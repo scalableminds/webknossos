@@ -752,8 +752,9 @@ class VolumeTracingService @Inject()(
         version = newVersion,
         mappingName = newEditableMappingIdOpt,
         hasSegmentIndex = Some(mergedVolumeStats.createdSegmentIndex),
-        userBoundingBoxes = addAdditionalBoundingBoxes(tracing.userBoundingBoxes, additionalBoundingBoxes)
-        // TODO set mag list from mergedVolumeStats?
+        userBoundingBoxes = addAdditionalBoundingBoxes(tracing.userBoundingBoxes, additionalBoundingBoxes),
+        mags = mergedVolumeStats.sortedMagsList.getOrElse(tracing.mags),
+        largestSegmentId = mergedVolumeStats.largestSegmentId.orElse(tracing.largestSegmentId)
       )
   }
 

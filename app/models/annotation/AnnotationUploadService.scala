@@ -147,13 +147,11 @@ class AnnotationUploadService @Inject()(tempFileService: WkTempFileService, nmlP
       volumeLayers.map(v => v.copy(tracing = wrapSegmentsInGroup(name, v.tracing)))
 
     parseResults.map {
-      case NmlParseSuccess(name, skeletonTracing, uploadedVolumeLayers, datasetId, description, wkUrl) =>
-        NmlParseSuccess(name,
-                        wrapTreesInGroup(name, skeletonTracing),
-                        wrapVolumeLayers(name, uploadedVolumeLayers),
-                        datasetId,
-                        description,
-                        wkUrl)
+      case s: NmlParseSuccess =>
+        s.copy(
+          skeletonTracing = wrapTreesInGroup(s.fileNameWithoutExtension, s.skeletonTracing),
+          volumeLayers = wrapVolumeLayers(s.fileNameWithoutExtension, s.volumeLayers)
+        )
       case r => r
     }
   }

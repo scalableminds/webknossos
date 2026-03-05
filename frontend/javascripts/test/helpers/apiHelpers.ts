@@ -31,9 +31,7 @@ import {
   annotationProto as MULTI_VOLUME_ANNOTATION_PROTO,
   tracings as MULTI_VOLUME_TRACINGS,
 } from "test/fixtures/multivolume_server_objects";
-import { Group } from "three";
 import type {
-  AdditionalCoordinate,
   APIAnnotation,
   APIDataset,
   APIMeshFileInfo,
@@ -47,11 +45,10 @@ import type { ArbitraryObject } from "types/type_utils";
 import type { ApiInterface } from "viewer/api/api_latest";
 import WebknossosApi from "viewer/api/api_loader";
 import { setupApi } from "viewer/api/internal_api";
-import Constants, { ControlModeEnum, type Vector2, type Vector3 } from "viewer/constants";
-import CustomLOD from "viewer/controller/custom_lod";
-import type { BufferGeometryWithInfo } from "viewer/controller/mesh_helpers";
+import Constants, { ControlModeEnum, type Vector2 } from "viewer/constants";
+import type CustomLOD from "viewer/controller/custom_lod";
 import { setSceneController } from "viewer/controller/scene_controller_provider";
-import type { SceneGroupForMeshes } from "viewer/controller/segment_mesh_controller";
+import SegmentMeshController from "viewer/controller/segment_mesh_controller";
 import UrlManager from "viewer/controller/url_manager";
 import type { ModelType } from "viewer/model";
 import Model from "viewer/model";
@@ -89,8 +86,7 @@ import {
   annotationProto as VOLUME_ANNOTATION_PROTO,
   tracing as VOLUME_TRACING,
 } from "../fixtures/volumetracing_server_objects";
-import { createUnitCubeBufferGeometry, makeSimpleMesh } from "./geometry_helpers";
-import SegmentMeshController from "viewer/controller/segment_mesh_controller";
+import { createUnitCubeBufferGeometry } from "./geometry_helpers";
 
 const TOKEN = "secure-token";
 const ANNOTATION_TYPE = "annotationTypeValue";
@@ -638,13 +634,11 @@ export async function setupWebknossosForTesting(
   Object.keys(segmentLodGroups).forEach((key) => {
     delete segmentLodGroups[key];
   });
-  setSceneController(
-    {
-      // @ts-expect-error
-      name: "This is a dummy scene controller so that getSceneController works in the tests.",
-      segmentMeshController: new SegmentMeshController(),
-    });
-  Store.dispatch(sceneControllerInitializedAction());
+  setSceneController({
+    // @ts-expect-error
+    name: "This is a dummy scene controller so that getSceneController works in the tests.",
+    segmentMeshController: new SegmentMeshController(),
+  });
 
   __setFeatures({});
 

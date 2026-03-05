@@ -7,10 +7,9 @@ import {
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
 import { waitUntilNotBusy } from "test/helpers/saga_test_helpers";
-import { delay, select } from "typed-redux-saga";
+import { delay } from "typed-redux-saga";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
-import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import {

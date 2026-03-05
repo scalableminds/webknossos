@@ -648,6 +648,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
   );
 
+  // todop: use NumberLikeMapWrapper
   const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
   sourceAgglomerateId = Number(
     (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(sourceInfo.unmappedId)) ??
@@ -684,7 +685,6 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     }
     const { splitMapping } = splitMappingInfo;
 
-    console.log("dispatch setMappingAction in proofreading saga");
     yield* put(
       setMappingAction(
         volumeTracingId,
@@ -708,12 +708,13 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     call(getDataValue, targetNodePosition, newMapping),
   ]);
 
-<<<<<<< HEAD:frontend/javascripts/viewer/model/sagas/volume/proofreading/proofread_saga.ts
   if (newSourceAgglomerateId === newTargetAgglomerateId && isSplittingAction) {
     // The split was unsuccessful.
     Toast.warning("The split operation was unsuccessful. Please retry.");
     yield* call(syncWithBackend);
     if (unsubscribeFromAnnotationMutex) {
+      // todom: doublecheck that all early-out-returns unsubscribe from the mutex
+      // (maybe use a finally?)
       yield* call(unsubscribeFromAnnotationMutex);
     }
     return;
@@ -728,32 +729,20 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   }
 
   // Reload sourceTree & targetTree as applying newest actions from the backend might have modified the skeleton.
-  const updatedSourceTree =
-    findTreeByNodeId(updatedSkeletonTracing.trees, sourceNodeId) ?? sourceTree;
-  const updatedTargetTree =
-    findTreeByNodeId(updatedSkeletonTracing.trees, targetNodeId) ?? targetTree;
+  const updatedSourceTree = findTreeByNodeId(updatedSkeletonTracing.trees, sourceNodeId);
+  const updatedTargetTree = findTreeByNodeId(updatedSkeletonTracing.trees, targetNodeId);
 
-||||||| 5175fc18c9:frontend/javascripts/viewer/model/sagas/volume/proofread_saga.ts
-=======
-  if (action.type === "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS") {
-    // The other actions are handled after the trees were already mutated by the reducer.
-    // However, in case of the min-cut, we need to update the tree variables.
-    const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.annotation));
-    const { trees } = skeletonTracing;
-    sourceTree = findTreeByNodeId(trees, sourceNodeId);
-    targetTree = findTreeByNodeId(trees, targetNodeId);
-    if (sourceTree == null || targetTree == null) {
-      console.error("Couldn't find trees for nodes. Details:", {
-        sourceNodeId,
-        sourceTree,
-        targetNodeId,
-        targetTree,
-      });
-      throw new Error("Couldn't find trees for source and/or tree nodes. See console for details");
-    }
+  if (updatedSourceTree == null || updatedTargetTree == null) {
+    Toast.error("Couldn't find trees for nodes. Details are logged to the console.");
+    console.error("Couldn't find trees for nodes. Details are logged to the console.", {
+      sourceNodeId,
+      updatedSourceTree,
+      targetNodeId,
+      updatedTargetTree,
+    });
+    return;
   }
 
->>>>>>> a2c4692de5d56d0527a347ad297c29ad67df46e3:frontend/javascripts/viewer/model/sagas/volume/proofread_saga.ts
   /* Rename agglomerate skeleton(s) according to their new id and mapping name */
   yield* put(
     setTreeNameAction(

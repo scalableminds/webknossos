@@ -366,6 +366,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       if (event.detail.type !== "complete" || !event.detail.didUploadCompleteSuccessfully) {
         // The upload was not successful. A retry might be initiated by other code that
         // listens to fileError events which is why we ignore the complete event now.
+        // The type is only checked to satisfy TS.
         return;
       }
       const newestForm = this.formRef.current;
@@ -446,6 +447,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     // recovered by refreshing the user token.
     resumableUpload.addEventListener("terminalFileError", (event: ResumableUploadEvent) => {
       if (event.detail.type !== "terminalFileError") {
+        // Satisfy TS.
         return;
       }
       Toast.error(event.detail.message);

@@ -544,6 +544,18 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
     });
 
     it("should not fire complete twice when the last file fails permanently", async () => {
+      /*
+        This test will make the last chunk fail and only retry after some time has passed.
+        In detail, the following will happen:
+        - A fileError event is triggered because a chunk (the last one) could not be uploaded.
+        - The handler for fileError is async and doesn't trigger a retry immediately (e.g.,
+          happens when fetching a new token for the retry).
+        - Because no retry was triggered immediately, ResumableUpload doesn't have anything to
+          do anymore and triggers `complete` (with success=false).
+        - Now, the fileError handler dispatches a retry.
+        - The second `complete` event (with success=true) is dispatched.
+      */
+
       resumable = new ResumableUpload({
         target: "/upload",
         chunkSize: 4,
@@ -565,6 +577,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       const successLog: boolean[] = [];
       const completeSpy = vi.fn((event: ResumableUploadEvent) => {
         if (event.detail.type !== "complete") {
+          // Satisfy TS.
           return;
         }
         successLog.push(event.detail.didUploadCompleteSuccessfully as boolean);
@@ -573,6 +586,7 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
 
       resumable.addEventListener("fileError", async (event: ResumableUploadEvent) => {
         if (event.detail.type !== "fileError") {
+          // Satisfy TS.
           return;
         }
         const { file } = event.detail;

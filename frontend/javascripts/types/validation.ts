@@ -62,6 +62,10 @@ export const validateLayerViewConfigurationObjectJSON = validateWithSchema(
   "types::LayerViewConfigurationObject",
 );
 
+export const validateTransformationsJSON = validateWithSchema(
+  "types::DataLayerWithTransformations",
+);
+
 export const validateUrlStateJSON = (value: string) => {
   const json = validateWithSchemaSync("types::UrlManagerState", value);
   return cloneDeepWith(json, (value, key) => {

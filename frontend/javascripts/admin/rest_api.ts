@@ -79,9 +79,9 @@ import {
   type VoxelyticsWorkflowReport,
   type ZarrPrivateLink,
 } from "types/api_types";
-import type { ArbitraryObject } from "types/globals";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import type { DatasourceConfiguration } from "types/schemas/datasource.types";
+import type { ArbitraryObject } from "types/type_utils";
 import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "viewer/constants";
 import { AnnotationStateFilterEnum } from "viewer/constants";
 import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
@@ -2017,7 +2017,7 @@ export function getEditableAgglomerateSkeleton(
   });
 }
 
-export async function getMeshfilesForDatasetLayer(
+export async function getMeshFilesForDatasetLayer(
   dataStoreUrl: string,
   dataset: APIDataset,
   layerName: string,
@@ -2175,6 +2175,9 @@ export async function getEdgesForAgglomerateMinCut(
           data: {
             ...segmentsInfo,
             // TODO: Proper 64 bit support (#6921)
+            // For a normal min-cut, the id at which the proofreading marker is at
+            // will be put into partition1. The right-clicked segment/mesh will be
+            // in partition2.
             partition1: segmentsInfo.partition1.map(Number),
             partition2: segmentsInfo.partition2.map(Number),
             agglomerateId: Number(segmentsInfo.agglomerateId),

@@ -12,8 +12,8 @@ A complete listing of all available keyboard & mouse shortcuts for WEBKNOSSOS ca
 | ++ctrl++ / ++cmd++ + ++z++               | Undo                                  |
 | ++ctrl++ / ++cmd++ + ++y++               | Redo                                  |
 | ++ctrl++ / ++cmd++ + ++s++               | Save                                  |
-| ++i++ or ++ctrl++ / ++cmd++ + Mousewheel | Zoom In                               |
-| ++o++ or ++ctrl++ / ++cmd++ + Mousewheel | Zoom Out                              |
+| ++i++ or ++ctrl++ / ++cmd++ / ++alt++ + Mousewheel | Zoom In                               |
+| ++o++ or ++ctrl++ / ++cmd++ / ++alt++ + Mousewheel | Zoom Out                              |
 | ++p++                                    | Select Previous Comment               |
 | ++n++                                    | Select Next Comment                   |
 | ++3++                                    | Toggle Segmentation Opacity           |
@@ -23,6 +23,7 @@ A complete listing of all available keyboard & mouse shortcuts for WEBKNOSSOS ca
 | ++period++                               | Toggle Viewport Maximization          |
 | ++k++ , ++l++                            | Toggle left/right Sidebars            |
 | ++ctrl++ / ++cmd++ + ++p++               | Open command palette                  |
+| ++ctrl++ + ++i++                         | Copy hovered segment ID               |
 
 ## Skeleton Annotation Mode
 
@@ -116,7 +117,7 @@ Note that you can enable *Classic Controls* which won't open a context menu on r
 
 ## Proofreading (Only for Paid Plans)
 
-For Proofreading you first need to activate an agglomerate mapping for the volume layer. Then activate the proofreading tool. 
+To use proofreading, first activate an agglomerate mapping for the volume layer and then switch to the proofreading tool.
 
 General Shortcuts:
 
@@ -152,7 +153,7 @@ If Multi Cut Tool is activated, the following shortcuts are available:
 
 ## Tool Switching Shortcuts
 
-Note that you need to first press ++ctrl++ / ++cmd++ + ++k++, release these keys and then press the letter that was assigned to a specific tool in order to switch to it.  
+Tool switching is a multi-step shortcut. First press ++ctrl++ / ++cmd++ + ++k++, release the keys, and then press the letter assigned to the tool.  
 ++ctrl++ / ++cmd++ + ++k++ is not needed for cyclic tool switching via ++w++ / ++shift+w++. 
 
 | Key Binding                            | Operation                                                                         |
@@ -165,10 +166,20 @@ Note that you need to first press ++ctrl++ / ++cmd++ + ++k++, release these keys
 | ++ctrl++ / ++cmd++ + ++k++ , **++e++** | Brush Erase Tool                                                                  |
 | ++ctrl++ / ++cmd++ + ++k++ , **++l++** | Lasso Tool                                                                        |
 | ++ctrl++ / ++cmd++ + ++k++ , **++r++** | Lasso Erase Tool                                                                  |
+| ++ctrl++ / ++cmd++ + ++k++ , **++f++** | Fill Tool                                                                         |
 | ++ctrl++ / ++cmd++ + ++k++ , **++p++** | Segment Picker Tool                                                               |
 | ++ctrl++ / ++cmd++ + ++k++ , **++q++** | Quick Select Tool                                                                 |
 | ++ctrl++ / ++cmd++ + ++k++ , **++x++** | Bounding Box Tool                                                                 |
 | ++ctrl++ / ++cmd++ + ++k++ , **++o++** | Proofreading Tool                                                                 |
+
+### Quick Select Preview
+
+When Quick Select preview mode is enabled:
+
+| Key Binding              | Operation                        |
+|--------------------------|----------------------------------|
+| ++enter++                | Confirm current Quick Select     |
+| ++escape++               | Cancel current Quick Select      |
 
 ### Brush Related Shortcuts
 

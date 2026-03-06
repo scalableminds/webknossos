@@ -41,11 +41,7 @@ function ActionsMenu({ layoutMenu }: Props) {
   return (
     <div>
       <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
-        <ButtonComponent
-          className="narrow"
-          icon={isWiderScreen ? <DownOutlined /> : <MenuOutlined />}
-          title="Actions"
-        >
+        <ButtonComponent icon={isWiderScreen ? <DownOutlined /> : <MenuOutlined />} title="Actions">
           {isWiderScreen ? "Menu" : ""}
         </ButtonComponent>
       </Dropdown>

@@ -41,7 +41,7 @@ export function parseProtoTracing(
 
 export function serializeProtoListOfLong<T extends number | bigint>(
   numbersOrBigInts: Array<T>,
-): Uint8Array {
+): Uint8Array<ArrayBuffer> {
   // TODO: Proper 64 bit support (#6921)
   const numbers =
     numbersOrBigInts.length > 0 && isBigInt(numbersOrBigInts[0])
@@ -56,7 +56,7 @@ export function serializeProtoListOfLong<T extends number | bigint>(
   if (errMsg) throw Error(errMsg);
   const message = messageType.create(listOfLong);
 
-  return messageType.encode(message).finish();
+  return messageType.encode(message).finish() as Uint8Array<ArrayBuffer>;
 }
 
 export function parseProtoListOfLong<T extends number | bigint>(

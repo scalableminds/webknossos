@@ -1,6 +1,6 @@
-import { ExperimentOutlined } from "@ant-design/icons";
+import Icon from "@ant-design/icons";
+import AiAnalysisIcon from "@images/icons/icon-ai-analysis.svg?react";
 import { withAuthentication } from "admin/auth/authentication_modal";
-import { hasSomePaidPlan } from "admin/organization/pricing_plan_utils";
 import { createExplorational } from "admin/rest_api";
 import { Alert, Button, Dropdown, Modal, Popover, Space } from "antd";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
@@ -49,7 +49,6 @@ import {
   layoutEmitter,
 } from "viewer/view/layouting/layout_persistence";
 import { ACTIONBAR_MARGIN_LEFT } from "./action_bar/tools/tool_helpers";
-
 import ToolkitView from "./action_bar/tools/toolkit_switcher_view";
 import { NumberSliderSetting } from "./components/setting_input_views";
 
@@ -313,7 +312,6 @@ class ActionBarView extends PureComponent<Props, State> {
 
   renderStartAIJobButton(disabled: boolean, tooltipTextIfDisabled: string): React.ReactNode {
     const tooltipText = disabled ? tooltipTextIfDisabled : "Start a processing job using AI";
-    const orgaHasSomePaidPlan = hasSomePaidPlan(this.props.activeOrganization);
 
     const menuItems = [
       {
@@ -321,15 +319,11 @@ class ActionBarView extends PureComponent<Props, State> {
         onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_inference")),
         label: "Run AI model",
       },
-      ...(orgaHasSomePaidPlan
-        ? [
-            {
-              key: "open_ai_training_button",
-              onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_training")),
-              label: "Train new AI model",
-            },
-          ]
-        : []),
+      {
+        key: "open_ai_training_button",
+        onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_training")),
+        label: "Train new AI model",
+      },
       {
         key: "open_ai_alignment_button",
         onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_alignment")),
@@ -357,7 +351,7 @@ class ActionBarView extends PureComponent<Props, State> {
         >
           <Button
             disabled={disabled}
-            icon={<ExperimentOutlined />}
+            icon={<Icon component={AiAnalysisIcon} />}
             title={tooltipText}
             type={
               this.state.windowWidth < constants.VERY_NARROW_SCREEN_WIDTH ? "primary" : "default"

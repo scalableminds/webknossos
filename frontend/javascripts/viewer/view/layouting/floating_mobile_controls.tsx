@@ -19,6 +19,7 @@ const moveForward = (timeFactor: number, isFirst: boolean) =>
 const moveBackward = (timeFactor: number, isFirst: boolean) =>
   moveW(-getMoveOffset(Store.getState(), timeFactor), isFirst);
 
+const LIGHT_THEME = getAntdTheme("light");
 const BUTTON_STYLE = { userSelect: "none", WebkitUserSelect: "none" } as const;
 
 export function FloatingMobileControls() {
@@ -46,10 +47,9 @@ export function FloatingMobileControls() {
   const handleContextMenu = (event: React.SyntheticEvent) => {
     event.preventDefault();
   };
-  const lightTheme = getAntdTheme("light");
 
   return (
-    <ConfigProvider theme={lightTheme}>
+    <ConfigProvider theme={LIGHT_THEME}>
       <div
         className="floating-buttons-bar"
         style={{ position: "fixed", left: 8, bottom: 28, zIndex: 1000 }}

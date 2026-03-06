@@ -1,5 +1,14 @@
 import { DeleteOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
-import { Divider, type MenuProps, Space, Table, type TableProps, Typography } from "antd";
+import {
+  Divider,
+  Empty,
+  Flex,
+  type MenuProps,
+  Space,
+  Table,
+  type TableProps,
+  Typography,
+} from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox, computeBoundingBoxFromArray } from "libs/utils";
 import noop from "lodash-es/noop";
@@ -323,24 +332,32 @@ export default function BoundingBoxTab() {
                 width,
               }}
             >
-              <Table
-                ref={bboxTableRef}
-                columns={boundingBoxWrapperTableColumns}
-                dataSource={userBoundingBoxes}
-                pagination={false}
-                rowKey="id"
-                showHeader={false}
-                className="bounding-box-table"
-                locale={{ emptyText: "No Bounding Boxes created yet." }}
-                rowSelection={{
-                  selectedRowKeys,
-                  getCheckboxProps: () => ({ disabled: true }),
-                }}
-                virtual
-                scroll={{ y: height - BBOX_BUTTONS_HEADER_HEIGHT }} // If the scroll height is exactly
-                // the height of the diff, the AutoSizer will always rerender the table and toggle an additional scrollbar.
-                onRow={getPropsForRow}
-              />
+              {userBoundingBoxes.length === 0 ? (
+                <Flex justify="center">
+                  <Empty
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    description="There are no bounding boxes. Create some using the + button above or with the bounding box tool."
+                  />
+                </Flex>
+              ) : (
+                <Table
+                  ref={bboxTableRef}
+                  columns={boundingBoxWrapperTableColumns}
+                  dataSource={userBoundingBoxes}
+                  pagination={false}
+                  rowKey="id"
+                  showHeader={false}
+                  className="bounding-box-table"
+                  rowSelection={{
+                    selectedRowKeys,
+                    getCheckboxProps: () => ({ disabled: true }),
+                  }}
+                  virtual
+                  scroll={{ y: height - BBOX_BUTTONS_HEADER_HEIGHT }} // If the scroll height is exactly
+                  // the height of the diff, the AutoSizer will always rerender the table and toggle an additional scrollbar.
+                  onRow={getPropsForRow}
+                />
+              )}
             </div>
           )}
         </AutoSizer>

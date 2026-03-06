@@ -13,6 +13,8 @@ import {
   Tree as AntdTree,
   Divider,
   Dropdown,
+  Empty,
+  Flex,
   type GetRef,
   type MenuProps,
   Space,
@@ -390,6 +392,17 @@ function CommentTabView(props: Props) {
           }),
       };
     });
+
+    if (treeData.length === 0) {
+      return (
+        <Flex justify="center">
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description="There are no comments. Create a skeleton node and type in the above text field to add a comment."
+          />
+        </Flex>
+      );
+    }
 
     return (
       <AutoSizer defaultHeight={500}>

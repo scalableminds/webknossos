@@ -1645,7 +1645,7 @@ class SegmentsView extends React.Component<Props, State> {
                   {isSegmentHierarchyEmpty ? (
                     <Empty
                       image={Empty.PRESENTED_IMAGE_SIMPLE}
-                      description={`There are no segments yet. ${
+                      description={`There are no segments. ${
                         this.props.allowUpdate && this.props.hasVolumeTracing
                           ? "Use the volume tools (e.g., the brush) to create a segment. Alternatively, select or click existing segments to add them to this list."
                           : "Select or click existing segments to add them to this list."

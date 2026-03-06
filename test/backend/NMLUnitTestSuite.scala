@@ -12,8 +12,10 @@ import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFormat
 import models.annotation.SharedParsingParameters
 import models.annotation.nml.{NmlParseSuccessWithoutFile, NmlParser, NmlWriter}
+import models.dataset.{Dataset, DatasetDAOLike}
 import models.user.User
-import com.scalableminds.util.tools.{Box, Full}
+import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.tools.{Box, Fox, Full}
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.scalatestplus.play.PlaySpec
 import play.api.i18n.{DefaultMessagesApi, Messages, MessagesProvider}
@@ -22,9 +24,35 @@ import play.api.test.FakeRequest
 import play.silhouette.api.LoginInfo
 import play.silhouette.impl.providers.CredentialsProvider
 
-import javax.inject.Inject
+class NMLUnitTestSuite extends PlaySpec {
 
-class NMLUnitTestSuite @Inject()(nmlParser: NmlParser) extends PlaySpec {
+  private val mockDatasetDAO = new DatasetDAOLike {
+    override def findOneByIdOrNameAndOrganization(
+        datasetIdOpt: Option[ObjectId],
+        datasetName: String,
+        organizationId: String)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Dataset] =
+      Fox.successful(
+        Dataset(
+          _id = ObjectId.dummyId,
+          _dataStore = "dummy",
+          _organization = "testOrganization",
+          _publication = None,
+          _uploader = None,
+          _folder = ObjectId.dummyId,
+          inboxSourceHash = None,
+          directoryName = "dummy_dataset",
+          isPublic = false,
+          isUsable = true,
+          isVirtual = false,
+          name = "dummy_dataset",
+          voxelSize = None,
+          sharingToken = None,
+          status = "",
+          logoUrl = None
+        ))(scala.concurrent.ExecutionContext.global)
+  }
+
+  private val nmlParser = new NmlParser(mockDatasetDAO)
   private val handleFoxJustification = "Handling Fox in Unit Test Context"
 
   implicit val messagesProvider: MessagesProvider = new MessagesProvider {

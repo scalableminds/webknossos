@@ -100,9 +100,16 @@ object DatasetCompactInfo {
   implicit val jsonFormat: Format[DatasetCompactInfo] = Json.format[DatasetCompactInfo]
 }
 
+trait DatasetDAOLike {
+  def findOneByIdOrNameAndOrganization(datasetIdOpt: Option[ObjectId], datasetName: String, organizationId: String)(
+      implicit ctx: DBAccessContext,
+      m: MessagesProvider): Fox[Dataset]
+}
+
 class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDAO, organizationDAO: OrganizationDAO)(
     implicit ec: ExecutionContext)
-    extends SQLDAO[Dataset, DatasetsRow, Datasets](sqlClient) {
+    extends SQLDAO[Dataset, DatasetsRow, Datasets](sqlClient)
+    with DatasetDAOLike {
   protected val collection = Datasets
 
   protected def idColumn(x: Datasets): Rep[String] = x._Id

@@ -7,7 +7,7 @@ import {
 import { Tooltip } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import ErrorHandling from "libs/error_handling";
-import { useWindowSize, useWkSelector } from "libs/react_hooks";
+import { useWindowWidth, useWkSelector } from "libs/react_hooks";
 import window from "libs/window";
 import throttle from "lodash-es/throttle";
 import type React from "react";
@@ -54,7 +54,7 @@ function SaveButton() {
       : null;
   });
   const isBusy = useWkSelector((state) => state.save.isBusy);
-  const { width: windowWidth } = useWindowSize();
+  const windowWidth = useWindowWidth();
 
   const [isStateSaved, setIsStateSaved] = useState(false);
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);

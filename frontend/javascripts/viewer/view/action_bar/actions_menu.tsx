@@ -1,7 +1,7 @@
 import { DownOutlined, MenuOutlined } from "@ant-design/icons";
 import { Dropdown } from "antd";
 import type { SubMenuType } from "antd/es/menu/interface";
-import { useWindowSize, useWkSelector } from "libs/react_hooks";
+import { useWindowWidth, useWkSelector } from "libs/react_hooks";
 import { memo } from "react";
 import constants from "viewer/constants";
 import ButtonComponent from "viewer/view/components/button_component";
@@ -17,7 +17,7 @@ function ActionsMenu({ layoutMenu }: Props) {
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
   const restrictions = useWkSelector((state) => state.annotation.restrictions);
   const annotationOwner = useWkSelector((state) => state.annotation.owner);
-  const { width: windowWidth } = useWindowSize();
+  const windowWidth = useWindowWidth();
 
   const task = useWkSelector((state) => state.task);
   const activeUser = useWkSelector((state) => state.activeUser);

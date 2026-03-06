@@ -332,30 +332,15 @@ export function useDebouncedValue<T>(value: T, delay: number): T {
   return debouncedValue;
 }
 
-type WindowSize = {
-  width: number;
-  height: number;
-};
-
-export function useWindowSize(): WindowSize {
-  const [size, setSize] = useState<WindowSize>({
-    width: window.innerWidth,
-    height: window.innerHeight,
-  });
+export function useWindowWidth() {
+  const [width, setWidth] = useState<number>(window.innerWidth);
 
   useEffect(() => {
-    function handleResize() {
-      setSize({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
-    }
-
-    window.addEventListener("resize", handleResize);
+    window.addEventListener("resize", () => setWidth(window.innerWidth));
     return () => {
-      window.removeEventListener("resize", handleResize);
+      window.removeEventListener("resize", () => setWidth(window.innerWidth));
     };
   }, []);
 
-  return size;
+  return width;
 }

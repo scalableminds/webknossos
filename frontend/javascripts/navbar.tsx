@@ -619,6 +619,7 @@ function LoggedInAvatar({
       style={{
         paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
         lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
+        marginInlineStart: "10px",
       }}
       theme="dark"
       subMenuCloseDelay={subMenuCloseDelay}

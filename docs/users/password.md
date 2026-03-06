@@ -24,7 +24,7 @@ This email address will be used for all future notifications and for logging in.
 
 ### Organization & Role
 
-Users can view their current **Organization** and [**Role**] (e.g., Administrator, Team Manager, User) from the `Profile` tab.
+Users can view their current **Organization** and **Role** (e.g., Administrator, Team Manager, User) from the `Profile` tab.
 For more information about roles, see [Access rights and roles](access_rights.md).
 
 ### Theme
@@ -92,4 +92,4 @@ If your token has been compromised or you suspect someone else has gained access
 
 #### Organization ID
 
-Certain API integrations need the organization ID which can be found here.
+Certain API integrations need the organization ID which can be found her, in the developer settings.

@@ -308,6 +308,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
         key: "3",
         children: (
           <React.Fragment>
+            {" "}
             <DropdownSetting
               label={
                 <FastTooltip title={settingsTooltips.gpuMemoryFactor}>
@@ -427,7 +428,7 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
 
     return (
       <Collapse
-        ghost
+        bordered={false}
         defaultActiveKey={["1", "2", "3"]}
         className="tracing-settings-menu"
         style={{

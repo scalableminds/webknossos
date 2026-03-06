@@ -1,9 +1,9 @@
 package backend
 
-import org.scalatestplus.play.PlaySpec
+import org.scalatest.wordspec.AsyncWordSpec
 import utils.sql.{SqlEscaping, SqlTypeImplicits}
 
-class SqlEscapingTestSuite extends PlaySpec with SqlTypeImplicits with SqlEscaping {
+class SqlEscapingTestSuite extends AsyncWordSpec with SqlTypeImplicits with SqlEscaping {
   "SQL Escaping" should {
     "not change plain string" in {
       assert(escapeLiteral("hello") == "'hello'")

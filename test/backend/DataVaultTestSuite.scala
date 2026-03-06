@@ -34,6 +34,14 @@ class DataVaultTestSuite extends AsyncWordSpec {
   val dummyDataStoreHost = "example.com"
 
   "Data vault" when {
+    "checking environment" should {
+      "not have interfering env vars set" in {
+        if (sys.env.contains("AWS_ACCESS_KEY_ID") || sys.env.contains("AWS_SECRET_ACCESS_KEY")) {
+          fail("Environment variables AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY must be unset for this test suite!")
+        } else succeed
+      }
+    }
+
     "using Range requests" when {
       val range: StartEndExclusiveByteRange = ByteRange.startEndExclusive(0, 100)
       val suffixRange: SuffixLengthByteRange = ByteRange.suffix(100)

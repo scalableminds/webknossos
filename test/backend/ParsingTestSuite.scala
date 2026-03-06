@@ -145,14 +145,15 @@ class ParsingTestSuite extends PlaySpec with WKWDataFormatHelper with VolumeData
         )
         .await("test")
       assert(
-        parsed1 == Full(5,
-                        6,
-                        7,
-                        Some(
-                          List(AdditionalCoordinate("a", 1),
-                               AdditionalCoordinate("b", 2),
-                               AdditionalCoordinate("c", 3),
-                               AdditionalCoordinate("d", 4)))))
+        parsed1 == Full(
+          (5,
+           6,
+           7,
+           Some(
+             List(AdditionalCoordinate("a", 1),
+                  AdditionalCoordinate("b", 2),
+                  AdditionalCoordinate("c", 3),
+                  AdditionalCoordinate("d", 4))))))
 
     }
 

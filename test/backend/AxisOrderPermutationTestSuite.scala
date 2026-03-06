@@ -1,14 +1,14 @@
 package backend
 
 import com.scalableminds.webknossos.datastore.datareaders.{Axis, FullAxisOrder}
-import org.scalatestplus.play.PlaySpec
+import org.scalatest.wordspec.AsyncWordSpec
 
-class AxisOrderPermutationTestSuite extends PlaySpec {
+class AxisOrderPermutationTestSuite extends AsyncWordSpec {
 
   private def permute(permutation: Array[Int], str: String): String =
     permutation.map(i => str(i)).mkString("")
 
-  def orderFromStringChars(str: String) = FullAxisOrder(str.map(char => Axis(name = char.toString)))
+  private def orderFromStringChars(str: String) = FullAxisOrder(str.map(char => Axis(name = char.toString)))
 
   private def permuteAxisOrderArrayCtoWkC(str: String) = {
     val axisOrder = orderFromStringChars(str)

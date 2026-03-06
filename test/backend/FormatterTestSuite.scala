@@ -1,11 +1,11 @@
 package backend
 
 import com.scalableminds.util.mvc.Formatter
-import org.scalatestplus.play.PlaySpec
+import org.scalatest.wordspec.AsyncWordSpec
 
 import scala.concurrent.duration.FiniteDuration
 
-class FormatterTestSuite extends PlaySpec with Formatter {
+class FormatterTestSuite extends AsyncWordSpec with Formatter {
   "formatDuration" should {
     "format human readable dates" in {
       assert(formatDuration(FiniteDuration(0, "ms")) == "0ms")

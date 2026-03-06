@@ -16,9 +16,9 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   StaticSegmentationLayer,
   UsableDataSource
 }
-import org.scalatestplus.play.PlaySpec
+import org.scalatest.wordspec.AsyncWordSpec
 
-class DataSourceTestSuite extends PlaySpec {
+class DataSourceTestSuite extends AsyncWordSpec {
 
   "DataSource" should {
     // The hashCode of a datasource is used by wk to decide if a newly scanned datasource differs from the one in the database.

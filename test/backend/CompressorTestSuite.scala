@@ -8,13 +8,14 @@ import com.scalableminds.webknossos.datastore.datareaders.{
   ZstdCompressor
 }
 import com.scalableminds.webknossos.datastore.datareaders.Lz4Compressor
-import org.scalatestplus.play.PlaySpec
+import org.scalatest.Assertion
+import org.scalatest.wordspec.AsyncWordSpec
 
 import java.security.SecureRandom
 
-class CompressorTestSuite extends PlaySpec {
+class CompressorTestSuite extends AsyncWordSpec {
 
-  def testCompressor(compressor: Compressor): Unit = {
+  def testCompressor(compressor: Compressor): Assertion = {
     val bytes = new Array[Byte](20)
     SecureRandom.getInstanceStrong.nextBytes(bytes)
     val decompressed = compressor.decompress(compressor.compress(bytes))

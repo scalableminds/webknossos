@@ -331,3 +331,16 @@ export function useDebouncedValue<T>(value: T, delay: number): T {
 
   return debouncedValue;
 }
+
+export function useWindowWidth() {
+  const [width, setWidth] = useState<number>(window.innerWidth);
+
+  useEffect(() => {
+    window.addEventListener("resize", () => setWidth(window.innerWidth));
+    return () => {
+      window.removeEventListener("resize", () => setWidth(window.innerWidth));
+    };
+  }, []);
+
+  return width;
+}

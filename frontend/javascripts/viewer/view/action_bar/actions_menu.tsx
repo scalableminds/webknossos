@@ -1,8 +1,9 @@
-import { DownOutlined } from "@ant-design/icons";
+import { DownOutlined, MenuOutlined } from "@ant-design/icons";
 import { Dropdown } from "antd";
 import type { SubMenuType } from "antd/es/menu/interface";
-import { useWkSelector } from "libs/react_hooks";
+import { useWindowWidth, useWkSelector } from "libs/react_hooks";
 import { memo } from "react";
+import constants from "viewer/constants";
 import ButtonComponent from "viewer/view/components/button_component";
 import { useTracingViewMenuItems } from "./use_tracing_view_menu_items";
 
@@ -16,10 +17,13 @@ function ActionsMenu({ layoutMenu }: Props) {
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
   const restrictions = useWkSelector((state) => state.annotation.restrictions);
   const annotationOwner = useWkSelector((state) => state.annotation.owner);
+  const windowWidth = useWindowWidth();
 
   const task = useWkSelector((state) => state.task);
   const activeUser = useWkSelector((state) => state.activeUser);
   const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);
+
+  const isWiderScreen = windowWidth >= constants.NARROW_SCREEN_WIDTH;
 
   const menuItems = useTracingViewMenuItems(
     {
@@ -37,9 +41,8 @@ function ActionsMenu({ layoutMenu }: Props) {
   return (
     <div>
       <Dropdown menu={{ items: menuItems }} trigger={["click"]}>
-        <ButtonComponent>
-          Menu
-          <DownOutlined />
+        <ButtonComponent icon={isWiderScreen ? <DownOutlined /> : <MenuOutlined />} title="Actions">
+          {isWiderScreen ? "Menu" : ""}
         </ButtonComponent>
       </Dropdown>
     </div>

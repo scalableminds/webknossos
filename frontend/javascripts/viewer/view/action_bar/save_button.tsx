@@ -7,12 +7,12 @@ import {
 import { Tooltip } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import ErrorHandling from "libs/error_handling";
-import { useWkSelector } from "libs/react_hooks";
+import { useWindowWidth, useWkSelector } from "libs/react_hooks";
 import window from "libs/window";
 import throttle from "lodash-es/throttle";
 import type React from "react";
 import { useCallback, useEffect, useState } from "react";
-
+import constants from "viewer/constants";
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
 import { Model, Store } from "viewer/singletons";
 import type { SaveState } from "viewer/store";
@@ -54,6 +54,7 @@ function SaveButton() {
       : null;
   });
   const isBusy = useWkSelector((state) => state.save.isBusy);
+  const windowWidth = useWindowWidth();
 
   const [isStateSaved, setIsStateSaved] = useState(false);
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
@@ -107,6 +108,20 @@ function SaveButton() {
 
   const totalBucketsToCompress =
     saveInfo.waitingForCompressionBucketCount + saveInfo.compressingBucketCount;
+  const isSmallScreen = windowWidth < constants.NARROW_SCREEN_WIDTH;
+
+  if (isSmallScreen && !shouldShowProgress && !showUnsavedWarning) {
+    return (
+      <ButtonComponent
+        key="save-button"
+        type="primary"
+        onClick={handleSave}
+        icon={saveButtonIcon}
+        className="narrow"
+      />
+    );
+  }
+
   return (
     <ButtonComponent
       key="save-button"

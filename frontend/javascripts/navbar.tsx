@@ -433,6 +433,7 @@ function getHelpSubMenu(
 
   return {
     key: HELP_MENU_KEY,
+    className: "hide-on-small-screen",
     label: getCollapsibleMenuTitle(
       "Help",
       <QuestionCircleOutlined className="icon-margin-right" />,
@@ -494,7 +495,15 @@ function NotificationIcon({
     >
       <Tooltip title="See what's new in WEBKNOSSOS" placement="bottomLeft">
         <Badge count={maybeUnreadReleaseCount || 0} size="small">
-          <Button onClick={handleShowWhatsNewView} shape="circle" icon={<BellOutlined />} />
+          <Button
+            onClick={handleShowWhatsNewView}
+            shape="circle"
+            icon={<BellOutlined />}
+            type="text"
+          >
+            {" "}
+            What's New{" "}
+          </Button>
         </Badge>
       </Tooltip>
     </div>
@@ -610,6 +619,7 @@ function LoggedInAvatar({
       style={{
         paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
         lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
+        marginInlineStart: "10px",
       }}
       theme="dark"
       subMenuCloseDelay={subMenuCloseDelay}
@@ -623,6 +633,17 @@ function LoggedInAvatar({
           label: <UserInitials activeUser={activeUser} isMultiMember={isMultiMember} />,
           style: { padding: 0 },
           children: [
+            {
+              key: "whatsNew",
+              label: (
+                <NotificationIcon
+                  key="notification-icon"
+                  activeUser={activeUser}
+                  navbarHeight={navbarHeight}
+                />
+              ),
+            },
+            { type: "divider" },
             {
               key: "userName",
               label: `${firstName} ${lastName}`,
@@ -876,13 +897,6 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
         />,
       );
     }
-    trailingNavItems.push(
-      <NotificationIcon
-        key="notification-icon"
-        activeUser={loggedInUser}
-        navbarHeight={navbarHeight}
-      />,
-    );
     trailingNavItems.push(
       <LoggedInAvatar
         key="logged-in-avatar"

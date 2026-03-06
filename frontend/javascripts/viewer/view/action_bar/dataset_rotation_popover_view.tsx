@@ -4,7 +4,7 @@ import { useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { useCallback } from "react";
 import { useDispatch } from "react-redux";
-import type { EmptyObject } from "types/globals";
+import type { EmptyObject } from "types/type_utils";
 import type { Vector3 } from "viewer/constants";
 import { isRotated } from "viewer/model/accessors/flycam_accessor";
 import { setRotationAction } from "viewer/model/actions/flycam_actions";

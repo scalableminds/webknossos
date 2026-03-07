@@ -28,11 +28,16 @@ import {
   mergeSegment4And6WithAgglomerateTree1And4,
   mergeSegment5And6WithAgglomerateTree1,
   mergeSegment5And6WithAgglomerateTree1And4,
+  minCutWithNodes2And3WithAgglomerateTree1,
   splitSegment1And2WithAgglomerateTree1,
   splitSegment2And3WithAgglomerateTree1,
   splitSegment2And3WithAgglomerateTrees1And4And6,
 } from "./proofreading/proofreading_interaction_update_action_fixtures";
-import { loadAgglomerateSkeletons } from "./proofreading/proofreading_skeleton_test_utils";
+import {
+  loadAgglomerateSkeletons,
+  mockEdgesForAgglomerateMinCut,
+  performMinCutWithNodesProofreading,
+} from "./proofreading/proofreading_skeleton_test_utils";
 import {
   initializeMappingAndTool,
   makeMappingEditableHelper,
@@ -349,4 +354,21 @@ describe("Proofreading should generate correct update actions", () => {
 
     await task.toPromise();
   });
+
+  it("performMinCutWithNodesProofreading should apply correct update actions after loading agglomerate trees", async (context: WebknossosTestContext) => {
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    // Mock backend answer telling saga to split edges 3-2.
+    mockEdgesForAgglomerateMinCut(context.mocks, 7);
+
+    const task = startSaga(function* task() {
+      yield performMinCutWithNodesProofreading(context, false);
+      // This includes the create agglomerate tree & merge agglomerate tree update actions.
+      const loadAgglomerateTreesAndSplitUpdateActions = getNestedUpdateActions(context).slice(-6);
+      expect(loadAgglomerateTreesAndSplitUpdateActions).toStrictEqual(
+        minCutWithNodes2And3WithAgglomerateTree1,
+      );
+    });
+
+    await task.toPromise();
+  }, 8000);
 });

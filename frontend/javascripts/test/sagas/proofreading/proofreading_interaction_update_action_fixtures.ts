@@ -425,7 +425,7 @@ export const mergeSegment5And6WithAgglomerateTree1And4 = [
   ],
   [
     {
-      name: "updateSegmentPartial",
+      name: "updateSegmentPartial" as const,
       value: {
         actionTracingId: VOLUME_TRACING_ID,
         id: 4,
@@ -824,6 +824,122 @@ export const splitSegment2And3WithAgglomerateTrees1And4And6 = [
         groupId: null,
         metadata: [],
         creationTime: 1494695001688,
+      },
+    },
+  ],
+];
+
+export const minCutWithNodes2And3WithAgglomerateTree1 = [
+  [
+    {
+      name: "createTree" as const,
+      value: {
+        actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        id: 4,
+        updatedId: undefined,
+        color: [0, 1, 0.7568627450980392] as Vector3,
+        name: "agglomerate 1 (volumeTracingId)",
+        timestamp: 1494695001688,
+        comments: [],
+        branchPoints: [],
+        groupId: undefined,
+        isVisible: true,
+        type: "AGGLOMERATE" as const,
+        edgesAreVisible: true,
+        metadata: [],
+        agglomerateInfo: {
+          agglomerateId: 1,
+          tracingId: "volumeTracingId",
+        },
+      },
+    },
+    {
+      name: "moveTreeComponent" as const,
+      value: {
+        actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        sourceId: 3,
+        targetId: 4,
+        nodeIds: [6],
+      },
+    },
+    {
+      name: "deleteEdge" as const,
+      value: {
+        actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        treeId: 3,
+        source: 5,
+        target: 6,
+      },
+    },
+  ],
+  [
+    {
+      name: "splitAgglomerate" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        segmentId1: 3,
+        segmentId2: 2,
+        agglomerateId: 1,
+      },
+    },
+  ],
+  [
+    {
+      name: "updateTree" as const,
+      value: {
+        actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        id: 3,
+        updatedId: 3,
+        color: [0.6784313725490196, 0.1411764705882353, 0.050980392156862744] as Vector3,
+        name: "agglomerate 1339 (volumeTracingId)",
+        timestamp: 1494695001688,
+        comments: [],
+        branchPoints: [],
+        groupId: undefined,
+        isVisible: true,
+        type: "AGGLOMERATE" as const,
+        edgesAreVisible: true,
+        metadata: [],
+        agglomerateInfo: {
+          agglomerateId: 1339,
+          tracingId: "volumeTracingId",
+        },
+      },
+    },
+  ],
+  [
+    {
+      name: "createSegment" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        id: 1339,
+        anchorPosition: undefined,
+        additionalCoordinates: undefined,
+        name: "Agglomerate 1339",
+        color: null,
+        groupId: null,
+        metadata: [],
+        creationTime: 1494695001688,
+      },
+    },
+  ],
+  [
+    {
+      name: "updateSegmentPartial" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        id: 1,
+        anchorPosition: [3, 3, 3] as Vector3,
+      },
+    },
+  ],
+  [
+    {
+      name: "updateSegmentPartial" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        id: 1339,
+        anchorPosition: [2, 2, 2] as Vector3,
       },
     },
   ],

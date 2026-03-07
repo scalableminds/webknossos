@@ -1,6 +1,6 @@
 import { SKELETON_TRACING_ID } from "test/fixtures/skeletontracing_server_objects";
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
-import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
+import type { Vector3 } from "viewer/constants";
 
 export const loadAgglomerateTree1 = [
   [
@@ -10,14 +10,14 @@ export const loadAgglomerateTree1 = [
         actionTracingId: SKELETON_TRACING_ID,
         id: 3,
         updatedId: undefined,
-        color: [0.6784313725490196, 0.1411764705882353, 0.050980392156862744],
+        color: [0.6784313725490196, 0.1411764705882353, 0.050980392156862744] as Vector3,
         name: "agglomerate 1 (volumeTracingId)",
         timestamp: 1494695001688,
         comments: [],
         branchPoints: [],
         groupId: undefined,
         isVisible: true,
-        type: "AGGLOMERATE",
+        type: "AGGLOMERATE" as const,
         edgesAreVisible: true,
         metadata: [],
         agglomerateInfo: {
@@ -32,13 +32,13 @@ export const loadAgglomerateTree1 = [
         actionTracingId: SKELETON_TRACING_ID,
         id: 4,
         additionalCoordinates: [],
-        rotation: [0, 0, 0],
+        rotation: [0, 0, 0] as Vector3,
         bitDepth: 8,
         viewport: 0,
         radius: 1,
         timestamp: 1494695001688,
         interpolation: false,
-        position: [1, 1, 1],
+        position: [1, 1, 1] as Vector3,
         treeId: 3,
         resolution: 1,
       },
@@ -49,13 +49,13 @@ export const loadAgglomerateTree1 = [
         actionTracingId: SKELETON_TRACING_ID,
         id: 5,
         additionalCoordinates: [],
-        rotation: [0, 0, 0],
+        rotation: [0, 0, 0] as Vector3,
         bitDepth: 8,
         viewport: 0,
         radius: 1,
         timestamp: 1494695001688,
         interpolation: false,
-        position: [2, 2, 2],
+        position: [2, 2, 2] as Vector3,
         treeId: 3,
         resolution: 1,
       },
@@ -66,13 +66,13 @@ export const loadAgglomerateTree1 = [
         actionTracingId: SKELETON_TRACING_ID,
         id: 6,
         additionalCoordinates: [],
-        rotation: [0, 0, 0],
+        rotation: [0, 0, 0] as Vector3,
         bitDepth: 8,
         viewport: 0,
         radius: 1,
         timestamp: 1494695001688,
         interpolation: false,
-        position: [3, 3, 3],
+        position: [3, 3, 3] as Vector3,
         treeId: 3,
         resolution: 1,
       },
@@ -95,7 +95,7 @@ export const loadAgglomerateTree1 = [
         target: 6,
       },
     },
-  ] as UpdateActionWithoutIsolationRequirement[],
+  ],
 ];
 
 export const mergeSegment4And6WithAgglomerateTree1And4 = [
@@ -130,13 +130,13 @@ export const mergeSegment4And6WithAgglomerateTree1And4 = [
         actionTracingId: SKELETON_TRACING_ID,
         id: 9,
         additionalCoordinates: [],
-        rotation: [0, 0, 0],
+        rotation: [0, 0, 0] as Vector3,
         bitDepth: 8,
         viewport: 0,
         radius: 1,
         timestamp: 1494695001688,
         interpolation: false,
-        position: [6, 6, 6],
+        position: [6, 6, 6] as Vector3,
         treeId: 4,
         resolution: 1,
       },
@@ -147,13 +147,13 @@ export const mergeSegment4And6WithAgglomerateTree1And4 = [
         actionTracingId: SKELETON_TRACING_ID,
         id: 10,
         additionalCoordinates: [],
-        rotation: [0, 0, 0],
+        rotation: [0, 0, 0] as Vector3,
         bitDepth: 8,
         viewport: 0,
         radius: 1,
         timestamp: 1494695001688,
         interpolation: false,
-        position: [7, 7, 7],
+        position: [7, 7, 7] as Vector3,
         treeId: 4,
         resolution: 1,
       },
@@ -183,7 +183,7 @@ export const mergeSegment4And6WithAgglomerateTree1And4 = [
       value: {
         actionTracingId: VOLUME_TRACING_ID,
         id: 4,
-        anchorPosition: [5, 5, 5],
+        anchorPosition: [5, 5, 5] as Vector3,
       },
     },
   ],
@@ -247,7 +247,7 @@ export const mergeSegment3And4WithAgglomerateTree1And4 = [
       value: {
         actionTracingId: VOLUME_TRACING_ID,
         id: 1,
-        anchorPosition: [3, 3, 3],
+        anchorPosition: [3, 3, 3] as Vector3,
       },
     },
   ],
@@ -265,7 +265,7 @@ export const mergeSegment3And4WithAgglomerateTree1 = [
         agglomerateId2: 4,
       },
     },
-  ] as UpdateActionWithoutIsolationRequirement[],
+  ],
   [
     {
       name: "mergeSegmentItems" as const,
@@ -277,7 +277,7 @@ export const mergeSegment3And4WithAgglomerateTree1 = [
         segmentId2: 4,
       },
     },
-  ] as UpdateActionWithoutIsolationRequirement[],
+  ],
   [
     {
       name: "createNode" as const,
@@ -285,13 +285,13 @@ export const mergeSegment3And4WithAgglomerateTree1 = [
         actionTracingId: SKELETON_TRACING_ID,
         id: 7,
         additionalCoordinates: [],
-        rotation: [0, 0, 0],
+        rotation: [0, 0, 0] as Vector3,
         bitDepth: 8,
         viewport: 0,
         radius: 1,
         timestamp: 1494695001688,
         interpolation: false,
-        position: [4, 4, 4],
+        position: [4, 4, 4] as Vector3,
         treeId: 3,
         resolution: 1,
       },
@@ -302,13 +302,13 @@ export const mergeSegment3And4WithAgglomerateTree1 = [
         actionTracingId: SKELETON_TRACING_ID,
         id: 8,
         additionalCoordinates: [],
-        rotation: [0, 0, 0],
+        rotation: [0, 0, 0] as Vector3,
         bitDepth: 8,
         viewport: 0,
         radius: 1,
         timestamp: 1494695001688,
         interpolation: false,
-        position: [5, 5, 5],
+        position: [5, 5, 5] as Vector3,
         treeId: 3,
         resolution: 1,
       },
@@ -331,17 +331,17 @@ export const mergeSegment3And4WithAgglomerateTree1 = [
         target: 8,
       },
     },
-  ] as UpdateActionWithoutIsolationRequirement[],
+  ],
   [
     {
       name: "updateSegmentPartial" as const,
       value: {
         actionTracingId: VOLUME_TRACING_ID,
         id: 1,
-        anchorPosition: [3, 3, 3],
+        anchorPosition: [3, 3, 3] as Vector3,
       },
     },
-  ] as UpdateActionWithoutIsolationRequirement[],
+  ],
 ];
 
 export const mergeSegment5And6WithAgglomerateTree1And4 = [
@@ -355,7 +355,7 @@ export const mergeSegment5And6WithAgglomerateTree1And4 = [
         agglomerateId1: 4,
         agglomerateId2: 6,
       },
-    } as UpdateActionWithoutIsolationRequirement,
+    },
   ],
   [
     {
@@ -367,7 +367,7 @@ export const mergeSegment5And6WithAgglomerateTree1And4 = [
         segmentId1: 5,
         segmentId2: 6,
       },
-    } as UpdateActionWithoutIsolationRequirement,
+    },
   ],
   [
     {
@@ -376,34 +376,34 @@ export const mergeSegment5And6WithAgglomerateTree1And4 = [
         actionTracingId: SKELETON_TRACING_ID,
         id: 9,
         additionalCoordinates: [],
-        rotation: [0, 0, 0],
+        rotation: [0, 0, 0] as Vector3,
         bitDepth: 8,
         viewport: 0,
         radius: 1,
         timestamp: 1494695001688,
         interpolation: false,
-        position: [6, 6, 6],
+        position: [6, 6, 6] as Vector3,
         treeId: 4,
         resolution: 1,
       },
-    } as UpdateActionWithoutIsolationRequirement,
+    },
     {
       name: "createNode" as const,
       value: {
         actionTracingId: SKELETON_TRACING_ID,
         id: 10,
         additionalCoordinates: [],
-        rotation: [0, 0, 0],
+        rotation: [0, 0, 0] as Vector3,
         bitDepth: 8,
         viewport: 0,
         radius: 1,
         timestamp: 1494695001688,
         interpolation: false,
-        position: [7, 7, 7],
+        position: [7, 7, 7] as Vector3,
         treeId: 4,
         resolution: 1,
       },
-    } as UpdateActionWithoutIsolationRequirement,
+    },
     {
       name: "createEdge" as const,
       value: {
@@ -412,7 +412,7 @@ export const mergeSegment5And6WithAgglomerateTree1And4 = [
         source: 8,
         target: 9,
       },
-    } as UpdateActionWithoutIsolationRequirement,
+    },
     {
       name: "createEdge" as const,
       value: {
@@ -421,7 +421,7 @@ export const mergeSegment5And6WithAgglomerateTree1And4 = [
         source: 9,
         target: 10,
       },
-    } as UpdateActionWithoutIsolationRequirement,
+    },
   ],
   [
     {
@@ -429,10 +429,10 @@ export const mergeSegment5And6WithAgglomerateTree1And4 = [
       value: {
         actionTracingId: VOLUME_TRACING_ID,
         id: 4,
-        anchorPosition: [5, 5, 5],
+        anchorPosition: [5, 5, 5] as Vector3,
       },
     },
-  ] as UpdateActionWithoutIsolationRequirement[],
+  ],
 ];
 
 export const mergeSegment5And6WithAgglomerateTree1 = [
@@ -466,7 +466,7 @@ export const mergeSegment5And6WithAgglomerateTree1 = [
       value: {
         actionTracingId: VOLUME_TRACING_ID,
         id: 4,
-        anchorPosition: [5, 5, 5],
+        anchorPosition: [5, 5, 5] as Vector3,
       },
     },
   ],
@@ -484,7 +484,7 @@ export const mergeSegment3And6WithAgglomerateTree1 = [
         agglomerateId2: 6,
       },
     },
-  ] as UpdateActionWithoutIsolationRequirement[],
+  ],
   [
     {
       name: "mergeSegmentItems" as const,
@@ -496,7 +496,7 @@ export const mergeSegment3And6WithAgglomerateTree1 = [
         segmentId2: 6,
       },
     },
-  ] as UpdateActionWithoutIsolationRequirement[],
+  ],
   [
     {
       name: "createNode" as const,
@@ -504,13 +504,13 @@ export const mergeSegment3And6WithAgglomerateTree1 = [
         actionTracingId: SKELETON_TRACING_ID,
         id: 7,
         additionalCoordinates: [],
-        rotation: [0, 0, 0],
+        rotation: [0, 0, 0] as Vector3,
         bitDepth: 8,
         viewport: 0,
         radius: 1,
         timestamp: 1494695001688,
         interpolation: false,
-        position: [6, 6, 6],
+        position: [6, 6, 6] as Vector3,
         treeId: 3,
         resolution: 1,
       },
@@ -521,13 +521,13 @@ export const mergeSegment3And6WithAgglomerateTree1 = [
         actionTracingId: SKELETON_TRACING_ID,
         id: 8,
         additionalCoordinates: [],
-        rotation: [0, 0, 0],
+        rotation: [0, 0, 0] as Vector3,
         bitDepth: 8,
         viewport: 0,
         radius: 1,
         timestamp: 1494695001688,
         interpolation: false,
-        position: [7, 7, 7],
+        position: [7, 7, 7] as Vector3,
         treeId: 3,
         resolution: 1,
       },
@@ -550,17 +550,17 @@ export const mergeSegment3And6WithAgglomerateTree1 = [
         target: 8,
       },
     },
-  ] as UpdateActionWithoutIsolationRequirement[],
+  ],
   [
     {
       name: "updateSegmentPartial" as const,
       value: {
         actionTracingId: VOLUME_TRACING_ID,
         id: 1,
-        anchorPosition: [3, 3, 3],
+        anchorPosition: [3, 3, 3] as Vector3,
       },
     },
-  ] as UpdateActionWithoutIsolationRequirement[],
+  ],
 ];
 
 export const splitSegment2And3WithAgglomerateTree1 = [
@@ -574,7 +574,7 @@ export const splitSegment2And3WithAgglomerateTree1 = [
         agglomerateId: 1,
       },
     },
-  ] as UpdateActionWithoutIsolationRequirement[],
+  ],
   [
     {
       name: "createTree" as const,
@@ -582,14 +582,14 @@ export const splitSegment2And3WithAgglomerateTree1 = [
         actionTracingId: SKELETON_TRACING_ID,
         id: 4,
         updatedId: undefined,
-        color: [0.6784313725490196, 0.1411764705882353, 0.050980392156862744],
+        color: [0.6784313725490196, 0.1411764705882353, 0.050980392156862744] as Vector3,
         name: "agglomerate 1339 (volumeTracingId)",
         timestamp: 1494695001688,
         comments: [],
         branchPoints: [],
         groupId: undefined,
         isVisible: true,
-        type: "AGGLOMERATE",
+        type: "AGGLOMERATE" as const,
         edgesAreVisible: true,
         metadata: [],
         agglomerateInfo: {
@@ -616,14 +616,14 @@ export const splitSegment2And3WithAgglomerateTree1 = [
         target: 6,
       },
     },
-  ] as UpdateActionWithoutIsolationRequirement[],
+  ],
   [
     {
       name: "createSegment" as const,
       value: {
         actionTracingId: VOLUME_TRACING_ID,
         id: 1339,
-        anchorPosition: [2, 2, 2],
+        anchorPosition: [2, 2, 2] as Vector3,
         additionalCoordinates: undefined,
         name: null,
         color: null,
@@ -632,14 +632,14 @@ export const splitSegment2And3WithAgglomerateTree1 = [
         creationTime: 1494695001688,
       },
     },
-  ] as UpdateActionWithoutIsolationRequirement[],
+  ],
   [
     {
-      name: "createSegment",
+      name: "createSegment" as const,
       value: {
         actionTracingId: VOLUME_TRACING_ID,
         id: 1,
-        anchorPosition: [3, 3, 3],
+        anchorPosition: [3, 3, 3] as Vector3,
         additionalCoordinates: undefined,
         name: null,
         color: null,
@@ -648,7 +648,7 @@ export const splitSegment2And3WithAgglomerateTree1 = [
         creationTime: 1494695001688,
       },
     },
-  ] as UpdateActionWithoutIsolationRequirement[],
+  ],
 ];
 
 export const splitSegment1And2WithAgglomerateTree1 = [
@@ -662,7 +662,7 @@ export const splitSegment1And2WithAgglomerateTree1 = [
         agglomerateId: 1,
       },
     },
-  ] as UpdateActionWithoutIsolationRequirement[],
+  ],
   [
     {
       name: "createTree" as const,
@@ -670,14 +670,14 @@ export const splitSegment1And2WithAgglomerateTree1 = [
         actionTracingId: SKELETON_TRACING_ID,
         id: 4,
         updatedId: undefined,
-        color: [0.6784313725490196, 0.1411764705882353, 0.050980392156862744],
+        color: [0.6784313725490196, 0.1411764705882353, 0.050980392156862744] as Vector3,
         name: "agglomerate 1339 (volumeTracingId)",
         timestamp: 1494695001688,
         comments: [],
         branchPoints: [],
         groupId: undefined,
         isVisible: true,
-        type: "AGGLOMERATE",
+        type: "AGGLOMERATE" as const,
         edgesAreVisible: true,
         metadata: [],
         agglomerateInfo: {
@@ -704,14 +704,14 @@ export const splitSegment1And2WithAgglomerateTree1 = [
         target: 5,
       },
     },
-  ] as UpdateActionWithoutIsolationRequirement[],
+  ],
   [
     {
-      name: "createSegment",
+      name: "createSegment" as const,
       value: {
         actionTracingId: VOLUME_TRACING_ID,
         id: 1339,
-        anchorPosition: [2, 2, 2],
+        anchorPosition: [2, 2, 2] as Vector3,
         additionalCoordinates: undefined,
         name: null,
         color: null,
@@ -720,7 +720,7 @@ export const splitSegment1And2WithAgglomerateTree1 = [
         creationTime: 1494695001688,
       },
     },
-  ] as UpdateActionWithoutIsolationRequirement[],
+  ],
 ];
 
 export const splitSegment2And3WithAgglomerateTrees1And4And6 = [
@@ -743,7 +743,7 @@ export const splitSegment2And3WithAgglomerateTrees1And4And6 = [
         agglomerateId: 1,
       },
     },
-  ] as UpdateActionWithoutIsolationRequirement[],
+  ],
   [
     {
       name: "createTree" as const,
@@ -751,14 +751,14 @@ export const splitSegment2And3WithAgglomerateTrees1And4And6 = [
         actionTracingId: SKELETON_TRACING_ID,
         id: 6,
         updatedId: undefined,
-        color: [0.6784313725490196, 0.1411764705882353, 0.050980392156862744],
+        color: [0.6784313725490196, 0.1411764705882353, 0.050980392156862744] as Vector3,
         name: "agglomerate 1339 (volumeTracingId)",
         timestamp: 1494695001688,
         comments: [],
         branchPoints: [],
         groupId: undefined,
         isVisible: true,
-        type: "AGGLOMERATE",
+        type: "AGGLOMERATE" as const,
         edgesAreVisible: true,
         metadata: [],
         agglomerateInfo: {
@@ -794,14 +794,14 @@ export const splitSegment2And3WithAgglomerateTrees1And4And6 = [
         target: 6,
       },
     },
-  ] as UpdateActionWithoutIsolationRequirement[],
+  ],
   [
     {
-      name: "createSegment",
+      name: "createSegment" as const,
       value: {
         actionTracingId: VOLUME_TRACING_ID,
         id: 1,
-        anchorPosition: [2, 2, 2],
+        anchorPosition: [2, 2, 2] as Vector3,
         additionalCoordinates: undefined,
         name: null,
         color: null,
@@ -810,14 +810,14 @@ export const splitSegment2And3WithAgglomerateTrees1And4And6 = [
         creationTime: 1494695001688,
       },
     },
-  ] as UpdateActionWithoutIsolationRequirement[],
+  ],
   [
     {
-      name: "createSegment",
+      name: "createSegment" as const,
       value: {
         actionTracingId: VOLUME_TRACING_ID,
         id: 1339,
-        anchorPosition: [3, 3, 3],
+        anchorPosition: [3, 3, 3] as Vector3,
         additionalCoordinates: undefined,
         name: null,
         color: null,
@@ -826,5 +826,5 @@ export const splitSegment2And3WithAgglomerateTrees1And4And6 = [
         creationTime: 1494695001688,
       },
     },
-  ] as UpdateActionWithoutIsolationRequirement[],
+  ],
 ];

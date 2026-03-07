@@ -5,7 +5,6 @@ import {
   getNestedUpdateActions,
   setupWebknossosForTesting,
   type WebknossosTestContext,
-  getFlattenedUpdateActions,
 } from "test/helpers/apiHelpers";
 import { publishDebuggingState } from "test/helpers/debugging_state_serializer";
 import { WkDevFlags } from "viewer/api/wk_dev";

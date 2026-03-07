@@ -913,6 +913,12 @@ export type ServerBoundingBoxMinMaxTypeTuple = {
   height: number;
   depth: number;
 };
+
+export type TreeAgglomerateInfo = {
+  agglomerateId: number;
+  tracingId?: string | undefined;
+  mappingName?: string | undefined;
+};
 export type ServerSkeletonTracingTree = {
   branchPoints: Array<ServerBranchPoint>;
   color: ColorObject | null | undefined;
@@ -927,6 +933,7 @@ export type ServerSkeletonTracingTree = {
   type?: TreeType;
   edgesAreVisible?: boolean;
   metadata: MetadataEntryProto[];
+  agglomerateInfo?: TreeAgglomerateInfo | undefined;
 };
 
 // Note that this differs from APIMetadataEntry, because

@@ -1,0 +1,52 @@
+[
+  [
+    {
+      "name": "mergeAgglomerate",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "agglomerateId1": 4,
+        "agglomerateId2": 1,
+        "segmentId1": 4,
+        "segmentId2": 1,
+      },
+    },
+  ],
+  [
+    {
+      "name": "deleteSegment",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "id": 1,
+      },
+    },
+  ],
+  [
+    {
+      "name": "moveTreeComponent",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "nodeIds": [
+          4,
+        ],
+        "sourceId": 3,
+        "targetId": 5,
+      },
+    },
+    {
+      "name": "deleteTree",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "id": 3,
+      },
+    },
+    {
+      "name": "createEdge",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "source": 4,
+        "target": 9,
+        "treeId": 5,
+      },
+    },
+  ],
+]

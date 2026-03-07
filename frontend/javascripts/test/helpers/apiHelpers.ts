@@ -1,4 +1,5 @@
 import type { MeshSegmentInfo } from "admin/api/mesh";
+import type { MeshChunkDataRequestList } from "admin/api/mesh.ts";
 import {
   acquireAnnotationMutex,
   getDataset,
@@ -33,6 +34,7 @@ import {
 import type {
   APIAnnotation,
   APIDataset,
+  APIMeshFileInfo,
   APITracingStoreAnnotation,
   ElementClass,
   ServerSkeletonTracing,
@@ -44,6 +46,7 @@ import type { ApiInterface } from "viewer/api/api_latest";
 import WebknossosApi from "viewer/api/api_loader";
 import { setupApi } from "viewer/api/internal_api";
 import Constants, { ControlModeEnum, type Vector2 } from "viewer/constants";
+import type CustomLOD from "viewer/controller/custom_lod";
 import { setSceneController } from "viewer/controller/scene_controller_provider";
 import SegmentMeshController from "viewer/controller/segment_mesh_controller";
 import UrlManager from "viewer/controller/url_manager";
@@ -64,7 +67,10 @@ import { setModel, setStore } from "viewer/singletons";
 import { type NumberLike, type SaveQueueEntry, default as Store, startSaga } from "viewer/store";
 import { setSlowCompression } from "viewer/workers/slow_byte_array_lz4_compression.worker";
 import { type TestContext as BaseTestContext, type Mock, vi } from "vitest";
-import DATASET, { sampleHdf5AgglomerateName } from "../fixtures/dataset_server_object";
+import DATASET, {
+  sampleHdf5AgglomerateName,
+  sampleMappingFileName,
+} from "../fixtures/dataset_server_object";
 import {
   annotation as SKELETON_ANNOTATION,
   annotationProto as SKELETON_ANNOTATION_PROTO,
@@ -80,6 +86,7 @@ import {
   annotationProto as VOLUME_ANNOTATION_PROTO,
   tracing as VOLUME_TRACING,
 } from "../fixtures/volumetracing_server_objects";
+import { createUnitCubeBufferGeometry } from "./geometry_helpers";
 
 const TOKEN = "secure-token";
 const ANNOTATION_TYPE = "annotationTypeValue";
@@ -105,6 +112,7 @@ export interface WebknossosTestContext extends BaseTestContext {
   api: ApiInterface;
   tearDownPullQueues: () => void;
   receivedDataPerSaveRequest: Array<SaveQueueEntry[]>;
+  segmentLodGroups: Record<string, CustomLOD>;
 }
 
 export function getFlattenedUpdateActions(context: WebknossosTestContext) {
@@ -258,6 +266,88 @@ vi.mock("admin/rest_api.ts", async () => {
         throw new Error("No test has mocked the return value yet here.");
       },
     ),
+    getMeshfilesForDatasetLayer: vi.fn(
+      async (
+        _dataStoreUrl: string,
+        _dataset: APIDataset,
+        _layerName: string,
+      ): Promise<Array<APIMeshFileInfo>> => {
+        return [
+          {
+            name: sampleMappingFileName,
+            mappingName: null, // Set to null to be usable for proofreading helper meshes.
+            formatVersion: 3,
+          },
+        ];
+      },
+    ),
+  };
+});
+
+// Mocks required to mock precomputed meshes loading
+vi.mock("libs/draco.ts", async () => {
+  return {
+    getDracoLoader: vi.fn(() => ({
+      decodeDracoFileAsync: createUnitCubeBufferGeometry,
+    })),
+  };
+});
+
+vi.mock("admin/api/mesh.ts", async () => {
+  const actual = await vi.importActual<typeof import("admin/api/mesh.ts")>("admin/api/mesh.ts");
+
+  const getMeshfileChunksForSegment = vi.fn(
+    async (
+      _dataStoreUrl: string,
+      _datasetId: string,
+      _layerName: string,
+      _meshFile: APIMeshFileInfo,
+      segmentId: number,
+      _targetMappingName: string | null | undefined,
+      _editableMappingTracingId: string | null | undefined,
+    ): Promise<MeshSegmentInfo> => {
+      console.log("Requesting default mesh segment info in mocked test.");
+      await sleep(100);
+      return {
+        meshFormat: "draco",
+        lods: [
+          {
+            chunks: [
+              {
+                position: [0, 0, 0],
+                byteOffset: 0,
+                byteSize: 666,
+                unmappedSegmentId: segmentId,
+              },
+            ],
+            transform: [
+              [1, 0, 0, 0],
+              [0, 1, 0, 0],
+              [0, 0, 1, 0],
+            ], // 4x3 matrix
+          },
+        ],
+        chunkScale: [1, 1, 1],
+      };
+    },
+  );
+
+  const getMeshfileChunkData = vi.fn(
+    async (
+      _dataStoreUrl: string,
+      _datasetId: string,
+      _layerName: string,
+      _batchDescription: MeshChunkDataRequestList,
+    ): Promise<ArrayBuffer[]> => {
+      return [new ArrayBuffer()];
+    },
+  );
+
+  return {
+    ...actual,
+    getMeshfileChunksForSegment,
+    getMeshfileChunkData,
+    // TODOM
   };
 });
 
@@ -536,6 +626,14 @@ export async function setupWebknossosForTesting(
   );
   vi.mocked(parseProtoAnnotation).mockReturnValue(cloneDeep(annotationProto));
 
+  // clear segmentLodGroups
+  if (testContext.segmentLodGroups == null) {
+    testContext.segmentLodGroups = {};
+  }
+  const { segmentLodGroups } = testContext;
+  Object.keys(segmentLodGroups).forEach((key) => {
+    delete segmentLodGroups[key];
+  });
   setSceneController({
     // @ts-expect-error
     name: "This is a dummy scene controller so that getSceneController works in the tests.",

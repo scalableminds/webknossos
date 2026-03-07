@@ -1,40 +1,85 @@
-import { getUpdateActionLog } from "admin/rest_api";
+import { getAgglomeratesForSegmentsFromTracingstore, getUpdateActionLog } from "admin/rest_api";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
-import { sleep } from "libs/utils";
+import { getAdaptToTypeFunction, sleep } from "libs/utils";
 import compact from "lodash-es/compact";
 import sum from "lodash-es/sum";
 import { buffers, type Channel } from "redux-saga";
-import { actionChannel, call, delay, flush, fork, put, race, takeEvery } from "typed-redux-saga";
+import {
+  actionChannel,
+  all,
+  call,
+  delay,
+  flush,
+  fork,
+  put,
+  race,
+  spawn,
+  takeEvery,
+} from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
-import { SagaIdentifier } from "viewer/constants";
+import { SagaIdentifier, type Vector3 } from "viewer/constants";
+import {
+  getSegmentationLayerByName,
+  getVisibleSegmentationLayer,
+} from "viewer/model/accessors/dataset_accessor";
+import {
+  getAllLoadedMeshes,
+  getSegmentsForLayer,
+  getVolumeTracingById,
+  isMeshLoaded,
+} from "viewer/model/accessors/volumetracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
-import { showManyBucketUpdatesWarningAction } from "viewer/model/actions/annotation_actions";
+import {
+  removeMeshAction,
+  showManyBucketUpdatesWarningAction,
+} from "viewer/model/actions/annotation_actions";
+import {
+  ensureLayerMappingsAreLoadedAction,
+  type SetLayerMappingsAction,
+} from "viewer/model/actions/dataset_actions";
 import {
   dispatchEnsureTracingsWereDiffedToSaveQueueAction,
   type EnsureHasNewestVersionAction,
   finishedApplyingMissingUpdatesAction,
   finishedRebaseAction,
+  finishForwardingUpdateActionsAction,
   type NotifyAboutUpdatedBucketsAction,
   prepareRebaseAction,
+  setPendingProofreadingOperationInfoAction,
   setVersionNumberAction,
+  startForwardingUpdateActionsAction,
 } from "viewer/model/actions/save_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
-import { applyVolumeUpdateActionsFromServerAction } from "viewer/model/actions/volumetracing_actions";
+import {
+  applyVolumeUpdateActionsFromServerAction,
+  setHasEditableMappingAction,
+  setMappingIsLockedAction,
+} from "viewer/model/actions/volumetracing_actions";
 import { globalPositionToBucketPositionWithMag } from "viewer/model/helpers/position_converter";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import { Model, Store } from "viewer/singletons";
-import type { NumberLike, SkeletonTracing, StoreAnnotation, VolumeTracing } from "viewer/store";
+import type {
+  NumberLike,
+  NumberLikeMap,
+  SkeletonTracing,
+  StoreAnnotation,
+  VolumeTracing,
+} from "viewer/store";
 import {
   enforceExecutionAsBusyBlockingUnlessAllowed,
   takeEveryWithBatchActionSupport,
 } from "../saga_helpers";
-import { splitAgglomerateInMapping, updateMappingWithMerge } from "../volume/proofread_saga";
+import {
+  refreshAffectedSegmentItemsAndMeshes,
+  splitAgglomerateInMapping,
+  updateMappingWithMerge,
+} from "../volume/proofreading/proofread_saga";
 import {
   saveQueueEntriesToServerUpdateActionBatches,
   updateSaveQueueEntriesToStateAfterRebase,
@@ -52,9 +97,9 @@ function* setupSavingToServer(): Saga<void> {
   yield* takeEvery("WK_READY", watchForNumberOfBucketsInSaveQueue);
 }
 
-const VERSION_POLL_INTERVAL_COLLAB = 10 * 1000;
-const VERSION_POLL_INTERVAL_READ_ONLY = 5 * 1000;
-const VERSION_POLL_INTERVAL_SINGLE_EDITOR = 30 * 1000;
+export const VERSION_POLL_INTERVAL_COLLAB = process.env.IS_TESTING ? 500 : 10 * 1000;
+const VERSION_POLL_INTERVAL_READ_ONLY = process.env.IS_TESTING ? 250 : 5 * 1000;
+const VERSION_POLL_INTERVAL_SINGLE_EDITOR = process.env.IS_TESTING ? 1 * 1000 : 30 * 1000;
 // interval at which the number of buckets in save queue is checked
 const CHECK_NUMBER_OF_BUCKETS_IN_SAVE_QUEUE_INTERVAL_MS = 10 * 1000;
 // sliding time window for which the number of buckets in save queue is summed up
@@ -171,22 +216,138 @@ function* fetchNewestMissingUpdateActions(): Saga<APIUpdateActionBatch[]> {
 
 const SAVING_CONFLICT_TOAST_KEY = "save_conflicts_warning";
 
+// This type is designed to include information needed after applying update actions via tryToIncorporateActions.
+// This info is passed up the saga calling hierarchy.
+// E.g. info about which auxiliary agglomerate meshes need reloading and which need to be removed.
+// This info can then be used to trigger side effects after saving is done to e.g. reload the newest auxiliary agglomerate meshes.
+
+type ApplyingUpdateArtifacts = {
+  meshIdsToRemovePerLayer: Map<string, Set<number>>;
+  meshIdsToLoadPerLayer: Map<string, Set<number>>;
+};
+
+type ApplyingUpdateResults = { success: boolean; artifactInfos: ApplyingUpdateArtifacts };
+
+const FailedIncorporateActionsReturnValue: ApplyingUpdateResults = {
+  success: false,
+  artifactInfos: {
+    meshIdsToRemovePerLayer: new Map(),
+    meshIdsToLoadPerLayer: new Map(),
+  },
+};
+const SuccessEmptyIncorporateActionsReturnValue: ApplyingUpdateResults = {
+  success: true,
+  artifactInfos: {
+    meshIdsToRemovePerLayer: new Map(),
+    meshIdsToLoadPerLayer: new Map(),
+  },
+};
+
+// This function updates the agglomerate ids of source- and targetInformation from proofreading actions,
+// to ensure that the post processing of a proofreading interaction by a saga in proofread_saga.tsx has
+// agglomerate id information from the state where the latest backend updates were applied but the own
+// mapping changes are not yet applied. This is needed to have correct information about what agglomerate ids
+// were actually affected by a proofreading action done by the local user. The info correctness is essential
+// to properly reload and synchronize loaded agglomerate skeletons and meshes.
+function* updatePendingProofreadingOperationInfoAction() {
+  const proofreadingPostProcessingInfo = yield* select(
+    (state) => state.save.proofreadingPostProcessingInfo,
+  );
+  if (proofreadingPostProcessingInfo == null) {
+    return;
+  }
+  const { tracingId, sourceInfo, targetInfo } = proofreadingPostProcessingInfo;
+  const activeMapping = yield* select(
+    (store) => store.temporaryConfiguration.activeMappingByLayer[tracingId],
+  );
+  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
+  const sourceAgglomerateId = (activeMapping.mapping as NumberLikeMap | undefined)?.get(
+    adaptToType(sourceInfo.unmappedId),
+  );
+  const targetAgglomerateId = targetInfo
+    ? (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(targetInfo.unmappedId))
+    : 0;
+  if (sourceAgglomerateId != null && targetAgglomerateId !== null) {
+    yield* put(
+      setPendingProofreadingOperationInfoAction({
+        tracingId,
+        sourceInfo: { ...sourceInfo, agglomerateId: Number(sourceAgglomerateId) },
+        targetInfo: targetInfo
+          ? { ...targetInfo, agglomerateId: Number(targetAgglomerateId) }
+          : null,
+      }),
+    );
+  } else {
+    // In the rare case where after applying the backend updates the mapping information
+    // for the source and targetInfo is no longer present in the mapping, load this missing info from the backend.
+    const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
+    const annotationId = yield* select((state) => state.annotation.annotationId);
+    const annotationVersion = yield* select((state) => state.annotation.version);
+    const idsToRequest = targetInfo
+      ? [sourceInfo.unmappedId, targetInfo.unmappedId]
+      : [sourceInfo.unmappedId];
+    const agglomerateInfoFromServer = yield* call(
+      getAgglomeratesForSegmentsFromTracingstore,
+      tracingStoreUrl,
+      tracingId,
+      idsToRequest,
+      annotationId,
+      annotationVersion,
+    );
+    const adaptToType = getAdaptToTypeFunction(agglomerateInfoFromServer);
+    const sourceAgglomerateIdFromServer = (
+      agglomerateInfoFromServer as NumberLikeMap | undefined
+    )?.get(adaptToType(sourceInfo.unmappedId));
+    const targetAgglomerateIdFromServer = targetInfo
+      ? (agglomerateInfoFromServer as NumberLikeMap | undefined)?.get(
+          adaptToType(targetInfo.unmappedId),
+        )
+      : 0;
+    yield* put(
+      setPendingProofreadingOperationInfoAction({
+        tracingId,
+        sourceInfo: {
+          ...sourceInfo,
+          agglomerateId: Number(sourceAgglomerateIdFromServer ?? sourceInfo.agglomerateId),
+        },
+        targetInfo: targetInfo
+          ? {
+              ...targetInfo,
+              agglomerateId: Number(targetAgglomerateIdFromServer ?? targetInfo.agglomerateId),
+            }
+          : null,
+      }),
+    );
+  }
+}
+
 function* applyNewestMissingUpdateActions(
   actions: APIUpdateActionBatch[],
-): Saga<{ successful: boolean }> {
+  isRebasing: boolean,
+): Saga<ApplyingUpdateResults> {
   if (actions.length === 0) {
     Toast.close(SAVING_CONFLICT_TOAST_KEY);
-    return { successful: true };
+    return SuccessEmptyIncorporateActionsReturnValue;
   }
   const allowSave = yield* select(
     (state) =>
       state.annotation.restrictions.allowSave && state.annotation.isUpdatingCurrentlyAllowed,
   );
   try {
-    if ((yield* tryToIncorporateActions(actions, false)).success) {
-      // Updates the annotation state used for future rebase operation the the current state with the missingUpdateActions applied.
-      yield* put(finishedApplyingMissingUpdatesAction());
-      return { successful: true };
+    if (!isRebasing) {
+      // If no rebasing is currently done, we still need to inform the diffing saga, that the currently replayed
+      // update actions originate from the server and should not be considered during diffing.
+      yield put(startForwardingUpdateActionsAction());
+    }
+    const { success, artifactInfos } = yield* tryToIncorporateActions(actions, false);
+    // Updates the annotation state used for future rebase operation the the current state with the missingUpdateActions applied.
+    yield* put(finishedApplyingMissingUpdatesAction());
+    if (!isRebasing) {
+      yield* put(finishForwardingUpdateActionsAction());
+    }
+    if (success) {
+      yield* call(updatePendingProofreadingOperationInfoAction);
+      return { success: true, artifactInfos };
     }
   } catch (exc) {
     // Afterwards, the user will be asked to reload the page.
@@ -210,7 +371,7 @@ function* applyNewestMissingUpdateActions(
     sticky: true,
     key: SAVING_CONFLICT_TOAST_KEY,
   });
-  return { successful: false };
+  return FailedIncorporateActionsReturnValue;
 }
 
 function* diffTracingsAndPrepareRebase(): Saga<void> {
@@ -242,11 +403,11 @@ function* reapplyUpdateActionsFromSaveQueue(
   // save queue entries to the rebase.
   appliedBackendUpdateActions: APIUpdateActionBatch[],
   annotationBeforeRebase: StoreAnnotation,
-): Saga<{ successful: boolean }> {
+): Saga<ApplyingUpdateResults> {
   const saveQueueEntries = yield* select((state) => state.save.queue);
   const currentVersion = yield* select((state) => state.annotation.version);
   if (saveQueueEntries.length === 0) {
-    return { successful: true };
+    return SuccessEmptyIncorporateActionsReturnValue;
   }
   // Potentially update save queue entries to state after applying missing backend actions.
   // Properties like unmapped segment ids of proofreading actions might have changed and are updated here.
@@ -261,16 +422,14 @@ function* reapplyUpdateActionsFromSaveQueue(
       updatedSaveQueue,
       currentVersion,
     );
-    const successfullyAppliedSaveQueueUpdates = (yield* tryToIncorporateActions(
-      saveQueueAsServerUpdateActionBatches,
-      true,
-    )).success;
+    const { success: successfullyAppliedSaveQueueUpdates, artifactInfos } =
+      yield* tryToIncorporateActions(saveQueueAsServerUpdateActionBatches, true);
     if (successfullyAppliedSaveQueueUpdates) {
       yield* put(finishedRebaseAction());
-      return { successful: true };
+      return { success: true, artifactInfos };
     }
   }
-  return { successful: false };
+  return FailedIncorporateActionsReturnValue;
 }
 
 type RebasingSuccessInfo = { successful: boolean; shouldTerminate: boolean };
@@ -280,6 +439,7 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   // saveQueueEntries should not change during performRebasing saga. When liveCollab is enabled, this is enforced via busy blocking.
   // When liveCollab is disabled, this code typically runs in read-only mode where the save queue is empty.
   const saveQueueEntries = yield* select((state) => state.save.queue);
+  const hasNewActionsFromBackend = missingUpdateActions.length > 0;
 
   // Side note: In a scenario where a user has an annotation open that they are not allowed to edit but another user is actively editing,
   // this code will notice that there are missingUpdateActions and apply them. This should not trigger a full rebase and should
@@ -287,7 +447,7 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   const needsRebasing =
     WkDevFlags.liveCollab &&
     othersMayEdit &&
-    missingUpdateActions.length > 0 &&
+    hasNewActionsFromBackend &&
     saveQueueEntries.length > 0;
   const annotationBeforeRebase = yield* select((state) => state.annotation);
   if (needsRebasing) {
@@ -297,15 +457,20 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   }
 
   try {
-    if (missingUpdateActions.length > 0) {
-      const { successful } = yield* call(applyNewestMissingUpdateActions, missingUpdateActions);
-      if (!successful) {
+    if (hasNewActionsFromBackend) {
+      const applyingResult = yield* call(
+        applyNewestMissingUpdateActions,
+        missingUpdateActions,
+        needsRebasing,
+      );
+      if (!applyingResult.success) {
         return { successful: false, shouldTerminate: false };
       }
+      yield* call(resolveApplyingUpdateArtifacts, applyingResult.artifactInfos);
     }
     if (needsRebasing) {
       // If no rebasing was necessary, the pending update actions in the save queue must not be reapplied.
-      const { successful } = yield* call(
+      const { success: successful } = yield* call(
         reapplyUpdateActionsFromSaveQueue,
         missingUpdateActions,
         annotationBeforeRebase,
@@ -334,7 +499,7 @@ const REBASING_BUSY_BLOCK_REASON = "Syncing Annotation";
 function* watchForNewerAnnotationVersion(): Saga<void> {
   yield* call(ensureWkInitialized);
 
-  const channel = yield* actionChannel(
+  const channel = yield* actionChannel<EnsureHasNewestVersionAction>(
     ["ENSURE_HAS_NEWEST_VERSION"],
     // If multiple actions are sent to this buffer (without consumption in between),
     // we want to flush them all at once. This is achieved by using an expanding buffer
@@ -389,7 +554,7 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
 export function* tryToIncorporateActions(
   newerActions: APIUpdateActionBatch[],
   areUnsavedChangesOfUser: boolean,
-): Saga<{ success: boolean }> {
+): Saga<{ success: boolean; artifactInfos: ApplyingUpdateArtifacts }> {
   // After all actions were incorporated, volume buckets and hdf5 mappings
   // are reloaded (if they exist and necessary). This is done as a
   // "finalization step", because it requires that the newest version is set
@@ -401,9 +566,21 @@ export function* tryToIncorporateActions(
       yield* call(fn);
     }
   }
+
+  function addToMap<T>(map: Map<string, Set<T>>, key: string, value: T) {
+    if (!map.has(key)) {
+      map.set(key, new Set());
+    }
+    map.get(key)?.add(value);
+  }
+  // Tracks which agglomerate ids were changed of which the frontend has loaded meshes to assist proofreading.
+  // Maps from the old agglomerate id to a potentially new one.
+  // Duplicates are later ignored when refreshing the meshes.
+  const meshIdsToRemovePerLayer: Map<string, Set<number>> = new Map();
+  const meshIdsToLoadPerLayer: Map<string, Set<number>> = new Map();
+
   for (const actionBatch of newerActions) {
-    const agglomerateIdsToRefresh = new Set<NumberLike>();
-    let volumeTracingIdOfMapping = null;
+    const agglomerateIdsToRefreshPerLayer: Map<string, Set<NumberLike>> = new Map();
     for (const action of actionBatch.value) {
       switch (action.name) {
         /////////////
@@ -521,7 +698,7 @@ export function* tryToIncorporateActions(
               action.value,
             );
             yield* call(finalize);
-            return { success: false };
+            return FailedIncorporateActionsReturnValue;
           }
           const activeMapping = yield* select(
             (store) => store.temporaryConfiguration.activeMappingByLayer[actionTracingId],
@@ -534,6 +711,28 @@ export function* tryToIncorporateActions(
             agglomerateId2,
             !areUnsavedChangesOfUser,
           );
+          if (areUnsavedChangesOfUser) {
+            // As this is a self-triggered proofreading action,  the proofreading saga
+            // itself takes care of reloading the meshes, no need to track this here.
+            break;
+          }
+          // Only reload meshes if the action is regarding the active proofreading volume annotation.
+          const hasAnyOfBothAgglomerateMeshesLoaded = yield* select(
+            (state) =>
+              isMeshLoaded(state, agglomerateId1, actionTracingId) ||
+              isMeshLoaded(state, agglomerateId2, actionTracingId),
+          );
+          if (!hasAnyOfBothAgglomerateMeshesLoaded) {
+            break;
+          }
+          // agglomerateId2 is merged into agglomerateId1 and the frontend currently has at least one of the meshes loaded.
+          // Outdate agglomerateId1 and agglomerateId2. Only agglomerateId1 needs to be reloaded however.
+          // Track outdated and updated agglomerateIds to refresh after applying updates.
+          addToMap(meshIdsToRemovePerLayer, actionTracingId, agglomerateId1);
+          addToMap(meshIdsToRemovePerLayer, actionTracingId, agglomerateId2);
+          addToMap(meshIdsToLoadPerLayer, actionTracingId, agglomerateId1);
+          // Remove refresh entry of agglomerateId2 as it was merged into agglomerateId1.
+          meshIdsToLoadPerLayer.get(actionTracingId)?.delete(agglomerateId2);
           break;
         }
         case "splitAgglomerate": {
@@ -548,25 +747,53 @@ export function* tryToIncorporateActions(
           // Note that a "normal" split typically contains multiple splitAgglomerate
           // actions (each action merely removes an edge in the graph).
           const { agglomerateId, actionTracingId } = action.value;
-          volumeTracingIdOfMapping = actionTracingId;
-          if (agglomerateId) {
+          if (agglomerateId != null) {
             // The action already contains the info about what agglomerate was split.
             // As the split could have happened between segments not loaded in this client,
             // we need to reload in case any segment of the agglomerate is loaded and
             // cannot guess the expected result without asking the backend.
-            agglomerateIdsToRefresh.add(agglomerateId);
+            addToMap(agglomerateIdsToRefreshPerLayer, actionTracingId, agglomerateId);
           } else {
             console.log(
               "Cannot apply splitAgglomerate action due to agglomerateId not being provided in the action",
               action.value,
             );
             yield* call(finalize);
-            return { success: false };
+            return FailedIncorporateActionsReturnValue;
           }
-
           break;
         }
 
+        case "updateMappingName": {
+          const { actionTracingId, mappingName, isEditable, isLocked } = action.value;
+          let mappingType;
+          if (mappingName) {
+            let volumeDataLayer = yield* select((state) =>
+              getSegmentationLayerByName(state.dataset, actionTracingId),
+            );
+            if (volumeDataLayer.mappings == null || volumeDataLayer.agglomerates == null) {
+              const setMappingsChannel =
+                yield* actionChannel<SetLayerMappingsAction>("SET_LAYER_MAPPINGS");
+              yield* put(ensureLayerMappingsAreLoadedAction(actionTracingId));
+              yield* take(setMappingsChannel);
+            }
+            mappingType =
+              (volumeDataLayer.agglomerates ?? []).indexOf(mappingName) >= 0
+                ? ("HDF5" as const)
+                : ("JSON" as const);
+          }
+          yield* put(setMappingAction(actionTracingId, mappingName, mappingType, true));
+          const volume = yield* select((state) =>
+            getVolumeTracingById(state.annotation, actionTracingId),
+          );
+          if (!volume.hasEditableMapping && isEditable) {
+            yield* put(setHasEditableMappingAction(actionTracingId));
+          }
+          if (!volume.mappingIsLocked && isLocked) {
+            yield* put(setMappingIsLockedAction(actionTracingId));
+          }
+          break;
+        }
         /*
          * Currently NOT supported:
          */
@@ -584,7 +811,6 @@ export function* tryToIncorporateActions(
 
         // Volume
         case "removeFallbackLayer":
-        case "updateMappingName": // Refactor mapping activation first before implementing this.
 
         // Legacy! The following actions are legacy actions and don't
         // need to be supported.
@@ -597,7 +823,7 @@ export function* tryToIncorporateActions(
         case "updateUserBoundingBoxesInVolumeTracing": {
           console.error("Cannot apply action", action.name);
           yield* call(finalize);
-          return { success: false };
+          return FailedIncorporateActionsReturnValue;
         }
         default: {
           action satisfies never;
@@ -605,38 +831,128 @@ export function* tryToIncorporateActions(
       }
     }
     yield* put(setVersionNumberAction(actionBatch.version));
-    if (agglomerateIdsToRefresh.size > 0 && volumeTracingIdOfMapping) {
-      const agglomerateIdToRefresh = agglomerateIdsToRefresh.values().next().value;
-      if (agglomerateIdToRefresh == null) {
-        continue;
-      }
-      const activeMapping = yield* select(
-        (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracingIdOfMapping],
-      );
-      const splitMapping = yield* splitAgglomerateInMapping(
-        activeMapping,
+    for (const [
+      tracingId,
+      agglomerateIdsToRefreshSet,
+    ] of agglomerateIdsToRefreshPerLayer.entries()) {
+      if (agglomerateIdsToRefreshSet && agglomerateIdsToRefreshSet.size > 0) {
         //  TODO: Add 64 bit support
-        Number(agglomerateIdToRefresh),
-        volumeTracingIdOfMapping,
-        actionBatch.version,
-      );
+        const agglomerateIdToRefresh = [...agglomerateIdsToRefreshSet.values().map(Number)];
+        if (agglomerateIdToRefresh == null) {
+          continue;
+        }
+        const activeMapping = yield* select(
+          (store) => store.temporaryConfiguration.activeMappingByLayer[tracingId],
+        );
+        const splitMappingInfo = yield* splitAgglomerateInMapping(
+          activeMapping,
+          agglomerateIdToRefresh[0],
+          tracingId,
+          actionBatch.version,
+          false,
+          // In the very rare case where split actions of two different agglomerate ids were included in the same version
+          // we also request those other agglomerate ids in the same request to save requests.
+          agglomerateIdToRefresh.slice(1),
+        );
 
-      yield* put(
-        setMappingAction(
-          volumeTracingIdOfMapping,
-          activeMapping.mappingName,
-          activeMapping.mappingType,
-          true, // Might be optimistic. The mapping might not be in in the same state as on the server when reapplying local updates.
-          // The finishedApplyingMissingUpdatesAction action takes care of storing the newest info in RebaseRelevantAnnotationState
-          // after the backend updates are applied.
-          {
-            mapping: splitMapping || undefined,
-          },
-        ),
-      );
+        if (splitMappingInfo == null) {
+          const message =
+            "Failed to apply an agglomerate split action from other user. Please refresh the page to resync.";
+          console.error(message);
+          Toast.error(message);
+          return FailedIncorporateActionsReturnValue;
+        }
+        const { splitMapping, oldAgglomerateIds, newAgglomerateIds } = splitMappingInfo;
+
+        yield* put(
+          setMappingAction(
+            tracingId,
+            activeMapping.mappingName,
+            activeMapping.mappingType,
+            true, // Might be optimistic. The mapping might not be in in the same state as on the server when reapplying local updates.
+            // The finishedApplyingMissingUpdatesAction action takes care of storing the newest info in RebaseRelevantAnnotationState
+            // after the backend updates are applied.
+            {
+              mapping: splitMapping || undefined,
+            },
+          ),
+        );
+        const loadedMeshes = yield select((state) => getAllLoadedMeshes(state, tracingId));
+        const loadedMeshesOfSplitAction = loadedMeshes.intersection(oldAgglomerateIds);
+        if (loadedMeshesOfSplitAction.size > 0) {
+          oldAgglomerateIds.forEach((aggloId) => {
+            addToMap(meshIdsToRemovePerLayer, tracingId, aggloId);
+          });
+          newAgglomerateIds.forEach((aggloId) => {
+            addToMap(meshIdsToLoadPerLayer, tracingId, aggloId);
+          });
+        }
+      }
     }
   }
+
   yield* call(finalize);
-  return { success: true };
+  return {
+    success: true,
+    artifactInfos: { meshIdsToRemovePerLayer, meshIdsToLoadPerLayer },
+  };
 }
+
+// Should be called with spawn to not block the rebasing as this is done detached afterwards.
+function* resolveApplyingUpdateArtifacts(artifactInfos: ApplyingUpdateArtifacts) {
+  const activeVolumeTracingId = (yield* select(getVisibleSegmentationLayer))?.tracingId;
+  if (!activeVolumeTracingId) {
+    return;
+  }
+  yield* call(
+    removeOutdatedMeshes,
+
+    artifactInfos.meshIdsToRemovePerLayer,
+  );
+  yield* spawn(reloadMeshes, artifactInfos.meshIdsToLoadPerLayer);
+}
+
+function* removeOutdatedMeshes(
+  meshIdsToRemovePerLayer: ApplyingUpdateArtifacts["meshIdsToRemovePerLayer"],
+) {
+  // Remove all outdated meshes.
+  for (const [tracingId, meshIdsToRemove] of meshIdsToRemovePerLayer.entries()) {
+    for (const aggloId of meshIdsToRemove) {
+      yield* put(removeMeshAction(tracingId, Number(aggloId)));
+    }
+  }
+}
+
+// Potentially waits until saving is done. Thus, !must be called with spawn!.
+function* reloadMeshes(
+  meshIdsToReloadPerLayer: ApplyingUpdateArtifacts["meshIdsToRemovePerLayer"],
+) {
+  const refreshAffectedMeshesEffects = [];
+  for (const [tracingId, meshIdsToReload] of meshIdsToReloadPerLayer.entries()) {
+    const refreshList: Array<{
+      newAgglomerateId: number;
+      nodePosition: Vector3;
+    }> = [];
+    const { hasSegmentIndex } = yield* select((state) =>
+      getVolumeTracingById(state.annotation, tracingId),
+    );
+    const segments = yield* select((state) => getSegmentsForLayer(state, tracingId));
+
+    for (const agglomerateId of meshIdsToReload) {
+      const segmentPosition = segments.getNullable(agglomerateId)?.anchorPosition;
+      // If the annotation has a segment index, the seed position for the mesh generation is ignored. In that case we can simply use [0, 0, 0].
+      if (segmentPosition || hasSegmentIndex) {
+        refreshList.push({
+          newAgglomerateId: agglomerateId,
+          nodePosition: segmentPosition ?? [0, 0, 0],
+        });
+      }
+    }
+    refreshAffectedMeshesEffects.push(
+      call(refreshAffectedSegmentItemsAndMeshes, tracingId, refreshList),
+    );
+  }
+  yield* all(refreshAffectedMeshesEffects);
+}
+
 export default [setupSavingToServer, watchForNewerAnnotationVersion];

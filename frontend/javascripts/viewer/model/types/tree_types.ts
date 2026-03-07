@@ -1,5 +1,9 @@
 import DiffableMap from "libs/diffable_map";
-import type { AdditionalCoordinate, MetadataEntryProto } from "types/api_types";
+import type {
+  AdditionalCoordinate,
+  MetadataEntryProto,
+  TreeAgglomerateInfo,
+} from "types/api_types";
 import type { TreeType, Vector3 } from "viewer/constants";
 import type EdgeCollection from "viewer/model/edge_collection";
 
@@ -53,6 +57,7 @@ export type MutableTree = {
   type: TreeType;
   edgesAreVisible: boolean;
   metadata: MetadataEntryProto[];
+  agglomerateInfo?: TreeAgglomerateInfo | undefined;
 };
 
 // When changing Tree, remember to also update MutableTree
@@ -70,6 +75,7 @@ export type Tree = {
   readonly type: TreeType;
   readonly edgesAreVisible: boolean;
   readonly metadata: MetadataEntryProto[];
+  readonly agglomerateInfo?: TreeAgglomerateInfo;
 };
 
 export type TreeGroupTypeFlat = {

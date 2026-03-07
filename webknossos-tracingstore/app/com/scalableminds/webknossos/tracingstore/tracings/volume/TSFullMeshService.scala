@@ -37,11 +37,11 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     with FoxImplicits
     with LazyLogging {
 
-  def loadFor(annotationId: ObjectId, tracingId: String, fullMeshRequest: FullMeshRequest)(
+  def loadFor(annotationId: ObjectId, tracingId: String, fullMeshRequest: FullMeshRequest, version: Option[Long])(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Array[Byte]] =
     for {
-      tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
+      tracing <- annotationService.findVolume(annotationId, tracingId, version) ?~> "tracing.notFound"
       data <- if (fullMeshRequest.meshFileName.isDefined)
         loadFullMeshFromMeshFile(annotationId, tracingId, tracing, fullMeshRequest)
       else loadFullMeshFromAdHoc(annotationId, tracingId, tracing, fullMeshRequest)
@@ -56,9 +56,12 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       remoteFallbackLayer <- remoteFallbackLayerForVolumeTracing(tracing, annotationId)
       baseMappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
       fullMeshRequestAdapted = if (tracing.getHasEditableMapping)
-        fullMeshRequest.copy(mappingName = baseMappingName,
-                             editableMappingTracingId = Some(tracingId),
-                             mappingType = Some("HDF5"))
+        fullMeshRequest.copy(
+          mappingName = baseMappingName,
+          editableMappingTracingId = Some(tracingId),
+          annotationVersion = fullMeshRequest.annotationVersion.orElse(Some(tracing.version)),
+          mappingType = Some("HDF5")
+        )
       else fullMeshRequest
       array <- remoteDatastoreClient.loadFullMeshStl(remoteFallbackLayer, fullMeshRequestAdapted)
     } yield array
@@ -109,6 +112,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
         mag,
         mappingName,
         volumeTracingService.editableMappingTracingId(tracing, tracingId),
+        tracing.version,
         fullMeshRequest.additionalCoordinates
       )
       bucketPositions = bucketPositionsRaw.toSeq
@@ -127,6 +131,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
             fullMeshRequest.mappingName,
             fullMeshRequest.mappingType,
             fullMeshRequest.additionalCoordinates,
+            fullMeshRequest.annotationVersion,
             findNeighbors = false
           )
           loadMeshChunkFromAdHoc(annotationId, tracingId, tracing, adHocMeshRequest)
@@ -156,7 +161,8 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
         voxelSize.factor,
         fullMeshRequest.mappingName,
         fullMeshRequest.mappingType,
-        fullMeshRequest.additionalCoordinates
+        fullMeshRequest.additionalCoordinates,
+        fullMeshRequest.annotationVersion,
       )
       _ = visited += topLeft
       (vertices: Array[Float], neighbors) <- loadMeshChunkFromAdHoc(annotationId, tracingId, tracing, adHocMeshRequest)

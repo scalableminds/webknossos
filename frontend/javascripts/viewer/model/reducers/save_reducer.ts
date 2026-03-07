@@ -230,7 +230,7 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
         },
         save: {
           rebaseRelevantServerAnnotationState: {
-            isRebasing: { $set: true },
+            isRebasingOrForwarding: { $set: true },
           },
         },
       });
@@ -240,7 +240,27 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       return update(state, {
         save: {
           rebaseRelevantServerAnnotationState: {
-            isRebasing: { $set: false },
+            isRebasingOrForwarding: { $set: false },
+          },
+        },
+      });
+    }
+
+    case "START_FORWARDING_UPDATE_ACTIONS": {
+      return update(state, {
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            isRebasingOrForwarding: { $set: true },
+          },
+        },
+      });
+    }
+
+    case "FINISH_FORWARDING_UPDATE_ACTIONS": {
+      return update(state, {
+        save: {
+          rebaseRelevantServerAnnotationState: {
+            isRebasingOrForwarding: { $set: false },
           },
         },
       });
@@ -262,7 +282,7 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
-    case "DONE_SAVING":
+    case "SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE":
     case "FINISHED_APPLYING_MISSING_UPDATES": {
       return update(state, {
         save: {
@@ -283,6 +303,14 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
               $set: state.annotation.volumes,
             },
           },
+        },
+      });
+    }
+
+    case "SET_PENDING_PROOFREADING_OPERATION_INFO": {
+      return update(state, {
+        save: {
+          proofreadingPostProcessingInfo: { $set: action.proofreadingPostProcessingInfo },
         },
       });
     }

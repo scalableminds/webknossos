@@ -1,6 +1,37 @@
 [
   [
     {
+<<<<<<< HEAD
+      "name": "createTree",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "agglomerateInfo": {
+          "agglomerateId": 1,
+          "tracingId": "volumeTracingId",
+||||||| 5175fc18c9
+      "actions": [
+        {
+          "name": "splitAgglomerate",
+          "value": {
+            "actionTracingId": "volumeTracingId",
+            "agglomerateId": 1,
+            "segmentId1": 2,
+            "segmentId2": 3,
+          },
+        },
+      ],
+      "authorId": "dummy-user-id",
+      "info": "["SET_VERSION_NUMBER","SET_LAST_SAVE_TIMESTAMP","SHIFT_SAVE_QUEUE","DONE_SAVING","SET_SAVE_BUSY","SET_USER_HOLDING_MUTEX","SET_IS_MUTEX_ACQUIRED","ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE","DELETE_EDGE","SET_BUSY_BLOCKING_INFO_ACTION"]",
+      "stats": {
+        "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
+          "branchPointCount": 2,
+          "edgeCount": 3,
+          "nodeCount": 6,
+          "treeCount": 3,
+        },
+        "volumeTracingId": {
+          "segmentCount": 1,
+=======
       "actions": [
         {
           "name": "createTree",
@@ -87,17 +118,178 @@
         },
         "volumeTracingId": {
           "segmentCount": 1,
+>>>>>>> a2c4692de5d56d0527a347ad297c29ad67df46e3
         },
+        "branchPoints": [],
+        "color": [
+          0,
+          1,
+          0.7568627450980392,
+        ],
+        "comments": [],
+        "edgesAreVisible": true,
+        "groupId": undefined,
+        "id": 4,
+        "isVisible": true,
+        "metadata": [],
+        "name": "agglomerate 1 (volumeTracingId)",
+        "timestamp": 1494695001688,
+        "type": "AGGLOMERATE",
+        "updatedId": undefined,
       },
+    },
+    {
+      "name": "moveTreeComponent",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "nodeIds": [
+          6,
+          7,
+          8,
+        ],
+        "sourceId": 3,
+        "targetId": 4,
+      },
+    },
+    {
+      "name": "deleteEdge",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "source": 5,
+        "target": 6,
+        "treeId": 3,
+      },
+<<<<<<< HEAD
+||||||| 5175fc18c9
+      "timestamp": 1494695001688,
+      "transactionGroupCount": 1,
+      "transactionGroupIndex": 0,
+      "transactionId": "dummyRequestId",
+      "version": 9,
+=======
       "timestamp": 1494695001688,
       "transactionGroupCount": 1,
       "transactionGroupIndex": 0,
       "transactionId": "dummyRequestId",
       "version": 10,
+>>>>>>> a2c4692de5d56d0527a347ad297c29ad67df46e3
     },
   ],
   [
     {
+<<<<<<< HEAD
+      "name": "splitAgglomerate",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "agglomerateId": 1,
+        "segmentId1": 2,
+        "segmentId2": 3,
+      },
+    },
+  ],
+  [
+    {
+      "name": "updateTree",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "agglomerateInfo": {
+          "agglomerateId": 1339,
+          "tracingId": "volumeTracingId",
+        },
+        "branchPoints": [],
+        "color": [
+          0,
+          1,
+          0.7568627450980392,
+        ],
+        "comments": [],
+        "edgesAreVisible": true,
+        "groupId": undefined,
+        "id": 4,
+        "isVisible": true,
+        "metadata": [],
+        "name": "agglomerate 1339 (volumeTracingId)",
+        "timestamp": 1494695001688,
+        "type": "AGGLOMERATE",
+        "updatedId": 4,
+      },
+    },
+  ],
+  [
+    {
+      "name": "createSegment",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "anchorPosition": undefined,
+        "color": null,
+        "creationTime": 1494695001688,
+        "groupId": null,
+        "id": 1339,
+        "metadata": [],
+        "name": "Agglomerate 1339",
+      },
+    },
+  ],
+  [
+    {
+      "name": "updateSegment",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "additionalCoordinates": undefined,
+        "anchorPosition": [
+          2,
+          2,
+          2,
+        ],
+        "color": null,
+        "creationTime": 1494695001688,
+        "groupId": null,
+        "id": 1,
+        "metadata": [],
+        "name": null,
+      },
+    },
+  ],
+  [
+    {
+      "name": "updateSegment",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "additionalCoordinates": undefined,
+        "anchorPosition": [
+          3,
+          3,
+          3,
+        ],
+        "color": null,
+        "creationTime": 1494695001688,
+        "groupId": null,
+        "id": 1339,
+        "metadata": [],
+        "name": "Agglomerate 1339",
+||||||| 5175fc18c9
+      "actions": [
+        {
+          "name": "deleteSegment",
+          "value": {
+            "actionTracingId": "volumeTracingId",
+            "id": 1,
+          },
+        },
+      ],
+      "authorId": "dummy-user-id",
+      "info": "["SET_SAVE_BUSY","SET_USER_HOLDING_MUTEX","SET_IS_MUTEX_ACQUIRED","ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE","DISALLOW_SAGA_WHILE_BUSY_ACTION","SET_MAPPING","FINISH_MAPPING_INITIALIZATION","SNAPSHOT_MAPPING_DATA_FOR_NEXT_REBASE_ACTION","SET_TREE_NAME","REMOVE_SEGMENT"]",
+      "stats": {
+        "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13": {
+          "branchPointCount": 2,
+          "edgeCount": 3,
+          "nodeCount": 6,
+          "treeCount": 3,
+        },
+        "volumeTracingId": {
+          "segmentCount": 0,
+        },
+=======
       "actions": [
         {
           "name": "updateTree",
@@ -134,7 +326,16 @@
         "volumeTracingId": {
           "segmentCount": 1,
         },
+>>>>>>> a2c4692de5d56d0527a347ad297c29ad67df46e3
       },
+<<<<<<< HEAD
+||||||| 5175fc18c9
+      "timestamp": 1494695001688,
+      "transactionGroupCount": 1,
+      "transactionGroupIndex": 0,
+      "transactionId": "dummyRequestId",
+      "version": 10,
+=======
       "timestamp": 1494695001688,
       "transactionGroupCount": 1,
       "transactionGroupIndex": 0,
@@ -214,6 +415,7 @@
       "transactionGroupIndex": 0,
       "transactionId": "dummyRequestId",
       "version": 13,
+>>>>>>> a2c4692de5d56d0527a347ad297c29ad67df46e3
     },
   ],
 ]

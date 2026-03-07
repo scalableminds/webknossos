@@ -1,0 +1,11 @@
+[
+  {
+    "name": "splitAgglomerate",
+    "value": {
+      "actionTracingId": "volumeTracingId",
+      "agglomerateId": 1,
+      "segmentId1": 1,
+      "segmentId2": 2,
+    },
+  },
+]

@@ -12,6 +12,10 @@ import {
   disableSavingAction,
   dispatchEnsureHasNewestVersionAsync,
 } from "viewer/model/actions/save_actions";
+import {
+  setActiveCellAction,
+  updateSegmentAction,
+} from "viewer/model/actions/volumetracing_actions";
 import { select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
@@ -22,8 +26,10 @@ import {
   expectedMappingAfterSplit,
   initialMapping,
 } from "./proofreading_fixtures";
+import { loadAgglomerateTree1 } from "./proofreading_interaction_update_action_fixtures";
 import {
   initializeMappingAndTool,
+  makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
 
@@ -589,4 +595,56 @@ describe("Proofreading (Poll only)", () => {
     const othersMayEdit = true;
     await testPollWithUserNotAllowedToSave(context, othersMayEdit);
   }, 8000);
+
+  it("should simply forward received update actions like agglomerate tree update actions without putting these changes to its own save queue or sending them to the backend", async (context: WebknossosTestContext) => {
+    const backendMock = mockInitialBucketAndAgglomerateData(context);
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+
+      // Set up the merge-related segment partners. Normally, this would happen
+      // due to the user's interactions.
+      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+      yield put(setActiveCellAction(1));
+      yield makeMappingEditableHelper();
+      yield put(setOthersMayEditForAnnotationAction(true));
+
+      // Ensure all changes till here are saved in the backend.
+      yield call(() => context.api.tracing.save());
+
+      // Store current annotation version, calculate expected version after injecting updates and inject the agglomerate tree loading.
+      const receivedAmountOfUpdateRequests = context.receivedDataPerSaveRequest.length;
+      const versionBeforeForwardingAgglomerateTreeLoading = yield select(
+        (state) => state.annotation.version,
+      );
+      const injectedAgglomerateTreeLoadingUpdates = loadAgglomerateTree1;
+      const expectedAmountOfUpdatesAfterInjection =
+        receivedAmountOfUpdateRequests + loadAgglomerateTree1.length;
+      backendMock.planMultipleVersionInjections(
+        versionBeforeForwardingAgglomerateTreeLoading + 1,
+        injectedAgglomerateTreeLoadingUpdates,
+      );
+
+      // Load the injected agglomerate tree updates and forward them.
+      yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
+
+      // Expect no pending or additional sent update requests.
+      expect(context.receivedDataPerSaveRequest.length).toBe(expectedAmountOfUpdatesAfterInjection);
+      let saveQueue = yield select((state) => state.save.queue);
+      expect(saveQueue.length).toBe(0);
+
+      // Enforce saved state including diffing tracings and storing their changes.
+      yield call(() => context.api.tracing.save());
+
+      // Expect no pending or additional sent update requests.
+      expect(context.receivedDataPerSaveRequest.length).toBe(expectedAmountOfUpdatesAfterInjection);
+      saveQueue = yield select((state) => state.save.queue);
+      expect(saveQueue.length).toBe(0);
+    });
+
+    await task.toPromise();
+  });
 });

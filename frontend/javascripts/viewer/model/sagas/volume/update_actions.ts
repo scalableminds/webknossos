@@ -1,10 +1,20 @@
 import { computeBoundingBoxObjectFromBoundingBox } from "libs/utils";
-import type { AdditionalCoordinate, APIMagRestrictions, MetadataEntryProto } from "types/api_types";
-import type { EmptyObject } from "types/type_utils";
-import type { Vector3 } from "viewer/constants";
+import type {
+  AdditionalCoordinate,
+  APIMagRestrictions,
+  MetadataEntryProto,
+  TreeAgglomerateInfo,
+} from "types/api_types";
+import type { TreeType, Vector3 } from "viewer/constants";
 import type { SendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { convertUserBoundingBoxFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
-import type { Node, Tree, TreeGroup } from "viewer/model/types/tree_types";
+import type {
+  MutableBranchPoint,
+  MutableCommentType,
+  Node,
+  Tree,
+  TreeGroup,
+} from "viewer/model/types/tree_types";
 import type {
   BoundingBoxObject,
   NumberLike,
@@ -151,6 +161,39 @@ export type WithoutServerSpecificFields<T extends { value: Record<string, any> }
 export type ApplicableSkeletonUpdateAction =
   WithoutServerSpecificFields<ApplicableSkeletonServerUpdateAction>;
 
+// This helper dict exists so that we can ensure via typescript that
+// the list contains all members of ApplicableSkeletonUpdateAction. As soon as
+// ApplicableSkeletonUpdateAction is extended with another action, TS will complain
+// if the following dictionary doesn't contain that action.
+const ApplicableSkeletonUpdateActionNamesHelper: Record<
+  ApplicableSkeletonUpdateAction["name"],
+  true
+> = {
+  updateTree: true,
+  createTree: true,
+  updateNode: true,
+  createNode: true,
+  createEdge: true,
+  deleteTree: true,
+  deleteEdge: true,
+  deleteNode: true,
+  moveTreeComponent: true,
+  updateTreeGroups: true,
+  updateTreeGroupsExpandedState: true,
+  updateTreeEdgesVisibility: true,
+  addUserBoundingBoxInSkeletonTracing: true,
+  updateUserBoundingBoxInSkeletonTracing: true,
+  updateUserBoundingBoxVisibilityInSkeletonTracing: true,
+  deleteUserBoundingBoxInSkeletonTracing: true,
+  updateActiveNode: true,
+  updateTreeVisibility: true,
+  updateTreeGroupVisibility: true,
+  updateActiveTree: true,
+};
+export const ApplicableSkeletonUpdateActionNamesHelperNamesList = Object.keys(
+  ApplicableSkeletonUpdateActionNamesHelper,
+);
+
 export type ApplicableVolumeUpdateAction =
   | UpdateLargestSegmentIdVolumeAction
   | UpdateSegmentPartialUpdateAction
@@ -271,7 +314,28 @@ export type ServerUpdateAction = AsServerAction<
   | CreateTracingUpdateAction
 >;
 
-export function createTree(tree: Tree, actionTracingId: string) {
+export function createTree(
+  tree: Tree,
+  actionTracingId: string,
+): {
+  name: "createTree";
+  value: {
+    actionTracingId: string;
+    id: number;
+    updatedId: undefined | number;
+    color: Vector3;
+    name: string;
+    timestamp: number;
+    comments: Readonly<MutableCommentType>[];
+    branchPoints: Readonly<MutableBranchPoint>[];
+    groupId: number | undefined | null;
+    isVisible: boolean;
+    type: TreeType;
+    edgesAreVisible: boolean;
+    metadata: MetadataEntryProto[];
+    agglomerateInfo?: TreeAgglomerateInfo;
+  };
+} {
   return {
     name: "createTree",
     value: {
@@ -288,6 +352,7 @@ export function createTree(tree: Tree, actionTracingId: string) {
       type: tree.type,
       edgesAreVisible: tree.edgesAreVisible,
       metadata: enforceValidMetadata(tree.metadata),
+      agglomerateInfo: tree.agglomerateInfo,
     },
   } as const;
 }
@@ -317,6 +382,7 @@ export function updateTree(tree: Tree, actionTracingId: string) {
       type: tree.type,
       edgesAreVisible: tree.edgesAreVisible,
       metadata: enforceValidMetadata(tree.metadata),
+      agglomerateInfo: tree.agglomerateInfo,
     },
   } as const;
 }
@@ -806,24 +872,15 @@ export function updateSegmentPartialVolumeAction(
     name?: string | null | undefined;
     color?: Vector3 | null;
     groupId?: number | null | undefined;
-    metadata?: Array<MetadataEntryProto>;
     creationTime?: number | null | undefined;
   },
   actionTracingId: string,
 ) {
-  const { metadata } = shape;
-  const maybeMetadataWrapper =
-    metadata != null
-      ? {
-          metadata: enforceValidMetadata(metadata),
-        }
-      : ({} as EmptyObject);
   return {
     name: "updateSegmentPartial",
     value: {
       actionTracingId,
       ...shape,
-      ...maybeMetadataWrapper,
     },
   } as const;
 }

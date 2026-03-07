@@ -127,4 +127,7 @@ POST          /triggers/createOrganizationDirectory                             
 POST          /triggers/reload/:organizationId/:datasetId                                                                                             @com.scalableminds.webknossos.datastore.controllers.DataSourceController.reload(organizationId: String, datasetId: ObjectId, layerName: Option[String])
 
 # Exports
-GET           /exports/:jobId/download                                                                                                                @com.scalableminds.webknossos.datastore.controllers.ExportsController.download(jobId: String)
+GET           /exports/:jobId/download                                                                                                                @com.scalableminds.webknossos.datastore.controllers.ExportsController.download(jobId: ObjectId)
+
+# AI Models
+POST          /aiModels/effectiveVoxelSize                                                                                                            @com.scalableminds.webknossos.datastore.controllers.DSAiModelController.effectiveVoxelSize

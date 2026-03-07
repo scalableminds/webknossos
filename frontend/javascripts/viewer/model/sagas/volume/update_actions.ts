@@ -5,7 +5,6 @@ import type {
   MetadataEntryProto,
   TreeAgglomerateInfo,
 } from "types/api_types";
-import type { EmptyObject } from "types/type_utils";
 import type { TreeType, Vector3 } from "viewer/constants";
 import type { SendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { convertUserBoundingBoxFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
@@ -873,24 +872,15 @@ export function updateSegmentPartialVolumeAction(
     name?: string | null | undefined;
     color?: Vector3 | null;
     groupId?: number | null | undefined;
-    metadata?: Array<MetadataEntryProto>;
     creationTime?: number | null | undefined;
   },
   actionTracingId: string,
 ) {
-  const { metadata } = shape;
-  const maybeMetadataWrapper =
-    metadata != null
-      ? {
-          metadata: enforceValidMetadata(metadata),
-        }
-      : ({} as EmptyObject);
   return {
     name: "updateSegmentPartial",
     value: {
       actionTracingId,
       ...shape,
-      ...maybeMetadataWrapper,
     },
   } as const;
 }

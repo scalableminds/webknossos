@@ -128,6 +128,9 @@ lazy val webknossos = (project in file("."))
     // https://github.com/playframework/playframework/issues/5765#issuecomment-1996991474
     Assets / WebKeys.exportedMappings := Seq(),
     TestAssets / WebKeys.exportedMappings := Seq(),
+    Assets / mappings := (Assets / mappings).value.filter { case (_, path) =>
+      !path.startsWith("public/bundle")
+    },
     updateOptions := updateOptions.value.withLatestSnapshots(true),
     Compile / unmanagedJars ++= {
       val libs = baseDirectory.value / "lib"

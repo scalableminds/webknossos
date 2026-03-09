@@ -159,16 +159,28 @@ export function withMappingActivationConfirmation(
   return confirmMappingActivation;
 }
 
+/**
+ * Returns a list of node keys for all groups that are currently expanded in the tree.
+ * This is used to control the expanded state of the antd Tree component.
+ */
 export const getExpandedKeys = (segmentGroups: SegmentGroup[]) => {
   return getExpandedGroups(segmentGroups).map((group) => getGroupNodeKey(group.groupId));
 };
 
+/**
+ * Similar to `getExpandedKeys`, but adds the root node's key to the list of expanded keys.
+ * Memoized to prevent unnecessary re-renders when the group structure hasn't changed.
+ */
 export const getExpandedKeysWithRoot = memoize((segmentGroups: SegmentGroup[]) => {
   const expandedGroups = getExpandedKeys(segmentGroups);
   expandedGroups.unshift(getGroupNodeKey(MISSING_GROUP_ID));
   return expandedGroups;
 });
 
+/**
+ * Recursively builds a tree data structure expected by the antd Tree component.
+ * It maps over group hierarchies and inserts the corresponding segments as leaf nodes.
+ */
 export function constructTreeData(
   groups: { name: string; groupId: number; children: SegmentGroup[] }[],
   groupToSegmentsMap: Record<number, Segment[]>,
@@ -200,6 +212,10 @@ export function constructTreeData(
   });
 }
 
+/**
+ * Retrieves a flattened list of all segments within a given group and all of its nested subgroups.
+ * If the provided `groupId` is `MISSING_GROUP_ID`, it returns all available segments.
+ */
 export const getSegmentsOfGroupRecursively = (
   groupId: number,
   segments: any | null | undefined, // any = Collection<Segment> or Map<number, Segment>
@@ -219,6 +235,10 @@ export const getSegmentsOfGroupRecursively = (
   return segmentIdsNested.flat() as Segment[];
 };
 
+/**
+ * Determines which parent groups need to be expanded to make a specific element visible in the tree.
+ * Primarily used when a user searches for and selects an element deeply nested in collapsed groups.
+ */
 export const calculateExpandedParentGroups = (
   selectedElement: SegmentHierarchyNode,
   segmentGroups: TreeGroup[],
@@ -230,6 +250,10 @@ export const calculateExpandedParentGroups = (
   return additionallyExpandGroup(segmentGroups, groupToExpand, getGroupNodeKey);
 };
 
+/**
+ * A utility to recursively traverse a segment hierarchy tree and execute a callback for every node.
+ * Useful for flattening tree data into a list (e.g., for search operations).
+ */
 export function visitAllItems(
   nodes: Array<SegmentHierarchyNode>,
   callback: (group: SegmentHierarchyNode) => void,

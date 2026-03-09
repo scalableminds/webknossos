@@ -29,8 +29,6 @@ case class User(
     _id: ObjectId,
     _multiUser: ObjectId,
     _organization: String,
-    firstName: String,
-    lastName: String,
     lastActivity: Instant = Instant.now,
     userConfiguration: JsObject,
     loginInfo: LoginInfo,
@@ -48,11 +46,6 @@ case class User(
     with FoxImplicits {
 
   def toStringAnonymous: String = s"User ${_id}"
-
-  val name: String = firstName + " " + lastName
-
-  val abbreviatedName: String =
-    (firstName.take(1) + lastName).toLowerCase.replace(" ", "_")
 
   def isAdminOf(organizationId: String): Boolean =
     isAdmin && organizationId == this._organization
@@ -108,8 +101,6 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         ObjectId(r._Id),
         ObjectId(r._Multiuser),
         r._Organization,
-        r.firstname,
-        r.lastname,
         Instant.fromSql(r.lastactivity),
         userConfiguration,
         LoginInfo(User.default_login_provider_id, r._Id),
@@ -481,7 +472,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def insertOne(u: User): Fox[Unit] =
     for {
       _ <- run(q"""INSERT INTO webknossos.users(
-                               _id, _multiUser, _organization, firstName, lastName,
+                               _id, _multiUser, _organization,
                                lastActivity, userConfiguration,
                                isDeactivated, isAdmin, isOrganizationOwner,
                                isDatasetManager, isUnlisted,
@@ -489,7 +480,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                                created, isDeleted
                              )
                              VALUES(
-                               ${u._id}, ${u._multiUser}, ${u._organization}, ${u.firstName}, ${u.lastName},
+                               ${u._id}, ${u._multiUser}, ${u._organization},
                                ${u.lastActivity}, ${u.userConfiguration},
                                ${u.isDeactivated}, ${u.isAdmin}, ${u.isOrganizationOwner},
                                ${u.isDatasetManager}, ${u.isUnlisted},
@@ -526,14 +517,6 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
               isDeactivated = $isDeactivated,
               lastTaskTypeId = $lastTaskTypeId
               WHERE _id = $userId""".asUpdate)
-    } yield ()
-
-  def updateNameByMultiUser(multiUserId: ObjectId, firstName: String, lastName: String): Fox[Unit] =
-    for {
-      _ <- run(q"""UPDATE webknossos.users
-              SET firstName = $firstName,
-                  lastName = $lastName
-                  WHERE _multiUser = $multiUserId""".asUpdate)
     } yield ()
 
   def updateLastTaskTypeId(userId: ObjectId, lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[Unit] =

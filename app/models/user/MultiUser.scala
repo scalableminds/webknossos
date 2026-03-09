@@ -20,6 +20,8 @@ case class MultiUser(
     _id: ObjectId,
     email: String,
     passwordInfo: PasswordInfo,
+    firstName: String,
+    lastName: String,
     isSuperUser: Boolean,
     _lastLoggedInIdentity: Option[ObjectId] = None,
     novelUserExperienceInfos: JsObject = Json.obj(),
@@ -28,7 +30,12 @@ case class MultiUser(
     isEmailVerified: Boolean = false,
     emailChangeDate: Instant = Instant.now,
     isDeleted: Boolean = false
-)
+) {
+  val name: String = firstName + " " + lastName
+
+  val abbreviatedName: String =
+    (firstName.take(1) + lastName).toLowerCase.replace(" ", "_")
+}
 
 object PasswordHasherType extends ExtendedEnumeration {
   type PasswordHasher = Value
@@ -52,6 +59,8 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
         ObjectId(r._Id),
         r.email,
         PasswordInfo(r.passwordinfoHasher, r.passwordinfoPassword),
+        r.firstname,
+        r.lastname,
         r.issuperuser,
         r._Lastloggedinidentity.map(ObjectId(_)),
         novelUserExperienceInfos,
@@ -68,10 +77,12 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
       passwordInfoHasher <- PasswordHasherType.fromString(u.passwordInfo.hasher).toFox
       _ <- run(q"""INSERT INTO webknossos.multiusers(_id, email, passwordInfo_hasher,
                                                      passwordInfo_password,
+                                                     firstName, lastName,
                                                      isSuperUser, novelUserExperienceInfos, selectedTheme,
                                                      created, isEmailVerified, isDeleted)
                    VALUES(${u._id}, ${u.email}, $passwordInfoHasher,
                           ${u.passwordInfo.password},
+                          ${u.firstName}, ${u.lastName},
                           ${u.isSuperUser}, ${u.novelUserExperienceInfos}, ${u.selectedTheme},
                           ${u.created}, ${u.isEmailVerified}, ${u.isDeleted})""".asUpdate)
     } yield ()
@@ -120,6 +131,14 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
       _ <- assertUpdateAccess(multiUserId)
       _ <- run(q"""UPDATE webknossos.multiusers
                    SET novelUserExperienceInfos = $novelUserExperienceInfos
+                   WHERE _id = $multiUserId""".asUpdate)
+    } yield ()
+
+  def updateName(multiUserId: ObjectId, firstName: String, lastName: String): Fox[Unit] =
+    for {
+      _ <- run(q"""UPDATE webknossos.multiUsers
+                   SET firstName = $firstName,
+                       lastName = $lastName
                    WHERE _id = $multiUserId""".asUpdate)
     } yield ()
 

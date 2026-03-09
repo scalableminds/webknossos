@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(156);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(157);
 COMMIT TRANSACTION;
 
 
@@ -440,8 +440,6 @@ CREATE TABLE webknossos.users(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   _multiUser TEXT CONSTRAINT _multiUser_objectId CHECK (_multiUser ~ '^[0-9a-f]{24}$') NOT NULL,
   _organization TEXT NOT NULL,
-  firstName TEXT NOT NULL, -- CHECK (firstName ~* '^[A-Za-z0-9\-_ ]+$'),
-  lastName TEXT NOT NULL, -- CHECK (lastName ~* '^[A-Za-z0-9\-_ ]+$'),
   lastActivity TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   userConfiguration JSONB NOT NULL,
   isDeactivated BOOLEAN NOT NULL DEFAULT FALSE,
@@ -502,6 +500,8 @@ CREATE TABLE webknossos.multiUsers(
   email TEXT NOT NULL UNIQUE CHECK (email ~* '^.+@.+$'),
   passwordInfo_hasher webknossos.USER_PASSWORDINFO_HASHERS NOT NULL DEFAULT 'SCrypt',
   passwordInfo_password TEXT NOT NULL,
+  firstName TEXT NOT NULL, -- CHECK (firstName ~* '^[A-Za-z0-9\-_ ]+$'),
+  lastName TEXT NOT NULL, -- CHECK (lastName ~* '^[A-Za-z0-9\-_ ]+$'),
   isSuperUser BOOLEAN NOT NULL DEFAULT FALSE,
   novelUserExperienceInfos JSONB NOT NULL DEFAULT '{}'::json,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -849,7 +849,7 @@ CREATE VIEW webknossos.webauthnCredentials_ as SELECT * FROM webknossos.webauthn
 
 CREATE VIEW webknossos.userInfos AS
 SELECT
-u._id AS _user, m.email, u.firstName, u.lastname, o.name AS organization_name,
+u._id AS _user, m.email, m.firstName, m.lastName, o.name AS organization_name,
 u.isDeactivated, u.isDatasetManager, u.isAdmin, m.isSuperUser,
 u._organization, o._id AS organization_id, u.created AS user_created,
 m.created AS multiuser_created, u._multiUser, m._lastLoggedInIdentity, u.lastActivity, m.isEmailVerified

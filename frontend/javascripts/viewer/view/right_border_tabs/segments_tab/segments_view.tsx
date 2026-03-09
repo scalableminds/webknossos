@@ -44,8 +44,6 @@ import Toast from "libs/toast";
 import { pluralize, sleep } from "libs/utils";
 import difference from "lodash-es/difference";
 import isNumber from "lodash-es/isNumber";
-import memoize from "lodash-es/memoize";
-import sortBy from "lodash-es/sortBy";
 import sum from "lodash-es/sum";
 import React, { type Key } from "react";
 import { connect } from "react-redux";
@@ -103,9 +101,8 @@ import {
   toggleSegmentGroupAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import type { TreeGroup } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";
-import type { MeshInformation, Segment, SegmentGroup, WebknossosState } from "viewer/store";
+import type { MeshInformation, Segment, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
@@ -114,8 +111,13 @@ import { InputWithUpdateOnBlur } from "viewer/view/components/input_with_update_
 import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/helpers";
 import SegmentListItem from "viewer/view/right_border_tabs/segments_tab/segment_list_item";
 import {
+  calculateExpandedParentGroups,
+  constructTreeData,
   formatMagWithLabel,
+  getExpandedKeysWithRoot,
+  getSegmentsOfGroupRecursively as getSegmentsOfGroupRecursivelyHelper,
   type SegmentHierarchyNode,
+  visitAllItems,
 } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import DeleteGroupModalView from "../delete_group_modal_view";
@@ -124,13 +126,10 @@ import { ResizableSplitPane } from "../resizable_split_pane";
 import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";
 import { ContextMenuContainer } from "../sidebar_context_menu";
 import {
-  additionallyExpandGroup,
-  createGroupToParentMap,
   createGroupToSegmentsMap,
   deepFlatFilter,
   findGroup,
   findParentIdForGroupId,
-  getExpandedGroups,
   getGroupByIdWithSubgroups,
   getGroupNodeKey,
   MISSING_GROUP_ID,
@@ -348,47 +347,6 @@ function renderEmptyMeshFileSelect() {
       description="No mesh file found. Click the + icon to compute a mesh file."
     />
   );
-}
-
-const getExpandedKeys = (segmentGroups: TreeGroup[]) => {
-  return getExpandedGroups(segmentGroups).map((group) => getGroupNodeKey(group.groupId));
-};
-
-const getExpandedKeysWithRoot = memoize((segmentGroups: TreeGroup[]) => {
-  const expandedGroups = getExpandedKeys(segmentGroups);
-  expandedGroups.unshift(getGroupNodeKey(MISSING_GROUP_ID));
-  return expandedGroups;
-});
-
-function constructTreeData(
-  groups: { name: string; groupId: number; children: SegmentGroup[] }[],
-  groupToSegmentsMap: Record<number, Segment[]>,
-): SegmentHierarchyNode[] {
-  // Insert all trees into their respective groups in the group hierarchy and transform groups to tree nodes
-  return sortBy(groups, "groupId").map((group) => {
-    const { groupId } = group;
-    const segments = groupToSegmentsMap[groupId] || [];
-    const treeNode: SegmentHierarchyNode = {
-      ...group,
-      title: group.name,
-      key: getGroupNodeKey(groupId),
-      id: groupId,
-      type: "group",
-      children: constructTreeData(group.children, groupToSegmentsMap).concat(
-        sortBy(segments, "id").map(
-          (segment): SegmentHierarchyNode => ({
-            ...segment,
-            title: segment.name || "",
-            type: "segment",
-            key: `segment-${segment.id}`,
-            id: segment.id,
-            isChecked: segment.isVisible,
-          }),
-        ),
-      ),
-    };
-    return treeNode;
-  });
 }
 
 const rootGroup = {
@@ -647,17 +605,7 @@ class SegmentsView extends React.Component<Props, State> {
       // that is in the same order as the rendered tree. That way, cycling through
       // the search results will not jump "randomly".
       const searchableTreeItemList: SegmentHierarchyNode[] = [];
-      function visitAllItems(
-        nodes: Array<SegmentHierarchyNode>,
-        callback: (group: SegmentHierarchyNode) => void,
-      ) {
-        for (const node of nodes) {
-          callback(node);
-          if ("children" in node && node.children != null) {
-            visitAllItems(node.children, callback);
-          }
-        }
-      }
+
       visitAllItems(generatedGroupTree, (item: SegmentHierarchyNode) => {
         searchableTreeItemList.push(item);
       });
@@ -1315,20 +1263,11 @@ class SegmentsView extends React.Component<Props, State> {
   }
 
   getSegmentsOfGroupRecursively = (groupId: number): Segment[] => {
-    const { segments, segmentGroups } = this.props;
-
-    if (segments == null || segmentGroups == null) {
-      return [];
-    }
-    if (groupId === MISSING_GROUP_ID) {
-      return Array.from(segments.values());
-    }
-    const groupToSegmentsMap = createGroupToSegmentsMap(segments);
-    const relevantGroupIds = getGroupByIdWithSubgroups(segmentGroups, groupId);
-    const segmentIdsNested = relevantGroupIds
-      .map((groupId) => (groupToSegmentsMap[groupId] != null ? groupToSegmentsMap[groupId] : null))
-      .filter((x) => x != null);
-    return segmentIdsNested.flat() as Segment[];
+    return getSegmentsOfGroupRecursivelyHelper(
+      groupId,
+      this.props.segments,
+      this.props.segmentGroups,
+    );
   };
 
   onRenameStart = () => {
@@ -1343,15 +1282,7 @@ class SegmentsView extends React.Component<Props, State> {
     if (this.tree?.current == null) {
       return;
     }
-    const groupToExpand =
-      selectedElement.type === "segment"
-        ? selectedElement.groupId
-        : createGroupToParentMap(this.props.segmentGroups)[selectedElement.id];
-    const expandedGroups = additionallyExpandGroup(
-      this.props.segmentGroups,
-      groupToExpand,
-      getGroupNodeKey,
-    );
+    const expandedGroups = calculateExpandedParentGroups(selectedElement, this.props.segmentGroups);
     if (expandedGroups) {
       this.setExpandedGroupsFromSet(expandedGroups);
     }

@@ -188,14 +188,14 @@ class UserController @Inject()(userService: UserService,
       (__ \ "experiences").readNullable[Map[String, Int]] and
       (__ \ "lastTaskTypeId").readNullable[String]).tupled
 
-  private def ensureProperTeamAdministration(user: User, teams: List[(TeamMembership, Team)])(
+  private def ensureProperTeamAdministration(user: User, userFullName: String, teams: List[(TeamMembership, Team)])(
       implicit m: MessagesProvider) =
     Fox.combined(teams.map {
       case (TeamMembership(_, true), team) =>
         for {
           _ <- Fox.fromBool(user._organization == team._organization) ?~> Messages("team.admin.notPossibleBy",
                                                                                    team.name,
-                                                                                   user.name) ~> FORBIDDEN
+                                                                                   userFullName) ~> FORBIDDEN
         } yield ()
       case (_, _) =>
         Fox.successful(())
@@ -304,11 +304,12 @@ class UserController @Inject()(userService: UserService,
             lastTaskTypeIdOpt) =>
         for {
           user <- userDAO.findOne(userId) ?~> "user.notFound" ~> NOT_FOUND
+          multiUser <- multiUserDAO.findOne(user._multiUser)
           // properties that can be changed by team managers and admins only: experiences, team memberships
           oldExperience <- userService.experiencesFor(user._id)
           oldAssignedMemberships <- userService.teamMembershipsFor(user._id)
-          firstName = firstNameOpt.getOrElse(user.firstName)
-          lastName = lastNameOpt.getOrElse(user.lastName)
+          firstName = firstNameOpt.getOrElse(multiUser.firstName)
+          lastName = lastNameOpt.getOrElse(multiUser.lastName)
           oldEmail <- userService.emailFor(user)
           email = emailOpt.getOrElse(oldEmail)
           isActive = isActiveOpt.getOrElse(!user.isDeactivated)
@@ -333,7 +334,12 @@ class UserController @Inject()(userService: UserService,
           _ <- checkNoActivateBeyondLimit(user, isActive)
           _ <- preventZeroAdmins(user, isAdmin)
           _ <- preventZeroOwners(user, isActive)
-          _ <- checkNameUpdatePermissions(user, issuingUser, firstName, lastName)
+          _ <- checkNameUpdatePermissions(user,
+                                          issuingUser,
+                                          multiUser.firstName,
+                                          multiUser.lastName,
+                                          firstName,
+                                          lastName)
           teams <- Fox.combined(assignedMemberships.map(t =>
             teamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> "team.notFound" ~> NOT_FOUND))
           oldTeamMemberships <- userService.teamMembershipsFor(user._id)
@@ -342,10 +348,11 @@ class UserController @Inject()(userService: UserService,
           assignedMembershipWTeams = assignedMemberships.zip(teams)
           teamsWithUpdate <- Fox.filter(assignedMembershipWTeams)(t =>
             userService.isTeamManagerOrAdminOf(issuingUser, t._1.teamId))
-          _ <- ensureProperTeamAdministration(user, teamsWithUpdate)
+          _ <- ensureProperTeamAdministration(user, multiUser.fullName, teamsWithUpdate)
           trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }
           updatedTeams = teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate
           _ <- userService.update(user,
+                                  multiUser,
                                   firstName.trim,
                                   lastName.trim,
                                   email,
@@ -363,9 +370,11 @@ class UserController @Inject()(userService: UserService,
 
   private def checkNameUpdatePermissions(originalUser: User,
                                          issuingUser: User,
+                                         firstNameBefore: String,
+                                         lastNameBefore: String,
                                          firstName: String,
                                          lastName: String): Fox[Unit] =
-    if (firstName.trim == originalUser.firstName && lastName.trim == originalUser.lastName)
+    if (firstName.trim == firstNameBefore && lastName.trim == lastNameBefore)
       Fox.successful(())
     else {
       if (issuingUser._id == originalUser._id)

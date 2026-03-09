@@ -278,8 +278,8 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
             u._id,
             m._id,
             m.email,
-            u.firstName,
-            u.lastName,
+            m.firstName,
+            m.lastName,
             u.userConfiguration,
             u.isAdmin,
             u.isOrganizationOwner,
@@ -310,7 +310,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         LEFT JOIN $payingOrganizationInfoSubquery AS payingOrganization ON payingOrganization._multiUser = u._multiUser
         WHERE $selectionPredicates
         GROUP BY
-          u._id, u.firstname, u.lastname, u.userConfiguration, u.isAdmin, u.isOrganizationOwner, u.isDatasetManager,
+          u._id, m.firstname, m.lastname, u.userConfiguration, u.isAdmin, u.isOrganizationOwner, u.isDatasetManager,
           u.isDeactivated, u.lastActivity, u.created, u.lastTaskTypeId, o._id, m._id, m.email,
           m.novelUserExperienceinfos, m.selectedTheme, m.isSuperUser, m.isEmailVerified, autr.team_ids, autr.team_names,
           autr.team_managers, aux.experience_values, aux.experience_domains, payingOrganization._organization, u._organization
@@ -373,18 +373,6 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    AND _organization = $organizationId
                    ORDER BY _id""".as[UsersRow])
       parsed <- Fox.combined(r.toList.map(parse))
-    } yield parsed
-
-  def findOwnerByOrg(organizationId: String): Fox[User] =
-    for {
-      r <- run(q"""SELECT $columns
-                   FROM $existingCollectionName
-                   WHERE isOrganizationOwner
-                   AND NOT isDeactivated
-                   AND _organization = $organizationId
-                   ORDER BY _id
-                   LIMIT 1""".as[UsersRow])
-      parsed <- parseFirst(r, organizationId)
     } yield parsed
 
   def findOneByOrgaAndMultiUser(organizationId: String, multiUserId: ObjectId)(

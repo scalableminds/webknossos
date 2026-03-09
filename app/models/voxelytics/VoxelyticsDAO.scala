@@ -491,7 +491,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           COALESCE(tasks.cancelled, 0) AS tasksCancelled,
           COALESCE(tasks.fileSize, 0) AS fileSize,
           COALESCE(tasks.inodeCount, 0) AS inodeCount,
-          u.firstName,
+          u.firstName, -- TODO switch to multiUsers table
           u.lastName
         FROM (${visibleRunsQ(currentUser, allowUnlisted = false)}) r
         JOIN (${runsWithStateQ(staleTimeout)}) rs ON rs._id = r._id

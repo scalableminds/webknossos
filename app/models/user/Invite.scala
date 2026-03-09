@@ -45,6 +45,7 @@ class InviteService @Inject()(conf: WkConf,
 
   def inviteOneRecipient(recipient: String,
                          sender: User,
+                         senderMultiUser: MultiUser,
                          autoActivate: Boolean,
                          isAdmin: Boolean,
                          isDatasetManager: Boolean,
@@ -53,7 +54,7 @@ class InviteService @Inject()(conf: WkConf,
       invite <- Fox.fromFuture(generateInvite(sender._organization, autoActivate, isAdmin, isDatasetManager))
       _ <- inviteDAO.insertOne(invite)
       _ <- inviteDAO.insertTeamMemberships(invite._id, teamMemberships)
-      _ <- sendInviteMail(recipient, sender, invite)
+      _ <- sendInviteMail(recipient, sender, senderMultiUser, invite)
     } yield ()
 
   private def generateInvite(organizationId: String,
@@ -73,13 +74,14 @@ class InviteService @Inject()(conf: WkConf,
         Instant.in(conf.WebKnossos.User.inviteExpiry)
       )
 
-  private def sendInviteMail(recipient: String, sender: User, invite: Invite)(
+  private def sendInviteMail(recipient: String, sender: User, senderMultiUser: MultiUser, invite: Invite)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(invite._organization)
       _ = logger.info("sending invite mail")
       _ = Mailer ! Send(
-        defaultMails.inviteMail(recipient, invite.tokenValue, invite.autoActivate, organization.name, sender.name))
+        defaultMails
+          .inviteMail(recipient, invite.tokenValue, invite.autoActivate, organization.name, senderMultiUser.fullName))
     } yield ()
 
   def removeExpiredInvites(): Fox[Unit] =

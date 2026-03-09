@@ -31,7 +31,7 @@ case class MultiUser(
     emailChangeDate: Instant = Instant.now,
     isDeleted: Boolean = false
 ) {
-  val name: String = firstName + " " + lastName
+  lazy val fullName: String = firstName + " " + lastName
 
   val abbreviatedName: String =
     (firstName.take(1) + lastName).toLowerCase.replace(" ", "_")
@@ -72,19 +72,19 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
       )
     }
 
-  def insertOne(u: MultiUser): Fox[Unit] =
+  def insertOne(mu: MultiUser): Fox[Unit] =
     for {
-      passwordInfoHasher <- PasswordHasherType.fromString(u.passwordInfo.hasher).toFox
+      passwordInfoHasher <- PasswordHasherType.fromString(mu.passwordInfo.hasher).toFox
       _ <- run(q"""INSERT INTO webknossos.multiusers(_id, email, passwordInfo_hasher,
                                                      passwordInfo_password,
                                                      firstName, lastName,
                                                      isSuperUser, novelUserExperienceInfos, selectedTheme,
                                                      created, isEmailVerified, isDeleted)
-                   VALUES(${u._id}, ${u.email}, $passwordInfoHasher,
-                          ${u.passwordInfo.password},
-                          ${u.firstName}, ${u.lastName},
-                          ${u.isSuperUser}, ${u.novelUserExperienceInfos}, ${u.selectedTheme},
-                          ${u.created}, ${u.isEmailVerified}, ${u.isDeleted})""".asUpdate)
+                   VALUES(${mu._id}, ${mu.email}, $passwordInfoHasher,
+                          ${mu.passwordInfo.password},
+                          ${mu.firstName}, ${mu.lastName},
+                          ${mu.isSuperUser}, ${mu.novelUserExperienceInfos}, ${mu.selectedTheme},
+                          ${mu.created}, ${mu.isEmailVerified}, ${mu.isDeleted})""".asUpdate)
     } yield ()
 
   def updatePasswordInfo(multiUserId: ObjectId, passwordInfo: PasswordInfo)(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -170,6 +170,19 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE email = $email AND $accessQuery".as[MultiusersRow])
       parsed <- parseFirst(r, email)
+    } yield parsed
+
+  def findMultiUserofOrganizationOwner(organizationId: String): Fox[MultiUser] =
+    for {
+      r <- run(q"""SELECT ${columnsWithPrefix("mu")}
+                   FROM webknossos.users_ u
+                   JOIN webknossos.multiUsers_ mu ON u._multiUser = mu._id
+                   WHERE u.isOrganizationOwner
+                   AND NOT u.isDeactivated
+                   AND u._organization = $organizationId
+                   ORDER BY m._id
+                   LIMIT 1""".as[MultiusersRow])
+      parsed <- parseFirst(r, organizationId)
     } yield parsed
 
   def emailNotPresentYet(email: String)(implicit ctx: DBAccessContext): Fox[Boolean] =

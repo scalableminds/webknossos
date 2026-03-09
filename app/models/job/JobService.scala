@@ -180,6 +180,7 @@ class JobService @Inject()(wkConf: WkConf,
   def publicWrites(job: Job)(implicit ctx: DBAccessContext): Fox[JsValue] =
     for {
       owner <- userDAO.findOne(job._owner) ?~> "user.notFound"
+      ownerMultiUser <- multiUserDAO.findOne(owner._multiUser)
       organization <- organizationDAO.findOne(owner._organization) ?~> "organization.notFound"
       ownerEmail <- userService.emailFor(owner)
       creditTransactionBox <- creditTransactionService.findTransactionOfJob(job._id).shiftBox
@@ -189,8 +190,8 @@ class JobService @Inject()(wkConf: WkConf,
           id = job._id,
           command = job.command,
           organizationId = organization._id,
-          ownerFirstName = owner.firstName,
-          ownerLastName = owner.lastName,
+          ownerFirstName = ownerMultiUser.firstName,
+          ownerLastName = ownerMultiUser.lastName,
           ownerEmail = ownerEmail,
           args = job.args - "webknossos_token" - "user_auth_token",
           state = job.effectiveState,

@@ -112,6 +112,8 @@ class UserService @Inject()(conf: WkConf,
         multiUserId,
         email,
         passwordInfo,
+        firstName,
+        lastName,
         isSuperUser = false,
         isEmailVerified = isEmailVerified
       )
@@ -121,8 +123,6 @@ class UserService @Inject()(conf: WkConf,
         newUserId,
         multiUserId,
         organizationId,
-        firstName,
-        lastName,
         Instant.now,
         Json.obj(),
         LoginInfo(CredentialsProvider.ID, newUserId.id),
@@ -208,6 +208,7 @@ class UserService @Inject()(conf: WkConf,
     } yield multiUser.email
 
   def update(user: User,
+             multiUser: MultiUser,
              firstName: String,
              lastName: String,
              email: String,
@@ -220,7 +221,7 @@ class UserService @Inject()(conf: WkConf,
 
     if (user.isDeactivated && activated) {
       logger.info(s"Activating user ${user._id}. Access context: ${ctx.toStringAnonymous}")
-      Mailer ! Send(defaultMails.activatedMail(user.name, email))
+      Mailer ! Send(defaultMails.activatedMail(multiUser.fullName, email))
     }
     for {
       oldEmail <- emailFor(user)
@@ -229,8 +230,8 @@ class UserService @Inject()(conf: WkConf,
         _ = logger.info(s"Email of MultiUser ${user._multiUser} changed from $oldEmail to $email")
       } yield ())
       _ <- userDAO.updateValues(user._id, isAdmin, isDatasetManager, isDeactivated = !activated, lastTaskTypeId)
-      _ <- Fox.runIf(firstName != user.firstName || lastName != user.lastName)(
-        userDAO.updateNameByMultiUser(user._multiUser, firstName, lastName))
+      _ <- Fox.runIf(firstName != multiUser.firstName || lastName != multiUser.lastName)(
+        multiUserDAO.updateName(user._multiUser, firstName, lastName))
       _ <- userDAO.updateTeamMembershipsForUser(user._id, teamMemberships)
       _ <- userExperiencesDAO.updateExperiencesForUser(user, experiences)
       _ = removeUserFromCache(user._id)
@@ -367,8 +368,8 @@ class UserService @Inject()(conf: WkConf,
       Json.obj(
         "id" -> user._id.toString,
         "email" -> multiUser.email,
-        "firstName" -> user.firstName,
-        "lastName" -> user.lastName,
+        "firstName" -> multiUser.firstName,
+        "lastName" -> multiUser.lastName,
         "isAdmin" -> user.isAdmin,
         "isOrganizationOwner" -> user.isOrganizationOwner,
         "isDatasetManager" -> user.isDatasetManager,
@@ -439,14 +440,14 @@ class UserService @Inject()(conf: WkConf,
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
       teamMemberships <- teamMembershipsFor(user._id)
-      email <- emailFor(user)
+      multiUser <- multiUserDAO.findOne(user._multiUser)
       teamMembershipsJs <- Fox.serialCombined(teamMemberships)(tm => teamMembershipService.publicWrites(tm))
     } yield {
       Json.obj(
         "id" -> user._id.toString,
-        "email" -> email,
-        "firstName" -> user.firstName,
-        "lastName" -> user.lastName,
+        "email" -> multiUser.email,
+        "firstName" -> multiUser.firstName,
+        "lastName" -> multiUser.lastName,
         "isAdmin" -> user.isAdmin,
         "isDatasetManager" -> user.isDatasetManager,
         "isAnonymous" -> false,

@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.datastore.storage
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.S3UriUtils
-import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.ws.WSClient
 import software.amazon.awssdk.auth.credentials.{
   AnonymousCredentialsProvider,
@@ -23,7 +22,7 @@ import scala.concurrent.duration.DurationInt
 import scala.jdk.DurationConverters.ScalaDurationOps
 import scala.jdk.OptionConverters.RichOptional
 
-class S3ClientPool(ws: WSClient) extends LazyLogging {
+class S3ClientPool(ws: WSClient) {
 
   private lazy val pool: AlfuCache[(Option[String], Option[String], Option[String]), S3AsyncClient] = AlfuCache()
 
@@ -45,8 +44,6 @@ class S3ClientPool(ws: WSClient) extends LazyLogging {
 
   private def buildS3Client(credentialsProvider: AwsCredentialsProvider,
                             customEndpointOpt: Option[URI]): S3AsyncClient = {
-    logger.info(
-      s"Cache miss, building S3 Client for endpoint $customEndpointOpt and credentialsProvider $credentialsProvider!")
     val basic =
       S3AsyncClient
         .builder()

@@ -95,6 +95,12 @@ trait StaticLayer extends DataLayer {
         l.copy(attachments = l.attachments.map(_.mergeWithPrecedence(attachments)).orElse(Some(attachments)))
     }
 
+  def withAttachments(attachments: DataLayerAttachments): StaticLayer =
+    this match {
+      case l: StaticColorLayer        => l.copy(attachments = Some(attachments))
+      case l: StaticSegmentationLayer => l.copy(attachments = Some(attachments))
+    }
+
   def mapped(
       boundingBoxMapping: BoundingBox => BoundingBox = b => b,
       defaultViewConfigurationMapping: Option[LayerViewConfiguration] => Option[LayerViewConfiguration] = l => l,

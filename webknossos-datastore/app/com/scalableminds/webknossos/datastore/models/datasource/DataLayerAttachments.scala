@@ -4,6 +4,7 @@ import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Box, Full}
 import com.scalableminds.webknossos.datastore.helpers.UPath
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Format, Json}
 
@@ -39,6 +40,26 @@ case class DataLayerAttachments(
     )
     if (filtered.isEmpty) None else Some(filtered)
   }
+
+  def withAdded(attachment: LayerAttachment, attachmentType: LayerAttachmentType.Value): DataLayerAttachments =
+    attachmentType match {
+      case LayerAttachmentType.mesh => this.copy(meshes = this.meshes :+ attachment)
+      case LayerAttachmentType.agglomerate =>
+        this.copy(agglomerates = this.agglomerates :+ attachment)
+      case LayerAttachmentType.segmentIndex => this.copy(segmentIndex = Some(attachment))
+      case LayerAttachmentType.connectome =>
+        this.copy(connectomes = this.connectomes :+ attachment)
+      case LayerAttachmentType.cumsum => this.copy(cumsum = Some(attachment))
+    }
+
+  def getByTypeAndName(attachmentType: LayerAttachmentType, name: String): Option[LayerAttachment] =
+    attachmentType match {
+      case LayerAttachmentType.mesh         => meshes.find(_.name == name)
+      case LayerAttachmentType.agglomerate  => agglomerates.find(_.name == name)
+      case LayerAttachmentType.segmentIndex => segmentIndex.find(_.name == name)
+      case LayerAttachmentType.connectome   => connectomes.find(_.name == name)
+      case LayerAttachmentType.cumsum       => cumsum.find(_.name == name)
+    }
 
   def mapped(attachmentMapping: LayerAttachment => LayerAttachment): DataLayerAttachments =
     DataLayerAttachments(

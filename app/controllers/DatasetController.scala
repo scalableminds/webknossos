@@ -688,8 +688,8 @@ class DatasetController @Inject()(userService: UserService,
       } yield Ok(Json.obj("newDatasetId" -> newDatasetId))
     }
 
-  def composeAddLayer(datasetId: ObjectId): Action[ComposeAddLayerRequest] =
-    sil.SecuredAction.async(validateJson[ComposeAddLayerRequest]) { implicit request =>
+  def composeAddLayer(datasetId: ObjectId): Action[ComposeRequestLayer] =
+    sil.SecuredAction.async(validateJson[ComposeRequestLayer]) { implicit request =>
       for {
         _ <- composeService.addLayer(datasetId, request.body) ?~> "dataset.compose.addLayer.failed"
       } yield Ok

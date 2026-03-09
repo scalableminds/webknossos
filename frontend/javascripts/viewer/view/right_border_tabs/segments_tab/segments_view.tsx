@@ -1445,7 +1445,6 @@ class SegmentsView extends React.Component<Props, State> {
           onRenameEnd={this.onRenameEnd}
           showContextMenuAt={this.showContextMenuAt}
           hideContextMenu={this.hideContextMenu}
-          createGroup={this.createGroup}
           handleDeleteGroup={this.handleDeleteGroup}
           getExpandSubgroupsItem={this.getExpandSubgroupsItem}
           getCollapseSubgroupsItem={this.getCollapseSubgroupsItem}
@@ -1652,14 +1651,6 @@ class SegmentsView extends React.Component<Props, State> {
       icon: <ShrinkOutlined />,
       label: "Collapse all subgroups",
     };
-  }
-
-  createGroup(parentGroupId: number): void {
-    if (!this.props.visibleSegmentationLayer) {
-      return;
-    }
-
-    api.tracing.createSegmentGroup(null, parentGroupId, this.props.visibleSegmentationLayer.name);
   }
 
   doesGroupHaveAnyMeshes = (groupId: number | null): boolean => {

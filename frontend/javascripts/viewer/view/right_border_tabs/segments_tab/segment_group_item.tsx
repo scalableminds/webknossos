@@ -1,7 +1,7 @@
 import { DeleteOutlined, FolderOutlined, PlusOutlined } from "@ant-design/icons";
 import { Divider, type MenuProps, Space } from "antd";
 import type { ItemType } from "antd/lib/menu/interface";
-import React from "react";
+import React, { useCallback } from "react";
 import type { APISegmentationLayer } from "types/api_types";
 import { api } from "viewer/singletons";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
@@ -17,7 +17,6 @@ type SegmentGroupItemProps = {
   onRenameEnd: () => void;
   showContextMenuAt: (xPos: number, yPos: number, menu: MenuProps) => void;
   hideContextMenu: () => void;
-  createGroup: (groupId: number) => void;
   handleDeleteGroup: (groupId: number) => void;
   getExpandSubgroupsItem: (groupId: number) => ItemType | null;
   getCollapseSubgroupsItem: (groupId: number) => ItemType | null;
@@ -48,7 +47,6 @@ function _SegmentGroupItem({
   onRenameEnd,
   showContextMenuAt,
   hideContextMenu,
-  createGroup,
   handleDeleteGroup,
   getExpandSubgroupsItem,
   getCollapseSubgroupsItem,
@@ -66,53 +64,86 @@ function _SegmentGroupItem({
 }: SegmentGroupItemProps) {
   const isEditingDisabled = !allowUpdate;
 
-  const onOpenContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const getMenu = (): MenuProps => ({
-      items: [
-        {
-          key: "create",
-          onClick: () => {
-            createGroup(groupId);
-            hideContextMenu();
-          },
-          disabled: isEditingDisabled,
-          icon: <PlusOutlined />,
-          label: "Create new group",
-        },
-        {
-          key: "delete",
-          disabled: isEditingDisabled,
-          onClick: () => {
-            handleDeleteGroup(groupId);
-            hideContextMenu();
-          },
-          icon: <DeleteOutlined />,
-          label: "Delete group",
-        },
-        getExpandSubgroupsItem(groupId),
-        getCollapseSubgroupsItem(groupId),
-        getMoveSegmentsHereMenuItem(groupId),
-        {
-          key: "groupAndMeshActionDivider",
-          label: <Divider style={{ marginBottom: 0, marginTop: 0 }} />,
-          disabled: true,
-        },
-        getSetGroupColorMenuItem(groupId),
-        getResetGroupColorMenuItem(groupId),
-        getShowSegmentStatistics(groupId),
-        getLoadMeshesFromFileMenuItem(groupId),
-        getComputeMeshesAdHocMenuItem(groupId),
-        getReloadMenuItem(groupId),
-        getRemoveMeshesMenuItem(groupId),
-        maybeGetShowOrHideMeshesMenuItems(groupId),
-        getDownLoadMeshesMenuItem(groupId),
-      ].flat(),
-    });
+  const createGroup = useCallback(
+    (parentGroupId: number): void => {
+      if (!visibleSegmentationLayer) {
+        return;
+      }
 
-    const [x, y] = getContextMenuPositionFromEvent(event, "segment-list-context-menu-overlay");
-    showContextMenuAt(x, y, getMenu());
-  };
+      api.tracing.createSegmentGroup(null, parentGroupId, visibleSegmentationLayer.name);
+    },
+    [visibleSegmentationLayer],
+  );
+
+  const onOpenContextMenu = useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      event.preventDefault();
+      const getMenu = (): MenuProps => ({
+        items: [
+          {
+            key: "create",
+            onClick: () => {
+              createGroup(groupId);
+              hideContextMenu();
+            },
+            disabled: isEditingDisabled,
+            icon: <PlusOutlined />,
+            label: "Create new group",
+          },
+          {
+            key: "delete",
+            disabled: isEditingDisabled,
+            onClick: () => {
+              handleDeleteGroup(groupId);
+              hideContextMenu();
+            },
+            icon: <DeleteOutlined />,
+            label: "Delete group",
+          },
+          getExpandSubgroupsItem(groupId),
+          getCollapseSubgroupsItem(groupId),
+          getMoveSegmentsHereMenuItem(groupId),
+          {
+            key: "groupAndMeshActionDivider",
+            label: <Divider style={{ marginBottom: 0, marginTop: 0 }} />,
+            disabled: true,
+          },
+          getSetGroupColorMenuItem(groupId),
+          getResetGroupColorMenuItem(groupId),
+          getShowSegmentStatistics(groupId),
+          getLoadMeshesFromFileMenuItem(groupId),
+          getComputeMeshesAdHocMenuItem(groupId),
+          getReloadMenuItem(groupId),
+          getRemoveMeshesMenuItem(groupId),
+          maybeGetShowOrHideMeshesMenuItems(groupId),
+          getDownLoadMeshesMenuItem(groupId),
+        ].flat(),
+      });
+
+      const [x, y] = getContextMenuPositionFromEvent(event, "segment-list-context-menu-overlay");
+      showContextMenuAt(x, y, getMenu());
+    },
+    [
+      createGroup,
+      groupId,
+      handleDeleteGroup,
+      hideContextMenu,
+      isEditingDisabled,
+      showContextMenuAt,
+      getCollapseSubgroupsItem,
+      getExpandSubgroupsItem,
+      getMoveSegmentsHereMenuItem,
+      getRemoveMeshesMenuItem,
+      getReloadMenuItem,
+      getComputeMeshesAdHocMenuItem,
+      getLoadMeshesFromFileMenuItem,
+      getDownLoadMeshesMenuItem,
+      maybeGetShowOrHideMeshesMenuItems,
+      getSetGroupColorMenuItem,
+      getResetGroupColorMenuItem,
+      getShowSegmentStatistics,
+    ],
+  );
 
   // Make sure the displayed name is not empty
   const displayableName = name?.trim() || "<Unnamed Group>";

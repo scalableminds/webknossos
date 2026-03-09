@@ -110,7 +110,7 @@ export class DataBucket {
   dirtyCount: number = 0;
   pendingOperations: Array<PendingOperation> = [];
   state: BucketStateEnumType;
-  private accessed: boolean;
+  accessed: boolean;
   data: BucketDataArray | null | undefined;
   temporalBucketManager: TemporalBucketManager;
   cube: DataCube;

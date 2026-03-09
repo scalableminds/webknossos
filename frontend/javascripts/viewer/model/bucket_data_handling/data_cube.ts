@@ -517,7 +517,7 @@ class DataCube {
     // finer buckets are already loaded. However, the current performance
     // is acceptable which is why this optimization isn't implemented.
     const valueSets = this.buckets
-      .filter((bucket) => bucket.state === "LOADED")
+      .filter((bucket) => bucket.state === "LOADED" && bucket.accessed)
       .map((bucket) => bucket.getValueSet());
     // @ts-expect-error The buckets of a single layer all have the same element class, so they are all number or all bigint
     const valueSet = union(valueSets);

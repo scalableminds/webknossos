@@ -525,6 +525,7 @@ function* updateLocalHdf5Mapping(
     // We do not try to look up all segment ids because these are usually too many
     // in coarse magnifications.
     // A toast will be shown to the user in the warnAboutSegmentationZoom saga.
+    yield* put(setMappingAction(layerName, mappingName, "HDF5", true, { mapping: new Map() }));
     return;
   }
 

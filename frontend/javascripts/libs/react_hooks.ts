@@ -336,9 +336,10 @@ export function useWindowWidth() {
   const [width, setWidth] = useState<number>(window.innerWidth);
 
   useEffect(() => {
-    window.addEventListener("resize", () => setWidth(window.innerWidth));
+    const handler = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", handler);
     return () => {
-      window.removeEventListener("resize", () => setWidth(window.innerWidth));
+      window.removeEventListener("resize", handler);
     };
   }, []);
 

@@ -393,6 +393,8 @@ export class DataBucket {
       throw new Error("Bucket.getData() called, but data does not exist (anymore).");
     }
 
+    this.markAsNeeded();
+
     return data;
   }
 

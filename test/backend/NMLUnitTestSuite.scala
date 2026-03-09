@@ -18,7 +18,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Empty, Failure, Fox, Full}
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.scalatest.Assertion
-import org.scalatest.wordspec.AnyWordSpec
+import org.scalatest.wordspec.AsyncWordSpec
 import play.api.i18n.{DefaultMessagesApi, Messages, MessagesProvider}
 import play.api.libs.json.Json
 import play.api.test.FakeRequest
@@ -27,7 +27,7 @@ import play.silhouette.impl.providers.CredentialsProvider
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class NMLUnitTestSuite extends AnyWordSpec {
+class NMLUnitTestSuite extends AsyncWordSpec {
 
   implicit private val ec: ExecutionContext = scala.concurrent.ExecutionContext.global
   implicit private val ctx: DBAccessContext = GlobalAccessContext

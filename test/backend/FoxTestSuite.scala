@@ -14,7 +14,7 @@ class FoxTestSuite extends AsyncWordSpec with FoxImplicits {
       val exception = new Exception("boom!")
       val f: Future[Unit] = Future.failed(exception)
       Fox.fromFuture(f).futureBox.map {
-        case Failure(msg, e, _) => assert(msg == "java.lang.Exception: boom!", e.toOption.contains(exception))
+        case Failure(msg, e, _) => assert(msg == "java.lang.Exception: boom!"); assert(e.toOption.contains(exception))
         case _                  => fail()
       }
     }

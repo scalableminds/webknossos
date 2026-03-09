@@ -758,8 +758,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def cleanUpUploadedDataset(uploadDir: Path, uploadId: String, reason: String): Fox[Unit] =
     for {
       _ <- Fox.successful(logger.info(s"Cleaning up uploaded dataset. Reason: $reason"))
-      _ <- removeFromRedis(uploadId)
       _ <- PathUtils.deleteDirectoryRecursively(uploadDir).toFox
+      _ <- removeFromRedis(uploadId)
     } yield ()
 
   private def removeFromRedis(uploadId: String): Fox[Unit] =

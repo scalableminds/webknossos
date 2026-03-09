@@ -28,6 +28,18 @@ case class DataLayerAttachments(
       cumsum = this.cumsum.orElse(other.cumsum)
     )
 
+  // Drop those attachments whose name is not in other’s matching collection.
+  def dropMissing(other: DataLayerAttachments): Option[DataLayerAttachments] = {
+    val filtered = DataLayerAttachments(
+      meshes = meshes.filter(a => other.meshes.exists(_.name == a.name)),
+      agglomerates = agglomerates.filter(a => other.agglomerates.exists(_.name == a.name)),
+      segmentIndex = segmentIndex.filter(a => other.segmentIndex.exists(_.name == a.name)),
+      connectomes = connectomes.filter(a => other.connectomes.exists(_.name == a.name)),
+      cumsum = cumsum.filter(a => other.cumsum.exists(_.name == a.name))
+    )
+    if (filtered.isEmpty) None else Some(filtered)
+  }
+
   def mapped(attachmentMapping: LayerAttachment => LayerAttachment): DataLayerAttachments =
     DataLayerAttachments(
       meshes = meshes.map(attachmentMapping(_)),
@@ -47,6 +59,7 @@ case class DataLayerAttachments(
     meshes.distinctBy(_.name).length != meshes.length ||
       agglomerates.distinctBy(_.name).length != agglomerates.length ||
       connectomes.distinctBy(_.name).length != connectomes.length
+
 }
 
 object DataLayerAttachments {

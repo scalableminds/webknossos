@@ -38,7 +38,7 @@ class S3ClientPool(ws: WSClient) {
       }
       client <- pool.getOrLoad(
         (credentialOpt.map(_.accessKeyId),
-         credentialOpt.map(c => SCrypt.sha(c.secretAccessKey)),
+         credentialOpt.map(c => SCrypt.sha256Hex(c.secretAccessKey)),
          customEndpointOpt.map(_.toString)),
         _ => {
           Fox.successful(buildS3Client(credentialsProvider, customEndpointOpt))

@@ -13,16 +13,16 @@ object SCrypt {
   /**
     * For readability.
     */
-  type PlainPassword = String
-  type PasswordHash = String
+  private type PlainPassword = String
+  private type PasswordHash = String
 
   /**
     * Useful salting default
     */
-  val QuickAndWeak = 6
-  val GoodEnough = 10
-  val RatherTough = 14
-  val PrettyInsane = 18
+  private val QuickAndWeak = 6
+  private val GoodEnough = 10
+  private val RatherTough = 14
+  private val PrettyInsane = 18
 
   /**
     *
@@ -47,6 +47,6 @@ object SCrypt {
   def md5(s: String): String =
     MessageDigest.getInstance("MD5").digest(s.getBytes).map("%02X".format(_)).mkString
 
-  def sha(s: String): String =
-    MessageDigest.getInstance("SHA-256").digest(s.getBytes("UTF-8")).map("%02x".format(_)).mkString
+  def sha256Hex(s: String): String =
+    MessageDigest.getInstance("SHA-256").digest(s.getBytes(StandardCharsets.UTF_8)).map("%02x".format(_)).mkString
 }

@@ -22,6 +22,7 @@ import { startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   loadAgglomerateTree1,
+  mergeAgglomerateTrees1And4,
   mergeSegment3And4WithAgglomerateTree1,
   mergeSegment3And4WithAgglomerateTree1And4,
   mergeSegment3And6WithAgglomerateTree1,
@@ -29,6 +30,7 @@ import {
   mergeSegment5And6WithAgglomerateTree1,
   mergeSegment5And6WithAgglomerateTree1And4,
   minCutWithNodes2And3WithAgglomerateTree1,
+  splitAgglomerateTree1,
   splitSegment1And2WithAgglomerateTree1,
   splitSegment2And3WithAgglomerateTree1,
   splitSegment2And3WithAgglomerateTrees1And4And6,
@@ -36,7 +38,9 @@ import {
 import {
   loadAgglomerateSkeletons,
   mockEdgesForAgglomerateMinCut,
+  performMergeTreesProofreading,
   performMinCutWithNodesProofreading,
+  performSplitTreesProofreading,
 } from "./proofreading/proofreading_skeleton_test_utils";
 import {
   initializeMappingAndTool,
@@ -367,6 +371,33 @@ describe("Proofreading should generate correct update actions", () => {
       expect(loadAgglomerateTreesAndSplitUpdateActions).toStrictEqual(
         minCutWithNodes2And3WithAgglomerateTree1,
       );
+    });
+
+    await task.toPromise();
+  }, 8000);
+
+  it("performMergeTreesProofreading should apply correct update actions after loading agglomerate trees", async (context: WebknossosTestContext) => {
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+
+    const task = startSaga(function* task() {
+      const shouldSaveAfterLoadingTrees = false;
+      yield performMergeTreesProofreading(context, shouldSaveAfterLoadingTrees, false);
+      // This includes the create agglomerate tree & merge agglomerate tree update actions.
+      const loadTreesAndMergeUpdateActions = getNestedUpdateActions(context).slice(-6)!;
+      expect(loadTreesAndMergeUpdateActions).toStrictEqual(mergeAgglomerateTrees1And4);
+    });
+
+    await task.toPromise();
+  }, 8000);
+
+  it("performSplitTreesProofreading should apply correct update actions when loading agglomerate trees", async (context: WebknossosTestContext) => {
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+
+    const task = startSaga(function* task() {
+      yield performSplitTreesProofreading(context, false);
+      // This includes the create agglomerate tree & merge agglomerate tree update actions.
+      const loadTreeAndSplitUpdateActions = getNestedUpdateActions(context).slice(5);
+      expect(loadTreeAndSplitUpdateActions).toStrictEqual(splitAgglomerateTree1);
     });
 
     await task.toPromise();

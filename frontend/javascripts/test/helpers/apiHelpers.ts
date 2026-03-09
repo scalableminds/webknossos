@@ -46,7 +46,6 @@ import type { ApiInterface } from "viewer/api/api_latest";
 import WebknossosApi from "viewer/api/api_loader";
 import { setupApi } from "viewer/api/internal_api";
 import Constants, { ControlModeEnum, type Vector2 } from "viewer/constants";
-import type CustomLOD from "viewer/controller/custom_lod";
 import { setSceneController } from "viewer/controller/scene_controller_provider";
 import SegmentMeshController from "viewer/controller/segment_mesh_controller";
 import UrlManager from "viewer/controller/url_manager";
@@ -112,7 +111,7 @@ export interface WebknossosTestContext extends BaseTestContext {
   api: ApiInterface;
   tearDownPullQueues: () => void;
   receivedDataPerSaveRequest: Array<SaveQueueEntry[]>;
-  segmentLodGroups: Record<string, CustomLOD>;
+  segmentMeshController: SegmentMeshController;
 }
 
 export function getFlattenedUpdateActions(context: WebknossosTestContext) {
@@ -288,15 +287,14 @@ vi.mock("admin/rest_api.ts", async () => {
 vi.mock("libs/draco.ts", async () => {
   return {
     getDracoLoader: vi.fn(() => ({
-      decodeDracoFileAsync: createUnitCubeBufferGeometry,
+      decodeDracoFileAsync: async () => createUnitCubeBufferGeometry(),
     })),
   };
 });
 
-vi.mock("admin/api/mesh.ts", async () => {
+vi.mock("admin/api/mesh", async () => {
   const actual = await vi.importActual<typeof import("admin/api/mesh.ts")>("admin/api/mesh.ts");
-
-  const getMeshfileChunksForSegment = vi.fn(
+  const getMeshFileChunksForSegment = vi.fn(
     async (
       _dataStoreUrl: string,
       _datasetId: string,
@@ -332,44 +330,29 @@ vi.mock("admin/api/mesh.ts", async () => {
     },
   );
 
-  const getMeshfileChunkData = vi.fn(
+  const getMeshFileChunkData = vi.fn(
     async (
       _dataStoreUrl: string,
       _datasetId: string,
       _layerName: string,
-      _batchDescription: MeshChunkDataRequestList,
+      batchDescription: MeshChunkDataRequestList,
     ): Promise<ArrayBuffer[]> => {
-      return [new ArrayBuffer()];
+      // Return ArrayBuffers for each chunk in the batch
+      // The size doesn't matter for the test since decodeDracoFileAsync is mocked
+      return batchDescription.requests.map((request) => new ArrayBuffer(request.byteSize));
     },
   );
 
   return {
     ...actual,
-    getMeshfileChunksForSegment,
-    getMeshfileChunkData,
-    // TODOM
+    getMeshFileChunksForSegment,
+    getMeshFileChunkData,
   };
 });
 
 vi.mock("libs/compute_bvh_async", () => ({
   computeBvhAsync: vi.fn().mockResolvedValue(undefined),
 }));
-
-vi.mock("admin/api/mesh", async () => {
-  const actual = await vi.importActual<typeof import("admin/api/mesh.ts")>("admin/api/mesh.ts");
-  const getMeshFileChunksForSegment = async (..._args: any[]): Promise<MeshSegmentInfo> => {
-    return {
-      meshFormat: "draco",
-      lods: [],
-      chunkScale: [1, 1, 1],
-    };
-  };
-
-  return {
-    ...actual,
-    getMeshFileChunksForSegment,
-  };
-});
 
 vi.mock("viewer/model/helpers/proto_helpers", async (importOriginal) => {
   const originalProtoHelperModule = (await importOriginal()) as ArbitraryObject;
@@ -626,18 +609,11 @@ export async function setupWebknossosForTesting(
   );
   vi.mocked(parseProtoAnnotation).mockReturnValue(cloneDeep(annotationProto));
 
-  // clear segmentLodGroups
-  if (testContext.segmentLodGroups == null) {
-    testContext.segmentLodGroups = {};
-  }
-  const { segmentLodGroups } = testContext;
-  Object.keys(segmentLodGroups).forEach((key) => {
-    delete segmentLodGroups[key];
-  });
+  testContext.segmentMeshController = new SegmentMeshController();
   setSceneController({
     // @ts-expect-error
     name: "This is a dummy scene controller so that getSceneController works in the tests.",
-    segmentMeshController: new SegmentMeshController(),
+    segmentMeshController: testContext.segmentMeshController,
   });
 
   __setFeatures({});

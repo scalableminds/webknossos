@@ -98,7 +98,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         // Set up the merge-related segment partners. Normally, this would happen
         // due to the user's interactions.
         yield loadAgglomerateMeshes([1]);
-        const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
+        const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
         expect([...loadedMeshIds]).toEqual([1]);
       });
       await task.toPromise();
@@ -121,11 +121,11 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
         yield put(setActiveCellAction(1));
         // Give mesh loading a little time
-        const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
+        const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
         expect(sortBy([...loadedMeshIds])).toEqual([1, 6]);
         yield loadAgglomerateMeshes([4]);
 
-        const loadedMeshIds2 = getAllCurrentlyLoadedMeshIds(context);
+        const loadedMeshIds2 = getAllCurrentlyLoadedMeshIds(context, tracingId);
         expect(sortBy([...loadedMeshIds2])).toEqual([1, 4, 6]);
 
         // Execute the actual merge and wait for the finished mapping.
@@ -145,7 +145,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         // to register that mesh with id 1 was added.
         yield delay(1);
 
-        const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
+        const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
         expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6]);
         expect(sortBy([...removedMeshes])).toEqual([1, 4]);
         expect([...addedMeshes]).toEqual([1]);
@@ -172,7 +172,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
         yield put(setActiveCellAction(1));
         // Give mesh loading a little time
-        const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
+        const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
         expect(sortBy([...loadedMeshIds])).toEqual([1, 4]);
 
         // Prepare the server's reply for the upcoming split.
@@ -205,7 +205,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         // to register that mesh with id 1339 was added.
         yield delay(1);
 
-        const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
+        const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
         expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 1339]);
         expect(sortBy([...removedMeshes])).toEqual([1, 1339]); // Although 1339 is not loaded it is tried to be removed by the proofreading saga to refresh it.
         expect(sortBy([...addedMeshes])).toEqual([1, 1339]);
@@ -227,7 +227,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
       yield loadAgglomerateMeshes([1, 4, 6]);
-      const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
+      const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect([...loadedMeshIds]).toEqual([1, 4, 6]);
 
       // After the meshes are loaded simulate a user making a merge.
@@ -258,7 +258,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       // Wait so that the addedMeshes listener has a 100% chance to register that mesh with id 4 was added.
       yield delay(1);
 
-      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
+      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4]);
       expect(sortBy([...removedMeshes])).toEqual([4, 6]);
       expect(sortBy([...addedMeshes])).toEqual([4]);
@@ -279,7 +279,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
       yield loadAgglomerateMeshes([1, 4, 6]);
-      const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
+      const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect([...loadedMeshIds]).toEqual([1, 4, 6]);
 
       // After the meshes are loaded simulate a user making a split.
@@ -328,7 +328,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       // Wait so that the addedMeshes listener has a 100% chance to register that mesh with id 1 was added.
       yield delay(1);
 
-      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
+      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 6, 1339]);
       expect(sortBy([...removedMeshes])).toEqual([1, 1339]);
       expect(sortBy([...addedMeshes])).toEqual([1, 1339]);
@@ -364,7 +364,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       // Load all meshes for all affected agglomerate meshes and one more.
       yield loadAgglomerateMeshes([4, 6, 1]);
 
-      const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
+      const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
 
       // Set up the merge-related segment partners. Normally, this would happen
@@ -390,7 +390,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       // Wait so that the addedMeshes listener has a 100% chance to register that mesh with id 1 was added.
       yield delay(1);
 
-      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
+      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1]);
       expect(sortBy([...removedMeshes])).toEqual([1, 4, 6]);
       expect(sortBy([...addedMeshes])).toEqual([1]);
@@ -442,7 +442,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       // Load all meshes for all affected agglomerate meshes and one more.
       yield loadAgglomerateMeshes([4, 6, 1]);
 
-      const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
+      const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
 
       // Set up the merge-related segment partners. Normally, this would happen
@@ -467,7 +467,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       // Wait so that the addedMeshes listener has a 100% chance to register that mesh with id 1339 was added.
       yield delay(1);
 
-      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
+      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6, 1339]);
       expect(sortBy([...removedMeshes])).toEqual([1, 4, 1339]);
       expect(sortBy([...addedMeshes])).toEqual([1, 1339]);
@@ -504,7 +504,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       // Load all meshes for all affected agglomerate meshes and one more.
       yield loadAgglomerateMeshes([4, 6, 1]);
 
-      const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
+      const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
 
       // Set up the split-related segment partners. Normally, this would happen
@@ -536,7 +536,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       // Wait so that the addedMeshes listener has a 100% chance to register that mesh with id 1339 was added.
       yield delay(1);
 
-      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
+      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6, 1339]);
       expect(sortBy([...removedMeshes])).toEqual([1, 4, 1339]);
       expect(sortBy([...addedMeshes])).toEqual([1, 1339]);
@@ -588,7 +588,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       // Load all meshes for all affected agglomerate meshes and one more.
       yield loadAgglomerateMeshes([4, 6, 1]);
 
-      const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
+      const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
 
       // Set up the split-related segment partners. Normally, this would happen
@@ -622,7 +622,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       // Wait so that the addedMeshes listener has a 100% chance to register that mesh with id 1340 was added.
       yield delay(1);
 
-      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
+      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 6, 1339, 1340]);
       expect(sortBy([...removedMeshes])).toEqual([1, 1339, 1340]);
       expect(sortBy([...addedMeshes])).toEqual([1, 1339, 1340]);
@@ -666,7 +666,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       );
 
       // Then check auxiliary meshes.
-      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
+      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 6, 1339, 1340]);
     });
 
@@ -718,7 +718,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       );
 
       // Then check auxiliary meshes.
-      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
+      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 6, 1339, 1340]);
     });
 
@@ -760,7 +760,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       );
 
       // Then check auxiliary meshes.
-      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
+      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1]);
     });
 
@@ -807,7 +807,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
           action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1340) as ActionPattern,
       );
       // Then check auxiliary meshes.
-      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
+      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 6, 1339, 1340]);
     });
 
@@ -818,7 +818,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
     // Additional edge to create agglomerate 1 with edges 1-2,2-3,1-3 to enforce cut with multiple edges.
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1, 3]]);
     // Mock backend answer telling saga to split edges 3-2 and 3-1.
-    mockEdgesForAgglomerateMinCut(context.mocks, 10, [
+    mockEdgesForAgglomerateMinCut(context.mocks, 12, [
       {
         position1: [3, 3, 3],
         position2: [1, 1, 1],
@@ -857,7 +857,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
           action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1339) as ActionPattern,
       );
       // Then check auxiliary meshes.
-      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
+      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 1339]);
     });
 
@@ -951,7 +951,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
           action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1) as ActionPattern,
       );
       // Then check auxiliary meshes.
-      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context);
+      const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6]);
     });
 

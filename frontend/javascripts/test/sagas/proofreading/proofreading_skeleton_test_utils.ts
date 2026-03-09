@@ -205,11 +205,11 @@ export function* loadAgglomerateSkeletons(
   );
 }
 
-function* loadInitialMeshes(context: WebknossosTestContext) {
+function* loadInitialMeshes(context: WebknossosTestContext, tracingId: string) {
   // Load all meshes for all affected agglomerate meshes and one more.
   yield loadAgglomerateMeshes([4, 6, 1]);
 
-  const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
+  const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
   expect(sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
 }
 
@@ -222,7 +222,7 @@ export function* performMergeTreesProofreading(
   yield call(initializeMappingAndTool, context, tracingId);
   expectMapping(tracingId, initialMapping);
   if (loadMeshes) {
-    yield loadInitialMeshes(context);
+    yield loadInitialMeshes(context, tracingId);
   }
 
   // Set up the merge-related segment partners. Normally, this would happen
@@ -256,7 +256,7 @@ export function* performSplitTreesProofreading(
   yield call(initializeMappingAndTool, context, tracingId);
   yield* expectMapping(tracingId, initialMapping);
   if (loadMeshes) {
-    yield loadInitialMeshes(context);
+    yield loadInitialMeshes(context, tracingId);
   }
 
   // Set up the merge-related segment partners. Normally, this would happen
@@ -288,7 +288,7 @@ export function* performMinCutWithNodesProofreading(
   yield call(initializeMappingAndTool, context, tracingId);
   yield* expectMapping(tracingId, initialMapping);
   if (loadMeshes) {
-    yield loadInitialMeshes(context);
+    yield loadInitialMeshes(context, tracingId);
   }
 
   // Set up the merge-related segment partners. Normally, this would happen

@@ -497,16 +497,20 @@ export function* loadAgglomerateMeshes(agglomerateIds: number[]): Saga<void> {
     yield take("FINISHED_LOADING_MESH");
   }
 }
-export function getAllCurrentlyLoadedMeshIds(context: WebknossosTestContext) {
+export function getAllCurrentlyLoadedMeshIds(
+  context: WebknossosTestContext,
+  volumeTracingId: string,
+) {
   const loadedMeshIds = new Set();
-  for (const layerName of Object.keys(context.segmentLodGroups)) {
-    for (const lodGroup of context.segmentLodGroups[layerName].children) {
-      for (const meshGroup of lodGroup.children) {
-        if ("segmentId" in meshGroup) {
-          loadedMeshIds.add(meshGroup.segmentId);
-        }
+  const { segmentMeshController } = context;
+  const additionalCoordKey = "";
+  const lodGroupsPerSegmentId =
+    segmentMeshController.meshesGroupsPerSegmentId[additionalCoordKey][volumeTracingId];
+  for (const lodGroup of Object.values(lodGroupsPerSegmentId)) {
+    for (const group of Object.values(lodGroup))
+      if ("segmentId" in group) {
+        loadedMeshIds.add(group.segmentId);
       }
-    }
   }
   return loadedMeshIds;
 }
@@ -522,7 +526,7 @@ export function* performCutFromAllNeighbours(
     // Load all meshes for all affected agglomerate meshes and one more.
     yield loadAgglomerateMeshes([4, 6, 1]);
 
-    const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
+    const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
     expect(sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
   }
   // Set up the merge-related segment partners. Normally, this would happen
@@ -569,7 +573,7 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
     // Load all meshes for all affected agglomerate meshes and one more.
     yield loadAgglomerateMeshes([4, 6, 1]);
 
-    const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context);
+    const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
     expect(sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
   }
 

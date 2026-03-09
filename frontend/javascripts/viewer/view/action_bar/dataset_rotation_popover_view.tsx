@@ -19,6 +19,7 @@ const warningColors: React.CSSProperties = {
 const PopoverContent: React.FC<EmptyObject> = () => {
   const dispatch = useDispatch();
   const rotation = useWkSelector((state) => state.flycam.rotation);
+  const allowedModes = useWkSelector((state) => state.annotation.restrictions.allowedModes);
   const handleChangeRotation = useCallback(
     (rotation: Vector3) => {
       dispatch(setRotationAction(rotation));
@@ -107,6 +108,7 @@ const PopoverContent: React.FC<EmptyObject> = () => {
         <Col>Flight Mode</Col>
         <Col offset={11}>
           <Switch
+            disabled={!allowedModes.includes("flight")}
             onChange={setViewMode}
             value={useWkSelector((state) => state.temporaryConfiguration.viewMode) === "flight"}
           />

@@ -2,7 +2,6 @@ package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.google.protobuf.ByteString
 import com.scalableminds.fossildb.proto.fossildbapi._
-import com.scalableminds.fossildb.proto.health._
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
@@ -11,6 +10,7 @@ import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder
 import io.grpc.{Status, StatusRuntimeException}
 import com.scalableminds.util.tools.{Box, Empty, Full}
 import com.scalableminds.util.tools.Box.tryo
+import grpc.health.v1.health.{HealthCheckRequest, HealthCheckResponse, HealthGrpc}
 import play.api.libs.json.{Reads, Writes}
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 

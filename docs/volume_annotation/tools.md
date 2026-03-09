@@ -1,6 +1,6 @@
 # Volume Annotation Tools
 
-Volume annotation in WEBKNOSSOS allows you to label and segment 3D structures in your dataset. This page covers the available tools and best practices for efficient volume annotation.
+Volume annotation in WEBKNOSSOS lets you label and segment 3D structures in your dataset. This page summarizes the available tools and practical usage tips.
 
 
 ![Trace Tool](../ui/images/trace-tool.jpg){align=left width="60"}
@@ -22,14 +22,14 @@ Volume annotation in WEBKNOSSOS allows you to label and segment 3D structures in
 - Relabeling segments with different IDs/colors
 - Quick corrections of small areas
 - The fill behavior can be modified using the 2D/3D fill modifiers (see below).
-- This tool only takes existing labels into account and does not look at any other underlying (microscopy) layers. Have a look at the [quick-select-tool](#quick-select-tool) for quickly annotating new structures.
+- This tool only uses existing labels and does not inspect underlying microscopy intensities. For fast annotation of unlabeled structures, use the [Quick Select tool](#quick-select-tool).
 
 ![Quick Select Tool](../ui/images/quickselect-tool.jpg){align=left width="60"} 
 **Quick Select**: Automatically annotate segments using either:
 
   - Threshold-based selection mode
-  - AI-based segmentation (powered by Segment Anything Model 2)
-    The AI mode works across various imaging modalities and can significantly speed up annotation workflows. See the [Quick-select tool](#quick-select-tool) section for detailed usage.
+  - AI-based segmentation (if AI Quick Select is available in your deployment)
+    AI mode can work across many imaging modalities and can speed up annotation workflows. See the [Quick-select tool](#quick-select-tool) section for detailed usage.
 
 ![Proofreading Tool](../ui/images/proofreading-tool.jpg){align=left width="60"} 
 **Proofreading**: Fix merge and split errors in automated segmentations using the underlying supervoxel graph by combining and breaking apart segments. Read more about [proofreading](../proofreading/proofreading_tool.md).
@@ -69,11 +69,11 @@ The following interactions and modes become available when working with some of 
 **Restrict Fill by Bounding Box**: When enabled, the fill operation will be restricted by the smallest bounding box that encloses the clicked position. This feature can be useful when correcting segmentation in a small bounding box (e.g., when curating training data).
 
 ## Quick-select tool
-The Quick Select tool offers AI-powered automatic segmentation, powered by [Segment Anything Model 2](https://ai.meta.com/blog/segment-anything-2/). Simply draw a selection around your target structure, and WEBKNOSSOS will automatically segment it for you.
+The Quick Select tool supports two modes: AI-based segmentation and threshold-based segmentation. Draw a selection around your target structure, and WEBKNOSSOS will generate a segment proposal.
 
 ### Operating Modes
 
-**AI Mode** (Default)
+**AI Mode** (Default, if available)
 
 - Activate the "AI" button in the toolbar
 - Works across various imaging modalities
@@ -85,6 +85,8 @@ The Quick Select tool offers AI-powered automatic segmentation, powered by [Segm
 - Uses intensity-based segmentation
 - Fills from the center of your selection
 
+If AI Quick Select is not available in your deployment, Quick Select runs in threshold mode.
+
 ### Usage Steps
 
 1. Select the Quick Select tool from the toolbar
@@ -93,7 +95,8 @@ The Quick Select tool offers AI-powered automatic segmentation, powered by [Segm
     - Number of sections to process (only AI mode)
     - Preview mode for real-time parameter adjustment
 4. Draw a rectangle around your target structure or click on it directly
-5. WEBKNOSSOS will automatically segment the structure across your specified sections
+5. If preview mode is enabled, refine the preview and confirm with ++enter++ (or cancel with ++escape++)
+6. WEBKNOSSOS will segment the structure across your selected sections
 
 ![youtube-video](https://www.youtube.com/embed/FnIor77Dg8s)
 
@@ -130,7 +133,7 @@ You can find the extrude button in the toolbar or use the dropdown menu next to 
 
 WEBKNOSSOS supports volumetric flood fills (3D) to relabel a segment with a new ID. Instead of having to relabel segment slice-by-slice, WEBKNOSSOS can do this for you. This operation allows you to fix both split and merge errors:
 
-- For split errors: Combine two segments by relabeling one segment with the ID of the other. Since this operation is fairly compute-intensive you might be better of with the [Merger Mode](../proofreading/merger_mode.md).
+- For split errors: Combine two segments by relabeling one segment with the ID of the other. Since this operation can be compute-intensive, you might be better off with [Merger Mode](../proofreading/merger_mode.md).
 - For merge errors: You have to manually split two segments at their intersection/border, e.g. a cell boundary. Use the eraser brush and make sure to establish a clear cut between both segments on a slice-by-slice basis. Both segments must not touch any longer. Create a new segment ID from the toolbar and apply it to one of the partial segments that you just divided.
 
 !!! note "Performance Consideration"

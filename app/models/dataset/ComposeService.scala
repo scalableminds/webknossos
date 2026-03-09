@@ -190,7 +190,8 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
         .getOrElse(DataLayerAttachments())
         .getByTypeAndName(request.attachmentType, request.sourceAttachmentName)
         .toFox ?~> "attachment.notFound"
-      updatedAttachments = targetAttachments.withAdded(sourceAttachment, request.attachmentType)
+      adaptedAttachment = sourceAttachment.copy(name = request.targetAttachmentName.getOrElse(sourceAttachment.name))
+      updatedAttachments = targetAttachments.withAdded(adaptedAttachment, request.attachmentType)
       _ <- Fox.fromBool(!updatedAttachments.containsDuplicateNames) ?~> "Attachment renamings create name collisions."
       updatedLayer = targetLayer.withAttachments(updatedAttachments)
       updatedLayers = targetDataSource.dataLayers.map(l => if (l.name == request.targetLayerName) updatedLayer else l)

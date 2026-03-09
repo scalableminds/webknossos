@@ -49,6 +49,8 @@ object Dependencies {
     "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapbVersion,
     // Protocol buffer GRPC calls. Communication to FossilDB. import io.grpc
     "io.grpc" % "grpc-netty-shaded" % grpcVersion,
+    // Protocol buffer GRPC health check for FossilDB. import io.grpc
+    "io.grpc" % "grpc-services" % grpcVersion,
     // Streaming JSON parsing. import com.google.gson
     "com.google.code.gson" % "gson" % "2.13.2",
     // Play WS Http client, used for RPC calls. import play.api.libs.ws

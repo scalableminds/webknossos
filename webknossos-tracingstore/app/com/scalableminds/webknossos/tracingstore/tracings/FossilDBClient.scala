@@ -2,16 +2,17 @@ package com.scalableminds.webknossos.tracingstore.tracings
 
 import com.google.protobuf.ByteString
 import com.scalableminds.fossildb.proto.fossildbapi._
-import com.scalableminds.fossildb.proto.health._
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.tracingstore.TracingStoreConfig
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.typesafe.scalalogging.LazyLogging
+import io.grpc.health.v1._
 import io.grpc.netty.shaded.io.grpc.netty.NettyChannelBuilder
 import io.grpc.{Status, StatusRuntimeException}
 import com.scalableminds.util.tools.{Box, Empty, Full}
 import com.scalableminds.util.tools.Box.tryo
 import play.api.libs.json.{Reads, Writes}
+import scalapb.grpc.Grpc
 import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -52,13 +53,14 @@ class FossilDBClient(collection: String,
     NettyChannelBuilder.forAddress(address, port).maxInboundMessageSize(Int.MaxValue).usePlaintext.build
   private val stub = FossilDBGrpc.stub(channel)
   private val blockingStub = FossilDBGrpc.blockingStub(channel)
-  private val healthStub = HealthGrpc.stub(channel)
+  private val healthStub = HealthGrpc.newFutureStub(channel)
   lazy val authority: String = f"$address:$port"
 
   def checkHealth(verbose: Boolean = false): Fox[Unit] = {
     val resultFox = for {
-      reply: HealthCheckResponse <- wrapException(healthStub.check(HealthCheckRequest()))
-      replyString = reply.status.toString
+      reply: HealthCheckResponse <- wrapException(
+        Grpc.guavaFuture2ScalaFuture(healthStub.check(HealthCheckRequest.getDefaultInstance)))
+      replyString = reply.getStatus.toString
       _ <- Fox.fromBool(replyString == "SERVING") ?~> replyString
       _ = if (verbose)
         logger.info(f"Successfully tested FossilDB health at $authority. Reply: " + replyString)

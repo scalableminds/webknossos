@@ -39,17 +39,15 @@ import type { DataNode } from "antd/lib/tree";
 import app from "app";
 import { ChangeColorMenuItemContent } from "components/color_picker";
 import FastTooltip from "components/fast_tooltip";
-import { SimpleRow } from "dashboard/folders/metadata_table";
 import Toast from "libs/toast";
 import { pluralize, sleep } from "libs/utils";
 import difference from "lodash-es/difference";
 import isNumber from "lodash-es/isNumber";
-import sum from "lodash-es/sum";
 import React, { type Key } from "react";
 import { connect } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { Dispatch } from "redux";
-import type { APIMeshFileInfo, MetadataEntryProto } from "types/api_types";
+import type { APIMeshFileInfo } from "types/api_types";
 import { type AdditionalCoordinate, APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { EMPTY_OBJECT } from "viewer/constants";
@@ -107,7 +105,6 @@ import Store from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
-import { InputWithUpdateOnBlur } from "viewer/view/components/input_with_update_on_blur";
 import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/helpers";
 import SegmentListItem from "viewer/view/right_border_tabs/segments_tab/segment_list_item";
 import {
@@ -121,20 +118,19 @@ import {
 } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import DeleteGroupModalView from "../delete_group_modal_view";
-import { MetadataEntryTableRows } from "../metadata_table";
 import { ResizableSplitPane } from "../resizable_split_pane";
 import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";
 import { ContextMenuContainer } from "../sidebar_context_menu";
 import {
   createGroupToSegmentsMap,
   deepFlatFilter,
-  findGroup,
   findParentIdForGroupId,
   getGroupByIdWithSubgroups,
   getGroupNodeKey,
   MISSING_GROUP_ID,
 } from "../trees_tab/tree_hierarchy_view_helpers";
 import { PrecomputeMeshesPopover } from "./precompute_meshes_popover";
+import { SegmentDetailsPanel } from "./segment_details_panel";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
 
 const SCROLL_DELAY_MS = 50;
@@ -1636,7 +1632,15 @@ class SegmentsView extends React.Component<Props, State> {
                           )}
                         </AutoSizer>
                       }
-                      secondChild={this.renderDetailsForSelection()}
+                      secondChild={
+                        <SegmentDetailsPanel
+                          selectedIds={this.props.selectedIds}
+                          segments={this.props.segments}
+                          segmentGroups={this.props.segmentGroups}
+                          visibleSegmentationLayer={this.props.visibleSegmentationLayer}
+                          allowUpdate={this.props.allowUpdate}
+                        />
+                      }
                     />
                   )}
                 </div>
@@ -1658,133 +1662,6 @@ class SegmentsView extends React.Component<Props, State> {
       </div>
     );
   }
-
-  renameActiveSegment = (newName: string) => {
-    if (this.props.visibleSegmentationLayer == null) {
-      return;
-    }
-    const { segments } = this.props.selectedIds;
-    if (segments.length !== 1) {
-      return;
-    }
-    const segment = this.props.segments?.getNullable(segments[0]);
-    if (segment == null) {
-      return;
-    }
-
-    this.props.updateSegment(
-      segment.id,
-      { name: newName },
-      this.props.visibleSegmentationLayer.name,
-      true,
-    );
-  };
-
-  renderDetailsForSelection() {
-    const { segments: selectedSegmentIds, group: selectedGroupId } = this.props.selectedIds;
-    if (selectedSegmentIds.length === 1) {
-      const readOnly = !this.props.allowUpdate;
-      const segment = this.props.segments?.getNullable(selectedSegmentIds[0]);
-      if (segment == null) {
-        return <>Cannot find details for selected segment.</>;
-      }
-      return (
-        <table className="metadata-table">
-          <thead>
-            <SimpleRow isTableHead label="ID" value={segment.id} />
-          </thead>
-          <tbody>
-            <SimpleRow
-              label="Name"
-              value={
-                <InputWithUpdateOnBlur
-                  value={segment.name || ""}
-                  onChange={this.renameActiveSegment}
-                />
-              }
-            />
-            <MetadataEntryTableRows
-              item={segment}
-              setMetadata={this.setMetadata}
-              readOnly={readOnly}
-            />
-          </tbody>
-        </table>
-      );
-    } else if (selectedGroupId != null) {
-      const { segmentGroups } = this.props;
-      const activeGroup = findGroup(this.props.segmentGroups, selectedGroupId);
-      if (!activeGroup || this.props.segments == null) {
-        return null;
-      }
-
-      const groupToSegmentsMap = createGroupToSegmentsMap(this.props.segments);
-      const groupWithSubgroups = getGroupByIdWithSubgroups(segmentGroups, selectedGroupId);
-
-      return (
-        <table className="metadata-table">
-          <thead>
-            <SimpleRow isTableHead label="ID" value={activeGroup.groupId} />
-          </thead>
-          <tbody>
-            <SimpleRow
-              label="Name"
-              value={
-                <InputWithUpdateOnBlur
-                  value={activeGroup.name || ""}
-                  onChange={(newName) => {
-                    if (this.props.visibleSegmentationLayer == null) {
-                      return;
-                    }
-                    api.tracing.renameSegmentGroup(
-                      activeGroup.groupId,
-                      newName,
-                      this.props.visibleSegmentationLayer.name,
-                    );
-                  }}
-                />
-              }
-            />
-
-            {groupWithSubgroups.length === 1 ? (
-              <SimpleRow
-                label="Segment Count"
-                value={groupToSegmentsMap[selectedGroupId]?.length ?? 0}
-              />
-            ) : (
-              <>
-                <SimpleRow
-                  label="Segment Count (direct children)"
-                  value={groupToSegmentsMap[selectedGroupId]?.length ?? 0}
-                />
-                <SimpleRow
-                  label="Segment Count (all children)"
-                  value={sum(
-                    groupWithSubgroups.map((groupId) => groupToSegmentsMap[groupId]?.length ?? 0),
-                  )}
-                />
-              </>
-            )}
-          </tbody>
-        </table>
-      );
-    }
-    return null;
-  }
-
-  setMetadata = (segment: Segment, newProperties: MetadataEntryProto[]) => {
-    if (this.props.visibleSegmentationLayer == null) {
-      return;
-    }
-    this.props.updateSegment(
-      segment.id,
-      {
-        metadata: newProperties,
-      },
-      this.props.visibleSegmentationLayer.name,
-      true,
-    );
-  };
 
   getExpandSubgroupsItem(groupId: number) {
     const children = this.getKeysOfSubGroups(groupId);

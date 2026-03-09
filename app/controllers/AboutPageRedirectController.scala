@@ -57,7 +57,9 @@ class AboutPageRedirectController @Inject()(conf: WkConf,
       "<!-- INJECT_THEME_CSS -->" -> renderThemeCss(multiUserOpt),
       "<!-- INJECT_OPENGRAPH_METADATA -->" -> renderOpenGraphMetadata(openGraphTags),
       "<!-- INJECT_WKORG_METADATA -->" -> wkOrgMetadata,
-      "<!-- INJECT_AIRBRAKE_CONFIG -->" -> airbrakeConfig
+      "<!-- INJECT_AIRBRAKE_CONFIG -->" -> airbrakeConfig,
+      // The loading indicator in index.html title is only meant for development setup.
+      "<title>Loading | WEBKNOSSOS</title>" -> "<title>WEBKNOSSOS</title>"
     )
   }
 

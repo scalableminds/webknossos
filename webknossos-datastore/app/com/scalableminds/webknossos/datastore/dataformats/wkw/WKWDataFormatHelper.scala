@@ -18,9 +18,9 @@ trait WKWDataFormatHelper {
 
   // Assumes single-bucket wkw files, as for volume tracings
   protected def parseWKWFilePath(path: String): Option[BucketPosition] = {
-    val CubeRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/z(\\d+)/y(\\d+)/x(\\d+).$dataFileExtension".r
+    val pathRegex = """(?:[^/]*/)*(\d+-\d+-\d+|\d+)/z(\d+)/y(\d+)/x(\d+)\.wkw$""".r
     path match {
-      case CubeRx(_, magStr, z, y, x) =>
+      case pathRegex(magStr, z, y, x) =>
         Vec3Int.fromMagLiteral(magStr, allowScalar = true).map { mag =>
           BucketPosition(x.toInt * mag.x * DataLayer.bucketLength,
                          y.toInt * mag.y * DataLayer.bucketLength,

@@ -192,14 +192,18 @@ export default class AdvancedSearchPopover<S extends Record<string, any>> extend
                       : `${currentPosition + 1}/${numberOfAvailableOptions}`}
                   </ButtonComponent>
                   <Tooltip title="Previous (shift+enter)">
-                    <ButtonComponent onClick={this.selectPreviousOption} disabled={hasNoResults}>
-                      <UpOutlined />
-                    </ButtonComponent>
+                    <ButtonComponent
+                      onClick={this.selectPreviousOption}
+                      disabled={hasNoResults}
+                      icon={<UpOutlined />}
+                    />
                   </Tooltip>
                   <Tooltip title="Next (enter)">
-                    <ButtonComponent onClick={this.selectNextOption} disabled={hasNoResults}>
-                      <DownOutlined />
-                    </ButtonComponent>
+                    <ButtonComponent
+                      onClick={this.selectNextOption}
+                      disabled={hasNoResults}
+                      icon={<DownOutlined />}
+                    />
                   </Tooltip>
                   <Tooltip title="Select all matches (except groups)">
                     <ButtonComponent
@@ -214,9 +218,8 @@ export default class AdvancedSearchPopover<S extends Record<string, any>> extend
                           : undefined
                       }
                       disabled={isSelectAllMatchesDisabled}
-                    >
-                      <CheckSquareOutlined />
-                    </ButtonComponent>
+                      icon={<CheckSquareOutlined />}
+                    />
                   </Tooltip>
                 </Space.Compact>
               </Fragment>

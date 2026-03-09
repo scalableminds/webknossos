@@ -17,18 +17,10 @@ object SCrypt {
   private type PasswordHash = String
 
   /**
-    * Useful salting default
-    */
-  private val QuickAndWeak = 6
-  private val GoodEnough = 10
-  private val RatherTough = 14
-  private val PrettyInsane = 18
-
-  /**
     *
     * @param rounds this is the base of log2 of the number of salting rounds. Legal values are >=4, sane values are leq 20
     */
-  def hashPassword(password: PlainPassword, rounds: Int = GoodEnough): PasswordHash = {
+  def hashPassword(password: PlainPassword, rounds: Int = 10): PasswordHash = {
 
     if (rounds < 4 || rounds > 20)
       throw new IllegalArgumentException("""As the number of operations grows

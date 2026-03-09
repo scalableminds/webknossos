@@ -688,6 +688,27 @@ class DatasetController @Inject()(userService: UserService,
       } yield Ok(Json.obj("newDatasetId" -> newDatasetId))
     }
 
+  def composeAddLayer(datasetId: ObjectId): Action[ComposeAddLayerRequest] =
+    sil.SecuredAction.async(validateJson[ComposeAddLayerRequest]) { implicit request =>
+      for {
+        _ <- composeService.addLayer(datasetId, request.body) ?~> "dataset.compose.addLayer.failed"
+      } yield Ok
+    }
+
+  def composeAddMag(datasetId: ObjectId): Action[ComposeAddMagRequest] =
+    sil.SecuredAction.async(validateJson[ComposeAddMagRequest]) { implicit request =>
+      for {
+        _ <- composeService.addMag(datasetId, request.body) ?~> "dataset.compose.addMag.failed"
+      } yield Ok
+    }
+
+  def composeAddAttachment(datasetId: ObjectId): Action[ComposeAddAttachmentRequest] =
+    sil.SecuredAction.async(validateJson[ComposeAddAttachmentRequest]) { implicit request =>
+      for {
+        _ <- composeService.addAttachment(datasetId, request.body) ?~> "dataset.compose.addAttachment.failed"
+      } yield Ok
+    }
+
   def reserveMagUploadToPath(datasetId: ObjectId): Action[ReserveMagUploadToPathRequest] =
     sil.SecuredAction.async(validateJson[ReserveMagUploadToPathRequest]) { implicit request =>
       for {

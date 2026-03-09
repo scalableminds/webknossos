@@ -17,6 +17,14 @@ import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
 import security.WkEnv
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  StaticColorLayer,
+  StaticSegmentationLayer,
+  UsableDataSource
+}
+import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent}
+import play.api.i18n.Messages
+import utils.MetadataAssertions
 
 import scala.concurrent.ExecutionContext
 
@@ -44,8 +52,48 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
                                     organizationDAO: OrganizationDAO,
                                     datasetService: DatasetService,
                                     datasetDAO: DatasetDAO,
+                                    analyticsService: AnalyticsService,
                                     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
-    extends Controller {
+    extends Controller
+    with MetadataAssertions {
+
+  def updatePartialV12(datasetId: ObjectId): Action[DatasetUpdateParameters] =
+    sil.SecuredAction.async(validateJson[DatasetUpdateParameters]) { implicit request =>
+      for {
+        dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.runOptional(request.body.metadata)(assertNoDuplicateMetadataKeys)
+        _ <- datasetDAO.updatePartial(dataset._id, request.body)
+        _ <- Fox.runOptional(request.body.dataSource) { dataSourceUpdates =>
+          def findOriginalAttachments(existingDataSource: UsableDataSource, layerName: String) = {
+            val reverseRenamingMap: Map[String, String] = request.body.layerRenamings
+              .getOrElse(Seq.empty)
+              .map(renaming => (renaming.newName, renaming.oldName))
+              .toMap
+            val existingLayerName = reverseRenamingMap.getOrElse(layerName, layerName)
+            val existingLayer = existingDataSource.dataLayers.find(_.name == existingLayerName)
+            existingLayer.flatMap(_.attachments)
+          }
+          for {
+            existingDataSource <- datasetService.usableDataSourceFor(dataset)
+            updatesWithUndoneAttachmentChanges = dataSourceUpdates.copy(
+              dataLayers = dataSourceUpdates.dataLayers.map {
+                case s: StaticColorLayer => s.copy(attachments = findOriginalAttachments(existingDataSource, s.name))
+                case s: StaticSegmentationLayer =>
+                  s.copy(attachments = findOriginalAttachments(existingDataSource, s.name))
+              }
+            )
+            _ <- datasetService.updateDataSourceFromUserChanges(dataset,
+                                                                updatesWithUndoneAttachmentChanges,
+                                                                request.body.layerRenamings.getOrElse(Seq.empty),
+                                                                request.body.attachmentRenamings.getOrElse(Seq.empty))
+          } yield ()
+        }
+        updated <- datasetDAO.findOne(datasetId)
+        _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
+        js <- datasetService.publicWrites(updated, Some(request.identity))
+      } yield Ok(js)
+    }
 
   /* provide v8 */
 

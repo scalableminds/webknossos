@@ -52,12 +52,20 @@ case class DatasetUpdateParameters(
     metadata: Option[JsArray],
     folderId: Option[ObjectId],
     dataSource: Option[UsableDataSource],
-    layerRenamings: Option[Seq[LayerRenaming]]
+    layerRenamings: Option[Seq[LayerRenaming]],
+    attachmentRenamings: Option[Seq[AttachmentRenaming]]
 )
 
 case class LayerRenaming(oldName: String, newName: String)
 object LayerRenaming {
   implicit val jsonFormat: OFormat[LayerRenaming] = Json.format[LayerRenaming]
+}
+case class AttachmentRenaming(
+    layerName: String, // Note: if a request contains a layer renaming *and* attachment renaming, this must use the *new* layerName.
+    oldName: String,
+    newName: String)
+object AttachmentRenaming {
+  implicit val jsonFormat: OFormat[AttachmentRenaming] = Json.format[AttachmentRenaming]
 }
 
 object DatasetUpdateParameters extends TristateOptionJsonHelper {
@@ -465,7 +473,8 @@ class DatasetController @Inject()(userService: UserService,
           dataSourceUpdates =>
             datasetService.updateDataSourceFromUserChanges(dataset,
                                                            dataSourceUpdates,
-                                                           request.body.layerRenamings.getOrElse(Seq.empty)))
+                                                           request.body.layerRenamings.getOrElse(Seq.empty),
+                                                           request.body.attachmentRenamings.getOrElse(Seq.empty)))
         updated <- datasetDAO.findOne(datasetId)
         _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
         js <- datasetService.publicWrites(updated, Some(request.identity))

@@ -24,7 +24,7 @@ import models.team._
 import models.user.{MultiUserDAO, User, UserService}
 import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import controllers.{LayerRenaming, PathDeletionService}
+import controllers.{AttachmentRenaming, LayerRenaming, PathDeletionService}
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.annotation.AnnotationDAO
@@ -278,12 +278,16 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   def updateDataSourceFromUserChanges(
       dataset: Dataset,
       dataSourceUpdates: UsableDataSource,
-      layerRenamings: Seq[LayerRenaming])(implicit ctx: DBAccessContext, mp: MessagesProvider): Fox[Unit] =
+      layerRenamings: Seq[LayerRenaming],
+      attachmentRenamings: Seq[AttachmentRenaming])(implicit ctx: DBAccessContext, mp: MessagesProvider): Fox[Unit] =
     for {
       existingDataSource <- usableDataSourceFor(dataset)
       datasetId = dataset._id
       dataStoreClient <- clientFor(dataset)
-      updatedDataSource <- applyDataSourceUpdates(existingDataSource, dataSourceUpdates, layerRenamings).toFox
+      updatedDataSource <- applyDataSourceUpdates(existingDataSource,
+                                                  dataSourceUpdates,
+                                                  layerRenamings,
+                                                  attachmentRenamings).toFox
       isChanged = updatedDataSource.hashCode() != existingDataSource.hashCode()
       _ <- if (isChanged) {
         logger.info(s"Updating dataSource of $datasetId")
@@ -307,7 +311,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
   private def applyDataSourceUpdates(existingDataSource: UsableDataSource,
                                      updates: UsableDataSource,
-                                     layerRenamings: Seq[LayerRenaming]): Box[UsableDataSource] = {
+                                     layerRenamings: Seq[LayerRenaming],
+                                     attachmentRenamings: Seq[AttachmentRenaming]): Box[UsableDataSource] = {
     val existingDataSourceWithRenamedLayers = applyLayerRenamings(existingDataSource, layerRenamings)
     for {
       _ <- Box.fromBool(

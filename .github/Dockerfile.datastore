@@ -1,4 +1,4 @@
-FROM eclipse-temurin:21-jre-alpine
+FROM eclipse-temurin:21-jre-jammy
 
 RUN apt-get update \
   && apt-get -y install libbrotli1 libdraco4 \

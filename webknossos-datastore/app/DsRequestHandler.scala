@@ -1,5 +1,6 @@
 import com.scalableminds.util.mvc.{ApiVersioning, ExtendedController}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
 import com.typesafe.scalalogging.LazyLogging
 import play.api.OptionalDevContext
 import play.api.http._
@@ -10,14 +11,14 @@ import play.core.WebCommands
 
 import javax.inject.Inject
 
-trait AdditionalHeaders {
+trait AdditionalHeaders extends MissingBucketHeaders {
   def options(request: RequestHeader): Result =
     Ok(":D").withHeaders(
       "Access-Control-Allow-Origin" -> "*",
       "Access-Control-Max-Age" -> "600",
       "Access-Control-Allow-Methods" -> "POST, GET, DELETE, PUT, HEAD, PATCH, OPTIONS",
       "Access-Control-Allow-Headers" -> request.headers.get("Access-Control-Request-Headers").getOrElse(""),
-      "Access-Control-Expose-Headers" -> "MISSING-BUCKETS"
+      "Access-Control-Expose-Headers" -> missingBucketsHeader
     )
 }
 

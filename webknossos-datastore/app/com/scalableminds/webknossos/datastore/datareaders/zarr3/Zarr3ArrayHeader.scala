@@ -322,4 +322,22 @@ object Zarr3ArrayHeader extends JsonImplicits {
       case (axis, index) => axis.copy(index = index + additionalAxesStartIndex)
     }
   }
+
+  def dummy: Zarr3ArrayHeader = {
+    val dimensionNames = Array("c", "x", "y", "z")
+    Zarr3ArrayHeader(
+      zarr_format = 3,
+      node_type = "array",
+      shape = Array.fill(dimensionNames.length)(1L),
+      data_type = Left("uint8"),
+      chunk_grid =
+        Left(ChunkGridSpecification("regular", ChunkGridConfiguration(Array.fill(dimensionNames.length)(32)))),
+      chunk_key_encoding = ChunkKeyEncoding("v2", configuration = None),
+      fill_value = Right(0),
+      attributes = None,
+      codecs = Seq(BytesCodecConfiguration(Some("little"))),
+      storage_transformers = None,
+      dimension_names = Some(dimensionNames)
+    )
+  }
 }

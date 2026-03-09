@@ -46,4 +46,7 @@ object SCrypt {
 
   def md5(s: String): String =
     MessageDigest.getInstance("MD5").digest(s.getBytes).map("%02X".format(_)).mkString
+
+  def sha(s: String): String =
+    MessageDigest.getInstance("SHA-256").digest(s.getBytes("UTF-8")).map("%02x".format(_)).mkString
 }

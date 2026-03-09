@@ -9,7 +9,6 @@ import Icon, {
   ExpandAltOutlined,
   EyeInvisibleOutlined,
   EyeOutlined,
-  FolderOutlined,
   LoadingOutlined,
   PlusOutlined,
   ReloadOutlined,
@@ -104,8 +103,6 @@ import type { MeshInformation, Segment, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
-import EditableTextLabel from "viewer/view/components/editable_text_label";
-import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/helpers";
 import SegmentListItem from "viewer/view/right_border_tabs/segments_tab/segment_list_item";
 import {
   calculateExpandedParentGroups,
@@ -131,6 +128,7 @@ import {
 } from "../trees_tab/tree_hierarchy_view_helpers";
 import { PrecomputeMeshesPopover } from "./precompute_meshes_popover";
 import { SegmentDetailsPanel } from "./segment_details_panel";
+import SegmentGroupItem from "./segment_group_item";
 import { SegmentStatisticsModal } from "./segment_statistics_modal";
 
 const SCROLL_DELAY_MS = 50;
@@ -325,8 +323,6 @@ type State = {
   menu: MenuProps | null | undefined;
   isMeshPrecomputeRunning: boolean;
 };
-
-// Redundant, moved to segments_view_helper.tsx
 
 const formatMeshFile = (
   meshFile: APIMeshFileInfo | null | undefined,
@@ -1439,77 +1435,32 @@ class SegmentsView extends React.Component<Props, State> {
         />
       );
     } else {
-      const { id, name } = treeItem;
-      const isEditingDisabled = !this.props.allowUpdate;
-      const onOpenContextMenu = (event: React.MouseEvent<HTMLDivElement>) => {
-        event.preventDefault();
-        const getMenu = (): MenuProps => ({
-          items: [
-            {
-              key: "create",
-              onClick: () => {
-                this.createGroup(id);
-                this.hideContextMenu();
-              },
-              disabled: isEditingDisabled,
-              icon: <PlusOutlined />,
-              label: "Create new group",
-            },
-            {
-              key: "delete",
-              disabled: isEditingDisabled,
-              onClick: () => {
-                this.handleDeleteGroup(id);
-                this.hideContextMenu();
-              },
-              icon: <DeleteOutlined />,
-              label: "Delete group",
-            },
-            this.getExpandSubgroupsItem(id),
-            this.getCollapseSubgroupsItem(id),
-            this.getMoveSegmentsHereMenuItem(id),
-            {
-              key: "groupAndMeshActionDivider",
-              label: <Divider style={{ marginBottom: 0, marginTop: 0 }} />,
-              disabled: true,
-            },
-            this.getSetGroupColorMenuItem(id),
-            this.getResetGroupColorMenuItem(id),
-            this.getShowSegmentStatistics(id),
-            this.getLoadMeshesFromFileMenuItem(id),
-            this.getComputeMeshesAdHocMenuItem(id),
-            this.getReloadMenuItem(id),
-            this.getRemoveMeshesMenuItem(id),
-            this.maybeGetShowOrHideMeshesMenuItems(id),
-            this.getDownLoadMeshesMenuItem(id),
-          ].flat(),
-        });
-
-        const [x, y] = getContextMenuPositionFromEvent(event, "segment-list-context-menu-overlay");
-        this.showContextMenuAt(x, y, getMenu());
-      };
-
-      // Make sure the displayed name is not empty
-      const displayableName = name?.trim() || "<Unnamed Group>";
-
       return (
-        <Space onContextMenu={onOpenContextMenu} size={4}>
-          <FolderOutlined />
-          <EditableTextLabel
-            value={displayableName}
-            label="Group Name"
-            onChange={(name) => {
-              if (this.props.visibleSegmentationLayer != null) {
-                api.tracing.renameSegmentGroup(id, name, this.props.visibleSegmentationLayer.name);
-              }
-            }}
-            // The root group must not be removed or renamed
-            disableEditing={!this.props.allowUpdate || id === MISSING_GROUP_ID}
-            onRenameStart={this.onRenameStart}
-            onRenameEnd={this.onRenameEnd}
-          />
-          {this.getSegmentStatisticsModal(id)}
-        </Space>
+        <SegmentGroupItem
+          groupId={treeItem.id}
+          name={treeItem.name}
+          allowUpdate={this.props.allowUpdate}
+          visibleSegmentationLayer={this.props.visibleSegmentationLayer}
+          onRenameStart={this.onRenameStart}
+          onRenameEnd={this.onRenameEnd}
+          showContextMenuAt={this.showContextMenuAt}
+          hideContextMenu={this.hideContextMenu}
+          createGroup={this.createGroup}
+          handleDeleteGroup={this.handleDeleteGroup}
+          getExpandSubgroupsItem={this.getExpandSubgroupsItem}
+          getCollapseSubgroupsItem={this.getCollapseSubgroupsItem}
+          getMoveSegmentsHereMenuItem={this.getMoveSegmentsHereMenuItem}
+          getSetGroupColorMenuItem={this.getSetGroupColorMenuItem}
+          getResetGroupColorMenuItem={this.getResetGroupColorMenuItem}
+          getShowSegmentStatistics={this.getShowSegmentStatistics}
+          getLoadMeshesFromFileMenuItem={this.getLoadMeshesFromFileMenuItem}
+          getComputeMeshesAdHocMenuItem={this.getComputeMeshesAdHocMenuItem}
+          getReloadMenuItem={this.getReloadMenuItem}
+          getRemoveMeshesMenuItem={this.getRemoveMeshesMenuItem}
+          maybeGetShowOrHideMeshesMenuItems={this.maybeGetShowOrHideMeshesMenuItems}
+          getDownLoadMeshesMenuItem={this.getDownLoadMeshesMenuItem}
+          segmentStatisticsModal={this.getSegmentStatisticsModal(treeItem.id)}
+        />
       );
     }
   };

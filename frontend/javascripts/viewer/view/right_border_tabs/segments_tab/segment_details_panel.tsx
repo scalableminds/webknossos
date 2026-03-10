@@ -6,7 +6,7 @@ import { useDispatch } from "react-redux";
 import type { APIDataLayer, MetadataEntryProto } from "types/api_types";
 import { updateSegmentAction } from "viewer/model/actions/volumetracing_actions";
 import { api } from "viewer/singletons";
-import type { Segment, SegmentGroup } from "viewer/store";
+import type { Segment, SegmentGroup, SegmentMap } from "viewer/store";
 import { InputWithUpdateOnBlur } from "viewer/view/components/input_with_update_on_blur";
 import { MetadataEntryTableRows } from "viewer/view/right_border_tabs/metadata_table";
 import {
@@ -17,7 +17,7 @@ import {
 
 export interface SegmentDetailsPanelProps {
   selectedIds: { segments: number[]; group: number | null };
-  segments: any | null | undefined; // any = Collection<Segment> or Map<number, Segment>
+  segments: SegmentMap | null | undefined;
   segmentGroups: SegmentGroup[];
   visibleSegmentationLayer: APIDataLayer | null | undefined;
   allowUpdate: boolean;

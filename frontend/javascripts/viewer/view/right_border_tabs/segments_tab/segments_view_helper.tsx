@@ -13,7 +13,13 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import { setMappingAction, setMappingEnabledAction } from "viewer/model/actions/settings_actions";
 import type { TreeGroup } from "viewer/model/types/tree_types";
-import type { ActiveMappingInfo, Segment, SegmentGroup, StoreAnnotation } from "viewer/store";
+import type {
+  ActiveMappingInfo,
+  Segment,
+  SegmentGroup,
+  SegmentMap,
+  StoreAnnotation,
+} from "viewer/store";
 import Store from "viewer/store";
 import {
   additionallyExpandGroup,
@@ -218,7 +224,7 @@ export function constructTreeData(
  */
 export const getSegmentsOfGroupRecursively = (
   groupId: number,
-  segments: any | null | undefined, // any = Collection<Segment> or Map<number, Segment>
+  segments: SegmentMap | null | undefined,
   segmentGroups: SegmentGroup[] | null | undefined,
 ): Segment[] => {
   if (segments == null || segmentGroups == null) {

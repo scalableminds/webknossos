@@ -1,8 +1,9 @@
 import { getAgglomeratesForSegmentsFromTracingstore, getUpdateActionLog } from "admin/rest_api";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
+import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Toast from "libs/toast";
-import { getAdaptToTypeFunction, sleep } from "libs/utils";
+import { sleep } from "libs/utils";
 import compact from "lodash-es/compact";
 import sum from "lodash-es/sum";
 import { buffers, type Channel } from "redux-saga";
@@ -64,13 +65,7 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import { Model, Store } from "viewer/singletons";
-import type {
-  NumberLike,
-  NumberLikeMap,
-  SkeletonTracing,
-  StoreAnnotation,
-  VolumeTracing,
-} from "viewer/store";
+import type { NumberLike, SkeletonTracing, StoreAnnotation, VolumeTracing } from "viewer/store";
 import {
   enforceExecutionAsBusyBlockingUnlessAllowed,
   takeEveryWithBatchActionSupport,
@@ -260,20 +255,31 @@ function* updatePendingProofreadingOperationInfoAction() {
   const activeMapping = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer[tracingId],
   );
-  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
-  const sourceAgglomerateId = (activeMapping.mapping as NumberLikeMap | undefined)?.get(
-    adaptToType(sourceInfo.unmappedId),
-  );
-  const targetAgglomerateId = targetInfo
-    ? (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(targetInfo.unmappedId))
-    : 0;
-  if (sourceAgglomerateId != null && targetAgglomerateId !== null) {
+
+  let sourceAgglomerateId: number | undefined;
+  let targetAgglomerateId: number | undefined;
+
+  if (activeMapping.mapping != null) {
+    const mappingWrapper = new NumberLikeMapWrapper(activeMapping.mapping);
+    sourceAgglomerateId = mappingWrapper.getAsNumber(sourceInfo.unmappedId);
+    if (targetInfo) {
+      targetAgglomerateId = mappingWrapper.getAsNumber(targetInfo.unmappedId);
+    }
+  }
+
+  if (sourceAgglomerateId != null && (targetInfo == null || targetAgglomerateId != null)) {
     yield* put(
       setPendingProofreadingOperationInfoAction({
         tracingId,
-        sourceInfo: { ...sourceInfo, agglomerateId: Number(sourceAgglomerateId) },
+        sourceInfo: { ...sourceInfo, agglomerateId: sourceAgglomerateId },
         targetInfo: targetInfo
-          ? { ...targetInfo, agglomerateId: Number(targetAgglomerateId) }
+          ? {
+              ...targetInfo,
+              agglomerateId:
+                // If targetInfo != null, targetAgglomerateId will be != null, too
+                // (we ensure this in the if-condition).
+                targetAgglomerateId as number,
+            }
           : null,
       }),
     );
@@ -294,15 +300,12 @@ function* updatePendingProofreadingOperationInfoAction() {
       annotationId,
       annotationVersion,
     );
-    const adaptToType = getAdaptToTypeFunction(agglomerateInfoFromServer);
-    const sourceAgglomerateIdFromServer = (
-      agglomerateInfoFromServer as NumberLikeMap | undefined
-    )?.get(adaptToType(sourceInfo.unmappedId));
+    const mappingWrapper = new NumberLikeMapWrapper(agglomerateInfoFromServer);
+    const sourceAgglomerateIdFromServer = mappingWrapper.get(sourceInfo.unmappedId);
     const targetAgglomerateIdFromServer = targetInfo
-      ? (agglomerateInfoFromServer as NumberLikeMap | undefined)?.get(
-          adaptToType(targetInfo.unmappedId),
-        )
-      : 0;
+      ? mappingWrapper.get(targetInfo.unmappedId)
+      : null;
+
     yield* put(
       setPendingProofreadingOperationInfoAction({
         tracingId,

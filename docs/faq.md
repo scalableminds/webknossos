@@ -19,15 +19,14 @@ There are two options to help you with data annotation:
 We are always happy to help you through email or a quick call. In addition, we offer a community support forum for questions, bug reports, product updates, and community engagement. Visit us at [https://forum.image.sc/tag/webknossos](https://forum.image.sc/tag/webknossos).
 
 ## How can I run machine learning analysis on my datasets with WEBKNOSSOS?
-Machine learning integration with WEBKNOSSOS is a very interesting topic for us and something that we want to focus more on. 
-At the moment, there is a trial integration of a neural network model for neuron segmentation in EM brain data. 
-We are looking to expand the model portfolio and integrated analysis. [Read more about automated analysis.](./automation/index.md)
-We have years of experience with automated machine learning analysis and [offer commercial automated analysis services](https://webknossos.org/services/automated-segmentation). 
 
-We are also always interested in new collaborations. 
-Get in touch if you want to work together on a project resulting in new classifiers.
+WEBKNOSSOS offers built-in tools for training your own AI models for image segmentation directly on the platform. You can train models for dense EM neuron segmentation or EM instance segmentation (e.g., nuclei, mitochondria) using your own ground truth annotations. 
 
-WEBKNOSSOS does not allow you to run custom machine learning models on your data yet. As a work-around you can download your annotations from WEBKNOSSOS - either manually or scripted [through our Python library](https://docs.webknossos.org/webknossos-py/) - and do your ML analysis offline and use WEBKNOSSOS to inspect the results. 
+To get started, check out our guide on [AI Model Training](./automation/ai_training.md), which explains how to prepare your annotations and configure the training. Once trained, you can apply your models to your datasets using our [AI Segmentation](./automation/ai_segmentation.md) tools.
+
+We also have years of experience with automated machine learning analysis and [offer commercial automated analysis services](https://webknossos.org/services/automated-segmentation) if you need assistance with large-scale datasets.
+
+If you prefer to run custom machine learning models outside of WEBKNOSSOS, you can download your annotations—either manually or scripted [through our Python library](https://docs.webknossos.org/webknossos-py/)—perform your ML analysis offline, and use WEBKNOSSOS to inspect the results.
 
 ## How can I use my dataset with WEBKNOSSOS?
 
@@ -50,7 +49,7 @@ For example, the WEBKNOSSOS main component could be hosted on commercial cloud i
 
 [Contact us](mailto:hello@webknossos.org) for commercial support, more information on (private) managed hosting, and custom deployment options.
 
-## Can I further analyze my annotations outside of WEBKNOSSOS with Python/MATLAB?
+## Can I further analyze my annotations outside of WEBKNOSSOS with Python?
 Yes, you can. WEBKNOSSOS allows the download and export of skeleton annotations as NML files and segmentations/volume data as binary/wkw files.
 
 Use our free [Python library](https://docs.webknossos.org/webknossos-py/) to work with the WEBKNOSSOS standard formats.

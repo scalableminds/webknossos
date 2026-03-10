@@ -26,8 +26,12 @@ export class NumberLikeMapWrapper<T extends number | bigint> {
     return this.map.get(this.adaptKey(key));
   }
 
-  getAsNumber(key: number): number {
-    return Number(this.get(key));
+  getAsNumber(key: number): number | undefined {
+    const val = this.get(key);
+    if (val === undefined) {
+      return val;
+    }
+    return Number(val);
   }
 
   has(key: number): boolean {

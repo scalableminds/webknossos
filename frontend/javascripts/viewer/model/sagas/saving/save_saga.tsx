@@ -3,7 +3,7 @@ import features from "features";
 import ErrorHandling from "libs/error_handling";
 import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Toast from "libs/toast";
-import { getAdaptToTypeFunction, sleep } from "libs/utils";
+import { sleep } from "libs/utils";
 import compact from "lodash-es/compact";
 import sum from "lodash-es/sum";
 import { buffers, type Channel } from "redux-saga";
@@ -65,13 +65,7 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import { Model, Store } from "viewer/singletons";
-import type {
-  NumberLike,
-  NumberLikeMap,
-  SkeletonTracing,
-  StoreAnnotation,
-  VolumeTracing,
-} from "viewer/store";
+import type { NumberLike, SkeletonTracing, StoreAnnotation, VolumeTracing } from "viewer/store";
 import {
   enforceExecutionAsBusyBlockingUnlessAllowed,
   takeEveryWithBatchActionSupport,

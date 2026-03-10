@@ -669,8 +669,8 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
 
   if (activeMapping.mapping != null) {
     const mappingWrapper = new NumberLikeMapWrapper(activeMapping.mapping);
-    sourceAgglomerateId = mappingWrapper.getAsNumber(sourceInfo.unmappedId);
-    targetAgglomerateId = mappingWrapper.getAsNumber(targetInfo.unmappedId);
+    sourceAgglomerateId = mappingWrapper.getAsNumber(sourceInfo.unmappedId) ?? sourceAgglomerateId;
+    targetAgglomerateId = mappingWrapper.getAsNumber(targetInfo.unmappedId) ?? targetAgglomerateId;
   }
 
   const isSplittingAction =
@@ -982,7 +982,7 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
   // Thus we reload the agglomerateId via simply looking it up via the first segment of partition 1.
   if (activeMapping.mapping != null) {
     const mappingWrapper = new NumberLikeMapWrapper(activeMapping.mapping);
-    agglomerateId = mappingWrapper.getAsNumber(partitions[1][0]);
+    agglomerateId = mappingWrapper.getAsNumber(partitions[1][0]) ?? agglomerateId;
   }
 
   const unmappedSegmentsOfPartitions = [...partitions[1], ...partitions[2]];
@@ -1340,8 +1340,10 @@ function* handleProofreadMergeOrMinCut(action: Action) {
 
     if (activeMapping.mapping != null) {
       const mappingWrapper = new NumberLikeMapWrapper(activeMapping.mapping);
-      sourceAgglomerateId = mappingWrapper.getAsNumber(sourceInfo.unmappedId);
-      targetAgglomerateId = mappingWrapper.getAsNumber(targetInfo.unmappedId);
+      sourceAgglomerateId =
+        mappingWrapper.getAsNumber(sourceInfo.unmappedId) ?? sourceAgglomerateId;
+      targetAgglomerateId =
+        mappingWrapper.getAsNumber(targetInfo.unmappedId) ?? targetAgglomerateId;
     }
   }
   // After saving and thus syncing with the server the mapping might have updated due to missing proofreading actions for other users.
@@ -1508,9 +1510,9 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   );
 
   if (activeMapping.mapping != null) {
-    targetAgglomerateId = new NumberLikeMapWrapper(activeMapping.mapping).getAsNumber(
-      targetSegmentId,
-    );
+    targetAgglomerateId =
+      new NumberLikeMapWrapper(activeMapping.mapping).getAsNumber(targetSegmentId) ??
+      targetAgglomerateId;
   }
 
   const newAnnotationVersion = yield* select((state) => state.annotation.version);
@@ -1924,7 +1926,10 @@ export function* splitAgglomerateInMapping(
     const mappingWrapper = new NumberLikeMapWrapper(unsplitMapping);
 
     additionalSegmentsToRequest.forEach((segmentId) => {
-      oldAgglomerateIds.add(mappingWrapper.getAsNumber(segmentId));
+      const id = mappingWrapper.getAsNumber(segmentId);
+      if (id != null) {
+        oldAgglomerateIds.add(id);
+      }
     });
   }
   const newAgglomerateIds = new Set<number>();

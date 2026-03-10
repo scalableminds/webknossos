@@ -500,8 +500,8 @@ class DataCube {
     this.bucketIterator = notCollectedBuckets.length;
   }
 
-  triggerBucketDataChanged(): void {
-    this.emitter.emit("bucketDataChanged");
+  triggerRenderedBucketDataChanged(): void {
+    this.emitter.emit("renderedBucketDataChanged");
   }
 
   shouldEagerlyMaintainUsedValueSet() {

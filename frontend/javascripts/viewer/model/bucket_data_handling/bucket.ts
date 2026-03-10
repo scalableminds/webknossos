@@ -111,6 +111,7 @@ export class DataBucket {
   pendingOperations: Array<PendingOperation> = [];
   state: BucketStateEnumType;
   accessed: boolean;
+  previousAccessed: boolean;
   data: BucketDataArray | null | undefined;
   temporalBucketManager: TemporalBucketManager;
   cube: DataCube;
@@ -140,6 +141,7 @@ export class DataBucket {
     this.state = BucketStateEnum.UNREQUESTED;
     this.dirty = false;
     this.accessed = false;
+    this.previousAccessed = false;
     this.data = null;
 
     if (this.cube.isSegmentation) {
@@ -404,14 +406,20 @@ export class DataBucket {
     this.pendingOperations = newPendingOperations;
     this.dirty = true;
     this.endDataMutation();
-    this.cube.triggerBucketDataChanged();
+    this.cube.triggerRenderedBucketDataChanged();
   }
 
   markAsNeeded(): void {
+    if (!this.previousAccessed) this.cube.triggerRenderedBucketDataChanged();
+
+    this.previousAccessed = this.accessed;
     this.accessed = true;
   }
 
   markAsUnneeded(): void {
+    if (this.previousAccessed) this.cube.triggerRenderedBucketDataChanged();
+
+    this.previousAccessed = this.accessed;
     this.accessed = false;
   }
 
@@ -653,7 +661,6 @@ export class DataBucket {
 
         this.state = BucketStateEnum.LOADED;
         this.trigger("bucketLoaded", data);
-        this.cube.triggerBucketDataChanged();
         break;
       }
 

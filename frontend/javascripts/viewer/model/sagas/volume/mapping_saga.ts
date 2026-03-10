@@ -256,13 +256,16 @@ function* reloadData(
   oldActiveMappingByLayer.value = activeMappingByLayer;
 }
 
-function createBucketDataChangedChannel(dataCube: DataCube) {
+function createRenderedBucketDataChangedChannel(dataCube: DataCube) {
   return eventChannel((emit) => {
-    const bucketDataChangedHandler = () => {
-      emit("BUCKET_DATA_CHANGED");
+    const renderedBucketDataChangedHandler = () => {
+      emit("RENDERED_BUCKET_DATA_CHANGED");
     };
 
-    const unbind = dataCube.emitter.on("bucketDataChanged", bucketDataChangedHandler);
+    const unbind = dataCube.emitter.on(
+      "renderedBucketDataChanged",
+      renderedBucketDataChangedHandler,
+    );
     return unbind;
   }, buffers.sliding<string>(1));
 }
@@ -284,7 +287,7 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
    * saga in an interruptible manner. See comments below for some rationale.
    */
   const dataCube = yield* call([Model, Model.getCubeByLayerName], layerName);
-  const bucketChannel = yield* call(createBucketDataChangedChannel, dataCube);
+  const bucketChannel = yield* call(createRenderedBucketDataChangedChannel, dataCube);
 
   // Also update the local hdf5 mapping by inspecting all already existing
   // buckets (likely, there are none yet because all buckets were reloaded, but
@@ -293,7 +296,7 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
 
   while (true) {
     yield take(bucketChannel);
-    // We received a BUCKET_DATA_CHANGED event. `startInterruptibleUpdateMapping` needs
+    // We received a RENDERED_BUCKET_DATA_CHANGED event. `startInterruptibleUpdateMapping` needs
     // to be invoked.
     // However, let's throttle¹ this by waiting and then discarding all other events
     // that might have accumulated in between.

@@ -2,7 +2,6 @@
 import type { MinCutTargetEdge } from "admin/rest_api";
 import { call, put } from "redux-saga/effects";
 import { SKELETON_TRACING_ID } from "test/fixtures/skeletontracing_server_objects";
-import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import {
   getNestedUpdateActions,
   setupWebknossosForTesting,

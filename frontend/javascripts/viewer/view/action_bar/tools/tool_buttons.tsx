@@ -1,4 +1,4 @@
-import Icon from "@ant-design/icons";
+import Icon, { CaretDownOutlined } from "@ant-design/icons";
 import BoundingBoxIcon from "@images/icons/icon-bounding-box.svg?react";
 import BrushIcon from "@images/icons/icon-brush.svg?react";
 import EraserIcon from "@images/icons/icon-eraser.svg?react";
@@ -11,7 +11,7 @@ import ProofreadingIcon from "@images/icons/icon-proofreading.svg?react";
 import QuickSelectToolIcon from "@images/icons/icon-quick-select.svg?react";
 import RulerIcon from "@images/icons/icon-ruler.svg?react";
 import SkeletonIcon from "@images/icons/icon-skeleton.svg?react";
-
+import { Popover } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
@@ -38,8 +38,8 @@ export const ToolIdToComponent: Record<
 > = {
   [AnnotationTool.MOVE.id]: MoveTool,
   [AnnotationTool.SKELETON.id]: SkeletonTool,
-  [AnnotationTool.BRUSH.id]: BrushTool,
-  [AnnotationTool.ERASE_BRUSH.id]: EraseBrushTool,
+  [AnnotationTool.BRUSH.id]: BrushToolMenu,
+  [AnnotationTool.ERASE_BRUSH.id]: BrushToolMenu,
   [AnnotationTool.TRACE.id]: TraceTool,
   [AnnotationTool.ERASE_TRACE.id]: EraseTraceTool,
   [AnnotationTool.FILL_CELL.id]: FillCellTool,
@@ -119,9 +119,51 @@ function getIsVolumeModificationAllowed(state: WebknossosState) {
   return hasVolume && !isReadOnly && !hasEditableMapping(state);
 }
 
-function BrushTool({ adaptedActiveTool }: ToolButtonProps) {
+function BrushToolMenu({ adaptedActiveTool }: ToolButtonProps) {
   const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
+
   const isVolumeModificationAllowed = useWkSelector(getIsVolumeModificationAllowed);
+  if (!isVolumeModificationAllowed) {
+    return null;
+  }
+  const popoverContent = () => (
+    <>
+      {BrushTool({ adaptedActiveTool, disabledInfosForTools, isVolumeModificationAllowed })}
+      {EraseBrushTool({ adaptedActiveTool, disabledInfosForTools, isVolumeModificationAllowed })}
+    </>
+  );
+  return (
+    <ToolRadioButton
+      name={AnnotationTool.BRUSH.readableName}
+      description={
+        "Draw over the voxels you would like to label. Adjust the brush size with Shift + Mousewheel."
+      }
+      disabledExplanation={disabledInfosForTools[AnnotationTool.BRUSH.id].explanation}
+      disabled={disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled}
+      value={AnnotationTool.BRUSH.id}
+    >
+      <Icon
+        component={BrushIcon}
+        style={{
+          opacity: disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled ? 0.5 : 1,
+        }}
+      />
+      <Popover content={popoverContent} trigger={["click", "hover"]}>
+        <CaretDownOutlined className="triangle-icon" />
+      </Popover>
+      {adaptedActiveTool === AnnotationTool.BRUSH ? <MaybeMultiSliceAnnotationInfoIcon /> : null}
+    </ToolRadioButton>
+  );
+}
+
+function BrushTool({
+  adaptedActiveTool,
+  disabledInfosForTools,
+  isVolumeModificationAllowed,
+}: ToolButtonProps & {
+  disabledInfosForTools: ReturnType<typeof getDisabledInfoForTools>;
+  isVolumeModificationAllowed: boolean;
+}) {
   if (!isVolumeModificationAllowed) {
     return null;
   }
@@ -146,13 +188,18 @@ function BrushTool({ adaptedActiveTool }: ToolButtonProps) {
   );
 }
 
-function EraseBrushTool({ adaptedActiveTool }: ToolButtonProps) {
-  const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
+function EraseBrushTool({
+  adaptedActiveTool,
+  disabledInfosForTools,
+  isVolumeModificationAllowed,
+}: ToolButtonProps & {
+  disabledInfosForTools: ReturnType<typeof getDisabledInfoForTools>;
+  isVolumeModificationAllowed: boolean;
+}) {
   const showEraseTraceTool =
     adaptedActiveTool === AnnotationTool.TRACE || adaptedActiveTool === AnnotationTool.ERASE_TRACE;
   const showEraseBrushTool = !showEraseTraceTool;
 
-  const isVolumeModificationAllowed = useWkSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
     return null;
   }

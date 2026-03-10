@@ -72,7 +72,6 @@ export default function AiModelListView() {
         }
       >
         <Table
-          bordered
           rowKey={(run: AiModel) => `${run.id}`}
           pagination={{ pageSize: 100 }}
           columns={[

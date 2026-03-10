@@ -980,11 +980,10 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
 
   // The agglomerateId of the split agglomerate might have changed due to syncing with the server caused by Model.ensureSavedState.
   // Thus we reload the agglomerateId via simply looking it up via the first segment of partition 1.
-  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
-  agglomerateId = Number(
-    (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(partitions[1][0])) ??
-      agglomerateId,
-  );
+  if (activeMapping.mapping != null) {
+    const mappingWrapper = new NumberLikeMapWrapper(activeMapping.mapping);
+    agglomerateId = mappingWrapper.getAsNumber(partitions[1][0]);
+  }
 
   const unmappedSegmentsOfPartitions = [...partitions[1], ...partitions[2]];
   // Make sure the reloaded partial mapping has mapping info about the partitions and first removed edge. The first removed edge is used for reloading the meshes.
@@ -1339,17 +1338,11 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
     );
 
-    const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
-    sourceAgglomerateId = Number(
-      (activeMapping.mapping as NumberLikeMap | undefined)?.get(
-        adaptToType(sourceInfo.unmappedId),
-      ) ?? sourceAgglomerateId,
-    );
-    targetAgglomerateId = Number(
-      (activeMapping.mapping as NumberLikeMap | undefined)?.get(
-        adaptToType(targetInfo.unmappedId),
-      ) ?? targetAgglomerateId,
-    );
+    if (activeMapping.mapping != null) {
+      const mappingWrapper = new NumberLikeMapWrapper(activeMapping.mapping);
+      sourceAgglomerateId = mappingWrapper.getAsNumber(sourceInfo.unmappedId);
+      targetAgglomerateId = mappingWrapper.getAsNumber(targetInfo.unmappedId);
+    }
   }
   // After saving and thus syncing with the server the mapping might have updated due to missing proofreading actions for other users.
   // Thus, the sourceAgglomerateId and targetAgglomerateId might be outdated. Therefore, we reload them.
@@ -1514,11 +1507,11 @@ function* handleProofreadCutFromNeighbors(action: Action) {
     (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
   );
 
-  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
-  targetAgglomerateId = Number(
-    (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(targetSegmentId)) ??
-      targetAgglomerateId,
-  );
+  if (activeMapping.mapping != null) {
+    targetAgglomerateId = new NumberLikeMapWrapper(activeMapping.mapping).getAsNumber(
+      targetSegmentId,
+    );
+  }
 
   const newAnnotationVersion = yield* select((state) => state.annotation.version);
   // Now that the changes are saved, we can split the mapping locally (because it requires
@@ -1928,14 +1921,10 @@ export function* splitAgglomerateInMapping(
   const oldAgglomerateIds = new Set<number>([sourceAgglomerateId]);
   if (unsplitMapping && additionalSegmentsToRequest.length > 0) {
     // Add the additionally reloaded segments' agglomerate ids to the once maybe refreshed.
-    const adaptToType = getAdaptToTypeFunction(unsplitMapping);
+    const mappingWrapper = new NumberLikeMapWrapper(unsplitMapping);
+
     additionalSegmentsToRequest.forEach((segmentId) => {
-      oldAgglomerateIds.add(
-        Number(
-          (unsplitMapping as NumberLikeMap | undefined)?.get(adaptToType(segmentId)) ??
-            sourceAgglomerateId,
-        ),
-      );
+      oldAgglomerateIds.add(mappingWrapper.getAsNumber(segmentId));
     });
   }
   const newAgglomerateIds = new Set<number>();

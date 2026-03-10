@@ -1,6 +1,7 @@
 import { getAgglomeratesForSegmentsFromTracingstore, getUpdateActionLog } from "admin/rest_api";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
+import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Toast from "libs/toast";
 import { getAdaptToTypeFunction, sleep } from "libs/utils";
 import compact from "lodash-es/compact";
@@ -260,21 +261,24 @@ function* updatePendingProofreadingOperationInfoAction() {
   const activeMapping = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer[tracingId],
   );
-  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
-  const sourceAgglomerateId = (activeMapping.mapping as NumberLikeMap | undefined)?.get(
-    adaptToType(sourceInfo.unmappedId),
-  );
-  const targetAgglomerateId = targetInfo
-    ? (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(targetInfo.unmappedId))
-    : 0;
-  if (sourceAgglomerateId != null && targetAgglomerateId !== null) {
+
+  let sourceAgglomerateId: number | undefined;
+  let targetAgglomerateId = 0;
+
+  if (activeMapping.mapping != null) {
+    const mappingWrapper = new NumberLikeMapWrapper(activeMapping.mapping);
+    sourceAgglomerateId = mappingWrapper.getAsNumber(sourceInfo.unmappedId);
+    if (targetInfo) {
+      targetAgglomerateId = mappingWrapper.getAsNumber(targetInfo.unmappedId);
+    }
+  }
+
+  if (sourceAgglomerateId != null) {
     yield* put(
       setPendingProofreadingOperationInfoAction({
         tracingId,
-        sourceInfo: { ...sourceInfo, agglomerateId: Number(sourceAgglomerateId) },
-        targetInfo: targetInfo
-          ? { ...targetInfo, agglomerateId: Number(targetAgglomerateId) }
-          : null,
+        sourceInfo: { ...sourceInfo, agglomerateId: sourceAgglomerateId },
+        targetInfo: targetInfo ? { ...targetInfo, agglomerateId: targetAgglomerateId } : null,
       }),
     );
   } else {

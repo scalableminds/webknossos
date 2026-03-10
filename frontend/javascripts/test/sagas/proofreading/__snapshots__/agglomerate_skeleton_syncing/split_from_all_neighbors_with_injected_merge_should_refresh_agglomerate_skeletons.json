@@ -1,6 +1,60 @@
 [
   [
     {
+      "name": "updateSegmentPartial",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "anchorPosition": [
+          2,
+          2,
+          2,
+        ],
+        "id": 1,
+      },
+    },
+  ],
+  [
+    {
+      "name": "createSegment",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "additionalCoordinates": undefined,
+        "anchorPosition": [
+          1,
+          1,
+          1,
+        ],
+        "color": null,
+        "creationTime": 1494695001688,
+        "groupId": null,
+        "id": 1339,
+        "metadata": [],
+        "name": null,
+      },
+    },
+  ],
+  [
+    {
+      "name": "createSegment",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "additionalCoordinates": undefined,
+        "anchorPosition": [
+          3,
+          3,
+          3,
+        ],
+        "color": null,
+        "creationTime": 1494695001688,
+        "groupId": null,
+        "id": 1340,
+        "metadata": [],
+        "name": null,
+      },
+    },
+  ],
+  [
+    {
       "name": "createTree",
       "value": {
         "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
@@ -92,58 +146,6 @@
         "source": 5,
         "target": 6,
         "treeId": 3,
-      },
-    },
-  ],
-  [
-    {
-      "name": "updateSegmentPartial",
-      "value": {
-        "actionTracingId": "volumeTracingId",
-        "anchorPosition": [
-          2,
-          2,
-          2,
-        ],
-        "id": 1,
-      },
-    },
-  ],
-  [
-    {
-      "name": "createSegment",
-      "value": {
-        "actionTracingId": "volumeTracingId",
-        "additionalCoordinates": undefined,
-        "anchorPosition": [
-          1,
-          1,
-          1,
-        ],
-        "color": null,
-        "creationTime": 1494695001688,
-        "groupId": null,
-        "id": 1339,
-        "metadata": [],
-        "name": null,
-      },
-    },
-    {
-      "name": "createSegment",
-      "value": {
-        "actionTracingId": "volumeTracingId",
-        "additionalCoordinates": undefined,
-        "anchorPosition": [
-          3,
-          3,
-          3,
-        ],
-        "color": null,
-        "creationTime": 1494695001688,
-        "groupId": null,
-        "id": 1340,
-        "metadata": [],
-        "name": null,
       },
     },
   ],

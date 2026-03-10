@@ -831,7 +831,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       );
 
       const splitAndAgglomerateSkeletonReloadingUpdates =
-        getNestedUpdateActions(context).slice(-3)!;
+        getNestedUpdateActions(context).slice(-4)!;
       yield expect(splitAndAgglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
         "./__snapshots__/agglomerate_skeleton_syncing/split_from_all_neighbors_with_injected_merge_should_refresh_agglomerate_skeletons.json",
       );

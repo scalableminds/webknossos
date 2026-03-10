@@ -520,6 +520,11 @@ function* updateLocalHdf5Mapping(
     getEditableMappingForVolumeTracingId(state, layerName),
   );
 
+  const previousMapping = yield* select(
+    (store) => store.temporaryConfiguration.activeMappingByLayer[layerName].mapping,
+  );
+  const previousMappingOrEmpty = previousMapping || (new Map() as Mapping);
+
   const isZoomThresholdExceeded = yield* select((state) =>
     isZoomThresholdExceededForAgglomerateMapping(state, layerName),
   );
@@ -528,18 +533,14 @@ function* updateLocalHdf5Mapping(
     // We do not try to look up all segment ids because these are usually too many
     // in coarse magnifications.
     // A toast will be shown to the user in the warnAboutSegmentationZoom saga.
-    yield* put(setMappingAction(layerName, mappingName, "HDF5", true, { mapping: new Map() }));
+    if (previousMapping == null) {
+      yield* put(setMappingAction(layerName, mappingName, "HDF5", true, { mapping: new Map() }));
+    }
     return;
   }
 
   const cube = Model.getCubeByLayerName(layerName);
   const segmentIds = cube.getValueSetForAllBuckets();
-
-  const previousMapping = yield* select(
-    (store) =>
-      store.temporaryConfiguration.activeMappingByLayer[layerName].mapping ||
-      (new Map() as Mapping),
-  );
 
   const {
     aWithoutB: newSegmentIds,
@@ -549,7 +550,7 @@ function* updateLocalHdf5Mapping(
     // that without any problems. This is done later to
     // avoid duplicating data for performance reasons.
     intersection: mutableRemainingEntries,
-  } = fastDiffSetAndMap(segmentIds as Set<NumberLike>, previousMapping);
+  } = fastDiffSetAndMap(segmentIds as Set<NumberLike>, previousMappingOrEmpty);
 
   let newEntries;
   try {
@@ -587,7 +588,7 @@ function* updateLocalHdf5Mapping(
     mapping.set(key, val);
   }
 
-  setCacheResultForDiffMappings(previousMapping, mapping, {
+  setCacheResultForDiffMappings(previousMappingOrEmpty, mapping, {
     changed: [],
     onlyA: deletedValues,
     onlyB: newSegmentIds,

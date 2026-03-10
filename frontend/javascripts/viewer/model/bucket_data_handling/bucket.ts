@@ -406,7 +406,7 @@ export class DataBucket {
     this.pendingOperations = newPendingOperations;
     this.dirty = true;
     this.endDataMutation();
-    this.cube.triggerRenderedBucketDataChanged();
+    if (this.accessed) this.cube.triggerRenderedBucketDataChanged();
   }
 
   markAsNeeded(): void {

@@ -51,7 +51,7 @@ import FolderSelection from "dashboard/folders/folder_selection";
 import dayjs from "dayjs";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
-import type { ResumableUploadErrorEvent } from "libs/resumable-upload";
+import type { ResumableUploadEvent } from "libs/resumable-upload";
 import Toast from "libs/toast";
 import { getFileExtension, isFileExtensionEqualTo, isUserAdminOrDatasetManager } from "libs/utils";
 import { Vector3Input } from "libs/vector_input";
@@ -362,7 +362,13 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       resumableUpload,
       datastoreUrl,
     });
-    resumableUpload.addEventListener("complete", () => {
+    resumableUpload.addEventListener("complete", (event: ResumableUploadEvent) => {
+      if (event.detail.type !== "complete" || !event.detail.didUploadCompleteSuccessfully) {
+        // The upload was not successful. A retry might be initiated by other code that
+        // listens to fileError events which is why we ignore the complete event now.
+        // The type is only checked to satisfy TS.
+        return;
+      }
       const newestForm = this.formRef.current;
 
       if (!newestForm) {
@@ -439,7 +445,11 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     });
     // terminalFileError is triggered by the RestApi when a normal fileError could not be
     // recovered by refreshing the user token.
-    resumableUpload.addEventListener("terminalFileError", (event: ResumableUploadErrorEvent) => {
+    resumableUpload.addEventListener("terminalFileError", (event: ResumableUploadEvent) => {
+      if (event.detail.type !== "terminalFileError") {
+        // Satisfy TS.
+        return;
+      }
       Toast.error(event.detail.message);
       this.setState({
         isUploading: false,

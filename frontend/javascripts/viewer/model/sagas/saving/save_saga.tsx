@@ -263,7 +263,7 @@ function* updatePendingProofreadingOperationInfoAction() {
   );
 
   let sourceAgglomerateId: number | undefined;
-  let targetAgglomerateId = 0;
+  let targetAgglomerateId: number | undefined;
 
   if (activeMapping.mapping != null) {
     const mappingWrapper = new NumberLikeMapWrapper(activeMapping.mapping);
@@ -273,12 +273,20 @@ function* updatePendingProofreadingOperationInfoAction() {
     }
   }
 
-  if (sourceAgglomerateId != null) {
+  if (sourceAgglomerateId != null && (targetInfo == null || targetAgglomerateId != null)) {
     yield* put(
       setPendingProofreadingOperationInfoAction({
         tracingId,
         sourceInfo: { ...sourceInfo, agglomerateId: sourceAgglomerateId },
-        targetInfo: targetInfo ? { ...targetInfo, agglomerateId: targetAgglomerateId } : null,
+        targetInfo: targetInfo
+          ? {
+              ...targetInfo,
+              agglomerateId:
+                // If targetInfo != null, targetAgglomerateId will be != null, too
+                // (we ensure this in the if-condition).
+                targetAgglomerateId as number,
+            }
+          : null,
       }),
     );
   } else {
@@ -298,15 +306,12 @@ function* updatePendingProofreadingOperationInfoAction() {
       annotationId,
       annotationVersion,
     );
-    const adaptToType = getAdaptToTypeFunction(agglomerateInfoFromServer);
-    const sourceAgglomerateIdFromServer = (
-      agglomerateInfoFromServer as NumberLikeMap | undefined
-    )?.get(adaptToType(sourceInfo.unmappedId));
+    const mappingWrapper = new NumberLikeMapWrapper(agglomerateInfoFromServer);
+    const sourceAgglomerateIdFromServer = mappingWrapper.get(sourceInfo.unmappedId);
     const targetAgglomerateIdFromServer = targetInfo
-      ? (agglomerateInfoFromServer as NumberLikeMap | undefined)?.get(
-          adaptToType(targetInfo.unmappedId),
-        )
-      : 0;
+      ? mappingWrapper.get(targetInfo.unmappedId)
+      : null;
+
     yield* put(
       setPendingProofreadingOperationInfoAction({
         tracingId,

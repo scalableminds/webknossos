@@ -1,6 +1,7 @@
 import type { MinCutTargetEdge } from "admin/rest_api";
 import { call, put } from "redux-saga/effects";
 import { SKELETON_TRACING_ID } from "test/fixtures/skeletontracing_server_objects";
+import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import {
   getNestedUpdateActions,
   setupWebknossosForTesting,
@@ -15,8 +16,8 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
 import { Store } from "viewer/singletons";
-import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import {
   type SaveQueueEntry,
   type SkeletonTracing,
@@ -45,7 +46,6 @@ import {
   makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
-import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
 
 function assertUpdatesMatchInjectedUpdates(
   testUpdates: SaveQueueEntry[][],

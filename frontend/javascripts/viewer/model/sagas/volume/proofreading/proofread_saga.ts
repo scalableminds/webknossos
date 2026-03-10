@@ -8,11 +8,13 @@ import {
 } from "admin/rest_api";
 import processTaskWithPool from "libs/async/task_pool";
 import { V3 } from "libs/mjs";
+import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Toast from "libs/toast";
 import { getAdaptToTypeFunction, isEditableEventTarget, isNumberMap, SoftError } from "libs/utils";
 import window from "libs/window";
 import isEqual from "lodash-es/isEqual";
 import union from "lodash-es/union";
+import uniqBy from "lodash-es/uniqBy";
 import messages from "messages";
 import { all, call, put, spawn, takeEvery } from "typed-redux-saga";
 import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_types";
@@ -125,7 +127,6 @@ import {
   syncAgglomerateSkeletonsAfterMergeAction,
   syncAgglomerateSkeletonsAfterSplitAction,
 } from "./agglomerate_skeleton_syncing_saga_helpers";
-import uniqBy from "lodash-es/uniqBy";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   return function* (...args: any[]) {
@@ -666,16 +667,11 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
   );
 
-  // todop: use NumberLikeMapWrapper
-  const adaptToType = getAdaptToTypeFunction(activeMapping.mapping);
-  sourceAgglomerateId = Number(
-    (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(sourceInfo.unmappedId)) ??
-      sourceAgglomerateId,
-  );
-  targetAgglomerateId = Number(
-    (activeMapping.mapping as NumberLikeMap | undefined)?.get(adaptToType(targetInfo.unmappedId)) ??
-      targetAgglomerateId,
-  );
+  if (activeMapping.mapping != null) {
+    const mappingWrapper = new NumberLikeMapWrapper(activeMapping.mapping);
+    sourceAgglomerateId = mappingWrapper.getAsNumber(sourceInfo.unmappedId);
+    targetAgglomerateId = mappingWrapper.getAsNumber(targetInfo.unmappedId);
+  }
 
   const isSplittingAction =
     action.type === "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS" || action.type === "DELETE_EDGE";

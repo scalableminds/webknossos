@@ -76,7 +76,7 @@ import {
   takeEveryWithBatchActionSupport,
 } from "../saga_helpers";
 import {
-  refreshAffectedSegmentItemsAndMeshes,
+  refreshAffectedMeshes,
   splitAgglomerateInMapping,
   updateMappingWithMerge,
 } from "../volume/proofreading/proofread_saga";
@@ -904,11 +904,7 @@ function* resolveApplyingUpdateArtifacts(artifactInfos: ApplyingUpdateArtifacts)
   if (!activeVolumeTracingId) {
     return;
   }
-  yield* call(
-    removeOutdatedMeshes,
-
-    artifactInfos.meshIdsToRemovePerLayer,
-  );
+  yield* call(removeOutdatedMeshes, artifactInfos.meshIdsToRemovePerLayer);
   yield* spawn(reloadMeshes, artifactInfos.meshIdsToLoadPerLayer);
 }
 
@@ -948,9 +944,7 @@ function* reloadMeshes(
         });
       }
     }
-    refreshAffectedMeshesEffects.push(
-      call(refreshAffectedSegmentItemsAndMeshes, tracingId, refreshList),
-    );
+    refreshAffectedMeshesEffects.push(call(refreshAffectedMeshes, tracingId, refreshList));
   }
   yield* all(refreshAffectedMeshesEffects);
 }

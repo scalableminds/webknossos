@@ -125,6 +125,7 @@ import {
   syncAgglomerateSkeletonsAfterMergeAction,
   syncAgglomerateSkeletonsAfterSplitAction,
 } from "./agglomerate_skeleton_syncing_saga_helpers";
+import uniqBy from "lodash-es/uniqBy";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   return function* (...args: any[]) {
@@ -256,8 +257,25 @@ function* ensureSegmentItemAndLoadCoarseMesh(
   position: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
 ): Saga<void> {
-  yield* put(clickSegmentAction(segmentId, position, additionalCoordinates, layerName));
+  yield* call(ensureSegmentItem, layerName, segmentId, position, additionalCoordinates);
+  yield* call(loadCoarseMesh, layerName, segmentId, position, additionalCoordinates);
+}
 
+function* ensureSegmentItem(
+  layerName: string,
+  segmentId: number,
+  position: Vector3,
+  additionalCoordinates: AdditionalCoordinate[] | undefined,
+): Saga<void> {
+  yield* put(clickSegmentAction(segmentId, position, additionalCoordinates, layerName));
+}
+
+function* loadCoarseMesh(
+  layerName: string,
+  segmentId: number,
+  position: Vector3,
+  additionalCoordinates: AdditionalCoordinate[] | undefined,
+): Saga<void> {
   const autoRenderMeshInProofreading = yield* select(
     (state) => state.userConfiguration.autoRenderMeshInProofreading,
   );
@@ -798,19 +816,23 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     nodePosition,
   });
 
-  // todom/todop: this needs to be rewritten so that mesh loading does not block
-  // mutex unsubscription (segment item should still be created within mutex
-  // to produce atomic version groups).
-  // the same needs to be done for the other sagas.
-  yield* spawn(refreshAffectedSegmentItemsAndMeshes, volumeTracingId, [
+  /* Ensure segment items exist for affected segments and reload affected meshes */
+  const refreshInfos = [
     pack(sourceInfo.agglomerateId, newSourceAgglomerateId, sourceNodePosition),
     pack(targetInfo.agglomerateId, newTargetAgglomerateId, targetNodePosition),
-  ]);
+  ];
+  yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
 
+  // Now that the segment items are up-to-date we can sync with the back-end
+  // and release the mutex.
   yield* call(syncWithBackend);
   if (unsubscribeFromAnnotationMutex) {
     yield* call(unsubscribeFromAnnotationMutex);
   }
+
+  // Refreshing the meshes might take a while and won't block the saga
+  // here.
+  yield* spawn(refreshAffectedMeshes, volumeTracingId, refreshInfos);
 }
 
 // Returns a tuple of whether the min cut failed and if successful a list of edges removed by the min cut.
@@ -1039,8 +1061,8 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
       ? edgesToRemove[0].position1
       : edgesToRemove[0].position2;
 
-  // todo: see above
-  yield* spawn(refreshAffectedSegmentItemsAndMeshes, volumeTracingId, [
+  /* Ensure segment items exist for affected segments and reload affected meshes */
+  const refreshInfos = [
     {
       oldAgglomerateId: agglomerateIdBeforeSplit,
       newAgglomerateId: newAgglomerateIdFromPartition1,
@@ -1051,11 +1073,19 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
       newAgglomerateId: newAgglomerateIdFromPartition2,
       nodePosition: meshLoadingPositionForPartition2,
     },
-  ]);
+  ];
+  yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
+
+  // Now that the segment items are up-to-date we can sync with the back-end
+  // and release the mutex.
   yield* call(syncWithBackend);
   if (unsubscribeFromAnnotationMutex) {
     yield* call(unsubscribeFromAnnotationMutex);
   }
+
+  // Refreshing the meshes might take a while and won't block the saga
+  // here.
+  yield* spawn(refreshAffectedMeshes, volumeTracingId, refreshInfos);
 }
 
 function* performCutFromNeighbors(
@@ -1380,10 +1410,8 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     );
   }
 
-  /* Reload meshes */
-
-  // todo: see other refreshAffectedSegmentItemsAndMeshes comments
-  yield* spawn(refreshAffectedSegmentItemsAndMeshes, volumeTracingId, [
+  /* Ensure segment items exist for affected segments and reload affected meshes */
+  const refreshInfos = [
     {
       oldAgglomerateId: sourceInfo.agglomerateId,
       newAgglomerateId: sourceAgglomerateId,
@@ -1394,11 +1422,17 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       newAgglomerateId: targetAgglomerateId,
       nodePosition: targetInfo.position,
     },
-  ]);
+  ];
+  yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
+
   yield* call(syncWithBackend);
   if (unsubscribeFromAnnotationMutex) {
     yield* call(unsubscribeFromAnnotationMutex);
   }
+
+  // Refreshing the meshes might take a while and won't block the saga
+  // here.
+  yield* spawn(refreshAffectedMeshes, volumeTracingId, refreshInfos);
 }
 
 function* handleProofreadCutFromNeighbors(action: Action) {
@@ -1528,9 +1562,8 @@ function* handleProofreadCutFromNeighbors(action: Action) {
     ),
   ]);
 
-  /* Reload meshes */
-  // todo: see other refreshAffectedSegmentItemsAndMeshes comments
-  yield* spawn(refreshAffectedSegmentItemsAndMeshes, volumeTracingId, [
+  /* Ensure segment items exist for affected segments and reload affected meshes */
+  const refreshInfos = [
     {
       oldAgglomerateId: targetAgglomerateIdBeforeSplit,
       newAgglomerateId: newTargetAgglomerateId,
@@ -1541,12 +1574,17 @@ function* handleProofreadCutFromNeighbors(action: Action) {
       newAgglomerateId: newNeighborAgglomerateIds[idx],
       nodePosition: neighbor.position,
     })),
-  ]);
+  ];
+  yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
 
   yield* call(syncWithBackend);
   if (unsubscribeFromAnnotationMutex) {
     yield* call(unsubscribeFromAnnotationMutex);
   }
+
+  // Refreshing the meshes might take a while and won't block the saga
+  // here.
+  yield* spawn(refreshAffectedMeshes, volumeTracingId, refreshInfos);
 }
 
 // Helper functions
@@ -1717,7 +1755,34 @@ function* getAgglomerateInfos(
   }
 }
 
-export function* refreshAffectedSegmentItemsAndMeshes(
+export function* refreshAffectedSegmentItems(
+  layerName: string,
+  items: Array<{
+    oldAgglomerateId?: number;
+    newAgglomerateId: number;
+    nodePosition: Vector3;
+  }>,
+) {
+  // Segmentations with more than 3 dimensions are currently not compatible
+  // with proofreading. Once such datasets appear, this parameter needs to be
+  // adapted.
+  const additionalCoordinates = undefined;
+
+  const meshLoadingEffects = uniqBy(items, (item) => item.newAgglomerateId).map((item) =>
+    call(
+      ensureSegmentItem,
+      layerName,
+      Number(item.newAgglomerateId),
+      item.nodePosition,
+      additionalCoordinates,
+    ),
+  );
+  // By using `all`, we avoid problems which can occur when running too many
+  // call effects in a for loop. Also see https://github.com/redux-saga/redux-saga/issues/1592.
+  yield* all(meshLoadingEffects);
+}
+
+export function* refreshAffectedMeshes(
   layerName: string,
   items: Array<{
     oldAgglomerateId?: number;
@@ -1747,7 +1812,7 @@ export function* refreshAffectedSegmentItemsAndMeshes(
     if (!newlyLoadedIds.has(item.newAgglomerateId)) {
       meshLoadingEffects.push(function* load() {
         yield* call(
-          ensureSegmentItemAndLoadCoarseMesh,
+          loadCoarseMesh,
           layerName,
           Number(item.newAgglomerateId),
           item.nodePosition,

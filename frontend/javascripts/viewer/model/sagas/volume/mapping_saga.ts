@@ -84,7 +84,7 @@ import { ensureWkInitialized } from "../ready_sagas";
 type APIMappings = Record<string, APIMapping>;
 type Container<T> = { value: T };
 
-const BUCKET_WATCHING_THROTTLE_DELAY = import.meta.env.MODE === "test" ? 5 : 500;
+const BUCKET_WATCHING_THROTTLE_DELAY = import.meta.env.MODE === "test" ? 5 : 50;
 
 const takeLatestMappingChange = (
   oldActiveMappingByLayer: Container<Record<string, ActiveMappingInfo>>,

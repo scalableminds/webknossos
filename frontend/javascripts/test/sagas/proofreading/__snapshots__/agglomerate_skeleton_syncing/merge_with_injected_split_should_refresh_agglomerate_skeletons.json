@@ -13,10 +13,13 @@
   ],
   [
     {
-      "name": "deleteSegment",
+      "name": "mergeSegmentItems",
       "value": {
         "actionTracingId": "volumeTracingId",
-        "id": 1,
+        "agglomerateId1": 4,
+        "agglomerateId2": 1,
+        "segmentId1": 4,
+        "segmentId2": 1,
       },
     },
   ],
@@ -43,8 +46,8 @@
       "name": "createEdge",
       "value": {
         "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-        "source": 4,
-        "target": 9,
+        "source": 9,
+        "target": 4,
         "treeId": 5,
       },
     },

@@ -48,9 +48,8 @@ function CreateNewBoundingBoxButton() {
       onClick={handleAddNewUserBoundingBox}
       style={NARROW_BUTTON_STYLE}
       title="Create a new bounding box centered around the current position."
-    >
-      <Icon component={NewBoundingBoxIcon} aria-label="New Bounding Box Icon" />
-    </ButtonComponent>
+      icon={<Icon component={NewBoundingBoxIcon} aria-label="New Bounding Box Icon" />}
+    />
   );
 }
 

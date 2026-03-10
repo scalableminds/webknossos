@@ -12,6 +12,26 @@
   ],
   [
     {
+      "name": "createSegment",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "additionalCoordinates": undefined,
+        "anchorPosition": [
+          2,
+          2,
+          2,
+        ],
+        "color": null,
+        "creationTime": 1494695001688,
+        "groupId": null,
+        "id": 1339,
+        "metadata": [],
+        "name": null,
+      },
+    },
+  ],
+  [
+    {
       "name": "createTree",
       "value": {
         "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",

@@ -31,6 +31,9 @@ import { startSaga, type WebknossosState } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   loadAgglomerateTree1,
+  mergeSegment1And4WithAgglomerateTrees1And4And6,
+  splitSegment1And2WithAgglomerateTrees1And4And6,
+  splitSegment1And2WithAgglomerateTrees1And6And4,
   splitSegment2And3WithAgglomerateTrees1And4And6,
 } from "./proofreading_interaction_update_action_fixtures";
 import { loadAgglomerateSkeletons } from "./proofreading_skeleton_test_utils";
@@ -153,7 +156,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
           [5, 5, 5],
         ]);
 
-        const agglomerateSkeletonReloadingUpdates = getNestedUpdateActions(context).slice(-2)!;
+        const agglomerateSkeletonReloadingUpdates = getNestedUpdateActions(context).slice(-3)!;
         yield expect(agglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
           `./__snapshots__/agglomerate_skeleton_syncing/merge_should_refresh_agglomerate_skeletons_with_others_may_edit-${othersMayEdit}.json`,
         );
@@ -262,7 +265,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         expect(updatedAgglomerateTrees.getOrThrow(3).nodes.size()).toBe(1);
         expect(updatedAgglomerateTrees.getOrThrow(4).nodes.size()).toBe(2);
 
-        const splittingAndAgglomerateReloadingUpdates = getNestedUpdateActions(context).slice(-2);
+        const splittingAndAgglomerateReloadingUpdates = getNestedUpdateActions(context).slice(-3);
         yield expect(splittingAndAgglomerateReloadingUpdates).toMatchFileSnapshot(
           `./__snapshots__/agglomerate_skeleton_syncing/split_should_refresh_agglomerate_skeletons_with_others_may_edit-${othersMayEdit}.json`,
         );
@@ -323,8 +326,8 @@ describe("Proofreading agglomerate skeleton syncing", () => {
           [5, 5, 5],
         ]);
 
-        const agglomerateSkeletonReloadingUpdates = getNestedUpdateActions(context).at(-1)!;
-        yield expect(agglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
+        const splitAndCreateSegmentActions = getNestedUpdateActions(context).slice(-2)!;
+        yield expect(splitAndCreateSegmentActions).toMatchFileSnapshot(
           `./__snapshots__/agglomerate_skeleton_syncing/split_should_not_refresh_unaffected_agglomerate_skeletons_with_others_may_edit-${othersMayEdit}.json`,
         );
       });
@@ -516,43 +519,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
   it("should merge two agglomerates, apply injected merge update action including agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context);
     // Simulate merging agglomerate 4 into agglomerate 1 by joining segments 1 & 4.
-    backendMock.planVersionInjection(10, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 1,
-          segmentId2: 4,
-          agglomerateId1: 1,
-          agglomerateId2: 4,
-        },
-      },
-      {
-        name: "moveTreeComponent",
-        value: {
-          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          sourceId: 4,
-          targetId: 3,
-          nodeIds: [7, 8],
-        },
-      },
-      {
-        name: "deleteTree",
-        value: {
-          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          id: 4,
-        },
-      },
-      {
-        name: "createEdge",
-        value: {
-          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          treeId: 3,
-          source: 4,
-          target: 7,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(10, mergeSegment1And4WithAgglomerateTrees1And4And6);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -594,7 +561,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         [7, 7, 7],
       ]);
 
-      const agglomerateSkeletonReloadingUpdates = getNestedUpdateActions(context).slice(-2)!;
+      const agglomerateSkeletonReloadingUpdates = getNestedUpdateActions(context).slice(-3)!;
       yield expect(agglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
         "./__snapshots__/agglomerate_skeleton_syncing/merge_with_injected_merge_should_refresh_agglomerate_skeletons.json",
       );
@@ -606,72 +573,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
   it("should merge two agglomerates, apply injected split update action including agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context);
     // Inject splitting agglomerate 1 between segments 1 & 2 including agglomerate skeleton update & create segment.
-    backendMock.planVersionInjection(10, [
-      {
-        name: "splitAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 1,
-          segmentId2: 2,
-          agglomerateId: 1,
-        },
-      },
-      {
-        name: "createTree",
-        value: {
-          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          id: 6,
-          updatedId: 6,
-          color: [0.6784313725490196, 0.1411764705882353, 0.050980392156862744],
-          name: "agglomerate 1339 (volumeTracingId)",
-          timestamp: 1494695001688,
-          comments: [],
-          branchPoints: [],
-          groupId: undefined,
-          isVisible: true,
-          type: "AGGLOMERATE",
-          edgesAreVisible: true,
-          metadata: [],
-          agglomerateInfo: {
-            agglomerateId: 1339,
-            tracingId: "volumeTracingId",
-            mappingName: undefined,
-          },
-        },
-      },
-      {
-        name: "moveTreeComponent",
-        value: {
-          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          sourceId: 3,
-          targetId: 6,
-          nodeIds: [5, 6],
-        },
-      },
-      {
-        name: "deleteEdge",
-        value: {
-          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          treeId: 3,
-          source: 4,
-          target: 5,
-        },
-      },
-      {
-        name: "createSegment",
-        value: {
-          actionTracingId: "volumeTracingId",
-          id: 1339,
-          anchorPosition: [2, 2, 2],
-          additionalCoordinates: undefined,
-          name: null,
-          color: null,
-          groupId: null,
-          metadata: [],
-          creationTime: 1494695001688,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(10, splitSegment1And2WithAgglomerateTrees1And6And4);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -711,8 +613,9 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         "./__snapshots__/agglomerate_skeleton_syncing/auto-sync_agglomerate_skeleton_1339_after_injected_split_and_merge.json",
       );
 
-      const agglomerateSkeletonReloadingUpdates = getNestedUpdateActions(context).slice(-3)!;
-      yield expect(agglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
+      const mergeAndAgglomerateSkeletonReloadingUpdates =
+        getNestedUpdateActions(context).slice(-3)!;
+      yield expect(mergeAndAgglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
         "./__snapshots__/agglomerate_skeleton_syncing/merge_with_injected_split_should_refresh_agglomerate_skeletons.json",
       );
     });
@@ -724,43 +627,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 
     // Simulate merging agglomerate 4 into agglomerate 1 by joining segments 1 & 4.
-    backendMock.planVersionInjection(10, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 1,
-          segmentId2: 4,
-          agglomerateId1: 1,
-          agglomerateId2: 4,
-        },
-      },
-      {
-        name: "moveTreeComponent",
-        value: {
-          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          sourceId: 4,
-          targetId: 3,
-          nodeIds: [7, 8],
-        },
-      },
-      {
-        name: "deleteTree",
-        value: {
-          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          id: 4,
-        },
-      },
-      {
-        name: "createEdge",
-        value: {
-          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          treeId: 3,
-          source: 4,
-          target: 7,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(10, mergeSegment1And4WithAgglomerateTrees1And4And6);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -812,6 +679,12 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       yield expect(agglomerateSkeleton1339).toMatchFileSnapshot(
         "./__snapshots__/agglomerate_skeleton_syncing/auto-sync_agglomerate_skeleton_1339_after_injected_merge_and_split.json",
       );
+
+      const splitAndAgglomerateSkeletonReloadingUpdates =
+        getNestedUpdateActions(context).slice(-3)!;
+      yield expect(splitAndAgglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
+        "./__snapshots__/agglomerate_skeleton_syncing/split_with_injected_merge_should_refresh_agglomerate_skeletons.json",
+      );
     });
     await task.toPromise();
   });
@@ -820,72 +693,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 
     // Inject splitting agglomerate 1 between segments 1 & 2 including agglomerate skeleton update & create segment.
-    backendMock.planVersionInjection(10, [
-      {
-        name: "splitAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 1,
-          segmentId2: 2,
-          agglomerateId: 1,
-        },
-      },
-      {
-        name: "createTree",
-        value: {
-          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          id: 6,
-          updatedId: 6,
-          color: [0.6784313725490196, 0.1411764705882353, 0.050980392156862744],
-          name: "agglomerate 1339 (volumeTracingId)",
-          timestamp: 1494695001688,
-          comments: [],
-          branchPoints: [],
-          groupId: undefined,
-          isVisible: true,
-          type: "AGGLOMERATE",
-          edgesAreVisible: true,
-          metadata: [],
-          agglomerateInfo: {
-            agglomerateId: 1339,
-            tracingId: "volumeTracingId",
-            mappingName: undefined,
-          },
-        },
-      },
-      {
-        name: "moveTreeComponent",
-        value: {
-          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          sourceId: 3,
-          targetId: 6,
-          nodeIds: [5, 6],
-        },
-      },
-      {
-        name: "deleteEdge",
-        value: {
-          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          treeId: 3,
-          source: 4,
-          target: 5,
-        },
-      },
-      {
-        name: "createSegment",
-        value: {
-          actionTracingId: "volumeTracingId",
-          id: 1339,
-          anchorPosition: [2, 2, 2],
-          additionalCoordinates: undefined,
-          name: null,
-          color: null,
-          groupId: null,
-          metadata: [],
-          creationTime: 1494695001688,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(10, splitSegment1And2WithAgglomerateTrees1And4And6);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -945,6 +753,12 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       yield expect(agglomerateSkeleton1340).toMatchFileSnapshot(
         "./__snapshots__/agglomerate_skeleton_syncing/auto-sync_agglomerate_skeleton_1340_after_injected_split_and_split.json",
       );
+
+      const splitAndAgglomerateSkeletonReloadingUpdates =
+        getNestedUpdateActions(context).slice(-3)!;
+      yield expect(splitAndAgglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
+        "./__snapshots__/agglomerate_skeleton_syncing/mincut_with_injected_split_should_refresh_agglomerate_skeletons.json",
+      );
     });
     await task.toPromise();
   });
@@ -953,43 +767,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
     const backendMock = mockInitialBucketAndAgglomerateData(context);
 
     // Simulate merging agglomerate 4 into agglomerate 1 by joining segments 1 & 4.
-    backendMock.planVersionInjection(10, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 1,
-          segmentId2: 4,
-          agglomerateId1: 1,
-          agglomerateId2: 4,
-        },
-      },
-      {
-        name: "moveTreeComponent",
-        value: {
-          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          sourceId: 4,
-          targetId: 3,
-          nodeIds: [7, 8],
-        },
-      },
-      {
-        name: "deleteTree",
-        value: {
-          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          id: 4,
-        },
-      },
-      {
-        name: "createEdge",
-        value: {
-          actionTracingId: "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          treeId: 3,
-          source: 4,
-          target: 7,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(10, mergeSegment1And4WithAgglomerateTrees1And4And6);
 
     // Prepare the server's reply for the upcoming split from all neighbors request.
     vi.mocked(context.mocks.getNeighborsForAgglomerateNode).mockReturnValue(
@@ -1050,6 +828,12 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       );
       yield expect(agglomerateSkeleton1340).toMatchFileSnapshot(
         "./__snapshots__/agglomerate_skeleton_syncing/auto-sync_agglomerate_skeleton_1340_after_injected_merge_and_splitting_from_all_neighbors.json",
+      );
+
+      const splitAndAgglomerateSkeletonReloadingUpdates =
+        getNestedUpdateActions(context).slice(-4)!;
+      yield expect(splitAndAgglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
+        "./__snapshots__/agglomerate_skeleton_syncing/split_from_all_neighbors_with_injected_merge_should_refresh_agglomerate_skeletons.json",
       );
     });
     await task.toPromise();
@@ -1154,6 +938,12 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       yield expect(agglomerateSkeleton1340).toMatchFileSnapshot(
         "./__snapshots__/agglomerate_skeleton_syncing/auto-sync_agglomerate_skeleton_1340_after_injected_split_and_partitioned_min_cut.json",
       );
+
+      const splitAndAgglomerateSkeletonReloadingUpdates =
+        getNestedUpdateActions(context).slice(-3)!;
+      yield expect(splitAndAgglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
+        "./__snapshots__/agglomerate_skeleton_syncing/multi_split_with_injected_split_should_refresh_agglomerate_skeletons.json",
+      );
     });
 
     await task.toPromise();
@@ -1201,7 +991,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         [5, 5, 5],
       ]);
 
-      const agglomerateSkeletonReloadingUpdates = getNestedUpdateActions(context).slice(-2)!;
+      const agglomerateSkeletonReloadingUpdates = getNestedUpdateActions(context).slice(-3)!;
       yield expect(agglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
         "./__snapshots__/agglomerate_skeleton_syncing/merge_should_correctly_update_newly_loaded_agglomerate_skeleton_due_to_rebasing.json",
       );
@@ -1253,7 +1043,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       expect(updatedAgglomerateTrees.size()).toBe(2);
       expect(updatedAgglomerateTrees.getOrThrow(3).nodes.size()).toBe(1);
       expect(updatedAgglomerateTrees.getOrThrow(4).nodes.size()).toBe(2);
-      const splittingAndAgglomerateReloadingUpdates = getNestedUpdateActions(context).slice(-2);
+      const splittingAndAgglomerateReloadingUpdates = getNestedUpdateActions(context).slice(-3);
       yield expect(splittingAndAgglomerateReloadingUpdates).toMatchFileSnapshot(
         "./__snapshots__/agglomerate_skeleton_syncing/split_should_correctly_update_newly_loaded_agglomerate_skeleton_due_to_rebasing.json",
       );

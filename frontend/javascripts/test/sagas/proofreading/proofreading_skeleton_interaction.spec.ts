@@ -1,3 +1,4 @@
+// biome-ignore assist/source/organizeImports: VOLUME_TRACING_ID after apiHelpers.
 import type { MinCutTargetEdge } from "admin/rest_api";
 import { call, put } from "redux-saga/effects";
 import { SKELETON_TRACING_ID } from "test/fixtures/skeletontracing_server_objects";
@@ -7,6 +8,7 @@ import {
   setupWebknossosForTesting,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
+import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";

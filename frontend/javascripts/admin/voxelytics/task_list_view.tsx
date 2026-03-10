@@ -674,8 +674,8 @@ export default function TaskListView({
               allowClear
             />
             <Space>
-              <Button onClick={() => onReload()}>
-                <SyncOutlined spin={isLoading} /> Refresh
+              <Button onClick={() => onReload()} icon={<SyncOutlined spin={isLoading} />}>
+                Refresh
               </Button>
               <Select
                 value={runId ?? ""}
@@ -708,9 +708,7 @@ export default function TaskListView({
               <Space.Compact>
                 <Button onClick={() => setExpandedTasks([])}>Collapse All</Button>
                 <Dropdown menu={overflowMenu}>
-                  <Button>
-                    <DownOutlined />
-                  </Button>
+                  <Button icon={<DownOutlined />} />
                 </Dropdown>
               </Space.Compact>
             </Space>

@@ -48,7 +48,7 @@
         "comments": [],
         "edgesAreVisible": true,
         "groupId": undefined,
-        "id": 4,
+        "id": 6,
         "isVisible": true,
         "metadata": [],
         "name": "agglomerate 1339 (volumeTracingId)",
@@ -66,7 +66,7 @@
           6,
         ],
         "sourceId": 3,
-        "targetId": 4,
+        "targetId": 6,
       },
     },
     {

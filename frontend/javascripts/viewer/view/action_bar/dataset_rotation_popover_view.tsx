@@ -36,6 +36,17 @@ const PopoverContent: React.FC<EmptyObject> = () => {
 
   return (
     <div>
+      <Row>
+        <Col>Flight Mode</Col>
+        <Col offset={11}>
+          <Switch
+            disabled={!allowedModes.includes("flight")}
+            onChange={setViewMode}
+            value={useWkSelector((state) => state.temporaryConfiguration.viewMode) === "flight"}
+          />
+        </Col>
+      </Row>
+      <Row style={{ marginTop: 10 }}>Rotation</Row>
       <div>
         <NumberSliderSetting
           label="X"
@@ -104,16 +115,6 @@ const PopoverContent: React.FC<EmptyObject> = () => {
           </Col>
         </Row>
       </div>
-      <Row>
-        <Col>Flight Mode</Col>
-        <Col offset={11}>
-          <Switch
-            disabled={!allowedModes.includes("flight")}
-            onChange={setViewMode}
-            value={useWkSelector((state) => state.temporaryConfiguration.viewMode) === "flight"}
-          />
-        </Col>
-      </Row>
     </div>
   );
 };
@@ -122,7 +123,7 @@ const DatasetRotationPopoverButtonView: React.FC<{ style: React.CSSProperties }>
   const isFlycamRotated = useWkSelector((state) => isRotated(state.flycam));
   const maybeWarningStyle = isFlycamRotated ? { ...style, ...warningColors, zIndex: 1 } : style;
   return (
-    <Popover title="Rotation" content={<PopoverContent />}>
+    <Popover content={<PopoverContent />}>
       <Button icon={<SyncOutlined />} style={maybeWarningStyle} />
     </Popover>
   );

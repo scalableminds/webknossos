@@ -262,6 +262,7 @@ function ProjectListView() {
           <Column
             title="Pending Task Instances"
             dataIndex="pendingInstances"
+            align="right"
             key="pendingInstances"
             sorter={compareBy<APIProjectWithStatus>((project) => project.pendingInstances)}
             filters={greaterThanZeroFilters}
@@ -275,6 +276,7 @@ function ProjectListView() {
           <Column
             title={<Tooltip title="Total annotating time spent on this project">Time [h]</Tooltip>}
             dataIndex="tracingTime"
+            align="right"
             key="tracingTime"
             sorter={compareBy<APIProjectWithStatus>((project) => project.tracingTime)}
             render={(tracingTimeMs) =>
@@ -338,6 +340,7 @@ function ProjectListView() {
             title="Priority"
             dataIndex="priority"
             key="priority"
+            align="right"
             sorter={compareBy<APIProjectWithStatus>((project) => project.priority)}
             render={(priority, project: APIProjectWithStatus) =>
               `${priority} ${project.paused ? "(paused)" : ""}`
@@ -353,6 +356,7 @@ function ProjectListView() {
           <Column
             title="Time Limit"
             dataIndex="expectedTime"
+            align="right"
             key="expectedTime"
             sorter={compareBy<APIProjectWithStatus>((project) => project.expectedTime)}
             render={(expectedTime) => `${expectedTime}m`}

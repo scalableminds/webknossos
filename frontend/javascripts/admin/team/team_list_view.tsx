@@ -178,19 +178,6 @@ function TeamListView() {
     setTeams([...teams, newTeam]);
   }
 
-  function renderPlaceholder() {
-    const teamMessage = (
-      <Fragment>
-        {"You can "}
-        <a onClick={() => setIsTeamCreationModalVisible(true)}>add a team</a>
-        {" to control access to specific datasets and manage which users can be assigned to tasks."}
-      </Fragment>
-    );
-    return isLoading ? null : (
-      <Alert title="Add more teams" description={teamMessage} type="info" showIcon />
-    );
-  }
-
   return (
     <AdminPage
       title="Teams"
@@ -206,7 +193,6 @@ function TeamListView() {
         </Button>
       }
       search={<Search allowClear onChange={handleSearch} value={searchQuery} />}
-      alerts={teams.length <= 1 ? renderPlaceholder() : null}
     >
       <Spin spinning={isLoading} size="large">
         <Table

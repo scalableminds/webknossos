@@ -136,18 +136,21 @@ function ProjectProgressReportView() {
             <Column
               title="Tasks"
               dataIndex="totalTasks"
+              align="right"
               sorter={compareBy<APIProjectProgressReport>((project) => project.totalTasks)}
               render={(number) => number.toLocaleString()}
             />
             <Column
               title="Priority"
               dataIndex="priority"
+              align="right"
               sorter={compareBy<APIProjectProgressReport>((project) => project.priority)}
               render={(number) => number.toLocaleString()}
             />
             <Column
               title="Time [h]"
               dataIndex="billedMilliseconds"
+              align="right"
               sorter={compareBy<APIProjectProgressReport>((project) => project.billedMilliseconds)}
               render={(number) =>
                 millisecondsToHours(number).toLocaleString(undefined, {
@@ -159,6 +162,7 @@ function ProjectProgressReportView() {
               <Column
                 title="Total"
                 width={100}
+                align="right"
                 dataIndex="totalInstances"
                 sorter={compareBy<APIProjectProgressReport>((project) => project.totalInstances)}
                 render={(number) => number.toLocaleString()}
@@ -166,6 +170,7 @@ function ProjectProgressReportView() {
               <Column
                 title="Progress"
                 key="progress"
+                align="right"
                 dataIndex="finishedInstances"
                 width={100}
                 sorter={compareBy<APIProjectProgressReport>(

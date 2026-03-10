@@ -24,11 +24,12 @@ const STYLING_CLASS_NAME = "time-tracking-details";
 
 const renderRow = (
   userDataPerAnnotation: APITimeTrackingPerAnnotation[],
-): [Array<JSX.Element>, Array<JSX.Element>] => {
+): [JSX.Element[], JSX.Element[]] => {
   if (userDataPerAnnotation == null) return [[], []];
   const groupedByProject = groupBy(userDataPerAnnotation, "projectName");
-  let taskRows: Array<JSX.Element> = [];
-  let annotationRows: Array<JSX.Element> = [];
+  let taskRows: JSX.Element[] = [];
+  let annotationRows: JSX.Element[] = [];
+
   for (const [project, loggedTimes] of Object.entries(groupedByProject)) {
     if (project === "null") {
       // explorative annotations

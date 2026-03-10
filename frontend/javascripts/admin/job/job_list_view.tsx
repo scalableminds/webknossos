@@ -550,6 +550,7 @@ function JobListView() {
           <Column
             title="Cost in Credits"
             key="costInMilliCredits"
+            align="right"
             render={(job: APIJob) =>
               job.costInMilliCredits ? formatMilliCreditsString(job.costInMilliCredits) : "-"
             }

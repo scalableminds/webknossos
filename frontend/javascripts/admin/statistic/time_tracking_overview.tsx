@@ -149,12 +149,14 @@ function TimeTrackingOverview() {
     {
       title: "No. tasks / annotations",
       dataIndex: "annotationCount",
+      align: "right",
       key: "numberAnn",
       sorter: compareBy<APITimeTrackingPerUser>((timeEntry) => timeEntry.annotationCount),
     },
     {
       title: "Avg. time per task / annotation",
       key: "avgTime",
+      align: "right",
       render: (item: APITimeTrackingPerUser) =>
         formatMilliseconds(item.timeMillis / item.annotationCount),
       sorter: compareBy<APITimeTrackingPerUser>(
@@ -165,6 +167,7 @@ function TimeTrackingOverview() {
       title: "Total time",
       dataIndex: "timeMillis",
       key: "tracingTimes",
+      align: "right",
       render: (tracingTimeInMs: APITimeTrackingPerUser["timeMillis"]) =>
         formatMilliseconds(tracingTimeInMs),
       sorter: compareBy<APITimeTrackingPerUser>((timeEntry) => timeEntry.timeMillis),
@@ -212,11 +215,17 @@ function TimeTrackingOverview() {
         <Table.Summary.Cell index={1}>
           <b>Total</b>
         </Table.Summary.Cell>
-        <Table.Summary.Cell index={2}> {totalNumberOfTasksAndAnnotations} </Table.Summary.Cell>
-        <Table.Summary.Cell index={3}>
+        <Table.Summary.Cell index={2} align="right">
+          {" "}
+          {totalNumberOfTasksAndAnnotations}{" "}
+        </Table.Summary.Cell>
+        <Table.Summary.Cell index={3} align="right">
           {formatMilliseconds(totalTimeMs / totalNumberOfTasksAndAnnotations)}
         </Table.Summary.Cell>
-        <Table.Summary.Cell index={4}> {formatMilliseconds(totalTimeMs)}</Table.Summary.Cell>
+        <Table.Summary.Cell index={4} align="right">
+          {" "}
+          {formatMilliseconds(totalTimeMs)}
+        </Table.Summary.Cell>
         <Table.Summary.Cell index={5} />
       </Table.Summary.Row>
     );

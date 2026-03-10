@@ -4,6 +4,7 @@ import {
   EditOutlined,
   EyeOutlined,
   PlusOutlined,
+  ProjectOutlined,
   ScheduleOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
@@ -253,7 +254,7 @@ function TaskTypeListView() {
                 </Link>
                 <br />
                 <Link to={`/taskTypes/${taskType.id}/projects`} title="View Projects">
-                  <EyeOutlined className="icon-margin-right" />
+                  <ProjectOutlined className="icon-margin-right" />
                   Projects
                 </Link>
                 <br />

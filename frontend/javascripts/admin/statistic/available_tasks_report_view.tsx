@@ -74,6 +74,7 @@ function AvailableTasksReportView() {
           />
           <Column
             title="# Available Tasks"
+            align="right"
             dataIndex="totalAvailableTasks"
             defaultSortOrder="ascend"
             sorter={compareBy<APIAvailableTasksReport>((task) => task.totalAvailableTasks)}

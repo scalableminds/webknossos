@@ -864,7 +864,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
     await task.toPromise();
   }, 8000);
 
-  it("should reload auxiliary proofreading meshes when performing partitioned min cut if min-cutted edges with outdated edge info due to interfering merge operations.", async (context: WebknossosTestContext) => {
+  it("should reload auxiliary proofreading meshes when performing partitioned min cut if min-cutted edges with outdated edge info due to interfering merge operations. The merge is thus, incomplete.", async (context: WebknossosTestContext) => {
     const { mocks } = context;
     // Initial mapping should be
     // [[1, 1],
@@ -893,7 +893,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
     //  [1337, 1],
     //  [1338, 1]]
     // Contains two circles now but only one is split by the min-cut request.
-    backendMock.planVersionInjection(10, [
+    backendMock.planVersionInjection(9, [
       {
         name: "mergeAgglomerate",
         value: {
@@ -906,7 +906,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       },
     ]);
 
-    backendMock.planVersionInjection(11, [
+    backendMock.planVersionInjection(10, [
       {
         name: "mergeAgglomerate",
         value: {
@@ -919,7 +919,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       },
     ]);
 
-    mockEdgesForPartitionedAgglomerateMinCut(mocks, 9);
+    mockEdgesForPartitionedAgglomerateMinCut(mocks, 8);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];

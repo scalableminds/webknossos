@@ -493,7 +493,7 @@ describe("Proofreading (with mesh actions)", () => {
       yield simulatePartitionedSplitAgglomeratesViaMeshes(context, false);
 
       const receivedUpdateActions = getFlattenedUpdateActions(context);
-      expect(receivedUpdateActions.slice(-4)).toEqual([
+      expect(receivedUpdateActions.slice(-3)).toEqual([
         {
           name: "splitAgglomerate",
           value: {
@@ -510,21 +510,6 @@ describe("Proofreading (with mesh actions)", () => {
             agglomerateId: 1,
             segmentId1: 3,
             segmentId2: 1337,
-          },
-        },
-        {
-          name: "createSegment",
-          value: {
-            actionTracingId: "volumeTracingId",
-
-            additionalCoordinates: undefined,
-            anchorPosition: [1, 1, 1],
-            color: null,
-            creationTime: 1494695001688,
-            groupId: null,
-            id: 1,
-            metadata: [],
-            name: null,
           },
         },
         {
@@ -642,8 +627,7 @@ describe("Proofreading (with mesh actions)", () => {
     const task = startSaga(function* task(): Saga<void> {
       yield simulatePartitionedSplitAgglomeratesViaMeshes(context, false);
       const receivedUpdateActions = getFlattenedUpdateActions(context);
-
-      expect(receivedUpdateActions.slice(-3)).toEqual([
+      expect(receivedUpdateActions.slice(-2)).toEqual([
         {
           name: "splitAgglomerate",
           value: {
@@ -660,14 +644,6 @@ describe("Proofreading (with mesh actions)", () => {
             agglomerateId: 1,
             segmentId1: 3,
             segmentId2: 1337,
-          },
-        },
-        {
-          name: "updateSegmentPartial",
-          value: {
-            actionTracingId: "volumeTracingId",
-            anchorPosition: [1, 1, 1],
-            id: 1,
           },
         },
       ]);

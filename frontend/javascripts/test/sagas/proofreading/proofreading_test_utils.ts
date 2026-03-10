@@ -549,6 +549,8 @@ export function* performCutFromAllNeighbours(
   yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Wait till full merge operation is done.
 }
 
+// All usages of this function should have an initial mapping with a agglomerate id 1 = 1-2-3-1337-1338-1.
+// In case this needs to be changed, the updateSegmentAction and setActiveCellAction actions need to be adjusted.
 export function* simulatePartitionedSplitAgglomeratesViaMeshes(
   context: WebknossosTestContext,
   loadMeshes: boolean,
@@ -579,8 +581,8 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
-  yield put(updateSegmentAction(6, { anchorPosition: [1337, 1337, 1337] }, tracingId));
-  yield put(setActiveCellAction(6, undefined, null, 1337));
+  yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+  yield put(setActiveCellAction(1, undefined, null, 1));
 
   yield makeMappingEditableHelper();
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).

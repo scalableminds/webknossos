@@ -68,8 +68,6 @@ export default function AdminPage({
                 level={2}
                 style={{
                   margin: 0,
-                  letterSpacing: "0.01em",
-                  fontWeight: 700,
                 }}
               >
                 {renderedTitle}
@@ -135,9 +133,9 @@ export default function AdminPage({
                   rowHoverBg: token.colorFillQuaternary,
                 },
               },
-            }}
-          >
-            {children}
+          }}
+        >
+          {children}
           </ConfigProvider>
         </Card>
       </Space>

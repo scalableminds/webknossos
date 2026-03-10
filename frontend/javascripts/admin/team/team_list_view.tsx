@@ -3,7 +3,7 @@ import { PropTypes } from "@scalableminds/prop-types";
 import AdminPage from "admin/admin_page";
 import { deleteTeam as deleteTeamAPI, getEditableTeams, getEditableUsers } from "admin/rest_api";
 import CreateTeamModal from "admin/team/create_team_modal_view";
-import { Alert, App, Button, Input, Space, Spin, Table, Tag, Tooltip } from "antd";
+import { App, Button, Input, Space, Spin, Table, Tag, Tooltip } from "antd";
 import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";
@@ -12,7 +12,7 @@ import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import partial from "lodash-es/partial";
 import messages from "messages";
 import type React from "react";
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { APITeam, APITeamMembership, APIUser } from "types/api_types";
 import EditTeamModalView from "./edit_team_modal_view";
 

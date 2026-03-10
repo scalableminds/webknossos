@@ -5,7 +5,7 @@ import {
   type ServerVolumeTracing,
 } from "types/api_types";
 
-const TRACING_ID = "volumeTracingId";
+export const VOLUME_TRACING_ID = "volumeTracingId";
 
 // this is a uint16 segmentation layer
 export const tracing: ServerVolumeTracing = {
@@ -38,7 +38,7 @@ export const tracing: ServerVolumeTracing = {
   },
   additionalAxes: [],
   elementClass: "uint16",
-  id: TRACING_ID,
+  id: VOLUME_TRACING_ID,
   largestSegmentId: 21890,
   zoomLevel: 0,
   mags: [
@@ -74,7 +74,7 @@ export const annotation: APIAnnotation = {
   annotationLayers: [
     {
       name: "some volume name",
-      tracingId: TRACING_ID,
+      tracingId: VOLUME_TRACING_ID,
       typ: AnnotationLayerEnum.Volume,
       stats: {},
     },
@@ -113,7 +113,7 @@ export const annotationProto: APITracingStoreAnnotation = {
   earliestAccessibleVersion: 0,
   annotationLayers: [
     {
-      tracingId: TRACING_ID,
+      tracingId: VOLUME_TRACING_ID,
       name: "some volume name",
       typ: AnnotationLayerEnum.Volume,
     },

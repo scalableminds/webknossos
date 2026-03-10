@@ -517,9 +517,10 @@ export function InnerMetadataTable({
                     ghost
                     size="small"
                     style={{ border: "none" }}
-                  >
-                    <PlusOutlined size={18} style={{ color: "var(--ant-color-text-tertiary)" }} />
-                  </Button>
+                    icon={
+                      <PlusOutlined size={18} style={{ color: "var(--ant-color-text-tertiary)" }} />
+                    }
+                  />
                 </Dropdown>
               </FastTooltip>
             </div>

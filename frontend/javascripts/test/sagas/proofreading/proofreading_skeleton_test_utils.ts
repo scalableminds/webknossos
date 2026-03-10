@@ -36,20 +36,11 @@ export function encodeServerTracing(
  * @param tracingId id for the resulting tracing
  */
 export function createSkeletonTracingFromAdjacency(
-  adjacencyList: Array<[number, number]>,
+  adjacencyList: Map<number, Set<number>>,
   startNode: number,
   tracingId: string,
   version: number,
 ): ServerSkeletonTracing {
-  // Build adjacency map (undirected)
-  const adj = new Map<number, Set<number>>();
-  for (const [a, b] of adjacencyList) {
-    if (!adj.has(a)) adj.set(a, new Set());
-    if (!adj.has(b)) adj.set(b, new Set());
-    adj.get(a)!.add(b);
-    adj.get(b)!.add(a);
-  }
-
   // BFS to find component containing startNode
   const visited = new Set<number>();
   const queue: number[] = [startNode];
@@ -58,7 +49,7 @@ export function createSkeletonTracingFromAdjacency(
 
   while (queue.length) {
     const n = queue.shift()!;
-    const neighbours = adj.get(n);
+    const neighbours = adjacencyList.get(n);
     if (!neighbours) continue;
     for (const nb of neighbours) {
       if (!visited.has(nb)) {
@@ -74,9 +65,18 @@ export function createSkeletonTracingFromAdjacency(
   const componentNodes = Array.from(visited).sort((a, b) => a - b);
   const componentNodeSet = new Set(componentNodes);
 
-  const componentEdges: Edge[] = adjacencyList
-    .filter(([a, b]) => componentNodeSet.has(a) && componentNodeSet.has(b) && a !== b)
-    .map(([a, b]) => ({ source: a, target: b }));
+  const componentEdges: Edge[] = [];
+  for (const [node, neighbours] of adjacencyList) {
+    for (const neighbour of neighbours) {
+      if (
+        componentNodeSet.has(node) &&
+        componentNodeSet.has(neighbour) &&
+        !componentEdges.some((e) => e.source === neighbour && e.target === node)
+      ) {
+        componentEdges.push({ source: node, target: neighbour });
+      }
+    }
+  }
 
   // Build ServerNode objects. Position = (n,n,n) as requested.
   const now = Date.now();

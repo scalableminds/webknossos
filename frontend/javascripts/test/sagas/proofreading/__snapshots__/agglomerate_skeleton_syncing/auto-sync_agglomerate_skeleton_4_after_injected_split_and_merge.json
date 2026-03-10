@@ -23,10 +23,10 @@
               "target": 10,
             },
           ],
-          9 => [
+          4 => [
             {
-              "source": 4,
-              "target": 9,
+              "source": 9,
+              "target": 4,
             },
           ],
         },
@@ -43,16 +43,14 @@
               "source": 9,
               "target": 10,
             },
-          ],
-          4 => [
             {
-              "source": 4,
-              "target": 9,
+              "source": 9,
+              "target": 4,
             },
           ],
         },
       ],
-      "entryCount": 2,
+      "entryCount": 1,
       "itemsPerBatch": 1000,
     },
   },

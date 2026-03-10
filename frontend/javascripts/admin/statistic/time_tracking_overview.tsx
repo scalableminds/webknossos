@@ -2,6 +2,7 @@ import { DownloadOutlined, FilterOutlined } from "@ant-design/icons";
 import AdminPage from "admin/admin_page";
 import { getTeams, getTimeEntries, getTimeTrackingForUserSpans } from "admin/rest_api";
 import { Button, DatePicker, Select, Space, Spin, Table, type TimeRangePickerProps } from "antd";
+import type { ColumnsType } from "antd/es/table";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import LinkButton from "components/link_button";
 import dayjs, { type Dayjs } from "dayjs";
@@ -134,7 +135,7 @@ function TimeTrackingOverview() {
     );
   };
 
-  const timeTrackingTableColumns = [
+  const timeTrackingTableColumns: ColumnsType<APITimeTrackingPerUser> = [
     {
       title: "User",
       dataIndex: "user",
@@ -216,14 +217,12 @@ function TimeTrackingOverview() {
           <b>Total</b>
         </Table.Summary.Cell>
         <Table.Summary.Cell index={2} align="right">
-          {" "}
-          {totalNumberOfTasksAndAnnotations}{" "}
+          {totalNumberOfTasksAndAnnotations}
         </Table.Summary.Cell>
         <Table.Summary.Cell index={3} align="right">
           {formatMilliseconds(totalTimeMs / totalNumberOfTasksAndAnnotations)}
         </Table.Summary.Cell>
         <Table.Summary.Cell index={4} align="right">
-          {" "}
           {formatMilliseconds(totalTimeMs)}
         </Table.Summary.Cell>
         <Table.Summary.Cell index={5} />

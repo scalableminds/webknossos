@@ -4,6 +4,7 @@ import dayjs from "dayjs";
 import { formatMilliseconds } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import groupBy from "lodash-es/groupBy";
+import type { ReactElement } from "react";
 import type { APITimeTrackingPerAnnotation } from "types/api_types";
 import type { AnnotationStateFilterEnum, AnnotationTypeFilterEnum } from "viewer/constants";
 import { AnnotationStats } from "viewer/view/right_border_tabs/dataset_info_tab_view";
@@ -24,11 +25,11 @@ const STYLING_CLASS_NAME = "time-tracking-details";
 
 const renderRow = (
   userDataPerAnnotation: APITimeTrackingPerAnnotation[],
-): [JSX.Element[], JSX.Element[]] => {
+): [ReactElement[], ReactElement[]] => {
   if (userDataPerAnnotation == null) return [[], []];
   const groupedByProject = groupBy(userDataPerAnnotation, "projectName");
-  let taskRows: JSX.Element[] = [];
-  let annotationRows: JSX.Element[] = [];
+  let taskRows: ReactElement[] = [];
+  let annotationRows: ReactElement[] = [];
 
   for (const [project, loggedTimes] of Object.entries(groupedByProject)) {
     if (project === "null") {

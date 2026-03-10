@@ -18,8 +18,9 @@ import { Link } from "react-router-dom";
 import type { AiModel } from "types/api_types";
 import { enforceActiveUser, formatUserName } from "viewer/model/accessors/user_accessor";
 
+const { Search } = Input;
+
 export default function AiModelListView() {
-  const { Search } = Input;
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
   const [currentlyEditedModel, setCurrentlyEditedModel] = useState<AiModel | null>(null);
   const [searchQuery, setSearchQuery] = useState("");

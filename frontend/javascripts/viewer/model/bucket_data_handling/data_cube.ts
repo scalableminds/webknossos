@@ -510,7 +510,7 @@ class DataCube {
     return Date.now() - (this.lastRequestForValueSet || 0) < 2 * 60 * 1000;
   }
 
-  getValueSetForAllBuckets(): Set<number> | Set<bigint> {
+  getValueSetForAllAccessedBuckets(): Set<number> | Set<bigint> {
     this.lastRequestForValueSet = Date.now();
 
     // Theoretically, we could ignore coarser buckets for which we know that

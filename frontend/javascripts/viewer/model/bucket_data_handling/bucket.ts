@@ -410,6 +410,9 @@ export class DataBucket {
   }
 
   markAsNeeded(): void {
+    // Compare to the previous value, not the current one. This is because during rendering
+    // all buckets are marked as unneeded and then all needed buckets are marked as such afterwards.
+    // So to find out whether this bucket was actually unneeded before, the previous value is decisive.
     if (!this.previousAccessed) this.cube.triggerRenderedBucketDataChanged();
 
     this.previousAccessed = this.accessed;
@@ -661,6 +664,7 @@ export class DataBucket {
 
         this.state = BucketStateEnum.LOADED;
         this.trigger("bucketLoaded", data);
+        if (this.accessed) this.cube.triggerRenderedBucketDataChanged();
         break;
       }
 

@@ -1021,7 +1021,7 @@ export const minCutWithNodes2And3WithAgglomerateTree1 = [
       value: {
         actionTracingId: SKELETON_TRACING_ID,
         id: 3,
-        updatedId: 3,
+        updatedId: undefined,
         color: [0.6784313725490196, 0.1411764705882353, 0.050980392156862744] as Vector3,
         name: "agglomerate 1339 (volumeTracingId)",
         timestamp: 1494695001688,
@@ -1461,7 +1461,7 @@ export const splitAgglomerateTree1 = [
       value: {
         actionTracingId: SKELETON_TRACING_ID,
         id: 4,
-        updatedId: 4,
+        updatedId: undefined,
         color: [0, 1, 0.7568627450980392] as Vector3,
         name: "agglomerate 1339 (volumeTracingId)",
         timestamp: 1494695001688,

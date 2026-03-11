@@ -168,6 +168,29 @@ describe("Save Mutex Saga", () => {
     await task.toPromise();
   });
 
+  it<WebknossosTestContext>("calling unsubscribeFromAnnotationMutexSaga multiple times should not result in an error.", async (context: WebknossosTestContext) => {
+    WkDevFlags.liveCollab = true;
+    await setupWebknossosForTestingWithRestrictions(context, true, true, true);
+    expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
+    const task = startSaga(function* task() {
+      const unsubscribe = yield call(subscribeToAnnotationMutex, "Test");
+      yield delay(1000);
+      expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
+      yield call(unsubscribe);
+      yield delay(10);
+      expect(context.mocks.releaseAnnotationMutex).toHaveBeenCalled();
+      context.mocks.acquireAnnotationMutex.mockClear();
+      context.mocks.releaseAnnotationMutex.mockClear();
+      yield call(unsubscribe);
+      yield call(unsubscribe);
+      yield call(unsubscribe);
+      yield delay(1000);
+      expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
+      expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
+    });
+    await task.toPromise();
+  });
+
   // Properties that can influence whether mutex acquisition is called are:
   // - othersMayEdit
   // - isUpdatingCurrentlyAllowed

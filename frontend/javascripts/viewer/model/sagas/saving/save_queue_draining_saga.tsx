@@ -168,7 +168,9 @@ export function* synchronizeAnnotationWithBackend(
     yield call(unsubscribeFromAnnotationMutexSaga);
   }
   // Update RebaseRelevantAnnotationState information as new updates have been stored on the server.
-  yield* put(snapshotAnnotationStateForNextRebaseAction());
+  if (saveQueue.length === 0) {
+    yield* put(snapshotAnnotationStateForNextRebaseAction());
+  }
   yield* put(setSaveBusyAction(false));
   return { hadConflict: false };
 }

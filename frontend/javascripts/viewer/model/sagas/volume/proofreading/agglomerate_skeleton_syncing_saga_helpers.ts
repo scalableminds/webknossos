@@ -23,6 +23,34 @@ import {
   type UpdateActionWithoutIsolationRequirement,
 } from "../update_actions";
 
+/* This module contains helper functions necessary to keep agglomerate trees
+ * in sync with the agglomerate mapping upon a proofreading action that is not
+ * tree-based.  This should always be done when the proofreading action originates
+ * from this user. In a live collab scenario this should not be done when incorporating
+ * proofreading updates from other users as these users ensured to keep the agglomerate
+ * trees in sync.
+ *
+ * When a split operation is done, the agglomerate mapping is always refresh via
+ * calling `splitAgglomerateInMapping`. This function automatically takes care of
+ * updating the agglomerate trees when its syncAgglomerateSkeletons parameter is set to true.
+ * So no extra special care needed.
+ *
+ * When a merge operation is done, syncAgglomerateSkeletonsAfterMergeAction must be called as
+ * part of the post processing of the merge interaction to synchronize the trees. This must be
+ * done after the merge update actions were stored on the server.
+ *
+ * Synchronizing the the trees is done in the following steps:
+ * - test whether the agglomerate tree of one of the affected agglomerates is loaded
+ * - If yes, build a helper structure which maps node positions to node ids to keep them consistent.
+ *   Additionally, remember the existing tree ids to keep them consistent as well.
+ * - Reload all agglomerate trees into a temporary skeleton tracing.
+ * - Remap the node ids and tree ids of the temporary skeleton tracing to have as minimal id changes
+ *   as possible between the newly loaded trees and the currently existing ones.
+ * - Diff the a skeleton tracing with the current agglomerate trees with the the temporary skeleton tracing.
+ * - Apply the update action from the diff to the current skeleton tracing to update the agglomerate trees
+ *   with as less as possible changes to the new version of the agglomerate mapping.
+ */
+
 // Puts the given trees into a skeleton tracing object, where the value equal those of the active skeleton tracing.
 // Before calling, ensure a skeleton tracing exists.
 function* agglomerateTreesToSkeleton(trees: Tree[]): Saga<SkeletonTracing> {
@@ -38,6 +66,8 @@ function* agglomerateTreesToSkeleton(trees: Tree[]): Saga<SkeletonTracing> {
   return tracingWithTreesReplaced;
 }
 
+// Loads the given all agglomerate trees with the ids contained in agglomerateIds
+// into a temporary skeleton tracing object. Not existing trees are excluded.
 function* getAgglomerateTreesAsSkeleton(
   agglomerateIds: number[],
   editableMappingTracingId: string,
@@ -62,6 +92,9 @@ function* getAgglomerateTreesAsSkeleton(
   return tracingWithOldAggloTrees;
 }
 
+// Loads the newest version of the agglomerate trees given by agglomerateIds from the server.
+// Their node ids and tree ids are then remapped according to the positionToIdMap and treeIds.
+// This helps to keep the ids consistent when diffing with the agglomerate trees currently loaded.
 function* getAllAgglomerateTreesFromServerAndRemap(
   agglomerateIds: number[],
   positionToIdMap: PositionToIdMap,
@@ -104,6 +137,9 @@ export function createPositionToIdMap(trees: MapIterator<Tree> | Tree[]) {
   return positionToIdMap;
 }
 
+// This function applies a positionToIdMap to a given array of trees.
+// It remaps their node ids to have minimal changes during diffing. The ids in the edges are mapped as well.
+// In case positionToIdMap does not contain the position of the current node, the gets a valid new id.
 export function remapNodeIdsWithPositionMap(
   trees: Tree[],
   positionToIdMap: PositionToIdMap,
@@ -140,6 +176,9 @@ export function remapNodeIdsWithPositionMap(
   });
 }
 
+// Compare two agglomerate skeletons via deep diffing ignoring the identity check of diffable maps.
+// The resulting update actions needed for the current agglomerate trees present in the store to
+// be transformed to the newest version received from the server as returned.
 export function deepDiffTreesInSkeletonTracings(
   prevSkeleton: SkeletonTracing,
   newSkeletonWithUpdatedIds: SkeletonTracing,
@@ -183,11 +222,13 @@ function* updateAffectedAgglomerateTrees(
           } as const,
         }) as const,
     ) as ApplicableSkeletonServerUpdateAction[];
-  // Apply diff to update agglomerate skeleton.
+  // Apply diff to update agglomerate trees.
   // Results in new skeleton diff changes registered by the tracing diffing saga.
   yield* put(applySkeletonUpdateActionsFromServerAction(diffActionsWithMissingServerFields));
 }
 
+// This function is needed to synchronize the agglomerate trees which need to be updated
+// in case they are present in the skelton tracing.
 export function* syncAgglomerateSkeletonsAfterMergeAction(
   sourceAgglomerateIdBeforeMerge: number,
   targetAgglomerateIdBeforeMerge: number,
@@ -236,6 +277,10 @@ export function* syncAgglomerateSkeletonsAfterMergeAction(
   );
 }
 
+// This function should be called after a successful split proofreading interaction to update
+// the potentially loaded agglomerate tree.
+// This is automatically done correct when reloading the mapping after a split via splitAgglomerateInMapping.
+// But the callee needs to tell the function to update the trees via the syncAgglomerateSkeletons parameter.
 export function* syncAgglomerateSkeletonsAfterSplitAction(
   newAgglomerateIds: number[],
   oldAgglomerateIds: number[],

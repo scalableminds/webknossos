@@ -804,8 +804,8 @@ function SkeletonTracingReducer(
       const isLiveCollabActive = WkDevFlags.liveCollab && state.annotation.othersMayEdit;
       if (isLiveCollabActive && isProofreadingActive && action.initiator === "USER") {
         // If live collab is active and the user did a proofreading split via edge deletion,
-        // wait for the proofreading saga to replay the action before deleting the edge as
-        // the affected agglomerate tree may not be in sync with the backend yet.
+        // we ignore the action as the affected agglomerate tree may not be in sync with the backend yet.
+        // In this case the proofreading saga takes care of re-dispatching the same action but with initiator = "PROOFREADING".
         return state;
       }
 
@@ -1124,9 +1124,9 @@ function SkeletonTracingReducer(
       const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
       const isLiveCollabActive = WkDevFlags.liveCollab && state.annotation.othersMayEdit;
       if (isLiveCollabActive && isProofreadingActive && action.initiator === "USER") {
-        // If live collab is active and the user did a proofreading merge via edge creation,
-        // wait for the proofreading saga to replay the action before deleting the edge as
-        // the affected agglomerate tree may not be in sync with the backend yet.
+        // If live collab is active and the user did a proofreading merge via edge creation / merge trees,
+        // we ignore the action as the affected agglomerate tree may not be in sync with the backend yet.
+        // In this case the proofreading saga takes care of re-dispatching the same action but with initiator = "PROOFREADING".
         return state;
       }
 
@@ -1204,7 +1204,7 @@ function SkeletonTracingReducer(
       });
     }
 
-    case "SET_TREE_AGGLOMERATE_INFO_AGGLOMERATE_ID": {
+    case "SET_TREE_AGGLOMERATE_INFO_ID": {
       const tree = getTree(skeletonTracing, action.treeId);
       if (tree == null || tree.agglomerateInfo == null) {
         return state;

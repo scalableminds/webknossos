@@ -148,6 +148,12 @@ function getUnsubscribeFromAnnotationMutexSaga(id: number): () => Saga<void> {
   function* unsubscribe(): Saga<void> {
     const state = getMutexLogicState();
     const callerId = state.subscribersToMutex[id];
+    if (!callerId) {
+      console.warn(
+        `Tried to unsubscribe from annotation mutex with id ${id} but it was not found. Maybe the unsubscribe was called multiple times.`,
+      );
+      return;
+    }
     delete state.subscribersToMutex[id];
     if (!state.runningAdHocMutexAcquiringSaga) {
       console.warn(
@@ -193,7 +199,7 @@ export function* subscribeToAnnotationMutex(callerId: string): Saga<() => Saga<v
 export function* clearAllSubscriptions() {
   const state = getMutexLogicState();
   for (const numId of Object.keys(state.subscribersToMutex)) {
-    const unsubscribe = getUnsubscribeFromAnnotationMutexSaga(numId as any as number);
+    const unsubscribe = getUnsubscribeFromAnnotationMutexSaga(Number(numId));
     yield* call(unsubscribe);
   }
 }

@@ -371,7 +371,7 @@ export function updateTree(tree: Tree, actionTracingId: string) {
     value: {
       actionTracingId,
       id: tree.treeId,
-      updatedId: tree.treeId,
+      updatedId: undefined,
       color: tree.color,
       name: tree.name,
       timestamp: tree.timestamp,

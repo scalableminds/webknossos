@@ -5,9 +5,9 @@ import com.scalableminds.webknossos.datastore.IdWithBool.{Id32WithBool, Id64With
 import com.scalableminds.webknossos.datastore.SkeletonTracing
 import com.scalableminds.webknossos.tracingstore.tracings.AnnotationUserStateUtils
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingDefaults
-import org.scalatestplus.play.PlaySpec
+import org.scalatest.wordspec.AsyncWordSpec
 
-class AnnotationUserStateTestSuite extends PlaySpec with AnnotationUserStateUtils {
+class AnnotationUserStateTestSuite extends AsyncWordSpec with AnnotationUserStateUtils {
 
   private lazy val userAId = ObjectId("userA")
   private lazy val userBId = ObjectId("userB")
@@ -35,7 +35,7 @@ class AnnotationUserStateTestSuite extends PlaySpec with AnnotationUserStateUtil
       val renderedUserState =
         renderSkeletonUserStateIntoUserState(dummySkeletonWithUserState, userAId, userBId)
       assert(renderedUserState.treeVisibilities == Seq(Id32WithBool(1, false), Id32WithBool(2, true)))
-      assert(renderedUserState.activeNodeId == Some(5))
+      assert(renderedUserState.activeNodeId.contains(5))
       assert(renderedUserState.treeGroupExpandedStates == Seq(Id32WithBool(1, true)))
     }
 
@@ -50,7 +50,7 @@ class AnnotationUserStateTestSuite extends PlaySpec with AnnotationUserStateUtil
       val renderedUserState =
         renderSkeletonUserStateIntoUserState(dummySkeletonWithUserState, userCId, userBId)
       assert(renderedUserState.treeVisibilities == Seq(Id32WithBool(1, true), Id32WithBool(2, true)))
-      assert(renderedUserState.activeNodeId == Some(2))
+      assert(renderedUserState.activeNodeId.contains(2))
       assert(renderedUserState.treeGroupExpandedStates == Seq.empty)
     }
 

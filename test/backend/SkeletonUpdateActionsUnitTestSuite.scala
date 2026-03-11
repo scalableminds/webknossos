@@ -5,9 +5,9 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
-import org.scalatestplus.play._
+import org.scalatest.wordspec.AsyncWordSpec
 
-class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
+class SkeletonUpdateActionsUnitTestSuite extends AsyncWordSpec {
 
   private def applyUpdateAction(action: SkeletonUpdateAction): SkeletonTracing =
     action.applyOn(Dummies.skeletonTracing)
@@ -52,10 +52,7 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       val result = applyUpdateAction(deleteTreeAction)
 
       assert(result.trees.length == Dummies.skeletonTracing.trees.length - 1)
-      result.trees.find(_.treeId == deleteTreeAction.id) match {
-        case Some(_) => throw new Exception
-        case None    =>
-      }
+      assert(!result.trees.exists(_.treeId == deleteTreeAction.id))
     }
   }
 

@@ -8,12 +8,13 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
   Zarr3ArrayHeader
 }
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader.Zarr3ArrayHeaderFormat
-import org.scalatestplus.play.PlaySpec
+import org.scalatest.wordspec.AsyncWordSpec
 
-class Zarr3TestSuite extends PlaySpec {
+class Zarr3TestSuite extends AsyncWordSpec {
 
   "Zarr 3" when {
-    "importing zarr.json" should {
+
+    "parsing zarr.json" should {
 
       val zarr3json =
         """

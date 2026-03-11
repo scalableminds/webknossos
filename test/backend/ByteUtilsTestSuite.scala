@@ -1,9 +1,9 @@
 package backend
 
-import org.scalatestplus.play.PlaySpec
 import com.scalableminds.util.tools.ByteUtils
+import org.scalatest.wordspec.AsyncWordSpec
 
-class ByteUtilsTestSuite extends PlaySpec {
+class ByteUtilsTestSuite extends AsyncWordSpec {
 
   class ByteUtilsTest extends ByteUtils
 

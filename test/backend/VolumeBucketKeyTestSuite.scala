@@ -4,11 +4,11 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, BucketPosition}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.tracingstore.tracings.volume.BucketKeys
-import org.scalatestplus.play.PlaySpec
+import org.scalatest.wordspec.AsyncWordSpec
 
-class VolumeBucketKeyTestSuite extends PlaySpec {
+class VolumeBucketKeyTestSuite extends AsyncWordSpec {
 
-  class BucketKeyBuilder extends BucketKeys {
+  private class BucketKeyBuilder extends BucketKeys {
     def build(dataLayerName: String,
               bucket: BucketPosition,
               additionalAxes: Option[Seq[AdditionalAxis]] = None): String =
@@ -17,22 +17,27 @@ class VolumeBucketKeyTestSuite extends PlaySpec {
     def parse(key: String, additionalAxes: Option[Seq[AdditionalAxis]]): Option[(String, BucketPosition)] =
       parseBucketKey(key, additionalAxes)
   }
-  val bucketKeyBuilder = new BucketKeyBuilder
+  private val bucketKeyBuilder = new BucketKeyBuilder
 
-  val layerName = "mylayer"
+  private val layerName = "mylayer"
 
   "Bucket Key" when {
+
     "built with xyz" should {
+
       val bucketPos = BucketPosition(32, 64, 96, Vec3Int(1, 1, 1), None)
+
       "match defined bucket key" in {
         val key = bucketKeyBuilder.build(layerName, bucketPos)
         assert(key == s"$layerName/1/[1,2,3]")
       }
-      "expands mag when anisotropic" in {
+
+      "expand mag when anisotropic" in {
         val key = bucketKeyBuilder.build(layerName, BucketPosition(32, 64, 96, Vec3Int(4, 4, 1), None))
         assert(key == s"$layerName/4-4-1/[0,0,3]")
       }
-      "is parsed as the same bucket position" in {
+
+      "be parsed as the same bucket position" in {
         bucketKeyBuilder.parse(s"$layerName/1/[1,2,3]", None) match {
           case Some((layer, parsedPos)) =>
             assert(layer == layerName)
@@ -42,15 +47,15 @@ class VolumeBucketKeyTestSuite extends PlaySpec {
       }
 
     }
+
     "built with additional coordinates" should {
+
       val additionalAxes =
         Seq(AdditionalAxis("a", Seq(0, 10), 0), AdditionalAxis("b", Seq(0, 10), 1))
       val additionalCoordinates = Seq(AdditionalCoordinate("a", 4), AdditionalCoordinate("b", 5))
-
       val bucketPos = BucketPosition(32, 64, 96, Vec3Int(1, 1, 1), Some(additionalCoordinates))
 
       "match defined bucket key" in {
-
         val key = bucketKeyBuilder.build(
           layerName,
           bucketPos,
@@ -58,7 +63,8 @@ class VolumeBucketKeyTestSuite extends PlaySpec {
         )
         assert(key == s"$layerName/1/[4,5][1,2,3]")
       }
-      "is parsed as the same bucket position" in {
+
+      "be parsed as the same bucket position" in {
         bucketKeyBuilder.parse(s"$layerName/1/[4,5][1,2,3]", Some(additionalAxes)) match {
           case Some((layer, parsedPos)) =>
             assert(layer == layerName)
@@ -75,6 +81,7 @@ class VolumeBucketKeyTestSuite extends PlaySpec {
         )
         assert(key == s"$layerName/1/[4,5][1,2,3]")
       }
+
     }
   }
 }

@@ -103,7 +103,7 @@ const AiTrainingDataSelector = ({
       let effectiveBbox = boundingBox;
       if (magnification) {
         const alignedBoundingBox = boundingBox.alignFromMag1ToMag(magnification, "shrink");
-        if (!alignedBoundingBox.equals(boundingBox)) {
+        if (!alignedBoundingBox.fromMagToMag1(magnification).equals(boundingBox)) {
           notMagAlignedBoundingBoxes.push(box.name);
         }
         effectiveBbox = alignedBoundingBox;

@@ -132,9 +132,8 @@ export const PricingEnforcedButton: React.FunctionComponent<RequiredPricingProps
       activeOrganization={activeOrganization}
       placement="bottom"
     >
-      <Button {...buttonProps} disabled>
+      <Button {...buttonProps} disabled icon={<LockOutlined />} iconPlacement="end">
         {children}
-        <LockOutlined style={{ marginLeft: 5 }} />
       </Button>
     </PricingEnforcedPopover>
   );

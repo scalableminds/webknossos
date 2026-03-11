@@ -534,13 +534,18 @@ function* updateLocalHdf5Mapping(
     // in coarse magnifications.
     // A toast will be shown to the user in the warnAboutSegmentationZoom saga.
     if (previousMapping == null) {
+      // If an annotation with activated mapping is loaded in a zoom state where the threshold is exceeded,
+      // a mapping needs to be set to let the mapping activation conclude (compare updateMappingTextures in mappings.ts).
+      // In cases where a mapping is already set and the zoom threshold is exceeded, it is not changed
+      // to avoid useless updates to the cuckoo textures. Once the threshold is no longer exceeded, the mapping
+      // will be updated again.
       yield* put(setMappingAction(layerName, mappingName, "HDF5", true, { mapping: new Map() }));
     }
     return;
   }
 
   const cube = Model.getCubeByLayerName(layerName);
-  const segmentIds = cube.getValueSetForAllBuckets();
+  const segmentIds = cube.getValueSetForAllAccessedBuckets();
 
   const {
     aWithoutB: newSegmentIds,

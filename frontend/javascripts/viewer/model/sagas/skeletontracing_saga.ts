@@ -61,8 +61,8 @@ import {
   createMutableTreeMapFromTreeArray,
   generateTreeName,
 } from "viewer/model/reducers/skeletontracing_reducer_helpers";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
 import {
   createEdge,
@@ -83,12 +83,13 @@ import {
 import { api } from "viewer/singletons";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
-import { diffBoundingBoxes, diffGroups } from "../helpers/diff_helpers";
 import {
   eulerAngleToReducerInternalMatrix,
   reducerInternalMatrixToEulerAngle,
 } from "../helpers/rotation_helpers";
 import type { MutableNode, Node, NodeMap, Tree, TreeMap } from "../types/tree_types";
+import { diffBoundingBoxes } from "./diffing/bounding_box_diffing";
+import { diffGroups } from "./diffing/group_diffing";
 import { ensureWkInitialized } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
 
@@ -155,6 +156,7 @@ function* centerActiveNode(action: Action): Saga<void> {
         activeNodePosition,
         false,
         applyRotation ? nodeRotation : undefined,
+        true,
       );
     }
     if (activeNode.additionalCoordinates) {

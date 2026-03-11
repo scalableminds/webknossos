@@ -1,5 +1,6 @@
 import { Button } from "antd";
 import FastTooltip from "components/fast_tooltip";
+import { ThemedIcon } from "components/themed_icon";
 import { V2 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import { type MouseEventHandler, useCallback, useState } from "react";
@@ -24,9 +25,6 @@ function BorderToggleButton({ onClick, side, inFooter }: Props) {
   })`;
   const className = `${side}-border-button no-hover-highlighting ${
     inFooter === true ? "footer-button" : "flexlayout__tab_toolbar_button"
-  }`;
-  const imageClass = `center-item-using-flex icon-sidebar-toggle icon-sidebar-${iconKind}-${side}-${
-    inFooter ? "dark" : "bright"
   }`;
 
   const onClickHandler = useCallback<MouseEventHandler<HTMLButtonElement>>(
@@ -72,9 +70,13 @@ function BorderToggleButton({ onClick, side, inFooter }: Props) {
             onClick();
           }
         }}
-      >
-        <div className={imageClass} />
-      </Button>
+        icon={
+          <ThemedIcon
+            name={`icon-sidebar-${iconKind}-${side}`}
+            className="center-item-using-flex icon-sidebar-toggle"
+          />
+        }
+      />
     </FastTooltip>
   );
 }

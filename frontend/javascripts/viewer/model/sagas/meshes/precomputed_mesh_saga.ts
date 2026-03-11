@@ -1,5 +1,5 @@
 import type { MeshLodInfo } from "admin/api/mesh";
-import { getMeshfilesForDatasetLayer, meshApi } from "admin/rest_api";
+import { getMeshFilesForDatasetLayer, meshApi } from "admin/rest_api";
 import Deferred from "libs/async/deferred";
 import processTaskWithPool from "libs/async/task_pool";
 import { mergeGeometries } from "libs/BufferGeometryUtils";
@@ -48,10 +48,10 @@ import {
   updateMeshFileListAction,
 } from "viewer/model/actions/annotation_actions";
 import type { LoadPrecomputedMeshAction } from "viewer/model/actions/segmentation_actions";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import Store from "viewer/store";
-import { getBaseSegmentationName } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
+import { getBaseSegmentationName } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
 import { getMeshExtraInfo } from "./ad_hoc_mesh_saga";
 
@@ -99,7 +99,7 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
   fetchDeferredsPerLayer[layerName] = deferred;
 
   const availableMeshFiles = yield* call(
-    getMeshfilesForDatasetLayer,
+    getMeshFilesForDatasetLayer,
     dataset.dataStore.url,
     dataset,
     getBaseSegmentationName(segmentationLayer),
@@ -287,7 +287,7 @@ function* _getChunkLoadingDescriptors(
   }
 
   const segmentInfo = yield* call(
-    meshApi.getMeshfileChunksForSegment,
+    meshApi.getMeshFileChunksForSegment,
     dataset.dataStore.url,
     dataset.id,
     getBaseSegmentationName(segmentationLayer),
@@ -367,7 +367,7 @@ function* loadPrecomputedMeshesInChunksForLod(
     (chunks) =>
       function* loadChunks(): Saga<void> {
         const dataForChunks = yield* call(
-          meshApi.getMeshfileChunkData,
+          meshApi.getMeshFileChunkData,
           dataset.dataStore.url,
           dataset.id,
           getBaseSegmentationName(segmentationLayer),
@@ -497,8 +497,8 @@ function* loadPrecomputedMeshesInChunksForLod(
 export default function* precomputedMeshSaga(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_INITIALIZED
   fetchDeferredsPerLayer = {};
-  const loadPrecomputedMeshActionChannel = yield* actionChannel("LOAD_PRECOMPUTED_MESH_ACTION");
   const maybeFetchMeshFilesActionChannel = yield* actionChannel("MAYBE_FETCH_MESH_FILES");
+  const loadPrecomputedMeshActionChannel = yield* actionChannel("LOAD_PRECOMPUTED_MESH_ACTION");
 
   yield* call(ensureSceneControllerInitialized);
   yield* call(ensureWkInitialized);

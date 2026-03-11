@@ -5,7 +5,7 @@ import type {
   SkeletonUserState,
   VolumeUserState,
 } from "types/api_types";
-import type { EmptyObject } from "types/globals";
+import type { EmptyObject } from "types/type_utils";
 import type { StoreAnnotation, WebknossosState } from "viewer/store";
 import { sum } from "../helpers/iterator_utils";
 

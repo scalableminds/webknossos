@@ -16,7 +16,7 @@ import mapValues from "lodash-es/mapValues";
 import partition from "lodash-es/partition";
 import throttle from "lodash-es/throttle";
 import { DoubleSide, Euler, Matrix4, ShaderMaterial, Vector3 as ThreeVector3 } from "three";
-import type { ValueOf } from "types/globals";
+import type { ValueOf } from "types/type_utils";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import {
   BLEND_MODES,
@@ -61,6 +61,7 @@ import {
   getBucketRetrievalSourceFn,
   getHideUnregisteredSegmentsForLayer,
   getProofreadingMarkerPosition,
+  isZoomThresholdExceededForAgglomerateMapping,
   needsLocalHdf5Mapping,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { getDtypeConfigForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
@@ -796,13 +797,19 @@ class PlaneMaterialFactory {
               return false;
             }
 
+            const isGPUMappingDisabled = isZoomThresholdExceededForAgglomerateMapping(
+              storeState,
+              layer.name,
+            );
+
             return (
               getMappingInfoForSupportedLayer(storeState).mappingStatus ===
                 MappingStatusEnum.ENABLED &&
               isEqual(getBucketRetrievalSourceFn(layer.name)(storeState).slice(0, 2), [
                 "REQUESTED-WITHOUT-MAPPING",
                 "LOCAL-MAPPING-APPLIED",
-              ])
+              ]) &&
+              !isGPUMappingDisabled
             );
           },
           (shouldApplyMappingOnGPU) => {

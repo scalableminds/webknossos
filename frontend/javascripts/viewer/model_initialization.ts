@@ -37,7 +37,7 @@ import type {
   ServerTracing,
   ServerVolumeTracing,
 } from "types/api_types";
-import type { Mutable } from "types/globals";
+import type { Mutable } from "types/type_utils";
 import constants, { ControlModeEnum, type Vector3 } from "viewer/constants";
 import type {
   DirectLayerSpecificProps,
@@ -555,7 +555,7 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
     maximumTextureCountForLayer,
   } = validateSpecsForLayers(dataset, requiredBucketCapacity);
 
-  if (!process.env.IS_TESTING) {
+  if (import.meta.env.MODE !== "test") {
     console.log("Supporting", smallestCommonBucketCapacity, "buckets");
   }
 

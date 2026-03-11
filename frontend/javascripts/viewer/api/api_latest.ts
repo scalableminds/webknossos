@@ -24,7 +24,7 @@ import TWEEN from "tween.js";
 import type { AdditionalCoordinate } from "types/api_types";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
-import type { Writeable } from "types/globals";
+import type { Writeable } from "types/type_utils";
 import type {
   BucketAddress,
   ControlMode,
@@ -185,11 +185,12 @@ import type {
 import Store from "viewer/store";
 import {
   callDeep,
+  createGroupHelper,
   createGroupToSegmentsMap,
   MISSING_GROUP_ID,
   mapGroups,
   moveGroupsHelper,
-} from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+} from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }
@@ -650,13 +651,11 @@ class TracingApi {
    */
   registerSegment(
     segmentId: number,
-    somePosition: Vector3,
-    someAdditionalCoordinates: AdditionalCoordinate[] | undefined = undefined,
+    anchorPosition: Vector3,
+    additionalCoordinates: AdditionalCoordinate[] | undefined = undefined,
     layerName?: string,
   ) {
-    Store.dispatch(
-      clickSegmentAction(segmentId, somePosition, someAdditionalCoordinates, layerName),
-    );
+    Store.dispatch(clickSegmentAction(segmentId, anchorPosition, additionalCoordinates, layerName));
   }
 
   /**
@@ -801,8 +800,8 @@ class TracingApi {
    *   3,
    *   {
    *     name: "A name",
-   *     somePosition: [1, 2, 3],
-   *     someAdditionalCoordinates: [],
+   *     anchorPosition: [1, 2, 3],
+   *     additionalCoordinates: [],
    *     color: [1, 2, 3],
    *     groupId: 1,
    *   },
@@ -854,13 +853,9 @@ class TracingApi {
    */
   createSegmentGroup(
     name: string | null = null,
-    parentGroupId: number = MISSING_GROUP_ID,
+    parentGroupId: number | null = MISSING_GROUP_ID,
     volumeLayerName?: string,
   ): number {
-    if (parentGroupId == null) {
-      // Guard against explicitly passed null or undefined.
-      parentGroupId = MISSING_GROUP_ID;
-    }
     const volumeTracing = volumeLayerName
       ? getVolumeTracingByLayerName(Store.getState().annotation, volumeLayerName)
       : getActiveSegmentationTracing(Store.getState());
@@ -868,23 +863,12 @@ class TracingApi {
       throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
     }
     const { segmentGroups } = volumeTracing;
-
-    const newSegmentGroups = cloneDeep(segmentGroups);
-    const newGroupId = getMaximumGroupId(newSegmentGroups) + 1;
-    const newGroup = {
-      name: name || `Group ${newGroupId}`,
-      groupId: newGroupId,
-      children: [],
-      isExpanded: false,
-    };
-
-    if (parentGroupId === MISSING_GROUP_ID) {
-      newSegmentGroups.push(newGroup);
-    } else {
-      callDeep(newSegmentGroups, parentGroupId, (item) => {
-        item.children.push(newGroup);
-      });
-    }
+    const { newSegmentGroups, newGroupId } = createGroupHelper(
+      segmentGroups,
+      name,
+      getMaximumGroupId(segmentGroups) + 1,
+      parentGroupId,
+    );
 
     Store.dispatch(setSegmentGroupsAction(newSegmentGroups, volumeTracing.tracingId));
 
@@ -1212,7 +1196,8 @@ class TracingApi {
     if (!treeAndNode) return;
 
     const [_activeTree, node] = treeAndNode;
-    Store.dispatch(setPositionAction(getNodePosition(node, Store.getState())));
+    const nodePosition = getNodePosition(node, Store.getState(), true);
+    Store.dispatch(setPositionAction(nodePosition));
   };
 
   /**
@@ -1417,6 +1402,7 @@ class TracingApi {
     position: Vector3,
     skipCenteringAnimationInThirdDimension: boolean = true,
     rotation?: Vector3,
+    useVoxelCenter: boolean = false,
   ): void {
     const { viewModeData, flycam } = Store.getState();
     const { activeViewport } = viewModeData.plane;
@@ -1442,6 +1428,10 @@ class TracingApi {
       positionY: number;
       positionZ: number;
     };
+
+    // The given offset is added when going to a position in the center of a voxel.
+    const targetPosition = useVoxelCenter ? V3.add(V3.floor(position), [0.5, 0.5, 0.5]) : position;
+
     const tween = new TWEEN.Tween({
       positionX: curPosition[0],
       positionY: curPosition[1],
@@ -1450,9 +1440,9 @@ class TracingApi {
     tween
       .to(
         {
-          positionX: position[0],
-          positionY: position[1],
-          positionZ: position[2],
+          positionX: targetPosition[0],
+          positionY: targetPosition[1],
+          positionZ: targetPosition[2],
         },
         200,
       )
@@ -2348,8 +2338,8 @@ class DataApi {
       updateSegmentAction(
         segmentId,
         {
-          somePosition: globalPositionsMag1[0],
-          someAdditionalCoordinates: additionalCoordinates || undefined,
+          anchorPosition: globalPositionsMag1[0],
+          additionalCoordinates: additionalCoordinates || undefined,
         },
         volumeTracing.tracingId,
       ),
@@ -3043,6 +3033,7 @@ export type ApiInterface = {
   user: UserApi;
   utils: UtilsApi;
 };
+
 export default function createApiInterface(model: WebKnossosModel): ApiInterface {
   return {
     tracing: new TracingApi(model),

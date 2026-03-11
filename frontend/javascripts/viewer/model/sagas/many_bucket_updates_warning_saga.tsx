@@ -2,7 +2,7 @@ import { updateNovelUserExperienceInfos } from "admin/rest_api";
 import { Button, Checkbox, type CheckboxChangeEvent, Space } from "antd";
 import Toast from "libs/toast";
 import { takeEvery } from "typed-redux-saga";
-import { type Saga, select } from "viewer/model/sagas/effect-generators";
+import { type Saga, select } from "viewer/model/sagas/effect_generators";
 import type { WebknossosState } from "viewer/store";
 
 const TOO_MANY_BUCKETS_TOAST_KEY = "manyBucketUpdatesWarningToast";

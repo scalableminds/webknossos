@@ -1,6 +1,6 @@
-import { ExperimentOutlined } from "@ant-design/icons";
+import Icon from "@ant-design/icons";
+import AiAnalysisIcon from "@images/icons/icon-ai-analysis.svg?react";
 import { withAuthentication } from "admin/auth/authentication_modal";
-import { hasSomePaidPlan } from "admin/organization/pricing_plan_utils";
 import { createExplorational } from "admin/rest_api";
 import { Alert, Button, Dropdown, Modal, Popover, Space } from "antd";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
@@ -33,15 +33,15 @@ import { setAdditionalCoordinatesAction } from "viewer/model/actions/flycam_acti
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
-import AddNewLayoutModal from "viewer/view/action-bar/add_new_layout_modal";
-import DatasetPositionAndRotationView from "viewer/view/action-bar/dataset_position_view";
-import ToolbarView from "viewer/view/action-bar/tools/toolbar_view";
+import AddNewLayoutModal from "viewer/view/action_bar/add_new_layout_modal";
+import DatasetPositionAndRotationView from "viewer/view/action_bar/dataset_position_view";
+import ToolbarView from "viewer/view/action_bar/tools/toolbar_view";
 import TracingActionsView, {
   getLayoutMenu,
   type LayoutProps,
-} from "viewer/view/action-bar/tracing_actions_view";
-import ViewDatasetActionsView from "viewer/view/action-bar/view_dataset_actions_view";
-import ViewModesView from "viewer/view/action-bar/view_modes_view";
+} from "viewer/view/action_bar/tracing_actions_view";
+import ViewDatasetActionsView from "viewer/view/action_bar/view_dataset_actions_view";
+import ViewModesView from "viewer/view/action_bar/view_modes_view";
 import {
   addNewLayout,
   deleteLayout,
@@ -49,9 +49,8 @@ import {
   LayoutEvents,
   layoutEmitter,
 } from "viewer/view/layouting/layout_persistence";
-import { ACTIONBAR_MARGIN_LEFT } from "./action-bar/tools/tool_helpers";
-
-import ToolkitView from "./action-bar/tools/toolkit_switcher_view";
+import { ACTIONBAR_MARGIN_LEFT } from "./action_bar/tools/tool_helpers";
+import ToolkitView from "./action_bar/tools/toolkit_switcher_view";
 import { NumberSliderSetting } from "./components/setting_input_views";
 
 const VersionRestoreWarning = (
@@ -305,7 +304,6 @@ class ActionBarView extends PureComponent<Props, State> {
 
   renderStartAIJobButton(disabled: boolean, tooltipTextIfDisabled: string): React.ReactNode {
     const tooltipText = disabled ? tooltipTextIfDisabled : "Start a processing job using AI";
-    const orgaHasSomePaidPlan = hasSomePaidPlan(this.props.activeOrganization);
 
     const menuItems = [
       {
@@ -313,15 +311,11 @@ class ActionBarView extends PureComponent<Props, State> {
         onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_inference")),
         label: "Run AI model",
       },
-      ...(orgaHasSomePaidPlan
-        ? [
-            {
-              key: "open_ai_training_button",
-              onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_training")),
-              label: "Train new AI model",
-            },
-          ]
-        : []),
+      {
+        key: "open_ai_training_button",
+        onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_training")),
+        label: "Train new AI model",
+      },
       {
         key: "open_ai_alignment_button",
         onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_alignment")),
@@ -339,7 +333,11 @@ class ActionBarView extends PureComponent<Props, State> {
           }}
           disabled={disabled}
         >
-          <Button disabled={disabled} icon={<ExperimentOutlined />} title={tooltipText}>
+          <Button
+            disabled={disabled}
+            icon={<Icon component={AiAnalysisIcon} />}
+            title={tooltipText}
+          >
             AI Analysis
           </Button>
         </Dropdown>

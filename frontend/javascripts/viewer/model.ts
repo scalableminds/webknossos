@@ -26,7 +26,7 @@ import type { TraceOrViewCommand } from "viewer/store";
 import Store from "viewer/store";
 import { initialize } from "./model_initialization";
 
-const WAIT_AFTER_SAVE_TRIGGER = process.env.IS_TESTING ? 50 : 500;
+const WAIT_AFTER_SAVE_TRIGGER = import.meta.env.MODE === "test" ? 50 : 500;
 
 // TODO: This class should be moved into the store and sagas.
 export class WebKnossosModel {
@@ -310,7 +310,6 @@ export class WebKnossosModel {
     // That way, we can be sure that the diffing sagas have processed all user actions
     // up until the time of where waitForDifferResponses was invoked.
     async function waitForDifferResponses() {
-      console.log("waitForDifferResponses");
       const { annotation } = Store.getState();
       await dispatchEnsureTracingsWereDiffedToSaveQueueAction(Store.dispatch, annotation);
       return true;
@@ -325,7 +324,6 @@ export class WebKnossosModel {
       // The dispatch of the saveNowAction IN the while loop is deliberate.
       // Otherwise if an update action is pushed to the save queue during the Utils.sleep,
       // the while loop would continue running until the next save would be triggered.
-      console.log("stuck in ensureSavedState loop");
       if (!Store.getState().save.isBusy) {
         Store.dispatch(saveNowAction());
       }

@@ -5,6 +5,10 @@ import {
   PlusOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
+import fileDarkIcon from "@images/file-dark.png";
+import fileLightIcon from "@images/file-light.png";
+import folderThumbnailIcon from "@images/folder-thumbnail.svg";
+import inactiveDatasetThumbnail from "@images/inactive-dataset-thumbnail.svg";
 import type { DatasetUpdater } from "admin/rest_api";
 import { Dropdown, type MenuProps, Space, Table, Tag, Tooltip } from "antd";
 import type {
@@ -45,16 +49,14 @@ import { DndProvider, DragPreviewImage, useDrag } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
 import { Link } from "react-router-dom";
 import type { APIDatasetCompact, APIMaybeUnimportedDataset, FolderItem } from "types/api_types";
-import type { EmptyObject } from "types/globals";
+import type { EmptyObject } from "types/type_utils";
 import { Unicode } from "viewer/constants";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import CategorizationLabel from "viewer/view/components/categorization_label";
 import EditableTextIcon from "viewer/view/components/editable_text_icon";
-import {
-  ContextMenuContext,
-  GenericContextMenuContainer,
-  getContextMenuPositionFromEvent,
-} from "viewer/view/context_menu";
+import { ContextMenuContext } from "viewer/view/context_menu/context_menu";
+import { GenericContextMenuContainer } from "viewer/view/context_menu/generic_context_menu_container";
+import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/helpers";
 
 type FolderItemWithName = FolderItem & { name: string };
 type DatasetOrFolder = APIDatasetCompact | FolderItemWithName;
@@ -194,10 +196,10 @@ class DragPreviewProvider {
     // row).
     this.lightIcon = null;
     this.darkIcon = null;
-    this.convertImageURLtoDataURL("/assets/images/file-light.png").then((dataURL) => {
+    this.convertImageURLtoDataURL(fileLightIcon).then((dataURL) => {
       this.lightIcon = dataURL;
     });
-    this.convertImageURLtoDataURL("/assets/images/file-dark.png").then((dataURL) => {
+    this.convertImageURLtoDataURL(fileDarkIcon).then((dataURL) => {
       this.darkIcon = dataURL;
     });
   }
@@ -340,7 +342,7 @@ class DatasetRenderer {
       : null;
     const imgSrc = selectedLayerName
       ? `/api/datasets/${this.data.id}/layers/${selectedLayerName}/thumbnail?w=${2 * THUMBNAIL_SIZE}&h=${2 * THUMBNAIL_SIZE}`
-      : "/assets/images/inactive-dataset-thumbnail.svg";
+      : inactiveDatasetThumbnail;
     const iconClassName = selectedLayerName ? "" : " icon-thumbnail";
 
     return (
@@ -421,7 +423,7 @@ class FolderRenderer {
     return (
       <>
         <img
-          src={"/assets/images/folder-thumbnail.svg"}
+          src={folderThumbnailIcon}
           className="dataset-table-thumbnail icon-thumbnail"
           style={{ width: THUMBNAIL_SIZE, height: THUMBNAIL_SIZE }}
           alt=""

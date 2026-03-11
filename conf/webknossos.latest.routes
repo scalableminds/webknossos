@@ -276,7 +276,7 @@ GET           /time/user/:userId/summedByAnnotation                             
 GET           /time/overview                                                                    controllers.TimeController.timeOverview(start: Long, end: Long, annotationTypes: String, annotationStates: String, teamIds: Option[String], projectIds: Option[String])
 
 # Long-Running Jobs
-GET           /jobs/request                                                                     controllers.WKRemoteWorkerController.requestJobs(key: String)
+GET           /jobs/request                                                                     controllers.WKRemoteWorkerController.requestJobs(key: String, workerVersion: Option[String])
 GET           /jobs                                                                             controllers.JobController.list(command: Option[String], skipForDeletedDatasets: Option[Boolean])
 GET           /jobs/status                                                                      controllers.JobController.status()
 GET           /jobs/getCreditCost                                                               controllers.JobController.getJobCreditCost(command: String, boundingBoxInMag: String)
@@ -305,7 +305,8 @@ POST          /aiModels/inferences/runInstanceModelInference                    
 GET           /aiModels/inferences/:id                                                          controllers.AiModelController.readAiInferenceInfo(id: ObjectId)
 GET           /aiModels/inferences                                                              controllers.AiModelController.listAiInferences
 GET           /aiModels                                                                         controllers.AiModelController.listAiModels
-POST          /aiModels/register                                                                controllers.AiModelController.registerAiModel
+POST          /aiModels/reserveUploadToPath                                                     controllers.AiModelController.reserveUploadToPath
+POST          /aiModels/:id/finishUploadToPath                                                  controllers.AiModelController.finishUploadToPath(id: ObjectId)
 GET           /aiModels/:id                                                                     controllers.AiModelController.readAiModelInfo(id: ObjectId)
 GET           /aiModels/:id/voxelSize                                                           controllers.AiModelController.aiModelVoxelSize(id: ObjectId)
 PUT           /aiModels/:id                                                                     controllers.AiModelController.updateAiModelInfo(id: ObjectId)

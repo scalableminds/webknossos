@@ -155,7 +155,7 @@ yarn fix-frontend
 yarn format-backend
 
 # Frontend type checking
-yarn tsc
+yarn typecheck
 
 # Frontend tests
 yarn test
@@ -165,3 +165,13 @@ docker compose run e2e-tests
 ```
 
 For more commands, see the `scripts` section in [package.json](package.json).
+
+## Passkeys
+
+Passkeys are only supported with HTTPS. You can generate self-signed certificates for local development with `./tools/proxy/gen-ssl-dev-certs.sh`. 
+
+You must also update `conf/application.conf`:
+- Set `http.uri` to `https://localhost:<port>`
+- Set `features.passkeysEnabled` to `true`
+
+You must also update your `vite.config.ts`: Comment in the `server.https` related lines.

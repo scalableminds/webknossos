@@ -13,22 +13,14 @@ object SCrypt {
   /**
     * For readability.
     */
-  type PlainPassword = String
-  type PasswordHash = String
-
-  /**
-    * Useful salting default
-    */
-  val QuickAndWeak = 6
-  val GoodEnough = 10
-  val RatherTough = 14
-  val PrettyInsane = 18
+  private type PlainPassword = String
+  private type PasswordHash = String
 
   /**
     *
     * @param rounds this is the base of log2 of the number of salting rounds. Legal values are >=4, sane values are leq 20
     */
-  def hashPassword(password: PlainPassword, rounds: Int = GoodEnough): PasswordHash = {
+  def hashPassword(password: PlainPassword, rounds: Int = 10): PasswordHash = {
 
     if (rounds < 4 || rounds > 20)
       throw new IllegalArgumentException("""As the number of operations grows
@@ -46,4 +38,7 @@ object SCrypt {
 
   def md5(s: String): String =
     MessageDigest.getInstance("MD5").digest(s.getBytes).map("%02X".format(_)).mkString
+
+  def sha256Hex(s: String): String =
+    MessageDigest.getInstance("SHA-256").digest(s.getBytes(StandardCharsets.UTF_8)).map("%02x".format(_)).mkString
 }

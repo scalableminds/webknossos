@@ -29,7 +29,7 @@ import { Model, Store } from "viewer/singletons";
 import { startSaga, type Theme, type TraceOrViewCommand, type WebknossosState } from "viewer/store";
 import ActionBarView from "viewer/view/action_bar_view";
 import { AiJobsDrawer } from "viewer/view/ai_jobs/ai_jobs_drawer";
-import WkContextMenu from "viewer/view/context_menu";
+import WkContextMenu from "viewer/view/context_menu/wk_context_menu";
 import DistanceMeasurementTooltip from "viewer/view/distance_measurement_tooltip";
 import {
   initializeInputCatcherSizes,
@@ -46,7 +46,7 @@ import {
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
 import NmlUploadZoneContainer from "viewer/view/nml_upload_zone_container";
 import WelcomeToast from "viewer/view/novel_user_experiences/welcome_toast";
-import { importTracingFiles } from "viewer/view/right-border-tabs/trees_tab/skeleton_tab_view";
+import { importTracingFiles } from "viewer/view/right_border_tabs/trees_tab/skeleton_tab_view";
 import TracingView from "viewer/view/tracing_view";
 import VersionView from "viewer/view/version_view";
 import TabTitle from "../components/tab_title_component";

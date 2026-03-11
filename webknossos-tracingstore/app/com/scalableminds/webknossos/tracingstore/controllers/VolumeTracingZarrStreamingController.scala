@@ -302,18 +302,16 @@ class VolumeTracingZarrStreamingController @Inject()(
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-            tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
-
+            tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> BAD_REQUEST
             existingMags = tracing.mags.map(vec3IntFromProto)
             magParsed <- Vec3Int
               .fromMagLiteral(mag, allowScalar = true)
-              .toFox ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
+              .toFox ?~> Messages("dataLayer.invalidMag", mag) ~> BAD_REQUEST
             _ <- Fox.fromBool(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
-
             reorderedAdditionalAxes = reorderAdditionalAxes(AdditionalAxis.fromProtos(tracing.additionalAxes))
             (x, y, z, additionalCoordinates) <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates(
               coordinates,
-              Some(reorderedAdditionalAxes)) ?~> Messages("zarr.invalidChunkCoordinates") ~> NOT_FOUND
+              Some(reorderedAdditionalAxes)) ?~> Messages("zarr.invalidChunkCoordinates") ~> BAD_REQUEST
             cubeSize = DataLayer.bucketLength
             wkRequest = WebknossosDataRequest(
               position = Vec3Int(x, y, z) * cubeSize * magParsed,

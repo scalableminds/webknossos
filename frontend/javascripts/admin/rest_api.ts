@@ -79,9 +79,9 @@ import {
   type VoxelyticsWorkflowReport,
   type ZarrPrivateLink,
 } from "types/api_types";
-import type { ArbitraryObject } from "types/globals";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import type { DatasourceConfiguration } from "types/schemas/datasource.types";
+import type { ArbitraryObject } from "types/type_utils";
 import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "viewer/constants";
 import { AnnotationStateFilterEnum } from "viewer/constants";
 import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
@@ -772,7 +772,7 @@ export async function getTracingForAnnotationType(
   });
   const tracing = parseProtoTracing(tracingArrayBuffer, tracingType);
 
-  if (!process.env.IS_TESTING) {
+  if (import.meta.env.MODE !== "test") {
     // Log to console as the decoded tracing is hard to inspect in the devtools otherwise.
     console.log(`Parsed protobuf ${tracingType} tracing:`, tracing);
   }
@@ -851,7 +851,7 @@ export async function getAnnotationProto(
     );
   });
   const annotationProto = parseProtoAnnotation(annotationArrayBuffer);
-  if (!process.env.IS_TESTING) {
+  if (import.meta.env.MODE !== "test") {
     // Log to console as the decoded annotationProto is hard to inspect in the devtools otherwise.
     console.log("Parsed protobuf annotation:", annotationProto);
   }
@@ -2017,7 +2017,7 @@ export function getEditableAgglomerateSkeleton(
   });
 }
 
-export async function getMeshfilesForDatasetLayer(
+export async function getMeshFilesForDatasetLayer(
   dataStoreUrl: string,
   dataset: APIDataset,
   layerName: string,
@@ -2175,6 +2175,9 @@ export async function getEdgesForAgglomerateMinCut(
           data: {
             ...segmentsInfo,
             // TODO: Proper 64 bit support (#6921)
+            // For a normal min-cut, the id at which the proofreading marker is at
+            // will be put into partition1. The right-clicked segment/mesh will be
+            // in partition2.
             partition1: segmentsInfo.partition1.map(Number),
             partition2: segmentsInfo.partition2.map(Number),
             agglomerateId: Number(segmentsInfo.agglomerateId),

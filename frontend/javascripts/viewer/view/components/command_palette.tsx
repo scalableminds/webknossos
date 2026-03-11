@@ -1,4 +1,9 @@
-import { getDatasets, getReadableAnnotations, updateSelectedThemeOfUser } from "admin/rest_api";
+import {
+  getAuthToken,
+  getDatasets,
+  getReadableAnnotations,
+  updateSelectedThemeOfUser,
+} from "admin/rest_api";
 import type { ItemType } from "antd/lib/menu/interface";
 import DOMPurify from "dompurify";
 import { useWkSelector } from "libs/react_hooks";
@@ -25,8 +30,8 @@ import type { UserConfiguration } from "viewer/store";
 import {
   type TracingViewMenuProps,
   useTracingViewMenuItems,
-} from "../action-bar/use_tracing_view_menu_items";
-import { viewDatasetMenu } from "../action-bar/view_dataset_actions_view";
+} from "../action_bar/use_tracing_view_menu_items";
+import { viewDatasetMenu } from "../action_bar/view_dataset_actions_view";
 import { LayoutEvents, layoutEmitter } from "../layouting/layout_persistence";
 import { commandPaletteDarkTheme, commandPaletteLightTheme } from "./command_palette_theme";
 
@@ -217,6 +222,34 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     color: commandEntryColor,
   };
 
+  const getAuthCommands = () => {
+    if (activeUser == null) return [];
+    return [
+      {
+        name: "Copy Organization ID",
+        command: async () => {
+          await navigator.clipboard.writeText(activeUser.organization);
+          Toast.success("Organization ID copied to clipboard");
+        },
+        color: commandEntryColor,
+      },
+      {
+        name: "Copy Auth Token",
+        command: async () => {
+          try {
+            const token = await getAuthToken();
+            await navigator.clipboard.writeText(token);
+            Toast.success("Auth token copied to clipboard");
+          } catch (error) {
+            Toast.error("Failed to fetch auth token. Please refresh the page to try again.");
+            console.error("Failed to fetch auth token:", error);
+          }
+        },
+        color: commandEntryColor,
+      },
+    ];
+  };
+
   const getSuperUserItems = (): CommandWithoutId[] => {
     if (!activeUser?.isSuperUser) {
       return [];
@@ -371,6 +404,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     ...mapMenuActionsToCommands(menuActions),
     ...getTabsAndSettingsMenuItems(),
     ...getSuperUserItems(),
+    ...getAuthCommands(),
   ];
 
   const [commands, setCommands] = useState<CommandWithoutId[]>(allStaticCommands);

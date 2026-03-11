@@ -1,0 +1,153 @@
+import Icon, { ExportOutlined } from "@ant-design/icons";
+import MergerModeIcon from "@images/icons/icon-merger-mode.svg?react";
+import PenIcon from "@images/icons/icon-pen.svg?react";
+import SomaClickingIcon from "@images/icons/icon-single-node-tree.svg?react";
+import SkeletonNewTreeIcon from "@images/icons/icon-skeleton-new-tree.svg?react";
+import { Badge, Space } from "antd";
+import { useIsActiveUserAdminOrManager } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
+import { useState } from "react";
+import { useDispatch } from "react-redux";
+import { APIJobCommand } from "types/api_types";
+import { getActiveTree } from "viewer/model/accessors/skeletontracing_accessor";
+import { Toolkit } from "viewer/model/accessors/tool_accessor";
+import { getActiveSegmentationTracing } from "viewer/model/accessors/volumetracing_accessor";
+import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
+import {
+  createTreeAction,
+  setMergerModeEnabledAction,
+} from "viewer/model/actions/skeletontracing_actions";
+import { MaterializeVolumeAnnotationModal } from "viewer/view/action_bar/materialize_volume_annotation_modal";
+import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
+import { ACTIONBAR_MARGIN_LEFT, NARROW_BUTTON_STYLE } from "./tool_helpers";
+
+export function SkeletonSpecificButtons() {
+  const dispatch = useDispatch();
+  const isMergerModeEnabled = useWkSelector(
+    (state) => state.temporaryConfiguration.isMergerModeEnabled,
+  );
+  const [showMaterializeVolumeAnnotationModal, setShowMaterializeVolumeAnnotationModal] =
+    useState<boolean>(false);
+  const isNewNodeNewTreeModeOn = useWkSelector((state) => state.userConfiguration.newNodeNewTree);
+  const isContinuousNodeCreationEnabled = useWkSelector(
+    (state) => state.userConfiguration.continuousNodeCreation,
+  );
+  const isSplitToolkit = useWkSelector(
+    (state) => state.userConfiguration.activeToolkit === Toolkit.SPLIT_SEGMENTS,
+  );
+  const toggleContinuousNodeCreation = () =>
+    dispatch(updateUserSettingAction("continuousNodeCreation", !isContinuousNodeCreationEnabled));
+
+  const dataset = useWkSelector((state) => state.dataset);
+  const isUserAdminOrManager = useIsActiveUserAdminOrManager();
+
+  const segmentationTracingLayer = useWkSelector((state) => getActiveSegmentationTracing(state));
+  const isEditableMappingActive =
+    segmentationTracingLayer != null && !!segmentationTracingLayer.hasEditableMapping;
+  const isMappingLockedWithNonNull =
+    segmentationTracingLayer != null &&
+    !!segmentationTracingLayer.mappingIsLocked &&
+    segmentationTracingLayer.mappingName != null;
+  const isMergerModeDisabled = isEditableMappingActive || isMappingLockedWithNonNull;
+  const mergerModeTooltipText = isEditableMappingActive
+    ? "Merger mode cannot be enabled while an editable mapping is active."
+    : isMappingLockedWithNonNull
+      ? "Merger mode cannot be enabled while a mapping is locked. Please create a new annotation and use the merger mode there."
+      : "Toggle Merger Mode - When enabled, skeletons that connect multiple segments will merge those segments.";
+
+  const toggleNewNodeNewTreeMode = () =>
+    dispatch(updateUserSettingAction("newNodeNewTree", !isNewNodeNewTreeModeOn));
+
+  const toggleMergerMode = () => dispatch(setMergerModeEnabledAction(!isMergerModeEnabled));
+
+  const isMaterializeVolumeAnnotationEnabled =
+    dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
+      APIJobCommand.MATERIALIZE_VOLUME_ANNOTATION,
+    );
+
+  return (
+    <Space.Compact
+      style={{
+        marginLeft: ACTIONBAR_MARGIN_LEFT,
+      }}
+    >
+      <CreateTreeButton />
+      {isSplitToolkit ? null : (
+        <ToggleButton
+          style={NARROW_BUTTON_STYLE}
+          onClick={toggleNewNodeNewTreeMode}
+          active={isNewNodeNewTreeModeOn}
+          title="Toggle the Single node Tree (soma clicking) mode - If enabled, each node creation will create a new tree."
+          icon={<Icon component={SomaClickingIcon} aria-label="Single Node Tree Mode" />}
+        />
+      )}
+      {isSplitToolkit ? null : (
+        <ToggleButton
+          active={isMergerModeEnabled}
+          style={{
+            ...NARROW_BUTTON_STYLE,
+            opacity: isMergerModeDisabled ? 0.5 : 1,
+          }}
+          onClick={toggleMergerMode}
+          disabled={isMergerModeDisabled}
+          title={mergerModeTooltipText}
+          icon={<Icon component={MergerModeIcon} aria-label="Merger Mode" />}
+        />
+      )}
+      <ToggleButton
+        active={isContinuousNodeCreationEnabled}
+        onClick={toggleContinuousNodeCreation}
+        style={NARROW_BUTTON_STYLE}
+        title="When activated, clicking and dragging creates nodes like a drawing tool."
+        icon={<Icon component={PenIcon} />}
+      />
+
+      {isMergerModeEnabled && isMaterializeVolumeAnnotationEnabled && isUserAdminOrManager && (
+        <ButtonComponent
+          style={NARROW_BUTTON_STYLE}
+          onClick={() => setShowMaterializeVolumeAnnotationModal(true)}
+          title="Materialize this merger mode annotation into a new dataset."
+          icon={<ExportOutlined />}
+        />
+      )}
+      {isMaterializeVolumeAnnotationEnabled && showMaterializeVolumeAnnotationModal && (
+        <MaterializeVolumeAnnotationModal
+          handleClose={() => setShowMaterializeVolumeAnnotationModal(false)}
+        />
+      )}
+    </Space.Compact>
+  );
+}
+
+function CreateTreeButton() {
+  const dispatch = useDispatch();
+  const activeTree = useWkSelector((state) => getActiveTree(state.annotation.skeleton));
+  const rgbColorString =
+    activeTree != null
+      ? `rgb(${activeTree.color.map((c) => Math.round(c * 255)).join(",")})`
+      : "transparent";
+  const activeTreeHint =
+    activeTree != null
+      ? `The active tree id is ${activeTree.treeId}.`
+      : "No tree is currently selected";
+
+  const handleCreateTree = () => dispatch(createTreeAction());
+
+  return (
+    <Badge
+      dot
+      style={{
+        boxShadow: "none",
+        background: rgbColorString,
+        zIndex: 1000,
+      }}
+    >
+      <ButtonComponent
+        onClick={handleCreateTree}
+        style={NARROW_BUTTON_STYLE}
+        title={`Create a new Tree (C) – ${activeTreeHint}`}
+        icon={<Icon component={SkeletonNewTreeIcon} />}
+      />
+    </Badge>
+  );
+}

@@ -4,10 +4,10 @@ RUN apt-get update \
   && apt-get -y install libbrotli1 libdraco4 \
   && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /webknossos-datastore \
+RUN mkdir -p /webknossos-datastore/binaryData \
   && groupadd -g 1000 -r webknossos \
   && useradd -u 1000 -r -g webknossos webknossos \
-  && chown webknossos:webknossos /webknossos-datastore
+  && chown -R webknossos:webknossos /webknossos-datastore
 
 WORKDIR /webknossos-datastore
 

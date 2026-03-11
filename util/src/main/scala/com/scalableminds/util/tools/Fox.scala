@@ -113,7 +113,7 @@ object Fox extends FoxImplicits {
     if (parallelity <= 0)
       Fox.failure("Fox.batchCombined must be called with positive parallelity.")
     else if (seq.isEmpty)
-      Fox.successful(Seq.empty)
+      Fox.successful(List.empty)
     else {
       // Calculate batch size so we end up with 'parallelity' number of batches
       val batchSize = math.max(1, math.ceil(seq.size.toDouble / parallelity).toInt)

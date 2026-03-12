@@ -1,26 +1,26 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg width="100%" height="100%" viewBox="0 0 1025 1025" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.4;">
-    <g transform="matrix(1,0,0,1,-8983,-3793)">
-        <g id="icon-restrict-to-bounding-box" transform="matrix(1,0,0,1,8983.69,3793.99)">
+<svg width="100%" height="100%" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.4;">
+    <g transform="matrix(1,0,0,1,-8983,-3795)">
+        <g id="icon-restrict-to-bounding-box" transform="matrix(1,0,0,1,8983,3795)">
             <rect x="0" y="0" width="1024" height="1024" style="fill:none;"/>
-            <g transform="matrix(1.02919,0,0,1.02919,-9260.9,-3914.42)">
-                <path d="M9879.69,4395.22L9879.69,4689.99L9111.69,4689.99L9111.69,3921.99L9480.15,3921.99" style="fill:none;stroke:rgb(241,241,241);stroke-width:69.96px;"/>
+            <g transform="matrix(1.10242,0,0,1.10242,-9956.29,-4198.6)">
+                <path d="M9879.69,4395.22L9879.69,4689.99L9111.69,4689.99L9111.69,3921.99L9480.15,3921.99" style="fill:none;stroke:black;stroke-width:65.31px;"/>
             </g>
-            <g transform="matrix(1.18504,0,0,1.18504,-10600.9,-4896.97)">
-                <path d="M9591.69,4177.99C9595.44,4174.84 9687.69,4348.85 9687.69,4393.6C9687.69,4446.58 9644.68,4489.6 9591.69,4489.6C9538.71,4489.6 9495.69,4446.58 9495.69,4393.6C9495.69,4348.85 9587.94,4174.84 9591.69,4177.99" style="fill:none;stroke:rgb(241,241,241);stroke-width:60.76px;"/>
+            <g transform="matrix(1.26936,0,0,1.26936,-11391.6,-5251.06)">
+                <path d="M9591.69,4177.99C9595.44,4174.84 9687.69,4348.85 9687.69,4393.6C9687.69,4446.58 9644.68,4489.6 9591.69,4489.6C9538.71,4489.6 9495.69,4446.58 9495.69,4393.6C9495.69,4348.85 9587.94,4174.84 9591.69,4177.99" style="fill:none;stroke:black;stroke-width:56.72px;"/>
             </g>
-            <g transform="matrix(-1,1.22465e-16,-1.22465e-16,-1,9674.22,4665.34)">
-                <g transform="matrix(-1,-1.22465e-16,1.22465e-16,-1,9674.91,4666.33)">
-                    <path d="M339.621,238.84L177.621,360.34L339.621,481.84L339.621,238.84Z" style="fill:rgb(241,241,241);"/>
-                    <path d="M307.221,360.34L499.221,360.34" style="fill:none;stroke:rgb(241,241,241);stroke-width:72px;"/>
-                </g>
+            <g transform="matrix(-1.07115,1.31179e-16,-1.31179e-16,-1.07115,10326.2,4991.65)">
+                <path d="M9367.69,4305.99L9175.69,4305.99" style="fill:none;stroke:black;stroke-width:67.22px;"/>
             </g>
-            <g transform="matrix(6.12323e-17,1,-1,6.12323e-17,4981.52,-8645.69)">
-                <g transform="matrix(6.12323e-17,-1,1,6.12323e-17,8644.71,4982.21)">
-                    <path d="M554.729,690.586L676.229,852.586L797.729,690.586L554.729,690.586Z" style="fill:rgb(241,241,241);"/>
-                    <path d="M676.229,722.986L676.229,530.986" style="fill:none;stroke:rgb(241,241,241);stroke-width:72px;"/>
-                </g>
+            <g transform="matrix(6.55893e-17,1.07115,-1.07115,6.55893e-17,5299.55,-9266.52)">
+                <path d="M9367.69,4305.99L9175.69,4305.99" style="fill:none;stroke:black;stroke-width:67.22px;"/>
+            </g>
+            <g transform="matrix(-1.17977,1.71479e-16,-1.71479e-16,-1.17977,1291.21,1074.24)">
+                <path d="M416.895,287.105L512,192L607.105,287.105" style="fill:none;stroke:black;stroke-width:61.03px;"/>
+            </g>
+            <g transform="matrix(4.52413e-17,-1.17977,1.17977,4.52413e-17,-16.2728,981.864)">
+                <path d="M416.895,287.105L512,192L607.105,287.105" style="fill:none;stroke:black;stroke-width:61.03px;"/>
             </g>
         </g>
     </g>

@@ -146,14 +146,18 @@ export const AiAnalysisSettings: React.FC = () => {
           rules={[
             { required: true, message: "Please select a bounding box" },
             {
-              validator: (_, value: UserBoundingBox) => {
+              validator: async (_, value: UserBoundingBox) => {
                 if (value && selectedLayer && selectedJobType) {
                   const boundingBox = computeArrayFromBoundingBox(value.boundingBox);
-
-                  const mag = getBestFittingMagComparedToTrainingDS(
+                  const aiModelId =
+                    selectedModel != null && "trainingJob" in selectedModel
+                      ? (selectedModel.id as string)
+                      : undefined;
+                  const mag = await getBestFittingMagComparedToTrainingDS(
                     selectedLayer,
                     dataset.dataSource.scale,
                     selectedJobType,
+                    aiModelId,
                   );
                   if (
                     isDatasetOrBoundingBoxTooSmall(boundingBox, mag, selectedLayer, selectedJobType)

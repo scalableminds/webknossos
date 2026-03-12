@@ -10,11 +10,13 @@ import type React from "react";
 import { useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { type AiModel, APIJobCommand } from "types/api_types";
+import type { Vector3 } from "viewer/constants";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { UserBoundingBox } from "viewer/store";
 import { useAlignmentJobContext } from "./alignment/ai_alignment_job_context";
 import { useRunAiModelJobContext } from "./run_ai_model/ai_image_segmentation_job_context";
 import { useAiTrainingJobContext } from "./train_ai_model/ai_training_job_context";
+import { getBestFittingMagComparedToTrainingDS } from "./utils";
 
 const { Title, Text } = Typography;
 
@@ -23,14 +25,52 @@ export const RunAiModelCreditInformation: React.FC = () => {
     selectedModel,
     selectedJobType,
     selectedBoundingBox,
+    selectedLayer,
     handleStartAnalysis,
     areParametersValid,
   } = useRunAiModelJobContext();
+  const dataset = useWkSelector((state) => state.dataset);
+
+  const aiModelId =
+    selectedModel != null && "trainingJob" in selectedModel
+      ? (selectedModel.id as string)
+      : undefined;
+
+  const { data: adjustedBoundingBox } = useQuery<UserBoundingBox | null>({
+    queryKey: [
+      "boundingBoxForCreditCost",
+      selectedBoundingBox?.boundingBox,
+      selectedJobType,
+      aiModelId,
+      selectedLayer?.name,
+    ],
+    queryFn: async () => {
+      if (!selectedLayer || !selectedBoundingBox || !selectedJobType) return null;
+
+      const mag = await getBestFittingMagComparedToTrainingDS(
+        selectedLayer,
+        dataset.dataSource.scale,
+        selectedJobType,
+        aiModelId,
+        false,
+      );
+
+      return {
+        ...selectedBoundingBox,
+        boundingBox: {
+          min: selectedBoundingBox.boundingBox.min.map((v, i) => Math.round(v / mag[i])) as Vector3,
+          max: selectedBoundingBox.boundingBox.max.map((v, i) => Math.round(v / mag[i])) as Vector3,
+        },
+      };
+    },
+    enabled: Boolean(selectedBoundingBox && selectedJobType && selectedLayer),
+  });
+
   return (
     <CreditInformation
       selectedModel={selectedModel}
       selectedJobType={selectedJobType}
-      selectedBoundingBox={selectedBoundingBox}
+      selectedBoundingBox={adjustedBoundingBox ?? selectedBoundingBox}
       handleStartAnalysis={handleStartAnalysis}
       startButtonTitle="Start analysis"
       areParametersValid={areParametersValid}

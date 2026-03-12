@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(157);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(158);
 COMMIT TRANSACTION;
 
 
@@ -696,7 +696,7 @@ CREATE TABLE webknossos.aiModel_trainingAnnotations(
 CREATE TABLE webknossos.aiInferences(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   _organization TEXT NOT NULL,
-  _aiModel TEXT CONSTRAINT _aiModel_objectId CHECK (_aiModel ~ '^[0-9a-f]{24}$') NOT NULL,
+  _aiModel TEXT CONSTRAINT _aiModel_objectId CHECK (_aiModel ~ '^[0-9a-f]{24}$'), -- TODO evolution: not null is gone
   _newDataset TEXT CONSTRAINT _newDataset_objectId CHECK (_newDataset ~ '^[0-9a-f]{24}$'),
   _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$'),
   _inferenceJob TEXT CONSTRAINT _inferenceJob_objectId CHECK (_inferenceJob ~ '^[0-9a-f]{24}$') NOT NULL,

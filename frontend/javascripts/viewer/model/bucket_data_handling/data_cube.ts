@@ -500,8 +500,8 @@ class DataCube {
     this.bucketIterator = notCollectedBuckets.length;
   }
 
-  triggerBucketDataChanged(): void {
-    this.emitter.emit("bucketDataChanged");
+  triggerRenderedBucketDataChanged(): void {
+    this.emitter.emit("renderedBucketDataChanged");
   }
 
   shouldEagerlyMaintainUsedValueSet() {
@@ -510,14 +510,14 @@ class DataCube {
     return Date.now() - (this.lastRequestForValueSet || 0) < 2 * 60 * 1000;
   }
 
-  getValueSetForAllBuckets(): Set<number> | Set<bigint> {
+  getValueSetForAllAccessedBuckets(): Set<number> | Set<bigint> {
     this.lastRequestForValueSet = Date.now();
 
     // Theoretically, we could ignore coarser buckets for which we know that
     // finer buckets are already loaded. However, the current performance
     // is acceptable which is why this optimization isn't implemented.
     const valueSets = this.buckets
-      .filter((bucket) => bucket.state === "LOADED")
+      .filter((bucket) => bucket.state === "LOADED" && bucket.accessed)
       .map((bucket) => bucket.getValueSet());
     // @ts-expect-error The buckets of a single layer all have the same element class, so they are all number or all bigint
     const valueSet = union(valueSets);

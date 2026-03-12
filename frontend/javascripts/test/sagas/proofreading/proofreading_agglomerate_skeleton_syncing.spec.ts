@@ -74,7 +74,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       yield makeMappingEditableHelper();
       yield put(setOthersMayEditForAnnotationAction(true));
 
-      const versionBeforeSkeletonLoading = yield select((state) => state.annotation.version);
+      const versionBeforeSkeletonLoading = yield* select((state) => state.annotation.version);
 
       const loadAgglomerateChannel = yield* actionChannel("LOAD_AGGLOMERATE_SKELETON");
       const ensureHasNewestVersionChannel = yield* actionChannel("ENSURE_HAS_NEWEST_VERSION");
@@ -100,7 +100,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         ((action: Action) =>
           action.type === "SET_IS_MUTEX_ACQUIRED" && !action.isMutexAcquired) as ActionPattern,
       );
-      const versionAfterSkeletonLoading = yield select((state) => state.annotation.version);
+      const versionAfterSkeletonLoading = yield* select((state) => state.annotation.version);
       // Check that the local version was bumped.
       expect(versionAfterSkeletonLoading - versionBeforeSkeletonLoading).toBeGreaterThan(0);
       const agglomerateSkeletonUpdates = getNestedUpdateActions(context).at(-1)!;
@@ -339,7 +339,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       const _backendMock = mockInitialBucketAndAgglomerateData(context);
 
       const task = startSaga(function* () {
-        const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
+        const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
         yield call(initializeMappingAndTool, context, tracingId);
 
         // Load relevant meshes.
@@ -383,7 +383,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       const _backendMock = mockInitialBucketAndAgglomerateData(context);
 
       const task = startSaga(function* () {
-        const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
+        const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
         yield call(initializeMappingAndTool, context, tracingId);
 
         // Load relevant meshes.
@@ -464,7 +464,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       );
 
       const task = startSaga(function* () {
-        const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
+        const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
         yield call(initializeMappingAndTool, context, tracingId);
 
         // Load relevant meshes.
@@ -787,7 +787,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
     );
 
     const task = startSaga(function* () {
-      const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
+      const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
       yield call(initializeMappingAndTool, context, tracingId);
 
       // Activate segment 2, setup editable mapping, make it shared and load agglomerate skeletons.

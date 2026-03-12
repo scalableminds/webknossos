@@ -59,7 +59,7 @@ async function makeProofreadMerge(
   const task = startSaga(function* () {
     yield put(setActiveOrganizationAction(powerOrga));
     yield put(setZoomStepAction(0.3));
-    const currentMag = yield select((state) => getCurrentMag(state, tracingId));
+    const currentMag = yield* select((state) => getCurrentMag(state, tracingId));
     expect(currentMag).toEqual([1, 1, 1]);
     yield put(setToolAction(AnnotationTool.PROOFREAD));
 
@@ -246,15 +246,15 @@ describe("Save Mutex Saga", () => {
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     const task = startSaga(function* task() {
       yield put(setOthersMayEditForAnnotationAction(true));
-      const hasMutex = yield select((state) => state.save.mutexState.hasAnnotationMutex);
+      const hasMutex = yield* select((state) => state.save.mutexState.hasAnnotationMutex);
       expect(hasMutex).toBe(false);
       yield take("SET_IS_MUTEX_ACQUIRED");
       expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
-      const hasMutexAfterAcquiring = yield select(
+      const hasMutexAfterAcquiring = yield* select(
         (state) => state.save.mutexState.hasAnnotationMutex,
       );
       expect(hasMutexAfterAcquiring).toBe(true);
-      const blockedByUser = yield select((state) => state.save.mutexState.blockedByUser);
+      const blockedByUser = yield* select((state) => state.save.mutexState.blockedByUser);
       expect(blockedByUser).toBe(null);
     });
     await task.toPromise();
@@ -270,18 +270,18 @@ describe("Save Mutex Saga", () => {
     }));
     const task = startSaga(function* task() {
       yield put(setOthersMayEditForAnnotationAction(true));
-      const hasMutex = yield select((state) => state.save.mutexState.hasAnnotationMutex);
+      const hasMutex = yield* select((state) => state.save.mutexState.hasAnnotationMutex);
       expect(hasMutex).toBe(false);
       // Waiting for saga to update which user is holding the mutex.
       yield take("SET_USER_HOLDING_MUTEX");
       expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
-      const hasMutexAfterAcquiring = yield select(
+      const hasMutexAfterAcquiring = yield* select(
         (state) => state.save.mutexState.hasAnnotationMutex,
       );
       expect(hasMutexAfterAcquiring).toBe(false);
-      const blockedByUser = yield select((state) => state.save.mutexState.blockedByUser);
+      const blockedByUser = yield* select((state) => state.save.mutexState.blockedByUser);
       expect(blockedByUser).toBe(blockingUser);
-      const isUpdatingCurrentlyAllowed = yield select(
+      const isUpdatingCurrentlyAllowed = yield* select(
         (state) => state.annotation.isUpdatingCurrentlyAllowed,
       );
       expect(isUpdatingCurrentlyAllowed).toBe(false);
@@ -336,7 +336,7 @@ describe("Save Mutex Saga", () => {
       blockedByUser: blockingUser,
     }));
     const task = startSaga(function* task() {
-      const hasMutex = yield select((state) => state.save.mutexState.hasAnnotationMutex);
+      const hasMutex = yield* select((state) => state.save.mutexState.hasAnnotationMutex);
       expect(hasMutex).toBe(false);
       // Make proofreading merge to trigger saving and thus mutex fetching. Do not wait till saving is done.
       yield makeProofreadMerge(context, false);
@@ -382,7 +382,7 @@ describe("Save Mutex Saga", () => {
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
     const task = startSaga(function* task() {
-      const hasMutex = yield select((state) => state.save.mutexState.hasAnnotationMutex);
+      const hasMutex = yield* select((state) => state.save.mutexState.hasAnnotationMutex);
       expect(hasMutex).toBe(false);
       // Request the annotation mutex.
       const unsubscribeFromMutex = yield call(subscribeToAnnotationMutex, "Test");
@@ -428,7 +428,7 @@ describe("Save Mutex Saga", () => {
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
     const task = startSaga(function* task() {
-      const hasMutex = yield select((state) => state.save.mutexState.hasAnnotationMutex);
+      const hasMutex = yield* select((state) => state.save.mutexState.hasAnnotationMutex);
       expect(hasMutex).toBe(false);
       // Request the annotation mutex multiple times.
       const unsubscribeFromMutex1 = yield call(subscribeToAnnotationMutex, "Test");

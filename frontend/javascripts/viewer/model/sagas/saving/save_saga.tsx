@@ -880,7 +880,7 @@ export function* tryToIncorporateActions(
             },
           ),
         );
-        const loadedMeshes = yield select((state) => getAllLoadedMeshes(state, tracingId));
+        const loadedMeshes = yield* select((state) => getAllLoadedMeshes(state, tracingId));
         const loadedMeshesOfSplitAction = loadedMeshes.intersection(oldAgglomerateIds);
         if (loadedMeshesOfSplitAction.size > 0) {
           oldAgglomerateIds.forEach((aggloId) => {

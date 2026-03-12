@@ -54,9 +54,9 @@ describe("Proofreading (with mesh actions)", () => {
 
   function* simulateMergeAgglomeratesViaMeshes(context: WebknossosTestContext): Saga<void> {
     const { api } = context;
-    const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
+    const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
     yield call(initializeMappingAndTool, context, tracingId);
-    const mapping0 = yield select(
+    const mapping0 = yield* select(
       (state: WebknossosState) =>
         getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
     );
@@ -70,7 +70,7 @@ describe("Proofreading (with mesh actions)", () => {
     yield makeMappingEditableHelper();
 
     // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
-    const mapping1 = yield select(
+    const mapping1 = yield* select(
       (state: WebknossosState) =>
         (
           getMappingInfo(
@@ -129,7 +129,7 @@ describe("Proofreading (with mesh actions)", () => {
     const task = startSaga(function* task(): Saga<void> {
       yield simulateMergeAgglomeratesViaMeshes(context);
 
-      const finalMapping = yield select(
+      const finalMapping = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -186,7 +186,7 @@ describe("Proofreading (with mesh actions)", () => {
     const task = startSaga(function* task(): Saga<void> {
       yield simulateMergeAgglomeratesViaMeshes(context);
 
-      const finalMapping = yield select(
+      const finalMapping = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -244,7 +244,7 @@ describe("Proofreading (with mesh actions)", () => {
   function* simulateSplitAgglomeratesViaMeshes(context: WebknossosTestContext): Saga<void> {
     // Splits segments 1337 and 1338 which are assumed to both be mapped to agglomerate 6.
     const { api } = context;
-    const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
+    const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
     const expectedInitialMapping = new Map([
       [1, 6],
       [2, 6],
@@ -256,7 +256,7 @@ describe("Proofreading (with mesh actions)", () => {
     ]);
 
     yield call(initializeMappingAndTool, context, tracingId);
-    const mapping0 = yield select(
+    const mapping0 = yield* select(
       (state) =>
         getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
     );
@@ -270,7 +270,7 @@ describe("Proofreading (with mesh actions)", () => {
     yield makeMappingEditableHelper();
 
     // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
-    const mapping1 = yield select(
+    const mapping1 = yield* select(
       (state) =>
         getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
     );
@@ -329,7 +329,7 @@ describe("Proofreading (with mesh actions)", () => {
           },
         },
       ]);
-      const finalMapping = yield select(
+      const finalMapping = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -436,7 +436,7 @@ describe("Proofreading (with mesh actions)", () => {
         },
       ]);
 
-      const finalMapping = yield select(
+      const finalMapping = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -527,7 +527,7 @@ describe("Proofreading (with mesh actions)", () => {
           },
         },
       ]);
-      const finalMapping = yield select(
+      const finalMapping = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -647,7 +647,7 @@ describe("Proofreading (with mesh actions)", () => {
           },
         },
       ]);
-      const finalMapping = yield select(
+      const finalMapping = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );

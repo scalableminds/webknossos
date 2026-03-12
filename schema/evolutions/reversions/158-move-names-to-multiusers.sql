@@ -1,24 +1,25 @@
 START TRANSACTION;
 
-do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 156 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
+do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 158 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
+
 
 DROP VIEW webknossos.userInfos;
-DROP VIEW webknossos.multiUsers_;
 DROP VIEW webknossos.users_;
+DROP VIEW webknossos.multiUsers_;
 
-ALTER TABLE webknossos.multiUsers ADD COLUMN firstName TEXT;
-ALTER TABLE webknossos.multiUsers ADD COLUMN lastName TEXT;
+ALTER TABLE webknossos.users ADD COLUMN firstName TEXT;
+ALTER TABLE webknossos.users ADD COLUMN lastName TEXT;
 
-UPDATE webknossos.multiUsers m
-SET firstName = u.firstName, lastName = u.lastName
-FROM webknossos.users u
+UPDATE webknossos.users u
+SET firstName = m.firstName, lastName = m.lastName
+FROM webknossos.multiUsers m
 WHERE u._multiUser = m._id;
 
-ALTER TABLE webknossos.multiUsers ALTER COLUMN firstName SET NOT NULL;
-ALTER TABLE webknossos.multiUsers ALTER COLUMN lastName SET NOT NULL;
+ALTER TABLE webknossos.users ALTER COLUMN firstName SET NOT NULL;
+ALTER TABLE webknossos.users ALTER COLUMN lastName SET NOT NULL;
 
-ALTER TABLE webknossos.users DROP COLUMN firstName;
-ALTER TABLE webknossos.users DROP COLUMN lastName;
+ALTER TABLE webknossos.multiUsers DROP COLUMN firstName;
+ALTER TABLE webknossos.multiUsers DROP COLUMN lastName;
 
 CREATE VIEW webknossos.multiUsers_ AS SELECT * FROM webknossos.multiUsers WHERE NOT isDeleted;
 CREATE VIEW webknossos.users_ AS SELECT * FROM webknossos.users WHERE NOT isDeleted;

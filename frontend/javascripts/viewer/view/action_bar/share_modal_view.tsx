@@ -1,11 +1,4 @@
-import {
-  CompressOutlined,
-  CopyOutlined,
-  GlobalOutlined,
-  LockOutlined,
-  ShareAltOutlined,
-  TeamOutlined,
-} from "@ant-design/icons";
+import { CompressOutlined, CopyOutlined, ShareAltOutlined } from "@ant-design/icons";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import {
   createShortLink,
@@ -20,6 +13,7 @@ import {
 import {
   Alert,
   Button,
+  Checkbox,
   Col,
   Input,
   Modal,
@@ -187,6 +181,11 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
   );
 }
 
+const LEFT_COL_STYLE = {
+  lineHeight: "22px",
+  paddingRight: 6,
+};
+
 function _ShareModalView(props: Props) {
   const { isOpen, onOk, annotationType, annotationId } = props;
   const dispatch = useDispatch();
@@ -345,9 +344,8 @@ function _ShareModalView(props: Props) {
   };
 
   const radioStyle = {
-    display: "block",
-    height: "30px",
-    lineHeight: "30px",
+    height: "20px",
+    lineHeight: "20px",
   };
   const iconMap = {
     Public: <GlobalOutlined />,
@@ -370,7 +368,8 @@ function _ShareModalView(props: Props) {
         <Col
           span={6}
           style={{
-            lineHeight: "30px",
+            ...LEFT_COL_STYLE,
+            marginTop: 6,
           }}
         >
           Sharing Link
@@ -393,13 +392,8 @@ function _ShareModalView(props: Props) {
         </Space>
       </DividerWithSubtitle>
       {maybeShowWarning()}
-      <Row>
-        <Col
-          span={6}
-          style={{
-            lineHeight: "28px",
-          }}
-        >
+      <Row style={{ marginBottom: 16 }}>
+        <Col span={6} style={LEFT_COL_STYLE}>
           <div>Who can view this annotation?</div>
           <p
             style={{
@@ -455,49 +449,38 @@ function _ShareModalView(props: Props) {
           </RadioGroup>
         </Col>
       </Row>
+      <Row>
+        <Col span={6} style={LEFT_COL_STYLE}>
+          For which teams should this annotation be listed?
+        </Col>
+        <Col span={18}>
+          <TeamSelectionComponent
+            mode="multiple"
+            allowNonEditableTeams
+            value={sharedTeams}
+            onChange={handleSharedTeamsChange}
+            disabled={!hasUpdatePermissions || visibility === "Private" || isChangingInProgress}
+          />
+          <Hint
+            style={{
+              margin: "6px 12px",
+            }}
+          >
+            Choose the teams to share your annotation with. Members of these teams can see this
+            annotation in their Annotations tab.
+          </Hint>
+        </Col>
+      </Row>
       <DividerWithSubtitle>
         <Space>
           <ShareAltOutlined />
-          Team Sharing
+          Editing
         </Space>
       </DividerWithSubtitle>
       <PricingEnforcedBlur requiredPricingPlan={PricingPlanEnum.Team}>
-        <Row>
-          <Col
-            span={6}
-            style={{
-              lineHeight: "22px",
-            }}
-          >
-            For which teams should this annotation be listed?
-          </Col>
-          <Col span={18}>
-            <TeamSelectionComponent
-              mode="multiple"
-              allowNonEditableTeams
-              value={sharedTeams}
-              onChange={handleSharedTeamsChange}
-              disabled={!hasUpdatePermissions || visibility === "Private" || isChangingInProgress}
-            />
-            <Hint
-              style={{
-                margin: "6px 12px",
-              }}
-            >
-              Choose the teams to share your annotation with. Members of these teams can see this
-              annotation in their Annotations tab.
-            </Hint>
-          </Col>
-        </Row>
-
-        <Row>
-          <Col
-            span={6}
-            style={{
-              lineHeight: "22px",
-            }}
-          >
-            Are other users allowed to edit this annotation?
+        <Row style={{ marginBottom: 16 }}>
+          <Col span={6} style={LEFT_COL_STYLE}>
+            Who can edit this annotation?
           </Col>
           <Col span={18}>
             <RadioGroup
@@ -506,29 +489,47 @@ function _ShareModalView(props: Props) {
               disabled={isChangingInProgress}
             >
               <Radio style={radioStyle} value={false} disabled={!hasUpdatePermissions}>
-                No, keep it read-only
+                Owner
               </Radio>
               <Hint
                 style={{
                   marginLeft: 24,
                 }}
               >
-                Only you can edit the content of this annotation.
+                Only the owner can edit the content of this annotation.
               </Hint>
 
-              <Radio style={radioStyle} value disabled={!hasUpdatePermissions}>
-                Yes, allow editing
+              <Radio style={radioStyle} value={true} disabled={!hasUpdatePermissions}>
+                Everybody who can view
               </Radio>
               <Hint
                 style={{
                   marginLeft: 24,
                 }}
               >
-                All registered users that can view this annotation can edit it. Note that you should
-                coordinate the collaboration, because parallel changes to this annotation will
-                result in a conflict.
+                All users in your organization who may view this annotation can also edit it.
               </Hint>
             </RadioGroup>
+          </Col>
+        </Row>
+        <Row>
+          <Col span={6} style={LEFT_COL_STYLE}>
+            Can users edit simultaneously?
+          </Col>
+          <Col span={18}>
+            <Checkbox checked={true} onChange={() => {}}>
+              Yes, allow simultaneous editing
+            </Checkbox>
+            <Hint
+              style={{
+                marginLeft: 24,
+              }}
+            >
+              When enabled, users can edit the annotation in parallel. This feature is experimental
+              and is currently limited to the proofreading tool (skeleton and brushing will be
+              disabled). When disabled, only one user can edit at the same time. We recommend to
+              coordinate the collaboration with your peers to avoid being blocked.
+            </Hint>
           </Col>
         </Row>
       </PricingEnforcedBlur>

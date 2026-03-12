@@ -14,6 +14,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.{
 }
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.VoxelSize
+import com.scalableminds.webknossos.datastore.models.annotation.AnnotationIdDomain.AnnotationIdDomain
 import com.scalableminds.webknossos.datastore.models.annotation.{
   AnnotationLayer,
   AnnotationLayerType,
@@ -34,13 +35,16 @@ import scala.concurrent.ExecutionContext
 
 class WKRemoteTracingStoreClient(
     tracingStore: TracingStore,
-    dataset: Dataset,
+    dataset: Option[Dataset],
     rpc: RPC,
     annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore)(implicit ec: ExecutionContext)
     extends LazyLogging
     with FoxImplicits {
 
-  private def baseInfo = s" Dataset: ${dataset.name} Tracingstore: ${tracingStore.url}"
+  private def baseInfo = dataset match {
+    case Some(ds) => s" Dataset: ${ds.name} Tracingstore: ${tracingStore.url}"
+    case None     => s"Tracingstore: ${tracingStore.url}"
+  }
 
   def getSkeletonTracing(annotationId: ObjectId,
                          annotationLayer: AnnotationLayer,
@@ -334,5 +338,14 @@ class WKRemoteTracingStoreClient(
         .addQueryParam("token", RpcTokenHolder.webknossosToken)
         .postEmpty()
     } yield ()
+
+  def getLargestIdOfDomainOrZero(annotationId: ObjectId, tracingId: String, domain: AnnotationIdDomain): Fox[Long] =
+    for {
+      id <- rpc(s"${tracingStore.url}/tracings/annotation/$annotationId/largestIdOrZero")
+        .addQueryParam("token", RpcTokenHolder.webknossosToken)
+        .addQueryParam("tracingId", tracingId)
+        .addQueryParam("domain", domain.toString)
+        .getWithJsonResponse[Long]
+    } yield id
 
 }

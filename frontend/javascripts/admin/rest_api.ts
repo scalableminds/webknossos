@@ -547,8 +547,9 @@ export function setOthersMayEditForAnnotation(
   annotationType: APIAnnotationType,
   othersMayEdit: boolean,
 ): Promise<void> {
+  const collaborationMode = othersMayEdit ? "Concurrent" : "OwnerOnly";
   return Request.receiveJSON(
-    `/api/annotations/${annotationType}/${annotationId}/othersMayEdit?othersMayEdit=${othersMayEdit}`,
+    `/api/annotations/${annotationType}/${annotationId}/collaborationMode?collaborationMode=${collaborationMode}`,
     {
       method: "PATCH",
     },
@@ -1000,6 +1001,52 @@ export async function downloadAnnotation(
 
   const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${params}`;
   await downloadWithFilename(downloadUrl);
+}
+
+export type AnnotationIdDomain =
+  | "Segment"
+  | "SegmentGroup"
+  | "Tree"
+  | "Node"
+  | "TreeGroup"
+  | "BoundingBox";
+
+export async function getIdReservationsForAnnotation(
+  annotationId: string,
+  tracingId: string,
+  domain: AnnotationIdDomain,
+) {
+  const params = new URLSearchParams({ tracingId, domain });
+
+  const ids: number[] = await Request.receiveJSON(
+    `api/annotations/${annotationId}/reservedIds?${params}`,
+  );
+  return ids;
+}
+
+export async function reserveIdsForAnnotation(
+  annotationId: string,
+  tracingId: string,
+  domain: AnnotationIdDomain,
+  numberOfIdsToReserve: number,
+  idsToRelease: number[] = [],
+): Promise<number[]> {
+  /*
+   * Will newly reserved ids for the specified domain.
+   */
+  const ids: number[] = await Request.sendJSONReceiveJSON(
+    `api/annotations/${annotationId}/reserveIds`,
+    {
+      data: {
+        domain,
+        tracingId,
+        numberOfIdsToReserve,
+        idsToRelease,
+      },
+      method: "POST",
+    },
+  );
+  return ids;
 }
 
 // ### Datasets

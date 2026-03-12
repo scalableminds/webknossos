@@ -107,6 +107,7 @@ export function serverVolumeToClientVolumeTracing(
     hideUnregisteredSegments: tracing.hideUnregisteredSegments ?? false,
     proofreadingMarkerPosition: undefined,
     segmentJournal: [],
+    idReservations: { SegmentGroup: [], Segment: [] },
   };
   return volumeTracing;
 }
@@ -449,6 +450,19 @@ function VolumeTracingReducer(
 
       return updateVolumeTracing(state, volumeTracing.tracingId, {
         mappingIsLocked: true,
+      });
+    }
+
+    case "SET_ID_RESERVATIONS": {
+      const volumeTracing = getVolumeTracingFromAction(state, action);
+      if (!volumeTracing) {
+        return state;
+      }
+      return updateVolumeTracing(state, action.tracingId, {
+        idReservations: {
+          ...volumeTracing.idReservations,
+          [action.domain]: action.reservations,
+        },
       });
     }
 

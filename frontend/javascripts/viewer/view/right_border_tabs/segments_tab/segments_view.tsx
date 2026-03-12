@@ -1447,8 +1447,8 @@ class SegmentsView extends React.Component<Props, State> {
           items: [
             {
               key: "create",
-              onClick: () => {
-                this.createGroup(id);
+              onClick: async () => {
+                await this.createGroup(id);
                 this.hideContextMenu();
               },
               disabled: isEditingDisabled,
@@ -1703,12 +1703,16 @@ class SegmentsView extends React.Component<Props, State> {
     };
   }
 
-  createGroup(parentGroupId: number): void {
+  async createGroup(parentGroupId: number): Promise<void> {
     if (!this.props.visibleSegmentationLayer) {
       return;
     }
 
-    api.tracing.createSegmentGroup(null, parentGroupId, this.props.visibleSegmentationLayer.name);
+    await api.tracing.createSegmentGroup(
+      null,
+      parentGroupId,
+      this.props.visibleSegmentationLayer.name,
+    );
   }
 
   doesGroupHaveAnyMeshes = (groupId: number | null): boolean => {

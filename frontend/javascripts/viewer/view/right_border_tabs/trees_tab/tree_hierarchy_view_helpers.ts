@@ -308,7 +308,7 @@ export function createGroupHelper(
       item.children.push(newGroup);
     });
   }
-  return { newSegmentGroups, newGroupId };
+  return newSegmentGroups;
 }
 
 export function deepFilter<T extends TreeNode | TreeGroup | SegmentHierarchyNode>(

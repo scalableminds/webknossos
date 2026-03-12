@@ -74,26 +74,4 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClien
         q"UPDATE $collectionToken SET isDeleted = TRUE, $nameColumnToken = CONCAT($nameColumnToken, $deletedSuffix) WHERE _id = $id".asUpdate)
     } yield ()
 
-  protected def updateStringCol(id: ObjectId, column: X => Rep[String], newValue: String)(
-      implicit ctx: DBAccessContext): Fox[Unit] = {
-    val query = for { row <- collection if notdel(row) && idColumn(row) === id.id } yield column(row)
-    for {
-      _ <- assertUpdateAccess(id)
-      _ <- run(query.update(newValue))
-    } yield ()
-  }
-
-  protected def updateObjectIdCol(id: ObjectId, column: X => Rep[String], newValue: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
-    updateStringCol(id, column, newValue.id)
-
-  protected def updateBooleanCol(id: ObjectId, column: X => Rep[Boolean], newValue: Boolean)(
-      implicit ctx: DBAccessContext): Fox[Unit] = {
-    val query = for { row <- collection if notdel(row) && idColumn(row) === id.id } yield column(row)
-    for {
-      _ <- assertUpdateAccess(id)
-      _ <- run(query.update(newValue))
-    } yield ()
-  }
-
 }

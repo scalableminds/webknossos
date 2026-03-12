@@ -19,12 +19,7 @@ import { select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
 import { Store } from "viewer/singletons";
-import {
-  type SaveQueueEntry,
-  type SkeletonTracing,
-  startSaga,
-  type WebknossosState,
-} from "viewer/store";
+import { type SaveQueueEntry, startSaga, type WebknossosState } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   mergeSegment3And4WithAgglomerateTree1,
@@ -43,6 +38,7 @@ import {
   performSplitTreesProofreading,
 } from "./proofreading_skeleton_test_utils";
 import {
+  expectSegmentList,
   initializeMappingAndTool,
   makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
@@ -77,7 +73,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
   it("should mock loading agglomerate skeletons correctly", async (context: WebknossosTestContext) => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context);
     const task = startSaga(function* task() {
-      const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
+      const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
       yield call(initializeMappingAndTool, context, tracingId);
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
@@ -89,9 +85,12 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
       // Load agglomerate skeleton for agglomerate id 1.
       yield call(loadAgglomerateSkeletons, context, [1, 4], false, false);
-      const skeletonWithAgglomerateTrees: SkeletonTracing = yield select(
+      const skeletonWithAgglomerateTrees = yield* select(
         (state: WebknossosState) => state.annotation.skeleton,
       );
+      if (skeletonWithAgglomerateTrees == null) {
+        throw new Error("Unexpected null value");
+      }
       const agglomerateTrees = Array.from(
         skeletonWithAgglomerateTrees.trees
           .values()
@@ -130,7 +129,15 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
         yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
           "./__snapshots__/proofreading_skeleton_interaction.spec.ts/merge_skeleton_simple.json",
         );
-        const finalMapping = yield select(
+
+        yield expectSegmentList(tracingId, [
+          {
+            id: 1,
+            anchorPosition: [3, 3, 3],
+          },
+        ]);
+
+        const finalMapping = yield* select(
           (state) =>
             getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
         );
@@ -175,7 +182,14 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       // Expect no further updates after the injected updates as the own proofreading operation became a no-op.
       expect(allReceivedUpdates.length).toEqual(11);
 
-      const finalMapping = yield select(
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [3, 3, 3],
+        },
+      ]);
+
+      const finalMapping = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -216,7 +230,23 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/split_skeleton_simple.json",
       );
-      const finalMapping = yield select(
+
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [1, 1, 1],
+        },
+        {
+          id: 1339,
+          anchorPosition: [2, 2, 2],
+        },
+        {
+          id: 1340,
+          anchorPosition: [3, 3, 3],
+        },
+      ]);
+
+      const finalMapping = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -258,7 +288,19 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/split_skeleton_interfered_merge.json",
       );
-      const finalMapping = yield select(
+
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [2, 2, 2],
+        },
+        {
+          id: 1339,
+          anchorPosition: [3, 3, 3],
+        },
+      ]);
+
+      const finalMapping = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -303,7 +345,19 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       // Expect no more updates after the injected updates:
       const lastUpdateRequest = context.receivedDataPerSaveRequest.at(-1)![0];
       expect(lastUpdateRequest.version).toEqual(11); // TODOM: The 11th update action should be an updateSegmentsPartial
-      const finalMapping = yield select(
+
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [3, 3, 3],
+        },
+        {
+          id: 1339,
+          anchorPosition: [2, 2, 2],
+        },
+      ]);
+
+      const finalMapping = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -357,7 +411,22 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/min_cut_nodes_skeleton_simple.json",
       );
 
-      const finalMapping = yield select(
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [3, 3, 3],
+        },
+        {
+          id: 4,
+          anchorPosition: [5, 5, 5],
+        },
+        {
+          id: 1339,
+          anchorPosition: [2, 2, 2],
+        },
+      ]);
+
+      const finalMapping = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -415,7 +484,18 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/min_cut_nodes_skeleton_more_complex.json",
       );
 
-      const finalMapping = yield select(
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [3, 3, 3],
+        },
+        {
+          id: 1339,
+          anchorPosition: [2, 2, 2],
+        },
+      ]);
+
+      const finalMapping = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -516,7 +596,14 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/min_cut_nodes_skeleton_incomplete.json",
       );
 
-      const finalMapping = yield select(
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [3, 3, 3],
+        },
+      ]);
+
+      const finalMapping = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );

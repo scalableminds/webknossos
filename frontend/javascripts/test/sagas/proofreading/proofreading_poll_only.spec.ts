@@ -57,7 +57,7 @@ describe("Proofreading (Poll only)", () => {
     const task = startSaga(function* () {
       yield call(initializeMappingAndTool, context, tracingId);
 
-      const mapping0 = yield select(
+      const mapping0 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -83,7 +83,7 @@ describe("Proofreading (Poll only)", () => {
       backendMock.injectVersion([foreignMergeAction], 4);
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
-      const mapping1 = yield select(
+      const mapping1 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -99,7 +99,7 @@ describe("Proofreading (Poll only)", () => {
       expect(updateBatch.actions.length).toBe(1);
       expect(updateBatch.actions).toEqual([foreignMergeAction]);
 
-      const activeTool = yield select((state) => state.uiInformation.activeTool);
+      const activeTool = yield* select((state) => state.uiInformation.activeTool);
       expect(activeTool).toBe(AnnotationTool.PROOFREAD);
     });
 
@@ -123,7 +123,7 @@ describe("Proofreading (Poll only)", () => {
     const task = startSaga(function* () {
       yield call(initializeMappingAndTool, context, tracingId);
 
-      const mapping0 = yield select(
+      const mapping0 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -159,7 +159,7 @@ describe("Proofreading (Poll only)", () => {
 
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
-      const mapping1 = yield select(
+      const mapping1 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -198,7 +198,7 @@ describe("Proofreading (Poll only)", () => {
 
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
-      const mapping2 = yield select(
+      const mapping2 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -244,7 +244,7 @@ describe("Proofreading (Poll only)", () => {
     const task = startSaga(function* () {
       yield call(initializeMappingAndTool, context, tracingId);
 
-      const mapping0 = yield select(
+      const mapping0 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -271,7 +271,7 @@ describe("Proofreading (Poll only)", () => {
 
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
-      const mapping1 = yield select(
+      const mapping1 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -301,7 +301,7 @@ describe("Proofreading (Poll only)", () => {
     const task = startSaga(function* () {
       yield call(initializeMappingAndTool, context, tracingId);
 
-      const mapping0 = yield select(
+      const mapping0 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -338,7 +338,7 @@ describe("Proofreading (Poll only)", () => {
 
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
-      const mapping1 = yield select(
+      const mapping1 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -384,7 +384,7 @@ describe("Proofreading (Poll only)", () => {
     const task = startSaga(function* () {
       yield call(initializeMappingAndTool, context, tracingId);
 
-      const mapping0 = yield select(
+      const mapping0 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -422,7 +422,7 @@ describe("Proofreading (Poll only)", () => {
 
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
-      const mapping1 = yield select(
+      const mapping1 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -467,7 +467,7 @@ describe("Proofreading (Poll only)", () => {
       const rebaseActionChannel = yield actionChannel(["PREPARE_REBASING", "FINISHED_REBASING"]);
       yield call(initializeMappingAndTool, context, tracingId);
 
-      const mapping0 = yield select(
+      const mapping0 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -493,7 +493,7 @@ describe("Proofreading (Poll only)", () => {
       backendMock.injectVersion([foreignMergeAction], 4);
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
-      const mapping1 = yield select(
+      const mapping1 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -513,7 +513,7 @@ describe("Proofreading (Poll only)", () => {
       const rebasingActions = yield flush(rebaseActionChannel);
       expect(rebasingActions.length).toBe(0);
 
-      const activeTool = yield select((state) => state.uiInformation.activeTool);
+      const activeTool = yield* select((state) => state.uiInformation.activeTool);
       expect(activeTool).toBe(AnnotationTool.PROOFREAD);
     });
 
@@ -533,7 +533,7 @@ describe("Proofreading (Poll only)", () => {
     const task = startSaga(function* () {
       yield call(initializeMappingAndTool, context, tracingId);
 
-      const mapping0 = yield select(
+      const mapping0 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -563,7 +563,7 @@ describe("Proofreading (Poll only)", () => {
       backendMock.injectVersion([foreignMergeAction], 4);
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
-      const mapping1 = yield select(
+      const mapping1 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -579,7 +579,7 @@ describe("Proofreading (Poll only)", () => {
       expect(updateBatch.actions.length).toBe(1);
       expect(updateBatch.actions).toEqual([foreignMergeAction]);
 
-      const activeTool = yield select((state) => state.uiInformation.activeTool);
+      const activeTool = yield* select((state) => state.uiInformation.activeTool);
       expect(activeTool).toBe(AnnotationTool.PROOFREAD);
     });
 
@@ -617,7 +617,7 @@ describe("Proofreading (Poll only)", () => {
 
       // Store current annotation version, calculate expected version after injecting updates and inject the agglomerate tree loading.
       const receivedAmountOfUpdateRequests = context.receivedDataPerSaveRequest.length;
-      const versionBeforeForwardingAgglomerateTreeLoading = yield select(
+      const versionBeforeForwardingAgglomerateTreeLoading = yield* select(
         (state) => state.annotation.version,
       );
       const injectedAgglomerateTreeLoadingUpdates = loadAgglomerateTree1;
@@ -633,7 +633,7 @@ describe("Proofreading (Poll only)", () => {
 
       // Expect no pending or additional sent update requests.
       expect(context.receivedDataPerSaveRequest.length).toBe(expectedAmountOfUpdatesAfterInjection);
-      let saveQueue = yield select((state) => state.save.queue);
+      let saveQueue = yield* select((state) => state.save.queue);
       expect(saveQueue.length).toBe(0);
 
       // Enforce saved state including diffing tracings and storing their changes.
@@ -641,7 +641,7 @@ describe("Proofreading (Poll only)", () => {
 
       // Expect no pending or additional sent update requests.
       expect(context.receivedDataPerSaveRequest.length).toBe(expectedAmountOfUpdatesAfterInjection);
-      saveQueue = yield select((state) => state.save.queue);
+      saveQueue = yield* select((state) => state.save.queue);
       expect(saveQueue.length).toBe(0);
     });
 

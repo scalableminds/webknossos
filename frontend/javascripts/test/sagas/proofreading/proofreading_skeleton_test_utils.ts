@@ -218,9 +218,9 @@ export function* performMergeTreesProofreading(
   shouldSaveAfterLoadingTrees: boolean,
   loadMeshes: boolean,
 ): Saga<void> {
-  const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
+  const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
   yield call(initializeMappingAndTool, context, tracingId);
-  expectMapping(tracingId, initialMapping);
+  yield* expectMapping(tracingId, initialMapping);
   if (loadMeshes) {
     yield loadInitialMeshes(context, tracingId);
   }
@@ -252,7 +252,7 @@ export function* performSplitTreesProofreading(
   context: WebknossosTestContext,
   loadMeshes: boolean,
 ): Saga<void> {
-  const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
+  const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
   yield call(initializeMappingAndTool, context, tracingId);
   yield* expectMapping(tracingId, initialMapping);
   if (loadMeshes) {
@@ -284,7 +284,7 @@ export function* performMinCutWithNodesProofreading(
   loadMeshes: boolean,
 ): Saga<void> {
   const { api } = context;
-  const { tracingId } = yield select((state: WebknossosState) => state.annotation.volumes[0]);
+  const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
   yield call(initializeMappingAndTool, context, tracingId);
   yield* expectMapping(tracingId, initialMapping);
   if (loadMeshes) {
@@ -304,9 +304,12 @@ export function* performMinCutWithNodesProofreading(
   // Load agglomerate skeleton for agglomerate id 1.
   yield call(loadAgglomerateSkeletons, context, [1], true, true);
   yield call(() => api.tracing.save()); // Also pulls newest version from backend.
-  const skeletonWithAgglomerateTrees: SkeletonTracing = yield select(
+  const skeletonWithAgglomerateTrees = yield* select(
     (state: WebknossosState) => state.annotation.skeleton,
   );
+  if (skeletonWithAgglomerateTrees == null) {
+    throw new Error("Unexpected null value");
+  }
   const agglomerateTrees = Array.from(
     skeletonWithAgglomerateTrees.trees
       .values()

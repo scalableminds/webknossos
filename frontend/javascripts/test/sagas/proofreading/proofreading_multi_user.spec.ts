@@ -45,6 +45,7 @@ import {
 import { publishDebuggingState } from "test/helpers/debugging_state_serializer";
 import {
   mergeSegment1And4,
+  mergeSegment2And4,
   mergeSegment5And6,
   splitSegment1And2,
   splitSegment2And3,
@@ -508,28 +509,7 @@ describe("Proofreading (Multi User)", () => {
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     prepareGetNeighborsForAgglomerateNode(mocks, 6, false);
 
-    backendMock.planVersionInjection(7, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 4,
-          segmentId2: 2,
-          agglomerateId1: 1,
-          agglomerateId2: 4,
-        },
-      },
-      {
-        name: "mergeSegmentItems",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 4,
-          segmentId2: 2,
-          agglomerateId1: 1,
-          agglomerateId2: 4,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(7, mergeSegment2And4);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -537,7 +517,7 @@ describe("Proofreading (Multi User)", () => {
     const task = startSaga(function* task() {
       yield performCutFromAllNeighbours(context, tracingId, false);
 
-      const splitSaveActionBatch = getFlattenedUpdateActions(context).slice(-3);
+      const splitSaveActionBatch = getFlattenedUpdateActions(context).slice(-2);
 
       expect(splitSaveActionBatch).toEqual([
         {
@@ -547,20 +527,6 @@ describe("Proofreading (Multi User)", () => {
             segmentId1: 2,
             segmentId2: 3,
             agglomerateId: 1,
-          },
-        },
-        {
-          name: "createSegment",
-          value: {
-            actionTracingId: "volumeTracingId",
-            additionalCoordinates: undefined,
-            anchorPosition: [2, 2, 2],
-            color: null,
-            creationTime: 1494695001688,
-            groupId: null,
-            id: 4,
-            metadata: [],
-            name: null,
           },
         },
         {
@@ -585,28 +551,26 @@ describe("Proofreading (Multi User)", () => {
         // But as answer to the edges to remove was on version before the merge, the newly added edge afterwards is not included in the edges that need to be removed to completely isolate the segment 2.
         // Thus, only 3 was cut off from segment 2.
         new Map([
-          [1, 4],
-          [2, 4],
+          [1, 1],
+          [2, 1],
           [3, 1339],
-          [5, 4],
-          [4, 4],
+          [5, 1],
+          [4, 1],
           [6, 6],
           [7, 6],
         ]),
       );
 
-      // todop
-      // yield call(publishDebuggingState, backendMock);
-      // yield expectSegmentList(tracingId, [
-      //   {
-      //     id: 1,
-      //     anchorPosition: [2, 2, 2],
-      //   },
-      //   {
-      //     id: 1339,
-      //     anchorPosition: [3, 3, 3],
-      //   },
-      // ]);
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [2, 2, 2],
+        },
+        {
+          id: 1339,
+          anchorPosition: [3, 3, 3],
+        },
+      ]);
     });
 
     await task.toPromise();

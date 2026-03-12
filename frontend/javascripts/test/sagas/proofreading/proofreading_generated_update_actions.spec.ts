@@ -25,6 +25,7 @@ import {
   mergeAgglomerateTrees1And4,
   mergeSegment1And4,
   mergeSegment1And4WithAgglomerateTrees1And4And6,
+  mergeSegment2And4,
   mergeSegment3And4WithAgglomerateTree1,
   mergeSegment3And4WithAgglomerateTree1And4,
   mergeSegment3And6WithAgglomerateTree1,
@@ -262,6 +263,18 @@ describe("Proofreading should generate correct update actions", () => {
       yield call(makeProofreadMerge, context, [], 1, 4, 1, false);
       const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment1And4);
+    });
+
+    await task.toPromise();
+  }, 8000);
+
+  it("when merging segments 2 and 4.", async (context: WebknossosTestContext) => {
+    mockInitialBucketAndAgglomerateData(context);
+
+    const task = startSaga(function* task() {
+      yield call(makeProofreadMerge, context, [], 2, 4, 1, false);
+      const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
+      expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment2And4);
     });
 
     await task.toPromise();

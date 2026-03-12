@@ -296,6 +296,49 @@ export const mergeSegment1And4 = [
   ],
 ];
 
+export const mergeSegment2And4 = [
+  [
+    {
+      name: "createSegment" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        additionalCoordinates: undefined,
+        anchorPosition: [2, 2, 2] as Vector3,
+        color: null,
+        creationTime: 1494695001688,
+        groupId: null,
+        id: 1,
+        metadata: [],
+        name: null,
+      },
+    },
+  ],
+  [
+    {
+      name: "mergeAgglomerate" as const,
+      value: {
+        actionTracingId: VOLUME_TRACING_ID,
+        segmentId1: 2,
+        segmentId2: 4,
+        agglomerateId1: 1,
+        agglomerateId2: 4,
+      },
+    },
+  ],
+  [
+    {
+      name: "mergeSegmentItems" as const,
+      value: {
+        actionTracingId: VOLUME_TRACING_ID,
+        agglomerateId1: 1,
+        agglomerateId2: 4,
+        segmentId1: 2,
+        segmentId2: 4,
+      },
+    },
+  ],
+];
+
 export const mergeSegment1And4WithAgglomerateTrees1And4And6 = [
   [
     {

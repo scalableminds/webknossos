@@ -220,7 +220,7 @@ export function* performMergeTreesProofreading(
 ): Saga<void> {
   const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
   yield call(initializeMappingAndTool, context, tracingId);
-  expectMapping(tracingId, initialMapping);
+  yield* expectMapping(tracingId, initialMapping);
   if (loadMeshes) {
     yield loadInitialMeshes(context, tracingId);
   }

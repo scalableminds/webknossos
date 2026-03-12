@@ -522,7 +522,7 @@ export function* performCutFromAllNeighbours(
   loadMeshes: boolean,
 ): Saga<void> {
   yield call(initializeMappingAndTool, context, tracingId);
-  expectMapping(tracingId, initialMapping);
+  yield* expectMapping(tracingId, initialMapping);
   if (loadMeshes) {
     // Load all meshes for all affected agglomerate meshes and one more.
     yield loadAgglomerateMeshes([4, 6, 1]);
@@ -537,7 +537,7 @@ export function* performCutFromAllNeighbours(
 
   yield makeMappingEditableHelper();
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
-  expectMapping(tracingId, initialMapping);
+  yield* expectMapping(tracingId, initialMapping);
   yield put(setOthersMayEditForAnnotationAction(true));
 
   // Execute the actual merge and wait for the finished mapping.

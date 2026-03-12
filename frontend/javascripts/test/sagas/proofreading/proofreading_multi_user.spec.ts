@@ -419,17 +419,7 @@ describe("Proofreading (Multi User)", () => {
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     prepareGetNeighborsForAgglomerateNode(mocks, 6, false);
 
-    backendMock.planVersionInjection(7, [
-      {
-        name: "splitAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1,
-          segmentId2: 2,
-          agglomerateId: 1,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(7, splitSegment1And2);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -439,15 +429,6 @@ describe("Proofreading (Multi User)", () => {
 
       const splitSaveActionBatch = getFlattenedUpdateActions(context).slice(-3);
       expect(splitSaveActionBatch).toEqual([
-        {
-          name: "splitAgglomerate",
-          value: {
-            actionTracingId: VOLUME_TRACING_ID,
-            segmentId1: 2,
-            segmentId2: 3,
-            agglomerateId: 1339,
-          },
-        },
         {
           name: "createSegment",
           value: {
@@ -460,6 +441,15 @@ describe("Proofreading (Multi User)", () => {
             id: 1339,
             metadata: [],
             name: null,
+          },
+        },
+        {
+          name: "splitAgglomerate",
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            segmentId1: 2,
+            segmentId2: 3,
+            agglomerateId: 1339,
           },
         },
         {

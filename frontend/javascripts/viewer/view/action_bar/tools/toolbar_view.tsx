@@ -1,5 +1,5 @@
 import Icon, { InfoCircleOutlined } from "@ant-design/icons";
-import AiAnalysisIcon from "@images/icons/icon-ai-analysis.svg?react";
+import AiQuickSelectIcon from "@images/icons/icon-ai-quick-select.svg?react";
 import AreaMeasurementIcon from "@images/icons/icon-area-measurement.svg?react";
 import NewBoundingBoxIcon from "@images/icons/icon-bounding-box-new.svg?react";
 import LineMeasurementIcon from "@images/icons/icon-line-measurement.svg?react";
@@ -200,7 +200,7 @@ function ToolSpecificSettings({
             onClick={toggleQuickSelectStrategy}
             disabled={!isAISelectAvailable}
             title={quickSelectTooltipText}
-            icon={<Icon component={AiAnalysisIcon} />}
+            icon={<Icon component={AiQuickSelectIcon} />}
           >
             AI
           </ToggleButton>

@@ -1,5 +1,5 @@
 import { RollbackOutlined, SyncOutlined } from "@ant-design/icons";
-import { Button, Col, Popover, Row } from "antd";
+import { Button, Col, Popover, Row, Switch } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { useCallback } from "react";
@@ -8,6 +8,7 @@ import type { EmptyObject } from "types/type_utils";
 import type { Vector3 } from "viewer/constants";
 import { isRotated } from "viewer/model/accessors/flycam_accessor";
 import { setRotationAction } from "viewer/model/actions/flycam_actions";
+import { setViewModeAction } from "viewer/model/actions/settings_actions";
 import { NumberSliderSetting } from "../components/setting_input_views";
 
 const warningColors: React.CSSProperties = {
@@ -18,6 +19,7 @@ const warningColors: React.CSSProperties = {
 const PopoverContent: React.FC<EmptyObject> = () => {
   const dispatch = useDispatch();
   const rotation = useWkSelector((state) => state.flycam.rotation);
+  const allowedModes = useWkSelector((state) => state.annotation.restrictions.allowedModes);
   const handleChangeRotation = useCallback(
     (rotation: Vector3) => {
       dispatch(setRotationAction(rotation));
@@ -25,8 +27,26 @@ const PopoverContent: React.FC<EmptyObject> = () => {
     [dispatch],
   );
 
+  const setViewMode = useCallback(
+    (checked: boolean) => {
+      dispatch(setViewModeAction(checked ? "flight" : "orthogonal"));
+    },
+    [dispatch],
+  );
+
   return (
     <div>
+      <Row>
+        <Col>Flight Mode</Col>
+        <Col offset={11}>
+          <Switch
+            disabled={!allowedModes.includes("flight")}
+            onChange={setViewMode}
+            value={useWkSelector((state) => state.temporaryConfiguration.viewMode) === "flight"}
+          />
+        </Col>
+      </Row>
+      <Row style={{ marginTop: 10 }}>Rotation</Row>
       <div>
         <NumberSliderSetting
           label="X"
@@ -103,7 +123,7 @@ const DatasetRotationPopoverButtonView: React.FC<{ style: React.CSSProperties }>
   const isFlycamRotated = useWkSelector((state) => isRotated(state.flycam));
   const maybeWarningStyle = isFlycamRotated ? { ...style, ...warningColors, zIndex: 1 } : style;
   return (
-    <Popover title="Rotation" content={<PopoverContent />}>
+    <Popover content={<PopoverContent />}>
       <Button icon={<SyncOutlined />} style={maybeWarningStyle} />
     </Popover>
   );

@@ -1,5 +1,4 @@
 import Icon, { InfoCircleOutlined } from "@ant-design/icons";
-import AiAnalysisIcon from "@images/icons/icon-ai-analysis.svg?react";
 import AreaMeasurementIcon from "@images/icons/icon-area-measurement.svg?react";
 import NewBoundingBoxIcon from "@images/icons/icon-bounding-box-new.svg?react";
 import LineMeasurementIcon from "@images/icons/icon-line-measurement.svg?react";
@@ -20,9 +19,8 @@ import {
   VolumeTools,
 } from "viewer/model/accessors/tool_accessor";
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
-import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
-import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
+import ButtonComponent from "viewer/view/components/button_component";
 import { ChangeBrushSizePopover } from "./brush_presets";
 import { SkeletonSpecificButtons } from "./skeleton_specific_ui";
 import { ToolIdToComponent } from "./tool_buttons";
@@ -147,24 +145,7 @@ function ToolSpecificSettings({
     showCreateCellButton &&
     (adaptedActiveTool === AnnotationTool.BRUSH ||
       adaptedActiveTool === AnnotationTool.ERASE_BRUSH);
-  const dispatch = useDispatch();
-  const quickSelectConfig = useWkSelector((state) => state.userConfiguration.quickSelect);
-  const isAISelectAvailable = features().segmentAnythingEnabled;
-  const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
-  const quickSelectTooltipText = isAISelectAvailable
-    ? isQuickSelectHeuristic
-      ? "The quick select tool is now working without AI. Activate AI for better results."
-      : "The quick select tool is now working with AI."
-    : "The quick select tool with AI is only available on webknossos.org";
   const areEditableMappingsEnabled = features().editableMappingsEnabled;
-  const toggleQuickSelectStrategy = () => {
-    dispatch(
-      updateUserSettingAction("quickSelect", {
-        ...quickSelectConfig,
-        useHeuristic: !quickSelectConfig.useHeuristic,
-      }),
-    );
-  };
 
   return (
     <>
@@ -189,25 +170,7 @@ function ToolSpecificSettings({
         visible={adaptedActiveTool.hasOverwriteCapabilities}
       />
 
-      {adaptedActiveTool === AnnotationTool.QUICK_SELECT && (
-        <div>
-          <ToggleButton
-            active={!isQuickSelectHeuristic}
-            style={{
-              ...NARROW_BUTTON_STYLE,
-              opacity: isQuickSelectHeuristic ? 0.5 : 1,
-            }}
-            onClick={toggleQuickSelectStrategy}
-            disabled={!isAISelectAvailable}
-            title={quickSelectTooltipText}
-            icon={<Icon component={AiAnalysisIcon} />}
-          >
-            AI
-          </ToggleButton>
-
-          <QuickSelectSettingsPopover />
-        </div>
-      )}
+      {adaptedActiveTool === AnnotationTool.QUICK_SELECT && <QuickSelectSettingsPopover />}
 
       {adaptedActiveTool.hasOverwriteCapabilities ? <VolumeInterpolationButton /> : null}
 

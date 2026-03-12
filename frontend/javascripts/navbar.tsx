@@ -22,7 +22,6 @@ import type { MenuProps } from "antd";
 import {
   Avatar,
   Badge,
-  Button,
   ConfigProvider,
   Flex,
   Input,
@@ -37,6 +36,7 @@ import {
 import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
 import classnames from "classnames";
+import FastTooltip from "components/fast_tooltip";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import features from "features";
 import { useFetch, useInterval } from "libs/react_helpers";
@@ -433,6 +433,7 @@ function getHelpSubMenu(
 
   return {
     key: HELP_MENU_KEY,
+    className: "hide-on-small-screen",
     label: getCollapsibleMenuTitle(
       "Help",
       <QuestionCircleOutlined className="icon-margin-right" />,
@@ -462,13 +463,7 @@ function getDashboardSubMenu(collapse: boolean): SubMenuType {
   };
 }
 
-function NotificationIcon({
-  activeUser,
-  navbarHeight,
-}: {
-  activeUser: APIUser;
-  navbarHeight: number;
-}) {
+function NotificationMenuEntry({ activeUser }: { activeUser: APIUser; navbarHeight: number }) {
   const dispatch = useDispatch();
   const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
 
@@ -487,17 +482,12 @@ function NotificationIcon({
   };
 
   return (
-    <div
-      style={{
-        paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
-      }}
-    >
-      <Tooltip title="See what's new in WEBKNOSSOS" placement="bottomLeft">
-        <Badge count={maybeUnreadReleaseCount || 0} size="small">
-          <Button onClick={handleShowWhatsNewView} shape="circle" icon={<BellOutlined />} />
-        </Badge>
-      </Tooltip>
-    </div>
+    <FastTooltip title="See what's new in WEBKNOSSOS">
+      <Badge count={maybeUnreadReleaseCount || 0} size="small" offset={[10, 0]}>
+        <BellOutlined />
+        <span onClick={handleShowWhatsNewView}> What's New </span>
+      </Badge>
+    </FastTooltip>
   );
 }
 
@@ -610,6 +600,7 @@ function LoggedInAvatar({
       style={{
         paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
         lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
+        marginInlineStart: "10px",
       }}
       theme="dark"
       subMenuCloseDelay={subMenuCloseDelay}
@@ -623,6 +614,17 @@ function LoggedInAvatar({
           label: <UserInitials activeUser={activeUser} isMultiMember={isMultiMember} />,
           style: { padding: 0 },
           children: [
+            {
+              key: "whatsNew",
+              label: (
+                <NotificationMenuEntry
+                  key="notification-icon"
+                  activeUser={activeUser}
+                  navbarHeight={navbarHeight}
+                />
+              ),
+            },
+            { type: "divider" },
             {
               key: "userName",
               label: `${firstName} ${lastName}`,
@@ -876,13 +878,6 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
         />,
       );
     }
-    trailingNavItems.push(
-      <NotificationIcon
-        key="notification-icon"
-        activeUser={loggedInUser}
-        navbarHeight={navbarHeight}
-      />,
-    );
     trailingNavItems.push(
       <LoggedInAvatar
         key="logged-in-avatar"

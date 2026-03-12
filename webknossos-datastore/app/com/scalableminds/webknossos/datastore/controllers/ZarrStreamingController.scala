@@ -254,10 +254,10 @@ class ZarrStreamingController @Inject()(
       reorderedAdditionalAxes = dataLayer.additionalAxes.map(reorderAdditionalAxes)
       (x, y, z, additionalCoordinates) <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates(
         coordinates,
-        reorderedAdditionalAxes) ?~> "zarr.invalidChunkCoordinates" ~> BAD_REQUEST
+        reorderedAdditionalAxes) ?~> "zarr.invalidChunkCoordinates" ~> NOT_FOUND
       magParsed <- Vec3Int
         .fromMagLiteral(mag, allowScalar = true)
-        .toFox ?~> Messages("dataLayer.invalidMag", mag) ~> BAD_REQUEST
+        .toFox ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
       _ <- Fox.fromBool(dataLayer.containsMag(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> NOT_FOUND
       cubeSize = DataLayer.bucketLength
       request = DataServiceDataRequest(

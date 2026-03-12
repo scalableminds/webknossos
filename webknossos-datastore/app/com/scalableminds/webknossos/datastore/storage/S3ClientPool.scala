@@ -12,16 +12,17 @@ import software.amazon.awssdk.auth.credentials.{
 }
 import software.amazon.awssdk.awscore.util.AwsHostNameUtils
 import software.amazon.awssdk.core.checksums.RequestChecksumCalculation
+import software.amazon.awssdk.http.Protocol
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3AsyncClient
 
-import scala.util.{Failure => TryFailure, Success => TrySuccess}
 import java.net.URI
-import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.DurationInt
+import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.DurationConverters.ScalaDurationOps
 import scala.jdk.OptionConverters.RichOptional
+import scala.util.{Failure => TryFailure, Success => TrySuccess}
 
 class S3ClientPool(ws: WSClient) {
 
@@ -56,7 +57,13 @@ class S3ClientPool(ws: WSClient) {
         .crossRegionAccessEnabled(true)
         // Disabling checksum calculation prevents files being stored with Content Encoding "aws-chunked".
         .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
-        .httpClientBuilder(NettyNioAsyncHttpClient.builder().connectionAcquisitionTimeout((2 minutes).toJava))
+        .httpClientBuilder(
+          NettyNioAsyncHttpClient
+            .builder()
+            .protocol(Protocol.HTTP2)
+            .maxConcurrency(64)
+            .tcpKeepAlive(true)
+            .connectionAcquisitionTimeout((2 minutes).toJava))
     customEndpointOpt match {
       case Some(customEndpoint) =>
         basic

@@ -129,6 +129,14 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
         yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
           "./__snapshots__/proofreading_skeleton_interaction.spec.ts/merge_skeleton_simple.json",
         );
+
+        yield expectSegmentList(tracingId, [
+          {
+            id: 1,
+            anchorPosition: [3, 3, 3],
+          },
+        ]);
+
         const finalMapping = yield* select(
           (state) =>
             getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
@@ -174,6 +182,13 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       // Expect no further updates after the injected updates as the own proofreading operation became a no-op.
       expect(allReceivedUpdates.length).toEqual(11);
 
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [3, 3, 3],
+        },
+      ]);
+
       const finalMapping = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
@@ -215,6 +230,22 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/split_skeleton_simple.json",
       );
+
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [1, 1, 1],
+        },
+        {
+          id: 1339,
+          anchorPosition: [2, 2, 2],
+        },
+        {
+          id: 1340,
+          anchorPosition: [3, 3, 3],
+        },
+      ]);
+
       const finalMapping = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
@@ -257,6 +288,18 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/split_skeleton_interfered_merge.json",
       );
+
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [2, 2, 2],
+        },
+        {
+          id: 1339,
+          anchorPosition: [3, 3, 3],
+        },
+      ]);
+
       const finalMapping = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
@@ -302,6 +345,18 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       // Expect no more updates after the injected updates:
       const lastUpdateRequest = context.receivedDataPerSaveRequest.at(-1)![0];
       expect(lastUpdateRequest.version).toEqual(11); // TODOM: The 11th update action should be an updateSegmentsPartial
+
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [3, 3, 3],
+        },
+        {
+          id: 1339,
+          anchorPosition: [2, 2, 2],
+        },
+      ]);
+
       const finalMapping = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
@@ -355,6 +410,21 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       yield expect(splitTreeAndAgglomerateAndDeleteSegmentActions).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/min_cut_nodes_skeleton_simple.json",
       );
+
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [3, 3, 3],
+        },
+        {
+          id: 4,
+          anchorPosition: [5, 5, 5],
+        },
+        {
+          id: 1339,
+          anchorPosition: [2, 2, 2],
+        },
+      ]);
 
       const finalMapping = yield* select(
         (state) =>
@@ -413,6 +483,17 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       yield expect(splitTreeAndAgglomerateAndDeleteSegmentActions).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/min_cut_nodes_skeleton_more_complex.json",
       );
+
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [3, 3, 3],
+        },
+        {
+          id: 1339,
+          anchorPosition: [2, 2, 2],
+        },
+      ]);
 
       const finalMapping = yield* select(
         (state) =>
@@ -515,17 +596,17 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/min_cut_nodes_skeleton_incomplete.json",
       );
 
-      const finalMapping = yield* select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-
       yield expectSegmentList(tracingId, [
         {
           id: 1,
           anchorPosition: [3, 3, 3],
         },
       ]);
+
+      const finalMapping = yield* select(
+        (state) =>
+          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+      );
 
       // Agglomerate 1 and 6 were merged and then split between segment 2 and 3.
       expect(finalMapping).toEqual(

@@ -314,7 +314,7 @@ describe("Proofreading should generate correct update actions", () => {
 
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [1, 4], 5, 6, 4, false);
-      const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-4)!;
+      const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment5And6WithAgglomerateTree1And4);
     });
 
@@ -327,7 +327,6 @@ describe("Proofreading should generate correct update actions", () => {
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [], 5, 6, 4, false);
       const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
-      console.log("mergeAndTreeUpdates", mergeAndTreeUpdates);
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment5And6);
     });
 
@@ -340,7 +339,7 @@ describe("Proofreading should generate correct update actions", () => {
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [1], 5, 6, 4, false);
       // There are no agglomerate tree updates as no loaded tree is affected by the merge
-      const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-3)!;
+      const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment5And6WithAgglomerateTree1);
     });
 
@@ -352,7 +351,7 @@ describe("Proofreading should generate correct update actions", () => {
 
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [1], 3, 6, 1, false);
-      const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-3)!;
+      const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment3And6WithAgglomerateTree1);
     });
 
@@ -392,7 +391,7 @@ describe("Proofreading should generate correct update actions", () => {
         } as MinCutTargetEdge,
       ];
       yield call(makeProofreadSplit, context, [1], 2, 3, 1, minCutEdges, false);
-      const splitAndTreeUpdates = getNestedUpdateActions(context).slice(-4)!;
+      const splitAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(splitAndTreeUpdates).toStrictEqual(splitSegment2And3WithAgglomerateTree1);
     });
 
@@ -412,7 +411,7 @@ describe("Proofreading should generate correct update actions", () => {
         } as MinCutTargetEdge,
       ];
       yield call(makeProofreadSplit, context, [1], 1, 2, 1, minCutEdges, false);
-      const splitAndTreeUpdates = getNestedUpdateActions(context).slice(-3)!;
+      const splitAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(splitAndTreeUpdates).toStrictEqual(splitSegment1And2WithAgglomerateTree1);
     });
 

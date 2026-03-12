@@ -18,6 +18,7 @@ import type { Vector2, Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
@@ -658,4 +659,10 @@ export function* expectMapping(
     (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
   );
   expect(mapping0).toEqual(expectedMapping);
+}
+
+export function* expectSegmentList(tracingId: string, segmentIds: number[]): Saga<void> {
+  const { segments } = yield select((state) => getVolumeTracingById(state.annotation, tracingId));
+  const allPresentSegmentIds = Array.from(segments.keys() as Generator<number>);
+  expect(segmentIds.sort((a, b) => a - b)).toEqual(allPresentSegmentIds.sort((a, b) => a - b));
 }

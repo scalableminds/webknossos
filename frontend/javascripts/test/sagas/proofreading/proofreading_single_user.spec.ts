@@ -25,6 +25,7 @@ import {
   initialMapping,
 } from "./proofreading_fixtures";
 import {
+  expectSegmentList,
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
@@ -43,7 +44,7 @@ describe("Proofreading (Single User)", () => {
 
   it("should merge two agglomerates and update the mapping accordingly", async (context: WebknossosTestContext) => {
     const { api } = context;
-    mockInitialBucketAndAgglomerateData(context);
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -73,6 +74,13 @@ describe("Proofreading (Single User)", () => {
       expect(mapping).toEqual(expectedMappingAfterMerge);
 
       yield call(() => api.tracing.save());
+
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [1, 1, 1],
+        },
+      ]);
 
       const receivedUpdateActions = getFlattenedUpdateActions(context).slice(-2);
 
@@ -105,7 +113,7 @@ describe("Proofreading (Single User)", () => {
 
   it("should split two agglomerates and update the mapping accordingly", async (context: WebknossosTestContext) => {
     const { api, mocks } = context;
-    const _backendMock = mockInitialBucketAndAgglomerateData(context);
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -150,6 +158,17 @@ describe("Proofreading (Single User)", () => {
       yield call(() => api.tracing.save());
       yield call(waitUntilNotBusy);
       yield call(() => api.tracing.save());
+
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [1, 1, 1],
+        },
+        {
+          id: 1339,
+          anchorPosition: [2, 2, 2],
+        },
+      ]);
 
       const receivedUpdateActions = getFlattenedUpdateActions(context);
 

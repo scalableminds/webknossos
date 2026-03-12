@@ -36,6 +36,7 @@
     "@vitejs/plugin-react": "^5.1.2",
     "@vitest/coverage-v8": "^4.0.16",
     "abort-controller": "^3.0.0",
+    "babel-plugin-react-compiler": "^1.0.0",
     "concurrently": "^9.2.1",
     "coveralls": "^3.0.2",
     "documentation": "^14.0.2",

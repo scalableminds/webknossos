@@ -67,7 +67,7 @@ describe("PullQueue", () => {
   beforeEach<TestContext>(async (context) => {
     const mockedCube = {
       isSegmentation: true,
-      triggerBucketDataChanged: () => {},
+      triggerRenderedBucketDataChanged: () => {},
       getBucket: vi.fn(),
       getOrCreateBucket: vi.fn(),
       boundingBox: {

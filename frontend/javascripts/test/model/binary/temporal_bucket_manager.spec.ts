@@ -34,7 +34,7 @@ describe("TemporalBucketManager", () => {
       isSegmentation: true,
       pushQueue,
       pullQueue,
-      triggerBucketDataChanged: vi.fn(),
+      triggerRenderedBucketDataChanged: vi.fn(),
     };
 
     const manager = new TemporalBucketManager(pullQueue as any, pushQueue as any);

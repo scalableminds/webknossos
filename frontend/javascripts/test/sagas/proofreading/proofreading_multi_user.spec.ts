@@ -724,7 +724,7 @@ describe("Proofreading (Multi User)", () => {
     await task.toPromise();
   }, 8000);
 
-  it.only("should merge two agglomerates after incorporating a new split action from backend", async (context: WebknossosTestContext) => {
+  it("should merge two agglomerates after incorporating a new split action from backend", async (context: WebknossosTestContext) => {
     /*
       - Backend splits agglomerate 1 (segments 1 and 2)
       - Frontend merges agglomerates 4 and 1 (segments 4 and 1)
@@ -921,12 +921,8 @@ describe("Proofreading (Multi User)", () => {
       yield call(publishDebuggingState, backendMock);
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
-          anchorPosition: [2, 2, 2],
-        },
-        {
-          id: 1339,
-          anchorPosition: [3, 3, 3],
+          id: 1337,
+          anchorPosition: [4, 4, 4],
         },
       ]);
     });
@@ -1165,7 +1161,7 @@ describe("Proofreading (Multi User)", () => {
       The resulting mapping reflects only the frontend merge, and no rebasing is triggered.
      */
     const { api } = context;
-    mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -1224,15 +1220,11 @@ describe("Proofreading (Multi User)", () => {
         ]),
       );
 
-      yield call(publishDebuggingState, backendMock);
+      yield call(publishDebuggingState, _backendMock);
       yield expectSegmentList(tracingId, [
         {
           id: 1,
-          anchorPosition: [2, 2, 2],
-        },
-        {
-          id: 1339,
-          anchorPosition: [3, 3, 3],
+          anchorPosition: [1, 1, 1],
         },
       ]);
 
@@ -1244,7 +1236,7 @@ describe("Proofreading (Multi User)", () => {
     await task.toPromise();
   }, 8000);
 
-  it("should not dead lock upon proofreading action when not receiving mutex after some time and auto timeout polling already ends in the waiting-loop for the ui busy lock", async (context: WebknossosTestContext) => {
+  it("should not deadlock upon proofreading action when not receiving mutex after some time and auto timeout polling already ends in the waiting-loop for the ui busy lock", async (context: WebknossosTestContext) => {
     mockInitialBucketAndAgglomerateData(context);
     const blockingUser = { firstName: "Sample", lastName: "User", id: "1111" };
 

@@ -125,12 +125,12 @@ describe("Proofreading should generate correct update actions", () => {
       // due to the user's interactions.
       yield put(
         updateSegmentAction(
-          sourceAgglomerateId,
+          sourceSegmentId,
           { anchorPosition: [sourceSegmentId, sourceSegmentId, sourceSegmentId] },
           tracingId,
         ),
       );
-      yield put(setActiveCellAction(sourceAgglomerateId));
+      yield put(setActiveCellAction(sourceSegmentId));
       yield makeMappingEditableHelper();
       if (othersMayEdit) {
         yield put(setOthersMayEditForAnnotationAction(true));
@@ -172,12 +172,12 @@ describe("Proofreading should generate correct update actions", () => {
       // due to the user's interactions.
       yield put(
         updateSegmentAction(
-          sourceAgglomerateId,
+          sourceSegmentId,
           { anchorPosition: [sourceSegmentId, sourceSegmentId, sourceSegmentId] },
           tracingId,
         ),
       );
-      yield put(setActiveCellAction(sourceAgglomerateId));
+      yield put(setActiveCellAction(sourceSegmentId));
       yield makeMappingEditableHelper();
       if (othersMayEdit) {
         yield put(setOthersMayEditForAnnotationAction(true));
@@ -341,7 +341,7 @@ describe("Proofreading should generate correct update actions", () => {
     await task.toPromise();
   }, 8000);
 
-  it.only("when splitting segments 2 and 3.", async (context: WebknossosTestContext) => {
+  it("when splitting segments 2 and 3.", async (context: WebknossosTestContext) => {
     mockInitialBucketAndAgglomerateData(context);
 
     const task = startSaga(function* task() {

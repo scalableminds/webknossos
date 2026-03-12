@@ -87,9 +87,11 @@ export const getBestFittingMagComparedToTrainingDS = async (
       closestMagOfCurrentDS = magObj.mag;
     }
   }
-  const maxDistance = Math.max(...bestDifference);
-  const resultText = `Using mag [${closestMagOfCurrentDS}]. This results in an effective voxel size of [${datasetScaleInNm.map((scale, i) => Math.round(scale * closestMagOfCurrentDS[i]))}] (compared to voxel size [${modelScale.map((scale) => Math.round(scale))}] used during training).`;
+
   if (showToast) {
+    const maxDistance = Math.max(...bestDifference);
+    const resultText = `Using mag [${closestMagOfCurrentDS}]. This results in an effective voxel size of [${datasetScaleInNm.map((scale, i) => Math.round(scale * closestMagOfCurrentDS[i]))}] (compared to voxel size [${modelScale.map((scale) => Math.round(scale))}] used during training).`;
+
     if (maxDistance > Math.log(2)) {
       Toast.warning(resultText);
     } else {

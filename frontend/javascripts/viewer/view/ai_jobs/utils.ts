@@ -1,3 +1,4 @@
+import { getAiModelVoxelSize } from "admin/api/jobs";
 import type { Rule } from "antd/es/form";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
@@ -40,7 +41,7 @@ export function getBoundingBoxesForLayers(layers: APIDataLayer[]): UserBoundingB
 // This function mirrors the selection of the mag
 // in voxelytics/worker/job_utils/voxelytics_utils.py select_mag_for_model_prediction
 // Make sure to keep it in sync
-export const getBestFittingMagComparedToTrainingDS = (
+export const getBestFittingMagComparedToTrainingDS = async (
   colorLayer: APIDataLayer,
   datasetScaleMag1: VoxelSize,
   jobType:
@@ -48,13 +49,26 @@ export const getBestFittingMagComparedToTrainingDS = (
     | APIJobCommand.INFER_NEURONS
     | APIJobCommand.INFER_NUCLEI
     | APIJobCommand.INFER_INSTANCES,
-) => {
-  if (jobType === APIJobCommand.INFER_MITOCHONDRIA || jobType === APIJobCommand.INFER_INSTANCES) {
+  aiModelId?: string,
+  showToast = true,
+): Promise<Vector3> => {
+  if (jobType === APIJobCommand.INFER_MITOCHONDRIA) {
     // infer_mitochondria_model always infers on the finest mag of the current dataset
     const magInfo = getMagInfo(colorLayer.mags);
     return magInfo.getFinestMag();
   }
-  const modelScale = MEAN_VX_SIZE[jobType];
+
+  let modelScale: Vector3;
+  if (aiModelId) {
+    const voxelSize = await getAiModelVoxelSize(aiModelId);
+    modelScale = convertVoxelSizeToUnit(voxelSize, UnitShort.nm);
+  } else if (jobType === APIJobCommand.INFER_INSTANCES) {
+    // Pretrained instance inferral uses the nuclei model
+    modelScale = MEAN_VX_SIZE[APIJobCommand.INFER_NUCLEI];
+  } else {
+    modelScale = MEAN_VX_SIZE[jobType];
+  }
+
   let closestMagOfCurrentDS = colorLayer.mags[0].mag;
   let bestDifference = [
     Number.POSITIVE_INFINITY,
@@ -75,11 +89,13 @@ export const getBestFittingMagComparedToTrainingDS = (
   }
   const maxDistance = Math.max(...bestDifference);
   const resultText = `Using mag [${closestMagOfCurrentDS}]. This results in an effective voxel size of [${datasetScaleInNm.map((scale, i) => Math.round(scale * closestMagOfCurrentDS[i]))}] (compared to voxel size [${modelScale.map((scale) => Math.round(scale))}] used during training).`;
-  if (maxDistance > Math.log(2)) {
-    Toast.warning(resultText);
-  } else {
-    Toast.info(resultText);
-    console.info(resultText);
+  if (showToast) {
+    if (maxDistance > Math.log(2)) {
+      Toast.warning(resultText);
+    } else {
+      Toast.info(resultText);
+      console.info(resultText);
+    }
   }
   return closestMagOfCurrentDS;
 };

@@ -43,7 +43,12 @@ import {
   prepareGetNeighborsForAgglomerateNode,
 } from "./proofreading_test_utils";
 import { publishDebuggingState } from "test/helpers/debugging_state_serializer";
-import { splitSegment1And2 } from "./proofreading_interaction_update_action_fixtures";
+import {
+  mergeSegment1And4,
+  mergeSegment5And6,
+  splitSegment1And2,
+  splitSegment2And3,
+} from "./proofreading_interaction_update_action_fixtures";
 
 function* prepareEditableMapping(
   context: WebknossosTestContext,
@@ -106,40 +111,7 @@ describe("Proofreading (Multi User)", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    backendMock.planVersionInjection(5, [
-      {
-        name: "updateSegmentPartial",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          id: 6,
-          anchorPosition: [1, 2, 3],
-          additionalCoordinates: undefined,
-          color: [1, 2, 3],
-          groupId: null,
-          creationTime: 0,
-        },
-      },
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 5,
-          segmentId2: 6,
-          agglomerateId1: 4,
-          agglomerateId2: 6,
-        },
-      },
-      {
-        name: "mergeSegmentItems",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 5,
-          segmentId2: 6,
-          agglomerateId1: 4,
-          agglomerateId2: 6,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(5, mergeSegment5And6);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -224,66 +196,38 @@ describe("Proofreading (Multi User)", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    backendMock.planVersionInjection(5, [
-      {
-        name: "updateSegmentPartial",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          id: 1,
-          anchorPosition: [1, 1, 1],
-          additionalCoordinates: undefined,
-          name: "Custom Name 1",
-          color: [1, 2, 3],
-          groupId: null,
-          creationTime: 0,
+    backendMock.planMultipleVersionInjections(5, [
+      ...mergeSegment1And4.slice(0, 1), // creates segment 1
+      [
+        {
+          name: "updateSegmentPartial",
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            id: 1,
+            anchorPosition: [1, 1, 1],
+            additionalCoordinates: undefined,
+            name: "Custom Name 1",
+            color: [1, 2, 3],
+            groupId: null,
+            creationTime: 0,
+          },
         },
-      },
-      {
-        name: "updateSegmentPartial",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          id: 4,
-          anchorPosition: [4, 4, 4],
-          additionalCoordinates: undefined,
-          name: "Custom Name 4",
-          color: [1, 2, 3],
-          groupId: null,
-          creationTime: 0,
+        {
+          name: "createSegment",
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            id: 4,
+            anchorPosition: [4, 4, 4],
+            additionalCoordinates: undefined,
+            name: "Custom Name 4",
+            color: [1, 2, 3],
+            groupId: null,
+            creationTime: 0,
+            metadata: [],
+          },
         },
-      },
-      {
-        name: "updateSegmentPartial",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          id: 6,
-          anchorPosition: [6, 6, 6],
-          additionalCoordinates: undefined,
-          name: "Custom Name 6",
-          color: [1, 2, 3],
-          groupId: null,
-          creationTime: 0,
-        },
-      },
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1,
-          segmentId2: 4,
-          agglomerateId1: 1,
-          agglomerateId2: 4,
-        },
-      },
-      {
-        name: "mergeSegmentItems",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1,
-          segmentId2: 4,
-          agglomerateId1: 1,
-          agglomerateId2: 4,
-        },
-      },
+      ],
+      ...mergeSegment1And4.slice(1),
     ]);
 
     const { annotation } = Store.getState();
@@ -382,53 +326,7 @@ describe("Proofreading (Multi User)", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    backendMock.planVersionInjection(5, [
-      {
-        name: "createSegment",
-        value: {
-          actionTracingId: "volumeTracingId",
-          additionalCoordinates: undefined,
-          anchorPosition: [1, 1, 1],
-          color: null,
-          creationTime: 1494695001688,
-          groupId: null,
-          id: 1,
-          metadata: [],
-          name: null,
-        },
-      },
-      {
-        name: "splitAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 3, // will keep its agglomerate id
-          segmentId2: 2, // will get a new agglomerate id
-          agglomerateId: 1,
-        },
-      },
-      {
-        name: "createSegment",
-        value: {
-          actionTracingId: "volumeTracingId",
-          additionalCoordinates: undefined,
-          anchorPosition: [2, 2, 2],
-          color: null,
-          creationTime: 1494695001688,
-          groupId: null,
-          id: 1339,
-          metadata: [],
-          name: null,
-        },
-      },
-      {
-        name: "updateSegmentPartial",
-        value: {
-          actionTracingId: "volumeTracingId",
-          anchorPosition: [3, 3, 3],
-          id: 1,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(5, splitSegment2And3);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -724,7 +622,7 @@ describe("Proofreading (Multi User)", () => {
     await task.toPromise();
   }, 8000);
 
-  it.only("should merge two agglomerates after incorporating a new split action from backend", async (context: WebknossosTestContext) => {
+  it("should merge two agglomerates after incorporating a new split action from backend", async (context: WebknossosTestContext) => {
     /*
       - Backend splits agglomerate 1 (segments 1 and 2)
       - Frontend merges agglomerates 4 and 1 (segments 4 and 1)
@@ -921,12 +819,8 @@ describe("Proofreading (Multi User)", () => {
       yield call(publishDebuggingState, backendMock);
       yield expectSegmentList(tracingId, [
         {
-          id: 1,
-          anchorPosition: [2, 2, 2],
-        },
-        {
-          id: 1339,
-          anchorPosition: [3, 3, 3],
+          id: 1337,
+          anchorPosition: [4, 4, 4],
         },
       ]);
     });
@@ -1165,7 +1059,7 @@ describe("Proofreading (Multi User)", () => {
       The resulting mapping reflects only the frontend merge, and no rebasing is triggered.
      */
     const { api } = context;
-    mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -1224,15 +1118,11 @@ describe("Proofreading (Multi User)", () => {
         ]),
       );
 
-      yield call(publishDebuggingState, backendMock);
+      yield call(publishDebuggingState, _backendMock);
       yield expectSegmentList(tracingId, [
         {
           id: 1,
-          anchorPosition: [2, 2, 2],
-        },
-        {
-          id: 1339,
-          anchorPosition: [3, 3, 3],
+          anchorPosition: [1, 1, 1],
         },
       ]);
 
@@ -1244,7 +1134,7 @@ describe("Proofreading (Multi User)", () => {
     await task.toPromise();
   }, 8000);
 
-  it("should not dead lock upon proofreading action when not receiving mutex after some time and auto timeout polling already ends in the waiting-loop for the ui busy lock", async (context: WebknossosTestContext) => {
+  it("should not deadlock upon proofreading action when not receiving mutex after some time and auto timeout polling already ends in the waiting-loop for the ui busy lock", async (context: WebknossosTestContext) => {
     mockInitialBucketAndAgglomerateData(context);
     const blockingUser = { firstName: "Sample", lastName: "User", id: "1111" };
 

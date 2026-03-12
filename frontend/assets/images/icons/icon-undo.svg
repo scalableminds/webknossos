@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg width="100%" height="100%" viewBox="0 0 1025 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.4;">
+<svg width="100%" height="100%" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.4;">
     <g transform="matrix(1,0,0,1,-7700,0)">
-        <g id="icon-undo" transform="matrix(1,0,0,1,7700.31,0)">
+        <g id="icon-undo" transform="matrix(1,0,0,1,7700,0)">
             <rect x="0" y="0" width="1024" height="1024" style="fill:none;"/>
             <g transform="matrix(0.815572,-0.470871,0.470871,0.815572,-3444.09,2215.12)">
-                <g transform="matrix(0.9196,0.530931,-0.530931,0.9196,4342.98,-208.61)">
-                    <path d="M34.087,348.943L108.845,537.138L268.58,412.676L34.087,348.943Z" style="fill:rgb(241,241,241);"/>
-                    <path d="M142.836,412.075C168.437,317.883 229.775,233.379 320.902,180.767C504.016,75.046 738.513,137.879 844.234,320.993C949.955,504.107 887.121,738.604 704.007,844.325C612.926,896.911 509.132,907.795 414.796,882.918" style="fill:none;stroke:rgb(241,241,241);stroke-width:72px;"/>
+                <g transform="matrix(0.9196,0.530931,-0.530931,0.9196,4343.26,-208.446)">
+                    <path d="M33.779,348.943L108.536,537.138L268.272,412.676L33.779,348.943Z"/>
+                    <path d="M142.528,412.075C168.128,317.883 229.467,233.379 320.594,180.767C503.707,75.046 738.205,137.879 843.925,320.993C949.646,504.107 886.813,738.604 703.699,844.325C612.618,896.911 508.823,907.795 414.487,882.918" style="fill:none;stroke:black;stroke-width:72px;"/>
                 </g>
             </g>
         </g>

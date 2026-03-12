@@ -33,7 +33,7 @@ export const viteConfig = {
         icon: true,
         jsx: {
           babelConfig: {
-            plugins: [[replaceSvgColorWithCurrentColor, { patchStroke: true, patchFill: false }]],
+            plugins: [[replaceSvgColorWithCurrentColor, { patchStroke: true, patchFill: true }]],
           },
         },
       },

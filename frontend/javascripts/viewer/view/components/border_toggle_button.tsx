@@ -1,9 +1,19 @@
+import Icon from "@ant-design/icons";
+import IconSidebarHideLeft from "@images/icons/icon-sidebar-hide-left.svg?react";
+import IconSidebarHideRight from "@images/icons/icon-sidebar-hide-right.svg?react";
+import IconSidebarShowLeft from "@images/icons/icon-sidebar-show-left.svg?react";
+import IconSidebarShowRight from "@images/icons/icon-sidebar-show-right.svg?react";
 import { Button } from "antd";
 import FastTooltip from "components/fast_tooltip";
-import { ThemedIcon } from "components/themed_icon";
 import { V2 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
-import { type MouseEventHandler, useCallback, useState } from "react";
+import {
+  type ComponentType,
+  type MouseEventHandler,
+  type SVGProps,
+  useCallback,
+  useState,
+} from "react";
 
 type Props = {
   onClick: () => void;
@@ -13,6 +23,12 @@ type Props = {
 
 const DRAG_THRESHOLD = 5;
 const TOOLTIP_STYLE = { height: 24 };
+const ICON_MAP: Record<string, ComponentType<SVGProps<SVGSVGElement>>> = {
+  "icon-sidebar-hide-left": IconSidebarHideLeft,
+  "icon-sidebar-show-left": IconSidebarShowLeft,
+  "icon-sidebar-hide-right": IconSidebarHideRight,
+  "icon-sidebar-show-right": IconSidebarShowRight,
+};
 
 function BorderToggleButton({ onClick, side, inFooter }: Props) {
   const borderOpenStatus = useWkSelector((state) => state.uiInformation.borderOpenStatus);
@@ -26,6 +42,7 @@ function BorderToggleButton({ onClick, side, inFooter }: Props) {
   const className = `${side}-border-button no-hover-highlighting ${
     inFooter === true ? "footer-button" : "flexlayout__tab_toolbar_button"
   }`;
+  const iconName = `icon-sidebar-${iconKind}-${side}`;
 
   const onClickHandler = useCallback<MouseEventHandler<HTMLButtonElement>>(
     (event) => {
@@ -70,12 +87,7 @@ function BorderToggleButton({ onClick, side, inFooter }: Props) {
             onClick();
           }
         }}
-        icon={
-          <ThemedIcon
-            name={`icon-sidebar-${iconKind}-${side}`}
-            className="center-item-using-flex icon-sidebar-toggle"
-          />
-        }
+        icon={<Icon component={ICON_MAP[iconName]} />}
       />
     </FastTooltip>
   );

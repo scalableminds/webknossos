@@ -113,7 +113,19 @@ export const viteConfig = {
     },
   },
   define: {
+    // Vite does not automatically provide a `process` polyfill in the
+    // browser. a) the frontend code still contains a few legacy
+    // `process.env.*` checks and b) third‑party libraries might reference
+    // `process.env.NODE_ENV`.  Without the mapping the dev server emits
+    // `process.env` literally which crashes because `process` is undefined
+    // in the browser.  We only need a *compile‑time* replacement; the real
+    // object is never used at runtime.
     global: "globalThis",
+    "process.env": {},
+    // we keep NODE_ENV for compatibility with existing checks in the repo
+    "process.env.NODE_ENV": JSON.stringify(process.env.NODE_ENV),
+    // the only custom value that is currently used in the client is IS_TESTING
+    "process.env.IS_TESTING": JSON.stringify(process.env.IS_TESTING ?? ""),
   },
 };
 

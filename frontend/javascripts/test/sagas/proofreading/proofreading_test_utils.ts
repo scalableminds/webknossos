@@ -532,8 +532,8 @@ export function* performCutFromAllNeighbours(
   }
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
-  yield put(updateSegmentAction(2, { anchorPosition: [2, 2, 2] }, tracingId));
-  yield put(setActiveCellAction(2));
+  yield put(updateSegmentAction(1, { anchorPosition: [2, 2, 2] }, tracingId));
+  yield put(setActiveCellAction(1));
 
   yield makeMappingEditableHelper();
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
@@ -543,7 +543,7 @@ export function* performCutFromAllNeighbours(
   // Execute the actual merge and wait for the finished mapping.
   yield put(
     cutAgglomerateFromNeighborsAction(
-      [2, 2, 2], // unmappedId=2 / mappedId=2 at this position
+      [2, 2, 2], // unmappedId=2 / mappedId=1 at this position
     ),
   );
   yield take("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");

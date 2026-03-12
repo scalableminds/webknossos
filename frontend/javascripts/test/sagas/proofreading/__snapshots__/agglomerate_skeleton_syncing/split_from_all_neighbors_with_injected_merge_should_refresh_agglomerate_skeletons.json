@@ -1,15 +1,21 @@
 [
   [
     {
-      "name": "updateSegmentPartial",
+      "name": "splitAgglomerate",
       "value": {
         "actionTracingId": "volumeTracingId",
-        "anchorPosition": [
-          2,
-          2,
-          2,
-        ],
-        "id": 1,
+        "agglomerateId": 1,
+        "segmentId1": 2,
+        "segmentId2": 1,
+      },
+    },
+    {
+      "name": "splitAgglomerate",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "agglomerateId": 1,
+        "segmentId1": 2,
+        "segmentId2": 3,
       },
     },
   ],

@@ -78,17 +78,17 @@ describe("Proofreading should generate correct update actions", () => {
       // due to the user's interactions.
       yield put(
         updateSegmentAction(
-          1,
+          agglomerateId,
           { anchorPosition: [agglomerateId, agglomerateId, agglomerateId] },
           tracingId,
         ),
       );
-      yield put(setActiveCellAction(1));
+      yield put(setActiveCellAction(agglomerateId));
       yield makeMappingEditableHelper();
       yield put(setOthersMayEditForAnnotationAction(true));
 
       vi.mocked(context.mocks.parseProtoTracing).mockRestore();
-      yield call(loadAgglomerateSkeletonAtPosition, [1, 1, 1]);
+      yield call(loadAgglomerateSkeletonAtPosition, [agglomerateId, agglomerateId, agglomerateId]);
     });
 
     await task.toPromise();

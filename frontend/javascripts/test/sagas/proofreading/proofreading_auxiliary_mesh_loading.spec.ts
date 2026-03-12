@@ -89,7 +89,9 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       const _backendMock = mockInitialBucketAndAgglomerateData(context);
 
       const task = startSaga(function* task(): Saga<void> {
-        const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
+        const { tracingId } = yield* select(
+          (state: WebknossosState) => state.annotation.volumes[0],
+        );
         yield call(initializeMappingAndTool, context, tracingId);
         if (othersMayEdit) {
           yield put(setOthersMayEditForAnnotationAction(true));
@@ -108,7 +110,9 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       const _backendMock = mockInitialBucketAndAgglomerateData(context);
 
       const task = startSaga(function* task(): Saga<void> {
-        const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
+        const { tracingId } = yield* select(
+          (state: WebknossosState) => state.annotation.volumes[0],
+        );
         yield call(initializeMappingAndTool, context, tracingId);
         if (othersMayEdit) {
           yield put(setOthersMayEditForAnnotationAction(true));
@@ -160,7 +164,9 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       const _backendMock = mockInitialBucketAndAgglomerateData(context);
 
       const task = startSaga(function* task(): Saga<void> {
-        const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
+        const { tracingId } = yield* select(
+          (state: WebknossosState) => state.annotation.volumes[0],
+        );
         yield call(initializeMappingAndTool, context, tracingId);
         if (othersMayEdit) {
           yield put(setOthersMayEditForAnnotationAction(true));

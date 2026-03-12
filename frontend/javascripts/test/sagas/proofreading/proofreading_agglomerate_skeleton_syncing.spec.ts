@@ -339,7 +339,9 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       const _backendMock = mockInitialBucketAndAgglomerateData(context);
 
       const task = startSaga(function* () {
-        const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
+        const { tracingId } = yield* select(
+          (state: WebknossosState) => state.annotation.volumes[0],
+        );
         yield call(initializeMappingAndTool, context, tracingId);
 
         // Load relevant meshes.
@@ -383,7 +385,9 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       const _backendMock = mockInitialBucketAndAgglomerateData(context);
 
       const task = startSaga(function* () {
-        const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
+        const { tracingId } = yield* select(
+          (state: WebknossosState) => state.annotation.volumes[0],
+        );
         yield call(initializeMappingAndTool, context, tracingId);
 
         // Load relevant meshes.
@@ -464,7 +468,9 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       );
 
       const task = startSaga(function* () {
-        const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
+        const { tracingId } = yield* select(
+          (state: WebknossosState) => state.annotation.volumes[0],
+        );
         yield call(initializeMappingAndTool, context, tracingId);
 
         // Load relevant meshes.
@@ -474,13 +480,13 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         }
 
         yield* loadAgglomerateSkeletons(context, [1, 6], false, othersMayEdit);
-        yield put(updateSegmentAction(2, { anchorPosition: [2, 2, 2] }, tracingId));
-        yield put(setActiveCellAction(2));
+        yield put(updateSegmentAction(1, { anchorPosition: [2, 2, 2] }, tracingId));
+        yield put(setActiveCellAction(1));
 
         // Execute the actual merge and wait for the finished mapping.
         yield put(
           cutAgglomerateFromNeighborsAction(
-            [2, 2, 2], // unmappedId=2 / mappedId=2 at this position
+            [2, 2, 2], // unmappedId=2 / mappedId=1 at this position
           ),
         );
         yield take(
@@ -702,8 +708,8 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(2, { anchorPosition: [2, 2, 2] }, tracingId));
-      yield put(setActiveCellAction(2));
+      yield put(updateSegmentAction(1, { anchorPosition: [2, 2, 2] }, tracingId));
+      yield put(setActiveCellAction(1));
       yield makeMappingEditableHelper();
       yield put(setOthersMayEditForAnnotationAction(true));
 
@@ -791,8 +797,8 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       yield call(initializeMappingAndTool, context, tracingId);
 
       // Activate segment 2, setup editable mapping, make it shared and load agglomerate skeletons.
-      yield put(updateSegmentAction(2, { anchorPosition: [2, 2, 2] }, tracingId));
-      yield put(setActiveCellAction(2));
+      yield put(updateSegmentAction(1, { anchorPosition: [2, 2, 2] }, tracingId));
+      yield put(setActiveCellAction(1));
       yield makeMappingEditableHelper();
       yield put(setOthersMayEditForAnnotationAction(true));
 

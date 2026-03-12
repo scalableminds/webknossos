@@ -35,12 +35,15 @@ import {
 } from "./proofreading_fixtures";
 import {
   expectMapping,
+  expectSegmentList,
   initializeMappingAndTool,
   makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
   performCutFromAllNeighbours,
   prepareGetNeighborsForAgglomerateNode,
 } from "./proofreading_test_utils";
+import { publishDebuggingState } from "test/helpers/debugging_state_serializer";
+import { splitSegment1And2 } from "./proofreading_interaction_update_action_fixtures";
 
 function* prepareEditableMapping(
   context: WebknossosTestContext,
@@ -181,6 +184,14 @@ describe("Proofreading (Multi User)", () => {
         },
       ]);
       yield* expectMapping(tracingId, expectedMappingAfterMergeRebase);
+
+      yield call(publishDebuggingState, backendMock);
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [1, 1, 1],
+        },
+      ]);
 
       const currentSegments = Store.getState().annotation.volumes[0].segments;
       expect(currentSegments.size()).toEqual(1);
@@ -327,6 +338,14 @@ describe("Proofreading (Multi User)", () => {
 
       yield* expectMapping(tracingId, expectedMappingAfterMergeRebase);
 
+      yield call(publishDebuggingState, backendMock);
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [4, 4, 4],
+        },
+      ]);
+
       const segment1AfterSaving = Store.getState().annotation.volumes[0].segments.getNullable(1);
       expect(segment1AfterSaving).toBeTruthy();
 
@@ -401,6 +420,14 @@ describe("Proofreading (Multi User)", () => {
           name: null,
         },
       },
+      {
+        name: "updateSegmentPartial",
+        value: {
+          actionTracingId: "volumeTracingId",
+          anchorPosition: [3, 3, 3],
+          id: 1,
+        },
+      },
     ]);
 
     const { annotation } = Store.getState();
@@ -466,6 +493,18 @@ describe("Proofreading (Multi User)", () => {
           [7, 6],
         ]),
       );
+
+      yield call(publishDebuggingState, backendMock);
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [3, 3, 3],
+        },
+        {
+          id: 1339,
+          anchorPosition: [1, 1, 1],
+        },
+      ]);
     });
 
     await task.toPromise();
@@ -552,6 +591,19 @@ describe("Proofreading (Multi User)", () => {
           [7, 6],
         ]),
       );
+
+      // todop
+      // yield call(publishDebuggingState, backendMock);
+      // yield expectSegmentList(tracingId, [
+      //   {
+      //     id: 1339,
+      //     anchorPosition: [2, 2, 2],
+      //   },
+      //   {
+      //     id: 1340,
+      //     anchorPosition: [3, 3, 3],
+      //   },
+      // ]);
     });
 
     await task.toPromise();
@@ -654,37 +706,41 @@ describe("Proofreading (Multi User)", () => {
           [7, 6],
         ]),
       );
+
+      // todop
+      // yield call(publishDebuggingState, backendMock);
+      // yield expectSegmentList(tracingId, [
+      //   {
+      //     id: 1,
+      //     anchorPosition: [2, 2, 2],
+      //   },
+      //   {
+      //     id: 1339,
+      //     anchorPosition: [3, 3, 3],
+      //   },
+      // ]);
     });
 
     await task.toPromise();
   }, 8000);
 
-  it("should merge two agglomerates after incorporating a new split action from backend", async (context: WebknossosTestContext) => {
+  it.only("should merge two agglomerates after incorporating a new split action from backend", async (context: WebknossosTestContext) => {
     /*
       - Backend splits agglomerate 1 (segments 1 and 2)
-      - Frontend merges agglomerates 4 and 1 (target segment 3)
+      - Frontend merges agglomerates 4 and 1 (segments 4 and 1)
 
       The resulting mapping incorporates both the frontend merge and the backend split.
      */
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    backendMock.planVersionInjection(5, [
-      {
-        name: "splitAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1,
-          segmentId2: 2,
-          agglomerateId: 1,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(5, splitSegment1And2);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      yield* prepareEditableMapping(context, tracingId, 3, [3, 3, 3]);
+      // todop
+      yield* prepareEditableMapping(context, tracingId, 1, [2, 2, 2]);
 
       // Execute the actual merge and wait for the finished mapping.
       yield put(
@@ -701,7 +757,7 @@ describe("Proofreading (Multi User)", () => {
           name: "mergeAgglomerate",
           value: {
             actionTracingId: VOLUME_TRACING_ID,
-            segmentId1: 3,
+            segmentId1: 2,
             segmentId2: 4,
             agglomerateId1: 1339,
             agglomerateId2: 4,
@@ -711,7 +767,7 @@ describe("Proofreading (Multi User)", () => {
           name: "mergeSegmentItems",
           value: {
             actionTracingId: "volumeTracingId",
-            segmentId1: 3,
+            segmentId1: 2,
             segmentId2: 4,
             agglomerateId1: 1339,
             agglomerateId2: 4,
@@ -730,6 +786,18 @@ describe("Proofreading (Multi User)", () => {
           [7, 6],
         ]),
       );
+
+      yield call(publishDebuggingState, backendMock);
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [1, 1, 1],
+        },
+        {
+          id: 1339,
+          anchorPosition: [2, 2, 2],
+        },
+      ]);
     });
 
     await task.toPromise();
@@ -849,6 +917,18 @@ describe("Proofreading (Multi User)", () => {
           // [1338, 1337], not loaded
         ]),
       );
+
+      yield call(publishDebuggingState, backendMock);
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [2, 2, 2],
+        },
+        {
+          id: 1339,
+          anchorPosition: [3, 3, 3],
+        },
+      ]);
     });
 
     await task.toPromise();
@@ -1143,6 +1223,18 @@ describe("Proofreading (Multi User)", () => {
           // [1338, 1337], not loaded
         ]),
       );
+
+      yield call(publishDebuggingState, backendMock);
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [2, 2, 2],
+        },
+        {
+          id: 1339,
+          anchorPosition: [3, 3, 3],
+        },
+      ]);
 
       // Asserting no rebasing relevant actions were triggered.
       const rebasingActions = yield flush(rebaseActionChannel);

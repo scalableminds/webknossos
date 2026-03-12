@@ -32,24 +32,34 @@ import {
   mergeSegment5And6WithAgglomerateTree1And4,
   minCutWithNodes2And3WithAgglomerateTree1,
   splitAgglomerateTree1,
+  splitSegment1And2,
   splitSegment1And2WithAgglomerateTree1,
   splitSegment1And2WithAgglomerateTrees1And4And6,
   splitSegment1And2WithAgglomerateTrees1And6And4,
   splitSegment2And3WithAgglomerateTree1,
   splitSegment2And3WithAgglomerateTrees1And4And6,
-} from "./proofreading/proofreading_interaction_update_action_fixtures";
+} from "./proofreading_interaction_update_action_fixtures";
 import {
   loadAgglomerateSkeletons,
   mockEdgesForAgglomerateMinCut,
   performMergeTreesProofreading,
   performMinCutWithNodesProofreading,
   performSplitTreesProofreading,
-} from "./proofreading/proofreading_skeleton_test_utils";
+} from "./proofreading_skeleton_test_utils";
 import {
   initializeMappingAndTool,
   makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
-} from "./proofreading/proofreading_test_utils";
+} from "./proofreading_test_utils";
+import { UpdateAction } from "viewer/model/sagas/volume/update_actions";
+
+const ACTION_TYPES_BLACKLIST = ["updateCamera", "updateMappingName", "updateActiveSegmentId"];
+
+function removeBlacklistedActions(actionBatches: UpdateAction[][]) {
+  return actionBatches
+    .map((actions) => actions.filter((action) => !ACTION_TYPES_BLACKLIST.includes(action.name)))
+    .filter((arr) => arr.length > 0);
+}
 
 describe("Proofreading should generate correct update actions", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;
@@ -337,6 +347,27 @@ describe("Proofreading should generate correct update actions", () => {
       yield call(makeProofreadSplit, context, [1], 1, 2, 1, minCutEdges, false);
       const splitAndTreeUpdates = getNestedUpdateActions(context).slice(-3)!;
       expect(splitAndTreeUpdates).toStrictEqual(splitSegment1And2WithAgglomerateTree1);
+    });
+
+    await task.toPromise();
+  }, 8000);
+
+  it("when splitting segments 1 and 2.", async (context: WebknossosTestContext) => {
+    mockInitialBucketAndAgglomerateData(context);
+
+    const task = startSaga(function* task() {
+      const minCutEdges = [
+        {
+          position1: [1, 1, 1],
+          position2: [2, 2, 2],
+          segmentId1: 1,
+          segmentId2: 2,
+        } as MinCutTargetEdge,
+      ];
+      yield call(makeProofreadSplit, context, [], 1, 2, 1, minCutEdges, false);
+      const splitAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
+
+      expect(splitAndTreeUpdates).toStrictEqual(splitSegment1And2);
     });
 
     await task.toPromise();

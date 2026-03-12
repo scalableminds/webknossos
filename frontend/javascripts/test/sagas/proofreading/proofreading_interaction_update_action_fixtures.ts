@@ -705,6 +705,52 @@ export const splitSegment2And3WithAgglomerateTree1 = [
   ],
 ];
 
+export const splitSegment1And2 = [
+  [
+    {
+      name: "createSegment" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        id: 1,
+        anchorPosition: [1, 1, 1] as Vector3,
+        additionalCoordinates: undefined,
+        name: null,
+        color: null,
+        groupId: null,
+        metadata: [],
+        creationTime: 1494695001688,
+      },
+    },
+  ],
+  [
+    {
+      name: "splitAgglomerate" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        segmentId1: 1,
+        segmentId2: 2,
+        agglomerateId: 1,
+      },
+    },
+  ],
+  [
+    {
+      name: "createSegment" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        id: 1339,
+        anchorPosition: [2, 2, 2] as Vector3,
+        additionalCoordinates: undefined,
+        name: null,
+        color: null,
+        groupId: null,
+        metadata: [],
+        creationTime: 1494695001688,
+      },
+    },
+  ],
+];
+
 export const splitSegment1And2WithAgglomerateTree1 = [
   [
     {

@@ -516,6 +516,8 @@ export function getAllCurrentlyLoadedMeshIds(
   return loadedMeshIds;
 }
 
+// todom/todop: this activates segment item 2 but there is no agglomerate 2
+// in the initial mapping.
 export function* performCutFromAllNeighbours(
   context: WebknossosTestContext,
   tracingId: string,

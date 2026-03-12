@@ -1,13 +1,19 @@
 import Icon from "@ant-design/icons";
+import IconSidebarHideLeft from "@images/icons/icon-sidebar-hide-left.svg?react";
+import IconSidebarHideRight from "@images/icons/icon-sidebar-hide-right.svg?react";
+import IconSidebarShowLeft from "@images/icons/icon-sidebar-show-left.svg?react";
+import IconSidebarShowRight from "@images/icons/icon-sidebar-show-right.svg?react";
 import { Button } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { V2 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
-import { ComponentType, type MouseEventHandler, SVGProps, useCallback, useState } from "react";
-import IconSidebarHideLeft from "@images/icons/icon-sidebar-hide-left.svg?react";
-import IconSidebarShowLeft from "@images/icons/icon-sidebar-show-left.svg?react";
-import IconSidebarHideRight from "@images/icons/icon-sidebar-hide-right.svg?react";
-import IconSidebarShowRight from "@images/icons/icon-sidebar-show-right.svg?react";
+import {
+  type ComponentType,
+  type MouseEventHandler,
+  type SVGProps,
+  useCallback,
+  useState,
+} from "react";
 
 type Props = {
   onClick: () => void;

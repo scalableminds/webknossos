@@ -51,7 +51,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     } else Json.obj()
     for {
       usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
-      ownerMultiUserBox <- multiUserDAO.findMultiUserofOrganizationOwner(organization._id).shiftBox
+      ownerMultiUserBox <- multiUserDAO.findMultiUserOfOrganizationOwner(organization._id).shiftBox
       milliCreditBalanceOpt <- Fox.runIf(requestingUser.exists(_._organization == organization._id))(
         creditTransactionDAO.getMilliCreditBalance(organization._id))
       ownerNameOpt = ownerMultiUserBox.toOption.map(o => o.fullName)
@@ -165,7 +165,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       Fox.successful(possiblyEmptyEmail)
     } else {
       for {
-        ownerMultiUser <- multiUserDAO.findMultiUserofOrganizationOwner(organization._id)
+        ownerMultiUser <- multiUserDAO.findMultiUserOfOrganizationOwner(organization._id)
       } yield ownerMultiUser.email
     }
 

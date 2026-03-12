@@ -172,7 +172,7 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
       parsed <- parseFirst(r, email)
     } yield parsed
 
-  def findMultiUserofOrganizationOwner(organizationId: String): Fox[MultiUser] =
+  def findMultiUserOfOrganizationOwner(organizationId: String): Fox[MultiUser] =
     for {
       r <- run(q"""SELECT ${columnsWithPrefix("mu")}
                    FROM webknossos.users_ u

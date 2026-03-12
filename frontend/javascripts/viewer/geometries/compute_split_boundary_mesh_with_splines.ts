@@ -60,7 +60,7 @@ export default function computeSplitBoundaryMeshWithSplines(points: Vector3[]): 
   const minZ = Math.min(...zValues);
   const maxZ = Math.max(...zValues);
 
-  if (minZ === maxZ && minZ > 0) {
+  if (minZ === maxZ && zValues.length > 0) {
     // All nodes are in the same section. Duplicate them to the next
     // and previous section to get a surface with a depth.
     return computeSplitBoundaryMeshWithSplines([

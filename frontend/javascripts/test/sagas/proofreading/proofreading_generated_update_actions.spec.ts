@@ -51,14 +51,29 @@ import {
   makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
-import { UpdateAction } from "viewer/model/sagas/volume/update_actions";
+import type { UpdateAction } from "viewer/model/sagas/volume/update_actions";
 
 const ACTION_TYPES_BLACKLIST = ["updateCamera", "updateMappingName", "updateActiveSegmentId"];
+const ACTION_TYPES_TREE_LOADING = ["createTree", "createNode", "createEdge"];
 
-function removeBlacklistedActions(actionBatches: UpdateAction[][]) {
-  return actionBatches
+function removeBlacklistedActions(
+  actionBatches: UpdateAction[][],
+  keepTreeLoadingBatches: boolean = false,
+) {
+  const filteredActionBatches = actionBatches
     .map((actions) => actions.filter((action) => !ACTION_TYPES_BLACKLIST.includes(action.name)))
     .filter((arr) => arr.length > 0);
+  if (keepTreeLoadingBatches) {
+    return filteredActionBatches;
+  }
+  const actionBatchesWithoutTreeLoadingBatches = filteredActionBatches.filter((batch) => {
+    const hasNoneTreeLoadingActions = batch.some(
+      (action) => !ACTION_TYPES_TREE_LOADING.includes(action.name),
+    );
+    const isTreeLoadingBatch = batch[0].name === "createTree" && !hasNoneTreeLoadingActions;
+    return !isTreeLoadingBatch;
+  });
+  return actionBatchesWithoutTreeLoadingBatches;
 }
 
 describe("Proofreading should generate correct update actions", () => {
@@ -220,8 +235,11 @@ describe("Proofreading should generate correct update actions", () => {
     const task = startSaga(function* task() {
       yield call(loadAgglomerateSkeleton, context, agglomerateId);
       yield call(() => context.api.tracing.save());
-      const loadTreeUpdates = getNestedUpdateActions(context).at(-1);
-      expect([loadTreeUpdates]).toStrictEqual(loadAgglomerateTree1);
+      const activateSegmentAndLoadTreeUpdates = removeBlacklistedActions(
+        getNestedUpdateActions(context),
+        true,
+      );
+      expect(activateSegmentAndLoadTreeUpdates).toStrictEqual(loadAgglomerateTree1);
     });
 
     await task.toPromise();
@@ -232,7 +250,7 @@ describe("Proofreading should generate correct update actions", () => {
 
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [1, 4], 5, 6, false);
-      const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-4)!;
+      const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment4And6WithAgglomerateTree1And4);
     });
 
@@ -244,7 +262,7 @@ describe("Proofreading should generate correct update actions", () => {
 
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [1, 4], 3, 4, false);
-      const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-4)!;
+      const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment3And4WithAgglomerateTree1And4);
     });
 
@@ -256,7 +274,7 @@ describe("Proofreading should generate correct update actions", () => {
 
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [1, 4, 6], 1, 4, false);
-      const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-3)!;
+      const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment1And4WithAgglomerateTrees1And4And6);
     });
 
@@ -268,7 +286,7 @@ describe("Proofreading should generate correct update actions", () => {
 
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [1], 3, 4, false);
-      const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-4)!;
+      const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment3And4WithAgglomerateTree1);
     });
 

@@ -15,6 +15,7 @@ import SkeletonIcon from "@images/icons/icon-skeleton.svg?react";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
+import type { ReactElement } from "react";
 import { useDispatch } from "react-redux";
 import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
@@ -34,7 +35,7 @@ const ERASER_OFFSET_LEFT = -35.2; // button width 34.2px + 1px border
 
 export const ToolIdToComponent: Record<
   AnnotationToolId,
-  (p: ToolButtonProps) => JSX.Element | null
+  (p: ToolButtonProps) => ReactElement | null
 > = {
   [AnnotationTool.MOVE.id]: MoveTool,
   [AnnotationTool.SKELETON.id]: SkeletonTool,

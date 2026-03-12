@@ -1,19 +1,16 @@
-import {
-  FileTextOutlined,
-  InfoCircleOutlined,
-  SyncOutlined,
-  TeamOutlined,
-} from "@ant-design/icons";
+import { FileTextOutlined, SyncOutlined, TeamOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
+import AdminPage from "admin/admin_page";
 import { getUsersOrganizations } from "admin/api/organization";
 import { getShowTrainingDataLink, JobState } from "admin/job/job_list_view";
 import { getAiModels, updateAiModel } from "admin/rest_api";
-import { App, Button, Col, Flex, Modal, Row, Select, Table, Tooltip, Typography } from "antd";
+import { App, Button, Col, Flex, Input, Modal, Row, Select, Table, Typography } from "antd";
 import FormattedDate from "components/formatted_date";
 import LinkButton from "components/link_button";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
+import { filterWithSearchQueryAND } from "libs/utils";
 import uniq from "lodash-es/uniq";
 import type { Key } from "react";
 import { useState } from "react";
@@ -21,9 +18,12 @@ import { Link } from "react-router-dom";
 import type { AiModel } from "types/api_types";
 import { enforceActiveUser, formatUserName } from "viewer/model/accessors/user_accessor";
 
+const { Search } = Input;
+
 export default function AiModelListView() {
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
   const [currentlyEditedModel, setCurrentlyEditedModel] = useState<AiModel | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const { modal } = App.useApp();
 
   const {
@@ -44,7 +44,7 @@ export default function AiModelListView() {
   });
 
   return (
-    <div className="container voxelytics-view">
+    <>
       {currentlyEditedModel ? (
         <EditModelSharedOrganizationsModal
           model={currentlyEditedModel}
@@ -55,82 +55,86 @@ export default function AiModelListView() {
           owningOrganization={activeUser.organization}
         />
       ) : null}
-      <Flex justify="space-between" align="flex-start">
-        <h3>AI Models</h3>
-        <Button onClick={() => refetch()} icon={<SyncOutlined spin={isFetching} />}>
-          Refresh
-        </Button>
-      </Flex>
-      <Typography.Paragraph type="secondary" style={{ marginBottom: 20 }}>
-        This list shows all AI models available in your organization. You can use these models to
-        run AI segmentation jobs on your datasets.
-        <a
-          href="https://docs.webknossos.org/webknossos/automation/ai_segmentation.html"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Tooltip title="Read more in the documentation">
-            <InfoCircleOutlined className="icon-margin-left" />
-          </Tooltip>
-        </a>
-        <br />
-        Model training functionality is coming soon.
-      </Typography.Paragraph>
-
-      <Table
-        bordered
-        rowKey={(run: AiModel) => `${run.id}`}
-        pagination={{ pageSize: 100 }}
-        columns={[
-          {
-            title: "Name",
-            dataIndex: "name",
-            key: "name",
-          },
-          {
-            title: "Created at",
-            key: "created",
-            defaultSortOrder: "descend",
-            sorter: (a: AiModel, b: AiModel) => a.created - b.created,
-            render: (model: AiModel) => <FormattedDate timestamp={model.created} />,
-          },
-          {
-            title: "User",
-            dataIndex: "user",
-            key: "user",
-            render: (user: AiModel["user"]) => formatUserName(activeUser, user),
-            filters: uniq(aiModels.map((model) => formatUserName(null, model.user))).map(
-              (username) => ({
-                text: username,
-                value: username,
-              }),
-            ),
-            onFilter: (value: Key | boolean, model: AiModel) =>
-              formatUserName(null, model.user).startsWith(String(value)),
-            filterSearch: true,
-          },
-          {
-            title: "Status",
-            dataIndex: "trainingJob",
-            key: "status",
-            render: (trainingJob: AiModel["trainingJob"]) =>
-              trainingJob && <JobState job={trainingJob} />,
-          },
-          {
-            title: "Comment",
-            dataIndex: "comment",
-            key: "comment",
-          },
-          {
-            title: "Actions",
-            render: (aiModel: AiModel) =>
-              renderActionsForModel(modal, aiModel, () => setCurrentlyEditedModel(aiModel)),
-            key: "actions",
-          },
-        ]}
-        dataSource={aiModels}
-      />
-    </div>
+      <AdminPage
+        title="AI Models"
+        descriptionURI="https://docs.webknossos.org/webknossos/automation/index.html"
+        description="Review available AI models, compare training status and ownership, and manage cross-organization access for models owned by your organization."
+        actions={
+          <Button onClick={() => refetch()} icon={<SyncOutlined spin={isFetching} />}>
+            Refresh
+          </Button>
+        }
+        search={
+          <Search
+            allowClear
+            onChange={(event) => setSearchQuery(event.target.value)}
+            value={searchQuery}
+          />
+        }
+      >
+        <Table
+          rowKey={(run: AiModel) => `${run.id}`}
+          pagination={{ pageSize: 100 }}
+          columns={[
+            {
+              title: "Name",
+              dataIndex: "name",
+              key: "name",
+            },
+            {
+              title: "Created at",
+              key: "created",
+              defaultSortOrder: "descend",
+              sorter: (a: AiModel, b: AiModel) => a.created - b.created,
+              render: (model: AiModel) => <FormattedDate timestamp={model.created} />,
+            },
+            {
+              title: "User",
+              dataIndex: "user",
+              key: "user",
+              render: (user: AiModel["user"]) => formatUserName(activeUser, user),
+              filters: uniq(aiModels.map((model) => formatUserName(null, model.user))).map(
+                (username) => ({
+                  text: username,
+                  value: username,
+                }),
+              ),
+              onFilter: (value: Key | boolean, model: AiModel) =>
+                formatUserName(null, model.user).startsWith(String(value)),
+              filterSearch: true,
+            },
+            {
+              title: "Status",
+              dataIndex: "trainingJob",
+              key: "status",
+              render: (trainingJob: AiModel["trainingJob"]) =>
+                trainingJob && <JobState job={trainingJob} />,
+            },
+            {
+              title: "Comment",
+              dataIndex: "comment",
+              key: "comment",
+            },
+            {
+              title: "Actions",
+              render: (aiModel: AiModel) =>
+                renderActionsForModel(modal, aiModel, () => setCurrentlyEditedModel(aiModel)),
+              key: "actions",
+            },
+          ]}
+          dataSource={filterWithSearchQueryAND(
+            aiModels,
+            [
+              "name",
+              "comment",
+              (model) => formatUserName(null, model.user),
+              (model) => model.trainingJob?.state || "",
+            ],
+            searchQuery,
+          )}
+        />
+      </AdminPage>
+    </>
   );
 }
 

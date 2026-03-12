@@ -20,3 +20,47 @@ Create a Project
 You can view your project's progress from your dashboard in the Statistics menu item, in the top bar. 
 
 ![youtube-video](https://www.youtube.com/embed/E6BA0GXCtiw)
+
+### Project Progress View
+
+The `Project Progress` report gives a compact overview across all projects of a selected team.
+
+1. Select `Statistics > Project Progress` in the top navigation bar.
+2. Pick a team in the filter section.
+3. Click Search
+
+The table includes:
+
+- `Project`: Project name (paused projects are marked with a pause icon).
+- `Tasks`: Number of tasks in the project.
+- `Priority`: Current project priority used for task assignment.
+- `Time [h]`: Total annotation time.
+- `Instances`: A bar graph showing the total number of finished/active/pending task instances.
+
+Notes:
+
+- The view refreshes automatically in regular intervals and can also be refreshed manually.
+- You can re-open the team filter panel at any time via the settings button.
+
+### Time Tracking View
+
+The `Annotation Time per User` report helps analyze workload and throughput per user.
+
+1. Open `Statistics > Time Tracking` in the top navigation bar.
+2. Configure filters to narrow the results:
+   - Include only tasks from projects and/or all annotations
+   - Teams
+   - Date range
+
+The report provides:
+
+- Per-user totals for annotation/task count and tracked time.
+- Average time per task/annotation.
+- Expandable rows for detailed per-user time-tracking entries.
+- CSV export for the current overview.
+- Per-user CSV export of detailed time spans.
+
+Tips:
+
+- Start with a narrow date range and one team for faster analysis.
+- Use the detailed per-user export when preparing quality reviews, audits, or billing reports.

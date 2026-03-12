@@ -1,16 +1,8 @@
 import { DownloadOutlined, FilterOutlined } from "@ant-design/icons";
+import AdminPage from "admin/admin_page";
 import { getTeams, getTimeEntries, getTimeTrackingForUserSpans } from "admin/rest_api";
-import {
-  Button,
-  DatePicker,
-  Flex,
-  Select,
-  Space,
-  Spin,
-  Table,
-  type TimeRangePickerProps,
-  Typography,
-} from "antd";
+import { Button, DatePicker, Select, Space, Spin, Table, type TimeRangePickerProps } from "antd";
+import type { ColumnsType } from "antd/es/table";
 import FixedExpandableTable from "components/fixed_expandable_table";
 import LinkButton from "components/link_button";
 import dayjs, { type Dayjs } from "dayjs";
@@ -143,7 +135,7 @@ function TimeTrackingOverview() {
     );
   };
 
-  const timeTrackingTableColumns = [
+  const timeTrackingTableColumns: ColumnsType<APITimeTrackingPerUser> = [
     {
       title: "User",
       dataIndex: "user",
@@ -158,12 +150,14 @@ function TimeTrackingOverview() {
     {
       title: "No. tasks / annotations",
       dataIndex: "annotationCount",
+      align: "right",
       key: "numberAnn",
       sorter: compareBy<APITimeTrackingPerUser>((timeEntry) => timeEntry.annotationCount),
     },
     {
       title: "Avg. time per task / annotation",
       key: "avgTime",
+      align: "right",
       render: (item: APITimeTrackingPerUser) =>
         formatMilliseconds(item.timeMillis / item.annotationCount),
       sorter: compareBy<APITimeTrackingPerUser>(
@@ -174,6 +168,7 @@ function TimeTrackingOverview() {
       title: "Total time",
       dataIndex: "timeMillis",
       key: "tracingTimes",
+      align: "right",
       render: (tracingTimeInMs: APITimeTrackingPerUser["timeMillis"]) =>
         formatMilliseconds(tracingTimeInMs),
       sorter: compareBy<APITimeTrackingPerUser>((timeEntry) => timeEntry.timeMillis),
@@ -221,20 +216,26 @@ function TimeTrackingOverview() {
         <Table.Summary.Cell index={1}>
           <b>Total</b>
         </Table.Summary.Cell>
-        <Table.Summary.Cell index={2}> {totalNumberOfTasksAndAnnotations} </Table.Summary.Cell>
-        <Table.Summary.Cell index={3}>
+        <Table.Summary.Cell index={2} align="right">
+          {totalNumberOfTasksAndAnnotations}
+        </Table.Summary.Cell>
+        <Table.Summary.Cell index={3} align="right">
           {formatMilliseconds(totalTimeMs / totalNumberOfTasksAndAnnotations)}
         </Table.Summary.Cell>
-        <Table.Summary.Cell index={4}> {formatMilliseconds(totalTimeMs)}</Table.Summary.Cell>
+        <Table.Summary.Cell index={4} align="right">
+          {formatMilliseconds(totalTimeMs)}
+        </Table.Summary.Cell>
         <Table.Summary.Cell index={5} />
       </Table.Summary.Row>
     );
   };
 
   return (
-    <div className="container">
-      <Flex justify="space-between" align="flex-start">
-        <h3>Annotation Time per User</h3>
+    <AdminPage
+      title="Annotation Time per User"
+      descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/tasks.html"
+      description="Analyze time spent on annotations and tasks by project, annotation type, state, team, and date range."
+      actions={
         <Button
           type="primary"
           icon={<DownloadOutlined />}
@@ -243,61 +244,56 @@ function TimeTrackingOverview() {
         >
           Export to CSV
         </Button>
-      </Flex>
-      <Typography.Paragraph type="secondary">
-        Analyze the time spent on annotations and tasks by users. Filter results by project,
-        annotation type, state, team, and date range.
-      </Typography.Paragraph>
-
-      <Space>
-        <ProjectAndAnnotationTypeDropdown
-          setSelectedProjectIds={setSelectedProjectIds}
-          selectedProjectIds={selectedProjectIds}
-          setSelectedAnnotationType={setSelectedTypes}
-          selectedAnnotationType={selectedTypes}
-          selectedAnnotationState={selectedState}
-          setSelectedAnnotationState={setSelectedState}
-        />
-        <Select
-          mode="multiple"
-          placeholder="Filter teams"
-          defaultValue={[]}
-          disabled={!isCurrentUserAdminOrManager}
-          style={{ width: 200 }}
-          options={allTeams.map((team) => {
-            return {
-              label: team.name,
-              value: team.id,
-            };
-          })}
-          value={selectedTeams}
-          onSelect={(teamIdOrKey: string) => setSelectedTeams([...selectedTeams, teamIdOrKey])}
-          onDeselect={(removedTeamId: string) => {
-            setSelectedTeams(selectedTeams.filter((teamId) => teamId !== removedTeamId));
-          }}
-          prefix={<FilterOutlined />}
-        />
-        <RangePicker
-          value={[startDate, endDate]}
-          presets={rangePresets}
-          onChange={(dates: [Dayjs | null, Dayjs | null] | null) => {
-            if (dates == null || dates[0] == null || dates[1] == null) return;
-            if (Math.abs(dates[0].diff(dates[1], "days")) > 3 * 31) {
-              Toast.error(messages["timetracking.date_range_too_long"]);
-              return;
-            }
-            setStartDate(dates[0].startOf("day"));
-            setEndeDate(dates[1].endOf("day"));
-          }}
-        />
-      </Space>
+      }
+      filters={
+        <Space>
+          <ProjectAndAnnotationTypeDropdown
+            setSelectedProjectIds={setSelectedProjectIds}
+            selectedProjectIds={selectedProjectIds}
+            setSelectedAnnotationType={setSelectedTypes}
+            selectedAnnotationType={selectedTypes}
+            selectedAnnotationState={selectedState}
+            setSelectedAnnotationState={setSelectedState}
+          />
+          <Select
+            mode="multiple"
+            placeholder="Filter teams"
+            defaultValue={[]}
+            disabled={!isCurrentUserAdminOrManager}
+            style={{ width: 400 }}
+            options={allTeams.map((team) => {
+              return {
+                label: team.name,
+                value: team.id,
+              };
+            })}
+            value={selectedTeams}
+            onSelect={(teamIdOrKey: string) => setSelectedTeams([...selectedTeams, teamIdOrKey])}
+            onDeselect={(removedTeamId: string) => {
+              setSelectedTeams(selectedTeams.filter((teamId) => teamId !== removedTeamId));
+            }}
+            prefix={<FilterOutlined />}
+          />
+          <RangePicker
+            value={[startDate, endDate]}
+            presets={rangePresets}
+            onChange={(dates: [Dayjs | null, Dayjs | null] | null) => {
+              if (dates == null || dates[0] == null || dates[1] == null) return;
+              if (Math.abs(dates[0].diff(dates[1], "days")) > 3 * 31) {
+                Toast.error(messages["timetracking.date_range_too_long"]);
+                return;
+              }
+              setStartDate(dates[0].startOf("day"));
+              setEndeDate(dates[1].endOf("day"));
+            }}
+          />
+        </Space>
+      }
+    >
       <Spin spinning={isFetching} size="large">
         <FixedExpandableTable
           dataSource={filteredTimeEntries}
           rowKey="user"
-          style={{
-            marginTop: 30,
-          }}
           pagination={false}
           columns={timeTrackingTableColumns}
           expandable={{
@@ -317,7 +313,7 @@ function TimeTrackingOverview() {
           summary={getSummaryRow}
         />
       </Spin>
-    </div>
+    </AdminPage>
   );
 }
 

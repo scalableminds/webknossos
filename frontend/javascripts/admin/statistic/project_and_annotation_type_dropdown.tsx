@@ -119,12 +119,13 @@ function ProjectAndAnnotationTypeDropdown({
     <Select
       className="project-and-annotation-type-dropdown"
       mode="multiple"
-      placeholder="Filter type or projects"
-      style={style}
+      placeholder="Filter tasks/annotations and projects"
+      style={{ minWidth: "400px", ...style }}
       options={filterOptions}
       showSearch={{ optionFilterProp: "label" }}
       value={selectedFilters}
-      popupMatchSelectWidth={400}
+      popupMatchSelectWidth={false}
+      maxTagCount="responsive"
       onDeselect={(removedKey: string) => onDeselect(removedKey)}
       onSelect={(newSelection: string) => setSelectedProjects(selectedFilters, newSelection)}
       prefix={<FilterOutlined />}

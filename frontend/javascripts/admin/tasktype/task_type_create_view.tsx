@@ -1,9 +1,10 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
+import AdminPage from "admin/admin_page";
 import { createTaskType, getEditableTeams, getTaskType, updateTaskType } from "admin/rest_api";
 import RecommendedConfigurationView, {
   getDefaultRecommendedConfiguration,
 } from "admin/tasktype/recommended_configuration_view";
-import { Button, Card, Checkbox, Form, Input, InputNumber, Radio, Select, Tooltip } from "antd";
+import { Button, Checkbox, Form, Input, InputNumber, Radio, Select, Tooltip } from "antd";
 import type { RuleObject } from "antd/es/form";
 import { useFetch } from "libs/react_helpers";
 import { jsonStringify } from "libs/utils";
@@ -173,328 +174,316 @@ function TaskTypeCreateView() {
   const isEditingMode = taskTypeId != null;
   const titlePrefix = isEditingMode ? "Update" : "Create";
   return (
-    <div
-      className="container"
-      style={{
-        maxWidth: 1600,
-        margin: "0 auto",
-      }}
+    <AdminPage
+      title={`${titlePrefix} Task Type`}
+      descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/concepts.html"
+      description="Define task type behavior, allowed modes, annotation settings, and optional recommended configuration."
     >
-      <Card title={<h3>{`${titlePrefix} Task Type`}</h3>}>
-        <Form
-          form={form}
-          onFinish={onFinish}
-          layout="vertical"
-          initialValues={{
-            tracingType: TracingTypeEnum.skeleton,
+      <Form
+        form={form}
+        onFinish={onFinish}
+        layout="vertical"
+        initialValues={{
+          tracingType: TracingTypeEnum.skeleton,
+        }}
+      >
+        <FormItem
+          name="summary"
+          label="Summary"
+          hasFeedback
+          rules={[
+            {
+              required: true,
+            },
+            {
+              min: 3,
+            },
+            {
+              validator: syncValidator(
+                (value) => !value.includes(","),
+                "The summary must not contain commas.",
+              ),
+            },
+          ]}
+        >
+          <Input />
+        </FormItem>
+
+        <FormItem
+          name="teamId"
+          label="Team"
+          hasFeedback
+          rules={[
+            {
+              required: true,
+            },
+          ]}
+        >
+          <Select
+            allowClear
+            showSearch={{ optionFilterProp: "label" }}
+            placeholder="Select a Team"
+            style={{
+              width: "100%",
+            }}
+            loading={isFetchingData}
+            options={teams.map((team: APITeam) => ({
+              value: team.id,
+              label: `${team.name}`,
+            }))}
+          />
+        </FormItem>
+
+        <FormItem
+          name="description"
+          label={
+            <span>
+              Description (
+              <a href="https://markdown-it.github.io/" target="_blank" rel="noopener noreferrer">
+                Markdown enabled
+              </a>
+              )
+            </span>
+          }
+          hasFeedback
+          rules={[
+            {
+              required: true,
+            },
+          ]}
+        >
+          <TextArea rows={10} />
+        </FormItem>
+
+        <FormItem name="tracingType" label="Annotation Type">
+          <RadioGroup>
+            <Radio value="skeleton" disabled={isEditingMode}>
+              Skeleton
+            </Radio>
+            <Radio value="volume" disabled={isEditingMode}>
+              Volume
+            </Radio>
+            <Radio value="hybrid" disabled={isEditingMode}>
+              Skeleton and Volume
+            </Radio>
+          </RadioGroup>
+        </FormItem>
+
+        <FormItem
+          name={["settings", "allowedModes"]}
+          label="Allowed Modes"
+          hasFeedback
+          rules={[
+            {
+              required: true,
+            },
+          ]}
+        >
+          <Select
+            mode="multiple"
+            allowClear
+            placeholder="Select all Allowed Modes"
+            showSearch={{ optionFilterProp: "label" }}
+            style={{
+              width: "100%",
+            }}
+            options={[
+              {
+                value: "orthogonal",
+                label: "Orthogonal",
+              },
+              {
+                value: "oblique",
+                label: "Oblique",
+              },
+              {
+                value: "flight",
+                label: "Flight",
+              },
+            ]}
+          />
+        </FormItem>
+
+        <FormItem name={["settings", "preferredMode"]} label="Preferred Mode" hasFeedback>
+          <Select
+            allowClear
+            showSearch={{ optionFilterProp: "label" }}
+            style={{
+              width: "100%",
+            }}
+            options={[
+              {
+                value: "",
+                label: "Any",
+              },
+              {
+                value: "orthogonal",
+                label: "Orthogonal",
+              },
+              {
+                value: "oblique",
+                label: "Oblique",
+              },
+              {
+                value: "flight",
+                label: "Flight",
+              },
+            ]}
+          />
+        </FormItem>
+
+        <FormItem
+          noStyle
+          shouldUpdate={(prevValues, curValues) => prevValues.tracingType !== curValues.tracingType}
+        >
+          {({ getFieldValue }) => (
+            <div>
+              {/* Skeleton-specific */}
+              <div
+                style={{
+                  // These form items are always emitted here and only their visibility
+                  // is changed, since the values are always needed to create/edit
+                  // a task type (its schema requires it even though the fields are
+                  // irrelevant for volume-only tasks).
+                  display:
+                    getFieldValue(["tracingType"]) === TracingTypeEnum.volume ? "none" : "block",
+                }}
+              >
+                <FormItem
+                  name={["settings", "somaClickingAllowed"]}
+                  label="Settings"
+                  valuePropName="checked"
+                >
+                  <Checkbox>Allow Single-node-tree mode (&quot;Soma clicking&quot;)</Checkbox>
+                </FormItem>
+
+                <FormItem name={["settings", "branchPointsAllowed"]} valuePropName="checked">
+                  <Checkbox>Allow Branchpoints</Checkbox>
+                </FormItem>
+                <FormItem name={["settings", "mergerMode"]} valuePropName="checked">
+                  <Checkbox>Merger Mode</Checkbox>
+                </FormItem>
+              </div>
+
+              {/* Volume-specific */}
+              <div
+                style={{
+                  // These form items are always emitted here and only their visibility
+                  // is changed, since the values are always needed to create/edit
+                  // a task type (its schema requires it even though the fields are
+                  // irrelevant for skeleton-only tasks).
+                  display:
+                    getFieldValue(["tracingType"]) === TracingTypeEnum.skeleton ? "none" : "block",
+                }}
+              >
+                <FormItem name={["settings", "volumeInterpolationAllowed"]} valuePropName="checked">
+                  <Checkbox>
+                    Allow Volume Interpolation{" "}
+                    <Tooltip
+                      title="When enabled, it suffices to only label every 2nd slice. The skipped slices will be filled automatically by interpolating between the labeled slices."
+                      placement="right"
+                    >
+                      <InfoCircleOutlined />
+                    </Tooltip>
+                  </Checkbox>
+                </FormItem>
+              </div>
+            </div>
+          )}
+        </FormItem>
+
+        <FormItem
+          name={["isMagRestricted"]}
+          valuePropName="checked"
+          style={{
+            marginBottom: 6,
           }}
         >
-          <FormItem
-            name="summary"
-            label="Summary"
-            hasFeedback
-            rules={[
-              {
-                required: true,
-              },
-              {
-                min: 3,
-              },
-              {
-                validator: syncValidator(
-                  (value) => !value.includes(","),
-                  "The summary must not contain commas.",
-                ),
-              },
-            ]}
-          >
-            <Input />
-          </FormItem>
+          <Checkbox disabled={isEditingMode}>
+            Restrict Magnifications{" "}
+            <Tooltip
+              title="The magnifications should be specified as power-of-two numbers. For example, if users should only be able to annotate in the best and second best mag, the minimum should be 1 and the maximum should be 2. The third and fourth mag can be addressed with 4 and 8."
+              placement="right"
+            >
+              <InfoCircleOutlined />
+            </Tooltip>
+          </Checkbox>
+        </FormItem>
 
-          <FormItem
-            name="teamId"
-            label="Team"
-            hasFeedback
-            rules={[
-              {
-                required: true,
-              },
-            ]}
-          >
-            <Select
-              allowClear
-              showSearch={{ optionFilterProp: "label" }}
-              placeholder="Select a Team"
-              style={{
-                width: "100%",
-              }}
-              loading={isFetchingData}
-              options={teams.map((team: APITeam) => ({
-                value: team.id,
-                label: `${team.name}`,
-              }))}
-            />
-          </FormItem>
-
-          <FormItem
-            name="description"
-            label={
-              <span>
-                Description (
-                <a href="https://markdown-it.github.io/" target="_blank" rel="noopener noreferrer">
-                  Markdown enabled
-                </a>
-                )
-              </span>
-            }
-            hasFeedback
-            rules={[
-              {
-                required: true,
-              },
-            ]}
-          >
-            <TextArea rows={10} />
-          </FormItem>
-
-          <FormItem name="tracingType" label="Annotation Type">
-            <RadioGroup>
-              <Radio value="skeleton" disabled={isEditingMode}>
-                Skeleton
-              </Radio>
-              <Radio value="volume" disabled={isEditingMode}>
-                Volume
-              </Radio>
-              <Radio value="hybrid" disabled={isEditingMode}>
-                Skeleton and Volume
-              </Radio>
-            </RadioGroup>
-          </FormItem>
-
-          <FormItem
-            name={["settings", "allowedModes"]}
-            label="Allowed Modes"
-            hasFeedback
-            rules={[
-              {
-                required: true,
-              },
-            ]}
-          >
-            <Select
-              mode="multiple"
-              allowClear
-              placeholder="Select all Allowed Modes"
-              optionFilterProp="label"
-              style={{
-                width: "100%",
-              }}
-              options={[
-                {
-                  value: "orthogonal",
-                  label: "Orthogonal",
-                },
-                {
-                  value: "oblique",
-                  label: "Oblique",
-                },
-                {
-                  value: "flight",
-                  label: "Flight",
-                },
-              ]}
-            />
-          </FormItem>
-
-          <FormItem name={["settings", "preferredMode"]} label="Preferred Mode" hasFeedback>
-            <Select
-              allowClear
-              showSearch={{ optionFilterProp: "label" }}
-              style={{
-                width: "100%",
-              }}
-              options={[
-                {
-                  value: "",
-                  label: "Any",
-                },
-                {
-                  value: "orthogonal",
-                  label: "Orthogonal",
-                },
-                {
-                  value: "oblique",
-                  label: "Oblique",
-                },
-                {
-                  value: "flight",
-                  label: "Flight",
-                },
-              ]}
-            />
-          </FormItem>
-
-          <FormItem
-            noStyle
-            shouldUpdate={(prevValues, curValues) =>
-              prevValues.tracingType !== curValues.tracingType
-            }
-          >
-            {({ getFieldValue }) => (
-              <div>
-                {/* Skeleton-specific */}
-                <div
-                  style={{
-                    // These form items are always emitted here and only their visibility
-                    // is changed, since the values are always needed to create/edit
-                    // a task type (its schema requires it even though the fields are
-                    // irrelevant for volume-only tasks).
-                    display:
-                      getFieldValue(["tracingType"]) === TracingTypeEnum.volume ? "none" : "block",
-                  }}
-                >
-                  <FormItem
-                    name={["settings", "somaClickingAllowed"]}
-                    label="Settings"
-                    valuePropName="checked"
-                  >
-                    <Checkbox>Allow Single-node-tree mode (&quot;Soma clicking&quot;)</Checkbox>
-                  </FormItem>
-
-                  <FormItem name={["settings", "branchPointsAllowed"]} valuePropName="checked">
-                    <Checkbox>Allow Branchpoints</Checkbox>
-                  </FormItem>
-                  <FormItem name={["settings", "mergerMode"]} valuePropName="checked">
-                    <Checkbox>Merger Mode</Checkbox>
-                  </FormItem>
-                </div>
-
-                {/* Volume-specific */}
-                <div
-                  style={{
-                    // These form items are always emitted here and only their visibility
-                    // is changed, since the values are always needed to create/edit
-                    // a task type (its schema requires it even though the fields are
-                    // irrelevant for skeleton-only tasks).
-                    display:
-                      getFieldValue(["tracingType"]) === TracingTypeEnum.skeleton
-                        ? "none"
-                        : "block",
-                  }}
-                >
-                  <FormItem
-                    name={["settings", "volumeInterpolationAllowed"]}
-                    valuePropName="checked"
-                  >
-                    <Checkbox>
-                      Allow Volume Interpolation{" "}
-                      <Tooltip
-                        title="When enabled, it suffices to only label every 2nd slice. The skipped slices will be filled automatically by interpolating between the labeled slices."
-                        placement="right"
-                      >
-                        <InfoCircleOutlined />
-                      </Tooltip>
-                    </Checkbox>
-                  </FormItem>
-                </div>
-              </div>
-            )}
-          </FormItem>
-
-          <FormItem
-            name={["isMagRestricted"]}
-            valuePropName="checked"
-            style={{
-              marginBottom: 6,
-            }}
-          >
-            <Checkbox disabled={isEditingMode}>
-              Restrict Magnifications{" "}
-              <Tooltip
-                title="The magnifications should be specified as power-of-two numbers. For example, if users should only be able to annotate in the best and second best mag, the minimum should be 1 and the maximum should be 2. The third and fourth mag can be addressed with 4 and 8."
-                placement="right"
+        <FormItem
+          noStyle
+          shouldUpdate={(prevValues, curValues) =>
+            !prevValues.isMagRestricted || prevValues.isMagRestricted !== curValues.isMagRestricted
+          }
+        >
+          {({ getFieldValue }) =>
+            getFieldValue(["isMagRestricted"]) ? (
+              <div
+                style={{
+                  marginLeft: 24,
+                }}
               >
-                <InfoCircleOutlined />
-              </Tooltip>
-            </Checkbox>
-          </FormItem>
-
-          <FormItem
-            noStyle
-            shouldUpdate={(prevValues, curValues) =>
-              !prevValues.isMagRestricted ||
-              prevValues.isMagRestricted !== curValues.isMagRestricted
-            }
-          >
-            {({ getFieldValue }) =>
-              getFieldValue(["isMagRestricted"]) ? (
-                <div
+                <FormItem
+                  name={["settings", "magRestrictions", "min"]}
+                  hasFeedback
+                  label="Minimum"
                   style={{
-                    marginLeft: 24,
+                    marginBottom: 6,
                   }}
+                  rules={[
+                    {
+                      validator: isValidMagnification,
+                    },
+                    {
+                      validator: (_rule, value) =>
+                        isMinimumMagnifactionLargerThenMaxRule(
+                          value,
+                          getFieldValue(["settings", "magRestrictions", "max"]),
+                        ),
+                    },
+                  ]}
                 >
-                  <FormItem
-                    name={["settings", "magRestrictions", "min"]}
-                    hasFeedback
-                    label="Minimum"
-                    style={{
-                      marginBottom: 6,
-                    }}
-                    rules={[
-                      {
-                        validator: isValidMagnification,
-                      },
-                      {
-                        validator: (_rule, value) =>
-                          isMinimumMagnifactionLargerThenMaxRule(
-                            value,
-                            getFieldValue(["settings", "magRestrictions", "max"]),
-                          ),
-                      },
-                    ]}
-                  >
-                    <InputNumber min={1} size="small" disabled={isEditingMode} />
-                  </FormItem>
-                  <FormItem
-                    name={["settings", "magRestrictions", "max"]}
-                    hasFeedback
-                    label="Maximum"
-                    rules={[
-                      {
-                        validator: isValidMagnification,
-                      },
-                      {
-                        validator: (_rule, value) =>
-                          isMaximumMagnificationSmallerThenMinRule(
-                            value,
-                            getFieldValue(["settings", "magRestrictions", "min"]),
-                          ),
-                      },
-                    ]}
-                  >
-                    <InputNumber min={1} size="small" disabled={isEditingMode} />
-                  </FormItem>
-                </div>
-              ) : null
-            }
-          </FormItem>
+                  <InputNumber min={1} size="small" disabled={isEditingMode} />
+                </FormItem>
+                <FormItem
+                  name={["settings", "magRestrictions", "max"]}
+                  hasFeedback
+                  label="Maximum"
+                  rules={[
+                    {
+                      validator: isValidMagnification,
+                    },
+                    {
+                      validator: (_rule, value) =>
+                        isMaximumMagnificationSmallerThenMinRule(
+                          value,
+                          getFieldValue(["settings", "magRestrictions", "min"]),
+                        ),
+                    },
+                  ]}
+                >
+                  <InputNumber min={1} size="small" disabled={isEditingMode} />
+                </FormItem>
+              </div>
+            ) : null
+          }
+        </FormItem>
 
-          <FormItem>
-            <RecommendedConfigurationView
-              form={form}
-              enabled={useRecommendedConfiguration}
-              onChangeEnabled={onChangeUseRecommendedConfiguration}
-            />
-          </FormItem>
+        <FormItem>
+          <RecommendedConfigurationView
+            form={form}
+            enabled={useRecommendedConfiguration}
+            onChangeEnabled={onChangeUseRecommendedConfiguration}
+          />
+        </FormItem>
 
-          <FormItem>
-            <Button type="primary" htmlType="submit">
-              {`${titlePrefix} Task Type`}
-            </Button>
-          </FormItem>
-        </Form>
-      </Card>
-    </div>
+        <FormItem>
+          <Button type="primary" htmlType="submit">
+            {`${titlePrefix} Task Type`}
+          </Button>
+        </FormItem>
+      </Form>
+    </AdminPage>
   );
 }
 

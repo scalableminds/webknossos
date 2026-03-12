@@ -1,6 +1,7 @@
 import { Form, Select } from "antd";
 import { V3 } from "libs/mjs";
 import { clamp } from "libs/utils";
+import type { ReactElement } from "react";
 import type { Vector3 } from "viewer/constants";
 import type { MagInfo } from "viewer/model/helpers/mag_info";
 
@@ -10,7 +11,7 @@ export function MagSelectionFormItem({
 }: {
   name: string | Array<string | number>;
   magInfo: MagInfo | undefined;
-}): JSX.Element {
+}): ReactElement {
   return (
     <Form.Item
       name={name}
@@ -35,7 +36,7 @@ function MagSelection({
   magInfo: MagInfo | undefined;
   value?: Vector3;
   onChange?: (newValue: Vector3) => void;
-}): JSX.Element {
+}): ReactElement {
   const allMags = magInfo != null ? magInfo.getMagList() : [];
 
   const onSelect = (index: number | undefined) => {

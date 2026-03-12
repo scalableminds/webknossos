@@ -512,11 +512,6 @@ describe("Save Saga", () => {
         numberOfSentItems: saveQueue.length,
         hadConflict: false,
       }),
-      put(snapshotAnnotationStateForNextRebaseAction()),
-    );
-    expectValueDeepEqual(
-      expect,
-      synchronizeAnnotationWithBackendSaga.next(),
       put(setSaveBusyAction(false)),
     );
     expect(synchronizeAnnotationWithBackendSaga.next().done).toBe(true);

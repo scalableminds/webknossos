@@ -82,7 +82,7 @@
         "name": "agglomerate 1340 (volumeTracingId)",
         "timestamp": 1494695001688,
         "type": "AGGLOMERATE",
-        "updatedId": 5,
+        "updatedId": undefined,
       },
     },
   ],

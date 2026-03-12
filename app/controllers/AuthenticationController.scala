@@ -546,9 +546,8 @@ class AuthenticationController @Inject()(
                       _ <- Fox.successful(logger.info(s"Multiuser ${multiUser._id} changed their password."))
                       _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordHasher.hash(passwords.password1))
                       _ <- Fox.fromFuture(combinedAuthenticatorService.discard(request.authenticator, Ok))
-                      userEmail <- userService.emailFor(user)
                     } yield {
-                      Mailer ! Send(defaultMails.changePasswordMail(multiUser.fullName, userEmail))
+                      Mailer ! Send(defaultMails.changePasswordMail(multiUser.fullName, multiUser.email))
                       Ok
                     }
                 }

@@ -182,7 +182,6 @@ class JobService @Inject()(wkConf: WkConf,
       owner <- userDAO.findOne(job._owner) ?~> "user.notFound"
       ownerMultiUser <- multiUserDAO.findOne(owner._multiUser)
       organization <- organizationDAO.findOne(owner._organization) ?~> "organization.notFound"
-      ownerEmail <- userService.emailFor(owner)
       creditTransactionBox <- creditTransactionService.findTransactionOfJob(job._id).shiftBox
     } yield
       Json.toJson(
@@ -192,7 +191,7 @@ class JobService @Inject()(wkConf: WkConf,
           organizationId = organization._id,
           ownerFirstName = ownerMultiUser.firstName,
           ownerLastName = ownerMultiUser.lastName,
-          ownerEmail = ownerEmail,
+          ownerEmail = ownerMultiUser.email,
           args = job.args - "webknossos_token" - "user_auth_token",
           state = job.effectiveState,
           returnValue = job.returnValue,

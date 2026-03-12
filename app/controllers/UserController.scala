@@ -310,7 +310,7 @@ class UserController @Inject()(userService: UserService,
           oldAssignedMemberships <- userService.teamMembershipsFor(user._id)
           firstName = firstNameOpt.getOrElse(multiUser.firstName)
           lastName = lastNameOpt.getOrElse(multiUser.lastName)
-          oldEmail <- userService.emailFor(user)
+          oldEmail = multiUser.email
           email = emailOpt.getOrElse(oldEmail)
           isActive = isActiveOpt.getOrElse(!user.isDeactivated)
           isAdmin = isAdminOpt.getOrElse(user.isAdmin)

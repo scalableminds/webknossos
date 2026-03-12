@@ -235,8 +235,7 @@ class OrganizationController @Inject()(
         _ <- Fox.fromBool(request.identity.isAdmin) ?~> Messages("organization.pricingUpgrades.notAuthorized")
         organization <- organizationDAO.findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
         multiUser <- multiUserDAO.findOne(request.identity._multiUser)
-        _ = Mailer ! Send(
-          defaultMails.upgradePricingPlanUsersMail(multiUser, requestedUsers, organization.name))
+        _ = Mailer ! Send(defaultMails.upgradePricingPlanUsersMail(multiUser, requestedUsers, organization.name))
       } yield Ok
     }
 
@@ -246,8 +245,7 @@ class OrganizationController @Inject()(
         _ <- Fox.fromBool(request.identity.isAdmin) ?~> Messages("organization.pricingUpgrades.notAuthorized")
         organization <- organizationDAO.findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
         multiUser <- multiUserDAO.findOne(request.identity._multiUser)
-        _ = Mailer ! Send(
-          defaultMails.upgradePricingPlanStorageMail(multiUser, requestedStorage, organization.name))
+        _ = Mailer ! Send(defaultMails.upgradePricingPlanStorageMail(multiUser, requestedStorage, organization.name))
       } yield Ok
     }
 
@@ -266,8 +264,7 @@ class OrganizationController @Inject()(
         multiUser <- multiUserDAO.findOne(request.identity._multiUser)
         aiPlanLabel = aiAddonLabelForPricingPlan(organization.pricingPlan)
         pricingPlanLabel = organization.pricingPlan.toString
-        _ = Mailer ! Send(
-          defaultMails.upgradeAiAddonMail(multiUser, organization.name, aiPlanLabel, pricingPlanLabel))
+        _ = Mailer ! Send(defaultMails.upgradeAiAddonMail(multiUser, organization.name, aiPlanLabel, pricingPlanLabel))
       } yield Ok
     }
 
@@ -277,15 +274,13 @@ class OrganizationController @Inject()(
         _ <- Fox.fromBool(requestedCredits > 0) ?~> Messages("organization.creditOrder.notPositive")
         _ <- Fox.fromBool(request.identity.isOrganizationOwner) ?~> Messages("organization.creditOrder.notAuthorized")
         organization <- organizationDAO.findOne(request.identity._organization) ?~> Messages("organization.notFound") ~> NOT_FOUND
-        userEmail <- userService.emailFor(request.identity)
         multiUser <- multiUserDAO.findOne(request.identity._multiUser)
         _ = logger.info(
-          s"Received credit order for organization ${organization.name} with $requestedCredits credits by user $userEmail")
+          s"Received credit order for organization ${organization.name} with $requestedCredits credits by user ${request.identity._id}")
         _ = Mailer ! Send(defaultMails.orderCreditsMail(multiUser, requestedCredits))
         _ = Mailer ! Send(
-          defaultMails.orderCreditsRequestMail(multiUser,
-                                               organization.name,
-                                               s"Purchase $requestedCredits WEBKNOSSOS credits."))
+          defaultMails
+            .orderCreditsRequestMail(multiUser, organization.name, s"Purchase $requestedCredits WEBKNOSSOS credits."))
       } yield Ok
     }
 

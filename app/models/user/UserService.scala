@@ -202,11 +202,6 @@ class UserService @Inject()(conf: WkConf,
         s"Multiuser ${originalUser._multiUser} joined organization $organizationId with new user id $newUserId.")
     } yield user
 
-  def emailFor(user: User)(implicit ctx: DBAccessContext): Fox[String] =
-    for {
-      multiUser <- multiUserDAO.findOne(user._multiUser)
-    } yield multiUser.email
-
   def update(user: User,
              multiUser: MultiUser,
              firstName: String,
@@ -223,8 +218,8 @@ class UserService @Inject()(conf: WkConf,
       logger.info(s"Activating user ${user._id}. Access context: ${ctx.toStringAnonymous}")
       Mailer ! Send(defaultMails.activatedMail(multiUser.fullName, email))
     }
+    val oldEmail = multiUser.email
     for {
-      oldEmail <- emailFor(user)
       _ <- Fox.runIf(oldEmail != email)(for {
         _ <- multiUserDAO.updateEmail(user._multiUser, email)
         _ = logger.info(s"Email of MultiUser ${user._multiUser} changed from $oldEmail to $email")

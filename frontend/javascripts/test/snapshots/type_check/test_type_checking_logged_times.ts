@@ -1,3 +1,0 @@
-
-import type { APITimeInterval } from "types/api_types";
-const a: Array<APITimeInterval> = [{"paymentInterval":{"month":4,"year":2016},"durationInSeconds":58},{"paymentInterval":{"month":8,"year":2018},"durationInSeconds":265},{"paymentInterval":{"month":1,"year":2021},"durationInSeconds":112},{"paymentInterval":{"month":3,"year":2021},"durationInSeconds":24},{"paymentInterval":{"month":5,"year":2021},"durationInSeconds":158},{"paymentInterval":{"month":8,"year":2021},"durationInSeconds":14},{"paymentInterval":{"month":11,"year":2021},"durationInSeconds":12},{"paymentInterval":{"month":2,"year":2024},"durationInSeconds":114},{"paymentInterval":{"month":3,"year":2024},"durationInSeconds":200}]

@@ -43,7 +43,12 @@ import {
   prepareGetNeighborsForAgglomerateNode,
 } from "./proofreading_test_utils";
 import { publishDebuggingState } from "test/helpers/debugging_state_serializer";
-import { splitSegment1And2 } from "./proofreading_interaction_update_action_fixtures";
+import {
+  mergeSegment1And4,
+  mergeSegment5And6,
+  splitSegment1And2,
+  splitSegment2And3,
+} from "./proofreading_interaction_update_action_fixtures";
 
 function* prepareEditableMapping(
   context: WebknossosTestContext,
@@ -106,40 +111,7 @@ describe("Proofreading (Multi User)", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    backendMock.planVersionInjection(5, [
-      {
-        name: "updateSegmentPartial",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          id: 6,
-          anchorPosition: [1, 2, 3],
-          additionalCoordinates: undefined,
-          color: [1, 2, 3],
-          groupId: null,
-          creationTime: 0,
-        },
-      },
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 5,
-          segmentId2: 6,
-          agglomerateId1: 4,
-          agglomerateId2: 6,
-        },
-      },
-      {
-        name: "mergeSegmentItems",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 5,
-          segmentId2: 6,
-          agglomerateId1: 4,
-          agglomerateId2: 6,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(5, mergeSegment5And6);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -224,66 +196,38 @@ describe("Proofreading (Multi User)", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    backendMock.planVersionInjection(5, [
-      {
-        name: "updateSegmentPartial",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          id: 1,
-          anchorPosition: [1, 1, 1],
-          additionalCoordinates: undefined,
-          name: "Custom Name 1",
-          color: [1, 2, 3],
-          groupId: null,
-          creationTime: 0,
+    backendMock.planMultipleVersionInjections(5, [
+      ...mergeSegment1And4.slice(0, 1), // creates segment 1
+      [
+        {
+          name: "updateSegmentPartial",
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            id: 1,
+            anchorPosition: [1, 1, 1],
+            additionalCoordinates: undefined,
+            name: "Custom Name 1",
+            color: [1, 2, 3],
+            groupId: null,
+            creationTime: 0,
+          },
         },
-      },
-      {
-        name: "updateSegmentPartial",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          id: 4,
-          anchorPosition: [4, 4, 4],
-          additionalCoordinates: undefined,
-          name: "Custom Name 4",
-          color: [1, 2, 3],
-          groupId: null,
-          creationTime: 0,
+        {
+          name: "createSegment",
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            id: 4,
+            anchorPosition: [4, 4, 4],
+            additionalCoordinates: undefined,
+            name: "Custom Name 4",
+            color: [1, 2, 3],
+            groupId: null,
+            creationTime: 0,
+            metadata: [],
+          },
         },
-      },
-      {
-        name: "updateSegmentPartial",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          id: 6,
-          anchorPosition: [6, 6, 6],
-          additionalCoordinates: undefined,
-          name: "Custom Name 6",
-          color: [1, 2, 3],
-          groupId: null,
-          creationTime: 0,
-        },
-      },
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1,
-          segmentId2: 4,
-          agglomerateId1: 1,
-          agglomerateId2: 4,
-        },
-      },
-      {
-        name: "mergeSegmentItems",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1,
-          segmentId2: 4,
-          agglomerateId1: 1,
-          agglomerateId2: 4,
-        },
-      },
+      ],
+      ...mergeSegment1And4.slice(1),
     ]);
 
     const { annotation } = Store.getState();
@@ -382,53 +326,7 @@ describe("Proofreading (Multi User)", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    backendMock.planVersionInjection(5, [
-      {
-        name: "createSegment",
-        value: {
-          actionTracingId: "volumeTracingId",
-          additionalCoordinates: undefined,
-          anchorPosition: [1, 1, 1],
-          color: null,
-          creationTime: 1494695001688,
-          groupId: null,
-          id: 1,
-          metadata: [],
-          name: null,
-        },
-      },
-      {
-        name: "splitAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 3, // will keep its agglomerate id
-          segmentId2: 2, // will get a new agglomerate id
-          agglomerateId: 1,
-        },
-      },
-      {
-        name: "createSegment",
-        value: {
-          actionTracingId: "volumeTracingId",
-          additionalCoordinates: undefined,
-          anchorPosition: [2, 2, 2],
-          color: null,
-          creationTime: 1494695001688,
-          groupId: null,
-          id: 1339,
-          metadata: [],
-          name: null,
-        },
-      },
-      {
-        name: "updateSegmentPartial",
-        value: {
-          actionTracingId: "volumeTracingId",
-          anchorPosition: [3, 3, 3],
-          id: 1,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(5, splitSegment2And3);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];

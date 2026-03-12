@@ -110,9 +110,9 @@ describe("Proofreading should generate correct update actions", () => {
   async function makeProofreadMerge(
     context: WebknossosTestContext,
     skeletonsToLoad: number[],
-    sourceAgglomerateId: number,
     sourceSegmentId: number,
     targetSegmentId: number,
+    sourceAgglomerateId: number,
     othersMayEdit: boolean,
   ): Promise<void> {
     const { annotation } = Store.getState();
@@ -235,7 +235,7 @@ describe("Proofreading should generate correct update actions", () => {
     mockInitialBucketAndAgglomerateData(context);
 
     const task = startSaga(function* task() {
-      yield call(makeProofreadMerge, context, [1, 4], 4, 5, 6, false);
+      yield call(makeProofreadMerge, context, [1, 4], 5, 6, 4, false);
       const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-4)!;
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment4And6WithAgglomerateTree1And4);
     });
@@ -247,7 +247,7 @@ describe("Proofreading should generate correct update actions", () => {
     mockInitialBucketAndAgglomerateData(context);
 
     const task = startSaga(function* task() {
-      yield call(makeProofreadMerge, context, [1, 4], 1, 3, 4, false);
+      yield call(makeProofreadMerge, context, [1, 4], 3, 4, 1, false);
       const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-4)!;
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment3And4WithAgglomerateTree1And4);
     });
@@ -259,7 +259,7 @@ describe("Proofreading should generate correct update actions", () => {
     mockInitialBucketAndAgglomerateData(context);
 
     const task = startSaga(function* task() {
-      yield call(makeProofreadMerge, context, [], 1, 1, 4, false);
+      yield call(makeProofreadMerge, context, [], 1, 4, 1, false);
       const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment1And4);
     });
@@ -271,7 +271,7 @@ describe("Proofreading should generate correct update actions", () => {
     mockInitialBucketAndAgglomerateData(context);
 
     const task = startSaga(function* task() {
-      yield call(makeProofreadMerge, context, [1, 4, 6], 1, 1, 4, false);
+      yield call(makeProofreadMerge, context, [1, 4, 6], 1, 4, 1, false);
       const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-3)!;
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment1And4WithAgglomerateTrees1And4And6);
     });
@@ -283,7 +283,7 @@ describe("Proofreading should generate correct update actions", () => {
     mockInitialBucketAndAgglomerateData(context);
 
     const task = startSaga(function* task() {
-      yield call(makeProofreadMerge, context, [1], 1, 3, 4, false);
+      yield call(makeProofreadMerge, context, [1], 3, 4, 1, false);
       const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-4)!;
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment3And4WithAgglomerateTree1);
     });
@@ -295,7 +295,7 @@ describe("Proofreading should generate correct update actions", () => {
     mockInitialBucketAndAgglomerateData(context);
 
     const task = startSaga(function* task() {
-      yield call(makeProofreadMerge, context, [1, 4], 4, 5, 6, false);
+      yield call(makeProofreadMerge, context, [1, 4], 5, 6, 4, false);
       const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-4)!;
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment5And6WithAgglomerateTree1And4);
     });
@@ -307,7 +307,7 @@ describe("Proofreading should generate correct update actions", () => {
     mockInitialBucketAndAgglomerateData(context);
 
     const task = startSaga(function* task() {
-      yield call(makeProofreadMerge, context, [], 4, 5, 6, false);
+      yield call(makeProofreadMerge, context, [], 5, 6, 4, false);
       const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       console.log("mergeAndTreeUpdates", mergeAndTreeUpdates);
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment5And6);
@@ -320,7 +320,7 @@ describe("Proofreading should generate correct update actions", () => {
     mockInitialBucketAndAgglomerateData(context);
 
     const task = startSaga(function* task() {
-      yield call(makeProofreadMerge, context, [1], 4, 5, 6, false);
+      yield call(makeProofreadMerge, context, [1], 5, 6, 4, false);
       // There are no agglomerate tree updates as no loaded tree is affected by the merge
       const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-3)!;
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment5And6WithAgglomerateTree1);
@@ -333,7 +333,7 @@ describe("Proofreading should generate correct update actions", () => {
     mockInitialBucketAndAgglomerateData(context);
 
     const task = startSaga(function* task() {
-      yield call(makeProofreadMerge, context, [1], 1, 3, 6, false);
+      yield call(makeProofreadMerge, context, [1], 3, 6, 1, false);
       const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-4)!;
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment3And6WithAgglomerateTree1);
     });

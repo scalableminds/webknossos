@@ -803,9 +803,9 @@ function SkeletonTracingReducer(
       const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
       const isLiveCollabActive = WkDevFlags.liveCollab && state.annotation.othersMayEdit;
       if (isLiveCollabActive && isProofreadingActive && action.initiator === "USER") {
-        // If live collab is active and the user did a proofreading split via edge deletion,
-        // we ignore the action as the affected agglomerate tree may not be in sync with the backend yet.
-        // In this case the proofreading saga takes care of re-dispatching the same action but with initiator = "PROOFREADING".
+        // Ignore this action as proofreading is active and the action originates from the user.
+        // The proofreading saga will take care of replaying the same action but with initiator = "PROOFREADING"
+        // to perform the desired tree manipulation.
         return state;
       }
 
@@ -1122,11 +1122,10 @@ function SkeletonTracingReducer(
     case "MERGE_TREES": {
       const { sourceNodeId, targetNodeId } = action;
       const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
-      const isLiveCollabActive = WkDevFlags.liveCollab && state.annotation.othersMayEdit;
-      if (isLiveCollabActive && isProofreadingActive && action.initiator === "USER") {
-        // If live collab is active and the user did a proofreading merge via edge creation / merge trees,
-        // we ignore the action as the affected agglomerate tree may not be in sync with the backend yet.
-        // In this case the proofreading saga takes care of re-dispatching the same action but with initiator = "PROOFREADING".
+      if (isProofreadingActive && action.initiator === "USER") {
+        // Ignore this action as proofreading is active and the action originates from the user.
+        // The proofreading saga will take care of replaying the same action but with initiator = "PROOFREADING"
+        // to perform the desired tree manipulation.
         return state;
       }
 

@@ -39,16 +39,16 @@ import security.RandomIDGenerator
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
-                                            organizationDAO: OrganizationDAO,
-                                            datasetDAO: DatasetDAO,
-                                            dataStoreDAO: DataStoreDAO,
-                                            layerToLinkService: LayerToLinkService,
-                                            pathDeletionService: PathDeletionService,
-                                            datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
-                                            datasetMagsDAO: DatasetMagsDAO,
-                                            folderDAO: FolderDAO,
-                                            conf: WkConf)
+class UploadToPathsService @Inject()(datasetService: DatasetService,
+                                     organizationDAO: OrganizationDAO,
+                                     datasetDAO: DatasetDAO,
+                                     dataStoreDAO: DataStoreDAO,
+                                     layerToLinkService: LayerToLinkService,
+                                     datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
+                                     datasetMagsDAO: DatasetMagsDAO,
+                                     pathDeletionService: PathDeletionService,
+                                     folderDAO: FolderDAO,
+                                     conf: WkConf)
     extends FoxImplicits
     with DataSourceValidation {
 
@@ -165,7 +165,7 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
   private def selectPathPrefixDatasetParent(requestedPrefix: Option[UPath], organizationId: String)(
       implicit ec: ExecutionContext): Fox[UPath] =
     for {
-      uploadToPathsPrefix <- selectPathPrefix(requestedPrefix).toFox ?~> "dataset.uploadToPaths.noMatchingPrefix"
+      uploadToPathsPrefix <- selectPathPrefix(requestedPrefix).toFox ?~> "uploadToPaths.noMatchingPrefix"
       withOrgaDirOrSame = if (conf.WebKnossos.Datasets.UploadToPaths.insertOrganizationDirectory)
         uploadToPathsPrefix / organizationId
       else uploadToPathsPrefix
@@ -235,6 +235,12 @@ class DatasetUploadToPathsService @Inject()(datasetService: DatasetService,
       TextUtils.normalizeStrong(attachmentName).getOrElse(s"$attachmentType-${ObjectId.generate}")
     layerPath / defaultDirName / (safeAttachmentName + suffix)
   }
+
+  def generateAiModelPath(id: ObjectId, organizationId: String, pathPrefix: Option[UPath])(
+      implicit ec: ExecutionContext): Fox[UPath] =
+    for {
+      uploadToPathsPrefix <- selectPathPrefix(pathPrefix).toFox ?~> "uploadToPaths.noMatchingPrefix"
+    } yield uploadToPathsPrefix / organizationId / ".aiModels" / id
 
   private def generateMagPath(mag: Vec3Int, layerPath: UPath): UPath =
     layerPath / f"${mag.toMagLiteral(allowScalar = true)}__${RandomIDGenerator.generateBlocking(12)}"

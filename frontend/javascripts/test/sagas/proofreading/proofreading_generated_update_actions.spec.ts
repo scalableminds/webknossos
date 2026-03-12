@@ -125,12 +125,12 @@ describe("Proofreading should generate correct update actions", () => {
       // due to the user's interactions.
       yield put(
         updateSegmentAction(
-          sourceSegmentId,
+          sourceAgglomerateId,
           { anchorPosition: [sourceSegmentId, sourceSegmentId, sourceSegmentId] },
           tracingId,
         ),
       );
-      yield put(setActiveCellAction(sourceSegmentId));
+      yield put(setActiveCellAction(sourceAgglomerateId));
       yield makeMappingEditableHelper();
       if (othersMayEdit) {
         yield put(setOthersMayEditForAnnotationAction(true));
@@ -172,12 +172,12 @@ describe("Proofreading should generate correct update actions", () => {
       // due to the user's interactions.
       yield put(
         updateSegmentAction(
-          sourceSegmentId,
+          sourceAgglomerateId,
           { anchorPosition: [sourceSegmentId, sourceSegmentId, sourceSegmentId] },
           tracingId,
         ),
       );
-      yield put(setActiveCellAction(sourceSegmentId));
+      yield put(setActiveCellAction(sourceAgglomerateId));
       yield makeMappingEditableHelper();
       if (othersMayEdit) {
         yield put(setOthersMayEditForAnnotationAction(true));
@@ -330,11 +330,11 @@ describe("Proofreading should generate correct update actions", () => {
   }, 8000);
 
   it("when loading agglomerate tree 1 and then merging segments 3 and 6.", async (context: WebknossosTestContext) => {
-    mockInitialBucketAndAgglomerateData(context);
+    mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [1], 3, 6, 1, false);
-      const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-4)!;
+      const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-3)!;
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment3And6WithAgglomerateTree1);
     });
 

@@ -639,16 +639,6 @@ export const mergeSegment3And6WithAgglomerateTree1 = [
   ],
   [
     {
-      name: "updateSegmentPartial" as const,
-      value: {
-        actionTracingId: VOLUME_TRACING_ID,
-        id: 1,
-        anchorPosition: [3, 3, 3] as Vector3,
-      },
-    },
-  ],
-  [
-    {
       name: "createNode" as const,
       value: {
         actionTracingId: SKELETON_TRACING_ID,

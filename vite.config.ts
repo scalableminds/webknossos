@@ -23,7 +23,11 @@ export const viteConfig = {
   resolve: { alias },
   plugins: [
     // analyzer(), // Enable/Disable vite bundle analyzer for inspecting the output bundle
-    react(),
+    react({
+      babel: {
+        plugins: ["babel-plugin-react-compiler"],
+      },
+    }),
     svgr({
       svgrOptions: {
         icon: true,

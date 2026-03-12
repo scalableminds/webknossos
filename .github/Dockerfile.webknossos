@@ -1,21 +1,21 @@
-FROM eclipse-temurin:21-jammy
+FROM eclipse-temurin:21-jre-jammy
 ARG VERSION_NODE="22.x"
 
 RUN curl -sL "https://deb.nodesource.com/setup_${VERSION_NODE}" | bash - \
-  && apt-get -y install libbrotli1 postgresql-client libdraco4 git nodejs \
+  && apt-get -y install libbrotli1 postgresql-client libdraco4 nodejs \
   && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /webknossos
+RUN mkdir -p /webknossos \
+  && addgroup --system --gid 999 webknossos \
+  && adduser --system --uid 999 --ingroup webknossos webknossos \
+  && mkdir -p /webknossos/disk \
+  && chown webknossos:webknossos /webknossos /webknossos/disk
 WORKDIR /webknossos
 
 # Copy compiled Scala output from a previous build step, e.g. output of the Docker-dev image
-COPY target/universal/stage .
+COPY --chown=webknossos:webknossos target/universal/stage .
 
-RUN addgroup --system --gid 999 webknossos \
-  && adduser --system --uid 999 --ingroup webknossos webknossos \
-  && mkdir disk \
-  && chown -R webknossos . \
-  && chmod +x bin/webknossos \
+RUN chmod +x bin/webknossos \
   && chmod +x tools/postgres/dbtool.js \
   && chmod go+w .
 

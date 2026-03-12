@@ -5,6 +5,22 @@ import type { Vector3 } from "viewer/constants";
 export const loadAgglomerateTree1 = [
   [
     {
+      name: "createSegment" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        id: 1,
+        anchorPosition: [1, 1, 1] as Vector3,
+        additionalCoordinates: undefined,
+        name: null,
+        color: null,
+        groupId: null,
+        metadata: [],
+        creationTime: 1494695001688,
+      },
+    },
+  ],
+  [
+    {
       name: "createTree" as const,
       value: {
         actionTracingId: SKELETON_TRACING_ID,
@@ -101,6 +117,22 @@ export const loadAgglomerateTree1 = [
 export const mergeSegment4And6WithAgglomerateTree1And4 = [
   [
     {
+      name: "createSegment" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        id: 5,
+        anchorPosition: [5, 5, 5] as Vector3,
+        additionalCoordinates: undefined,
+        name: null,
+        color: null,
+        groupId: null,
+        metadata: [],
+        creationTime: 1494695001688,
+      },
+    },
+  ],
+  [
+    {
       name: "mergeAgglomerate" as const,
       value: {
         actionTracingId: VOLUME_TRACING_ID,
@@ -190,6 +222,22 @@ export const mergeSegment4And6WithAgglomerateTree1And4 = [
 ];
 
 export const mergeSegment3And4WithAgglomerateTree1And4 = [
+  [
+    {
+      name: "createSegment" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        id: 3,
+        anchorPosition: [3, 3, 3] as Vector3,
+        additionalCoordinates: undefined,
+        name: null,
+        color: null,
+        groupId: null,
+        metadata: [],
+        creationTime: 1494695001688,
+      },
+    },
+  ],
   [
     {
       name: "mergeAgglomerate" as const,
@@ -342,6 +390,22 @@ export const mergeSegment2And4 = [
 export const mergeSegment1And4WithAgglomerateTrees1And4And6 = [
   [
     {
+      name: "createSegment" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        id: 1,
+        anchorPosition: [1, 1, 1] as Vector3,
+        additionalCoordinates: undefined,
+        name: null,
+        color: null,
+        groupId: null,
+        metadata: [],
+        creationTime: 1494695001688,
+      },
+    },
+  ],
+  [
+    {
       name: "mergeAgglomerate" as const,
       value: {
         actionTracingId: VOLUME_TRACING_ID,
@@ -394,6 +458,22 @@ export const mergeSegment1And4WithAgglomerateTrees1And4And6 = [
 ];
 
 export const mergeSegment3And4WithAgglomerateTree1 = [
+  [
+    {
+      name: "createSegment" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        id: 3,
+        anchorPosition: [3, 3, 3] as Vector3,
+        additionalCoordinates: undefined,
+        name: null,
+        color: null,
+        groupId: null,
+        metadata: [],
+        creationTime: 1494695001688,
+      },
+    },
+  ],
   [
     {
       name: "mergeAgglomerate" as const,

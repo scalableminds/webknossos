@@ -142,7 +142,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       annotationTime <- annotation.tracingTime.toFox ?~> "no annotation.tracingTime"
       timeLimit <- project.expectedTime.toFox ?~> "no project.expectedTime"
       projectOwner <- userService.findOneCached(project._owner)(GlobalAccessContext)
-      projectOwnerMultiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+      projectOwnerMultiUser <- multiUserDAO.findOne(projectOwner._multiUser)(GlobalAccessContext)
     } yield {
       if (annotationTime >= timeLimit && annotationTime - time.toMillis < timeLimit) {
         Mailer ! Send(

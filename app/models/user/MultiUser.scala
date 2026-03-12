@@ -180,7 +180,7 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
                    WHERE u.isOrganizationOwner
                    AND NOT u.isDeactivated
                    AND u._organization = $organizationId
-                   ORDER BY m._id
+                   ORDER BY mu._id
                    LIMIT 1""".as[MultiusersRow])
       parsed <- parseFirst(r, organizationId)
     } yield parsed

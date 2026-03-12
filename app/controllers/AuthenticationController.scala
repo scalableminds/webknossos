@@ -316,14 +316,15 @@ class AuthenticationController @Inject()(
       _ = analyticsService.track(SignupEvent(user, inviteBox.isDefined))
       _ <- Fox.runIf(inviteBox.isDefined)(Fox.runOptional(inviteBox.toOption)(i =>
         inviteService.deactivateUsedInvite(i)(GlobalAccessContext)))
-      newUserEmailRecipient <- organizationService.newUserMailRecipient(organization)(GlobalAccessContext)
+      newUserEmailRecipient <- organizationService.newUserMailRecipient(organization)
       _ = if (conf.Features.isWkorgInstance) {
         mailchimpClient.registerUser(user, multiUser, tag = MailchimpTag.RegisteredAsUser)
       } else {
-        Mailer ! Send(defaultMails.newUserMail(user.name, email, autoActivate))
+        Mailer ! Send(defaultMails.newUserMail(multiUser.fullName, email, autoActivate))
       }
       _ = Mailer ! Send(
-        defaultMails.registerAdminNotifierMail(user.name, email, organization, autoActivate, newUserEmailRecipient))
+        defaultMails
+          .registerAdminNotifierMail(multiUser.fullName, email, organization, autoActivate, newUserEmailRecipient))
     } yield {
       user
     }
@@ -437,11 +438,11 @@ class AuthenticationController @Inject()(
         teamMemberships = teamMemberships
       )
       _ = analyticsService.track(JoinOrganizationEvent(request.identity, organization))
-      userEmail <- userService.emailFor(request.identity)
+      multiUser <- multiUserDAO.findOne(request.identity._multiUser)
       newUserEmailRecipient <- organizationService.newUserMailRecipient(organization)
       _ = Mailer ! Send(
-        defaultMails.registerAdminNotifierMail(request.identity.name,
-                                               userEmail,
+        defaultMails.registerAdminNotifierMail(multiUser.fullName,
+                                               multiUser.email,
                                                organization,
                                                invite.autoActivate,
                                                newUserEmailRecipient))
@@ -453,10 +454,12 @@ class AuthenticationController @Inject()(
     implicit request =>
       for {
         _ <- validateInvitePermissions(request.identity, request.body)
+        senderMultiUser <- multiUserDAO.findOne(request.identity._multiUser)
         _ <- Fox.serialCombined(request.body.recipients)(
           recipient =>
             inviteService.inviteOneRecipient(recipient,
                                              request.identity,
+                                             senderMultiUser,
                                              request.body.autoActivate,
                                              request.body.isAdmin,
                                              request.body.isDatasetManager,
@@ -488,10 +491,11 @@ class AuthenticationController @Inject()(
             case None => Future.successful(NotFound(Messages("error.noUser")))
             case Some(user) =>
               for {
-                token <- bearerTokenAuthenticatorService
-                  .createAndInit(user.loginInfo, TokenType.ResetPassword, deleteOld = true)
+                multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+                token <- Fox.fromFuture(bearerTokenAuthenticatorService
+                  .createAndInit(user.loginInfo, TokenType.ResetPassword, deleteOld = true))
               } yield {
-                Mailer ! Send(defaultMails.resetPasswordMail(user.name, email.toLowerCase, token))
+                Mailer ! Send(defaultMails.resetPasswordMail(multiUser.fullName, email.toLowerCase, token))
                 Ok
               }
           }
@@ -538,12 +542,12 @@ class AuthenticationController @Inject()(
                     Future.successful(NotFound(Messages("error.noUser")))
                   case Some(user) =>
                     for {
-                      _ <- Fox.successful(logger.info(s"Multiuser ${user._multiUser} changed their password."))
+                      multiUser <- multiUserDAO.findOne(user._multiUser)
+                      _ <- Fox.successful(logger.info(s"Multiuser ${multiUser._id} changed their password."))
                       _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordHasher.hash(passwords.password1))
                       _ <- Fox.fromFuture(combinedAuthenticatorService.discard(request.authenticator, Ok))
-                      userEmail <- userService.emailFor(user)
                     } yield {
-                      Mailer ! Send(defaultMails.changePasswordMail(user.name, userEmail))
+                      Mailer ! Send(defaultMails.changePasswordMail(multiUser.fullName, multiUser.email))
                       Ok
                     }
                 }
@@ -598,15 +602,15 @@ class AuthenticationController @Inject()(
           for {
             nonce <- values.get("nonce").flatMap(_.headOption).toFox ?~> "Nonce is missing"
             returnUrl <- values.get("return_sso_url").flatMap(_.headOption).toFox ?~> "Return url is missing"
-            userEmail <- userService.emailFor(user)
+            multiUser <- multiUserDAO.findOne(user._multiUser)
             _ = logger.info(f"User ${user._id} logged in via SSO.")
           } yield {
             val returnPayload =
               s"nonce=$nonce&" +
-                s"email=${URLEncoder.encode(userEmail, "UTF-8")}&" +
+                s"email=${URLEncoder.encode(multiUser.email, "UTF-8")}&" +
                 s"external_id=${URLEncoder.encode(user._id.toString, "UTF-8")}&" +
-                s"username=${URLEncoder.encode(user.abbreviatedName, "UTF-8")}&" +
-                s"name=${URLEncoder.encode(user.name, "UTF-8")}"
+                s"username=${URLEncoder.encode(multiUser.abbreviatedName, "UTF-8")}&" +
+                s"name=${URLEncoder.encode(multiUser.fullName, "UTF-8")}"
             val encodedReturnPayload = Base64.encodeBase64String(returnPayload.getBytes("UTF-8"))
             val returnSignature = shaHex(ssoKey, encodedReturnPayload)
             val query = "sso=" + URLEncoder.encode(encodedReturnPayload, "UTF-8") + "&sig=" + returnSignature
@@ -690,11 +694,11 @@ class AuthenticationController @Inject()(
     for {
       _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "auth.passkeys.disabled"
       _ <- Fox.fromBool(usesHttps) ?~> "auth.passkeys.requiresHttps"
-      email <- userService.emailFor(request.identity)
+      multiUser <- multiUserDAO.findOne(request.identity._multiUser)
       user = WebAuthnCreationOptionsUser(
-        displayName = request.identity.name,
-        id = Base64.encodeBase64URLSafeString(request.identity._multiUser.toString.getBytes),
-        name = email
+        displayName = multiUser.fullName,
+        id = Base64.encodeBase64URLSafeString(multiUser._id.toString.getBytes),
+        name = multiUser.email
       )
       credentials <- webAuthnCredentialDAO
         .findAllForUser(request.identity._multiUser) ?~> "Failed to fetch Passkeys" ~> INTERNAL_SERVER_ERROR

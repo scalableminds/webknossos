@@ -23,7 +23,7 @@ class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUse
       val emailMd5 = SCrypt.md5(multiUser.email)
       logger.info(s"Registering user ${user._id} for Mailchimp, tag=${MailchimpTag.format(tag)}")
       for {
-        _ <- registerUser(user.firstName, user.lastName, multiUser.email, emailMd5)
+        _ <- registerUser(multiUser.firstName, multiUser.lastName, multiUser.email, emailMd5)
         _ <- tagByEmailMd5(emailMd5, tag)
       } yield ()
       ()

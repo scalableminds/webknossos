@@ -166,7 +166,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       else q"TRUE"
       rows <- run(
         q"""
-          SELECT j._id, j.command, u._organization, u.firstName, u.lastName, mu.email, j.commandArgs, COALESCE(j.manualState, j.state),
+          SELECT j._id, j.command, u._organization, mu.firstName, mu.lastName, mu.email, j.commandArgs, COALESCE(j.manualState, j.state),
                  j.returnValue, j._voxelytics_workflowHash, j.created, j.started, j.ended, ct.milli_credit_delta
           FROM webknossos.jobs_ j
           JOIN webknossos.users_ u on j._owner = u._id

@@ -36,10 +36,10 @@ conf/application.conf-e
 dev-db/
 docker-compose.override.yml
 fossildb-dev/
-!frontend/javascripts/test/snapshots/type-check/.gitkeep
-!frontend/javascripts/test/snapshots/debug-htmls/.gitkeep
-frontend/javascripts/test/snapshots/debug-htmls/*
-frontend/javascripts/test/snapshots/type-check/*
+frontend/javascripts/test/snapshots/debug_htmls/*
+frontend/javascripts/test/snapshots/type_check/*
+!frontend/javascripts/test/snapshots/type_check/.gitkeep
+!frontend/javascripts/test/snapshots/debug_htmls/.gitkeep
 logs/
 project/boot/
 project/plugins/project/

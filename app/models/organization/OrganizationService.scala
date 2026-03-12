@@ -51,10 +51,10 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     } else Json.obj()
     for {
       usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
-      ownerBox <- userDAO.findOwnerByOrg(organization._id).shiftBox
+      ownerMultiUserBox <- multiUserDAO.findMultiUserOfOrganizationOwner(organization._id).shiftBox
       milliCreditBalanceOpt <- Fox.runIf(requestingUser.exists(_._organization == organization._id))(
         creditTransactionDAO.getMilliCreditBalance(organization._id))
-      ownerNameOpt = ownerBox.toOption.map(o => s"${o.firstName} ${o.lastName}")
+      ownerNameOpt = ownerMultiUserBox.toOption.map(o => o.fullName)
     } yield
       Json.obj(
         "id" -> organization._id,
@@ -160,18 +160,16 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         Fox.fromBool(userCount + usersToAddCount <= includedUsers))
     } yield ()
 
-  private def fallbackOnOwnerEmail(possiblyEmptyEmail: String, organization: Organization)(
-      implicit ctx: DBAccessContext): Fox[String] =
+  private def fallbackOnOwnerEmail(possiblyEmptyEmail: String, organization: Organization): Fox[String] =
     if (possiblyEmptyEmail.nonEmpty) {
       Fox.successful(possiblyEmptyEmail)
     } else {
       for {
-        owner <- userDAO.findOwnerByOrg(organization._id)
-        ownerEmail <- userService.emailFor(owner)
-      } yield ownerEmail
+        ownerMultiUser <- multiUserDAO.findMultiUserOfOrganizationOwner(organization._id)
+      } yield ownerMultiUser.email
     }
 
-  def newUserMailRecipient(organization: Organization)(implicit ctx: DBAccessContext): Fox[String] =
+  def newUserMailRecipient(organization: Organization): Fox[String] =
     fallbackOnOwnerEmail(organization.newUserMailingList, organization)
 
   def acceptTermsOfService(organizationId: String, version: Int)(implicit ctx: DBAccessContext,

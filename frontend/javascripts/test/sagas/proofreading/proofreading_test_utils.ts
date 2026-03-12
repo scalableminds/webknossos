@@ -45,7 +45,7 @@ import type {
   ServerUpdateAction,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
-import type { NumberLike, SaveQueueEntry, WebknossosState } from "viewer/store";
+import type { NumberLike, SaveQueueEntry, Segment, WebknossosState } from "viewer/store";
 import { combinedReducer } from "viewer/store";
 import { expect, vi } from "vitest";
 import { edgesForInitialMapping, initialMapping } from "./proofreading_fixtures";
@@ -63,7 +63,7 @@ export function* initializeMappingAndTool(
   // and zoom in so that buckets in mag 1, 1, 1 are loaded.
   yield put(setActiveOrganizationAction(powerOrga));
   yield put(setZoomStepAction(0.3));
-  const currentMag = yield select((state) => getCurrentMag(state, tracingId));
+  const currentMag = yield* select((state) => getCurrentMag(state, tracingId));
   expect(currentMag).toEqual([1, 1, 1]);
 
   // Activate agglomerate mapping and wait for finished mapping initialization
@@ -556,7 +556,7 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
   context: WebknossosTestContext,
   loadMeshes: boolean,
 ): Saga<void> {
-  const { tracingId } = yield select((state) => state.annotation.volumes[0]);
+  const { tracingId } = yield* select((state) => state.annotation.volumes[0]);
   const expectedInitialMapping = new Map([
     [1, 1],
     [2, 1],
@@ -568,7 +568,7 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
   ]);
 
   yield call(initializeMappingAndTool, context, tracingId);
-  const mapping0 = yield select(
+  const mapping0 = yield* select(
     (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
   );
   expect(mapping0).toEqual(expectedInitialMapping);
@@ -587,7 +587,7 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
 
   yield makeMappingEditableHelper();
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
-  const mapping1 = yield select(
+  const mapping1 = yield* select(
     (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
   );
   expect(mapping1).toEqual(expectedInitialMapping);
@@ -655,14 +655,22 @@ export function* expectMapping(
   tracingId: string,
   expectedMapping: Map<number, number>,
 ): Saga<void> {
-  const mapping0 = yield select(
+  const mapping0 = yield* select(
     (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
   );
   expect(mapping0).toEqual(expectedMapping);
 }
 
-export function* expectSegmentList(tracingId: string, segmentIds: number[]): Saga<void> {
-  const { segments } = yield select((state) => getVolumeTracingById(state.annotation, tracingId));
-  const allPresentSegmentIds = Array.from(segments.keys() as Generator<number>);
-  expect(segmentIds.sort((a, b) => a - b)).toEqual(allPresentSegmentIds.sort((a, b) => a - b));
+export function* expectSegmentList(
+  tracingId: string,
+  expectedSegments: Array<Partial<Segment> & { id: number }>,
+): Saga<void> {
+  const { segments } = yield* select((state) => getVolumeTracingById(state.annotation, tracingId));
+  const expectedSegmentIds = expectedSegments.map((s) => s.id);
+  const actualSegmentIds = Array.from(segments.keys() as Generator<number>);
+  expect(actualSegmentIds.sort((a, b) => a - b)).toEqual(expectedSegmentIds.sort((a, b) => a - b));
+
+  for (const expectedSegment of expectedSegments) {
+    expect(segments.getNullable(expectedSegment.id) as Segment).toMatchObject(expectedSegment);
+  }
 }

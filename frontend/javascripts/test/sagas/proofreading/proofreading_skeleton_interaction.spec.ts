@@ -43,10 +43,12 @@ import {
   performSplitTreesProofreading,
 } from "./proofreading_skeleton_test_utils";
 import {
+  expectSegmentList,
   initializeMappingAndTool,
   makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
+import { publishDebuggingState } from "test/helpers/debugging_state_serializer";
 
 function assertUpdatesMatchInjectedUpdates(
   testUpdates: SaveQueueEntry[][],
@@ -520,6 +522,13 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
+
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [3, 3, 3],
+        },
+      ]);
 
       // Agglomerate 1 and 6 were merged and then split between segment 2 and 3.
       expect(finalMapping).toEqual(

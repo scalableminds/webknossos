@@ -514,13 +514,18 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
     const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
     const isLiveCollabActive = WkDevFlags.liveCollab && othersMayEdit;
     if (isLiveCollabActive) {
+      // If live collab is active and the user did a proofreading merge via edge creation / merge trees,
+      // the affected agglomerate tree(s) may not be in sync with the backend yet. So poll the latest updates.
+      // It is ensured that no new updates by other users are created during processing this proofreading
+      // interaction as we subscribed to the mutex above.
       yield* call(pollNewestBackendVersion);
-      // Replay the current action with the proofreading saga as the initiator.
-      const actionWithSagaAsInitiator = { ...action, initiator: "PROOFREADING" } as
-        | DeleteEdgeAction
-        | MergeTreesAction;
-      yield* put(actionWithSagaAsInitiator);
     }
+    // Replay the current action with the proofreading saga as the initiator.
+    // The reducer ignores the current action as the initiator is marked as "USER".
+    const actionWithSagaAsInitiator = { ...action, initiator: "PROOFREADING" } as
+      | DeleteEdgeAction
+      | MergeTreesAction;
+    yield* put(actionWithSagaAsInitiator);
 
     const { sourceNodeId, targetNodeId } = action;
     const skeletonTracing = yield* select((state) => enforceSkeletonTracing(state.annotation));

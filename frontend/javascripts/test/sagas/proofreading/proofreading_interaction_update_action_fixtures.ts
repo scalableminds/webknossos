@@ -677,11 +677,11 @@ export const mergeSegment5And6WithAgglomerateTree1And4 = [
 export const mergeSegment5And6WithAgglomerateTree1 = [
   [
     {
-      name: "createSegment",
+      name: "createSegment" as const,
       value: {
         actionTracingId: "volumeTracingId",
         additionalCoordinates: undefined,
-        anchorPosition: [5, 5, 5],
+        anchorPosition: [5, 5, 5] as Vector3,
         color: null,
         creationTime: 1494695001688,
         groupId: null,

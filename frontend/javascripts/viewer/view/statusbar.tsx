@@ -1,4 +1,11 @@
-import { DownloadOutlined, MoreOutlined, WarningOutlined } from "@ant-design/icons";
+import Icon, { DownloadOutlined, MoreOutlined, WarningOutlined } from "@ant-design/icons";
+import IconStatusbarDownsampling from "@images/icons/icon-statusbar-downsampling.svg?react";
+import IconStatusbarMouseLeft from "@images/icons/icon-statusbar-mouse-left.svg?react";
+import IconStatusbarMouseLeftDrag from "@images/icons/icon-statusbar-mouse-left-drag.svg?react";
+import IconStatusbarMouseRight from "@images/icons/icon-statusbar-mouse-right.svg?react";
+import IconStatusbarMouseRightDrag from "@images/icons/icon-statusbar-mouse-right-drag.svg?react";
+import IconStatusbarMouseWheel from "@images/icons/icon-statusbar-mouse-wheel.svg?react";
+import { Space, Typography } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { V3 } from "libs/mjs";
@@ -42,6 +49,8 @@ import { Store } from "viewer/singletons";
 import { NumberInputPopoverSetting } from "viewer/view/components/setting_input_views";
 import { CommandPalette } from "./components/command_palette";
 
+const { Text } = Typography;
+
 const lineColor = "rgba(255, 255, 255, 0.67)";
 const moreIconStyle = {
   height: 14,
@@ -63,30 +72,9 @@ function getPosString(
 function ZoomShortcut() {
   return (
     <span key="zoom" className="shortcut-info-element">
-      <span
-        key="zoom-i"
-        className="keyboard-key-icon-small"
-        style={{
-          borderColor: lineColor,
-          marginTop: -1,
-        }}
-      >
-        {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
-        <span
-          style={{
-            position: "relative",
-            top: -2,
-          }}
-        >
-          {AltOrOptionKey}
-        </span>
-      </span>{" "}
+      <Text keyboard>{AltOrOptionKey}</Text>
       +
-      <img
-        className="keyboard-mouse-icon"
-        src="/assets/images/icon-statusbar-mouse-wheel.svg"
-        alt="Mouse Wheel"
-      />
+      <Icon component={IconStatusbarMouseWheel} aria-label="Mouse Wheel" />
       Zoom in/out
     </span>
   );
@@ -95,25 +83,17 @@ function ZoomShortcut() {
 function LeftClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDescriptor }) {
   const leftClick =
     actionDescriptor.leftClick != null ? (
-      <span className="shortcut-info-element">
-        <img
-          className="keyboard-mouse-icon"
-          src="/assets/images/icon-statusbar-mouse-left.svg"
-          alt="Mouse Left Click"
-        />
+      <Space size="small" className="shortcut-info-element">
+        <Icon component={IconStatusbarMouseLeft} aria-label="Mouse Left Click" />
         {actionDescriptor.leftClick}
-      </span>
+      </Space>
     ) : null;
   const leftDrag =
     actionDescriptor.leftDrag != null ? (
-      <span className="shortcut-info-element">
-        <img
-          className="keyboard-mouse-icon"
-          src="/assets/images/icon-statusbar-mouse-left-drag.svg"
-          alt="Mouse Left Drag"
-        />
+      <Space size="small" className="shortcut-info-element">
+        <Icon component={IconStatusbarMouseLeftDrag} aria-label="Mouse Left Drag" />
         {actionDescriptor.leftDrag}
-      </span>
+      </Space>
     ) : null;
   return (
     <span>
@@ -126,25 +106,17 @@ function LeftClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDescr
 function RightClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDescriptor }) {
   const rightClick =
     actionDescriptor.rightClick != null ? (
-      <span className="shortcut-info-element">
-        <img
-          className="keyboard-mouse-icon"
-          src="/assets/images/icon-statusbar-mouse-right.svg"
-          alt="Mouse Right Click"
-        />
+      <Space size="small" className="shortcut-info-element">
+        <Icon component={IconStatusbarMouseRight} aria-label="Mouse Right Click" />
         {actionDescriptor.rightClick}
-      </span>
+      </Space>
     ) : null;
   const rightDrag =
     actionDescriptor.rightDrag != null ? (
-      <span className="shortcut-info-element">
-        <img
-          className="keyboard-mouse-icon"
-          src="/assets/images/icon-statusbar-mouse-right-drag.svg"
-          alt="Mouse Right Drag"
-        />
+      <Space size="small" className="shortcut-info-element">
+        <Icon component={IconStatusbarMouseRightDrag} aria-label="Mouse Right Drag" />
         {actionDescriptor.rightDrag}
-      </span>
+      </Space>
     ) : null;
   return (
     <React.Fragment>
@@ -157,7 +129,13 @@ function RightClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDesc
 const getMoreShortcutsInfo = () => {
   return (
     <>
-      <CommandPalette label={<div style={{ marginLeft: 25 }}>[Ctrl+P] Commands</div>} />
+      <CommandPalette
+        label={
+          <div style={{ marginLeft: 25 }}>
+            <Text keyboard>Ctrl + P</Text> Commands
+          </div>
+        }
+      />
       {moreShortcutsLink}
     </>
   );
@@ -208,120 +186,23 @@ function ShortcutsInfo() {
         {actionDescriptor != null ? (
           <LeftClickShortcut actionDescriptor={actionDescriptor} />
         ) : (
-          <span
-            className="shortcut-info-element"
-            style={{
-              textTransform: "capitalize",
-            }}
-          >
-            <img
-              className="keyboard-mouse-icon"
-              src="/assets/images/icon-statusbar-mouse-left-drag.svg"
-              alt="Mouse Left Drag"
-            />
+          <span className="shortcut-info-element">
+            <Icon component={IconStatusbarMouseLeftDrag} aria-label="Mouse Left Drag" />
             Move
           </span>
         )}
-
-        <span className="shortcut-info-element">
-          <span
-            key="space-forward-i"
-            className="keyboard-key-icon-small"
-            style={{
-              borderColor: lineColor,
-              marginTop: -1,
-            }}
-          >
-            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
-            <span
-              style={{
-                position: "relative",
-                top: -2,
-              }}
-            >
-              Space
-            </span>
-          </span>{" "}
+        <Space size="small" className="shortcut-info-element">
+          <Text keyboard>Space</Text>
           Trace forward
-        </span>
-        <span className="shortcut-info-element">
-          <span
-            key="ctrl-back-i"
-            className="keyboard-key-icon-small"
-            style={{
-              borderColor: lineColor,
-              marginTop: -1,
-            }}
-          >
-            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
-            <span
-              style={{
-                position: "relative",
-                top: -2,
-              }}
-            >
-              CTRL
-            </span>
-          </span>{" "}
-          <span
-            key="space-back-i"
-            className="keyboard-key-icon-small"
-            style={{
-              borderColor: lineColor,
-              marginTop: -1,
-            }}
-          >
-            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
-            <span
-              style={{
-                position: "relative",
-                top: -2,
-              }}
-            >
-              Space
-            </span>
-          </span>{" "}
+        </Space>
+        <Space size="small" className="shortcut-info-element">
+          <Text keyboard>Ctrl + Space</Text>
           Trace backward
-        </span>
-        <span className="shortcut-info-element">
-          <span
-            key="arrow-left-i"
-            className="keyboard-key-icon-small"
-            style={{
-              borderColor: lineColor,
-              marginTop: -1,
-            }}
-          >
-            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
-            <span
-              style={{
-                position: "relative",
-                top: -2,
-              }}
-            >
-              ◀
-            </span>
-          </span>{" "}
-          <span
-            key="arrow-right-i"
-            className="keyboard-key-icon-small"
-            style={{
-              borderColor: lineColor,
-              marginTop: -1,
-            }}
-          >
-            {/* Move text up to vertically center it in the border from keyboard-key-icon-small */}
-            <span
-              style={{
-                position: "relative",
-                top: -2,
-              }}
-            >
-              ▶
-            </span>
-          </span>{" "}
+        </Space>
+        <Space size="small" className="shortcut-info-element">
+          <Text keyboard>◀ / ▶</Text>
           Rotation
-        </span>
+        </Space>
         {getMoreShortcutsInfo()}
       </React.Fragment>
     );
@@ -347,22 +228,14 @@ function ShortcutsInfo() {
     <React.Fragment>
       <LeftClickShortcut actionDescriptor={actionDescriptor} />
       <RightClickShortcut actionDescriptor={actionDescriptor} />
-      <span className="shortcut-info-element">
-        <img
-          className="keyboard-mouse-icon"
-          src="/assets/images/icon-statusbar-mouse-wheel.svg"
-          alt="Mouse Wheel"
-        />
+      <Space size="small" className="shortcut-info-element">
+        <Icon component={IconStatusbarMouseWheel} aria-label="Mouse Wheel" />
         {isAltPressed || isControlOrMetaPressed ? "Zoom in/out" : "Move along 3rd axis"}
-      </span>
-      <span className="shortcut-info-element">
-        <img
-          className="keyboard-mouse-icon"
-          src="/assets/images/icon-statusbar-mouse-right-drag.svg"
-          alt="Mouse Right"
-        />
+      </Space>
+      <Space size="small" className="shortcut-info-element">
+        <Icon component={IconStatusbarMouseRightDrag} aria-label="Mouse Right" />
         Rotate 3D View
-      </span>
+      </Space>
       <ZoomShortcut />
       {getMoreShortcutsInfo()}
     </React.Fragment>
@@ -552,11 +425,7 @@ function MagnificationInfo() {
 
   return (
     <span className="info-element">
-      <img
-        src="/assets/images/icon-statusbar-downsampling.svg"
-        className="mag-status-bar-icon"
-        alt="Magnification"
-      />{" "}
+      <Icon component={IconStatusbarDownsampling} aria-label="Magnification" />{" "}
       <FastTooltip dynamicRenderer={renderMagTooltipContent} placement="top">
         {representativeMag.join("-")}
         {isActiveMagGlobal ? "" : "*"}{" "}

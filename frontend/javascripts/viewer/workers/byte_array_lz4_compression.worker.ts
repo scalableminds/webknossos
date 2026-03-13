@@ -1,15 +1,15 @@
-import { expose } from "./comlink_wrapper";
-import lz4 from "./lz4_wasm_wrapper";
+import { compress, decompress } from "lz4-wasm";
+import { expose } from "./comlink_core";
 
 function compressLz4Block(
   data: Uint8Array<ArrayBuffer>,
-  compress: boolean,
+  shouldCompress: boolean,
 ): Uint8Array<ArrayBuffer> {
-  if (compress) {
-    return lz4.compress(data) as Uint8Array<ArrayBuffer>;
+  if (shouldCompress) {
+    return compress(data) as Uint8Array<ArrayBuffer>;
   }
 
-  return lz4.decompress(data) as Uint8Array<ArrayBuffer>;
+  return decompress(data) as Uint8Array<ArrayBuffer>;
 }
 
 export default expose(compressLz4Block);

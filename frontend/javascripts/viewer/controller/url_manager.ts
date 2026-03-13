@@ -10,7 +10,7 @@ import throttle from "lodash-es/throttle";
 import messages from "messages";
 import type { AdditionalCoordinate, APIDataset } from "types/api_types";
 import { type APIAnnotationType, APICompoundTypeEnum } from "types/api_types";
-import type { Mutable } from "types/globals";
+import type { Mutable } from "types/type_utils";
 import { validateUrlStateJSON } from "types/validation";
 import type { Vector3, ViewMode } from "viewer/constants";
 import constants, { MappingStatusEnum, ViewModeValues } from "viewer/constants";

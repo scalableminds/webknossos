@@ -90,7 +90,7 @@ Samplecountry
     Organization(
       "sample_organization",
       additionalInformation,
-      "/assets/images/logo.svg",
+      "/images/logo.svg",
       "Sample Organization",
       PricingPlan.Custom,
       Some(AiPlan.Power_AI),
@@ -169,6 +169,8 @@ Samplecountry
     defaultUser._id,
     None,
     List.empty,
+    None,
+    uploadToPathIsPending = false,
     "sample_ai_model",
     Some("Works if model files are manually placed at binaryData/sample_organization/66544a56d20000af0e42ba0f/"),
     Some(AiModelCategory.em_neurons)

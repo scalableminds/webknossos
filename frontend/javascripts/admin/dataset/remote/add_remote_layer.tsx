@@ -9,9 +9,9 @@ import isEqual from "lodash-es/isEqual";
 import messages from "messages";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { APIDataStore, VoxelSize } from "types/api_types";
-import type { ArbitraryObject } from "types/globals";
 import type { DatasourceConfiguration } from "types/schemas/datasource.types";
-import { Hint } from "viewer/view/action-bar/download_modal_view";
+import type { ArbitraryObject } from "types/type_utils";
+import { Hint } from "viewer/view/action_bar/download_modal_view";
 import { GoogleAuthFormItem } from "./google_auth_form_item";
 
 const FormItem = Form.Item;

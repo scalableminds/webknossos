@@ -50,6 +50,8 @@ public/commit.txt
 public/docs
 public/docs/frontend-api
 public/test-bundle
+public/images
+public/wasm
 public/index.html
 frontend/stylesheets/fontawesome*
 src/main/scala/rebel.xml
@@ -104,6 +106,10 @@ metals.sbt
 **/screenshots/*.diff.png
 **/screenshots/*.new.png
 
+# Tools
+tools/debugging/version-visualizer/data/*
+!tools/debugging/version-visualizer/data/.gitignore
+
 # Yarn 
 .yarn/*
 !.yarn/cache
@@ -113,3 +119,6 @@ metals.sbt
 !.yarn/sdks
 !.yarn/versions
 tools/**/.yarn/*
+public/index.html
+
+tsconfig.tsbuildinfo

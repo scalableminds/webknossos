@@ -1,4 +1,3 @@
-import { BlobReader, BlobWriter, ZipWriter } from "@zip.js/zip.js";
 import { saveAs } from "file-saver";
 import ErrorHandling from "libs/error_handling";
 import exportToStl from "libs/stl_exporter";
@@ -15,9 +14,9 @@ import {
   type UpdateMeshVisibilityAction,
   updateMeshVisibilityAction,
 } from "viewer/model/actions/annotation_actions";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
-import { stlMeshConstants } from "viewer/view/right-border-tabs/segments_tab/segments_view";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
+import { stlMeshConstants } from "viewer/view/right_border_tabs/segments_tab/segments_view";
 import { getAdditionalCoordinatesAsString } from "../../accessors/flycam_accessor";
 import type { FlycamAction } from "../../actions/flycam_actions";
 import type {
@@ -60,6 +59,7 @@ function* downloadMeshCellsAsZIP(
   segments: Array<{ segmentName: string; segmentId: number; layerName: string }>,
 ): Saga<void> {
   const { segmentMeshController } = getSceneController();
+  const { BlobReader, BlobWriter, ZipWriter } = yield* call(() => import("@zip.js/zip.js"));
   const zipWriter = new ZipWriter(new BlobWriter("application/zip"));
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   try {

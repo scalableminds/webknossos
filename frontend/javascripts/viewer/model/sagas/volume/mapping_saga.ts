@@ -64,8 +64,8 @@ import {
   MAPPING_MESSAGE_KEY,
   setCacheResultForDiffMappings,
 } from "viewer/model/bucket_data_handling/mappings";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { jsHsv2rgb } from "viewer/shaders/utils.glsl";
 import { api, Model } from "viewer/singletons";
 import type {
@@ -84,7 +84,7 @@ import { ensureWkInitialized } from "../ready_sagas";
 type APIMappings = Record<string, APIMapping>;
 type Container<T> = { value: T };
 
-const BUCKET_WATCHING_THROTTLE_DELAY = process.env.IS_TESTING ? 5 : 500;
+const BUCKET_WATCHING_THROTTLE_DELAY = import.meta.env.MODE === "test" ? 5 : 50;
 
 const takeLatestMappingChange = (
   oldActiveMappingByLayer: Container<Record<string, ActiveMappingInfo>>,
@@ -256,13 +256,16 @@ function* reloadData(
   oldActiveMappingByLayer.value = activeMappingByLayer;
 }
 
-function createBucketDataChangedChannel(dataCube: DataCube) {
+function createRenderedBucketDataChangedChannel(dataCube: DataCube) {
   return eventChannel((emit) => {
-    const bucketDataChangedHandler = () => {
-      emit("BUCKET_DATA_CHANGED");
+    const renderedBucketDataChangedHandler = () => {
+      emit("RENDERED_BUCKET_DATA_CHANGED");
     };
 
-    const unbind = dataCube.emitter.on("bucketDataChanged", bucketDataChangedHandler);
+    const unbind = dataCube.emitter.on(
+      "renderedBucketDataChanged",
+      renderedBucketDataChangedHandler,
+    );
     return unbind;
   }, buffers.sliding<string>(1));
 }
@@ -284,7 +287,7 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
    * saga in an interruptible manner. See comments below for some rationale.
    */
   const dataCube = yield* call([Model, Model.getCubeByLayerName], layerName);
-  const bucketChannel = yield* call(createBucketDataChangedChannel, dataCube);
+  const bucketChannel = yield* call(createRenderedBucketDataChangedChannel, dataCube);
 
   // Also update the local hdf5 mapping by inspecting all already existing
   // buckets (likely, there are none yet because all buckets were reloaded, but
@@ -293,7 +296,7 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
 
   while (true) {
     yield take(bucketChannel);
-    // We received a BUCKET_DATA_CHANGED event. `startInterruptibleUpdateMapping` needs
+    // We received a RENDERED_BUCKET_DATA_CHANGED event. `startInterruptibleUpdateMapping` needs
     // to be invoked.
     // However, let's throttle¹ this by waiting and then discarding all other events
     // that might have accumulated in between.
@@ -435,7 +438,7 @@ function* handleSetMapping(
       yield* call(setCustomColors, action, classes, layerName);
     }
 
-    if (process.env.IS_TESTING) {
+    if (import.meta.env.MODE === "test") {
       // in test context, the mapping.ts code is not executed (which is usually responsible
       // for finishing the initialization).
       // TODO #9064: Refactor this
@@ -517,6 +520,11 @@ function* updateLocalHdf5Mapping(
     getEditableMappingForVolumeTracingId(state, layerName),
   );
 
+  const previousMapping = yield* select(
+    (store) => store.temporaryConfiguration.activeMappingByLayer[layerName].mapping,
+  );
+  const previousMappingOrEmpty = previousMapping || (new Map() as Mapping);
+
   const isZoomThresholdExceeded = yield* select((state) =>
     isZoomThresholdExceededForAgglomerateMapping(state, layerName),
   );
@@ -525,17 +533,19 @@ function* updateLocalHdf5Mapping(
     // We do not try to look up all segment ids because these are usually too many
     // in coarse magnifications.
     // A toast will be shown to the user in the warnAboutSegmentationZoom saga.
+    if (previousMapping == null) {
+      // If an annotation with activated mapping is loaded in a zoom state where the threshold is exceeded,
+      // a mapping needs to be set to let the mapping activation conclude (compare updateMappingTextures in mappings.ts).
+      // In cases where a mapping is already set and the zoom threshold is exceeded, it is not changed
+      // to avoid useless updates to the cuckoo textures. Once the threshold is no longer exceeded, the mapping
+      // will be updated again.
+      yield* put(setMappingAction(layerName, mappingName, "HDF5", true, { mapping: new Map() }));
+    }
     return;
   }
 
   const cube = Model.getCubeByLayerName(layerName);
-  const segmentIds = cube.getValueSetForAllBuckets();
-
-  const previousMapping = yield* select(
-    (store) =>
-      store.temporaryConfiguration.activeMappingByLayer[layerName].mapping ||
-      (new Map() as Mapping),
-  );
+  const segmentIds = cube.getValueSetForAllAccessedBuckets();
 
   const {
     aWithoutB: newSegmentIds,
@@ -545,7 +555,7 @@ function* updateLocalHdf5Mapping(
     // that without any problems. This is done later to
     // avoid duplicating data for performance reasons.
     intersection: mutableRemainingEntries,
-  } = fastDiffSetAndMap(segmentIds as Set<NumberLike>, previousMapping);
+  } = fastDiffSetAndMap(segmentIds as Set<NumberLike>, previousMappingOrEmpty);
 
   let newEntries;
   try {
@@ -583,7 +593,7 @@ function* updateLocalHdf5Mapping(
     mapping.set(key, val);
   }
 
-  setCacheResultForDiffMappings(previousMapping, mapping, {
+  setCacheResultForDiffMappings(previousMappingOrEmpty, mapping, {
     changed: [],
     onlyA: deletedValues,
     onlyB: newSegmentIds,
@@ -593,7 +603,7 @@ function* updateLocalHdf5Mapping(
 
   yield* call(adaptActiveSegmentToProofreadingMarker, layerName);
 
-  if (process.env.IS_TESTING) {
+  if (import.meta.env.MODE === "test") {
     // in test context, the mapping.ts code is not executed (which is usually responsible
     // for finishing the initialization).
     yield put(finishMappingInitializationAction(layerName));

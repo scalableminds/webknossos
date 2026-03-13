@@ -1,4 +1,8 @@
-import { CloseOutlined } from "@ant-design/icons";
+import Icon, { CloseOutlined } from "@ant-design/icons";
+import IconAnnotate from "@images/backgrounds/annotate.svg?react";
+import IconImportOwnData from "@images/backgrounds/import-own-data.svg?react";
+import IconInviteColleagues from "@images/backgrounds/invite-colleagues.svg?react";
+import IconOpenDemo from "@images/backgrounds/open-demo.svg?react";
 import { InviteUsersModal } from "admin/onboarding";
 import { Button, Tooltip } from "antd";
 import { getDemoDatasetUrl } from "features";
@@ -67,9 +71,8 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
         }}
       >
         <Tooltip title="Don't show this again" placement="left">
-          <Button type="text" onClick={onDismiss}>
+          <Button type="text" onClick={onDismiss} icon={<CloseOutlined />} iconPlacement="end">
             Close
-            <CloseOutlined />
           </Button>
         </Tooltip>
       </div>
@@ -85,7 +88,7 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
               title="Open a Demo Dataset"
               description="Have a look at a public dataset to experience WEBKNOSSOS in action."
               href={getDemoDatasetUrl()}
-              icon={<i className="icon-open-demo" />}
+              icon={<Icon component={IconOpenDemo} className="welcome-header-icon" aria-hidden />}
             />
 
             {isUserAdminOrDatasetManager(activeUser) ? (
@@ -93,21 +96,29 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
                 title="Import Your Own Data"
                 description="Directly upload your data as a zip file."
                 to="/datasets/upload"
-                icon={<i className="icon-import-own-data" />}
+                icon={
+                  <Icon component={IconImportOwnData} className="welcome-header-icon" aria-hidden />
+                }
               />
             ) : null}
 
             <WhatsNextAction
               title="Learn How To Create Annotations"
               description="Watch a short video to see how data can be annotated with WEBKNOSSOS."
-              icon={<i className="icon-annotate" />}
+              icon={<Icon component={IconAnnotate} className="welcome-header-icon" aria-hidden />}
               href="https://www.youtube.com/watch?v=iw2C7XB6wP4"
             />
             {isUserAdminOrTeamManager(activeUser) ? (
               <WhatsNextAction
                 title="Invite Your Colleagues"
                 description="Send email invites to your colleagues and ask them to join your organization."
-                icon={<i className="icon-invite-colleagues" />}
+                icon={
+                  <Icon
+                    component={IconInviteColleagues}
+                    className="welcome-header-icon"
+                    aria-hidden
+                  />
+                }
                 onClick={() => {
                   renderIndependently((destroy) => (
                     <InviteUsersModal organizationId={activeUser.organization} destroy={destroy} />

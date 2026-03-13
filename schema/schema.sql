@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(155);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(157);
 COMMIT TRANSACTION;
 
 
@@ -564,6 +564,7 @@ CREATE TABLE webknossos.workers(
   maxParallelLowPriorityJobs INT NOT NULL DEFAULT 1,
   supportedJobCommands TEXT[] NOT NULL DEFAULT array[]::TEXT[],
   lastHeartBeat TIMESTAMPTZ NOT NULL DEFAULT '2000-01-01T00:00:00Z',
+  lastReportedVersion TEXT,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );
@@ -669,6 +670,8 @@ CREATE TABLE webknossos.aiModels(
   _dataStore TEXT NOT NULL, -- redundant to job, but must be available for jobless models
   _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
   _trainingJob TEXT CONSTRAINT _trainingJob_objectId CHECK (_trainingJob ~ '^[0-9a-f]{24}$'),
+  path TEXT,
+  uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
   name TEXT NOT NULL,
   comment TEXT,
   category webknossos.AI_MODEL_CATEGORY,

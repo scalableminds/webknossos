@@ -373,7 +373,12 @@ export function createSkeletonNode(
     const treeAndNode = getTreeAndNode(newSkeleton, newNodeId, newSkeleton.activeTreeId);
     if (!treeAndNode) return;
 
-    api.tracing.centerPositionAnimated(position.floating, skipCenteringAnimationInThirdDimension);
+    api.tracing.centerPositionAnimated(
+      position.floating,
+      skipCenteringAnimationInThirdDimension,
+      undefined,
+      true,
+    );
   }
 
   if (branchpoint) {

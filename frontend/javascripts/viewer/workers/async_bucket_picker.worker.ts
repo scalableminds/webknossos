@@ -5,7 +5,7 @@ import constants from "viewer/constants";
 import determineBucketsForFlight from "viewer/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
 import determineBucketsForOblique from "viewer/model/bucket_data_handling/bucket_picker_strategies/oblique_bucket_picker";
 import type { LoadingStrategy, PlaneRects } from "viewer/store";
-import { expose } from "./comlink_wrapper";
+import { expose } from "./comlink_core";
 
 type PriorityItem = {
   bucketAddress: Vector4;

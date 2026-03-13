@@ -556,7 +556,7 @@ function* updateLocalHdf5Mapping(
     // avoid duplicating data for performance reasons.
     intersection: mutableRemainingEntries,
   } = fastDiffSetAndMap(segmentIds as Set<NumberLike>, previousMappingOrEmpty);
-
+  console.log("Mapping this many segment IDs:", newSegmentIds.size);
   let newEntries;
   try {
     newEntries =

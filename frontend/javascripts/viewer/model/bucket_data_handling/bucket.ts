@@ -679,8 +679,14 @@ export class DataBucket {
 
   private ensureValueSet(): asserts this is { cachedValueSet: Set<number> | Set<bigint> } {
     if (this.cachedValueSet == null) {
-      // @ts-expect-error The Set constructor accepts null and BigUint64Arrays just fine.
-      this.cachedValueSet = new Set(this.data);
+      const bucketMag = Math.max(...this.cube.magInfo.getMagByIndexOrThrow(this.zoomedAddress[3]));
+      if (bucketMag >= 8) {
+        // @ts-expect-error The Set constructor accepts null and BigUint64Arrays just fine.
+        this.cachedValueSet = new Set(this.data.filter((_, index) => index % 15 === 0));
+      } else {
+        // @ts-expect-error The Set constructor accepts null and BigUint64Arrays just fine.
+        this.cachedValueSet = new Set(this.data);
+      }
     }
   }
 

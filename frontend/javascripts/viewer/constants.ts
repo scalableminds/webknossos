@@ -349,7 +349,7 @@ const Constants = {
 /* Note that this must stay in sync with the back-end constant MaxMagForAgglomerateMapping
   compare https://github.com/scalableminds/webknossos/issues/5223.
  */
-export const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 16;
+export const MAX_MAG_FOR_AGGLOMERATE_MAPPING = 1024;
 
 export default Constants;
 

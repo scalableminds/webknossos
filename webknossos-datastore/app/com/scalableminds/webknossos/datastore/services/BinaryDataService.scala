@@ -29,7 +29,7 @@ class BinaryDataService(val dataBaseDir: Path,
 
   /* Note that this must stay in sync with the front-end constant MAX_MAG_FOR_AGGLOMERATE_MAPPING
      compare https://github.com/scalableminds/webknossos/issues/5223 */
-  private val MaxMagForAgglomerateMapping = 16
+  private val MaxMagForAgglomerateMapping = 1024
 
   private lazy val bucketProviderCache = new BucketProviderCache(maxEntries = 5000)
 

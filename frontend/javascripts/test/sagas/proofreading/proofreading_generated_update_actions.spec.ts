@@ -402,12 +402,12 @@ describe("Proofreading should generate correct update actions", () => {
   });
 
   it("when loading agglomerate tree 1 and then merging segments 5 and 6.", async (context: WebknossosTestContext) => {
-    mockInitialBucketAndAgglomerateData(context);
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [1], 5, 6, 4, false);
       // There are no agglomerate tree updates as no loaded tree is affected by the merge
-      const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-3)!;
+      const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment5And6WithAgglomerateTree1);
     });
 

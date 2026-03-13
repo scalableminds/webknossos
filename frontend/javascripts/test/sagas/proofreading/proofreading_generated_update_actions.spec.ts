@@ -4,8 +4,10 @@ import {
   setupWebknossosForTesting,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
+import { publishDebuggingState } from "test/helpers/debugging_state_serializer";
 import { call, delay, put, take } from "typed-redux-saga";
 import { WkDevFlags } from "viewer/api/wk_dev";
+import type { Vector3 } from "viewer/constants";
 import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import {
@@ -17,6 +19,7 @@ import {
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+import type { UpdateAction } from "viewer/model/sagas/volume/update_actions";
 import { api, Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -30,10 +33,10 @@ import {
   mergeSegment3And4WithAgglomerateTree1And4,
   mergeSegment3And6WithAgglomerateTree1,
   mergeSegment4And6WithAgglomerateTree1And4,
-  mergeSegment1337And5,
   mergeSegment5And6,
   mergeSegment5And6WithAgglomerateTree1,
   mergeSegment5And6WithAgglomerateTree1And4,
+  mergeSegment1337And5,
   minCutWithNodes2And3WithAgglomerateTree1,
   splitAgglomerateTree1,
   splitSegment1And2,
@@ -58,10 +61,6 @@ import {
   makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
-import type { UpdateAction } from "viewer/model/sagas/volume/update_actions";
-import { ColoredLogger, sleep } from "libs/utils";
-import { Vector3 } from "viewer/constants";
-import { publishDebuggingState } from "test/helpers/debugging_state_serializer";
 
 const ACTION_TYPES_BLACKLIST = ["updateCamera", "updateMappingName", "updateActiveSegmentId"];
 const ACTION_TYPES_TREE_LOADING = ["createTree", "createNode", "createEdge"];
@@ -300,6 +299,8 @@ describe("Proofreading should generate correct update actions", () => {
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [1, 4], 3, 4, 1, false);
       const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
+      yield call(publishDebuggingState, _backendMock);
+
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment3And4WithAgglomerateTree1And4);
     });
 

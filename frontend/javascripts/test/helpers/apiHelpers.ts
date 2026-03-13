@@ -14,6 +14,7 @@ import {
 } from "admin/rest_api";
 import app from "app";
 import { __setFeatures } from "features";
+import { V3 } from "libs/mjs";
 import Request, { type RequestOptions } from "libs/request";
 import { sleep } from "libs/utils";
 import cloneDeep from "lodash-es/cloneDeep";
@@ -45,7 +46,7 @@ import type { ArbitraryObject } from "types/type_utils";
 import type { ApiInterface } from "viewer/api/api_latest";
 import WebknossosApi from "viewer/api/api_loader";
 import { setupApi } from "viewer/api/internal_api";
-import Constants, { ControlModeEnum, Vector3, type Vector2 } from "viewer/constants";
+import Constants, { ControlModeEnum, type Vector2, type Vector3 } from "viewer/constants";
 import { setSceneController } from "viewer/controller/scene_controller_provider";
 import SegmentMeshController from "viewer/controller/segment_mesh_controller";
 import UrlManager from "viewer/controller/url_manager";
@@ -59,6 +60,8 @@ import {
 } from "viewer/model/actions/actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import type { RequestBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { parseProtoAnnotation, parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
 import rootSaga from "viewer/model/sagas/root_saga";
@@ -86,9 +89,6 @@ import {
   tracing as VOLUME_TRACING,
 } from "../fixtures/volumetracing_server_objects";
 import { createUnitCubeBufferGeometry } from "./geometry_helpers";
-import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
-import { V3 } from "libs/mjs";
-import { RequestBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 
 const TOKEN = "secure-token";
 const ANNOTATION_TYPE = "annotationTypeValue";

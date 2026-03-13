@@ -125,7 +125,9 @@ export class BackendMock {
   getState(requestedVersion: number | null = null): WebknossosState {
     let state = this.initialState;
     if (state == null) {
-      throw new Error("Unexpected getState on BackendMock.");
+      throw new Error(
+        "Unexpected getState on BackendMock. Did you pass Store.getState() to mockInitialBucketAndAgglomerateData?",
+      );
     }
     for (const actionBatch of this.getLocalUpdateActionLog(requestedVersion)) {
       state = combinedReducer(
@@ -150,7 +152,9 @@ export class BackendMock {
   getLocalUpdateActionLog(requestedVersion: number | null = null, until: boolean = true) {
     let state = this.initialState;
     if (state == null) {
-      throw new Error("Unexpected getState on BackendMock.");
+      throw new Error(
+        "Unexpected getState on BackendMock. Did you pass Store.getState() to mockInitialBucketAndAgglomerateData?",
+      );
     }
 
     if (requestedVersion === null) {

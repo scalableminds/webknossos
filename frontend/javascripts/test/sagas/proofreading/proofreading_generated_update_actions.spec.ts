@@ -509,10 +509,14 @@ describe("Proofreading should generate correct update actions", () => {
 
   it("when loading agglomerate trees 1, 2 and 4 and then splitting segments 2 and 3 with additional initial edges", async (context: WebknossosTestContext) => {
     // There should be the following circle of edges: 1-2-3-1337-1338-1.
-    const _backendMock = mockInitialBucketAndAgglomerateData(context, [
-      [1, 1338],
-      [3, 1337],
-    ]);
+    const _backendMock = mockInitialBucketAndAgglomerateData(
+      context,
+      [
+        [1, 1338],
+        [3, 1337],
+      ],
+      Store.getState(),
+    );
     const task = startSaga(function* task() {
       const minCutEdges = [
         {
@@ -530,7 +534,12 @@ describe("Proofreading should generate correct update actions", () => {
       ];
 
       yield call(makeProofreadSplit, context, [1, 4, 6], 2, 3, 1, minCutEdges, false);
-      const splitAndTreeAndSegmentUpdates = getNestedUpdateActions(context).slice(-4)!;
+
+      yield call(publishDebuggingState, _backendMock);
+
+      const splitAndTreeAndSegmentUpdates = removeBlacklistedActions(
+        getNestedUpdateActions(context),
+      );
       expect(splitAndTreeAndSegmentUpdates).toStrictEqual(
         splitSegment2And3WithAgglomerateTrees1And4And6,
       );

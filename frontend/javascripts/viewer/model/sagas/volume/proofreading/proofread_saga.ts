@@ -10,7 +10,13 @@ import processTaskWithPool from "libs/async/task_pool";
 import { V3 } from "libs/mjs";
 import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Toast from "libs/toast";
-import { getAdaptToTypeFunction, isEditableEventTarget, isNumberMap, SoftError } from "libs/utils";
+import {
+  ColoredLogger,
+  getAdaptToTypeFunction,
+  isEditableEventTarget,
+  isNumberMap,
+  SoftError,
+} from "libs/utils";
 import window from "libs/window";
 import isEqual from "lodash-es/isEqual";
 import union from "lodash-es/union";
@@ -1416,16 +1422,21 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       );
     }
 
+    const [newSourceAgglomerateId, newTargetAgglomerateId] = yield* all([
+      call(preparation.getDataValue, sourceInfo.position, activeMapping.mapping),
+      call(preparation.getDataValue, targetInfo.position, activeMapping.mapping),
+    ]);
+
     /* Ensure segment items exist for affected segments and reload affected meshes */
     const refreshInfos = [
       {
         oldAgglomerateId: sourceInfo.agglomerateId,
-        newAgglomerateId: sourceAgglomerateId,
+        newAgglomerateId: newSourceAgglomerateId,
         nodePosition: sourceInfo.position,
       },
       {
         oldAgglomerateId: targetInfo.agglomerateId,
-        newAgglomerateId: targetAgglomerateId,
+        newAgglomerateId: newTargetAgglomerateId,
         nodePosition: targetInfo.position,
       },
     ];

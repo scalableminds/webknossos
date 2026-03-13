@@ -31,6 +31,7 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { initialMapping } from "./proofreading_fixtures";
 import {
+  expectSegmentList,
   initializeMappingAndTool,
   makeMappingEditableHelper,
   mockEdgesForPartitionedAgglomerateMinCut,
@@ -121,7 +122,7 @@ describe("Proofreading (with mesh actions)", () => {
 
   // Mesh interactions tests
   it("should merge two agglomerates correctly even when merged segments are not loaded (such an action can be triggered via mesh proofreading)", async (context: WebknossosTestContext) => {
-    const _backendMock = mockInitialBucketAndAgglomerateData(context);
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -148,6 +149,18 @@ describe("Proofreading (with mesh actions)", () => {
           // been looked up for rebasing and thus added to the loaded mapping.
           // [1338, 1], not loaded
         ]),
+      );
+      yield call(() => context.api.tracing.save());
+
+      yield* expectSegmentList(
+        tracingId,
+        [
+          {
+            id: 1,
+            anchorPosition: [1, 1, 1],
+          },
+        ],
+        _backendMock,
       );
     });
 

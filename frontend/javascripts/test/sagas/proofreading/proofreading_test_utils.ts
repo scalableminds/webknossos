@@ -56,6 +56,8 @@ import {
   createSkeletonTracingFromAdjacency,
   encodeServerTracing,
 } from "./proofreading_skeleton_test_utils";
+import compact from "lodash-es/compact";
+import { Store } from "viewer/singletons";
 
 export function* initializeMappingAndTool(
   context: WebknossosTestContext,
@@ -675,13 +677,20 @@ export function* expectMapping(
 export function* expectSegmentList(
   tracingId: string,
   expectedSegments: Array<Partial<Segment> & { id: number }>,
+  backendMock?: BackendMock,
 ): Saga<void> {
-  const { segments } = yield* select((state) => getVolumeTracingById(state.annotation, tracingId));
-  const expectedSegmentIds = expectedSegments.map((s) => s.id);
-  const actualSegmentIds = Array.from(segments.keys() as Generator<number>);
-  expect(actualSegmentIds.sort((a, b) => a - b)).toEqual(expectedSegmentIds.sort((a, b) => a - b));
+  const states = compact([Store.getState(), backendMock?.getState()]);
 
-  for (const expectedSegment of expectedSegments) {
-    expect(segments.getNullable(expectedSegment.id) as Segment).toMatchObject(expectedSegment);
+  for (const state of states) {
+    const { segments } = getVolumeTracingById(state.annotation, tracingId);
+    const expectedSegmentIds = expectedSegments.map((s) => s.id);
+    const actualSegmentIds = Array.from(segments.keys() as Generator<number>);
+    expect(actualSegmentIds.sort((a, b) => a - b)).toEqual(
+      expectedSegmentIds.sort((a, b) => a - b),
+    );
+
+    for (const expectedSegment of expectedSegments) {
+      expect(segments.getNullable(expectedSegment.id) as Segment).toMatchObject(expectedSegment);
+    }
   }
 }

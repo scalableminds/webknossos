@@ -603,7 +603,7 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
-  yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+  yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
   yield put(setActiveCellAction(1, undefined, null, 1));
 
   yield makeMappingEditableHelper();

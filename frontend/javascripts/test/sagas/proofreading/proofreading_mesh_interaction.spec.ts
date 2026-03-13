@@ -39,6 +39,8 @@ import {
   mockInitialBucketAndAgglomerateData,
   simulatePartitionedSplitAgglomeratesViaMeshes,
 } from "./proofreading_test_utils";
+import { publishDebuggingState } from "test/helpers/debugging_state_serializer";
+import { mergeSegment5And6 } from "./proofreading_interaction_update_action_fixtures";
 
 describe("Proofreading (with mesh actions)", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;
@@ -169,30 +171,9 @@ describe("Proofreading (with mesh actions)", () => {
   }, 8000);
 
   it("should load unknown unmapped segment ids of mesh merge operation when incorporating interfered update actions.", async (context: WebknossosTestContext) => {
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    backendMock.planVersionInjection(7, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 5,
-          segmentId2: 6,
-          agglomerateId1: 4,
-          agglomerateId2: 6,
-        },
-      },
-      {
-        name: "mergeSegmentItems",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 5,
-          segmentId2: 6,
-          agglomerateId1: 4,
-          agglomerateId2: 6,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(7, mergeSegment5And6);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -217,6 +198,15 @@ describe("Proofreading (with mesh actions)", () => {
           [1337, 1], // loaded due to rebasing was necessary due to injected update action.
           // [1338, 1], not loaded
         ]),
+      );
+
+      yield* expectSegmentList(
+        tracingId,
+        [
+          { id: 1, anchorPosition: getPositionForSegmentId(1) },
+          { id: 4, anchorPosition: getPositionForSegmentId(5) }, // 5 is contained in agglomerate 4
+        ],
+        backendMock,
       );
     });
 
@@ -317,10 +307,14 @@ describe("Proofreading (with mesh actions)", () => {
     //  [7, 6],
     //  [1337, 6],
     //  [1338, 6]]
-    const _backendMock = mockInitialBucketAndAgglomerateData(context, [
-      [7, 1337],
-      [1338, 1],
-    ]);
+    const backendMock = mockInitialBucketAndAgglomerateData(
+      context,
+      [
+        [7, 1337],
+        [1338, 1],
+      ],
+      Store.getState(),
+    );
 
     mockEdgesForNormalAgglomerateMinCut(mocks);
 
@@ -363,6 +357,17 @@ describe("Proofreading (with mesh actions)", () => {
           // [1338, 1339], also not loaded. see above.
         ]),
       );
+
+      yield* expectSegmentList(
+        tracingId,
+        [
+          {
+            id: 6,
+            anchorPosition: getPositionForSegmentId(1337), // 1337 is contained in agglomerate 6
+          },
+        ],
+        backendMock,
+      );
     });
 
     await task.toPromise();
@@ -390,6 +395,7 @@ describe("Proofreading (with mesh actions)", () => {
     );
 
     backendMock.planVersionInjection(7, [
+      // todop: use fixture
       {
         name: "mergeAgglomerate",
         value: {
@@ -483,8 +489,6 @@ describe("Proofreading (with mesh actions)", () => {
     await task.toPromise();
   });
 
-  // TODOp (#9036): this test (still?) creates a segment item 6 (for agglomerate 6) with an incorrect anchor position (1337^3).
-  // This is likely an incorrect mock.
   it("should perform partitioned min-cut correctly", async (context: WebknossosTestContext) => {
     const { mocks } = context;
     // Initial mapping should be
@@ -498,7 +502,7 @@ describe("Proofreading (with mesh actions)", () => {
     //  [1337, 1],
     //  [1338, 1]]
     // Thus, there should be the following circle of edges: 1-2-3-1337-1338-1.
-    const _backendMock = mockInitialBucketAndAgglomerateData(
+    const backendMock = mockInitialBucketAndAgglomerateData(
       context,
       [
         [1, 1338],
@@ -540,7 +544,7 @@ describe("Proofreading (with mesh actions)", () => {
           value: {
             actionTracingId: "volumeTracingId",
             additionalCoordinates: undefined,
-            anchorPosition: [1338, 1338, 1338],
+            anchorPosition: getPositionForSegmentId(1338),
             color: null,
             creationTime: 1494695001688,
             groupId: null,
@@ -567,6 +571,21 @@ describe("Proofreading (with mesh actions)", () => {
           [1337, 1339], // Loaded as this segment is part of a split proofreading action done in this test.
           [1338, 1339], // Loaded as this segment is part of a split proofreading action done in this test.
         ]),
+      );
+
+      yield* expectSegmentList(
+        tracingId,
+        [
+          {
+            id: 1,
+            anchorPosition: getPositionForSegmentId(1),
+          },
+          {
+            id: 1339,
+            anchorPosition: getPositionForSegmentId(1338), // segment 1338 is in agglomerate 1339
+          },
+        ],
+        backendMock,
       );
     });
 
@@ -649,6 +668,8 @@ describe("Proofreading (with mesh actions)", () => {
 
     const task = startSaga(function* task(): Saga<void> {
       yield simulatePartitionedSplitAgglomeratesViaMeshes(context, false);
+      yield call(publishDebuggingState, backendMock);
+
       const receivedUpdateActions = getFlattenedUpdateActions(context);
       expect(receivedUpdateActions.slice(-2)).toEqual([
         {
@@ -687,6 +708,17 @@ describe("Proofreading (with mesh actions)", () => {
           [1337, 1], // Loaded as this segment is part of a split proofreading action done in this test.
           [1338, 1], // Loaded as this segment is part of a split proofreading action done in this test.
         ]),
+      );
+
+      yield* expectSegmentList(
+        tracingId,
+        [
+          {
+            id: 1,
+            anchorPosition: getPositionForSegmentId(1),
+          },
+        ],
+        backendMock,
       );
     });
 

@@ -568,10 +568,10 @@ export const mergeSegment5And6 = [
       name: "mergeSegmentItems" as const,
       value: {
         actionTracingId: VOLUME_TRACING_ID,
-        agglomerateId1: 4,
-        agglomerateId2: 6,
         segmentId1: 5,
         segmentId2: 6,
+        agglomerateId1: 4,
+        agglomerateId2: 6,
       },
     },
   ],

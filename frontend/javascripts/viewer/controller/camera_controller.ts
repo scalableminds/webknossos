@@ -5,6 +5,7 @@ import {
   Euler,
   Matrix4,
   type OrthographicCamera,
+  PerspectiveCamera,
   Quaternion,
   Vector3 as ThreeVector3,
 } from "three";
@@ -29,7 +30,7 @@ import type { CameraData } from "viewer/store";
 import Store from "viewer/store";
 
 type Props = {
-  cameras: OrthoViewMap<OrthographicCamera>;
+  cameras: OrthoViewMap<OrthographicCamera | PerspectiveCamera>;
   onCameraPositionChanged: () => void;
   onTDCameraChanged: (userTriggered?: boolean) => void;
   setTargetAndFixPosition: () => void;
@@ -83,9 +84,18 @@ function getCameraFromQuaternion(quat: { x: number; y: number; z: number; w: num
   };
 }
 
+function getTDCameraTarget(cameraData: CameraData): Vector3 {
+  if (cameraData.target != null) {
+    return cameraData.target;
+  }
+  const state = Store.getState();
+  return voxelToUnit(state.dataset.dataSource.scale, getPosition(state.flycam));
+}
+
 class CameraController extends PureComponent<Props> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'storePropertyUnsubscribers' has no initi... Remove this comment to see the full error message
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
+  tdViewDiagonalDatasetExtent: number = 0;
   // Properties are only created here to avoid creating new objects for each update call.
   flycamRotationEuler = new Euler();
   flycamRotationMatrix = new Matrix4();
@@ -100,10 +110,11 @@ class CameraController extends PureComponent<Props> {
     const diagonalDatasetExtent = Math.sqrt(
       datasetExtent.width ** 2 + datasetExtent.height ** 2 + datasetExtent.depth ** 2,
     );
+    this.tdViewDiagonalDatasetExtent = diagonalDatasetExtent;
     const far = Math.max(8000000, diagonalDatasetExtent * 2);
 
     for (const cam of Object.values(this.props.cameras)) {
-      cam.near = 0;
+      cam.near = cam instanceof PerspectiveCamera ? Math.max(cam.near, 0.1) : 0;
       cam.far = far;
     }
 
@@ -111,10 +122,13 @@ class CameraController extends PureComponent<Props> {
     this.bindToEvents();
     waitForElementWithId(tdId).then(() => {
       this.props.setTargetAndFixPosition();
+      const state = Store.getState();
+      const flycamPosition = voxelToUnit(state.dataset.dataSource.scale, getPosition(state.flycam));
       Store.dispatch(
         setTDCameraWithoutTimeTrackingAction({
-          near: 0,
+          near: this.props.cameras[OrthoViews.TDView] instanceof PerspectiveCamera ? 0.1 : 0,
           far,
+          target: flycamPosition,
         }),
       );
       api.tracing.rotate3DViewToDiagonal(false);
@@ -141,35 +155,47 @@ class CameraController extends PureComponent<Props> {
         state.flycam.zoomStep,
         planeId,
       ).map((x) => x * scaleFactor);
-      this.props.cameras[planeId].left = -width / 2;
-      this.props.cameras[planeId].right = width / 2;
-      this.props.cameras[planeId].bottom = -height / 2;
-      this.props.cameras[planeId].top = height / 2;
+      const camera = this.props.cameras[planeId] as OrthographicCamera;
+      camera.left = -width / 2;
+      camera.right = width / 2;
+      camera.bottom = -height / 2;
+      camera.top = height / 2;
       // We only set the `near` value here. The effect of far=clippingDistance is
       // achieved by offsetting the plane onto which is rendered by the amount
       // of clippingDistance. Theoretically, `far` could be set here too, however,
       // this leads to imprecision related bugs which cause the planes to not render
       // for certain clippingDistance values.
-      this.props.cameras[planeId].near = -clippingDistance;
-      this.props.cameras[planeId].updateProjectionMatrix();
+      camera.near = -clippingDistance;
+      camera.updateProjectionMatrix();
     }
 
     if (inputCatcherRects != null) {
-      // Update td camera's aspect ratio
-      const tdCamera = this.props.cameras[OrthoViews.TDView];
-      const oldMid = (tdCamera.right + tdCamera.left) / 2;
-      const oldWidth = tdCamera.right - tdCamera.left;
-      const oldHeight = tdCamera.top - tdCamera.bottom;
+      // Update td camera's aspect ratio (stored as left/right)
       const tdRect = inputCatcherRects[OrthoViews.TDView];
       // Do not update the tdCamera if the tdView is not visible
       if (tdRect.height === 0 || tdRect.width === 0) return;
+      const tdCameraData = Store.getState().viewModeData.plane.tdCamera;
+      const oldMid = (tdCameraData.right + tdCameraData.left) / 2;
+      const oldWidth = tdCameraData.right - tdCameraData.left;
+      const oldHeight = tdCameraData.top - tdCameraData.bottom;
+      if (oldHeight === 0) {
+        Store.dispatch(
+          setTDCameraWithoutTimeTrackingAction({
+            left: tdCameraData.left,
+            right: tdCameraData.right,
+          }),
+        );
+        return;
+      }
       const oldAspectRatio = oldWidth / oldHeight;
       const newAspectRatio = tdRect.width / tdRect.height;
       const newWidth = (oldWidth * newAspectRatio) / oldAspectRatio;
-      tdCamera.left = oldMid - newWidth / 2;
-      tdCamera.right = oldMid + newWidth / 2;
-      tdCamera.updateProjectionMatrix();
-      this.props.onTDCameraChanged(false);
+      Store.dispatch(
+        setTDCameraWithoutTimeTrackingAction({
+          left: oldMid - newWidth / 2,
+          right: oldMid + newWidth / 2,
+        }),
+      );
     }
   }
 
@@ -196,6 +222,21 @@ class CameraController extends PureComponent<Props> {
           .multiply(this.baseRotationMatrix),
       );
       this.props.cameras[viewport].updateProjectionMatrix();
+    }
+
+    // Keep the TDView's rotation center in sync with the other viewports while
+    // the user interacts outside of the TDView. This avoids a small "catch up"
+    // jump when hovering the TDView afterwards.
+    if (state.viewModeData.plane.activeViewport !== OrthoViews.TDView) {
+      const prevTarget = state.viewModeData.plane.tdCamera.target;
+      if (
+        prevTarget == null ||
+        prevTarget[0] !== cameraPosition[0] ||
+        prevTarget[1] !== cameraPosition[1] ||
+        prevTarget[2] !== cameraPosition[2]
+      ) {
+        Store.dispatch(setTDCameraWithoutTimeTrackingAction({ target: cameraPosition }));
+      }
     }
   }
 
@@ -230,13 +271,39 @@ class CameraController extends PureComponent<Props> {
   // TD-View methods
   updateTDCamera(cameraData: CameraData): void {
     const tdCamera = this.props.cameras[OrthoViews.TDView];
+    const target = getTDCameraTarget(cameraData);
+
     tdCamera.position.set(...cameraData.position);
-    tdCamera.left = cameraData.left;
-    tdCamera.right = cameraData.right;
-    tdCamera.top = cameraData.top;
-    tdCamera.bottom = cameraData.bottom;
     tdCamera.up = new ThreeVector3(...cameraData.up);
-    tdCamera.updateProjectionMatrix();
+    tdCamera.lookAt(new ThreeVector3(...target));
+
+    if (tdCamera instanceof PerspectiveCamera) {
+      // Interpret left/right/top/bottom as viewplane extents at the target depth and
+      // use an off-axis perspective projection to preserve pan/zoom semantics.
+      const distance = V3.length(V3.sub(target, cameraData.position)) || 1;
+      // Increase the near plane with distance to improve depth precision (reduces z-fighting),
+      // while keeping the visible projection identical (left/right/top/bottom are scaled by near/distance).
+      const near = Math.max(0.1, distance / 1000);
+      const farPadding = Math.max(1000, this.tdViewDiagonalDatasetExtent * 2);
+      const far = Math.max(near + 1, distance + farPadding);
+      const scale = near / distance;
+      const left = cameraData.left * scale;
+      const right = cameraData.right * scale;
+      const top = cameraData.top * scale;
+      const bottom = cameraData.bottom * scale;
+      tdCamera.near = near;
+      tdCamera.far = far;
+      tdCamera.projectionMatrix.makePerspective(left, right, top, bottom, near, far);
+      tdCamera.projectionMatrixInverse.copy(tdCamera.projectionMatrix).invert();
+    } else {
+      tdCamera.left = cameraData.left;
+      tdCamera.right = cameraData.right;
+      tdCamera.top = cameraData.top;
+      tdCamera.bottom = cameraData.bottom;
+      tdCamera.near = cameraData.near;
+      tdCamera.far = cameraData.far;
+      tdCamera.updateProjectionMatrix();
+    }
     this.props.onCameraPositionChanged();
   }
 
@@ -346,6 +413,7 @@ export function rotate3DViewTo(
         right,
         top,
         bottom,
+        target: flycamPos,
       }),
     );
   };

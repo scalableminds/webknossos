@@ -35,7 +35,7 @@ type GeometryLike = {
 const flipYRotationMatrix = new Matrix4().makeRotationY(Math.PI);
 
 class ArbitraryView {
-  cameras: OrthoViewMap<OrthographicCamera>;
+  cameras: OrthoViewMap<OrthographicCamera | PerspectiveCamera>;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'plane' has no initializer and is not def... Remove this comment to see the full error message
   plane: ArbitraryPlane;
   setClippingDistance: (value: number) => void;
@@ -45,8 +45,8 @@ class ArbitraryView {
   animationRequestId: number | null | undefined = null;
   // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Perspective... Remove this comment to see the full error message
   camera: PerspectiveCamera = null;
-  // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Orthographi... Remove this comment to see the full error message
-  tdCamera: OrthographicCamera = null;
+  // @ts-expect-error ts-migrate(2322) FIXME: Type 'null' is not assignable to type 'Perspective... Remove this comment to see the full error message
+  tdCamera: PerspectiveCamera = null;
   geometries: Array<GeometryLike> = [];
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'group' has no initializer and is not def... Remove this comment to see the full error message
   group: Object3D;
@@ -63,7 +63,7 @@ class ArbitraryView {
     this.camera.name = ArbitraryViewport;
     this.camera.matrixAutoUpdate = false;
     scene.add(this.camera);
-    const tdCamera = new OrthographicCamera(0, 0, 0, 0);
+    const tdCamera = new PerspectiveCamera(45, 1, 0.1, 1000);
     tdCamera.position.copy(new ThreeVector3(10, 10, -10));
     tdCamera.up = new ThreeVector3(0, 0, -1);
     tdCamera.matrixAutoUpdate = true;
@@ -79,7 +79,7 @@ class ArbitraryView {
     this.needsRerender = true;
   }
 
-  getCameras(): OrthoViewMap<OrthographicCamera> {
+  getCameras(): OrthoViewMap<OrthographicCamera | PerspectiveCamera> {
     return this.cameras;
   }
 

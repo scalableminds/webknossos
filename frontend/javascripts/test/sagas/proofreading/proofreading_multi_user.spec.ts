@@ -160,7 +160,6 @@ describe("Proofreading (Multi User)", () => {
       ]);
       yield* expectMapping(tracingId, expectedMappingAfterMergeRebase);
 
-      yield call(publishDebuggingState, backendMock);
       yield expectSegmentList(tracingId, [
         {
           id: 1,
@@ -285,7 +284,6 @@ describe("Proofreading (Multi User)", () => {
 
       yield* expectMapping(tracingId, expectedMappingAfterMergeRebase);
 
-      yield call(publishDebuggingState, backendMock);
       yield expectSegmentList(tracingId, [
         {
           id: 1,
@@ -395,7 +393,6 @@ describe("Proofreading (Multi User)", () => {
         ]),
       );
 
-      yield call(publishDebuggingState, backendMock);
       yield expectSegmentList(tracingId, [
         {
           id: 1,
@@ -641,7 +638,6 @@ describe("Proofreading (Multi User)", () => {
         ]),
       );
 
-      yield call(publishDebuggingState, backendMock);
       yield expectSegmentList(tracingId, [
         {
           id: 1,
@@ -757,7 +753,6 @@ describe("Proofreading (Multi User)", () => {
         ]),
       );
 
-      yield call(publishDebuggingState, backendMock);
       yield expectSegmentList(tracingId, [
         {
           id: 1337,
@@ -1064,7 +1059,7 @@ describe("Proofreading (Multi User)", () => {
     await task.toPromise();
   }, 8000);
 
-  it.only("should not create a segment item after splitting when another user performed a merge that swallows that item", async (context: WebknossosTestContext) => {
+  it("should not create a segment item after splitting when another user performed a merge that swallows that item", async (context: WebknossosTestContext) => {
     const { api, mocks } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
 
@@ -1176,30 +1171,7 @@ describe("Proofreading (Multi User)", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
 
-    backendMock.planVersionInjection(5, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1337,
-          segmentId2: 5,
-          agglomerateId1: 1337,
-          agglomerateId2: 4,
-        },
-      },
-    ]);
-    backendMock.planVersionInjection(6, [
-      {
-        name: "mergeSegmentItems",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1337,
-          segmentId2: 5,
-          agglomerateId1: 1337,
-          agglomerateId2: 4,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(5, mergeSegment1337And5);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -1278,7 +1250,7 @@ describe("Proofreading (Multi User)", () => {
      * The local user removes segment item 4. However, another user already merged 1337 and 4 so that
      * segment item does not exist, anymore (instead segment item 1337 will exist).
      * The removal will now be ignored. One can argue whether the removal should now be applied to
-     * segment 1337, but the implementation of that would more complicated which is why the code
+     * segment 1337, but the implementation of that would be more complicated which is why the code
      * behaves like this currently. The reason for why it would be more complicated is that the
      * look up from old id to new id is done by using the anchor position of the segment item.
      * However, the segment item doesn't exist locally anymore (because it was removed by the user).
@@ -1286,30 +1258,7 @@ describe("Proofreading (Multi User)", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
 
-    backendMock.planVersionInjection(5, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1337,
-          segmentId2: 5,
-          agglomerateId1: 1337,
-          agglomerateId2: 4,
-        },
-      },
-    ]);
-    backendMock.planVersionInjection(6, [
-      {
-        name: "mergeSegmentItems",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1337,
-          segmentId2: 5,
-          agglomerateId1: 1337,
-          agglomerateId2: 4,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(5, mergeSegment1337And5);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -1341,7 +1290,7 @@ describe("Proofreading (Multi User)", () => {
         const segment1337AfterSaving = currentSegments.getNullable(1337);
         expect(segment1337AfterSaving).toMatchObject({
           name: "Segment 1337 and Segment 4",
-          anchorPosition: [4, 4, 4],
+          anchorPosition: [100, 100, 100],
         });
       }
     });

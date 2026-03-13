@@ -61,6 +61,7 @@ import {
 import type { UpdateAction } from "viewer/model/sagas/volume/update_actions";
 import { ColoredLogger, sleep } from "libs/utils";
 import { Vector3 } from "viewer/constants";
+import { publishDebuggingState } from "test/helpers/debugging_state_serializer";
 
 const ACTION_TYPES_BLACKLIST = ["updateCamera", "updateMappingName", "updateActiveSegmentId"];
 const ACTION_TYPES_TREE_LOADING = ["createTree", "createNode", "createEdge"];
@@ -100,7 +101,7 @@ describe("Proofreading should generate correct update actions", () => {
   });
 
   async function loadAgglomerateSkeleton(context: WebknossosTestContext, agglomerateId: number) {
-    mockInitialBucketAndAgglomerateData(context);
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -285,6 +286,8 @@ describe("Proofreading should generate correct update actions", () => {
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [1, 4], 5, 6, 4, false);
       const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
+      yield call(publishDebuggingState, _backendMock);
+
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment4And6WithAgglomerateTree1And4);
     });
 
@@ -292,7 +295,7 @@ describe("Proofreading should generate correct update actions", () => {
   }, 8000);
 
   it("when loading agglomerate trees 1 and 4 and then merging segments 3 and 4.", async (context: WebknossosTestContext) => {
-    mockInitialBucketAndAgglomerateData(context);
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [1, 4], 3, 4, 1, false);
@@ -304,7 +307,7 @@ describe("Proofreading should generate correct update actions", () => {
   }, 8000);
 
   it("when merging segments 1 and 4.", async (context: WebknossosTestContext) => {
-    mockInitialBucketAndAgglomerateData(context);
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [], 1, 4, 1, false);
@@ -316,7 +319,7 @@ describe("Proofreading should generate correct update actions", () => {
   }, 8000);
 
   it("when merging segments 2 and 4.", async (context: WebknossosTestContext) => {
-    mockInitialBucketAndAgglomerateData(context);
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [], 2, 4, 1, false);
@@ -328,7 +331,7 @@ describe("Proofreading should generate correct update actions", () => {
   }, 8000);
 
   it("when loading agglomerate trees 1, 4 and 6 then merging segments 1 and 4.", async (context: WebknossosTestContext) => {
-    mockInitialBucketAndAgglomerateData(context);
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [1, 4, 6], 1, 4, 1, false);
@@ -340,7 +343,7 @@ describe("Proofreading should generate correct update actions", () => {
   }, 8000);
 
   it("when loading agglomerate tree 1 and then merging segments 3 and 4.", async (context: WebknossosTestContext) => {
-    mockInitialBucketAndAgglomerateData(context);
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [1], 3, 4, 1, false);
@@ -352,11 +355,11 @@ describe("Proofreading should generate correct update actions", () => {
   }, 8000);
 
   it("when loading agglomerate trees 1 and 4 and then merging segments 5 and 6.", async (context: WebknossosTestContext) => {
-    mockInitialBucketAndAgglomerateData(context);
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [1, 4], 5, 6, 4, false);
-      const mergeAndTreeUpdates = getNestedUpdateActions(context).slice(-4)!;
+      const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment5And6WithAgglomerateTree1And4);
     });
 
@@ -364,7 +367,7 @@ describe("Proofreading should generate correct update actions", () => {
   }, 8000);
 
   it("when merging segments 5 and 6.", async (context: WebknossosTestContext) => {
-    mockInitialBucketAndAgglomerateData(context);
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [], 5, 6, 4, false);
@@ -377,7 +380,7 @@ describe("Proofreading should generate correct update actions", () => {
   }, 8000);
 
   it("when merging segments 1337 and 5.", async (context: WebknossosTestContext) => {
-    mockInitialBucketAndAgglomerateData(context);
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
       yield call(
@@ -427,7 +430,7 @@ describe("Proofreading should generate correct update actions", () => {
   }, 8000);
 
   it("when splitting segments 2 and 3.", async (context: WebknossosTestContext) => {
-    mockInitialBucketAndAgglomerateData(context);
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
       const minCutEdges = [
@@ -467,7 +470,7 @@ describe("Proofreading should generate correct update actions", () => {
   }, 8000);
 
   it("when loading agglomerate tree 1 and then splitting segments 1 and 2.", async (context: WebknossosTestContext) => {
-    mockInitialBucketAndAgglomerateData(context);
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
       const minCutEdges = [
@@ -487,7 +490,7 @@ describe("Proofreading should generate correct update actions", () => {
   }, 8000);
 
   it("when splitting segments 1 and 2.", async (context: WebknossosTestContext) => {
-    mockInitialBucketAndAgglomerateData(context);
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
       const minCutEdges = [
@@ -549,7 +552,7 @@ describe("Proofreading should generate correct update actions", () => {
   });
 
   it("when loading agglomerate tree 1, 6 and 4 and then splitting segments 1 and 2.", async (context: WebknossosTestContext) => {
-    mockInitialBucketAndAgglomerateData(context);
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
       const minCutEdges = [
@@ -569,7 +572,7 @@ describe("Proofreading should generate correct update actions", () => {
   }, 8000);
 
   it("when loading agglomerate tree 1, 4 and 6 and then splitting segments 1 and 2.", async (context: WebknossosTestContext) => {
-    mockInitialBucketAndAgglomerateData(context);
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
       const minCutEdges = [

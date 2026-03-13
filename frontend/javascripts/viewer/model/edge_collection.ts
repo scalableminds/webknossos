@@ -1,5 +1,6 @@
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
-import { diffArrays } from "libs/utils";
+import ErrorHandling from "libs/error_handling";
+import { diffArrays, diffNumberArrays } from "libs/utils";
 import type { Edge } from "./types/tree_types";
 
 type EdgeMap = DiffableMap<number, Edge[]>;
@@ -160,19 +161,27 @@ export default class EdgeCollection implements NotEnumerableByObject {
     newEdgeCollection.edgeCount = edgeCount;
     return newEdgeCollection;
   }
-} // Given two EdgeCollections, this function returns an object holding:
+}
+
+// Given two EdgeCollections, this function returns an object holding:
 // onlyA: An array of edges, which only exists in A
 // onlyB: An array of edges, which only exists in B
-
+// If useDeepEqualityCheck is set to true, the diff might include edges which are not instance equal to one of the passed maps!
+// See more details below in the if-useDeepEqualityCheck block.
 export function diffEdgeCollections(
   edgeCollectionA: EdgeCollection,
   edgeCollectionB: EdgeCollection,
+  useDeepEqualityCheck: boolean,
 ): {
   onlyA: Edge[];
   onlyB: Edge[];
 } {
   // Since inMap and outMap are symmetrical to each other, it suffices to only diff the outMaps
-  const mapDiff = diffDiffableMaps(edgeCollectionA.outMap, edgeCollectionB.outMap);
+  const mapDiff = diffDiffableMaps(
+    edgeCollectionA.outMap,
+    edgeCollectionB.outMap,
+    useDeepEqualityCheck,
+  );
 
   const getEdgesForNodes = (nodeIds: number[], diffableMap: EdgeMap) =>
     nodeIds.flatMap((nodeId) => diffableMap.getOrThrow(nodeId));
@@ -182,13 +191,41 @@ export function diffEdgeCollections(
     onlyB: getEdgesForNodes(mapDiff.onlyB, edgeCollectionB.outMap),
   };
 
+  const MAX_TOLERATED_DIFFING_TIME = 500;
+  const startTime = performance.now();
   for (const changedNodeIndex of mapDiff.changed) {
     // For each changedNodeIndex there is at least one outgoing edge which was added or removed.
     // So, check for each outgoing edge whether it only exists in A or B
-    const outgoingEdgesDiff = diffArrays(
-      edgeCollectionA.outMap.getOrThrow(changedNodeIndex),
-      edgeCollectionB.outMap.getOrThrow(changedNodeIndex),
-    );
+    let outgoingEdgesDiff;
+    if (useDeepEqualityCheck) {
+      // In case of a deep equality check, we diff by outgoing edges.
+      // The edges are then recreated based on the returned diff.
+      // If in some later time instance equality is needed, this should be fairly easy to implement here.
+      const targetDiff = diffNumberArrays(
+        edgeCollectionA.outMap.getOrThrow(changedNodeIndex).map((edge) => edge.target),
+        edgeCollectionB.outMap.getOrThrow(changedNodeIndex).map((edge) => edge.target),
+      );
+      outgoingEdgesDiff = {
+        onlyA: targetDiff.onlyA.map((target) => ({ source: changedNodeIndex, target })),
+        onlyB: targetDiff.onlyB.map((target) => ({ source: changedNodeIndex, target })),
+      };
+    } else {
+      outgoingEdgesDiff = diffArrays(
+        edgeCollectionA.outMap.getOrThrow(changedNodeIndex),
+        edgeCollectionB.outMap.getOrThrow(changedNodeIndex),
+      );
+    }
+    const endTime = performance.now();
+    const elapsedTime = endTime - startTime;
+    if (elapsedTime > MAX_TOLERATED_DIFFING_TIME) {
+      // If diffing takes too long, log it to airbrake so we notice that this is an actual problem in production.
+      ErrorHandling.notify(
+        new Error(
+          `Diffing edges took more than ${MAX_TOLERATED_DIFFING_TIME}. The total time was ${elapsedTime}.`,
+        ),
+      );
+    }
+
     edgeDiff.onlyA = edgeDiff.onlyA.concat(outgoingEdgesDiff.onlyA);
     edgeDiff.onlyB = edgeDiff.onlyB.concat(outgoingEdgesDiff.onlyB);
   }

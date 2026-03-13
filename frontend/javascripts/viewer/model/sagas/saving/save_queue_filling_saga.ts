@@ -111,9 +111,12 @@ export function* setupSavingForTracingType(
   );
   // During rebasing, the local users updates are replayed and thus the identity of skeleton nodes and edges in the diffable map entries change.
   // But content wise they should be the same. Thus, after rebasing reload the tracing to avoid diffs caused by the diffable map identity mismatches.
-  yield* takeLatest("FINISHED_REBASING", function* resetPrevTracing(_action: FinishedRebaseAction) {
-    prevTracing = yield* getTracing();
-  });
+  yield* takeLatest(
+    ["FINISHED_REBASING", "FINISH_FORWARDING_UPDATE_ACTIONS"],
+    function* resetPrevTracing(_action: FinishedRebaseAction) {
+      prevTracing = yield* getTracing();
+    },
+  );
 
   // See Model.ensureSavedState for an explanation of this action channel.
   const ensureDiffedChannel = yield* actionChannel<EnsureTracingsWereDiffedToSaveQueueAction>(
@@ -151,15 +154,18 @@ export function* setupSavingForTracingType(
     }
 
     // The allowUpdate setting could have changed in the meantime.
-    const allowUpdate = yield* select((state) => {
-      return state.annotation.isUpdatingCurrentlyAllowed && state.annotation.restrictions.allowSave;
-    });
-    // Ignore changes while rebasing as during this time actions are simply replayed on top of the server's state.
-    // Therefore, these actions were already added to the save queue and should not be added again.
-    const isRebasing = yield* select(
-      (state) => state.save.rebaseRelevantServerAnnotationState.isRebasing,
+    const allowUpdate = yield* select(
+      (state) =>
+        state.annotation.isUpdatingCurrentlyAllowed && state.annotation.restrictions.allowSave,
     );
-    if (!allowUpdate || isRebasing) {
+    // Ignore changes while rebasing or forwarding new backend actions as during this time actions
+    // are simply replayed on top of the server's state.
+    // Therefore, these actions were already added to the save queue or originate from the server itself
+    // and should not be added again.
+    const isRebasingOrForwarding = yield* select(
+      (state) => state.save.rebaseRelevantServerAnnotationState.isRebasingOrForwarding,
+    );
+    if (!allowUpdate || isRebasingOrForwarding) {
       if (ensureAction) {
         yield* call(resolveEnsureDiffedActions);
       }

@@ -301,6 +301,7 @@ const Constants = {
   MODES_SKELETON: ["orthogonal", "flight", "oblique"] as ViewMode[],
   BUCKET_WIDTH: 32,
   BUCKET_SIZE: 32 ** 3,
+  BUCKET_SHAPE: [32, 32, 32] as Vector3,
   VIEWPORT_WIDTH,
   DEFAULT_NAVBAR_HEIGHT: 48,
   BANNER_HEIGHT: 38,
@@ -344,6 +345,7 @@ const Constants = {
   REGISTER_SEGMENTS_BB_MAX_VOLUME_VX: 512 * 512 * 512,
   REGISTER_SEGMENTS_BB_MAX_SEGMENT_COUNT: 5000,
   DEFAULT_MESH_OPACITY: 1,
+  PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT: 32,
 } as const;
 
 /* Note that this must stay in sync with the back-end constant MaxMagForAgglomerateMapping

@@ -117,7 +117,9 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
         segmentIds,
         bucketPosition.mag,
         editableMappingTracingId,
-        bucketPosition.additionalCoordinates)
+        None, // use newest version
+        bucketPosition.additionalCoordinates
+      )
       _ = previousBucketPositionsBySegment.foreach {
         case (segmentId, previousBucketPositions) =>
           val newBucketPositions = previousBucketPositions + bucketPosition.toVec3IntProto
@@ -147,6 +149,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                               mag: Vec3Int,
                               mappingName: Option[String],
                               editableMappingTracingId: Option[String],
+                              annotationVersion: Long,
                               additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Set[Vec3IntProto]] =
@@ -157,7 +160,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
         elementClass = tracing.elementClass,
         mappingName = mappingName,
         volumeSegmentIndexClient = volumeSegmentIndexClient,
-        version = tracing.version,
+        version = annotationVersion,
         remoteDatastoreClient = remoteDatastoreClient,
         fallbackLayer = fallbackLayer,
         additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),

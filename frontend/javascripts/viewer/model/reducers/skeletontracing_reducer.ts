@@ -9,6 +9,7 @@ import orderBy from "lodash-es/orderBy";
 import uniqBy from "lodash-es/uniqBy";
 import type { MetadataEntryProto } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import { TreeTypeEnum } from "viewer/constants";
 import {
   areGeometriesTransformed,
@@ -800,6 +801,14 @@ function SkeletonTracingReducer(
         return state;
       }
       const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
+      const isLiveCollabActive = WkDevFlags.liveCollab && state.annotation.othersMayEdit;
+      if (isLiveCollabActive && isProofreadingActive && action.initiator === "USER") {
+        // Ignore this action as proofreading is active and the action originates from the user.
+        // The proofreading saga will take care of replaying the same action but with initiator = "PROOFREADING"
+        // to perform the desired tree manipulation.
+        return state;
+      }
+
       const treeType = isProofreadingActive ? TreeTypeEnum.AGGLOMERATE : TreeTypeEnum.DEFAULT;
 
       const sourceTree = getTreeAndNode(skeletonTracing, sourceNodeId, null, treeType);
@@ -1113,6 +1122,13 @@ function SkeletonTracingReducer(
     case "MERGE_TREES": {
       const { sourceNodeId, targetNodeId } = action;
       const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
+      if (isProofreadingActive && action.initiator === "USER") {
+        // Ignore this action as proofreading is active and the action originates from the user.
+        // The proofreading saga will take care of replaying the same action but with initiator = "PROOFREADING"
+        // to perform the desired tree manipulation.
+        return state;
+      }
+
       const treeType = isProofreadingActive ? TreeTypeEnum.AGGLOMERATE : TreeTypeEnum.DEFAULT;
       const oldTrees = skeletonTracing.trees;
       const mergeResult = mergeTrees(oldTrees, sourceNodeId, targetNodeId, treeType);
@@ -1174,6 +1190,28 @@ function SkeletonTracingReducer(
       const newTrees = skeletonTracing.trees.set(tree.treeId, {
         ...tree,
         metadata: sanitizeMetadata(action.metadata),
+      });
+
+      return update(state, {
+        annotation: {
+          skeleton: {
+            trees: {
+              $set: newTrees,
+            },
+          },
+        },
+      });
+    }
+
+    case "SET_TREE_AGGLOMERATE_INFO_ID": {
+      const tree = getTree(skeletonTracing, action.treeId);
+      if (tree == null || tree.agglomerateInfo == null) {
+        return state;
+      }
+
+      const newTrees = skeletonTracing.trees.set(tree.treeId, {
+        ...tree,
+        agglomerateInfo: { ...tree.agglomerateInfo, agglomerateId: action.agglomerateId },
       });
 
       return update(state, {

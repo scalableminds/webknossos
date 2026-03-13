@@ -3,17 +3,11 @@ import { getAdaptToTypeFunction } from "./utils";
 
 export class NumberLikeMapWrapper<T extends number | bigint> {
   private readonly map: Map<T, T>;
-  private readonly adapt: (key: number) => T;
+  private readonly adaptKey: (key: number) => T;
 
   constructor(mapping: Mapping) {
     this.map = mapping as Map<T, T>;
-    this.adapt = getAdaptToTypeFunction(mapping) as (key: number) => T;
-  }
-
-  private convertKey(key: number): T {
-    // Adapt numeric keys (or values) to number or bigint depending
-    // on the current mapping type.
-    return this.adapt(key);
+    this.adaptKey = getAdaptToTypeFunction(mapping) as (key: number) => T;
   }
 
   get size(): number {
@@ -25,23 +19,27 @@ export class NumberLikeMapWrapper<T extends number | bigint> {
   }
 
   delete(key: number): boolean {
-    return this.map.delete(this.convertKey(key));
+    return this.map.delete(this.adaptKey(key));
   }
 
   get(key: number): T | undefined {
-    return this.map.get(this.convertKey(key));
+    return this.map.get(this.adaptKey(key));
   }
 
-  getAsNumber(key: number): number {
-    return Number(this.get(key));
+  getAsNumber(key: number): number | undefined {
+    const val = this.get(key);
+    if (val === undefined) {
+      return val;
+    }
+    return Number(val);
   }
 
   has(key: number): boolean {
-    return this.map.has(this.convertKey(key));
+    return this.map.has(this.adaptKey(key));
   }
 
   set(key: number, value: T): this {
-    this.map.set(this.convertKey(key), value);
+    this.map.set(this.adaptKey(key), value);
     return this;
   }
 }

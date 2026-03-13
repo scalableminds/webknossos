@@ -120,9 +120,7 @@
 
   "overrides": [
     {
-      "includes": [
-        "**/package.json"
-      ],
+      "includes": ["**/package.json"],
       "formatter": {
         "lineWidth": 1
       }

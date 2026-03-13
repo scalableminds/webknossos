@@ -1,27 +1,27 @@
 package com.scalableminds.webknossos.datastore.services
 
-import com.scalableminds.util.tools.{Box, FoxImplicits}
-import com.scalableminds.util.tools.Box.tryo
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.{PathSchemes, S3UriUtils, UPath}
 import com.scalableminds.webknossos.datastore.storage.{
   CredentialConfigReader,
   DataVaultCredential,
-  S3AccessKeyCredential
+  S3AccessKeyCredential,
+  S3ClientPoolHolder
 }
 import com.typesafe.scalalogging.LazyLogging
-import scala.jdk.DurationConverters._
-import software.amazon.awssdk.core.checksums.RequestChecksumCalculation
-import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
-import software.amazon.awssdk.regions.Region
+
 import software.amazon.awssdk.services.s3.S3AsyncClient
 import software.amazon.awssdk.transfer.s3.S3TransferManager
 
 import java.net.URI
 import javax.inject.Inject
-import scala.concurrent.duration.DurationInt
+import scala.concurrent.ExecutionContext
 
-class ManagedS3Service @Inject()(config: DataStoreConfig) extends FoxImplicits with LazyLogging {
+class ManagedS3Service @Inject()(config: DataStoreConfig, s3ClientPoolHolder: S3ClientPoolHolder)(
+    implicit ec: ExecutionContext)
+    extends FoxImplicits
+    with LazyLogging {
 
   def pathIsInManagedS3(path: UPath): Boolean =
     path.getScheme.contains(PathSchemes.schemeS3) && globalCredentials.exists(c =>
@@ -70,27 +70,13 @@ class ManagedS3Service @Inject()(config: DataStoreConfig) extends FoxImplicits w
     )
   }
 
-  private lazy val s3UploadClientBox: Box[S3AsyncClient] = for {
-    s3UploadCredential <- Box(s3UploadCredentialOpt)
-    client <- buildClient(s3UploadEndpoint, s3UploadCredential)
+  private lazy val s3UploadClientFox: Fox[S3AsyncClient] = for {
+    s3UploadCredential <- s3UploadCredentialOpt.toFox
+    client <- s3ClientPoolHolder.s3ClientPool.getS3Client(Some(s3UploadCredential), s3UploadEndpoint)
   } yield client
 
-  private def buildClient(endpoint: URI, credential: S3AccessKeyCredential): Box[S3AsyncClient] =
-    tryo(
-      S3AsyncClient
-        .builder()
-        .httpClientBuilder(NettyNioAsyncHttpClient.builder().connectionAcquisitionTimeout((2 minutes).toJava))
-        .credentialsProvider(credential.toCredentialsProvider)
-        .crossRegionAccessEnabled(true)
-        .forcePathStyle(true)
-        .endpointOverride(endpoint)
-        .region(Region.US_EAST_1)
-        // Disabling checksum calculation prevents files being stored with Content Encoding "aws-chunked".
-        .requestChecksumCalculation(RequestChecksumCalculation.WHEN_REQUIRED)
-        .build())
-
-  lazy val s3UploadTransferManagerBox: Box[S3TransferManager] = for {
-    client <- s3UploadClientBox
+  lazy val s3UploadTransferManagerFox: Fox[S3TransferManager] = for {
+    client <- s3UploadClientFox
   } yield S3TransferManager.builder().transferDirectoryMaxConcurrency(30).s3Client(client).build()
 
 }

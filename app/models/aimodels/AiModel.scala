@@ -1,12 +1,12 @@
 package models.aimodels
 
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits, Full}
 import com.scalableminds.webknossos.schema.Tables.{Aimodels, AimodelsRow}
 import models.aimodels.AiModelCategory.AiModelCategory
-import models.dataset.{DataStoreDAO, DataStoreService}
-import models.job.{JobDAO, JobService}
+import models.dataset.{DataStoreDAO, DataStoreService, WKRemoteDataStoreClient}
+import models.job.{JobDAO, JobService, JobState}
 import models.user.{User, UserDAO, UserService}
 import play.api.libs.json.{JsObject, Json}
 import slick.dbio.{DBIO, Effect, NoStream}
@@ -15,7 +15,8 @@ import slick.lifted.Rep
 import slick.sql.SqlAction
 import com.scalableminds.util.objectid.ObjectId
 import models.organization.OrganizationDAO
-import com.scalableminds.util.tools.Full
+import com.scalableminds.webknossos.datastore.helpers.UPath
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
@@ -28,6 +29,8 @@ case class AiModel(_id: ObjectId,
                    _user: ObjectId,
                    _trainingJob: Option[ObjectId],
                    _trainingAnnotations: List[ObjectId],
+                   path: Option[UPath],
+                   uploadToPathIsPending: Boolean,
                    name: String,
                    comment: Option[String],
                    category: Option[AiModelCategory],
@@ -41,7 +44,9 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
                                userService: UserService,
                                organizationDAO: OrganizationDAO,
                                jobDAO: JobDAO,
-                               jobService: JobService) {
+                               jobService: JobService,
+                               rpc: RPC)
+    extends FoxImplicits {
   def publicWrites(aiModel: AiModel, requestingUser: User)(implicit ec: ExecutionContext,
                                                            ctx: DBAccessContext): Fox[JsObject] =
     for {
@@ -61,6 +66,8 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
         sharedOrgasIdsUserCanAccess = aiModel._sharedOrganizations.filter(orgaIdsUserCanAccess.contains)
       } yield Some(sharedOrgasIdsUserCanAccess)
       else Fox.successful(None)
+      path <- pathWithFallback(aiModel)
+      isUsable = !aiModel.uploadToPathIsPending && trainingJobOpt.flatten.forall(_.effectiveState == JobState.SUCCESS)
     } yield
       Json.obj(
         "id" -> aiModel._id,
@@ -72,8 +79,24 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
         "trainingJob" -> trainingJobJsOpt,
         "created" -> aiModel.created,
         "sharedOrganizationIds" -> sharedOrganizationIds,
-        "category" -> aiModel.category
+        "category" -> aiModel.category,
+        "path" -> path,
+        "isUsable" -> isUsable
       )
+
+  private def pathWithFallback(aiModel: AiModel)(implicit ec: ExecutionContext): Fox[UPath] =
+    aiModel.path match {
+      case Some(path) => Fox.successful(path)
+      case None =>
+        for {
+          dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)(GlobalAccessContext)
+          dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
+          dataStoreBaseDir <- dataStoreClient.getBaseDirAbsolute
+          baseDirUPath <- UPath.fromString(dataStoreBaseDir).toFox
+          // No custom path, use legacy path schema:
+          fallbackPath = baseDirUPath / aiModel._organization / ".aiModels" / aiModel._id.toString
+        } yield fallbackPath
+    }
 }
 
 class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
@@ -88,6 +111,7 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def parse(r: AimodelsRow): Fox[AiModel] =
     for {
       trainingAnnotationIds <- findTrainingAnnotationIdsFor(ObjectId(r._Id))
+      path <- Fox.runOptional(r.path)(UPath.fromString(_).toFox)
       aiModelWithoutSharedOrgas = AiModel(
         ObjectId(r._Id),
         r._Organization,
@@ -96,6 +120,8 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         ObjectId(r._User),
         r._Trainingjob.map(ObjectId(_)),
         trainingAnnotationIds,
+        path,
+        r.uploadtopathispending,
         r.name,
         r.comment,
         r.category.flatMap(AiModelCategory.fromString),
@@ -147,10 +173,10 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def insertOne(a: AiModel): Fox[Unit] = {
     val insertModelQuery =
       q"""INSERT INTO webknossos.aiModels (
-                      _id, _organization, _dataStore, _user, _trainingJob, name,
+                      _id, _organization, _dataStore, _user, _trainingJob, path, uploadToPathIsPending, name,
                        comment, category, created, modified, isDeleted
                     ) VALUES (
-                      ${a._id}, ${a._organization}, ${a._dataStore}, ${a._user}, ${a._trainingJob}, ${a.name},
+                      ${a._id}, ${a._organization}, ${a._dataStore}, ${a._user}, ${a._trainingJob}, ${a.path}, ${a.uploadToPathIsPending}, ${a.name},
                       ${a.comment}, ${a.category}, ${a.created}, ${a.modified}, ${a.isDeleted}
                     )
            """.asUpdate
@@ -208,5 +234,15 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       q"INSERT INTO webknossos.aiModel_organizations (_aiModel, _organization) VALUES ($aiModelId, $organizationId)".asUpdate)
     run(DBIO.sequence(deleteQuery +: insertQueries).transactionally).map(_ => ())
   }
+
+  def updatePath(aiModelId: ObjectId, path: UPath): Fox[Unit] =
+    for {
+      _ <- run(q"UPDATE webknossos.aiModels SET path = $path WHERE _id = $aiModelId".asUpdate)
+    } yield ()
+
+  def finishUploadToPath(aiModelId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(q"UPDATE webknossos.aiModels SET uploadToPathIsPending = ${false} WHERE _id = $aiModelId".asUpdate)
+    } yield ()
 
 }

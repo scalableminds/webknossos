@@ -16,7 +16,11 @@ import com.scalableminds.webknossos.datastore.datavault.{
   SuffixLengthByteRange,
   VaultPath
 }
-import com.scalableminds.webknossos.datastore.storage.{CredentializedUPath, GoogleServiceAccountCredential}
+import com.scalableminds.webknossos.datastore.storage.{
+  CredentializedUPath,
+  GoogleServiceAccountCredential,
+  S3ClientPool
+}
 import com.scalableminds.util.tools.{Box, Empty, EmptyBox, Failure, Full}
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import play.api.libs.json.JsString
@@ -143,8 +147,10 @@ class DataVaultTestSuite extends PlaySpec {
         "return correct response" in {
           val upath = UPath.fromStringUnsafe("s3://janelia-cosem-datasets/jrc_hela-3/jrc_hela-3.n5/em/fibsem-uint16/")
           WsTestClient.withClient { ws =>
+            val clientPool = new S3ClientPool(ws)
             val vaultPath =
-              new VaultPath(upath, S3DataVault.create(CredentializedUPath(upath, None), ws)(globalExecutionContext))
+              new VaultPath(upath,
+                            S3DataVault.create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext))
             val bytes =
               (vaultPath / "s0/5/5/5")
                 .readBytes(range)(globalExecutionContext, emptyTokenContext)
@@ -192,8 +198,10 @@ class DataVaultTestSuite extends PlaySpec {
         "return correctly decoded brotli-compressed data" in {
           val upath = UPath.fromStringUnsafe("s3://open-neurodata/bock11/image/4_4_40")
           WsTestClient.withClient { ws =>
+            val clientPool = new S3ClientPool(ws)
             val vaultPath =
-              new VaultPath(upath, S3DataVault.create(CredentializedUPath(upath, None), ws)(globalExecutionContext))
+              new VaultPath(upath,
+                            S3DataVault.create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext))
             val bytes =
               (vaultPath / "33792-34304_29696-30208_3216-3232")
                 .readBytes()(globalExecutionContext, emptyTokenContext)
@@ -206,7 +214,8 @@ class DataVaultTestSuite extends PlaySpec {
           "requesting a non-existent bucket" in {
             val upath = UPath.fromStringUnsafe(s"s3://non-existent-bucket${UUID.randomUUID}/non-existent-object")
             WsTestClient.withClient { ws =>
-              val s3DataVault = S3DataVault.create(CredentializedUPath(upath, None), ws)(globalExecutionContext)
+              val clientPool = new S3ClientPool(ws)
+              val s3DataVault = S3DataVault.create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext)
               val vaultPath = new VaultPath(upath, s3DataVault)
               val result =
                 vaultPath.readBytes()(globalExecutionContext, emptyTokenContext).await(handleFoxJustification)
@@ -219,7 +228,8 @@ class DataVaultTestSuite extends PlaySpec {
           "requesting a non-existent object in existent bucket" in {
             val upath = UPath.fromStringUnsafe(s"s3://open-neurodata/non-existent-object${UUID.randomUUID}")
             WsTestClient.withClient { ws =>
-              val s3DataVault = S3DataVault.create(CredentializedUPath(upath, None), ws)(globalExecutionContext)
+              val clientPool = new S3ClientPool(ws)
+              val s3DataVault = S3DataVault.create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext)
               val vaultPath = new VaultPath(upath, s3DataVault)
               val result =
                 vaultPath.readBytes()(globalExecutionContext, emptyTokenContext).await(handleFoxJustification)
@@ -233,8 +243,9 @@ class DataVaultTestSuite extends PlaySpec {
     "using directory list requests" when {
       val upath = UPath.fromStringUnsafe("s3://janelia-cosem-datasets/jrc_hela-3/jrc_hela-3.n5/em/fibsem-uint16/")
       WsTestClient.withClient { ws =>
+        val clientPool = new S3ClientPool(ws)
         val vaultPath =
-          new VaultPath(upath, S3DataVault.create(CredentializedUPath(upath, None), ws)(globalExecutionContext))
+          new VaultPath(upath, S3DataVault.create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext))
 
         "using s3 data vault" should {
           "list available directories" in {
@@ -248,7 +259,7 @@ class DataVaultTestSuite extends PlaySpec {
           "return failure" when {
             "requesting directory listing on non-existent bucket" in {
               val upath = UPath.fromStringUnsafe(f"s3://non-existent-bucket${UUID.randomUUID}/non-existent-object/")
-              val s3DataVault = S3DataVault.create(CredentializedUPath(upath, None), ws)(globalExecutionContext)
+              val s3DataVault = S3DataVault.create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext)
               val vaultPath = new VaultPath(upath, s3DataVault)
               val result = vaultPath.listDirectory(maxItems = 5)(globalExecutionContext).await(handleFoxJustification)
               assertBoxFailure(result)

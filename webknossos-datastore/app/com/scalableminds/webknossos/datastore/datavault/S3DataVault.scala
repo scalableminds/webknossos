@@ -5,24 +5,17 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.storage.{
   CredentializedUPath,
   LegacyDataVaultCredential,
-  S3AccessKeyCredential
+  S3AccessKeyCredential,
+  S3ClientPool
 }
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Empty, Full, Failure => BoxFailure}
 import com.scalableminds.webknossos.datastore.helpers.{S3UriUtils, UPath}
 import org.apache.commons.lang3.builder.HashCodeBuilder
-import scala.jdk.DurationConverters._
-import play.api.libs.ws.WSClient
-import software.amazon.awssdk.auth.credentials.{
-  AnonymousCredentialsProvider,
-  AwsCredentialsProvider,
-  EnvironmentVariableCredentialsProvider
-}
-import software.amazon.awssdk.awscore.util.AwsHostNameUtils
+
+import scala.util.{Failure => TryFailure, Success => TrySuccess}
 import software.amazon.awssdk.core.ResponseBytes
 import software.amazon.awssdk.core.async.AsyncResponseTransformer
-import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
-import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3AsyncClient
 import software.amazon.awssdk.services.s3.model.{
   CommonPrefix,
@@ -36,16 +29,13 @@ import software.amazon.awssdk.services.s3.model.{
 
 import java.net.URI
 import java.util.concurrent.CompletionException
-import scala.concurrent.duration.DurationInt
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.CollectionConverters.CollectionHasAsScala
 import scala.jdk.FutureConverters._
-import scala.jdk.OptionConverters.RichOptional
-import scala.util.{Failure => TryFailure, Success => TrySuccess}
 
 class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
                   uri: URI,
-                  ws: WSClient,
+                  s3ClientPool: S3ClientPool,
                   implicit val ec: ExecutionContext)
     extends DataVault
     with FoxImplicits {
@@ -55,7 +45,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
   }
 
   private lazy val clientFox: Fox[S3AsyncClient] =
-    S3DataVault.getAmazonS3Client(s3AccessKeyCredential, uri, ws)
+    s3ClientPool.getS3Client(s3AccessKeyCredential, uri)
 
   private def getRangeRequest(bucketName: String, key: String, range: StartEndExclusiveByteRange): GetObjectRequest =
     GetObjectRequest.builder().bucket(bucketName).key(key).range(range.toRangeHeader).build()
@@ -183,56 +173,14 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
 }
 
 object S3DataVault {
-  def create(credentializedUpath: CredentializedUPath, ws: WSClient)(implicit ec: ExecutionContext): S3DataVault = {
+  def create(credentializedUpath: CredentializedUPath, s3ClientPool: S3ClientPool)(
+      implicit ec: ExecutionContext): S3DataVault = {
     val credential = credentializedUpath.credential.flatMap {
       case f: S3AccessKeyCredential     => Some(f)
       case f: LegacyDataVaultCredential => Some(f.toS3AccessKey)
       case _                            => None
     }
-    new S3DataVault(credential, credentializedUpath.upath.toRemoteUriUnsafe, ws, ec)
-  }
-
-  private def getCredentialsProvider(credentialOpt: Option[S3AccessKeyCredential]): AwsCredentialsProvider =
-    credentialOpt match {
-      case Some(s3AccessKeyCredential: S3AccessKeyCredential) => s3AccessKeyCredential.toCredentialsProvider
-      case None if sys.env.contains("AWS_ACCESS_KEY_ID") || sys.env.contains("AWS_ACCESS_KEY") =>
-        EnvironmentVariableCredentialsProvider.create()
-      case None =>
-        AnonymousCredentialsProvider.create()
-    }
-
-  private def determineProtocol(uri: URI, ws: WSClient)(implicit ec: ExecutionContext): Fox[String] = {
-    // If the endpoint supports HTTPS, use it. Otherwise, use HTTP.
-    val httpsUri = new URI("https", uri.getAuthority, "", "", "")
-    val httpsFuture = ws.url(httpsUri.toString).get()
-
-    val protocolFuture = httpsFuture.transformWith({
-      case TrySuccess(_) => Future.successful("https")
-      case TryFailure(_) => Future.successful("http")
-    })
-    for {
-      protocol <- Fox.fromFuture(protocolFuture)
-    } yield protocol
-  }
-
-  private def getAmazonS3Client(credentialOpt: Option[S3AccessKeyCredential], uri: URI, ws: WSClient)(
-      implicit ec: ExecutionContext): Fox[S3AsyncClient] = {
-    val basic =
-      S3AsyncClient
-        .builder()
-        .credentialsProvider(getCredentialsProvider(credentialOpt))
-        .crossRegionAccessEnabled(true)
-        .httpClientBuilder(NettyNioAsyncHttpClient.builder().connectionAcquisitionTimeout((2 minutes).toJava))
-    if (S3UriUtils.isNonAmazonHost(uri)) {
-      for {
-        protocol <- determineProtocol(uri, ws)
-      } yield
-        basic
-          .forcePathStyle(true)
-          .endpointOverride(new URI(s"$protocol://${uri.getAuthority}"))
-          .region(AwsHostNameUtils.parseSigningRegion(uri.getAuthority, "s3").toScala.getOrElse(Region.US_EAST_1))
-          .build()
-    } else Fox.successful(basic.region(Region.US_EAST_1).build())
+    new S3DataVault(credential, credentializedUpath.upath.toRemoteUriUnsafe, s3ClientPool, ec)
   }
 
 }

@@ -11,7 +11,7 @@ import ProofreadingIcon from "@images/icons/icon-proofreading.svg?react";
 import QuickSelectToolIcon from "@images/icons/icon-quick-select.svg?react";
 import RulerIcon from "@images/icons/icon-ruler.svg?react";
 import SkeletonIcon from "@images/icons/icon-skeleton.svg?react";
-import { Popover } from "antd";
+import { Button, Popover } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
@@ -39,7 +39,7 @@ export const ToolIdToComponent: Record<
   [AnnotationTool.MOVE.id]: MoveTool,
   [AnnotationTool.SKELETON.id]: SkeletonTool,
   [AnnotationTool.BRUSH.id]: BrushToolMenu,
-  [AnnotationTool.ERASE_BRUSH.id]: BrushToolMenu,
+  [AnnotationTool.ERASE_BRUSH.id]: () => null,
   [AnnotationTool.TRACE.id]: TraceTool,
   [AnnotationTool.ERASE_TRACE.id]: EraseTraceTool,
   [AnnotationTool.FILL_CELL.id]: FillCellTool,
@@ -133,26 +133,23 @@ function BrushToolMenu({ adaptedActiveTool }: ToolButtonProps) {
     </>
   );
   return (
-    <ToolRadioButton
-      name={AnnotationTool.BRUSH.readableName}
-      description={
-        "Draw over the voxels you would like to label. Adjust the brush size with Shift + Mousewheel."
-      }
-      disabledExplanation={disabledInfosForTools[AnnotationTool.BRUSH.id].explanation}
-      disabled={disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled}
-      value={AnnotationTool.BRUSH.id}
-    >
-      <Icon
-        component={BrushIcon}
-        style={{
-          opacity: disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled ? 0.5 : 1,
-        }}
-      />
-      <Popover content={popoverContent} trigger={["click", "hover"]}>
+    <Popover content={popoverContent} trigger={["click", "hover"]}>
+      <ToolRadioButton
+        name={AnnotationTool.BRUSH.readableName}
+        disabledExplanation={disabledInfosForTools[AnnotationTool.BRUSH.id].explanation}
+        disabled={disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled}
+        value={AnnotationTool.BRUSH.id}
+      >
+        <Icon
+          component={BrushIcon}
+          style={{
+            opacity: disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled ? 0.5 : 1,
+          }}
+        />
         <CaretDownOutlined className="triangle-icon" />
-      </Popover>
-      {adaptedActiveTool === AnnotationTool.BRUSH ? <MaybeMultiSliceAnnotationInfoIcon /> : null}
-    </ToolRadioButton>
+        {adaptedActiveTool === AnnotationTool.BRUSH ? <MaybeMultiSliceAnnotationInfoIcon /> : null}
+      </ToolRadioButton>
+    </Popover>
   );
 }
 

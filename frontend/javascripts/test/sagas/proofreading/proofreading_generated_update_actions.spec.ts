@@ -43,6 +43,7 @@ import {
   splitSegment2And3,
   splitSegment2And3WithAgglomerateTree1,
   splitSegment2And3WithAgglomerateTrees1And4And6,
+  splitSegment7And1337AndMerge1337And5,
 } from "./proofreading_interaction_update_action_fixtures";
 import {
   loadAgglomerateSkeletons,
@@ -195,21 +196,29 @@ describe("Proofreading should generate correct update actions", () => {
     sourceAgglomerateId: number,
     minCutEdges: Array<MinCutTargetEdge>,
     othersMayEdit: boolean,
+    voxelPositionsToLoad: Vector3[] = [],
   ): Promise<void> {
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
     const task = startSaga(function* () {
       yield call(initializeMappingAndTool, context, tracingId);
 
+      const anchorPosition = initialBucketOverrides.find(
+        (el) => el.value === sourceSegmentId,
+      )?.position;
+      if (!anchorPosition) {
+        throw new Error(`Could not look up position by using ${sourceSegmentId} as id.`);
+      }
+      const targetPosition = initialBucketOverrides.find(
+        (el) => el.value === targetSegmentId,
+      )?.position;
+      if (!targetPosition) {
+        throw new Error(`Could not look up position by using ${targetSegmentId} as id.`);
+      }
+
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(
-        updateSegmentAction(
-          sourceAgglomerateId,
-          { anchorPosition: [sourceSegmentId, sourceSegmentId, sourceSegmentId] },
-          tracingId,
-        ),
-      );
+      yield put(updateSegmentAction(sourceAgglomerateId, { anchorPosition }, tracingId));
       yield put(setActiveCellAction(sourceAgglomerateId));
       yield makeMappingEditableHelper();
       if (othersMayEdit) {
@@ -237,13 +246,16 @@ describe("Proofreading should generate correct update actions", () => {
         },
       );
 
+      for (const voxelPos of voxelPositionsToLoad) {
+        yield call(() => api.data.getDataValue(tracingId, voxelPos, 0));
+        // Wait a bit so that the mapping saga can map the segment at voxelPos
+        // by asking the backend.
+        yield delay(50);
+      }
+
       // Execute the split and wait for the finished mapping.
       yield put(
-        minCutAgglomerateWithPositionAction(
-          [targetSegmentId, targetSegmentId, targetSegmentId],
-          targetSegmentId,
-          sourceAgglomerateId,
-        ),
+        minCutAgglomerateWithPositionAction(targetPosition, targetSegmentId, sourceAgglomerateId),
       );
       // Wait till proofreading action is finished; including refreshing agglomerate skeletons.
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
@@ -566,6 +578,34 @@ describe("Proofreading should generate correct update actions", () => {
 
     await task.toPromise();
   }, 8000);
+
+  it("when splitting 7 and 1337 and merging 1337 with 5", async (context: WebknossosTestContext) => {
+    const _backendMock = mockInitialBucketAndAgglomerateData(
+      context,
+      [[1337, 7]],
+      Store.getState(),
+    );
+
+    const task = startSaga(function* task() {
+      const minCutEdges = [
+        {
+          position1: [7, 7, 7],
+          position2: [100, 100, 100],
+          segmentId1: 7,
+          segmentId2: 1337,
+        } as MinCutTargetEdge,
+      ];
+      yield call(makeProofreadSplit, context, [], 7, 1337, 1337, minCutEdges, false, [
+        [100, 100, 100],
+      ]);
+
+      yield call(makeProofreadMerge, context, [], 1337, 5, 1339, false);
+      const splitAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
+      expect(splitAndTreeUpdates).toStrictEqual(splitSegment7And1337AndMerge1337And5);
+    });
+
+    await task.toPromise();
+  });
 
   it("performMinCutWithNodesProofreading should apply correct update actions after loading agglomerate trees", async (context: WebknossosTestContext) => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());

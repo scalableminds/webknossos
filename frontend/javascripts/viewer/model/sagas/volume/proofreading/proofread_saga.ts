@@ -851,7 +851,7 @@ function* performMinCut(
 ): Saga<[boolean, MinCutTargetEdge[]]> {
   if (sourceAgglomerateId !== targetAgglomerateId) {
     Toast.error(
-      "Segments need to be in the same agglomerate to perform a min-cut splitting operation.",
+      `Segments need to be in the same agglomerate to perform a min-cut splitting operation. Agglomerate ids are ${sourceAgglomerateId} and ${targetAgglomerateId}.`,
     );
     return [true, []];
   }

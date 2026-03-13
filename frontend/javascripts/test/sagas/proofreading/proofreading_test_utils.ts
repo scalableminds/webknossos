@@ -18,7 +18,10 @@ import type { Vector2, Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
+import {
+  getVolumeTracingById,
+  hasEditableMapping,
+} from "viewer/model/accessors/volumetracing_accessor";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
@@ -58,6 +61,10 @@ export function* initializeMappingAndTool(
   context: WebknossosTestContext,
   tracingId: string,
 ): Saga<void> {
+  if (yield* select((state) => hasEditableMapping(state, tracingId))) {
+    console.log("Skipping initializeMappingAndTool, because an editable mapping already exists.");
+    return;
+  }
   const { api } = context;
   // Set up organization with power plan (necessary for proofreading)
   // and zoom in so that buckets in mag 1, 1, 1 are loaded.

@@ -1305,6 +1305,76 @@ export const splitSegment2And3WithAgglomerateTrees1And4And6 = [
   ],
 ];
 
+export const splitSegment7And1337AndMerge1337And5 = [
+  [
+    {
+      name: "createSegment" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        additionalCoordinates: undefined,
+        anchorPosition: [7, 7, 7] as Vector3,
+        color: null,
+        creationTime: 1494695001688,
+        groupId: null,
+        id: 1337,
+        metadata: [],
+        name: null,
+      },
+    },
+  ],
+  [
+    {
+      name: "splitAgglomerate" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        agglomerateId: 1337,
+        segmentId1: 7,
+        segmentId2: 1337,
+      },
+    },
+  ],
+  [
+    {
+      name: "createSegment" as const,
+      value: {
+        actionTracingId: "volumeTracingId",
+        additionalCoordinates: undefined,
+        anchorPosition: [100, 100, 100] as Vector3,
+        color: null,
+        creationTime: 1494695001688,
+        groupId: null,
+        id: 1339,
+        metadata: [],
+        name: null,
+      },
+    },
+  ],
+  [
+    {
+      name: "mergeAgglomerate" as const,
+      value: {
+        actionTracingId: VOLUME_TRACING_ID,
+        segmentId1: 1337,
+        segmentId2: 5,
+        agglomerateId1: 1339,
+        agglomerateId2: 4,
+      },
+    },
+  ],
+  [
+    {
+      name: "mergeSegmentItems" as const,
+      value: {
+        actionTracingId: VOLUME_TRACING_ID,
+        segmentId1: 1337,
+        segmentId2: 5,
+        agglomerateId1: 1339,
+        agglomerateId2: 4,
+      },
+    },
+  ],
+];
+
 export const minCutWithNodes2And3WithAgglomerateTree1 = [
   [
     {

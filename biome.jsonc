@@ -105,9 +105,7 @@
         "noRedeclare": "off",
         "noFallthroughSwitchClause": "off",
         "noFocusedTests": "error",
-        "noAssignInExpressions": "off"
-      },
-      "nursery": {
+        "noAssignInExpressions": "off",
         "noReactForwardRef": "error"
       }
     }

@@ -288,6 +288,7 @@ class VolumeTracingZarrStreamingController @Inject()(
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> BAD_REQUEST
             existingMags = tracing.mags.map(vec3IntFromProto)
+            // Failures in parsing coordinates or mag need to still be NOT_FOUND, not BAD_REQUEST because neuroglancer tries to access :layer_name/:mag/.zattrs
             magParsed <- Vec3Int
               .fromMagLiteral(mag, allowScalar = true)
               .toFox ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND

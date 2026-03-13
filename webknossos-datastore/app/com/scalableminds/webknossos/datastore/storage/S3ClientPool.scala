@@ -12,7 +12,6 @@ import software.amazon.awssdk.auth.credentials.{
 }
 import software.amazon.awssdk.awscore.util.AwsHostNameUtils
 import software.amazon.awssdk.core.checksums.RequestChecksumCalculation
-import software.amazon.awssdk.http.Protocol
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3AsyncClient
@@ -60,7 +59,6 @@ class S3ClientPool(ws: WSClient) {
         .httpClientBuilder(
           NettyNioAsyncHttpClient
             .builder()
-            .protocol(Protocol.HTTP2)
             .maxConcurrency(64)
             .tcpKeepAlive(true)
             .connectionAcquisitionTimeout((2 minutes).toJava))

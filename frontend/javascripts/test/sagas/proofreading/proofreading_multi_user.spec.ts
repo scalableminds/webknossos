@@ -50,6 +50,7 @@ import {
   mergeSegment5And6,
   splitSegment1And2,
   splitSegment2And3,
+  splitSegment7And1337AndMerge1337And5,
 } from "./proofreading_interaction_update_action_fixtures";
 
 function* prepareEditableMapping(
@@ -777,108 +778,46 @@ describe("Proofreading (Multi User)", () => {
       The resulting mapping correctly incorporates all backend split and merge actions, including those involving initially not-loaded segments.
      */
 
-    /* Initial mapping should now be
-     * [[ 1, 1 ],
-     *  [ 2, 1 ],
-     *  [ 3, 1 ],
-     *  [ 4, 4 ],
-     *  [ 5, 4 ],
-     *  [ 6, 1337 ],
-     *  [ 7, 1337 ],
-     *  [ 1337, 1337 ],
-     *  [ 1338, 1337 ]]
-     */
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
 
-    /* Should lead to the following full mapping:
-     * [[ 1, 1 ],
-     *  [ 2, 1 ],
-     *  [ 3, 1 ],
-     *  [ 4, 4 ],
-     *  [ 5, 4 ],
-     *  [ 6, 1337 ],
-     *  [ 7, 1337 ],
-     *  [ 1337, 1339 ],
-     *  [ 1338, 1339 ]]
-     */
-    backendMock.planVersionInjection(5, [
-      {
-        name: "splitAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 7, // will keep its agglomerate id
-          segmentId2: 1337,
-          agglomerateId: 1337,
+    backendMock.planMultipleVersionInjections(5, [
+      ...splitSegment7And1337AndMerge1337And5,
+      [
+        {
+          name: "updateSegmentPartial",
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            id: 1339,
+            name: "Custom Name for 1339",
+          },
         },
-      },
-    ]);
-
-    /* Should lead to the following full mapping:
-     * [[ 1, 1 ],
-     *  [ 2, 1 ],
-     *  [ 3, 1 ],
-     *  [ 4, 1339 ],
-     *  [ 5, 1339 ],
-     *  [ 6, 1337 ],
-     *  [ 7, 1337 ],
-     *  [ 1337, 1339 ],
-     *  [ 1338, 1339 ]]
-     */
-    backendMock.planVersionInjection(6, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1337,
-          segmentId2: 5,
-          agglomerateId1: 1339,
-          agglomerateId2: 4,
+        {
+          name: "updateMetadataOfSegment",
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            id: 1339,
+            removeEntriesByKey: [],
+            upsertEntriesByKey: [{ key: "key1", stringValue: "value for 1339" }],
+          },
         },
-      },
-      {
-        name: "mergeSegmentItems",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1337,
-          segmentId2: 5,
-          agglomerateId1: 1339,
-          agglomerateId2: 4,
+        {
+          name: "updateSegmentPartial",
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            id: 1,
+            name: "Custom Name for 1",
+          },
         },
-      },
-      {
-        name: "updateSegmentPartial",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          id: 1339,
-          name: "Custom Name for 1339",
+        {
+          name: "updateMetadataOfSegment",
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            id: 1,
+            removeEntriesByKey: [],
+            upsertEntriesByKey: [{ key: "key1", stringValue: "value for 1" }],
+          },
         },
-      },
-      {
-        name: "updateMetadataOfSegment",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          id: 1339,
-          removeEntriesByKey: [],
-          upsertEntriesByKey: [{ key: "key1", stringValue: "value for 1339" }],
-        },
-      },
-      {
-        name: "updateSegmentPartial",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          id: 1,
-          name: "Custom Name for 1",
-        },
-      },
-      {
-        name: "updateMetadataOfSegment",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          id: 1,
-          removeEntriesByKey: [],
-          upsertEntriesByKey: [{ key: "key1", stringValue: "value for 1" }],
-        },
-      },
+      ],
     ]);
 
     const { annotation } = Store.getState();
@@ -928,7 +867,13 @@ describe("Proofreading (Multi User)", () => {
 
       for (const state of [frontendState, backendState]) {
         const currentSegments = state.annotation.volumes[0].segments;
-        expect(currentSegments.size()).toEqual(1);
+        expect(currentSegments.size()).toEqual(2);
+
+        const segment1337AfterSaving = currentSegments.getNullable(1337);
+        expect(segment1337AfterSaving).toMatchObject({
+          name: null,
+          anchorPosition: [7, 7, 7],
+        });
 
         const segment1339AfterSaving = currentSegments.getNullable(1339);
         expect(segment1339AfterSaving).toMatchObject({
@@ -941,7 +886,7 @@ describe("Proofreading (Multi User)", () => {
         });
       }
 
-      const receivedUpdateActions = getFlattenedUpdateActions(context).slice(-2);
+      const receivedUpdateActions = getFlattenedUpdateActions(context).slice(-3);
 
       expect(receivedUpdateActions).toEqual([
         {
@@ -962,6 +907,14 @@ describe("Proofreading (Multi User)", () => {
             segmentId2: 1,
             agglomerateId1: 1339,
             agglomerateId2: 1,
+          },
+        },
+        {
+          name: "updateSegmentPartial",
+          value: {
+            actionTracingId: "volumeTracingId",
+            id: 1339,
+            anchorPosition: [4, 4, 4],
           },
         },
       ]);

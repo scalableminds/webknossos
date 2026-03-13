@@ -14,7 +14,6 @@ import {
   AnnotationTool,
   type AnnotationToolId,
   adaptActiveToolToShortcuts,
-  MeasurementTools,
   Toolkit,
   Toolkits,
   VolumeTools,
@@ -216,15 +215,11 @@ function ToolSpecificSettings({
       {adaptedActiveTool === AnnotationTool.PROOFREAD && areEditableMappingsEnabled ? (
         <ProofreadingComponents />
       ) : null}
-
-      {MeasurementTools.includes(adaptedActiveTool) ? (
-        <MeasurementToolSwitch activeTool={adaptedActiveTool} />
-      ) : null}
     </>
   );
 }
 
-function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
+export function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
   const dispatch = useDispatch();
   const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
   const { isDisabled, explanation } = disabledInfosForTools[AnnotationTool.AREA_MEASUREMENT.id];

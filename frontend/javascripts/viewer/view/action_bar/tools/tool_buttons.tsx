@@ -11,7 +11,7 @@ import ProofreadingIcon from "@images/icons/icon-proofreading.svg?react";
 import QuickSelectToolIcon from "@images/icons/icon-quick-select.svg?react";
 import RulerIcon from "@images/icons/icon-ruler.svg?react";
 import SkeletonIcon from "@images/icons/icon-skeleton.svg?react";
-import { Button, Popover } from "antd";
+import { Popover } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
@@ -26,6 +26,7 @@ import {
 import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";
 import type { WebknossosState } from "viewer/store";
 import { NARROW_BUTTON_STYLE, ToolRadioButton } from "./tool_helpers";
+import { MeasurementToolSwitch } from "./toolbar_view";
 
 type ToolButtonProps = { adaptedActiveTool: AnnotationTool };
 
@@ -47,7 +48,7 @@ export const ToolIdToComponent: Record<
   [AnnotationTool.QUICK_SELECT.id]: QuickSelectTool,
   [AnnotationTool.BOUNDING_BOX.id]: BoundingBoxTool,
   [AnnotationTool.PROOFREAD.id]: ProofreadTool,
-  [AnnotationTool.LINE_MEASUREMENT.id]: LineMeasurementTool,
+  [AnnotationTool.LINE_MEASUREMENT.id]: MeasurementToolMenu,
   [AnnotationTool.AREA_MEASUREMENT.id]: () => null,
 };
 
@@ -133,23 +134,23 @@ function BrushToolMenu({ adaptedActiveTool }: ToolButtonProps) {
     </>
   );
   return (
-    <Popover content={popoverContent} trigger={["click", "hover"]}>
-      <ToolRadioButton
-        name={AnnotationTool.BRUSH.readableName}
-        disabledExplanation={disabledInfosForTools[AnnotationTool.BRUSH.id].explanation}
-        disabled={disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled}
-        value={AnnotationTool.BRUSH.id}
-      >
+    <ToolRadioButton
+      name={AnnotationTool.BRUSH.readableName}
+      disabledExplanation={disabledInfosForTools[AnnotationTool.BRUSH.id].explanation}
+      disabled={disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled}
+      value={AnnotationTool.BRUSH.id}
+    >
+      <Popover content={popoverContent} trigger={["click", "hover"]}>
         <Icon
-          component={BrushIcon}
+          component={adaptedActiveTool === AnnotationTool.ERASE_BRUSH ? EraserIcon : BrushIcon}
           style={{
             opacity: disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled ? 0.5 : 1,
           }}
         />
         <CaretDownOutlined className="triangle-icon" />
         {adaptedActiveTool === AnnotationTool.BRUSH ? <MaybeMultiSliceAnnotationInfoIcon /> : null}
-      </ToolRadioButton>
-    </Popover>
+      </Popover>
+    </ToolRadioButton>
   );
 }
 
@@ -434,17 +435,22 @@ function ProofreadTool(_props: ToolButtonProps) {
   );
 }
 
-function LineMeasurementTool(_props: ToolButtonProps) {
+function MeasurementToolMenu(props: ToolButtonProps) {
   return (
     <ToolRadioButton
       name={AnnotationTool.LINE_MEASUREMENT.readableName}
-      description="Use to measure distances or areas."
       disabledExplanation=""
       disabled={false}
       value={AnnotationTool.LINE_MEASUREMENT.id}
       style={NARROW_BUTTON_STYLE}
     >
-      <Icon component={RulerIcon} />
+      <Popover
+        content={<MeasurementToolSwitch activeTool={props.adaptedActiveTool} />}
+        trigger={["click", "hover"]}
+      >
+        <Icon component={RulerIcon} />
+        <CaretDownOutlined className="triangle-icon" />
+      </Popover>
     </ToolRadioButton>
   );
 }

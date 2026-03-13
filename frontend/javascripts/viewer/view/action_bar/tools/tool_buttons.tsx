@@ -1,4 +1,4 @@
-import Icon from "@ant-design/icons";
+import Icon, { CaretDownOutlined } from "@ant-design/icons";
 import BoundingBoxIcon from "@images/icons/icon-bounding-box.svg?react";
 import BrushIcon from "@images/icons/icon-brush.svg?react";
 import EraserIcon from "@images/icons/icon-eraser.svg?react";
@@ -11,7 +11,7 @@ import ProofreadingIcon from "@images/icons/icon-proofreading.svg?react";
 import QuickSelectToolIcon from "@images/icons/icon-quick-select.svg?react";
 import RulerIcon from "@images/icons/icon-ruler.svg?react";
 import SkeletonIcon from "@images/icons/icon-skeleton.svg?react";
-
+import { Popover } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
@@ -26,6 +26,7 @@ import {
 import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";
 import type { WebknossosState } from "viewer/store";
 import { NARROW_BUTTON_STYLE, ToolRadioButton } from "./tool_helpers";
+import { MeasurementToolSwitch } from "./toolbar_view";
 
 type ToolButtonProps = { adaptedActiveTool: AnnotationTool };
 
@@ -38,8 +39,8 @@ export const ToolIdToComponent: Record<
 > = {
   [AnnotationTool.MOVE.id]: MoveTool,
   [AnnotationTool.SKELETON.id]: SkeletonTool,
-  [AnnotationTool.BRUSH.id]: BrushTool,
-  [AnnotationTool.ERASE_BRUSH.id]: EraseBrushTool,
+  [AnnotationTool.BRUSH.id]: BrushToolMenu,
+  [AnnotationTool.ERASE_BRUSH.id]: () => null,
   [AnnotationTool.TRACE.id]: TraceTool,
   [AnnotationTool.ERASE_TRACE.id]: EraseTraceTool,
   [AnnotationTool.FILL_CELL.id]: FillCellTool,
@@ -47,7 +48,7 @@ export const ToolIdToComponent: Record<
   [AnnotationTool.QUICK_SELECT.id]: QuickSelectTool,
   [AnnotationTool.BOUNDING_BOX.id]: BoundingBoxTool,
   [AnnotationTool.PROOFREAD.id]: ProofreadTool,
-  [AnnotationTool.LINE_MEASUREMENT.id]: LineMeasurementTool,
+  [AnnotationTool.LINE_MEASUREMENT.id]: MeasurementToolMenu,
   [AnnotationTool.AREA_MEASUREMENT.id]: () => null,
 };
 
@@ -119,9 +120,48 @@ function getIsVolumeModificationAllowed(state: WebknossosState) {
   return hasVolume && !isReadOnly && !hasEditableMapping(state);
 }
 
-function BrushTool({ adaptedActiveTool }: ToolButtonProps) {
+function BrushToolMenu({ adaptedActiveTool }: ToolButtonProps) {
   const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
+
   const isVolumeModificationAllowed = useWkSelector(getIsVolumeModificationAllowed);
+  if (!isVolumeModificationAllowed) {
+    return null;
+  }
+  const popoverContent = () => (
+    <>
+      {BrushTool({ adaptedActiveTool, disabledInfosForTools, isVolumeModificationAllowed })}
+      {EraseBrushTool({ adaptedActiveTool, disabledInfosForTools, isVolumeModificationAllowed })}
+    </>
+  );
+  return (
+    <ToolRadioButton
+      name={AnnotationTool.BRUSH.readableName}
+      disabledExplanation={disabledInfosForTools[AnnotationTool.BRUSH.id].explanation}
+      disabled={disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled}
+      value={AnnotationTool.BRUSH.id}
+    >
+      <Popover content={popoverContent} trigger={["click", "hover"]}>
+        <Icon
+          component={adaptedActiveTool === AnnotationTool.ERASE_BRUSH ? EraserIcon : BrushIcon}
+          style={{
+            opacity: disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled ? 0.5 : 1,
+          }}
+        />
+        <CaretDownOutlined className="triangle-icon" />
+        {adaptedActiveTool === AnnotationTool.BRUSH ? <MaybeMultiSliceAnnotationInfoIcon /> : null}
+      </Popover>
+    </ToolRadioButton>
+  );
+}
+
+function BrushTool({
+  adaptedActiveTool,
+  disabledInfosForTools,
+  isVolumeModificationAllowed,
+}: ToolButtonProps & {
+  disabledInfosForTools: ReturnType<typeof getDisabledInfoForTools>;
+  isVolumeModificationAllowed: boolean;
+}) {
   if (!isVolumeModificationAllowed) {
     return null;
   }
@@ -146,13 +186,18 @@ function BrushTool({ adaptedActiveTool }: ToolButtonProps) {
   );
 }
 
-function EraseBrushTool({ adaptedActiveTool }: ToolButtonProps) {
-  const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
+function EraseBrushTool({
+  adaptedActiveTool,
+  disabledInfosForTools,
+  isVolumeModificationAllowed,
+}: ToolButtonProps & {
+  disabledInfosForTools: ReturnType<typeof getDisabledInfoForTools>;
+  isVolumeModificationAllowed: boolean;
+}) {
   const showEraseTraceTool =
     adaptedActiveTool === AnnotationTool.TRACE || adaptedActiveTool === AnnotationTool.ERASE_TRACE;
   const showEraseBrushTool = !showEraseTraceTool;
 
-  const isVolumeModificationAllowed = useWkSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
     return null;
   }
@@ -390,17 +435,22 @@ function ProofreadTool(_props: ToolButtonProps) {
   );
 }
 
-function LineMeasurementTool(_props: ToolButtonProps) {
+function MeasurementToolMenu(props: ToolButtonProps) {
   return (
     <ToolRadioButton
       name={AnnotationTool.LINE_MEASUREMENT.readableName}
-      description="Use to measure distances or areas."
       disabledExplanation=""
       disabled={false}
       value={AnnotationTool.LINE_MEASUREMENT.id}
       style={NARROW_BUTTON_STYLE}
     >
-      <Icon component={RulerIcon} />
+      <Popover
+        content={<MeasurementToolSwitch activeTool={props.adaptedActiveTool} />}
+        trigger={["click", "hover"]}
+      >
+        <Icon component={RulerIcon} />
+        <CaretDownOutlined className="triangle-icon" />
+      </Popover>
     </ToolRadioButton>
   );
 }

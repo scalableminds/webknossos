@@ -89,3 +89,22 @@
   // vertical-align: -3px)
   vertical-align: 0;
 }
+
+.triangle-icon {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  font-size: 10px;
+  transform: rotate(-45deg); /* makes it look like a corner triangle */
+  pointer-events: none;
+}
+
+.brush-tool-popover-open {
+  display: inline-flex;
+  width: auto;
+  flex: 0 0 auto;
+
+  &.ant-radio-button-wrapper {
+    width: auto;
+  }
+}

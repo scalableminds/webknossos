@@ -50,7 +50,7 @@ export type SendBucketInfo = {
   mag: Vector3;
   cubeSize: number;
 };
-type RequestBucketInfo = SendBucketInfo & {
+export type RequestBucketInfo = SendBucketInfo & {
   fourBit: boolean;
   applyAgglomerate?: string;
   version?: number;

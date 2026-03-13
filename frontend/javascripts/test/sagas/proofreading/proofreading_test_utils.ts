@@ -372,6 +372,18 @@ export class BackendMock {
   };
 }
 
+export const initialBucketOverrides: Array<{ position: Vector3; value: number }> = [
+  { position: [100, 100, 100], value: 1337 }, // todop: can we change the positions to to 1337³ etc?
+  { position: [101, 101, 101], value: 1338 },
+  { position: [1, 1, 1], value: 1 },
+  { position: [2, 2, 2], value: 2 },
+  { position: [3, 3, 3], value: 3 },
+  { position: [4, 4, 4], value: 4 },
+  { position: [5, 5, 5], value: 5 },
+  { position: [6, 6, 6], value: 6 },
+  { position: [7, 7, 7], value: 7 },
+];
+
 export function mockInitialBucketAndAgglomerateData(
   context: WebknossosTestContext,
   additionalEdges: Vector2[] = [],
@@ -379,25 +391,11 @@ export function mockInitialBucketAndAgglomerateData(
 ) {
   const { mocks } = context;
 
-  const backendMock = new BackendMock(
-    [
-      { position: [100, 100, 100], value: 1337 },
-      { position: [101, 101, 101], value: 1338 },
-      { position: [1, 1, 1], value: 1 },
-      { position: [2, 2, 2], value: 2 },
-      { position: [3, 3, 3], value: 3 },
-      { position: [4, 4, 4], value: 4 },
-      { position: [5, 5, 5], value: 5 },
-      { position: [6, 6, 6], value: 6 },
-      { position: [7, 7, 7], value: 7 },
-    ],
-    additionalEdges,
-    initialState,
-  );
+  const backendMock = new BackendMock(initialBucketOverrides, additionalEdges, initialState);
 
   vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
     createBucketResponseFunction(
-      { color: "uint8", segmentation: "uint16" },
+      { color: "uint8", segmentation: "uint16", volumeTracingId: "uint16" },
       backendMock.fillValue,
       backendMock.requestDelay,
       backendMock.overrides,

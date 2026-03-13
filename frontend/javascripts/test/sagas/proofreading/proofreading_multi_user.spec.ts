@@ -44,6 +44,7 @@ import {
 } from "./proofreading_test_utils";
 import { publishDebuggingState } from "test/helpers/debugging_state_serializer";
 import {
+  mergeSegment1337And5,
   mergeSegment1And4,
   mergeSegment2And4,
   mergeSegment5And6,
@@ -591,7 +592,7 @@ describe("Proofreading (Multi User)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      // todop
+      // todop: what did I want to do here?
       yield* prepareEditableMapping(context, tracingId, 1, [2, 2, 2]);
 
       // Execute the actual merge and wait for the finished mapping.
@@ -675,30 +676,7 @@ describe("Proofreading (Multi User)", () => {
      *  [ 1337, 1337 ]
      *  [ 1338, 1337 ]]
      */
-    backendMock.planVersionInjection(5, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1337,
-          segmentId2: 5,
-          agglomerateId1: 1337,
-          agglomerateId2: 4,
-        },
-      },
-    ]);
-    backendMock.planVersionInjection(6, [
-      {
-        name: "mergeSegmentItems",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1337,
-          segmentId2: 5,
-          agglomerateId1: 1337,
-          agglomerateId2: 4,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(5, mergeSegment1337And5);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -731,7 +709,7 @@ describe("Proofreading (Multi User)", () => {
       yield take("SET_BUSY_BLOCKING_INFO_ACTION");
       yield call(waitUntilNotBusy);
 
-      const receivedUpdateActions = getFlattenedUpdateActions(context).slice(-2);
+      const receivedUpdateActions = getFlattenedUpdateActions(context).slice(-3);
 
       expect(receivedUpdateActions).toEqual([
         {
@@ -752,6 +730,14 @@ describe("Proofreading (Multi User)", () => {
             segmentId2: 1,
             agglomerateId1: 1337,
             agglomerateId2: 1,
+          },
+        },
+        {
+          name: "updateSegmentPartial",
+          value: {
+            actionTracingId: "volumeTracingId",
+            anchorPosition: [4, 4, 4],
+            id: 1337,
           },
         },
       ]);

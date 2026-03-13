@@ -1239,7 +1239,9 @@ function* handleProofreadMergeOrMinCut(action: Action) {
 
   if (action.type === "PROOFREAD_MERGE") {
     if (sourceAgglomerateId === targetAgglomerateId) {
-      Toast.error("Segments that should be merged need to be in different agglomerates.");
+      Toast.error(
+        `Segments that should be merged need to be in different agglomerates. Both segments belong to agglomerate id=${sourceAgglomerateId}`,
+      );
       return;
     }
 
@@ -1681,6 +1683,7 @@ export function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Prep
 
   const mapSegmentId = (segmentId: number, overrideMapping: Mapping | null = null): number => {
     const mappingToAccess = overrideMapping ?? mapping;
+    // todop: use numberlikemapwrapper
     const mappedId = isNumberMap(mappingToAccess)
       ? mappingToAccess.get(Number(segmentId))
       : // TODO: Proper 64 bit support (#6921)

@@ -56,7 +56,7 @@ import {
   performSplitTreesProofreading,
 } from "./proofreading_skeleton_test_utils";
 import {
-  initialBucketOverrides,
+  getPositionForSegmentId,
   initializeMappingAndTool,
   makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
@@ -113,7 +113,7 @@ describe("Proofreading should generate correct update actions", () => {
       yield put(
         updateSegmentAction(
           agglomerateId,
-          { anchorPosition: [agglomerateId, agglomerateId, agglomerateId] },
+          { anchorPosition: [agglomerateId, agglomerateId, agglomerateId] }, // todop/todom: use getPositionForSegmentId
           tracingId,
         ),
       );
@@ -122,7 +122,7 @@ describe("Proofreading should generate correct update actions", () => {
       yield put(setOthersMayEditForAnnotationAction(true));
 
       vi.mocked(context.mocks.parseProtoTracing).mockRestore();
-      yield call(loadAgglomerateSkeletonAtPosition, [agglomerateId, agglomerateId, agglomerateId]);
+      yield call(loadAgglomerateSkeletonAtPosition, [agglomerateId, agglomerateId, agglomerateId]); // todop: use getPositionForSegmentId
     });
 
     await task.toPromise();
@@ -143,18 +143,8 @@ describe("Proofreading should generate correct update actions", () => {
     const task = startSaga(function* () {
       yield call(initializeMappingAndTool, context, tracingId);
 
-      const anchorPosition = initialBucketOverrides.find(
-        (el) => el.value === sourceSegmentId,
-      )?.position;
-      if (!anchorPosition) {
-        throw new Error(`Could not look up position by using ${sourceSegmentId} as id.`);
-      }
-      const targetPosition = initialBucketOverrides.find(
-        (el) => el.value === targetSegmentId,
-      )?.position;
-      if (!targetPosition) {
-        throw new Error(`Could not look up position by using ${targetSegmentId} as id.`);
-      }
+      const anchorPosition = getPositionForSegmentId(sourceSegmentId);
+      const targetPosition = getPositionForSegmentId(targetSegmentId);
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
@@ -203,18 +193,8 @@ describe("Proofreading should generate correct update actions", () => {
     const task = startSaga(function* () {
       yield call(initializeMappingAndTool, context, tracingId);
 
-      const anchorPosition = initialBucketOverrides.find(
-        (el) => el.value === sourceSegmentId,
-      )?.position;
-      if (!anchorPosition) {
-        throw new Error(`Could not look up position by using ${sourceSegmentId} as id.`);
-      }
-      const targetPosition = initialBucketOverrides.find(
-        (el) => el.value === targetSegmentId,
-      )?.position;
-      if (!targetPosition) {
-        throw new Error(`Could not look up position by using ${targetSegmentId} as id.`);
-      }
+      const anchorPosition = getPositionForSegmentId(sourceSegmentId);
+      const targetPosition = getPositionForSegmentId(targetSegmentId);
 
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.

@@ -302,7 +302,7 @@ export class BackendMock {
     _mappingName: string,
     segmentId: number,
   ): Promise<Vector3> => {
-    return [segmentId, segmentId, segmentId];
+    return getPositionForSegmentId(segmentId);
   };
 
   planVersionInjection(
@@ -385,7 +385,7 @@ export class BackendMock {
   };
 }
 
-export const initialBucketOverrides: Array<{ position: Vector3; value: number }> = [
+const initialBucketOverrides: Array<{ position: Vector3; value: number }> = [
   { position: [100, 100, 100], value: 1337 }, // todop: can we change the positions to to 1337³ etc?
   { position: [101, 101, 101], value: 1338 },
   { position: [1, 1, 1], value: 1 },
@@ -396,6 +396,14 @@ export const initialBucketOverrides: Array<{ position: Vector3; value: number }>
   { position: [6, 6, 6], value: 6 },
   { position: [7, 7, 7], value: 7 },
 ];
+
+export function getPositionForSegmentId(sourceSegmentId: number) {
+  const position = initialBucketOverrides.find((el) => el.value === sourceSegmentId)?.position;
+  if (!position) {
+    throw new Error(`Could not look up position by using ${sourceSegmentId} as id.`);
+  }
+  return position;
+}
 
 export function mockInitialBucketAndAgglomerateData(
   context: WebknossosTestContext,
@@ -647,14 +655,14 @@ export const mockEdgesForPartitionedAgglomerateMinCut = (
       if (agglomerateId === 1 && isEqual(partition1, [1, 2]) && isEqual(partition2, [1337, 1338])) {
         return [
           {
-            position1: [1, 1, 1],
-            position2: [1338, 1338, 1338],
+            position1: getPositionForSegmentId(1),
+            position2: getPositionForSegmentId(1338),
             segmentId1: 1,
             segmentId2: 1338,
           },
           {
-            position1: [3, 3, 3],
-            position2: [1337, 1337, 1337],
+            position1: getPositionForSegmentId(3),
+            position2: getPositionForSegmentId(1337),
             segmentId1: 3,
             segmentId2: 1337,
           },

@@ -881,7 +881,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
     vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
       Promise.resolve([
         {
-          position1: [1337, 1337, 1337],
+          position1: [1337, 1337, 1337], // todop/todom: use getPositionForSegmentId(1337)
           position2: [1338, 1338, 1338],
           segmentId1: 1337,
           segmentId2: 1338,
@@ -897,6 +897,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
+      // todop/todom: use getPositionForSegmentId(1337) for anchorPosition
       yield put(updateSegmentAction(1339, { anchorPosition: [1337, 1337, 1337] }, tracingId));
       yield put(setActiveCellAction(1339, undefined, null, 1337));
 

@@ -32,6 +32,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { initialMapping } from "./proofreading_fixtures";
 import {
   expectSegmentList,
+  getPositionForSegmentId,
   initializeMappingAndTool,
   makeMappingEditableHelper,
   mockEdgesForPartitionedAgglomerateMinCut,
@@ -243,8 +244,8 @@ describe("Proofreading (with mesh actions)", () => {
         if (agglomerateId === 6 && isEqual(partition1, [1337]) && isEqual(partition2, [1338])) {
           return [
             {
-              position1: [1337, 1337, 1337],
-              position2: [1338, 1338, 1338],
+              position1: getPositionForSegmentId(1337),
+              position2: getPositionForSegmentId(1338),
               segmentId1: 1337,
               segmentId2: 1338,
             },
@@ -277,7 +278,7 @@ describe("Proofreading (with mesh actions)", () => {
 
     // Set up the merge-related segment partners. Normally, this would happen
     // due to the user's interactions.
-    yield put(updateSegmentAction(6, { anchorPosition: [1337, 1337, 1337] }, tracingId));
+    yield put(updateSegmentAction(6, { anchorPosition: getPositionForSegmentId(1337) }, tracingId));
     yield put(setActiveCellAction(6, undefined, null, 1337));
 
     yield makeMappingEditableHelper();
@@ -438,7 +439,7 @@ describe("Proofreading (with mesh actions)", () => {
           value: {
             actionTracingId: "volumeTracingId",
             additionalCoordinates: undefined,
-            anchorPosition: [1338, 1338, 1338],
+            anchorPosition: [101, 101, 101],
             color: null,
             creationTime: 1494695001688,
             groupId: null,
@@ -468,10 +469,19 @@ describe("Proofreading (with mesh actions)", () => {
           [1338, 1339], // loaded due to split mesh operation
         ]),
       );
+
+      yield* expectSegmentList(
+        tracingId,
+        [
+          { id: 4, anchorPosition: [100, 100, 100] },
+          { id: 1339, anchorPosition: [101, 101, 101] },
+        ],
+        backendMock,
+      );
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   // TODOp (#9036): this test (still?) creates a segment item 6 (for agglomerate 6) with an incorrect anchor position (1337^3).
   // This is likely an incorrect mock.

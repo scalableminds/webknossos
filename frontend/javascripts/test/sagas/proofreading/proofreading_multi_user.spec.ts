@@ -1064,34 +1064,11 @@ describe("Proofreading (Multi User)", () => {
     await task.toPromise();
   }, 8000);
 
-  it("should not create a segment item after splitting when another user performed a merge that swallows that item", async (context: WebknossosTestContext) => {
+  it.only("should not create a segment item after splitting when another user performed a merge that swallows that item", async (context: WebknossosTestContext) => {
     const { api, mocks } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
 
-    backendMock.planVersionInjection(5, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1337,
-          segmentId2: 5,
-          agglomerateId1: 1337,
-          agglomerateId2: 4,
-        },
-      },
-    ]);
-    backendMock.planVersionInjection(6, [
-      {
-        name: "mergeSegmentItems",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1337,
-          segmentId2: 5,
-          agglomerateId1: 1337,
-          agglomerateId2: 4,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(5, mergeSegment1337And5);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];

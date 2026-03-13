@@ -50,6 +50,7 @@ import FolderSelection from "dashboard/folders/folder_selection";
 import dayjs from "dayjs";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
+import type { ResumableUploadEvent } from "libs/resumable-upload";
 import Toast from "libs/toast";
 import { getFileExtension, isFileExtensionEqualTo, isUserAdminOrDatasetManager } from "libs/utils";
 import { Vector3Input } from "libs/vector_input";
@@ -360,7 +361,13 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       resumableUpload,
       datastoreUrl,
     });
-    resumableUpload.on("complete", () => {
+    resumableUpload.addEventListener("complete", (event: ResumableUploadEvent) => {
+      if (event.detail.type !== "complete" || !event.detail.didUploadCompleteSuccessfully) {
+        // The upload was not successful. A retry might be initiated by other code that
+        // listens to fileError events which is why we ignore the complete event now.
+        // The type is only checked to satisfy TS.
+        return;
+      }
       const newestForm = this.formRef.current;
 
       if (!newestForm) {
@@ -432,30 +439,34 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         },
       );
     });
-    resumableUpload.on("filesAdded", () => {
+    resumableUpload.addEventListener("filesAdded", () => {
       resumableUpload.upload();
     });
     // terminalFileError is triggered by the RestApi when a normal fileError could not be
     // recovered by refreshing the user token.
-    resumableUpload.on("terminalFileError", (_file: FileWithPath, message: string) => {
-      Toast.error(message);
+    resumableUpload.addEventListener("terminalFileError", (event: ResumableUploadEvent) => {
+      if (event.detail.type !== "terminalFileError") {
+        // Satisfy TS.
+        return;
+      }
+      Toast.error(event.detail.message);
       this.setState({
         isUploading: false,
       });
     });
-    resumableUpload.on("progress", () => {
+    resumableUpload.addEventListener("progress", () => {
       this.setState({
         isRetrying: false,
         uploadProgress: resumableUpload.progress(),
       });
     });
-    resumableUpload.on("fileRetry", () => {
+    resumableUpload.addEventListener("fileRetry", () => {
       logRetryToAnalytics(newDatasetName);
       this.setState({
         isRetrying: true,
       });
     });
-    resumableUpload.addFiles(formValues.zipFile);
+    resumableUpload.addFiles(formValues.zipFile as File[]);
   };
 
   cancelUpload = async () => {

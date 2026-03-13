@@ -293,7 +293,7 @@ object Zarr3ArrayHeader extends JsonImplicits {
         ChunkGridSpecification(
           "regular",
           ChunkGridConfiguration(
-            chunk_shape = Array.fill(additionalAxes.length)(1) ++ Array(channels) ++ Array(DataLayer.bucketLength,
+            chunk_shape = Array(channels) ++ Array.fill(additionalAxes.length)(1) ++ Array(DataLayer.bucketLength,
                                                                                            DataLayer.bucketLength,
                                                                                            DataLayer.bucketLength))
         )),

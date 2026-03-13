@@ -120,7 +120,7 @@ export const mergeSegment4And6WithAgglomerateTree1And4 = [
       name: "createSegment" as const,
       value: {
         actionTracingId: "volumeTracingId",
-        id: 5,
+        id: 4,
         anchorPosition: [5, 5, 5] as Vector3,
         additionalCoordinates: undefined,
         name: null,
@@ -152,16 +152,6 @@ export const mergeSegment4And6WithAgglomerateTree1And4 = [
         agglomerateId2: 6,
         segmentId1: 5,
         segmentId2: 6,
-      },
-    },
-  ],
-  [
-    {
-      name: "updateSegmentPartial" as const,
-      value: {
-        actionTracingId: VOLUME_TRACING_ID,
-        id: 4,
-        anchorPosition: [5, 5, 5] as Vector3,
       },
     },
   ],

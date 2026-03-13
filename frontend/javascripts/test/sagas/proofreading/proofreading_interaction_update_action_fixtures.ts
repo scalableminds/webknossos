@@ -908,6 +908,22 @@ export const splitSegment2And3 = [
 export const splitSegment2And3WithAgglomerateTree1 = [
   [
     {
+      name: "createSegment" as const,
+      value: {
+        actionTracingId: VOLUME_TRACING_ID,
+        id: 1,
+        anchorPosition: [2, 2, 2] as Vector3,
+        additionalCoordinates: undefined,
+        name: null,
+        color: null,
+        groupId: null,
+        metadata: [],
+        creationTime: 1494695001688,
+      },
+    },
+  ],
+  [
+    {
       name: "splitAgglomerate" as const,
       value: {
         actionTracingId: VOLUME_TRACING_ID,
@@ -935,17 +951,11 @@ export const splitSegment2And3WithAgglomerateTree1 = [
   ],
   [
     {
-      name: "createSegment" as const,
+      name: "updateSegmentPartial" as const,
       value: {
         actionTracingId: VOLUME_TRACING_ID,
         id: 1,
         anchorPosition: [3, 3, 3] as Vector3,
-        additionalCoordinates: undefined,
-        name: null,
-        color: null,
-        groupId: null,
-        metadata: [],
-        creationTime: 1494695001688,
       },
     },
   ],

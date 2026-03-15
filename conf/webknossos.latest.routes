@@ -117,6 +117,9 @@ GET           /datasets/:datasetId                                              
 GET           /datasets/:datasetId/dataSourceForSuperUser                                       controllers.DatasetController.dataSourceForSuperUser(datasetId: ObjectId)
 POST          /datasets/:datasetId/duplicateToOrga                                              controllers.DatasetController.duplicateToOrga(datasetId: ObjectId, targetOrganizationId: String)
 POST          /datasets/compose                                                                 controllers.DatasetController.compose()
+POST          /datasets/:datasetId/compose/addLayer                                             controllers.DatasetController.composeAddLayer(datasetId: ObjectId)
+POST          /datasets/:datasetId/compose/addMag                                               controllers.DatasetController.composeAddMag(datasetId: ObjectId)
+POST          /datasets/:datasetId/compose/addAttachment                                        controllers.DatasetController.composeAddAttachment(datasetId: ObjectId)
 POST          /datasets/reserveUploadToPaths                                                    controllers.DatasetController.reserveUploadToPaths()
 
 # Folders

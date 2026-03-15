@@ -1,5 +1,6 @@
 # Note: keep this in sync with the reported version numbers in the com.scalableminds.util.mvc.ApiVersioning trait
 
+->  /v13/ datastore.latest.Routes
 ->  /v12/ datastore.latest.Routes
 
 POST          /v11/datasets/reserveUpload                                                                                                                @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.reserveUploadV11()

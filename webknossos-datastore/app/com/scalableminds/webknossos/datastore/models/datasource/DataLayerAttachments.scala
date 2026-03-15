@@ -4,6 +4,7 @@ import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.tools.{Box, Full}
 import com.scalableminds.webknossos.datastore.helpers.UPath
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
 import org.apache.commons.io.FilenameUtils
 import play.api.libs.json.{Format, Json}
 
@@ -28,6 +29,38 @@ case class DataLayerAttachments(
       cumsum = this.cumsum.orElse(other.cumsum)
     )
 
+  // Drop those attachments whose name is not in other’s matching collection.
+  def dropMissing(other: DataLayerAttachments): Option[DataLayerAttachments] = {
+    val filtered = DataLayerAttachments(
+      meshes = meshes.filter(a => other.meshes.exists(_.name == a.name)),
+      agglomerates = agglomerates.filter(a => other.agglomerates.exists(_.name == a.name)),
+      segmentIndex = segmentIndex.filter(a => other.segmentIndex.exists(_.name == a.name)),
+      connectomes = connectomes.filter(a => other.connectomes.exists(_.name == a.name)),
+      cumsum = cumsum.filter(a => other.cumsum.exists(_.name == a.name))
+    )
+    if (filtered.isEmpty) None else Some(filtered)
+  }
+
+  def withAdded(attachment: LayerAttachment, attachmentType: LayerAttachmentType.Value): DataLayerAttachments =
+    attachmentType match {
+      case LayerAttachmentType.mesh => this.copy(meshes = this.meshes :+ attachment)
+      case LayerAttachmentType.agglomerate =>
+        this.copy(agglomerates = this.agglomerates :+ attachment)
+      case LayerAttachmentType.segmentIndex => this.copy(segmentIndex = Some(attachment))
+      case LayerAttachmentType.connectome =>
+        this.copy(connectomes = this.connectomes :+ attachment)
+      case LayerAttachmentType.cumsum => this.copy(cumsum = Some(attachment))
+    }
+
+  def getByTypeAndName(attachmentType: LayerAttachmentType, name: String): Option[LayerAttachment] =
+    attachmentType match {
+      case LayerAttachmentType.mesh         => meshes.find(_.name == name)
+      case LayerAttachmentType.agglomerate  => agglomerates.find(_.name == name)
+      case LayerAttachmentType.segmentIndex => segmentIndex.find(_.name == name)
+      case LayerAttachmentType.connectome   => connectomes.find(_.name == name)
+      case LayerAttachmentType.cumsum       => cumsum.find(_.name == name)
+    }
+
   def mapped(attachmentMapping: LayerAttachment => LayerAttachment): DataLayerAttachments =
     DataLayerAttachments(
       meshes = meshes.map(attachmentMapping(_)),
@@ -47,6 +80,7 @@ case class DataLayerAttachments(
     meshes.distinctBy(_.name).length != meshes.length ||
       agglomerates.distinctBy(_.name).length != agglomerates.length ||
       connectomes.distinctBy(_.name).length != connectomes.length
+
 }
 
 object DataLayerAttachments {

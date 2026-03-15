@@ -4,6 +4,7 @@
 # Note: keep this in sync with the reported version numbers in the com.scalableminds.util.mvc.ApiVersioning trait
 
 # version log
+ # changed in v13: Attachments not mentioned in the dataSource passed to updatePartial will now be deleted.
  # changed in v12: Dataset upload now expects layersToLink in new format with datasetId instead of orgaId+directoryName
  # changed in v11: Datasets reserveManualUpload flow via WK side. Note: older versions of the route are *not* supported for security reasons.
  # changed in v9: Datasets are now identified by their id, not their name. The routes now need to pass a dataset id instead of a name and organization id tuple.
@@ -16,11 +17,22 @@
  # new in v3: annotation info and finish request now take timestamp
  # new in v2: annotation json contains visibility enum instead of booleans
 
+->       /v13/                                                                webknossos.latest.Routes
+
+PATCH    /v12/datasets/:datasetId/updatePartial                               controllers.LegacyApiController.updatePartialV12(datasetId: ObjectId)
 ->       /v12/                                                                webknossos.latest.Routes
+
+PATCH    /v11/datasets/:datasetId/updatePartial                               controllers.LegacyApiController.updatePartialV12(datasetId: ObjectId)
 ->       /v11/                                                                webknossos.latest.Routes
+
+PATCH    /v10/datasets/:datasetId/updatePartial                               controllers.LegacyApiController.updatePartialV12(datasetId: ObjectId)
 ->       /v10/                                                                webknossos.latest.Routes
+
+PATCH    /v9/datasets/:datasetId/updatePartial                               controllers.LegacyApiController.updatePartialV12(datasetId: ObjectId)
 ->       /v9/                                                                 webknossos.latest.Routes
 
+# v8: support changes to v13
+PATCH    /v8/datasets/:datasetId/updatePartial                                controllers.LegacyApiController.updatePartialV12(datasetId: ObjectId)
 # v8: support changes to v9
 PATCH    /v8/datasets/:organizationId/:datasetName                            controllers.LegacyApiController.updateDatasetV8(organizationId: String, datasetName: String)
 GET      /v8/datasets/:organizationId/:datasetName/sharingToken               controllers.LegacyApiController.getDatasetSharingTokenV8(organizationId: String, datasetName: String)
@@ -32,6 +44,9 @@ POST     /v8/tasks                                                            co
 GET      /v8/projects/:id/tasks                                               controllers.LegacyApiController.tasksForProjectV8(id: ObjectId, limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 
 ->       /v8/                                                                 webknossos.latest.Routes
+
+# v7: support changes to v13
+PATCH    /v7/datasets/:datasetId/updatePartial                                controllers.LegacyApiController.updatePartialV12(datasetId: ObjectId)
 #v7: support changes to v9
 PATCH    /v7/datasets/:organizationId/:datasetName                            controllers.LegacyApiController.updateDatasetV8(organizationId: String, datasetName: String)
 GET      /v7/datasets/:organizationId/:datasetName/sharingToken               controllers.LegacyApiController.getDatasetSharingTokenV8(organizationId: String, datasetName: String)
@@ -47,6 +62,8 @@ GET      /v7/datasets                                                         co
 
 ->       /v7/                                                                 webknossos.latest.Routes
 
+# v6: support changes to v13
+PATCH    /v6/datasets/:datasetId/updatePartial                                controllers.LegacyApiController.updatePartialV12(datasetId: ObjectId)
 # v6: support changes to v9
 PATCH    /v6/datasets/:organizationId/:datasetName                            controllers.LegacyApiController.updateDatasetV8(organizationId: String, datasetName: String)
 GET      /v6/datasets/:organizationId/:datasetName/sharingToken               controllers.LegacyApiController.getDatasetSharingTokenV8(organizationId: String, datasetName: String)
@@ -63,6 +80,8 @@ GET      /v6/datasets/:organizationName/:datasetName                          co
 ->       /v6/                                                                 webknossos.latest.Routes
 
 
+# v5: support changes to v13
+PATCH    /v5/datasets/:datasetId/updatePartial                                controllers.LegacyApiController.updatePartialV12(datasetId: ObjectId)
 # v5: support changes to v9
 PATCH    /v5/datasets/:organizationId/:datasetName                            controllers.LegacyApiController.updateDatasetV8(organizationId: String, datasetName: String)
 GET      /v5/datasets/:organizationId/:datasetName/sharingToken               controllers.LegacyApiController.getDatasetSharingTokenV8(organizationId: String, datasetName: String)

@@ -52,12 +52,20 @@ case class DatasetUpdateParameters(
     metadata: Option[JsArray],
     folderId: Option[ObjectId],
     dataSource: Option[UsableDataSource],
-    layerRenamings: Option[Seq[LayerRenaming]]
+    layerRenamings: Option[Seq[LayerRenaming]],
+    attachmentRenamings: Option[Seq[AttachmentRenaming]]
 )
 
 case class LayerRenaming(oldName: String, newName: String)
 object LayerRenaming {
   implicit val jsonFormat: OFormat[LayerRenaming] = Json.format[LayerRenaming]
+}
+case class AttachmentRenaming(
+    layerName: String, // Note: if a request contains a layer renaming *and* attachment renaming, this must use the *new* layerName.
+    oldName: String,
+    newName: String)
+object AttachmentRenaming {
+  implicit val jsonFormat: OFormat[AttachmentRenaming] = Json.format[AttachmentRenaming]
 }
 
 object DatasetUpdateParameters extends TristateOptionJsonHelper {
@@ -465,7 +473,8 @@ class DatasetController @Inject()(userService: UserService,
           dataSourceUpdates =>
             datasetService.updateDataSourceFromUserChanges(dataset,
                                                            dataSourceUpdates,
-                                                           request.body.layerRenamings.getOrElse(Seq.empty)))
+                                                           request.body.layerRenamings.getOrElse(Seq.empty),
+                                                           request.body.attachmentRenamings.getOrElse(Seq.empty)))
         updated <- datasetDAO.findOne(datasetId)
         _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
         js <- datasetService.publicWrites(updated, Some(request.identity))
@@ -677,6 +686,27 @@ class DatasetController @Inject()(userService: UserService,
       for {
         (_, newDatasetId) <- composeService.composeDataset(request.body, request.identity) ?~> "dataset.compose.failed"
       } yield Ok(Json.obj("newDatasetId" -> newDatasetId))
+    }
+
+  def composeAddLayer(datasetId: ObjectId): Action[ComposeRequestLayer] =
+    sil.SecuredAction.async(validateJson[ComposeRequestLayer]) { implicit request =>
+      for {
+        _ <- composeService.addLayer(datasetId, request.body) ?~> "dataset.compose.addLayer.failed"
+      } yield Ok
+    }
+
+  def composeAddMag(datasetId: ObjectId): Action[ComposeAddMagRequest] =
+    sil.SecuredAction.async(validateJson[ComposeAddMagRequest]) { implicit request =>
+      for {
+        _ <- composeService.addMag(datasetId, request.body) ?~> "dataset.compose.addMag.failed"
+      } yield Ok
+    }
+
+  def composeAddAttachment(datasetId: ObjectId): Action[ComposeAddAttachmentRequest] =
+    sil.SecuredAction.async(validateJson[ComposeAddAttachmentRequest]) { implicit request =>
+      for {
+        _ <- composeService.addAttachment(datasetId, request.body) ?~> "dataset.compose.addAttachment.failed"
+      } yield Ok
     }
 
   def reserveMagUploadToPath(datasetId: ObjectId): Action[ReserveMagUploadToPathRequest] =

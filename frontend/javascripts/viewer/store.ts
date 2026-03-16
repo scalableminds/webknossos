@@ -377,6 +377,10 @@ export type UserConfiguration = {
   readonly renderWatermark: boolean;
   readonly antialiasRendering: boolean;
   readonly activeToolkit: Toolkit;
+  readonly lastUsedToolQueue: [AnnotationTool, AnnotationTool, AnnotationTool];
+  readonly erasePreference: "BRUSH" | "TRACE";
+  readonly writePreference: "BRUSH" | "TRACE";
+  readonly measurementPreference: "LINE" | "AREA";
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &

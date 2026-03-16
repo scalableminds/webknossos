@@ -128,6 +128,19 @@ function* watchToolReset(): Saga<never> {
   }
 }
 
+function* setLastUsedToolQueue(setToolAction: SetToolAction): Saga<void> {
+  const newTool = setToolAction.tool;
+  const lastUsedToolQueue = yield* select((state) => state.userConfiguration.lastUsedToolQueue);
+  if (lastUsedToolQueue.some((tool) => tool === newTool)) return;
+  const [, ...remainingTools] = lastUsedToolQueue;
+  const updatedLastUsedToolQueue: [AnnotationTool, AnnotationTool, AnnotationTool] = [
+    ...remainingTools,
+    newTool,
+  ];
+  yield* put(updateUserSettingAction("lastUsedToolQueue", updatedLastUsedToolQueue));
+  console.log("Updated last used tool queue:", updatedLastUsedToolQueue);
+}
+
 export default function* toolSaga() {
   yield* call(ensureWkInitialized);
 
@@ -146,4 +159,5 @@ export default function* toolSaga() {
     ] as ActionPattern,
     ensureActiveToolIsInToolkit,
   );
+  yield* takeEvery("SET_TOOL", setLastUsedToolQueue);
 }

@@ -4,7 +4,6 @@ import {
   setupWebknossosForTesting,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
-import { publishDebuggingState } from "test/helpers/debugging_state_serializer";
 import { call, delay, put, take } from "typed-redux-saga";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
@@ -265,7 +264,6 @@ describe("Proofreading should generate correct update actions", () => {
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [1, 4], 5, 6, 4, false);
       const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
-      yield call(publishDebuggingState, _backendMock);
 
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment4And6WithAgglomerateTree1And4);
     });
@@ -279,7 +277,6 @@ describe("Proofreading should generate correct update actions", () => {
     const task = startSaga(function* task() {
       yield call(makeProofreadMerge, context, [1, 4], 3, 4, 1, false);
       const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
-      yield call(publishDebuggingState, _backendMock);
 
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment3And4WithAgglomerateTree1And4);
     });
@@ -518,8 +515,6 @@ describe("Proofreading should generate correct update actions", () => {
 
       yield call(makeProofreadSplit, context, [1, 4, 6], 2, 3, 1, minCutEdges, false);
 
-      yield call(publishDebuggingState, _backendMock);
-
       const splitAndTreeAndSegmentUpdates = removeBlacklistedActions(
         getNestedUpdateActions(context),
       );
@@ -565,7 +560,6 @@ describe("Proofreading should generate correct update actions", () => {
       ];
       yield call(makeProofreadSplit, context, [1, 4, 6], 1, 2, 1, minCutEdges, false);
       const splitAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
-      yield call(publishDebuggingState, _backendMock);
       expect(splitAndTreeUpdates).toStrictEqual(splitSegment1And2WithAgglomerateTrees1And4And6);
     });
 
@@ -594,7 +588,6 @@ describe("Proofreading should generate correct update actions", () => {
 
       yield call(makeProofreadMerge, context, [], 1337, 5, 1339, false);
       const splitAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
-      yield call(publishDebuggingState, _backendMock);
       expect(splitAndTreeUpdates).toStrictEqual(splitSegment7And1337AndMerge1337And5);
     });
 
@@ -612,7 +605,6 @@ describe("Proofreading should generate correct update actions", () => {
       const loadAgglomerateTreesAndSplitUpdateActions = removeBlacklistedActions(
         getNestedUpdateActions(context),
       );
-      yield call(publishDebuggingState, _backendMock);
       expect(loadAgglomerateTreesAndSplitUpdateActions).toStrictEqual(
         minCutWithNodes2And3WithAgglomerateTree1,
       );
@@ -632,7 +624,6 @@ describe("Proofreading should generate correct update actions", () => {
         getNestedUpdateActions(context),
         true,
       );
-      yield call(publishDebuggingState, _backendMock);
       expect(loadTreesAndMergeUpdateActions).toStrictEqual(mergeAgglomerateTrees1And4);
     });
 
@@ -649,7 +640,6 @@ describe("Proofreading should generate correct update actions", () => {
         getNestedUpdateActions(context),
         true,
       );
-      yield call(publishDebuggingState, _backendMock);
       expect(loadTreeAndSplitUpdateActions).toStrictEqual(splitAgglomerateTree1);
     });
 

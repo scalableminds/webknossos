@@ -39,7 +39,6 @@ import {
   mockInitialBucketAndAgglomerateData,
   simulatePartitionedSplitAgglomeratesViaMeshes,
 } from "./proofreading_test_utils";
-import { publishDebuggingState } from "test/helpers/debugging_state_serializer";
 import { mergeSegment5And6 } from "./proofreading_interaction_update_action_fixtures";
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_server_objects";
 
@@ -325,7 +324,6 @@ describe("Proofreading (with mesh actions)", () => {
     const task = startSaga(function* task(): Saga<void> {
       yield simulateSplitAgglomeratesViaMeshes(context);
 
-      yield call(publishDebuggingState, backendMock);
       const splitOperationUpdateActions = getFlattenedUpdateActions(context).slice(-2);
 
       expect(splitOperationUpdateActions).toEqual([
@@ -687,7 +685,6 @@ describe("Proofreading (with mesh actions)", () => {
 
     const task = startSaga(function* task(): Saga<void> {
       yield simulatePartitionedSplitAgglomeratesViaMeshes(context, false);
-      yield call(publishDebuggingState, backendMock);
 
       const receivedUpdateActions = getFlattenedUpdateActions(context);
       expect(receivedUpdateActions.slice(-2)).toEqual([

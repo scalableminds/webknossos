@@ -10,7 +10,13 @@ import processTaskWithPool from "libs/async/task_pool";
 import { V3 } from "libs/mjs";
 import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Toast from "libs/toast";
-import { getAdaptToTypeFunction, isEditableEventTarget, isNumberMap, SoftError } from "libs/utils";
+import {
+  ColoredLogger,
+  getAdaptToTypeFunction,
+  isEditableEventTarget,
+  isNumberMap,
+  SoftError,
+} from "libs/utils";
 import window from "libs/window";
 import isEqual from "lodash-es/isEqual";
 import union from "lodash-es/union";
@@ -851,7 +857,7 @@ function* performMinCut(
 ): Saga<[boolean, MinCutTargetEdge[]]> {
   if (sourceAgglomerateId !== targetAgglomerateId) {
     Toast.error(
-      "Segments need to be in the same agglomerate to perform a min-cut splitting operation.",
+      `Segments need to be in the same agglomerate to perform a min-cut splitting operation. Agglomerate ids are ${sourceAgglomerateId} and ${targetAgglomerateId}.`,
     );
     return [true, []];
   }
@@ -1239,7 +1245,9 @@ function* handleProofreadMergeOrMinCut(action: Action) {
 
   if (action.type === "PROOFREAD_MERGE") {
     if (sourceAgglomerateId === targetAgglomerateId) {
-      Toast.error("Segments that should be merged need to be in different agglomerates.");
+      Toast.error(
+        `Segments that should be merged need to be in different agglomerates. Both segments belong to agglomerate id=${sourceAgglomerateId}`,
+      );
       return;
     }
 
@@ -1414,16 +1422,21 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       );
     }
 
+    const [newSourceAgglomerateId, newTargetAgglomerateId] = yield* all([
+      call(preparation.getDataValue, sourceInfo.position, activeMapping.mapping),
+      call(preparation.getDataValue, targetInfo.position, activeMapping.mapping),
+    ]);
+
     /* Ensure segment items exist for affected segments and reload affected meshes */
     const refreshInfos = [
       {
         oldAgglomerateId: sourceInfo.agglomerateId,
-        newAgglomerateId: sourceAgglomerateId,
+        newAgglomerateId: newSourceAgglomerateId,
         nodePosition: sourceInfo.position,
       },
       {
         oldAgglomerateId: targetInfo.agglomerateId,
-        newAgglomerateId: targetAgglomerateId,
+        newAgglomerateId: newTargetAgglomerateId,
         nodePosition: targetInfo.position,
       },
     ];
@@ -1681,6 +1694,7 @@ export function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Prep
 
   const mapSegmentId = (segmentId: number, overrideMapping: Mapping | null = null): number => {
     const mappingToAccess = overrideMapping ?? mapping;
+    // todop: use numberlikemapwrapper
     const mappedId = isNumberMap(mappingToAccess)
       ? mappingToAccess.get(Number(segmentId))
       : // TODO: Proper 64 bit support (#6921)

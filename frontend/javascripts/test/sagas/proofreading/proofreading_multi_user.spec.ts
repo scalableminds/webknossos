@@ -44,10 +44,13 @@ import {
 } from "./proofreading_test_utils";
 import { publishDebuggingState } from "test/helpers/debugging_state_serializer";
 import {
+  mergeSegment1337And5,
   mergeSegment1And4,
+  mergeSegment2And4,
   mergeSegment5And6,
   splitSegment1And2,
   splitSegment2And3,
+  splitSegment7And1337AndMerge1337And5,
 } from "./proofreading_interaction_update_action_fixtures";
 
 function* prepareEditableMapping(
@@ -157,7 +160,6 @@ describe("Proofreading (Multi User)", () => {
       ]);
       yield* expectMapping(tracingId, expectedMappingAfterMergeRebase);
 
-      yield call(publishDebuggingState, backendMock);
       yield expectSegmentList(tracingId, [
         {
           id: 1,
@@ -282,7 +284,6 @@ describe("Proofreading (Multi User)", () => {
 
       yield* expectMapping(tracingId, expectedMappingAfterMergeRebase);
 
-      yield call(publishDebuggingState, backendMock);
       yield expectSegmentList(tracingId, [
         {
           id: 1,
@@ -392,7 +393,6 @@ describe("Proofreading (Multi User)", () => {
         ]),
       );
 
-      yield call(publishDebuggingState, backendMock);
       yield expectSegmentList(tracingId, [
         {
           id: 1,
@@ -419,17 +419,7 @@ describe("Proofreading (Multi User)", () => {
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     prepareGetNeighborsForAgglomerateNode(mocks, 6, false);
 
-    backendMock.planVersionInjection(7, [
-      {
-        name: "splitAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1,
-          segmentId2: 2,
-          agglomerateId: 1,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(7, splitSegment1And2);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -439,15 +429,6 @@ describe("Proofreading (Multi User)", () => {
 
       const splitSaveActionBatch = getFlattenedUpdateActions(context).slice(-3);
       expect(splitSaveActionBatch).toEqual([
-        {
-          name: "splitAgglomerate",
-          value: {
-            actionTracingId: VOLUME_TRACING_ID,
-            segmentId1: 2,
-            segmentId2: 3,
-            agglomerateId: 1339,
-          },
-        },
         {
           name: "createSegment",
           value: {
@@ -460,6 +441,15 @@ describe("Proofreading (Multi User)", () => {
             id: 1339,
             metadata: [],
             name: null,
+          },
+        },
+        {
+          name: "splitAgglomerate",
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            segmentId1: 2,
+            segmentId2: 3,
+            agglomerateId: 1339,
           },
         },
         {
@@ -518,28 +508,7 @@ describe("Proofreading (Multi User)", () => {
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     prepareGetNeighborsForAgglomerateNode(mocks, 6, false);
 
-    backendMock.planVersionInjection(7, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 4,
-          segmentId2: 2,
-          agglomerateId1: 1,
-          agglomerateId2: 4,
-        },
-      },
-      {
-        name: "mergeSegmentItems",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 4,
-          segmentId2: 2,
-          agglomerateId1: 1,
-          agglomerateId2: 4,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(7, mergeSegment2And4);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -547,7 +516,7 @@ describe("Proofreading (Multi User)", () => {
     const task = startSaga(function* task() {
       yield performCutFromAllNeighbours(context, tracingId, false);
 
-      const splitSaveActionBatch = getFlattenedUpdateActions(context).slice(-3);
+      const splitSaveActionBatch = getFlattenedUpdateActions(context).slice(-2);
 
       expect(splitSaveActionBatch).toEqual([
         {
@@ -557,20 +526,6 @@ describe("Proofreading (Multi User)", () => {
             segmentId1: 2,
             segmentId2: 3,
             agglomerateId: 1,
-          },
-        },
-        {
-          name: "createSegment",
-          value: {
-            actionTracingId: "volumeTracingId",
-            additionalCoordinates: undefined,
-            anchorPosition: [2, 2, 2],
-            color: null,
-            creationTime: 1494695001688,
-            groupId: null,
-            id: 4,
-            metadata: [],
-            name: null,
           },
         },
         {
@@ -595,28 +550,26 @@ describe("Proofreading (Multi User)", () => {
         // But as answer to the edges to remove was on version before the merge, the newly added edge afterwards is not included in the edges that need to be removed to completely isolate the segment 2.
         // Thus, only 3 was cut off from segment 2.
         new Map([
-          [1, 4],
-          [2, 4],
+          [1, 1],
+          [2, 1],
           [3, 1339],
-          [5, 4],
-          [4, 4],
+          [5, 1],
+          [4, 1],
           [6, 6],
           [7, 6],
         ]),
       );
 
-      // todop
-      // yield call(publishDebuggingState, backendMock);
-      // yield expectSegmentList(tracingId, [
-      //   {
-      //     id: 1,
-      //     anchorPosition: [2, 2, 2],
-      //   },
-      //   {
-      //     id: 1339,
-      //     anchorPosition: [3, 3, 3],
-      //   },
-      // ]);
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [2, 2, 2],
+        },
+        {
+          id: 1339,
+          anchorPosition: [3, 3, 3],
+        },
+      ]);
     });
 
     await task.toPromise();
@@ -637,7 +590,7 @@ describe("Proofreading (Multi User)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      // todop
+      // todop: what did I want to do here?
       yield* prepareEditableMapping(context, tracingId, 1, [2, 2, 2]);
 
       // Execute the actual merge and wait for the finished mapping.
@@ -685,7 +638,6 @@ describe("Proofreading (Multi User)", () => {
         ]),
       );
 
-      yield call(publishDebuggingState, backendMock);
       yield expectSegmentList(tracingId, [
         {
           id: 1,
@@ -721,30 +673,7 @@ describe("Proofreading (Multi User)", () => {
      *  [ 1337, 1337 ]
      *  [ 1338, 1337 ]]
      */
-    backendMock.planVersionInjection(5, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1337,
-          segmentId2: 5,
-          agglomerateId1: 1337,
-          agglomerateId2: 4,
-        },
-      },
-    ]);
-    backendMock.planVersionInjection(6, [
-      {
-        name: "mergeSegmentItems",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1337,
-          segmentId2: 5,
-          agglomerateId1: 1337,
-          agglomerateId2: 4,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(5, mergeSegment1337And5);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -777,7 +706,7 @@ describe("Proofreading (Multi User)", () => {
       yield take("SET_BUSY_BLOCKING_INFO_ACTION");
       yield call(waitUntilNotBusy);
 
-      const receivedUpdateActions = getFlattenedUpdateActions(context).slice(-2);
+      const receivedUpdateActions = getFlattenedUpdateActions(context).slice(-3);
 
       expect(receivedUpdateActions).toEqual([
         {
@@ -800,6 +729,14 @@ describe("Proofreading (Multi User)", () => {
             agglomerateId2: 1,
           },
         },
+        {
+          name: "updateSegmentPartial",
+          value: {
+            actionTracingId: "volumeTracingId",
+            anchorPosition: [4, 4, 4],
+            id: 1337,
+          },
+        },
       ]);
       yield* expectMapping(
         tracingId,
@@ -816,7 +753,6 @@ describe("Proofreading (Multi User)", () => {
         ]),
       );
 
-      yield call(publishDebuggingState, backendMock);
       yield expectSegmentList(tracingId, [
         {
           id: 1337,
@@ -837,108 +773,46 @@ describe("Proofreading (Multi User)", () => {
       The resulting mapping correctly incorporates all backend split and merge actions, including those involving initially not-loaded segments.
      */
 
-    /* Initial mapping should now be
-     * [[ 1, 1 ],
-     *  [ 2, 1 ],
-     *  [ 3, 1 ],
-     *  [ 4, 4 ],
-     *  [ 5, 4 ],
-     *  [ 6, 1337 ],
-     *  [ 7, 1337 ],
-     *  [ 1337, 1337 ],
-     *  [ 1338, 1337 ]]
-     */
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
 
-    /* Should lead to the following full mapping:
-     * [[ 1, 1 ],
-     *  [ 2, 1 ],
-     *  [ 3, 1 ],
-     *  [ 4, 4 ],
-     *  [ 5, 4 ],
-     *  [ 6, 1337 ],
-     *  [ 7, 1337 ],
-     *  [ 1337, 1339 ],
-     *  [ 1338, 1339 ]]
-     */
-    backendMock.planVersionInjection(5, [
-      {
-        name: "splitAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 7, // will keep its agglomerate id
-          segmentId2: 1337,
-          agglomerateId: 1337,
+    backendMock.planMultipleVersionInjections(5, [
+      ...splitSegment7And1337AndMerge1337And5,
+      [
+        {
+          name: "updateSegmentPartial",
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            id: 1339,
+            name: "Custom Name for 1339",
+          },
         },
-      },
-    ]);
-
-    /* Should lead to the following full mapping:
-     * [[ 1, 1 ],
-     *  [ 2, 1 ],
-     *  [ 3, 1 ],
-     *  [ 4, 1339 ],
-     *  [ 5, 1339 ],
-     *  [ 6, 1337 ],
-     *  [ 7, 1337 ],
-     *  [ 1337, 1339 ],
-     *  [ 1338, 1339 ]]
-     */
-    backendMock.planVersionInjection(6, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1337,
-          segmentId2: 5,
-          agglomerateId1: 1339,
-          agglomerateId2: 4,
+        {
+          name: "updateMetadataOfSegment",
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            id: 1339,
+            removeEntriesByKey: [],
+            upsertEntriesByKey: [{ key: "key1", stringValue: "value for 1339" }],
+          },
         },
-      },
-      {
-        name: "mergeSegmentItems",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1337,
-          segmentId2: 5,
-          agglomerateId1: 1339,
-          agglomerateId2: 4,
+        {
+          name: "updateSegmentPartial",
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            id: 1,
+            name: "Custom Name for 1",
+          },
         },
-      },
-      {
-        name: "updateSegmentPartial",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          id: 1339,
-          name: "Custom Name for 1339",
+        {
+          name: "updateMetadataOfSegment",
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            id: 1,
+            removeEntriesByKey: [],
+            upsertEntriesByKey: [{ key: "key1", stringValue: "value for 1" }],
+          },
         },
-      },
-      {
-        name: "updateMetadataOfSegment",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          id: 1339,
-          removeEntriesByKey: [],
-          upsertEntriesByKey: [{ key: "key1", stringValue: "value for 1339" }],
-        },
-      },
-      {
-        name: "updateSegmentPartial",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          id: 1,
-          name: "Custom Name for 1",
-        },
-      },
-      {
-        name: "updateMetadataOfSegment",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          id: 1,
-          removeEntriesByKey: [],
-          upsertEntriesByKey: [{ key: "key1", stringValue: "value for 1" }],
-        },
-      },
+      ],
     ]);
 
     const { annotation } = Store.getState();
@@ -988,7 +862,13 @@ describe("Proofreading (Multi User)", () => {
 
       for (const state of [frontendState, backendState]) {
         const currentSegments = state.annotation.volumes[0].segments;
-        expect(currentSegments.size()).toEqual(1);
+        expect(currentSegments.size()).toEqual(2);
+
+        const segment1337AfterSaving = currentSegments.getNullable(1337);
+        expect(segment1337AfterSaving).toMatchObject({
+          name: null,
+          anchorPosition: [7, 7, 7],
+        });
 
         const segment1339AfterSaving = currentSegments.getNullable(1339);
         expect(segment1339AfterSaving).toMatchObject({
@@ -1001,7 +881,7 @@ describe("Proofreading (Multi User)", () => {
         });
       }
 
-      const receivedUpdateActions = getFlattenedUpdateActions(context).slice(-2);
+      const receivedUpdateActions = getFlattenedUpdateActions(context).slice(-3);
 
       expect(receivedUpdateActions).toEqual([
         {
@@ -1022,6 +902,14 @@ describe("Proofreading (Multi User)", () => {
             segmentId2: 1,
             agglomerateId1: 1339,
             agglomerateId2: 1,
+          },
+        },
+        {
+          name: "updateSegmentPartial",
+          value: {
+            actionTracingId: "volumeTracingId",
+            id: 1339,
+            anchorPosition: [4, 4, 4],
           },
         },
       ]);
@@ -1175,30 +1063,7 @@ describe("Proofreading (Multi User)", () => {
     const { api, mocks } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
 
-    backendMock.planVersionInjection(5, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1337,
-          segmentId2: 5,
-          agglomerateId1: 1337,
-          agglomerateId2: 4,
-        },
-      },
-    ]);
-    backendMock.planVersionInjection(6, [
-      {
-        name: "mergeSegmentItems",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1337,
-          segmentId2: 5,
-          agglomerateId1: 1337,
-          agglomerateId2: 4,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(5, mergeSegment1337And5);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -1306,30 +1171,7 @@ describe("Proofreading (Multi User)", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
 
-    backendMock.planVersionInjection(5, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1337,
-          segmentId2: 5,
-          agglomerateId1: 1337,
-          agglomerateId2: 4,
-        },
-      },
-    ]);
-    backendMock.planVersionInjection(6, [
-      {
-        name: "mergeSegmentItems",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1337,
-          segmentId2: 5,
-          agglomerateId1: 1337,
-          agglomerateId2: 4,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(5, mergeSegment1337And5);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -1408,7 +1250,7 @@ describe("Proofreading (Multi User)", () => {
      * The local user removes segment item 4. However, another user already merged 1337 and 4 so that
      * segment item does not exist, anymore (instead segment item 1337 will exist).
      * The removal will now be ignored. One can argue whether the removal should now be applied to
-     * segment 1337, but the implementation of that would more complicated which is why the code
+     * segment 1337, but the implementation of that would be more complicated which is why the code
      * behaves like this currently. The reason for why it would be more complicated is that the
      * look up from old id to new id is done by using the anchor position of the segment item.
      * However, the segment item doesn't exist locally anymore (because it was removed by the user).
@@ -1416,30 +1258,7 @@ describe("Proofreading (Multi User)", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
 
-    backendMock.planVersionInjection(5, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1337,
-          segmentId2: 5,
-          agglomerateId1: 1337,
-          agglomerateId2: 4,
-        },
-      },
-    ]);
-    backendMock.planVersionInjection(6, [
-      {
-        name: "mergeSegmentItems",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1337,
-          segmentId2: 5,
-          agglomerateId1: 1337,
-          agglomerateId2: 4,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(5, mergeSegment1337And5);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -1471,7 +1290,7 @@ describe("Proofreading (Multi User)", () => {
         const segment1337AfterSaving = currentSegments.getNullable(1337);
         expect(segment1337AfterSaving).toMatchObject({
           name: "Segment 1337 and Segment 4",
-          anchorPosition: [4, 4, 4],
+          anchorPosition: [100, 100, 100],
         });
       }
     });

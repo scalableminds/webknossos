@@ -189,7 +189,7 @@ export function* loadAgglomerateSkeletons(
   vi.mocked(context.mocks.parseProtoTracing).mockRestore();
   for (let index = 0; index < agglomerateIdsToLoad.length; ++index) {
     const agglomerateId = agglomerateIdsToLoad[index];
-    yield call(loadAgglomerateSkeletonAtPosition, [agglomerateId, agglomerateId, agglomerateId]);
+    yield call(loadAgglomerateSkeletonAtPosition, [agglomerateId, agglomerateId, agglomerateId]); // use getPositionForSegmentId
     // Wait until skeleton saga has loaded the skeleton.
     if (isInLiveCollabMode) {
       yield take("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");

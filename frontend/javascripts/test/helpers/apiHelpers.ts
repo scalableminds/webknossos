@@ -14,6 +14,7 @@ import {
 } from "admin/rest_api";
 import app from "app";
 import { __setFeatures } from "features";
+import { V3 } from "libs/mjs";
 import Request, { type RequestOptions } from "libs/request";
 import { sleep } from "libs/utils";
 import cloneDeep from "lodash-es/cloneDeep";
@@ -45,7 +46,7 @@ import type { ArbitraryObject } from "types/type_utils";
 import type { ApiInterface } from "viewer/api/api_latest";
 import WebknossosApi from "viewer/api/api_loader";
 import { setupApi } from "viewer/api/internal_api";
-import Constants, { ControlModeEnum, type Vector2 } from "viewer/constants";
+import Constants, { ControlModeEnum, type Vector2, type Vector3 } from "viewer/constants";
 import { setSceneController } from "viewer/controller/scene_controller_provider";
 import SegmentMeshController from "viewer/controller/segment_mesh_controller";
 import UrlManager from "viewer/controller/url_manager";
@@ -59,6 +60,8 @@ import {
 } from "viewer/model/actions/actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import type { RequestBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { parseProtoAnnotation, parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
 import rootSaga from "viewer/model/sagas/root_saga";
@@ -151,7 +154,10 @@ vi.mock("libs/request", () => ({
     sendJSONReceiveArraybufferWithHeaders: vi
       .fn()
       .mockImplementation(
-        createBucketResponseFunction({ color: "uint8", segmentation: "uint16" }, 0),
+        createBucketResponseFunction(
+          { color: "uint8", segmentation: "uint16", volumeTracingId: "uint16" },
+          0,
+        ),
       ),
     always: vi.fn().mockReturnValue(Promise.resolve()),
   },
@@ -431,7 +437,7 @@ export function createBucketResponseFunction(
   delay = 0,
   overrides: BucketOverride[] = [],
 ) {
-  return async function getBucketData(_url: string, payload: { data: Array<unknown> }) {
+  return async function getBucketData(_url: string, payload: { data: Array<RequestBucketInfo> }) {
     await sleep(delay);
     const requestedURL = new URL(_url);
     // Removing first empty part as the pathname always starts with a /.
@@ -455,14 +461,21 @@ export function createBucketResponseFunction(
     }
 
     for (let bucketIdx = 0; bucketIdx < bucketCount; bucketIdx++) {
-      for (const { position, value } of overrides) {
-        const [x, y, z] = position;
-        const indexInBucket =
-          bucketIdx * Constants.BUCKET_WIDTH ** 3 +
-          z * Constants.BUCKET_WIDTH ** 2 +
-          y * Constants.BUCKET_WIDTH +
-          x;
-        typedArray[indexInBucket] = value;
+      const bucketPosition = payload.data[bucketIdx].position as Vector3;
+      for (const { position: overridePosition, value } of overrides) {
+        const bucketBBox = new BoundingBox({
+          min: bucketPosition,
+          max: V3.add(bucketPosition, Constants.BUCKET_SHAPE),
+        });
+        if (bucketBBox.containsPoint(overridePosition)) {
+          const [x, y, z] = V3.mod(overridePosition, Constants.BUCKET_WIDTH);
+          const indexInBucket =
+            bucketIdx * Constants.BUCKET_WIDTH ** 3 +
+            z * Constants.BUCKET_WIDTH ** 2 +
+            y * Constants.BUCKET_WIDTH +
+            x;
+          typedArray[indexInBucket] = value;
+        }
       }
     }
 

@@ -8,7 +8,7 @@ export const createAction = (id: number, properties: Partial<Segment>) =>
   updateSegmentAction(
     id,
     {
-      anchorPosition: [id, id, id],
+      anchorPosition: [id, id, id], // todop/todom: use getPositionForSegmentId
       groupId: id,
       ...properties,
     },

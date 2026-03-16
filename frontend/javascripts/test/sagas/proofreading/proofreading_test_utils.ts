@@ -18,7 +18,10 @@ import type { Vector2, Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
-import { getVolumeTracingById } from "viewer/model/accessors/volumetracing_accessor";
+import {
+  getVolumeTracingById,
+  hasEditableMapping,
+} from "viewer/model/accessors/volumetracing_accessor";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
@@ -53,11 +56,17 @@ import {
   createSkeletonTracingFromAdjacency,
   encodeServerTracing,
 } from "./proofreading_skeleton_test_utils";
+import compact from "lodash-es/compact";
+import { Store } from "viewer/singletons";
 
 export function* initializeMappingAndTool(
   context: WebknossosTestContext,
   tracingId: string,
 ): Saga<void> {
+  if (yield* select((state) => hasEditableMapping(state, tracingId))) {
+    console.log("Skipping initializeMappingAndTool, because an editable mapping already exists.");
+    return;
+  }
   const { api } = context;
   // Set up organization with power plan (necessary for proofreading)
   // and zoom in so that buckets in mag 1, 1, 1 are loaded.
@@ -118,7 +127,9 @@ export class BackendMock {
   getState(requestedVersion: number | null = null): WebknossosState {
     let state = this.initialState;
     if (state == null) {
-      throw new Error("Unexpected getState on BackendMock.");
+      throw new Error(
+        "Unexpected getState on BackendMock. Did you pass Store.getState() to mockInitialBucketAndAgglomerateData?",
+      );
     }
     for (const actionBatch of this.getLocalUpdateActionLog(requestedVersion)) {
       state = combinedReducer(
@@ -143,7 +154,9 @@ export class BackendMock {
   getLocalUpdateActionLog(requestedVersion: number | null = null, until: boolean = true) {
     let state = this.initialState;
     if (state == null) {
-      throw new Error("Unexpected getState on BackendMock.");
+      throw new Error(
+        "Unexpected getState on BackendMock. Did you pass Store.getState() to mockInitialBucketAndAgglomerateData?",
+      );
     }
 
     if (requestedVersion === null) {
@@ -289,7 +302,7 @@ export class BackendMock {
     _mappingName: string,
     segmentId: number,
   ): Promise<Vector3> => {
-    return [segmentId, segmentId, segmentId];
+    return getPositionForSegmentId(segmentId);
   };
 
   planVersionInjection(
@@ -372,6 +385,26 @@ export class BackendMock {
   };
 }
 
+const initialBucketOverrides: Array<{ position: Vector3; value: number }> = [
+  { position: [100, 100, 100], value: 1337 }, // todop: can we change the positions to to 1337³ etc?
+  { position: [101, 101, 101], value: 1338 },
+  { position: [1, 1, 1], value: 1 },
+  { position: [2, 2, 2], value: 2 },
+  { position: [3, 3, 3], value: 3 },
+  { position: [4, 4, 4], value: 4 },
+  { position: [5, 5, 5], value: 5 },
+  { position: [6, 6, 6], value: 6 },
+  { position: [7, 7, 7], value: 7 },
+];
+
+export function getPositionForSegmentId(sourceSegmentId: number) {
+  const position = initialBucketOverrides.find((el) => el.value === sourceSegmentId)?.position;
+  if (!position) {
+    throw new Error(`Could not look up position by using ${sourceSegmentId} as id.`);
+  }
+  return position;
+}
+
 export function mockInitialBucketAndAgglomerateData(
   context: WebknossosTestContext,
   additionalEdges: Vector2[] = [],
@@ -379,25 +412,11 @@ export function mockInitialBucketAndAgglomerateData(
 ) {
   const { mocks } = context;
 
-  const backendMock = new BackendMock(
-    [
-      { position: [100, 100, 100], value: 1337 },
-      { position: [101, 101, 101], value: 1338 },
-      { position: [1, 1, 1], value: 1 },
-      { position: [2, 2, 2], value: 2 },
-      { position: [3, 3, 3], value: 3 },
-      { position: [4, 4, 4], value: 4 },
-      { position: [5, 5, 5], value: 5 },
-      { position: [6, 6, 6], value: 6 },
-      { position: [7, 7, 7], value: 7 },
-    ],
-    additionalEdges,
-    initialState,
-  );
+  const backendMock = new BackendMock(initialBucketOverrides, additionalEdges, initialState);
 
   vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
     createBucketResponseFunction(
-      { color: "uint8", segmentation: "uint16" },
+      { color: "uint8", segmentation: "uint16", volumeTracingId: "uint16" },
       backendMock.fillValue,
       backendMock.requestDelay,
       backendMock.overrides,
@@ -584,7 +603,7 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
-  yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+  yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
   yield put(setActiveCellAction(1, undefined, null, 1));
 
   yield makeMappingEditableHelper();
@@ -636,14 +655,14 @@ export const mockEdgesForPartitionedAgglomerateMinCut = (
       if (agglomerateId === 1 && isEqual(partition1, [1, 2]) && isEqual(partition2, [1337, 1338])) {
         return [
           {
-            position1: [1, 1, 1],
-            position2: [1338, 1338, 1338],
+            position1: getPositionForSegmentId(1),
+            position2: getPositionForSegmentId(1338),
             segmentId1: 1,
             segmentId2: 1338,
           },
           {
-            position1: [3, 3, 3],
-            position2: [1337, 1337, 1337],
+            position1: getPositionForSegmentId(3),
+            position2: getPositionForSegmentId(1337),
             segmentId1: 3,
             segmentId2: 1337,
           },
@@ -666,13 +685,20 @@ export function* expectMapping(
 export function* expectSegmentList(
   tracingId: string,
   expectedSegments: Array<Partial<Segment> & { id: number }>,
+  backendMock?: BackendMock,
 ): Saga<void> {
-  const { segments } = yield* select((state) => getVolumeTracingById(state.annotation, tracingId));
-  const expectedSegmentIds = expectedSegments.map((s) => s.id);
-  const actualSegmentIds = Array.from(segments.keys() as Generator<number>);
-  expect(actualSegmentIds.sort((a, b) => a - b)).toEqual(expectedSegmentIds.sort((a, b) => a - b));
+  const states = compact([Store.getState(), backendMock?.getState()]);
 
-  for (const expectedSegment of expectedSegments) {
-    expect(segments.getNullable(expectedSegment.id) as Segment).toMatchObject(expectedSegment);
+  for (const state of states) {
+    const { segments } = getVolumeTracingById(state.annotation, tracingId);
+    const expectedSegmentIds = expectedSegments.map((s) => s.id);
+    const actualSegmentIds = Array.from(segments.keys() as Generator<number>);
+    expect(actualSegmentIds.sort((a, b) => a - b)).toEqual(
+      expectedSegmentIds.sort((a, b) => a - b),
+    );
+
+    for (const expectedSegment of expectedSegments) {
+      expect(segments.getNullable(expectedSegment.id) as Segment).toMatchObject(expectedSegment);
+    }
   }
 }

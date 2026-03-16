@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.storage
 
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.security.SCrypt
-import com.scalableminds.util.tools.{Box, Fox}
+import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.S3UriUtils
 import play.api.libs.ws.WSClient
 import software.amazon.awssdk.auth.credentials.{
@@ -26,16 +26,21 @@ import scala.jdk.OptionConverters.RichOptional
 class S3ClientPool(ws: WSClient) {
 
   // Key: access key id, secret key (hashed), custom endpoint
-  private lazy val pool: AlfuCache[(Option[String], Option[String], Option[String]), S3AsyncClient] = AlfuCache(
-    onRemovalFn = Some((_, clientBox: Box[S3AsyncClient]) => clientBox.foreach(_.close())))
+  private lazy val defaultPool: AlfuCache[(Option[String], Option[String], Option[String]), S3AsyncClient] =
+    AlfuCache(timeToLive = 100 days, timeToIdle = 100 days)
 
-  def getS3Client(credentialOpt: Option[S3AccessKeyCredential], uri: URI)(
+  // Key: access key id, secret key (hashed), custom endpoint
+  private lazy val uploadPool: AlfuCache[(Option[String], Option[String], Option[String]), S3AsyncClient] =
+    AlfuCache(timeToLive = 100 days, timeToIdle = 100 days)
+
+  def getS3Client(credentialOpt: Option[S3AccessKeyCredential], uri: URI, isForUpload: Boolean)(
       implicit ec: ExecutionContext): Fox[S3AsyncClient] = {
     val credentialsProvider = getCredentialsProvider(credentialOpt)
     for {
       customEndpointOpt <- Fox.runIf(S3UriUtils.isNonAmazonHost(uri)) {
         determineProtocol(uri).map(p => new URI(s"$p://${uri.getAuthority}"))
       }
+      pool = if (isForUpload) uploadPool else defaultPool
       client <- pool.getOrLoad(
         (credentialOpt.map(_.accessKeyId),
          credentialOpt.map(c => SCrypt.sha256Hex(c.secretAccessKey)),

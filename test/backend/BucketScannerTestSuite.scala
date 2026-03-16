@@ -2,9 +2,10 @@ package backend
 
 import com.scalableminds.webknossos.datastore.helpers.NativeBucketScanner
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
-import org.scalatestplus.play.PlaySpec
+import org.scalatest.wordspec.AsyncWordSpec
 
-class BucketScannerTestSuite extends PlaySpec {
+class BucketScannerTestSuite extends AsyncWordSpec {
+
   "NativeBucketScanner" should {
     "collect segment ids in a byte array with ElementClass uint16" in {
       val elementClass = ElementClass.uint16

@@ -1047,8 +1047,9 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     image={Empty.PRESENTED_IMAGE_SIMPLE}
                     description={
                       <span>
-                        There are no trees in this tracing.
-                        <br /> A new tree will be created automatically once a node is set.
+                        There are no trees in this annotation.
+                        <br /> A new tree will be created automatically once the first node is
+                        placed.
                       </span>
                     }
                   />

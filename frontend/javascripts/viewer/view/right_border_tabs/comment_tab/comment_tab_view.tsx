@@ -13,6 +13,8 @@ import {
   Tree as AntdTree,
   Divider,
   Dropdown,
+  Empty,
+  Flex,
   type GetRef,
   type MenuProps,
   Space,
@@ -24,7 +26,6 @@ import useLifecycle from "beautiful-react-hooks/useLifecycle";
 import { InputKeyboard } from "libs/input";
 import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import { compareBy, localeCompareBy } from "libs/utils";
-import flatMap from "lodash-es/flatMap";
 import isEmpty from "lodash-es/isEmpty";
 import uniq from "lodash-es/uniq";
 import memoizeOne from "memoize-one";
@@ -392,6 +393,17 @@ function CommentTabView(props: Props) {
       };
     });
 
+    if (treeData.length === 0) {
+      return (
+        <Flex justify="center">
+          <Empty
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            description="There are no comments. Create a skeleton node and type in the above text field to add a comment."
+          />
+        </Flex>
+      );
+    }
+
     return (
       <AutoSizer defaultHeight={500}>
         {({ height, width }) => (
@@ -465,12 +477,12 @@ function CommentTabView(props: Props) {
                       setExpandedTreeIds(uniq([...expandedTreeIds, tree.treeId.toString()]));
                     }
                   }}
-                  data={flatMap(getData(), (tree) =>
+                  data={getData().flatMap((tree) =>
                     tree.comments.slice().sort(getCommentSorter(sortBy, isSortedAscending)),
                   )}
                   searchKey="content"
                   provideShortcut
-                  targetId={commentListId}
+                  targetId={commentTabId}
                 >
                   <ButtonComponent
                     icon={<SearchOutlined />}

@@ -2,11 +2,12 @@ package backend
 
 import com.scalableminds.util.tools.TextUtils
 import com.scalableminds.util.tools.{Failure, Full}
-import org.scalatestplus.play.PlaySpec
+import org.scalatest.wordspec.AsyncWordSpec
 
-class TextUtilsTestSuite extends PlaySpec {
+class TextUtilsTestSuite extends AsyncWordSpec {
 
   "renderTemplateReplacements" should {
+
     "replace all provided placeholders (even multiple occurrences)" in {
       val template = "Hello, {{name}}! Welcome to {{site}}. Goodbye, {{name}}."
       val result = TextUtils.renderTemplateReplacements(
@@ -24,14 +25,13 @@ class TextUtilsTestSuite extends PlaySpec {
         template,
         """<meta property="og:title" content="" />""" -> """<meta property="og:title" content="dataset-$foo" />"""
       )
-
       assert(result == Full("""<meta property="og:title" content="dataset-$foo" />"""))
     }
 
     "fail when a placeholder is missing" in {
       val result = TextUtils.renderTemplateReplacements("Hello world", "{{missing}}" -> "value")
-
       assert(result.isInstanceOf[Failure])
     }
+
   }
 }

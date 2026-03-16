@@ -649,8 +649,9 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         [7, 7, 7],
       ]);
 
-      const agglomerateSkeletonReloadingUpdates = getNestedUpdateActions(context).slice(-3)!;
-      yield expect(agglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
+      const mergeAndAgglomerateSkeletonReloadingUpdates =
+        getNestedUpdateActions(context).slice(-4)!;
+      yield expect(mergeAndAgglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
         "./__snapshots__/agglomerate_skeleton_syncing/merge_with_injected_merge_should_refresh_agglomerate_skeletons.json",
       );
       yield call(publishDebuggingState, backendMock);

@@ -343,8 +343,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   private def findNewLayers(existingDataSoruce: UsableDataSource, updates: UsableDataSource): Box[Seq[StaticLayer]] = {
     val newLayers = updates.dataLayers.filter(layer => !existingDataSoruce.dataLayers.exists(_.name == layer.name))
     val noneHaveMags = newLayers.forall(_.mags.isEmpty)
+    val noneHaveAttachments = newLayers.forall(_.attachments.forall(_.isEmpty))
     for {
       _ <- Box.fromBool(noneHaveMags) ?~ "New layers may not have mags. Add empty layers instead and then add mags."
+      _ <- Box.fromBool(noneHaveAttachments) ?~ "New layers may not have attachments. Add empty layers instead and then add attachments."
     } yield newLayers
   }
 

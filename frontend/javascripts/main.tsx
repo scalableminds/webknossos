@@ -122,6 +122,10 @@ async function initApp() {
     ]);
     await loadOrganization();
 
+    // In dev setup the original title indicates loading. That’s done now.
+    // Note that this doesn’t use the TabTitle component so that we avoid having multiple ones at once.
+    document.title = "WEBKNOSSOS";
+
     reactRoot.render(
       <ErrorBoundary>
         <Provider store={Store}>

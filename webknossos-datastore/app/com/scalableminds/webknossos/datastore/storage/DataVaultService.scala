@@ -28,7 +28,8 @@ case class CredentializedUPath(upath: UPath, credential: Option[DataVaultCredent
 class DataVaultService @Inject()(ws: WSClient,
                                  config: DataStoreConfig,
                                  remoteWebknossosClient: DSRemoteWebknossosClient,
-                                 managedS3Service: ManagedS3Service)
+                                 managedS3Service: ManagedS3Service,
+                                 s3ClientPoolHolder: S3ClientPoolHolder)
     extends LazyLogging
     with FoxImplicits {
 
@@ -152,7 +153,7 @@ class DataVaultService @Inject()(ws: WSClient,
     try {
       val fs: DataVault = scheme match {
         case Some(PathSchemes.schemeGS) => GoogleCloudDataVault.create(credentializedUpath)
-        case Some(PathSchemes.schemeS3) => S3DataVault.create(credentializedUpath, ws)
+        case Some(PathSchemes.schemeS3) => S3DataVault.create(credentializedUpath, s3ClientPoolHolder.s3ClientPool)
         case Some(PathSchemes.schemeHttps) | Some(PathSchemes.schemeHttp) =>
           HttpsDataVault.create(credentializedUpath, ws, config.Http.uri)
         case None => FileSystemDataVault.create

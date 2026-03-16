@@ -70,12 +70,13 @@ function BorderToggleButton({ onClick, side, inFooter }: Props) {
             onClick();
           }
         }}
-      >
-        <ThemedIcon
-          name={`icon-sidebar-${iconKind}-${side}`}
-          className="center-item-using-flex icon-sidebar-toggle"
-        />
-      </Button>
+        icon={
+          <ThemedIcon
+            name={`icon-sidebar-${iconKind}-${side}`}
+            className="center-item-using-flex icon-sidebar-toggle"
+          />
+        }
+      />
     </FastTooltip>
   );
 }

@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.helpers
 
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import com.scalableminds.util.tools.Box.tryo
 import org.apache.commons.lang3.builder.HashCodeBuilder
@@ -12,6 +13,9 @@ trait UPath {
   def toRemoteUriUnsafe: URI
 
   def /(other: String): UPath
+
+  def /(other: ObjectId): UPath =
+    this / other.toString
 
   def /(other: UPath): UPath =
     this / other.toString

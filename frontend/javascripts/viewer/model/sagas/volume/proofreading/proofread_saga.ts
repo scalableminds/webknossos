@@ -1370,23 +1370,8 @@ function* handleProofreadMergeOrMinCut(action: Action) {
         const maybeTargetAgglomerateId = mappingWrapper.getAsNumber(targetInfo.unmappedId);
 
         if (maybeSourceAgglomerateId == null || maybeTargetAgglomerateId == null) {
-          // const error = new Error(
-          //   `Source or target agglomerate id couldn't be looked up. This should not happen.`,
-          // );
-          // const notifyInfos = {
-          //   action,
-          //   unmappedSourceId: sourceInfo.unmappedId,
-          //   unmappedTargetId: targetInfo.unmappedId,
-          //   sourceAgglomerateId: maybeSourceAgglomerateId,
-          //   targetAgglomerateId: maybeTargetAgglomerateId,
-          // };
-          // console.warn(error, notifyInfos);
-          // if (process.env.IS_TESTING) {
-          //   throw error;
-          // }
-          // ErrorHandling.notify(error, notifyInfos);
           // As an additional safety net we look up the IDs again. Actually,
-          // this should not happen in production (see the warning code above).
+          // this should not happen in production.
           let newSourceAgglomerateId;
           let newTargetAgglomerateId;
 

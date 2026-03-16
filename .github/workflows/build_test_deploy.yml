@@ -173,13 +173,13 @@ jobs:
         env:
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
 
+      - name: Build webknossos (vite)
+        run: yarn build
+
       - name: Build frontend documentation
         run: yarn run docs --project-version "$WK_VERSION"
         env:
           WK_VERSION: ${{ github.run_id }}
-
-      - name: Build webknossos (vite)
-        run: yarn build
 
       - name: Build webknossos (sbt)
         run: sbt -DfailOnWarning compile stage

@@ -110,7 +110,8 @@ export class DataBucket {
   dirtyCount: number = 0;
   pendingOperations: Array<PendingOperation> = [];
   state: BucketStateEnumType;
-  private accessed: boolean;
+  accessed: boolean;
+  previousAccessed: boolean;
   data: BucketDataArray | null | undefined;
   temporalBucketManager: TemporalBucketManager;
   cube: DataCube;
@@ -140,6 +141,7 @@ export class DataBucket {
     this.state = BucketStateEnum.UNREQUESTED;
     this.dirty = false;
     this.accessed = false;
+    this.previousAccessed = false;
     this.data = null;
 
     if (this.cube.isSegmentation) {
@@ -393,6 +395,8 @@ export class DataBucket {
       throw new Error("Bucket.getData() called, but data does not exist (anymore).");
     }
 
+    this.markAsNeeded();
+
     return data;
   }
 
@@ -402,14 +406,23 @@ export class DataBucket {
     this.pendingOperations = newPendingOperations;
     this.dirty = true;
     this.endDataMutation();
-    this.cube.triggerBucketDataChanged();
+    if (this.accessed) this.cube.triggerRenderedBucketDataChanged();
   }
 
   markAsNeeded(): void {
+    // Compare to the previous value, not the current one. This is because during rendering
+    // all buckets are marked as unneeded and then all needed buckets are marked as such afterwards.
+    // So to find out whether this bucket was actually unneeded before, the previous value is decisive.
+    if (!this.previousAccessed) this.cube.triggerRenderedBucketDataChanged();
+
+    this.previousAccessed = this.accessed;
     this.accessed = true;
   }
 
   markAsUnneeded(): void {
+    if (this.previousAccessed) this.cube.triggerRenderedBucketDataChanged();
+
+    this.previousAccessed = this.accessed;
     this.accessed = false;
   }
 
@@ -651,7 +664,7 @@ export class DataBucket {
 
         this.state = BucketStateEnum.LOADED;
         this.trigger("bucketLoaded", data);
-        this.cube.triggerBucketDataChanged();
+        if (this.accessed) this.cube.triggerRenderedBucketDataChanged();
         break;
       }
 

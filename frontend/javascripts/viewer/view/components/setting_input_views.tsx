@@ -497,25 +497,9 @@ function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
   };
 
   const upscaledColor = color.map((colorPart) => colorPart * 255) as any as Vector3;
-  const marginRightStyle = {
-    marginRight: 8,
-  };
   const marginLeftStyle = {
     marginLeft: 6,
   };
-  const disabledIconStyle = { ...marginRightStyle, opacity: 0.5, cursor: "not-allowed" };
-  const exportButton = (
-    <>
-      <DownloadOutlined style={isExportEnabled ? marginRightStyle : disabledIconStyle} />
-      Export data
-    </>
-  );
-  const deleteButton = (
-    <>
-      <DeleteOutlined style={disabled ? disabledIconStyle : marginRightStyle} />
-      Delete
-    </>
-  );
 
   const editingDisallowedExplanation = messages["tracing.read_only_mode_notification"](
     isLockedByOwner,
@@ -549,23 +533,14 @@ function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
       },
       {
         key: "export",
+        icon: <DownloadOutlined />,
         label: isExportEnabled ? (
-          exportButton
+          "Export data"
         ) : (
-          <FastTooltip title={exportDisallowedExplanation}>{exportButton}</FastTooltip>
+          <FastTooltip title={exportDisallowedExplanation}>Export data</FastTooltip>
         ),
         disabled: !isExportEnabled,
         onClick: onExport,
-      },
-      {
-        key: "delete",
-        label: !disabled ? (
-          deleteButton
-        ) : (
-          <FastTooltip title={editingDisallowedExplanation}>{deleteButton}</FastTooltip>
-        ),
-        onClick: onDelete,
-        disabled,
       },
     ];
 

@@ -67,9 +67,7 @@ export default function ToolkitView() {
           zIndex: 1000,
         }}
       >
-        <Button style={NARROW_BUTTON_STYLE}>
-          <Icon component={ToolkitIcon} />
-        </Button>
+        <Button style={NARROW_BUTTON_STYLE} icon={<Icon component={ToolkitIcon} />} />
       </Badge>
     </Dropdown>
   );

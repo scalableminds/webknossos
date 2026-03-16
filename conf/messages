@@ -125,7 +125,6 @@ dataset.upload.moreBytesThanReserved=The uploaded dataset contains more bytes th
 dataset.upload.creation.failed=Failed to create dataset.
 dataset.upload.disallowedPaths=Cannot upload a datasource with local paths that leave the dataset, or with paths that match the WEBKNOSSOS reserved paths.
 dataset.reserveUploadToPaths.noLayers=Cannot reserve upload for dataset with no layers.
-dataset.uploadToPaths.noMatchingPrefix=Could not determine a configured path prefix that matches the request.
 dataset.explore.failed.readFile=Failed to read remote file
 dataset.explore.magDtypeMismatch=Element class must be the same for all mags of a layer. Got {0}
 dataset.explore.autoAdd.failed=Failed to automatically import the explored dataset.
@@ -134,6 +133,8 @@ dataset.metadata.duplicateKeys=Metadata keys must be unique.
 dataset.boundingBox.unset=This dataset has no bounding box. Please make sure this dataset is imported correctly.
 dataset.reserveMagUploadToPath.notVirtual=Adding mags to existing datasets is only allowed for virtual datasets.
 dataset.reserveMagUploadToPath.exists=This mag is already pending.
+
+uploadToPaths.noMatchingPrefix=Could not determine a configured path prefix that matches the request.
 
 dataVault.insert.failed=Failed to store remote file system credential
 dataVault.setup.failed=Failed to set up remote file system
@@ -418,5 +419,10 @@ aiModel.nameInUse=The AI model name is already in use. Please choose a different
 aiModel.notOwned=The AI model is not owned by your organization.
 aiModel.updatingFailed=Could not update the AI model's name and comment.
 aiModel.updatingSharedFailed=Could not update the organizations that may access the AI model.
+aiModel.reserve.wrongOrga=Cannot reserve upload to path for AI models of other organizations.
+aiModel.reserve.notPending=Cannot reserve upload to path for AI model that is not currently marked as pending.
+aiModel.finish.wrongOrga=Cannot finish upload to path for AI models of other organizations.
+aiModel.finish.notPending=Cannot finish upload to path for AI model that is not currently marked as pending.
+
 
 aiInference.notFound=Could not find requested AI inference.

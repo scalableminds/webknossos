@@ -72,6 +72,7 @@ type State = {
   owningOrganizationName: string | null;
   isMarkdownModalOpen: boolean;
 };
+
 const shortcuts = [
   {
     key: "1",
@@ -88,6 +89,7 @@ const shortcuts = [
         className="keyboard-mouse-icon"
         aria-label="Mouse Wheel"
         title="Mouse Wheel"
+        style={{ color: "var(--ant-color-primary)" }}
       />,
     ],
     action: "Zoom in/out",
@@ -101,6 +103,7 @@ const shortcuts = [
         className="keyboard-mouse-icon"
         aria-label="Mouse Wheel"
         title="Mouse Wheel"
+        style={{ color: "var(--ant-color-primary)" }}
       />,
       "or",
       <KeyboardKeyIcon label="D" key="move-2" className="keyboard-key-icon" />,
@@ -117,6 +120,7 @@ const shortcuts = [
         key="move"
         className="keyboard-mouse-icon"
         aria-label="Left Mouse Button Drag"
+        style={{ color: "var(--ant-color-primary)" }}
       />,
     ],
     action: "Move",
@@ -129,6 +133,7 @@ const shortcuts = [
         key="rotate"
         className="keyboard-mouse-icon"
         aria-label="Right Mouse Button Drag"
+        style={{ color: "var(--ant-color-primary)" }}
       />,
       "in 3D View",
     ],

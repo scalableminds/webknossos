@@ -19,7 +19,11 @@ export function KeyboardKeyIcon({ label, style, ...props }: KeyboardKeyIconProps
         justifyContent: "center",
       }}
     >
-      <ThemedIcon name="icon-keyboard-key" style={{ fontSize: "2em", ...style }} {...props} />
+      <ThemedIcon
+        name="icon-keyboard-key"
+        style={{ fontSize: "2em", color: "var(--ant-color-primary)", ...style }}
+        {...props}
+      />
       <span
         style={{
           position: "absolute",

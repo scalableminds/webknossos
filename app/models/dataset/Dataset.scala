@@ -480,7 +480,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
 
   // Some users use legacy software to create NMLs with dataset names. For some datasets, this differs from dataset directoryName
   // To support uploading these NMLs if the name happens to be unique in the orga, this is used.
-  private def findOneByNameIfUniqueAndorganization(name: String, organizationId: String)(
+  private def findOneByNameAndOrganizationIfUnique(name: String, organizationId: String)(
       implicit ctx: DBAccessContext): Fox[Dataset] =
     for {
       accessQuery <- readAccessQuery
@@ -489,6 +489,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
             WHERE name = $name
             AND _organization = $organizationId
             AND $accessQuery
+            LIMIT 2
          """.as[DatasetsRow])
       _ <- Fox.fromBool(r.length <= 1) ?~> "Multiple datasets with this name exist in this organization. Specify dataset id to select correct one."
       parsed <- parseFirst(r, s"$organizationId/$name (name, not directoryName)")
@@ -504,7 +505,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
           fromDirectoryNameBox <- findOneByNameAndOrganization(datasetName, organizationId).shiftBox
           orFromName <- fromDirectoryNameBox match {
             case Full(fromDirectoryName) => Fox.successful(fromDirectoryName)
-            case _                       => findOneByNameIfUniqueAndorganization(datasetName, organizationId)
+            case _                       => findOneByNameAndOrganizationIfUnique(datasetName, organizationId)
           }
         } yield orFromName) ?~> Messages("dataset.notFound", datasetName)
     }

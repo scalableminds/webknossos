@@ -168,7 +168,7 @@ describe("Proofreading (with mesh actions)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should load unknown unmapped segment ids of mesh merge operation when incorporating interfered update actions.", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());

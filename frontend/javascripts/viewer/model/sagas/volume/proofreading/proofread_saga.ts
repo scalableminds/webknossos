@@ -10,6 +10,7 @@ import processTaskWithPool from "libs/async/task_pool";
 import { V3 } from "libs/mjs";
 import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Toast from "libs/toast";
+import ErrorHandling from "libs/error_handling";
 import {
   ColoredLogger,
   getAdaptToTypeFunction,
@@ -1235,7 +1236,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     console.warn("[Proofreading] Could not gather id infos.");
     return;
   }
-  let [sourceInfo, targetInfo] = idInfos;
+  let [sourceInfo, targetInfo] = idInfos.infos;
   let sourceAgglomerateId = sourceInfo.agglomerateId;
   let targetAgglomerateId = targetInfo.agglomerateId;
 
@@ -1355,16 +1356,60 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     }
 
     function* reloadMappingAndAggloIds() {
+      if (!preparation || !idInfos) {
+        throw new Error("Satisfy TS.");
+      }
       activeMapping = yield* select(
         (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
       );
 
       if (activeMapping.mapping != null) {
         const mappingWrapper = new NumberLikeMapWrapper(activeMapping.mapping);
-        sourceAgglomerateId =
-          mappingWrapper.getAsNumber(sourceInfo.unmappedId) ?? sourceAgglomerateId;
-        targetAgglomerateId =
-          mappingWrapper.getAsNumber(targetInfo.unmappedId) ?? targetAgglomerateId;
+
+        const maybeSourceAgglomerateId = mappingWrapper.getAsNumber(sourceInfo.unmappedId);
+        const maybeTargetAgglomerateId = mappingWrapper.getAsNumber(targetInfo.unmappedId);
+
+        if (maybeSourceAgglomerateId == null || maybeTargetAgglomerateId == null) {
+          // const error = new Error(
+          //   `Source or target agglomerate id couldn't be looked up. This should not happen.`,
+          // );
+          // const notifyInfos = {
+          //   action,
+          //   unmappedSourceId: sourceInfo.unmappedId,
+          //   unmappedTargetId: targetInfo.unmappedId,
+          //   sourceAgglomerateId: maybeSourceAgglomerateId,
+          //   targetAgglomerateId: maybeTargetAgglomerateId,
+          // };
+          // console.warn(error, notifyInfos);
+          // if (process.env.IS_TESTING) {
+          //   throw error;
+          // }
+          // ErrorHandling.notify(error, notifyInfos);
+          // As an additional safety net we look up the IDs again. Actually,
+          // this should not happen in production (see the warning code above).
+          let newSourceAgglomerateId;
+          let newTargetAgglomerateId;
+
+          if (idInfos.type === "PROOFREAD_MERGE") {
+            newSourceAgglomerateId = yield* call(
+              preparation.getDataValue,
+              sourceInfo.position,
+              activeMapping.mapping,
+            );
+            newTargetAgglomerateId = newSourceAgglomerateId;
+          } else {
+            let [sourceInfo, targetInfo] = idInfos.infos;
+            [newSourceAgglomerateId, newTargetAgglomerateId] = yield* all([
+              call(preparation.getDataValue, sourceInfo.position, activeMapping.mapping),
+              call(preparation.getDataValue, targetInfo.position, activeMapping.mapping),
+            ]);
+          }
+          sourceAgglomerateId = newSourceAgglomerateId;
+          targetAgglomerateId = newTargetAgglomerateId;
+        } else {
+          sourceAgglomerateId = maybeSourceAgglomerateId;
+          targetAgglomerateId = maybeTargetAgglomerateId;
+        }
       }
     }
     // After saving and thus syncing with the server the mapping might have updated due to missing proofreading actions for other users.
@@ -1422,22 +1467,22 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       );
     }
 
-    const [newSourceAgglomerateId, newTargetAgglomerateId] = yield* all([
-      call(preparation.getDataValue, sourceInfo.position, activeMapping.mapping),
-      call(preparation.getDataValue, targetInfo.position, activeMapping.mapping),
-    ]);
-
     /* Ensure segment items exist for affected segments and reload affected meshes */
     const refreshInfos = [
       {
         oldAgglomerateId: sourceInfo.agglomerateId,
-        newAgglomerateId: newSourceAgglomerateId,
+        newAgglomerateId: sourceAgglomerateId,
         nodePosition: sourceInfo.position,
       },
       {
         oldAgglomerateId: targetInfo.agglomerateId,
-        newAgglomerateId: newTargetAgglomerateId,
-        nodePosition: targetInfo.position,
+        newAgglomerateId: targetAgglomerateId,
+        nodePosition:
+          // targetInfo.position can only be undefined in case of
+          // a merge (see idInfos.type). In that case,
+          // this element was merged into another element.
+          // Therefore, sourceInfo.position is a valid replacement.
+          targetInfo.position ?? sourceInfo.position,
       },
     ];
     yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
@@ -1791,7 +1836,7 @@ export function* refreshAffectedSegmentItems(
   // adapted.
   const additionalCoordinates = undefined;
 
-  const meshLoadingEffects = uniqBy(items, (item) => item.newAgglomerateId).map((item) =>
+  const ensureSegmentItemEffects = uniqBy(items, (item) => item.newAgglomerateId).map((item) =>
     call(
       ensureSegmentItem,
       layerName,
@@ -1802,7 +1847,7 @@ export function* refreshAffectedSegmentItems(
   );
   // By using `all`, we avoid problems which can occur when running too many
   // call effects in a for loop. Also see https://github.com/redux-saga/redux-saga/issues/1592.
-  yield* all(meshLoadingEffects);
+  yield* all(ensureSegmentItemEffects);
 }
 
 export function* refreshAffectedMeshes(
@@ -2064,14 +2109,23 @@ export function* updateMappingWithMerge(
   );
 }
 
+type IdInfo = { agglomerateId: number; unmappedId: number; position: Vector3 };
+type IdInfoOpt = { agglomerateId: number; unmappedId: number; position: Vector3 | undefined };
+
+type GatheredInfos =
+  | {
+      type: "PROOFREAD_MERGE";
+      infos: [IdInfo, IdInfoOpt];
+    }
+  | {
+      type: "MIN_CUT_AGGLOMERATE";
+      infos: [IdInfo, IdInfo];
+    };
+
 function* gatherInfoForOperation(
   action: ProofreadMergeAction | MinCutAgglomerateWithPositionAction,
   preparation: Preparation,
-): Saga<Array<{
-  agglomerateId: number;
-  unmappedId: number;
-  position: Vector3;
-}> | null> {
+): Saga<GatheredInfos | null> {
   const { volumeTracing } = preparation;
   const { tracingId: volumeTracingId, activeCellId, activeUnmappedSegmentId } = volumeTracing;
   if (activeCellId === 0) {
@@ -2119,10 +2173,13 @@ function* gatherInfoForOperation(
       return null;
     }
     const [idInfo1, idInfo2] = idInfos;
-    return [
-      { ...idInfo1, position: sourcePosition },
-      { ...idInfo2, position: targetPosition },
-    ];
+    return {
+      type: action.type,
+      infos: [
+        { ...idInfo1, position: sourcePosition },
+        { ...idInfo2, position: targetPosition },
+      ],
+    };
   }
 
   // The action was triggered in the 3D viewport. In this case, we don't have
@@ -2144,34 +2201,48 @@ function* gatherInfoForOperation(
     return null;
   }
   const targetSegmentId = action.segmentId;
-  if (targetSegmentId == null) {
-    Toast.warning(MISSING_INFORMATION_WARNING);
-    console.log(`No position is known for agglomerate ${action.agglomerateId}`);
-    return null;
-  }
+
   if (action.type === "PROOFREAD_MERGE") {
+    // todop
     // When merging two segments, they can share the same seed position afterwards.
     // Also, using the active segment position is fine because it's definitely
     // matching the active agglomerate.
     // Therefore, we do so to avoid another roundtrip to the server.
-    sourcePosition = activeSegmentPosition;
-    targetPosition = activeSegmentPosition;
-  } else {
-    // When splitting two segments, we don't really have reliable positions at hand.
-    // For the source position, we cannot rely on the active segment position, because
-    // the active supervoxel doesn't necessarily match the last click position within
-    // the data viewports.
-    // For the target position, we also don't have reliable information available.
-    [sourcePosition, targetPosition] = yield* all([
-      call(getPositionForSegmentId, volumeTracing, activeUnmappedSegmentId),
-      call(getPositionForSegmentId, volumeTracing, targetSegmentId),
-    ]);
-  }
+    const idInfos: [IdInfo, IdInfoOpt] = [
+      {
+        agglomerateId: activeCellId,
+        unmappedId: activeUnmappedSegmentId,
+        position: activeSegmentPosition,
+      },
+      {
+        agglomerateId: action.agglomerateId,
+        unmappedId: action.segmentId,
+        position: undefined,
+      },
+    ];
 
-  const idInfos = [
+    return {
+      type: action.type,
+      infos: idInfos,
+    };
+  }
+  // When splitting two segments, we don't really have reliable positions at hand.
+  // For the source position, we cannot rely on the active segment position, because
+  // the active supervoxel doesn't necessarily match the last click position within
+  // the data viewports.
+  // For the target position, we also don't have reliable information available.
+  [sourcePosition, targetPosition] = yield* all([
+    call(getPositionForSegmentId, volumeTracing, activeUnmappedSegmentId),
+    call(getPositionForSegmentId, volumeTracing, targetSegmentId),
+  ]);
+
+  const idInfos: [IdInfo, IdInfo] = [
     { agglomerateId: activeCellId, unmappedId: activeUnmappedSegmentId, position: sourcePosition },
     { agglomerateId: action.agglomerateId, unmappedId: action.segmentId, position: targetPosition },
   ];
 
-  return idInfos;
+  return {
+    type: action.type,
+    infos: idInfos,
+  };
 }

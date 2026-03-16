@@ -1,17 +1,18 @@
 import Icon, { CaretDownOutlined } from "@ant-design/icons";
+import AreaMeasurementIcon from "@images/icons/icon-area-measurement.svg?react";
 import BoundingBoxIcon from "@images/icons/icon-bounding-box.svg?react";
 import BrushIcon from "@images/icons/icon-brush.svg?react";
 import EraserIcon from "@images/icons/icon-eraser.svg?react";
 import FillIcon from "@images/icons/icon-fill.svg?react";
 import LassoIcon from "@images/icons/icon-lasso.svg?react";
 import LayerGroupIcon from "@images/icons/icon-layer-group.svg?react";
+import LineMeasurementIcon from "@images/icons/icon-line-measurement.svg?react";
 import MoveIcon from "@images/icons/icon-move.svg?react";
 import PipetteIcon from "@images/icons/icon-pipette.svg?react";
 import ProofreadingIcon from "@images/icons/icon-proofreading.svg?react";
 import QuickSelectToolIcon from "@images/icons/icon-quick-select.svg?react";
-import RulerIcon from "@images/icons/icon-ruler.svg?react";
 import SkeletonIcon from "@images/icons/icon-skeleton.svg?react";
-import { Popover } from "antd";
+import { Dropdown, Popover } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
@@ -24,9 +25,9 @@ import {
   hasEditableMapping,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";
+import { setToolAction } from "viewer/model/actions/ui_actions";
 import type { WebknossosState } from "viewer/store";
 import { NARROW_BUTTON_STYLE, ToolRadioButton } from "./tool_helpers";
-import { MeasurementToolSwitch } from "./toolbar_view";
 
 type ToolButtonProps = { adaptedActiveTool: AnnotationTool };
 
@@ -435,22 +436,40 @@ function ProofreadTool(_props: ToolButtonProps) {
   );
 }
 
-function MeasurementToolMenu(props: ToolButtonProps) {
+function MeasurementToolMenu() {
+  const measurementPreference = useWkSelector(
+    (state) => state.userConfiguration.measurementPreference,
+  );
+  const favoriteMeasurementTool =
+    measurementPreference === "LINE_MEASUREMENT"
+      ? AnnotationTool.LINE_MEASUREMENT
+      : AnnotationTool.AREA_MEASUREMENT;
+  const dispatch = useDispatch();
   return (
     <ToolRadioButton
-      name={AnnotationTool.LINE_MEASUREMENT.readableName}
+      name={favoriteMeasurementTool.readableName}
       disabledExplanation=""
       disabled={false}
-      value={AnnotationTool.LINE_MEASUREMENT.id}
+      value={favoriteMeasurementTool.id}
       style={NARROW_BUTTON_STYLE}
     >
-      <Popover
-        content={<MeasurementToolSwitch activeTool={props.adaptedActiveTool} />}
-        trigger={["click", "hover"]}
+      <Dropdown
+        menu={{
+          items: [
+            { key: AnnotationTool.LINE_MEASUREMENT.id, label: "Line Measurement" },
+            { key: AnnotationTool.AREA_MEASUREMENT.id, label: "Area Measurement" },
+          ],
+          onClick: (key) => dispatch(setToolAction(AnnotationTool[key.key as AnnotationToolId])),
+        }}
+        trigger={["hover"]}
       >
-        <Icon component={RulerIcon} />
-        <CaretDownOutlined className="triangle-icon" />
-      </Popover>
+        <Icon
+          component={
+            measurementPreference === "LINE_MEASUREMENT" ? LineMeasurementIcon : AreaMeasurementIcon
+          }
+        />
+      </Dropdown>
+      <CaretDownOutlined className="triangle-icon" />
     </ToolRadioButton>
   );
 }

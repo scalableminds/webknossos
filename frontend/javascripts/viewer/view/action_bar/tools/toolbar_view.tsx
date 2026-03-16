@@ -52,20 +52,6 @@ function CreateNewBoundingBoxButton() {
   );
 }
 
-function toolToRadioGroupValue(adaptedActiveTool: AnnotationTool): AnnotationToolId {
-  /*
-   * The tool radio buttons only contain one button for both measurement tools (area
-   * and line). The selection of the "sub tool" can be done when one of them is active
-   * with extra buttons next to the radio group.
-   * To ensure that the highlighting of the generic measurement tool button works properly,
-   * we map both measurement tools to the line tool here.
-   */
-  if (adaptedActiveTool === AnnotationTool.AREA_MEASUREMENT) {
-    return AnnotationTool.LINE_MEASUREMENT.id;
-  }
-  return adaptedActiveTool.id;
-}
-
 export default function ToolbarView() {
   const dispatch = useDispatch();
   const hasVolume = useWkSelector((state) => state.annotation?.volumes.length > 0);
@@ -94,7 +80,7 @@ export default function ToolbarView() {
 
   return (
     <>
-      <Radio.Group onChange={handleSetTool} value={toolToRadioGroupValue(adaptedActiveTool)}>
+      <Radio.Group onChange={handleSetTool} value={adaptedActiveTool}>
         {Toolkits[toolkit].map((tool) => {
           const ToolButton = ToolIdToComponent[tool.id];
           return <ToolButton key={tool.id} adaptedActiveTool={adaptedActiveTool} />;

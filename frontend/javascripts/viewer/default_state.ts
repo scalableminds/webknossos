@@ -101,10 +101,14 @@ const defaultState: WebknossosState = {
     renderWatermark: true,
     antialiasRendering: false,
     activeToolkit: Toolkit.ALL_TOOLS,
-    lastUsedToolQueue: [AnnotationTool.MOVE, AnnotationTool.BRUSH, AnnotationTool.ERASE_BRUSH],
+    lastUsedToolQueue: [
+      AnnotationTool.MOVE.id,
+      AnnotationTool.BRUSH.id,
+      AnnotationTool.ERASE_BRUSH.id,
+    ],
     erasePreference: "BRUSH",
     writePreference: "BRUSH",
-    measurementPreference: "LINE",
+    measurementPreference: "LINE_MEASUREMENT",
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,

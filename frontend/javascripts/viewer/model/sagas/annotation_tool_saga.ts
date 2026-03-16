@@ -2,7 +2,12 @@ import { type ActionPattern, delay, fork } from "redux-saga/effects";
 import { call, put, take, takeEvery } from "typed-redux-saga";
 import { getToolControllerForAnnotationTool } from "viewer/controller/combinations/tool_controls";
 import getSceneController from "viewer/controller/scene_controller_provider";
-import { AnnotationTool, MeasurementTools, Toolkit } from "viewer/model/accessors/tool_accessor";
+import {
+  AnnotationTool,
+  type AnnotationToolId,
+  MeasurementTools,
+  Toolkit,
+} from "viewer/model/accessors/tool_accessor";
 import {
   type CycleToolAction,
   hideMeasurementTooltipAction,
@@ -131,14 +136,46 @@ function* watchToolReset(): Saga<never> {
 function* setLastUsedToolQueue(setToolAction: SetToolAction): Saga<void> {
   const newTool = setToolAction.tool;
   const lastUsedToolQueue = yield* select((state) => state.userConfiguration.lastUsedToolQueue);
-  if (lastUsedToolQueue.some((tool) => tool === newTool)) return;
+  if (lastUsedToolQueue.some((tool) => tool === newTool.id)) return;
   const [, ...remainingTools] = lastUsedToolQueue;
-  const updatedLastUsedToolQueue: [AnnotationTool, AnnotationTool, AnnotationTool] = [
+  const updatedLastUsedToolQueue: [AnnotationToolId, AnnotationToolId, AnnotationToolId] = [
     ...remainingTools,
-    newTool,
+    newTool.id,
   ];
   yield* put(updateUserSettingAction("lastUsedToolQueue", updatedLastUsedToolQueue));
-  console.log("Updated last used tool queue:", updatedLastUsedToolQueue);
+  console.log("Updated last used tool queue:", updatedLastUsedToolQueue); //TODO_C remove
+}
+
+function* rememberToolPreferences(setToolAction: SetToolAction): Saga<void> {
+  const newTool = setToolAction.tool;
+  if (
+    newTool.id === AnnotationTool.AREA_MEASUREMENT.id ||
+    newTool.id === AnnotationTool.LINE_MEASUREMENT.id
+  ) {
+    yield* put(
+      updateUserSettingAction(
+        "measurementPreference",
+        newTool.id === AnnotationTool.AREA_MEASUREMENT.id ? "AREA_MEASUREMENT" : "LINE_MEASUREMENT",
+      ),
+    );
+  } else if (newTool.id === AnnotationTool.BRUSH.id || newTool.id === AnnotationTool.TRACE.id) {
+    yield* put(
+      updateUserSettingAction(
+        "writePreference",
+        newTool.id === AnnotationTool.BRUSH.id ? "BRUSH" : "TRACE",
+      ),
+    );
+  } else if (
+    newTool.id === AnnotationTool.ERASE_BRUSH.id ||
+    newTool.id === AnnotationTool.ERASE_TRACE.id
+  ) {
+    yield* put(
+      updateUserSettingAction(
+        "erasePreference",
+        newTool.id === AnnotationTool.ERASE_BRUSH.id ? "BRUSH" : "TRACE",
+      ),
+    );
+  }
 }
 
 export default function* toolSaga() {
@@ -160,4 +197,5 @@ export default function* toolSaga() {
     ensureActiveToolIsInToolkit,
   );
   yield* takeEvery("SET_TOOL", setLastUsedToolQueue);
+  yield* takeEvery("SET_TOOL", rememberToolPreferences);
 }

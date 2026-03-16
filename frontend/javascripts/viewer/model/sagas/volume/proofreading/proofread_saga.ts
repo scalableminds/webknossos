@@ -10,14 +10,7 @@ import processTaskWithPool from "libs/async/task_pool";
 import { V3 } from "libs/mjs";
 import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Toast from "libs/toast";
-import ErrorHandling from "libs/error_handling";
-import {
-  ColoredLogger,
-  getAdaptToTypeFunction,
-  isEditableEventTarget,
-  isNumberMap,
-  SoftError,
-} from "libs/utils";
+import { getAdaptToTypeFunction, isEditableEventTarget, isNumberMap, SoftError } from "libs/utils";
 import window from "libs/window";
 import isEqual from "lodash-es/isEqual";
 import union from "lodash-es/union";

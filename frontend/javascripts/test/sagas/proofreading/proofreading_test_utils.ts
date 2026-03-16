@@ -1,5 +1,6 @@
 import type { MinCutTargetEdge, NeighborInfo } from "admin/rest_api";
 import type { RequestOptionsWithData } from "libs/request";
+import compact from "lodash-es/compact";
 import isEqual from "lodash-es/isEqual";
 import sortBy from "lodash-es/sortBy";
 import { call, put, take } from "redux-saga/effects";
@@ -48,6 +49,7 @@ import type {
   ServerUpdateAction,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
+import { Store } from "viewer/singletons";
 import type { NumberLike, SaveQueueEntry, Segment, WebknossosState } from "viewer/store";
 import { combinedReducer } from "viewer/store";
 import { expect, vi } from "vitest";
@@ -56,8 +58,6 @@ import {
   createSkeletonTracingFromAdjacency,
   encodeServerTracing,
 } from "./proofreading_skeleton_test_utils";
-import compact from "lodash-es/compact";
-import { Store } from "viewer/singletons";
 
 export function* initializeMappingAndTool(
   context: WebknossosTestContext,

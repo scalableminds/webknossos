@@ -219,14 +219,14 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
 
     const task = startSaga(function* task() {
       yield performSplitTreesProofreading(context, false);
-      const injectedSplitAndTreeUpdateRequest = context.receivedDataPerSaveRequest.slice(3, 6);
+      const injectedSplitAndTreeUpdateRequest = context.receivedDataPerSaveRequest.slice(3, 7);
       assertUpdatesMatchInjectedUpdates(
         injectedSplitAndTreeUpdateRequest,
         splitSegment1And2WithAgglomerateTree1,
         8,
       );
       // This includes the create agglomerate tree & merge agglomerate tree update actions.
-      const latestUpdateActionRequestPayload = getNestedUpdateActions(context).slice(9);
+      const latestUpdateActionRequestPayload = getNestedUpdateActions(context).slice(10);
       yield expect(latestUpdateActionRequestPayload).toMatchFileSnapshot(
         "./__snapshots__/proofreading_skeleton_interaction.spec.ts/split_skeleton_simple.json",
       );
@@ -335,8 +335,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
 
     const task = startSaga(function* task() {
       yield performSplitTreesProofreading(context, false);
-      yield call(() => context.api.tracing.save()); // TODOM remove later.
-      const injectedMergeRequest = context.receivedDataPerSaveRequest.slice(3, 7);
+      const injectedMergeRequest = context.receivedDataPerSaveRequest.slice(3, 8);
       assertUpdatesMatchInjectedUpdates(
         injectedMergeRequest,
         splitSegment2And3WithAgglomerateTree1,
@@ -344,7 +343,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       );
       // Expect no more updates after the injected updates:
       const lastUpdateRequest = context.receivedDataPerSaveRequest.at(-1)![0];
-      expect(lastUpdateRequest.version).toEqual(11); // TODOM: The 11th update action should be an updateSegmentsPartial
+      expect(lastUpdateRequest.version).toEqual(12); // TODOM: The 11th update action should be an updateSegmentsPartial
 
       yield expectSegmentList(tracingId, [
         {

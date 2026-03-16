@@ -21,6 +21,20 @@
   ],
   [
     {
+      "name": "updateSegmentPartial",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "anchorPosition": [
+          2,
+          2,
+          2,
+        ],
+        "id": 1,
+      },
+    },
+  ],
+  [
+    {
       "name": "createSegment",
       "value": {
         "actionTracingId": "volumeTracingId",

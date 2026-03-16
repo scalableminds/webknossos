@@ -41,6 +41,7 @@ import {
 } from "./proofreading_test_utils";
 import { publishDebuggingState } from "test/helpers/debugging_state_serializer";
 import { mergeSegment5And6 } from "./proofreading_interaction_update_action_fixtures";
+import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_server_objects";
 
 describe("Proofreading (with mesh actions)", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;
@@ -103,7 +104,7 @@ describe("Proofreading (with mesh actions)", () => {
       {
         name: "mergeAgglomerate",
         value: {
-          actionTracingId: "volumeTracingId",
+          actionTracingId: VOLUME_TRACING_ID,
           segmentId1: 1,
           segmentId2: 1337,
           agglomerateId1: 1,
@@ -113,7 +114,7 @@ describe("Proofreading (with mesh actions)", () => {
       {
         name: "mergeSegmentItems",
         value: {
-          actionTracingId: "volumeTracingId",
+          actionTracingId: VOLUME_TRACING_ID,
           segmentId1: 1,
           segmentId2: 1337,
           agglomerateId1: 1,
@@ -324,16 +325,30 @@ describe("Proofreading (with mesh actions)", () => {
     const task = startSaga(function* task(): Saga<void> {
       yield simulateSplitAgglomeratesViaMeshes(context);
 
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+      yield call(publishDebuggingState, backendMock);
+      const splitOperationUpdateActions = getFlattenedUpdateActions(context).slice(-2);
 
-      expect(mergeSaveActionBatch).toEqual([
+      expect(splitOperationUpdateActions).toEqual([
         {
           name: "splitAgglomerate",
           value: {
-            actionTracingId: "volumeTracingId",
+            actionTracingId: VOLUME_TRACING_ID,
             agglomerateId: 6,
             segmentId1: 1337,
             segmentId2: 1338,
+          },
+        },
+        {
+          name: "createSegment",
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            id: 1339,
+            anchorPosition: [101, 101, 101],
+            name: null,
+            color: null,
+            groupId: null,
+            metadata: [],
+            creationTime: 1494695001688,
           },
         },
       ]);
@@ -364,6 +379,10 @@ describe("Proofreading (with mesh actions)", () => {
           {
             id: 6,
             anchorPosition: getPositionForSegmentId(1337), // 1337 is contained in agglomerate 6
+          },
+          {
+            id: 1339,
+            anchorPosition: getPositionForSegmentId(1338), // was split off
           },
         ],
         backendMock,
@@ -399,7 +418,7 @@ describe("Proofreading (with mesh actions)", () => {
       {
         name: "mergeAgglomerate",
         value: {
-          actionTracingId: "volumeTracingId",
+          actionTracingId: VOLUME_TRACING_ID,
           segmentId1: 5,
           segmentId2: 6,
           agglomerateId1: 4,
@@ -409,7 +428,7 @@ describe("Proofreading (with mesh actions)", () => {
       {
         name: "mergeSegmentItems",
         value: {
-          actionTracingId: "volumeTracingId",
+          actionTracingId: VOLUME_TRACING_ID,
           segmentId1: 5,
           segmentId2: 6,
           agglomerateId1: 4,
@@ -432,7 +451,7 @@ describe("Proofreading (with mesh actions)", () => {
         {
           name: "splitAgglomerate",
           value: {
-            actionTracingId: "volumeTracingId",
+            actionTracingId: VOLUME_TRACING_ID,
             // Different to test above:
             agglomerateId: 4, // !Changed! due to interfered merge update action version 7. Would be aggloId 6,
             // but the merge made it a 4, because the split operation is after the injected version 7.
@@ -443,7 +462,7 @@ describe("Proofreading (with mesh actions)", () => {
         {
           name: "createSegment",
           value: {
-            actionTracingId: "volumeTracingId",
+            actionTracingId: VOLUME_TRACING_ID,
             additionalCoordinates: undefined,
             anchorPosition: [101, 101, 101],
             color: null,
@@ -524,7 +543,7 @@ describe("Proofreading (with mesh actions)", () => {
         {
           name: "splitAgglomerate",
           value: {
-            actionTracingId: "volumeTracingId",
+            actionTracingId: VOLUME_TRACING_ID,
             agglomerateId: 1,
             segmentId1: 1,
             segmentId2: 1338,
@@ -533,7 +552,7 @@ describe("Proofreading (with mesh actions)", () => {
         {
           name: "splitAgglomerate",
           value: {
-            actionTracingId: "volumeTracingId",
+            actionTracingId: VOLUME_TRACING_ID,
             agglomerateId: 1,
             segmentId1: 3,
             segmentId2: 1337,
@@ -542,7 +561,7 @@ describe("Proofreading (with mesh actions)", () => {
         {
           name: "createSegment",
           value: {
-            actionTracingId: "volumeTracingId",
+            actionTracingId: VOLUME_TRACING_ID,
             additionalCoordinates: undefined,
             anchorPosition: getPositionForSegmentId(1338),
             color: null,
@@ -629,7 +648,7 @@ describe("Proofreading (with mesh actions)", () => {
       {
         name: "mergeAgglomerate",
         value: {
-          actionTracingId: "volumeTracingId",
+          actionTracingId: VOLUME_TRACING_ID,
           segmentId1: 1,
           segmentId2: 4,
           agglomerateId1: 1,
@@ -639,7 +658,7 @@ describe("Proofreading (with mesh actions)", () => {
       {
         name: "mergeSegmentItems",
         value: {
-          actionTracingId: "volumeTracingId",
+          actionTracingId: VOLUME_TRACING_ID,
           segmentId1: 1,
           segmentId2: 4,
           agglomerateId1: 1,
@@ -652,7 +671,7 @@ describe("Proofreading (with mesh actions)", () => {
       {
         name: "mergeAgglomerate",
         value: {
-          actionTracingId: "volumeTracingId",
+          actionTracingId: VOLUME_TRACING_ID,
           segmentId1: 5,
           segmentId2: 1337,
           agglomerateId1: 1,
@@ -675,7 +694,7 @@ describe("Proofreading (with mesh actions)", () => {
         {
           name: "splitAgglomerate",
           value: {
-            actionTracingId: "volumeTracingId",
+            actionTracingId: VOLUME_TRACING_ID,
             agglomerateId: 1,
             segmentId1: 1,
             segmentId2: 1338,
@@ -684,7 +703,7 @@ describe("Proofreading (with mesh actions)", () => {
         {
           name: "splitAgglomerate",
           value: {
-            actionTracingId: "volumeTracingId",
+            actionTracingId: VOLUME_TRACING_ID,
             agglomerateId: 1,
             segmentId1: 3,
             segmentId2: 1337,

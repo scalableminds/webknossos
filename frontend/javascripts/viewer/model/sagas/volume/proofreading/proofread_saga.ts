@@ -1355,61 +1355,34 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       return;
     }
 
-    function* reloadMappingAndAggloIds() {
-      if (!preparation || !idInfos) {
-        throw new Error("Satisfy TS.");
-      }
-      activeMapping = yield* select(
-        (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
-      );
-
-      if (activeMapping.mapping != null) {
-        const mappingWrapper = new NumberLikeMapWrapper(activeMapping.mapping);
-
-        const maybeSourceAgglomerateId = mappingWrapper.getAsNumber(sourceInfo.unmappedId);
-        const maybeTargetAgglomerateId = mappingWrapper.getAsNumber(targetInfo.unmappedId);
-
-        if (maybeSourceAgglomerateId == null || maybeTargetAgglomerateId == null) {
-          // As an additional safety net we look up the IDs again. Actually,
-          // this should not happen in production.
-          let newSourceAgglomerateId;
-          let newTargetAgglomerateId;
-
-          if (idInfos.type === "PROOFREAD_MERGE") {
-            newSourceAgglomerateId = yield* call(
-              preparation.getDataValue,
-              sourceInfo.position,
-              activeMapping.mapping,
-            );
-            newTargetAgglomerateId = newSourceAgglomerateId;
-          } else {
-            let [sourceInfo, targetInfo] = idInfos.infos;
-            [newSourceAgglomerateId, newTargetAgglomerateId] = yield* all([
-              call(preparation.getDataValue, sourceInfo.position, activeMapping.mapping),
-              call(preparation.getDataValue, targetInfo.position, activeMapping.mapping),
-            ]);
-          }
-          sourceAgglomerateId = newSourceAgglomerateId;
-          targetAgglomerateId = newTargetAgglomerateId;
-        } else {
-          sourceAgglomerateId = maybeSourceAgglomerateId;
-          targetAgglomerateId = maybeTargetAgglomerateId;
-        }
-      }
-    }
     // After saving and thus syncing with the server the mapping might have updated due to missing proofreading actions for other users.
     // Thus, the sourceAgglomerateId and targetAgglomerateId might be outdated. Therefore, we reload them.
-    yield* call(reloadMappingAndAggloIds);
 
     annotationVersion = yield* select((state) => state.annotation.version);
     if (action.type === "MIN_CUT_AGGLOMERATE") {
+      // Get latest agglomerate id of the agglomerate that was splitted by the current operation in case it changed due to rebasing or so.
+      const newInfo = yield* call(
+        reloadMappingAndAggloIds,
+        volumeTracing.tracingId,
+        sourceInfo.unmappedId,
+        targetInfo.unmappedId,
+      );
+      if (!newInfo) {
+        Toast.error(
+          `Could not reload the agglomerate information for proofreading split segments operation.`,
+        );
+        return;
+      }
+      activeMapping = newInfo.activeMapping;
+      const latestSourceAgglomerateId = newInfo.sourceAgglomerateId;
+
       console.log("start updating the mapping after a min-cut");
       // Now that the changes are saved, we can split the local mapping (because it requires
       // communication with the back-end).
       const autoUpdateAgglomerateSkeletons = true;
       const splitMappingInfo = yield* splitAgglomerateInMapping(
         activeMapping,
-        sourceAgglomerateId,
+        latestSourceAgglomerateId,
         volumeTracingId,
         annotationVersion,
         autoUpdateAgglomerateSkeletons,
@@ -1435,11 +1408,25 @@ function* handleProofreadMergeOrMinCut(action: Action) {
         ),
       );
 
-      // Now the agglomerate Ids have changed again, thus, reload them.
-      yield* call(reloadMappingAndAggloIds);
-
       console.log("finished updating the mapping after a min-cut");
     }
+    // Now that the local mapping information has changed due to the reloading of the mapping in the split case or the eager updated
+    // in case of a merge action of the merge or split, reload the agglomerate id info and the mapping.
+    const newInfo = yield* call(
+      reloadMappingAndAggloIds,
+      volumeTracing.tracingId,
+      sourceInfo.unmappedId,
+      targetInfo.unmappedId,
+    );
+    if (!newInfo) {
+      Toast.error(
+        `Could not reload the agglomerate information for proofreading operation segments.`,
+      );
+      return;
+    }
+    activeMapping = newInfo.activeMapping;
+    sourceAgglomerateId = newInfo.sourceAgglomerateId;
+    targetAgglomerateId = newInfo.targetAgglomerateId;
 
     if (action.type === "PROOFREAD_MERGE") {
       // Reload the agglomerate skeletons affected by the merge if they are loaded.
@@ -1780,6 +1767,62 @@ export function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Prep
     volumeTracing: { ...volumeTracing, mappingName },
     annotationVersion,
   };
+}
+
+function* reloadMappingAndAggloIds(
+  tracingId: string,
+  unmappedSourceId: number,
+  unmappedTargetId: number,
+) {
+  const activeMapping = yield* select(
+    (store) => store.temporaryConfiguration.activeMappingByLayer[tracingId],
+  );
+
+  if (activeMapping.mapping != null) {
+    const mappingWrapper = new NumberLikeMapWrapper(activeMapping.mapping);
+
+    const maybeSourceAgglomerateId = mappingWrapper.getAsNumber(unmappedSourceId);
+    const maybeTargetAgglomerateId = mappingWrapper.getAsNumber(unmappedTargetId);
+
+    if (maybeSourceAgglomerateId != null && maybeTargetAgglomerateId != null) {
+      return {
+        sourceAgglomerateId: maybeSourceAgglomerateId,
+        targetAgglomerateId: maybeTargetAgglomerateId,
+        activeMapping,
+      };
+    }
+
+    // As an additional safety net we look up the IDs again. Actually,
+    // this should not happen in production.
+    const segmentsToRequest = [unmappedSourceId, unmappedTargetId];
+    const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
+    const annotationVersion = yield* select((state) => state.annotation.version);
+    const annotationId = yield* select((state) => state.annotation.annotationId);
+
+    const missingMappingInfo = yield* call(
+      getAgglomeratesForSegmentsFromTracingstore,
+      tracingStoreUrl,
+      tracingId,
+      segmentsToRequest,
+      annotationId,
+      annotationVersion,
+    );
+    const missingMappingInfoWrapper = new NumberLikeMapWrapper(missingMappingInfo);
+    const maybeSourceAgglomerateIdFromServer =
+      missingMappingInfoWrapper.getAsNumber(unmappedSourceId);
+    const maybeTargetAgglomerateIdFromServer =
+      missingMappingInfoWrapper.getAsNumber(unmappedTargetId);
+    if (maybeSourceAgglomerateIdFromServer == null || maybeTargetAgglomerateIdFromServer == null) {
+      throw new SoftError(
+        `Could not look up agglomerate id for unmapped segment id ${unmappedSourceId} or ${unmappedTargetId}.`,
+      );
+    }
+    return {
+      sourceAgglomerateId: maybeSourceAgglomerateIdFromServer,
+      targetAgglomerateId: maybeTargetAgglomerateIdFromServer,
+      activeMapping,
+    };
+  }
 }
 
 function* getAgglomerateInfos(

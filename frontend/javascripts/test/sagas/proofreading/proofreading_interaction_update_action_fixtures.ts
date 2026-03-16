@@ -1149,6 +1149,22 @@ export const splitSegment1And2WithAgglomerateTree1 = [
 export const splitSegment1And2WithAgglomerateTrees1And6And4 = [
   [
     {
+      name: "createSegment" as const,
+      value: {
+        actionTracingId: VOLUME_TRACING_ID,
+        id: 1,
+        anchorPosition: [1, 1, 1] as Vector3,
+        additionalCoordinates: undefined,
+        name: null,
+        color: null,
+        groupId: null,
+        metadata: [],
+        creationTime: 1494695001688,
+      },
+    },
+  ],
+  [
+    {
       name: "splitAgglomerate" as const,
       value: {
         actionTracingId: VOLUME_TRACING_ID,
@@ -1402,6 +1418,22 @@ export const splitSegment7And1337AndMerge1337And5 = [
 export const minCutWithNodes2And3WithAgglomerateTree1 = [
   [
     {
+      name: "createSegment" as const,
+      value: {
+        actionTracingId: VOLUME_TRACING_ID,
+        id: 1,
+        anchorPosition: [1, 1, 1] as Vector3,
+        additionalCoordinates: undefined,
+        name: null,
+        color: null,
+        groupId: null,
+        metadata: [],
+        creationTime: 1494695001688,
+      },
+    },
+  ],
+  [
+    {
       name: "createTree" as const,
       value: {
         actionTracingId: SKELETON_TRACING_ID,
@@ -1516,6 +1548,22 @@ export const minCutWithNodes2And3WithAgglomerateTree1 = [
 ];
 
 export const mergeAgglomerateTrees1And4 = [
+  [
+    {
+      name: "createSegment" as const,
+      value: {
+        actionTracingId: VOLUME_TRACING_ID,
+        id: 1,
+        anchorPosition: [1, 1, 1] as const,
+        additionalCoordinates: undefined,
+        name: null,
+        color: null,
+        groupId: null,
+        metadata: [],
+        creationTime: 1494695001688,
+      },
+    },
+  ],
   [
     {
       name: "createTree" as const,
@@ -1747,6 +1795,22 @@ export const mergeAgglomerateTrees1And4 = [
 ];
 
 export const splitAgglomerateTree1 = [
+  [
+    {
+      name: "createSegment" as const,
+      value: {
+        actionTracingId: VOLUME_TRACING_ID,
+        id: 1,
+        anchorPosition: [1, 1, 1] as Vector3,
+        additionalCoordinates: undefined,
+        name: null,
+        color: null,
+        groupId: null,
+        metadata: [],
+        creationTime: 1494695001688,
+      },
+    },
+  ],
   [
     {
       name: "createTree" as const,

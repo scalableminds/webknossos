@@ -8,11 +8,11 @@ import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, Buck
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, DataLayer}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipHelper
-import org.scalatestplus.play.PlaySpec
+import org.scalatest.wordspec.AsyncWordSpec
 
 import scala.concurrent.ExecutionContext
 
-class ParsingTestSuite extends PlaySpec with WKWDataFormatHelper with VolumeDataZipHelper {
+class ParsingTestSuite extends AsyncWordSpec with WKWDataFormatHelper with VolumeDataZipHelper {
   // Test a couple of regexes and parsers
 
   implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.global
@@ -117,24 +117,17 @@ class ParsingTestSuite extends PlaySpec with WKWDataFormatHelper with VolumeData
 
   "parseNDimensionalDotCoordinates" should {
     "correctly parse chunk coordinates without additional axes" in {
-      val parsed1 = ZarrCoordinatesParser
-        .parseNDimensionalDotCoordinates(
-          "0.1.2.3",
-          None
-        )
-        .await("test")
-      assert(parsed1 == Full((1, 2, 3, None)))
-      val parsed2 = ZarrCoordinatesParser
-        .parseNDimensionalDotCoordinates(
-          "0.4.3.6",
-          None
-        )
-        .await("test")
-      assert(parsed2 == Full((4, 3, 6, None)))
+      for {
+        parsed1 <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates("0.1.2.3", None).futureBox
+        parsed2 <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates("0.4.3.6", None).futureBox
+      } yield {
+        assert(parsed1 == Full((1, 2, 3, None)))
+        assert(parsed2 == Full((4, 3, 6, None)))
+      }
     }
 
     "correctly parse chunk coordinates with additional axes" in {
-      val parsed1 = ZarrCoordinatesParser
+      ZarrCoordinatesParser
         .parseNDimensionalDotCoordinates(
           "0.1.2.3.4.5.6.7",
           Some(
@@ -143,26 +136,35 @@ class ParsingTestSuite extends PlaySpec with WKWDataFormatHelper with VolumeData
                 AdditionalAxis("c", Seq(1, 10), 3),
                 AdditionalAxis("d", Seq(1, 10), 4)))
         )
-        .await("test")
-      assert(
-        parsed1 == Full(
-          (5,
-           6,
-           7,
-           Some(
-             List(AdditionalCoordinate("a", 1),
-                  AdditionalCoordinate("b", 2),
-                  AdditionalCoordinate("c", 3),
-                  AdditionalCoordinate("d", 4))))))
-
+        .futureBox
+        .map { parsed1 =>
+          assert(
+            parsed1 == Full(
+              (5,
+               6,
+               7,
+               Some(
+                 List(AdditionalCoordinate("a", 1),
+                      AdditionalCoordinate("b", 2),
+                      AdditionalCoordinate("c", 3),
+                      AdditionalCoordinate("d", 4))))))
+        }
     }
 
     "reject invalid chunk coordinates" in {
-      assert(ZarrCoordinatesParser.parseNDimensionalDotCoordinates("0.1.2.3.4.5.6.7", None).await("test").isEmpty)
-      assert(ZarrCoordinatesParser.parseNDimensionalDotCoordinates("0.1.2", None).await("test").isEmpty)
-      assert(ZarrCoordinatesParser.parseNDimensionalDotCoordinates("notAnInt0.1.2", None).await("test").isEmpty)
-      assert(ZarrCoordinatesParser.parseNDimensionalDotCoordinates("notAnInt", None).await("test").isEmpty)
-      assert(ZarrCoordinatesParser.parseNDimensionalDotCoordinates("", None).await("test").isEmpty)
+      for {
+        r1 <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates("0.1.2.3.4.5.6.7", None).futureBox
+        r2 <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates("0.1.2", None).futureBox
+        r3 <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates("notAnInt0.1.2", None).futureBox
+        r4 <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates("notAnInt", None).futureBox
+        r5 <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates("", None).futureBox
+      } yield {
+        assert(r1.isEmpty)
+        assert(r2.isEmpty)
+        assert(r3.isEmpty)
+        assert(r4.isEmpty)
+        assert(r5.isEmpty)
+      }
     }
 
   }

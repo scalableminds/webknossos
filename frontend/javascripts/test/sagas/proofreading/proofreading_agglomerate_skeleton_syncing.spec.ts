@@ -38,11 +38,13 @@ import {
 } from "./proofreading_interaction_update_action_fixtures";
 import { loadAgglomerateSkeletons } from "./proofreading_skeleton_test_utils";
 import {
+  expectSegmentList,
   initializeMappingAndTool,
   loadAgglomerateMeshes,
   makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
+import { publishDebuggingState } from "test/helpers/debugging_state_serializer";
 
 describe("Proofreading agglomerate skeleton syncing", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;
@@ -107,6 +109,12 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       yield expect(agglomerateSkeletonUpdates).toMatchFileSnapshot(
         "./__snapshots__/agglomerate_skeleton_syncing/should_auto_push_skeleton_updates_in_live_collab.json",
       );
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [1, 1, 1],
+        },
+      ]);
     });
 
     await task.toPromise();
@@ -114,7 +122,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
   describe.each([false, true])("With othersMayEdit=%s", (othersMayEdit: boolean) => {
     it("should merge two agglomerates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
-      mockInitialBucketAndAgglomerateData(context);
+      const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
       const { annotation } = Store.getState();
       const { tracingId } = annotation.volumes[0];
@@ -156,17 +164,25 @@ describe("Proofreading agglomerate skeleton syncing", () => {
           [5, 5, 5],
         ]);
 
+        yield call(publishDebuggingState, backendMock);
+
         const agglomerateSkeletonReloadingUpdates = getNestedUpdateActions(context).slice(-3)!;
         yield expect(agglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
           `./__snapshots__/agglomerate_skeleton_syncing/merge_should_refresh_agglomerate_skeletons_with_others_may_edit-${othersMayEdit}.json`,
         );
+        yield expectSegmentList(tracingId, [
+          {
+            id: 1,
+            anchorPosition: [1, 1, 1],
+          },
+        ]);
       });
 
       await task.toPromise();
     });
 
     it("should merge two agglomerates and not update agglomerate skeleton if not included in update actions.", async (context: WebknossosTestContext) => {
-      mockInitialBucketAndAgglomerateData(context);
+      const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
       const { annotation } = Store.getState();
       const { tracingId } = annotation.volumes[0];
@@ -214,14 +230,21 @@ describe("Proofreading agglomerate skeleton syncing", () => {
               ),
             ),
           );
+        yield call(publishDebuggingState, backendMock);
         expect(agglomerateSkeletonUpdateActions.length).toBe(0);
+        yield expectSegmentList(tracingId, [
+          {
+            id: 1,
+            anchorPosition: [1, 1, 1],
+          },
+        ]);
       });
 
       await task.toPromise();
     });
 
     it("should split an agglomerate and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
-      mockInitialBucketAndAgglomerateData(context);
+      const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
       const { annotation } = Store.getState();
       const { tracingId } = annotation.volumes[0];
@@ -266,16 +289,27 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         expect(updatedAgglomerateTrees.getOrThrow(4).nodes.size()).toBe(2);
 
         const splittingAndAgglomerateReloadingUpdates = getNestedUpdateActions(context).slice(-3);
+        yield call(publishDebuggingState, backendMock);
         yield expect(splittingAndAgglomerateReloadingUpdates).toMatchFileSnapshot(
           `./__snapshots__/agglomerate_skeleton_syncing/split_should_refresh_agglomerate_skeletons_with_others_may_edit-${othersMayEdit}.json`,
         );
+        yield expectSegmentList(tracingId, [
+          {
+            id: 1,
+            anchorPosition: [1, 1, 1],
+          },
+          {
+            id: 1339,
+            anchorPosition: [2, 2, 2],
+          },
+        ]);
       });
 
       await task.toPromise();
     });
 
     it("should split an agglomerate and not update an unaffected agglomerate skeleton", async (context: WebknossosTestContext) => {
-      mockInitialBucketAndAgglomerateData(context);
+      const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
       const { annotation } = Store.getState();
       const { tracingId } = annotation.volumes[0];
@@ -327,16 +361,27 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         ]);
 
         const splitAndCreateSegmentActions = getNestedUpdateActions(context).slice(-2)!;
+        yield call(publishDebuggingState, backendMock);
         yield expect(splitAndCreateSegmentActions).toMatchFileSnapshot(
           `./__snapshots__/agglomerate_skeleton_syncing/split_should_not_refresh_unaffected_agglomerate_skeletons_with_others_may_edit-${othersMayEdit}.json`,
         );
+        yield expectSegmentList(tracingId, [
+          {
+            id: 1,
+            anchorPosition: [1, 1, 1],
+          },
+          {
+            id: 1339,
+            anchorPosition: [2, 2, 2],
+          },
+        ]);
       });
 
       await task.toPromise();
     });
 
     it("should auto update agglomerate skeletons after merge via mesh interaction", async (context: WebknossosTestContext) => {
-      const _backendMock = mockInitialBucketAndAgglomerateData(context);
+      const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
       const task = startSaga(function* () {
         const { tracingId } = yield* select(
@@ -377,12 +422,19 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         yield expect(agglomerateSkeletonOne).toMatchFileSnapshot(
           "./__snapshots__/agglomerate_skeleton_syncing/auto-sync_agglomerate_skeleton_1_after_merging.json",
         );
+        yield call(publishDebuggingState, backendMock);
+        yield expectSegmentList(tracingId, [
+          {
+            id: 1,
+            anchorPosition: [1, 1, 1],
+          },
+        ]);
       });
       await task.toPromise();
     });
 
     it("should auto update agglomerate skeletons after split via mesh interaction", async (context: WebknossosTestContext) => {
-      const _backendMock = mockInitialBucketAndAgglomerateData(context);
+      const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
       const task = startSaga(function* () {
         const { tracingId } = yield* select(
@@ -443,12 +495,27 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         yield expect(agglomerateSkeleton1339).toMatchFileSnapshot(
           "./__snapshots__/agglomerate_skeleton_syncing/auto-sync_agglomerate_skeleton_1339_after_splitting.json",
         );
+        yield call(publishDebuggingState, backendMock);
+        yield expectSegmentList(tracingId, [
+          {
+            id: 1,
+            anchorPosition: [1, 1, 1],
+          },
+          {
+            id: 1339,
+            anchorPosition: [2, 2, 2],
+          },
+          {
+            id: 6,
+            anchorPosition: [6, 6, 6],
+          },
+        ]);
       });
       await task.toPromise();
     });
 
     it("should auto update agglomerate skeletons after splitting from all neighbors", async (context: WebknossosTestContext) => {
-      const _backendMock = mockInitialBucketAndAgglomerateData(context);
+      const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
       // Prepare the server's reply for the upcoming split.
       vi.mocked(context.mocks.getNeighborsForAgglomerateNode).mockReturnValue(
@@ -515,6 +582,21 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         yield expect(agglomerateSkeleton1340).toMatchFileSnapshot(
           "./__snapshots__/agglomerate_skeleton_syncing/auto-sync_agglomerate_skeleton_1340_after_splitting_from_all_neighbors.json",
         );
+        yield call(publishDebuggingState, backendMock);
+        yield expectSegmentList(tracingId, [
+          {
+            id: 1,
+            anchorPosition: [2, 2, 2],
+          },
+          {
+            id: 1339,
+            anchorPosition: [1, 1, 1],
+          },
+          {
+            id: 1340,
+            anchorPosition: [3, 3, 3],
+          },
+        ]);
       });
       await task.toPromise();
     });
@@ -523,7 +605,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
   // --------- Multi user tests with injected updates ---------
 
   it("should merge two agglomerates, apply injected merge update action including agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     // Simulate merging agglomerate 4 into agglomerate 1 by joining segments 1 & 4.
     backendMock.planMultipleVersionInjections(10, mergeSegment1And4WithAgglomerateTrees1And4And6);
 
@@ -571,13 +653,20 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       yield expect(agglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
         "./__snapshots__/agglomerate_skeleton_syncing/merge_with_injected_merge_should_refresh_agglomerate_skeletons.json",
       );
+      yield call(publishDebuggingState, backendMock);
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [4, 4, 4],
+        },
+      ]);
     });
 
     await task.toPromise();
   });
 
   it("should merge two agglomerates, apply injected split update action including agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     // Inject splitting agglomerate 1 between segments 1 & 2 including agglomerate skeleton update & create segment.
     backendMock.planMultipleVersionInjections(10, splitSegment1And2WithAgglomerateTrees1And6And4);
 
@@ -624,13 +713,24 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       yield expect(mergeAndAgglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
         "./__snapshots__/agglomerate_skeleton_syncing/merge_with_injected_split_should_refresh_agglomerate_skeletons.json",
       );
+      yield call(publishDebuggingState, backendMock);
+      yield expectSegmentList(tracingId, [
+        {
+          id: 4,
+          anchorPosition: [4, 4, 4],
+        },
+        {
+          id: 1339,
+          anchorPosition: [2, 2, 2],
+        },
+      ]);
     });
 
     await task.toPromise();
   });
 
   it("should split an agglomerate, apply injected merge update action including agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     // Simulate merging agglomerate 4 into agglomerate 1 by joining segments 1 & 4.
     backendMock.planMultipleVersionInjections(10, mergeSegment1And4WithAgglomerateTrees1And4And6);
@@ -691,12 +791,24 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       yield expect(splitAndAgglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
         "./__snapshots__/agglomerate_skeleton_syncing/split_with_injected_merge_should_refresh_agglomerate_skeletons.json",
       );
+      yield call(publishDebuggingState, backendMock);
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [1, 1, 1],
+        },
+        {
+          id: 1339,
+          anchorPosition: [2, 2, 2],
+        },
+      ]);
     });
     await task.toPromise();
   });
 
+  // TODOM continue: Add checks for segment list entries from here on below.
   it("should split an agglomerate, apply injected split update action including agglomerate skeleton updates and update the agglomerate skeleton accordingly", async (context: WebknossosTestContext) => {
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     // Inject splitting agglomerate 1 between segments 1 & 2 including agglomerate skeleton update & create segment.
     backendMock.planMultipleVersionInjections(10, splitSegment1And2WithAgglomerateTrees1And4And6);
@@ -765,6 +877,17 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       yield expect(splitAndAgglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
         "./__snapshots__/agglomerate_skeleton_syncing/mincut_with_injected_split_should_refresh_agglomerate_skeletons.json",
       );
+      yield call(publishDebuggingState, backendMock);
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [1, 1, 1],
+        },
+        {
+          id: 1339,
+          anchorPosition: [2, 2, 2],
+        },
+      ]);
     });
     await task.toPromise();
   });

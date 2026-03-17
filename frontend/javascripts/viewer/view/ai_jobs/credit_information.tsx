@@ -1,7 +1,7 @@
-import { CreditCardOutlined } from "@ant-design/icons";
+import { CreditCardOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import { getJobCreditCostAndUpdateOrgaCredits, type JobCreditCostInfo } from "admin/rest_api";
-import { Button, Card, Col, Divider, Flex, Row, Space, Spin, Typography } from "antd";
+import { Button, Card, Col, Divider, Flex, Row, Space, Spin, Tooltip, Typography } from "antd";
 import features from "features";
 import { formatMilliCreditsString, formatVoxels } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
@@ -11,6 +11,7 @@ import { useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { type AiModel, APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
+import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { UserBoundingBox } from "viewer/store";
 import { useAlignmentJobContext } from "./alignment/ai_alignment_job_context";
@@ -19,6 +20,16 @@ import { useAiTrainingJobContext } from "./train_ai_model/ai_training_job_contex
 import { getBestFittingMagComparedToTrainingDS } from "./utils";
 
 const { Title, Text } = Typography;
+
+function mag1BboxToMag(mag1Bbox: UserBoundingBox, mag: Vector3): UserBoundingBox {
+  return {
+    ...mag1Bbox,
+    boundingBox: {
+      min: mag1Bbox.boundingBox.min.map((v, i) => Math.floor(v / mag[i])) as Vector3,
+      max: mag1Bbox.boundingBox.max.map((v, i) => Math.ceil(v / mag[i])) as Vector3,
+    },
+  };
+}
 
 export const RunAiModelCreditInformation: React.FC = () => {
   const {
@@ -55,13 +66,7 @@ export const RunAiModelCreditInformation: React.FC = () => {
         false,
       );
 
-      return {
-        ...selectedBoundingBox,
-        boundingBox: {
-          min: selectedBoundingBox.boundingBox.min.map((v, i) => Math.round(v / mag[i])) as Vector3,
-          max: selectedBoundingBox.boundingBox.max.map((v, i) => Math.round(v / mag[i])) as Vector3,
-        },
-      };
+      return mag1BboxToMag(selectedBoundingBox, mag);
     },
     enabled: Boolean(selectedBoundingBox && selectedJobType && selectedLayer),
   });
@@ -79,15 +84,21 @@ export const RunAiModelCreditInformation: React.FC = () => {
 };
 
 export const AlignmentCreditInformation: React.FC = () => {
-  const { selectedTask, selectedBoundingBox, handleStartAnalysis, areParametersValid } =
+  const { selectedTask, selectedBoundingBox, colorLayer, handleStartAnalysis, areParametersValid } =
     useAlignmentJobContext();
   const selectJobType = selectedTask?.jobType ?? null;
+
+  const adjustedBoundingBox = useMemo(() => {
+    if (!selectedBoundingBox) return null;
+    const mag = getMagInfo(colorLayer.mags).getFinestMag();
+    return mag1BboxToMag(selectedBoundingBox, mag);
+  }, [selectedBoundingBox, colorLayer]);
 
   return (
     <CreditInformation
       selectedModel={selectedTask}
       selectedJobType={selectJobType}
-      selectedBoundingBox={selectedBoundingBox}
+      selectedBoundingBox={adjustedBoundingBox}
       handleStartAnalysis={handleStartAnalysis}
       startButtonTitle="Start alignment"
       areParametersValid={areParametersValid}
@@ -238,7 +249,13 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
       </Row>
       <Row justify="space-between">
         <Col>
-          <Text>Dataset Size:</Text>
+          <Text>
+            Dataset Size{" "}
+            <Tooltip title="Respecting selected bounding boxes and magnifications.">
+              <InfoCircleOutlined />
+            </Tooltip>
+            :
+          </Text>
         </Col>
         <Col>
           <Text strong>{getBoundingBoxinVoxels()}</Text>

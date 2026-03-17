@@ -8,6 +8,7 @@ import mail.{DefaultMails, Send}
 
 import javax.inject.Inject
 import models.organization.{
+  ByteCount,
   FreeCreditTransactionService,
   Organization,
   OrganizationDAO,
@@ -346,7 +347,7 @@ class OrganizationController @Inject()(
       aiPlan = Some(organization.aiPlan),
       paidUntil = organization.paidUntil.map(Some(_)),
       includedUsers = organization.includedUsers.map(Some(_)),
-      includedStorageBytes = organization.includedStorageBytes.map(Some(_)),
+      includedStorageBytes = organization.includedStorageBytes.map(numBytes => Some(ByteCount(numBytes))),
       created = organization.created
     )
 

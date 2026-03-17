@@ -1,6 +1,5 @@
 import { sendAnalyticsEvent } from "admin/rest_api";
 import { ConfigProvider, Layout } from "antd";
-import FastTooltip from "components/fast_tooltip";
 import features from "features";
 import type { Action, BorderNode, TabNode, TabSetNode } from "flexlayout-react";
 import { Actions, DockLocation, Layout as FlexLayoutComponent, Model } from "flexlayout-react";

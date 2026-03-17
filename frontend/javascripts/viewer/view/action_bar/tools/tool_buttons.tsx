@@ -456,8 +456,16 @@ function MeasurementToolMenu() {
       <Dropdown
         menu={{
           items: [
-            { key: AnnotationTool.LINE_MEASUREMENT.id, label: "Line Measurement" },
-            { key: AnnotationTool.AREA_MEASUREMENT.id, label: "Area Measurement" },
+            {
+              key: AnnotationTool.LINE_MEASUREMENT.id,
+              label: "Line Measurement",
+              icon: <Icon component={LineMeasurementIcon} />,
+            },
+            {
+              key: AnnotationTool.AREA_MEASUREMENT.id,
+              label: "Area Measurement",
+              icon: <Icon component={AreaMeasurementIcon} />,
+            },
           ],
           onClick: (key) => dispatch(setToolAction(AnnotationTool[key.key as AnnotationToolId])),
         }}

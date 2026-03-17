@@ -80,7 +80,7 @@ export default function ToolbarView() {
 
   return (
     <>
-      <Radio.Group onChange={handleSetTool} value={adaptedActiveTool}>
+      <Radio.Group onChange={handleSetTool} value={adaptedActiveTool.id}>
         {Toolkits[toolkit].map((tool) => {
           const ToolButton = ToolIdToComponent[tool.id];
           return <ToolButton key={tool.id} adaptedActiveTool={adaptedActiveTool} />;
@@ -202,38 +202,5 @@ function ToolSpecificSettings({
         <ProofreadingComponents />
       ) : null}
     </>
-  );
-}
-
-export function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
-  const dispatch = useDispatch();
-  const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
-  const { isDisabled, explanation } = disabledInfosForTools[AnnotationTool.AREA_MEASUREMENT.id];
-
-  const handleSetMeasurementTool = (evt: RadioChangeEvent) => {
-    const value = evt.target.value as AnnotationToolId;
-    dispatch(setToolAction(AnnotationTool[value]));
-  };
-  return (
-    <Radio.Group value={activeTool.id} onChange={handleSetMeasurementTool}>
-      <RadioButtonWithTooltip
-        title="Measure distances with connected lines by using Left Click."
-        style={NARROW_BUTTON_STYLE}
-        value={AnnotationTool.LINE_MEASUREMENT.id}
-      >
-        <Icon component={LineMeasurementIcon} aria-label="Line Measurement Tool Icon" />
-      </RadioButtonWithTooltip>
-      <RadioButtonWithTooltip
-        disabledTitle={explanation}
-        title={
-          "Measure areas by using Left Drag. Avoid self-crossing polygon structure for accurate results."
-        }
-        style={NARROW_BUTTON_STYLE}
-        value={AnnotationTool.AREA_MEASUREMENT.id}
-        disabled={isDisabled}
-      >
-        <Icon component={AreaMeasurementIcon} aria-label="Area Measurement Tool Icon" />
-      </RadioButtonWithTooltip>
-    </Radio.Group>
   );
 }

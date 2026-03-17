@@ -861,7 +861,7 @@ export function* tryToIncorporateActions(
 
         if (splitMappingInfo == null) {
           const message =
-            "Failed to apply an agglomerate split action from other user. Please refresh the page to resync.";
+            "Failed to apply an agglomerate split action from another user. Please refresh the page to resync.";
           console.error(message);
           Toast.error(message);
           return FailedIncorporateActionsReturnValue;

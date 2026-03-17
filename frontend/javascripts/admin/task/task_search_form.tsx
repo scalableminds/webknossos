@@ -128,10 +128,10 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
 
   const formItemLayout = {
     labelCol: {
-      span: 5,
+      span: 3,
     },
     wrapperCol: {
-      span: 19,
+      span: 21,
     },
   };
   return (
@@ -139,6 +139,8 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
       onFinish={(formValues) => handleSearchFormFinish(false, formValues)}
       form={form}
       onFieldsChange={onFormChange}
+      layout="horizontal"
+      labelAlign="left"
     >
       <Row gutter={40}>
         <Col span={12}>
@@ -163,8 +165,6 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
             />
           </FormItem>
         </Col>
-      </Row>
-      <Row gutter={40}>
         <Col span={12}>
           <FormItem name="projectId" {...formItemLayout} label="Project">
             <Select

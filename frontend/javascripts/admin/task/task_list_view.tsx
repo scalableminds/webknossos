@@ -24,7 +24,7 @@ import { downloadTasksAsCSV } from "admin/task/task_create_form_view";
 import type { QueryObject, TaskFormFieldValues } from "admin/task/task_search_form";
 import TaskSearchForm from "admin/task/task_search_form";
 import UserSelectionComponent from "admin/user/user_selection_component";
-import { Alert, App, Button, Input, Modal, Spin, Tag, Typography } from "antd";
+import { Alert, App, Button, Input, Modal, Spin, Tag } from "antd";
 import type { ColumnType } from "antd/lib/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FixedExpandableTable from "components/fixed_expandable_table";
@@ -435,15 +435,12 @@ function TaskListView({ initialFieldValues }: Props) {
       search={<Search allowClear onChange={handleSearch} value={searchQuery} />}
       alerts={features().isWkorgInstance ? <AnnotationServicesAd /> : null}
       filters={
-        <>
-          <Typography.Title level={5}>Search for Tasks</Typography.Title>
-          <TaskSearchForm
-            onChange={(queryObject) => fetchData(queryObject)}
-            initialFieldValues={initialFieldValues}
-            isLoading={isLoading}
-            onDownloadAllTasks={downloadSettingsFromAllTasks}
-          />
-        </>
+        <TaskSearchForm
+          onChange={(queryObject) => fetchData(queryObject)}
+          initialFieldValues={initialFieldValues}
+          isLoading={isLoading}
+          onDownloadAllTasks={downloadSettingsFromAllTasks}
+        />
       }
     >
       <Spin spinning={isLoading} size="large">

@@ -100,15 +100,17 @@ function ProjectProgressReportView() {
         }
         filters={
           areSettingsVisible ? (
-            <TeamSelectionComponent
-              value={team}
-              onChange={(selectedTeam) => {
-                if (!Array.isArray(selectedTeam) && selectedTeam != null) {
-                  handleTeamChange(selectedTeam);
-                }
-              }}
-              prefix={<FilterOutlined />}
-            />
+            <div style={{ maxWidth: 400 }}>
+              <TeamSelectionComponent
+                value={team}
+                onChange={(selectedTeam) => {
+                  if (!Array.isArray(selectedTeam) && selectedTeam != null) {
+                    handleTeamChange(selectedTeam);
+                  }
+                }}
+                prefix={<FilterOutlined />}
+              />
+            </div>
           ) : null
         }
       >

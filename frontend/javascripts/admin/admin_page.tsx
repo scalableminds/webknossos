@@ -1,5 +1,5 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { Card, ConfigProvider, Flex, Grid, Space, Tooltip, Typography, theme } from "antd";
+import { ConfigProvider, Flex, Grid, Space, Tooltip, Typography, theme } from "antd";
 import type { CSSProperties, ReactElement, ReactNode } from "react";
 import { cloneElement, isValidElement } from "react";
 
@@ -116,28 +116,28 @@ export default function AdminPage({
             {alerts}
           </Flex>
         ) : null}
-        {filters != null ? <Card>{filters}</Card> : null}
-        <Card
-          styles={{
-            body: {
-              padding: token.paddingSM,
+        {filters != null ? filters : null}
+        <ConfigProvider
+          theme={{
+            components: {
+              Table: {
+                headerBg: token.colorFillTertiary,
+                headerColor: token.colorTextSecondary,
+                rowHoverBg: token.colorFillQuaternary,
+              },
             },
           }}
         >
-          <ConfigProvider
-            theme={{
-              components: {
-                Table: {
-                  headerBg: token.colorFillTertiary,
-                  headerColor: token.colorTextSecondary,
-                  rowHoverBg: token.colorFillQuaternary,
-                },
-              },
-          }}
-        >
-          {children}
-          </ConfigProvider>
-        </Card>
+          <div
+            style={{
+              border: `1px solid ${token.colorBorder}`,
+              borderRadius: token.borderRadius,
+              boxShadow: token.boxShadow,
+            }}
+          >
+            {children}
+          </div>
+        </ConfigProvider>
       </Space>
     </div>
   );

@@ -40,17 +40,19 @@ function AvailableTasksReportView() {
       title="Available Task Assignments"
       descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/tasks.html"
       description={
-        "Select a team to show an overview of its users and the number of available task assignments they qualify for. Task availability for each user is determined by assigned experiences, team memberships, the number of pending task instances, etc. For tasks with multiple instances, each user will get at most one. Note that individual tasks may be listed as available to multiple users here, but each will only be handed to the first user to request it."
+        "Select a team to view available task assignments for its users. Availability depends on experience, team membership, and pending instances. Each task instance is assigned to the first user who requests it."
       }
       filters={
-        <TeamSelectionComponent
-          onChange={(selectedTeam) => {
-            if (!Array.isArray(selectedTeam) && selectedTeam != null) {
-              fetchData(selectedTeam.id);
-            }
-          }}
-          prefix={<FilterOutlined />}
-        />
+        <div style={{ maxWidth: 400 }}>
+          <TeamSelectionComponent
+            onChange={(selectedTeam) => {
+              if (!Array.isArray(selectedTeam) && selectedTeam != null) {
+                fetchData(selectedTeam.id);
+              }
+            }}
+            prefix={<FilterOutlined />}
+          />
+        </div>
       }
     >
       <Spin spinning={isLoading}>

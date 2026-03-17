@@ -29,6 +29,7 @@ import { initialMapping } from "./proofreading_fixtures";
 import {
   expectMapping,
   getAllCurrentlyLoadedMeshIds,
+  getPositionForSegmentId,
   initializeMappingAndTool,
   loadAgglomerateMeshes,
   makeMappingEditableHelper,
@@ -189,7 +190,7 @@ export function* loadAgglomerateSkeletons(
   vi.mocked(context.mocks.parseProtoTracing).mockRestore();
   for (let index = 0; index < agglomerateIdsToLoad.length; ++index) {
     const agglomerateId = agglomerateIdsToLoad[index];
-    yield call(loadAgglomerateSkeletonAtPosition, [agglomerateId, agglomerateId, agglomerateId]); // todop: use getPositionForSegmentId
+    yield call(loadAgglomerateSkeletonAtPosition, getPositionForSegmentId(agglomerateId));
     // Wait until skeleton saga has loaded the skeleton.
     if (isInLiveCollabMode) {
       yield take("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");

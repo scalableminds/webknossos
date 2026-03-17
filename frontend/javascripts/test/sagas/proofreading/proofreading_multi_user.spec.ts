@@ -596,7 +596,6 @@ describe("Proofreading (Multi User)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      // todop: what did I want to do here?
       yield* prepareEditableMapping(context, tracingId, 1, [2, 2, 2]);
 
       // Execute the actual merge and wait for the finished mapping.

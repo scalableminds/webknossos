@@ -1,3 +1,4 @@
+import type { ActionPattern } from "@redux-saga/types";
 import { getAgglomeratesForSegmentsFromTracingstore, getUpdateActionLog } from "admin/rest_api";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
@@ -81,7 +82,6 @@ import {
 } from "./rebasing_helpers_sagas";
 import { pushSaveQueueAsync } from "./save_queue_draining_saga";
 import { setupSavingForAnnotation, setupSavingForTracingType } from "./save_queue_filling_saga";
-import type { ActionPattern } from "@redux-saga/types";
 
 function* setupSavingToServer(): Saga<void> {
   // This saga continuously drains the save queue by sending its content to the server.

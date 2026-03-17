@@ -2,6 +2,7 @@ import type { ActionPattern, Task } from "@redux-saga/types";
 import type { MinCutTargetEdge } from "admin/rest_api";
 import sortBy from "lodash-es/sortBy";
 import { call, put, take } from "redux-saga/effects";
+import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_server_objects";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { cancel, delay, takeEvery } from "typed-redux-saga";
 import { WkDevFlags } from "viewer/api/wk_dev";
@@ -54,7 +55,6 @@ import {
   prepareGetNeighborsForAgglomerateNode,
   simulatePartitionedSplitAgglomeratesViaMeshes,
 } from "./proofreading_test_utils";
-import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_server_objects";
 
 describe("Proofreading (with auxiliary mesh loading enabled)", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;

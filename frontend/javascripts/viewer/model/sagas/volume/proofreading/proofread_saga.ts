@@ -12,6 +12,7 @@ import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Toast from "libs/toast";
 import { getAdaptToTypeFunction, isEditableEventTarget, isNumberMap, SoftError } from "libs/utils";
 import window from "libs/window";
+import { uniq } from "lodash-es";
 import isEqual from "lodash-es/isEqual";
 import union from "lodash-es/union";
 import uniqBy from "lodash-es/uniqBy";
@@ -128,7 +129,6 @@ import {
   syncAgglomerateSkeletonsAfterMergeAction,
   syncAgglomerateSkeletonsAfterSplitAction,
 } from "./agglomerate_skeleton_syncing_saga_helpers";
-import { uniq } from "lodash-es";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   return function* (...args: any[]) {

@@ -27,8 +27,13 @@ import { Store } from "viewer/singletons";
 import { startSaga, type WebknossosState } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  mergeSegment1And4,
+  mergeSegment5And6,
   mergeSegment5And6WithAgglomerateTree1,
   mergeSegment5And6WithAgglomerateTree1And4,
+  splitSegment1And2,
+  splitSegment1And2WithAgglomerateTree1,
+  splitSegment2And3,
 } from "./proofreading_interaction_update_action_fixtures";
 import {
   mockEdgesForAgglomerateMinCut,
@@ -37,7 +42,9 @@ import {
   performSplitTreesProofreading,
 } from "./proofreading_skeleton_test_utils";
 import {
+  expectSegmentList,
   getAllCurrentlyLoadedMeshIds,
+  getPositionForSegmentId,
   initializeMappingAndTool,
   loadAgglomerateMeshes,
   makeMappingEditableHelper,
@@ -47,6 +54,7 @@ import {
   prepareGetNeighborsForAgglomerateNode,
   simulatePartitionedSplitAgglomeratesViaMeshes,
 } from "./proofreading_test_utils";
+import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_server_objects";
 
 describe("Proofreading (with auxiliary mesh loading enabled)", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;
@@ -86,7 +94,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
   describe.each([false, true])("With othersMayEdit=%s", (othersMayEdit: boolean) => {
     it("should load auxiliary meshes", async (context: WebknossosTestContext) => {
-      const _backendMock = mockInitialBucketAndAgglomerateData(context);
+      const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
       const task = startSaga(function* task(): Saga<void> {
         const { tracingId } = yield* select(
@@ -107,7 +115,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
     });
 
     it("should reload auxiliary meshes after merge", async (context: WebknossosTestContext) => {
-      const _backendMock = mockInitialBucketAndAgglomerateData(context);
+      const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
       const task = startSaga(function* task(): Saga<void> {
         const { tracingId } = yield* select(
@@ -122,7 +130,9 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         // due to the user's interactions.
         yield loadAgglomerateMeshes([1, 6]);
 
-        yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+        yield put(
+          updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
+        );
         yield put(setActiveCellAction(1));
         // Give mesh loading a little time
         const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
@@ -155,13 +165,23 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         expect([...addedMeshes]).toEqual([1]);
         yield cancel(forkedEffect1);
         yield cancel(forkedEffect2);
+        yield expectSegmentList(tracingId, [
+          {
+            id: 1,
+            anchorPosition: [1, 1, 1],
+          },
+          {
+            id: 6,
+            anchorPosition: [6, 6, 6],
+          },
+        ]);
       });
       await task.toPromise();
     });
 
     it("should reload auxiliary meshes after split", async (context: WebknossosTestContext) => {
       const { mocks } = context;
-      const _backendMock = mockInitialBucketAndAgglomerateData(context);
+      const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
       const task = startSaga(function* task(): Saga<void> {
         const { tracingId } = yield* select(
@@ -217,41 +237,39 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         expect(sortBy([...addedMeshes])).toEqual([1, 1339]);
         yield cancel(forkedEffect1);
         yield cancel(forkedEffect2);
+        yield expectSegmentList(tracingId, [
+          {
+            id: 1,
+            anchorPosition: [1, 1, 1],
+          },
+          {
+            id: 4,
+            anchorPosition: [4, 4, 4],
+          },
+          {
+            id: 1339,
+            anchorPosition: [2, 2, 2],
+          },
+        ]);
       });
       await task.toPromise();
     });
   });
 
   it("should reload auxiliary meshes after applying foreign merge action (no rebase)", async (context: WebknossosTestContext) => {
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task(): Saga<void> {
       const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
       yield call(initializeMappingAndTool, context, tracingId);
       yield put(setOthersMayEditForAnnotationAction(true));
 
-      // Set up the merge-related segment partners. Normally, this would happen
-      // due to the user's interactions.
       yield loadAgglomerateMeshes([1, 4, 6]);
       const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect([...loadedMeshIds]).toEqual([1, 4, 6]);
 
       // After the meshes are loaded simulate a user making a merge.
-      backendMock.injectVersion(
-        [
-          {
-            name: "mergeAgglomerate",
-            value: {
-              actionTracingId: "volumeTracingId",
-              segmentId1: 5,
-              segmentId2: 6,
-              agglomerateId1: 4,
-              agglomerateId2: 6,
-            },
-          },
-        ],
-        4,
-      );
+      backendMock.planMultipleVersionInjections(4, mergeSegment5And6);
 
       const [removedMeshes, forkedEffect1] = yield* trackRemovedMeshActions();
       const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
@@ -270,58 +288,34 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       expect(sortBy([...addedMeshes])).toEqual([4]);
       yield cancel(forkedEffect1);
       yield cancel(forkedEffect2);
+      yield expectSegmentList(tracingId, [
+        {
+          id: 4,
+          anchorPosition: [6, 6, 6],
+        },
+        {
+          id: 1,
+          anchorPosition: [1, 1, 1],
+        },
+      ]);
     });
     await task.toPromise();
   });
 
   it("should reload auxiliary meshes after applying foreign split action (no rebase)", async (context: WebknossosTestContext) => {
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task(): Saga<void> {
       const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
       yield call(initializeMappingAndTool, context, tracingId);
       yield put(setOthersMayEditForAnnotationAction(true));
 
-      // Set up the merge-related segment partners. Normally, this would happen
-      // due to the user's interactions.
       yield loadAgglomerateMeshes([1, 4, 6]);
       const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect([...loadedMeshIds]).toEqual([1, 4, 6]);
 
       // After the meshes are loaded simulate a user making a split.
-      backendMock.injectVersion(
-        [
-          {
-            name: "splitAgglomerate",
-            value: {
-              actionTracingId: "volumeTracingId",
-              segmentId1: 3,
-              segmentId2: 2,
-              agglomerateId: 1,
-            },
-          },
-        ],
-        4,
-      );
-      backendMock.injectVersion(
-        [
-          {
-            name: "createSegment",
-            value: {
-              actionTracingId: "volumeTracingId",
-              id: 1339,
-              anchorPosition: [0, 0, 0],
-              additionalCoordinates: undefined,
-              name: null,
-              color: null,
-              groupId: null,
-              metadata: [],
-              creationTime: 1494695001688,
-            },
-          },
-        ],
-        5,
-      );
+      backendMock.planMultipleVersionInjections(4, splitSegment2And3);
 
       const [removedMeshes, forkedEffect1] = yield* trackRemovedMeshActions();
       const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
@@ -340,25 +334,36 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       expect(sortBy([...addedMeshes])).toEqual([1, 1339]);
       yield cancel(forkedEffect1);
       yield cancel(forkedEffect2);
+      // As the agglomerate meshes were loaded they were added to the segment list.
+      // These segment list changes however are not sent to the server yet. Enforce this
+      // so that local segment list and the segment list mocked in the backend are equal to use expectSegmentList.
+      yield call(() => context.api.tracing.save());
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [3, 3, 3],
+        },
+        {
+          id: 4,
+          anchorPosition: [4, 4, 4],
+        },
+        {
+          id: 6,
+          anchorPosition: [6, 6, 6],
+        },
+        {
+          id: 1339,
+          anchorPosition: [1, 1, 1],
+        },
+      ]);
     });
     await task.toPromise();
   });
 
   it("should load auxiliary meshes when merging agglomerates and incorporating an interfering merge action from the backend", async (context: WebknossosTestContext) => {
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    backendMock.planVersionInjection(9, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 5,
-          segmentId2: 6,
-          agglomerateId1: 4,
-          agglomerateId2: 6,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(9, mergeSegment5And6);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -385,7 +390,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       yield put(
         proofreadMergeAction(
           [4, 4, 4], // unmappedId=4 / mappedId=4 at this position
-          1, // unmappedId=1 maps to 1
+          4, // unmappedId=1 maps to 1
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -402,41 +407,20 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       expect(sortBy([...addedMeshes])).toEqual([1]);
       yield cancel(forkedEffect1);
       yield cancel(forkedEffect2);
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [1, 1, 1],
+        },
+      ]);
     });
-
     await task.toPromise();
   });
 
   it("should load auxiliary meshes when merging agglomerates and incorporating an interfering split action from the backend", async (context: WebknossosTestContext) => {
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    backendMock.planVersionInjection(9, [
-      {
-        name: "splitAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 3,
-          segmentId2: 2,
-          agglomerateId: 1,
-        },
-      },
-    ]);
-    backendMock.planVersionInjection(10, [
-      {
-        name: "createSegment",
-        value: {
-          actionTracingId: "volumeTracingId",
-          id: 1339,
-          anchorPosition: [0, 0, 0],
-          additionalCoordinates: undefined,
-          name: null,
-          color: null,
-          groupId: null,
-          metadata: [],
-          creationTime: 1494695001688,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(9, splitSegment2And3);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -479,26 +463,28 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       expect(sortBy([...addedMeshes])).toEqual([1, 1339]);
       yield cancel(forkedEffect1);
       yield cancel(forkedEffect2);
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [3, 3, 3],
+        },
+        {
+          id: 6,
+          anchorPosition: [6, 6, 6],
+        },
+        {
+          id: 1339,
+          anchorPosition: [1, 1, 1],
+        },
+      ]);
     });
-
     await task.toPromise();
   });
 
   it("should load auxiliary meshes when splitting agglomerates and incorporating an interfering merge action from the backend", async (context: WebknossosTestContext) => {
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    backendMock.planVersionInjection(9, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 1,
-          segmentId2: 4,
-          agglomerateId1: 1,
-          agglomerateId2: 4,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(9, mergeSegment1And4);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -548,41 +534,28 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       expect(sortBy([...addedMeshes])).toEqual([1, 1339]);
       yield cancel(forkedEffect1);
       yield cancel(forkedEffect2);
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [1, 1, 1],
+        },
+        {
+          id: 6,
+          anchorPosition: [6, 6, 6],
+        },
+        {
+          id: 1339,
+          anchorPosition: [2, 2, 2],
+        },
+      ]);
     });
-
     await task.toPromise();
   });
 
   it("should load auxiliary meshes when splitting agglomerates and incorporating an interfering split action from the backend", async (context: WebknossosTestContext) => {
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    backendMock.planVersionInjection(9, [
-      {
-        name: "splitAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 3,
-          segmentId2: 2,
-          agglomerateId: 1,
-        },
-      },
-    ]);
-    backendMock.planVersionInjection(10, [
-      {
-        name: "createSegment",
-        value: {
-          actionTracingId: "volumeTracingId",
-          id: 1339,
-          anchorPosition: [0, 0, 0],
-          additionalCoordinates: undefined,
-          name: null,
-          color: null,
-          groupId: null,
-          metadata: [],
-          creationTime: 1494695001688,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(9, splitSegment2And3);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -634,13 +607,34 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       expect(sortBy([...addedMeshes])).toEqual([1, 1339, 1340]);
       yield cancel(forkedEffect1);
       yield cancel(forkedEffect2);
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [3, 3, 3],
+        },
+        {
+          id: 4,
+          anchorPosition: [4, 4, 4],
+        },
+        {
+          id: 6,
+          anchorPosition: [6, 6, 6],
+        },
+        {
+          id: 1339,
+          anchorPosition: [1, 1, 1],
+        },
+        {
+          id: 1340,
+          anchorPosition: [2, 2, 2],
+        },
+      ]);
     });
-
     await task.toPromise();
   });
 
   it("should reload auxiliary proofreading meshes correctly when cutting agglomerate from all neighbors", async (context: WebknossosTestContext) => {
-    const _backendMock = mockInitialBucketAndAgglomerateData(context);
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     const { mocks } = context;
     prepareGetNeighborsForAgglomerateNode(mocks, 9, true);
 
@@ -674,27 +668,38 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       // Then check auxiliary meshes.
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 6, 1339, 1340]);
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [2, 2, 2],
+        },
+        {
+          id: 4,
+          anchorPosition: [4, 4, 4],
+        },
+        {
+          id: 6,
+          anchorPosition: [6, 6, 6],
+        },
+        {
+          id: 1339,
+          anchorPosition: [1, 1, 1],
+        },
+        {
+          id: 1340,
+          anchorPosition: [3, 3, 3],
+        },
+      ]);
     });
-
     await task.toPromise();
   });
 
   it("should reload auxiliary proofreading meshes correctly when cutting agglomerate from all neighbors after incorporating a new split action from backend", async (context: WebknossosTestContext) => {
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     const { mocks } = context;
     prepareGetNeighborsForAgglomerateNode(mocks, 9, false);
 
-    backendMock.planVersionInjection(10, [
-      {
-        name: "splitAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 1,
-          segmentId2: 2,
-          agglomerateId: 1,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(10, splitSegment1And2);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -720,19 +725,40 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       );
       yield take(
         ((action: Action) =>
-          action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1340) as ActionPattern,
+          action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1) as ActionPattern,
       );
 
       // Then check auxiliary meshes.
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 6, 1339, 1340]);
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [1, 1, 1],
+        },
+        {
+          id: 4,
+          anchorPosition: [4, 4, 4],
+        },
+        {
+          id: 6,
+          anchorPosition: [6, 6, 6],
+        },
+        {
+          id: 1339,
+          anchorPosition: [2, 2, 2],
+        },
+        {
+          id: 1340,
+          anchorPosition: [3, 3, 3],
+        },
+      ]);
     });
-
     await task.toPromise();
   });
 
   it("should reload agglomerate meshes correctly when merging two agglomerate skeletons and incorporating a new merge action from backend", async (context: WebknossosTestContext) => {
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     // Merging agglomerates 4 & 6 based on the segments 5 & 6.
     // As agglomerate trees 1 & 4 are loaded their updates are included as well
     backendMock.planMultipleVersionInjections(11, mergeSegment5And6WithAgglomerateTree1And4);
@@ -768,23 +794,20 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       // Then check auxiliary meshes.
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1]);
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [3, 3, 3],
+        },
+      ]);
     });
-
     await task.toPromise();
   });
 
   it("should reload auxiliary proofreading meshes when splitting agglomerate skeleton and incorporating a new split action from backend", async (context: WebknossosTestContext) => {
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
-    const injectedSplit = {
-      name: "splitAgglomerate" as const,
-      value: {
-        actionTracingId: "volumeTracingId",
-        segmentId1: 1,
-        segmentId2: 2,
-        agglomerateId: 1,
-      },
-    };
-    backendMock.planVersionInjection(10, [injectedSplit]);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+
+    backendMock.planMultipleVersionInjections(10, splitSegment1And2WithAgglomerateTree1);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -810,19 +833,40 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       yield take(
         ((action: Action) =>
-          action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1340) as ActionPattern,
+          action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1) as ActionPattern,
       );
       // Then check auxiliary meshes.
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 6, 1339, 1340]);
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [1, 1, 1],
+        },
+        {
+          id: 4,
+          anchorPosition: [4, 4, 4],
+        },
+        {
+          id: 6,
+          anchorPosition: [6, 6, 6],
+        },
+        {
+          id: 1339,
+          anchorPosition: [2, 2, 2],
+        },
+        {
+          id: 1340,
+          anchorPosition: [3, 3, 3],
+        },
+      ]);
     });
-
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should min cut agglomerate via node ids and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
     // Additional edge to create agglomerate 1 with edges 1-2,2-3,1-3 to enforce cut with multiple edges.
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1, 3]]);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [[1, 3]], Store.getState());
     // Mock backend answer telling saga to split edges 3-2 and 3-1.
     mockEdgesForAgglomerateMinCut(context.mocks, 12, [
       {
@@ -860,13 +904,26 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       yield take(
         ((action: Action) =>
-          action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1339) as ActionPattern,
+          action.type === "FINISHED_LOADING_MESH" && action.segmentId === 4) as ActionPattern,
       );
       // Then check auxiliary meshes.
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 1339]);
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [3, 3, 3],
+        },
+        {
+          id: 4,
+          anchorPosition: [5, 5, 5],
+        },
+        {
+          id: 1339,
+          anchorPosition: [2, 2, 2],
+        },
+      ]);
     });
-
     await task.toPromise();
   }, 8000);
 
@@ -883,10 +940,14 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
     //  [1337, 1],
     //  [1338, 1]]
     // Thus, there should be the following circle of edges: 1-2-3-1337-1338-1.
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [
-      [1, 1338],
-      [3, 1337],
-    ]);
+    const backendMock = mockInitialBucketAndAgglomerateData(
+      context,
+      [
+        [1, 1338],
+        [3, 1337],
+      ],
+      Store.getState(),
+    );
 
     // Mapping after interference should be
     // [[1, 1],
@@ -899,30 +960,47 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
     //  [1337, 1],
     //  [1338, 1]]
     // Contains two circles now but only one is split by the min-cut request.
-    backendMock.planVersionInjection(9, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 1,
-          segmentId2: 4,
-          agglomerateId1: 1,
-          agglomerateId2: 4,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(9, mergeSegment1And4);
 
-    backendMock.planVersionInjection(10, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: "volumeTracingId",
-          segmentId1: 5,
-          segmentId2: 1337,
-          agglomerateId1: 1,
-          agglomerateId2: 1,
+    // An intentional cycle within agglomerate 1 is created here by adding the edge 1337 -> 5.
+    // This means there is no createSegment action but an updateSegmentPartial and the agglomerate ids
+    // in the merge actions are identical.
+    backendMock.planMultipleVersionInjections(12, [
+      [
+        {
+          name: "updateSegmentPartial" as const,
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            id: 1,
+            anchorPosition: getPositionForSegmentId(1337),
+          },
         },
-      },
+      ],
+      [
+        // This action intentionally creates a cycle in the agglomerate.
+        {
+          name: "mergeAgglomerate" as const,
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            agglomerateId1: 1,
+            agglomerateId2: 1,
+            segmentId1: 1337,
+            segmentId2: 5,
+          },
+        },
+      ],
+      [
+        {
+          name: "mergeSegmentItems" as const,
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            agglomerateId1: 1,
+            agglomerateId2: 1,
+            segmentId1: 1337,
+            segmentId2: 5,
+          },
+        },
+      ],
     ]);
 
     mockEdgesForPartitionedAgglomerateMinCut(mocks, 8);
@@ -959,8 +1037,17 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       // Then check auxiliary meshes.
       const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6]);
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [1, 1, 1],
+        },
+        {
+          id: 6,
+          anchorPosition: [6, 6, 6],
+        },
+      ]);
     });
-
     await task.toPromise();
   });
 });

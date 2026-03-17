@@ -480,18 +480,24 @@ describe("Proofreading (Multi User)", () => {
         ]),
       );
 
-      // todop
-      // yield call(publishDebuggingState, backendMock);
-      // yield expectSegmentList(tracingId, [
-      //   {
-      //     id: 1339,
-      //     anchorPosition: [2, 2, 2],
-      //   },
-      //   {
-      //     id: 1340,
-      //     anchorPosition: [3, 3, 3],
-      //   },
-      // ]);
+      yield expectSegmentList(
+        tracingId,
+        [
+          {
+            id: 1,
+            anchorPosition: [1, 1, 1],
+          },
+          {
+            id: 1339,
+            anchorPosition: [2, 2, 2],
+          },
+          {
+            id: 1340,
+            anchorPosition: [3, 3, 3],
+          },
+        ],
+        backendMock,
+      );
     });
 
     await task.toPromise();
@@ -590,7 +596,6 @@ describe("Proofreading (Multi User)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      // todop: what did I want to do here?
       yield* prepareEditableMapping(context, tracingId, 1, [2, 2, 2]);
 
       // Execute the actual merge and wait for the finished mapping.

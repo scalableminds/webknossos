@@ -386,7 +386,7 @@ export class BackendMock {
 }
 
 const initialBucketOverrides: Array<{ position: Vector3; value: number }> = [
-  { position: [100, 100, 100], value: 1337 }, // todop: can we change the positions to to 1337³ etc?
+  { position: [100, 100, 100], value: 1337 },
   { position: [101, 101, 101], value: 1338 },
   { position: [1, 1, 1], value: 1 },
   { position: [2, 2, 2], value: 2 },
@@ -535,8 +535,6 @@ export function getAllCurrentlyLoadedMeshIds(
   return loadedMeshIds;
 }
 
-// todom/todop: this activates segment item 2 but there is no agglomerate 2
-// in the initial mapping.
 export function* performCutFromAllNeighbours(
   context: WebknossosTestContext,
   tracingId: string,

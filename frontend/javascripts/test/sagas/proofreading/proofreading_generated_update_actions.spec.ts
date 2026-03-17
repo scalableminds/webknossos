@@ -112,7 +112,7 @@ describe("Proofreading should generate correct update actions", () => {
       yield put(
         updateSegmentAction(
           agglomerateId,
-          { anchorPosition: [agglomerateId, agglomerateId, agglomerateId] }, // todop/todom: use getPositionForSegmentId
+          { anchorPosition: getPositionForSegmentId(agglomerateId) },
           tracingId,
         ),
       );
@@ -121,7 +121,7 @@ describe("Proofreading should generate correct update actions", () => {
       yield put(setOthersMayEditForAnnotationAction(true));
 
       vi.mocked(context.mocks.parseProtoTracing).mockRestore();
-      yield call(loadAgglomerateSkeletonAtPosition, [agglomerateId, agglomerateId, agglomerateId]); // todop: use getPositionForSegmentId
+      yield call(loadAgglomerateSkeletonAtPosition, getPositionForSegmentId(agglomerateId));
     });
 
     await task.toPromise();

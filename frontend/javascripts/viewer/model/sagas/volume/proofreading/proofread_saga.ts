@@ -1706,11 +1706,8 @@ export function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Prep
 
   const mapSegmentId = (segmentId: number, overrideMapping: Mapping | null = null): number => {
     const mappingToAccess = overrideMapping ?? mapping;
-    // todop: use numberlikemapwrapper
-    const mappedId = isNumberMap(mappingToAccess)
-      ? mappingToAccess.get(Number(segmentId))
-      : // TODO: Proper 64 bit support (#6921)
-        Number(mappingToAccess.get(BigInt(segmentId)));
+    const mappingWrapper = new NumberLikeMapWrapper(mappingToAccess);
+    const mappedId = mappingWrapper.getAsNumber(segmentId);
     if (mappedId == null) {
       // It could happen that the user tries to perform a proofreading operation
       // that involves an id for which the mapped id wasn't fetched yet.
@@ -2234,11 +2231,6 @@ function* gatherInfoForOperation(
   const targetSegmentId = action.segmentId;
 
   if (action.type === "PROOFREAD_MERGE") {
-    // todop
-    // When merging two segments, they can share the same seed position afterwards.
-    // Also, using the active segment position is fine because it's definitely
-    // matching the active agglomerate.
-    // Therefore, we do so to avoid another roundtrip to the server.
     const idInfos: [IdInfo, IdInfoOpt] = [
       {
         agglomerateId: activeCellId,
@@ -2248,6 +2240,9 @@ function* gatherInfoForOperation(
       {
         agglomerateId: action.agglomerateId,
         unmappedId: action.segmentId,
+        // Strictly speaking, we do not have a valid position for the target segment
+        // here. *After* the merge, the source position would also be valid for
+        // the target, but we leave that logic to the caller.
         position: undefined,
       },
     ];

@@ -27,6 +27,8 @@ export class NumberLikeMapWrapper<T extends number | bigint> {
   }
 
   getAsNumber(key: number): number | undefined {
+    // TODO: When implementing proper 64 bit support (#6921),
+    // getAsNumber should probably not be used anymore at all.
     const val = this.get(key);
     if (val === undefined) {
       return val;

@@ -134,14 +134,23 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
   ]);
 
   const handleStartAnalysis = useCallback(async () => {
-    if (!areParametersValid) {
+    if (
+      !areParametersValid ||
+      // These variables are already checked with areParametersValid, but the checks
+      // are needed for TS.
+      selectedModel == null ||
+      selectedJobType == null ||
+      selectedBoundingBox == null ||
+      newDatasetName == null ||
+      selectedLayer == null
+    ) {
       Toast.error("Please select a model, bounding box, and provide a dataset name.");
       return;
     }
 
     await Model.ensureSavedState();
 
-    const boundingBox = computeArrayFromBoundingBox(selectedBoundingBox!.boundingBox);
+    const boundingBox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
     const maybeAnnotationId = isViewMode ? {} : { annotationId };
 
     if (isEvaluationActive) {
@@ -165,9 +174,8 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
       }
     }
 
-    const isColorLayerInverted = datasetConfiguration.layers[selectedLayer!.name].isInverted;
-    const aiModelId =
-      selectedModel != null && "trainingJob" in selectedModel ? selectedModel.id : undefined;
+    const isColorLayerInverted = datasetConfiguration.layers[selectedLayer.name].isInverted;
+    const aiModelId = "trainingJob" in selectedModel ? selectedModel.id : undefined;
 
     try {
       switch (selectedJobType) {
@@ -176,7 +184,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
             ...maybeAnnotationId,
             aiModelId,
             datasetId: dataset.id,
-            colorLayerName: selectedLayer!.name,
+            colorLayerName: selectedLayer.name,
             boundingBox: boundingBox.join(","),
             newDatasetName,
             invertColorLayer: isColorLayerInverted,
@@ -195,7 +203,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
         case APIJobCommand.INFER_NUCLEI:
           await runInstanceModelInference({
             datasetId: dataset.id,
-            colorLayerName: selectedLayer!.name,
+            colorLayerName: selectedLayer.name,
             boundingBox: boundingBox.join(","),
             newDatasetName,
             invertColorLayer: isColorLayerInverted,
@@ -205,7 +213,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
           await runInstanceModelInference({
             datasetId: dataset.id,
             aiModelId,
-            colorLayerName: selectedLayer!.name,
+            colorLayerName: selectedLayer.name,
             boundingBox: boundingBox.join(","),
             newDatasetName,
             invertColorLayer: isColorLayerInverted,
@@ -215,7 +223,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
         case APIJobCommand.INFER_MITOCHONDRIA:
           await runPretrainedMitochondriaInferenceJob(
             dataset.id,
-            selectedLayer!.name,
+            selectedLayer.name,
             boundingBox,
             newDatasetName,
           );

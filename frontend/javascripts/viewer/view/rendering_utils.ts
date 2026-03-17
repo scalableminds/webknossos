@@ -123,7 +123,7 @@ function getScreenshotLogoImage(): Promise<HTMLImageElement> {
 
 export async function downloadScreenshot() {
   const { dataset, flycam, temporaryConfiguration, userConfiguration } = Store.getState();
-  const { antialiasRendering, renderWatermark } = userConfiguration;
+  const { renderWatermark } = userConfiguration;
   const { viewMode } = temporaryConfiguration;
   const datasetName = dataset.name;
   const [x, y, z] = getFlooredPosition(flycam);
@@ -137,14 +137,8 @@ export async function downloadScreenshot() {
     if (width === 0 || height === 0) continue;
     const clearColor = planeId !== "arbitraryViewport" ? OrthoViewColors[planeId] : 0xffffff;
 
-    const buffer = renderToTexture(
-      planeId,
-      undefined,
-      undefined,
-      false,
-      clearColor,
-      antialiasRendering,
-    );
+    // Always anti-alias when creating screenshots since it looks better and performance is mostly irrelevant
+    const buffer = renderToTexture(planeId, undefined, undefined, false, clearColor, true);
 
     const inputCatcherElement = document.querySelector(`#inputcatcher_${planeId}`);
     const drawImageIntoCanvasCallback =

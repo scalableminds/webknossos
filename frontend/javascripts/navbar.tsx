@@ -462,9 +462,7 @@ function getDashboardSubMenu(collapse: boolean): SubMenuType {
   };
 }
 
-function getWhatsNewMenuEntry(activeUser: APIUser) {
-  const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
-
+function getWhatsNewMenuEntry(activeUser: APIUser, maybeUnreadReleaseCount: number | null) {
   const handleShowWhatsNewView = () => {
     const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
       lastViewedWhatsNewTimestamp: Date.now(),
@@ -568,6 +566,7 @@ function LoggedInAvatar({
     activeOrganization != null ? activeOrganization.name || activeOrganization.id : organizationId;
   const [organizationFilter, onChangeOrganizationFilter] = useState("");
   const [openKeys, setOpenKeys] = useState<string[]>([]);
+  const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
 
   const filteredOrganizations = filterWithSearchQueryAND(
     switchableOrganizations,
@@ -629,7 +628,7 @@ function LoggedInAvatar({
               disabled: true,
             },
             { type: "divider" },
-            getWhatsNewMenuEntry(activeUser),
+            getWhatsNewMenuEntry(activeUser, maybeUnreadReleaseCount),
             {
               key: "account",
               label: <Link to="/account">Account Settings</Link>,

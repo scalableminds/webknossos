@@ -171,8 +171,8 @@ export default function LogTab({
           />{" "}
           Fullscreen
         </span>
-        <Button onClick={() => loadLog()}>
-          <SyncOutlined spin={isLoading} /> Refresh
+        <Button onClick={() => loadLog()} icon={<SyncOutlined spin={isLoading} />}>
+          Refresh
         </Button>
         <Button onClick={downloadFullLog}>Download</Button>
         <Select onChange={(value) => setLevel(value)} value={level} style={{ marginLeft: -1 }}>

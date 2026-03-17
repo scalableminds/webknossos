@@ -252,12 +252,13 @@ class ZarrStreamingController @Inject()(
     for {
       (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> SERVICE_UNAVAILABLE
       reorderedAdditionalAxes = dataLayer.additionalAxes.map(reorderAdditionalAxes)
+      // Failures in parsing coordinates or mag need to still be NOT_FOUND, not BAD_REQUEST because neuroglancer tries to access :layer_name/:mag/.zattrs
       (x, y, z, additionalCoordinates) <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates(
         coordinates,
-        reorderedAdditionalAxes) ?~> "zarr.invalidChunkCoordinates" ~> BAD_REQUEST
+        reorderedAdditionalAxes) ?~> "zarr.invalidChunkCoordinates" ~> NOT_FOUND
       magParsed <- Vec3Int
         .fromMagLiteral(mag, allowScalar = true)
-        .toFox ?~> Messages("dataLayer.invalidMag", mag) ~> BAD_REQUEST
+        .toFox ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
       _ <- Fox.fromBool(dataLayer.containsMag(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> NOT_FOUND
       cubeSize = DataLayer.bucketLength
       request = DataServiceDataRequest(

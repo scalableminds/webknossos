@@ -264,13 +264,11 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
             throw new Exception(
               s"Chunk request currentChunkSize $currentChunkSize doesn’t match passed file length ${bytes.length}")
           }
-          this.synchronized {
-            PathUtils.ensureDirectory(uploadDir.resolve(filePath).getParent)
-            val tempFile = new RandomAccessFile(uploadDir.resolve(filePath).toFile, "rw")
-            tempFile.seek((currentChunkNumber - 1) * chunkSize)
-            tempFile.write(bytes)
-            tempFile.close()
-          }
+          PathUtils.ensureDirectory(uploadDir.resolve(filePath).getParent)
+          val tempFile = new RandomAccessFile(uploadDir.resolve(filePath).toFile, "rw")
+          tempFile.seek((currentChunkNumber - 1) * chunkSize)
+          tempFile.write(bytes)
+          tempFile.close()
           Fox.successful(())
         } catch {
           case e: Exception =>
@@ -422,9 +420,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
           } yield UPath.fromLocalPath(finalUploadedLocalPath)
         }
         dataSourceWithAdaptedPaths = dataSourceService.resolvePathsInNewBasePath(usableDataSourceFromDir, newBasePath)
-        _ = this.synchronized {
-          PathUtils.deleteDirectoryRecursively(unpackedDir)
-        }
+        _ = PathUtils.deleteDirectoryRecursively(unpackedDir)
       } yield Some(dataSourceWithAdaptedPaths)
     }
 
@@ -503,7 +499,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       prefix: String
   ): Fox[Unit] =
     for {
-      transferManager <- managedS3Service.s3UploadTransferManagerBox.toFox ?~> "S3 upload is not properly configured, cannot get S3 client"
+      transferManager <- managedS3Service.s3UploadTransferManagerFox ?~> "S3 upload is not properly configured, cannot get S3 client"
       directoryUpload = transferManager.uploadDirectory(
         UploadDirectoryRequest.builder().bucket(bucketName).s3Prefix(prefix).source(dataDir).build()
       )
@@ -762,10 +758,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def cleanUpUploadedDataset(uploadDir: Path, uploadId: String, reason: String): Fox[Unit] =
     for {
       _ <- Fox.successful(logger.info(s"Cleaning up uploaded dataset. Reason: $reason"))
+      _ <- PathUtils.deleteDirectoryRecursively(uploadDir).toFox
       _ <- removeFromRedis(uploadId)
-      _ <- this.synchronized {
-        PathUtils.deleteDirectoryRecursively(uploadDir).toFox
-      }
     } yield ()
 
   private def removeFromRedis(uploadId: String): Fox[Unit] =

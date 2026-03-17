@@ -20,6 +20,7 @@ const PopoverContent: React.FC<EmptyObject> = () => {
   const dispatch = useDispatch();
   const rotation = useWkSelector((state) => state.flycam.rotation);
   const allowedModes = useWkSelector((state) => state.annotation.restrictions.allowedModes);
+  const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
   const handleChangeRotation = useCallback(
     (rotation: Vector3) => {
       dispatch(setRotationAction(rotation));
@@ -42,7 +43,7 @@ const PopoverContent: React.FC<EmptyObject> = () => {
           <Switch
             disabled={!allowedModes.includes("flight")}
             onChange={setViewMode}
-            value={useWkSelector((state) => state.temporaryConfiguration.viewMode) === "flight"}
+            value={viewMode === "flight"}
           />
         </Col>
       </Row>
@@ -123,7 +124,7 @@ const DatasetRotationPopoverButtonView: React.FC<{ style: React.CSSProperties }>
   const isFlycamRotated = useWkSelector((state) => isRotated(state.flycam));
   const maybeWarningStyle = isFlycamRotated ? { ...style, ...warningColors, zIndex: 1 } : style;
   return (
-    <Popover content={<PopoverContent />}>
+    <Popover content={<PopoverContent />} open>
       <Button icon={<SyncOutlined />} style={maybeWarningStyle} />
     </Popover>
   );

@@ -1,6 +1,5 @@
 import Icon, {
   BarChartOutlined,
-  BellOutlined,
   ExperimentOutlined,
   HomeOutlined,
   QuestionCircleOutlined,
@@ -36,7 +35,6 @@ import {
 import type { ItemType, MenuItemType, SubMenuType } from "antd/es/menu/interface";
 import { MaintenanceBanner, UpgradeVersionBanner } from "banners";
 import classnames from "classnames";
-import FastTooltip from "components/fast_tooltip";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import features from "features";
 import { useFetch, useInterval } from "libs/react_helpers";
@@ -63,6 +61,7 @@ import {
 } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
+import { Store } from "viewer/singletons";
 import { HelpModal } from "viewer/view/help_modal";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
 
@@ -463,15 +462,14 @@ function getDashboardSubMenu(collapse: boolean): SubMenuType {
   };
 }
 
-function NotificationMenuEntry({ activeUser }: { activeUser: APIUser; navbarHeight: number }) {
-  const dispatch = useDispatch();
+function getWhatsNewMenuEntry(activeUser: APIUser) {
   const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
 
   const handleShowWhatsNewView = () => {
     const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
       lastViewedWhatsNewTimestamp: Date.now(),
     });
-    dispatch(setActiveUserAction(newUserSync));
+    Store.dispatch(setActiveUserAction(newUserSync));
     sendAnalyticsEvent("open_whats_new_view");
 
     if (window.Olvy) {
@@ -481,14 +479,20 @@ function NotificationMenuEntry({ activeUser }: { activeUser: APIUser; navbarHeig
     }
   };
 
-  return (
-    <FastTooltip title="See what's new in WEBKNOSSOS">
-      <Badge count={maybeUnreadReleaseCount || 0} size="small" offset={[10, 0]}>
-        <BellOutlined />
-        <span onClick={handleShowWhatsNewView}> What's New </span>
+  return {
+    key: "whatsNew",
+    label: (
+      <Badge
+        className="navbar-whats-new-badge"
+        count={maybeUnreadReleaseCount || 0}
+        size="small"
+        offset={[10, 0]}
+      >
+        What's new
       </Badge>
-    </FastTooltip>
-  );
+    ),
+    onClick: handleShowWhatsNewView,
+  };
 }
 
 export const switchTo = async (org: APIOrganizationCompact) => {
@@ -615,17 +619,6 @@ function LoggedInAvatar({
           style: { padding: 0 },
           children: [
             {
-              key: "whatsNew",
-              label: (
-                <NotificationMenuEntry
-                  key="notification-icon"
-                  activeUser={activeUser}
-                  navbarHeight={navbarHeight}
-                />
-              ),
-            },
-            { type: "divider" },
-            {
               key: "userName",
               label: `${firstName} ${lastName}`,
               disabled: true,
@@ -635,9 +628,8 @@ function LoggedInAvatar({
               label: orgName,
               disabled: true,
             },
-            {
-              type: "divider",
-            },
+            { type: "divider" },
+            getWhatsNewMenuEntry(activeUser),
             {
               key: "account",
               label: <Link to="/account">Account Settings</Link>,

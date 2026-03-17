@@ -15,27 +15,11 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.{
   NgffMetadataV0_5,
   ZarrHeader
 }
-import com.scalableminds.webknossos.datastore.datareaders.zarr3.{
-  BytesCodecConfiguration,
-  ChunkGridConfiguration,
-  ChunkGridSpecification,
-  ChunkKeyEncoding,
-  ChunkKeyEncodingConfiguration,
-  NgffZarr3GroupHeader,
-  TransposeCodecConfiguration,
-  TransposeSetting,
-  Zarr3ArrayHeader
-}
+import com.scalableminds.webknossos.datastore.datareaders.zarr3._
 import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder}
 import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, UPath}
+import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, WebknossosDataRequest}
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  AdditionalAxis,
-  DataFormat,
-  DataLayer,
-  ElementClass,
-  StaticSegmentationLayer
-}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
@@ -304,14 +288,15 @@ class VolumeTracingZarrStreamingController @Inject()(
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
             tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> BAD_REQUEST
             existingMags = tracing.mags.map(vec3IntFromProto)
+            // Failures in parsing coordinates or mag need to still be NOT_FOUND, not BAD_REQUEST because neuroglancer tries to access :layer_name/:mag/.zattrs
             magParsed <- Vec3Int
               .fromMagLiteral(mag, allowScalar = true)
-              .toFox ?~> Messages("dataLayer.invalidMag", mag) ~> BAD_REQUEST
+              .toFox ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
             _ <- Fox.fromBool(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
             reorderedAdditionalAxes = reorderAdditionalAxes(AdditionalAxis.fromProtos(tracing.additionalAxes))
             (x, y, z, additionalCoordinates) <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates(
               coordinates,
-              Some(reorderedAdditionalAxes)) ?~> Messages("zarr.invalidChunkCoordinates") ~> BAD_REQUEST
+              Some(reorderedAdditionalAxes)) ?~> Messages("zarr.invalidChunkCoordinates") ~> NOT_FOUND
             cubeSize = DataLayer.bucketLength
             wkRequest = WebknossosDataRequest(
               position = Vec3Int(x, y, z) * cubeSize * magParsed,

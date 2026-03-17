@@ -72,7 +72,9 @@ class ManagedS3Service @Inject()(config: DataStoreConfig, s3ClientPoolHolder: S3
 
   private lazy val s3UploadClientFox: Fox[S3AsyncClient] = for {
     s3UploadCredential <- s3UploadCredentialOpt.toFox
-    client <- s3ClientPoolHolder.s3ClientPool.getS3Client(Some(s3UploadCredential), s3UploadEndpoint)
+    client <- s3ClientPoolHolder.s3ClientPool.getS3Client(Some(s3UploadCredential),
+                                                          s3UploadEndpoint,
+                                                          isForUpload = true)
   } yield client
 
   lazy val s3UploadTransferManagerFox: Fox[S3TransferManager] = for {

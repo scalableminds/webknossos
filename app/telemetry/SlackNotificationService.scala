@@ -56,4 +56,10 @@ class SlackNotificationService @Inject()(rpc: RPC, config: WkConf) extends LazyL
       title = "Slow request",
       msg = msg
     )
+
+  def noticeStartup(version: String): Unit =
+    slackClient.info(
+      title = "Startup",
+      msg = s"WEBKNOSSOS version `$version` started"
+    )
 }

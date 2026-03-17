@@ -1,7 +1,7 @@
+import { getPositionForSegmentId } from "test/sagas/proofreading/proofreading_test_utils";
 import { updateSegmentAction } from "viewer/model/actions/volumetracing_actions";
 import type { Segment, WebknossosState } from "viewer/store";
 import { VOLUME_TRACING_ID } from "./volumetracing_server_objects";
-import { getPositionForSegmentId } from "test/sagas/proofreading/proofreading_test_utils";
 
 export const getSegment = (state: WebknossosState, id: number) =>
   state.annotation.volumes[0].segments.getNullable(id);

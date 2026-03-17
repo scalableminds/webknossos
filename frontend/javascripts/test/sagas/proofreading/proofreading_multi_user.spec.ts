@@ -480,18 +480,24 @@ describe("Proofreading (Multi User)", () => {
         ]),
       );
 
-      // todop
-      // yield call(publishDebuggingState, backendMock);
-      // yield expectSegmentList(tracingId, [
-      //   {
-      //     id: 1339,
-      //     anchorPosition: [2, 2, 2],
-      //   },
-      //   {
-      //     id: 1340,
-      //     anchorPosition: [3, 3, 3],
-      //   },
-      // ]);
+      yield expectSegmentList(
+        tracingId,
+        [
+          {
+            id: 1,
+            anchorPosition: [1, 1, 1],
+          },
+          {
+            id: 1339,
+            anchorPosition: [2, 2, 2],
+          },
+          {
+            id: 1340,
+            anchorPosition: [3, 3, 3],
+          },
+        ],
+        backendMock,
+      );
     });
 
     await task.toPromise();

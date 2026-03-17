@@ -109,13 +109,13 @@ export function* synchronizeAnnotationWithBackend(
       "Save Queue Draining",
     );
     // Wait until we have the newest version. This *must* happen after
-    // dispatchEnsureMaySaveNowAsync, because otherwise there would be a
+    // subscribeToAnnotationMutex, because otherwise there would be a
     // race condition where the frontend thinks that it knows about the newest
     // version when in fact somebody else saved a newer version in the meantime.
     yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
   }
   // Send (parts of) the save queue to the server.
-  // There are two main cases:
+  // There are three main cases:
   // 1) forcePush is true
   //    The user explicitly requested to save an annotation.
   //    In this case, batches are sent to the server until the save

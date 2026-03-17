@@ -172,6 +172,11 @@ function getUnsubscribeFromAnnotationMutexSaga(id: number): () => Saga<void> {
 }
 
 export function* subscribeToAnnotationMutex(callerId: string): Saga<() => Saga<void>> {
+  /*
+   * Blocks until the mutex annotation has been acquired and returns a function
+   * which should be used to release the annotation mutex (note, that the mutex
+   * will only be released when no other "subscription" is pending).
+   */
   const state = getMutexLogicState();
   let newId = Math.round(Math.random() * 10000);
   while (newId in state.subscribersToMutex) {

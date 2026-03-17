@@ -326,7 +326,7 @@ function* updatePendingProofreadingOperationInfoAction() {
 
 function* applyNewestMissingUpdateActions(
   actions: APIUpdateActionBatch[],
-  isRebasing: boolean,
+  needsRewindingRebase: boolean,
 ): Saga<ApplyingUpdateResults> {
   if (actions.length === 0) {
     Toast.close(SAVING_CONFLICT_TOAST_KEY);
@@ -337,7 +337,7 @@ function* applyNewestMissingUpdateActions(
       state.annotation.restrictions.allowSave && state.annotation.isUpdatingCurrentlyAllowed,
   );
   try {
-    if (!isRebasing) {
+    if (!needsRewindingRebase) {
       // If no rebasing is currently done, we still need to inform the diffing saga, that the currently replayed
       // update actions originate from the server and should not be considered during diffing.
       yield put(startForwardingUpdateActionsAction());
@@ -345,7 +345,7 @@ function* applyNewestMissingUpdateActions(
     const { success, artifactInfos } = yield* tryToIncorporateActions(actions, false);
     // Updates the annotation state used for future rebase operation the the current state with the missingUpdateActions applied.
     yield* put(finishedApplyingMissingUpdatesAction());
-    if (!isRebasing) {
+    if (!needsRewindingRebase) {
       yield* put(finishForwardingUpdateActionsAction());
     }
     if (success) {
@@ -445,17 +445,18 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   const hasNewActionsFromBackend = missingUpdateActions.length > 0;
 
   // Side note: In a scenario where a user has an annotation open that they are not allowed to edit but another user is actively editing,
-  // this code will notice that there are missingUpdateActions and apply them. This should not trigger a full rebase and should
-  // be ensured because "not allowed to edit" means the save queue would be empty. Thus no needsRebasing = true.
-  const needsRebasing =
+  // this code will notice that there are missingUpdateActions and apply them. This should not trigger a full "rewinding" rebase
+  // and should be ensured because "not allowed to edit" means the save queue would be empty. Thus no needsRewindingRebase = true.
+  const needsRewindingRebase =
     WkDevFlags.liveCollab &&
     othersMayEdit &&
     hasNewActionsFromBackend &&
     saveQueueEntries.length > 0;
   const annotationBeforeRebase = yield* select((state) => state.annotation);
-  if (needsRebasing) {
+  if (needsRewindingRebase) {
     // As a side-effect of this call,
-    // the annotation in the store will be set to the info stored in RebaseRelevantAnnotationState.
+    // the annotation in the store will be set to the info stored in RebaseRelevantAnnotationState
+    // (similar to a git stash before doing a git pull & git stash pop).
     yield* call(diffTracingsAndPrepareRebase);
   }
 
@@ -464,14 +465,14 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
       const applyingResult = yield* call(
         applyNewestMissingUpdateActions,
         missingUpdateActions,
-        needsRebasing,
+        needsRewindingRebase,
       );
       if (!applyingResult.success) {
         return { successful: false, shouldTerminate: false };
       }
       yield* call(resolveApplyingUpdateArtifacts, applyingResult.artifactInfos);
     }
-    if (needsRebasing) {
+    if (needsRewindingRebase) {
       // If no rebasing was necessary, the pending update actions in the save queue must not be reapplied.
       const { success: successful } = yield* call(
         reapplyUpdateActionsFromSaveQueue,

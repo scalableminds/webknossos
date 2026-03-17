@@ -527,11 +527,13 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
   onRenderTabSet = (
     tabSetNode: TabSetNode | BorderNode,
     renderValues: {
+      leading?: React.ReactNode;
       buttons: Array<React.ReactNode>;
+      stickyButtons: Array<React.ReactNode>;
       headerContent?: React.ReactNode;
     },
   ) => {
-    const { isTopMost, isRightMost } = getPositionStatusOf(tabSetNode);
+    const { isTopMost, isRightMost, isLeftMost } = getPositionStatusOf(tabSetNode);
 
     if (isTopMost && isRightMost) {
       renderValues.buttons.push(
@@ -542,27 +544,11 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
         />,
       );
     }
-  };
 
-  onRenderTab = (tabNode: TabNode, renderValues: Record<string, any>) => {
-    const parent = tabNode.getParent();
-
-    if (parent?.getType() !== "tabset") {
-      // Do not consider borders, only tabsets in the center layout.
-      return;
-    }
-
-    const parentTabSetNode = parent;
-
-    if (parentTabSetNode.getChildren()[0].getId() === tabNode.getId()) {
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Node' is not assignable to param... Remove this comment to see the full error message
-      const { isTopMost, isLeftMost } = getPositionStatusOf(parentTabSetNode);
-
-      if (isTopMost && isLeftMost) {
-        renderValues.leading = (
-          <BorderToggleButton side="left" onClick={() => this.toggleBorder("left")} />
-        );
-      }
+    if (isTopMost && isLeftMost) {
+      renderValues.leading = (
+        <BorderToggleButton side="left" onClick={() => this.toggleBorder("left")} />
+      );
     }
   };
 
@@ -588,7 +574,6 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
             onModelChange={() => this.onLayoutChange()}
             onAction={this.onAction}
             onRenderTabSet={this.onRenderTabSet}
-            onRenderTab={this.onRenderTab}
             classNameMapper={this.classNameMapper}
           />
         </div>

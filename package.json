@@ -149,7 +149,7 @@
     "distance-transform": "https://github.com/scalableminds/distance-transform",
     "dompurify": "^3.3.0",
     "file-saver": "^2.0.1",
-    "flexlayout-react": "0.7.15",
+    "flexlayout-react": "0.8.19",
     "hammerjs": "^2.0.8",
     "html2canvas": "^1.4.1",
     "immutability-helper": "^3.1.1",

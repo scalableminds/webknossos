@@ -6313,13 +6313,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"flexlayout-react@npm:0.7.15":
-  version: 0.7.15
-  resolution: "flexlayout-react@npm:0.7.15"
+"flexlayout-react@npm:0.8.19":
+  version: 0.8.19
+  resolution: "flexlayout-react@npm:0.8.19"
   peerDependencies:
-    react: ^18.0.0
-    react-dom: ^18.0.0
-  checksum: 10c0/dbf1afe3bc4d9de57c0a27f97f7223bd9283ac60bbc242e1aa7679e71a5cf585b83db9111d76d07ec896ae73a720d584849120a93f6ccb3b6c0712779c46d9bd
+    react: ^18.0.0 || ^19.0.0
+    react-dom: ^18.0.0 || ^19.0.0
+  checksum: 10c0/0cf3ae2c911d32c41a2a7b7b42a1daae62586c3cd77887fdaf7e940f58e01b023eb5afb40d522f49704af39730155871bf05f552a10a08c878e9915ac8fb3d66
   languageName: node
   linkType: hard
 
@@ -12578,7 +12578,7 @@ __metadata:
     dompurify: "npm:^3.3.0"
     dpdm: "npm:^3.14.0"
     file-saver: "npm:^2.0.1"
-    flexlayout-react: "npm:0.7.15"
+    flexlayout-react: "npm:0.8.19"
     hammerjs: "npm:^2.0.8"
     html2canvas: "npm:^1.4.1"
     husky: "npm:^9.1.5"

@@ -1,6 +1,6 @@
 package models.organization
 
-import play.api.libs.json.{Format, JsError, JsResult, JsString, JsSuccess, JsValue, Json}
+import play.api.libs.json.{Format, JsError, JsNumber, JsResult, JsString, JsSuccess, JsValue, Json}
 
 case class ByteCount(numBytes: Long)
 
@@ -21,6 +21,8 @@ object ByteCount {
     def reads(json: JsValue): JsResult[ByteCount] = json match {
       case JsString(s) =>
         ByteCount.fromString(s).map(JsSuccess(_)).getOrElse(JsError("Invalid ByteCount: " + s))
+      case JsNumber(n) =>
+        JsSuccess(ByteCount(n.toLong))
       case _ =>
         JsError("Invalid ByteCount")
     }

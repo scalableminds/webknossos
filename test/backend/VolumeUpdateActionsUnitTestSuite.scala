@@ -20,9 +20,9 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   UpdateSegmentPartialVolumeAction,
   UpsertSegmentGroupVolumeAction
 }
-import org.scalatestplus.play._
+import org.scalatest.wordspec.AsyncWordSpec
 
-class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplicits {
+class VolumeUpdateActionsUnitTestSuite extends AsyncWordSpec with ProtoGeometryImplicits {
 
   private def applyUpdateAction(action: ApplyableVolumeUpdateAction): VolumeTracing =
     action.applyOn(Dummies.volumeTracing)
@@ -105,6 +105,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
   // Note: The tests for MergeSegmentItemsVolumeAction have parity with those in the frontend.
   // If the action changes, tests should be adapted both in frontend and here.
   "MergeSegmentItemsVolumeAction" should {
+
     "merge two segments (both segments exist; source should take precedence)" in {
       val action = MergeSegmentItemsVolumeAction(1, 2, 1, 2, Dummies.tracingId)
       val result = action.applyOn(Dummies.volumeTracing.withSegments(Seq(segmentWithMetadata1, segmentWithMetadata2)))
@@ -169,6 +170,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
 
       assert(result.segments == Seq(segmentWithMetadata1))
     }
+
   }
 
   "CreateSegmentVolumeAction" should {
@@ -197,10 +199,7 @@ class VolumeUpdateActionsUnitTestSuite extends PlaySpec with ProtoGeometryImplic
       val result = applyUpdateAction(deleteSegmentAction)
 
       assert(result.segments.length == Dummies.volumeTracing.segments.length - 1)
-      result.segments.find(_.segmentId == deleteSegmentAction.id) match {
-        case Some(_) => throw new Exception
-        case None    =>
-      }
+      assert(!result.segments.exists(_.segmentId == deleteSegmentAction.id))
     }
   }
 

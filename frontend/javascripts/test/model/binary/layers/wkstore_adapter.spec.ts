@@ -30,7 +30,7 @@ const mockedCube = {
     [1, 1, 1],
     [2, 2, 2],
   ]),
-  triggerBucketDataChanged: () => {},
+  triggerRenderedBucketDataChanged: () => {},
 } as any as DataCube;
 
 vi.mock("viewer/store", () => ({

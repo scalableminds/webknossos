@@ -720,7 +720,6 @@ export function* tryToIncorporateActions(
             // itself takes care of reloading the meshes, no need to track this here.
             break;
           }
-          // Only reload meshes if the action is regarding the active proofreading volume annotation.
           const hasAnyOfBothAgglomerateMeshesLoaded = yield* select(
             (state) =>
               isMeshLoaded(state, agglomerateId1, actionTracingId) ||

@@ -81,6 +81,7 @@ import {
 } from "./rebasing_helpers_sagas";
 import { pushSaveQueueAsync } from "./save_queue_draining_saga";
 import { setupSavingForAnnotation, setupSavingForTracingType } from "./save_queue_filling_saga";
+import type { ActionPattern } from "@redux-saga/types";
 
 function* setupSavingToServer(): Saga<void> {
   // This saga continuously drains the save queue by sending its content to the server.
@@ -926,6 +927,15 @@ function* removeOutdatedMeshes(
 function* reloadMeshes(
   meshIdsToReloadPerLayer: ApplyingUpdateArtifacts["meshIdsToRemovePerLayer"],
 ) {
+  // First wait in case the ui state is busy until it is no longer to ensure a potential running proofreading saga finished.
+  const busyState = yield* select((state) => state.uiInformation.busyBlockingInfo);
+  if (busyState.isBusy) {
+    yield* take(
+      ((action: Action) =>
+        action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
+        !action.value.isBusy) as ActionPattern<Action>,
+    );
+  }
   const refreshAffectedMeshesEffects = [];
   for (const [tracingId, meshIdsToReload] of meshIdsToReloadPerLayer.entries()) {
     const refreshList: Array<{
@@ -938,12 +948,13 @@ function* reloadMeshes(
     const segments = yield* select((state) => getSegmentsForLayer(state, tracingId));
 
     for (const agglomerateId of meshIdsToReload) {
-      const segmentPosition = segments.getNullable(agglomerateId)?.anchorPosition;
-      // If the annotation has a segment index, the seed position for the mesh generation is ignored. In that case we can simply use [0, 0, 0].
-      if (segmentPosition || hasSegmentIndex) {
+      const segment = segments.getNullable(agglomerateId);
+      // Only load meshes for segments still present.
+      if (segment && (segment?.anchorPosition || hasSegmentIndex)) {
         refreshList.push({
           newAgglomerateId: agglomerateId,
-          nodePosition: segmentPosition ?? [0, 0, 0],
+          // If the annotation has a segment index, the seed position for the mesh generation is ignored. In that case we can simply use [0, 0, 0].
+          nodePosition: segment?.anchorPosition ?? [0, 0, 0],
         });
       }
     }

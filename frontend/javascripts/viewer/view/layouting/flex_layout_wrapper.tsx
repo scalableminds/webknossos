@@ -400,11 +400,6 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
       <FlexLayoutComponent
         model={model}
         factory={(...args) => this.layoutFactory(...args)}
-        titleFactory={(renderedNode) => (
-          <FastTooltip title={BorderTabs[renderedNode.getId()].description}>
-            {renderedNode.getName()}{" "}
-          </FastTooltip>
-        )}
         onModelChange={() => {
           // Update / inform parent layout about the changes.
           // This will trigger the parents onModelChange and this will then save the model changes.

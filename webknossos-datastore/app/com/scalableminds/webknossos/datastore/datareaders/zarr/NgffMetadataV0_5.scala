@@ -37,7 +37,7 @@ case class NgffMetadataV0_5(version: String,
 object NgffMetadataV0_5 {
   def fromNameVoxelSizeAndMags(dataLayerName: String,
                                dataSourceVoxelSize: VoxelSize,
-                               mags: List[Vec3Int],
+                               mags: Seq[Vec3Int],
                                additionalAxes: Option[Seq[AdditionalAxis]],
                                version: String = "0.5"): NgffMetadataV0_5 = {
     val datasets = mags.map(
@@ -58,10 +58,10 @@ object NgffMetadataV0_5 {
       NgffAxis(name = "y", `type` = "space", unit = Some(lengthUnitStr)),
       NgffAxis(name = "z", `type` = "space", unit = Some(lengthUnitStr)),
     )
-    NgffMetadataV0_5(version,
-                     multiscales =
-                       List(NgffMultiscalesItemV0_5(name = Some(dataLayerName), datasets = datasets, axes = axes)),
-                     None)
+    NgffMetadataV0_5(
+      version,
+      multiscales = List(NgffMultiscalesItemV0_5(name = Some(dataLayerName), datasets = datasets.toList, axes = axes)),
+      None)
   }
 
   implicit val jsonFormat: OFormat[NgffMetadataV0_5] = Json.format[NgffMetadataV0_5]

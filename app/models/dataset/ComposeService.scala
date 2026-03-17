@@ -27,10 +27,10 @@ object ComposeRequest {
   implicit val composeRequestFormat: OFormat[ComposeRequest] = Json.format[ComposeRequest]
 }
 case class ComposeRequestLayer(
-    datasetId: ObjectId,
-    sourceName: String,
-    newName: String,
-    transformations: Seq[CoordinateTransformation]
+    sourceDatasetId: ObjectId,
+    sourceLayerName: String,
+    targetLayerName: String,
+    transformations: Option[Seq[CoordinateTransformation]]
 )
 
 object ComposeRequestLayer {
@@ -85,15 +85,15 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
       implicit ctx: DBAccessContext,
       mp: MessagesProvider): Fox[(StaticLayer, VoxelSize)] =
     for {
-      dataset <- datasetDAO.findOne(composeLayer.datasetId) ?~> "Dataset not found"
+      dataset <- datasetDAO.findOne(composeLayer.sourceDatasetId) ?~> "Dataset not found"
       usableDataSource <- datasetService.usableDataSourceFor(dataset)
-      layer <- usableDataSource.dataLayers.find(_.name == composeLayer.sourceName).toFox
-      applyCoordinateTransformations = (cOpt: Option[List[CoordinateTransformation]]) =>
+      layer <- usableDataSource.dataLayers.find(_.name == composeLayer.sourceLayerName).toFox
+      applyCoordinateTransformations = (cOpt: Option[Seq[CoordinateTransformation]]) =>
         cOpt match {
-          case Some(c) => Some(c ++ composeLayer.transformations.toList)
-          case None    => Some(composeLayer.transformations.toList)
+          case Some(c) => Some(c ++ composeLayer.transformations.getOrElse(Seq.empty))
+          case None    => Some(composeLayer.transformations.getOrElse(Seq.empty))
       }
-      editedLayer = layer.mapped(name = composeLayer.newName,
+      editedLayer = layer.mapped(name = composeLayer.targetLayerName,
                                  coordinateTransformations =
                                    applyCoordinateTransformations(layer.coordinateTransformations))
     } yield (editedLayer, usableDataSource.scale)
@@ -104,7 +104,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
     // stores, however, the data store is only stored for each dataset and not per mag.
     for {
       _ <- Fox.fromBool(composeRequest.layers.nonEmpty) ?~> "Cannot compose dataset with no layers"
-      datasetIds = composeRequest.layers.map(_.datasetId).distinct
+      datasetIds = composeRequest.layers.map(_.sourceDatasetId).distinct
       datasets <- Fox.serialCombined(datasetIds)(datasetDAO.findOne(_))
       dataStores = datasets.map(_._dataStore)
     } yield {
@@ -135,12 +135,13 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
     for {
       targetDataset <- datasetDAO.findOne(targetDatasetId) ?~> "dataset.notFound"
       targetDataSource <- datasetService.usableDataSourceFor(targetDataset)
-      _ <- Fox.fromBool(!targetDataSource.dataLayers.exists(_.name == request.newName)) ?~> "dataset.layer.nameAlreadyExists"
-      sourceDataset <- datasetDAO.findOne(request.datasetId) ?~> "dataset.notFound"
+      _ <- Fox.fromBool(!targetDataSource.dataLayers.exists(_.name == request.targetLayerName)) ?~> "dataset.layer.nameAlreadyExists"
+      sourceDataset <- datasetDAO.findOne(request.sourceDatasetId) ?~> "dataset.notFound"
       _ <- Fox.fromBool(targetDataset._dataStore == sourceDataset._dataStore) ?~> "compose.differingDataStores"
       sourceDataSource <- datasetService.usableDataSourceFor(sourceDataset)
-      sourceLayer <- sourceDataSource.getDataLayer(request.sourceName).toFox ?~> "layer.notFound"
-      updatedDataSource = targetDataSource.copy(dataLayers = targetDataSource.dataLayers :+ sourceLayer)
+      sourceLayer <- sourceDataSource.getDataLayer(request.sourceLayerName).toFox ?~> "layer.notFound"
+      updatedDataSource = targetDataSource.copy(
+        dataLayers = targetDataSource.dataLayers :+ sourceLayer.mapped(name = request.targetLayerName))
       _ <- datasetDAO.updateDataSource(targetDatasetId,
                                        targetDataset._dataStore,
                                        updatedDataSource.hashCode(),

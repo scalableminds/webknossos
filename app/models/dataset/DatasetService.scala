@@ -446,7 +446,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         }
     }
 
-  private def applyMagUpdates(existingMags: List[MagLocator], magUpdates: List[MagLocator]): List[MagLocator] =
+  private def applyMagUpdates(existingMags: Seq[MagLocator], magUpdates: Seq[MagLocator]): Seq[MagLocator] =
     // In this context removing mags is the only allowed update
     existingMags.filter(existingMag => magUpdates.exists(_.mag == existingMag.mag))
 

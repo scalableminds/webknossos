@@ -24,9 +24,10 @@ import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import { Model } from "viewer/singletons";
 import type { UserBoundingBox } from "viewer/store";
 import type { SplitMergerEvaluationSettings } from "viewer/view/ai_jobs/components/collapsible_split_merger_evaluation_settings";
+import type { PretrainedModel } from "./ai_model_selector";
 
 interface RunAiModelJobContextType {
-  selectedModel: AiModel | Partial<AiModel> | null;
+  selectedModel: AiModel | PretrainedModel | null;
   selectedJobType:
     | APIJobCommand.INFER_NEURONS
     | APIJobCommand.INFER_NUCLEI
@@ -46,7 +47,7 @@ interface RunAiModelJobContextType {
       | APIJobCommand.INFER_MITOCHONDRIA
       | APIJobCommand.INFER_INSTANCES,
   ) => void;
-  setSelectedModel: (model: AiModel | Partial<AiModel>) => void;
+  setSelectedModel: (model: AiModel | PretrainedModel) => void;
   setSelectedBoundingBox: (bbox: UserBoundingBox | null) => void;
   setNewDatasetName: (name: string) => void;
   setSelectedLayer: (layer: APIDataLayer) => void;
@@ -69,7 +70,7 @@ const RunAiModelJobContext = createContext<RunAiModelJobContextType | undefined>
 export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [selectedModel, setSelectedModel] = useState<AiModel | Partial<AiModel> | null>(null);
+  const [selectedModel, setSelectedModel] = useState<AiModel | PretrainedModel | null>(null);
   const [selectedJobType, setSelectedJobType] = useState<
     | APIJobCommand.INFER_NEURONS
     | APIJobCommand.INFER_NUCLEI
@@ -166,9 +167,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
 
     const isColorLayerInverted = datasetConfiguration.layers[selectedLayer!.name].isInverted;
     const aiModelId =
-      selectedModel != null && "trainingJob" in selectedModel
-        ? (selectedModel.id as string)
-        : undefined;
+      selectedModel != null && "trainingJob" in selectedModel ? selectedModel.id : undefined;
 
     try {
       switch (selectedJobType) {

@@ -76,7 +76,10 @@ export const AiAnalysisSettings: React.FC = () => {
     }
   };
 
-  const isInstanceModel = selectedModel?.category === APIAiModelCategory.EM_NUCLEI;
+  const isInstanceModel =
+    selectedModel != null &&
+    "category" in selectedModel &&
+    selectedModel.category === APIAiModelCategory.EM_NUCLEI;
   const isNeuronModel = selectedModel ? !isInstanceModel : false;
 
   const formFields = [
@@ -151,7 +154,7 @@ export const AiAnalysisSettings: React.FC = () => {
                   const boundingBox = computeArrayFromBoundingBox(value.boundingBox);
                   const aiModelId =
                     selectedModel != null && "trainingJob" in selectedModel
-                      ? (selectedModel.id as string)
+                      ? selectedModel.id
                       : undefined;
                   const mag = await getBestFittingMagComparedToTrainingDS(
                     selectedLayer,

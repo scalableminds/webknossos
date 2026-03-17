@@ -43,9 +43,7 @@ export const RunAiModelCreditInformation: React.FC = () => {
   const dataset = useWkSelector((state) => state.dataset);
 
   const aiModelId =
-    selectedModel != null && "trainingJob" in selectedModel
-      ? (selectedModel.id as string)
-      : undefined;
+    selectedModel != null && "trainingJob" in selectedModel ? selectedModel.id : undefined;
 
   const { data: adjustedBoundingBox } = useQuery<UserBoundingBox | null>({
     queryKey: [

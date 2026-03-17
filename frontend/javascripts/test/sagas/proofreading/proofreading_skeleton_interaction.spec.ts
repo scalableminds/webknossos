@@ -42,6 +42,7 @@ import {
   initializeMappingAndTool,
   makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
+  getPositionForSegmentId,
 } from "./proofreading_test_utils";
 
 function assertUpdatesMatchInjectedUpdates(
@@ -77,7 +78,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       yield call(initializeMappingAndTool, context, tracingId);
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
 
       yield makeMappingEditableHelper();
@@ -98,9 +99,9 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       );
       expect(agglomerateTrees.length).toBe(2);
       const sourceNode = agglomerateTrees[0].nodes.getOrThrow(6);
-      expect(sourceNode.untransformedPosition).toStrictEqual([3, 3, 3]);
+      expect(sourceNode.untransformedPosition).toStrictEqual(getPositionForSegmentId(3));
       const targetNode = agglomerateTrees[1].nodes.getOrThrow(7);
-      expect(targetNode.untransformedPosition).toStrictEqual([4, 4, 4]);
+      expect(targetNode.untransformedPosition).toStrictEqual(getPositionForSegmentId(4));
     });
     await task.toPromise();
   });
@@ -384,8 +385,8 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     // Mock backend answer telling saga to split edges 3-2 and 3-1.
     mockEdgesForAgglomerateMinCut(context.mocks, 10, [
       {
-        position1: [3, 3, 3],
-        position2: [1, 1, 1],
+        position1: getPositionForSegmentId(3),
+        position2: getPositionForSegmentId(1),
         segmentId1: 3,
         segmentId2: 1,
       } as MinCutTargetEdge,
@@ -457,8 +458,8 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     // Mock backend answer telling saga to split edges 3-2 and 3-1 to separate segments 2 and 3 from each other.
     mockEdgesForAgglomerateMinCut(context.mocks, 11, [
       {
-        position1: [3, 3, 3],
-        position2: [1, 1, 1],
+        position1: getPositionForSegmentId(3),
+        position2: getPositionForSegmentId(1),
         segmentId1: 3,
         segmentId2: 1,
       } as MinCutTargetEdge,
@@ -569,7 +570,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
             actionTimestamp: 0,
             actionTracingId: VOLUME_TRACING_ID,
             id: 1,
-            anchorPosition: [3, 3, 3] as Vector3,
+            anchorPosition: getPositionForSegmentId(3) as Vector3,
           },
         },
       ],

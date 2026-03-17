@@ -144,7 +144,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         yield loadAgglomerateSkeletons(context, [1, 4, 6], false, othersMayEdit);
 
         // Execute the actual merge and wait for the finished mapping.
-        yield put(proofreadMergeAction([4, 4, 4], 4));
+        yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
         // Wait till proofreading action is finished; including refreshing agglomerate skeletons.
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
@@ -159,11 +159,11 @@ describe("Proofreading agglomerate skeleton syncing", () => {
           .map((n) => n.untransformedPosition)
           .sort((a, b) => a[0] - b[0]);
         expect(allPositionsSorted).toStrictEqual([
-          [1, 1, 1],
-          [2, 2, 2],
-          [3, 3, 3],
-          [4, 4, 4],
-          [5, 5, 5],
+          getPositionForSegmentId(1),
+          getPositionForSegmentId(2),
+          getPositionForSegmentId(3),
+          getPositionForSegmentId(4),
+          getPositionForSegmentId(5),
         ]);
 
         const agglomerateSkeletonReloadingUpdates = getNestedUpdateActions(context).slice(-3)!;
@@ -204,7 +204,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         yield loadAgglomerateSkeletons(context, [6], true, othersMayEdit);
 
         // Execute the actual merge and wait for the finished mapping.
-        yield put(proofreadMergeAction([4, 4, 4], 1));
+        yield put(proofreadMergeAction(getPositionForSegmentId(4), 1));
         // Wait till proofreading action is finished; including refreshing agglomerate skeletons.
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
@@ -219,8 +219,8 @@ describe("Proofreading agglomerate skeleton syncing", () => {
           .map((n) => n.untransformedPosition)
           .sort((a, b) => a[0] - b[0]);
         expect(allPositionsSorted).toStrictEqual([
-          [6, 6, 6],
-          [7, 7, 7],
+          getPositionForSegmentId(6),
+          getPositionForSegmentId(7),
         ]);
 
         const agglomerateSkeletonUpdateActions = context.receivedDataPerSaveRequest
@@ -255,7 +255,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
         // Set up the split-related segment partners. Normally, this would happen
         // due to the user's interactions.
-        yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+        yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
         yield put(setActiveCellAction(1));
         yield makeMappingEditableHelper();
         if (othersMayEdit) {
@@ -268,8 +268,8 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
           Promise.resolve([
             {
-              position1: [1, 1, 1],
-              position2: [2, 2, 2],
+              position1: getPositionForSegmentId(1),
+              position2: getPositionForSegmentId(2),
               segmentId1: 1,
               segmentId2: 2,
             },
@@ -277,7 +277,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         );
 
         // Execute the split and wait for the finished mapping.
-        yield put(minCutAgglomerateWithPositionAction([2, 2, 2], 2, 1));
+        yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
         // Wait till proofreading action is finished; including refreshing agglomerate skeletons.
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
@@ -319,7 +319,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
         // Set up the split-related segment partners. Normally, this would happen
         // due to the user's interactions.
-        yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+        yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
         yield put(setActiveCellAction(1));
         yield makeMappingEditableHelper();
         if (othersMayEdit) {
@@ -332,8 +332,8 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
           Promise.resolve([
             {
-              position1: [1, 1, 1],
-              position2: [2, 2, 2],
+              position1: getPositionForSegmentId(1),
+              position2: getPositionForSegmentId(2),
               segmentId1: 1,
               segmentId2: 2,
             },
@@ -341,7 +341,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         );
 
         // Execute the split and wait for the finished mapping.
-        yield put(minCutAgglomerateWithPositionAction([2, 2, 2], 2, 1));
+        yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
         // Wait till proofreading action is finished; including refreshing agglomerate skeletons.
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
         yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
@@ -356,8 +356,8 @@ describe("Proofreading agglomerate skeleton syncing", () => {
           .map((n) => n.untransformedPosition)
           .sort((a, b) => a[0] - b[0]);
         expect(allPositionsSorted).toStrictEqual([
-          [4, 4, 4],
-          [5, 5, 5],
+          getPositionForSegmentId(4),
+          getPositionForSegmentId(5),
         ]);
 
         const splitAndCreateSegmentActions = getNestedUpdateActions(context).slice(-2)!;
@@ -396,7 +396,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         }
 
         yield* loadAgglomerateSkeletons(context, [1, 6], false, othersMayEdit);
-        yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+        yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
         yield put(setActiveCellAction(1, undefined, null, 1));
 
         // Execute the actual merge via meshes merging segment 1 with segment 6.
@@ -448,15 +448,15 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         }
 
         yield* loadAgglomerateSkeletons(context, [1, 6], false, othersMayEdit);
-        yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+        yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
         yield put(setActiveCellAction(1, undefined, null, 1));
 
         // Prepare the server's reply for the upcoming split.
         vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
           Promise.resolve([
             {
-              position1: [1, 1, 1],
-              position2: [2, 2, 2],
+              position1: getPositionForSegmentId(1),
+              position2: getPositionForSegmentId(2),
               segmentId1: 1,
               segmentId2: 2,
             },
@@ -521,11 +521,11 @@ describe("Proofreading agglomerate skeleton syncing", () => {
           neighbors: [
             {
               segmentId: 1,
-              position: [1, 1, 1] as Vector3,
+              position: getPositionForSegmentId(1) as Vector3,
             },
             {
               segmentId: 3,
-              position: [3, 3, 3] as Vector3,
+              position: getPositionForSegmentId(3) as Vector3,
             },
           ],
         }),
@@ -544,13 +544,13 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         }
 
         yield* loadAgglomerateSkeletons(context, [1, 6], false, othersMayEdit);
-        yield put(updateSegmentAction(1, { anchorPosition: [2, 2, 2] }, tracingId));
+        yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(2) }, tracingId));
         yield put(setActiveCellAction(1));
 
         // Execute the actual merge and wait for the finished mapping.
         yield put(
           cutAgglomerateFromNeighborsAction(
-            [2, 2, 2], // unmappedId=2 / mappedId=1 at this position
+            getPositionForSegmentId(2), // unmappedId=2 / mappedId=1 at this position
           ),
         );
         yield take(
@@ -613,7 +613,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(4, { anchorPosition: [4, 4, 4] }, tracingId));
+      yield put(updateSegmentAction(4, { anchorPosition: getPositionForSegmentId(4) }, tracingId));
       yield put(setActiveCellAction(4));
       yield makeMappingEditableHelper();
       const othersMayEdit = true;
@@ -621,7 +621,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       yield* loadAgglomerateSkeletons(context, [1, 4, 6], false, othersMayEdit);
       // Execute the actual merge and wait for the finished mapping.
-      yield put(proofreadMergeAction([6, 6, 6], 6));
+      yield put(proofreadMergeAction(getPositionForSegmentId(6), 6));
       // Wait till proofreading action is finished; including refreshing agglomerate skeletons.
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
@@ -636,13 +636,13 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         .map((n) => n.untransformedPosition)
         .sort((a, b) => a[0] - b[0]);
       expect(allPositionsSorted).toStrictEqual([
-        [1, 1, 1],
-        [2, 2, 2],
-        [3, 3, 3],
-        [4, 4, 4],
-        [5, 5, 5],
-        [6, 6, 6],
-        [7, 7, 7],
+        getPositionForSegmentId(1),
+        getPositionForSegmentId(2),
+        getPositionForSegmentId(3),
+        getPositionForSegmentId(4),
+        getPositionForSegmentId(5),
+        getPositionForSegmentId(6),
+        getPositionForSegmentId(7),
       ]);
 
       const mergeAndAgglomerateSkeletonReloadingUpdates =
@@ -674,7 +674,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: [4, 4, 4] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(4) }, tracingId));
       yield put(setActiveCellAction(1));
       yield makeMappingEditableHelper();
       const othersMayEdit = true;
@@ -682,7 +682,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       yield* loadAgglomerateSkeletons(context, [1, 6, 4], false, othersMayEdit);
       // Execute the actual merge and wait for the finished mapping.
-      yield put(proofreadMergeAction([1, 1, 1], 1));
+      yield put(proofreadMergeAction(getPositionForSegmentId(1), 1));
       // Wait till proofreading action is finished; including refreshing agglomerate skeletons.
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
@@ -737,7 +737,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
       yield makeMappingEditableHelper();
       yield put(setOthersMayEditForAnnotationAction(true));
@@ -748,8 +748,8 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
         Promise.resolve([
           {
-            position1: [1, 1, 1],
-            position2: [2, 2, 2],
+            position1: getPositionForSegmentId(1),
+            position2: getPositionForSegmentId(2),
             segmentId1: 1,
             segmentId2: 2,
           },
@@ -757,7 +757,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       );
 
       // Execute the split and wait for the finished mapping.
-      yield put(minCutAgglomerateWithPositionAction([2, 2, 2], 2, 1));
+      yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
       // Wait till proofreading action is finished; including refreshing agglomerate skeletons..
       yield take(
         ((action: Action) =>
@@ -813,7 +813,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: [2, 2, 2] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(2) }, tracingId));
       yield put(setActiveCellAction(1));
       yield makeMappingEditableHelper();
       yield put(setOthersMayEditForAnnotationAction(true));
@@ -824,8 +824,8 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
         Promise.resolve([
           {
-            position1: [2, 2, 2],
-            position2: [3, 3, 3],
+            position1: getPositionForSegmentId(2),
+            position2: getPositionForSegmentId(3),
             segmentId1: 2,
             segmentId2: 3,
           },
@@ -833,7 +833,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       );
 
       // Execute the split and wait for the finished mapping.
-      yield put(minCutAgglomerateWithPositionAction([3, 3, 3], 3, 1));
+      yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(3), 3, 1));
       // Wait till proofreading action is finished; including refreshing agglomerate skeletons..
       yield take(
         ((action: Action) =>
@@ -901,11 +901,11 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         neighbors: [
           {
             segmentId: 1,
-            position: [1, 1, 1] as Vector3,
+            position: getPositionForSegmentId(1) as Vector3,
           },
           {
             segmentId: 3,
-            position: [3, 3, 3] as Vector3,
+            position: getPositionForSegmentId(3) as Vector3,
           },
         ],
       }),
@@ -916,7 +916,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       yield call(initializeMappingAndTool, context, tracingId);
 
       // Activate segment 2, setup editable mapping, make it shared and load agglomerate skeletons.
-      yield put(updateSegmentAction(1, { anchorPosition: [2, 2, 2] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(2) }, tracingId));
       yield put(setActiveCellAction(1));
       yield makeMappingEditableHelper();
       yield put(setOthersMayEditForAnnotationAction(true));
@@ -926,7 +926,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         cutAgglomerateFromNeighborsAction(
-          [2, 2, 2], // unmappedId=2 / mappedId=2 at this position
+          getPositionForSegmentId(2), // unmappedId=2 / mappedId=2 at this position
         ),
       );
       yield take(
@@ -1122,13 +1122,13 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
       yield makeMappingEditableHelper();
       yield put(setOthersMayEditForAnnotationAction(true));
 
       // Execute the actual merge and wait for the finished mapping.
-      yield put(proofreadMergeAction([4, 4, 4], 4));
+      yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
       // Wait till proofreading action is finished; including refreshing agglomerate skeletons.
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
@@ -1143,11 +1143,11 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         .map((n) => n.untransformedPosition)
         .sort((a, b) => a[0] - b[0]);
       expect(allPositionsSorted).toStrictEqual([
-        [1, 1, 1],
-        [2, 2, 2],
-        [3, 3, 3],
-        [4, 4, 4],
-        [5, 5, 5],
+        getPositionForSegmentId(1),
+        getPositionForSegmentId(2),
+        getPositionForSegmentId(3),
+        getPositionForSegmentId(4),
+        getPositionForSegmentId(5),
       ]);
 
       const agglomerateSkeletonReloadingUpdates = getNestedUpdateActions(context).slice(-3)!;
@@ -1179,7 +1179,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
       yield makeMappingEditableHelper();
       yield put(setOthersMayEditForAnnotationAction(true));
@@ -1188,8 +1188,8 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
         Promise.resolve([
           {
-            position1: [1, 1, 1],
-            position2: [2, 2, 2],
+            position1: getPositionForSegmentId(1),
+            position2: getPositionForSegmentId(2),
             segmentId1: 1,
             segmentId2: 2,
           },
@@ -1197,7 +1197,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       );
 
       // Execute the split and wait for the finished mapping.
-      yield put(minCutAgglomerateWithPositionAction([2, 2, 2], 2, 1));
+      yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
       // Wait till proofreading action is finished; including refreshing agglomerate skeletons.
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished

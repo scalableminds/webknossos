@@ -28,6 +28,7 @@ import {
   expectSegmentList,
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
+  getPositionForSegmentId,
 } from "./proofreading_test_utils";
 import { waitUntilNotBusy } from "test/helpers/saga_test_helpers";
 
@@ -59,11 +60,11 @@ describe("Proofreading (Single User)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
 
       // Execute the actual merge and wait for the finished mapping.
-      yield put(proofreadMergeAction([4, 4, 4], 1));
+      yield put(proofreadMergeAction(getPositionForSegmentId(4), 1));
       yield take("FINISH_MAPPING_INITIALIZATION");
 
       const mapping = yield* select(
@@ -129,15 +130,15 @@ describe("Proofreading (Single User)", () => {
 
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
 
       // Prepare the server's reply for the upcoming split.
       vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
         Promise.resolve([
           {
-            position1: [1, 1, 1],
-            position2: [2, 2, 2],
+            position1: getPositionForSegmentId(1),
+            position2: getPositionForSegmentId(2),
             segmentId1: 1,
             segmentId2: 2,
           },
@@ -145,7 +146,7 @@ describe("Proofreading (Single User)", () => {
       );
 
       // Execute the split and wait for the finished mapping.
-      yield put(minCutAgglomerateWithPositionAction([2, 2, 2], 2, 1));
+      yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
       yield take("FINISH_MAPPING_INITIALIZATION");
 
       const mapping1 = yield* select(
@@ -187,7 +188,7 @@ describe("Proofreading (Single User)", () => {
           value: {
             actionTracingId: "volumeTracingId",
             additionalCoordinates: undefined,
-            anchorPosition: [2, 2, 2],
+            anchorPosition: getPositionForSegmentId(2),
             color: null,
             creationTime: 1494695001688,
             groupId: null,

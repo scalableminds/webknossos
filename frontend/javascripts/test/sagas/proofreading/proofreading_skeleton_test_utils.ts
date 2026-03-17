@@ -228,7 +228,7 @@ export function* performMergeTreesProofreading(
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
-  yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+  yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
   yield put(setActiveCellAction(1));
   yield makeMappingEditableHelper();
 
@@ -262,7 +262,7 @@ export function* performSplitTreesProofreading(
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
-  yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+  yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
   yield put(setActiveCellAction(1));
 
   yield makeMappingEditableHelper();
@@ -294,7 +294,7 @@ export function* performMinCutWithNodesProofreading(
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
-  yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+  yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
   yield put(setActiveCellAction(1));
 
   yield makeMappingEditableHelper();
@@ -318,9 +318,9 @@ export function* performMinCutWithNodesProofreading(
   );
   expect(agglomerateTrees.length).toBe(1);
   const targetNode = agglomerateTrees[0].nodes.getOrThrow(5);
-  expect(targetNode.untransformedPosition).toStrictEqual([2, 2, 2]);
+  expect(targetNode.untransformedPosition).toStrictEqual(getPositionForSegmentId(2));
   const sourceNode = agglomerateTrees[0].nodes.getOrThrow(6);
-  expect(sourceNode.untransformedPosition).toStrictEqual([3, 3, 3]);
+  expect(sourceNode.untransformedPosition).toStrictEqual(getPositionForSegmentId(3));
   yield put(minCutAgglomerateAction(sourceNode.id, targetNode.id));
 
   yield take("FINISH_MAPPING_INITIALIZATION");
@@ -358,8 +358,8 @@ export const mockEdgesForAgglomerateMinCut = (
       ) {
         return [
           {
-            position1: [3, 3, 3],
-            position2: [2, 2, 2],
+            position1: getPositionForSegmentId(3),
+            position2: getPositionForSegmentId(2),
             segmentId1: 3,
             segmentId2: 2,
           } as MinCutTargetEdge,

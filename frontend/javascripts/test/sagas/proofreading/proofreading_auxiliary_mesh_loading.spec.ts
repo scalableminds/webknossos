@@ -145,7 +145,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         // Execute the actual merge and wait for the finished mapping.
         const [removedMeshes, forkedEffect1] = yield* trackRemovedMeshActions();
         const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
-        yield put(proofreadMergeAction([4, 4, 4], 1));
+        yield put(proofreadMergeAction(getPositionForSegmentId(4), 1));
         yield take(
           ((action: Action) =>
             action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
@@ -195,7 +195,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         // due to the user's interactions.
         yield loadAgglomerateMeshes([1, 4]);
 
-        yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+        yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
         yield put(setActiveCellAction(1));
         // Give mesh loading a little time
         const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
@@ -205,8 +205,8 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
           Promise.resolve([
             {
-              position1: [1, 1, 1],
-              position2: [2, 2, 2],
+              position1: getPositionForSegmentId(1),
+              position2: getPositionForSegmentId(2),
               segmentId1: 1,
               segmentId2: 2,
             },
@@ -217,7 +217,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         const [removedMeshes, forkedEffect1] = yield* trackRemovedMeshActions();
         const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
         // Execute the split and wait for the auxiliary meshes being reloaded properly.
-        yield put(minCutAgglomerateWithPositionAction([2, 2, 2], 2, 1));
+        yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
         yield take(
           ((action: Action) =>
             action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
@@ -380,7 +380,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
 
       yield makeMappingEditableHelper();
@@ -389,7 +389,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
       yield put(
         proofreadMergeAction(
-          [4, 4, 4], // unmappedId=4 / mappedId=4 at this position
+          getPositionForSegmentId(4), // unmappedId=4 / mappedId=4 at this position
           4, // unmappedId=1 maps to 1
         ),
       );
@@ -437,7 +437,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
 
       yield makeMappingEditableHelper();
@@ -446,7 +446,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
       yield put(
         proofreadMergeAction(
-          [4, 4, 4], // unmappedId=4 / mappedId=4 at this position
+          getPositionForSegmentId(4), // unmappedId=4 / mappedId=4 at this position
           1, // unmappedId=1 maps to 1
         ),
       );
@@ -501,7 +501,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
       yield makeMappingEditableHelper();
 
@@ -509,8 +509,8 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
         Promise.resolve([
           {
-            position1: [1, 1, 1],
-            position2: [2, 2, 2],
+            position1: getPositionForSegmentId(1),
+            position2: getPositionForSegmentId(2),
             segmentId1: 1,
             segmentId2: 2,
           },
@@ -520,7 +520,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       const [removedMeshes, forkedEffect1] = yield* trackRemovedMeshActions();
       const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
       // Execute the split and wait for the finished mapping.
-      yield put(minCutAgglomerateWithPositionAction([2, 2, 2], 2, 1));
+      yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
       yield take(
         ((action: Action) =>
           action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1339) as ActionPattern,
@@ -572,7 +572,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
       yield makeMappingEditableHelper();
 
@@ -580,8 +580,8 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
         Promise.resolve([
           {
-            position1: [1, 1, 1],
-            position2: [2, 2, 2],
+            position1: getPositionForSegmentId(1),
+            position2: getPositionForSegmentId(2),
             segmentId1: 1,
             segmentId2: 2,
           },
@@ -591,7 +591,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       const [removedMeshes, forkedEffect1] = yield* trackRemovedMeshActions();
       const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
       // Execute the split and wait for the finished mapping.
-      yield put(minCutAgglomerateWithPositionAction([2, 2, 2], 2, 1));
+      yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
       yield take("FINISH_MAPPING_INITIALIZATION");
       // Loading meshes 1, 1339, 1340.
       yield take(
@@ -870,8 +870,8 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
     // Mock backend answer telling saga to split edges 3-2 and 3-1.
     mockEdgesForAgglomerateMinCut(context.mocks, 12, [
       {
-        position1: [3, 3, 3],
-        position2: [1, 1, 1],
+        position1: getPositionForSegmentId(3),
+        position2: getPositionForSegmentId(1),
         segmentId1: 3,
         segmentId2: 1,
       } as MinCutTargetEdge,

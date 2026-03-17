@@ -249,7 +249,7 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
         <Col>
           <Text>
             Dataset Size{" "}
-            <Tooltip title="Respecting selected bounding boxes and magnifications.">
+            <Tooltip title="Displayed size respects selected bounding boxes and magnifications.">
               <InfoCircleOutlined />
             </Tooltip>
             :

@@ -39,7 +39,10 @@ import {
   mockInitialBucketAndAgglomerateData,
   simulatePartitionedSplitAgglomeratesViaMeshes,
 } from "./proofreading_test_utils";
-import { mergeSegment5And6 } from "./proofreading_interaction_update_action_fixtures";
+import {
+  mergeSegment1And4,
+  mergeSegment5And6,
+} from "./proofreading_interaction_update_action_fixtures";
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_server_objects";
 
 describe("Proofreading (with mesh actions)", () => {
@@ -628,40 +631,26 @@ describe("Proofreading (with mesh actions)", () => {
     //  [1337, 1],
     //  [1338, 1]]
     // Contains two circles now but only one is split by the min-cut request.
-    backendMock.planVersionInjection(7, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1,
-          segmentId2: 4,
-          agglomerateId1: 1,
-          agglomerateId2: 4,
+    backendMock.planMultipleVersionInjections(7, [
+      ...mergeSegment1And4,
+      // The following update action is not imported from a fixture,
+      // because such a "double-merge" is not really provokable from the UI
+      // currently. There is the fixture `mergeSegment1337And5`, but it
+      // also contains a createSegment action which does not make sense
+      // in the already-merged state.
+      // Therefore, we use a handcoded update action here.
+      [
+        {
+          name: "mergeAgglomerate",
+          value: {
+            actionTracingId: VOLUME_TRACING_ID,
+            segmentId1: 5,
+            segmentId2: 1337,
+            agglomerateId1: 1,
+            agglomerateId2: 1,
+          },
         },
-      },
-      {
-        name: "mergeSegmentItems",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 1,
-          segmentId2: 4,
-          agglomerateId1: 1,
-          agglomerateId2: 4,
-        },
-      },
-    ]);
-
-    backendMock.planVersionInjection(8, [
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 5,
-          segmentId2: 1337,
-          agglomerateId1: 1,
-          agglomerateId2: 1,
-        },
-      },
+      ],
     ]);
 
     mockEdgesForPartitionedAgglomerateMinCut(mocks, 6);

@@ -95,6 +95,7 @@ import {
   clickSegmentAction,
   initializeEditableMappingAction,
   mergeSegmentItemsAction,
+  removeSegmentAction,
   setHasEditableMappingAction,
   updateProofreadingMarkerPositionAction,
   updateSegmentAction,
@@ -127,6 +128,7 @@ import {
   syncAgglomerateSkeletonsAfterMergeAction,
   syncAgglomerateSkeletonsAfterSplitAction,
 } from "./agglomerate_skeleton_syncing_saga_helpers";
+import { uniq } from "lodash-es";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   return function* (...args: any[]) {
@@ -1856,6 +1858,14 @@ export function* refreshAffectedSegmentItems(
   // with proofreading. Once such datasets appear, this parameter needs to be
   // adapted.
   const additionalCoordinates = undefined;
+  // What about removing old segments.
+  const outdatedIds = uniq(items.map((item) => item.oldAgglomerateId)).filter((id) => id != null);
+  const itemsToAddOrUpdate = uniqBy(items, (item) => item.newAgglomerateId);
+  const removedIds = new Set(outdatedIds).difference(
+    new Set(itemsToAddOrUpdate.map((item) => item.newAgglomerateId)),
+  );
+  const removeEffects = [...removedIds].map((id) => put(removeSegmentAction(id, layerName)));
+  yield* all(removeEffects);
 
   const ensureSegmentItemEffects = uniqBy(items, (item) => item.newAgglomerateId).map((item) =>
     call(

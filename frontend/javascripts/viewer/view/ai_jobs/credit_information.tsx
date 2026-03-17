@@ -24,10 +24,7 @@ const { Title, Text } = Typography;
 function mag1BboxToMag(mag1Bbox: UserBoundingBox, mag: Vector3): UserBoundingBox {
   return {
     ...mag1Bbox,
-    boundingBox: {
-      min: mag1Bbox.boundingBox.min.map((v, i) => Math.floor(v / mag[i])) as Vector3,
-      max: mag1Bbox.boundingBox.max.map((v, i) => Math.ceil(v / mag[i])) as Vector3,
-    },
+    boundingBox: new BoundingBox(mag1Bbox.boundingBox).fromMag1ToMag(mag).toBoundingBoxMinMaxType(),
   };
 }
 

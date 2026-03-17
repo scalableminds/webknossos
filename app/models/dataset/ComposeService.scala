@@ -134,6 +134,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
                                                                         mp: MessagesProvider): Fox[Unit] =
     for {
       targetDataset <- datasetDAO.findOne(targetDatasetId) ?~> "dataset.notFound"
+      _ <- Fox.fromBool(targetDataset.isVirtual) ?~> "dataset.composeInPlace.mustBeVirtual"
       targetDataSource <- datasetService.usableDataSourceFor(targetDataset)
       _ <- Fox.fromBool(!targetDataSource.dataLayers.exists(_.name == request.targetLayerName)) ?~> "dataset.layer.nameAlreadyExists"
       sourceDataset <- datasetDAO.findOne(request.sourceDatasetId) ?~> "dataset.notFound"
@@ -155,6 +156,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
                                                                        mp: MessagesProvider): Fox[Unit] =
     for {
       targetDataset <- datasetDAO.findOne(targetDatasetId) ?~> "dataset.notFound"
+      _ <- Fox.fromBool(targetDataset.isVirtual) ?~> "dataset.composeInPlace.mustBeVirtual"
       targetDataSource <- datasetService.usableDataSourceFor(targetDataset)
       targetLayer <- targetDataSource.getDataLayer(request.targetLayerName).toFox ?~> "layer.notFound"
       sourceDataset <- datasetDAO.findOne(request.sourceDatasetId) ?~> "dataset.notFound"
@@ -180,6 +182,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
                                                                                      mp: MessagesProvider): Fox[Unit] =
     for {
       targetDataset <- datasetDAO.findOne(targetDatasetId) ?~> "dataset.notFound"
+      _ <- Fox.fromBool(targetDataset.isVirtual) ?~> "dataset.composeInPlace.mustBeVirtual"
       targetDataSource <- datasetService.usableDataSourceFor(targetDataset)
       targetLayer <- targetDataSource.getDataLayer(request.targetLayerName).toFox ?~> "layer.notFound"
       sourceDataset <- datasetDAO.findOne(request.sourceDatasetId) ?~> "dataset.notFound"

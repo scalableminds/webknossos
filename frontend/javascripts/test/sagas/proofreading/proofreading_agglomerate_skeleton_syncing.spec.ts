@@ -1047,11 +1047,11 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       //Activate Multi-split tool
       yield put(updateUserSettingAction("isMultiSplitActive", true));
       // Select partition 1
-      yield put(toggleSegmentInPartitionAction(1, 1, 1339));
-      yield put(toggleSegmentInPartitionAction(1337, 1, 1339));
+      yield put(toggleSegmentInPartitionAction(1, 1, 1));
+      yield put(toggleSegmentInPartitionAction(1338, 1, 1));
       // Select partition 2
-      yield put(toggleSegmentInPartitionAction(1338, 2, 1339));
-      yield put(toggleSegmentInPartitionAction(3, 2, 1339));
+      yield put(toggleSegmentInPartitionAction(1337, 2, 1));
+      yield put(toggleSegmentInPartitionAction(3, 2, 1));
       // Execute the actual merge and wait for the finished mapping.
       yield put(minCutPartitionsAction());
       yield take(
@@ -1085,7 +1085,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       );
 
       const splitAndAgglomerateSkeletonReloadingUpdates =
-        getNestedUpdateActions(context).slice(-3)!;
+        getNestedUpdateActions(context).slice(-4)!;
       yield expect(splitAndAgglomerateSkeletonReloadingUpdates).toMatchFileSnapshot(
         "./__snapshots__/agglomerate_skeleton_syncing/multi_split_with_injected_split_should_refresh_agglomerate_skeletons.json",
       );
@@ -1096,7 +1096,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         },
         {
           id: 1339,
-          anchorPosition: [3, 3, 3],
+          anchorPosition: [100, 100, 100],
         },
         {
           id: 1340,

@@ -235,7 +235,6 @@ export type OverwriteMode = keyof typeof OverwriteModeEnum;
 
 export enum InterpolationModeEnum {
   INTERPOLATE = "INTERPOLATE",
-  EXTRUDE = "EXTRUDE",
 }
 export type InterpolationMode = keyof typeof InterpolationModeEnum;
 export enum FillModeEnum {

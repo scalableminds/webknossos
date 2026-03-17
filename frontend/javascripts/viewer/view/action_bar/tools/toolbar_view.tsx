@@ -31,7 +31,6 @@ import {
   OverwriteModeSwitch,
   ProofreadingComponents,
   QuickSelectSettingsPopover,
-  VolumeInterpolationButton,
 } from "./volume_specific_ui";
 
 function CreateNewBoundingBoxButton() {
@@ -171,8 +170,6 @@ function ToolSpecificSettings({
       />
 
       {adaptedActiveTool === AnnotationTool.QUICK_SELECT && <QuickSelectSettingsPopover />}
-
-      {adaptedActiveTool.hasOverwriteCapabilities ? <VolumeInterpolationButton /> : null}
 
       {adaptedActiveTool === AnnotationTool.FILL_CELL ? <FloodFillSettings /> : null}
 

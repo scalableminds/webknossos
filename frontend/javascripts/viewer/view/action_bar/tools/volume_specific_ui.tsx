@@ -1,39 +1,23 @@
 import Icon, {
   ClearOutlined,
-  DownOutlined,
   InfoCircleOutlined,
   ScissorOutlined,
   SettingOutlined,
 } from "@ant-design/icons";
-import AlignCenterIcon from "@images/icons/icon-align-center.svg?react";
 import HighlighterIcon from "@images/icons/icon-highlighter.svg?react";
-import InterpolateIcon from "@images/icons/icon-interpolate.svg?react";
 import LoadMeshesIcon from "@images/icons/icon-load-meshes.svg?react";
 import OverwriteEmptyIcon from "@images/icons/icon-overwrite-empty.svg?react";
 import OverwriteEverythingIcon from "@images/icons/icon-overwrite-everything.svg?react";
 import RestrictFloodfillToBboxIcon from "@images/icons/icon-restrict-to-bounding-box.svg?react";
 import NewSegmentIcon from "@images/icons/icon-segment-new.svg?react";
 import { updateNovelUserExperienceInfos } from "admin/rest_api";
-import {
-  Badge,
-  Button,
-  Dropdown,
-  type MenuProps,
-  Popconfirm,
-  Popover,
-  Radio,
-  type RadioChangeEvent,
-  Space,
-} from "antd";
-import FastTooltip from "components/fast_tooltip";
+import { Badge, Popconfirm, Popover, Radio, type RadioChangeEvent, Space } from "antd";
 import { usePrevious, useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import {
   FillModeEnum,
-  type InterpolationMode,
-  InterpolationModeEnum,
   MappingStatusEnum,
   type OverwriteMode,
   OverwriteModeEnum,
@@ -47,11 +31,7 @@ import { clearProofreadingByProducts } from "viewer/model/actions/proofread_acti
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { showQuickSelectSettingsAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import {
-  createCellAction,
-  interpolateSegmentationLayerAction,
-} from "viewer/model/actions/volumetracing_actions";
-import { getInterpolationInfo } from "viewer/model/sagas/volume/volume_interpolation_saga";
+import { createCellAction } from "viewer/model/actions/volumetracing_actions";
 import { rgbaToCSS } from "viewer/shaders/utils.glsl";
 import { Model } from "viewer/singletons";
 import Store from "viewer/store";
@@ -171,64 +151,6 @@ export function OverwriteModeSwitch({
         <Icon component={OverwriteEmptyIcon} aria-label="Overwrite Empty Icon" />
       </RadioButtonWithTooltip>
     </Radio.Group>
-  );
-}
-
-const INTERPOLATION_ICON = {
-  [InterpolationModeEnum.INTERPOLATE]: <Icon component={InterpolateIcon} />,
-  [InterpolationModeEnum.EXTRUDE]: <Icon component={AlignCenterIcon} rotate={90} />,
-};
-
-export function VolumeInterpolationButton() {
-  const dispatch = useDispatch();
-  const interpolationMode = useWkSelector((state) => state.userConfiguration.interpolationMode);
-
-  const onInterpolateClick = (e: React.MouseEvent<HTMLElement> | null) => {
-    e?.currentTarget.blur();
-    dispatch(interpolateSegmentationLayerAction());
-  };
-
-  const { tooltipTitle, isDisabled } = useWkSelector((state) =>
-    getInterpolationInfo(state, "Not available since"),
-  );
-
-  const menu: MenuProps = {
-    onClick: (e) => {
-      dispatch(updateUserSettingAction("interpolationMode", e.key as InterpolationMode));
-      onInterpolateClick(null);
-    },
-    items: [
-      {
-        label: "Interpolate current segment",
-        key: InterpolationModeEnum.INTERPOLATE,
-        icon: INTERPOLATION_ICON[InterpolationModeEnum.INTERPOLATE],
-      },
-      {
-        label: "Extrude (copy) current segment",
-        key: InterpolationModeEnum.EXTRUDE,
-        icon: INTERPOLATION_ICON[InterpolationModeEnum.EXTRUDE],
-      },
-    ],
-  };
-
-  return (
-    // Without the outer div, the Dropdown can eat up all the remaining horizontal space,
-    // moving sibling elements to the far right.
-    <div>
-      <Space.Compact>
-        <FastTooltip title={tooltipTitle}>
-          <Button
-            icon={INTERPOLATION_ICON[interpolationMode]}
-            onClick={onInterpolateClick}
-            disabled={isDisabled}
-            style={{ padding: "0 5px 0 6px" }}
-          />
-        </FastTooltip>
-        <Dropdown menu={menu}>
-          <Button icon={<DownOutlined />} disabled={isDisabled} />
-        </Dropdown>
-      </Space.Compact>
-    </div>
   );
 }
 

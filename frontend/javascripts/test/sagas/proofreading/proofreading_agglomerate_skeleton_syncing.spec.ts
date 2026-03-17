@@ -255,7 +255,9 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
         // Set up the split-related segment partners. Normally, this would happen
         // due to the user's interactions.
-        yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
+        yield put(
+          updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
+        );
         yield put(setActiveCellAction(1));
         yield makeMappingEditableHelper();
         if (othersMayEdit) {
@@ -319,7 +321,9 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
         // Set up the split-related segment partners. Normally, this would happen
         // due to the user's interactions.
-        yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
+        yield put(
+          updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
+        );
         yield put(setActiveCellAction(1));
         yield makeMappingEditableHelper();
         if (othersMayEdit) {
@@ -396,7 +400,9 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         }
 
         yield* loadAgglomerateSkeletons(context, [1, 6], false, othersMayEdit);
-        yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
+        yield put(
+          updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
+        );
         yield put(setActiveCellAction(1, undefined, null, 1));
 
         // Execute the actual merge via meshes merging segment 1 with segment 6.
@@ -448,7 +454,9 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         }
 
         yield* loadAgglomerateSkeletons(context, [1, 6], false, othersMayEdit);
-        yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
+        yield put(
+          updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
+        );
         yield put(setActiveCellAction(1, undefined, null, 1));
 
         // Prepare the server's reply for the upcoming split.
@@ -544,7 +552,9 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         }
 
         yield* loadAgglomerateSkeletons(context, [1, 6], false, othersMayEdit);
-        yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(2) }, tracingId));
+        yield put(
+          updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(2) }, tracingId),
+        );
         yield put(setActiveCellAction(1));
 
         // Execute the actual merge and wait for the finished mapping.

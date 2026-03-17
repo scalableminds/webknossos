@@ -29,10 +29,10 @@ import {
 import { loadAgglomerateTree1 } from "./proofreading_interaction_update_action_fixtures";
 import {
   expectSegmentList,
+  getPositionForSegmentId,
   initializeMappingAndTool,
   makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
-  getPositionForSegmentId,
 } from "./proofreading_test_utils";
 
 describe("Proofreading (Poll only)", () => {

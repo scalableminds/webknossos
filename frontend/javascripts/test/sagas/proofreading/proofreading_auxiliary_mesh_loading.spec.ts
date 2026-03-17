@@ -195,7 +195,9 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         // due to the user's interactions.
         yield loadAgglomerateMeshes([1, 4]);
 
-        yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
+        yield put(
+          updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
+        );
         yield put(setActiveCellAction(1));
         // Give mesh loading a little time
         const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);

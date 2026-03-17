@@ -40,7 +40,7 @@ class DSAiModelController @Inject()(accessTokenService: DataStoreAccessTokenServ
         for {
           modelVaultPath <- dataVaultService.vaultPathFor(request.body.modelPath)
           statisticsFileBytes <- (modelVaultPath / "model" / filenameStatisticsJson)
-            .readBytes() ?~> s"Could not model $filenameStatisticsJson info file."
+            .readBytes() ?~> s"Could not read model $filenameStatisticsJson info file."
           modelStatistics <- JsonHelper
             .parseAs[ModelStatistics](statisticsFileBytes)
             .toFox ?~> s"Could not parse model $filenameStatisticsJson – is the scale attribute missing?"

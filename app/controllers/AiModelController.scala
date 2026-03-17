@@ -63,7 +63,7 @@ case class RunInferenceParameters(datasetId: ObjectId,
                                   workflowYaml: Option[String],
                                   invertColorLayer: Option[Boolean],
                                   seedGeneratorDistanceThreshold: Option[Double],
-                                  doSplitMergerEvaluation: Boolean,
+                                  doSplitMergerEvaluation: Boolean = false,
                                   evalUseSparseTracing: Option[Boolean],
                                   evalMaxEdgeLength: Option[Double],
                                   evalSparseTubeThresholdNm: Option[Double],
@@ -278,9 +278,12 @@ class AiModelController @Inject()(
       for {
         dataset <- datasetDAO.findOne(request.body.datasetId)
         _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
+        aiModelOpt <- Fox.runOptional(request.body.aiModelId)(aiModelDAO.findOne) ?~> "aiModel.notFound"
+        _ <- Fox.runOptional(aiModelOpt) { aiModel =>
+          Fox.fromBool(aiModel._dataStore == dataset._dataStore) ?~> "aiModel.dataStoreMismatch"
+        }
         (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.colorLayerName)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
-        aiModelOpt <- Fox.runOptional(request.body.aiModelId)(aiModelDAO.findOne) ?~> "aiModel.notFound"
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
         jobCommand = JobCommand.infer_instances
         mag1BoundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
@@ -332,9 +335,12 @@ class AiModelController @Inject()(
       for {
         dataset <- datasetDAO.findOne(request.body.datasetId)
         _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
+        aiModelOpt <- Fox.runOptional(request.body.aiModelId)(aiModelDAO.findOne) ?~> "aiModel.notFound"
+        _ <- Fox.runOptional(aiModelOpt) { aiModel =>
+          Fox.fromBool(aiModel._dataStore == dataset._dataStore) ?~> "aiModel.dataStoreMismatch"
+        }
         (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.colorLayerName)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
-        aiModelOpt <- Fox.runOptional(request.body.aiModelId)(aiModelDAO.findOne) ?~> "aiModel.notFound"
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
         jobCommand = JobCommand.infer_neurons
         mag1BoundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox

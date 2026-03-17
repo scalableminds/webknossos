@@ -4,6 +4,8 @@ do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 158 
 
 DROP VIEW webknossos.aiInferences_;
 
+DELETE FROM webknossos.aiInferences WHERE _aiModel IS NULL;
+
 ALTER TABLE webknossos.aiInferences ALTER COLUMN _aiModel SET NOT NULL;
 
 CREATE VIEW webknossos.aiInferences_ as SELECT * FROM webknossos.aiInferences WHERE NOT isDeleted;

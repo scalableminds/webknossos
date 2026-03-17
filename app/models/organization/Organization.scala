@@ -358,7 +358,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       aiPlanParsed: Option[AiPlan] <- Fox.runOptional(row.aiplan)(aiPlanStr => AiPlan.fromString(aiPlanStr).toFox)
       aiPlan = if (row.aiplanchanged) Some(aiPlanParsed) else None
       paidUntil = if (row.paiduntilchanged) Some(row.paiduntil.map(Instant.fromSql)) else None
-      includedStorageBytes = if (row.includedstoragechanged) Some(row.includedstorage) else None
+      includedStorageBytes = if (row.includedstoragechanged) Some(row.includedstorage.map(ByteCount(_))) else None
       includedUsers = if (row.includeduserschanged) Some(row.includedusers) else None
     } yield
       OrganizationPlanUpdate(

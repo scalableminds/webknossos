@@ -411,29 +411,7 @@ describe("Proofreading (with mesh actions)", () => {
       Store.getState(),
     );
 
-    backendMock.planVersionInjection(7, [
-      // todop: use fixture
-      {
-        name: "mergeAgglomerate",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 5,
-          segmentId2: 6,
-          agglomerateId1: 4,
-          agglomerateId2: 6,
-        },
-      },
-      {
-        name: "mergeSegmentItems",
-        value: {
-          actionTracingId: VOLUME_TRACING_ID,
-          segmentId1: 5,
-          segmentId2: 6,
-          agglomerateId1: 4,
-          agglomerateId2: 6,
-        },
-      },
-    ]);
+    backendMock.planMultipleVersionInjections(7, mergeSegment5And6);
 
     mockEdgesForNormalAgglomerateMinCut(mocks);
 
@@ -445,7 +423,7 @@ describe("Proofreading (with mesh actions)", () => {
 
       const receivedUpdateActions = getFlattenedUpdateActions(context);
 
-      expect(receivedUpdateActions.slice(-2)).toEqual([
+      expect(receivedUpdateActions.slice(-3)).toEqual([
         {
           name: "splitAgglomerate",
           value: {
@@ -455,6 +433,14 @@ describe("Proofreading (with mesh actions)", () => {
             // but the merge made it a 4, because the split operation is after the injected version 7.
             segmentId1: 1337,
             segmentId2: 1338,
+          },
+        },
+        {
+          name: "updateSegmentPartial",
+          value: {
+            actionTracingId: "volumeTracingId",
+            id: 4,
+            anchorPosition: [100, 100, 100],
           },
         },
         {

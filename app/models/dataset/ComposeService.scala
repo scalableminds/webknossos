@@ -165,7 +165,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
       sourceLayer <- sourceDataSource.getDataLayer(request.sourceLayerName).toFox ?~> "layer.notFound"
       sourceMag <- sourceLayer.mags.find(_.mag == request.sourceMag).toFox ?~> "mag.notFound"
       adaptedMag = sourceMag.copy(mag = request.targetMag.getOrElse(sourceMag.mag))
-      updatedLayer = targetLayer.mapped(newMags = Some((sourceLayer.mags :+ adaptedMag).sortBy(_.mag.maxDim)))
+      updatedLayer = targetLayer.mapped(newMags = Some((targetLayer.mags :+ adaptedMag).sortBy(_.mag.maxDim)))
       _ <- Fox.fromBool(updatedLayer.mags.distinctBy(_.mag.maxDim).length == updatedLayer.mags.length) ?~> "compose.duplicateMag"
       updatedLayers = targetDataSource.dataLayers.map(l => if (l.name == request.targetLayerName) updatedLayer else l)
       updatedDataSource = targetDataSource.copy(dataLayers = updatedLayers)

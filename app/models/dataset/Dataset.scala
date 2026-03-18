@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.{Fox, Full, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.helpers.UPath
@@ -467,14 +467,37 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       parsed <- parseFirst(r, s"$organizationId/$directoryName")
     } yield parsed
 
+  // Some users use legacy software to create NMLs with dataset names. For some datasets, this differs from dataset directoryName
+  // To support uploading these NMLs if the name happens to be unique in the orga, this is used.
+  private def findOneByNameAndOrganizationIfUnique(name: String, organizationId: String)(
+      implicit ctx: DBAccessContext): Fox[Dataset] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(q"""SELECT $columns
+            FROM $existingCollectionName
+            WHERE name = $name
+            AND _organization = $organizationId
+            AND $accessQuery
+            LIMIT 2
+         """.as[DatasetsRow])
+      _ <- Fox.fromBool(r.length <= 1) ?~> "Multiple datasets with this name exist in this organization. Specify dataset id to select correct one."
+      parsed <- parseFirst(r, s"$organizationId/$name (name, not directoryName)")
+    } yield parsed
+
   def findOneByIdOrNameAndOrganization(datasetIdOpt: Option[ObjectId], datasetName: String, organizationId: String)(
       implicit ctx: DBAccessContext,
       m: MessagesProvider): Fox[Dataset] =
-    datasetIdOpt
-      .map(datasetId => findOne(datasetId))
-      .getOrElse(findOneByNameAndOrganization(datasetName, organizationId)) ?~> Messages(
-      "dataset.notFound",
-      datasetIdOpt.map(_.toString).getOrElse(datasetName))
+    datasetIdOpt match {
+      case Some(datasetId) => findOne(datasetId) ?~> Messages("dataset.notFound", datasetId)
+      case None =>
+        (for {
+          fromDirectoryNameBox <- findOneByNameAndOrganization(datasetName, organizationId).shiftBox
+          orFromName <- fromDirectoryNameBox match {
+            case Full(fromDirectoryName) => Fox.successful(fromDirectoryName)
+            case _                       => findOneByNameAndOrganizationIfUnique(datasetName, organizationId)
+          }
+        } yield orFromName) ?~> Messages("dataset.notFound", datasetName)
+    }
 
   def findAllByDirectoryNamesAndOrganization(directoryNames: List[String], organizationId: String)(
       implicit ctx: DBAccessContext): Fox[List[Dataset]] =

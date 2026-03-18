@@ -159,10 +159,10 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
       parsed <- parseFirst(r, "find one with uploads allowed")
     } yield parsed
 
-  def updateUrlByName(name: String, url: String): Fox[Unit] = {
-    val query = for { row <- Datastores if notdel(row) && row.name === name } yield row.url
-    for { _ <- run(query.update(url)) } yield ()
-  }
+  def updateUrlByName(name: String, url: String): Fox[Unit] =
+    for {
+      _ <- run(q"UPDATE $collectionName SET url = $url WHERE name = $name".asUpdate)
+    } yield ()
 
   def insertOne(d: DataStore): Fox[Unit] =
     for {

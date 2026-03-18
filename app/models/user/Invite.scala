@@ -121,9 +121,8 @@ class InviteDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def findOneByTokenValue(tokenValue: String): Fox[Invite] =
     for {
-      rOpt <- run(Invites.filter(r => notdel(r) && r.tokenvalue === tokenValue).result.headOption)
-      r <- rOpt.toFox
-      parsed <- parse(r)
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE tokenValue = $tokenValue".as[InvitesRow])
+      parsed <- parseFirst(r, "tokenValue")
     } yield parsed
 
   def insertOne(i: Invite): Fox[Unit] =
@@ -155,11 +154,9 @@ class InviteDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed = rows.map(row => TeamMembership(row._1, row._2))
     } yield parsed
 
-  def deleteAllExpired(): Fox[Unit] = {
-    val query = for {
-      row <- collection if notdel(row) && row.expirationdatetime <= Instant.now.toSql
-    } yield isDeletedColumn(row)
-    for { _ <- run(query.update(true)) } yield ()
-  }
+  def deleteAllExpired(): Fox[Unit] =
+    for {
+      _ <- run(q"UPDATE $collectionName SET isDeleted = TRUE WHERE expirationDateTime <= ${Instant.now}".asUpdate)
+    } yield ()
 
 }

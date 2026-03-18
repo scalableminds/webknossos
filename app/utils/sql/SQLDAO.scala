@@ -5,11 +5,10 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import slick.jdbc.GetResult
-import slick.lifted.{AbstractTable, Rep, TableQuery}
+import slick.lifted.{AbstractTable, TableQuery}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import slick.jdbc.PostgresProfile.api._
 
 abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SecuredSQLDAO(sqlClient) {
@@ -22,11 +21,6 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClien
   def columnsWithPrefix(prefix: String): SqlToken = SqlToken.raw(columnsList.map(prefix + _).mkString(", "))
 
   protected def resultConverter: GetResult[X#TableElementType]
-
-  protected def idColumn(x: X): Rep[String]
-  protected def isDeletedColumn(x: X): Rep[Boolean]
-
-  protected def notdel(r: X): Rep[Boolean] = isDeletedColumn(r) === false
 
   protected def parse(row: X#TableElementType): Fox[C]
 

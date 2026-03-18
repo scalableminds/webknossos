@@ -86,20 +86,17 @@ class TokenDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def findOneByValue(value: String): Fox[Token] =
     for {
-      rOpt <- run(Tokens.filter(r => notdel(r) && r.value === value).result.headOption)
-      r <- rOpt.toFox
-      parsed <- parse(r)
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE value = $value".as[TokensRow])
+      parsed <- parseFirst(r, "value")
     } yield parsed
 
   def findOneByLoginInfo(providerID: String, providerKey: String, tokenType: TokenType): Fox[Token] =
     for {
-      rOpt <- run(Tokens
-        .filter(r =>
-          notdel(r) && r.logininfoProviderid === providerID && r.logininfoProviderkey === providerKey && r.tokentype === tokenType.toString)
-        .result
-        .headOption)
-      r <- rOpt.toFox
-      parsed <- parse(r)
+      r <- run(q"""SELECT $columns from $existingCollectionName
+            WHERE loginInfo_providerID = $providerID
+            AND loginInfo_providerKey = $providerKey
+            AND tokenType = $tokenType""".as[TokensRow])
+      parsed <- parseFirst(r, "loginInfo")
     } yield parsed
 
   def insertOne(t: Token): Fox[Unit] =

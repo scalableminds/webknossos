@@ -56,7 +56,7 @@ class TracingStoreService @Inject()(
           Forbidden(Messages("tracingStore.notFound"))
         }) // Default error
 
-  def clientFor(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[WKRemoteTracingStoreClient] =
+  def clientFor(dataset: Dataset): Fox[WKRemoteTracingStoreClient] =
     for {
       tracingStore <- tracingStoreDAO.findFirst ?~> "tracingStore.notFound"
     } yield new WKRemoteTracingStoreClient(tracingStore, dataset, rpc, tracingDataSourceTemporaryStore)
@@ -82,16 +82,14 @@ class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
 
   def findOneByKey(key: String): Fox[TracingStore] =
     for {
-      rOpt <- run(Tracingstores.filter(r => notdel(r) && r.key === key).result.headOption)
-      r <- rOpt.toFox
-      parsed <- parse(r)
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE key = $key".as[TracingstoresRow])
+      parsed <- parseFirst(r, "key")
     } yield parsed
 
   def findOneByName(name: String): Fox[TracingStore] =
     for {
-      rOpt <- run(Tracingstores.filter(r => notdel(r) && r.name === name).result.headOption)
-      r <- rOpt.toFox
-      parsed <- parse(r)
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE name = $name".as[TracingstoresRow])
+      parsed <- parseFirst(r, name)
     } yield parsed
 
   def findOneByUrl(url: String)(implicit ctx: DBAccessContext): Fox[TracingStore] =

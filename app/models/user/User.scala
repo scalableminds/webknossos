@@ -152,7 +152,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           )
         )"""
 
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
+  def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[UsersRow])

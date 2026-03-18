@@ -103,7 +103,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     q"""(_team IN (SELECT _team FROM webknossos.user_team_roles WHERE isTeamManager AND _user = $requestingUserId)
        OR _organization = (SELECT _organization from webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))"""
 
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TaskType] =
+  def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TaskType] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[TasktypesRow])

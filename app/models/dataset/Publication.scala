@@ -72,7 +72,7 @@ class PublicationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       )
     )
 
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Publication] =
+  def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Publication] =
     for {
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id".as[PublicationsRow])
       parsed <- parseFirst(r, id)

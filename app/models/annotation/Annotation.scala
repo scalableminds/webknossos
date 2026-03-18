@@ -286,7 +286,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
 
   // read operations
 
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
+  def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[AnnotationsRow])

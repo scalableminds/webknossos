@@ -239,7 +239,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield ()
   }
 
-  override def findOne(folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Folder] =
+  def findOne(folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Folder] =
     for {
       accessQuery <- readAccessQuery
       rows <- run(q"SELECT $columns FROM webknossos.folders WHERE _id = $folderId AND $accessQuery".as[FoldersRow])

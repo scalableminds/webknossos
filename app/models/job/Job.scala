@@ -214,7 +214,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       }
     } yield parsed
 
-  override def findOne(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Job] =
+  def findOne(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Job] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery AND _id = $jobId".as[JobsRow])

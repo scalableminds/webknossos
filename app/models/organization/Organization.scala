@@ -114,7 +114,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
     } yield value == 0
 
   @deprecated("use findOne with string type instead", since = "")
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Organization] =
+  def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Organization] =
     Fox.failure("Cannot find organization by ObjectId. Use findOne with string type instead")
 
   def findOne(organizationId: String)(implicit ctx: DBAccessContext): Fox[Organization] =

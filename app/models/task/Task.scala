@@ -83,7 +83,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   private def listAccessQ(requestingUserId: ObjectId) = deleteAccessQ(requestingUserId)
 
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Task] =
+  def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Task] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[TasksRow])

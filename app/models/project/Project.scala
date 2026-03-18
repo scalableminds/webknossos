@@ -84,7 +84,7 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   // read operations
 
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Project] =
+  def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Project] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[ProjectsRow])

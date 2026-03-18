@@ -212,7 +212,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         )
         """
 
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Dataset] =
+  def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Dataset] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[DatasetsRow])

@@ -155,7 +155,16 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         )
      """
 
-  override def findOne(aiModelId: ObjectId)(implicit ctx: DBAccessContext): Fox[AiModel] =
+  override protected def updateAccessQ(requestingUserId: ObjectId): SqlToken =
+    q"""
+       _organization IN (
+          SELECT _organization
+          FROM webknossos.users_
+          WHERE _id = $requestingUserId
+        )
+     """
+
+  def findOne(aiModelId: ObjectId)(implicit ctx: DBAccessContext): Fox[AiModel] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $aiModelId AND $accessQuery".as[AimodelsRow])

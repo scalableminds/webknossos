@@ -109,6 +109,8 @@ Samplecountry
     multiUserId,
     defaultUserEmail,
     userService.createPasswordInfo(defaultUserPassword),
+    "Sample",
+    "User",
     isSuperUser = conf.WebKnossos.SampleOrganization.User.isSuperUser,
     isEmailVerified = true
   )
@@ -116,8 +118,6 @@ Samplecountry
     userId,
     multiUserId,
     defaultOrganization._id,
-    "Sample",
-    "User",
     Instant.now,
     Json.obj(),
     userService.createLoginInfo(userId),
@@ -132,6 +132,8 @@ Samplecountry
     multiUserId2,
     defaultUserEmail2,
     userService.createPasswordInfo(defaultUserPassword),
+    "Non-Admin",
+    "User",
     isSuperUser = false,
     isEmailVerified = true
   )
@@ -139,8 +141,6 @@ Samplecountry
     userId2,
     multiUserId2,
     defaultOrganization._id,
-    "Non-Admin",
-    "User",
     Instant.now,
     Json.obj(),
     userService.createLoginInfo(userId2),

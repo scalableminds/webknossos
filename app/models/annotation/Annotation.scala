@@ -397,8 +397,8 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
               a.name,
               a.description,
               a._user,
-              u.firstname,
-              u.lastname,
+              mu.firstname,
+              mu.lastname,
               a.othersmayedit,
               a.modified,
               a.tags,
@@ -418,11 +418,12 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
             JOIN webknossos.datasets_ d ON d._id = a._dataset
             JOIN webknossos.organizations_ AS o ON o._id = d._organization
             JOIN webknossos.annotation_layers AS al ON al._annotation = a._id
+            JOIN webknossos.multiusers_ mu ON u._multiUser = mu._id
             WHERE $stateQuery AND $accessQuery AND $userQuery AND $typQuery
             GROUP BY
               a._id, a.name, a.description, a._user, a.othersmayedit, a.modified,
               a.tags, a.state,  a.islockedbyowner, a.typ, a.visibility, a.tracingtime,
-              u.firstname, u.lastname,
+              mu.firstname, mu.lastname,
               d.name, o._id
             ORDER BY a._id DESC
             LIMIT $limit

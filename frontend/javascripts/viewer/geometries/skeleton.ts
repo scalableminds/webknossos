@@ -583,13 +583,15 @@ class Skeleton {
         "untransformedPosition" in node ? node.untransformedPosition : node.position;
       attributes.position.set(untransformedPosition, index * 3);
 
-      const nodeCoords = node.additionalCoordinates ?? [];
-      const nodeCoordMap = new Map(nodeCoords.map((c) => [c.name, c.value]));
+      if (flycamAdditionalCoordinateNames.size > 0) {
+        const nodeCoords = node.additionalCoordinates ?? [];
+        const nodeCoordMap = new Map(nodeCoords.map((c) => [c.name, c.value]));
 
-      for (const name of flycamAdditionalCoordinateNames) {
-        const attribute = buffer.geometry.attributes[`additionalCoord_${name}`];
-        const value = nodeCoordMap.get(name) ?? NaN;
-        attribute.set([value], index);
+        for (const name of flycamAdditionalCoordinateNames) {
+          const attribute = buffer.geometry.attributes[`additionalCoord_${name}`];
+          const value = nodeCoordMap.get(name) ?? NaN;
+          attribute.set([value], index);
+        }
       }
       attributes.radius.array[index] = node.radius;
       attributes.type.array[index] = NodeTypes.NORMAL;
@@ -641,13 +643,15 @@ class Skeleton {
       const attribute = buffer.geometry.attributes.position;
       attribute.set(position, index * 3);
 
-      const nodeCoords = additionalCoordinates ?? [];
-      const nodeCoordMap = new Map(nodeCoords.map((c) => [c.name, c.value]));
+      if (flycamAdditionalCoordinateNames.size > 0) {
+        const nodeCoords = additionalCoordinates ?? [];
+        const nodeCoordMap = new Map(nodeCoords.map((c) => [c.name, c.value]));
 
-      for (const name of flycamAdditionalCoordinateNames) {
-        const attribute = buffer.geometry.attributes[`additionalCoord_${name}`];
-        const value = nodeCoordMap.get(name) ?? NaN;
-        attribute.set([value], index);
+        for (const name of flycamAdditionalCoordinateNames) {
+          const attribute = buffer.geometry.attributes[`additionalCoord_${name}`];
+          const value = nodeCoordMap.get(name) ?? NaN;
+          attribute.set([value], index);
+        }
       }
 
       return [attribute];

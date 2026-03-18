@@ -240,17 +240,18 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
 
   const getOrganizationItems = useCallback(async () => {
     const organizations = await getUsersOrganizations();
-    return organizations.map((org) => {
+    const otherOrganizations = organizations.filter((orga) => orga.id !== activeUser?.organization);
+    return otherOrganizations.map((organization) => {
       return {
-        name: `Switch to Organization: ${org.name}`,
+        name: `Switch to Organization: ${organization.name}`,
         command: async () => {
-          await switchTo(org);
+          await switchTo(organization);
         },
         color: commandEntryColor,
-        id: org.id,
+        id: organization.id,
       };
     });
-  }, []);
+  }, [activeUser?.organization]);
 
   const switchOrganizationItem = {
     name: DynamicCommands.switchOrganization,

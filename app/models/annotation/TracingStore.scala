@@ -65,7 +65,6 @@ class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
   protected val collection = Tracingstores
   protected def resultConverter = GetResultTracingstoresRow
 
-
   protected def parse(r: TracingstoresRow): Fox[TracingStore] =
     Fox.successful(
       TracingStore(

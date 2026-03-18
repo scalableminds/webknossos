@@ -62,7 +62,6 @@ class TokenDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected val collection = Tokens
   protected def resultConverter = GetResultTokensRow
 
-
   protected def parse(r: TokensRow): Fox[Token] =
     for {
       tokenType <- TokenType.fromString(r.tokentype).toFox

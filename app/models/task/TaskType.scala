@@ -113,13 +113,6 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseFirst(r, summary)
     } yield parsed
 
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[TaskType]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[TasktypesRow])
-      parsed <- parseAll(r)
-    } yield parsed
-
   def insertOne(t: TaskType, organizationId: String): Fox[Unit] =
     for {
       _ <- run(q"""INSERT INTO webknossos.taskTypes(

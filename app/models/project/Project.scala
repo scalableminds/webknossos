@@ -58,7 +58,6 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected val collection = Projects
   protected def resultConverter = GetResultProjectsRow
 
-
   protected def parse(r: ProjectsRow): Fox[Project] =
     Fox.successful(
       Project(
@@ -81,13 +80,6 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   override protected def deleteAccessQ(requestingUserId: ObjectId) = q"_owner = $requestingUserId"
 
   // read operations
-
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[Project]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery ORDER BY created".as[ProjectsRow])
-      parsed <- parseAll(r)
-    } yield parsed
 
   // Does not use access query (because they dont support prefixes). Use only after separate access check!
   def findAllWithTaskType(taskTypeId: String): Fox[List[Project]] =

@@ -95,7 +95,6 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected val collection = Teams
   protected def resultConverter = GetResultTeamsRow
 
-
   protected def parse(r: TeamsRow): Fox[Team] =
     Fox.successful(
       Team(
@@ -121,13 +120,6 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         q"SELECT COUNT(*) FROM webknossos.teams WHERE name = $teamName AND _organization = $organizationId".as[Int])
       count <- countList.headOption.toFox
     } yield count
-
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[Team]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[TeamsRow])
-      parsed <- parseAll(r)
-    } yield parsed
 
   def findAllEditable(implicit ctx: DBAccessContext): Fox[List[Team]] =
     for {

@@ -47,7 +47,6 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
   protected val collection = Multiusers
   protected def resultConverter = GetResultMultiusersRow
 
-
   protected def parse(r: MultiusersRow): Fox[MultiUser] =
     for {
       novelUserExperienceInfos <- JsonHelper.parseAs[JsObject](r.noveluserexperienceinfos).toFox

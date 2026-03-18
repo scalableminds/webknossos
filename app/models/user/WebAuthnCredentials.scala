@@ -76,7 +76,6 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
   protected val collection = Webauthncredentials
   protected def resultConverter = GetResultWebauthncredentialsRow
 
-
   protected def parse(r: WebauthncredentialsRow): Fox[WebAuthnCredential] = {
     val objectConverter = new ObjectConverter()
     val converter = objectConverter.getJsonConverter

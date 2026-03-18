@@ -120,7 +120,6 @@ class MaintenanceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   protected val collection = Maintenances
   protected def resultConverter = GetResultMaintenancesRow
 
-
   protected def parse(r: MaintenancesRow): Fox[Maintenance] =
     Fox.successful(
       Maintenance(ObjectId(r._Id),

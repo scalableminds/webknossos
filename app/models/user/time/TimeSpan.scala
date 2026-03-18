@@ -48,7 +48,6 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected val collection = Timespans
   protected def resultConverter = GetResultTimespansRow
 
-
   protected def parse(r: TimespansRow): Fox[TimeSpan] =
     Fox.successful(
       TimeSpan(

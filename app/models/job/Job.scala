@@ -102,7 +102,6 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected val collection = Jobs
   protected def resultConverter = GetResultJobsRow
 
-
   protected def parse(r: JobsRow): Fox[Job] =
     for {
       manualStateOpt <- Fox.runOptional(r.manualstate)(JobState.fromString(_).toFox)

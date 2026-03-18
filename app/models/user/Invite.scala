@@ -102,7 +102,6 @@ class InviteDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected val collection = Invites
   protected def resultConverter = GetResultInvitesRow
 
-
   protected def parse(r: InvitesRow): Fox[Invite] =
     Fox.successful(
       Invite(

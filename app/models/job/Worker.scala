@@ -38,7 +38,6 @@ class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected val collection = Workers
   protected def resultConverter = GetResultWorkersRow
 
-
   protected def parse(r: WorkersRow): Fox[Worker] =
     for {
       supportedJobCommands <- Fox.serialCombined(parseArrayLiteral(r.supportedjobcommands)) { s =>

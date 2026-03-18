@@ -1,11 +1,12 @@
 package backend
 
 import com.scalableminds.webknossos.datastore.helpers.UPath
-import org.scalatestplus.play.PlaySpec
+import org.scalatest.wordspec.AsyncWordSpec
 
-class UPathTestSuite extends PlaySpec {
+class UPathTestSuite extends AsyncWordSpec {
 
   "UPath" should {
+
     "Be constructable from well-formed string" in {
       assert(UPath.fromString("relative/elsewhere").exists(_.toString == "./relative/elsewhere"))
       assert(UPath.fromString("./relative/elsewhere").exists(_.toString == "./relative/elsewhere"))

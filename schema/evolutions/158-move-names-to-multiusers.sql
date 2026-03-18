@@ -14,6 +14,8 @@ SET firstName = u.firstName, lastName = u.lastName
 FROM webknossos.users u
 WHERE u._multiUser = m._id;
 
+UPDATE webknossos.multiUsers SET firstName = '<deleted>', lastName = '<deleted>' WHERE firstName IS NULL;
+
 ALTER TABLE webknossos.multiUsers ALTER COLUMN firstName SET NOT NULL;
 ALTER TABLE webknossos.multiUsers ALTER COLUMN lastName SET NOT NULL;
 

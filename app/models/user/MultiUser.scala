@@ -171,7 +171,7 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
 
   def findMultiUserOfOrganizationOwner(organizationId: String): Fox[MultiUser] =
     for {
-      r <- run(q"""SELECT ${columnsWithPrefix("mu")}
+      r <- run(q"""SELECT ${columnsWithPrefix("mu.")}
                    FROM webknossos.users_ u
                    JOIN webknossos.multiUsers_ mu ON u._multiUser = mu._id
                    WHERE u.isOrganizationOwner

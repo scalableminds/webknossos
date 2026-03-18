@@ -173,20 +173,16 @@ export function VolumeInterpolationButton() {
   );
 
   return (
-    // Without the outer div, the Dropdown can eat up all the remaining horizontal space,
-    // moving sibling elements to the far right.
-    <div>
-      <Space.Compact>
-        <FastTooltip title={tooltipTitle}>
-          <Button
-            icon={<Icon component={InterpolateIcon} />}
-            onClick={onInterpolateClick}
-            disabled={isDisabled}
-            style={{ padding: "0 5px 0 6px" }}
-          />
-        </FastTooltip>
-      </Space.Compact>
-    </div>
+    <Space.Compact>
+      <FastTooltip title={tooltipTitle}>
+        <Button
+          icon={<Icon component={InterpolateIcon} />}
+          onClick={onInterpolateClick}
+          disabled={isDisabled}
+          style={{ padding: "0 5px 0 6px" }}
+        />
+      </FastTooltip>
+    </Space.Compact>
   );
 }
 

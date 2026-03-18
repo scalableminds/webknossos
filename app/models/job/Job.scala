@@ -101,6 +101,7 @@ object JobCompactInfo {
 class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Job, JobsRow, Jobs](sqlClient) {
   protected val collection = Jobs
+  protected def resultConverter = GetResultJobsRow
 
   protected def idColumn(x: Jobs): Rep[String] = x._Id
   protected def isDeletedColumn(x: Jobs): Rep[Boolean] = x.isdeleted
@@ -212,13 +213,6 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
             costInMilliCredits = row._14.map(_ * -1) // delta is negative, so cost should be positive.
           )
       }
-    } yield parsed
-
-  def findOne(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Job] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery AND _id = $jobId".as[JobsRow])
-      parsed <- parseFirst(r, jobId)
     } yield parsed
 
   def cancelConvertToWkwJobForDataset(datasetId: ObjectId): Fox[Unit] =

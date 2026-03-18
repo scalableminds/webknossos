@@ -111,6 +111,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     extends SQLDAO[Dataset, DatasetsRow, Datasets](sqlClient)
     with DatasetDAOLike {
   protected val collection = Datasets
+  protected def resultConverter = GetResultDatasetsRow
 
   protected def idColumn(x: Datasets): Rep[String] = x._Id
 
@@ -211,13 +212,6 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
           )
         )
         """
-
-  def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Dataset] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[DatasetsRow])
-      parsed <- parseFirst(r, id)
-    } yield parsed
 
   def findAllWithSearch(isActiveOpt: Option[Boolean],
                         isUnreported: Option[Boolean],
@@ -771,6 +765,7 @@ case class DataSourceMagRow(_dataset: ObjectId,
 class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[MagWithPaths, DatasetMagsRow, DatasetMags](sqlClient) {
   protected val collection = DatasetMags
+  protected def resultConverter = GetResultDatasetMagsRow
 
   protected def idColumn(x: DatasetMags): Rep[String] = x._Dataset
 

@@ -94,6 +94,7 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
 class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Team, TeamsRow, Teams](sqlClient) {
   protected val collection = Teams
+  protected def resultConverter = GetResultTeamsRow
 
   protected def idColumn(x: Teams): Rep[String] = x._Id
   protected def isDeletedColumn(x: Teams): Rep[Boolean] = x.isdeleted
@@ -116,13 +117,6 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   override protected def deleteAccessQ(requestingUserId: ObjectId) =
     q"""NOT isOrganizationTeam
         AND _organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin)"""
-
-  def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Team] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[TeamsRow])
-      parsed <- parseFirst(r, id)
-    } yield parsed
 
   def countByNameAndOrganization(teamName: String, organizationId: String): Fox[Int] =
     for {

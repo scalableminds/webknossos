@@ -64,6 +64,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   protected def idColumn(x: Tasktypes): Rep[String] = x._Id
   protected def isDeletedColumn(x: Tasktypes): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultTasktypesRow
 
   protected def parse(r: TasktypesRow): Fox[TaskType] =
     for {
@@ -102,13 +103,6 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   override protected def updateAccessQ(requestingUserId: ObjectId) =
     q"""(_team IN (SELECT _team FROM webknossos.user_team_roles WHERE isTeamManager AND _user = $requestingUserId)
        OR _organization = (SELECT _organization from webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))"""
-
-  def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TaskType] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[TasktypesRow])
-      parsed <- parseFirst(r, id.toString)
-    } yield parsed
 
   def findOneBySummaryAndOrganization(summary: String, organizationId: String)(
       implicit ctx: DBAccessContext): Fox[TaskType] =

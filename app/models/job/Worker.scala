@@ -37,6 +37,7 @@ case class Worker(_id: ObjectId,
 class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Worker, WorkersRow, Workers](sqlClient) {
   protected val collection = Workers
+  protected def resultConverter = GetResultWorkersRow
 
   protected def idColumn(x: Workers): Rep[String] = x._Id
 

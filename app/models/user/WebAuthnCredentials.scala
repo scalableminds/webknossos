@@ -75,6 +75,7 @@ class AttestationStatementEnvelope {
 class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[WebAuthnCredential, WebauthncredentialsRow, Webauthncredentials](sqlClient) {
   protected val collection = Webauthncredentials
+  protected def resultConverter = GetResultWebauthncredentialsRow
 
   override protected def idColumn(x: Webauthncredentials): Rep[String] = x._Id
   override protected def isDeletedColumn(x: Webauthncredentials): Rep[Boolean] = x.isdeleted

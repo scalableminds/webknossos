@@ -39,6 +39,7 @@ object PasswordHasherType extends ExtendedEnumeration {
 class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[MultiUser, MultiusersRow, Multiusers](sqlClient) {
   protected val collection = Multiusers
+  protected def resultConverter = GetResultMultiusersRow
 
   protected def idColumn(x: Multiusers): Rep[String] = x._Id
   protected def isDeletedColumn(x: Multiusers): Rep[Boolean] = x.isdeleted

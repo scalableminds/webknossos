@@ -51,6 +51,7 @@ object Script {
 class ScriptDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Script, ScriptsRow, Scripts](sqlClient) {
   protected val collection = Scripts
+  protected def resultConverter = GetResultScriptsRow
 
   protected def idColumn(x: Scripts): Rep[String] = x._Id
   protected def isDeletedColumn(x: Scripts): Rep[Boolean] = x.isdeleted

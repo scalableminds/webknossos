@@ -93,6 +93,7 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO, jobService: JobServ
 class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[DataStore, DatastoresRow, Datastores](sqlClient) {
   protected val collection = Datastores
+  protected def resultConverter = GetResultDatastoresRow
 
   protected def idColumn(x: Datastores): Rep[String] = x.name
   protected def isDeletedColumn(x: Datastores): Rep[Boolean] = x.isdeleted

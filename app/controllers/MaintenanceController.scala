@@ -119,6 +119,7 @@ class MaintenanceService @Inject()() {
 class MaintenanceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Maintenance, MaintenancesRow, Maintenances](sqlClient) {
   protected val collection = Maintenances
+  protected def resultConverter = GetResultMaintenancesRow
 
   protected def idColumn(x: Maintenances): Rep[String] = x._Id
 

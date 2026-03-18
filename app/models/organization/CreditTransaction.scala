@@ -4,8 +4,11 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.schema.Tables.CreditTransactionsRow
-import com.scalableminds.webknossos.schema.Tables.CreditTransactions
+import com.scalableminds.webknossos.schema.Tables.{
+  CreditTransactions,
+  CreditTransactionsRow,
+  GetResultCreditTransactionsRow
+}
 import models.organization.CreditState.CreditState
 import models.organization.CreditTransactionState.TransactionState
 import slick.dbio.DBIO
@@ -40,6 +43,7 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
     extends SQLDAO[CreditTransaction, CreditTransactionsRow, CreditTransactions](sqlClient) {
 
   protected val collection = CreditTransactions
+  protected def resultConverter = GetResultCreditTransactionsRow
 
   protected def idColumn(x: CreditTransactions): Rep[String] = x._Id
 
@@ -120,15 +124,6 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[CreditTransactionsRow])
       parsed <- parseAll(r)
-    } yield parsed
-
-  def findOne(transactionId: String)(implicit ctx: DBAccessContext): Fox[CreditTransaction] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(
-        q"SELECT $columns FROM $existingCollectionName WHERE _id = $transactionId AND $accessQuery"
-          .as[CreditTransactionsRow])
-      parsed <- parseFirst(r, transactionId)
     } yield parsed
 
   def getMilliCreditBalance(organizationId: String)(implicit ctx: DBAccessContext): Fox[Int] =

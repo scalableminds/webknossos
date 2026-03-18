@@ -68,7 +68,7 @@ class CreditTransactionController @Inject()(organizationDAO: OrganizationDAO,
     } yield Ok
   }
 
-  def refundCreditTransaction(organizationId: String, transactionId: String): Action[AnyContent] =
+  def refundCreditTransaction(organizationId: String, transactionId: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can manually refund credits"

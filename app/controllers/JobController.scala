@@ -80,7 +80,7 @@ class JobController @Inject()(jobDAO: JobDAO,
     for {
       _ <- Fox.successful(())
       jobCountsByState <- jobDAO.countByState
-      workers <- workerDAO.findAll
+      workers <- workerDAO.findAll(GlobalAccessContext)
       workersJson = workers.map(workerService.publicWrites)
       jsStatus = Json.obj(
         "workers" -> workersJson,

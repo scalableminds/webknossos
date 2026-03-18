@@ -96,6 +96,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   private val PricingPlansAllowingGuestsQuery =
     q"""(${PricingPlan.Team}, ${PricingPlan.Power}, ${PricingPlan.Custom}, ${PricingPlan.Team_Trial}, ${PricingPlan.Power_Trial})"""
   protected val collection = Users
+  protected def resultConverter = GetResultUsersRow
 
   protected def idColumn(x: Users): Rep[String] = x._Id
   protected def isDeletedColumn(x: Users): Rep[Boolean] = x.isdeleted
@@ -151,13 +152,6 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
             )
           )
         )"""
-
-  def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[UsersRow])
-      parsed <- parseFirst(r, id)
-    } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[User]] =
     for {

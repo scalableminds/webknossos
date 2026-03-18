@@ -54,6 +54,7 @@ class PublicationService @Inject()(datasetService: DatasetService,
 class PublicationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Publication, PublicationsRow, Publications](sqlClient) {
   protected val collection = Publications
+  protected def resultConverter = GetResultPublicationsRow
 
   protected def idColumn(x: Publications): Rep[String] = x._Id
 
@@ -71,12 +72,6 @@ class PublicationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
         r.isdeleted
       )
     )
-
-  def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Publication] =
-    for {
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id".as[PublicationsRow])
-      parsed <- parseFirst(r, id)
-    } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Publication]] =
     for {

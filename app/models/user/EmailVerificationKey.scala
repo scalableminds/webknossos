@@ -4,7 +4,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables
-import com.scalableminds.webknossos.schema.Tables.{Emailverificationkeys, EmailverificationkeysRow}
+import com.scalableminds.webknossos.schema.Tables.{Emailverificationkeys, EmailverificationkeysRow, GetResultEmailverificationkeysRow}
 import slick.lifted.{Rep, TableQuery}
 import utils.sql.{SQLDAO, SqlClient}
 
@@ -21,6 +21,7 @@ case class EmailVerificationKey(_id: ObjectId,
 class EmailVerificationKeyDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[EmailVerificationKey, EmailverificationkeysRow, Emailverificationkeys](sqlClient) {
   override protected def collection: TableQuery[Tables.Emailverificationkeys] = Emailverificationkeys
+  protected def resultConverter = GetResultEmailverificationkeysRow
 
   override protected def idColumn(x: Tables.Emailverificationkeys): Rep[String] = x._Id
 

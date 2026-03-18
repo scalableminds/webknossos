@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.schema.Tables.{Aiinferences, AiinferencesRow}
+import com.scalableminds.webknossos.schema.Tables.{Aiinferences, AiinferencesRow, GetResultAiinferencesRow}
 import models.dataset.{DataStoreDAO, DataStoreService, DatasetDAO, DatasetService}
 import models.job.{JobDAO, JobService}
 import models.user.{User, UserDAO, UserService}
@@ -76,6 +76,7 @@ class AiInferenceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   protected def idColumn(x: Aiinferences): Rep[String] = x._Id
 
   protected def isDeletedColumn(x: Aiinferences): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultAiinferencesRow
 
   protected def parse(r: AiinferencesRow): Fox[AiInference] =
     for {

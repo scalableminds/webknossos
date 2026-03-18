@@ -45,6 +45,7 @@ class AnnotationPrivateLinkService @Inject()()(implicit ec: ExecutionContext) {
 class AnnotationPrivateLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[AnnotationPrivateLink, AnnotationPrivatelinksRow, AnnotationPrivatelinks](sqlClient) {
   protected val collection = AnnotationPrivatelinks
+  protected def resultConverter = GetResultAnnotationPrivatelinksRow
 
   protected def idColumn(x: AnnotationPrivatelinks): Rep[String] = x._Id
 

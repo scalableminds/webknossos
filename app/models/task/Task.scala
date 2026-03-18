@@ -38,6 +38,7 @@ case class Task(
 class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Task, TasksRow, Tasks](sqlClient) {
   protected val collection = Tasks
+  protected def resultConverter = GetResultTasksRow
 
   protected def idColumn(x: Tasks): profile.api.Rep[String] = x._Id
   protected def isDeletedColumn(x: Tasks): profile.api.Rep[Boolean] = x.isdeleted
@@ -82,13 +83,6 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         in (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin)))"""
 
   private def listAccessQ(requestingUserId: ObjectId) = deleteAccessQ(requestingUserId)
-
-  def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Task] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[TasksRow])
-      parsed <- parseFirst(r, id)
-    } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Task]] =
     for {

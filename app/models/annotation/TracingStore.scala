@@ -1,10 +1,11 @@
 package models.annotation
 
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
+
 import javax.inject.Inject
 import models.dataset.Dataset
 import play.api.i18n.{Messages, MessagesProvider}
@@ -12,7 +13,7 @@ import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Result, Results}
 import slick.jdbc.PostgresProfile.api._
 import slick.lifted.Rep
-import utils.sql.{SqlClient, SQLDAO}
+import utils.sql.{SQLDAO, SqlClient}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -64,6 +65,7 @@ class TracingStoreService @Inject()(
 class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[TracingStore, TracingstoresRow, Tracingstores](sqlClient) {
   protected val collection = Tracingstores
+  protected def resultConverter = GetResultTracingstoresRow
 
   protected def idColumn(x: Tracingstores): Rep[String] = x.name
   protected def isDeletedColumn(x: Tracingstores): Rep[Boolean] = x.isdeleted
@@ -99,9 +101,9 @@ class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       parsed <- parseFirst(r, url)
     } yield parsed
 
-  def findFirst(implicit ctx: DBAccessContext): Fox[TracingStore] =
+  def findFirst: Fox[TracingStore] =
     for {
-      all <- findAll
+      all <- findAll(GlobalAccessContext)
       first <- all.headOption.toFox
     } yield first
 

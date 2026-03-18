@@ -99,6 +99,7 @@ class InviteService @Inject()(conf: WkConf,
 class InviteDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Invite, InvitesRow, Invites](sqlClient) {
   protected val collection = Invites
+  protected def resultConverter = GetResultInvitesRow
 
   protected def idColumn(x: Invites): Rep[String] = x._Id
 

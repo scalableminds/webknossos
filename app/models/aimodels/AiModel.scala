@@ -3,7 +3,7 @@ package models.aimodels
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, Full}
-import com.scalableminds.webknossos.schema.Tables.{Aimodels, AimodelsRow}
+import com.scalableminds.webknossos.schema.Tables.{Aimodels, AimodelsRow, GetResultAimodelsRow}
 import models.aimodels.AiModelCategory.AiModelCategory
 import models.dataset.{DataStoreDAO, DataStoreService, WKRemoteDataStoreClient}
 import models.job.{JobDAO, JobService, JobState}
@@ -103,6 +103,7 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[AiModel, AimodelsRow, Aimodels](sqlClient) {
 
   protected val collection = Aimodels
+  protected def resultConverter = GetResultAimodelsRow
 
   protected def idColumn(x: Aimodels): Rep[String] = x._Id
 
@@ -145,14 +146,12 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                   WHERE _id = $requestingUserId
               ))
           )
-        OR _id IN (
-          SELECT _id FROM webknossos.aiModels
-          WHERE _organization IN (
-                  SELECT _organization
-                  FROM webknossos.users_
-                  WHERE _id = $requestingUserId
-          )
-        )
+         OR
+        (_organization IN (
+            SELECT _organization
+            FROM webknossos.users_
+            WHERE _id = $requestingUserId
+        ))
      """
 
   override protected def updateAccessQ(requestingUserId: ObjectId): SqlToken =
@@ -163,13 +162,6 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           WHERE _id = $requestingUserId
         )
      """
-
-  def findOne(aiModelId: ObjectId)(implicit ctx: DBAccessContext): Fox[AiModel] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $aiModelId AND $accessQuery".as[AimodelsRow])
-      parsed <- parseFirst(r, "id")
-    } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[AiModel]] =
     for {

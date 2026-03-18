@@ -57,6 +57,7 @@ object Project {
 class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Project, ProjectsRow, Projects](sqlClient) {
   protected val collection = Projects
+  protected def resultConverter = GetResultProjectsRow
 
   protected def idColumn(x: Projects): Rep[String] = x._Id
   protected def isDeletedColumn(x: Projects): Rep[Boolean] = x.isdeleted
@@ -83,13 +84,6 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   override protected def deleteAccessQ(requestingUserId: ObjectId) = q"_owner = $requestingUserId"
 
   // read operations
-
-  def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Project] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[ProjectsRow])
-      parsed <- parseFirst(r, id)
-    } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Project]] =
     for {
@@ -166,7 +160,10 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield ()
 
   def updatePaused(id: ObjectId, isPaused: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
-    updateBooleanCol(id, _.paused, isPaused)
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(q"UPDATE webknossos.projects SET isPaused = $isPaused WHERE _id = $id".asUpdate)
+    } yield ()
 
   def countForTeam(teamId: ObjectId): Fox[Int] =
     for {

@@ -47,6 +47,7 @@ object TimeSpan {
 class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[TimeSpan, TimespansRow, Timespans](sqlClient) {
   protected val collection = Timespans
+  protected def resultConverter = GetResultTimespansRow
 
   protected def idColumn(x: Timespans): Rep[String] = x._Id
   protected def isDeletedColumn(x: Timespans): Rep[Boolean] = x.isdeleted

@@ -192,6 +192,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     implicit ec: ExecutionContext)
     extends SQLDAO[Annotation, AnnotationsRow, Annotations](sqlClient) {
   protected val collection = Annotations
+  protected def resultConverter = GetResultAnnotationsRow
 
   protected def idColumn(x: Annotations): Rep[String] = x._Id
   protected def isDeletedColumn(x: Annotations): Rep[Boolean] = x.isdeleted
@@ -285,13 +286,6 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     deleteAccessQ(requestingUserId)
 
   // read operations
-
-  def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[AnnotationsRow])
-      parsed <- parseFirst(r, id)
-    } yield parsed
 
   private def getStateQuery(isFinished: Option[Boolean]) =
     isFinished match {
@@ -755,13 +749,13 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
   def updateDescription(id: ObjectId, description: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- updateStringCol(id, _.description, description)
+      _ <- run(q"UPDATE webknossos.annotations SET _description = $description WHERE _id = $id".asUpdate)
     } yield ()
 
   def updateName(id: ObjectId, name: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- updateStringCol(id, _.name, name)
+      _ <- run(q"UPDATE webknossos.annotations SET _name = $name WHERE _id = $id".asUpdate)
     } yield ()
 
   def updateVisibility(id: ObjectId, visibility: AnnotationVisibility.Value)(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -783,10 +777,16 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     } yield ()
 
   def updateUser(id: ObjectId, userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
-    updateObjectIdCol(id, _._User, userId)
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(q"UPDATE webknossos.annotations SET _user = $userId".asUpdate)
+    } yield ()
 
   def updateOthersMayEdit(id: ObjectId, othersMayEdit: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
-    updateBooleanCol(id, _.othersmayedit, othersMayEdit)
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(q"UPDATE webknossos.annotations SET othersMayEdit = $othersMayEdit".asUpdate)
+    } yield ()
 
   def updateViewConfiguration(id: ObjectId, viewConfiguration: Option[JsObject])(
       implicit ctx: DBAccessContext): Fox[Unit] =

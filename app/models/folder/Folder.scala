@@ -133,6 +133,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Folder, FoldersRow, Folders](sqlClient) {
 
   protected val collection = Folders
+  protected def resultConverter = GetResultFoldersRow
   protected def idColumn(x: Folders): Rep[String] = x._Id
   protected def isDeletedColumn(x: Folders): Rep[Boolean] = x.isdeleted
 
@@ -238,13 +239,6 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       _ <- run(DBIO.sequence(List(insertFolderQuery(f), insertPathQuery)).transactionally)
     } yield ()
   }
-
-  def findOne(folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Folder] =
-    for {
-      accessQuery <- readAccessQuery
-      rows <- run(q"SELECT $columns FROM webknossos.folders WHERE _id = $folderId AND $accessQuery".as[FoldersRow])
-      parsed <- parseFirst(rows, "id")
-    } yield parsed
 
   def countChildren(folderId: ObjectId): Fox[Int] =
     for {

@@ -62,6 +62,7 @@ object Token {
 class TokenDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Token, TokensRow, Tokens](sqlClient) {
   protected val collection = Tokens
+  protected def resultConverter = GetResultTokensRow
 
   protected def idColumn(x: Tokens): Rep[String] = x._Id
   protected def isDeletedColumn(x: Tokens): Rep[Boolean] = x.isdeleted
@@ -122,17 +123,15 @@ class TokenDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    WHERE value = $value""".asUpdate)
     } yield ()
 
-  def deleteOneByValue(value: String): Fox[Unit] = {
-    val query = for { row <- collection if notdel(row) && row.value === value } yield isDeletedColumn(row)
-    for { _ <- run(query.update(true)) } yield ()
-  }
+  def deleteOneByValue(value: String): Fox[Unit] =
+    for {
+      _ <- run(q"UPDATE $collectionName SET isDeleted = TRUE WHERE value = $value".asUpdate)
+    } yield ()
 
-  def deleteAllExpired(): Fox[Unit] = {
-    val query = for {
-      row <- collection if notdel(row) && row.expirationdatetime <= Instant.now.toSql
-    } yield isDeletedColumn(row)
-    for { _ <- run(query.update(true)) } yield ()
-  }
+  def deleteAllExpired(): Fox[Unit] =
+    for {
+      _ <- run(q"UPDATE $collectionName SET isDeleted = TRUE WHERE expirationDateTime <= ${Instant.now}".asUpdate)
+    } yield ()
 
   def deleteDataStoreTokensForMultiUser(multiUserId: ObjectId): Fox[Unit] =
     for {

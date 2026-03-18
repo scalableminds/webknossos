@@ -61,6 +61,7 @@ case class DataLayerAttachmentStorageReport(
 class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Organization, OrganizationsRow, Organizations](sqlClient) {
   protected val collection = Organizations
+  protected def resultConverter = GetResultOrganizationsRow
 
   protected def idColumn(x: Organizations): Rep[String] = x._Id
 
@@ -114,7 +115,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
     } yield value == 0
 
   @deprecated("use findOne with string type instead", since = "")
-  def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Organization] =
+  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Organization] =
     Fox.failure("Cannot find organization by ObjectId. Use findOne with string type instead")
 
   def findOne(organizationId: String)(implicit ctx: DBAccessContext): Fox[Organization] =

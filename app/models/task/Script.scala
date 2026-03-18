@@ -6,7 +6,6 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import models.user.{UserDAO, UserService}
 import play.api.libs.json._
-import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
@@ -53,8 +52,6 @@ class ScriptDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected val collection = Scripts
   protected def resultConverter = GetResultScriptsRow
 
-  protected def idColumn(x: Scripts): Rep[String] = x._Id
-  protected def isDeletedColumn(x: Scripts): Rep[Boolean] = x.isdeleted
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"(SELECT _organization FROM webknossos.users_ u WHERE u._id = _owner) = (SELECT _organization FROM webknossos.users_ u WHERE u._id = $requestingUserId)"

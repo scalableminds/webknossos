@@ -6,7 +6,6 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import play.api.libs.json.{JsValue, Json, OFormat}
 import security.RandomIDGenerator
-import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
@@ -47,9 +46,6 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: Exec
   protected val collection = AnnotationPrivatelinks
   protected def resultConverter = GetResultAnnotationPrivatelinksRow
 
-  protected def idColumn(x: AnnotationPrivatelinks): Rep[String] = x._Id
-
-  protected def isDeletedColumn(x: AnnotationPrivatelinks): Rep[Boolean] = x.isdeleted
 
   protected def parse(r: AnnotationPrivatelinksRow): Fox[AnnotationPrivateLink] =
     Fox.successful(

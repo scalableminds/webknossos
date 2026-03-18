@@ -8,7 +8,6 @@ import models.annotation.{AnnotationDAO, AnnotationService}
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json.{JsObject, Json}
-import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
 
@@ -56,9 +55,6 @@ class PublicationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   protected val collection = Publications
   protected def resultConverter = GetResultPublicationsRow
 
-  protected def idColumn(x: Publications): Rep[String] = x._Id
-
-  protected def isDeletedColumn(x: Publications): Rep[Boolean] = x.isdeleted
 
   protected def parse(r: PublicationsRow): Fox[Publication] =
     Fox.successful(

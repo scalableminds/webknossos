@@ -40,8 +40,6 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected val collection = Tasks
   protected def resultConverter = GetResultTasksRow
 
-  protected def idColumn(x: Tasks): profile.api.Rep[String] = x._Id
-  protected def isDeletedColumn(x: Tasks): profile.api.Rep[Boolean] = x.isdeleted
 
   protected def parse(r: TasksRow): Fox[Task] =
     for {

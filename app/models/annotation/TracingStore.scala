@@ -11,8 +11,6 @@ import models.dataset.Dataset
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Result, Results}
-import slick.jdbc.PostgresProfile.api._
-import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -67,8 +65,6 @@ class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
   protected val collection = Tracingstores
   protected def resultConverter = GetResultTracingstoresRow
 
-  protected def idColumn(x: Tracingstores): Rep[String] = x.name
-  protected def isDeletedColumn(x: Tracingstores): Rep[Boolean] = x.isdeleted
 
   protected def parse(r: TracingstoresRow): Fox[TracingStore] =
     Fox.successful(

@@ -9,7 +9,6 @@ import com.scalableminds.webknossos.schema.Tables._
 import models.user.Theme.Theme
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json.{JsObject, Json}
-import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
 
@@ -41,8 +40,6 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
   protected val collection = Multiusers
   protected def resultConverter = GetResultMultiusersRow
 
-  protected def idColumn(x: Multiusers): Rep[String] = x._Id
-  protected def isDeletedColumn(x: Multiusers): Rep[Boolean] = x.isdeleted
 
   protected def parse(r: MultiusersRow): Fox[MultiUser] =
     for {

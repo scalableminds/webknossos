@@ -11,7 +11,6 @@ import models.user.{User, UserDAO, UserService}
 import play.api.libs.json.{JsObject, Json}
 import slick.dbio.{DBIO, Effect, NoStream}
 import slick.jdbc.PostgresProfile.api._
-import slick.lifted.Rep
 import slick.sql.SqlAction
 import com.scalableminds.util.objectid.ObjectId
 import models.organization.OrganizationDAO
@@ -104,10 +103,6 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   protected val collection = Aimodels
   protected def resultConverter = GetResultAimodelsRow
-
-  protected def idColumn(x: Aimodels): Rep[String] = x._Id
-
-  protected def isDeletedColumn(x: Aimodels): Rep[Boolean] = x.isdeleted
 
   protected def parse(r: AimodelsRow): Fox[AiModel] =
     for {

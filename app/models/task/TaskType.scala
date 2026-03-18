@@ -11,7 +11,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
 import models.annotation.{AnnotationSettings, TracingMode}
 import models.team.TeamDAO
 import play.api.libs.json._
-import slick.lifted.Rep
 import utils.sql.{EnumerationArrayValue, SQLDAO, SqlClient}
 
 import javax.inject.Inject
@@ -62,8 +61,6 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[TaskType, TasktypesRow, Tasktypes](sqlClient) {
   protected val collection = Tasktypes
 
-  protected def idColumn(x: Tasktypes): Rep[String] = x._Id
-  protected def isDeletedColumn(x: Tasktypes): Rep[Boolean] = x.isdeleted
   protected def resultConverter = GetResultTasktypesRow
 
   protected def parse(r: TasktypesRow): Fox[TaskType] =

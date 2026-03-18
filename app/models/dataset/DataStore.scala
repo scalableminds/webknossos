@@ -10,8 +10,6 @@ import javax.inject.Inject
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{Format, JsObject, Json}
 import play.api.mvc.{Result, Results}
-import slick.jdbc.PostgresProfile.api._
-import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.WkConf
 
@@ -95,8 +93,6 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
   protected val collection = Datastores
   protected def resultConverter = GetResultDatastoresRow
 
-  protected def idColumn(x: Datastores): Rep[String] = x.name
-  protected def isDeletedColumn(x: Datastores): Rep[Boolean] = x.isdeleted
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"(onlyAllowedOrganization IS NULL) OR (onlyAllowedOrganization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId))"

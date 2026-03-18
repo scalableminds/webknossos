@@ -14,7 +14,6 @@ import models.task.TaskTypeDAO
 import models.user.User
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
-import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
 
@@ -96,8 +95,6 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected val collection = Teams
   protected def resultConverter = GetResultTeamsRow
 
-  protected def idColumn(x: Teams): Rep[String] = x._Id
-  protected def isDeletedColumn(x: Teams): Rep[Boolean] = x.isdeleted
 
   protected def parse(r: TeamsRow): Fox[Team] =
     Fox.successful(

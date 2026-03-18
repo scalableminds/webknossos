@@ -44,7 +44,6 @@ import slick.dbio.DBIO
 import slick.jdbc.GetResult
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
-import slick.lifted.Rep
 import slick.sql.SqlAction
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 
@@ -113,9 +112,6 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
   protected val collection = Datasets
   protected def resultConverter = GetResultDatasetsRow
 
-  protected def idColumn(x: Datasets): Rep[String] = x._Id
-
-  protected def isDeletedColumn(x: Datasets): Rep[Boolean] = x.isdeleted
 
   private def parseVoxelSizeOpt(factorLiteralOpt: Option[String],
                                 unitLiteralOpt: Option[String]): Fox[Option[VoxelSize]] = factorLiteralOpt match {
@@ -767,9 +763,6 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   protected val collection = DatasetMags
   protected def resultConverter = GetResultDatasetMagsRow
 
-  protected def idColumn(x: DatasetMags): Rep[String] = x._Dataset
-
-  protected def isDeletedColumn(x: DatasetMags): Rep[Boolean] = false
 
   protected def parse(row: DatasetMagsRow): Fox[MagWithPaths] =
     for {

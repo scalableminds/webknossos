@@ -9,7 +9,6 @@ import models.dataset.{DataStoreDAO, DataStoreService, DatasetDAO, DatasetServic
 import models.job.{JobDAO, JobService}
 import models.user.{User, UserDAO, UserService}
 import play.api.libs.json.{JsObject, Json}
-import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
@@ -73,9 +72,6 @@ class AiInferenceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   protected val collection = Aiinferences
 
-  protected def idColumn(x: Aiinferences): Rep[String] = x._Id
-
-  protected def isDeletedColumn(x: Aiinferences): Rep[Boolean] = x.isdeleted
   protected def resultConverter = GetResultAiinferencesRow
 
   protected def parse(r: AiinferencesRow): Fox[AiInference] =

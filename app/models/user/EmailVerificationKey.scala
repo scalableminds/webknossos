@@ -23,9 +23,6 @@ class EmailVerificationKeyDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execu
   override protected def collection: TableQuery[Tables.Emailverificationkeys] = Emailverificationkeys
   protected def resultConverter = GetResultEmailverificationkeysRow
 
-  override protected def idColumn(x: Tables.Emailverificationkeys): Rep[String] = x._Id
-
-  override protected def isDeletedColumn(x: Tables.Emailverificationkeys): Rep[Boolean] = ???
 
   override protected def parse(
       row: _root_.com.scalableminds.webknossos.schema.Tables.EmailverificationkeysRow): Fox[EmailVerificationKey] =

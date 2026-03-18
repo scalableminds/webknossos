@@ -13,7 +13,6 @@ import com.typesafe.scalalogging.LazyLogging
 import models.job.JobCommand.JobCommand
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
-import slick.lifted.Rep
 import telemetry.SlackNotificationService
 import utils.sql.{SQLDAO, SqlClient}
 import utils.WkConf
@@ -39,9 +38,6 @@ class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected val collection = Workers
   protected def resultConverter = GetResultWorkersRow
 
-  protected def idColumn(x: Workers): Rep[String] = x._Id
-
-  protected def isDeletedColumn(x: Workers): Rep[Boolean] = x.isdeleted
 
   protected def parse(r: WorkersRow): Fox[Worker] =
     for {

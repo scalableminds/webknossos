@@ -6,7 +6,6 @@ import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationState.AnnotationState
 import models.annotation.AnnotationType.AnnotationType
 import play.api.libs.json.{JsObject, JsValue, Json}
-import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
 
@@ -49,8 +48,6 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected val collection = Timespans
   protected def resultConverter = GetResultTimespansRow
 
-  protected def idColumn(x: Timespans): Rep[String] = x._Id
-  protected def isDeletedColumn(x: Timespans): Rep[Boolean] = x.isdeleted
 
   protected def parse(r: TimespansRow): Fox[TimeSpan] =
     Fox.successful(

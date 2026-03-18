@@ -6,7 +6,6 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import PricingPlan.PricingPlan
-import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType
 import models.organization.AiPlan.AiPlan
@@ -63,9 +62,6 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
   protected val collection = Organizations
   protected def resultConverter = GetResultOrganizationsRow
 
-  protected def idColumn(x: Organizations): Rep[String] = x._Id
-
-  protected def isDeletedColumn(x: Organizations): Rep[Boolean] = x.isdeleted
 
   protected def parse(r: OrganizationsRow): Fox[Organization] =
     for {

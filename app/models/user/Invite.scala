@@ -14,7 +14,6 @@ import models.organization.OrganizationDAO
 import models.team.TeamMembership
 import security.RandomIDGenerator
 import slick.jdbc.PostgresProfile.api._
-import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient}
 import utils.WkConf
 
@@ -101,9 +100,6 @@ class InviteDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected val collection = Invites
   protected def resultConverter = GetResultInvitesRow
 
-  protected def idColumn(x: Invites): Rep[String] = x._Id
-
-  protected def isDeletedColumn(x: Invites): Rep[Boolean] = x.isdeleted
 
   protected def parse(r: InvitesRow): Fox[Invite] =
     Fox.successful(

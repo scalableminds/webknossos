@@ -9,7 +9,6 @@ import models.job.JobCommand.JobCommand
 import play.api.libs.json.{JsObject, Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
-import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceStatus
@@ -103,8 +102,6 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected val collection = Jobs
   protected def resultConverter = GetResultJobsRow
 
-  protected def idColumn(x: Jobs): Rep[String] = x._Id
-  protected def isDeletedColumn(x: Jobs): Rep[Boolean] = x.isdeleted
 
   protected def parse(r: JobsRow): Fox[Job] =
     for {

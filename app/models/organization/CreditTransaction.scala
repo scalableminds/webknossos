@@ -15,7 +15,6 @@ import slick.dbio.DBIO
 import slick.jdbc.GetResult
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
-import slick.lifted.Rep
 import telemetry.SlackNotificationService
 import utils.WkConf
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
@@ -45,9 +44,6 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
   protected val collection = CreditTransactions
   protected def resultConverter = GetResultCreditTransactionsRow
 
-  protected def idColumn(x: CreditTransactions): Rep[String] = x._Id
-
-  override protected def isDeletedColumn(x: CreditTransactions): Rep[Boolean] = x.isDeleted
 
   override protected def parse(row: CreditTransactionsRow): Fox[CreditTransaction] =
     for {

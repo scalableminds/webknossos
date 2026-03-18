@@ -12,7 +12,6 @@ import models.user.{User, UserService}
 import com.scalableminds.util.tools.Full
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
 
@@ -59,8 +58,6 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected val collection = Projects
   protected def resultConverter = GetResultProjectsRow
 
-  protected def idColumn(x: Projects): Rep[String] = x._Id
-  protected def isDeletedColumn(x: Projects): Rep[Boolean] = x.isdeleted
 
   protected def parse(r: ProjectsRow): Fox[Project] =
     Fox.successful(

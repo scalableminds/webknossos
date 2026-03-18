@@ -7,8 +7,6 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import TokenType.TokenType
-import slick.jdbc.PostgresProfile.api._
-import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
 
@@ -64,8 +62,6 @@ class TokenDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected val collection = Tokens
   protected def resultConverter = GetResultTokensRow
 
-  protected def idColumn(x: Tokens): Rep[String] = x._Id
-  protected def isDeletedColumn(x: Tokens): Rep[Boolean] = x.isdeleted
 
   protected def parse(r: TokensRow): Fox[Token] =
     for {

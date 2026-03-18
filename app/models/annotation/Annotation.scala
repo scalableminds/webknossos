@@ -13,7 +13,6 @@ import slick.jdbc.GetResult
 import slick.jdbc.GetResult._
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
-import slick.lifted.Rep
 import slick.sql.SqlAction
 import com.scalableminds.util.objectid.ObjectId
 import slick.dbio.DBIO
@@ -193,9 +192,6 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     extends SQLDAO[Annotation, AnnotationsRow, Annotations](sqlClient) {
   protected val collection = Annotations
   protected def resultConverter = GetResultAnnotationsRow
-
-  protected def idColumn(x: Annotations): Rep[String] = x._Id
-  protected def isDeletedColumn(x: Annotations): Rep[Boolean] = x.isdeleted
 
   protected def parse(r: AnnotationsRow): Fox[Annotation] =
     for {

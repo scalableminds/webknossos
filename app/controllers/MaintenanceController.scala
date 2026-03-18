@@ -6,7 +6,6 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.UserService
 import play.api.libs.json.{JsObject, Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
-import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
 
@@ -121,9 +120,6 @@ class MaintenanceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   protected val collection = Maintenances
   protected def resultConverter = GetResultMaintenancesRow
 
-  protected def idColumn(x: Maintenances): Rep[String] = x._Id
-
-  protected def isDeletedColumn(x: Maintenances): Rep[Boolean] = x.isdeleted
 
   protected def parse(r: MaintenancesRow): Fox[Maintenance] =
     Fox.successful(

@@ -9,7 +9,6 @@ import models.team.{TeamDAO, TeamService}
 import models.user.User
 import play.api.libs.json.{JsArray, JsObject, Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
-import slick.lifted.Rep
 import slick.sql.SqlAction
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
@@ -134,8 +133,6 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   protected val collection = Folders
   protected def resultConverter = GetResultFoldersRow
-  protected def idColumn(x: Folders): Rep[String] = x._Id
-  protected def isDeletedColumn(x: Folders): Rep[Boolean] = x.isdeleted
 
   protected def parse(r: FoldersRow): Fox[Folder] =
     for {

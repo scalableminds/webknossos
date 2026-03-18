@@ -14,7 +14,6 @@ import play.api.libs.json._
 import slick.jdbc.GetResult
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
-import slick.lifted.Rep
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
 import models.organization.PricingPlan
@@ -93,13 +92,11 @@ case class UserCompactInfo(
 
 class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[User, UsersRow, Users](sqlClient) {
-  private val PricingPlansAllowingGuestsQuery =
-    q"""(${PricingPlan.Team}, ${PricingPlan.Power}, ${PricingPlan.Custom}, ${PricingPlan.Team_Trial}, ${PricingPlan.Power_Trial})"""
   protected val collection = Users
   protected def resultConverter = GetResultUsersRow
 
-  protected def idColumn(x: Users): Rep[String] = x._Id
-  protected def isDeletedColumn(x: Users): Rep[Boolean] = x.isdeleted
+  private val pricingPlansAllowingGuestsQuery =
+    q"""(${PricingPlan.Team}, ${PricingPlan.Power}, ${PricingPlan.Custom}, ${PricingPlan.Team_Trial}, ${PricingPlan.Power_Trial})"""
 
   protected def parse(r: UsersRow): Fox[User] =
     for {
@@ -226,7 +223,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
               AND _organization IN (
                 SELECT _id
                 FROM webknossos.organizations
-                WHERE pricingPlan IN $PricingPlansAllowingGuestsQuery
+                WHERE pricingPlan IN $pricingPlansAllowingGuestsQuery
               )
             ORDER BY _multiUser, created ASC
          )
@@ -412,7 +409,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                       AND NOT isDeactivated
                       AND _organization IN (
                         SELECT _id FROM webknossos.organizations
-                        WHERE pricingPlan IN $PricingPlansAllowingGuestsQuery
+                        WHERE pricingPlan IN $pricingPlansAllowingGuestsQuery
                       )
                       ORDER BY created ASC
                       LIMIT 1""".as[ObjectId])

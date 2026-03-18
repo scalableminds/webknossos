@@ -541,19 +541,15 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       _ <- run(q"""UPDATE webknossos.users SET isDeleted = true WHERE _organization = $organizationId""".asUpdate)
     } yield ()
 
-  def findTeamMembershipsForUser(userId: ObjectId): Fox[List[TeamMembership]] = {
-    val query = for {
-      (teamRoleRow, team) <- UserTeamRoles.filter(_._User === userId.id) join Teams on (_._Team === _._Id)
-    } yield (team._Id, team.name, teamRoleRow.isteammanager)
-
+  def findTeamMembershipsForUser(userId: ObjectId): Fox[List[TeamMembership]] =
     for {
-      rows: Seq[(String, String, Boolean)] <- run(query.result)
-      teamMemberships <- Fox.combined(rows.toList.map {
-        case (teamId, _, isTeamManager) =>
-          ObjectId.fromString(teamId).map(teamIdValidated => TeamMembership(teamIdValidated, isTeamManager))
+      rows <- run(
+        q"SELECT _user, _team, isTeamManager FROM webknossos.user_team_roles WHERE _user = $userId"
+          .as[UserTeamRolesRow])
+      teamMemberships <- Fox.combined(rows.map { r =>
+        ObjectId.fromString(r._Team).map(teamIdValidated => TeamMembership(teamIdValidated, r.isteammanager))
       })
     } yield teamMemberships
-  }
 
   private def insertTeamMembershipQuery(userId: ObjectId, teamMembership: TeamMembership) =
     q"INSERT INTO webknossos.user_team_roles(_user, _team, isTeamManager) VALUES($userId, ${teamMembership.teamId}, ${teamMembership.isTeamManager})".asUpdate
@@ -606,10 +602,9 @@ class UserExperiencesDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(impli
 
   def findAllExperiencesForUser(userId: ObjectId): Fox[Map[String, Int]] =
     for {
-      rows <- run(UserExperiences.filter(_._User === userId.id).result)
-    } yield {
-      rows.map(r => (r.domain, r.value)).toMap
-    }
+      rows <- run(
+        q"SELECT _user, domain, value FROM webknossos.user_experiences WHERE _user = $userId".as[UserExperiencesRow])
+    } yield rows.map(r => (r.domain, r.value)).toMap
 
   def updateExperiencesForUser(user: User, experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[Unit] = {
     val clearQuery = q"DELETE FROM webknossos.user_experiences WHERE _user = ${user._id}".asUpdate

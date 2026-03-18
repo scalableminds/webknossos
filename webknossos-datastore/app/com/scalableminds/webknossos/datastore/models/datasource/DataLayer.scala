@@ -34,7 +34,7 @@ trait DataLayer {
   // This is the default from the Dataset Edit View.
   def adminViewConfiguration: Option[LayerViewConfiguration]
 
-  def coordinateTransformations: Option[List[CoordinateTransformation]]
+  def coordinateTransformations: Option[Seq[CoordinateTransformation]]
 
   // n-dimensional datasets = 3-dimensional datasets with additional coordinate axes
   def additionalAxes: Option[Seq[AdditionalAxis]]
@@ -102,7 +102,7 @@ trait StaticLayer extends DataLayer {
       magMapping: MagLocator => MagLocator = m => m,
       attachmentMapping: DataLayerAttachments => DataLayerAttachments = a => a,
       name: String = this.name,
-      coordinateTransformations: Option[List[CoordinateTransformation]] = this.coordinateTransformations): StaticLayer =
+      coordinateTransformations: Option[Seq[CoordinateTransformation]] = this.coordinateTransformations): StaticLayer =
     this match {
       case l: StaticColorLayer =>
         l.copy(
@@ -180,7 +180,7 @@ case class StaticColorLayer(name: String,
                             mags: List[MagLocator],
                             defaultViewConfiguration: Option[LayerViewConfiguration] = None,
                             adminViewConfiguration: Option[LayerViewConfiguration] = None,
-                            coordinateTransformations: Option[List[CoordinateTransformation]] = None,
+                            coordinateTransformations: Option[Seq[CoordinateTransformation]] = None,
                             additionalAxes: Option[Seq[AdditionalAxis]] = None,
                             attachments: Option[DataLayerAttachments] = None)
     extends StaticLayer {
@@ -235,7 +235,7 @@ case class StaticSegmentationLayer(name: String,
                                    mags: List[MagLocator],
                                    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
                                    adminViewConfiguration: Option[LayerViewConfiguration] = None,
-                                   coordinateTransformations: Option[List[CoordinateTransformation]] = None,
+                                   coordinateTransformations: Option[Seq[CoordinateTransformation]] = None,
                                    additionalAxes: Option[Seq[AdditionalAxis]] = None,
                                    attachments: Option[DataLayerAttachments] = None,
                                    largestSegmentId: Option[Long] = None,

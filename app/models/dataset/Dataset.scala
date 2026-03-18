@@ -112,7 +112,6 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
   protected val collection = Datasets
   protected def resultConverter = GetResultDatasetsRow
 
-
   private def parseVoxelSizeOpt(factorLiteralOpt: Option[String],
                                 unitLiteralOpt: Option[String]): Fox[Option[VoxelSize]] = factorLiteralOpt match {
     case Some(factorLiteral) =>
@@ -762,7 +761,6 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
     extends SQLDAO[MagWithPaths, DatasetMagsRow, DatasetMags](sqlClient) {
   protected val collection = DatasetMags
   protected def resultConverter = GetResultDatasetMagsRow
-
 
   protected def parse(row: DatasetMagsRow): Fox[MagWithPaths] =
     for {
@@ -1416,15 +1414,16 @@ class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implic
     } yield CoordinateTransformation(CoordinateTransformationType.thin_plate_spline, None, Some(correspondences))
 
   def findCoordinateTransformationsForLayer(datasetId: ObjectId,
-                                            layerName: String): Fox[List[CoordinateTransformation]] =
+                                            layerName: String): Fox[Seq[CoordinateTransformation]] =
     for {
-      rows <- run(
-        DatasetLayerCoordinatetransformations
-          .filter(r => r._Dataset === datasetId.id && r.layername === layerName)
-          .sortBy(r => r.insertionorderindex)
-          .result).map(_.toList)
-      rowsParsed <- Fox.combined(rows.map(parseRow)) ?~> "could not parse transformations row"
-    } yield rowsParsed
+      r <- run(q"""SELECT _dataset, layerName, type, matrix, correspondences, insertionOrderIndex
+                   FROM webknossos.dataset_layer_coordinateTransformations
+                   WHERE _dataset = $datasetId
+                   AND layerName = $layerName
+                   ORDER BY insertionOrderIndex
+                   """".as[DatasetLayerCoordinatetransformationsRow])
+      parsed <- Fox.combined(r.map(parseRow)) ?~> "could not parse transformations row"
+    } yield parsed
 
   def updateCoordinateTransformations(datasetId: ObjectId, layers: List[DataLayer]): Fox[Unit] = {
     val clearQuery =

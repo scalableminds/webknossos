@@ -63,10 +63,10 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
       dataset <- datasetDAO.findOne(composeLayer.datasetId) ?~> "Dataset not found"
       usableDataSource <- datasetService.usableDataSourceFor(dataset)
       layer <- usableDataSource.dataLayers.find(_.name == composeLayer.sourceName).toFox
-      applyCoordinateTransformations = (cOpt: Option[List[CoordinateTransformation]]) =>
+      applyCoordinateTransformations = (cOpt: Option[Seq[CoordinateTransformation]]) =>
         cOpt match {
-          case Some(c) => Some(c ++ composeLayer.transformations.toList)
-          case None    => Some(composeLayer.transformations.toList)
+          case Some(c) => Some(c ++ composeLayer.transformations)
+          case None    => Some(composeLayer.transformations)
       }
       editedLayer = layer.mapped(name = composeLayer.newName,
                                  coordinateTransformations =

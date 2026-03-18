@@ -40,7 +40,6 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected val collection = Tasks
   protected def resultConverter = GetResultTasksRow
 
-
   protected def parse(r: TasksRow): Fox[Task] =
     for {
       editPosition <- Vec3Int
@@ -309,15 +308,14 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         """.asUpdate)
     } yield ()
 
-  def updateTotalInstances(id: ObjectId, newTotalInstances: Long)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val query = for { c <- Tasks if c._Id === id.id } yield c.totalinstances
+  def updateTotalInstances(id: ObjectId, newTotalInstances: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(query.update(newTotalInstances).withTransactionIsolation(Serializable),
+      query = q"UPDATE $collectionName SET totalInstances = $newTotalInstances WHERE _id = $id".asUpdate
+      _ <- run(query.withTransactionIsolation(Serializable),
                retryCount = 50,
                retryIfErrorContains = List(transactionSerializationError))
     } yield ()
-  }
 
   def incrementTotalInstancesOfAllWithProject(projectId: ObjectId, delta: Long)(
       implicit ctx: DBAccessContext): Fox[Unit] =

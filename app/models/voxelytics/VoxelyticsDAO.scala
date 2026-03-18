@@ -87,7 +87,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           JOIN webknossos.voxelytics_chunks c ON c._id = cs._id
           JOIN webknossos.voxelytics_tasks t ON t._id = c._task
           WHERE t._run IN ${SqlToken.tupleFromList(runIds)}
-          ORDER BY t.name, c.executionId, c.chunkName, cs.beginTime DESC
+          ORDER BY t.name, c.executionId, c.chunkName, cs.beginTime DESC NULLS LAST
         ) any_chunks ON any_chunks.name = tc.name AND any_chunks.executionId = tc.executionId AND any_chunks.chunkName = tc.chunkName
         LEFT JOIN ( -- Latest chunk states (excluding skipped or pending)
           SELECT
@@ -104,7 +104,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           JOIN webknossos.voxelytics_tasks t ON t._id = c._task
           WHERE cs.state NOT IN ${SqlToken.tupleFromValues(VoxelyticsRunState.SKIPPED, VoxelyticsRunState.PENDING)}
             AND t._run IN ${SqlToken.tupleFromList(runIds)}
-          ORDER BY t.name, c.executionId, c.chunkName, cs.beginTime DESC
+          ORDER BY t.name, c.executionId, c.chunkName, cs.beginTime DESC NULLS LAST
         ) running_chunks ON running_chunks.name = tc.name AND running_chunks.executionId = tc.executionId AND running_chunks.chunkName = tc.chunkName
         WHERE TRUE ${taskName.map(t => q"AND tc.name = $t").getOrElse(q"")}"""
 
@@ -122,7 +122,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           ts.state IN ${SqlToken.tupleFromValues(VoxelyticsRunState.COMPLETE, VoxelyticsRunState.SKIPPED)}
           AND t._run IN ${SqlToken.tupleFromList(runIds)}
           ${taskName.map(t => q" AND t.name = $t").getOrElse(q"")}
-        ORDER BY t.name, ts.beginTime DESC"""
+        ORDER BY t.name, ts.beginTime DESC NULLS LAST"""
 
   def findArtifacts(currentUser: User, runIds: List[ObjectId], staleTimeout: FiniteDuration): Fox[List[ArtifactEntry]] =
     for {
@@ -153,7 +153,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           JOIN webknossos.voxelytics_tasks t ON a._task = t._id
           JOIN (${tasksWithStateQ(staleTimeout)}) ts ON ts._id = t._id AND ts.state = ${VoxelyticsRunState.COMPLETE}
           JOIN (${visibleRunsQ(currentUser, allowUnlisted = true)}) r ON r._id = t._run
-          ORDER BY a.path, ts.beginTime DESC
+          ORDER BY a.path, ts.beginTime DESC NULLS LAST
         ) o ON o.path = a.path AND t.state = ${VoxelyticsRunState.SKIPPED}
         """.as[(String, String, String, String, Long, Long, String, String, String, Option[String], Option[String])])
     } yield
@@ -260,7 +260,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           FROM chunk_states cs
           JOIN webknossos.voxelytics_chunks c ON c._id = cs._id
           WHERE cs.state = ${VoxelyticsRunState.RUNNING}
-          ORDER BY c._task, cs.beginTime DESC
+          ORDER BY c._task, cs.beginTime DESC NULLS LAST
         ) exec ON exec._task = t._id
         LEFT JOIN (
           SELECT
@@ -329,7 +329,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           SELECT DISTINCT ON (l.taskName) l.taskName, l.executionId
           FROM latest_chunk_states l
           WHERE l.state = ${VoxelyticsRunState.RUNNING}
-          ORDER BY l.taskName, l.beginTime DESC
+          ORDER BY l.taskName, l.beginTime DESC NULLS LAST
         ) exec ON exec.taskName = l.taskName
         LEFT JOIN (
           SELECT
@@ -429,7 +429,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           FROM webknossos.voxelytics_tasks t
           JOIN (${visibleRunsQ(currentUser, allowUnlisted = false)}) r ON t._run = r._id
           JOIN task_states ts ON ts._id = t._id
-          ORDER BY workflow_hash, taskName, ts.beginTime DESC
+          ORDER BY workflow_hash, taskName, ts.beginTime DESC NULLS LAST
         ) any_tasks ON any_tasks.workflow_hash = w.hash
         LEFT JOIN ( -- Aggregating the task states of workflow runs (excluding skipped and pending)
           SELECT
@@ -448,7 +448,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
             GROUP BY a._task
           ) ta ON ta._task = t._id
           WHERE ts.state NOT IN ${SqlToken.tupleFromValues(VoxelyticsRunState.SKIPPED, VoxelyticsRunState.PENDING)}
-          ORDER BY workflow_hash, taskName, ts.beginTime DESC
+          ORDER BY workflow_hash, taskName, ts.beginTime DESC NULLS LAST
         ) running_tasks ON running_tasks.workflow_hash = w.hash AND running_tasks.taskName = any_tasks.taskName
         WHERE w.hash IN ${SqlToken.tupleFromList(workflowHashes)} AND w._organization = $organizationId
         GROUP BY w.hash
@@ -491,8 +491,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           COALESCE(tasks.cancelled, 0) AS tasksCancelled,
           COALESCE(tasks.fileSize, 0) AS fileSize,
           COALESCE(tasks.inodeCount, 0) AS inodeCount,
-          u.firstName,
-          u.lastName
+          mu.firstName,
+          mu.lastName
         FROM (${visibleRunsQ(currentUser, allowUnlisted = false)}) r
         JOIN (${runsWithStateQ(staleTimeout)}) rs ON rs._id = r._id
         LEFT JOIN (
@@ -516,6 +516,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           GROUP BY t._run
         ) tasks ON tasks._run = r._id
         LEFT JOIN webknossos.users_ u ON r._user = u._id
+        LEFT JOIN webknossos.multiUsers_ mu ON u._multiUser = mu._id
         WHERE r._organization = $organizationId
         """.as[(String,
                 String,

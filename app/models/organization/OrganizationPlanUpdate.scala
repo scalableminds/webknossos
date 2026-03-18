@@ -13,7 +13,7 @@ case class OrganizationPlanUpdate(
     aiPlan: Option[Option[AiPlan]] = Some(None), // None means unchanged, Some(None) means set to None
     paidUntil: Option[Option[Instant]] = Some(None), // None means unchanged, Some(None) means set to None
     includedUsers: Option[Option[Int]] = Some(None), // None means unchanged, Some(None) means set to None
-    includedStorageBytes: Option[Option[Long]] = Some(None), // None means unchanged, Some(None) means set to None
+    includedStorageBytes: Option[Option[ByteCount]] = Some(None), // None means unchanged, Some(None) means set to None
     created: Instant = Instant.now
 ) {
   lazy val aiPlanChanged: Boolean = aiPlan.isDefined
@@ -23,7 +23,7 @@ case class OrganizationPlanUpdate(
   lazy val aiPlanFlat: Option[AiPlan] = aiPlan.flatten
   lazy val paidUntilFlat: Option[Instant] = paidUntil.flatten
   lazy val includedUsersFlat: Option[Int] = includedUsers.flatten
-  lazy val includedStorageFlat: Option[Long] = includedStorageBytes.flatten
+  lazy val includedStorageFlat: Option[Long] = includedStorageBytes.flatten.map(_.numBytes)
 }
 
 object OrganizationPlanUpdate extends TristateOptionJsonHelper {

@@ -212,8 +212,8 @@ export const getColorForCoords: ShaderModule = {
       vec3 offsetInBucketUVW = transDim(offsetInBucket);
       if (offsetInBucketUVW.x < 0.01 || offsetInBucketUVW.y < 0.01
           || offsetInBucketUVW.x >= 31. || offsetInBucketUVW.y >= 31.
-          || isNan(offsetInBucketUVW.x) || isNan(offsetInBucketUVW.y)
-          || isNan(offsetInBucketUVW.z)
+          || isnan(offsetInBucketUVW.x) || isnan(offsetInBucketUVW.y)
+          || isnan(offsetInBucketUVW.z)
         ) {
         beSafe = true;
       }
@@ -258,7 +258,7 @@ export const getColorForCoords: ShaderModule = {
         return returnValue;
       }
 
-      if (bucketAddress < 0. || isNan(bucketAddress)) {
+      if (bucketAddress < 0. || isnan(bucketAddress)) {
         // The requested data could not be found in the look up
         // table. Render black.
         returnValue[1] = vec4(0.0, 0.0, 0.0, 0.0);

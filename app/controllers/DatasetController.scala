@@ -755,13 +755,14 @@ class DatasetController @Inject()(userService: UserService,
                                                            request.body.layerName,
                                                            request.body.attachmentName,
                                                            request.body.attachmentType)
+        dataStoreClient <- datasetService.clientFor(dataset)
         _ <- Fox.runIf(!dataset.isVirtual) {
           for {
             updatedDataSource <- datasetService.usableDataSourceFor(dataset)
-            dataStoreClient <- datasetService.clientFor(dataset)
             _ <- dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource)
           } yield ()
         }
+        _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
       } yield Ok
     }
 

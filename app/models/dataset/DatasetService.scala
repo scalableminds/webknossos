@@ -294,7 +294,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         logger.info(s"Updating dataSource of $datasetId")
         for {
           _ <- Fox.runIf(!dataset.isVirtual)(dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource))
-          _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
           datastoreClient <- clientFor(dataset)
           removedPaths = existingDataSource.allExplicitPaths.diff(updatedDataSource.allExplicitPaths)
           pathsUsedOnlyByThisDataset <- if (removedPaths.nonEmpty) findPathsUsedOnlyByThisDataset(datasetId)
@@ -305,6 +304,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                            updatedDataSource.hashCode(),
                                            updatedDataSource,
                                            isUsable = true)(GlobalAccessContext)
+          _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
           _ <- pathDeletionService.deletePaths(datastoreClient, pathsToDelete)
         } yield ()
       } else Fox.successful(logger.info(f"DataSource $datasetId not updated as the hashCode is the same"))

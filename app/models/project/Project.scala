@@ -81,6 +81,13 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   // read operations
 
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[Project]] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery ORDER BY created".as[ProjectsRow])
+      parsed <- parseAll(r)
+    } yield parsed
+
   // Does not use access query (because they dont support prefixes). Use only after separate access check!
   def findAllWithTaskType(taskTypeId: String): Fox[List[Project]] =
     for {
@@ -151,7 +158,7 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def updatePaused(id: ObjectId, isPaused: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(q"UPDATE webknossos.projects SET isPaused = $isPaused WHERE _id = $id".asUpdate)
+      _ <- run(q"UPDATE webknossos.projects SET paused = $isPaused WHERE _id = $id".asUpdate)
     } yield ()
 
   def countForTeam(teamId: ObjectId): Fox[Int] =

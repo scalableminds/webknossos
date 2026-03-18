@@ -746,13 +746,13 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
   def updateDescription(id: ObjectId, description: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(q"UPDATE webknossos.annotations SET _description = $description WHERE _id = $id".asUpdate)
+      _ <- run(q"UPDATE webknossos.annotations SET description = $description WHERE _id = $id".asUpdate)
     } yield ()
 
   def updateName(id: ObjectId, name: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(q"UPDATE webknossos.annotations SET _name = $name WHERE _id = $id".asUpdate)
+      _ <- run(q"UPDATE webknossos.annotations SET name = $name WHERE _id = $id".asUpdate)
     } yield ()
 
   def updateVisibility(id: ObjectId, visibility: AnnotationVisibility.Value)(implicit ctx: DBAccessContext): Fox[Unit] =

@@ -53,7 +53,7 @@ type BufferCollection = {
 
 type BufferOperation = (position: BufferPosition) => BufferAttribute[];
 const NodeBufferHelperType = {
-  setAttributes(geometry: BufferGeometry, capacity: number): void {
+  initializeAttributes(geometry: BufferGeometry, capacity: number): void {
     geometry.setAttribute("position", new BufferAttribute(new Float32Array(capacity * 3), 3));
 
     const additionalCoords = Store.getState().flycam.additionalCoordinates ?? [];
@@ -78,7 +78,7 @@ const NodeBufferHelperType = {
 };
 
 const EdgeBufferHelperType = {
-  setAttributes(geometry: BufferGeometry, capacity: number): void {
+  initializeAttributes(geometry: BufferGeometry, capacity: number): void {
     geometry.setAttribute("position", new BufferAttribute(new Float32Array(capacity * 2 * 3), 3));
 
     const additionalCoords = Store.getState().flycam.additionalCoordinates ?? [];
@@ -207,9 +207,12 @@ class Skeleton {
       EdgeBufferHelperType,
     );
 
+    const flycamAdditionalCoordinateNames = new Set(
+      (Store.getState().flycam.additionalCoordinates ?? []).map(({ name }) => name),
+    );
     // fill buffers with data
     for (const tree of trees.values()) {
-      this.createTree(tree);
+      this.createTree(tree, flycamAdditionalCoordinateNames);
     }
 
     // compute bounding sphere to make ThreeJS happy
@@ -245,7 +248,7 @@ class Skeleton {
 
   initializeBuffer(capacity: number, material: RawShaderMaterial, helper: BufferHelper): Buffer {
     const geometry = new BufferGeometry() as BufferGeometryWithBufferAttributes;
-    helper.setAttributes(geometry, capacity);
+    helper.initializeAttributes(geometry, capacity);
     const mesh = helper.buildMesh(geometry, material);
     // Frustum culling is disabled because nodes that are transformed
     // wouldn't be culled correctly.
@@ -349,11 +352,15 @@ class Skeleton {
       skeletonTracing.trees,
     );
 
+    const flycamAdditionalCoordinateNames = new Set(
+      (state.flycam.additionalCoordinates ?? []).map(({ name }) => name),
+    );
+
     for (const update of diff) {
       switch (update.name) {
         case "createNode": {
           const { treeId, id: nodeId } = update.value;
-          this.createNode(treeId, update.value);
+          this.createNode(treeId, update.value, flycamAdditionalCoordinateNames);
           const tree = skeletonTracing.trees.getOrThrow(treeId);
           const isBranchpoint = tree.branchPoints.find((bp) => bp.nodeId === nodeId) != null;
 
@@ -379,7 +386,7 @@ class Skeleton {
           const tree = skeletonTracing.trees.getOrThrow(update.value.treeId);
           const source = tree.nodes.getOrThrow(update.value.source);
           const target = tree.nodes.getOrThrow(update.value.target);
-          this.createEdge(tree.treeId, source, target);
+          this.createEdge(tree.treeId, source, target, flycamAdditionalCoordinateNames);
           break;
         }
 
@@ -392,7 +399,13 @@ class Skeleton {
           const { treeId, id, radius, position, additionalCoordinates } = update.value;
           this.updateNodeRadius(treeId, id, radius);
           const tree = skeletonTracing.trees.getOrThrow(treeId);
-          this.updateNodePosition(tree, id, position, additionalCoordinates);
+          this.updateNodePosition(
+            tree,
+            id,
+            position,
+            additionalCoordinates,
+            flycamAdditionalCoordinateNames,
+          );
           break;
         }
 
@@ -533,9 +546,9 @@ class Skeleton {
    * Utility function to create a complete tree.
    * Usually called only once initially.
    */
-  createTree(tree: Tree) {
+  createTree(tree: Tree, flycamAdditionalCoordinateNames: Set<string>) {
     for (const node of tree.nodes.values()) {
-      this.createNode(tree.treeId, node);
+      this.createNode(tree.treeId, node, flycamAdditionalCoordinateNames);
     }
 
     for (const branchpoint of tree.branchPoints) {
@@ -549,7 +562,7 @@ class Skeleton {
     for (const edge of tree.edges.all()) {
       const source = tree.nodes.getOrThrow(edge.source);
       const target = tree.nodes.getOrThrow(edge.target);
-      this.createEdge(tree.treeId, source, target);
+      this.createEdge(tree.treeId, source, target, flycamAdditionalCoordinateNames);
     }
 
     this.updateTreeColor(tree.treeId, tree.color, tree.isVisible, tree.edgesAreVisible);
@@ -558,7 +571,11 @@ class Skeleton {
   /**
    * Creates a new node in a WebGL buffer.
    */
-  createNode(treeId: number, node: Node | UpdateActionNode | CreateActionNode) {
+  createNode(
+    treeId: number,
+    node: Node | UpdateActionNode | CreateActionNode,
+    flycamAdditionalCoordinateNames: Set<string>,
+  ) {
     const id = this.combineIds(node.id, treeId);
     this.create(id, this.nodes, ({ buffer, index }: BufferPosition): BufferAttribute[] => {
       const attributes = buffer.geometry.attributes;
@@ -566,19 +583,13 @@ class Skeleton {
         "untransformedPosition" in node ? node.untransformedPosition : node.position;
       attributes.position.set(untransformedPosition, index * 3);
 
-      const additionalCoordinateNames = new Set(
-        (Store.getState().flycam.additionalCoordinates ?? []).map(({ name }) => name),
-      );
-      for (const coordName of additionalCoordinateNames) {
-        const attributeAdditionalCoordinates =
-          buffer.geometry.attributes[`additionalCoord_${coordName}`];
-        attributeAdditionalCoordinates.set([NaN], index);
-      }
+      const nodeCoords = node.additionalCoordinates ?? [];
+      const nodeCoordMap = new Map(nodeCoords.map((c) => [c.name, c.value]));
 
-      for (const coord of node.additionalCoordinates ?? []) {
-        const attributeAdditionalCoordinates =
-          buffer.geometry.attributes[`additionalCoord_${coord.name}`];
-        attributeAdditionalCoordinates.set([coord.value], index);
+      for (const name of flycamAdditionalCoordinateNames) {
+        const attribute = buffer.geometry.attributes[`additionalCoord_${name}`];
+        const value = nodeCoordMap.get(name) ?? NaN;
+        attribute.set([value], index);
       }
       attributes.radius.array[index] = node.radius;
       attributes.type.array[index] = NodeTypes.NORMAL;
@@ -622,6 +633,7 @@ class Skeleton {
     nodeId: number,
     position: Vector3,
     additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+    flycamAdditionalCoordinateNames: Set<string>,
   ) {
     const { treeId } = tree;
     const bufferNodeId = this.combineIds(nodeId, treeId);
@@ -629,19 +641,13 @@ class Skeleton {
       const attribute = buffer.geometry.attributes.position;
       attribute.set(position, index * 3);
 
-      const additionalCoordinateNames = new Set(
-        (Store.getState().flycam.additionalCoordinates ?? []).map(({ name }) => name),
-      );
-      for (const coordName of additionalCoordinateNames) {
-        const attributeAdditionalCoordinates =
-          buffer.geometry.attributes[`additionalCoord_${coordName}`];
-        attributeAdditionalCoordinates.set([NaN], index);
-      }
+      const nodeCoords = additionalCoordinates ?? [];
+      const nodeCoordMap = new Map(nodeCoords.map((c) => [c.name, c.value]));
 
-      for (const coord of additionalCoordinates ?? []) {
-        const attributeAdditionalCoordinates =
-          buffer.geometry.attributes[`additionalCoord_${coord.name}`];
-        attributeAdditionalCoordinates.set([coord.value], index);
+      for (const name of flycamAdditionalCoordinateNames) {
+        const attribute = buffer.geometry.attributes[`additionalCoord_${name}`];
+        const value = nodeCoordMap.get(name) ?? NaN;
+        attribute.set([value], index);
       }
 
       return [attribute];
@@ -694,11 +700,14 @@ class Skeleton {
   /**
    * Creates a new edge in a WebGL buffer.
    */
-  createEdge(treeId: number, source: Node, target: Node) {
+  createEdge(
+    treeId: number,
+    source: Node,
+    target: Node,
+    flycamAdditionalCoordinateNames: Set<string>,
+  ) {
     const id = this.combineIds(treeId, source.id, target.id);
-    const additionalCoordinateNames = new Set(
-      (Store.getState().flycam.additionalCoordinates ?? []).map(({ name }) => name),
-    );
+
     this.create(id, this.edges, ({ buffer, index }) => {
       const { attributes } = buffer.geometry;
       const positionAttribute = attributes.position;
@@ -709,19 +718,19 @@ class Skeleton {
       treeIdAttribute.set([treeId, treeId], index * 2);
 
       const changedAttributes = [];
-      if (source.additionalCoordinates || target.additionalCoordinates) {
-        const sourceAdditionalCoords = new Map(
-          (source.additionalCoordinates ?? []).map(({ name, value }) => [name, value]),
+      if (flycamAdditionalCoordinateNames.size > 0) {
+        const sourceCoordMap = new Map(
+          (source.additionalCoordinates ?? []).map((c) => [c.name, c.value]),
         );
-        const targetAdditionalCoords = new Map(
-          (source.additionalCoordinates ?? []).map(({ name, value }) => [name, value]),
+        const targetCoordMap = new Map(
+          (source.additionalCoordinates ?? []).map((c) => [c.name, c.value]),
         );
 
-        for (const name of additionalCoordinateNames) {
+        for (const name of flycamAdditionalCoordinateNames) {
           const additionalCoordAttribute = attributes[`additionalCoord_${name}`];
 
-          additionalCoordAttribute.set([sourceAdditionalCoords.get(name) ?? NaN], 2 * index);
-          additionalCoordAttribute.set([targetAdditionalCoords.get(name) ?? NaN], 2 * index + 1);
+          additionalCoordAttribute.set([sourceCoordMap.get(name) ?? NaN], 2 * index);
+          additionalCoordAttribute.set([targetCoordMap.get(name) ?? NaN], 2 * index + 1);
           changedAttributes.push(additionalCoordAttribute);
         }
       }

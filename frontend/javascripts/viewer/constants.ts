@@ -233,10 +233,6 @@ export enum OverwriteModeEnum {
 }
 export type OverwriteMode = keyof typeof OverwriteModeEnum;
 
-export enum InterpolationModeEnum {
-  INTERPOLATE = "INTERPOLATE",
-}
-export type InterpolationMode = keyof typeof InterpolationModeEnum;
 export enum FillModeEnum {
   // The leading underscore is a workaround, since leading numbers are not valid identifiers
   // in JS.

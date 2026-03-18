@@ -52,7 +52,6 @@ class ScriptDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected val collection = Scripts
   protected def resultConverter = GetResultScriptsRow
 
-
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"(SELECT _organization FROM webknossos.users_ u WHERE u._id = _owner) = (SELECT _organization FROM webknossos.users_ u WHERE u._id = $requestingUserId)"
 
@@ -85,10 +84,4 @@ class ScriptDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    WHERE _id = ${s._id}""".asUpdate)
     } yield ()
 
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[Script]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[ScriptsRow])
-      parsed <- Fox.combined(r.toList.map(parse))
-    } yield parsed
 }

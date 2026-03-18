@@ -158,13 +158,6 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         )
      """
 
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[AiModel]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[AimodelsRow])
-      parsed <- parseAll(r)
-    } yield parsed
-
   def countByNameAndOrganization(aiModelName: String, organizationId: String): Fox[Int] =
     for {
       countList <- run(

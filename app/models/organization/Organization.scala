@@ -62,7 +62,6 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
   protected val collection = Organizations
   protected def resultConverter = GetResultOrganizationsRow
 
-
   protected def parse(r: OrganizationsRow): Fox[Organization] =
     for {
       pricingPlan <- PricingPlan.fromString(r.pricingplan).toFox
@@ -96,13 +95,6 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
     case Some(_) => q"TRUE"
     case _       => q"FALSE"
   }
-
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[Organization]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[OrganizationsRow])
-      parsed <- parseAll(r)
-    } yield parsed
 
   def isEmpty: Fox[Boolean] =
     for {

@@ -34,7 +34,7 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClien
     } yield parsed
 
   protected def parseAll(rowSeq: Seq[X#TableElementType]): Fox[List[C]] =
-    Fox.combined(rowSeq.toList.map(parse)) ?~> s"Parsing failed for a row in $collectionName during list query"
+    Fox.combined(rowSeq.map(parse)) ?~> s"Parsing failed for a row in $collectionName during list query"
 
   def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[C] =
     for {
@@ -50,7 +50,7 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClien
       accessQuery <- readAccessQuery
       r <- run(
         q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[X#TableElementType](resultConverter))
-      parsed <- Fox.combined(r.toList.map(parse))
+      parsed <- parseAll(r)
     } yield parsed
 
   def deleteOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =

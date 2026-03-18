@@ -93,7 +93,6 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
   protected val collection = Datastores
   protected def resultConverter = GetResultDatastoresRow
 
-
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"(onlyAllowedOrganization IS NULL) OR (onlyAllowedOrganization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId))"
 
@@ -124,13 +123,6 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE url = $url AND $accessQuery".as[DatastoresRow])
       parsed <- parseFirst(r, url)
-    } yield parsed
-
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[DataStore]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery ORDER BY name".as[DatastoresRow])
-      parsed <- parseAll(r)
     } yield parsed
 
   def findAllWithStorageReporting: Fox[List[DataStore]] =

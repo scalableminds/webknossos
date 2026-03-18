@@ -44,7 +44,6 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
   protected val collection = CreditTransactions
   protected def resultConverter = GetResultCreditTransactionsRow
 
-
   override protected def parse(row: CreditTransactionsRow): Fox[CreditTransaction] =
     for {
       transactionState <- CreditTransactionState.fromString(row.transactionState).toFox
@@ -114,13 +113,6 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
   override protected def updateAccessQ(requestingUserId: ObjectId): SqlToken = readAccessQ(requestingUserId)
 
   override protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken = q"FALSE"
-
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[CreditTransaction]] =
-    for {
-      accessQuery <- accessQueryFromAccessQ(listAccessQ)
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[CreditTransactionsRow])
-      parsed <- parseAll(r)
-    } yield parsed
 
   def getMilliCreditBalance(organizationId: String)(implicit ctx: DBAccessContext): Fox[Int] =
     for {

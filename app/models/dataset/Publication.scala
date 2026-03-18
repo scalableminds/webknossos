@@ -55,7 +55,6 @@ class PublicationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   protected val collection = Publications
   protected def resultConverter = GetResultPublicationsRow
 
-
   protected def parse(r: PublicationsRow): Fox[Publication] =
     Fox.successful(
       Publication(
@@ -68,12 +67,6 @@ class PublicationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
         r.isdeleted
       )
     )
-
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[Publication]] =
-    for {
-      r <- run(q"SELECT $columns FROM $existingCollectionName".as[PublicationsRow])
-      parsed <- parseAll(r)
-    } yield parsed
 
   def insertOne(p: Publication): Fox[Unit] =
     for {

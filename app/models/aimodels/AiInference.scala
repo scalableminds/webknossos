@@ -96,13 +96,6 @@ class AiInferenceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"_organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId)"
 
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[AiInference]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[AiinferencesRow])
-      parsed <- parseAll(r)
-    } yield parsed
-
   def insertOne(a: AiInference): Fox[Unit] =
     for {
       _ <- run(q"""INSERT INTO webknossos.aiInferences(

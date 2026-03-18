@@ -46,7 +46,6 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: Exec
   protected val collection = AnnotationPrivatelinks
   protected def resultConverter = GetResultAnnotationPrivatelinksRow
 
-
   protected def parse(r: AnnotationPrivatelinksRow): Fox[AnnotationPrivateLink] =
     Fox.successful(
       AnnotationPrivateLink(
@@ -78,13 +77,6 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: Exec
                      expirationDateTime = $expirationDateTime
                    WHERE _id = $id""".asUpdate)
     } yield ()
-
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[AnnotationPrivateLink]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"""SELECT $columns FROM $existingCollectionName WHERE $accessQuery""".as[AnnotationPrivatelinksRow])
-      parsed <- parseAll(r)
-    } yield parsed
 
   def findAllByAnnotation(annotationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[AnnotationPrivateLink]] =
     for {

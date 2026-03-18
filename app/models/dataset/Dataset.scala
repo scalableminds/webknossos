@@ -1444,7 +1444,7 @@ class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implic
                    WHERE _dataset = $datasetId
                    AND layerName = $layerName
                    ORDER BY insertionOrderIndex
-                   """".as[DatasetLayerCoordinatetransformationsRow])
+                   """.as[DatasetLayerCoordinatetransformationsRow])
       parsed <- Fox.combined(r.map(parseRow)) ?~> "could not parse transformations row"
     } yield parsed
 

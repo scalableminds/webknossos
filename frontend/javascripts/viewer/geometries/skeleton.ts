@@ -111,16 +111,14 @@ const EdgeBufferHelperType = {
 class Skeleton {
   rootGroup: Group;
   pickingNode: Object3D;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'prevTracing' has no initializer and is n... Remove this comment to see the full error message
-  prevTracing: SkeletonTracing;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'nodes' has no initializer and is not def... Remove this comment to see the full error message
-  nodes: BufferCollection;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'edges' has no initializer and is not def... Remove this comment to see the full error message
-  edges: BufferCollection;
-  // @ts-expect-error ts-migrate(2564) FIXME: Property 'treeColorTexture' has no initializer and... Remove this comment to see the full error message
-  treeColorTexture: DataTexture;
   supportsPicking: boolean;
   stopStoreListening: () => void;
+  // The following properties are set in reset() which is called from the constructor.
+  // Therefore, we use ! tell TS it's safe to assume non-null.
+  prevTracing!: SkeletonTracing;
+  nodes!: BufferCollection;
+  edges!: BufferCollection;
+  treeColorTexture!: DataTexture;
 
   nodeShader: NodeShader | undefined;
   edgeShader: EdgeShader | undefined;
@@ -642,6 +640,7 @@ class Skeleton {
     this.update(bufferNodeId, this.nodes, ({ buffer, index }) => {
       const attribute = buffer.geometry.attributes.position;
       attribute.set(position, index * 3);
+      const updatedAttributes = [attribute];
 
       if (flycamAdditionalCoordinateNames.size > 0) {
         const nodeCoords = additionalCoordinates ?? [];
@@ -651,21 +650,44 @@ class Skeleton {
           const attribute = buffer.geometry.attributes[`additionalCoord_${name}`];
           const value = nodeCoordMap.get(name) ?? NaN;
           attribute.set([value], index);
+          updatedAttributes.push(attribute);
         }
       }
 
-      return [attribute];
+      return updatedAttributes;
     });
 
     const edgePositionUpdater = (edge: Edge, isIngoingEdge: boolean) => {
-      // The changed node is the target node of the edge which is saved
-      // after the source node in the buffer. Thus we need an offset.
+      // If isIngoingEdge is true, the changed node is the target node of the
+      // (source, target) edge. Thus, we need an offset.
       const indexOffset = isIngoingEdge ? 3 : 0;
       const bufferEdgeId = this.combineIds(treeId, edge.source, edge.target);
       this.update(bufferEdgeId, this.edges, ({ buffer, index }) => {
-        const positionAttribute = buffer.geometry.attributes.position;
+        const { attributes } = buffer.geometry;
+        const positionAttribute = attributes.position;
         positionAttribute.set(position, index * 6 + indexOffset);
-        return [positionAttribute];
+        const updatedAttributes = [positionAttribute];
+
+        if (flycamAdditionalCoordinateNames.size > 0) {
+          const source = tree.nodes.getOrThrow(edge.source);
+          const target = tree.nodes.getOrThrow(edge.target);
+          const sourceCoordMap = new Map(
+            (source.additionalCoordinates ?? []).map((c) => [c.name, c.value]),
+          );
+          const targetCoordMap = new Map(
+            (target.additionalCoordinates ?? []).map((c) => [c.name, c.value]),
+          );
+
+          for (const name of flycamAdditionalCoordinateNames) {
+            const additionalCoordAttribute = attributes[`additionalCoord_${name}`];
+
+            additionalCoordAttribute.set([sourceCoordMap.get(name) ?? NaN], 2 * index);
+            additionalCoordAttribute.set([targetCoordMap.get(name) ?? NaN], 2 * index + 1);
+            updatedAttributes.push(additionalCoordAttribute);
+          }
+        }
+
+        return updatedAttributes;
       });
     };
 
@@ -717,6 +739,8 @@ class Skeleton {
       const positionAttribute = attributes.position;
       const treeIdAttribute = attributes.treeId;
 
+      // Each position needs 3 items (x, y, z). Per edge, there are two
+      // positions, which explains the ... * 6 + 3 calculation.
       positionAttribute.set(source.untransformedPosition, index * 6);
       positionAttribute.set(target.untransformedPosition, index * 6 + 3);
       treeIdAttribute.set([treeId, treeId], index * 2);
@@ -727,7 +751,7 @@ class Skeleton {
           (source.additionalCoordinates ?? []).map((c) => [c.name, c.value]),
         );
         const targetCoordMap = new Map(
-          (source.additionalCoordinates ?? []).map((c) => [c.name, c.value]),
+          (target.additionalCoordinates ?? []).map((c) => [c.name, c.value]),
         );
 
         for (const name of flycamAdditionalCoordinateNames) {

@@ -91,11 +91,11 @@ class NodeShader {
       },
     };
 
-    each(additionalCoordinates, (_val, idx) => {
-      this.uniforms[`currentAdditionalCoord_${idx}`] = {
+    for (const coord of additionalCoordinates ?? []) {
+      this.uniforms[`currentAdditionalCoord_${coord.name}`] = {
         value: 0,
       };
-    });
+    }
 
     this.storePropertyUnsubscribers = [
       listenToStoreProperty(
@@ -114,9 +114,9 @@ class NodeShader {
       listenToStoreProperty(
         (storeState) => storeState.flycam.additionalCoordinates,
         (additionalCoordinates) => {
-          each(additionalCoordinates, (coord, idx) => {
-            this.uniforms[`currentAdditionalCoord_${idx}`].value = coord.value;
-          });
+          for (const coord of additionalCoordinates ?? []) {
+            this.uniforms[`currentAdditionalCoord_${coord.name}`].value = coord.value;
+          }
         },
         true,
       ),
@@ -206,8 +206,8 @@ uniform mat4 transform;
   <%= generateCalculateTpsOffsetFunction("Skeleton", true) %>
 <% } %>
 
-<% range(additionalCoordinateLength).map((idx) => { %>
-  uniform float currentAdditionalCoord_<%= idx %>;
+<% additionalCoordinates.map((coord) => { %>
+  uniform float currentAdditionalCoord_<%= coord.name %>;
 <% }) %>
 
 uniform sampler2D treeColors;
@@ -215,8 +215,8 @@ uniform sampler2D treeColors;
 in float radius;
 in vec3 position;
 
-<% range(additionalCoordinateLength).map((idx) => { %>
-  in float additionalCoord_<%= idx %>;
+<% additionalCoordinates.map((coord) => { %>
+  in float additionalCoord_<%= coord.name %>;
 <% }) %>
 
 
@@ -256,8 +256,8 @@ vec3 shiftHue(vec3 color, float shiftValue) {
 }
 
 void main() {
-    <% range(additionalCoordinateLength).map((idx) => { %>
-      if (additionalCoord_<%= idx %> != currentAdditionalCoord_<%= idx %>) {
+    <% additionalCoordinates.map((coord) => { %>
+      if (!isnan(additionalCoord_<%= coord.name %>) && additionalCoord_<%= coord.name %> != currentAdditionalCoord_<%= coord.name %>) {
         return;
       }
     <% }) %>
@@ -352,7 +352,7 @@ void main() {
     }
 
 }`)({
-      additionalCoordinateLength: (additionalCoordinates || []).length,
+      additionalCoordinates: additionalCoordinates || [],
       tpsTransform: this.scaledTps,
       generateTpsInitialization,
       generateCalculateTpsOffsetFunction,

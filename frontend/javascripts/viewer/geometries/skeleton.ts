@@ -57,10 +57,10 @@ const NodeBufferHelperType = {
   setAttributes(geometry: BufferGeometry, capacity: number): void {
     geometry.setAttribute("position", new BufferAttribute(new Float32Array(capacity * 3), 3));
 
-    const additionalCoordLength = (Store.getState().flycam.additionalCoordinates ?? []).length;
-    for (const idx of range(0, additionalCoordLength)) {
+    const additionalCoords = Store.getState().flycam.additionalCoordinates ?? [];
+    for (const coord of additionalCoords) {
       geometry.setAttribute(
-        `additionalCoord_${idx}`,
+        `additionalCoord_${coord.name}`,
         new BufferAttribute(new Float32Array(capacity), 1),
       );
     }
@@ -82,10 +82,10 @@ const EdgeBufferHelperType = {
   setAttributes(geometry: BufferGeometry, capacity: number): void {
     geometry.setAttribute("position", new BufferAttribute(new Float32Array(capacity * 2 * 3), 3));
 
-    const additionalCoordLength = (Store.getState().flycam.additionalCoordinates ?? []).length;
-    for (const idx of range(0, additionalCoordLength)) {
+    const additionalCoords = Store.getState().flycam.additionalCoordinates ?? [];
+    for (const coord of additionalCoords) {
       geometry.setAttribute(
-        `additionalCoord_${idx}`,
+        `additionalCoord_${coord.name}`,
         new BufferAttribute(new Float32Array(capacity * 2), 1),
       );
     }
@@ -567,12 +567,19 @@ class Skeleton {
         "untransformedPosition" in node ? node.untransformedPosition : node.position;
       attributes.position.set(untransformedPosition, index * 3);
 
-      if (node.additionalCoordinates) {
-        for (const idx of range(0, node.additionalCoordinates.length)) {
-          const attributeAdditionalCoordinates =
-            buffer.geometry.attributes[`additionalCoord_${idx}`];
-          attributeAdditionalCoordinates.set([node.additionalCoordinates[idx].value], index);
-        }
+      const additionalCoordinateNames = new Set(
+        (Store.getState().flycam.additionalCoordinates ?? []).map(({ name }) => name),
+      );
+      for (const coordName of additionalCoordinateNames) {
+        const attributeAdditionalCoordinates =
+          buffer.geometry.attributes[`additionalCoord_${coordName}`];
+        attributeAdditionalCoordinates.set([NaN], index);
+      }
+
+      for (const coord of node.additionalCoordinates ?? []) {
+        const attributeAdditionalCoordinates =
+          buffer.geometry.attributes[`additionalCoord_${coord.name}`];
+        attributeAdditionalCoordinates.set([coord.value], index);
       }
       attributes.radius.array[index] = node.radius;
       attributes.type.array[index] = NodeTypes.NORMAL;
@@ -623,12 +630,19 @@ class Skeleton {
       const attribute = buffer.geometry.attributes.position;
       attribute.set(position, index * 3);
 
-      if (additionalCoordinates) {
-        for (const idx of range(0, additionalCoordinates.length)) {
-          const attributeAdditionalCoordinates =
-            buffer.geometry.attributes[`additionalCoord_${idx}`];
-          attributeAdditionalCoordinates.set([additionalCoordinates[idx].value], index);
-        }
+      const additionalCoordinateNames = new Set(
+        (Store.getState().flycam.additionalCoordinates ?? []).map(({ name }) => name),
+      );
+      for (const coordName of additionalCoordinateNames) {
+        const attributeAdditionalCoordinates =
+          buffer.geometry.attributes[`additionalCoord_${coordName}`];
+        attributeAdditionalCoordinates.set([NaN], index);
+      }
+
+      for (const coord of additionalCoordinates ?? []) {
+        const attributeAdditionalCoordinates =
+          buffer.geometry.attributes[`additionalCoord_${coord.name}`];
+        attributeAdditionalCoordinates.set([coord.value], index);
       }
 
       return [attribute];
@@ -683,6 +697,9 @@ class Skeleton {
    */
   createEdge(treeId: number, source: Node, target: Node) {
     const id = this.combineIds(treeId, source.id, target.id);
+    const additionalCoordinateNames = new Set(
+      (Store.getState().flycam.additionalCoordinates ?? []).map(({ name }) => name),
+    );
     this.create(id, this.edges, ({ buffer, index }) => {
       const { attributes } = buffer.geometry;
       const positionAttribute = attributes.position;
@@ -693,12 +710,19 @@ class Skeleton {
       treeIdAttribute.set([treeId, treeId], index * 2);
 
       const changedAttributes = [];
-      if (source.additionalCoordinates && target.additionalCoordinates) {
-        for (const idx of range(0, source.additionalCoordinates.length)) {
-          const additionalCoordAttribute = attributes[`additionalCoord_${idx}`];
+      if (source.additionalCoordinates || target.additionalCoordinates) {
+        const sourceAdditionalCoords = new Map(
+          (source.additionalCoordinates ?? []).map(({ name, value }) => [name, value]),
+        );
+        const targetAdditionalCoords = new Map(
+          (source.additionalCoordinates ?? []).map(({ name, value }) => [name, value]),
+        );
 
-          additionalCoordAttribute.set([source.additionalCoordinates[idx].value], 2 * index);
-          additionalCoordAttribute.set([target.additionalCoordinates[idx].value], 2 * index + 1);
+        for (const name of additionalCoordinateNames) {
+          const additionalCoordAttribute = attributes[`additionalCoord_${name}`];
+
+          additionalCoordAttribute.set([sourceAdditionalCoords.get(name) ?? NaN], 2 * index);
+          additionalCoordAttribute.set([targetAdditionalCoords.get(name) ?? NaN], 2 * index + 1);
           changedAttributes.push(additionalCoordAttribute);
         }
       }

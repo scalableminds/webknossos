@@ -110,9 +110,9 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
 
   def add(sourceVolumeIndex: Int, bucketPosition: BucketPosition, data: Array[Byte]): Unit = {
     prepareIdMaps()
+    val skipMapping = idMaps.isEmpty || (initialLargestSegmentId > 0 && sourceVolumeIndex == 0)
     if (mergedVolume.contains(bucketPosition)) {
       val previousBucketData = mergedVolume(bucketPosition)
-      val skipMapping = idMaps.isEmpty || (initialLargestSegmentId > 0 && sourceVolumeIndex == 0)
       val idMap = if (skipMapping) (Array.empty[Long], Array.empty[Long]) else idMaps(sourceVolumeIndex)
       val decompressed = decompressIfNeeded(previousBucketData, expectedUncompressedBucketSize, "")
       bucketScanner.mergeVolumeBucketInPlace(decompressed,
@@ -125,7 +125,7 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
       val compressed = compressVolumeBucket(decompressed, expectedUncompressedBucketSize)
       mergedVolume.update(bucketPosition, compressed)
     } else {
-      if (idMaps.isEmpty) {
+      if (skipMapping) {
         mergedVolume += ((bucketPosition, compressVolumeBucket(data, expectedUncompressedBucketSize)))
       } else {
         val idMap = idMaps(sourceVolumeIndex)

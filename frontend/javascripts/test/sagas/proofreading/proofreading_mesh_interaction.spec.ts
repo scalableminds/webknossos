@@ -214,7 +214,7 @@ describe("Proofreading (with mesh actions)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   const mockEdgesForNormalAgglomerateMinCut = (mocks: WebknossosTestContext["mocks"]) =>
     vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockImplementation(

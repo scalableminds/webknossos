@@ -1855,7 +1855,7 @@ export function* refreshAffectedSegmentItems(
   // with proofreading. Once such datasets appear, this parameter needs to be
   // adapted.
   const additionalCoordinates = undefined;
-  // What about removing old segments.
+  // Remove old segments which are no longer present.
   const outdatedIds = uniq(items.map((item) => item.oldAgglomerateId)).filter((id) => id != null);
   const itemsToAddOrUpdate = uniqBy(items, (item) => item.newAgglomerateId);
   const removedIds = new Set(outdatedIds).difference(

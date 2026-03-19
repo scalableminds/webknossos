@@ -145,7 +145,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         // Execute the actual merge and wait for the finished mapping.
         const [removedMeshes, forkedEffect1] = yield* trackRemovedMeshActions();
         const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
-        yield put(proofreadMergeAction(getPositionForSegmentId(4), 1));
+        yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
         yield take(
           ((action: Action) =>
             action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
@@ -392,7 +392,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       yield put(
         proofreadMergeAction(
           getPositionForSegmentId(4), // unmappedId=4 / mappedId=4 at this position
-          4, // unmappedId=1 maps to 1
+          4, // unmappedId=4 maps to 4
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -449,7 +449,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       yield put(
         proofreadMergeAction(
           getPositionForSegmentId(4), // unmappedId=4 / mappedId=4 at this position
-          1, // unmappedId=1 maps to 1
+          4, // unmappedId=4 maps to 4
         ),
       );
       yield take(
@@ -927,7 +927,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       ]);
     });
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should reload auxiliary proofreading meshes when performing partitioned min cut if min-cutted edges with outdated edge info due to interfering merge operations. The merge is thus, incomplete.", async (context: WebknossosTestContext) => {
     const { mocks } = context;

@@ -157,7 +157,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       });
 
       await task.toPromise();
-    }, 8000);
+    });
   });
 
   it("should not merge two agglomerate skeletons if interfering merge makes it a no-op.", async (context: WebknossosTestContext) => {
@@ -209,7 +209,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should split agglomerate skeleton and incorporate a new split action from backend", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
@@ -266,7 +266,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should split an agglomerate skeleton and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
@@ -446,7 +446,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should try to min cut agglomerate via node ids but interfering merge adds new edge. Resulting mapping should be correct.", async (context: WebknossosTestContext) => {
     // Additional edge to create agglomerate 1 with edges 1-2,2-3,1-3 to enforce cut with multiple edges.
@@ -515,7 +515,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should try to min cut agglomerate via node ids but interfering merge adds new edge which is not cut. Resulting mapping should be correct.", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
@@ -623,5 +623,5 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 });

@@ -9,7 +9,6 @@ import orderBy from "lodash-es/orderBy";
 import uniqBy from "lodash-es/uniqBy";
 import type { MetadataEntryProto } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import { TreeTypeEnum } from "viewer/constants";
 import {
   areGeometriesTransformed,

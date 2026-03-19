@@ -445,6 +445,8 @@ export function handleMergeSegments(state: WebknossosState, action: MergeSegment
   const targetSegment = segments.getNullable(action.targetAgglomerateId);
 
   // If the agglomerates are equal, do not remove the entry as this would empty the whole segment information.
+  // This can happen in a concurrent editing scenario of the same segment.
+  // Usually the later users client would notice a duplicate merge operation, be we do not want to rely on this here.
   let newState = isSameAgglomerate
     ? state
     : handleRemoveSegment(state, removeSegmentAction(action.targetAgglomerateId, action.layerName));

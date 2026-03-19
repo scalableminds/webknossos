@@ -179,7 +179,7 @@ describe("Proofreading (Multi User)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("(II) should merge two agglomerates optimistically and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
     /*
@@ -303,7 +303,7 @@ describe("Proofreading (Multi User)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should merge two agglomerates optimistically and incorporate a new split action from backend", async (context: WebknossosTestContext) => {
     /*
@@ -407,7 +407,7 @@ describe("Proofreading (Multi User)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should cut agglomerate from all neighbors after incorporating a new split action from backend", async (context: WebknossosTestContext) => {
     /*
@@ -502,7 +502,7 @@ describe("Proofreading (Multi User)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should not cut agglomerate from all neighbors due to interfering merge action", async (context: WebknossosTestContext) => {
     /*
@@ -580,7 +580,7 @@ describe("Proofreading (Multi User)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should merge two agglomerates after incorporating a new split action from backend", async (context: WebknossosTestContext) => {
     /*
@@ -1032,7 +1032,7 @@ describe("Proofreading (Multi User)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should not deadlock upon proofreading action when not receiving mutex after some time and auto timeout polling already ends in the waiting-loop for the ui busy lock", async (context: WebknossosTestContext) => {
     mockInitialBucketAndAgglomerateData(context);
@@ -1052,7 +1052,7 @@ describe("Proofreading (Multi User)", () => {
       yield put(
         proofreadMergeAction(
           getPositionForSegmentId(4), // unmappedId=4 / mappedId=4 at this position
-          1, // unmappedId=1 maps to 1
+          4, // unmappedId=4 maps to 4
         ),
       );
       const waitingTimeTillPollingTimeoutWasTriggered = VERSION_POLL_INTERVAL_COLLAB * 2 + 100;
@@ -1069,7 +1069,7 @@ describe("Proofreading (Multi User)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should not create a segment item after splitting when another user performed a merge that swallows that item", async (context: WebknossosTestContext) => {
     const { api, mocks } = context;
@@ -1178,7 +1178,7 @@ describe("Proofreading (Multi User)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should update correct segment item if that one was merged into another segment by another user", async (context: WebknossosTestContext) => {
     /*
@@ -1267,7 +1267,7 @@ describe("Proofreading (Multi User)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should ignore segment item removal if that one was merged into another segment by another user", async (context: WebknossosTestContext) => {
     /*
@@ -1326,5 +1326,5 @@ describe("Proofreading (Multi User)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 });

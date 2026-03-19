@@ -269,7 +269,7 @@ describe("Proofreading should generate correct update actions", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("when loading agglomerate trees 1 and 4 and then merging segments 3 and 4.", async (context: WebknossosTestContext) => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
@@ -282,7 +282,7 @@ describe("Proofreading should generate correct update actions", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("when merging segments 1 and 4.", async (context: WebknossosTestContext) => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
@@ -294,7 +294,7 @@ describe("Proofreading should generate correct update actions", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("when merging segments 2 and 4.", async (context: WebknossosTestContext) => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
@@ -306,7 +306,7 @@ describe("Proofreading should generate correct update actions", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("when loading agglomerate trees 1, 4 and 6 then merging segments 1 and 4.", async (context: WebknossosTestContext) => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
@@ -318,7 +318,7 @@ describe("Proofreading should generate correct update actions", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("when loading agglomerate tree 1 and then merging segments 3 and 4.", async (context: WebknossosTestContext) => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
@@ -330,7 +330,7 @@ describe("Proofreading should generate correct update actions", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("when loading agglomerate trees 1 and 4 and then merging segments 5 and 6.", async (context: WebknossosTestContext) => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
@@ -342,7 +342,7 @@ describe("Proofreading should generate correct update actions", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("when merging segments 5 and 6.", async (context: WebknossosTestContext) => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
@@ -354,7 +354,7 @@ describe("Proofreading should generate correct update actions", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("when merging segments 1337 and 5.", async (context: WebknossosTestContext) => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
@@ -392,7 +392,7 @@ describe("Proofreading should generate correct update actions", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("when loading agglomerate tree 1 and then merging segments 3 and 6.", async (context: WebknossosTestContext) => {
     mockInitialBucketAndAgglomerateData(context, [], Store.getState());
@@ -404,7 +404,7 @@ describe("Proofreading should generate correct update actions", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("when splitting segments 2 and 3.", async (context: WebknossosTestContext) => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
@@ -424,7 +424,7 @@ describe("Proofreading should generate correct update actions", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("when loading agglomerate tree 1 and then splitting segments 2 and 3.", async (context: WebknossosTestContext) => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
@@ -444,7 +444,7 @@ describe("Proofreading should generate correct update actions", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("when loading agglomerate tree 1 and then splitting segments 1 and 2.", async (context: WebknossosTestContext) => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
@@ -464,7 +464,7 @@ describe("Proofreading should generate correct update actions", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("when splitting segments 1 and 2.", async (context: WebknossosTestContext) => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
@@ -485,7 +485,7 @@ describe("Proofreading should generate correct update actions", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("when loading agglomerate trees 1, 2 and 4 and then splitting segments 2 and 3 with additional initial edges", async (context: WebknossosTestContext) => {
     // There should be the following circle of edges: 1-2-3-1337-1338-1.
@@ -544,7 +544,7 @@ describe("Proofreading should generate correct update actions", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("when loading agglomerate tree 1, 4 and 6 and then splitting segments 1 and 2.", async (context: WebknossosTestContext) => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
@@ -564,7 +564,7 @@ describe("Proofreading should generate correct update actions", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("when splitting 7 and 1337 and merging 1337 with 5", async (context: WebknossosTestContext) => {
     const _backendMock = mockInitialBucketAndAgglomerateData(
@@ -611,7 +611,7 @@ describe("Proofreading should generate correct update actions", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("performMergeTreesProofreading should apply correct update actions after loading agglomerate trees", async (context: WebknossosTestContext) => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
@@ -628,7 +628,7 @@ describe("Proofreading should generate correct update actions", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("performSplitTreesProofreading should apply correct update actions when loading agglomerate trees", async (context: WebknossosTestContext) => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
@@ -644,5 +644,5 @@ describe("Proofreading should generate correct update actions", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 });

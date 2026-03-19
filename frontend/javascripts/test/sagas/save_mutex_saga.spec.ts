@@ -30,7 +30,10 @@ import {
 import { Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { mockInitialBucketAndAgglomerateData } from "./proofreading/proofreading_test_utils";
+import {
+  getPositionForSegmentId,
+  mockInitialBucketAndAgglomerateData,
+} from "./proofreading/proofreading_test_utils";
 
 const blockingUser: APIUserCompact = { firstName: "Sample", lastName: "User", id: "1111" };
 
@@ -73,7 +76,7 @@ async function makeProofreadMerge(
     yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
     yield put(setActiveCellAction(1));
     // Execute the actual merge and wait for the finished mapping.
-    yield put(proofreadMergeAction([4, 4, 4], 1));
+    yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
     yield take("SET_BUSY_BLOCKING_INFO_ACTION");
     if (waitTillFinished) {
       // Wait for UI made busy and back to idle again to ensure saving of the whole sagas is done.

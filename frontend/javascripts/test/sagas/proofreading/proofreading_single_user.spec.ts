@@ -64,7 +64,7 @@ describe("Proofreading (Single User)", () => {
       yield put(setActiveCellAction(1));
 
       // Execute the actual merge and wait for the finished mapping.
-      yield put(proofreadMergeAction(getPositionForSegmentId(4), 1));
+      yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
       yield take("FINISH_MAPPING_INITIALIZATION");
 
       const mapping = yield* select(
@@ -110,7 +110,7 @@ describe("Proofreading (Single User)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should split two agglomerates and update the mapping accordingly", async (context: WebknossosTestContext) => {
     const { api, mocks } = context;
@@ -201,5 +201,5 @@ describe("Proofreading (Single User)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 });

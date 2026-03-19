@@ -4,7 +4,7 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
+import com.scalableminds.webknossos.datastore.controllers.{GetEffectiveVoxelSizeParameters, PathValidationResult}
 import com.scalableminds.webknossos.datastore.explore.{
   ExploreRemoteDatasetRequest,
   ExploreRemoteDatasetResponse,
@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.explore.{
 }
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource
-import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, RawCuboidRequest}
+import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, RawCuboidRequest, VoxelSize}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{PathStorageUsageRequest, PathStorageUsageResponse}
 import com.typesafe.scalalogging.LazyLogging
@@ -27,6 +27,8 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
 
   private lazy val hasSegmentIndexFileCache: AlfuCache[(ObjectId, String), Boolean] =
     AlfuCache(timeToLive = 1 minute)
+
+  private lazy val effectiveAiModelVoxelSizeCache: AlfuCache[UPath, VoxelSize] = AlfuCache(timeToLive = 15 minutes)
 
   def getDataLayerThumbnail(dataset: Dataset,
                             dataLayerName: String,
@@ -139,5 +141,15 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
         .addQueryParam("token", RpcTokenHolder.webknossosToken)
         .deleteJsonWithJsonResponse[Seq[UPath], Seq[UPath]](paths)
     } yield pathsToDeleteExternally
+
+  def getEffectiveAiModelVoxelSize(modelPath: UPath)(implicit ec: ExecutionContext): Fox[VoxelSize] =
+    effectiveAiModelVoxelSizeCache.getOrLoad(
+      modelPath,
+      _ =>
+        rpc(s"${dataStore.url}/data/aiModels/effectiveVoxelSize")
+          .addQueryParam("token", RpcTokenHolder.webknossosToken)
+          .postJsonWithJsonResponse[GetEffectiveVoxelSizeParameters, VoxelSize](
+            GetEffectiveVoxelSizeParameters(modelPath))
+    )
 
 }

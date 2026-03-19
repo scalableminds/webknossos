@@ -11,7 +11,7 @@ For API details, see the WEBKNOSSOS [Frontend API documentation](https://webknos
 2. Click `Add Script`.
 3. Fill in:
    - `Script Name`: Human-readable label shown in selectors.
-   - `Gist URL`: URL of the script source, a public GitHub Gist that your setup can access.
+   - `Gist URL`: URL of the script source, a public [GitHub Gist](https://gist.github.com/) that your setup can access.
    - `Owner`: User responsible for maintaining the script.
 4. Save the script.
 
@@ -20,18 +20,30 @@ After saving, the script appears in the Scripts list and can be selected from th
 ## Example Script
 
 ```javascript
-// Example script that adds a keyboard shortcut to toggle the color of the current layer.
+/**
+ * Example: WebKnossos Custom SkeletonNode Tagger
+ * ----------------------------
+ * Description: Automatically assigns specific labels to the currently 
+ * selected tracing node using keyboard shortcuts. This bypasses manual 
+ * menu entry to speed up synaptic annotation.
+ * * Usage: 
+ * - Press '4' to label active node as "syn shaft"
+ * - Press '5' to label active node as "syn spineHead"
+ */
 
-(function () {
-  const toggleColor = () => {
-    const layer = window.webknossos.getCurrentLayer();
-    if (layer) {
-      layer.setColor(layer.getColor() === "red" ? "blue" : "red");
-    }
-  };
+window.webknossos.apiReady(3).then((api) => {
+    // Helper: Fetches active node and applies the string to the comment field
+    const tagNode = (comment) => {
+        const nodeId = api.tracing.getActiveNodeId();
+        if (nodeId) {
+            api.tracing.setCommentForNode(comment, nodeId);
+        }
+    };
 
-  window.webknossos.registerKeyboardShortcut("t", toggleColor);
-})();
+    // Keyboard Listeners
+    api.utils.registerKeyHandler("4", () => tagNode("syn shaft"));
+    api.utils.registerKeyHandler("5", () => tagNode("syn spineHead"));
+});
 ```
 
 ## Run Script from WEBKNOSSOS Annotation Viewer

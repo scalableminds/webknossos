@@ -17,6 +17,7 @@ import com.scalableminds.util.objectid.ObjectId
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import com.scalableminds.util.time.Instant
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import models.aimodels.AiModelCategory.AiModelCategory
 import models.organization.{OrganizationDAO, OrganizationService}
@@ -52,17 +53,21 @@ object RunInstanceModelTrainingParameters {
   implicit val jsonFormat: OFormat[RunInstanceModelTrainingParameters] = Json.format[RunInstanceModelTrainingParameters]
 }
 
-case class RunInferenceParameters(annotationId: Option[ObjectId],
-                                  aiModelId: ObjectId,
-                                  datasetDirectoryName: String,
-                                  organizationId: String,
+case class RunInferenceParameters(datasetId: ObjectId,
+                                  aiModelId: Option[ObjectId],
                                   colorLayerName: String,
-                                  boundingBox: String,
-                                  newDatasetName: String,
+                                  boundingBox: String, // Always in mag1
+                                  annotationId: Option[ObjectId],
                                   maskAnnotationLayerName: Option[String],
+                                  newDatasetName: String,
                                   workflowYaml: Option[String],
                                   invertColorLayer: Option[Boolean],
-                                  seedGeneratorDistanceThreshold: Option[Double])
+                                  seedGeneratorDistanceThreshold: Option[Double],
+                                  doSplitMergerEvaluation: Boolean = false,
+                                  evalUseSparseTracing: Option[Boolean],
+                                  evalMaxEdgeLength: Option[Double],
+                                  evalSparseTubeThresholdNm: Option[Double],
+                                  evalMinMergerPathLengthNm: Option[Double])
 
 object RunInferenceParameters {
   implicit val jsonFormat: OFormat[RunInferenceParameters] = Json.format[RunInferenceParameters]
@@ -101,24 +106,32 @@ class AiModelController @Inject()(
     jobService: JobService,
     datasetDAO: DatasetDAO,
     dataStoreDAO: DataStoreDAO,
+    rpc: RPC,
     uploadToPathsService: UploadToPathsService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
   def readAiModelInfo(aiModelId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
-    {
-      for {
-        _ <- userService.assertIsSuperUser(request.identity)
-        aiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
-        jsResult <- aiModelService.publicWrites(aiModel, request.identity)
-      } yield Ok(jsResult)
-    }
+    for {
+      _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(request.identity)
+      aiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
+      jsResult <- aiModelService.publicWrites(aiModel, request.identity)
+    } yield Ok(jsResult)
+  }
+
+  def aiModelVoxelSize(aiModelId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+    for {
+      _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(request.identity)
+      aiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
+      dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)
+      voxelSize <- aiModelService.findModelVoxelSize(Some(aiModel), usePretrainedNeuronModel = false, dataStore)
+    } yield Ok(Json.toJson(voxelSize))
   }
 
   def readAiInferenceInfo(aiInferenceId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     {
       for {
-        _ <- userService.assertIsSuperUser(request.identity)
+        _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(request.identity)
         aiInference <- aiInferenceDAO.findOne(aiInferenceId) ?~> "aiInference.notFound" ~> NOT_FOUND
         jsResult <- aiInferenceService.publicWrites(aiInference, request.identity)
       } yield Ok(jsResult)
@@ -137,7 +150,7 @@ class AiModelController @Inject()(
   def listAiInferences: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     {
       for {
-        _ <- userService.assertIsSuperUser(request.identity)
+        _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(request.identity)
         aiInferences <- aiInferenceDAO.findAll
         jsResults <- Fox.serialCombined(aiInferences)(inference =>
           aiInferenceService.publicWrites(inference, request.identity))
@@ -260,36 +273,45 @@ class AiModelController @Inject()(
       } yield Ok(newAiModelJs)
     }
 
-  def runCustomInstanceModelInference: Action[RunInferenceParameters] =
+  // If no model is selected, the pretrained *nuclei model* is used
+  def runInstanceModelInference: Action[RunInferenceParameters] =
     sil.SecuredAction.async(validateJson[RunInferenceParameters]) { implicit request =>
       for {
-        organization <- organizationDAO.findOne(request.body.organizationId)(GlobalAccessContext) ?~> Messages(
-          "organization.notFound",
-          request.body.organizationId)
-        _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
-        dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(request.body.datasetDirectoryName, organization._id)
+        dataset <- datasetDAO.findOne(request.body.datasetId)
+        _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
+        aiModelOpt <- Fox.runOptional(request.body.aiModelId)(aiModelDAO.findOne) ?~> "aiModel.notFound"
+        _ <- Fox.runOptional(aiModelOpt) { aiModel =>
+          Fox.fromBool(aiModel._dataStore == dataset._dataStore) ?~> "aiModel.dataStoreMismatch"
+        }
+        (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.colorLayerName)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
-        aiModel <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
         jobCommand = JobCommand.infer_instances
-        boundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
+        mag1BoundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
         commandArgs = Json.obj(
           "dataset_id" -> dataset._id,
-          "organization_id" -> organization._id,
+          "organization_id" -> dataset._organization,
           "dataset_name" -> dataset.name,
           "layer_name" -> request.body.colorLayerName,
-          "bbox" -> boundingBox.toLiteral,
+          "bbox" -> mag1BoundingBox.toLiteral,
           "model_id" -> request.body.aiModelId,
-          "model_organization_id" -> aiModel._organization,
-          "dataset_directory_name" -> request.body.datasetDirectoryName,
+          "model_organization_id" -> aiModelOpt.map(_._organization),
+          "dataset_directory_name" -> dataset.directoryName,
           "new_dataset_name" -> request.body.newDatasetName,
           "custom_workflow_provided_by_user" -> request.body.workflowYaml,
-          "seed_generator_distance_threshold" -> request.body.seedGeneratorDistanceThreshold
+          "invert_color_layer" -> request.body.invertColorLayer,
+          "seed_generator_distance_threshold" -> request.body.seedGeneratorDistanceThreshold,
         )
         creditTransactionComment = s"AI custom instance segmentation with model ${request.body.aiModelId} for dataset ${dataset.name}"
+        targetMagBoundingBox <- aiModelService.inferenceBBoxToTargetMag(mag1BoundingBox,
+                                                                        layer,
+                                                                        dataSource.scale,
+                                                                        aiModelOpt,
+                                                                        usePretrainedNeuronModel = false,
+                                                                        dataStore)
         newInferenceJob <- jobService.submitPaidJob(jobCommand,
                                                     commandArgs,
-                                                    boundingBox,
+                                                    targetMagBoundingBox,
                                                     creditTransactionComment,
                                                     request.identity,
                                                     dataStore.name) ?~> "job.couldNotRunInferWithModel"
@@ -299,7 +321,7 @@ class AiModelController @Inject()(
           _aiModel = request.body.aiModelId,
           _newDataset = None,
           _annotation = request.body.annotationId,
-          boundingBox = boundingBox,
+          boundingBox = mag1BoundingBox,
           _inferenceJob = newInferenceJob._id,
           newSegmentationLayerName = "segmentation",
           maskAnnotationLayerName = request.body.maskAnnotationLayerName
@@ -309,36 +331,48 @@ class AiModelController @Inject()(
       } yield Ok(newAiModelJs)
     }
 
-  def runCustomNeuronInference: Action[RunInferenceParameters] =
+  def runNeuronModelInference: Action[RunInferenceParameters] =
     sil.SecuredAction.async(validateJson[RunInferenceParameters]) { implicit request =>
       for {
-        organization <- organizationDAO.findOne(request.body.organizationId)(GlobalAccessContext) ?~> Messages(
-          "organization.notFound",
-          request.body.organizationId)
-        _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
-        dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(request.body.datasetDirectoryName, organization._id)
+        dataset <- datasetDAO.findOne(request.body.datasetId)
+        _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
+        aiModelOpt <- Fox.runOptional(request.body.aiModelId)(aiModelDAO.findOne) ?~> "aiModel.notFound"
+        _ <- Fox.runOptional(aiModelOpt) { aiModel =>
+          Fox.fromBool(aiModel._dataStore == dataset._dataStore) ?~> "aiModel.dataStoreMismatch"
+        }
+        (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.colorLayerName)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
-        aiModel <- aiModelDAO.findOne(request.body.aiModelId) ?~> "aiModel.notFound"
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
         jobCommand = JobCommand.infer_neurons
-        boundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
+        mag1BoundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
+        targetMagBoundingBox <- aiModelService.inferenceBBoxToTargetMag(mag1BoundingBox,
+                                                                        layer,
+                                                                        dataSource.scale,
+                                                                        aiModelOpt,
+                                                                        usePretrainedNeuronModel = aiModelOpt.isEmpty,
+                                                                        dataStore)
         commandArgs = Json.obj(
           "dataset_id" -> dataset._id,
-          "organization_id" -> organization._id,
+          "organization_id" -> dataset._organization,
           "dataset_name" -> dataset.name,
           "layer_name" -> request.body.colorLayerName,
-          "bbox" -> boundingBox.toLiteral,
+          "bbox" -> mag1BoundingBox.toLiteral,
           "model_id" -> request.body.aiModelId,
-          "model_organization_id" -> aiModel._organization,
-          "dataset_directory_name" -> request.body.datasetDirectoryName,
+          "model_organization_id" -> aiModelOpt.map(_._organization),
+          "dataset_directory_name" -> dataset.directoryName,
           "new_dataset_name" -> request.body.newDatasetName,
           "custom_workflow_provided_by_user" -> request.body.workflowYaml,
-          "invert_color_layer" -> request.body.invertColorLayer
+          "invert_color_layer" -> request.body.invertColorLayer,
+          "do_split_merger_evaluation" -> request.body.doSplitMergerEvaluation,
+          "eval_use_sparse_tracing" -> request.body.evalUseSparseTracing,
+          "eval_max_edge_length" -> request.body.evalMaxEdgeLength,
+          "eval_sparse_tube_threshold_nm" -> request.body.evalSparseTubeThresholdNm,
+          "eval_min_merger_path_length_nm" -> request.body.evalMinMergerPathLengthNm,
         )
         creditTransactionComment = s"AI custom neuron segmentation with model ${request.body.aiModelId} for dataset ${dataset.name}"
         newInferenceJob <- jobService.submitPaidJob(jobCommand,
                                                     commandArgs,
-                                                    boundingBox,
+                                                    targetMagBoundingBox,
                                                     creditTransactionComment,
                                                     request.identity,
                                                     dataStore.name) ?~> "job.couldNotRunInferWithModel"
@@ -348,7 +382,7 @@ class AiModelController @Inject()(
           _aiModel = request.body.aiModelId,
           _newDataset = None,
           _annotation = request.body.annotationId,
-          boundingBox = boundingBox,
+          boundingBox = mag1BoundingBox,
           _inferenceJob = newInferenceJob._id,
           newSegmentationLayerName = "segmentation",
           maskAnnotationLayerName = request.body.maskAnnotationLayerName
@@ -368,7 +402,7 @@ class AiModelController @Inject()(
           } else sharedOrganizationIds
         }
         for {
-          _ <- userService.assertIsSuperUser(request.identity)
+          _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(request.identity)
           aiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
           _ <- Fox.fromBool(aiModel._organization == request.identity._organization) ?~> "aiModel.notOwned"
           _ <- aiModelDAO.updateOne(aiModel.copy(name = request.body.name,
@@ -462,7 +496,7 @@ class AiModelController @Inject()(
   def deleteAiModel(aiModelId: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        _ <- userService.assertIsSuperUser(request.identity)
+        _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(request.identity)
         referencesCount <- aiInferenceDAO.countForModel(aiModelId)
         _ <- Fox.fromBool(referencesCount == 0) ?~> "aiModel.delete.referencedByInferences"
         _ <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND

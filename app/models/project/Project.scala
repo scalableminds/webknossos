@@ -124,7 +124,7 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def findUsersWithActiveTasks(projectId: ObjectId): Fox[List[(String, String, String, Int)]] =
     for {
-      rSeq <- run(q"""SELECT m.email, u.firstName, u.lastName, count(a._id)
+      rSeq <- run(q"""SELECT m.email, m.firstName, m.lastName, count(a._id)
                       FROM webknossos.annotations_ a
                       JOIN webknossos.tasks_ t ON a._task = t._id
                       JOIN webknossos.projects_ p ON t._project = p._id
@@ -133,7 +133,7 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                       WHERE p._id = $projectId
                       AND a.state = ${AnnotationState.Active}
                       AND a.typ = ${AnnotationType.Task}
-                      GROUP BY m.email, u.firstName, u.lastName
+                      GROUP BY m.email, m.firstName, m.lastName
                      """.as[(String, String, String, Int)])
     } yield rSeq.toList
 

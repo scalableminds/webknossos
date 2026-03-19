@@ -70,7 +70,7 @@ export const RunAiModelCreditInformation: React.FC = () => {
     <CreditInformation
       selectedModel={selectedModel}
       selectedJobType={selectedJobType}
-      selectedBoundingBox={adjustedBoundingBox ?? selectedBoundingBox}
+      selectedBoundingBox={adjustedBoundingBox ?? null}
       handleStartAnalysis={handleStartAnalysis}
       startButtonTitle="Start analysis"
       areParametersValid={areParametersValid}

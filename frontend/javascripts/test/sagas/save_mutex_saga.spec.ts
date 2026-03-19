@@ -634,8 +634,8 @@ describe("Save Mutex Saga", () => {
 describe("Save Mutex Saga should crash", () => {
   afterEach<WebknossosTestContext>(async (context) => {
     context.tearDownPullQueues();
-    // Saving after each test and checking that the root saga did not crash as only the saga fetching the mutex should have crashed.
-    expect(hasRootSagaCrashed()).toBe(false);
+    // Saving after each test and checking that the root saga did crash as the tests below should make the save mutex acquisition saga crash.
+    expect(hasRootSagaCrashed()).toBe(true);
     vi.clearAllMocks(); // clears call counts of *all* spies
     WkDevFlags.liveCollab = initialLiveCollab;
   });

@@ -88,6 +88,7 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO, jobService: JobServ
       _ <- Fox.fromBool(key == dataStore.key)
       result <- Fox.fromFuture(block(dataStore))
     } yield result).getOrElse(Forbidden(Json.obj("granted" -> false, "msg" -> Messages("dataStore.notFound")))))
+
 }
 
 class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

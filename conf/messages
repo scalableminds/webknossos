@@ -424,6 +424,6 @@ aiModel.reserve.wrongOrga=Cannot reserve upload to path for AI models of other o
 aiModel.reserve.notPending=Cannot reserve upload to path for AI model that is not currently marked as pending.
 aiModel.finish.wrongOrga=Cannot finish upload to path for AI models of other organizations.
 aiModel.finish.notPending=Cannot finish upload to path for AI model that is not currently marked as pending.
-
+aiModel.dataStoreMismatch=Cannot use AI model on a dataset on a different data store.
 
 aiInference.notFound=Could not find requested AI inference.

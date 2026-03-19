@@ -451,7 +451,6 @@ function TaskListView({ initialFieldValues }: Props) {
           pagination={{
             defaultPageSize: 50,
           }}
-          style={{ marginBottom: 30 }}
           expandable={{
             expandedRowRender: (task) => <TaskAnnotationView task={task} />,
           }}

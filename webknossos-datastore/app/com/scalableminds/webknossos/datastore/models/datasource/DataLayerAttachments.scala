@@ -70,6 +70,18 @@ case class DataLayerAttachments(
       cumsum = cumsum.map(attachmentMapping(_))
     )
 
+  def renameByMap(renamingMap: Map[(LayerAttachmentType, String), String]): DataLayerAttachments =
+    DataLayerAttachments(
+      meshes = meshes.map(a => a.copy(name = renamingMap.getOrElse((LayerAttachmentType.mesh, a.name), a.name))),
+      agglomerates =
+        agglomerates.map(a => a.copy(name = renamingMap.getOrElse((LayerAttachmentType.agglomerate, a.name), a.name))),
+      segmentIndex =
+        segmentIndex.map(a => a.copy(name = renamingMap.getOrElse((LayerAttachmentType.segmentIndex, a.name), a.name))),
+      connectomes =
+        connectomes.map(a => a.copy(name = renamingMap.getOrElse((LayerAttachmentType.connectome, a.name), a.name))),
+      cumsum = cumsum.map(a => a.copy(name = renamingMap.getOrElse((LayerAttachmentType.cumsum, a.name), a.name))),
+    )
+
   def resolvedIn(dataSourcePath: UPath): DataLayerAttachments =
     mapped(_.resolvedIn(dataSourcePath))
 

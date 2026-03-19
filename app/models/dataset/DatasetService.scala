@@ -25,6 +25,7 @@ import models.team._
 import models.user.{MultiUserDAO, User, UserService}
 import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
 import controllers.{AttachmentRenaming, LayerRenaming, PathDeletionService}
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
@@ -367,13 +368,14 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                        attachmentRenamings: Seq[AttachmentRenaming]): UsableDataSource =
     if (attachmentRenamings.isEmpty) existingDataSource
     else {
-      val renamingMap: Map[(String, String), String] =
-        attachmentRenamings.map(renaming => ((renaming.layerName, renaming.oldName), renaming.newName)).toMap
       existingDataSource.copy(
         dataLayers = existingDataSource.dataLayers.map { layer =>
-          layer.mapped(attachmentMapping = attachments =>
-            attachments.mapped(attachment =>
-              attachment.copy(name = renamingMap.getOrElse((layer.name, attachment.name), attachment.name))))
+          val renamingMapForLayer: Map[(LayerAttachmentType, String), String] =
+            attachmentRenamings
+              .filter(_.layerName == layer.name)
+              .map(renaming => ((renaming.attachmentType, renaming.oldName), renaming.newName))
+              .toMap
+          layer.mapped(attachmentMapping = attachments => attachments.renameByMap(renamingMapForLayer))
         }
       )
     }

@@ -9,6 +9,7 @@ import com.scalableminds.util.tools.{Empty, Failure, Fox, Full, TristateOptionJs
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSourceId,
   DataSourceStatus,
@@ -63,6 +64,7 @@ object LayerRenaming {
 case class AttachmentRenaming(
     layerName: String, // Note: if a request contains a layer renaming *and* attachment renaming, this must use the *new* layerName.
     oldName: String,
+    attachmentType: LayerAttachmentType,
     newName: String)
 object AttachmentRenaming {
   implicit val jsonFormat: OFormat[AttachmentRenaming] = Json.format[AttachmentRenaming]

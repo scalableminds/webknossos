@@ -66,11 +66,11 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
         _ <- datasetDAO.updatePartial(dataset._id, request.body)
         _ <- Fox.runOptional(request.body.dataSource) { dataSourceUpdates =>
           def findOriginalAttachments(existingDataSource: UsableDataSource, layerName: String) = {
-            val reverseRenamingMap: Map[String, String] = request.body.layerRenamings
+            val reverseLayerRenamingMap: Map[String, String] = request.body.layerRenamings
               .getOrElse(Seq.empty)
-              .map(renaming => (renaming.newName, renaming.oldName))
+              .map(layerRenaming => (layerRenaming.newName, layerRenaming.oldName))
               .toMap
-            val existingLayerName = reverseRenamingMap.getOrElse(layerName, layerName)
+            val existingLayerName = reverseLayerRenamingMap.getOrElse(layerName, layerName)
             val existingLayer = existingDataSource.dataLayers.find(_.name == existingLayerName)
             existingLayer.flatMap(_.attachments)
           }

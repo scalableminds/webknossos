@@ -801,8 +801,7 @@ function SkeletonTracingReducer(
         return state;
       }
       const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
-      const isLiveCollabActive = WkDevFlags.liveCollab && state.annotation.othersMayEdit;
-      if (isLiveCollabActive && isProofreadingActive && action.initiator === "USER") {
+      if (isProofreadingActive && action.initiator === "USER") {
         // Ignore this action as proofreading is active and the action originates from the user.
         // The proofreading saga will take care of replaying the same action but with initiator = "PROOFREADING"
         // to perform the desired tree manipulation.

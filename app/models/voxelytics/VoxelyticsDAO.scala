@@ -491,8 +491,8 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           COALESCE(tasks.cancelled, 0) AS tasksCancelled,
           COALESCE(tasks.fileSize, 0) AS fileSize,
           COALESCE(tasks.inodeCount, 0) AS inodeCount,
-          u.firstName,
-          u.lastName
+          mu.firstName,
+          mu.lastName
         FROM (${visibleRunsQ(currentUser, allowUnlisted = false)}) r
         JOIN (${runsWithStateQ(staleTimeout)}) rs ON rs._id = r._id
         LEFT JOIN (
@@ -516,6 +516,7 @@ class VoxelyticsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
           GROUP BY t._run
         ) tasks ON tasks._run = r._id
         LEFT JOIN webknossos.users_ u ON r._user = u._id
+        LEFT JOIN webknossos.multiUsers_ mu ON u._multiUser = mu._id
         WHERE r._organization = $organizationId
         """.as[(String,
                 String,

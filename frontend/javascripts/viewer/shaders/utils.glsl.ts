@@ -270,18 +270,6 @@ export const div: ShaderModule = {
     }
   `,
 };
-export const isNan: ShaderModule = {
-  requirements: [],
-  code: `
-    bool isNan(float val) {
-      // https://stackoverflow.com/questions/9446888/best-way-to-detect-nans-in-opengl-shaders
-      return !(val < 0.0 || 0.0 < val || val == 0.0);
-      // important: some nVidias failed to cope with version below.
-      // Probably wrong optimization.
-      /*return ( val <= 0.0 || 0.0 <= val ) ? false : true;*/
-    }
-  `,
-};
 export const transDim: ShaderModule = {
   code: `
     // Similar to the transDim function in dimensions.js, this function transposes dimensions for the current plane.

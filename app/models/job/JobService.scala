@@ -100,12 +100,12 @@ class JobService @Inject()(wkConf: WkConf,
 
   private def sendSuccessEmailNotification(user: User, job: Job, resultLink: String): Unit =
     for {
-      userEmail <- userService.emailFor(user)(GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       datasetName = job.datasetName.getOrElse("")
-      genericEmailTemplate = defaultMails.jobSuccessfulGenericMail(user, userEmail, datasetName, resultLink, _, _)
+      genericEmailTemplate = defaultMails.jobSuccessfulGenericMail(multiUser, datasetName, resultLink, _, _)
       emailTemplate <- (job.command match {
         case JobCommand.convert_to_wkw =>
-          Some(defaultMails.jobSuccessfulUploadConvertMail(user, userEmail, datasetName, resultLink))
+          Some(defaultMails.jobSuccessfulUploadConvertMail(multiUser, datasetName, resultLink))
         case JobCommand.export_tiff =>
           Some(
             genericEmailTemplate(
@@ -113,7 +113,7 @@ class JobService @Inject()(wkConf: WkConf,
               "Your dataset has been exported as Tiff and is ready for download."
             ))
         case JobCommand.infer_neurons =>
-          Some(defaultMails.jobSuccessfulNeuronSegmentationMail(user, userEmail, datasetName, resultLink))
+          Some(defaultMails.jobSuccessfulNeuronSegmentationMail(multiUser, datasetName, resultLink))
         case JobCommand.infer_instances =>
           Some(
             genericEmailTemplate(
@@ -121,13 +121,13 @@ class JobService @Inject()(wkConf: WkConf,
               "Your instance segmentation is ready."
             ))
         case JobCommand.infer_mitochondria =>
-          Some(defaultMails.jobSuccessfulMitoSegmentationMail(user, userEmail, datasetName, resultLink))
+          Some(defaultMails.jobSuccessfulMitoSegmentationMail(multiUser, datasetName, resultLink))
         case JobCommand.align_sections =>
-          Some(defaultMails.jobSuccessfulAlignmentMail(user, userEmail, datasetName, resultLink))
+          Some(defaultMails.jobSuccessfulAlignmentMail(multiUser, datasetName, resultLink))
         case JobCommand.train_neuron_model =>
-          Some(defaultMails.jobSuccessfulModelTrainingMail(user, userEmail, resultLink))
+          Some(defaultMails.jobSuccessfulModelTrainingMail(multiUser, resultLink))
         case JobCommand.train_instance_model =>
-          Some(defaultMails.jobSuccessfulModelTrainingMail(user, userEmail, resultLink))
+          Some(defaultMails.jobSuccessfulModelTrainingMail(multiUser, resultLink))
         case JobCommand.materialize_volume_annotation =>
           Some(
             genericEmailTemplate(
@@ -154,11 +154,11 @@ class JobService @Inject()(wkConf: WkConf,
 
   private def sendFailedEmailNotification(user: User, job: Job): Unit =
     for {
-      userEmail <- userService.emailFor(user)(GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       datasetName = job.datasetName.getOrElse("")
       emailTemplate = job.command match {
-        case JobCommand.convert_to_wkw => defaultMails.jobFailedUploadConvertMail(user, userEmail, datasetName)
-        case _                         => defaultMails.jobFailedGenericMail(user, userEmail, datasetName, job.command.toString)
+        case JobCommand.convert_to_wkw => defaultMails.jobFailedUploadConvertMail(multiUser, datasetName)
+        case _                         => defaultMails.jobFailedGenericMail(multiUser, datasetName, job.command.toString)
       }
       _ = Mailer ! Send(emailTemplate)
     } yield ()
@@ -180,8 +180,8 @@ class JobService @Inject()(wkConf: WkConf,
   def publicWrites(job: Job)(implicit ctx: DBAccessContext): Fox[JsValue] =
     for {
       owner <- userDAO.findOne(job._owner) ?~> "user.notFound"
+      ownerMultiUser <- multiUserDAO.findOne(owner._multiUser)
       organization <- organizationDAO.findOne(owner._organization) ?~> "organization.notFound"
-      ownerEmail <- userService.emailFor(owner)
       creditTransactionBox <- creditTransactionService.findTransactionOfJob(job._id).shiftBox
     } yield
       Json.toJson(
@@ -189,9 +189,9 @@ class JobService @Inject()(wkConf: WkConf,
           id = job._id,
           command = job.command,
           organizationId = organization._id,
-          ownerFirstName = owner.firstName,
-          ownerLastName = owner.lastName,
-          ownerEmail = ownerEmail,
+          ownerFirstName = ownerMultiUser.firstName,
+          ownerLastName = ownerMultiUser.lastName,
+          ownerEmail = ownerMultiUser.email,
           args = job.args - "webknossos_token" - "user_auth_token",
           state = job.effectiveState,
           returnValue = job.returnValue,

@@ -1,7 +1,7 @@
 package mail
 
 import models.organization.Organization
-import models.user.User
+import models.user.MultiUser
 import utils.WkConf
 import views._
 
@@ -30,12 +30,17 @@ class DefaultMails @Inject()(conf: WkConf) {
       recipients = List(recipient)
     )
 
-  def overLimitMail(user: User, projectName: String, taskId: String, annotationId: String, projectOwner: String): Mail =
+  def overLimitMail(multiUser: MultiUser,
+                    projectName: String,
+                    taskId: String,
+                    annotationId: String,
+                    projectOwner: String): Mail =
     Mail(
       from = defaultSender,
-      subject = s"WEBKNOSSOS | Time limit reached. ${user.abbreviatedName} in $projectName",
-      bodyHtml =
-        html.mail.notifyAdminTimeLimit(user.name, projectName, taskId, annotationId, uri, additionalFooter).body,
+      subject = s"WEBKNOSSOS | Time limit reached. ${multiUser.abbreviatedName} in $projectName",
+      bodyHtml = html.mail
+        .notifyAdminTimeLimit(multiUser.fullName, projectName, taskId, annotationId, uri, additionalFooter)
+        .body,
       recipients = List(projectOwner)
     )
 
@@ -94,96 +99,92 @@ class DefaultMails @Inject()(conf: WkConf) {
     )
   }
 
-  def helpMail(user: User, userEmail: String, organizationName: String, message: String, currentUrl: String): Mail =
+  def helpMail(multiUser: MultiUser, organizationName: String, message: String, currentUrl: String): Mail =
     Mail(
       from = defaultSender,
       subject = "Help requested // Feedback provided",
-      bodyHtml = html.mail.help(user.name, organizationName, message, currentUrl, additionalFooter).body,
-      recipients = List(supportEmail, userEmail),
-      replyTo = List(userEmail, supportEmail)
+      bodyHtml = html.mail.help(multiUser.fullName, organizationName, message, currentUrl, additionalFooter).body,
+      recipients = List(supportEmail, multiUser.email),
+      replyTo = List(multiUser.email, supportEmail)
     )
 
-  def extendPricingPlanMail(user: User, userEmail: String, organizationName: String): Mail =
+  def extendPricingPlanMail(multiUser: MultiUser, organizationName: String): Mail =
     Mail(
       from = defaultSender,
       subject = "WEBKNOSSOS Plan Extension",
-      bodyHtml = html.mail.extendPricingPlan(user.name, additionalFooter, organizationName).body,
-      recipients = List(supportEmail, userEmail),
-      replyTo = List(userEmail, supportEmail)
+      bodyHtml = html.mail.extendPricingPlan(multiUser.fullName, additionalFooter, organizationName).body,
+      recipients = List(supportEmail, multiUser.email),
+      replyTo = List(multiUser.email, supportEmail)
     )
 
-  def upgradePricingPlanToTeamMail(user: User, userEmail: String, organizationName: String): Mail =
+  def upgradePricingPlanToTeamMail(multiUser: MultiUser, organizationName: String): Mail =
     Mail(
       from = defaultSender,
       subject = "WEBKNOSSOS Upgrade: Team Plan",
-      bodyHtml = html.mail.upgradePricingPlanToTeam(user.name, additionalFooter, organizationName).body,
-      recipients = List(supportEmail, userEmail),
-      replyTo = List(userEmail, supportEmail)
+      bodyHtml = html.mail.upgradePricingPlanToTeam(multiUser.fullName, additionalFooter, organizationName).body,
+      recipients = List(supportEmail, multiUser.email),
+      replyTo = List(multiUser.email, supportEmail)
     )
 
-  def upgradePricingPlanToPowerMail(user: User, userEmail: String, organizationName: String): Mail =
+  def upgradePricingPlanToPowerMail(multiUser: MultiUser, organizationName: String): Mail =
     Mail(
       from = defaultSender,
       subject = "WEBKNOSSOS Upgrade: Power Plan",
-      bodyHtml = html.mail.upgradePricingPlanToPower(user.name, additionalFooter, organizationName).body,
-      recipients = List(supportEmail, userEmail),
-      replyTo = List(userEmail, supportEmail)
+      bodyHtml = html.mail.upgradePricingPlanToPower(multiUser.fullName, additionalFooter, organizationName).body,
+      recipients = List(supportEmail, multiUser.email),
+      replyTo = List(multiUser.email, supportEmail)
     )
 
-  def upgradePricingPlanUsersMail(user: User, userEmail: String, requestedUsers: Int, organizationName: String): Mail =
+  def upgradePricingPlanUsersMail(multiUser: MultiUser, requestedUsers: Int, organizationName: String): Mail =
     Mail(
       from = defaultSender,
       subject = "WEBKNOSSOS Upgrade: Additional Users",
-      bodyHtml = html.mail.upgradePricingPlanUsers(user.name, requestedUsers, additionalFooter, organizationName).body,
-      recipients = List(supportEmail, userEmail),
-      replyTo = List(userEmail, supportEmail)
+      bodyHtml =
+        html.mail.upgradePricingPlanUsers(multiUser.fullName, requestedUsers, additionalFooter, organizationName).body,
+      recipients = List(supportEmail, multiUser.email),
+      replyTo = List(multiUser.email, supportEmail)
     )
 
-  def upgradePricingPlanStorageMail(user: User,
-                                    userEmail: String,
-                                    requestedStorage: Int,
-                                    organizationName: String): Mail =
+  def upgradePricingPlanStorageMail(multiUser: MultiUser, requestedStorage: Int, organizationName: String): Mail =
     Mail(
       from = defaultSender,
       subject = "WEBKNOSSOS Upgrade: Additional Storage",
-      bodyHtml =
-        html.mail.upgradePricingPlanStorage(user.name, requestedStorage, additionalFooter, organizationName).body,
-      recipients = List(supportEmail, userEmail),
-      replyTo = List(userEmail, supportEmail)
+      bodyHtml = html.mail
+        .upgradePricingPlanStorage(multiUser.fullName, requestedStorage, additionalFooter, organizationName)
+        .body,
+      recipients = List(supportEmail, multiUser.email),
+      replyTo = List(multiUser.email, supportEmail)
     )
 
-  def upgradeAiAddonMail(user: User,
-                         userEmail: String,
-                         organizationName: String,
-                         aiPlan: String,
-                         pricingPlan: String): Mail =
+  def upgradeAiAddonMail(multiUser: MultiUser, organizationName: String, aiPlan: String, pricingPlan: String): Mail =
     Mail(
       from = defaultSender,
       subject = s"WEBKNOSSOS Upgrade: AI Add-on ($aiPlan)",
-      bodyHtml = html.mail.upgradeAiAddon(user.name, aiPlan, pricingPlan, additionalFooter, organizationName).body,
-      recipients = List(supportEmail, userEmail),
-      replyTo = List(userEmail, supportEmail)
-    )
-
-  def orderCreditsMail(user: User, userEmail: String, requestedCredits: Int): Mail =
-    Mail(
-      from = defaultSender,
-      subject = "Request to buy WEBKNOSSOS credits",
-      bodyHtml = html.mail.orderCredits(user.name, requestedCredits, additionalFooter).body,
-      recipients = List(userEmail)
-    )
-
-  def orderCreditsRequestMail(user: User, userEmail: String, organizationName: String, messageBody: String): Mail =
-    Mail(
-      from = defaultSender,
-      subject = "Request to buy WEBKNOSSOS credits",
       bodyHtml =
-        html.mail.orderCreditsRequest(user.name, userEmail, organizationName, messageBody, additionalFooter).body,
+        html.mail.upgradeAiAddon(multiUser.fullName, aiPlan, pricingPlan, additionalFooter, organizationName).body,
+      recipients = List(supportEmail, multiUser.email),
+      replyTo = List(multiUser.email, supportEmail)
+    )
+
+  def orderCreditsMail(multiUser: MultiUser, requestedCredits: Int): Mail =
+    Mail(
+      from = defaultSender,
+      subject = "Request to buy WEBKNOSSOS credits",
+      bodyHtml = html.mail.orderCredits(multiUser.fullName, requestedCredits, additionalFooter).body,
+      recipients = List(multiUser.email)
+    )
+
+  def orderCreditsRequestMail(multiUser: MultiUser, organizationName: String, messageBody: String): Mail =
+    Mail(
+      from = defaultSender,
+      subject = "Request to buy WEBKNOSSOS credits",
+      bodyHtml = html.mail
+        .orderCreditsRequest(multiUser.fullName, multiUser.email, organizationName, messageBody, additionalFooter)
+        .body,
       recipients = List(supportEmail)
     )
 
-  def jobSuccessfulGenericMail(user: User,
-                               userEmail: String,
+  def jobSuccessfulGenericMail(multiUser: MultiUser,
                                datasetName: String,
                                jobLink: String,
                                jobTitle: String,
@@ -192,76 +193,78 @@ class DefaultMails @Inject()(conf: WkConf) {
       from = defaultSender,
       subject = s"$jobTitle is ready",
       bodyHtml = html.mail
-        .jobSuccessfulGeneric(user.name, datasetName, jobLink, jobTitle, jobDescription, additionalFooter)
+        .jobSuccessfulGeneric(multiUser.fullName, datasetName, jobLink, jobTitle, jobDescription, additionalFooter)
         .body,
-      recipients = List(userEmail)
+      recipients = List(multiUser.email)
     )
 
-  def jobSuccessfulUploadConvertMail(user: User, userEmail: String, datasetName: String, jobLink: String): Mail =
+  def jobSuccessfulUploadConvertMail(multiUser: MultiUser, datasetName: String, jobLink: String): Mail =
     Mail(
       from = defaultSender,
       subject = "Your dataset is ready",
-      bodyHtml = html.mail.jobSuccessfulUploadConvert(user.name, datasetName, jobLink, additionalFooter).body,
-      recipients = List(userEmail)
+      bodyHtml = html.mail.jobSuccessfulUploadConvert(multiUser.fullName, datasetName, jobLink, additionalFooter).body,
+      recipients = List(multiUser.email)
     )
 
-  def jobSuccessfulNeuronSegmentationMail(user: User, userEmail: String, datasetName: String, jobLink: String): Mail =
+  def jobSuccessfulNeuronSegmentationMail(multiUser: MultiUser, datasetName: String, jobLink: String): Mail =
     Mail(
       from = defaultSender,
       subject = s"Your segmentation is ready",
-      bodyHtml = html.mail.jobSuccessfulNeuronSegmentation(user.name, datasetName, jobLink, additionalFooter).body,
-      recipients = List(userEmail)
+      bodyHtml =
+        html.mail.jobSuccessfulNeuronSegmentation(multiUser.fullName, datasetName, jobLink, additionalFooter).body,
+      recipients = List(multiUser.email)
     )
 
-  def jobSuccessfulMitoSegmentationMail(user: User, userEmail: String, datasetName: String, jobLink: String): Mail =
+  def jobSuccessfulMitoSegmentationMail(multiUser: MultiUser, datasetName: String, jobLink: String): Mail =
     Mail(
       from = defaultSender,
       subject = s"Your mitochondria segmentation is ready",
-      bodyHtml = html.mail.jobSuccessfulMitoSegmentation(user.name, datasetName, jobLink, additionalFooter).body,
-      recipients = List(userEmail)
+      bodyHtml =
+        html.mail.jobSuccessfulMitoSegmentation(multiUser.fullName, datasetName, jobLink, additionalFooter).body,
+      recipients = List(multiUser.email)
     )
 
-  def jobSuccessfulAlignmentMail(user: User, userEmail: String, datasetName: String, jobLink: String): Mail =
+  def jobSuccessfulAlignmentMail(multiUser: MultiUser, datasetName: String, jobLink: String): Mail =
     Mail(
       from = defaultSender,
       subject = s"Your alignment is ready",
-      bodyHtml = html.mail.jobSuccessfulAlignment(user.name, datasetName, jobLink, additionalFooter).body,
-      recipients = List(userEmail)
+      bodyHtml = html.mail.jobSuccessfulAlignment(multiUser.fullName, datasetName, jobLink, additionalFooter).body,
+      recipients = List(multiUser.email)
     )
 
-  def jobSuccessfulModelTrainingMail(user: User, userEmail: String, jobLink: String): Mail =
+  def jobSuccessfulModelTrainingMail(multiUser: MultiUser, jobLink: String): Mail =
     Mail(
       from = defaultSender,
       subject = s"Your model training is ready",
-      bodyHtml = html.mail.jobSuccessfulModelTraining(user.name, jobLink, additionalFooter).body,
-      recipients = List(userEmail)
+      bodyHtml = html.mail.jobSuccessfulModelTraining(multiUser.fullName, jobLink, additionalFooter).body,
+      recipients = List(multiUser.email)
     )
 
-  def jobFailedGenericMail(user: User, userEmail: String, datasetName: String, jobTitle: String): Mail =
+  def jobFailedGenericMail(multiUser: MultiUser, datasetName: String, jobTitle: String): Mail =
     Mail(
       from = defaultSender,
       subject = "Oops. Your WEBKNOSSOS job failed",
-      bodyHtml = html.mail.jobFailedGeneric(user.name, datasetName, jobTitle, additionalFooter).body,
-      recipients = List(userEmail)
+      bodyHtml = html.mail.jobFailedGeneric(multiUser.fullName, datasetName, jobTitle, additionalFooter).body,
+      recipients = List(multiUser.email)
     )
 
-  def jobFailedUploadConvertMail(user: User, userEmail: String, datasetName: String): Mail =
+  def jobFailedUploadConvertMail(multiUser: MultiUser, datasetName: String): Mail =
     Mail(
       from = defaultSender,
       subject = "Oops. Your dataset upload & conversion failed",
-      bodyHtml = html.mail.jobFailedUploadConvert(user.name, datasetName, additionalFooter).body,
-      recipients = List(userEmail)
+      bodyHtml = html.mail.jobFailedUploadConvert(multiUser.fullName, datasetName, additionalFooter).body,
+      recipients = List(multiUser.email)
     )
 
-  def emailVerificationMail(user: User, userEmail: String, key: String): Mail = {
+  def emailVerificationMail(multiUser: MultiUser, key: String): Mail = {
     val linkExpiry = conf.WebKnossos.User.EmailVerification.linkExpiry
       .map(duration => s"This link will expire in ${duration.toString()}. ")
       .getOrElse("")
     Mail(
       from = defaultSender,
       subject = "Verify Your Email at WEBKNOSSOS",
-      bodyHtml = html.mail.verifyEmail(user.name, key, linkExpiry, additionalFooter).body,
-      recipients = List(userEmail)
+      bodyHtml = html.mail.verifyEmail(multiUser.fullName, key, linkExpiry, additionalFooter).body,
+      recipients = List(multiUser.email)
     )
   }
 

@@ -106,7 +106,7 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
   private def findBestMatchingMag(modelVoxelSize: VoxelSize, datasetVoxelSize: VoxelSize, layer: StaticLayer)(
       implicit ec: ExecutionContext): Fox[Vec3Int] =
     for {
-      _ <- Fox.fromBool(layer.mags.nonEmpty) ?~> "layer.noMags"
+      _ <- Fox.fromBool(layer.mags.nonEmpty) ?~> "dataset.noMags"
       modelVoxelSizeNm = modelVoxelSize.toNanometer
       datasetVoxelSizeNm = datasetVoxelSize.toNanometer
       bestMag = layer.mags.map(_.mag).minBy { mag =>
@@ -203,10 +203,10 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         )
      """
 
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[AiModel] =
+  override def findOne(aiModelId: ObjectId)(implicit ctx: DBAccessContext): Fox[AiModel] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[AimodelsRow])
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $aiModelId AND $accessQuery".as[AimodelsRow])
       parsed <- parseFirst(r, "id")
     } yield parsed
 

@@ -1,9 +1,4 @@
-import {
-  FilterOutlined,
-  PauseCircleOutlined,
-  ReloadOutlined,
-  SettingOutlined,
-} from "@ant-design/icons";
+import { FilterOutlined, PauseCircleOutlined, ReloadOutlined } from "@ant-design/icons";
 import AdminPage from "admin/admin_page";
 import { getProjectProgressReport } from "admin/rest_api";
 import { Badge, Button, Space, Spin, Table } from "antd";
@@ -85,17 +80,20 @@ function ProjectProgressReportView() {
           <Space>
             {updatedAt != null ? <FormattedDate timestamp={updatedAt} /> : null}
             <Button
-              icon={<SettingOutlined />}
-              shape="circle"
+              icon={<FilterOutlined />}
               variant="outlined"
               onClick={handleOpenSettings}
-            />
+              disabled={team == null}
+            >
+              Filter
+            </Button>
             <Button
               icon={<ReloadOutlined spin={isLoading} />}
-              shape="circle"
               variant="outlined"
               onClick={handleReload}
-            />
+            >
+              Refresh
+            </Button>
           </Space>
         }
         filters={

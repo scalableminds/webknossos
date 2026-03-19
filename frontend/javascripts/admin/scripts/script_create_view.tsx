@@ -1,6 +1,6 @@
 import AdminPage from "admin/admin_page";
 import { createScript, getScript, getTeamManagerOrAdminUsers, updateScript } from "admin/rest_api";
-import { Button, Form, Input, Select } from "antd";
+import { Button, Form, Input, Select, theme } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -11,6 +11,7 @@ const FormItem = Form.Item;
 
 function ScriptCreateView() {
   const { scriptId } = useParams();
+  const { token } = theme.useToken();
 
   const navigate = useNavigate();
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
@@ -58,69 +59,75 @@ function ScriptCreateView() {
       descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/scripts.html"
       description="Create or update reusable frontend scripts and assign ownership."
     >
-      <Form onFinish={onFinish} layout="vertical" form={form}>
-        <FormItem
-          name="name"
-          label="Script Name"
-          hasFeedback
-          rules={[
-            {
-              required: true,
-            },
-            {
-              min: 3,
-            },
-          ]}
-        >
-          <Input autoFocus />
-        </FormItem>
+      <div
+        style={{
+          padding: token.paddingLG,
+        }}
+      >
+        <Form onFinish={onFinish} layout="vertical" form={form}>
+          <FormItem
+            name="name"
+            label="Script Name"
+            hasFeedback
+            rules={[
+              {
+                required: true,
+              },
+              {
+                min: 3,
+              },
+            ]}
+          >
+            <Input autoFocus />
+          </FormItem>
 
-        <FormItem
-          name="gist"
-          label="Gist URL"
-          hasFeedback
-          rules={[
-            {
-              required: true,
-            },
-            {
-              type: "url",
-            },
-          ]}
-        >
-          <Input />
-        </FormItem>
+          <FormItem
+            name="gist"
+            label="Gist URL"
+            hasFeedback
+            rules={[
+              {
+                required: true,
+              },
+              {
+                type: "url",
+              },
+            ]}
+          >
+            <Input />
+          </FormItem>
 
-        <FormItem
-          name="owner"
-          label="Owner"
-          hasFeedback
-          rules={[
-            {
-              required: true,
-            },
-          ]}
-        >
-          <Select
-            showSearch={{ optionFilterProp: "label" }}
-            placeholder="Select a User"
-            style={{
-              width: "100%",
-            }}
-            loading={isFetchingData}
-            options={users.map((user: APIUser) => ({
-              value: user.id,
-              label: `${user.lastName}, ${user.firstName} (${user.email})`,
-            }))}
-          />
-        </FormItem>
+          <FormItem
+            name="owner"
+            label="Owner"
+            hasFeedback
+            rules={[
+              {
+                required: true,
+              },
+            ]}
+          >
+            <Select
+              showSearch={{ optionFilterProp: "label" }}
+              placeholder="Select a User"
+              style={{
+                width: "100%",
+              }}
+              loading={isFetchingData}
+              options={users.map((user: APIUser) => ({
+                value: user.id,
+                label: `${user.lastName}, ${user.firstName} (${user.email})`,
+              }))}
+            />
+          </FormItem>
 
-        <FormItem>
-          <Button type="primary" htmlType="submit">
-            {titlePrefix} Script
-          </Button>
-        </FormItem>
-      </Form>
+          <FormItem>
+            <Button type="primary" htmlType="submit">
+              {titlePrefix} Script
+            </Button>
+          </FormItem>
+        </Form>
+      </div>
     </AdminPage>
   );
 }

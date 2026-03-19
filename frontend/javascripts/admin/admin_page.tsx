@@ -33,6 +33,7 @@ type Props = {
   search?: ReactNode;
   alerts?: ReactNode;
   filters?: ReactNode;
+  subNavigation?: ReactNode;
   children: ReactNode;
 };
 
@@ -44,6 +45,7 @@ export default function AdminPage({
   search,
   alerts,
   filters,
+  subNavigation,
   children,
 }: Props) {
   const renderedTitle = normalizeTitle(title);
@@ -133,8 +135,20 @@ export default function AdminPage({
               border: `1px solid ${token.colorBorder}`,
               borderRadius: token.borderRadius,
               boxShadow: token.boxShadow,
+              overflow: "hidden",
+              background: token.colorBgContainer,
             }}
           >
+            {subNavigation != null ? (
+              <div
+                style={{
+                  padding: `${token.paddingSM}px ${token.paddingLG}px 0`,
+                  background: token.colorBgContainer,
+                }}
+              >
+                {subNavigation}
+              </div>
+            ) : null}
             {children}
           </div>
         </ConfigProvider>

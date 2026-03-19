@@ -1637,7 +1637,6 @@ type Preparation = {
 
 export function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation | null> {
   const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
-  const annotationVersion = yield* select((state) => state.annotation.version);
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   if (volumeTracingLayer == null || volumeTracing == null) {
     return null;
@@ -1744,6 +1743,8 @@ export function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Prep
   const activeMapping = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
   );
+  // Getting latest annotation version as it might have changed due to e.g. making the mapping editable.
+  const annotationVersion = yield* select((state) => state.annotation.version);
 
   if (activeMapping.mapping == null) {
     Toast.error("Active mapping is not available, cannot proofread.");

@@ -119,7 +119,7 @@ function ProjectAndAnnotationTypeDropdown({
     <Select
       className="project-and-annotation-type-dropdown"
       mode="multiple"
-      placeholder="Filter tasks/annotations and projects"
+      placeholder="Filter tasks, annotations and projects"
       style={{ minWidth: "400px", ...style }}
       options={filterOptions}
       showSearch={{ optionFilterProp: "label" }}

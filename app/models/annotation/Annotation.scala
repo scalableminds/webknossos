@@ -776,13 +776,13 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
   def updateUser(id: ObjectId, userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(q"UPDATE webknossos.annotations SET _user = $userId".asUpdate)
+      _ <- run(q"UPDATE webknossos.annotations SET _user = $userId WHERE _id = $id".asUpdate)
     } yield ()
 
   def updateOthersMayEdit(id: ObjectId, othersMayEdit: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(q"UPDATE webknossos.annotations SET othersMayEdit = $othersMayEdit".asUpdate)
+      _ <- run(q"UPDATE webknossos.annotations SET othersMayEdit = $othersMayEdit WHERE _id = $id".asUpdate)
     } yield ()
 
   def updateViewConfiguration(id: ObjectId, viewConfiguration: Option[JsObject])(

@@ -35,12 +35,6 @@ class ShortLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
                    VALUES(${sl._id}, ${sl.key}, ${sl.longLink})""".asUpdate)
     } yield ()
 
-  def findOne(id: String): Fox[ShortLink] =
-    for {
-      r <- run(q"SELECT $columns FROM webknossos.shortLinks WHERE id = $id".as[ShortlinksRow])
-      parsed <- parseFirst(r, id)
-    } yield parsed
-
   def findOneByKey(key: String): Fox[ShortLink] =
     for {
       r <- run(q"SELECT $columns FROM webknossos.shortLinks WHERE key = $key".as[ShortlinksRow])

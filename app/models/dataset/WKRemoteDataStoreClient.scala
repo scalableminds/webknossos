@@ -28,6 +28,8 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
   private lazy val hasSegmentIndexFileCache: AlfuCache[(ObjectId, String), Boolean] =
     AlfuCache(timeToLive = 1 minute)
 
+  private lazy val effectiveAiModelVoxelSizeCache: AlfuCache[UPath, VoxelSize] = AlfuCache(timeToLive = 15 minutes)
+
   def getDataLayerThumbnail(dataset: Dataset,
                             dataLayerName: String,
                             mag1BoundingBox: BoundingBox,
@@ -140,11 +142,14 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
         .deleteJsonWithJsonResponse[Seq[UPath], Seq[UPath]](paths)
     } yield pathsToDeleteExternally
 
-  def getEffectiveAiModelVoxelSize(modelPath: UPath): Fox[VoxelSize] =
-    for {
-      voxelSize <- rpc(s"${dataStore.url}/data/aiModels/effectiveVoxelSize")
-        .addQueryParam("token", RpcTokenHolder.webknossosToken)
-        .postJsonWithJsonResponse[GetEffectiveVoxelSizeParameters, VoxelSize](
-          GetEffectiveVoxelSizeParameters(modelPath))
-    } yield voxelSize
+  def getEffectiveAiModelVoxelSize(modelPath: UPath)(implicit ec: ExecutionContext): Fox[VoxelSize] =
+    effectiveAiModelVoxelSizeCache.getOrLoad(
+      modelPath,
+      _ =>
+        rpc(s"${dataStore.url}/data/aiModels/effectiveVoxelSize")
+          .addQueryParam("token", RpcTokenHolder.webknossosToken)
+          .postJsonWithJsonResponse[GetEffectiveVoxelSizeParameters, VoxelSize](
+            GetEffectiveVoxelSizeParameters(modelPath))
+    )
+
 }

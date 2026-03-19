@@ -102,7 +102,6 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
       targetMagBoundingBox = mag1BoundingBox / targetMag
     } yield targetMagBoundingBox
 
-  // TODO unit test?
   private def findBestMatchingMag(modelVoxelSize: VoxelSize, datasetVoxelSize: VoxelSize, layer: StaticLayer)(
       implicit ec: ExecutionContext): Fox[Vec3Int] =
     for {
@@ -128,14 +127,17 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
         } yield fallbackPath
     }
 
+  private lazy val PretrainedNeuronModelVoxelSize = VoxelSize(Vec3Double(7.96, 7.96, 31.2), LengthUnit.nanometer)
+  private lazy val PretrainedNucleiModelVoxelSize = VoxelSize(Vec3Double(179.84, 179.84, 224.0), LengthUnit.nanometer)
+
   def findModelVoxelSize(aiModelOpt: Option[AiModel], usePretrainedNeuronModel: Boolean, dataStore: DataStore)(
       implicit ec: ExecutionContext): Fox[VoxelSize] =
     aiModelOpt match {
       case None =>
-        if (usePretrainedNeuronModel) Fox.successful(VoxelSize(Vec3Double(7.96, 7.96, 31.2), LengthUnit.nanometer))
+        if (usePretrainedNeuronModel) Fox.successful(PretrainedNeuronModelVoxelSize)
         else {
           // No custom model, not pretrained neuron model. Assume pretrained nuclei model.
-          Fox.successful(VoxelSize(Vec3Double(179.84, 179.84, 224.0), LengthUnit.nanometer))
+          Fox.successful(PretrainedNucleiModelVoxelSize)
         }
       case Some(aiModel) =>
         for {

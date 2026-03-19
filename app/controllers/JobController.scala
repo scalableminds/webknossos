@@ -267,8 +267,8 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.alignSections.notAllowed.organization" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
-          dataSource <- datasetService.usableDataSourceFor(dataset) ?~> "dataset.notUsable"
-          layerMag <- dataSource.getDataLayer(layerName).flatMap(_.finestMag).toFox ?~> "dataset.noMags"
+          (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, layerName) ?~> "dataset.notUsable"
+          layerMag <- layer.finestMag.toFox ?~> "dataset.noMags"
           finestMagDatasetBoundingBox = dataSource.boundingBox / layerMag
           command = JobCommand.align_sections
           commandArgs = Json.obj(

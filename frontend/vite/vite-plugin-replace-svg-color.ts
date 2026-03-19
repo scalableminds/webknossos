@@ -1,10 +1,11 @@
 /**
  * SVGR Babel plugin that normalizes icon colors by rewriting:
  * - non-`none` `stroke` values to `currentColor` (when `patchStroke` is enabled)
- * - non-`none` `fill` values to `none` (when `patchFill` is enabled)
+ * - non-`none` `fill` values to `currentColor` (when `patchFill` is enabled)
  *
  * It handles both direct JSX attributes (`stroke`, `fill`) and
- * inline style object properties (`style={{ stroke: ..., fill: ... }}`).
+ * inline style properties, whether they are emitted as JSX style objects
+ * (`style={{ stroke: ..., fill: ... }}`) or raw declaration strings.
  *
  * When designing SVG icons, tools like Inkscape or Affinity Designer typically assign
  * fixed colors to paths (e.g., #000 or rgb(123, 123, 123)). While these colors may
@@ -24,14 +25,66 @@ type ReplaceSvgColorOptions = {
   patchFill?: boolean;
 };
 
+type PatchedAttributeName = "stroke" | "fill";
+
 const replaceSvgColorWithCurrentColor = (
   { types: t }: { types: any },
   options: ReplaceSvgColorOptions = {},
 ) => {
   const { patchStroke = true, patchFill = true } = options;
-  const isPatchedAttribute = (name: string) =>
-    (name === "stroke" && patchStroke) || (name === "fill" && patchFill);
-  const isNoneColorValue = (value: unknown) => String(value ?? "").toLowerCase() === "none";
+
+  const getPatchedAttributeName = (name: string): PatchedAttributeName | null => {
+    if (name === "stroke" && patchStroke) {
+      return "stroke";
+    }
+    if (name === "fill" && patchFill) {
+      return "fill";
+    }
+    return null;
+  };
+  const getReplacementValue = (name: PatchedAttributeName) =>
+    name === "stroke" ? "currentColor" : "currentColor";
+
+  const isNoneColorValue = (value: unknown) =>
+    String(value ?? "")
+      .trim()
+      .toLowerCase() === "none";
+
+  const getReplacementStyleValue = (name: string, value: unknown): string | null => {
+    const patchedAttributeName = getPatchedAttributeName(name.toLowerCase());
+    if (patchedAttributeName == null || isNoneColorValue(value)) {
+      return null;
+    }
+    return getReplacementValue(patchedAttributeName);
+  };
+
+  const patchStyleDeclarations = (styleValue: string): string | null => {
+    let didPatch = false;
+    const patchedStyleValue = styleValue
+      .split(";")
+      .map((declaration) => {
+        const separatorIndex = declaration.indexOf(":");
+        if (separatorIndex === -1) {
+          return declaration;
+        }
+
+        const rawName = declaration.slice(0, separatorIndex);
+        const rawValue = declaration.slice(separatorIndex + 1);
+        const replacementValue = getReplacementStyleValue(rawName.trim(), rawValue.trim());
+
+        if (replacementValue == null) {
+          return declaration;
+        }
+
+        didPatch = true;
+        const leadingWhitespace = rawValue.match(/^\s*/)?.[0] ?? "";
+        const trailingWhitespace = rawValue.match(/\s*$/)?.[0] ?? "";
+        return `${rawName}:${leadingWhitespace}${replacementValue}${trailingWhitespace}`;
+      })
+      .join(";");
+
+    return didPatch ? patchedStyleValue : null;
+  };
 
   return {
     visitor: {
@@ -41,13 +94,16 @@ const replaceSvgColorWithCurrentColor = (
           return;
         }
 
-        if (isPatchedAttribute(attributeName.name)) {
+        const patchedAttributeName = getPatchedAttributeName(attributeName.name);
+        if (patchedAttributeName != null) {
           const attributeValuePath = path.get("value");
           if (
             attributeValuePath.isStringLiteral() &&
             !isNoneColorValue(attributeValuePath.node.value)
           ) {
-            attributeValuePath.replaceWith(t.stringLiteral("currentColor"));
+            attributeValuePath.replaceWith(
+              t.stringLiteral(getReplacementValue(patchedAttributeName)),
+            );
           }
           return;
         }
@@ -57,11 +113,27 @@ const replaceSvgColorWithCurrentColor = (
         }
 
         const styleValuePath = path.get("value");
+        if (styleValuePath.isStringLiteral()) {
+          const patchedStyleValue = patchStyleDeclarations(styleValuePath.node.value);
+          if (patchedStyleValue != null) {
+            styleValuePath.replaceWith(t.stringLiteral(patchedStyleValue));
+          }
+          return;
+        }
+
         if (!styleValuePath.isJSXExpressionContainer()) {
           return;
         }
 
         const styleExpressionPath = styleValuePath.get("expression");
+        if (styleExpressionPath.isStringLiteral()) {
+          const patchedStyleValue = patchStyleDeclarations(styleExpressionPath.node.value);
+          if (patchedStyleValue != null) {
+            styleExpressionPath.replaceWith(t.stringLiteral(patchedStyleValue));
+          }
+          return;
+        }
+
         if (!styleExpressionPath.isObjectExpression()) {
           return;
         }
@@ -72,25 +144,23 @@ const replaceSvgColorWithCurrentColor = (
           }
 
           const propertyKeyPath = propertyPath.get("key");
-          const isStrokeKey =
-            propertyKeyPath.isIdentifier({ name: "stroke" }) ||
-            propertyKeyPath.isStringLiteral({ value: "stroke" });
-          const isFillKey =
-            propertyKeyPath.isIdentifier({ name: "fill" }) ||
-            propertyKeyPath.isStringLiteral({ value: "fill" });
-          const shouldPatchStroke = isStrokeKey && patchStroke;
-          const shouldPatchFill = isFillKey && patchFill;
-
-          if (!shouldPatchStroke && !shouldPatchFill) {
+          let propertyName: string | null = null;
+          if (propertyKeyPath.isIdentifier()) {
+            propertyName = propertyKeyPath.node.name;
+          } else if (propertyKeyPath.isStringLiteral()) {
+            propertyName = propertyKeyPath.node.value;
+          }
+          if (propertyName == null) {
             continue;
           }
 
           const propertyValuePath = propertyPath.get("value");
-          if (
-            propertyValuePath.isStringLiteral() &&
-            !isNoneColorValue(propertyValuePath.node.value)
-          ) {
-            propertyValuePath.replaceWith(t.stringLiteral("currentColor"));
+          const replacementValue = propertyValuePath.isStringLiteral()
+            ? getReplacementStyleValue(propertyName, propertyValuePath.node.value)
+            : null;
+
+          if (replacementValue != null) {
+            propertyValuePath.replaceWith(t.stringLiteral(replacementValue));
           }
         }
       },

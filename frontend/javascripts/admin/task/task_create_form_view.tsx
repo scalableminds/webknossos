@@ -797,6 +797,7 @@ function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
       title={titleLabel}
       descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/tasks.html"
       description="Create or update task metadata, assignment settings, and task specification details."
+      contentMaxWidth={960}
     >
       {content}
     </AdminPage>

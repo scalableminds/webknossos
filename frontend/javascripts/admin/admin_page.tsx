@@ -34,6 +34,7 @@ type Props = {
   alerts?: ReactNode;
   filters?: ReactNode;
   subNavigation?: ReactNode;
+  contentMaxWidth?: number | string;
   children: ReactNode;
 };
 
@@ -46,6 +47,7 @@ export default function AdminPage({
   alerts,
   filters,
   subNavigation,
+  contentMaxWidth,
   children,
 }: Props) {
   const renderedTitle = normalizeTitle(title);
@@ -149,7 +151,19 @@ export default function AdminPage({
                 {subNavigation}
               </div>
             ) : null}
-            {children}
+            {contentMaxWidth != null ? (
+              <div
+                style={{
+                  maxWidth: contentMaxWidth,
+                  width: "100%",
+                  marginInline: "auto",
+                }}
+              >
+                {children}
+              </div>
+            ) : (
+              children
+            )}
           </div>
         </ConfigProvider>
       </Space>

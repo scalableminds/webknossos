@@ -6,7 +6,7 @@ import {
   getUsers,
   updateProject,
 } from "admin/rest_api";
-import { Button, Checkbox, Form, Input, InputNumber, Select, theme } from "antd";
+import { Button, Checkbox, Col, Form, Input, InputNumber, Row, Select, theme } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -26,6 +26,7 @@ function ProjectCreateView() {
   const [form] = Form.useForm();
   const navigate = useNavigate();
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
+
   useEffect(() => {
     fetchData();
     applyDefaults();
@@ -75,6 +76,7 @@ function ProjectCreateView() {
       title={title}
       descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/projects.html"
       description="Create or update project metadata and assignment settings."
+      contentMaxWidth={800}
     >
       <div
         style={{
@@ -102,83 +104,94 @@ function ProjectCreateView() {
           >
             <Input autoFocus disabled={isEditMode} />
           </FormItem>
-          <FormItem
-            name="team"
-            label="Team"
-            hasFeedback
-            rules={[
-              {
-                required: true,
-              },
-            ]}
-          >
-            <Select
-              showSearch={{ optionFilterProp: "label" }}
-              placeholder="Select a Team"
-              style={fullWidth}
-              disabled={isEditMode}
-              loading={isFetchingData}
-              options={teams.map((team: APITeam) => ({
-                label: team.name,
-                value: team.id,
-              }))}
-            />
-          </FormItem>
+          <Row gutter={token.paddingMD}>
+            <Col xs={24} md={12}>
+              <FormItem
+                name="team"
+                label="Team"
+                hasFeedback
+                rules={[
+                  {
+                    required: true,
+                  },
+                ]}
+              >
+                <Select
+                  showSearch={{ optionFilterProp: "label" }}
+                  placeholder="Select a Team"
+                  style={fullWidth}
+                  disabled={isEditMode}
+                  loading={isFetchingData}
+                  options={teams.map((team: APITeam) => ({
+                    label: team.name,
+                    value: team.id,
+                  }))}
+                />
+              </FormItem>
+            </Col>
+            <Col xs={24} md={12}>
+              <FormItem
+                name="owner"
+                label="Owner"
+                hasFeedback
+                rules={[
+                  {
+                    required: true,
+                  },
+                ]}
+              >
+                <Select
+                  placeholder="Select a User"
+                  showSearch={{ optionFilterProp: "label" }}
+                  style={fullWidth}
+                  disabled={isEditMode}
+                  loading={isFetchingData}
+                  options={users.map((user: APIUser) => ({
+                    label: `${user.lastName}, ${user.firstName} (${user.email})`,
+                    value: user.id,
+                  }))}
+                />
+              </FormItem>
+            </Col>
+          </Row>
 
-          <FormItem
-            name="owner"
-            label="Owner"
-            hasFeedback
-            rules={[
-              {
-                required: true,
-              },
-            ]}
-          >
-            <Select
-              placeholder="Select a User"
-              showSearch={{ optionFilterProp: "label" }}
-              style={fullWidth}
-              disabled={isEditMode}
-              loading={isFetchingData}
-              options={users.map((user: APIUser) => ({
-                label: `${user.lastName}, ${user.firstName} (${user.email})`,
-                value: user.id,
-              }))}
-            />
-          </FormItem>
-          <FormItem
-            name="priority"
-            label="Priority"
-            hasFeedback
-            rules={[
-              {
-                required: true,
-              },
-              {
-                type: "number",
-              },
-            ]}
-          >
-            <InputNumber style={fullWidth} />
-          </FormItem>
-
-          <FormItem
-            name="expectedTime"
-            label="Time Limit (Minutes)"
-            hasFeedback
-            rules={[
-              {
-                required: true,
-              },
-              {
-                type: "number",
-                min: 1,
-              },
-            ]}
-          >
-            <InputNumber style={fullWidth} />
-          </FormItem>
+          <Row gutter={token.paddingMD}>
+            <Col xs={24} md={12}>
+              <FormItem
+                name="priority"
+                label="Priority"
+                hasFeedback
+                rules={[
+                  {
+                    required: true,
+                  },
+                  {
+                    type: "number",
+                  },
+                ]}
+              >
+                <InputNumber style={fullWidth} />
+              </FormItem>
+            </Col>
+            <Col xs={24} md={12}>
+              <FormItem
+                name="expectedTime"
+                label="Time Limit (Minutes)"
+                hasFeedback
+                rules={[
+                  {
+                    required: true,
+                  },
+                  {
+                    type: "number",
+                    min: 1,
+                  },
+                ]}
+              >
+                <InputNumber style={fullWidth} />
+              </FormItem>
+            </Col>
+          </Row>
 
           <FormItemWithInfo
             name="isBlacklistedFromReport"

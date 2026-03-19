@@ -41,6 +41,7 @@ const TaskCreateView = () => {
       title="Create Tasks"
       descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/tasks.html"
       description="Create individual tasks with detailed settings or import larger batches from CSV."
+      contentMaxWidth={960}
       subNavigation={
         <Tabs
           activeKey={activeTab}

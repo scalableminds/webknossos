@@ -257,10 +257,10 @@ function ModesView() {
   );
 
   // The outer div is necessary for proper spacing.
-  return (
+  return isViewMode || isReadOnly || !isOrthoMode ? null : (
     <div>
       <Space.Compact>
-        {isViewMode || isReadOnly || !isOrthoMode ? null : <ToolkitView />}
+        <ToolkitView />
       </Space.Compact>
     </div>
   );

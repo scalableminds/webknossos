@@ -12,7 +12,7 @@ import PipetteIcon from "@images/icons/icon-pipette.svg?react";
 import ProofreadingIcon from "@images/icons/icon-proofreading.svg?react";
 import QuickSelectToolIcon from "@images/icons/icon-quick-select.svg?react";
 import SkeletonIcon from "@images/icons/icon-skeleton.svg?react";
-import { Dropdown, Popover } from "antd";
+import { Dropdown } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
@@ -41,9 +41,9 @@ export const ToolIdToComponent: Record<
   [AnnotationTool.MOVE.id]: MoveTool,
   [AnnotationTool.SKELETON.id]: SkeletonTool,
   [AnnotationTool.BRUSH.id]: BrushToolMenu,
-  [AnnotationTool.ERASE_BRUSH.id]: () => null,
-  [AnnotationTool.TRACE.id]: TraceTool,
-  [AnnotationTool.ERASE_TRACE.id]: EraseTraceTool,
+  [AnnotationTool.ERASE_BRUSH.id]: EraseToolMenu,
+  [AnnotationTool.TRACE.id]: () => null,
+  [AnnotationTool.ERASE_TRACE.id]: () => null,
   [AnnotationTool.FILL_CELL.id]: FillCellTool,
   [AnnotationTool.VOXEL_PIPETTE.id]: VoxelPipetteTool,
   [AnnotationTool.QUICK_SELECT.id]: QuickSelectTool,
@@ -123,17 +123,13 @@ function getIsVolumeModificationAllowed(state: WebknossosState) {
 
 function BrushToolMenu({ adaptedActiveTool }: ToolButtonProps) {
   const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
+  const dispatch = useDispatch();
+  const brushPreference = useWkSelector((state) => state.userConfiguration.writePreference);
 
   const isVolumeModificationAllowed = useWkSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
     return null;
   }
-  const popoverContent = () => (
-    <>
-      {BrushTool({ adaptedActiveTool, disabledInfosForTools, isVolumeModificationAllowed })}
-      {EraseBrushTool({ adaptedActiveTool, disabledInfosForTools, isVolumeModificationAllowed })}
-    </>
-  );
   return (
     <ToolRadioButton
       name={AnnotationTool.BRUSH.readableName}
@@ -141,16 +137,79 @@ function BrushToolMenu({ adaptedActiveTool }: ToolButtonProps) {
       disabled={disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled}
       value={AnnotationTool.BRUSH.id}
     >
-      <Popover content={popoverContent} trigger={["click", "hover"]}>
-        <Icon
-          component={adaptedActiveTool === AnnotationTool.ERASE_BRUSH ? EraserIcon : BrushIcon}
-          style={{
-            opacity: disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled ? 0.5 : 1,
-          }}
-        />
-        <CaretDownOutlined className="triangle-icon" />
-        {adaptedActiveTool === AnnotationTool.BRUSH ? <MaybeMultiSliceAnnotationInfoIcon /> : null}
-      </Popover>
+      <Dropdown
+        menu={{
+          items: [
+            {
+              key: AnnotationTool.BRUSH.id,
+              label: "Brush",
+              icon: <Icon component={BrushIcon} />,
+            },
+            {
+              key: AnnotationTool.TRACE.id,
+              label: "Trace",
+              icon: <Icon component={LassoIcon} />,
+            },
+          ],
+          onClick: (key) => dispatch(setToolAction(AnnotationTool[key.key as AnnotationToolId])),
+        }}
+        trigger={["hover", "contextMenu"]}
+      >
+        <Icon component={brushPreference === "BRUSH" ? BrushIcon : LassoIcon} />
+      </Dropdown>
+      <CaretDownOutlined className="triangle-icon" />
+      {adaptedActiveTool === AnnotationTool.BRUSH || adaptedActiveTool === AnnotationTool.TRACE ? (
+        <MaybeMultiSliceAnnotationInfoIcon />
+      ) : null}
+    </ToolRadioButton>
+  );
+}
+
+function EraseToolMenu({ adaptedActiveTool }: ToolButtonProps) {
+  const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
+  const dispatch = useDispatch();
+  const erasePreference = useWkSelector((state) => state.userConfiguration.erasePreference);
+
+  const isVolumeModificationAllowed = useWkSelector(getIsVolumeModificationAllowed);
+  if (!isVolumeModificationAllowed) {
+    return null;
+  }
+  return (
+    <ToolRadioButton
+      name={AnnotationTool.ERASE_BRUSH.readableName}
+      disabledExplanation={disabledInfosForTools[AnnotationTool.ERASE_BRUSH.id].explanation}
+      disabled={disabledInfosForTools[AnnotationTool.ERASE_BRUSH.id].isDisabled}
+      value={
+        erasePreference === "ERASE_BRUSH"
+          ? AnnotationTool.ERASE_BRUSH.id
+          : AnnotationTool.ERASE_TRACE.id
+      }
+    >
+      <Dropdown
+        menu={{
+          items: [
+            {
+              key: AnnotationTool.ERASE_BRUSH.id,
+              label: "Erase Brush",
+              icon: <Icon component={EraserIcon} />,
+            },
+            {
+              key: AnnotationTool.ERASE_TRACE.id,
+              label: "Erase Trace",
+              icon: <Icon component={EraserIcon} />,
+            },
+          ],
+          onClick: (key) => dispatch(setToolAction(AnnotationTool[key.key as AnnotationToolId])),
+        }}
+        trigger={["hover", "contextMenu"]}
+      >
+        <Icon component={EraserIcon} />
+      </Dropdown>
+      <CaretDownOutlined className="triangle-icon" />
+      {adaptedActiveTool === AnnotationTool.ERASE_BRUSH ||
+      adaptedActiveTool === AnnotationTool.ERASE_TRACE ? (
+        <MaybeMultiSliceAnnotationInfoIcon />
+      ) : null}
     </ToolRadioButton>
   );
 }
@@ -182,7 +241,9 @@ function BrushTool({
           opacity: disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled ? 0.5 : 1,
         }}
       />
-      {adaptedActiveTool === AnnotationTool.BRUSH ? <MaybeMultiSliceAnnotationInfoIcon /> : null}
+      {adaptedActiveTool === AnnotationTool.BRUSH || adaptedActiveTool === AnnotationTool.TRACE ? (
+        <MaybeMultiSliceAnnotationInfoIcon />
+      ) : null}
     </ToolRadioButton>
   );
 }
@@ -283,7 +344,8 @@ function EraseTraceTool({ adaptedActiveTool }: ToolButtonProps) {
           opacity: disabledInfosForTools[AnnotationTool.ERASE_TRACE.id].isDisabled ? 0.5 : 1,
         }}
       />
-      {adaptedActiveTool === AnnotationTool.ERASE_TRACE ? (
+      {adaptedActiveTool === AnnotationTool.ERASE_BRUSH ||
+      adaptedActiveTool === AnnotationTool.ERASE_TRACE ? (
         <MaybeMultiSliceAnnotationInfoIcon />
       ) : null}
     </ToolRadioButton>
@@ -469,7 +531,7 @@ function MeasurementToolMenu() {
           ],
           onClick: (key) => dispatch(setToolAction(AnnotationTool[key.key as AnnotationToolId])),
         }}
-        trigger={["hover"]}
+        trigger={["hover", "contextMenu"]}
       >
         <Icon
           component={

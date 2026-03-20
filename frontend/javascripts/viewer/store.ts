@@ -378,7 +378,7 @@ export type UserConfiguration = {
   readonly antialiasRendering: boolean;
   readonly activeToolkit: Toolkit;
   readonly lastUsedToolQueue: [AnnotationToolId, AnnotationToolId, AnnotationToolId];
-  readonly erasePreference: "BRUSH" | "TRACE";
+  readonly erasePreference: "ERASE_BRUSH" | "ERASE_TRACE";
   readonly writePreference: "BRUSH" | "TRACE";
   readonly measurementPreference: "LINE_MEASUREMENT" | "AREA_MEASUREMENT";
 };

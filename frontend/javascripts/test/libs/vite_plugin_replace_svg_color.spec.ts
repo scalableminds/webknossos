@@ -1,7 +1,7 @@
 import { transformAsync as transformWithBabel } from "@babel/core";
 import { transform as transformWithSvgr } from "@svgr/core";
-import replaceSvgColorWithCurrentColor from "../../../vite/vite-plugin-replace-svg-color";
 import { describe, expect, it } from "vitest";
+import replaceSvgColorWithCurrentColor from "../../../vite/vite-plugin-replace-svg-color";
 
 describe("vite-plugin-replace-svg-color", () => {
   it("preserves unrelated SVGR style properties while patching fill", async () => {
@@ -62,7 +62,7 @@ describe("vite-plugin-replace-svg-color", () => {
     );
   });
 
-  it('does not patch raw style strings with `fill:none`', async () => {
+  it("does not patch raw style strings with `fill:none`", async () => {
     const input = '<path style="fill-rule:evenodd;fill:none;stroke-linecap:round;" />';
 
     const result = await transformWithBabel(input, {

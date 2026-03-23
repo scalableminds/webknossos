@@ -323,10 +323,14 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     await task.toPromise();
   });
 
-  // TODOM: createSegment is sent twice to the server for id 1.
-  // Talk with philipp:  reason:  this test initially already adds agglo 1 to the segment list.
-  // But the test generating splitSegment2And3WithAgglomerateTree1 instead has agglo 4 in the segment list.
-  // So, what should we do? Just accept and write a comment or fix this in this test or in the "splitSegment2And3WithAgglomerateTree1" generating test?
+  // Note: createSegment is sent twice to the server for id 1.
+  // The reason is that it is first created via a "click" performed by performSplitTreesProofreading.
+  // Then this action is stored in the mocked backend. Afterwards, the injection of splitSegment2And3WithAgglomerateTree1 kicks in.
+  // And splitSegment2And3WithAgglomerateTree1 is designed to work with a "clean / empty" annotation.
+  // Thus, it also includes the createSegment action. And conceptually we do not want to changes this,
+  // as the tests generating the fixtures should be independent from any injections or so and should work on a clean annotation state.
+  // Thus, we accept the duplicate createSegment action. As the reducer handles forwarding the second createSegment correctly,
+  // this is no problem. But when looking at the update action log of this tests, this becomes present. So be aware of this fact.
   it("should split two agglomerate skeletons if interfering split makes it an no-op.", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     backendMock.planMultipleVersionInjections(8, splitSegment2And3WithAgglomerateTree1);
@@ -344,7 +348,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       );
       // Expect no more updates after the injected updates:
       const lastUpdateRequest = context.receivedDataPerSaveRequest.at(-1)![0];
-      expect(lastUpdateRequest.version).toEqual(12); // TODOM: The 11th update action should be an updateSegmentsPartial
+      expect(lastUpdateRequest.version).toEqual(12);
 
       yield expectSegmentList(tracingId, [
         {

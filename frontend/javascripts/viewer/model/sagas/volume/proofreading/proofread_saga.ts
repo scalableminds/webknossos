@@ -113,7 +113,7 @@ import type {
   ActiveMappingInfo,
   Mapping,
   NumberLikeMap,
-  ProofreadingActionInfo,
+  ProofreadingActionMappingInfo,
   VolumeTracing,
 } from "viewer/store";
 import {
@@ -363,8 +363,8 @@ function* checkForAgglomerateSkeletonModification(
 
 function* pushPendingProofreadingOperationInfo(
   volumeTracingId: string,
-  sourceInfo: ProofreadingActionInfo,
-  targetInfo: ProofreadingActionInfo | null = null,
+  sourceInfo: ProofreadingActionMappingInfo,
+  targetInfo: ProofreadingActionMappingInfo | null = null,
 ): Saga<void> {
   // For proper post processing, it is necessary that sourceInfo & targetInfo (does make sense in splitting operations)
   // have the correct agglomerate id values at the state on which this proofreading action
@@ -384,7 +384,7 @@ function* pushPendingProofreadingOperationInfo(
 }
 
 function* popPendingProofreadingOperationInfo(): Saga<
-  [ProofreadingActionInfo, ProofreadingActionInfo | null] | null
+  [ProofreadingActionMappingInfo, ProofreadingActionMappingInfo | null] | null
 > {
   // See comment above.
   // After the proofreading update actions were stored on the server, the updated source & targetInfo

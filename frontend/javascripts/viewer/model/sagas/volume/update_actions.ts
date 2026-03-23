@@ -154,7 +154,7 @@ export type ApplicableVolumeServerUpdateAction = AsServerAction<ApplicableVolume
 
 export type WithoutServerSpecificFields<T extends { value: Record<string, any> }> = T extends any
   ? Omit<T, "value"> & {
-      value: Omit<T["value"], "actionTimestamp" | "actionTracingId">;
+      value: Omit<T["value"], "actionTimestamp" | "actionTracingId" | "actionAuthorId" | "info">;
     }
   : never;
 
@@ -299,6 +299,7 @@ type AddServerValuesFn<T extends { value: any }> = (arg0: T) => T & {
   value: T["value"] & {
     actionTimestamp: number;
     actionAuthorId?: string;
+    info?: string;
   };
 };
 

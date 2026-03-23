@@ -1,14 +1,12 @@
-import Icon, { InfoCircleOutlined } from "@ant-design/icons";
-import AreaMeasurementIcon from "@images/icons/icon-area-measurement.svg?react";
+import Icon, { CaretDownOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import NewBoundingBoxIcon from "@images/icons/icon-bounding-box-new.svg?react";
-import LineMeasurementIcon from "@images/icons/icon-line-measurement.svg?react";
-import { Radio, type RadioChangeEvent, Space, Tag } from "antd";
+import { Dropdown, Radio, type RadioChangeEvent, Space, Tag } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
-import { useKeyPress, useWkSelector } from "libs/react_hooks";
-import { useCallback } from "react";
+import { useKeyPress, useWindowWidth, useWkSelector } from "libs/react_hooks";
+import { useCallback, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
-import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
+import Constants from "viewer/constants";
 import {
   AnnotationTool,
   type AnnotationToolId,
@@ -23,7 +21,7 @@ import ButtonComponent from "viewer/view/components/button_component";
 import { ChangeBrushSizePopover } from "./brush_presets";
 import { SkeletonSpecificButtons } from "./skeleton_specific_ui";
 import { ToolIdToComponent } from "./tool_buttons";
-import { ACTIONBAR_MARGIN_LEFT, NARROW_BUTTON_STYLE, RadioButtonWithTooltip } from "./tool_helpers";
+import { ACTIONBAR_MARGIN_LEFT, NARROW_BUTTON_STYLE, ToolRadioButton } from "./tool_helpers";
 import {
   CreateSegmentButton,
   FloodFillSettings,
@@ -36,7 +34,7 @@ import {
 function CreateNewBoundingBoxButton() {
   const dispatch = useDispatch();
 
-  const handleAddNewUserBoundingBox = useCallback(() => {
+  const handleAddNewUserBoundingBox = useMemo(() => {
     dispatch(addUserBoundingBoxAction());
   }, [dispatch]);
 
@@ -57,6 +55,14 @@ export default function ToolbarView() {
   const toolkit = useWkSelector((state) => state.userConfiguration.activeToolkit);
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
   const isSplitToolkit = toolkit === Toolkit.SPLIT_SEGMENTS;
+  const windowWidth = useWindowWidth();
+  const isNarrowScreen = useMemo(() => windowWidth < Constants.NARROW_SCREEN_WIDTH, [windowWidth]);
+  const lastRecentlyUsedToolsFromUserConfig = useWkSelector(
+    (state) => state.userConfiguration.lastUsedToolQueue,
+  );
+  const [lastRecentlyUsedTools, setLastRecentlyUsedTools] = useState<AnnotationToolId[]>(
+    lastRecentlyUsedToolsFromUserConfig,
+  );
 
   const isShiftPressed = useKeyPress("Shift");
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
@@ -76,14 +82,64 @@ export default function ToolbarView() {
     [dispatch],
   );
 
+  const toolsForButtons = useMemo(() => {
+    const allToolsInToolkit = Toolkits[toolkit];
+    if (isNarrowScreen && toolkit !== Toolkit.READ_ONLY_TOOLS) {
+      const firstToolsInToolkit = allToolsInToolkit.slice(0, 3);
+      console.log("lastRecentlyUsedToolsFromUserConfig", lastRecentlyUsedToolsFromUserConfig);
+      for (const toolId of lastRecentlyUsedToolsFromUserConfig) {
+        if (
+          allToolsInToolkit.includes(AnnotationTool[toolId]) &&
+          !firstToolsInToolkit.includes(AnnotationTool[toolId])
+        ) {
+          firstToolsInToolkit.unshift(AnnotationTool[toolId]);
+        }
+      }
+      const newRecentlyUsedTools = firstToolsInToolkit.slice(0, 3);
+      setLastRecentlyUsedTools(newRecentlyUsedTools.map((tool) => tool.id));
+      return newRecentlyUsedTools;
+    }
+    return Toolkits[toolkit];
+  }, [isNarrowScreen, toolkit, lastRecentlyUsedToolsFromUserConfig]);
+
+  const getToolDropdown = useMemo(() => {
+    if (!isNarrowScreen || toolkit === Toolkit.READ_ONLY_TOOLS) return null;
+    return (
+      <Dropdown
+        menu={{
+          items: Toolkits[toolkit].map((tool) => {
+            return {
+              key: tool.id,
+              label: (
+                <span
+                  onClick={() => {
+                    dispatch(setToolAction(tool));
+                  }}
+                >
+                  {tool.name}
+                </span>
+              ),
+            };
+          }),
+        }}
+      >
+        <ToolRadioButton name="More tools" value={null} style={NARROW_BUTTON_STYLE}>
+          {" "}
+          <CaretDownOutlined />{" "}
+        </ToolRadioButton>
+      </Dropdown>
+    );
+  }, [isNarrowScreen, toolkit, dispatch]);
+
   return (
     <>
       <Radio.Group onChange={handleSetTool} value={adaptedActiveTool.id}>
-        {Toolkits[toolkit].map((tool) => {
+        {toolsForButtons.map((tool) => {
           const ToolButton = ToolIdToComponent[tool.id];
           return <ToolButton key={tool.id} adaptedActiveTool={adaptedActiveTool} />;
         })}
       </Radio.Group>
+      {getToolDropdown}
 
       <ToolSpecificSettings
         hasSkeleton={hasSkeleton}

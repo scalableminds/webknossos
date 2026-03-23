@@ -20,12 +20,14 @@ import { stlMeshConstants } from "viewer/view/right_border_tabs/segments_tab/seg
 import { getAdditionalCoordinatesAsString } from "../../accessors/flycam_accessor";
 import type { FlycamAction } from "../../actions/flycam_actions";
 import type {
+  ApplyVolumeUpdateActionsFromServerAction,
   BatchUpdateGroupsAndSegmentsAction,
   MergeSegmentItemsAction,
   RemoveSegmentAction,
   UpdateSegmentAction,
 } from "../../actions/volumetracing_actions";
 import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
+import { withoutServerSpecificFields } from "viewer/model/reducers/update_action_application/shared_update_helper";
 
 export const NO_LOD_MESH_INDEX = -1;
 
@@ -194,6 +196,25 @@ function* handleSegmentColorChange(action: UpdateSegmentAction): Saga<void> {
   }
 }
 
+function* handleSegmentColorChangeFromOtherUsers(
+  action: ApplyVolumeUpdateActionsFromServerAction,
+): Saga<void> {
+  const { segmentMeshController } = yield* call(getSceneController);
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  for (const updateAction of action.actions) {
+    if (updateAction.name === "updateSegmentPartial" && "color" in updateAction.value) {
+      const { actionTracingId } = updateAction.value;
+      const actionWithoutMetaInfo = withoutServerSpecificFields(updateAction);
+      const segmentUpdateInfo = actionWithoutMetaInfo.value;
+      if (
+        segmentMeshController.hasMesh(segmentUpdateInfo.id, actionTracingId, additionalCoordinates)
+      ) {
+        segmentMeshController.setMeshColor(segmentUpdateInfo.id, actionTracingId);
+      }
+    }
+  }
+}
+
 function* handleMeshOpacityChange(action: UpdateMeshOpacityAction): Saga<void> {
   const { segmentMeshController } = yield* call(getSceneController);
   segmentMeshController.setMeshOpacity(action.id, action.layerName, action.opacity);
@@ -224,4 +245,8 @@ export default function* commonMeshSaga(): Saga<void> {
   yield* takeEvery("UPDATE_SEGMENT", handleSegmentColorChange);
   yield* takeEvery("UPDATE_MESH_OPACITY", handleMeshOpacityChange);
   yield* takeEvery("BATCH_UPDATE_GROUPS_AND_SEGMENTS", handleBatchSegmentColorChange);
+  yield* takeEvery(
+    "APPLY_VOLUME_UPDATE_ACTIONS_FROM_SERVER",
+    handleSegmentColorChangeFromOtherUsers,
+  );
 }

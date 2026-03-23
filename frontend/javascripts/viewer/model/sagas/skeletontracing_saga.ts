@@ -462,18 +462,6 @@ function* loadAgglomerateSkeletonWithId(
         },
       ),
     );
-    if (shouldGuardWithAnnotationMutex) {
-      // Enforces to directly store the loaded agglomerate skeleton to the annotation on the server to enable easier syncing of update actions.
-      // The saving includes releasing the mutex acquired earlier.
-      yield* call([Model, Model.ensureSavedState]);
-      if (unsubscribeFromAnnotationMutex) {
-        yield* call(unsubscribeFromAnnotationMutex);
-      } else {
-        console.warn(
-          "Loaded agglomerate skeleton in live collab mode, but there was no mutex subscription to be released, although this is to be expected.",
-        );
-      }
-    }
 
     // @ts-expect-error TS infers usedTreeIds to be never, but it should be number[] if its not null
     if (usedTreeIds == null || usedTreeIds.length !== 1) {
@@ -490,6 +478,19 @@ function* loadAgglomerateSkeletonWithId(
     // @ts-expect-error
     handleAgglomerateLoadingError(e);
     return null;
+  } finally {
+    if (shouldGuardWithAnnotationMutex) {
+      // Enforces to directly store the loaded agglomerate skeleton to the annotation on the server to enable easier syncing of update actions.
+      // The saving includes releasing the mutex acquired earlier.
+      yield* call([Model, Model.ensureSavedState]);
+      if (unsubscribeFromAnnotationMutex) {
+        yield* call(unsubscribeFromAnnotationMutex);
+      } else {
+        console.warn(
+          "Loaded agglomerate skeleton in live collab mode, but there was no mutex subscription to be released, although this is to be expected.",
+        );
+      }
+    }
   }
 
   yield* call(progressCallback, true, "Skeleton generation done.");

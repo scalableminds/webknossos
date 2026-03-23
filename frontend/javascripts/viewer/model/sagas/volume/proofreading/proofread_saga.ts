@@ -85,6 +85,7 @@ import {
   type SetNodePositionAction,
   setTreeAgglomerateInfoIdAction,
   setTreeNameAction,
+  setTreesAgglomerateInfoTracingIdAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import {
   allowSagaWhileBusyAction,
@@ -453,6 +454,8 @@ export function* createEditableMapping(): Saga<string> {
     createdTimestamp: Date.now(),
   };
   yield* put(initializeEditableMappingAction(editableMapping));
+  yield* put(setTreesAgglomerateInfoTracingIdAction(volumeTracingId));
+
   return volumeTracingId;
 }
 
@@ -481,8 +484,6 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   // Note that the skeletontracing reducer already mutated the skeletons according to the
   // received action.
   if (
-    // TODOM!!!!: Change agglomerateInfo: tracingId
-    // to currently active editableMappingTracingId in case it is still the mapping name!
     action.type !== "MERGE_TREES" &&
     action.type !== "DELETE_EDGE" &&
     action.type !== "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS"

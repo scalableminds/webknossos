@@ -50,6 +50,9 @@ export type MergeTreesAction = ReturnType<typeof mergeTreesAction>;
 type SetTreeNameAction = ReturnType<typeof setTreeNameAction>;
 type SetTreeMetadataAction = ReturnType<typeof setTreeMetadataAction>;
 type SetTreeAgglomerateIdAction = ReturnType<typeof setTreeAgglomerateInfoIdAction>;
+type SetTreesAgglomerateInfoTracingIdAction = ReturnType<
+  typeof setTreesAgglomerateInfoTracingIdAction
+>;
 type SelectNextTreeAction = ReturnType<typeof selectNextTreeAction>;
 type SetTreeColorIndexAction = ReturnType<typeof setTreeColorIndexAction>;
 type ShuffleTreeColorAction = ReturnType<typeof shuffleTreeColorAction>;
@@ -111,6 +114,7 @@ export type SkeletonTracingAction =
   | SetTreeNameAction
   | SetTreeMetadataAction
   | SetTreeAgglomerateIdAction
+  | SetTreesAgglomerateInfoTracingIdAction
   | SelectNextTreeAction
   | SetTreeColorAction
   | SetTreeTypeAction
@@ -160,6 +164,7 @@ export const SkeletonTracingSaveRelevantActions = [
   "SET_ACTIVE_TREE_BY_NAME",
   "SET_TREE_NAME",
   "SET_TREE_AGGLOMERATE_INFO_ID",
+  "SET_TREES_AGGLOMERATE_INFO_TRACING_ID",
   "SET_TREE_METADATA",
   "MERGE_TREES",
   "SELECT_NEXT_TREE",
@@ -500,14 +505,17 @@ export const setTreeMetadataAction = (
     treeId,
   }) as const;
 
-export const setTreeAgglomerateInfoIdAction = (
-  agglomerateId: number,
-  treeId?: number | null | undefined,
-) =>
+export const setTreeAgglomerateInfoIdAction = (agglomerateId: number, treeId: number) =>
   ({
     type: "SET_TREE_AGGLOMERATE_INFO_ID",
     agglomerateId,
     treeId,
+  }) as const;
+
+export const setTreesAgglomerateInfoTracingIdAction = (newAgglomerateMappingTracingId: string) =>
+  ({
+    type: "SET_TREES_AGGLOMERATE_INFO_TRACING_ID",
+    newAgglomerateMappingTracingId,
   }) as const;
 
 export const selectNextTreeAction = (forward: boolean | null | undefined = true) =>

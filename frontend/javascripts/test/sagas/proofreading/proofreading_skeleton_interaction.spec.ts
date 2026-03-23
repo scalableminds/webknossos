@@ -44,6 +44,15 @@ import {
   mockInitialBucketAndAgglomerateData,
   getPositionForSegmentId,
 } from "./proofreading_test_utils";
+import DiffableMap from "libs/diffable_map";
+import { Tree } from "viewer/model/types/tree_types";
+import { createTree } from "viewer/model/reducers/skeletontracing_reducer_helpers";
+import { sampleHdf5AgglomerateName } from "test/fixtures/dataset_server_object";
+import { addTreesAndGroupsAction } from "viewer/model/actions/skeletontracing_actions";
+import {
+  enforceSkeletonTracing,
+  getTreesWithType,
+} from "viewer/model/accessors/skeletontracing_accessor";
 
 function assertUpdatesMatchInjectedUpdates(
   testUpdates: SaveQueueEntry[][],
@@ -102,6 +111,60 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       expect(sourceNode.untransformedPosition).toStrictEqual(getPositionForSegmentId(3));
       const targetNode = agglomerateTrees[1].nodes.getOrThrow(7);
       expect(targetNode.untransformedPosition).toStrictEqual(getPositionForSegmentId(4));
+    });
+    await task.toPromise();
+  });
+
+  it("should put the mapping tracing id into the loaded agglomerate skeletons upon making the mapping editable", async (context: WebknossosTestContext) => {
+    const _backendMock = mockInitialBucketAndAgglomerateData(context);
+    const task = startSaga(function* task() {
+      const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
+      yield call(initializeMappingAndTool, context, tracingId);
+      // Set up the merge-related segment partners. Normally, this would happen
+      // due to the user's interactions.
+      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
+      yield put(setActiveCellAction(1));
+
+      let trees = new DiffableMap<number, Tree>();
+      const state = yield* select((state) => state);
+      const simulatedAgglomerateTree = createTree(state, Date.now());
+      expect(simulatedAgglomerateTree).toBeDefined();
+      if (!simulatedAgglomerateTree) {
+        return;
+      }
+      const simulatedAgglomerateTreeWithMappingNameInfo: Tree = {
+        ...simulatedAgglomerateTree,
+        name: "agglomerate 1 (volumeTracingId)",
+        type: TreeTypeEnum.AGGLOMERATE,
+        agglomerateInfo: {
+          agglomerateId: 1,
+          mappingName: sampleHdf5AgglomerateName,
+        },
+      };
+      trees = trees.set(3, simulatedAgglomerateTreeWithMappingNameInfo);
+      yield put(addTreesAndGroupsAction(trees, undefined));
+
+      const treesBeforeMakingMappingEditable = yield* select((state) =>
+        getTreesWithType(enforceSkeletonTracing(state.annotation), TreeTypeEnum.AGGLOMERATE),
+      );
+
+      expect(treesBeforeMakingMappingEditable.size()).toBe(1);
+      treesBeforeMakingMappingEditable.values().forEach((agglomerateTree) => {
+        expect(agglomerateTree.agglomerateInfo).toBeDefined();
+        expect(agglomerateTree.agglomerateInfo?.mappingName).toBe(sampleHdf5AgglomerateName);
+        expect(agglomerateTree.agglomerateInfo?.tracingId).toBeUndefined();
+      });
+      WkDevFlags.logActions = true;
+      yield makeMappingEditableHelper();
+
+      const treesAfterMakingMappingEditable = yield* select((state) =>
+        getTreesWithType(enforceSkeletonTracing(state.annotation), TreeTypeEnum.AGGLOMERATE),
+      );
+      treesAfterMakingMappingEditable.values().forEach((agglomerateTree) => {
+        expect(agglomerateTree.agglomerateInfo).toBeDefined();
+        expect(agglomerateTree.agglomerateInfo?.mappingName).toBeUndefined();
+        expect(agglomerateTree.agglomerateInfo?.tracingId).toBe(VOLUME_TRACING_ID);
+      });
     });
     await task.toPromise();
   });
@@ -346,7 +409,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
         splitSegment2And3WithAgglomerateTree1,
         8,
       );
-      // Expect no more updates after the injected updates:
+      // Expect no more updates after the injected updates.
       const lastUpdateRequest = context.receivedDataPerSaveRequest.at(-1)![0];
       expect(lastUpdateRequest.version).toEqual(12);
 

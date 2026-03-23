@@ -45,7 +45,7 @@ import {
   getPositionForSegmentId,
 } from "./proofreading_test_utils";
 import DiffableMap from "libs/diffable_map";
-import { Tree } from "viewer/model/types/tree_types";
+import type { Tree } from "viewer/model/types/tree_types";
 import { createTree } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { sampleHdf5AgglomerateName } from "test/fixtures/dataset_server_object";
 import { addTreesAndGroupsAction } from "viewer/model/actions/skeletontracing_actions";

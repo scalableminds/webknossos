@@ -1,4 +1,5 @@
 import type { MinCutTargetEdge } from "admin/rest_api";
+import type { ActionPattern } from "redux-saga/effects";
 import {
   getNestedUpdateActions,
   setupWebknossosForTesting,
@@ -8,6 +9,7 @@ import { call, delay, put, take } from "typed-redux-saga";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
 import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
+import type { Action } from "viewer/model/actions/actions";
 import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import {
   minCutAgglomerateWithPositionAction,
@@ -122,6 +124,11 @@ describe("Proofreading should generate correct update actions", () => {
 
       vi.mocked(context.mocks.parseProtoTracing).mockRestore();
       yield call(loadAgglomerateSkeletonAtPosition, getPositionForSegmentId(agglomerateId));
+      // Wait till mutex is released after sending loaded skeleton updates to the mocked backend.
+      yield take(
+        ((action: Action) =>
+          action.type === "SET_IS_MUTEX_ACQUIRED" && !action.isMutexAcquired) as ActionPattern,
+      );
     });
 
     await task.toPromise();

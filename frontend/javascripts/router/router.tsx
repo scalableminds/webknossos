@@ -456,7 +456,7 @@ const routes = createRoutesFromElements(
       }
     />
     <Route
-      path="/workflows/:workflowName"
+      path="/workflows/:workflowHash"
       element={
         <SecuredRoute>
           <AsyncWorkflowView />

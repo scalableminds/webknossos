@@ -34,6 +34,7 @@ import type { CycleToolAction, SetToolAction } from "viewer/model/actions/ui_act
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { ensureWkInitialized } from "../ready_sagas";
+import { startSaga } from "viewer/store";
 
 // Also refer to application.conf where annotation.mutex.expiryTime is defined
 // (typically, 2 minutes).
@@ -148,8 +149,12 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   }
 }
 
+const MUTEX_SUBSCRIPTION_TIMEOUT = 60 * 1000;
+
 function getUnsubscribeFromAnnotationMutexSaga(id: number): () => Saga<void> {
+  let didUnsubscribe = false;
   function* unsubscribe(): Saga<void> {
+    didUnsubscribe = true;
     const state = getMutexLogicState();
     const callerId = state.subscribersToMutex[id];
     if (!callerId) {
@@ -173,6 +178,14 @@ function getUnsubscribeFromAnnotationMutexSaga(id: number): () => Saga<void> {
       yield* call(releaseMutex);
     }
   }
+  function* timeoutUnsubscribe(): Saga<void> {
+    if (didUnsubscribe) {
+      return;
+    }
+    yield* call(unsubscribe);
+  }
+  // Let the subscription automatically timeout after one minute using a saga.
+  setTimeout(() => startSaga(timeoutUnsubscribe), MUTEX_SUBSCRIPTION_TIMEOUT);
   return unsubscribe;
 }
 
@@ -181,6 +194,8 @@ export function* subscribeToAnnotationMutex(callerId: string): Saga<() => Saga<v
    * Blocks until the mutex annotation has been acquired and returns a function
    * which should be used to release the annotation mutex (note, that the mutex
    * will only be released when no other "subscription" is pending).
+   * Note: There is default timeout on a subscription after which it will be invalid.
+   * The idea is in case an operation is stuck to not block other users infinitely.
    */
   const state = getMutexLogicState();
   let newId = Math.round(Math.random() * 10000);

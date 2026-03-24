@@ -485,7 +485,7 @@ function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): 
       yield* call(unsubscribeFromAnnotationMutex);
     }
     // Hide the progress notification and handle the error
-    hideFn();
+    hideFn?.();
     // @ts-expect-error
     handleAgglomerateLoadingError(e);
     return;

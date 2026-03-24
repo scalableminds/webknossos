@@ -9,7 +9,6 @@ import {
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
 import { globalToLayerTransformedPosition } from "viewer/model/accessors/dataset_layer_transformation_accessor";
-import { getTreeNameForAgglomerateSkeleton } from "viewer/model/accessors/skeletontracing_accessor";
 import { calculateGlobalPos } from "viewer/model/accessors/view_mode_accessor";
 import {
   hasAgglomerateMapping,
@@ -26,22 +25,22 @@ export async function handleAgglomerateSkeletonAtClick(clickPosition: Point2) {
   const globalPosition = calculateGlobalPos(state, clickPosition);
   loadAgglomerateSkeletonAtPosition(globalPosition.rounded);
 }
-export async function loadAgglomerateSkeletonAtPosition(position: Vector3): Promise<string | null> {
+export async function loadAgglomerateSkeletonAtPosition(position: Vector3): Promise<void> {
   const segmentation = Model.getVisibleSegmentationLayer();
 
   if (!segmentation) {
-    return null;
+    return;
   }
 
   const segmentId = await getSegmentIdForPositionAsync(position);
-  return loadAgglomerateSkeletonForSegmentId(segmentId);
+  loadAgglomerateSkeletonForSegmentId(segmentId);
 }
-export function loadAgglomerateSkeletonForSegmentId(segmentId: number): string | null {
+export function loadAgglomerateSkeletonForSegmentId(segmentId: number): void {
   const state = Store.getState();
   const segmentation = Model.getVisibleSegmentationLayer();
 
   if (!segmentation) {
-    return null;
+    return;
   }
 
   const { mappingName } = getMappingInfo(
@@ -52,11 +51,11 @@ export function loadAgglomerateSkeletonForSegmentId(segmentId: number): string |
 
   if (mappingName && isAgglomerateMappingEnabled.value) {
     Store.dispatch(loadAgglomerateSkeletonAction(segmentation.name, mappingName, segmentId));
-    return getTreeNameForAgglomerateSkeleton(segmentId, mappingName);
+    return;
   } else {
     Toast.error(isAgglomerateMappingEnabled.reason);
   }
-  return null;
+  return;
 }
 export async function loadSynapsesOfAgglomerateAtPosition(position: Vector3) {
   const state = Store.getState();

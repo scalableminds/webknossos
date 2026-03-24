@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<svg width="100%" height="100%" viewBox="0 0 1025 1025" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.4;">
-    <g transform="matrix(1,0,0,1,-7700,-1242)">
-        <g id="icon-redo" transform="matrix(1,0,0,1,7700.31,1242.09)">
+<svg width="100%" height="100%" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.4;">
+    <g transform="matrix(1,0,0,1,-7700,-1226)">
+        <g id="icon-redo" transform="matrix(1,0,0,1,7700,1226)">
             <rect x="0" y="0" width="1024" height="1024" style="fill:none;"/>
             <g transform="matrix(-0.815572,-0.470871,-0.470871,0.815572,4481.88,2215.12)">
-                <g transform="matrix(-0.9196,-0.530931,-0.530931,0.9196,5297.94,342.624)">
-                    <path d="M769.822,412.77L929.557,537.232L1004.32,349.037L769.822,412.77Z" style="fill:rgb(241,241,241);"/>
-                    <path d="M895.566,412.169C869.965,317.977 808.627,233.473 717.5,180.861C534.386,75.14 299.889,137.973 194.168,321.087C88.447,504.201 151.281,738.698 334.395,844.419C425.476,897.005 529.27,907.889 623.606,883.012" style="fill:none;stroke:rgb(241,241,241);stroke-width:72px;"/>
+                <g transform="matrix(-0.9196,-0.530931,-0.530931,0.9196,5297.61,342.546)">
+                    <path d="M769.513,412.676L929.249,537.138L1004.01,348.943L769.513,412.676Z"/>
+                    <path d="M895.258,412.075C869.657,317.883 808.318,233.379 717.192,180.767C534.078,75.046 299.581,137.879 193.86,320.993C88.139,504.107 150.972,738.604 334.086,844.325C425.168,896.911 528.962,907.795 623.298,882.918" style="fill:none;stroke:black;stroke-width:72px;"/>
                 </g>
             </g>
         </g>

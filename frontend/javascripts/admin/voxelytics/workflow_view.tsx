@@ -318,7 +318,7 @@ function shouldCollapseId(id: string, expandedKeys: Record<string, boolean>): [s
 }
 
 export default function WorkflowView() {
-  const { workflowName = "" } = useParams();
+  const { workflowHash = "" } = useParams();
   const { metatask } = useSearchParams();
   const user = useWkSelector((state) => state.activeUser);
 
@@ -345,7 +345,7 @@ export default function WorkflowView() {
   async function loadData() {
     try {
       setLoadingState({ status: "LOADING" });
-      let _report = parseReport(await getVoxelyticsWorkflow(workflowName, null));
+      let _report = parseReport(await getVoxelyticsWorkflow(workflowHash, null));
       if (metatask != null) {
         // If a meta task is passed via a GET parameter,
         // the entire report is filtered so that only the tasks of the given
@@ -357,7 +357,7 @@ export default function WorkflowView() {
     } catch (err) {
       try {
         const organization =
-          user != null ? await isWorkflowAccessibleBySwitching(workflowName) : null;
+          user != null ? await isWorkflowAccessibleBySwitching(workflowHash) : null;
         setLoadingState({
           status: "FAILED",
           organizationToSwitchTo: organization ?? undefined,
@@ -393,10 +393,14 @@ export default function WorkflowView() {
 
   usePolling(
     loadData,
-    // Only poll while the workflow is still running
-    report == null || report.runs.some((run) => run.state === VoxelyticsRunState.RUNNING)
+    // Only poll while the workflow is still running, but also load a report
+    // if it wasn't loaded before or the workflow hash changed
+    report == null ||
+      report.workflow.hash !== workflowHash ||
+      report.runs.some((run) => run.state === VoxelyticsRunState.RUNNING)
       ? VX_POLLING_INTERVAL
       : null,
+    [workflowHash],
   );
 
   if (loadingState.status === "FAILED" && user != null) {

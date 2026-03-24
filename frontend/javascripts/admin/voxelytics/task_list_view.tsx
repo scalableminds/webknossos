@@ -833,10 +833,22 @@ function aggregateTaskInfos(
   }
 
   const taskInfo = allTaskInfos.find((t) => t.taskName === task.taskName) as VoxelyticsTaskInfo;
+  if (taskInfo === undefined) {
+    throw new Error(`Task info not found for task ${task.taskName}.`);
+  }
+
   if (runId != null) {
+    const taskRun = taskInfo.runs.find((tr) => tr.runId === runId);
+    if (taskRun === undefined) {
+      throw new Error(
+        `Task run ${runId} not found for task ${task.taskName}. Task might be from a different VX report.`,
+      );
+    }
+
     return {
-      ...taskInfo.runs.find((tr) => tr.runId === runId),
+      ...taskRun,
       taskName: taskInfo.taskName,
+      runs: [],
     } as VoxelyticsTaskInfo;
   }
   return taskInfo;

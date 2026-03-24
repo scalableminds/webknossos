@@ -7,8 +7,7 @@ import FixedExpandableTable from "components/fixed_expandable_table";
 import LinkButton from "components/link_button";
 import dayjs, { type Dayjs } from "dayjs";
 import { formatMilliseconds } from "libs/format_utils";
-import { useFetch } from "libs/react_helpers";
-import { useWkSelector } from "libs/react_hooks";
+import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { compareBy, isUserAdminOrTeamManager, localeCompareBy } from "libs/utils";
 import messages from "messages";
@@ -29,46 +28,47 @@ const TIMETRACKING_CSV_HEADER_SPANS = [
 function TimeTrackingOverview() {
   const currentTime = dayjs();
   const [startDate, setStartDate] = useState(currentTime.startOf("month"));
-  const [endDate, setEndeDate] = useState(currentTime);
-  const [isFetching, setIsFetching] = useState(false);
+  const [endDate, setEndDate] = useState(currentTime);
   const isCurrentUserAdminOrManager = useWkSelector((state) => {
     const activeUser = state.activeUser;
     return activeUser != null && isUserAdminOrTeamManager(activeUser);
   });
-  const allTeams = useFetch(
-    async () => {
-      setIsFetching(true);
-      const allTeams = await getTeams();
-      setIsFetching(false);
-      return allTeams;
-    },
-    [],
-    [],
-  );
 
-  const [selectedProjectIds, setSelectedProjectIds] = useState(Array<string>);
+  const { data: allTeams = [], isLoading: isTeamsLoading } = useQueryWithErrorHandling({
+    queryKey: ["teams"],
+    queryFn: getTeams,
+  });
+
+  const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);
   const [selectedTypes, setSelectedTypes] = useState(
     AnnotationTypeFilterEnum.TASKS_AND_ANNOTATIONS_KEY,
   );
   const [selectedState, setSelectedState] = useState(AnnotationStateFilterEnum.ALL);
-  const [selectedTeams, setSelectedTeams] = useState(allTeams.map((team) => team.id));
-  const filteredTimeEntries = useFetch(
-    async () => {
-      setIsFetching(true);
-      const filteredEntries = await getTimeEntries(
-        startDate.valueOf(),
-        endDate.valueOf(),
+  const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
+
+  const { data: filteredTimeEntries = [], isFetching: isEntriesFetching } =
+    useQueryWithErrorHandling({
+      queryKey: [
+        "timeEntries",
         selectedTeams,
         selectedTypes,
         selectedState,
         selectedProjectIds,
-      );
-      setIsFetching(false);
-      return filteredEntries;
-    },
-    [],
-    [selectedTeams, selectedTypes, selectedState, selectedProjectIds, startDate, endDate],
-  );
+        startDate.valueOf(),
+        endDate.valueOf(),
+      ],
+      queryFn: () =>
+        getTimeEntries(
+          startDate.valueOf(),
+          endDate.valueOf(),
+          selectedTeams,
+          selectedTypes,
+          selectedState,
+          selectedProjectIds,
+        ),
+    });
+
+  const isFetching = isTeamsLoading || isEntriesFetching;
 
   const downloadTimeSpans = async (
     userId: string,
@@ -107,7 +107,7 @@ function TimeTrackingOverview() {
   };
 
   const exportToCSV = () => {
-    if (filteredTimeEntries?.length === null) {
+    if (filteredTimeEntries.length === 0) {
       return;
     }
     const timeEntries = filteredTimeEntries.map((row) => {
@@ -240,7 +240,7 @@ function TimeTrackingOverview() {
           type="primary"
           icon={<DownloadOutlined />}
           onClick={() => exportToCSV()}
-          disabled={filteredTimeEntries == null || filteredTimeEntries?.length === 0}
+          disabled={filteredTimeEntries.length === 0}
         >
           Export to CSV
         </Button>
@@ -284,7 +284,7 @@ function TimeTrackingOverview() {
                 return;
               }
               setStartDate(dates[0].startOf("day"));
-              setEndeDate(dates[1].endOf("day"));
+              setEndDate(dates[1].endOf("day"));
             }}
           />
         </Space>

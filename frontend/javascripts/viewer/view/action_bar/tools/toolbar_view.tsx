@@ -4,7 +4,7 @@ import { Dropdown, Radio, type RadioChangeEvent, Space, Tag } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
 import { useKeyPress, useWindowWidth, useWkSelector } from "libs/react_hooks";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import { useDispatch } from "react-redux";
 import Constants from "viewer/constants";
 import {
@@ -60,9 +60,6 @@ export default function ToolbarView() {
   const lastRecentlyUsedToolsFromUserConfig = useWkSelector(
     (state) => state.userConfiguration.lastUsedToolQueue,
   );
-  const [lastRecentlyUsedTools, setLastRecentlyUsedTools] = useState<AnnotationToolId[]>(
-    lastRecentlyUsedToolsFromUserConfig,
-  );
 
   const isShiftPressed = useKeyPress("Shift");
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
@@ -84,20 +81,20 @@ export default function ToolbarView() {
 
   const toolsForButtons = useMemo(() => {
     const allToolsInToolkit = Toolkits[toolkit];
+    const allToolIdsInToolkit = allToolsInToolkit.map((tool) => tool.id);
     if (isNarrowScreen && toolkit !== Toolkit.READ_ONLY_TOOLS) {
-      const firstToolsInToolkit = allToolsInToolkit.slice(0, 3);
-      console.log("lastRecentlyUsedToolsFromUserConfig", lastRecentlyUsedToolsFromUserConfig);
-      for (const toolId of lastRecentlyUsedToolsFromUserConfig) {
-        if (
-          allToolsInToolkit.includes(AnnotationTool[toolId]) &&
-          !firstToolsInToolkit.includes(AnnotationTool[toolId])
-        ) {
-          firstToolsInToolkit.unshift(AnnotationTool[toolId]);
+      const lruToolsInToolkit = lastRecentlyUsedToolsFromUserConfig.filter((toolId) =>
+        allToolIdsInToolkit.includes(toolId),
+      );
+      for (const tool of allToolsInToolkit) {
+        if (lruToolsInToolkit.length >= 3) break;
+        if (!lruToolsInToolkit.includes(tool.id)) {
+          lruToolsInToolkit.push(tool.id);
         }
       }
-      const newRecentlyUsedTools = firstToolsInToolkit.slice(0, 3);
-      setLastRecentlyUsedTools(newRecentlyUsedTools.map((tool) => tool.id));
-      return newRecentlyUsedTools;
+      return lruToolsInToolkit
+        .map((toolId) => allToolsInToolkit.find((tool) => tool.id === toolId))
+        .filter((tool): tool is AnnotationTool => tool != null);
     }
     return Toolkits[toolkit];
   }, [isNarrowScreen, toolkit, lastRecentlyUsedToolsFromUserConfig]);

@@ -137,12 +137,12 @@ function* setLastUsedToolQueue(setToolAction: SetToolAction): Saga<void> {
   const newTool = setToolAction.tool;
   const lastUsedToolQueue = yield* select((state) => state.userConfiguration.lastUsedToolQueue);
   if (lastUsedToolQueue.some((tool) => tool === newTool.id)) return;
-  const [, ...remainingTools] = lastUsedToolQueue;
+  const remainingTools = lastUsedToolQueue.filter((tool) => tool !== newTool.id);
   const updatedLastUsedToolQueue: [AnnotationToolId, AnnotationToolId, AnnotationToolId] = [
-    ...remainingTools,
     newTool.id,
+    ...remainingTools,
   ];
-  yield* put(updateUserSettingAction("lastUsedToolQueue", updatedLastUsedToolQueue));
+  yield* put(updateUserSettingAction("lastUsedToolQueue", updatedLastUsedToolQueue.slice(0, 3)));
   console.log("Updated last used tool queue:", updatedLastUsedToolQueue); //TODO_C remove
 }
 

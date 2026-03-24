@@ -3,7 +3,7 @@ import { Modal } from "antd";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
-import createProgressCallback, { HideFn } from "libs/progress_callback";
+import createProgressCallback, { type HideFn } from "libs/progress_callback";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
 import { map3 } from "libs/utils";
@@ -405,7 +405,7 @@ function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): 
   const shouldGuardWithAnnotationMutex =
     othersMayEdit && (yield* call(getCurrentMutexFetchingStrategy)) === MutexFetchingStrategy.AdHoc;
   let unsubscribeFromAnnotationMutex = null;
-  let hideFn: HideFn | undefined = undefined;
+  let hideFn: HideFn | undefined;
   if (shouldGuardWithAnnotationMutex) {
     ({ hideFn } = yield* call(
       progressCallback,

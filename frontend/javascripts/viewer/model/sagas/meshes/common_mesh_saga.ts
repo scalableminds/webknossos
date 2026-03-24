@@ -14,6 +14,7 @@ import {
   type UpdateMeshVisibilityAction,
   updateMeshVisibilityAction,
 } from "viewer/model/actions/annotation_actions";
+import { withoutServerSpecificFields } from "viewer/model/reducers/update_action_application/shared_update_helper";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { stlMeshConstants } from "viewer/view/right_border_tabs/segments_tab/segments_view";
@@ -27,7 +28,6 @@ import type {
   UpdateSegmentAction,
 } from "../../actions/volumetracing_actions";
 import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
-import { withoutServerSpecificFields } from "viewer/model/reducers/update_action_application/shared_update_helper";
 
 export const NO_LOD_MESH_INDEX = -1;
 

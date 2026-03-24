@@ -33,8 +33,8 @@ import type { UpdateLayerSettingAction } from "viewer/model/actions/settings_act
 import type { CycleToolAction, SetToolAction } from "viewer/model/actions/ui_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
-import { ensureWkInitialized } from "../ready_sagas";
 import { startSaga } from "viewer/store";
+import { ensureWkInitialized } from "../ready_sagas";
 
 // Also refer to application.conf where annotation.mutex.expiryTime is defined
 // (typically, 2 minutes).

@@ -8,10 +8,10 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{
-  AgglomerateInfo,
   Edge,
   SkeletonTracing,
   Tree,
+  TreeAgglomerateInfoProto,
   TreeTypeProto
 }
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
@@ -143,7 +143,8 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
           edges = skeletonEdges,
           name = s"agglomerate $agglomerateId (${agglomerateFileKey.attachment.name})",
           `type` = Some(TreeTypeProto.AGGLOMERATE),
-          agglomerateInfo = Some(AgglomerateInfo(agglomerateId, None, Some(agglomerateFileKey.attachment.name)))
+          agglomerateInfo =
+            Some(TreeAgglomerateInfoProto(agglomerateId, None, Some(agglomerateFileKey.attachment.name)))
         ))
 
       skeleton = SkeletonTracingDefaults.createInstance.copy(trees = trees)

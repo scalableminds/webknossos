@@ -1,3 +1,7 @@
+.flexlayout__layout {
+  background: transparent;
+}
+
 .flexlayout__tab,
 .flexlayout__tabset,
 .flexlayout__tabset_tabbar_outer,
@@ -53,10 +57,12 @@
 // remove a 1px line of white pixel at the very left/right side of the screen
 .flexlayout__border_left {
   border-right: none;
+  width: 0;
 }
 
 .flexlayout__border_right {
   border-left: none;
+  width: 0;
 }
 
 
@@ -70,6 +76,8 @@
 }
 
 .flexlayout__tabset_tabbar_outer {
+  height: 22px;
+  line-height: 22px;
   // On Safari, this ensures that the "maximize/minimize viewport"-button is easily clickable and a tab header/name can be grabbed for repositioning. 
   // (otherwise, the resizer becomes the default target for some reason).
   z-index: 100;

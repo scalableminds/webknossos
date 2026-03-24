@@ -30,11 +30,20 @@ export const viteConfig = {
     }),
     svgr({
       svgrOptions: {
+        plugins: ["@svgr/plugin-svgo", "@svgr/plugin-jsx"],
         icon: true,
         jsx: {
           babelConfig: {
-            plugins: [[replaceSvgColorWithCurrentColor, { patchStroke: true, patchFill: false }]],
+            plugins: [[replaceSvgColorWithCurrentColor, { patchStroke: true, patchFill: true }]],
           },
+        },
+        svgoConfig: {
+          plugins: [
+            { name: "convertStyleToAttrs" }, // converts <SVG style="..."> to individual attrs
+            {
+              name: "preset-default",
+            },
+          ],
         },
       },
     }),
@@ -88,31 +97,6 @@ export const viteConfig = {
       },
     },
     hmr: false, // disable Hot Module Replacement for now
-    watch: {
-      ignored: [
-        "**/node_modules/**",
-        "**/dist/**",
-        "**/frontend/javascripts/test/**",
-        "**/app/**",
-        "**/webknossos-tracingstore/**",
-        "**/webknossos-datastore/**",
-        "**/util/**",
-        "**/webknossos-jni/**",
-        "**/conf/**",
-        "**/project/**",
-        "**/docs/**",
-        "**/fossildb/**",
-        "**/target/**",
-        "**/schema/**",
-        "**/tools/**",
-        "**/binaryData/**",
-        "**/coverage/**",
-        "**/public/**",
-        "**/public-test/**",
-        "**/unreleased_changes/**",
-        "**/test/**",
-      ],
-    },
   },
   define: {
     global: "globalThis",

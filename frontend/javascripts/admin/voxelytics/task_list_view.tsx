@@ -527,7 +527,7 @@ export default function TaskListView({
                 >
                   {expandedMetaTaskKeys[taskGroup.key] ? "Collapse in DAG" : "Expand in DAG"}
                 </a>
-                <Link to={addUrlParam(location, "metatask", taskGroup.key)} reloadDocument>
+                <Link to={addUrlParam(location, "metatask", taskGroup.key)}>
                   Open in extra View
                 </Link>
               </div>
@@ -566,10 +566,7 @@ export default function TaskListView({
             }}
           />
           {foreignWorkflow != null ? (
-            <Link
-              to={`/workflows/${foreignWorkflow[0]}?runId=${foreignWorkflow[1]}`}
-              reloadDocument
-            >
+            <Link to={`/workflows/${foreignWorkflow[0]}?runId=${foreignWorkflow[1]}`}>
               {task.taskName}
               &nbsp;
               <ExportOutlined />

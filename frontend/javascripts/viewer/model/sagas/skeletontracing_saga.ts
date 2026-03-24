@@ -428,28 +428,28 @@ function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): 
   );
   const maybeTree = findTreeByAgglomerateId(trees, agglomerateId, layerName, mappingName);
 
-  if (maybeTree != null) {
-    console.warn(
-      `Tree for agglomerate ${agglomerateId} with mapping ${mappingName} is already loaded. Its tree name is "${maybeTree.name}".`,
-    );
-    yield* call(
+  try {
+    if (maybeTree != null) {
+      console.warn(
+        `Tree for agglomerate ${agglomerateId} with mapping ${mappingName} is already loaded. Its tree name is "${maybeTree.name}".`,
+      );
+      yield* call(
+        progressCallback,
+        true,
+        `Skeleton for agglomerate ${agglomerateId} is already present. If it not in sync with the mapping, please delete and reload it.`,
+      );
+      return;
+    }
+
+    ({ hideFn } = yield* call(
       progressCallback,
       true,
-      `Skeleton for agglomerate ${agglomerateId} is already present. If it not in sync with the mapping, please delete and reload it.`,
-    );
-    return;
-  }
+      `Loading skeleton for agglomerate ${agglomerateId} with mapping ${mappingName}`,
+    ));
 
-  ({ hideFn } = yield* call(
-    progressCallback,
-    true,
-    `Loading skeleton for agglomerate ${agglomerateId} with mapping ${mappingName}`,
-  ));
-
-  let usedTreeIds: number[] | null = null;
-  let agglomerateSkeleton: ServerSkeletonTracing;
-  let newTree: Tree | undefined;
-  try {
+    let usedTreeIds: number[] | null = null;
+    let agglomerateSkeleton: ServerSkeletonTracing;
+    let newTree: Tree | undefined;
     agglomerateSkeleton = yield* call(
       getAgglomerateSkeletonTracing,
       layerName,

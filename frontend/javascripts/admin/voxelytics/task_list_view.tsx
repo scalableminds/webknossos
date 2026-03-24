@@ -527,7 +527,7 @@ export default function TaskListView({
                 >
                   {expandedMetaTaskKeys[taskGroup.key] ? "Collapse in DAG" : "Expand in DAG"}
                 </a>
-                <Link to={addUrlParam(location, "metatask", taskGroup.key)}>
+                <Link to={addUrlParam(location, "metatask", taskGroup.key)} reloadDocument>
                   Open in extra View
                 </Link>
               </div>
@@ -834,9 +834,17 @@ function aggregateTaskInfos(
 
   const taskInfo = allTaskInfos.find((t) => t.taskName === task.taskName) as VoxelyticsTaskInfo;
   if (runId != null) {
+    const taskRun = taskInfo.runs.find((tr) => tr.runId === runId);
+    if (taskRun === undefined) {
+      throw new Error(
+        `Task run ${runId} not found for task ${task.taskName}. Task might be from a different VX report.`,
+      );
+    }
+
     return {
-      ...taskInfo.runs.find((tr) => tr.runId === runId),
+      ...taskRun,
       taskName: taskInfo.taskName,
+      runs: [],
     } as VoxelyticsTaskInfo;
   }
   return taskInfo;

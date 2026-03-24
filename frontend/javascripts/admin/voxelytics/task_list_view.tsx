@@ -566,7 +566,10 @@ export default function TaskListView({
             }}
           />
           {foreignWorkflow != null ? (
-            <Link to={`/workflows/${foreignWorkflow[0]}?runId=${foreignWorkflow[1]}`}>
+            <Link
+              to={`/workflows/${foreignWorkflow[0]}?runId=${foreignWorkflow[1]}`}
+              reloadDocument
+            >
               {task.taskName}
               &nbsp;
               <ExportOutlined />
@@ -833,6 +836,10 @@ function aggregateTaskInfos(
   }
 
   const taskInfo = allTaskInfos.find((t) => t.taskName === task.taskName) as VoxelyticsTaskInfo;
+  if (taskInfo === undefined) {
+    throw new Error(`Task info not found for task ${task.taskName}.`);
+  }
+
   if (runId != null) {
     const taskRun = taskInfo.runs.find((tr) => tr.runId === runId);
     if (taskRun === undefined) {

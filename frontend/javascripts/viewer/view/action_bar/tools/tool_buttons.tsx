@@ -128,8 +128,8 @@ function BrushToolMenu({ adaptedActiveTool }: ToolButtonProps) {
     return null;
   }
 
-  const isBrushDisabled = true;
-  const isTraceDisabled = true;
+  const isBrushDisabled = disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled;
+  const isTraceDisabled = disabledInfosForTools[AnnotationTool.TRACE.id].isDisabled;
 
   const areBothWriteToolsDisabled = isBrushDisabled && isTraceDisabled;
   const maybeDisabledButtonStyle = areBothWriteToolsDisabled ? { opacity: 0.5 } : {};
@@ -395,8 +395,10 @@ function MeasurementToolMenu() {
       ? AnnotationTool.LINE_MEASUREMENT
       : AnnotationTool.AREA_MEASUREMENT;
   const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
-  const isLineMeasurementDisabled = true;
-  const isAreaMeasurementDisabled = true;
+  const isLineMeasurementDisabled =
+    disabledInfosForTools[AnnotationTool.LINE_MEASUREMENT.id].isDisabled;
+  const isAreaMeasurementDisabled =
+    disabledInfosForTools[AnnotationTool.AREA_MEASUREMENT.id].isDisabled;
   const areBothMeasurementToolsDisabled = isLineMeasurementDisabled && isAreaMeasurementDisabled;
   const maybeDisabledButtonStyle = areBothMeasurementToolsDisabled ? { opacity: 0.5 } : {};
   const dispatch = useDispatch();

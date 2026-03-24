@@ -73,8 +73,8 @@ export default function ToolbarView() {
 
   const handleSetTool = useCallback(
     (event: RadioChangeEvent) => {
-      const value = event.target.value as AnnotationToolId;
-      dispatch(setToolAction(AnnotationTool[value]));
+      const value = event.target.value as AnnotationToolId | null; // null if dropdown for more tools is clicked
+      if (value != null) dispatch(setToolAction(AnnotationTool[value]));
     },
     [dispatch],
   );
@@ -102,29 +102,28 @@ export default function ToolbarView() {
   const getToolDropdown = useMemo(() => {
     if (!isNarrowScreen || toolkit === Toolkit.READ_ONLY_TOOLS) return null;
     return (
-      <Dropdown
-        menu={{
-          items: Toolkits[toolkit].map((tool) => {
-            return {
-              key: tool.id,
-              label: (
-                <span
-                  onClick={() => {
-                    dispatch(setToolAction(tool));
-                  }}
-                >
-                  {tool.name}
-                </span>
-              ),
-            };
-          }),
-        }}
-      >
-        <ToolRadioButton name="More tools" value={null} style={NARROW_BUTTON_STYLE}>
-          {" "}
-          <CaretDownOutlined />{" "}
-        </ToolRadioButton>
-      </Dropdown>
+      <ToolRadioButton name="More tools" value={null} style={NARROW_BUTTON_STYLE}>
+        <Dropdown
+          menu={{
+            items: Toolkits[toolkit].map((tool) => {
+              return {
+                key: tool.id,
+                label: (
+                  <span
+                    onClick={() => {
+                      dispatch(setToolAction(tool));
+                    }}
+                  >
+                    {tool.name}
+                  </span>
+                ),
+              };
+            }),
+          }}
+        >
+          <CaretDownOutlined />
+        </Dropdown>
+      </ToolRadioButton>
     );
   }, [isNarrowScreen, toolkit, dispatch]);
 
@@ -135,8 +134,8 @@ export default function ToolbarView() {
           const ToolButton = ToolIdToComponent[tool.id];
           return <ToolButton key={tool.id} adaptedActiveTool={adaptedActiveTool} />;
         })}
+        {getToolDropdown}
       </Radio.Group>
-      {getToolDropdown}
 
       <ToolSpecificSettings
         hasSkeleton={hasSkeleton}

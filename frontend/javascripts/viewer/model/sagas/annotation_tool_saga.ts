@@ -137,12 +137,11 @@ function* setLastUsedToolQueue(setToolAction: SetToolAction): Saga<void> {
   const newTool = setToolAction.tool;
   const lastUsedToolQueue = yield* select((state) => state.userConfiguration.lastUsedToolQueue);
   if (lastUsedToolQueue.some((tool) => tool === newTool.id)) return;
-  const remainingTools = lastUsedToolQueue.filter((tool) => tool !== newTool.id);
   const updatedLastUsedToolQueue: [AnnotationToolId, AnnotationToolId, AnnotationToolId] = [
     newTool.id,
-    ...remainingTools,
+    ...lastUsedToolQueue.slice(0, 2),
   ];
-  yield* put(updateUserSettingAction("lastUsedToolQueue", updatedLastUsedToolQueue.slice(0, 3)));
+  yield* put(updateUserSettingAction("lastUsedToolQueue", updatedLastUsedToolQueue));
   console.log("Updated last used tool queue:", updatedLastUsedToolQueue); //TODO_C remove
 }
 
@@ -172,7 +171,7 @@ function* rememberToolPreferences(setToolAction: SetToolAction): Saga<void> {
     yield* put(
       updateUserSettingAction(
         "erasePreference",
-        newTool.id === AnnotationTool.ERASE_BRUSH.id ? "BRUSH" : "TRACE",
+        newTool.id === AnnotationTool.ERASE_BRUSH.id ? "ERASE_BRUSH" : "ERASE_TRACE",
       ),
     );
   }

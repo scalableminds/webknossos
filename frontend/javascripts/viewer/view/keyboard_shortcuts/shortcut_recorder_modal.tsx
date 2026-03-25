@@ -1,19 +1,17 @@
 import { Button, Flex, Modal, Typography } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardComboChain } from "./keyboard_shortcut_types";
-import {
-  formatKeyCombo,
-  keyComboChainToKeystrokesConfig,
-  normalizeKeyName,
-} from "./keyboard_shortcut_utils";
+import { keyComboChainToUiElements, normalizeKeyName } from "./keyboard_shortcut_utils";
 
 const { Text } = Typography;
+
+const SampleKeyCombo: KeyboardComboChain = [["ctrl", "a"], ["o"]];
 
 type ShortcutRecorderModalProps = {
   isOpen: boolean;
   initialKeyComboChain?: KeyboardComboChain; // optional preview of current binding
   onCancel: () => void; // do not overwrite
-  onSave: (newKeyComboChain: KeyboardComboChain) => void; // returns final combo like "ctrl + a, o"
+  onSave: (newKeyComboChain: KeyboardComboChain) => void; // returns final combo like [["ctrl", "a"], ["o"]]
 };
 
 export function ShortcutRecorderModal({
@@ -168,7 +166,8 @@ export function ShortcutRecorderModal({
       <div style={{ padding: 8 }}>
         <Text type="secondary">
           Press keys now. Release all keys to finish the current stroke. Press keys again to add a
-          subsequent stroke. Example: <code>ctrl + a, o</code>. Reset everything with Esc + Ctrl.
+          subsequent stroke. Example: {keyComboChainToUiElements(SampleKeyCombo)}. Reset everything
+          with Esc + Ctrl.
         </Text>
 
         <div
@@ -196,7 +195,7 @@ export function ShortcutRecorderModal({
               <div style={{ width: "100%", overflow: "auto" }}>
                 <Text strong>Recorded:</Text>{" "}
                 <span style={{ marginLeft: 8 }}>
-                  {keyComboChainToKeystrokesConfig(keyComboChain) || "— waiting —"}
+                  {keyComboChainToUiElements(keyComboChain) || "— waiting —"}
                 </span>
               </div>
             </div>
@@ -221,7 +220,9 @@ export function ShortcutRecorderModal({
             }}
           >
             <Text italic>
-              {previewKeyCombo.length > 0 ? formatKeyCombo(previewKeyCombo) : "— no keys down —"}
+              {previewKeyCombo.length > 0
+                ? keyComboChainToUiElements([previewKeyCombo])
+                : "— no keys down —"}
             </Text>
           </div>
         </div>

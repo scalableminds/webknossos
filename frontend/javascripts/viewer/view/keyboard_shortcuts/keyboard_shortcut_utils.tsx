@@ -195,7 +195,7 @@ export function keyComboChainToUiElements(comboChain: KeyboardComboChain): React
       }
     });
     if (outerIndex < comboChain.length - 1) {
-      uiElements.push(<Text key={uiElements.length}>&gt</Text>);
+      uiElements.push(<Text key={uiElements.length}>&gt;</Text>);
     }
   });
   return uiElements;

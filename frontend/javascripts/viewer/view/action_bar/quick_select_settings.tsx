@@ -14,7 +14,8 @@ import {
   fineTuneQuickSelectAction,
 } from "viewer/model/actions/volumetracing_actions";
 import ButtonComponent from "../components/button_component";
-import { NumberSliderSetting, SwitchSetting } from "../components/setting_input_views";
+import NumberSliderSetting from "../left_border_tabs/components/number_slider_setting";
+import SwitchSetting from "../left_border_tabs/components/switch_setting";
 
 // The maximum depth of 50 also needs to be adapted in the back-end
 // (at the time of writing, in segmentAnythingMask in DatasetController.scala).

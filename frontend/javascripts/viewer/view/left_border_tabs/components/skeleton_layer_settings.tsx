@@ -24,14 +24,12 @@ import {
 import { deleteAnnotationLayer } from "viewer/model/sagas/volume/update_actions";
 import { Model } from "viewer/singletons";
 import ButtonComponent from "viewer/view/components/button_component";
-import {
-  LogSliderSetting,
-  NumberSliderSetting,
-  SwitchSetting,
-} from "viewer/view/components/setting_input_views";
 import { confirmAsync } from "../../../../dashboard/dataset/helper_components";
 import { DummyDragHandle } from "./drag_handle";
 import LayerTransformationIcon from "./layer_transformation_icon";
+import { LogSliderSetting } from "./log_slider_setting";
+import NumberSliderSetting from "./number_slider_setting";
+import SwitchSetting from "./switch_setting";
 
 export default function SkeletonLayerSettings() {
   const dispatch = useDispatch();

@@ -23,7 +23,7 @@ import {
   setMappingEnabledAction,
 } from "viewer/model/actions/settings_actions";
 import type { MappingType, WebknossosState } from "viewer/store";
-import { SwitchSetting } from "viewer/view/components/setting_input_views";
+import SwitchSetting from "./components/switch_setting";
 
 type Props = {
   layerName: string;

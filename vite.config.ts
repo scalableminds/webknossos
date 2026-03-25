@@ -39,6 +39,9 @@ export const viteConfig = {
       protoDir: "webknossos-datastore/proto",
     }),
   ],
+  devtools: {
+    enabled: true,
+  },
   optimizeDeps: {
     exclude: ["three-mesh-bvh"],
   },

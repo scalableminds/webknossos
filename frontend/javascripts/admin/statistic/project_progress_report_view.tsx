@@ -63,6 +63,7 @@ function ProjectProgressReportView() {
             icon={<ReloadOutlined spin={isFetching} />}
             variant="outlined"
             onClick={() => refetch()}
+            disabled={team == null}
           >
             Refresh
           </Button>

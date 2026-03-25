@@ -355,6 +355,7 @@ export default function WorkflowView() {
     },
     staleTime: 0, // disable caching
     gcTime: 0, // disable garbage collection
+    retry: false,
   });
 
   const { data: accessibleOrganization } = useQuery({

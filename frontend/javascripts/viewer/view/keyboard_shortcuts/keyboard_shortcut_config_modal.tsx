@@ -128,51 +128,77 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       dataIndex: "combos",
       key: "combos",
       render: (combos: KeyboardComboChain[], record: TableDataEntry) => (
-        <span
+        <div
           style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 12,
+            display: "flex",
+            flexWrap: "wrap",
+            gap: 8,
+            alignItems: "center", // flex-start
+            width: "100%",
           }}
         >
-          {combos.map((comboChain, index) => (
-            <span
-              key={index}
-              style={{
-                border: "1px solid gray",
-                borderRadius: 4,
-                borderColor: "var(--ant-color-border)",
-                display: "inline-flex",
-                alignItems: "center",
-              }}
-            >
-              {/* TODOM: Make this a flex box table cell. Overflowing keyboard shortcuts should be put into a new row in the cell*/}
-              {<span style={{ padding: "0px 4px" }}>{keyComboChainToUiElements(comboChain)}</span>}
-              <Button
-                type="text"
-                icon={<EditOutlined />}
-                onClick={() => {
-                  setRecorderTargetHandlerId(record.handlerId);
-                  setRecorderEditingKeyCombo(comboChain);
-                  setIsRecorderOpen(true);
-                }}
-              />
-              <Button
-                type="text"
-                icon={<CloseOutlined />}
-                onClick={() => handleRemoveComboChain(record.handlerId, comboChain)}
-              />
-            </span>
-          ))}{" "}
-          <Button
-            icon={<PlusOutlined />}
-            onClick={() => {
-              setRecorderTargetHandlerId(record.handlerId);
-              setRecorderEditingKeyCombo(null);
-              setIsRecorderOpen(true);
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 8,
+              alignItems: "center",
+              flex: 1,
+              minWidth: 0,
             }}
-          />
-        </span>
+          >
+            {combos.map((comboChain, index) => (
+              <div
+                key={index}
+                style={{
+                  display: "inline-flex",
+                  gap: 4,
+                  alignItems: "center",
+                  padding: 2,
+                  whiteSpace: "nowrap",
+                  border: "1px solid gray",
+                  borderRadius: 4,
+                  borderColor: "var(--ant-color-border)",
+                }}
+              >
+                <span style={{ padding: "0px 4px" }}>{keyComboChainToUiElements(comboChain)}</span>
+                <Button
+                  type="text"
+                  icon={<EditOutlined />}
+                  onClick={() => {
+                    setRecorderTargetHandlerId(record.handlerId);
+                    setRecorderEditingKeyCombo(comboChain);
+                    setIsRecorderOpen(true);
+                  }}
+                />
+                <Button
+                  type="text"
+                  icon={<CloseOutlined />}
+                  onClick={() => handleRemoveComboChain(record.handlerId, comboChain)}
+                />
+              </div>
+            ))}
+          </div>
+
+          <div
+            style={{
+              order: 1,
+              display: "flex",
+              justifyContent: "flex-end",
+              marginLeft: "auto",
+              minWidth: 0,
+            }}
+          >
+            <Button
+              icon={<PlusOutlined />}
+              onClick={() => {
+                setRecorderTargetHandlerId(record.handlerId);
+                setRecorderEditingKeyCombo(null);
+                setIsRecorderOpen(true);
+              }}
+            />
+          </div>
+        </div>
       ),
     },
     {

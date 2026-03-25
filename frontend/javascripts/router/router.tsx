@@ -457,6 +457,27 @@ const routes = createRoutesFromElements(
     />
     <Route
       path="/workflows/:workflowHash"
+      loader={({ params, request }) => {
+        const url = new URL(request.url);
+        const runId = url.searchParams.get("runId");
+        if (runId) {
+          url.searchParams.delete("runId");
+          const search = url.searchParams.toString();
+
+          return redirect(
+            `/workflows/${params.workflowHash}/run/${encodeURIComponent(runId)}${search ? `?${search}` : ""}`,
+          );
+        }
+        return null;
+      }}
+      element={
+        <SecuredRoute>
+          <AsyncWorkflowView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/workflows/:workflowHash/run/:runId"
       element={
         <SecuredRoute>
           <AsyncWorkflowView />

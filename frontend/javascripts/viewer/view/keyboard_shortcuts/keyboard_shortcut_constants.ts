@@ -1,5 +1,5 @@
 import { cloneDeep } from "lodash-es";
-import type { Mutable } from "types/globals";
+import type { Mutable } from "types/type_utils";
 import {
   ArbitraryControllerNavigationConfigKeyboardShortcuts,
   ArbitraryControllerNavigationKeyboardShortcuts,

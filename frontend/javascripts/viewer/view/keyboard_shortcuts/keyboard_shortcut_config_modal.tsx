@@ -86,6 +86,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       if (updatedCombos.length > 0) {
         return { ...prevConfig, [handlerId]: updatedCombos };
       }
+      // @ts-expect-error TODOM fix
       const defaultCombo = getAllDefaultKeyboardShortcuts()[handlerId] as KeyboardComboChain[];
       Toast.info("Restored the default shortcut to keep the shortcut reachable.");
       return { ...prevConfig, [handlerId]: defaultCombo };

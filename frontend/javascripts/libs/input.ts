@@ -11,7 +11,7 @@ import Date from "libs/date";
 import window, { document } from "libs/window";
 import extend from "lodash-es/extend";
 import { createNanoEvents, type Emitter } from "nanoevents";
-import type { ValueOf } from "types/globals";
+import type { ValueOf } from "types/type_utils";
 import type { OrthoView, Point2 } from "viewer/constants";
 import constants from "viewer/constants";
 import { addEventListenerWithDelegation, isNoElementFocused } from "./utils";

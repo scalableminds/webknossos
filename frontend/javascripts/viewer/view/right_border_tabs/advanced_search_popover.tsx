@@ -115,9 +115,10 @@ export default class AdvancedSearchPopover<S extends Record<string, any>> extend
     currentPosition =
       currentPosition == null ? -1 : Math.min(currentPosition, numberOfAvailableOptions - 1);
     const hasNoResults = numberOfAvailableOptions === 0;
-    const availableOptionsToSelectAllMatches = availableOptions.filter(
-      (result) => result.type === "Tree" || result.type === "segment",
-    );
+    const availableOptionsToSelectAllMatches = availableOptions.filter((result) => {
+      const resultType = result.type;
+      return resultType == null || (resultType !== "Group" && resultType !== "group");
+    });
     const isSelectAllMatchesDisabled = availableOptionsToSelectAllMatches.length < 2;
     const additionalInputStyle =
       hasNoResults && searchQuery !== ""
@@ -192,14 +193,18 @@ export default class AdvancedSearchPopover<S extends Record<string, any>> extend
                       : `${currentPosition + 1}/${numberOfAvailableOptions}`}
                   </ButtonComponent>
                   <Tooltip title="Previous (shift+enter)">
-                    <ButtonComponent onClick={this.selectPreviousOption} disabled={hasNoResults}>
-                      <UpOutlined />
-                    </ButtonComponent>
+                    <ButtonComponent
+                      onClick={this.selectPreviousOption}
+                      disabled={hasNoResults}
+                      icon={<UpOutlined />}
+                    />
                   </Tooltip>
                   <Tooltip title="Next (enter)">
-                    <ButtonComponent onClick={this.selectNextOption} disabled={hasNoResults}>
-                      <DownOutlined />
-                    </ButtonComponent>
+                    <ButtonComponent
+                      onClick={this.selectNextOption}
+                      disabled={hasNoResults}
+                      icon={<DownOutlined />}
+                    />
                   </Tooltip>
                   <Tooltip title="Select all matches (except groups)">
                     <ButtonComponent
@@ -214,9 +219,8 @@ export default class AdvancedSearchPopover<S extends Record<string, any>> extend
                           : undefined
                       }
                       disabled={isSelectAllMatchesDisabled}
-                    >
-                      <CheckSquareOutlined />
-                    </ButtonComponent>
+                      icon={<CheckSquareOutlined />}
+                    />
                   </Tooltip>
                 </Space.Compact>
               </Fragment>

@@ -39,10 +39,8 @@ case class Job(
 ) extends JobResultLinks {
   protected def id: ObjectId = _id
 
-  def isEnded: Boolean = {
-    val relevantState = manualState.getOrElse(state)
-    relevantState == JobState.SUCCESS || state == JobState.FAILURE
-  }
+  def isEnded: Boolean =
+    effectiveState == JobState.SUCCESS || effectiveState == JobState.FAILURE
 
   def duration: Option[FiniteDuration] =
     for {
@@ -168,7 +166,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       else q"TRUE"
       rows <- run(
         q"""
-          SELECT j._id, j.command, u._organization, u.firstName, u.lastName, mu.email, j.commandArgs, COALESCE(j.manualState, j.state),
+          SELECT j._id, j.command, u._organization, mu.firstName, mu.lastName, mu.email, j.commandArgs, COALESCE(j.manualState, j.state),
                  j.returnValue, j._voxelytics_workflowHash, j.created, j.started, j.ended, ct.milli_credit_delta
           FROM webknossos.jobs_ j
           JOIN webknossos.users_ u on j._owner = u._id

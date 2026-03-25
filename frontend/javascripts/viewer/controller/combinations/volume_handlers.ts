@@ -73,16 +73,19 @@ export function handleEraseStart(pos: Point2, plane: OrthoView) {
   Store.dispatch(setContourTracingModeAction(ContourModeEnum.DELETE));
   Store.dispatch(startEditingAction(layerPos, plane));
 }
+
 export function handleMoveForDrawOrErase(pos: Point2) {
   const state = Store.getState();
   const globalPosRounded = calculateGlobalPos(state, pos).rounded;
   const layerPos = getUntransformedSegmentationPosition(state, globalPosRounded);
   Store.dispatch(addToContourListAction(layerPos));
 }
+
 export function handleEndForDrawOrErase() {
   Store.dispatch(finishEditingAction());
   Store.dispatch(resetContourAction());
 }
+
 export function handlePickCell(pos: Point2) {
   const state = Store.getState();
   const globalPos = calculateGlobalPos(state, pos);
@@ -127,9 +130,11 @@ const _getSegmentIdForPosition = (mapped: boolean) => (globalPos: Vector3) => {
         renderedZoomStepForCameraPosition,
       );
 };
+
 export const getSegmentIdForPosition = memoizeOne(_getSegmentIdForPosition(true), ([a], [b]) =>
   V3.isEqual(a, b),
 );
+
 export const getUnmappedSegmentIdForPosition = memoizeOne(
   _getSegmentIdForPosition(false),
   ([a], [b]) => V3.isEqual(a, b),
@@ -173,6 +178,7 @@ const _getSegmentIdInfoForPosition = (globalPos: Vector3) => {
     ),
   };
 };
+
 export const getSegmentIdInfoForPosition = memoizeOne(_getSegmentIdInfoForPosition, ([a], [b]) =>
   V3.isEqual(a, b),
 );
@@ -213,6 +219,7 @@ export async function getSegmentIdForPositionAsync(globalPos: Vector3) {
     renderedZoomStepForCameraPosition,
   );
 }
+
 function handlePickCellFromGlobalPosition(
   globalPos: PositionWithRounding,
   additionalCoordinates: AdditionalCoordinate[],
@@ -242,10 +249,12 @@ function handlePickCellFromGlobalPosition(
     ),
   );
 }
+
 export function handleFloodFill(state: WebknossosState, screenPos: Point2, plane: OrthoView) {
   const globalPosRounded = calculateGlobalPos(Store.getState(), screenPos).rounded;
   handleFloodFillFromGlobalPosition(state, globalPosRounded, plane);
 }
+
 export function handleFloodFillFromGlobalPosition(
   state: WebknossosState,
   globalPos: Vector3,
@@ -254,8 +263,10 @@ export function handleFloodFillFromGlobalPosition(
   const positionInLayerSpace = getUntransformedSegmentationPosition(state, globalPos);
   Store.dispatch(floodFillAction(positionInLayerSpace, plane));
 }
+
 const MAX_BRUSH_CHANGE_VALUE = 5;
 const BRUSH_CHANGING_CONSTANT = 0.02;
+
 export function changeBrushSizeIfBrushIsActiveBy(factor: number) {
   const currentBrushSize = Store.getState().userConfiguration.brushSize;
   const newBrushSize =

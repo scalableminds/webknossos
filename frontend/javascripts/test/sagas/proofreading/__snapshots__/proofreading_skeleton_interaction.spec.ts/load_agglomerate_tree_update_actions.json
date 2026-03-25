@@ -102,8 +102,8 @@
         "name": "createEdge",
         "value": {
           "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          "source": 5,
-          "target": 4,
+          "source": 4,
+          "target": 5,
           "treeId": 3,
         },
       },
@@ -111,8 +111,8 @@
         "name": "createEdge",
         "value": {
           "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
-          "source": 6,
-          "target": 4,
+          "source": 5,
+          "target": 6,
           "treeId": 3,
         },
       },

@@ -239,11 +239,13 @@ function DatasetView({
     <Space.Compact>
       {searchBox}
       <Dropdown menu={filterMenu} trigger={["click"]}>
-        <Button>
-          <Badge dot={datasetFilteringMode !== "showAllDatasets"}>
-            <SettingOutlined />
-          </Badge>
-        </Button>
+        <Button
+          icon={
+            <Badge dot={datasetFilteringMode !== "showAllDatasets"}>
+              <SettingOutlined />
+            </Badge>
+          }
+        />
       </Dropdown>
     </Space.Compact>
   ) : (
@@ -327,16 +329,18 @@ export function DatasetRefreshButton({ context }: { context: DatasetCollectionCo
       <FastTooltip
         title={showLoadingIndicator ? "Refreshing the dataset list." : "Refresh the dataset list."}
       >
-        <Button onClick={() => context.fetchDatasets()} disabled={context.isChecking}>
-          {showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />} Refresh
+        <Button
+          onClick={() => context.fetchDatasets()}
+          disabled={context.isChecking}
+          icon={showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />}
+        >
+          Refresh
         </Button>
       </FastTooltip>
       <Dropdown
         menu={{ onClick: () => context.checkDatasets(organizationId), items: refreshMenuItems }}
       >
-        <Button disabled={context.isChecking}>
-          <EllipsisOutlined />
-        </Button>
+        <Button disabled={context.isChecking} icon={<EllipsisOutlined />} />
       </Dropdown>
     </Space.Compact>
   );

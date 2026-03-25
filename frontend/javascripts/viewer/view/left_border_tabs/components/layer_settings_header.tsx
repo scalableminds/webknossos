@@ -1,4 +1,4 @@
-import {
+import Icon, {
   DatabaseOutlined,
   DeleteOutlined,
   EditOutlined,
@@ -11,6 +11,7 @@ import {
   VerticalAlignMiddleOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
+import BrushIcon from "@images/icons/icon-brush.svg?react";
 import {
   clearCache,
   findDataPositionForLayer,
@@ -22,6 +23,7 @@ import type { ItemType } from "antd/es/menu/interface";
 import type { SwitchChangeEventHandler } from "antd/es/switch";
 import FastTooltip from "components/fast_tooltip";
 import { HoverIconButton } from "components/hover_icon_button";
+import { confirmAsync } from "dashboard/dataset/helper_components";
 import { M4x4, V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -65,7 +67,6 @@ import type { DatasetLayerConfiguration, VolumeTracing } from "viewer/store";
 import Store from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
-import { confirmAsync } from "../../../../dashboard/dataset/helper_components";
 import { validateReadableLayerName } from "../modals/add_volume_layer_modal";
 import { DragHandle, DummyDragHandle } from "./drag_handle";
 import LayerInfoIconWithTooltip from "./layer_info_icon_with_tooltip";
@@ -621,7 +622,7 @@ export default function LayerSettingsHeader({
                 : ""
             }`}
             tooltipPlacement="left"
-            icon={<i className="fas fa-paint-brush" />}
+            icon={<Icon component={BrushIcon} />}
           />
         ) : null}
         {intensityRange != null && intensityRange[0] === intensityRange[1] && !isDisabled ? (

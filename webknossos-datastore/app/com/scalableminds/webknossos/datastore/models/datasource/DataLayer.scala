@@ -61,6 +61,8 @@ trait DataLayer {
     ElementClass.bytesPerElement(elementClass)
 
   lazy val sortedMags: List[Vec3Int] = resolutions.sortBy(_.maxDim)
+
+  lazy val finestMag: Option[Vec3Int] = sortedMags.headOption
 }
 
 object DataLayer {

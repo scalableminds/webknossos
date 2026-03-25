@@ -567,9 +567,8 @@ export function CopyableSharingLink({
           type={showShortLink ? "primary" : "default"}
           onClick={() => setShowShortLink(!showShortLink)}
           style={{ padding: "0px 8px" }}
-        >
-          <CompressOutlined />
-        </Button>
+          icon={<CompressOutlined />}
+        />
       </Tooltip>
       <Input
         style={{

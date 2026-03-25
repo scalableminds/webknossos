@@ -1,6 +1,8 @@
 import Icon, { ExportOutlined } from "@ant-design/icons";
 import MergerModeIcon from "@images/icons/icon-merger-mode.svg?react";
-import SomaClickingIcon from "@images/icons/icon-soma-clicking.svg?react";
+import PenIcon from "@images/icons/icon-pen.svg?react";
+import SomaClickingIcon from "@images/icons/icon-single-node-tree.svg?react";
+import SkeletonNewTreeIcon from "@images/icons/icon-skeleton-new-tree.svg?react";
 import { Badge, Space } from "antd";
 import { useIsActiveUserAdminOrManager } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
@@ -76,9 +78,8 @@ export function SkeletonSpecificButtons() {
           onClick={toggleNewNodeNewTreeMode}
           active={isNewNodeNewTreeModeOn}
           title="Toggle the Single node Tree (soma clicking) mode - If enabled, each node creation will create a new tree."
-        >
-          <Icon component={SomaClickingIcon} aria-label="Single Node Tree Mode" />
-        </ToggleButton>
+          icon={<Icon component={SomaClickingIcon} aria-label="Single Node Tree Mode" />}
+        />
       )}
       {isSplitToolkit ? null : (
         <ToggleButton
@@ -90,27 +91,24 @@ export function SkeletonSpecificButtons() {
           onClick={toggleMergerMode}
           disabled={isMergerModeDisabled}
           title={mergerModeTooltipText}
-        >
-          <Icon component={MergerModeIcon} aria-label="Merger Mode" />
-        </ToggleButton>
+          icon={<Icon component={MergerModeIcon} aria-label="Merger Mode" />}
+        />
       )}
       <ToggleButton
         active={isContinuousNodeCreationEnabled}
         onClick={toggleContinuousNodeCreation}
         style={NARROW_BUTTON_STYLE}
         title="When activated, clicking and dragging creates nodes like a drawing tool."
-      >
-        <i className="fas fa-pen" />
-      </ToggleButton>
+        icon={<Icon component={PenIcon} />}
+      />
 
       {isMergerModeEnabled && isMaterializeVolumeAnnotationEnabled && isUserAdminOrManager && (
         <ButtonComponent
           style={NARROW_BUTTON_STYLE}
           onClick={() => setShowMaterializeVolumeAnnotationModal(true)}
           title="Materialize this merger mode annotation into a new dataset."
-        >
-          <ExportOutlined />
-        </ButtonComponent>
+          icon={<ExportOutlined />}
+        />
       )}
       {isMaterializeVolumeAnnotationEnabled && showMaterializeVolumeAnnotationModal && (
         <MaterializeVolumeAnnotationModal
@@ -148,25 +146,8 @@ function CreateTreeButton() {
         onClick={handleCreateTree}
         style={NARROW_BUTTON_STYLE}
         title={`Create a new Tree (C) – ${activeTreeHint}`}
-      >
-        <i
-          style={{
-            opacity: 0.9,
-            transform: "scale(0.9) translate(-2px, -1px)",
-            marginRight: 3,
-          }}
-          className="fas fa-project-diagram"
-        />
-        <i
-          className="fas fa-plus"
-          style={{
-            position: "absolute",
-            top: 13,
-            left: 21,
-            fontSize: 11,
-          }}
-        />
-      </ButtonComponent>
+        icon={<Icon component={SkeletonNewTreeIcon} />}
+      />
     </Badge>
   );
 }

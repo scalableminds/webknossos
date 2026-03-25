@@ -164,11 +164,14 @@ describe("View mode accessors", () => {
           -viewportAdjustedOffset[2],
           viewportAdjustedOffset[1],
         ] as Vector3;
-        const expectedPosition = [...V3.add(initialFlycamPosition, rotatedAdjustedOffset)];
-        expect(
+        const expectedPosition = V3.add(initialFlycamPosition, rotatedAdjustedOffset);
+        almostEqual(
+          expect,
           globalPosition.rounded,
+          expectedPosition,
+          2,
           `Global position is wrong with offset ${offset} in viewport ${planeId}.`,
-        ).toStrictEqual(expectedPosition);
+        );
       }
     }
   });
@@ -193,7 +196,7 @@ describe("View mode accessors", () => {
         const rotatedOffset = new ThreeVector3(offset[0], offset[1], 0)
           .applyEuler(new Euler(...rotationInRadian, "ZYX"))
           .toArray();
-        const expectedPosition = [...V3.add(initialFlycamPosition, rotatedOffset)] as Vector3;
+        const expectedPosition = V3.add(initialFlycamPosition, rotatedOffset);
         almostEqual(
           expect,
           globalPosition.floating,

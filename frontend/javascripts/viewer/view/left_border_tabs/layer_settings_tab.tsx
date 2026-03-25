@@ -16,8 +16,8 @@ import React from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import { APIAnnotationTypeEnum, type APIDataLayer } from "types/api_types";
-import type { ValueOf } from "types/globals";
 import { getSpecificDefaultsForLayer } from "types/schemas/dataset_view_configuration_defaults";
+import type { ValueOf } from "types/type_utils";
 import { ControlModeEnum, MappingStatusEnum } from "viewer/constants";
 import {
   getDefaultValueRangeOfLayer,
@@ -397,8 +397,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
           <>
             <Divider />
             <Row justify="center" align="middle">
-              <Button onClick={this.showAddVolumeLayerModal}>
-                <PlusOutlined />
+              <Button onClick={this.showAddVolumeLayerModal} icon={<PlusOutlined />}>
                 Add Volume Annotation Layer
               </Button>
             </Row>
@@ -412,8 +411,8 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
               style={{
                 marginTop: 10,
               }}
+              icon={<PlusOutlined />}
             >
-              <PlusOutlined />
               Add Skeleton Annotation Layer
             </Button>
           </Row>
@@ -422,8 +421,7 @@ class DatasetSettings extends React.PureComponent<DatasetSettingsProps, State> {
         {this.props.controlMode === ControlModeEnum.VIEW && this.props.isAdminOrDatasetManager ? (
           <Row justify="center" align="middle">
             <FastTooltip title="Save the current view configuration as default for all users.">
-              <Button onClick={this.saveViewConfigurationAsDefault}>
-                <SaveOutlined />
+              <Button onClick={this.saveViewConfigurationAsDefault} icon={<SaveOutlined />}>
                 Save View Configuration as Default
               </Button>
             </FastTooltip>

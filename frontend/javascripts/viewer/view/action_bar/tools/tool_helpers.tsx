@@ -51,7 +51,7 @@ export function RadioButtonWithTooltip({
     >
       <FastTooltip title={disabled ? disabledTitle : title} onMouseEnter={onMouseEnter}>
         {/* See comments above. */}
-        <span style={{ ...NARROW_BUTTON_STYLE, display: "block" }}>{children}</span>
+        <div style={{ ...NARROW_BUTTON_STYLE, display: "block" }}>{children}</div>
       </FastTooltip>
     </Radio.Button>
   );

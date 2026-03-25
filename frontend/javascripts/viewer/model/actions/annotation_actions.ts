@@ -19,6 +19,7 @@ import type {
   UserBoundingBoxWithoutId,
   UserBoundingBoxWithoutIdMaybe,
 } from "viewer/store";
+import type { Action } from "./actions";
 import type { InitializeSkeletonTracingAction } from "./skeletontracing_actions";
 import type {
   InitializeEditableMappingAction,
@@ -115,7 +116,7 @@ export type UserBoundingBoxAction =
   | AddUserBoundingBoxesAction
   | FinishedResizingUserBoundingBoxAction;
 
-export const AllUserBoundingBoxActions = [
+export const AllUserBoundingBoxActions: Action["type"][] = [
   "SET_USER_BOUNDING_BOXES",
   "ADD_NEW_USER_BOUNDING_BOX",
   "CHANGE_USER_BOUNDING_BOX",

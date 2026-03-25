@@ -71,9 +71,8 @@ export const WhatsNextHeader = ({ activeUser, onDismiss }: WhatsNextHeaderProps)
         }}
       >
         <Tooltip title="Don't show this again" placement="left">
-          <Button type="text" onClick={onDismiss}>
+          <Button type="text" onClick={onDismiss} icon={<CloseOutlined />} iconPlacement="end">
             Close
-            <CloseOutlined />
           </Button>
         </Tooltip>
       </div>

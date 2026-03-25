@@ -88,16 +88,5 @@ const Dimensions = {
   roundCoordinate(coordinate: Vector3): Vector3 {
     return [Math.floor(coordinate[0]), Math.floor(coordinate[1]), Math.floor(coordinate[2])];
   },
-
-  distance(pos1: Array<number>, pos2: Array<number>): number {
-    let sumOfSquares = 0;
-
-    for (let i = 0; i < Math.min(pos1.length, pos2.length); i++) {
-      const diff = pos1[i] - pos2[i];
-      sumOfSquares += diff * diff;
-    }
-
-    return Math.sqrt(sumOfSquares);
-  },
 };
 export default Dimensions;

@@ -1,6 +1,6 @@
 import { AnnotationLayerEnum } from "types/api_types";
 import { removeSubsequentUpdateBBoxActions } from "viewer/model/helpers/compaction/compact_save_queue";
-import { diffBoundingBoxes } from "viewer/model/helpers/diff_helpers";
+import { diffBoundingBoxes } from "viewer/model/sagas/diffing/bounding_box_diffing";
 import {
   type UpdateUserBoundingBoxInSkeletonTracingAction,
   type UpdateUserBoundingBoxInVolumeTracingAction,

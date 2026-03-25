@@ -924,6 +924,8 @@ export class BoundingBoxToolController extends ToolController {
   static getPlaneMouseControls(planeId: OrthoView, planeView: PlaneView): MouseBindingMap {
     let primarySelectedEdge: SelectedEdge | null | undefined = null;
     let secondarySelectedEdge: SelectedEdge | null | undefined = null;
+    // Accumulator for fractional movement that gets lost to rounding
+    let movementAccumulator: Vector3 = [0, 0, 0];
     return {
       leftDownMove: (
         delta: Point2,
@@ -936,7 +938,12 @@ export class BoundingBoxToolController extends ToolController {
           return;
         }
         if (event.ctrlKey || event.metaKey) {
-          handleMovingBoundingBox(delta, planeId, primarySelectedEdge);
+          movementAccumulator = handleMovingBoundingBox(
+            delta,
+            planeId,
+            primarySelectedEdge,
+            movementAccumulator,
+          );
         } else {
           handleResizingBoundingBox(pos, planeId, primarySelectedEdge, secondarySelectedEdge);
         }
@@ -960,7 +967,7 @@ export class BoundingBoxToolController extends ToolController {
         if (primarySelectedEdge) {
           Store.dispatch(finishedResizingUserBoundingBoxAction(primarySelectedEdge.boxId));
         }
-
+        movementAccumulator = [0, 0, 0];
         primarySelectedEdge = null;
         secondarySelectedEdge = null;
         getSceneController().highlightUserBoundingBox(null);

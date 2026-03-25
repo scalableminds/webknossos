@@ -1,0 +1,152 @@
+import { diffArrays, diffObjects } from "libs/utils";
+import isEmpty from "lodash-es/isEmpty";
+import isEqual from "lodash-es/isEqual";
+import keyBy from "lodash-es/keyBy";
+import { AnnotationLayerEnum } from "types/api_types";
+import {
+  addUserBoundingBoxInSkeletonTracing,
+  addUserBoundingBoxInVolumeTracing,
+  deleteUserBoundingBoxInSkeletonTracing,
+  deleteUserBoundingBoxInVolumeTracing,
+  updateUserBoundingBoxInSkeletonTracing,
+  updateUserBoundingBoxInVolumeTracing,
+  updateUserBoundingBoxVisibilityInSkeletonTracing,
+  updateUserBoundingBoxVisibilityInVolumeTracing,
+} from "viewer/model/sagas/volume/update_actions";
+import type { UserBoundingBox } from "viewer/store";
+
+function stripIsVisible(boxes: UserBoundingBox[]): Omit<UserBoundingBox, "isVisible">[] {
+  return boxes.map((box) => {
+    const { isVisible: _isVisible, ...rest } = box;
+    return rest;
+  });
+}
+
+function gatherSetsForVisibility(boxes: UserBoundingBox[]) {
+  const visible = new Set<number>();
+  const invisible = new Set<number>();
+  for (const box of boxes) {
+    if (box.isVisible) {
+      visible.add(box.id);
+    } else {
+      invisible.add(box.id);
+    }
+  }
+  return { visible, invisible };
+}
+
+function* diffBoundingBoxContents(
+  prevBoundingBoxes: UserBoundingBox[],
+  currentBoundingBoxes: UserBoundingBox[],
+  tracingId: string,
+  tracingType: AnnotationLayerEnum,
+) {
+  const [addBBoxAction, deleteBBoxAction, updateBBoxAction] =
+    tracingType === AnnotationLayerEnum.Skeleton
+      ? [
+          addUserBoundingBoxInSkeletonTracing,
+          deleteUserBoundingBoxInSkeletonTracing,
+          updateUserBoundingBoxInSkeletonTracing,
+        ]
+      : [
+          addUserBoundingBoxInVolumeTracing,
+          deleteUserBoundingBoxInVolumeTracing,
+          updateUserBoundingBoxInVolumeTracing,
+        ];
+
+  const prevBoundingBoxesWithoutIsVisible = stripIsVisible(prevBoundingBoxes);
+  const currentBoundingBoxesWithoutIsVisible = stripIsVisible(currentBoundingBoxes);
+  const didContentChange = !isEqual(
+    prevBoundingBoxesWithoutIsVisible,
+    currentBoundingBoxesWithoutIsVisible,
+  );
+
+  if (!didContentChange) {
+    return;
+  }
+  const prevBBoxById = keyBy(prevBoundingBoxesWithoutIsVisible, (bbox) => bbox.id);
+  const currentBBoxById = keyBy(currentBoundingBoxesWithoutIsVisible, (bbox) => bbox.id);
+
+  const {
+    onlyA: deletedBBoxIds,
+    onlyB: addedBBoxIds,
+    both: maybeChangedBBoxIds,
+  } = diffArrays(
+    prevBoundingBoxesWithoutIsVisible.map((bbox) => bbox.id),
+    currentBoundingBoxesWithoutIsVisible.map((bbox) => bbox.id),
+  );
+
+  const getErrorMessage = (id: number) =>
+    `User bounding box with id ${id} not found in ${tracingType} tracing.`;
+  for (const id of deletedBBoxIds) {
+    yield deleteBBoxAction(id, tracingId);
+  }
+
+  for (const id of addedBBoxIds) {
+    const bbox = currentBBoxById[id];
+    if (bbox) {
+      yield addBBoxAction(bbox, tracingId);
+    } else {
+      throw new Error(getErrorMessage(id));
+    }
+  }
+  for (const id of maybeChangedBBoxIds) {
+    const currentBbox = currentBBoxById[id];
+    const prevBbox = prevBBoxById[id];
+    if (currentBbox == null || prevBbox == null) {
+      throw new Error(getErrorMessage(id));
+    }
+    if (currentBbox === prevBbox) continue;
+
+    const changedProps = diffObjects(prevBbox, currentBbox);
+
+    if (!isEmpty(changedProps)) {
+      yield updateBBoxAction(currentBbox.id, changedProps, tracingId);
+    }
+  }
+}
+
+function* diffBoundingBoxVisibilities(
+  prevBoundingBoxes: UserBoundingBox[],
+  currentBoundingBoxes: UserBoundingBox[],
+  tracingId: string,
+  tracingType: AnnotationLayerEnum,
+) {
+  const updateBBoxVisibility =
+    tracingType === AnnotationLayerEnum.Skeleton
+      ? updateUserBoundingBoxVisibilityInSkeletonTracing
+      : updateUserBoundingBoxVisibilityInVolumeTracing;
+
+  const prevVisibleState = gatherSetsForVisibility(prevBoundingBoxes);
+  const visibleState = gatherSetsForVisibility(currentBoundingBoxes);
+
+  const newlyVisibleIds = Array.from(visibleState.visible.difference(prevVisibleState.visible));
+  const newlyInvisibleIds = Array.from(
+    visibleState.invisible.difference(prevVisibleState.invisible),
+  );
+
+  for (const id of newlyVisibleIds) {
+    yield updateBBoxVisibility(id, true, tracingId);
+  }
+
+  for (const id of newlyInvisibleIds) {
+    yield updateBBoxVisibility(id, false, tracingId);
+  }
+}
+
+export function* diffBoundingBoxes(
+  prevBoundingBoxes: UserBoundingBox[],
+  currentBoundingBoxes: UserBoundingBox[],
+  tracingId: string,
+  tracingType: AnnotationLayerEnum,
+) {
+  if (prevBoundingBoxes === currentBoundingBoxes) return;
+
+  yield* diffBoundingBoxContents(prevBoundingBoxes, currentBoundingBoxes, tracingId, tracingType);
+  yield* diffBoundingBoxVisibilities(
+    prevBoundingBoxes,
+    currentBoundingBoxes,
+    tracingId,
+    tracingType,
+  );
+}

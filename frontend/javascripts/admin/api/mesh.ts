@@ -15,7 +15,7 @@ export type MeshLodInfo = {
   transform: [Vector4, Vector4, Vector4]; // 4x3 matrix
 };
 
-type MeshSegmentInfo = {
+export type MeshSegmentInfo = {
   meshFormat: "draco";
   lods: Array<MeshLodInfo>;
   chunkScale: Vector3;
@@ -26,7 +26,7 @@ type ListMeshChunksRequest = {
   segmentId: number;
 };
 
-export function getMeshfileChunksForSegment(
+export function getMeshFileChunksForSegment(
   dataStoreUrl: string,
   datasetId: string,
   layerName: string,
@@ -76,7 +76,7 @@ type MeshChunkDataRequestList = {
   requests: MeshChunkDataRequest[];
 };
 
-export function getMeshfileChunkData(
+export function getMeshFileChunkData(
   dataStoreUrl: string,
   datasetId: string,
   layerName: string,

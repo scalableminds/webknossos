@@ -1,7 +1,7 @@
-import { CreditCardOutlined } from "@ant-design/icons";
+import { CreditCardOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import { useQuery } from "@tanstack/react-query";
 import { getJobCreditCostAndUpdateOrgaCredits, type JobCreditCostInfo } from "admin/rest_api";
-import { Button, Card, Col, Divider, Flex, Row, Space, Spin, Typography } from "antd";
+import { Button, Card, Col, Divider, Flex, Row, Space, Spin, Tooltip, Typography } from "antd";
 import features from "features";
 import { formatMilliCreditsString, formatVoxels } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
@@ -10,27 +10,67 @@ import type React from "react";
 import { useCallback, useMemo } from "react";
 import { Link } from "react-router-dom";
 import { type AiModel, APIJobCommand } from "types/api_types";
+import type { Vector3 } from "viewer/constants";
+import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { UserBoundingBox } from "viewer/store";
 import { useAlignmentJobContext } from "./alignment/ai_alignment_job_context";
 import { useRunAiModelJobContext } from "./run_ai_model/ai_image_segmentation_job_context";
 import { useAiTrainingJobContext } from "./train_ai_model/ai_training_job_context";
+import { getBestFittingMagComparedToTrainingDS } from "./utils";
 
 const { Title, Text } = Typography;
+
+function mag1BboxToMag(mag1Bbox: UserBoundingBox, mag: Vector3): UserBoundingBox {
+  return {
+    ...mag1Bbox,
+    boundingBox: new BoundingBox(mag1Bbox.boundingBox).fromMag1ToMag(mag).toBoundingBoxMinMaxType(),
+  };
+}
 
 export const RunAiModelCreditInformation: React.FC = () => {
   const {
     selectedModel,
     selectedJobType,
     selectedBoundingBox,
+    selectedLayer,
     handleStartAnalysis,
     areParametersValid,
   } = useRunAiModelJobContext();
+  const dataset = useWkSelector((state) => state.dataset);
+
+  const aiModelId =
+    selectedModel != null && "trainingJob" in selectedModel ? selectedModel.id : undefined;
+
+  const { data: adjustedBoundingBox } = useQuery<UserBoundingBox | null>({
+    queryKey: [
+      "boundingBoxForCreditCost",
+      selectedBoundingBox?.boundingBox,
+      selectedJobType,
+      aiModelId,
+      selectedLayer?.name,
+    ],
+    queryFn: async () => {
+      if (!selectedLayer || !selectedBoundingBox || !selectedJobType) return null;
+
+      const mag = await getBestFittingMagComparedToTrainingDS(
+        selectedLayer,
+        dataset.dataSource.scale,
+        selectedJobType,
+        aiModelId,
+        false,
+      );
+
+      return mag1BboxToMag(selectedBoundingBox, mag);
+    },
+    enabled: Boolean(selectedBoundingBox && selectedJobType && selectedLayer),
+  });
+
   return (
     <CreditInformation
       selectedModel={selectedModel}
       selectedJobType={selectedJobType}
-      selectedBoundingBox={selectedBoundingBox}
+      selectedBoundingBox={adjustedBoundingBox ?? null}
       handleStartAnalysis={handleStartAnalysis}
       startButtonTitle="Start analysis"
       areParametersValid={areParametersValid}
@@ -39,15 +79,21 @@ export const RunAiModelCreditInformation: React.FC = () => {
 };
 
 export const AlignmentCreditInformation: React.FC = () => {
-  const { selectedTask, selectedBoundingBox, handleStartAnalysis, areParametersValid } =
+  const { selectedTask, selectedBoundingBox, colorLayer, handleStartAnalysis, areParametersValid } =
     useAlignmentJobContext();
   const selectJobType = selectedTask?.jobType ?? null;
+
+  const adjustedBoundingBox = useMemo(() => {
+    if (!selectedBoundingBox) return null;
+    const mag = getMagInfo(colorLayer.mags).getFinestMag();
+    return mag1BboxToMag(selectedBoundingBox, mag);
+  }, [selectedBoundingBox, colorLayer]);
 
   return (
     <CreditInformation
       selectedModel={selectedTask}
       selectedJobType={selectJobType}
-      selectedBoundingBox={selectedBoundingBox}
+      selectedBoundingBox={adjustedBoundingBox}
       handleStartAnalysis={handleStartAnalysis}
       startButtonTitle="Start alignment"
       areParametersValid={areParametersValid}
@@ -198,7 +244,13 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
       </Row>
       <Row justify="space-between">
         <Col>
-          <Text>Dataset Size:</Text>
+          <Text>
+            Dataset Size{" "}
+            <Tooltip title="Displayed size respects selected bounding boxes and magnifications.">
+              <InfoCircleOutlined />
+            </Tooltip>
+            :
+          </Text>
         </Col>
         <Col>
           <Text strong>{getBoundingBoxinVoxels()}</Text>

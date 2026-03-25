@@ -5,7 +5,6 @@ import constants from "viewer/constants";
 import Constants, {
   ControlModeEnum,
   FillModeEnum,
-  InterpolationModeEnum,
   OrthoViews,
   OverwriteModeEnum,
   TDViewDisplayModeEnum,
@@ -86,7 +85,6 @@ const defaultState: WebknossosState = {
     overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
     fillMode: FillModeEnum._2D,
     isFloodfillRestrictedToBoundingBox: false,
-    interpolationMode: InterpolationModeEnum.INTERPOLATE,
     useLegacyBindings: false,
     quickSelect: {
       useHeuristic: false,
@@ -198,6 +196,7 @@ const defaultState: WebknossosState = {
       annotationDescription: "",
       annotationVersion: 1,
       skeleton: undefined,
+      volumes: [],
       activeMappingByLayer: {},
       isRebasing: false,
     },

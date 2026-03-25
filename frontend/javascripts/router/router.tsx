@@ -41,7 +41,7 @@ import {
   Route,
   redirect,
 } from "react-router-dom";
-import type { EmptyObject } from "types/globals";
+import type { EmptyObject } from "types/type_utils";
 import { CommandPalette } from "viewer/view/components/command_palette";
 
 const { Content } = Layout;
@@ -456,7 +456,7 @@ const routes = createRoutesFromElements(
       }
     />
     <Route
-      path="/workflows/:workflowName"
+      path="/workflows/:workflowHash"
       element={
         <SecuredRoute>
           <AsyncWorkflowView />

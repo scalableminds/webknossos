@@ -1,3 +1,5 @@
+import Icon from "@ant-design/icons";
+import ToolkitIcon from "@images/icons/icon-toolkit.svg?react";
 import { Badge, Button, Dropdown, type MenuProps } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useCallback } from "react";
@@ -65,9 +67,7 @@ export default function ToolkitView() {
           zIndex: 1000,
         }}
       >
-        <Button style={NARROW_BUTTON_STYLE}>
-          <i className="fas fa-tools" />
-        </Button>
+        <Button style={NARROW_BUTTON_STYLE} icon={<Icon component={ToolkitIcon} />} />
       </Badge>
     </Dropdown>
   );

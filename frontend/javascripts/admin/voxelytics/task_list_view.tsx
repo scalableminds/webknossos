@@ -49,7 +49,7 @@ import {
   type VoxelyticsTaskInfo,
   type VoxelyticsWorkflowReport,
 } from "types/api_types";
-import type { ArrayElement } from "types/globals";
+import type { ArrayElement } from "types/type_utils";
 import { LOG_LEVELS } from "viewer/constants";
 import ArtifactsDiskUsageList from "./artifacts_disk_usage_list";
 import DAGView, { colorHasher } from "./dag_view";
@@ -674,8 +674,8 @@ export default function TaskListView({
               allowClear
             />
             <Space>
-              <Button onClick={() => onReload()}>
-                <SyncOutlined spin={isLoading} /> Refresh
+              <Button onClick={() => onReload()} icon={<SyncOutlined spin={isLoading} />}>
+                Refresh
               </Button>
               <Select
                 value={runId ?? ""}
@@ -708,9 +708,7 @@ export default function TaskListView({
               <Space.Compact>
                 <Button onClick={() => setExpandedTasks([])}>Collapse All</Button>
                 <Dropdown menu={overflowMenu}>
-                  <Button>
-                    <DownOutlined />
-                  </Button>
+                  <Button icon={<DownOutlined />} />
                 </Dropdown>
               </Space.Compact>
             </Space>
@@ -835,10 +833,22 @@ function aggregateTaskInfos(
   }
 
   const taskInfo = allTaskInfos.find((t) => t.taskName === task.taskName) as VoxelyticsTaskInfo;
+  if (taskInfo === undefined) {
+    throw new Error(`Task info not found for task ${task.taskName}.`);
+  }
+
   if (runId != null) {
+    const taskRun = taskInfo.runs.find((tr) => tr.runId === runId);
+    if (taskRun === undefined) {
+      throw new Error(
+        `Task run ${runId} not found for task ${task.taskName}. Task might be from a different VX report.`,
+      );
+    }
+
     return {
-      ...taskInfo.runs.find((tr) => tr.runId === runId),
+      ...taskRun,
       taskName: taskInfo.taskName,
+      runs: [],
     } as VoxelyticsTaskInfo;
   }
   return taskInfo;

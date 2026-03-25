@@ -1,4 +1,10 @@
-import { getDatasets, getReadableAnnotations, updateSelectedThemeOfUser } from "admin/rest_api";
+import { getUsersOrganizations } from "admin/api/organization";
+import {
+  getAuthToken,
+  getDatasets,
+  getReadableAnnotations,
+  updateSelectedThemeOfUser,
+} from "admin/rest_api";
 import type { ItemType } from "antd/lib/menu/interface";
 import DOMPurify from "dompurify";
 import { useWkSelector } from "libs/react_hooks";
@@ -8,7 +14,7 @@ import capitalize from "lodash-es/capitalize";
 import compact from "lodash-es/compact";
 import noop from "lodash-es/noop";
 import sortBy from "lodash-es/sortBy";
-import { getAdministrationSubMenu, getAnalysisSubMenu } from "navbar";
+import { getAdministrationSubMenu, getAnalysisSubMenu, switchTo } from "navbar";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ReactCommandPalette, { type Command } from "react-command-palette";
 import { useDispatch } from "react-redux";
@@ -42,6 +48,7 @@ type CommandWithoutId = Omit<ExtendedCommand, "id">;
 enum DynamicCommands {
   viewDataset = "View Dataset ",
   viewAnnotation = "View Annotation ",
+  switchOrganization = "Switch Organization ",
 }
 
 const getLabelForAction = (action: NonNullable<ItemType>) => {
@@ -173,6 +180,20 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       return;
     }
 
+    if (command.name === DynamicCommands.switchOrganization) {
+      try {
+        const organizations = await getOrganizationItems();
+        if (organizations.length > 0) {
+          setCommands(organizations);
+        } else {
+          Toast.info("No other organizations available.");
+        }
+      } catch (_e) {
+        Toast.error("Failed to load organizations.");
+      }
+      return;
+    }
+
     closePalette();
   }, []);
 
@@ -210,11 +231,61 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     });
   }, []);
 
-  const viewAnnotationItems = {
+  const viewAnnotationsItem = {
     name: DynamicCommands.viewAnnotation,
     shortcut: "Enter to show list",
     command: () => {},
     color: commandEntryColor,
+  };
+
+  const getOrganizationItems = useCallback(async () => {
+    const organizations = await getUsersOrganizations();
+    const otherOrganizations = organizations.filter((orga) => orga.id !== activeUser?.organization);
+    return otherOrganizations.map((organization) => {
+      return {
+        name: `Switch to Organization: ${organization.name}`,
+        command: async () => {
+          await switchTo(organization);
+        },
+        color: commandEntryColor,
+        id: organization.id,
+      };
+    });
+  }, [activeUser?.organization]);
+
+  const switchOrganizationItem = {
+    name: DynamicCommands.switchOrganization,
+    shortcut: "Enter to show list",
+    command: () => {},
+    color: commandEntryColor,
+  };
+
+  const getAuthCommands = () => {
+    if (activeUser == null) return [];
+    return [
+      {
+        name: "Copy Organization ID",
+        command: async () => {
+          await navigator.clipboard.writeText(activeUser.organization);
+          Toast.success("Organization ID copied to clipboard");
+        },
+        color: commandEntryColor,
+      },
+      {
+        name: "Copy Auth Token",
+        command: async () => {
+          try {
+            const token = await getAuthToken();
+            await navigator.clipboard.writeText(token);
+            Toast.success("Auth token copied to clipboard");
+          } catch (error) {
+            Toast.error("Failed to fetch auth token. Please refresh the page to try again.");
+            console.error("Failed to fetch auth token:", error);
+          }
+        },
+        color: commandEntryColor,
+      },
+    ];
   };
 
   const getSuperUserItems = (): CommandWithoutId[] => {
@@ -363,7 +434,8 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
 
   const allStaticCommands = [
     viewDatasetsItem,
-    viewAnnotationItems,
+    viewAnnotationsItem,
+    switchOrganizationItem,
     ...getNavigationEntries(),
     ...getThemeEntries(),
     ...getToolEntries(),
@@ -371,6 +443,7 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     ...mapMenuActionsToCommands(menuActions),
     ...getTabsAndSettingsMenuItems(),
     ...getSuperUserItems(),
+    ...getAuthCommands(),
   ];
 
   const [commands, setCommands] = useState<CommandWithoutId[]>(allStaticCommands);

@@ -18,6 +18,7 @@ import {
 import { useReduxActionListener } from "viewer/model/helpers/listener_helpers";
 import type { Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";
+import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/helpers";
 import {
   additionallyExpandGroup,
   createGroupToTreesMap,
@@ -34,7 +35,6 @@ import {
   type TreeNode,
 } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 import { InputWithUpdateOnBlur } from "../../components/input_with_update_on_blur";
-import { getContextMenuPositionFromEvent } from "../../context_menu";
 import { MetadataEntryTableRows } from "../metadata_table";
 import { ResizableSplitPane } from "../resizable_split_pane";
 import ScrollableVirtualizedTree from "../scrollable_virtualized_tree";

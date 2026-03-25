@@ -2,7 +2,7 @@ import { Alert, ConfigProvider, Typography } from "antd";
 import ErrorHandling from "libs/error_handling";
 import React, { type ErrorInfo } from "react";
 import { getAntdTheme, getThemeFromUser } from "theme";
-import type { ArbitraryObject } from "types/globals";
+import type { ArbitraryObject } from "types/type_utils";
 import { Store } from "viewer/singletons";
 
 type ErrorBoundaryProps = ArbitraryObject;

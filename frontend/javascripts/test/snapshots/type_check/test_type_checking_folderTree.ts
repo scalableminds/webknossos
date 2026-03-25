@@ -1,3 +1,0 @@
-
-import type { FlatFolderTreeItem } from "types/api_types";
-const a: Array<FlatFolderTreeItem> = [{"id":"570b9f4e4bb848d08880712a","name":"A subfolder!","parent":"570b9f4e4bb848d0885ea917","metadata":[],"isEditable":true},{"id":"570b9f4e4bb848d08880712b","name":"Another subfolder!","parent":"570b9f4e4bb848d0885ea917","metadata":[],"isEditable":true},{"id":"570b9f4e4bb848d0885ea917","name":"Organization_X","parent":null,"metadata":[{"key":"key","type":"number","value":10}],"isEditable":true}]

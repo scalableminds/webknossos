@@ -84,6 +84,7 @@ We have tutorials on a wide range of topics to get you started. Also check out o
 - [Tutorial: Volume Annotation](./tutorials/volume_annotation.md)
 - [Tutorial: Data Sharing with WEBKNOSSOS](./tutorials/data_sharing.md)
 - [Tutorial: Automation and Interoperability](./tutorials/automation.md)
+- [Tutorial: Annotating Ground Truth Data for Machine Learning](./tutorials/trainingdata_annotation.md)
 
 ## Learn More
 

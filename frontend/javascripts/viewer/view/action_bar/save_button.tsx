@@ -7,16 +7,17 @@ import {
 import { Tooltip } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import ErrorHandling from "libs/error_handling";
-import { useWkSelector } from "libs/react_hooks";
+import { useWindowWidth, useWkSelector } from "libs/react_hooks";
 import window from "libs/window";
 import throttle from "lodash-es/throttle";
 import type React from "react";
-import { useCallback, useEffect, useState } from "react";
-
+import { useCallback, useEffect, useMemo, useState } from "react";
+import constants from "viewer/constants";
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
 import { Model, Store } from "viewer/singletons";
 import type { SaveState } from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
+import { NARROW_BUTTON_STYLE } from "./tools/tool_helpers";
 
 const SAVE_POLLING_INTERVAL = 1000; // 1s
 
@@ -53,6 +54,7 @@ function SaveButton() {
       : null;
   });
   const isBusy = useWkSelector((state) => state.save.isBusy);
+  const windowWidth = useWindowWidth();
 
   const [isStateSaved, setIsStateSaved] = useState(false);
   const [showUnsavedWarning, setShowUnsavedWarning] = useState(false);
@@ -106,31 +108,49 @@ function SaveButton() {
 
   const totalBucketsToCompress =
     saveInfo.waitingForCompressionBucketCount + saveInfo.compressingBucketCount;
+  const isSmallScreen = windowWidth < constants.NARROW_SCREEN_WIDTH;
+
+  const tooltipText = useMemo(
+    () =>
+      // Downloading the buckets often takes longer and the progress
+      // is visible (as the count will decrease continually).
+      // If lots of buckets need compression, this can also take a bit.
+      // Don't show both labels at the same time, because the compression
+      // usually can only start after the download is finished.
+      outstandingBucketDownloadCount > 0
+        ? `${outstandingBucketDownloadCount} items remaining to download...`
+        : totalBucketsToCompress > 0
+          ? `${totalBucketsToCompress} items remaining to compress...`
+          : null,
+    [outstandingBucketDownloadCount, totalBucketsToCompress],
+  );
+
+  if (isSmallScreen && !shouldShowProgress && !showUnsavedWarning) {
+    return (
+      <FastTooltip title={tooltipText}>
+        <ButtonComponent
+          key="save-button"
+          type="primary"
+          onClick={handleSave}
+          icon={saveButtonIcon}
+          className="narrow"
+        />
+      </FastTooltip>
+    );
+  }
+
   return (
     <ButtonComponent
       key="save-button"
       type="primary"
       onClick={handleSave}
       icon={saveButtonIcon}
-      className="narrow"
       style={{
+        ...NARROW_BUTTON_STYLE,
         background: showUnsavedWarning ? "var(--ant-color-error)" : undefined,
       }}
     >
-      <FastTooltip
-        title={
-          // Downloading the buckets often takes longer and the progress
-          // is visible (as the count will decrease continually).
-          // If lots of buckets need compression, this can also take a bit.
-          // Don't show both labels at the same time, because the compression
-          // usually can only start after the download is finished.
-          outstandingBucketDownloadCount > 0
-            ? `${outstandingBucketDownloadCount} items remaining to download...`
-            : totalBucketsToCompress > 0
-              ? `${totalBucketsToCompress} items remaining to compress...`
-              : null
-        }
-      >
+      <FastTooltip title={tooltipText}>
         {shouldShowProgress ? (
           <span
             style={{

@@ -74,8 +74,7 @@ function ZoomShortcut() {
     <span key="zoom" className="shortcut-info-element">
       <Text keyboard>{AltOrOptionKey}</Text>
       +
-      <Icon component={IconStatusbarMouseWheel} aria-label="Mouse Wheel" />
-      Zoom in/out
+      <Icon component={IconStatusbarMouseWheel} aria-label="Mouse Wheel" /> Zoom in/out
     </span>
   );
 }

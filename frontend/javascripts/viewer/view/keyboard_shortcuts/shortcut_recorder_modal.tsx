@@ -1,7 +1,11 @@
 import { Button, Flex, Modal, Typography } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardComboChain } from "./keyboard_shortcut_types";
-import { formatKeyCombo, formatKeyComboChain, normalizeKeyName } from "./keyboard_shortcut_utils";
+import {
+  formatKeyCombo,
+  keyComboChainToKeystrokesConfig,
+  normalizeKeyName,
+} from "./keyboard_shortcut_utils";
 
 const { Text } = Typography;
 
@@ -192,7 +196,7 @@ export function ShortcutRecorderModal({
               <div style={{ width: "100%", overflow: "auto" }}>
                 <Text strong>Recorded:</Text>{" "}
                 <span style={{ marginLeft: 8 }}>
-                  {formatKeyComboChain(keyComboChain) || "— waiting —"}
+                  {keyComboChainToKeystrokesConfig(keyComboChain) || "— waiting —"}
                 </span>
               </div>
             </div>

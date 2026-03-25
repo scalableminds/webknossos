@@ -307,7 +307,6 @@ class ArbitraryController extends React.PureComponent<Props> {
               activeNode.rotation,
               true,
             );
-            l;
           }
         },
       },

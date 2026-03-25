@@ -113,6 +113,7 @@ function TracingModals() {
 
     modalList.push(
       <KeyboardShortcutConfigModal
+        key="keyboard-shortcut-modal"
         isOpen={showKeyboardShortcutConfigModal}
         onClose={handleKeyboardShortcutConfigClose}
       />,

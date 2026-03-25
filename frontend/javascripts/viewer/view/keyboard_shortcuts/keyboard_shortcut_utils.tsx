@@ -6,7 +6,7 @@ import type {
   KeyboardLoopHandler,
   KeyboardNoLoopHandler,
 } from "libs/input";
-import { flatten } from "lodash-es";
+import { flatten, zipWith } from "lodash-es";
 import type { AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { Store } from "viewer/singletons";
 import type {
@@ -15,9 +15,13 @@ import type {
   KeyboardShortcutNoLoopedHandlerMap,
   KeyboardShortcutsMap,
 } from "./keyboard_shortcut_types";
-
+import React from "react";
+import { Typography } from "antd";
+import { MacCommandOutlined, WindowsOutlined } from "@ant-design/icons";
+const { Text } = Typography;
 export const MODIFIER_KEYS = new Set(["ctrl", "super", "alt", "shift"]);
 
+// TODOM Refactor to not converte between keyevent name and back too often!
 export function normalizeKeyName(raw: string): string {
   if (!raw) return raw;
   // unify common names
@@ -83,6 +87,45 @@ export function keyToKeyEventName(raw: string): string {
   }
 }
 
+export function keyToUiElement(key: string): React.ReactNode {
+  switch (key) {
+    case " ":
+      return "Space";
+    case "esc":
+    case "escape":
+      return "esc";
+    case "arrowLeft":
+      return "◀";
+    case "arrowRight":
+      return "▶";
+    case "arrowUp":
+      return "▲";
+    case "arrowDown":
+      return "▼";
+    case "meta":
+      return <MacCommandOutlined />;
+    case "super":
+      return <WindowsOutlined />;
+    case "control":
+      return "Ctrl";
+    case "alt":
+      return "Alt";
+    case "shift":
+      return "Shift";
+    case "enter":
+      return "Enter";
+    case "backspace":
+      return "Backspace";
+    case "delete":
+      return "Delete";
+    case "tab":
+      return "Tab";
+
+    default:
+      return key;
+  }
+}
+
 function escapeReservedKeystrokeCharacters(key: string): string {
   if (["+", ">", ","].includes(key)) {
     return `\\${key}`;
@@ -90,13 +133,13 @@ function escapeReservedKeystrokeCharacters(key: string): string {
   return key;
 }
 
-export function formatKeyCombo(combo: string[]): string {
+// Moves modifier keys to the front of the combo.
+function sortKeyCombo(combo: string[]): string[] {
   // Ensure modifiers appear first in canonical order,
   // then non-modifier keys in the order they were pressed (preserved in `order`)
   const modifiersOrder = ["ctrl", "meta", "super", "alt", "shift"];
   const presentModifiers: string[] = [];
   const nonModifiers: string[] = [];
-  const adjustKey = (key: string) => escapeReservedKeystrokeCharacters(keyToKeyEventName(key));
 
   const seen = new Set<string>();
   for (const k of combo) {
@@ -105,29 +148,57 @@ export function formatKeyCombo(combo: string[]): string {
       seen.add(n);
     } else {
       if (!seen.has(n)) {
-        // only add non-modifier if not a modifier (keeps uniqueness) and escape reserved characters.
-        nonModifiers.push(adjustKey(n));
+        // only add non-modifier if not a modifier (keeps uniqueness).
+        nonModifiers.push(n);
         seen.add(n);
       }
     }
   }
 
   for (const m of modifiersOrder) {
-    if (seen.has(m)) presentModifiers.push(adjustKey(m));
+    if (seen.has(m)) presentModifiers.push(m);
   }
 
   // But order may have modifiers after non-modifiers in `order`. We already fixed ordering.
   // Combine modifiers then nonModifiers
-  const parts = [...presentModifiers, ...nonModifiers];
-  return parts.join(" + ");
+  return [...presentModifiers, ...nonModifiers];
 }
 
-export function formatKeyComboChain(comboChain: KeyboardComboChain): string {
+export function formatKeyCombo(combo: string[]): string | React.ReactNode[] {
+  // Ensure modifiers appear first in canonical order,
+  // then non-modifier keys in the order they were pressed (preserved in `order`)
+  return sortKeyCombo(combo).map((key) =>
+    escapeReservedKeystrokeCharacters(keyToKeyEventName(key)),
+  );
+}
+
+export function keyComboChainToKeystrokesConfig(comboChain: KeyboardComboChain): string {
   return comboChain.map((combo) => formatKeyCombo(combo)).join(", ");
 }
 
-export function formatComparableKeyComboChain(comboChain: ComparableKeyComboChain): string {
+export function comparableKeyComboChainToKeyCombo(comboChain: ComparableKeyComboChain): string {
   return comboChain.map((combo) => formatKeyCombo([...combo])).join(", ");
+}
+
+export function keyComboChainToUiElements(comboChain: KeyboardComboChain): React.ReactNode[] {
+  const uiElements: React.ReactNode[] = [];
+
+  comboChain.forEach((combo, outerIndex) => {
+    sortKeyCombo(combo).forEach((key, innerIndex) => {
+      uiElements.push(
+        <Text key={uiElements.length} keyboard style={{ whiteSpace: "nowrap" }}>
+          {keyToUiElement(key)}
+        </Text>,
+      );
+      if (innerIndex < combo.length - 1) {
+        uiElements.push(<Text key={uiElements.length}>+</Text>);
+      }
+    });
+    if (outerIndex < comboChain.length - 1) {
+      uiElements.push(<Text key={uiElements.length}>&gt</Text>);
+    }
+  });
+  return uiElements;
 }
 
 export const buildKeyBindingsFromConfigAndMapping = (
@@ -139,7 +210,7 @@ export const buildKeyBindingsFromConfigAndMapping = (
       const isInHandlerMapping = handlerId in handlerIdMapping;
       if (isInHandlerMapping) {
         return keyChainCombos.map((chainCombo) => {
-          const keyComboStr = formatKeyComboChain(chainCombo);
+          const keyComboStr = keyComboChainToKeystrokesConfig(chainCombo);
           return [keyComboStr, handlerIdMapping[handlerId]];
         });
       } else {
@@ -159,7 +230,7 @@ export const buildKeyBindingsFromConfigAndLoopedMapping = (
       const isInHandlerMapping = handlerId in handlerIdMapping;
       if (isInHandlerMapping) {
         return keyChainCombos.map((chainCombo) => {
-          const keyComboStr = formatKeyComboChain(chainCombo);
+          const keyComboStr = keyComboChainToKeystrokesConfig(chainCombo);
           return [keyComboStr, handlerIdMapping[handlerId]];
         });
       } else {
@@ -252,7 +323,7 @@ export const buildKeyBindingsFromConfigAndMappingForTools = (
   const keyComboChainAndHandlerIds = invertKeyboardShortcutMap(config);
   const bindings: KeyBindingMap = {};
   keyComboChainAndHandlerIds.forEach(([comparableComboChain, handlers]) => {
-    const stringifiedComboChain = formatComparableKeyComboChain(comparableComboChain);
+    const stringifiedComboChain = comparableKeyComboChainToKeyCombo(comparableComboChain);
     const toolToHandlerMap: Partial<Record<AnnotationToolId, KeyboardNoLoopHandler>> = {};
     for (const handler of handlers) {
       for (const annotationToolIdStr of Object.keys(handlerIdMappingPerAnnotationTool)) {
@@ -281,7 +352,7 @@ export const buildKeyBindingsFromConfigAndLoopedMappingForTools = (
   const keyComboChainAndHandlerIds = invertKeyboardShortcutMap(config);
   const bindings: KeyBindingLoopMap = {};
   keyComboChainAndHandlerIds.forEach(([comparableComboChain, handlers]) => {
-    const stringifiedComboChain = formatComparableKeyComboChain(comparableComboChain);
+    const stringifiedComboChain = comparableKeyComboChainToKeyCombo(comparableComboChain);
     const toolToHandlerMap: Partial<Record<AnnotationToolId, KeyboardLoopHandler>> = {};
     for (const handler of handlers) {
       for (const annotationToolIdStr of Object.keys(handlerIdMappingPerAnnotationTool)) {

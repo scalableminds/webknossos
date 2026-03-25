@@ -1,5 +1,16 @@
 import { CloseOutlined, EditOutlined, PlusOutlined, RollbackOutlined } from "@ant-design/icons";
-import { Button, Flex, Input, Modal, Space, Switch, Table, TabsProps, Typography } from "antd";
+import {
+  Button,
+  Flex,
+  Input,
+  Modal,
+  Space,
+  Switch,
+  Table,
+  Tabs,
+  type TabsProps,
+  Typography,
+} from "antd";
 import app from "app";
 import Toast from "libs/toast";
 import { isEqual } from "lodash-es";
@@ -14,9 +25,9 @@ import {
   validateShortcutMapText,
 } from "./keyboard_shortcut_persistence";
 import { type KeyboardComboChain, KeyboardShortcutDomain } from "./keyboard_shortcut_types";
-import { formatKeyComboChain } from "./keyboard_shortcut_utils";
+import { keyComboChainToUiElements } from "./keyboard_shortcut_utils";
 import { ShortcutRecorderModal } from "./shortcut_recorder_modal";
-import { ColumnsType } from "antd/es/table";
+import type { ColumnsType } from "antd/es/table";
 
 const { Text, Title } = Typography;
 
@@ -75,9 +86,8 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       if (updatedCombos.length > 0) {
         return { ...prevConfig, [handlerId]: updatedCombos };
       }
-      // @ts-expect-error TODOM
       const defaultCombo = getAllDefaultKeyboardShortcuts()[handlerId] as KeyboardComboChain[];
-      Toast.info("Default shortcut restored to keep the shortcut reachable.");
+      Toast.info("Restored the default shortcut to keep the shortcut reachable.");
       return { ...prevConfig, [handlerId]: defaultCombo };
     });
   };
@@ -136,11 +146,11 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
                 alignItems: "center",
               }}
             >
-              {<span style={{ padding: "0px 12px" }}>{formatKeyComboChain(comboChain)}</span>}
+              {/* TODOM: Make this a flex box table cell. Overflowing keyboard shortcuts should be put into a new row in the cell*/}
+              {<span style={{ padding: "0px 4px" }}>{keyComboChainToUiElements(comboChain)}</span>}
               <Button
                 type="text"
                 icon={<EditOutlined />}
-                style={{ padding: "0px 20px" }}
                 onClick={() => {
                   setRecorderTargetHandlerId(record.handlerId);
                   setRecorderEditingKeyCombo(comboChain);
@@ -150,13 +160,11 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
               <Button
                 type="text"
                 icon={<CloseOutlined />}
-                style={{ padding: "0px 20px" }}
                 onClick={() => handleRemoveComboChain(record.handlerId, comboChain)}
               />
             </span>
           ))}{" "}
           <Button
-            style={{ padding: "0px 20px" }}
             icon={<PlusOutlined />}
             onClick={() => {
               setRecorderTargetHandlerId(record.handlerId);
@@ -180,20 +188,6 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
         return metaInfo?.description ?? handlerId;
       },
     },
-    /*{
-      title: "Edit",
-      key: "edit",
-      render: (_: any, record: any) => (
-        <Button
-          style={{ padding: "0px 20px" }}
-          icon={<EditOutlined />}
-          onClick={() => {
-            setRecorderTargetHandlerId(record.handlerId);
-            setIsRecorderOpen(true);
-          }}
-        />
-      ),
-    },*/
   ];
 
   // Handle JSON editor changes
@@ -222,7 +216,6 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
     setLocalConfig(getAllDefaultKeyboardShortcuts());
   };
 
-  // TODOM: continue
   const shortcutsTabItems: TabsProps["items"] = [
     {
       key: "general",
@@ -237,6 +230,70 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
           <ShortcutDomainTable
             domainName={KeyboardShortcutDomain.GENERAL_EDITING}
             tableData={tableDataMap[KeyboardShortcutDomain.GENERAL_EDITING]}
+            columns={columns}
+          />
+        </>
+      ),
+    },
+    {
+      key: "arbitrary",
+      label: "Arbitrary Mode",
+      children: (
+        <>
+          <ShortcutDomainTable
+            domainName={KeyboardShortcutDomain.ARBITRARY_NAVIGATION}
+            tableData={tableDataMap[KeyboardShortcutDomain.ARBITRARY_NAVIGATION]}
+            columns={columns}
+          />
+          <ShortcutDomainTable
+            domainName={KeyboardShortcutDomain.ARBITRARY_EDITING}
+            tableData={tableDataMap[KeyboardShortcutDomain.ARBITRARY_EDITING]}
+            columns={columns}
+          />
+        </>
+      ),
+    },
+    {
+      key: "plane",
+      label: "Plane Mode",
+      children: (
+        <>
+          <ShortcutDomainTable
+            domainName={KeyboardShortcutDomain.PLANE_NAVIGATION}
+            tableData={tableDataMap[KeyboardShortcutDomain.PLANE_NAVIGATION]}
+            columns={columns}
+          />
+          <ShortcutDomainTable
+            domainName={KeyboardShortcutDomain.PLANE_CONFIGURATIONS}
+            tableData={tableDataMap[KeyboardShortcutDomain.PLANE_CONFIGURATIONS]}
+            columns={columns}
+          />
+        </>
+      ),
+    },
+    {
+      key: "tools",
+      label: "Plane Mode Tools",
+      children: (
+        <>
+          <ShortcutDomainTable
+            domainName={KeyboardShortcutDomain.PLANE_SKELETON_TOOL}
+            tableData={tableDataMap[KeyboardShortcutDomain.PLANE_SKELETON_TOOL]}
+            columns={columns}
+          />
+          <ShortcutDomainTable
+            domainName={KeyboardShortcutDomain.PLANE_VOLUME_TOOL}
+            tableData={tableDataMap[KeyboardShortcutDomain.PLANE_VOLUME_TOOL]}
+            columns={columns}
+          />
+          <ShortcutDomainTable
+            domainName={KeyboardShortcutDomain.PLANE_BOUNDING_BOX_TOOL}
+            tableData={tableDataMap[KeyboardShortcutDomain.PLANE_BOUNDING_BOX_TOOL]}
+            columns={columns}
+          />
+          <ShortcutDomainTable
+            domainName={KeyboardShortcutDomain.PLANE_PROOFREADING_TOOL}
+            tableData={tableDataMap[KeyboardShortcutDomain.PLANE_PROOFREADING_TOOL]}
             columns={columns}
           />
         </>
@@ -273,19 +330,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       </Flex>
 
       {/* TABLE VIEW */}
-      {!isJsonView &&
-        Object.values(KeyboardShortcutDomain).map((domainName) => (
-          <div key={domainName}>
-            <Title level={5}>{domainName} Shortcuts</Title>
-            <Table
-              dataSource={tableDataMap[domainName]}
-              columns={columns}
-              pagination={false}
-              size="small"
-              style={{ marginBottom: 24 }}
-            />
-          </div>
-        ))}
+      {!isJsonView && <Tabs items={shortcutsTabItems} />}
 
       {/* JSON VIEW */}
       {isJsonView && (

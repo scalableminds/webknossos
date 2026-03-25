@@ -3,7 +3,6 @@ import babel from "@rolldown/plugin-babel";
 import react, { reactCompilerPreset } from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
 import wasm from "vite-plugin-wasm";
-import analyzer from "vite-bundle-analyzer";
 import viteProtobufPlugin from "./frontend/vite/vite-plugin-protobuf";
 import replaceSvgColorWithCurrentColor from "./frontend/vite/vite-plugin-replace-svg-color";
 
@@ -19,7 +18,6 @@ const alias = {
 export const viteConfig = {
   resolve: { alias, tsconfigPaths: true },
   plugins: [
-    // analyzer(), // Enable/Disable vite bundle analyzer for inspecting the output bundle
     react(),
     babel({
       presets: [reactCompilerPreset()],

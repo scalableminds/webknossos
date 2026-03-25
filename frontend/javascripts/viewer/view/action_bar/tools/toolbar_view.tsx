@@ -79,17 +79,26 @@ export default function ToolbarView() {
     [dispatch],
   );
 
+  const onlyShowLastRecentlyUsedTools = isNarrowScreen && toolkit !== Toolkit.READ_ONLY_TOOLS;
+
   const toolsForButtons = useMemo(() => {
     const allToolsInToolkit = Toolkits[toolkit];
     const allToolIdsInToolkit = allToolsInToolkit.map((tool) => tool.id);
-    if (isNarrowScreen && toolkit !== Toolkit.READ_ONLY_TOOLS) {
+    if (onlyShowLastRecentlyUsedTools) {
       const lruToolsInToolkit = lastRecentlyUsedToolsFromUserConfig.filter((toolId) =>
         allToolIdsInToolkit.includes(toolId),
       );
       for (const tool of allToolsInToolkit) {
         if (lruToolsInToolkit.length >= 3) break;
         if (!lruToolsInToolkit.includes(tool.id)) {
-          lruToolsInToolkit.push(tool.id);
+          let adaptedToolId = tool.id;
+          // fix tools with tool menues
+          if (tool.id === AnnotationTool.TRACE.id) adaptedToolId = AnnotationTool.BRUSH.id;
+          else if (tool.id === AnnotationTool.ERASE_TRACE.id)
+            adaptedToolId = AnnotationTool.ERASE_BRUSH.id;
+          else if (tool.id === AnnotationTool.AREA_MEASUREMENT.id)
+            adaptedToolId = AnnotationTool.LINE_MEASUREMENT.id;
+          lruToolsInToolkit.push(adaptedToolId);
         }
       }
       return lruToolsInToolkit
@@ -97,10 +106,10 @@ export default function ToolbarView() {
         .filter((tool): tool is AnnotationTool => tool != null);
     }
     return Toolkits[toolkit];
-  }, [isNarrowScreen, toolkit, lastRecentlyUsedToolsFromUserConfig]);
+  }, [onlyShowLastRecentlyUsedTools, toolkit, lastRecentlyUsedToolsFromUserConfig]);
 
   const getToolDropdown = useMemo(() => {
-    if (!isNarrowScreen || toolkit === Toolkit.READ_ONLY_TOOLS) return null;
+    if (!onlyShowLastRecentlyUsedTools) return null;
     return (
       <ToolRadioButton name="More tools" value={null} style={NARROW_BUTTON_STYLE}>
         <Dropdown
@@ -125,7 +134,7 @@ export default function ToolbarView() {
         </Dropdown>
       </ToolRadioButton>
     );
-  }, [isNarrowScreen, toolkit, dispatch]);
+  }, [onlyShowLastRecentlyUsedTools, toolkit, dispatch]);
 
   return (
     <>

@@ -1,3 +1,5 @@
+import { MacCommandOutlined, WindowsOutlined } from "@ant-design/icons";
+import { Typography } from "antd";
 import type {
   KeyBindingLoopMap,
   KeyBindingMap,
@@ -6,7 +8,8 @@ import type {
   KeyboardLoopHandler,
   KeyboardNoLoopHandler,
 } from "libs/input";
-import { flatten, zipWith } from "lodash-es";
+import { flatten } from "lodash-es";
+import type React from "react";
 import type { AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { Store } from "viewer/singletons";
 import type {
@@ -15,9 +18,7 @@ import type {
   KeyboardShortcutNoLoopedHandlerMap,
   KeyboardShortcutsMap,
 } from "./keyboard_shortcut_types";
-import React from "react";
-import { Typography } from "antd";
-import { MacCommandOutlined, WindowsOutlined } from "@ant-design/icons";
+
 const { Text } = Typography;
 export const MODIFIER_KEYS = new Set(["ctrl", "super", "alt", "shift"]);
 

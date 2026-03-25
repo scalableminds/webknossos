@@ -11,6 +11,7 @@ import {
   type TabsProps,
   Typography,
 } from "antd";
+import type { ColumnsType } from "antd/es/table";
 import app from "app";
 import Toast from "libs/toast";
 import { isEqual } from "lodash-es";
@@ -27,7 +28,6 @@ import {
 import { type KeyboardComboChain, KeyboardShortcutDomain } from "./keyboard_shortcut_types";
 import { keyComboChainToUiElements } from "./keyboard_shortcut_utils";
 import { ShortcutRecorderModal } from "./shortcut_recorder_modal";
-import type { ColumnsType } from "antd/es/table";
 
 const { Text, Title } = Typography;
 

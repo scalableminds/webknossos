@@ -2,7 +2,8 @@ import Icon, { CaretDownOutlined } from "@ant-design/icons";
 import AreaMeasurementIcon from "@images/icons/icon-area-measurement.svg?react";
 import BoundingBoxIcon from "@images/icons/icon-bounding-box.svg?react";
 import BrushIcon from "@images/icons/icon-brush.svg?react";
-import EraserIcon from "@images/icons/icon-eraser.svg?react";
+import EraserBrushIcon from "@images/icons/icon-eraser-brush.svg?react";
+import EraserLassoIcon from "@images/icons/icon-eraser-lasso.svg?react";
 import FillIcon from "@images/icons/icon-fill.svg?react";
 import LassoIcon from "@images/icons/icon-lasso.svg?react";
 import LayerGroupIcon from "@images/icons/icon-layer-group.svg?react";
@@ -209,7 +210,7 @@ function EraseToolMenu({ adaptedActiveTool }: ToolButtonProps) {
             {
               key: AnnotationTool.ERASE_BRUSH.id,
               label: "Erase Brush",
-              icon: <Icon component={EraserIcon} />,
+              icon: <Icon component={EraserBrushIcon} />,
               disabled: isEraseBrushDisabled,
               title: isEraseBrushDisabled
                 ? disabledInfosForTools[AnnotationTool.ERASE_BRUSH.id].explanation
@@ -218,7 +219,7 @@ function EraseToolMenu({ adaptedActiveTool }: ToolButtonProps) {
             {
               key: AnnotationTool.ERASE_TRACE.id,
               label: "Erase Trace",
-              icon: <Icon component={EraserIcon} />,
+              icon: <Icon component={EraserLassoIcon} />,
               disabled: isEraseTraceDisabled,
               title: isEraseTraceDisabled
                 ? disabledInfosForTools[AnnotationTool.ERASE_TRACE.id].explanation
@@ -229,7 +230,10 @@ function EraseToolMenu({ adaptedActiveTool }: ToolButtonProps) {
         }}
         trigger={["hover"]}
       >
-        <Icon component={EraserIcon} style={maybeDisabledButtonStyle} />
+        <Icon
+          component={erasePreference === "ERASE_BRUSH" ? EraserBrushIcon : EraserLassoIcon}
+          style={maybeDisabledButtonStyle}
+        />
       </Dropdown>
       <CaretDownOutlined className="triangle-icon" style={maybeDisabledButtonStyle} />
       {adaptedActiveTool === AnnotationTool.ERASE_BRUSH ||

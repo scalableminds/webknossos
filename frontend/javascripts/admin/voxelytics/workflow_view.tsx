@@ -340,16 +340,21 @@ export default function WorkflowView() {
     refetch,
   } = useQuery({
     queryKey: ["voxelyticsWorkflow", workflowHash],
-    queryFn: async () => parseReport(await getVoxelyticsWorkflow(workflowHash, null)),
+    queryFn: async () => await getVoxelyticsWorkflow(workflowHash, null),
     // If a meta task is passed via a URL parameter, the entire report is filtered so that only the
     // tasks of the given meta task are shown (left-hand as well as right-hand side).
-    select: (data) => (metatask != null ? selectMetaTask(data, metatask) : data),
+    select: (data) => {
+      const parsedReport = parseReport(data);
+      return metatask != null ? selectMetaTask(parsedReport, metatask) : parsedReport;
+    },
     refetchInterval: (query) => {
       const data = query.state.data;
       return data == null || data.runs.some((run) => run.state === VoxelyticsRunState.RUNNING)
         ? (VX_POLLING_INTERVAL ?? false)
         : false;
     },
+    staleTime: 0, // disable caching
+    gcTime: 0, // disable garbage collection
   });
 
   const { data: accessibleOrganization } = useQuery({

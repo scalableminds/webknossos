@@ -49,10 +49,17 @@ export const viteConfig = {
     sourcemap: true,
     rolldownOptions: {
       output: {
-        manualChunks(id) {
-          if (id.includes("node_modules/html2canvas")) {
-            return "html2canvas";
-          }
+        codeSplitting: {
+          minSize: 250000, // 250KB global minimum chunk size to avoid small artifacts
+          groups: [
+            {
+              name: "vendor",
+              test: /[\\/]node_modules[\\/]/,
+              minSize: 250000, // 250KB minimum size for vendor chunks
+              maxSize: 1000000, // 1MB maximum size per vendor chunk (prevents monolithic bundle)
+              priority: 10,
+            },
+          ],
         },
       },
     },

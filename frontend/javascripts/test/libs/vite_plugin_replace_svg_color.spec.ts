@@ -1,3 +1,4 @@
+// @ts-expect-error @babel/core types are not installed; assuming any
 import { transformAsync as transformWithBabel } from "@babel/core";
 import { transform as transformWithSvgr } from "@svgr/core";
 import { describe, expect, it } from "vitest";

@@ -15,6 +15,7 @@ import SkeletonIcon from "@images/icons/icon-skeleton.svg?react";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
+import type { ReactElement } from "react";
 import { useDispatch } from "react-redux";
 import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
@@ -26,7 +27,6 @@ import {
 import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";
 import type { WebknossosState } from "viewer/store";
 import { NARROW_BUTTON_STYLE, ToolRadioButton } from "./tool_helpers";
-import type { ReactElement } from "react";
 
 type ToolButtonProps = { adaptedActiveTool: AnnotationTool };
 

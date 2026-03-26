@@ -14,7 +14,7 @@ export const DEFAULT_ORTHO_BOUNDING_BOX_NO_LOOPED_KEYBOARD_SHORTCUTS: KeyboardSh
   {
     [OrthoBoundingBoxNoLoopedKeyboardShortcuts.CREATE_BOUNDING_BOX]: [[["c"]]],
     [OrthoBoundingBoxNoLoopedKeyboardShortcuts.TOGGLE_CURSOR_STATE_FOR_MOVING]: [
-      [["ctrl"], ["meta"]],
+      [["Control"], ["Meta"]],
     ],
   };
 

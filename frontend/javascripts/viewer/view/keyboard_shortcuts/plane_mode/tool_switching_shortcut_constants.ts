@@ -20,29 +20,35 @@ export enum PlaneControllerToolSwitchingKeyboardShortcuts {
 
 export const DEFAULT_PLANE_TOOL_SWITCHING_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<PlaneControllerToolSwitchingKeyboardShortcuts> =
   {
-    [PlaneControllerToolSwitchingKeyboardShortcuts.SWITCH_TO_MOVE_TOOL]: [[["ctrl", "k"], ["m"]]],
+    [PlaneControllerToolSwitchingKeyboardShortcuts.SWITCH_TO_MOVE_TOOL]: [
+      [["Control", "k"], ["m"]],
+    ],
     [PlaneControllerToolSwitchingKeyboardShortcuts.SWITCH_TO_SKELETON_TOOL]: [
-      [["ctrl", "k"], ["s"]],
+      [["Control", "k"], ["s"]],
     ],
-    [PlaneControllerToolSwitchingKeyboardShortcuts.SWITCH_TO_BRUSH_TOOL]: [[["ctrl", "k"], ["b"]]],
+    [PlaneControllerToolSwitchingKeyboardShortcuts.SWITCH_TO_BRUSH_TOOL]: [
+      [["Control", "k"], ["b"]],
+    ],
     [PlaneControllerToolSwitchingKeyboardShortcuts.SWITCH_TO_BRUSH_ERASE_TOOL]: [
-      [["ctrl", "k"], ["e"]],
+      [["Control", "k"], ["e"]],
     ],
-    [PlaneControllerToolSwitchingKeyboardShortcuts.SWITCH_TO_LASSO_TOOL]: [[["ctrl", "k"], ["l"]]],
+    [PlaneControllerToolSwitchingKeyboardShortcuts.SWITCH_TO_LASSO_TOOL]: [
+      [["Control", "k"], ["l"]],
+    ],
     [PlaneControllerToolSwitchingKeyboardShortcuts.SWITCH_TO_LASSO_ERASE_TOOL]: [
-      [["ctrl", "k"], ["r"]],
+      [["Control", "k"], ["r"]],
     ],
     [PlaneControllerToolSwitchingKeyboardShortcuts.SWITCH_TO_SEGMENT_PICKER_TOOL]: [
-      [["ctrl", "k"], ["p"]],
+      [["Control", "k"], ["p"]],
     ],
     [PlaneControllerToolSwitchingKeyboardShortcuts.SWITCH_TO_QUICK_SELECT_TOOL]: [
-      [["ctrl", "k"], ["q"]],
+      [["Control", "k"], ["q"]],
     ],
     [PlaneControllerToolSwitchingKeyboardShortcuts.SWITCH_TO_BOUNDING_BOX_TOOL]: [
-      [["ctrl", "k"], ["x"]],
+      [["Control", "k"], ["x"]],
     ],
     [PlaneControllerToolSwitchingKeyboardShortcuts.SWITCH_TO_PROOFREADING_TOOL]: [
-      [["ctrl", "k"], ["q"]],
+      [["Control", "k"], ["q"]],
     ],
   } as const;
 

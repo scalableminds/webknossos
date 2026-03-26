@@ -20,73 +20,9 @@ import type {
 } from "./keyboard_shortcut_types";
 
 const { Text } = Typography;
-export const MODIFIER_KEYS = new Set(["ctrl", "super", "alt", "shift"]);
+export const MODIFIER_KEYS = new Set(["Control", "Meta", "Meta", "Alt", "Shift"]);
 
 // TODOM Refactor to not converte between keyevent name and back too often!
-export function normalizeKeyName(raw: string): string {
-  if (!raw) return raw;
-  // unify common names
-  switch (raw) {
-    case " ":
-      return "space";
-    case "Esc":
-    case "Escape":
-      return "esc";
-    case "ArrowLeft":
-      return "left";
-    case "ArrowRight":
-      return "right";
-    case "ArrowUp":
-      return "up";
-    case "ArrowDown":
-      return "down";
-    case "Meta":
-      return "super";
-    case "Control":
-      return "ctrl";
-    case "Alt":
-      return "alt";
-    case "Shift":
-      return "shift";
-    case "Enter":
-      return "enter";
-    case "Backspace":
-      return "backspace";
-    case "Delete":
-      return "delete";
-    case "Tab":
-      return "tab";
-    default:
-      // use lowercased printable
-      return raw.length === 1 ? raw.toLowerCase() : raw.toLowerCase();
-  }
-}
-
-export function keyToKeyEventName(raw: string): string {
-  if (!raw) return raw;
-  // unify common names
-  switch (raw) {
-    case " ":
-    case "spacebar":
-      return "space";
-    case "esc":
-      return "escape";
-    case "left":
-      return "arrowleft";
-    case "right":
-      return "arrowright";
-    case "up":
-      return "arrowup";
-    case "down":
-      return "arrowdown";
-    case "meta":
-      return "super";
-    case "ctrl":
-      return "control";
-    default:
-      return raw;
-  }
-}
 
 export function keyToUiElement(key: string): React.ReactNode {
   switch (key) {
@@ -94,33 +30,23 @@ export function keyToUiElement(key: string): React.ReactNode {
       return "Space";
     case "esc":
     case "escape":
-      return "esc";
-    case "arrowLeft":
+      return "Esc";
+    case "ArrowLeft":
       return "◀";
-    case "arrowRight":
+    case "ArrowRight":
       return "▶";
-    case "arrowUp":
+    case "ArrowUp":
       return "▲";
-    case "arrowDown":
+    case "ArrowDown":
       return "▼";
-    case "meta":
-      return <MacCommandOutlined />;
-    case "super":
-      return <WindowsOutlined />;
-    case "control":
+    case "Meta":
+      return (
+        <>
+          <MacCommandOutlined />/<WindowsOutlined />
+        </>
+      );
+    case "Control":
       return "Ctrl";
-    case "alt":
-      return "Alt";
-    case "shift":
-      return "Shift";
-    case "enter":
-      return "Enter";
-    case "backspace":
-      return "Backspace";
-    case "delete":
-      return "Delete";
-    case "tab":
-      return "Tab";
 
     default:
       return key;
@@ -138,7 +64,7 @@ function escapeReservedKeystrokeCharacters(key: string): string {
 function sortKeyCombo(combo: string[]): string[] {
   // Ensure modifiers appear first in canonical order,
   // then non-modifier keys in the order they were pressed (preserved in `order`)
-  const modifiersOrder = ["ctrl", "meta", "super", "alt", "shift"];
+  const modifiersOrder = ["Control", "Meta", "Meta", "Alt", "Shift"];
   const presentModifiers: string[] = [];
   const nonModifiers: string[] = [];
 
@@ -165,12 +91,12 @@ function sortKeyCombo(combo: string[]): string[] {
   return [...presentModifiers, ...nonModifiers];
 }
 
-export function formatKeyCombo(combo: string[]): string | React.ReactNode[] {
+export function formatKeyCombo(combo: string[]): string {
   // Ensure modifiers appear first in canonical order,
   // then non-modifier keys in the order they were pressed (preserved in `order`)
-  return sortKeyCombo(combo).map((key) =>
-    escapeReservedKeystrokeCharacters(keyToKeyEventName(key)),
-  );
+  return sortKeyCombo(combo)
+    .map((key) => escapeReservedKeystrokeCharacters(key))
+    .join(" + ");
 }
 
 export function keyComboChainToKeystrokesConfig(comboChain: KeyboardComboChain): string {

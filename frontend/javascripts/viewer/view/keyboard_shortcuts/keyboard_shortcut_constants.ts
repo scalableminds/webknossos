@@ -66,9 +66,9 @@ export enum GeneralKeyboardShortcuts {
 }
 
 export const DEFAULT_GENERAL_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<GeneralKeyboardShortcuts> = {
-  [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_PLANE]: [[["shift", "1"]]],
-  [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_ARBITRARY]: [[["shift", "2"]]],
-  [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_ARBITRARY_PLANE]: [[["shift", "3"]]],
+  [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_PLANE]: [[["Shift", "1"]]],
+  [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_ARBITRARY]: [[["Shift", "2"]]],
+  [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_ARBITRARY_PLANE]: [[["Shift", "3"]]],
   [GeneralKeyboardShortcuts.CYCLE_VIEWMODE]: [[["m"]]],
   [GeneralKeyboardShortcuts.TOGGLE_SEGMENTATION]: [[["3"]]],
 } as const;
@@ -102,9 +102,9 @@ export enum GeneralEditingKeyboardShortcuts {
 
 export const DEFAULT_GENERAL_EDITING_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<GeneralEditingKeyboardShortcuts> =
   {
-    [GeneralEditingKeyboardShortcuts.SAVE]: [[["super", "s"]], [["ctrl", "s"]]],
-    [GeneralEditingKeyboardShortcuts.UNDO]: [[["super", "z"]], [["ctrl", "z"]]],
-    [GeneralEditingKeyboardShortcuts.REDO]: [[["super", "y"]], [["ctrl", "y"]]],
+    [GeneralEditingKeyboardShortcuts.SAVE]: [[["Meta", "s"]], [["Control", "s"]]],
+    [GeneralEditingKeyboardShortcuts.UNDO]: [[["Meta", "z"]], [["Control", "z"]]],
+    [GeneralEditingKeyboardShortcuts.REDO]: [[["Meta", "y"]], [["Control", "y"]]],
   } as const;
 
 const GeneralEditingKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<GeneralEditingKeyboardShortcuts> =

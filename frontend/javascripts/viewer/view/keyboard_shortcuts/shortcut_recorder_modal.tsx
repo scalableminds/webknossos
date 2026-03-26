@@ -1,17 +1,17 @@
 import { Button, Flex, Modal, Typography } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { KeyboardComboChain } from "./keyboard_shortcut_types";
-import { keyComboChainToUiElements, normalizeKeyName } from "./keyboard_shortcut_utils";
+import { keyComboChainToUiElements } from "./keyboard_shortcut_utils";
 
 const { Text } = Typography;
 
-const SampleKeyCombo: KeyboardComboChain = [["ctrl", "a"], ["o"]];
+const SampleKeyCombo: KeyboardComboChain = [["Control", "a"], ["o"]];
 
 type ShortcutRecorderModalProps = {
   isOpen: boolean;
   initialKeyComboChain?: KeyboardComboChain; // optional preview of current binding
   onCancel: () => void; // do not overwrite
-  onSave: (newKeyComboChain: KeyboardComboChain) => void; // returns final combo like [["ctrl", "a"], ["o"]]
+  onSave: (newKeyComboChain: KeyboardComboChain) => void; // returns final combo like [["Control", "a"], ["o"]]
 };
 
 export function ShortcutRecorderModal({
@@ -56,35 +56,33 @@ export function ShortcutRecorderModal({
       e.preventDefault();
       e.stopPropagation();
 
-      const raw = e.key;
-      const normalized = normalizeKeyName(raw);
+      const pressedKeyId = e.key;
 
       // ignore repeated keydown for held keys (auto-repeat)
-      if (currentDownSetRef.current.has(normalized)) {
+      if (currentDownSetRef.current.has(pressedKeyId)) {
         return;
       }
-      currentDownSetRef.current.add(normalized);
+      currentDownSetRef.current.add(pressedKeyId);
 
-      if (currentSeenSetRef.current.has(normalized)) {
+      if (currentSeenSetRef.current.has(pressedKeyId)) {
         return;
       }
 
       // add to currentDown set & order
-      currentSeenSetRef.current.add(normalized);
+      currentSeenSetRef.current.add(pressedKeyId);
 
       // Update the preview state
-      setPreviewKeyCombo((prevPreviewStroke) => [...prevPreviewStroke, normalized]);
+      setPreviewKeyCombo((prevPreviewStroke) => [...prevPreviewStroke, pressedKeyId]);
     }
 
     function handleKeyUp(e: KeyboardEvent) {
       e.preventDefault();
       e.stopPropagation();
 
-      const raw = e.key;
-      const normalized = normalizeKeyName(raw);
+      const pressedKeyId = e.key;
 
       // Remove from currentDown
-      currentDownSetRef.current.delete(normalized);
+      currentDownSetRef.current.delete(pressedKeyId);
       // Keep order array coherent: don't remove the entry from the order array (we only use order snapshot)
       // We only finalize when *no* keys remain pressed.
 

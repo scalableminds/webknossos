@@ -20,16 +20,16 @@ export enum PlaneControllerLoopedNavigationKeyboardShortcuts {
 
 export const DEFAULT_PLANE_LOOPED_NAVIGATION_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<PlaneControllerLoopedNavigationKeyboardShortcuts> =
   {
-    [PlaneControllerLoopedNavigationKeyboardShortcuts.MOVE_LEFT]: [[["left"]]],
-    [PlaneControllerLoopedNavigationKeyboardShortcuts.MOVE_RIGHT]: [[["right"]]],
-    [PlaneControllerLoopedNavigationKeyboardShortcuts.MOVE_UP]: [[["up"]]],
-    [PlaneControllerLoopedNavigationKeyboardShortcuts.MOVE_DOWN]: [[["down"]]],
-    [PlaneControllerLoopedNavigationKeyboardShortcuts.YAW_LEFT]: [[["shift", "left"]]],
-    [PlaneControllerLoopedNavigationKeyboardShortcuts.YAW_RIGHT]: [[["shift", "right"]]],
-    [PlaneControllerLoopedNavigationKeyboardShortcuts.PITCH_UP]: [[["shift", "up"]]],
-    [PlaneControllerLoopedNavigationKeyboardShortcuts.PITCH_DOWN]: [[["shift", "down"]]],
-    [PlaneControllerLoopedNavigationKeyboardShortcuts.ALT_ROLL_LEFT]: [[["alt", "left"]]],
-    [PlaneControllerLoopedNavigationKeyboardShortcuts.ALT_ROLL_RIGHT]: [[["alt", "right"]]],
+    [PlaneControllerLoopedNavigationKeyboardShortcuts.MOVE_LEFT]: [[["ArrowLeft"]]],
+    [PlaneControllerLoopedNavigationKeyboardShortcuts.MOVE_RIGHT]: [[["ArrowRight"]]],
+    [PlaneControllerLoopedNavigationKeyboardShortcuts.MOVE_UP]: [[["ArrowUp"]]],
+    [PlaneControllerLoopedNavigationKeyboardShortcuts.MOVE_DOWN]: [[["ArrowDown"]]],
+    [PlaneControllerLoopedNavigationKeyboardShortcuts.YAW_LEFT]: [[["Shift", "ArrowLeft"]]],
+    [PlaneControllerLoopedNavigationKeyboardShortcuts.YAW_RIGHT]: [[["Shift", "ArrowRight"]]],
+    [PlaneControllerLoopedNavigationKeyboardShortcuts.PITCH_UP]: [[["Shift", "ArrowUp"]]],
+    [PlaneControllerLoopedNavigationKeyboardShortcuts.PITCH_DOWN]: [[["Shift", "ArrowDown"]]],
+    [PlaneControllerLoopedNavigationKeyboardShortcuts.ALT_ROLL_LEFT]: [[["Alt", "ArrowLeft"]]],
+    [PlaneControllerLoopedNavigationKeyboardShortcuts.ALT_ROLL_RIGHT]: [[["Alt", "ArrowRight"]]],
   } as const;
 
 export const PlaneNavigationKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<PlaneControllerLoopedNavigationKeyboardShortcuts> =
@@ -76,16 +76,16 @@ export enum PlaneControllerLoopDelayedNavigationKeyboardShortcuts {
 export const DEFAULT_PLANE_LOOP_DELAYED_NAVIGATION_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<PlaneControllerLoopDelayedNavigationKeyboardShortcuts> =
   {
     [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_MULTIPLE_FORWARD]: [
-      [["shift", "f"]],
+      [["Shift", "f"]],
     ],
     [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_MULTIPLE_BACKWARD]: [
-      [["shift", "d"]],
+      [["Shift", "d"]],
     ],
     [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_BACKWARD]: [
-      [["shift", "space"]],
-      [["ctrl", "space"]],
+      [["Shift", "Space"]],
+      [["Control", "Space"]],
     ],
-    [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_FORWARD]: [[["space"]]],
+    [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_FORWARD]: [[["Space"]]],
     [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_FORWARD_DIRECTION_AWARE]: [
       [["f"]],
     ],
@@ -141,7 +141,7 @@ export const DEFAULT_PLANE_NO_LOOPED_GENERAL_KEYBOARD_SHORTCUTS: KeyboardShortcu
   {
     [PlaneControllerNoLoopGeneralKeyboardShortcuts.DOWNLOAD_SCREENSHOT]: [[["q"]]],
     [PlaneControllerNoLoopGeneralKeyboardShortcuts.CYCLE_TOOLS]: [[["w"]]],
-    [PlaneControllerNoLoopGeneralKeyboardShortcuts.CYCLE_TOOLS_BACKWARDS]: [[["shift", "w"]]],
+    [PlaneControllerNoLoopGeneralKeyboardShortcuts.CYCLE_TOOLS_BACKWARDS]: [[["Shift", "w"]]],
   } as const;
 
 export const PlaneGeneralKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<PlaneControllerNoLoopGeneralKeyboardShortcuts> =

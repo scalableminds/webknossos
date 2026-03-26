@@ -25,8 +25,8 @@ export const DEFAULT_ORTHO_SKELETON_NO_LOOPED_KEYBOARD_SHORTCUTS: KeyboardShortc
     [OrthoSkeletonNoLoopedKeyboardShortcuts.TOGGLE_INACTIVE_TREES_PLANE]: [[["2"]]],
     // Delete active node
     [OrthoSkeletonNoLoopedKeyboardShortcuts.DELETE_ACTIVE_NODE_PLANE]: [
-      [["delete"]],
-      [["backspace"]],
+      [["Delete"]],
+      [["Backspace"]],
     ],
     [OrthoSkeletonNoLoopedKeyboardShortcuts.CREATE_TREE_PLANE]: [[["c"]]],
     [OrthoSkeletonNoLoopedKeyboardShortcuts.MOVE_ALONG_DIRECTION]: [[["e"]]],
@@ -36,8 +36,8 @@ export const DEFAULT_ORTHO_SKELETON_NO_LOOPED_KEYBOARD_SHORTCUTS: KeyboardShortc
     [OrthoSkeletonNoLoopedKeyboardShortcuts.DELETE_BRANCH_POINT_PLANE]: [[["j"]]],
     [OrthoSkeletonNoLoopedKeyboardShortcuts.RECENTER_ACTIVE_NODE_PLANE]: [[["s"]]],
     // navigate nodes
-    [OrthoSkeletonNoLoopedKeyboardShortcuts.NEXT_NODE_BACKWARD_PLANE]: [[["ctrl", ","]]],
-    [OrthoSkeletonNoLoopedKeyboardShortcuts.NEXT_NODE_FORWARD_PLANE]: [[["ctrl", "."]]],
+    [OrthoSkeletonNoLoopedKeyboardShortcuts.NEXT_NODE_BACKWARD_PLANE]: [[["Control", ","]]],
+    [OrthoSkeletonNoLoopedKeyboardShortcuts.NEXT_NODE_FORWARD_PLANE]: [[["Control", "."]]],
   };
 
 export const OrthoSkeletonNoLoopedKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<OrthoSkeletonNoLoopedKeyboardShortcuts> =
@@ -86,10 +86,10 @@ export enum OrthoSkeletonLoopedKeyboardShortcuts {
 
 export const DEFAULT_ORTHO_SKELETON_LOOPED_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<OrthoSkeletonLoopedKeyboardShortcuts> =
   {
-    [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_LEFT]: [[["ctrl", "left"]]],
-    [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_RIGHT]: [[["ctrl", "right"]]],
-    [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_UP]: [[["ctrl", "up"]]],
-    [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_DOWN]: [[["ctrl", "down"]]],
+    [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_LEFT]: [[["Control", "ArrowLeft"]]],
+    [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_RIGHT]: [[["Control", "ArrowRight"]]],
+    [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_UP]: [[["Control", "ArrowUp"]]],
+    [OrthoSkeletonLoopedKeyboardShortcuts.MOVE_NODE_DOWN]: [[["Control", "ArrowDown"]]],
   };
 
 export const OrthoSkeletonLoopedKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<OrthoSkeletonLoopedKeyboardShortcuts> =

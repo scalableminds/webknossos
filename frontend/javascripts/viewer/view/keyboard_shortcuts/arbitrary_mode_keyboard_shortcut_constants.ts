@@ -25,30 +25,36 @@ export enum ArbitraryControllerNavigationKeyboardShortcuts {
 
 export const DEFAULT_ARBITRARY_NAVIGATION_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<ArbitraryControllerNavigationKeyboardShortcuts> =
   {
-    [ArbitraryControllerNavigationKeyboardShortcuts.MOVE_FORWARD_WITH_RECORDING]: [[["space"]]],
+    [ArbitraryControllerNavigationKeyboardShortcuts.MOVE_FORWARD_WITH_RECORDING]: [[["Space"]]],
     [ArbitraryControllerNavigationKeyboardShortcuts.MOVE_BACKWARD_WITH_RECORDING]: [
-      [["ctrl", "space"]],
+      [["Control", "Space"]],
     ],
     [ArbitraryControllerNavigationKeyboardShortcuts.MOVE_FORWARD_WITHOUT_RECORDING]: [[["f"]]],
     [ArbitraryControllerNavigationKeyboardShortcuts.MOVE_BACKWARD_WITHOUT_RECORDING]: [[["d"]]],
     [ArbitraryControllerNavigationKeyboardShortcuts.YAW_FLYCAM_POSITIVE_AT_CENTER]: [
-      [["shift", "left"]],
+      [["Shift", "ArrowLeft"]],
     ],
     [ArbitraryControllerNavigationKeyboardShortcuts.YAW_FLYCAM_INVERTED_AT_CENTER]: [
-      [["shift", "right"]],
+      [["Shift", "ArrowRight"]],
     ],
     [ArbitraryControllerNavigationKeyboardShortcuts.PITCH_FLYCAM_POSITIVE_AT_CENTER]: [
-      [["shift", "up"]],
+      [["Shift", "ArrowUp"]],
     ],
     [ArbitraryControllerNavigationKeyboardShortcuts.PITCH_FLYCAM_INVERTED_AT_CENTER]: [
-      [["shift", "down"]],
+      [["Shift", "ArrowDown"]],
     ],
-    [ArbitraryControllerNavigationKeyboardShortcuts.YAW_FLYCAM_POSITIVE_IN_DISTANCE]: [[["left"]]],
-    [ArbitraryControllerNavigationKeyboardShortcuts.YAW_FLYCAM_INVERTED_IN_DISTANCE]: [[["right"]]],
+    [ArbitraryControllerNavigationKeyboardShortcuts.YAW_FLYCAM_POSITIVE_IN_DISTANCE]: [
+      [["ArrowLeft"]],
+    ],
+    [ArbitraryControllerNavigationKeyboardShortcuts.YAW_FLYCAM_INVERTED_IN_DISTANCE]: [
+      [["ArrowRight"]],
+    ],
     [ArbitraryControllerNavigationKeyboardShortcuts.PITCH_FLYCAM_POSITIVE_IN_DISTANCE]: [
-      [["down"]],
+      [["ArrowDown"]],
     ],
-    [ArbitraryControllerNavigationKeyboardShortcuts.PITCH_FLYCAM_INVERTED_IN_DISTANCE]: [[["up"]]],
+    [ArbitraryControllerNavigationKeyboardShortcuts.PITCH_FLYCAM_INVERTED_IN_DISTANCE]: [
+      [["ArrowUp"]],
+    ],
     [ArbitraryControllerNavigationKeyboardShortcuts.ZOOM_IN_ARBITRARY]: [[["i"]]],
     [ArbitraryControllerNavigationKeyboardShortcuts.ZOOM_OUT_ARBITRARY]: [[["o"]]],
   } as const;
@@ -144,9 +150,9 @@ export const DEFAULT_ARBITRARY_NO_LOOP_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<
     [ArbitraryControllerNoLoopKeyboardShortcuts.TOGGLE_ALL_TREES_ARBITRARY]: [[["1"]]],
     [ArbitraryControllerNoLoopKeyboardShortcuts.TOGGLE_INACTIVE_TREES_ARBITRARY]: [[["2"]]],
     [ArbitraryControllerNoLoopKeyboardShortcuts.DELETE_ACTIVE_NODE_ARBITRARY]: [
-      [["delete"]],
-      [["backspace"]],
-      [["shift", "space"]],
+      [["Delete"]],
+      [["Backspace"]],
+      [["Shift", "Space"]],
     ],
     [ArbitraryControllerNoLoopKeyboardShortcuts.CREATE_TREE_ARBITRARY]: [[["c"]]],
     [ArbitraryControllerNoLoopKeyboardShortcuts.CREATE_BRANCH_POINT_ARBITRARY]: [[["b"]]],

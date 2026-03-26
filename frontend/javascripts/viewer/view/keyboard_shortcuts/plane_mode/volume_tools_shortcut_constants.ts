@@ -18,10 +18,10 @@ export const DEFAULT_ORTHO_VOLUME_NO_LOOPED_KEYBOARD_SHORTCUTS: KeyboardShortcut
   {
     [OrthoVolumeNoLoopedKeyboardShortcuts.CREATE_NEW_CELL]: [[["c"]]],
     [OrthoVolumeNoLoopedKeyboardShortcuts.INTERPOLATE_SEGMENTATION]: [[["v"]]],
-    [OrthoVolumeNoLoopedKeyboardShortcuts.COPY_SEGMENT_ID]: [[["ctrl", "i"]]],
-    [OrthoVolumeNoLoopedKeyboardShortcuts.BRUSH_PRESET_SMALL]: [[["ctrl", "k"], ["1"]]],
-    [OrthoVolumeNoLoopedKeyboardShortcuts.BRUSH_PRESET_MEDIUM]: [[["ctrl", "k"], ["2"]]],
-    [OrthoVolumeNoLoopedKeyboardShortcuts.BRUSH_PRESET_LARGE]: [[["ctrl", "k"], ["3"]]],
+    [OrthoVolumeNoLoopedKeyboardShortcuts.COPY_SEGMENT_ID]: [[["Control", "i"]]],
+    [OrthoVolumeNoLoopedKeyboardShortcuts.BRUSH_PRESET_SMALL]: [[["Control", "k"], ["1"]]],
+    [OrthoVolumeNoLoopedKeyboardShortcuts.BRUSH_PRESET_MEDIUM]: [[["Control", "k"], ["2"]]],
+    [OrthoVolumeNoLoopedKeyboardShortcuts.BRUSH_PRESET_LARGE]: [[["Control", "k"], ["3"]]],
   };
 
 export const OrthoVolumeNoLoopedKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<OrthoVolumeNoLoopedKeyboardShortcuts> =
@@ -57,8 +57,8 @@ export enum OrthoVolumeLoopDelayedConfigKeyboardShortcuts {
 }
 export const DEFAULT_ORTHO_VOLUME_LOOP_DELAYED_CONFIG_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<OrthoVolumeLoopDelayedConfigKeyboardShortcuts> =
   {
-    [OrthoVolumeLoopDelayedConfigKeyboardShortcuts.DECREASE_BRUSH_SIZE]: [[["shift", "i"]]],
-    [OrthoVolumeLoopDelayedConfigKeyboardShortcuts.INCREASE_BRUSH_SIZE]: [[["shift", "o"]]],
+    [OrthoVolumeLoopDelayedConfigKeyboardShortcuts.DECREASE_BRUSH_SIZE]: [[["Shift", "i"]]],
+    [OrthoVolumeLoopDelayedConfigKeyboardShortcuts.INCREASE_BRUSH_SIZE]: [[["Shift", "o"]]],
   };
 
 export const OrthoVolumeLoopDelayedConfigKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<OrthoVolumeLoopDelayedConfigKeyboardShortcuts> =

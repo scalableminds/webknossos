@@ -11,6 +11,7 @@
     "strict": true,
     "target": "esnext",
     "skipLibCheck": true, //reconsider this later
+    "lib": ["dom", "esnext"],
     "allowSyntheticDefaultImports": true,
     "paths": {
       "@images/*": ["./frontend/assets/images/*"],

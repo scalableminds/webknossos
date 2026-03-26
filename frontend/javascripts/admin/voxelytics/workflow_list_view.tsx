@@ -201,7 +201,7 @@ export default function WorkflowListView() {
                     {run.workflowName} ({run.workflowHash})
                   </Link>
                 ) : (
-                  <Link to={`/workflows/${run.workflowHash}?runId=${encodeURIComponent(run.id)}`}>
+                  <Link to={`/workflows/${run.workflowHash}/run/${encodeURIComponent(run.id)}`}>
                     {run.name}
                   </Link>
                 ),

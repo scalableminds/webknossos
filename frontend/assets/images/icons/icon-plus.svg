@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 <svg width="100%" height="100%" viewBox="0 0 1024 1024" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:1.4;">
-    <g transform="matrix(1,0,0,1,0,-3795)">
-        <g id="icon-lasso" transform="matrix(1,0,0,1,-6.30607e-14,3795)">
+    <g transform="matrix(1,0,0,1,-3850,-1226)">
+        <g id="icon-plus" transform="matrix(1,0,0,1,3850,1226)">
             <rect x="0" y="0" width="1024" height="1024" style="fill:none;"/>
-            <g transform="matrix(1.27273,0,0,1.39752,-221.091,-5503.68)">
-                <ellipse cx="576" cy="4241.99" rx="352" ry="224" style="fill:none;stroke:black;stroke-width:53.87px;"/>
+            <g transform="matrix(1,0,0,1,-3879.3,-1242.09)">
+                <path d="M4391.3,1306.09L4391.3,2202.09" style="fill:none;stroke:black;stroke-width:72px;"/>
             </g>
-            <g transform="matrix(1.36655,0,0,1.16667,148.069,-4522.36)">
-                <path d="M90.095,4460.21C72.833,4318.62 -37.384,4496.48 90.095,4460.21C116.554,4452.68 -7.604,4620.14 131.905,4684.21" style="fill:none;stroke:black;stroke-width:56.67px;"/>
+            <g transform="matrix(1,0,0,1,-3879.3,-1242.09)">
+                <path d="M3943.3,1754.09L4839.3,1754.09" style="fill:none;stroke:black;stroke-width:72px;"/>
             </g>
         </g>
     </g>

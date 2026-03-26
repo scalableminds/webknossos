@@ -50,7 +50,7 @@ export function BoundingBoxSelection({
   showVolume?: boolean;
   style?: React.CSSProperties;
   value: number | null;
-}): JSX.Element {
+}) {
   const filterOption = useCallback(
     (input: string, option?: ArrayElement<SelectProps["options"]>) =>
       // @ts-expect-error: option.label is a React component / React.Node

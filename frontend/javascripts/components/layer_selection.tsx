@@ -29,7 +29,7 @@ export function LayerSelection<L extends { name: string }>({
   // default property names for controlled antd FormItems.
   onChange?: (a: string) => void;
   value?: string | null;
-}): JSX.Element {
+}) {
   const onSelect = onChange ? (layerName: string) => onChange(layerName) : undefined;
   const maybeLayerType = layerType || "";
   const maybeSpace = layerType != null ? " " : "";
@@ -67,7 +67,7 @@ export function LayerSelectionFormItem<L extends { name: string }>({
   fixedLayerName,
   label,
   onChange,
-}: LayerSelectionProps<L>): JSX.Element {
+}: LayerSelectionProps<L>) {
   const layerType = chooseSegmentationLayer ? "segmentation" : "color";
   return (
     <Form.Item

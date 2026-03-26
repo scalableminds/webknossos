@@ -10,7 +10,7 @@ export function MagSelectionFormItem({
 }: {
   name: string | Array<string | number>;
   magInfo: MagInfo | undefined;
-}): JSX.Element {
+}) {
   return (
     <Form.Item
       name={name}
@@ -35,7 +35,7 @@ function MagSelection({
   magInfo: MagInfo | undefined;
   value?: Vector3;
   onChange?: (newValue: Vector3) => void;
-}): JSX.Element {
+}) {
   const allMags = magInfo != null ? magInfo.getMagList() : [];
 
   const onSelect = (index: number | undefined) => {

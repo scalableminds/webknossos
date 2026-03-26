@@ -26,7 +26,7 @@ export function BoundingBoxSelectionFormItem({
   showVolume = false,
   onChangeSelectedBoundingBox,
   value: selectedBoundingBoxId,
-}: BoundingBoxSelectionProps): JSX.Element {
+}: BoundingBoxSelectionProps) {
   const dataset = useWkSelector((state) => state.dataset);
   const isInDatasetViewMode = useWkSelector(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,

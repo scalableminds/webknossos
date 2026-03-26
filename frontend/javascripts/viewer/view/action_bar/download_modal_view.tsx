@@ -278,7 +278,7 @@ function _DownloadModalView({
   isAnnotation,
   initialTab,
   initialBoundingBoxId,
-}: Props): JSX.Element {
+}: Props) {
   const activeUser = useWkSelector((state) => state.activeUser);
   const annotation = useWkSelector((state) => state.annotation);
   const dataset = useWkSelector((state) => state.dataset);

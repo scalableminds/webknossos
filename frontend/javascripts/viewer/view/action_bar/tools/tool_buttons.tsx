@@ -26,6 +26,7 @@ import {
 import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";
 import type { WebknossosState } from "viewer/store";
 import { NARROW_BUTTON_STYLE, ToolRadioButton } from "./tool_helpers";
+import type { ReactElement } from "react";
 
 type ToolButtonProps = { adaptedActiveTool: AnnotationTool };
 
@@ -34,7 +35,7 @@ const ERASER_OFFSET_LEFT = -35.2; // button width 34.2px + 1px border
 
 export const ToolIdToComponent: Record<
   AnnotationToolId,
-  (p: ToolButtonProps) => JSX.Element | null
+  (p: ToolButtonProps) => ReactElement | null
 > = {
   [AnnotationTool.MOVE.id]: MoveTool,
   [AnnotationTool.SKELETON.id]: SkeletonTool,

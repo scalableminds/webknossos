@@ -1,5 +1,5 @@
 import {
-  KeyboardShortcutCollisionDomain,
+  KeyboardShortcutCollisionEntityName,
   KeyboardShortcutDomain,
   type KeyboardShortcutHandlerMetaInfoMap,
   type KeyboardShortcutMetaInfo,
@@ -98,7 +98,7 @@ export const ArbitraryNavigationKeyboardShortcutMetaInfo: KeyboardShortcutHandle
               description,
               domain: KeyboardShortcutDomain.ARBITRARY_NAVIGATION,
               looped: true,
-              collisionDomains: [KeyboardShortcutCollisionDomain.ARBITRARY_MODE],
+              collisionEntityName: KeyboardShortcutCollisionEntityName.ARBITRARY_MODE,
             },
           ] as [ArbitraryControllerNavigationKeyboardShortcuts, KeyboardShortcutMetaInfo],
       ),
@@ -121,13 +121,13 @@ export const ArbitraryNavigationConfigKeyboardShortcutMetaInfo: KeyboardShortcut
       description: "Increase move value",
       domain: KeyboardShortcutDomain.ARBITRARY_NAVIGATION,
       looped: false,
-      collisionDomains: [KeyboardShortcutCollisionDomain.ARBITRARY_MODE],
+      collisionEntityName: KeyboardShortcutCollisionEntityName.ARBITRARY_MODE,
     },
     [ArbitraryControllerNavigationConfigKeyboardShortcuts.DECREASE_MOVE_VALUE_ARBITRARY]: {
       description: "Decrease move value",
       domain: KeyboardShortcutDomain.ARBITRARY_NAVIGATION,
       looped: false,
-      collisionDomains: [KeyboardShortcutCollisionDomain.ARBITRARY_MODE],
+      collisionEntityName: KeyboardShortcutCollisionEntityName.ARBITRARY_MODE,
     },
   };
 
@@ -195,7 +195,7 @@ export const ArbitraryNoLoopKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMet
               description,
               domain: KeyboardShortcutDomain.ARBITRARY_EDITING,
               looped: false,
-              collisionDomains: [KeyboardShortcutCollisionDomain.ARBITRARY_MODE],
+              collisionEntityName: KeyboardShortcutCollisionEntityName.ARBITRARY_MODE,
             },
           ] as [ArbitraryControllerNoLoopKeyboardShortcuts, KeyboardShortcutMetaInfo],
       ),

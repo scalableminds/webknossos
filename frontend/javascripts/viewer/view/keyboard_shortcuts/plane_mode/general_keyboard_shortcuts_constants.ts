@@ -1,7 +1,8 @@
 import {
-  KeyboardShortcutCollisionDomain,
+  KeyboardShortcutCollisionEntityName,
   KeyboardShortcutDomain,
   type KeyboardShortcutHandlerMetaInfoMap,
+  type KeyboardShortcutMetaInfo,
   type KeyboardShortcutsMap,
 } from "../keyboard_shortcut_types";
 
@@ -47,15 +48,18 @@ export const PlaneNavigationKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMet
       [PlaneControllerLoopedNavigationKeyboardShortcuts.ALT_ROLL_RIGHT]: "Roll right", // TODOM check for correct naming
     };
     return Object.fromEntries(
-      Object.entries(withDescription).map(([handlerId, description]) => [
-        handlerId,
-        {
-          description,
-          domain: KeyboardShortcutDomain.PLANE_NAVIGATION,
-          looped: true,
-          collisionDomains: [KeyboardShortcutCollisionDomain.PLANE_MODE],
-        },
-      ]),
+      Object.entries(withDescription).map(
+        ([handlerId, description]) =>
+          [
+            handlerId,
+            {
+              description,
+              domain: KeyboardShortcutDomain.PLANE_NAVIGATION,
+              looped: true,
+              collisionEntityName: KeyboardShortcutCollisionEntityName.PLANE_MODE,
+            },
+          ] as [PlaneControllerLoopedNavigationKeyboardShortcuts, KeyboardShortcutMetaInfo],
+      ),
     ) as KeyboardShortcutHandlerMetaInfoMap<PlaneControllerLoopedNavigationKeyboardShortcuts>;
   })();
 
@@ -119,15 +123,18 @@ export const PlaneLoopDelayedNavigationKeyboardShortcutMetaInfo: KeyboardShortcu
         "Decrease move value",
     };
     return Object.fromEntries(
-      Object.entries(withDescription).map(([handlerId, description]) => [
-        handlerId,
-        {
-          description,
-          domain: KeyboardShortcutDomain.PLANE_NAVIGATION,
-          looped: true,
-          collisionDomains: [KeyboardShortcutCollisionDomain.PLANE_MODE],
-        },
-      ]),
+      Object.entries(withDescription).map(
+        ([handlerId, description]) =>
+          [
+            handlerId,
+            {
+              description,
+              domain: KeyboardShortcutDomain.PLANE_NAVIGATION,
+              looped: true,
+              collisionEntityName: KeyboardShortcutCollisionEntityName.PLANE_MODE,
+            },
+          ] as [PlaneControllerLoopDelayedNavigationKeyboardShortcuts, KeyboardShortcutMetaInfo],
+      ),
     ) as KeyboardShortcutHandlerMetaInfoMap<PlaneControllerLoopDelayedNavigationKeyboardShortcuts>;
   })();
 
@@ -155,14 +162,17 @@ export const PlaneGeneralKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaIn
         "Cycle Backwards Through Tools (Move / Proofread / Bounding Box / ...)",
     };
     return Object.fromEntries(
-      Object.entries(withDescription).map(([handlerId, description]) => [
-        handlerId,
-        {
-          description,
-          domain: KeyboardShortcutDomain.PLANE_NAVIGATION,
-          looped: false,
-          collisionDomains: [KeyboardShortcutCollisionDomain.PLANE_MODE],
-        },
-      ]),
+      Object.entries(withDescription).map(
+        ([handlerId, description]) =>
+          [
+            handlerId,
+            {
+              description,
+              domain: KeyboardShortcutDomain.PLANE_NAVIGATION,
+              looped: false,
+              collisionEntityName: KeyboardShortcutCollisionEntityName.PLANE_MODE,
+            },
+          ] as [PlaneControllerNoLoopGeneralKeyboardShortcuts, KeyboardShortcutMetaInfo],
+      ),
     ) as KeyboardShortcutHandlerMetaInfoMap<PlaneControllerNoLoopGeneralKeyboardShortcuts>;
   })();

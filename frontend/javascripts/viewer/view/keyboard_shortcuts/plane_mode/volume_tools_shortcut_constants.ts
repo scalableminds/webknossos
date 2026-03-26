@@ -1,11 +1,12 @@
 import {
-  KeyboardShortcutCollisionDomain,
+  KeyboardShortcutCollisionEntityName,
   KeyboardShortcutDomain,
   type KeyboardShortcutHandlerMetaInfoMap,
+  type KeyboardShortcutMetaInfo,
   type KeyboardShortcutsMap,
 } from "../keyboard_shortcut_types";
 
-export enum OrthoVolumeNoLoopedKeyboardShortcuts {
+export enum PlaneVolumeToolNoLoopedKeyboardShortcuts {
   CREATE_NEW_CELL = "CREATE_NEW_CELL",
   INTERPOLATE_SEGMENTATION = "INTERPOLATE_SEGMENTATION",
   COPY_SEGMENT_ID = "COPY_SEGMENT_ID",
@@ -14,65 +15,66 @@ export enum OrthoVolumeNoLoopedKeyboardShortcuts {
   BRUSH_PRESET_LARGE = "BRUSH_PRESET_LARGE",
 }
 
-export const DEFAULT_ORTHO_VOLUME_NO_LOOPED_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<OrthoVolumeNoLoopedKeyboardShortcuts> =
+export const DEFAULT_PLANE_VOLUME_TOOL_NO_LOOPED_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<PlaneVolumeToolNoLoopedKeyboardShortcuts> =
   {
-    [OrthoVolumeNoLoopedKeyboardShortcuts.CREATE_NEW_CELL]: [[["c"]]],
-    [OrthoVolumeNoLoopedKeyboardShortcuts.INTERPOLATE_SEGMENTATION]: [[["v"]]],
-    [OrthoVolumeNoLoopedKeyboardShortcuts.COPY_SEGMENT_ID]: [[["Control", "i"]]],
-    [OrthoVolumeNoLoopedKeyboardShortcuts.BRUSH_PRESET_SMALL]: [[["Control", "k"], ["1"]]],
-    [OrthoVolumeNoLoopedKeyboardShortcuts.BRUSH_PRESET_MEDIUM]: [[["Control", "k"], ["2"]]],
-    [OrthoVolumeNoLoopedKeyboardShortcuts.BRUSH_PRESET_LARGE]: [[["Control", "k"], ["3"]]],
+    [PlaneVolumeToolNoLoopedKeyboardShortcuts.CREATE_NEW_CELL]: [[["c"]]],
+    [PlaneVolumeToolNoLoopedKeyboardShortcuts.INTERPOLATE_SEGMENTATION]: [[["v"]]],
+    [PlaneVolumeToolNoLoopedKeyboardShortcuts.COPY_SEGMENT_ID]: [[["Control", "i"]]],
+    [PlaneVolumeToolNoLoopedKeyboardShortcuts.BRUSH_PRESET_SMALL]: [[["Control", "k"], ["1"]]],
+    [PlaneVolumeToolNoLoopedKeyboardShortcuts.BRUSH_PRESET_MEDIUM]: [[["Control", "k"], ["2"]]],
+    [PlaneVolumeToolNoLoopedKeyboardShortcuts.BRUSH_PRESET_LARGE]: [[["Control", "k"], ["3"]]],
   };
 
-export const OrthoVolumeNoLoopedKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<OrthoVolumeNoLoopedKeyboardShortcuts> =
+export const PlaneVolumeToolNoLoopedKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<PlaneVolumeToolNoLoopedKeyboardShortcuts> =
   (() => {
-    const withDescription: Record<OrthoVolumeNoLoopedKeyboardShortcuts, string> = {
-      [OrthoVolumeNoLoopedKeyboardShortcuts.CREATE_NEW_CELL]: "Create new cell",
-      [OrthoVolumeNoLoopedKeyboardShortcuts.INTERPOLATE_SEGMENTATION]:
+    const withDescription: Record<PlaneVolumeToolNoLoopedKeyboardShortcuts, string> = {
+      [PlaneVolumeToolNoLoopedKeyboardShortcuts.CREATE_NEW_CELL]: "Create new cell",
+      [PlaneVolumeToolNoLoopedKeyboardShortcuts.INTERPOLATE_SEGMENTATION]:
         "Interpolate annotation between latest drawn sections",
-      [OrthoVolumeNoLoopedKeyboardShortcuts.COPY_SEGMENT_ID]: "Copy segment id under cursor",
-      [OrthoVolumeNoLoopedKeyboardShortcuts.BRUSH_PRESET_SMALL]: "Switch to small brush",
-      [OrthoVolumeNoLoopedKeyboardShortcuts.BRUSH_PRESET_MEDIUM]: "Switch to medium sized brush",
-      [OrthoVolumeNoLoopedKeyboardShortcuts.BRUSH_PRESET_LARGE]: "Switch to large brush",
+      [PlaneVolumeToolNoLoopedKeyboardShortcuts.COPY_SEGMENT_ID]: "Copy segment id under cursor",
+      [PlaneVolumeToolNoLoopedKeyboardShortcuts.BRUSH_PRESET_SMALL]: "Switch to small brush",
+      [PlaneVolumeToolNoLoopedKeyboardShortcuts.BRUSH_PRESET_MEDIUM]:
+        "Switch to medium sized brush",
+      [PlaneVolumeToolNoLoopedKeyboardShortcuts.BRUSH_PRESET_LARGE]: "Switch to large brush",
     };
     return Object.fromEntries(
-      Object.entries(withDescription).map(([handlerId, description]) => [
-        handlerId,
-        {
-          description,
-          domain: KeyboardShortcutDomain.PLANE_VOLUME_TOOL,
-          looped: false,
-          collisionDomains: [
-            KeyboardShortcutCollisionDomain.PLANE_MODE,
-            KeyboardShortcutCollisionDomain.PLANE_VOLUME_TOOL,
-          ],
-        },
-      ]),
-    ) as KeyboardShortcutHandlerMetaInfoMap<OrthoVolumeNoLoopedKeyboardShortcuts>;
+      Object.entries(withDescription).map(
+        ([handlerId, description]) =>
+          [
+            handlerId,
+            {
+              description,
+              domain: KeyboardShortcutDomain.PLANE_VOLUME_TOOL,
+              looped: false,
+              collisionEntityName: KeyboardShortcutCollisionEntityName.PLANE_VOLUME_TOOL,
+            },
+          ] as [PlaneVolumeToolNoLoopedKeyboardShortcuts, KeyboardShortcutMetaInfo],
+      ),
+    ) as KeyboardShortcutHandlerMetaInfoMap<PlaneVolumeToolNoLoopedKeyboardShortcuts>;
   })();
 
-export enum OrthoVolumeLoopDelayedConfigKeyboardShortcuts {
+export enum PlaneVolumeToolLoopDelayedConfigKeyboardShortcuts {
   DECREASE_BRUSH_SIZE = "DECREASE_BRUSH_SIZE",
   INCREASE_BRUSH_SIZE = "INCREASE_BRUSH_SIZE",
 }
-export const DEFAULT_ORTHO_VOLUME_LOOP_DELAYED_CONFIG_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<OrthoVolumeLoopDelayedConfigKeyboardShortcuts> =
+export const DEFAULT_PLANE_VOLUME_TOOL_LOOP_DELAYED_CONFIG_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<PlaneVolumeToolLoopDelayedConfigKeyboardShortcuts> =
   {
-    [OrthoVolumeLoopDelayedConfigKeyboardShortcuts.DECREASE_BRUSH_SIZE]: [[["Shift", "i"]]],
-    [OrthoVolumeLoopDelayedConfigKeyboardShortcuts.INCREASE_BRUSH_SIZE]: [[["Shift", "o"]]],
+    [PlaneVolumeToolLoopDelayedConfigKeyboardShortcuts.DECREASE_BRUSH_SIZE]: [[["Shift", "i"]]],
+    [PlaneVolumeToolLoopDelayedConfigKeyboardShortcuts.INCREASE_BRUSH_SIZE]: [[["Shift", "o"]]],
   };
 
-export const OrthoVolumeLoopDelayedConfigKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<OrthoVolumeLoopDelayedConfigKeyboardShortcuts> =
+export const PlaneVolumeToolLoopDelayedConfigKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<PlaneVolumeToolLoopDelayedConfigKeyboardShortcuts> =
   {
-    [OrthoVolumeLoopDelayedConfigKeyboardShortcuts.DECREASE_BRUSH_SIZE]: {
+    [PlaneVolumeToolLoopDelayedConfigKeyboardShortcuts.DECREASE_BRUSH_SIZE]: {
       description: "Decrease brush size",
       domain: KeyboardShortcutDomain.PLANE_CONFIGURATIONS,
       looped: true,
-      collisionDomains: [KeyboardShortcutCollisionDomain.PLANE_MODE],
+      collisionEntityName: KeyboardShortcutCollisionEntityName.PLANE_MODE,
     },
-    [OrthoVolumeLoopDelayedConfigKeyboardShortcuts.INCREASE_BRUSH_SIZE]: {
+    [PlaneVolumeToolLoopDelayedConfigKeyboardShortcuts.INCREASE_BRUSH_SIZE]: {
       description: "Increase brush size",
       domain: KeyboardShortcutDomain.PLANE_CONFIGURATIONS,
       looped: true,
-      collisionDomains: [KeyboardShortcutCollisionDomain.PLANE_MODE],
+      collisionEntityName: KeyboardShortcutCollisionEntityName.PLANE_MODE,
     },
   };

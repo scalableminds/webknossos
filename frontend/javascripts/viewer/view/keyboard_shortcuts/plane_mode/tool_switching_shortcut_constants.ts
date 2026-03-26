@@ -1,7 +1,8 @@
 import {
-  KeyboardShortcutCollisionDomain,
+  KeyboardShortcutCollisionEntityName,
   KeyboardShortcutDomain,
   type KeyboardShortcutHandlerMetaInfoMap,
+  type KeyboardShortcutMetaInfo,
   type KeyboardShortcutsMap,
 } from "../keyboard_shortcut_types";
 
@@ -52,7 +53,7 @@ export const DEFAULT_PLANE_TOOL_SWITCHING_KEYBOARD_SHORTCUTS: KeyboardShortcutsM
     ],
   } as const;
 
-export const PlaneLoopDelayedNavigationKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<PlaneControllerToolSwitchingKeyboardShortcuts> =
+export const PlaneToolSwitchingKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<PlaneControllerToolSwitchingKeyboardShortcuts> =
   (() => {
     const withDescription: Record<PlaneControllerToolSwitchingKeyboardShortcuts, string> = {
       [PlaneControllerToolSwitchingKeyboardShortcuts.SWITCH_TO_MOVE_TOOL]: "Move Tool",
@@ -73,14 +74,17 @@ export const PlaneLoopDelayedNavigationKeyboardShortcutMetaInfo: KeyboardShortcu
         "Proofreading Tool",
     };
     return Object.fromEntries(
-      Object.entries(withDescription).map(([handlerId, description]) => [
-        handlerId,
-        {
-          description,
-          domain: KeyboardShortcutDomain.PLANE_NAVIGATION,
-          looped: true,
-          collisionDomains: [KeyboardShortcutCollisionDomain.PLANE_MODE],
-        },
-      ]),
+      Object.entries(withDescription).map(
+        ([handlerId, description]) =>
+          [
+            handlerId,
+            {
+              description,
+              domain: KeyboardShortcutDomain.PLANE_TOOL_SWITCHING,
+              looped: true,
+              collisionEntityName: KeyboardShortcutCollisionEntityName.PLANE_MODE,
+            },
+          ] as [PlaneControllerToolSwitchingKeyboardShortcuts, KeyboardShortcutMetaInfo],
+      ),
     ) as KeyboardShortcutHandlerMetaInfoMap<PlaneControllerToolSwitchingKeyboardShortcuts>;
   })();

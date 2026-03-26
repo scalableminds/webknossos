@@ -3,10 +3,13 @@ import type { KeyboardLoopHandler, KeyboardNoLoopHandler } from "libs/input";
 export enum KeyboardShortcutDomain {
   GENERAL = "General",
   GENERAL_EDITING = "General Editing",
+  GENERAL_LAYOUT = "Layout",
+  GENERAL_COMMENT_TAB = "Comment Tab",
   ARBITRARY_NAVIGATION = "Navigation in Arbitrary Mode",
   ARBITRARY_EDITING = "Editing in Arbitrary Mode",
   PLANE_NAVIGATION = "Navigation in Plane Mode",
   PLANE_CONFIGURATIONS = "Change Configurations in Plane Mode",
+  PLANE_TOOL_SWITCHING = "Tool Switching",
   PLANE_SKELETON_TOOL = "Skeleton Tool Shortcuts in Plane Mode",
   PLANE_VOLUME_TOOL = "Volume Tools Shortcuts in Plane Mode",
   PLANE_BOUNDING_BOX_TOOL = "Bounding Box Tool Shortcuts in Plane Mode",
@@ -14,9 +17,8 @@ export enum KeyboardShortcutDomain {
 }
 
 // Default is general -> colliding with all other shortcuts.
-export enum KeyboardShortcutCollisionDomain {
+export enum KeyboardShortcutCollisionEntityName {
   GENERAL = "general",
-  MOVE_TOOL = "move_tool",
   ARBITRARY_MODE = "arbitrary_mode",
   PLANE_MODE = "plane_mode",
   PLANE_SKELETON_TOOL = "skeleton_tool_plane",
@@ -38,7 +40,7 @@ export type KeyboardShortcutMetaInfo = {
   looped?: boolean;
   domain: KeyboardShortcutDomain;
   // No collision domain means colliding with all shortcuts.
-  collisionDomains?: KeyboardShortcutCollisionDomain[];
+  collisionEntityName: KeyboardShortcutCollisionEntityName;
 };
 
 export type KeyboardShortcutHandlerMetaInfoMap<KeyboardShortcutHandlerId extends string> = Record<

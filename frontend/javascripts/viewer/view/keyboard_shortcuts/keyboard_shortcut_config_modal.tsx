@@ -98,10 +98,13 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
     const domainToEntries: Record<KeyboardShortcutDomain, TableDataEntry[]> = {
       [KeyboardShortcutDomain.GENERAL]: [],
       [KeyboardShortcutDomain.GENERAL_EDITING]: [],
+      [KeyboardShortcutDomain.GENERAL_LAYOUT]: [],
+      [KeyboardShortcutDomain.GENERAL_COMMENT_TAB]: [],
       [KeyboardShortcutDomain.ARBITRARY_NAVIGATION]: [],
       [KeyboardShortcutDomain.ARBITRARY_EDITING]: [],
       [KeyboardShortcutDomain.PLANE_NAVIGATION]: [],
       [KeyboardShortcutDomain.PLANE_CONFIGURATIONS]: [],
+      [KeyboardShortcutDomain.PLANE_TOOL_SWITCHING]: [],
       [KeyboardShortcutDomain.PLANE_SKELETON_TOOL]: [],
       [KeyboardShortcutDomain.PLANE_VOLUME_TOOL]: [],
       [KeyboardShortcutDomain.PLANE_BOUNDING_BOX_TOOL]: [],
@@ -259,6 +262,16 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
             tableData={tableDataMap[KeyboardShortcutDomain.GENERAL_EDITING]}
             columns={columns}
           />
+          <ShortcutDomainTable
+            domainName={KeyboardShortcutDomain.GENERAL_LAYOUT}
+            tableData={tableDataMap[KeyboardShortcutDomain.GENERAL_LAYOUT]}
+            columns={columns}
+          />
+          <ShortcutDomainTable
+            domainName={KeyboardShortcutDomain.GENERAL_COMMENT_TAB}
+            tableData={tableDataMap[KeyboardShortcutDomain.GENERAL_COMMENT_TAB]}
+            columns={columns}
+          />
         </>
       ),
     },
@@ -293,6 +306,19 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
           <ShortcutDomainTable
             domainName={KeyboardShortcutDomain.PLANE_CONFIGURATIONS}
             tableData={tableDataMap[KeyboardShortcutDomain.PLANE_CONFIGURATIONS]}
+            columns={columns}
+          />
+        </>
+      ),
+    },
+    {
+      key: "plane_tools",
+      label: "Plane Mode - Tool Activation",
+      children: (
+        <>
+          <ShortcutDomainTable
+            domainName={KeyboardShortcutDomain.PLANE_TOOL_SWITCHING}
+            tableData={tableDataMap[KeyboardShortcutDomain.PLANE_TOOL_SWITCHING]}
             columns={columns}
           />
         </>

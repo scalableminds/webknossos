@@ -18,7 +18,7 @@ export function FailedToLoadView() {
         style={{
           height: "100vh",
           marginTop: "calc(-1 * var(--navbar-height))",
-          backgroundImage: `url(${backgroundMixedCellsDrawn})`,
+          backgroundImage: `url("${backgroundMixedCellsDrawn}")`,
           backgroundSize: "cover",
           backgroundRepeat: "no-repeat",
           backgroundAttachment: "fixed",

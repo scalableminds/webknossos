@@ -1,9 +1,9 @@
 package backend
 
 import com.scalableminds.webknossos.datastore.datareaders.precomputed.CompressedMortonCode
-import org.scalatestplus.play.PlaySpec
+import org.scalatest.wordspec.AsyncWordSpec
 
-class CompressedMortonCodeTestSuite extends PlaySpec {
+class CompressedMortonCodeTestSuite extends AsyncWordSpec {
 
   "Compressed Morton Code" when {
     "Grid size = 10,10,10" should {

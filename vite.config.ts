@@ -2,9 +2,10 @@ import tsconfigPaths from "vite-tsconfig-paths";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import svgr from "vite-plugin-svgr";
-import viteProtobufPlugin from "./frontend/vite/vite-plugin-protobuf";
 import wasm from "vite-plugin-wasm";
 import analyzer from "vite-bundle-analyzer";
+import viteProtobufPlugin from "./frontend/vite/vite-plugin-protobuf";
+import replaceSvgColorWithCurrentColor from "./frontend/vite/vite-plugin-replace-svg-color";
 
 import path from "node:path";
 import fs from "node:fs";
@@ -13,6 +14,7 @@ import fs from "node:fs";
 // Code-related resolves are handled by "paths" in tsconfig.ts, tsconfigPaths-plugin respectively
 const alias = {
   "@images": path.resolve(__dirname, "frontend/assets/images"),
+  "@wasm": path.resolve(__dirname, "frontend/assets/wasm"),
 };
 
 // https://vite.dev/config/
@@ -21,9 +23,29 @@ export const viteConfig = {
   resolve: { alias },
   plugins: [
     // analyzer(), // Enable/Disable vite bundle analyzer for inspecting the output bundle
-    react(),
+    react({
+      babel: {
+        plugins: ["babel-plugin-react-compiler"],
+      },
+    }),
     svgr({
-      svgrOptions: { icon: true },
+      svgrOptions: {
+        plugins: ["@svgr/plugin-svgo", "@svgr/plugin-jsx"],
+        icon: true,
+        jsx: {
+          babelConfig: {
+            plugins: [[replaceSvgColorWithCurrentColor, { patchStroke: true, patchFill: true }]],
+          },
+        },
+        svgoConfig: {
+          plugins: [
+            { name: "convertStyleToAttrs" }, // converts <SVG style="..."> to individual attrs
+            {
+              name: "preset-default",
+            },
+          ],
+        },
+      },
     }),
     tsconfigPaths(),
     wasm(),
@@ -75,29 +97,31 @@ export const viteConfig = {
       },
     },
     hmr: false, // disable Hot Module Replacement for now
-    ignored: [
-      "**/node_modules/**",
-      "**/dist/**",
-      "**/frontend/javascripts/test/**",
-      "**/app/**",
-      "**/webknossos-tracingstore/**",
-      "**/webknossos-datastore/**",
-      "**/util/**",
-      "**/webknossos-jni/**",
-      "**/conf/**",
-      "**/project/**",
-      "**/docs/**",
-      "**/fossildb/**",
-      "**/target/**",
-      "**/schema/**",
-      "**/tools/**",
-      "**/binaryData/**",
-      "**/coverage/**",
-      "**/public/**",
-      "**/public-test/**",
-      "**/unreleased_changes/**",
-      "**/test/**",
-    ],
+    watch: {
+      ignored: [
+        "**/node_modules/**",
+        "**/dist/**",
+        "**/frontend/javascripts/test/**",
+        "**/app/**",
+        "**/webknossos-tracingstore/**",
+        "**/webknossos-datastore/**",
+        "**/util/**",
+        "**/webknossos-jni/**",
+        "**/conf/**",
+        "**/project/**",
+        "**/docs/**",
+        "**/fossildb/**",
+        "**/target/**",
+        "**/schema/**",
+        "**/tools/**",
+        "**/binaryData/**",
+        "**/coverage/**",
+        "**/public/**",
+        "**/public-test/**",
+        "**/unreleased_changes/**",
+        "**/test/**",
+      ],
+    },
   },
   define: {
     global: "globalThis",

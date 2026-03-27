@@ -38,7 +38,7 @@ trait SqlEscaping {
         // Splitting *the original string* at split positions obtained from matching there
         val withoutEscapedQuotes = trimmed.replace("\\\"", "__")
         val regex = if (withoutEscapedQuotes.contains("\"")) {
-          ",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)".r
+          """,(?=(?:[^"]*+"[^"]*+")*+[^"]*+$)""".r
         } else {
           // If there are no quotes in the literal, no need for the complex regex, just split at all commas,
           // this is much faster.

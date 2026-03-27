@@ -57,8 +57,8 @@ export default function AiModelListView() {
       ) : null}
       <Flex justify="space-between" align="flex-start">
         <h3>AI Models</h3>
-        <Button onClick={() => refetch()}>
-          <SyncOutlined spin={isFetching} /> Refresh
+        <Button onClick={() => refetch()} icon={<SyncOutlined spin={isFetching} />}>
+          Refresh
         </Button>
       </Flex>
       <Typography.Paragraph type="secondary" style={{ marginBottom: 20 }}>

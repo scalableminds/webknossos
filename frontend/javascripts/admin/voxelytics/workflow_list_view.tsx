@@ -174,8 +174,8 @@ export default function WorkflowListView() {
       <Flex justify="space-between" align="baseline" style={{ marginBottom: 20 }}>
         <h3>Voxelytics Workflows</h3>
         <Space>
-          <Button onClick={() => refetch()}>
-            <SyncOutlined spin={isFetching} /> Refresh
+          <Button onClick={() => refetch()} icon={<SyncOutlined spin={isFetching} />}>
+            Refresh
           </Button>
           <Search
             style={{
@@ -201,7 +201,7 @@ export default function WorkflowListView() {
                     {run.workflowName} ({run.workflowHash})
                   </Link>
                 ) : (
-                  <Link to={`/workflows/${run.workflowHash}?runId=${encodeURIComponent(run.id)}`}>
+                  <Link to={`/workflows/${run.workflowHash}/run/${encodeURIComponent(run.id)}`}>
                     {run.name}
                   </Link>
                 ),

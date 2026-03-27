@@ -1,4 +1,4 @@
-import {
+import Icon, {
   DeleteOutlined,
   EllipsisOutlined,
   LoadingOutlined,
@@ -6,6 +6,8 @@ import {
   TagsOutlined,
   VerticalAlignBottomOutlined,
 } from "@ant-design/icons";
+import BrushIcon from "@images/icons/icon-brush.svg?react";
+import CrosshairsIcon from "@images/icons/icon-crosshairs.svg?react";
 import { App, Checkbox, List, type MenuProps, Space } from "antd";
 import type { MenuItemType } from "antd/es/menu/interface";
 import type { CheckboxChangeEvent } from "antd/lib/checkbox/Checkbox";
@@ -44,7 +46,7 @@ import type { ActiveMappingInfo, MeshInformation, Segment, VolumeTracing } from 
 import Store from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import EditableTextLabel from "viewer/view/components/editable_text_label";
-import { getContextMenuPositionFromEvent } from "viewer/view/context_menu";
+import { getContextMenuPositionFromEvent } from "viewer/view/context_menu/helpers";
 import { LoadMeshMenuItemLabel } from "./load_mesh_menu_item_label";
 import { withMappingActivationConfirmation } from "./segments_view_helper";
 
@@ -88,7 +90,7 @@ const getLoadPrecomputedMeshMenuItem = (
         if (!currentMeshFile) {
           return;
         }
-        if (!segment.somePosition) {
+        if (!segment.anchorPosition) {
           Toast.info(
             <React.Fragment>
               Cannot load a mesh for this segment, because its position is unknown.
@@ -100,8 +102,8 @@ const getLoadPrecomputedMeshMenuItem = (
         hideContextMenu(
           loadPrecomputedMesh(
             segment.id,
-            segment.somePosition,
-            segment.someAdditionalCoordinates,
+            segment.anchorPosition,
+            segment.additionalCoordinates,
             currentMeshFile?.name,
           ),
         );
@@ -134,7 +136,7 @@ const getComputeMeshAdHocMenuItem = (
   return {
     key: "loadAdHocMesh",
     onClick: () => {
-      if (!segment.somePosition) {
+      if (!segment.anchorPosition) {
         Toast.info(
           <React.Fragment>
             Cannot load a mesh for this segment, because its position is unknown.
@@ -146,7 +148,7 @@ const getComputeMeshAdHocMenuItem = (
       hideContextMenu(
         loadAdHocMesh(
           segment.id,
-          segment.somePosition,
+          segment.anchorPosition,
           Store.getState().flycam.additionalCoordinates,
         ),
       );
@@ -160,8 +162,8 @@ const getMakeSegmentActiveMenuItem = (
   segment: Segment,
   setActiveCell: (
     arg0: number,
-    somePosition?: Vector3,
-    someAdditionalCoordinates?: AdditionalCoordinate[] | null,
+    anchorPosition?: Vector3 | null,
+    additionalCoordinates?: AdditionalCoordinate[] | null,
   ) => void,
   activeCellId: number | null | undefined,
   isEditingDisabled: boolean,
@@ -175,7 +177,7 @@ const getMakeSegmentActiveMenuItem = (
     key: "setActiveCell",
     onClick: () =>
       hideContextMenu(
-        setActiveCell(segment.id, segment.somePosition, segment.someAdditionalCoordinates),
+        setActiveCell(segment.id, segment.anchorPosition, segment.additionalCoordinates),
       ),
     disabled: isActiveSegment || isEditingDisabled,
     label: (
@@ -206,8 +208,8 @@ type Props = {
   visibleSegmentationLayer: APISegmentationLayer | null | undefined;
   loadAdHocMesh: (
     segmentId: number,
-    somePosition: Vector3,
-    someAdditionalCoordinates: AdditionalCoordinate[] | undefined | null,
+    anchorPosition: Vector3,
+    additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   ) => void;
   loadPrecomputedMesh: (
     segmentId: number,
@@ -217,8 +219,8 @@ type Props = {
   ) => void;
   setActiveCell: (
     arg0: number,
-    somePosition?: Vector3,
-    someAdditionalCoordinates?: AdditionalCoordinate[] | null,
+    anchorPosition?: Vector3 | null,
+    additionalCoordinates?: AdditionalCoordinate[] | null,
   ) => void;
   mesh: MeshInformation | null | undefined;
   setPosition: (arg0: Vector3) => void;
@@ -654,12 +656,12 @@ function _SegmentListItem({
           {segment.name != null ? <SegmentIdAddendum id={segment.id} /> : null}
           {isCentered ? (
             <FastTooltip title="This segment is currently centered in the data viewports.">
-              <i className="fas fa-crosshairs deemphasized" />
+              <Icon component={CrosshairsIcon} className="deemphasized" />
             </FastTooltip>
           ) : null}
           {segment.id === activeCellId ? (
             <FastTooltip title="The currently active segment id belongs to this segment.">
-              <i className="fas fa-paint-brush deemphasized" />
+              <Icon component={BrushIcon} className="deemphasized" />
             </FastTooltip>
           ) : null}
         </Space>

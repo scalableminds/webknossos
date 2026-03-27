@@ -24,7 +24,7 @@ import { connect, useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
 import type { Dispatch } from "redux";
 import type { APIDataset, APIUser } from "types/api_types";
-import type { EmptyObject } from "types/globals";
+import type { EmptyObject } from "types/type_utils";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
 import {
@@ -72,6 +72,7 @@ type State = {
   owningOrganizationName: string | null;
   isMarkdownModalOpen: boolean;
 };
+
 const shortcuts = [
   {
     key: "1",
@@ -88,6 +89,7 @@ const shortcuts = [
         className="keyboard-mouse-icon"
         aria-label="Mouse Wheel"
         title="Mouse Wheel"
+        style={{ color: "var(--ant-color-primary)" }}
       />,
     ],
     action: "Zoom in/out",
@@ -101,6 +103,7 @@ const shortcuts = [
         className="keyboard-mouse-icon"
         aria-label="Mouse Wheel"
         title="Mouse Wheel"
+        style={{ color: "var(--ant-color-primary)" }}
       />,
       "or",
       <KeyboardKeyIcon label="D" key="move-2" className="keyboard-key-icon" />,
@@ -117,6 +120,7 @@ const shortcuts = [
         key="move"
         className="keyboard-mouse-icon"
         aria-label="Left Mouse Button Drag"
+        style={{ color: "var(--ant-color-primary)" }}
       />,
     ],
     action: "Move",
@@ -129,6 +133,7 @@ const shortcuts = [
         key="rotate"
         className="keyboard-mouse-icon"
         aria-label="Right Mouse Button Drag"
+        style={{ color: "var(--ant-color-primary)" }}
       />,
       "in 3D View",
     ],

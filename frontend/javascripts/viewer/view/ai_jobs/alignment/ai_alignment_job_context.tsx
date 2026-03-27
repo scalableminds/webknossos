@@ -4,6 +4,7 @@ import Toast from "libs/toast";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
+import type { APIDataLayer } from "types/api_types";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox } from "viewer/store";
@@ -16,6 +17,7 @@ interface AlignmentJobContextType {
   selectedTask: AlignmentTask | null;
   setSelectedTask: (task: AlignmentTask) => void;
   selectedBoundingBox: UserBoundingBox | null;
+  colorLayer: APIDataLayer;
   setNewDatasetName: (name: string) => void;
   shouldUseManualMatches: boolean;
   setShouldUseManualMatches: (shouldUseManualMatches: boolean) => void;
@@ -75,6 +77,7 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
   const value = {
     selectedTask,
     selectedBoundingBox,
+    colorLayer,
     newDatasetName,
     setNewDatasetName,
     setSelectedTask,

@@ -4,7 +4,7 @@ import deepForEach from "deep-for-each";
 import { JSDOM } from "jsdom";
 import cloneDeep from "lodash-es/cloneDeep";
 import shell from "shelljs";
-import type { ArbitraryObject } from "types/globals";
+import type { ArbitraryObject } from "types/type_utils";
 import { vi } from "vitest";
 
 vi.mock("libs/request", async (importOriginal) => {

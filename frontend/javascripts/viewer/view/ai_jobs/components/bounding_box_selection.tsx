@@ -3,7 +3,7 @@ import { formatVoxels } from "libs/format_utils";
 import { computeArrayFromBoundingBox, rgbToHex } from "libs/utils";
 import type React from "react";
 import { useCallback } from "react";
-import type { ArrayElement } from "types/globals";
+import type { ArrayElement } from "types/type_utils";
 import type { Vector3 } from "viewer/constants";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { UserBoundingBox } from "viewer/store";

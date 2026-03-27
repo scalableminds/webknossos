@@ -187,7 +187,6 @@ class Plane {
     positionOffset: Vector3 = DEFAULT_POSITION_OFFSET,
   ): void => {
     // The world scaling by the dataset scale factor is inverted by the scene group
-
     // containing all planes to avoid sheering in anisotropic scaled datasets.
     // Thus, this scale needs to be applied manually to the position here.
     const scaledPosition = V3.multiply(originalPosition, this.datasetScaleFactor);

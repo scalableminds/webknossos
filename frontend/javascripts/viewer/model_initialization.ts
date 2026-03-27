@@ -37,7 +37,7 @@ import type {
   ServerTracing,
   ServerVolumeTracing,
 } from "types/api_types";
-import type { Mutable } from "types/globals";
+import type { Mutable } from "types/type_utils";
 import constants, { ControlModeEnum, type Vector3 } from "viewer/constants";
 import type {
   DirectLayerSpecificProps,

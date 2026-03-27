@@ -20,10 +20,6 @@ import { ShareButton } from "viewer/view/action_bar/share_modal_view";
 import ButtonComponent from "viewer/view/components/button_component";
 import DatasetRotationPopoverButtonView from "./dataset_rotation_popover_view";
 
-const positionIconStyle: React.CSSProperties = {
-  transform: "rotate(-45deg)",
-  marginRight: 0,
-};
 const warningColors: React.CSSProperties = {
   color: "rgb(255, 155, 85)",
   borderColor: "rgb(241, 122, 39)",
@@ -143,9 +139,8 @@ function DatasetPositionView() {
             onClick={copyPositionToClipboard}
             style={{ padding: "0 10px", ...iconColoringStyle }}
             className="hide-on-small-screen"
-          >
-            <PushpinOutlined style={positionIconStyle} />
-          </ButtonComponent>
+            icon={<PushpinOutlined rotate={-45} />}
+          />
         </FastTooltip>
         <FastTooltip dynamicRenderer={getPositionTooltipContent}>
           <Vector3Input

@@ -1,4 +1,4 @@
-import {
+import Icon, {
   ArrowsAltOutlined,
   BackwardOutlined,
   CodepenOutlined,
@@ -14,10 +14,10 @@ import {
   ShrinkOutlined,
   VideoCameraOutlined,
 } from "@ant-design/icons";
+import HideSkeletonEdgesIcon from "@images/icons/icon-hide-skeleton-edges.svg?react";
 import { Avatar, Button, List } from "antd";
 import classNames from "classnames";
 import FormattedDate from "components/formatted_date";
-import { ThemedIcon } from "components/themed_icon";
 import { useWkSelector } from "libs/react_hooks";
 import groupBy from "lodash-es/groupBy";
 import max from "lodash-es/max";
@@ -38,14 +38,18 @@ import type {
   DeleteEdgeUpdateAction,
   DeleteNodeUpdateAction,
   DeleteSegmentDataUpdateAction,
+  DeleteSegmentGroupUpdateAction,
   DeleteSegmentUpdateAction,
   DeleteTreeUpdateAction,
   DeleteUserBoundingBoxInSkeletonTracingAction,
   DeleteUserBoundingBoxInVolumeTracingAction,
   LEGACY_MergeTreeUpdateAction,
+  LEGACY_UpdateSegmentGroupsUpdateAction,
+  LEGACY_UpdateSegmentUpdateAction,
   LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction,
   LEGACY_UpdateUserBoundingBoxesInVolumeTracingUpdateAction,
   MergeAgglomerateUpdateAction,
+  MergeSegmentItemsUpdateAction,
   MoveTreeComponentUpdateAction,
   RevertToVersionUpdateAction,
   ServerUpdateAction,
@@ -59,11 +63,11 @@ import type {
   UpdateLargestSegmentIdVolumeAction,
   UpdateMappingNameUpdateAction,
   UpdateMetadataOfAnnotationUpdateAction,
+  UpdateMetadataOfSegmentUpdateAction,
   UpdateNodeUpdateAction,
   UpdateSegmentGroupsExpandedStateUpdateAction,
-  UpdateSegmentGroupsUpdateAction,
   UpdateSegmentGroupVisibilityVolumeAction,
-  UpdateSegmentUpdateAction,
+  UpdateSegmentPartialUpdateAction,
   UpdateSegmentVisibilityVolumeAction,
   UpdateTreeEdgesVisibilityUpdateAction,
   UpdateTreeGroupsExpandedStateAction,
@@ -74,6 +78,7 @@ import type {
   UpdateUserBoundingBoxInVolumeTracingAction,
   UpdateUserBoundingBoxVisibilityInSkeletonTracingAction,
   UpdateUserBoundingBoxVisibilityInVolumeTracingAction,
+  UpsertSegmentGroupUpdateAction,
 } from "viewer/model/sagas/volume/update_actions";
 import type { StoreAnnotation } from "viewer/store";
 import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
@@ -236,7 +241,7 @@ const descriptionFns: Record<
     };
   },
   updateSegmentGroups: (
-    firstAction: AsServerAction<UpdateSegmentGroupsUpdateAction>,
+    firstAction: AsServerAction<LEGACY_UpdateSegmentGroupsUpdateAction>,
     _actionCount: number,
     annotation: StoreAnnotation,
   ): Description => {
@@ -246,6 +251,34 @@ const descriptionFns: Record<
     );
     return {
       description: `Updated the segment groups of layer ${layerName}.`,
+      icon: <EditOutlined />,
+    };
+  },
+  deleteSegmentGroup: (
+    firstAction: AsServerAction<DeleteSegmentGroupUpdateAction>,
+    _actionCount: number,
+    annotation: StoreAnnotation,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(
+      annotation,
+      firstAction.value.actionTracingId,
+    );
+    return {
+      description: `Deleted the segment group with id ${firstAction.value.groupId} of layer ${layerName}.`,
+      icon: <DeleteOutlined />,
+    };
+  },
+  upsertSegmentGroup: (
+    firstAction: AsServerAction<UpsertSegmentGroupUpdateAction>,
+    _actionCount: number,
+    annotation: StoreAnnotation,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(
+      annotation,
+      firstAction.value.actionTracingId,
+    );
+    return {
+      description: `Added/changed the segment group with id ${firstAction.value.groupId} of layer ${layerName}.`,
       icon: <EditOutlined />,
     };
   },
@@ -291,7 +324,7 @@ const descriptionFns: Record<
     action: AsServerAction<UpdateTreeEdgesVisibilityUpdateAction>,
   ): Description => ({
     description: `Updated the visibility of the edges of the tree with id ${action.value.treeId}.`,
-    icon: <ThemedIcon name="icon-hide-skeleton-edges" aria-label="Hide Tree Edges Icon" />,
+    icon: <Icon component={HideSkeletonEdgesIcon} aria-label="Hide Tree Edges Icon" />,
   }),
   updateTreeGroupVisibility: (
     action: AsServerAction<UpdateTreeGroupVisibilityUpdateAction>,
@@ -328,7 +361,7 @@ const descriptionFns: Record<
     };
   },
   updateSegment: (
-    firstAction: AsServerAction<UpdateSegmentUpdateAction>,
+    firstAction: AsServerAction<LEGACY_UpdateSegmentUpdateAction>,
     _actionCount: number,
     annotation: StoreAnnotation,
   ): Description => {
@@ -337,8 +370,44 @@ const descriptionFns: Record<
       firstAction.value.actionTracingId,
     );
     return {
-      description: `Updated the segment with id ${firstAction.value.id} in the segments list  of layer ${layerName}.`,
+      description: `Updated the segment with id ${firstAction.value.id} in the segments list of layer ${layerName}.`,
       icon: <EditOutlined />,
+    };
+  },
+  updateSegmentPartial: (
+    firstAction: AsServerAction<UpdateSegmentPartialUpdateAction>,
+    _actionCount: number,
+    annotation: StoreAnnotation,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(
+      annotation,
+      firstAction.value.actionTracingId,
+    );
+    return {
+      description: `Updated the segment with id ${firstAction.value.id} in the segments list of layer ${layerName}.`,
+      icon: <EditOutlined />,
+    };
+  },
+  updateMetadataOfSegment: (
+    action: AsServerAction<UpdateMetadataOfSegmentUpdateAction>,
+  ): Description => {
+    return {
+      description: `Updated metadata of segment with id: ${action.value.id}`,
+      icon: <EditOutlined />,
+    };
+  },
+  mergeSegmentItems: (
+    firstAction: AsServerAction<MergeSegmentItemsUpdateAction>,
+    _actionCount: number,
+    annotation: StoreAnnotation,
+  ): Description => {
+    const layerName = maybeGetReadableVolumeTracingName(
+      annotation,
+      firstAction.value.actionTracingId,
+    );
+    return {
+      description: `Merged segment with id ${firstAction.value.agglomerateId2} into segment ${firstAction.value.agglomerateId1} from the segments list of layer ${layerName}.`,
+      icon: <DeleteOutlined />,
     };
   },
   deleteSegment: (

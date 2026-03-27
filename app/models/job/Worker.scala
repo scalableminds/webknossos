@@ -30,6 +30,7 @@ case class Worker(_id: ObjectId,
                   maxParallelLowPriorityJobs: Int,
                   supportedJobCommands: Set[JobCommand],
                   lastHeartBeat: Instant = Instant.zero,
+                  lastReportedVersion: Option[String] = None,
                   created: Instant = Instant.now,
                   isDeleted: Boolean = false)
 
@@ -56,6 +57,7 @@ class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.maxparallellowpriorityjobs,
         supportedJobCommands.toSet,
         Instant.fromSql(r.lastheartbeat),
+        r.lastreportedversion,
         Instant.fromSql(r.created),
         r.isdeleted
       )
@@ -73,8 +75,14 @@ class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def updateHeartBeat(_id: ObjectId): Unit = {
-    run(q"UPDATE webknossos.workers SET lastHeartBeat = NOW() WHERE _id = ${_id}".asUpdate)
+  def updateHeartBeat(workerId: ObjectId): Unit = {
+    run(q"UPDATE webknossos.workers SET lastHeartBeat = NOW() WHERE _id = $workerId".asUpdate)
+    // Note that this should not block the jobs polling operation, failures here are not critical
+    ()
+  }
+
+  def updateLastReportedVersion(workerId: ObjectId, reportedVersion: String): Unit = {
+    run(q"UPDATE webknossos.workers SET lastReportedVersion = $reportedVersion WHERE _id = $workerId".asUpdate)
     // Note that this should not block the jobs polling operation, failures here are not critical
     ()
   }
@@ -94,7 +102,8 @@ class WorkerService @Inject()(conf: WkConf) {
       "supportedJobCommands" -> worker.supportedJobCommands,
       "created" -> worker.created,
       "lastHeartBeat" -> worker.lastHeartBeat,
-      "lastHeartBeatIsRecent" -> lastHeartBeatIsRecent(worker)
+      "lastHeartBeatIsRecent" -> lastHeartBeatIsRecent(worker),
+      "lastReportedVersion" -> worker.lastReportedVersion
     )
 
 }

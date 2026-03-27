@@ -1,6 +1,5 @@
 import { M4x4 } from "libs/mjs";
 import type TPS3D from "libs/thin_plate_spline";
-import each from "lodash-es/each";
 import range from "lodash-es/range";
 import template from "lodash-es/template";
 import { type DataTexture, GLSL3, RawShaderMaterial } from "three";
@@ -55,19 +54,19 @@ class EdgeShader {
 
     const { additionalCoordinates } = Store.getState().flycam;
 
-    each(additionalCoordinates, (_val, idx) => {
-      this.uniforms[`currentAdditionalCoord_${idx}`] = {
+    for (const coord of additionalCoordinates ?? []) {
+      this.uniforms[`currentAdditionalCoord_${coord.name}`] = {
         value: 0,
       };
-    });
+    }
 
     this.storePropertyUnsubscribers = [
       listenToStoreProperty(
         (storeState) => storeState.flycam.additionalCoordinates,
         (additionalCoordinates) => {
-          each(additionalCoordinates, (coord, idx) => {
-            this.uniforms[`currentAdditionalCoord_${idx}`].value = coord.value;
-          });
+          for (const coord of additionalCoordinates ?? []) {
+            this.uniforms[`currentAdditionalCoord_${coord.name}`].value = coord.value;
+          }
         },
         true,
       ),
@@ -137,23 +136,23 @@ uniform mat4 transform;
   <%= generateCalculateTpsOffsetFunction("Skeleton", true) %>
 <% } %>
 
-<% range(additionalCoordinateLength).map((idx) => { %>
-  uniform float currentAdditionalCoord_<%= idx %>;
+<% additionalCoordinates.map((coord) => { %>
+  uniform float currentAdditionalCoord_<%= coord.name %>;
 <% }) %>
 
 in vec3 position;
 in float treeId;
 
-<% range(additionalCoordinateLength).map((idx) => { %>
-  in float additionalCoord_<%= idx %>;
+<% additionalCoordinates.map((coord) => { %>
+  in float additionalCoord_<%= coord.name %>;
 <% }) %>
 
 out float alpha;
 
 void main() {
     alpha = 1.0;
-    <% range(additionalCoordinateLength).map((idx) => { %>
-      if (additionalCoord_<%= idx %> != currentAdditionalCoord_<%= idx %>) {
+    <% additionalCoordinates.map((coord) => { %>
+      if (!isnan(additionalCoord_<%= coord.name %>) && additionalCoord_<%= coord.name %> != currentAdditionalCoord_<%= coord.name %>) {
         alpha = 0.;
       }
     <% }) %>
@@ -174,18 +173,21 @@ void main() {
       return;
     }
 
+    // As nodes are rendered in the center of a voxel, so are edges.
+    vec3 positionWithOffset = position + vec3(0.5);
+
     <% if (tpsTransform != null) { %>
-      vec3 tpsOffset = calculateTpsOffsetForSkeleton(position);
-      vec4 transformedCoord = vec4(position + tpsOffset, 1.);
+      vec3 tpsOffset = calculateTpsOffsetForSkeleton(positionWithOffset);
+      vec4 transformedCoord = vec4(positionWithOffset + tpsOffset, 1.);
     <% } else { %>
-      vec4 transformedCoord = transform * vec4(position, 1.);
+      vec4 transformedCoord = transform * vec4(positionWithOffset, 1.);
     <% } %>
     gl_Position = projectionMatrix * modelViewMatrix * transformedCoord;
 
 
     color = rgba.rgb;
 }`)({
-      additionalCoordinateLength: (additionalCoordinates || []).length,
+      additionalCoordinates: additionalCoordinates || [],
       tpsTransform: this.scaledTps,
       generateTpsInitialization,
       generateCalculateTpsOffsetFunction,

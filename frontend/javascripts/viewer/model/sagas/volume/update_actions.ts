@@ -1,5 +1,6 @@
 import { computeBoundingBoxObjectFromBoundingBox } from "libs/utils";
 import type { AdditionalCoordinate, APIMagRestrictions, MetadataEntryProto } from "types/api_types";
+import type { EmptyObject } from "types/type_utils";
 import type { Vector3 } from "viewer/constants";
 import type { SendBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { convertUserBoundingBoxFromFrontendToServer } from "viewer/model/reducers/reducer_helpers";
@@ -39,13 +40,20 @@ type LEGACY_UpdateVolumeTracingUpdateAction = ReturnType<typeof LEGACY_updateVol
 export type UpdateActiveSegmentIdUpdateAction = ReturnType<typeof updateActiveSegmentId>;
 export type UpdateLargestSegmentIdVolumeAction = ReturnType<typeof updateLargestSegmentId>;
 export type CreateSegmentUpdateAction = ReturnType<typeof createSegmentVolumeAction>;
-export type UpdateSegmentUpdateAction = ReturnType<typeof updateSegmentVolumeAction>;
+export type LEGACY_UpdateSegmentUpdateAction = ReturnType<typeof LEGACY_updateSegmentVolumeAction>;
+export type UpdateSegmentPartialUpdateAction = ReturnType<typeof updateSegmentPartialVolumeAction>;
+export type UpdateMetadataOfSegmentUpdateAction = ReturnType<
+  typeof updateMetadataOfSegmentUpdateAction
+>;
+export type UpsertSegmentGroupUpdateAction = ReturnType<typeof upsertSegmentGroupUpdateAction>;
+export type DeleteSegmentGroupUpdateAction = ReturnType<typeof deleteSegmentGroupUpdateAction>;
 export type UpdateSegmentVisibilityVolumeAction = ReturnType<
   typeof updateSegmentVisibilityVolumeAction
 >;
 export type UpdateSegmentGroupVisibilityVolumeAction = ReturnType<
   typeof updateSegmentGroupVisibilityVolumeAction
 >;
+export type MergeSegmentItemsUpdateAction = ReturnType<typeof mergeSegmentItemsVolumeAction>;
 export type DeleteSegmentUpdateAction = ReturnType<typeof deleteSegmentVolumeAction>;
 export type DeleteSegmentDataUpdateAction = ReturnType<typeof deleteSegmentDataVolumeAction>;
 export type LEGACY_UpdateUserBoundingBoxesInSkeletonTracingUpdateAction = ReturnType<
@@ -79,7 +87,7 @@ export type UpdateUserBoundingBoxVisibilityInVolumeTracingAction = ReturnType<
   typeof updateUserBoundingBoxVisibilityInVolumeTracing
 >;
 export type UpdateBucketUpdateAction = ReturnType<typeof updateBucket>;
-export type UpdateSegmentGroupsUpdateAction = ReturnType<typeof updateSegmentGroups>;
+export type LEGACY_UpdateSegmentGroupsUpdateAction = ReturnType<typeof LEGACY_updateSegmentGroups>;
 export type UpdateSegmentGroupsExpandedStateUpdateAction = ReturnType<
   typeof updateSegmentGroupsExpandedState
 >;
@@ -132,21 +140,26 @@ type _ApplicableSkeletonUpdateAction =
   | UpdateTreeGroupsExpandedStateAction;
 
 export type ApplicableSkeletonServerUpdateAction = AsServerAction<_ApplicableSkeletonUpdateAction>;
-export type WithoutServerSpecificFields<T extends { value: Record<string, any> }> = Omit<
-  T,
-  "value"
-> & {
-  value: Omit<T["value"], "actionTimestamp" | "actionTracingId">;
-};
+export type ApplicableVolumeServerUpdateAction = AsServerAction<ApplicableVolumeUpdateAction>;
+
+export type WithoutServerSpecificFields<T extends { value: Record<string, any> }> = T extends any
+  ? Omit<T, "value"> & {
+      value: Omit<T["value"], "actionTimestamp" | "actionTracingId">;
+    }
+  : never;
+
 export type ApplicableSkeletonUpdateAction =
   WithoutServerSpecificFields<ApplicableSkeletonServerUpdateAction>;
 
 export type ApplicableVolumeUpdateAction =
   | UpdateLargestSegmentIdVolumeAction
-  | UpdateSegmentUpdateAction
+  | UpdateSegmentPartialUpdateAction
+  | UpdateMetadataOfSegmentUpdateAction
+  | UpsertSegmentGroupUpdateAction
+  | DeleteSegmentGroupUpdateAction
   | CreateSegmentUpdateAction
+  | MergeSegmentItemsUpdateAction
   | DeleteSegmentUpdateAction
-  | UpdateSegmentGroupsUpdateAction
   | AddUserBoundingBoxInVolumeTracingAction
   | UpdateUserBoundingBoxInVolumeTracingAction
   | DeleteUserBoundingBoxInVolumeTracingAction
@@ -189,15 +202,20 @@ export type UpdateActionWithoutIsolationRequirement =
   | UpdateUserBoundingBoxVisibilityInSkeletonTracingAction
   | UpdateUserBoundingBoxVisibilityInVolumeTracingAction
   | CreateSegmentUpdateAction
-  | UpdateSegmentUpdateAction
+  | LEGACY_UpdateSegmentUpdateAction
+  | UpdateSegmentPartialUpdateAction
+  | UpdateMetadataOfSegmentUpdateAction
+  | UpsertSegmentGroupUpdateAction
+  | DeleteSegmentGroupUpdateAction
   | UpdateSegmentVisibilityVolumeAction
+  | MergeSegmentItemsUpdateAction
   | DeleteSegmentUpdateAction
   | DeleteSegmentDataUpdateAction
   | UpdateBucketUpdateAction
   | UpdateTreeVisibilityUpdateAction
   | UpdateTreeEdgesVisibilityUpdateAction
   | UpdateTreeGroupVisibilityUpdateAction
-  | UpdateSegmentGroupsUpdateAction
+  | LEGACY_UpdateSegmentGroupsUpdateAction
   | UpdateSegmentGroupsExpandedStateUpdateAction
   | UpdateSegmentGroupVisibilityVolumeAction
   | UpdateTreeGroupsUpdateAction
@@ -729,6 +747,7 @@ export function updateUserBoundingBoxVisibilityInSkeletonTracing(
 export function createSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,
+  additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   name: string | null | undefined,
   color: Vector3 | null,
   groupId: number | null | undefined,
@@ -742,6 +761,7 @@ export function createSegmentVolumeAction(
       actionTracingId,
       id,
       anchorPosition,
+      additionalCoordinates,
       name,
       color,
       groupId,
@@ -751,7 +771,7 @@ export function createSegmentVolumeAction(
   } as const;
 }
 
-export function updateSegmentVolumeAction(
+export function LEGACY_updateSegmentVolumeAction(
   id: number,
   anchorPosition: Vector3 | null | undefined,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
@@ -760,7 +780,7 @@ export function updateSegmentVolumeAction(
   groupId: number | null | undefined,
   metadata: Array<MetadataEntryProto>,
   actionTracingId: string,
-  creationTime: number | null | undefined = Date.now(),
+  creationTime: number | null | undefined,
 ) {
   return {
     name: "updateSegment",
@@ -778,6 +798,86 @@ export function updateSegmentVolumeAction(
   } as const;
 }
 
+export function updateSegmentPartialVolumeAction(
+  shape: {
+    id: number;
+    anchorPosition?: Vector3 | null | undefined;
+    additionalCoordinates?: AdditionalCoordinate[] | undefined | null;
+    name?: string | null | undefined;
+    color?: Vector3 | null;
+    groupId?: number | null | undefined;
+    metadata?: Array<MetadataEntryProto>;
+    creationTime?: number | null | undefined;
+  },
+  actionTracingId: string,
+) {
+  const { metadata } = shape;
+  const maybeMetadataWrapper =
+    metadata != null
+      ? {
+          metadata: enforceValidMetadata(metadata),
+        }
+      : ({} as EmptyObject);
+  return {
+    name: "updateSegmentPartial",
+    value: {
+      actionTracingId,
+      ...shape,
+      ...maybeMetadataWrapper,
+    },
+  } as const;
+}
+
+export function updateMetadataOfSegmentUpdateAction(
+  id: number,
+  upsertEntriesByKey: Array<MetadataEntryProto>,
+  removeEntriesByKey: Array<string>,
+  actionTracingId: string,
+) {
+  return {
+    name: "updateMetadataOfSegment",
+    value: {
+      id,
+      upsertEntriesByKey: enforceValidMetadata(upsertEntriesByKey),
+      removeEntriesByKey,
+      actionTracingId,
+    },
+  } as const;
+}
+
+export function upsertSegmentGroupUpdateAction(
+  groupId: number,
+  properties: {
+    // If not set, the name is not updated. A group must always have a name.
+    name?: string;
+    // Includes moving the groups current subgroups.
+    newParentId?: number | null | undefined;
+  },
+  actionTracingId: string,
+) {
+  return {
+    name: "upsertSegmentGroup",
+    value: {
+      groupId,
+      actionTracingId,
+      ...properties,
+    },
+  } as const;
+}
+
+export function deleteSegmentGroupUpdateAction(groupId: number, actionTracingId: string) {
+  /*
+   * Will delete the specified group including all its subgroups.
+   */
+  return {
+    name: "deleteSegmentGroup",
+    value: {
+      groupId,
+      actionTracingId,
+    },
+  } as const;
+}
+
 export function updateSegmentVisibilityVolumeAction(
   id: number,
   isVisible: boolean,
@@ -789,6 +889,25 @@ export function updateSegmentVisibilityVolumeAction(
       id,
       actionTracingId,
       isVisible,
+    },
+  } as const;
+}
+
+export function mergeSegmentItemsVolumeAction(
+  agglomerateId1: number,
+  agglomerateId2: number,
+  segmentId1: number,
+  segmentId2: number,
+  actionTracingId: string,
+) {
+  return {
+    name: "mergeSegmentItems",
+    value: {
+      actionTracingId,
+      agglomerateId1, // aka "source"
+      agglomerateId2, // aka "target"; will be "swallowed" by source
+      segmentId1, // the unmapped ID (supervoxel) that belongs to agglomerateId1
+      segmentId2, // the unmapped ID (supervoxel) that belongs to agglomerateId2
     },
   } as const;
 }
@@ -833,7 +952,10 @@ export function updateBucket(
   } as const;
 }
 
-export function updateSegmentGroups(segmentGroups: Array<SegmentGroup>, actionTracingId: string) {
+export function LEGACY_updateSegmentGroups(
+  segmentGroups: Array<SegmentGroup>,
+  actionTracingId: string,
+) {
   return {
     name: "updateSegmentGroups",
     value: {
@@ -961,8 +1083,8 @@ export function updateMappingName(
   } as const;
 }
 export function splitAgglomerate(
-  segmentId1: NumberLike,
-  segmentId2: NumberLike,
+  segmentId1: NumberLike, // will keep its agglomerate id
+  segmentId2: NumberLike, // will get a new agglomerate id
   agglomerateId: NumberLike,
   actionTracingId: string,
 ): {
@@ -1000,8 +1122,8 @@ export function splitAgglomerate(
   } as const;
 }
 export function mergeAgglomerate(
-  segmentId1: NumberLike,
-  segmentId2: NumberLike,
+  segmentId1: NumberLike, // source
+  segmentId2: NumberLike, // target (will be "swallowed" by source)
   agglomerateId1: NumberLike,
   agglomerateId2: NumberLike,
   actionTracingId: string,

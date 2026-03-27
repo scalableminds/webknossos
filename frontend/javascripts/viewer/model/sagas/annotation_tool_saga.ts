@@ -142,7 +142,6 @@ function* setLastUsedToolQueue(setToolAction: SetToolAction): Saga<void> {
     ...lastUsedToolQueue.slice(0, 2),
   ] as [AnnotationToolId, AnnotationToolId, AnnotationToolId];
   yield* put(updateUserSettingAction("lastUsedToolQueue", updatedLastUsedToolQueue));
-  console.log("Updated last used tool queue:", updatedLastUsedToolQueue); //TODO_C remove
 }
 
 function* rememberToolPreferences(setToolAction: SetToolAction): Saga<void> {

@@ -6,7 +6,7 @@ import features from "features";
 import { useKeyPress, useWindowWidth, useWkSelector } from "libs/react_hooks";
 import { useCallback, useMemo } from "react";
 import { useDispatch } from "react-redux";
-import Constants from "viewer/constants";
+import Constants, { ControlModeEnum } from "viewer/constants";
 import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import {
   AnnotationTool,
@@ -58,9 +58,12 @@ export default function ToolbarView() {
   const isSplitToolkit = toolkit === Toolkit.SPLIT_SEGMENTS;
   const windowWidth = useWindowWidth();
   const disabledInfoForTools = useWkSelector(getDisabledInfoForTools);
-  const isNarrowScreen = useMemo(() => windowWidth < Constants.NARROW_SCREEN_WIDTH, [windowWidth]);
+  const isWiderScreen = useMemo(() => windowWidth >= Constants.NARROW_SCREEN_WIDTH, [windowWidth]);
   const lastRecentlyUsedToolsFromUserConfig = useWkSelector(
     (state) => state.userConfiguration.lastUsedToolQueue,
+  );
+  const isViewMode = useWkSelector(
+    (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
 
   const isShiftPressed = useKeyPress("Shift");
@@ -81,37 +84,35 @@ export default function ToolbarView() {
     [dispatch],
   );
 
-  const onlyShowLastRecentlyUsedTools = isNarrowScreen && toolkit !== Toolkit.READ_ONLY_TOOLS;
+  const showAllTools = isWiderScreen || toolkit === Toolkit.READ_ONLY_TOOLS || isViewMode;
 
   const toolsForButtons = useMemo(() => {
+    if (showAllTools) return Toolkits[toolkit];
     const allToolsInToolkit = Toolkits[toolkit];
     const allToolIdsInToolkit = allToolsInToolkit.map((tool) => tool.id);
-    if (onlyShowLastRecentlyUsedTools) {
-      const lruToolsInToolkit = lastRecentlyUsedToolsFromUserConfig.filter((toolId) =>
-        allToolIdsInToolkit.includes(toolId),
-      );
-      for (const tool of allToolsInToolkit) {
-        if (lruToolsInToolkit.length >= 3) break;
-        if (!lruToolsInToolkit.includes(tool.id)) {
-          let adaptedToolId = tool.id;
-          // fix tools with tool menues
-          if (tool.id === AnnotationTool.TRACE.id) adaptedToolId = AnnotationTool.BRUSH.id;
-          else if (tool.id === AnnotationTool.ERASE_TRACE.id)
-            adaptedToolId = AnnotationTool.ERASE_BRUSH.id;
-          else if (tool.id === AnnotationTool.AREA_MEASUREMENT.id)
-            adaptedToolId = AnnotationTool.LINE_MEASUREMENT.id;
-          lruToolsInToolkit.push(adaptedToolId);
-        }
+    const lruToolsInToolkit = lastRecentlyUsedToolsFromUserConfig.filter((toolId) =>
+      allToolIdsInToolkit.includes(toolId),
+    );
+    for (const tool of allToolsInToolkit) {
+      if (lruToolsInToolkit.length >= 3) break;
+      if (!lruToolsInToolkit.includes(tool.id)) {
+        let adaptedToolId = tool.id;
+        // fix tools with tool menues
+        if (tool.id === AnnotationTool.TRACE.id) adaptedToolId = AnnotationTool.BRUSH.id;
+        else if (tool.id === AnnotationTool.ERASE_TRACE.id)
+          adaptedToolId = AnnotationTool.ERASE_BRUSH.id;
+        else if (tool.id === AnnotationTool.AREA_MEASUREMENT.id)
+          adaptedToolId = AnnotationTool.LINE_MEASUREMENT.id;
+        lruToolsInToolkit.push(adaptedToolId);
       }
-      return lruToolsInToolkit
-        .map((toolId) => allToolsInToolkit.find((tool) => tool.id === toolId))
-        .filter((tool): tool is AnnotationTool => tool != null);
     }
-    return Toolkits[toolkit];
-  }, [onlyShowLastRecentlyUsedTools, toolkit, lastRecentlyUsedToolsFromUserConfig]);
+    return lruToolsInToolkit
+      .map((toolId) => allToolsInToolkit.find((tool) => tool.id === toolId))
+      .filter((tool): tool is AnnotationTool => tool != null);
+  }, [showAllTools, toolkit, lastRecentlyUsedToolsFromUserConfig]);
 
   const getToolDropdown = useMemo(() => {
-    if (!onlyShowLastRecentlyUsedTools) return null;
+    if (showAllTools) return null;
     return (
       <ToolRadioButton name="More tools" value={null} style={NARROW_BUTTON_STYLE}>
         <Dropdown
@@ -142,7 +143,7 @@ export default function ToolbarView() {
         </Dropdown>
       </ToolRadioButton>
     );
-  }, [onlyShowLastRecentlyUsedTools, toolkit, dispatch, disabledInfoForTools]);
+  }, [showAllTools, toolkit, dispatch, disabledInfoForTools]);
 
   return (
     <>

@@ -104,7 +104,7 @@ const defaultState: WebknossosState = {
       AnnotationTool.BRUSH.id,
       AnnotationTool.ERASE_BRUSH.id,
     ],
-    erasePreference: "BRUSH",
+    erasePreference: "ERASE_BRUSH",
     writePreference: "BRUSH",
     measurementPreference: "LINE_MEASUREMENT",
   },

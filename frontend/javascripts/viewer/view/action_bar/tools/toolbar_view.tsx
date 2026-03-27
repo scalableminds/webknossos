@@ -7,6 +7,7 @@ import { useKeyPress, useWindowWidth, useWkSelector } from "libs/react_hooks";
 import { useCallback, useMemo } from "react";
 import { useDispatch } from "react-redux";
 import Constants from "viewer/constants";
+import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import {
   AnnotationTool,
   type AnnotationToolId,
@@ -34,7 +35,7 @@ import {
 function CreateNewBoundingBoxButton() {
   const dispatch = useDispatch();
 
-  const handleAddNewUserBoundingBox = useMemo(() => {
+  const handleAddNewUserBoundingBox = useCallback(() => {
     dispatch(addUserBoundingBoxAction());
   }, [dispatch]);
 
@@ -56,6 +57,7 @@ export default function ToolbarView() {
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
   const isSplitToolkit = toolkit === Toolkit.SPLIT_SEGMENTS;
   const windowWidth = useWindowWidth();
+  const disabledInfoForTools = useWkSelector(getDisabledInfoForTools);
   const isNarrowScreen = useMemo(() => windowWidth < Constants.NARROW_SCREEN_WIDTH, [windowWidth]);
   const lastRecentlyUsedToolsFromUserConfig = useWkSelector(
     (state) => state.userConfiguration.lastUsedToolQueue,
@@ -115,15 +117,21 @@ export default function ToolbarView() {
         <Dropdown
           menu={{
             items: Toolkits[toolkit].map((tool) => {
+              const isDisabled = disabledInfoForTools[tool.id].isDisabled;
               return {
                 key: tool.id,
+                disabled: isDisabled,
+                title: isDisabled ? disabledInfoForTools[tool.id].explanation : undefined,
                 label: (
                   <span
                     onClick={() => {
                       dispatch(setToolAction(tool));
                     }}
                   >
-                    {tool.name}
+                    <Space size="small">
+                      {tool.icon}
+                      {tool.readableName}
+                    </Space>
                   </span>
                 ),
               };
@@ -134,7 +142,7 @@ export default function ToolbarView() {
         </Dropdown>
       </ToolRadioButton>
     );
-  }, [onlyShowLastRecentlyUsedTools, toolkit, dispatch]);
+  }, [onlyShowLastRecentlyUsedTools, toolkit, dispatch, disabledInfoForTools]);
 
   return (
     <>

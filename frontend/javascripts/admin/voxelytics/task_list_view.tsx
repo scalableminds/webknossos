@@ -36,7 +36,7 @@ import {
   formatTimeInterval,
   formatTimeIntervalStrict,
 } from "libs/format_utils";
-import { useSearchParams, useUpdateEvery, useWkSelector } from "libs/react_hooks";
+import { useUpdateEvery, useWkSelector } from "libs/react_hooks";
 import { notEmpty } from "libs/utils";
 import MiniSearch from "minisearch";
 import React, { useEffect, useMemo, useState } from "react";
@@ -254,6 +254,7 @@ export default function TaskListView({
   isLoading,
   onToggleExpandedMetaTaskKey,
   onReload,
+  runId,
 }: {
   report: VoxelyticsWorkflowReport;
   tasksWithHierarchy: Array<VoxelyticsTaskConfigWithHierarchy>;
@@ -262,10 +263,10 @@ export default function TaskListView({
   isLoading: boolean;
   onToggleExpandedMetaTaskKey: (v: string) => void;
   onReload: () => void;
+  runId: string | null;
 }) {
   const { modal } = App.useApp();
   const [searchQuery, setSearchQuery] = useState("");
-  const { runId } = useSearchParams();
   const navigate = useNavigate();
 
   // expandedTask = state of the collapsible list
@@ -566,7 +567,9 @@ export default function TaskListView({
             }}
           />
           {foreignWorkflow != null ? (
-            <Link to={`/workflows/${foreignWorkflow[0]}?runId=${foreignWorkflow[1]}`}>
+            <Link
+              to={`/workflows/${foreignWorkflow[0]}/run/${encodeURIComponent(foreignWorkflow[1])}`}
+            >
               {task.taskName}
               &nbsp;
               <ExportOutlined />
@@ -679,13 +682,12 @@ export default function TaskListView({
               </Button>
               <Select
                 value={runId ?? ""}
-                onChange={(value) =>
+                onChange={(value) => {
+                  const basePath = `/workflows/${report.workflow.hash}`;
                   navigate(
-                    value === ""
-                      ? removeUrlParam(location, "runId")
-                      : addUrlParam(location, "runId", value),
-                  )
-                }
+                    value === "" ? `${basePath}` : `${basePath}/run/${encodeURIComponent(value)}`,
+                  );
+                }}
                 popupMatchSelectWidth={false}
                 styles={{
                   root: {

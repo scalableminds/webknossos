@@ -7,7 +7,6 @@ import viteProtobufPlugin from "./frontend/vite/vite-plugin-protobuf";
 import replaceSvgColorWithCurrentColor from "./frontend/vite/vite-plugin-replace-svg-color";
 
 import path from "node:path";
-import fs from "node:fs";
 
 const alias = {
   "@images": path.resolve(__dirname, "frontend/assets/images"),

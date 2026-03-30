@@ -75,6 +75,11 @@ object NmlResults extends LazyLogging {
     override def wkUrl: Option[String] = _wkUrl
 
     override def withName(name: String): NmlParseResult = this.copy(fileName = name)
+
+    def fileNameWithoutExtension: String =
+      if (fileName.toLowerCase.endsWith(".nml") || fileName.toLowerCase.endsWith(".zip"))
+        fileName.dropRight(4)
+      else fileName
   }
 
   case class NmlParseFailure(fileName: String, error: String) extends NmlParseResult {

@@ -92,7 +92,8 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
         _ <- Fox.runIf(
           jobBeforeChange.state != request.body.state && (request.body.state == JobState.FAILURE || request.body.state == JobState.CANCELLED)) {
           creditTransactionService
-            .refundTransactionForJob(jobBeforeChange._id)(GlobalAccessContext) ?~> "job.creditTransaction.refund.failed"
+            .refundTransactionForJob(jobBeforeChange._id, isCancelled = request.body.state == JobState.CANCELLED)(
+              GlobalAccessContext) ?~> "job.creditTransaction.refund.failed"
         }
       } yield Ok
   }

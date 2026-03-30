@@ -47,13 +47,14 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
 
     } yield ()
 
-  def refundTransactionForJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def refundTransactionForJob(jobId: ObjectId, isCancelled: Boolean = false)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       transactionBox <- creditTransactionDAO.findPendingTransactionForJob(jobId).shiftBox
       _ <- transactionBox match {
         case Full(transaction) =>
           for {
-            _ <- creditTransactionDAO.refundTransaction(transaction._id)
+            _ <- creditTransactionDAO.refundTransaction(transaction._id, isCancelled)
           } yield ()
         case Empty      => Fox.successful(()) // Assume transaction-less Job
         case f: Failure => f.toFox

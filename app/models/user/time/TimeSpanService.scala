@@ -11,7 +11,7 @@ import javax.inject.Inject
 import models.annotation._
 import models.project.ProjectDAO
 import models.task.TaskDAO
-import models.user.{User, UserService}
+import models.user.{MultiUserDAO, User, UserService}
 import com.scalableminds.util.tools.{Box, Full}
 import org.apache.pekko.actor.{ActorSelection, ActorSystem}
 import utils.WkConf
@@ -22,6 +22,7 @@ import scala.concurrent.duration._
 
 class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
                                 userService: UserService,
+                                multiUserDAO: MultiUserDAO,
                                 taskDAO: TaskDAO,
                                 annotationService: AnnotationService,
                                 projectDAO: ProjectDAO,
@@ -135,16 +136,18 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     for {
       annotation <- annotationOpt.toFox
       user <- userService.findOneCached(annotation._user)(GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       task <- annotationService.taskFor(annotation)(GlobalAccessContext)
       project <- projectDAO.findOne(task._project)
       annotationTime <- annotation.tracingTime.toFox ?~> "no annotation.tracingTime"
       timeLimit <- project.expectedTime.toFox ?~> "no project.expectedTime"
       projectOwner <- userService.findOneCached(project._owner)(GlobalAccessContext)
-      projectOwnerEmail <- userService.emailFor(projectOwner)(GlobalAccessContext)
+      projectOwnerMultiUser <- multiUserDAO.findOne(projectOwner._multiUser)(GlobalAccessContext)
     } yield {
       if (annotationTime >= timeLimit && annotationTime - time.toMillis < timeLimit) {
         Mailer ! Send(
-          defaultMails.overLimitMail(user, project.name, task._id.toString, annotation.id, projectOwnerEmail))
+          defaultMails
+            .overLimitMail(multiUser, project.name, task._id.toString, annotation.id, projectOwnerMultiUser.email))
       }
     }
 

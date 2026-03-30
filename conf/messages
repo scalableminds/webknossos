@@ -133,6 +133,7 @@ dataset.metadata.duplicateKeys=Metadata keys must be unique.
 dataset.boundingBox.unset=This dataset has no bounding box. Please make sure this dataset is imported correctly.
 dataset.reserveMagUploadToPath.notVirtual=Adding mags to existing datasets is only allowed for virtual datasets.
 dataset.reserveMagUploadToPath.exists=This mag is already pending.
+dataset.composeInPlace.mustBeVirtual=This feature is not available for disk-based (“non-virtual”) datasets. If you have access on disk, edit it directly.
 
 uploadToPaths.noMatchingPrefix=Could not determine a configured path prefix that matches the request.
 
@@ -423,6 +424,6 @@ aiModel.reserve.wrongOrga=Cannot reserve upload to path for AI models of other o
 aiModel.reserve.notPending=Cannot reserve upload to path for AI model that is not currently marked as pending.
 aiModel.finish.wrongOrga=Cannot finish upload to path for AI models of other organizations.
 aiModel.finish.notPending=Cannot finish upload to path for AI model that is not currently marked as pending.
-
+aiModel.dataStoreMismatch=Cannot use AI model on a dataset on a different data store.
 
 aiInference.notFound=Could not find requested AI inference.

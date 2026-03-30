@@ -12,6 +12,7 @@ import com.scalableminds.webknossos.datastore.controllers.Controller
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{
   GetSegmentIndexParameters,
+  MissingBucketHeaders,
   ProtoGeometryImplicits,
   SegmentStatisticsParameters,
   SegmentStatisticsParametersMeshBased
@@ -30,7 +31,11 @@ import com.scalableminds.webknossos.tracingstore.annotation.{AnnotationTransacti
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume._
-import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingSelector}
+import com.scalableminds.webknossos.tracingstore.tracings.{
+  KeyValueStoreImplicits,
+  TemporaryMergedVolumeStatsStore,
+  TracingSelector
+}
 import com.scalableminds.webknossos.tracingstore.{
   TSRemoteDatastoreClient,
   TSRemoteWebknossosClient,
@@ -45,6 +50,7 @@ import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
 import java.io.File
 import java.nio.{ByteBuffer, ByteOrder}
 import scala.concurrent.ExecutionContext
+import scala.concurrent.duration.DurationInt
 
 class VolumeTracingController @Inject()(
     val volumeTracingService: VolumeTracingService,
@@ -59,9 +65,11 @@ class VolumeTracingController @Inject()(
     volumeSegmentStatisticsService: VolumeSegmentStatisticsService,
     volumeSegmentIndexService: VolumeSegmentIndexService,
     fullMeshService: TSFullMeshService,
+    temporaryMergedVolumeStatsStore: TemporaryMergedVolumeStatsStore,
     val rpc: RPC)(implicit val ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends Controller
     with ProtoGeometryImplicits
+    with MissingBucketHeaders
     with KeyValueStoreImplicits {
 
   implicit val tracingsCompanion: VolumeTracings.type = VolumeTracings
@@ -137,7 +145,12 @@ class VolumeTracingController @Inject()(
       }
     }
 
-  def mergedFromContents(newTracingId: String): Action[VolumeTracings] =
+  /*
+   * First, create tracing that is *like* the final merged one but is “emptied” (no segments, bboxes, groups, user state)
+   * (Note that this can already be done on the client side to save bandwidth)
+   * After volumeData is merged, this tracing object (version 0L will later be overwritten by the actual merged tracing)
+   */
+  def initializeForMerge(newTracingId: String): Action[VolumeTracings] =
     Action.async(validateProto[VolumeTracings]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
@@ -151,14 +164,19 @@ class VolumeTracingController @Inject()(
                      newVersion = 0L,
                      additionalBoundingBoxes = Seq.empty)
               .toFox
-            // segment lists for multi-volume uploads are not supported yet, compare https://github.com/scalableminds/webknossos/issues/6887
-            mergedTracing = mergedTracingRaw.copy(segments = List.empty)
+            mergedTracing = mergedTracingRaw.copy(segments = Seq.empty,
+                                                  segmentGroups = Seq.empty,
+                                                  userBoundingBoxes = Seq.empty,
+                                                  userStates = Seq.empty)
             _ <- volumeTracingService.saveVolume(newTracingId, mergedTracing.version, mergedTracing)
           } yield Ok
         }
       }
     }
 
+  /*
+   * Assume initializeForMerge has already run. We can now merge the actual volume data an store the resulting stats
+   */
   def initialDataMultiple(annotationId: ObjectId, tracingId: String): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
@@ -168,13 +186,36 @@ class VolumeTracingController @Inject()(
               initialData <- request.body.asRaw.map(_.asFile).toFox ?~> Messages("zipFile.notFound")
               // The annotation object may not yet exist here. Caller is responsible to save that too.
               tracing <- annotationService.findVolumeRaw(tracingId) ?~> Messages("tracing.notFound")
-              mags <- volumeTracingService.initializeWithDataMultiple(annotationId,
-                                                                      tracingId,
-                                                                      tracing.value,
-                                                                      initialData)
-              _ <- volumeTracingService.updateMagList(tracingId, tracing.value, mags)
-            } yield Ok(Json.toJson(tracingId))
+              mergedVolumeStats <- volumeTracingService.initializeWithDataMultiple(annotationId,
+                                                                                   tracingId,
+                                                                                   tracing.value,
+                                                                                   initialData)
+              _ = temporaryMergedVolumeStatsStore.insert(tracingId, mergedVolumeStats, to = Some(1 hour))
+            } yield Ok
           }
+        }
+      }
+    }
+
+  /*
+   * Assume initializeForMerge and initialDataMultiple has already run.
+   * We now have the mergedVolumeStats to do the “real” merge of the
+   * VolumeTracing objects and overwrite the initialized one.
+   */
+  def mergedFromContents(newTracingId: String): Action[VolumeTracings] =
+    Action.async(validateProto[VolumeTracings]) { implicit request =>
+      log() {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+          val tracingsFlat = request.body.flatten
+          for {
+            mergedVolumeStats <- temporaryMergedVolumeStatsStore
+              .pop(newTracingId)
+              .toFox ?~> "mergedVolumeStats.notFound"
+            mergedTracing <- volumeTracingService
+              .merge(tracingsFlat, mergedVolumeStats, None, newVersion = 0L, additionalBoundingBoxes = Seq.empty)
+              .toFox
+            _ <- volumeTracingService.saveVolume(newTracingId, mergedTracing.version, mergedTracing)
+          } yield Ok
         }
       }
     }
@@ -226,16 +267,10 @@ class VolumeTracingController @Inject()(
               val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
               editableMappingService.volumeData(mappingLayer, request.body)
             } else volumeTracingService.data(annotationId, tracingId, tracing, request.body)
-          } yield Ok(data).withHeaders(getMissingBucketsHeaders(indices): _*)
+          } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
         }
       }
     }
-
-  private def getMissingBucketsHeaders(indices: List[Int]): Seq[(String, String)] =
-    List("MISSING-BUCKETS" -> formatMissingBucketList(indices), "Access-Control-Expose-Headers" -> "MISSING-BUCKETS")
-
-  private def formatMissingBucketList(indices: List[Int]): String =
-    "[" + indices.mkString(", ") + "]"
 
   def importVolumeData(tracingId: String): Action[MultipartFormData[TemporaryFile]] =
     Action.async(parse.multipartFormData) { implicit request =>

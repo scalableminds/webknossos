@@ -1,11 +1,8 @@
 import {
-  type BaseCustomModelInferenceParameters,
   refreshOrganizationCredits,
-  runCustomInstanceModelInferenceJob,
-  runCustomNeuronModelInferenceJob,
+  runInstanceModelInference,
+  runNeuronModelInference,
   runPretrainedMitochondriaInferenceJob,
-  runPretrainedNeuronInferenceJob,
-  runPretrainedNucleiInferenceJob,
 } from "admin/rest_api";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -27,9 +24,10 @@ import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import { Model } from "viewer/singletons";
 import type { UserBoundingBox } from "viewer/store";
 import type { SplitMergerEvaluationSettings } from "viewer/view/ai_jobs/components/collapsible_split_merger_evaluation_settings";
+import type { PretrainedModel } from "./ai_model_selector";
 
 interface RunAiModelJobContextType {
-  selectedModel: AiModel | Partial<AiModel> | null;
+  selectedModel: AiModel | PretrainedModel | null;
   selectedJobType:
     | APIJobCommand.INFER_NEURONS
     | APIJobCommand.INFER_NUCLEI
@@ -49,7 +47,7 @@ interface RunAiModelJobContextType {
       | APIJobCommand.INFER_MITOCHONDRIA
       | APIJobCommand.INFER_INSTANCES,
   ) => void;
-  setSelectedModel: (model: AiModel | Partial<AiModel>) => void;
+  setSelectedModel: (model: AiModel | PretrainedModel) => void;
   setSelectedBoundingBox: (bbox: UserBoundingBox | null) => void;
   setNewDatasetName: (name: string) => void;
   setSelectedLayer: (layer: APIDataLayer) => void;
@@ -72,7 +70,7 @@ const RunAiModelJobContext = createContext<RunAiModelJobContextType | undefined>
 export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [selectedModel, setSelectedModel] = useState<AiModel | Partial<AiModel> | null>(null);
+  const [selectedModel, setSelectedModel] = useState<AiModel | PretrainedModel | null>(null);
   const [selectedJobType, setSelectedJobType] = useState<
     | APIJobCommand.INFER_NEURONS
     | APIJobCommand.INFER_NUCLEI
@@ -136,14 +134,23 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
   ]);
 
   const handleStartAnalysis = useCallback(async () => {
-    if (!areParametersValid) {
+    if (
+      !areParametersValid ||
+      // These variables are already checked with areParametersValid, but the checks
+      // are needed for TS.
+      selectedModel == null ||
+      selectedJobType == null ||
+      selectedBoundingBox == null ||
+      newDatasetName == null ||
+      selectedLayer == null
+    ) {
       Toast.error("Please select a model, bounding box, and provide a dataset name.");
       return;
     }
 
     await Model.ensureSavedState();
 
-    const boundingBox = computeArrayFromBoundingBox(selectedBoundingBox!.boundingBox);
+    const boundingBox = computeArrayFromBoundingBox(selectedBoundingBox.boundingBox);
     const maybeAnnotationId = isViewMode ? {} : { annotationId };
 
     if (isEvaluationActive) {
@@ -167,72 +174,62 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
       }
     }
 
-    const isColorLayerInverted = datasetConfiguration.layers[selectedLayer!.name].isInverted;
+    const isColorLayerInverted = datasetConfiguration.layers[selectedLayer.name].isInverted;
+    const aiModelId = "trainingJob" in selectedModel ? selectedModel.id : undefined;
 
     try {
-      if ("trainingJob" in selectedModel!) {
-        // Custom models
-        const commonInferenceArgs: BaseCustomModelInferenceParameters = {
-          ...maybeAnnotationId,
-          aiModelId: selectedModel!.id as string,
-          datasetDirectoryName: dataset.directoryName,
-          organizationId: dataset.owningOrganization,
-          colorLayerName: selectedLayer!.name,
-          boundingBox,
-          newDatasetName: newDatasetName,
-          invertColorLayer: isColorLayerInverted,
-        };
-
-        switch (selectedJobType) {
-          case APIJobCommand.INFER_NEURONS:
-            await runCustomNeuronModelInferenceJob({
-              ...commonInferenceArgs,
-            });
-            break;
-          case APIJobCommand.INFER_INSTANCES:
-            await runCustomInstanceModelInferenceJob({
-              ...commonInferenceArgs,
-              seedGeneratorDistanceThreshold: seedGeneratorDistanceThreshold,
-            });
-            break;
-          default:
-            throw new Error(`Unsupported custom model for job type: ${selectedJobType}`);
-        }
-      } else {
-        // Pre-trained models
-        switch (selectedJobType) {
-          case APIJobCommand.INFER_NEURONS:
-            await runPretrainedNeuronInferenceJob(
-              dataset.id,
-              selectedLayer!.name,
-              boundingBox,
-              newDatasetName,
-              isColorLayerInverted,
-              isEvaluationActive,
-              isEvaluationActive ? annotationId : undefined,
-              isEvaluationActive ? splitMergerEvaluationSettings : undefined,
-            );
-            break;
-          case APIJobCommand.INFER_MITOCHONDRIA:
-            await runPretrainedMitochondriaInferenceJob(
-              dataset.id,
-              selectedLayer!.name,
-              boundingBox,
-              newDatasetName,
-            );
-            break;
-          case APIJobCommand.INFER_NUCLEI:
-            await runPretrainedNucleiInferenceJob(
-              dataset.id,
-              selectedLayer!.name,
-              newDatasetName,
-              isColorLayerInverted,
-            );
-            break;
-
-          default:
-            throw new Error(`Unsupported pretrained model for job type: ${selectedJobType}`);
-        }
+      switch (selectedJobType) {
+        case APIJobCommand.INFER_NEURONS:
+          await runNeuronModelInference({
+            ...maybeAnnotationId,
+            aiModelId,
+            datasetId: dataset.id,
+            colorLayerName: selectedLayer.name,
+            boundingBox: boundingBox.join(","),
+            newDatasetName,
+            invertColorLayer: isColorLayerInverted,
+            doSplitMergerEvaluation: isEvaluationActive,
+            ...(isEvaluationActive
+              ? {
+                  evalUseSparseTracing: splitMergerEvaluationSettings.useSparseTracing,
+                  evalMaxEdgeLength: splitMergerEvaluationSettings.maxEdgeLength,
+                  evalSparseTubeThresholdNm: splitMergerEvaluationSettings.sparseTubeThresholdInNm,
+                  evalMinMergerPathLengthNm:
+                    splitMergerEvaluationSettings.minimumMergerPathLengthInNm,
+                }
+              : {}),
+          });
+          break;
+        case APIJobCommand.INFER_NUCLEI:
+          await runInstanceModelInference({
+            datasetId: dataset.id,
+            colorLayerName: selectedLayer.name,
+            boundingBox: boundingBox.join(","),
+            newDatasetName,
+            invertColorLayer: isColorLayerInverted,
+          });
+          break;
+        case APIJobCommand.INFER_INSTANCES:
+          await runInstanceModelInference({
+            datasetId: dataset.id,
+            aiModelId,
+            colorLayerName: selectedLayer.name,
+            boundingBox: boundingBox.join(","),
+            newDatasetName,
+            invertColorLayer: isColorLayerInverted,
+            seedGeneratorDistanceThreshold,
+          });
+          break;
+        case APIJobCommand.INFER_MITOCHONDRIA:
+          await runPretrainedMitochondriaInferenceJob(
+            dataset.id,
+            selectedLayer.name,
+            boundingBox,
+            newDatasetName,
+          );
+          break;
+        default:
+          throw new Error(`Unsupported job type: ${selectedJobType}`);
       }
       Toast.success("Analysis started successfully!");
       dispatch(setAIJobDrawerStateAction("invisible"));

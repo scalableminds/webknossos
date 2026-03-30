@@ -123,7 +123,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
         position <- getPositionOfNonZeroData(data, position, dataLayer.bytesPerElement).toFox
       } yield position
 
-    def magIter(positions: List[Vec3Int], remainingMags: List[Vec3Int]): Fox[Option[(Vec3Int, Vec3Int)]] =
+    def magIter(positions: List[Vec3Int], remainingMags: Seq[Vec3Int]): Fox[Option[(Vec3Int, Vec3Int)]] =
       remainingMags match {
         case List() => Fox.successful(None)
         case head :: tail =>

@@ -9,7 +9,11 @@ import com.scalableminds.webknossos.tracingstore.files.TsTempFileService
 import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotificationService
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.{TSDatasetErrorLoggingService, VolumeTracingService}
-import com.scalableminds.webknossos.tracingstore.tracings.{TemporaryTracingService, TracingDataStore}
+import com.scalableminds.webknossos.tracingstore.tracings.{
+  TemporaryMergedVolumeStatsStore,
+  TemporaryTracingService,
+  TracingDataStore
+}
 import org.apache.pekko.actor.ActorSystem
 
 class TracingStoreModule extends AbstractModule {
@@ -32,6 +36,7 @@ class TracingStoreModule extends AbstractModule {
     bind(classOf[TSDatasetErrorLoggingService]).asEagerSingleton()
     bind(classOf[TsTempFileService]).asEagerSingleton()
     bind(classOf[TSCleanUpService]).asEagerSingleton()
+    bind(classOf[TemporaryMergedVolumeStatsStore]).asEagerSingleton()
   }
 
 }

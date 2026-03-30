@@ -1,5 +1,6 @@
+import AdminPage from "admin/admin_page";
 import { createScript, getScript, getTeamManagerOrAdminUsers, updateScript } from "admin/rest_api";
-import { Button, Card, Form, Input, Select } from "antd";
+import { Button, Col, Form, Input, Row, Select, theme } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -10,6 +11,7 @@ const FormItem = Form.Item;
 
 function ScriptCreateView() {
   const { scriptId } = useParams();
+  const { token } = theme.useToken();
 
   const navigate = useNavigate();
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
@@ -52,24 +54,62 @@ function ScriptCreateView() {
 
   const titlePrefix = scriptId ? "Update" : "Create";
   return (
-    <div className="container">
-      <Card title={<h3>{titlePrefix} Script</h3>}>
+    <AdminPage
+      title={`${titlePrefix} Script`}
+      descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/scripts.html"
+      description="Create or update reusable frontend scripts and assign ownership."
+      contentMaxWidth={800}
+    >
+      <div
+        style={{
+          padding: token.paddingLG,
+        }}
+      >
         <Form onFinish={onFinish} layout="vertical" form={form}>
-          <FormItem
-            name="name"
-            label="Script Name"
-            hasFeedback
-            rules={[
-              {
-                required: true,
-              },
-              {
-                min: 3,
-              },
-            ]}
-          >
-            <Input autoFocus />
-          </FormItem>
+          <Row gutter={token.paddingMD}>
+            <Col xs={24} md={12}>
+              <FormItem
+                name="name"
+                label="Script Name"
+                hasFeedback
+                rules={[
+                  {
+                    required: true,
+                  },
+                  {
+                    min: 3,
+                  },
+                ]}
+              >
+                <Input autoFocus />
+              </FormItem>
+            </Col>
+            <Col xs={24} md={12}>
+              <FormItem
+                name="owner"
+                label="Owner"
+                hasFeedback
+                rules={[
+                  {
+                    required: true,
+                  },
+                ]}
+              >
+                <Select
+                  showSearch={{ optionFilterProp: "label" }}
+                  placeholder="Select a User"
+                  style={{
+                    width: "100%",
+                  }}
+                  loading={isFetchingData}
+                  options={users.map((user: APIUser) => ({
+                    value: user.id,
+                    label: `${user.lastName}, ${user.firstName} (${user.email})`,
+                  }))}
+                />
+              </FormItem>
+            </Col>
+          </Row>
 
           <FormItem
             name="gist"
@@ -87,38 +127,14 @@ function ScriptCreateView() {
             <Input />
           </FormItem>
 
-          <FormItem
-            name="owner"
-            label="Owner"
-            hasFeedback
-            rules={[
-              {
-                required: true,
-              },
-            ]}
-          >
-            <Select
-              showSearch={{ optionFilterProp: "label" }}
-              placeholder="Select a User"
-              style={{
-                width: "100%",
-              }}
-              loading={isFetchingData}
-              options={users.map((user: APIUser) => ({
-                value: user.id,
-                label: `${user.lastName}, ${user.firstName} (${user.email})`,
-              }))}
-            />
-          </FormItem>
-
           <FormItem>
             <Button type="primary" htmlType="submit">
               {titlePrefix} Script
             </Button>
           </FormItem>
         </Form>
-      </Card>
-    </div>
+      </div>
+    </AdminPage>
   );
 }
 

@@ -11,6 +11,7 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import AdminPage from "admin/admin_page";
 import ChangeUsernameView from "admin/auth/change_username_view";
 import { InviteUsersModal } from "admin/onboarding";
 import { getActiveUserCount } from "admin/organization/pricing_plan_utils";
@@ -291,10 +292,12 @@ function UserListView() {
   const mayChangeNameForUsers = features().isWkorgInstance === false && activeUser.isAdmin;
 
   return (
-    <div className="container">
-      <h3>Users</h3>
-      <Flex justify="space-between" style={{ marginBottom: "var(--ant-padding-xs)" }}>
-        <Space>
+    <AdminPage
+      title="Users"
+      descriptionURI="https://docs.webknossos.org/webknossos/users/index.html"
+      description="Manage members, permissions, and activation status in your organization."
+      actions={
+        <Space wrap size="middle">
           {hasRowsSelected ? <span>{selectedUserIds.length} selected user(s)</span> : null}
           <Button
             onClick={() => setIsTeamRoleModalOpen(true)}
@@ -347,20 +350,17 @@ function UserListView() {
             </Modal>
           ) : null}
         </Space>
-        <Search
-          style={{
-            width: 200,
-          }}
-          onChange={handleSearch}
-          value={searchQuery}
-        />
-      </Flex>
-      <Space orientation="vertical" style={{ width: "100%" }}>
-        {activationFilterWarning}
-        {isNewUserInvitesDisabled ? renderUpgradePlanAlert() : null}
-        {noOtherUsers && !isNewUserInvitesDisabled ? renderInviteUsersAlert() : null}
-        {renderNewUsersAlert()}
-      </Space>
+      }
+      search={<Search allowClear onChange={handleSearch} value={searchQuery} />}
+      alerts={
+        <Space orientation="vertical" style={{ width: "100%" }}>
+          {activationFilterWarning}
+          {isNewUserInvitesDisabled ? renderUpgradePlanAlert() : null}
+          {noOtherUsers && !isNewUserInvitesDisabled ? renderInviteUsersAlert() : null}
+          {renderNewUsersAlert()}
+        </Space>
+      }
+    >
       <Spin size="large" spinning={isLoading}>
         <Table
           dataSource={filterWithSearchQueryAND(
@@ -372,9 +372,6 @@ function UserListView() {
           rowSelection={rowSelection}
           pagination={{
             defaultPageSize: 50,
-          }}
-          style={{
-            marginTop: 30,
           }}
           onChange={(_pagination, filters) =>
             // @ts-expect-error ts-migrate(2322) FIXME: Type 'FilterValue' is not assignable to type '("tr... Remove this comment to see the full error(message)
@@ -617,7 +614,7 @@ function UserListView() {
         onCancel={() => setIsTeamRoleModalOpen(false)}
         activeUser={activeUser}
       />
-    </div>
+    </AdminPage>
   );
 }
 

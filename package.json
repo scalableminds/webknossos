@@ -58,7 +58,7 @@
     "shelljs": "^0.8.5",
     "typescript": "~5.9.0",
     "typescript-coverage-report": "^0.8.0",
-    "vite": "^8.0.2",
+    "vite": "^8.0.3",
     "vite-plugin-svgr": "^4.5.0",
     "vite-plugin-wasm": "^3.6.0",
     "vitest": "^4.1.1"

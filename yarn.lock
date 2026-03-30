@@ -12823,7 +12823,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite@npm:^6.0.0 || ^7.0.0 || ^8.0.0, vite@npm:^8.0.2":
+"vite@npm:^6.0.0 || ^7.0.0 || ^8.0.0, vite@npm:^8.0.3":
   version: 8.0.3
   resolution: "vite@npm:8.0.3"
   dependencies:
@@ -13166,7 +13166,7 @@ __metadata:
     typescript-coverage-report: "npm:^0.8.0"
     url: "npm:^0.11.0"
     url-join: "npm:^4.0.0"
-    vite: "npm:^8.0.2"
+    vite: "npm:^8.0.3"
     vite-plugin-svgr: "npm:^4.5.0"
     vite-plugin-wasm: "npm:^3.6.0"
     vitest: "npm:^4.1.1"

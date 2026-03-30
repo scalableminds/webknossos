@@ -34,7 +34,7 @@ import {
 } from "libs/utils";
 import messages from "messages";
 import type React from "react";
-import { useState } from "react";
+import { type ReactElement, useState } from "react";
 import {
   type AdditionalAxis,
   type APIDataLayer,
@@ -278,7 +278,7 @@ function _DownloadModalView({
   isAnnotation,
   initialTab,
   initialBoundingBoxId,
-}: Props): JSX.Element {
+}: Props): ReactElement {
   const activeUser = useWkSelector((state) => state.activeUser);
   const annotation = useWkSelector((state) => state.annotation);
   const dataset = useWkSelector((state) => state.dataset);

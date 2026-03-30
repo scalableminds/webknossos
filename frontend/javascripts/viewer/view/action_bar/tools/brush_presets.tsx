@@ -4,7 +4,7 @@ import CircleIcon from "@images/icons/icon-circle.svg?react";
 import { Col, Divider, Dropdown, type MenuProps, Popover, Row } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
-import { useCallback, useEffect, useState } from "react";
+import { type ReactElement, useCallback, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { userSettings } from "types/schemas/user_settings.schema";
 import { Unicode } from "viewer/constants";
@@ -25,7 +25,7 @@ function BrushPresetButton({
 }: {
   name: string;
   onClick: () => void;
-  icon: JSX.Element;
+  icon: ReactElement;
   brushSize: number;
 }) {
   const { ThinSpace } = Unicode;

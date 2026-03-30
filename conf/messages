@@ -117,7 +117,7 @@ dataset.upload.validation.failed=Failed to validate Dataset information for uplo
 dataset.upload.linkRestricted=Can only link layers of datasets that are either public or allowed to be administrated by your account
 dataset.upload.invalidLinkedLayers=Could not link all requested layers
 dataset.upload.couldNotLoadUnfinishedUploads=Could not load unfinished uploads of user.
-dataset.upload.noFiles=Tried to finish upload with no files. May be a retry of a failed finish request, see previous errors.
+dataset.upload.noFiles=Tried to finish upload with no files. Note that files starting with dot are not read. This may be a retry of a failed finish request, see previous errors.
 dataset.upload.storageExceeded=Cannot upload dataset because the storage quota of the organization is exceeded.
 dataset.upload.finishFailed=Failed to finalize upload for dataset {0}.
 dataset.upload.moveToTarget.failed=Failed to move uploaded dataset to target directory.
@@ -133,6 +133,7 @@ dataset.metadata.duplicateKeys=Metadata keys must be unique.
 dataset.boundingBox.unset=This dataset has no bounding box. Please make sure this dataset is imported correctly.
 dataset.reserveMagUploadToPath.notVirtual=Adding mags to existing datasets is only allowed for virtual datasets.
 dataset.reserveMagUploadToPath.exists=This mag is already pending.
+dataset.composeInPlace.mustBeVirtual=This feature is not available for disk-based (“non-virtual”) datasets. If you have access on disk, edit it directly.
 
 uploadToPaths.noMatchingPrefix=Could not determine a configured path prefix that matches the request.
 

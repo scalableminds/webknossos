@@ -52,6 +52,7 @@ import {
 import { Unicode } from "viewer/constants";
 import { CategorizationSearch } from "viewer/view/components/categorization_label";
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
+import { FolderBreadcrumb } from "./advanced_dataset/folder_breadcrumb";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import type { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
 import {
@@ -312,6 +313,7 @@ function DatasetView({
         setTags={setSearchTags}
         localStorageSavingKey={LOCAL_STORAGE_FILTER_TAGS_KEY}
       />
+      {!searchQuery && <FolderBreadcrumb context={context} />}
       <NewJobsAlert jobs={jobs} />
       <Spin size="large" spinning={datasets.length === 0 && context.isLoading}>
         {content}

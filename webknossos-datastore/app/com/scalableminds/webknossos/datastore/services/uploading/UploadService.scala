@@ -725,7 +725,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         for {
           zipFile <- firstFile.toFox
           _ = logger.info(s"finishUpload for $datasetId: Unzipping dataset to $unpackToDir...")
-          _ = ZipIO
+          _ <- ZipIO
             .unzipToDirectory(
               zipFile.toFile,
               unpackToDir,

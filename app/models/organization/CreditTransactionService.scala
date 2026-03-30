@@ -73,7 +73,8 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
     creditTransactionDAO.findTransactionForJob(jobId)
 
   // For display purposes: pairs each expired free-credit grant with its revocation and replaces
-  // both with a single delta-zero entry whose comment states how many milli-credits were actually used.
+  // both with a single net entry. Net-zero pairs (credits granted but never used) are returned
+  // with milliCreditDelta == 0 so the caller can filter them out.
   def compactFreeCreditsForDisplay(transactions: List[CreditTransaction]): List[CreditTransaction] = {
     val revocationByGrantId: Map[ObjectId, CreditTransaction] =
       transactions
@@ -85,10 +86,8 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
       .filterNot(t => revocationIds.contains(t._id))
       .map(t =>
         revocationByGrantId.get(t._id) match {
-          case Some(revocation) =>
-            val milliCreditsUsed = (t.milliCreditDelta + revocation.milliCreditDelta) / 1000
-            t.copy(milliCreditDelta = 0, comment = s"${t.comment}: $milliCreditsUsed used")
-          case None => t
+          case Some(revocation) => t.copy(milliCreditDelta = t.milliCreditDelta + revocation.milliCreditDelta, comment = s"${t.comment}: ${(t.milliCreditDelta + revocation.milliCreditDelta) / 1000} used")
+          case None             => t
       })
   }
 

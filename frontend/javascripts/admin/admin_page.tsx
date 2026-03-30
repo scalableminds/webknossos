@@ -3,13 +3,6 @@ import { ConfigProvider, Flex, Grid, Space, Tooltip, Typography, theme } from "a
 import type { CSSProperties, ReactElement, ReactNode } from "react";
 import { cloneElement, isValidElement } from "react";
 
-function normalizeTitle(title: ReactNode) {
-  if (typeof title !== "string") {
-    return title;
-  }
-  return title.toUpperCase();
-}
-
 function renderSearch(search: ReactNode, isCompact: boolean) {
   if (!isValidElement(search)) {
     return search;
@@ -50,7 +43,6 @@ export default function AdminPage({
   contentMaxWidth,
   children,
 }: Props) {
-  const renderedTitle = normalizeTitle(title);
   const { token } = theme.useToken();
   const screens = Grid.useBreakpoint();
   const isCompact = !screens.md;
@@ -72,9 +64,10 @@ export default function AdminPage({
                 level={2}
                 style={{
                   margin: 0,
+                  textTransform: "uppercase",
                 }}
               >
-                {renderedTitle}
+                {title}
               </Typography.Title>
               {description != null ? (
                 <Typography.Paragraph

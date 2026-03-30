@@ -45,7 +45,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
   }
 
   private lazy val clientFox: Fox[S3AsyncClient] =
-    s3ClientPool.getS3Client(s3AccessKeyCredential, uri)
+    s3ClientPool.getS3Client(s3AccessKeyCredential, uri, isForUpload = false)
 
   private def getRangeRequest(bucketName: String, key: String, range: StartEndExclusiveByteRange): GetObjectRequest =
     GetObjectRequest.builder().bucket(bucketName).key(key).range(range.toRangeHeader).build()

@@ -14,7 +14,7 @@ import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
 
 const { Title, Text } = Typography;
 
-type PretrainedModel = {
+export type PretrainedModel = {
   name: string;
   comment: string;
   id: string;

@@ -6,6 +6,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Box, Empty, EmptyBox, Fox, FoxImplicits, Full, JsonHelper, TextUtils}
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataLayerAttachments,
   DataSource,
   DataSourceId,
   DataSourceStatus,
@@ -24,7 +25,8 @@ import models.team._
 import models.user.{MultiUserDAO, User, UserService}
 import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import controllers.{LayerRenaming, PathDeletionService}
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
+import controllers.{AttachmentRenaming, LayerRenaming, PathDeletionService}
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.annotation.AnnotationDAO
@@ -278,18 +280,21 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   def updateDataSourceFromUserChanges(
       dataset: Dataset,
       dataSourceUpdates: UsableDataSource,
-      layerRenamings: Seq[LayerRenaming])(implicit ctx: DBAccessContext, mp: MessagesProvider): Fox[Unit] =
+      layerRenamings: Seq[LayerRenaming],
+      attachmentRenamings: Seq[AttachmentRenaming])(implicit ctx: DBAccessContext, mp: MessagesProvider): Fox[Unit] =
     for {
       existingDataSource <- usableDataSourceFor(dataset)
       datasetId = dataset._id
       dataStoreClient <- clientFor(dataset)
-      updatedDataSource <- applyDataSourceUpdates(existingDataSource, dataSourceUpdates, layerRenamings).toFox
+      updatedDataSource <- applyDataSourceUpdates(existingDataSource,
+                                                  dataSourceUpdates,
+                                                  layerRenamings,
+                                                  attachmentRenamings).toFox
       isChanged = updatedDataSource.hashCode() != existingDataSource.hashCode()
       _ <- if (isChanged) {
         logger.info(s"Updating dataSource of $datasetId")
         for {
           _ <- Fox.runIf(!dataset.isVirtual)(dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource))
-          _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
           datastoreClient <- clientFor(dataset)
           removedPaths = existingDataSource.allExplicitPaths.diff(updatedDataSource.allExplicitPaths)
           pathsUsedOnlyByThisDataset <- if (removedPaths.nonEmpty) findPathsUsedOnlyByThisDataset(datasetId)
@@ -300,6 +305,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                            updatedDataSource.hashCode(),
                                            updatedDataSource,
                                            isUsable = true)(GlobalAccessContext)
+          _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
           _ <- pathDeletionService.deletePaths(datastoreClient, pathsToDelete)
         } yield ()
       } else Fox.successful(logger.info(f"DataSource $datasetId not updated as the hashCode is the same"))
@@ -307,21 +313,27 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
   private def applyDataSourceUpdates(existingDataSource: UsableDataSource,
                                      updates: UsableDataSource,
-                                     layerRenamings: Seq[LayerRenaming]): Box[UsableDataSource] = {
+                                     layerRenamings: Seq[LayerRenaming],
+                                     attachmentRenamings: Seq[AttachmentRenaming]): Box[UsableDataSource] = {
     val existingDataSourceWithRenamedLayers = applyLayerRenamings(existingDataSource, layerRenamings)
+    val existingDataSourceWithRenamedAttachments =
+      applyAttachmentRenamings(existingDataSourceWithRenamedLayers, attachmentRenamings)
     for {
       _ <- Box.fromBool(
-        existingDataSourceWithRenamedLayers.dataLayers.length == existingDataSourceWithRenamedLayers.dataLayers
+        existingDataSourceWithRenamedAttachments.dataLayers.length == existingDataSourceWithRenamedAttachments.dataLayers
           .distinctBy(_.name)
           .length) ?~ "Layer renamings create name collisions."
-      updatedLayers = existingDataSourceWithRenamedLayers.dataLayers.flatMap { existingLayer =>
+      _ <- Box.fromBool(
+        existingDataSourceWithRenamedAttachments.dataLayers.forall(_.attachments.forall(!_.containsDuplicateNames))
+      ) ?~ "Attachment renamings create name collisions."
+      updatedLayers = existingDataSourceWithRenamedAttachments.dataLayers.flatMap { existingLayer =>
         val layerUpdatesOpt = updates.dataLayers.find(_.name == existingLayer.name)
         layerUpdatesOpt match {
           case Some(layerUpdates) => Some(applyLayerUpdates(existingLayer, layerUpdates))
           case None               => None
         }
       }
-      addedLayers <- findNewLayers(existingDataSourceWithRenamedLayers, updates)
+      addedLayers <- findNewLayers(existingDataSourceWithRenamedAttachments, updates)
     } yield
       existingDataSource.copy(
         dataLayers = updatedLayers ++ addedLayers,
@@ -332,8 +344,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   private def findNewLayers(existingDataSoruce: UsableDataSource, updates: UsableDataSource): Box[Seq[StaticLayer]] = {
     val newLayers = updates.dataLayers.filter(layer => !existingDataSoruce.dataLayers.exists(_.name == layer.name))
     val noneHaveMags = newLayers.forall(_.mags.isEmpty)
+    val noneHaveAttachments = newLayers.forall(_.attachments.forall(_.isEmpty))
     for {
       _ <- Box.fromBool(noneHaveMags) ?~ "New layers may not have mags. Add empty layers instead and then add mags."
+      _ <- Box.fromBool(noneHaveAttachments) ?~ "New layers may not have attachments. Add empty layers instead and then add attachments."
     } yield newLayers
   }
 
@@ -350,6 +364,22 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       existingDataSource.copy(dataLayers = layersRenamed)
     }
 
+  private def applyAttachmentRenamings(existingDataSource: UsableDataSource,
+                                       attachmentRenamings: Seq[AttachmentRenaming]): UsableDataSource =
+    if (attachmentRenamings.isEmpty) existingDataSource
+    else {
+      existingDataSource.copy(
+        dataLayers = existingDataSource.dataLayers.map { layer =>
+          val renamingMapForLayer: Map[(LayerAttachmentType, String), String] =
+            attachmentRenamings
+              .filter(_.layerName == layer.name)
+              .map(renaming => ((renaming.attachmentType, renaming.oldName), renaming.newName))
+              .toMap
+          layer.mapped(attachmentMapping = attachments => attachments.renameByMap(renamingMapForLayer))
+        }
+      )
+    }
+
   private def applyLayerUpdates(existingLayer: StaticLayer, layerUpdates: StaticLayer): StaticLayer =
     /*
   Taken from the new layer are only those properties:
@@ -364,6 +394,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     existingLayer match {
       case e: StaticColorLayer =>
         val mags = applyMagUpdates(e.mags, layerUpdates.mags)
+        val attachments = applyAttachmentUpdates(e.attachments, layerUpdates.attachments)
         layerUpdates match {
           case u: StaticColorLayer =>
             e.copy(
@@ -371,7 +402,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
               coordinateTransformations = u.coordinateTransformations,
               defaultViewConfiguration = u.defaultViewConfiguration,
               adminViewConfiguration = u.adminViewConfiguration,
-              mags = mags
+              mags = mags,
+              attachments = attachments
             )
           case u: StaticSegmentationLayer =>
             StaticSegmentationLayer(
@@ -384,13 +416,14 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
               u.adminViewConfiguration,
               u.coordinateTransformations,
               e.additionalAxes,
-              e.attachments,
+              attachments,
               u.largestSegmentId,
               None
             )
         }
       case e: StaticSegmentationLayer =>
         val mags = applyMagUpdates(e.mags, layerUpdates.mags)
+        val attachments = applyAttachmentUpdates(e.attachments, layerUpdates.attachments)
         layerUpdates match {
           case u: StaticSegmentationLayer =>
             e.copy(
@@ -399,7 +432,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
               defaultViewConfiguration = u.defaultViewConfiguration,
               adminViewConfiguration = u.adminViewConfiguration,
               largestSegmentId = u.largestSegmentId,
-              mags = mags
+              mags = mags,
+              attachments = attachments
             )
           case u: StaticColorLayer =>
             StaticColorLayer(
@@ -412,14 +446,22 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
               u.adminViewConfiguration,
               u.coordinateTransformations,
               e.additionalAxes,
-              e.attachments
+              attachments
             )
         }
     }
 
-  private def applyMagUpdates(existingMags: List[MagLocator], magUpdates: List[MagLocator]): List[MagLocator] =
+  private def applyMagUpdates(existingMags: Seq[MagLocator], magUpdates: Seq[MagLocator]): Seq[MagLocator] =
     // In this context removing mags is the only allowed update
     existingMags.filter(existingMag => magUpdates.exists(_.mag == existingMag.mag))
+
+  private def applyAttachmentUpdates(existingAttachmentsOpt: Option[DataLayerAttachments],
+                                     attachmentUpdatesOpt: Option[DataLayerAttachments]): Option[DataLayerAttachments] =
+    (existingAttachmentsOpt, attachmentUpdatesOpt) match {
+      case (Some(existingAttachments), Some(attachmentUpdates)) =>
+        existingAttachments.dropMissing(attachmentUpdates)
+      case _ => None // If existing is empty, none can be added here. If updates is empty, drop all.
+    }
 
   def deactivateUnreportedDataSources(reportedDatasetIds: List[ObjectId],
                                       dataStore: DataStore,
@@ -457,6 +499,13 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     else
       Fox.successful(UnusableDataSource(dataSourceId, None, dataset.status, dataset.voxelSize))
   }
+
+  def getDataSourceAndLayerFor(dataset: Dataset, layerName: String)(
+      implicit mp: MessagesProvider): Fox[(UsableDataSource, StaticLayer)] =
+    for {
+      usableDataSource <- usableDataSourceFor(dataset)
+      dataLayer <- usableDataSource.getDataLayer(layerName).toFox ?~> Messages("dataLayer.notFound", layerName)
+    } yield (usableDataSource, dataLayer)
 
   private def notifyDatastoreOnUpdate(datasetId: ObjectId)(implicit ctx: DBAccessContext) =
     for {

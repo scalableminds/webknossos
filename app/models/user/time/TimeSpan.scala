@@ -205,7 +205,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       val projectQuery = projectIdsFilterQuery(projectIds)
       val query =
         q"""
-          SELECT u._id, u.firstName, u.lastName, mu.email, SUM(ts.time), COUNT(DISTINCT a._id)
+          SELECT u._id, mu.firstName, mu.lastName, mu.email, SUM(ts.time), COUNT(DISTINCT a._id)
           FROM webknossos.timespans_ ts
           JOIN webknossos.annotations_ a ON ts._annotation = a._id
           JOIN webknossos.users_ u ON ts._user = u._id
@@ -219,7 +219,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           AND ts.time > 0
           AND ts.created >= $start
           AND ts.created < $end
-          GROUP BY u._id, u.firstName, u.lastName, mu.email
+          GROUP BY u._id, mu.firstName, mu.lastName, mu.email
          """
       for {
         tuples <- run(query.as[(ObjectId, String, String, String, Long, Int)])

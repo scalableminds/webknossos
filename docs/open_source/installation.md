@@ -33,7 +33,7 @@ docker compose up webknossos nginx nginx-letsencrypt
 
 # Wait a couple of minutes for WEBKNOSSOS to become available under your domain
 # e.g. https://webknossos.example.com
-# Set up your organization and admin account using the onboarding screens (see below)
+# Set up your organization and admin account using the onboarding pages (see below)
 
 # After the initial run, you can start WEBKNOSSOS in the background
 DOCKER_TAG=xx.yy.z PUBLIC_HOST=webknossos.example.com LETSENCRYPT_EMAIL=admin@example.com \
@@ -70,7 +70,7 @@ Create your first user
 
 ## Your First Dataset
 Without any data, WEBKNOSSOS is not fun.
-Luckily, there are some sample datasets that you can download directly from the onboarding screens.
+Luckily, there are some sample datasets that you can download directly from the onboarding pages.
 Once you've completed the onboarding, you can also import your own datasets.
 
 For small datasets (max. 1GB), you can use the upload functionality provided in the web interface.

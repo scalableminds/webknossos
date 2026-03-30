@@ -49,7 +49,7 @@ The security page allows users to manage their password and passkeys, as well as
 
 **Logged-out users** can _reset_ a forgotten password:
 
-1. Click on `Forgot Password` on the login screen.
+1. Click on `Forgot Password` on the login page.
 2. Provide your account's email address.
 3. You will receive an email with instructions to reset your password.
 
@@ -59,7 +59,7 @@ If you suspect unauthorized access or have lost a device, you can log out of all
 
 1. Navigate to the `Security` tab in `Account Settings`.
 2. Click on the `Log out on all devices` button under `Log out everywhere`.
-3. Confirm the prompt to log out. You will be redirected to the login screen.
+3. Confirm the prompt to log out. You will be redirected to the login page.
 
 ### Passkeys
 

@@ -72,6 +72,26 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
   def findTransactionOfJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[CreditTransaction] =
     creditTransactionDAO.findTransactionForJob(jobId)
 
+  // For display purposes: pairs each expired free-credit grant with its revocation and replaces
+  // both with a single delta-zero entry whose comment states how many milli-credits were actually used.
+  def compactFreeCreditsForDisplay(transactions: List[CreditTransaction]): List[CreditTransaction] = {
+    val revocationByGrantId: Map[ObjectId, CreditTransaction] =
+      transactions
+        .filter(_.creditState == CreditState.Revoking)
+        .flatMap(t => t._relatedTransaction.map(_ -> t))
+        .toMap
+    val revocationIds: Set[ObjectId] = revocationByGrantId.values.map(_._id).toSet
+    transactions
+      .filterNot(t => revocationIds.contains(t._id))
+      .map(t =>
+        revocationByGrantId.get(t._id) match {
+          case Some(revocation) =>
+            val milliCreditsUsed = (t.milliCreditDelta + revocation.milliCreditDelta) / 1000
+            t.copy(milliCreditDelta = 0, comment = s"${t.comment}: $milliCreditsUsed used")
+          case None => t
+      })
+  }
+
 }
 
 class CreditTransactionPublicWritesService @Inject()(jobDAO: JobDAO, jobService: JobService) {

@@ -224,6 +224,9 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
   blockTimeoutId: number | null = null;
   formRef = React.createRef<FormInstance<UploadFormFieldTypes>>();
+  // Set to true when the user initiates a cancel (before the confirmation dialog is resolved)
+  // to prevent the `complete` event from triggering finishDatasetUpload in the meantime.
+  _isCancellingUpload = false;
 
   componentDidMount() {
     sendAnalyticsEvent("open_upload_view");
@@ -293,6 +296,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       return;
     }
 
+    this._isCancellingUpload = false;
     this.setState({
       isUploading: true,
       uploadProgress: 0,
@@ -362,10 +366,15 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       datastoreUrl,
     });
     resumableUpload.addEventListener("complete", (event: ResumableUploadEvent) => {
-      if (event.detail.type !== "complete" || !event.detail.didUploadCompleteSuccessfully) {
-        // The upload was not successful. A retry might be initiated by other code that
-        // listens to fileError events which is why we ignore the complete event now.
-        // The type is only checked to satisfy TS.
+      if (
+        event.detail.type !== "complete" ||
+        !event.detail.didUploadCompleteSuccessfully ||
+        this._isCancellingUpload
+      ) {
+        // The upload was not successful, or a cancel was initiated before the complete event
+        // fired (e.g. the last in-flight chunk completed while the cancel dialog was open).
+        // A retry might be initiated by other code that listens to fileError events which is
+        // why we ignore the complete event now. The type is only checked to satisfy TS.
         return;
       }
       const newestForm = this.formRef.current;
@@ -471,6 +480,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
   cancelUpload = async () => {
     const { uploadId, resumableUpload, datastoreUrl } = this.state;
+    this._isCancellingUpload = true;
     resumableUpload.pause();
     const shouldCancel = await confirmAsync({
       title:
@@ -480,6 +490,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     });
 
     if (!shouldCancel) {
+      this._isCancellingUpload = false;
       resumableUpload.upload();
       return;
     }

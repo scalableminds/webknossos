@@ -322,13 +322,16 @@ describe("Resumable", () => {
     it("should cancel all uploads", () => {
       const beforeCancelCallback = vi.fn();
       const cancelCallback = vi.fn();
+      const completeCallback = vi.fn();
       resumable.addEventListener("beforeCancel", beforeCancelCallback);
       resumable.addEventListener("cancel", cancelCallback);
+      resumable.addEventListener("complete", completeCallback);
 
       resumable.cancel();
 
       expect(beforeCancelCallback).toHaveBeenCalled();
       expect(cancelCallback).toHaveBeenCalled();
+      expect(completeCallback).not.toHaveBeenCalled();
     });
 
     it("should update query parameters", () => {

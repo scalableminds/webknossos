@@ -130,6 +130,7 @@ class JobController @Inject()(jobDAO: JobDAO,
       _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> "job.disabled"
       _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
       job <- jobDAO.findOne(id)
+      _ <- creditTransactionService.reserveCreditsForRetry(job._id)
       _ <- jobDAO.retryOne(id)
       js <- jobService.publicWrites(job)
     } yield Ok(js)

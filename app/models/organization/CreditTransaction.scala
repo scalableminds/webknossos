@@ -257,6 +257,15 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
       parsed <- parseFirst(r, jobId)
     } yield parsed
 
+  def findPendingTransactionForJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[CreditTransaction] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(
+        q"SELECT $columns FROM $existingCollectionName WHERE _paid_job = $jobId AND transaction_state = ${CreditTransactionState.Pending} AND $accessQuery"
+          .as[CreditTransactionsRow])
+      parsed <- parseFirst(r, jobId)
+    } yield parsed
+
   private def findAllOrganizationsWithExpiredCredits: Fox[List[ObjectId]] =
     for {
       r <- run(q"""SELECT DISTINCT _organization

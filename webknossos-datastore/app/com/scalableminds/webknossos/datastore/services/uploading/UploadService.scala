@@ -722,11 +722,12 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       firstFile = shallowFileList.headOption
       _ <- if (shallowFileList.length == 1 && shallowFileList.headOption.exists(
                  _.toString.toLowerCase.endsWith(".zip"))) {
-        firstFile.toFox.flatMap { file =>
-          logger.info(s"finishUpload for $datasetId: Unzipping dataset...")
-          ZipIO
+        for {
+          zipFile <- firstFile.toFox
+          _ = logger.info(s"finishUpload for $datasetId: Unzipping dataset to $unpackToDir...")
+          _ = ZipIO
             .unzipToDirectory(
-              new File(file.toString),
+              zipFile.toFile,
               unpackToDir,
               includeHiddenFiles = false,
               hiddenFilesWhitelist = List(".zarray", ".zattrs"),
@@ -734,10 +735,12 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
               Some(excludeFromPrefix)
             )
             .toFox
-        }.map(_ => ())
+          _ <- Fox.fromBool(unpackToDir.toFile.exists()) ?~> "dataset.upload.noFiles"
+        } yield ()
       } else {
         for {
           deepFileList: List[Path] <- PathUtils.listFilesRecursive(uploadDir, silent = false, maxDepth = 10).toFox
+          _ <- Fox.fromBool(deepFileList.nonEmpty) ?~> "dataset.upload.noFiles"
           commonPrefixPreliminary = PathUtils.commonPrefix(deepFileList)
           _ = logger.info(
             s"Detected dataset root during upload of $datasetId from ${deepFileList.length} files in $uploadDir with commonPrefixPreliminary=$commonPrefixPreliminary")

@@ -1340,6 +1340,8 @@ export type RenderAnimationOptions = {
   magForTextures: Vector3;
   movieResolution: MOVIE_RESOLUTIONS;
   cameraPosition: CAMERA_POSITIONS;
+  annotationId: string | null;
+  includeSkeletons: boolean;
 };
 
 export type ServerErrorMessage = {

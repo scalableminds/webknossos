@@ -48,7 +48,9 @@ case class AnimationJobOptions(
     cameraPosition: CameraPositionSetting.Value,
     intensityMin: Double,
     intensityMax: Double,
-    magForTextures: Vec3Int
+    magForTextures: Vec3Int,
+    annotationId: Option[ObjectId],
+    includeSkeletons: Boolean
 )
 
 object AnimationJobOptions {
@@ -452,6 +454,8 @@ class JobController @Inject()(jobDAO: JobDAO,
             "intensity_min" -> animationJobOptions.intensityMin,
             "intensity_max" -> animationJobOptions.intensityMax,
             "mag_for_textures" -> animationJobOptions.magForTextures,
+            "annotation_id" -> animationJobOptions.annotationId,
+            "include_skeletons" -> animationJobOptions.includeSkeletons,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunRenderAnimation"
           js <- jobService.publicWrites(job)

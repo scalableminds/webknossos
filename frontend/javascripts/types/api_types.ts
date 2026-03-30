@@ -1342,6 +1342,7 @@ export type RenderAnimationOptions = {
   cameraPosition: CAMERA_POSITIONS;
   annotationId: string | null;
   includeSkeletons: boolean;
+  saveBlenderFile: boolean;
 };
 
 export type ServerErrorMessage = {

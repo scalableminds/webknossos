@@ -89,6 +89,21 @@ function HeuristicQuickSelectControls() {
   );
 
   const dispatch = useDispatch();
+  const isAISelectAvailable = features().segmentAnythingEnabled;
+  const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
+  const quickSelectTooltipText = isAISelectAvailable
+    ? isQuickSelectHeuristic
+      ? "The quick select tool is now working without AI. Activate AI for better results."
+      : "The quick select tool is now working with AI."
+    : "The quick select tool with AI is only available on webknossos.org";
+  const toggleQuickSelectStrategy = () => {
+    dispatch(
+      updateUserSettingAction("quickSelect", {
+        ...quickSelectConfig,
+        useHeuristic: !quickSelectConfig.useHeuristic,
+      }),
+    );
+  };
 
   const onResetValues = () => {
     const { segmentMode, threshold, closeValue, erodeValue, dilateValue, ...rest } =
@@ -152,6 +167,13 @@ function HeuristicQuickSelectControls() {
 
   return (
     <div>
+      <SwitchSetting
+        value={!isQuickSelectHeuristic}
+        onChange={toggleQuickSelectStrategy}
+        disabled={!isAISelectAvailable}
+        tooltipText={quickSelectTooltipText}
+        label="AI Mode"
+      ></SwitchSetting>
       <SwitchSetting
         label="Show Preview"
         value={quickSelectConfig.showPreview}

@@ -117,10 +117,10 @@ export type APIDataLayer = APIColorLayer | APISegmentationLayer;
 export type APISkeletonLayer = { category: "skeleton"; name: string };
 
 export type LayerLink = {
-  datasetId: string;
-  datasetName: string;
-  sourceName: string;
-  newName: string;
+  sourceDatasetId: string;
+  sourceDatasetName: string; // Only used in frontend
+  sourceLayerName: string;
+  targetLayerName: string;
   transformations: CoordinateTransformation[];
 };
 

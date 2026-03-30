@@ -4,6 +4,7 @@ import { useEffectOnlyOnce } from "libs/react_hooks";
 import Toast from "libs/toast";
 import compact from "lodash-es/compact";
 import unionBy from "lodash-es/unionBy";
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useState } from "react";
 import type { APITeam } from "types/api_types";
 
@@ -16,6 +17,7 @@ type TeamSelectionComponentProps = {
   mode?: "tags" | "multiple" | undefined;
   allowNonEditableTeams?: boolean;
   disabled?: boolean;
+  prefix?: ReactNode;
 };
 
 function TeamSelectionComponent({
@@ -25,6 +27,7 @@ function TeamSelectionComponent({
   mode,
   allowNonEditableTeams,
   disabled,
+  prefix,
 }: TeamSelectionComponentProps) {
   const [possibleTeams, setPossibleTeams] = useState<APITeam[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<APITeam[]>(value ? [value].flat() : []);
@@ -73,16 +76,15 @@ function TeamSelectionComponent({
 
   return (
     <Select
-      showSearch
       mode={mode}
       style={{ width: "100%" }}
       placeholder={mode && mode === "multiple" ? "Select Teams" : "Select a Team"}
-      optionFilterProp="children"
+      showSearch={{ optionFilterProp: "children", filterOption: true }}
       onChange={onSelectTeams}
       value={selectedTeams.map((t) => t.id)}
-      filterOption
       disabled={disabled ?? false}
       loading={isFetchingData}
+      prefix={prefix}
     >
       {getAllTeams().map((team) => (
         <Option disabled={possibleTeams.find((t) => t.id === team.id) == null} key={team.id}>

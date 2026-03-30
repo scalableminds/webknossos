@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -59,7 +60,7 @@ class MaintenanceController @Inject()(
   def listAll: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
-      maintenances <- maintenanceDAO.findAll
+      maintenances <- maintenanceDAO.findAll(GlobalAccessContext)
       js = maintenances.map(maintenanceService.publicWrites)
     } yield Ok(Json.toJson(js))
   }
@@ -134,12 +135,6 @@ class MaintenanceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   def findCurrentAndUpcoming: Fox[List[Maintenance]] =
     for {
       rows <- run(q"SELECT $columns FROM $existingCollectionName WHERE endTime >= ${Instant.now}".as[MaintenancesRow])
-      parsed <- parseAll(rows)
-    } yield parsed
-
-  def findAll: Fox[List[Maintenance]] =
-    for {
-      rows <- run(q"SELECT $columns FROM $existingCollectionName".as[MaintenancesRow])
       parsed <- parseAll(rows)
     } yield parsed
 

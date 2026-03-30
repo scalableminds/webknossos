@@ -604,7 +604,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       metadata = Some(metadata),
       folderId = Some(folderId),
       dataSource = None,
-      layerRenamings = None
+      layerRenamings = None,
+      attachmentRenamings = None
     )
     updatePartial(datasetId, updateParameters)
   }

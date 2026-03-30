@@ -19,7 +19,7 @@ trait DataLayer {
   def name: String
   def category: LayerCategory.Value
   def boundingBox: BoundingBox
-  def resolutions: List[Vec3Int]
+  def resolutions: Seq[Vec3Int]
   def elementClass: ElementClass.Value
 
   def bucketProvider(dataVaultServiceOpt: Option[DataVaultService],
@@ -60,7 +60,9 @@ trait DataLayer {
   lazy val bytesPerElement: Int =
     ElementClass.bytesPerElement(elementClass)
 
-  lazy val sortedMags: List[Vec3Int] = resolutions.sortBy(_.maxDim)
+  lazy val sortedMags: Seq[Vec3Int] = resolutions.sortBy(_.maxDim)
+
+  lazy val finestMag: Option[Vec3Int] = sortedMags.headOption
 }
 
 object DataLayer {
@@ -79,9 +81,9 @@ trait StaticLayer extends DataLayer {
 
   def bucketProviderCacheKey: String = this.name
 
-  def mags: List[MagLocator]
+  def mags: Seq[MagLocator]
 
-  def resolutions: List[Vec3Int] = mags.map(_.mag)
+  def resolutions: Seq[Vec3Int] = mags.map(_.mag)
 
   def numChannels: Int = if (elementClass == ElementClass.uint24) 3 else 1
 
@@ -95,10 +97,16 @@ trait StaticLayer extends DataLayer {
         l.copy(attachments = l.attachments.map(_.mergeWithPrecedence(attachments)).orElse(Some(attachments)))
     }
 
+  def withAttachments(attachments: DataLayerAttachments): StaticLayer =
+    this match {
+      case l: StaticColorLayer        => l.copy(attachments = Some(attachments))
+      case l: StaticSegmentationLayer => l.copy(attachments = Some(attachments))
+    }
+
   def mapped(
       boundingBoxMapping: BoundingBox => BoundingBox = b => b,
       defaultViewConfigurationMapping: Option[LayerViewConfiguration] => Option[LayerViewConfiguration] = l => l,
-      newMags: Option[List[MagLocator]] = None, // Note: If this is defined, the magMapping has no impact
+      newMags: Option[Seq[MagLocator]] = None, // Note: If this is defined, the magMapping has no impact
       magMapping: MagLocator => MagLocator = m => m,
       attachmentMapping: DataLayerAttachments => DataLayerAttachments = a => a,
       name: String = this.name,
@@ -177,7 +185,7 @@ case class StaticColorLayer(name: String,
                             dataFormat: DataFormat.Value,
                             boundingBox: BoundingBox,
                             elementClass: ElementClass.Value,
-                            mags: List[MagLocator],
+                            mags: Seq[MagLocator],
                             defaultViewConfiguration: Option[LayerViewConfiguration] = None,
                             adminViewConfiguration: Option[LayerViewConfiguration] = None,
                             coordinateTransformations: Option[Seq[CoordinateTransformation]] = None,
@@ -232,7 +240,7 @@ case class StaticSegmentationLayer(name: String,
                                    dataFormat: DataFormat.Value,
                                    boundingBox: BoundingBox,
                                    elementClass: ElementClass.Value,
-                                   mags: List[MagLocator],
+                                   mags: Seq[MagLocator],
                                    defaultViewConfiguration: Option[LayerViewConfiguration] = None,
                                    adminViewConfiguration: Option[LayerViewConfiguration] = None,
                                    coordinateTransformations: Option[Seq[CoordinateTransformation]] = None,

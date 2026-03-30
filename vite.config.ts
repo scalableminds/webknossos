@@ -47,7 +47,7 @@ export const viteConfig = {
     }),
   ],
   devtools: {
-    enabled: true,
+    enabled: false,
   },
   optimizeDeps: {
     exclude: ["three-mesh-bvh"],

@@ -17,6 +17,7 @@ import { Dropdown } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
+import type { ReactElement } from "react";
 import { useDispatch } from "react-redux";
 import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
@@ -36,7 +37,7 @@ type ToolButtonProps = { adaptedActiveTool: AnnotationTool };
 
 export const ToolIdToComponent: Record<
   AnnotationToolId,
-  (p: ToolButtonProps) => JSX.Element | null
+  (p: ToolButtonProps) => ReactElement | null
 > = {
   [AnnotationTool.MOVE.id]: MoveTool,
   [AnnotationTool.SKELETON.id]: SkeletonTool,

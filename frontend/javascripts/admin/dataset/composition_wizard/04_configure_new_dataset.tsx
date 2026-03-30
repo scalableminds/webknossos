@@ -81,10 +81,10 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
       ) as [APIDataset, APIDataLayer][]
     ).map(
       ([dataset, dataLayer]): LayerLink => ({
-        datasetId: dataset.id,
-        datasetName: dataset.name,
-        sourceName: dataLayer.name,
-        newName: dataLayer.name,
+        sourceDatasetId: dataset.id,
+        sourceDatasetName: dataset.name,
+        sourceLayerName: dataLayer.name,
+        targetLayerName: dataLayer.name,
         transformations: [],
       }),
     );
@@ -126,7 +126,7 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
         checkLandmarksForThinPlateSpline(sourcePoints, targetPoints);
       }
       return layers.map((layer) => {
-        const areDatasetsIdentical = layer.datasetId === linkedDatasets[0].id;
+        const areDatasetsIdentical = layer.sourceDatasetId === linkedDatasets[0].id;
         return {
           ...layer,
           // The first dataset will be transformed to match the second.
@@ -183,11 +183,11 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
         layers: layersWithTransforms,
       });
 
-      const uniqueDatasets = uniqBy(layersWithoutTransforms, (layer) => layer.datasetId);
+      const uniqueDatasets = uniqBy(layersWithoutTransforms, (layer) => layer.sourceDatasetId);
       const datasetMarkdownLinks = uniqueDatasets
         .map(
           (el) =>
-            `- [${el.datasetName}](/datasets/${getReadableURLPart({ name: el.datasetName, id: el.datasetId })})`,
+            `- [${el.sourceDatasetName}](/datasets/${getReadableURLPart({ name: el.sourceDatasetName, id: el.sourceDatasetId })})`,
         )
         .join("\n");
 
@@ -269,8 +269,8 @@ export function ConfigureNewDataset(props: WizardComponentProps) {
                   // the layer name may change in this view, the order does not, so idx is the right key choice here
                   <List.Item key={`layer-${idx}`}>
                     <LinkedLayerForm
-                      datasetId={layer.datasetId}
-                      datasetName={layer.datasetName}
+                      datasetId={layer.sourceDatasetId}
+                      datasetName={layer.sourceDatasetName}
                       layer={layer}
                       index={idx}
                       onRemoveLayer={onRemoveLayer}
@@ -347,7 +347,7 @@ function LinkedLayerForm({
       <Row gutter={48}>
         <Col span={24} xl={12}>
           <FormItemWithInfo
-            name={["layers", index, "newName"]}
+            name={["layers", index, "targetLayerName"]}
             label="Name"
             style={{
               marginBottom: 24,
@@ -362,8 +362,8 @@ function LinkedLayerForm({
               {
                 validator: syncValidator(
                   (value: string) =>
-                    layers.filter((someLayer: LayerLink) => someLayer.newName === value).length <=
-                    1,
+                    layers.filter((someLayer: LayerLink) => someLayer.targetLayerName === value)
+                      .length <= 1,
                   "Layer names must be unique.",
                 ),
               },
@@ -388,7 +388,7 @@ function LinkedLayerForm({
             >
               {datasetName}
             </a>{" "}
-            / {layer.sourceName}
+            / {layer.sourceLayerName}
           </FormItemWithInfo>
         </Col>
       </Row>

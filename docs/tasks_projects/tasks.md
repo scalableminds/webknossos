@@ -6,7 +6,7 @@ The task systems is designed for automated task distribution to a (large) group 
 
 First, a _Task Type_ needs to be created:
 
-1. Open the `Task Types` screen of the administration section and click on `Add Task Type`.
+1. Open the `Task Types` page of the administration section and click on `Add Task Type`.
 2. Fill out the form to create the Task Type:
    - Note that the `Description` field supports Markdown formatting.
    - If you don't have a sophisticated team structure, select the [default Team](../users/organizations.md).
@@ -53,7 +53,7 @@ Next, you need to set up a [Project](../tasks_projects/projects.md). Once you ha
 
 ## Creating a Task
 
-1. Open the `Tasks` screen of the administration section and click on `Add Task`.
+1. Open the `Tasks` page of the administration section and click on `Add Task`.
 2. Fill out the form create the Task.
    - Enter the starting positions in the lower part of the form.
    - Alternatively, you can upload an NML file that contains nodes that will be used as starting positions.
@@ -65,7 +65,7 @@ Tasks can also be created in bulk using the advanced CSV text input. Not recomme
 Create a Task
 ///
 
-**Note that you need to specify required _Experiences_ for a _Task_. Your _Task_ can only be assigned if there are users that have the required _Experience_ assigned to them. You can assign an [Experience](../users/new_users.md) to a user on the `Users` screen.**
+**Note that you need to specify required _Experiences_ for a _Task_. Your _Task_ can only be assigned if there are users that have the required _Experience_ assigned to them. You can assign an [Experience](../users/new_users.md) to a user on the `Users` page.**
 
 ![Assigning Experiences to users](../images/users_experience.jpeg)
 /// caption

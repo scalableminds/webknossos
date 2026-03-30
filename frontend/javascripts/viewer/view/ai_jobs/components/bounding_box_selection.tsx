@@ -2,7 +2,7 @@ import { Select, type SelectProps } from "antd";
 import { formatVoxels } from "libs/format_utils";
 import { computeArrayFromBoundingBox, rgbToHex } from "libs/utils";
 import type React from "react";
-import { useCallback } from "react";
+import { type ReactElement, useCallback } from "react";
 import type { ArrayElement } from "types/type_utils";
 import type { Vector3 } from "viewer/constants";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
@@ -50,7 +50,7 @@ export function BoundingBoxSelection({
   showVolume?: boolean;
   style?: React.CSSProperties;
   value: number | null;
-}): JSX.Element {
+}): ReactElement {
   const filterOption = useCallback(
     (input: string, option?: ArrayElement<SelectProps["options"]>) =>
       // @ts-expect-error: option.label is a React component / React.Node

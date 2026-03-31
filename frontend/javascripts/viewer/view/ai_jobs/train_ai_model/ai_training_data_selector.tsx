@@ -1,4 +1,4 @@
-import { DeleteOutlined, FolderOutlined, PlusOutlined } from "@ant-design/icons";
+import { AppstoreAddOutlined, DeleteOutlined, FolderOutlined, PlusOutlined } from "@ant-design/icons";
 import { Alert, Button, Card, Col, Form, Popover, Row, Select, Space, Statistic } from "antd";
 import { formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
@@ -9,6 +9,7 @@ import { ColorWKBlue } from "theme";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import { colorLayerMustNotBeUint24Rule, getIntersectingMagList } from "../utils";
+import GenerateBoundingBoxesModal from "viewer/view/right_border_tabs/generate_bounding_boxes_modal";
 import {
   type AiTrainingAnnotationSelection,
   useAiTrainingJobContext,
@@ -22,7 +23,8 @@ const AiTrainingDataSelector = ({
 }: {
   selectedAnnotation: AiTrainingAnnotationSelection;
 }) => {
-  const { handleSelectionChange, setSelectedAnnotations } = useAiTrainingJobContext();
+  const { handleSelectionChange, setSelectedAnnotations, selectedJobType } =
+    useAiTrainingJobContext();
 
   const {
     annotation,
@@ -57,6 +59,8 @@ const AiTrainingDataSelector = ({
     }
     return [];
   }, [imageDataLayer, groundTruthLayer, annotation, dataset, volumeTracingMags]);
+
+  const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
 
   const boundingBoxCount = useMemo(() => userBoundingBoxes.length, [userBoundingBoxes]);
   const boundingBoxVolume = useMemo(
@@ -224,12 +228,38 @@ const AiTrainingDataSelector = ({
           </Space>
         </Col>
       </Row>
-      {bboxErrors.map((error) => (
-        <Alert key={error} title={error} type="error" showIcon style={{ marginTop: 12 }} />
-      ))}
+      {boundingBoxCount === 0 ? (
+        <Alert
+          type="error"
+          showIcon
+          style={{ marginTop: 12 }}
+          message="At least one bounding box is required for training."
+          action={
+            <Button
+              size="small"
+              icon={<AppstoreAddOutlined />}
+              onClick={() => setIsGenerateModalOpen(true)}
+            >
+              Generate
+            </Button>
+          }
+        />
+      ) : (
+        bboxErrors.map((error) => (
+          <Alert key={error} title={error} type="error" showIcon style={{ marginTop: 12 }} />
+        ))
+      )}
       {bboxWarnings.map((warning) => (
         <Alert key={warning} title={warning} type="warning" showIcon style={{ marginTop: 12 }} />
       ))}
+      {isGenerateModalOpen ? (
+        <GenerateBoundingBoxesModal
+          isOpen={isGenerateModalOpen}
+          onClose={() => setIsGenerateModalOpen(false)}
+          magnification={magnification ?? null}
+          jobType={selectedJobType}
+        />
+      ) : null}
     </Card>
   );
 };

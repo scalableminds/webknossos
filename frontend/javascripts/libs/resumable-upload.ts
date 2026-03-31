@@ -243,7 +243,7 @@ const helpers = {
       return target(params);
     }
 
-    const url = new URL(target as string);
+    const url = new URL(target as string, window.location.origin);
     Object.entries(params).forEach(([key, value]) => {
       url.searchParams.append(key, value);
     });

@@ -6,6 +6,7 @@ import features from "features";
 import { useKeyPress, useWindowWidth, useWkSelector } from "libs/react_hooks";
 import { useCallback, useMemo } from "react";
 import { useDispatch } from "react-redux";
+import { all } from "typed-redux-saga";
 import Constants, { ControlModeEnum } from "viewer/constants";
 import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import {
@@ -87,24 +88,32 @@ export default function ToolbarView() {
   const showAllTools = isWiderScreen || toolkit === Toolkit.READ_ONLY_TOOLS || isViewMode;
 
   const toolsForButtons = useMemo(() => {
-    if (showAllTools) return Toolkits[toolkit];
+    //if (showAllTools) return Toolkits[toolkit];
     const allToolsInToolkit = Toolkits[toolkit];
     const allToolIdsInToolkit = allToolsInToolkit.map((tool) => tool.id);
-    const lruToolsInToolkit = lastRecentlyUsedToolsFromUserConfig.filter((toolId) =>
-      allToolIdsInToolkit.includes(toolId),
-    );
-    for (const tool of allToolsInToolkit) {
-      if (lruToolsInToolkit.length >= 3) break;
-      if (!lruToolsInToolkit.includes(tool.id)) {
-        let adaptedToolId = tool.id;
-        // fix tools with tool menues
-        if (tool.id === AnnotationTool.TRACE.id) adaptedToolId = AnnotationTool.BRUSH.id;
-        else if (tool.id === AnnotationTool.ERASE_TRACE.id)
-          adaptedToolId = AnnotationTool.ERASE_BRUSH.id;
-        else if (tool.id === AnnotationTool.AREA_MEASUREMENT.id)
-          adaptedToolId = AnnotationTool.LINE_MEASUREMENT.id;
-        lruToolsInToolkit.push(adaptedToolId);
-      }
+    const adaptToolId = (toolId: AnnotationToolId): AnnotationToolId => {
+      // fix tools with tool menus
+      if (toolId === AnnotationTool.TRACE.id) return AnnotationTool.BRUSH.id;
+      if (toolId === AnnotationTool.ERASE_TRACE.id) return AnnotationTool.ERASE_BRUSH.id;
+      if (toolId === AnnotationTool.AREA_MEASUREMENT.id) return AnnotationTool.LINE_MEASUREMENT.id;
+      return toolId;
+    };
+
+    const lruToolsInToolkit = lastRecentlyUsedToolsFromUserConfig
+      .filter((toolId) => allToolIdsInToolkit.includes(toolId))
+      .map(adaptToolId)
+      .filter((toolId, index, array) => array.indexOf(toolId) === index); // remove duplicates
+
+    // fill up remaining slots with tools from the toolkit
+    if (lruToolsInToolkit.length < 3) {
+      allToolsInToolkit.some((tool) => {
+        if (lruToolsInToolkit.length >= 3) return true;
+        const adaptedToolId = adaptToolId(tool.id);
+        if (!lruToolsInToolkit.includes(adaptedToolId)) {
+          lruToolsInToolkit.push(adaptedToolId);
+        }
+        return false;
+      });
     }
     return lruToolsInToolkit
       .map((toolId) => allToolsInToolkit.find((tool) => tool.id === toolId))
@@ -112,7 +121,7 @@ export default function ToolbarView() {
   }, [showAllTools, toolkit, lastRecentlyUsedToolsFromUserConfig]);
 
   const getToolDropdown = useMemo(() => {
-    if (showAllTools) return null;
+    //if (showAllTools) return null;
     return (
       <ToolRadioButton name="More tools" value={null} style={NARROW_BUTTON_STYLE}>
         <Dropdown

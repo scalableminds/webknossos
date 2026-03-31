@@ -40,9 +40,9 @@ import type {
 } from "viewer/store";
 import Store from "viewer/store";
 import { MaterializeVolumeAnnotationModal } from "viewer/view/action_bar/materialize_volume_annotation_modal";
-import { NumberSliderSetting } from "viewer/view/components/setting_input_views";
 import ColorLayerSettings from "./components/color_layer_settings";
 import LayerSettingsHeader from "./components/layer_settings_header";
+import NumberSliderSetting from "./components/number_slider_setting";
 import SegmentationLayerSettings from "./components/segmentation_layer_settings";
 import SkeletonLayerSettings from "./components/skeleton_layer_settings";
 import Histogram, { isHistogramSupported } from "./histogram_view";

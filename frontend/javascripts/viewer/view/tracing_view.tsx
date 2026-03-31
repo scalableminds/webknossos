@@ -1,13 +1,17 @@
-import { sendAnalyticsEvent } from "admin/rest_api";
+import { sendAnalyticsEvent, updateUserConfiguration } from "admin/rest_api";
+import { Button } from "antd";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
 import type * as React from "react";
 import { getWebGlAnalyticsInformation } from "viewer/controller/renderer";
+import Constants from "viewer/constants";
 import {
   setViewModeAction,
   updateDatasetSettingAction,
+  updateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
+import { getGpuFactorsWithLabels } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import { api } from "viewer/singletons";
 import Store from "viewer/store";
 
@@ -23,13 +27,54 @@ const registerWebGlCrashHandler = (canvas) => {
     "webglcontextlost",
     (e: MessageEvent) => {
       e.preventDefault();
-      Toast.error(messages["webgl.context_loss"], {
-        sticky: true,
-        key: WEBGL_CONTEXT_LOST_KEY,
-      });
       console.error("Webgl context lost", e);
       ErrorHandling.notify(new Error("WebGLContextLost"));
       sendAnalyticsEvent("webgl_context_lost", getWebGlAnalyticsInformation(Store.getState()));
+
+      // The hardware utilization setting (gpuMemoryFactor) is persisted per user account and
+      // shared across devices. A setting that works well on a high-end machine may be too
+      // demanding on a weaker device, causing a WebGL context loss on the next login.
+      // To help the user recover, we offer a one-click button in the error toast that steps
+      // down to the next lower hardware utilization tier, persists the change to the server
+      // (so it survives the reload), and then reloads the page.
+      const state = Store.getState();
+      const currentGpuFactor =
+        state.userConfiguration.gpuMemoryFactor || Constants.DEFAULT_GPU_MEMORY_FACTOR;
+      // getGpuFactorsWithLabels returns factors in descending order, so the first entry
+      // strictly lower than the current factor is the next step down.
+      const lowerUtilizationEntry = getGpuFactorsWithLabels().find(
+        ([factorStr]) => Number(factorStr) < currentGpuFactor,
+      );
+
+      const handleReduceAndReload = async () => {
+        Toast.close(WEBGL_CONTEXT_LOST_KEY);
+        if (lowerUtilizationEntry) {
+          const lowerGpuFactor = Number(lowerUtilizationEntry[0]);
+          Store.dispatch(updateUserSettingAction("gpuMemoryFactor", lowerGpuFactor));
+
+          if (state.activeUser != null) {
+            await updateUserConfiguration({
+              ...Store.getState().userConfiguration,
+              gpuMemoryFactor: lowerGpuFactor,
+            });
+          }
+        }
+        location.reload();
+      };
+
+      const recoveryButton = (
+        <Button size="small" onClick={handleReduceAndReload}>
+          {lowerUtilizationEntry != null
+            ? `Reduce Hardware Utilization to "${lowerUtilizationEntry[1]}" & Reload`
+            : "Reload Page"}
+        </Button>
+      );
+
+      Toast.error(messages["webgl.context_loss"], {
+        sticky: true,
+        key: WEBGL_CONTEXT_LOST_KEY,
+        customFooter: recoveryButton,
+      });
     },
     false,
   );

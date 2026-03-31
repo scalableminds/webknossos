@@ -40,7 +40,7 @@ You can choose between two resolutions for your animation video:
 
 - **Include the currently selected 3D meshes:** If checked, the animation will include any meshes that are currently loaded in the 3D view.
 - **Include WEBKNOSSOS Watermark:** If checked, the WEBKNOSSOS logo will be displayed as a watermark on the animation video. Access to this option may depend on your WEBKNOSSOS plan.
-- **Include skeleton annotation:** If checked, the visible skeleton trees of the current annotation will be included in the animation. This option is only available when viewing an annotation that contains a skeleton tracing (not in view-only mode).
+- **Include skeleton annotation:** If checked, the visible skeleton trees of the current annotation will be included in the animation. This option is only available when viewing an annotation that contains a skeleton layer (not in view-only mode).
 
 ### Layer & Bounding Box
 

@@ -1,6 +1,7 @@
 import { SettingOutlined } from "@ant-design/icons";
 import { getDatasetNameRules } from "admin/dataset/dataset_components";
 import { APIAiModelCategory } from "admin/rest_api";
+import { KeyValuePairsFormItem } from "components/key_value_pairs";
 import type { FormProps } from "antd";
 import {
   Card,
@@ -48,6 +49,8 @@ export const AiAnalysisSettings: React.FC = () => {
     setIsEvaluationActive,
     splitMergerEvaluationSettings,
     setSplitMergerEvaluationSettings,
+    customConfiguration,
+    setCustomConfiguration,
     selectedJobType,
   } = useRunAiModelJobContext();
   const dataset = useWkSelector((state) => state.dataset);
@@ -73,6 +76,9 @@ export const AiAnalysisSettings: React.FC = () => {
       setSplitMergerEvaluationSettings(
         allValues.splitMergerEvaluationSettings as SplitMergerEvaluationSettings,
       );
+    }
+    if ("customConfiguration" in changedValues) {
+      setCustomConfiguration(changedValues.customConfiguration);
     }
   };
 
@@ -103,6 +109,7 @@ export const AiAnalysisSettings: React.FC = () => {
       name: ["splitMergerEvaluationSettings", "minimumMergerPathLengthInNm"],
       value: splitMergerEvaluationSettings?.minimumMergerPathLengthInNm,
     },
+    { name: ["customConfiguration"], value: customConfiguration },
   ];
 
   return (
@@ -199,6 +206,9 @@ export const AiAnalysisSettings: React.FC = () => {
                     </Form.Item>
                   </Col>
                 )}
+              </Row>
+              <Row>
+                <KeyValuePairsFormItem name="customConfiguration" label="Custom Configuration" />
               </Row>
 
               {isNeuronModel && (

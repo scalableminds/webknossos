@@ -8,7 +8,7 @@ import models.annotation.AnnotationDAO
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetService, UploadToPathsService}
 import models.job.{JobCommand, JobService}
 import models.user.{User, UserService}
-import play.api.libs.json.{Json, OFormat}
+import play.api.libs.json.{JsObject, Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
 import security.WkEnv
@@ -67,7 +67,8 @@ case class RunInferenceParameters(datasetId: ObjectId,
                                   evalUseSparseTracing: Option[Boolean],
                                   evalMaxEdgeLength: Option[Double],
                                   evalSparseTubeThresholdNm: Option[Double],
-                                  evalMinMergerPathLengthNm: Option[Double])
+                                  evalMinMergerPathLengthNm: Option[Double],
+                                  customConfiguration: Option[JsObject])
 
 object RunInferenceParameters {
   implicit val jsonFormat: OFormat[RunInferenceParameters] = Json.format[RunInferenceParameters]
@@ -301,7 +302,7 @@ class AiModelController @Inject()(
           "custom_workflow_provided_by_user" -> request.body.workflowYaml,
           "invert_color_layer" -> request.body.invertColorLayer,
           "seed_generator_distance_threshold" -> request.body.seedGeneratorDistanceThreshold,
-        )
+        ) ++ request.body.customConfiguration.getOrElse(Json.obj())
         creditTransactionComment = s"AI custom instance segmentation with model ${request.body.aiModelId} for dataset ${dataset.name}"
         targetMagBoundingBox <- aiModelService.inferenceBBoxToTargetMag(mag1BoundingBox,
                                                                         layer,
@@ -368,7 +369,7 @@ class AiModelController @Inject()(
           "eval_max_edge_length" -> request.body.evalMaxEdgeLength,
           "eval_sparse_tube_threshold_nm" -> request.body.evalSparseTubeThresholdNm,
           "eval_min_merger_path_length_nm" -> request.body.evalMinMergerPathLengthNm,
-        )
+        ) ++ request.body.customConfiguration.getOrElse(Json.obj())
         creditTransactionComment = s"AI custom neuron segmentation with model ${request.body.aiModelId} for dataset ${dataset.name}"
         newInferenceJob <- jobService.submitPaidJob(jobCommand,
                                                     commandArgs,

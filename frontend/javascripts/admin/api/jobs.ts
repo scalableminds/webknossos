@@ -200,6 +200,7 @@ type RunNeuronInferenceParameters = {
   evalMaxEdgeLength?: number;
   evalSparseTubeThresholdNm?: number;
   evalMinMergerPathLengthNm?: number;
+  customConfiguration?: Record<string, string | number | boolean>;
 };
 
 type RunInstanceInferenceParameters = {
@@ -213,6 +214,7 @@ type RunInstanceInferenceParameters = {
   workflowYaml?: string;
   invertColorLayer?: boolean;
   seedGeneratorDistanceThreshold?: number | null;
+  customConfiguration?: Record<string, string | number | boolean>;
 };
 
 export function runNeuronModelInference(params: RunNeuronInferenceParameters): Promise<APIJob> {

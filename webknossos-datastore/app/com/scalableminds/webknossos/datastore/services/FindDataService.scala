@@ -162,20 +162,17 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     def histogramBinForFloat(v: Float, min: Float, bucketSize: Float): Int =
       ((v - min) / bucketSize).floor.toInt
 
-    def calculateHistogramValues(
-        data: Array[_ >: Byte with Short with Int with Long with Float],
-        bytesPerElement: Int,
-        elementClass: ElementClass.Value) = {
+    def calculateHistogramValues(data: Array[_ >: Byte with Short with Int with Long with Float],
+                                 bytesPerElement: Int,
+                                 elementClass: ElementClass.Value) = {
       val isUint24 = dataLayer.elementClass == ElementClass.uint24
       val isSigned = ElementClass.isSigned(elementClass)
       val counts = if (isUint24) Array.ofDim[Long](768) else Array.ofDim[Long](256)
       var extrema: (Double, Double) =
-        (
-          if (isSigned)
-            (-math.pow(2, 8 * bytesPerElement - 1), math.pow(2, 8 * bytesPerElement - 1) - 1)
-          else
-            (0, math.pow(2, 8 * bytesPerElement) - 1)
-        )
+        if (isSigned)
+          (-math.pow(2, 8 * bytesPerElement - 1), math.pow(2, 8 * bytesPerElement - 1) - 1)
+        else
+          (0, math.pow(2, 8 * bytesPerElement) - 1)
 
       if (data.nonEmpty) {
         data match {

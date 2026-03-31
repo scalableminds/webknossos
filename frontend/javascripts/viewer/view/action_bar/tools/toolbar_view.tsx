@@ -88,7 +88,7 @@ export default function ToolbarView() {
   const showAllTools = isWiderScreen || toolkit === Toolkit.READ_ONLY_TOOLS || isViewMode;
 
   const toolsForButtons = useMemo(() => {
-    //if (showAllTools) return Toolkits[toolkit];
+    if (showAllTools) return Toolkits[toolkit];
     const allToolsInToolkit = Toolkits[toolkit];
     const allToolIdsInToolkit = allToolsInToolkit.map((tool) => tool.id);
     const adaptToolId = (toolId: AnnotationToolId): AnnotationToolId => {
@@ -121,7 +121,7 @@ export default function ToolbarView() {
   }, [showAllTools, toolkit, lastRecentlyUsedToolsFromUserConfig]);
 
   const getToolDropdown = useMemo(() => {
-    //if (showAllTools) return null;
+    if (showAllTools) return null;
     return (
       <ToolRadioButton name="More tools" value={null} style={NARROW_BUTTON_STYLE}>
         <Dropdown

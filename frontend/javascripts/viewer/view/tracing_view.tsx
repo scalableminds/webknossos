@@ -4,8 +4,8 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
 import type * as React from "react";
-import { getWebGlAnalyticsInformation } from "viewer/controller/renderer";
 import Constants from "viewer/constants";
+import { getWebGlAnalyticsInformation } from "viewer/controller/renderer";
 import {
   setViewModeAction,
   updateDatasetSettingAction,

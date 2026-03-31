@@ -1,4 +1,9 @@
-import { AppstoreAddOutlined, DeleteOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
+import {
+  AppstoreAddOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+  SearchOutlined,
+} from "@ant-design/icons";
 import {
   Divider,
   Empty,

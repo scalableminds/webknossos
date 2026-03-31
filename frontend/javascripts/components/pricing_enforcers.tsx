@@ -16,7 +16,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 import type { APIOrganization, APIUser } from "types/api_types";
 import { PRIMARY_COLOR } from "viewer/constants";
-import { SwitchSetting } from "viewer/view/components/setting_input_views";
+import SwitchSetting from "viewer/view/left_border_tabs/components/switch_setting";
 
 const PRIMARY_COLOR_HEX = rgbToHex(PRIMARY_COLOR);
 

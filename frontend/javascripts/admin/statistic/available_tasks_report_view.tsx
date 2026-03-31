@@ -3,7 +3,7 @@ import AdminPage from "admin/admin_page";
 import { getAvailableTasksReport } from "admin/rest_api";
 import { Spin, Table, Tag, Tooltip } from "antd";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
-import { handleGenericError } from "libs/error_handling";
+import { useQueryWithErrorHandling } from "libs/react_hooks";
 import { compareBy, localeCompareBy } from "libs/utils";
 import { useState } from "react";
 import type { APIAvailableTasksReport } from "types/api_types";
@@ -11,29 +11,18 @@ import type { APIAvailableTasksReport } from "types/api_types";
 const { Column } = Table;
 
 /*
- * Note that the phrasing “available” tasks is chosen here over “pending” to
+ * Note that the phrasing "available" tasks is chosen here over "pending" to
  * emphasize that tasks are still available for individual users.
  * From the project viewpoint they are tasks with pending instances.
  */
 function AvailableTasksReportView() {
-  const [data, setData] = useState<APIAvailableTasksReport[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
 
-  async function fetchData(teamId: string | null | undefined) {
-    if (teamId == null) {
-      setData([]);
-    } else {
-      try {
-        setIsLoading(true);
-        const progressData = await getAvailableTasksReport(teamId);
-        setData(progressData);
-      } catch (error) {
-        handleGenericError(error as Error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  }
+  const { data = [], isLoading } = useQueryWithErrorHandling({
+    queryKey: ["availableTasksReport", selectedTeamId],
+    enabled: selectedTeamId != null,
+    queryFn: () => getAvailableTasksReport(selectedTeamId!),
+  });
 
   return (
     <AdminPage
@@ -47,7 +36,7 @@ function AvailableTasksReportView() {
           <TeamSelectionComponent
             onChange={(selectedTeam) => {
               if (!Array.isArray(selectedTeam) && selectedTeam != null) {
-                fetchData(selectedTeam.id);
+                setSelectedTeamId(selectedTeam.id);
               }
             }}
             prefix={<FilterOutlined />}

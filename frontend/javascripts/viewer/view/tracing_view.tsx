@@ -1,4 +1,4 @@
-import { sendAnalyticsEvent, updateUserConfiguration } from "admin/rest_api";
+import { sendAnalyticsEvent } from "admin/rest_api";
 import { Button } from "antd";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
@@ -51,13 +51,6 @@ const registerWebGlCrashHandler = (canvas) => {
         if (lowerUtilizationEntry) {
           const lowerGpuFactor = Number(lowerUtilizationEntry[0]);
           Store.dispatch(updateUserSettingAction("gpuMemoryFactor", lowerGpuFactor));
-
-          if (state.activeUser != null) {
-            await updateUserConfiguration({
-              ...Store.getState().userConfiguration,
-              gpuMemoryFactor: lowerGpuFactor,
-            });
-          }
         }
         location.reload();
       };

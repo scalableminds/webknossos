@@ -90,9 +90,9 @@ class CreditTransactionController @Inject()(organizationDAO: OrganizationDAO,
       isSuperUser <- userService.isSuperUser(request.identity._multiUser)
       _ <- Fox.fromBool(isSuperUser || request.identity.isAdmin) ?~> "organization.listCreditTransactions.onlyAdmin"
       transactions <- creditTransactionDAO.findAll
-      nonZeroTransactions = transactions.filter(_.milliCreditDelta != 0)
-      compactedTransactions = creditTransactionService.compactFreeCreditsForDisplay(nonZeroTransactions)
-      transactionsJs <- Fox.serialCombined(compactedTransactions)(creditTransactionPublicWritesService.publicWrites)
+      compactedTransactions = creditTransactionService.compactFreeCreditsForDisplay(transactions)
+      nonZeroTransactions = compactedTransactions.filter(_.milliCreditDelta != 0)
+      transactionsJs <- Fox.serialCombined(nonZeroTransactions)(creditTransactionPublicWritesService.publicWrites)
     } yield Ok(Json.toJson(transactionsJs))
   }
 

@@ -86,7 +86,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
       .filterNot(t => revocationIds.contains(t._id))
       .map(t =>
         revocationByGrantId.get(t._id) match {
-          case Some(revocation) => t.copy(milliCreditDelta = t.milliCreditDelta + revocation.milliCreditDelta, comment = s"${t.comment}: ${(t.milliCreditDelta + revocation.milliCreditDelta) / 1000} used")
+          case Some(revocation) => t.copy(milliCreditDelta = t.milliCreditDelta + revocation.milliCreditDelta, comment = s"${t.comment}: ${(t.milliCreditDelta + revocation.milliCreditDelta) / 1000.0} used")
           case None             => t
       })
   }

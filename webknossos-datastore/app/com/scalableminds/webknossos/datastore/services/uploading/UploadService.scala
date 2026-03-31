@@ -21,10 +21,10 @@ import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataSourceService, ManagedS3Service}
-import com.scalableminds.webknossos.datastore.storage.{DataStoreRedisStore, DataVaultService}
+import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
-import play.api.libs.json.{Json, OFormat, Reads}
+import play.api.libs.json.{Json, OFormat}
 import software.amazon.awssdk.transfer.s3.model.UploadDirectoryRequest
 
 import java.io.{File, RandomAccessFile}
@@ -72,11 +72,6 @@ case class LinkedLayerIdentifier(datasetId: ObjectId, layerName: String, newLaye
 
 object LinkedLayerIdentifier {
   implicit val jsonFormat: OFormat[LinkedLayerIdentifier] = Json.format[LinkedLayerIdentifier]
-}
-
-case class LinkedLayerIdentifiers(layersToLink: Option[List[LinkedLayerIdentifier]])
-object LinkedLayerIdentifiers {
-  implicit val jsonFormat: OFormat[LinkedLayerIdentifiers] = Json.format[LinkedLayerIdentifiers]
 }
 
 case class UploadInformation(uploadId: String, needsConversion: Option[Boolean])
@@ -258,7 +253,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     for {
       dataSourceId <- uploadMetadataStore.getDataSourceId(uploadId)
       _ = logger.info(s"Finishing ${uploadFullName(uploadId, datasetId, dataSourceId)}...")
-      linkedLayerIdentifiers <- getObjectFromRedis[LinkedLayerIdentifiers](redisKeyForLinkedLayerIdentifier(uploadId))
+      linkedLayerIdentifiers <- uploadMetadataStore.getLinkedLayerIdentifiers(uploadId)
       needsConversion = uploadInformation.needsConversion.getOrElse(false)
       uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId)
       _ <- backupRawUploadedData(uploadDir, uploadBackupDirectoryFor(dataSourceId.organizationId, uploadId), datasetId).toFox
@@ -281,14 +276,13 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                             label = s"processing dataset at $unpackToDir")
       datasetSizeBytes <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue).toFox ?~> "dataset.upload.measureTotalSize.failed"
       dataSourceWithAbsolutePathsOpt <- moveUnpackedToTarget(unpackToDir, needsConversion, datasetId, dataSourceId) ?~> "dataset.upload.moveUnpackedToTarget.failed"
-
       _ <- remoteWebknossosClient.reportUpload(
         datasetId,
         ReportDatasetUploadParameters(
           uploadInformation.needsConversion.getOrElse(false),
           datasetSizeBytes,
           dataSourceWithAbsolutePathsOpt,
-          linkedLayerIdentifiers.layersToLink.getOrElse(List.empty)
+          linkedLayerIdentifiers
         )
       ) ?~> "dataset.upload.reportUpload.failed"
     } yield ()
@@ -296,11 +290,11 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
   private def checkWithinRequestedFileSize(uploadDir: Path, uploadId: String, datasetId: ObjectId): Fox[Unit] =
     for {
-      totalFileSizeInBytesOpt <- runningUploadMetadataStore.find(redisKeyForTotalFileSizeInBytes(uploadId)) ?~> "Could not look up reserved total file size"
+      totalFileSizeInBytesOpt <- uploadMetadataStore.getTotalFileSizeInBytes(uploadId) ?~> "Could not look up reserved total file size"
       _ <- totalFileSizeInBytesOpt.map { reservedFileSize =>
         for {
           actualFileSize <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(uploadDir.toFile).longValue).toFox ?~> "Could not measure actual file size"
-          _ <- if (actualFileSize > reservedFileSize.toLong) {
+          _ <- if (actualFileSize > reservedFileSize) {
             cleanUpDatasetExceedingSize(uploadDir, uploadId)
             Fox.failure(
               f"Uploaded dataset $datasetId exceeds the reserved size of $reservedFileSize bytes, got $actualFileSize bytes.")
@@ -512,20 +506,18 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
   private def checkAllChunksUploaded(uploadId: String): Fox[Unit] =
     for {
-      fileCountStringOpt <- runningUploadMetadataStore.find(redisKeyForFileCount(uploadId)) ?~> "Could not look up reserved file count"
-      fileCountString <- fileCountStringOpt.toFox ?~> "dataset.upload.noFiles"
-      fileCount <- tryo(fileCountString.toLong).toFox ?~> "Could not look up reserved file count (toLong)"
-      fileNames <- runningUploadMetadataStore.findSet(redisKeyForFileNameSet(uploadId)) ?~> "Could not look up reserved file names"
-      _ <- Fox.fromBool(fileCount == fileNames.size)
-      list <- Fox.serialCombined(fileNames.toList) { fileName =>
-        val chunkCount =
-          runningUploadMetadataStore
-            .find(redisKeyForFileChunkCount(uploadId, fileName))
-            .map(s => s.getOrElse("").toLong)
-        val chunks = runningUploadMetadataStore.findSet(redisKeyForFileChunkSet(uploadId, fileName))
-        chunks.flatMap(set => chunkCount.map(_ == set.size))
-      } ?~> "Could not look up reserved file sizes"
-      _ <- Fox.fromBool(list.forall(identity))
+      fileCountOpt <- uploadMetadataStore.getFileCount(uploadId) ?~> "Could not look up reserved file count."
+      fileCount <- fileCountOpt.toFox ?~> "Could not look up reserved file count."
+      fileNames <- uploadMetadataStore.getFileNames(uploadId) ?~> "Could not look up reserved file names."
+      _ <- Fox.fromBool(fileCount == fileNames.size) ?~> "Reserved file count does not match file names length."
+      _ <- Fox.serialCombined(fileNames) { fileName =>
+        for {
+          chunkCountOpt <- uploadMetadataStore.getFileChunkCount(uploadId, fileName) ?~> "Could not look up file chunk count."
+          chunkCount <- chunkCountOpt.toFox
+          chunkSet <- uploadMetadataStore.getFileChunkSet(uploadId, fileName) ?~> "Could not look up file chunk set."
+          _ <- Fox.fromBool(chunkCount == chunkSet.size) ?~> s"Chunks missing for uploaded file $fileName: expected $chunkCount, got ${chunkSet.size}."
+        } yield ()
+      }
     } yield ()
 
   private def unpackToDirFor(dataSourceId: DataSourceId): Path =

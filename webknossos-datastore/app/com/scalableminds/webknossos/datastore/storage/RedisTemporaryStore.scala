@@ -1,13 +1,14 @@
 package com.scalableminds.webknossos.datastore.storage
 
 import com.redis._
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.typesafe.scalalogging.LazyLogging
+import play.api.libs.json.{Json, Reads, Writes}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
-trait RedisTemporaryStore extends LazyLogging {
+trait RedisTemporaryStore extends LazyLogging with FoxImplicits {
   implicit def ec: ExecutionContext
   protected def address: String
   protected def port: Int
@@ -48,16 +49,12 @@ trait RedisTemporaryStore extends LazyLogging {
 
   def insert(id: String, value: String, expirationOpt: Option[FiniteDuration] = None): Fox[Unit] =
     withExceptionHandler { client =>
-      expirationOpt
-        .map(expiration => client.setex(id, expiration.toSeconds, value))
-        .getOrElse(client.set(id, value))
+      expirationOpt.map(expiration => client.setex(id, expiration.toSeconds, value)).getOrElse(client.set(id, value))
     }
 
   def insertLong(id: String, value: Long, expirationOpt: Option[FiniteDuration] = None): Fox[Unit] =
     withExceptionHandler { client =>
-      expirationOpt
-        .map(expiration => client.setex(id, expiration.toSeconds, value))
-        .getOrElse(client.set(id, value))
+      expirationOpt.map(expiration => client.setex(id, expiration.toSeconds, value)).getOrElse(client.set(id, value))
     }
 
   def contains(id: String): Fox[Boolean] =
@@ -66,7 +63,7 @@ trait RedisTemporaryStore extends LazyLogging {
   def remove(id: String): Fox[Unit] =
     withExceptionHandler(_.del(id))
 
-  def checkHealth(implicit ec: ExecutionContext): Fox[Unit] =
+  def checkHealth: Fox[Unit] =
     withExceptionHandler { client =>
       val reply = client.ping
       if (!reply.contains("PONG")) throw new Exception(reply.getOrElse("No Reply"))
@@ -84,6 +81,18 @@ trait RedisTemporaryStore extends LazyLogging {
 
   def findSet(id: String): Fox[Set[String]] =
     withExceptionHandler(_.smembers(id).map(_.flatten).getOrElse(Set.empty))
+
+  def findParsed[T: Reads](key: String)(implicit ec: ExecutionContext): Fox[T] =
+    for {
+      objectStringOption <- find(key)
+      objectString <- objectStringOption.toFox
+      parsed <- JsonHelper.parseAs[T](objectString).toFox
+    } yield parsed
+
+  def insertSerialized[T: Writes](key: String, value: T): Fox[Unit] = {
+    val serialized = Json.stringify(Json.toJson(value))
+    insert(key, serialized)
+  }
 
   private def withExceptionHandler[B](f: RedisClient => B): Fox[B] =
     try {

@@ -50,6 +50,7 @@ import FolderSelection from "dashboard/folders/folder_selection";
 import dayjs from "dayjs";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
+import type { ResumableUploadEvent } from "libs/resumable-upload";
 import Toast from "libs/toast";
 import { getFileExtension, isFileExtensionEqualTo, isUserAdminOrDatasetManager } from "libs/utils";
 import { Vector3Input } from "libs/vector_input";
@@ -223,6 +224,9 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
   blockTimeoutId: number | null = null;
   formRef = React.createRef<FormInstance<UploadFormFieldTypes>>();
+  // Set to true when the user initiates a cancel (before the confirmation dialog is resolved)
+  // to prevent the `complete` event from triggering finishDatasetUpload in the meantime.
+  _isCancellingUpload = false;
 
   componentDidMount() {
     sendAnalyticsEvent("open_upload_view");
@@ -292,6 +296,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       return;
     }
 
+    this._isCancellingUpload = false;
     this.setState({
       isUploading: true,
       uploadProgress: 0,
@@ -360,7 +365,18 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       resumableUpload,
       datastoreUrl,
     });
-    resumableUpload.on("complete", () => {
+    resumableUpload.addEventListener("complete", (event: ResumableUploadEvent) => {
+      if (
+        event.detail.type !== "complete" ||
+        !event.detail.didUploadCompleteSuccessfully ||
+        this._isCancellingUpload
+      ) {
+        // The upload was not successful, or a cancel was initiated before the complete event
+        // fired (e.g. the last in-flight chunk completed while the cancel dialog was open).
+        // A retry might be initiated by other code that listens to fileError events which is
+        // why we ignore the complete event now. The type is only checked to satisfy TS.
+        return;
+      }
       const newestForm = this.formRef.current;
 
       if (!newestForm) {
@@ -432,34 +448,39 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         },
       );
     });
-    resumableUpload.on("filesAdded", () => {
+    resumableUpload.addEventListener("filesAdded", () => {
       resumableUpload.upload();
     });
     // terminalFileError is triggered by the RestApi when a normal fileError could not be
     // recovered by refreshing the user token.
-    resumableUpload.on("terminalFileError", (_file: FileWithPath, message: string) => {
-      Toast.error(message);
+    resumableUpload.addEventListener("terminalFileError", (event: ResumableUploadEvent) => {
+      if (event.detail.type !== "terminalFileError") {
+        // Satisfy TS.
+        return;
+      }
+      Toast.error(event.detail.message);
       this.setState({
         isUploading: false,
       });
     });
-    resumableUpload.on("progress", () => {
+    resumableUpload.addEventListener("progress", () => {
       this.setState({
         isRetrying: false,
         uploadProgress: resumableUpload.progress(),
       });
     });
-    resumableUpload.on("fileRetry", () => {
+    resumableUpload.addEventListener("fileRetry", () => {
       logRetryToAnalytics(newDatasetName);
       this.setState({
         isRetrying: true,
       });
     });
-    resumableUpload.addFiles(formValues.zipFile);
+    resumableUpload.addFiles(formValues.zipFile as File[]);
   };
 
   cancelUpload = async () => {
     const { uploadId, resumableUpload, datastoreUrl } = this.state;
+    this._isCancellingUpload = true;
     resumableUpload.pause();
     const shouldCancel = await confirmAsync({
       title:
@@ -469,6 +490,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     });
 
     if (!shouldCancel) {
+      this._isCancellingUpload = false;
       resumableUpload.upload();
       return;
     }

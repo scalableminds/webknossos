@@ -16,7 +16,7 @@ import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
-import { NumberSliderSetting } from "viewer/view/components/setting_input_views";
+import NumberSliderSetting from "viewer/view/left_border_tabs/components/number_slider_setting";
 import { getBaseSegmentationName } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 
 const { Option } = Select;

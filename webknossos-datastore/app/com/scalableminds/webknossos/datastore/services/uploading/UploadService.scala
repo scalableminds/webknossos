@@ -86,7 +86,7 @@ object CancelUploadInformation {
 }
 
 class UploadService @Inject()(dataSourceService: DataSourceService,
-                              uploadMetadataStore: UploadMetadataStore,
+                              uploadMetadataStore: DatasetUploadMetadataStore,
                               dataVaultService: DataVaultService,
                               exploreLocalLayerService: ExploreLocalLayerService,
                               dataStoreConfig: DataStoreConfig,
@@ -109,7 +109,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     uploadMetadataStore.isKnownUpload(uploadId)
 
   def getDatasetIdByUploadId(uploadId: String): Fox[ObjectId] =
-    uploadMetadataStore.getDatasetId(uploadId)
+    uploadMetadataStore.findDatasetId(uploadId)
 
   def extractDatasetUploadId(uploadFileId: String): String = uploadFileId.split("/").headOption.getOrElse("")
 
@@ -147,11 +147,11 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         unfinishedUploadsWithoutIds.map(
           unfinishedUpload => {
             for {
-              uploadIdOpt <- uploadMetadataStore.getUploadIdByDataSourceId(unfinishedUpload.dataSourceId)
+              uploadIdOpt <- uploadMetadataStore.findUploadIdByDataSourceId(unfinishedUpload.dataSourceId)
               updatedUploadOpt = uploadIdOpt.map(uploadId => unfinishedUpload.copy(uploadId = uploadId))
               updatedUploadWithFilePathsOpt <- Fox.runOptional(updatedUploadOpt)(updatedUpload =>
                 for {
-                  filePaths <- uploadMetadataStore.getFilePaths(updatedUpload.uploadId)
+                  filePaths <- uploadMetadataStore.findFilePaths(updatedUpload.uploadId)
                   uploadUpdatedWithFilePaths = updatedUpload.copy(filePaths = Some(filePaths))
                 } yield uploadUpdatedWithFilePaths)
             } yield updatedUploadWithFilePathsOpt
@@ -166,7 +166,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def getFilePathAndDirForUploadFileId(uploadFileId: String): Fox[(String, Path)] = {
     val uploadId = extractDatasetUploadId(uploadFileId)
     for {
-      dataSourceId <- uploadMetadataStore.getDataSourceId(uploadId)
+      dataSourceId <- uploadMetadataStore.findDataSourceId(uploadId)
       uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId)
       filePathRaw = uploadFileId.split("/").tail.mkString("/")
       filePath = if (filePathRaw.charAt(0) == '/') filePathRaw.drop(1) else filePathRaw
@@ -193,8 +193,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                         chunkFile: File): Fox[Unit] = {
     val uploadId = extractDatasetUploadId(uploadFileId)
     for {
-      datasetId <- uploadMetadataStore.getDatasetId(uploadId)
-      dataSourceId <- uploadMetadataStore.getDataSourceId(uploadId)
+      datasetId <- uploadMetadataStore.findDatasetId(uploadId)
+      dataSourceId <- uploadMetadataStore.findDataSourceId(uploadId)
       (filePath, uploadDir) <- getFilePathAndDirForUploadFileId(uploadFileId)
       isFileKnown <- uploadMetadataStore.isFileKnown(uploadId, filePath)
       _ <- Fox.runIf(!isFileKnown) {
@@ -232,7 +232,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   def cancelUpload(cancelUploadInformation: CancelUploadInformation): Fox[Unit] = {
     val uploadId = cancelUploadInformation.uploadId
     for {
-      dataSourceId <- uploadMetadataStore.getDataSourceId(uploadId)
+      dataSourceId <- uploadMetadataStore.findDataSourceId(uploadId)
       datasetId <- getDatasetIdByUploadId(uploadId)
       knownUpload <- isKnownUpload(uploadId)
     } yield
@@ -251,9 +251,9 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     val uploadId = uploadInformation.uploadId
 
     for {
-      dataSourceId <- uploadMetadataStore.getDataSourceId(uploadId)
+      dataSourceId <- uploadMetadataStore.findDataSourceId(uploadId)
       _ = logger.info(s"Finishing ${uploadFullName(uploadId, datasetId, dataSourceId)}...")
-      linkedLayerIdentifiers <- uploadMetadataStore.getLinkedLayerIdentifiers(uploadId)
+      linkedLayerIdentifiers <- uploadMetadataStore.findLinkedLayerIdentifiers(uploadId)
       needsConversion = uploadInformation.needsConversion.getOrElse(false)
       uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId)
       _ <- backupRawUploadedData(uploadDir, uploadBackupDirectoryFor(dataSourceId.organizationId, uploadId), datasetId).toFox
@@ -290,7 +290,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
   private def checkWithinRequestedFileSize(uploadDir: Path, uploadId: String, datasetId: ObjectId): Fox[Unit] =
     for {
-      totalFileSizeInBytesOpt <- uploadMetadataStore.getTotalFileSizeInBytes(uploadId) ?~> "Could not look up reserved total file size"
+      totalFileSizeInBytesOpt <- uploadMetadataStore.findTotalFileSizeInBytes(uploadId) ?~> "Could not look up reserved total file size"
       _ <- totalFileSizeInBytesOpt.map { reservedFileSize =>
         for {
           actualFileSize <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(uploadDir.toFile).longValue).toFox ?~> "Could not measure actual file size"
@@ -506,15 +506,15 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
   private def checkAllChunksUploaded(uploadId: String): Fox[Unit] =
     for {
-      fileCountOpt <- uploadMetadataStore.getFileCount(uploadId) ?~> "Could not look up reserved file count."
+      fileCountOpt <- uploadMetadataStore.findFileCount(uploadId) ?~> "Could not look up reserved file count."
       fileCount <- fileCountOpt.toFox ?~> "Could not look up reserved file count."
-      fileNames <- uploadMetadataStore.getFileNames(uploadId) ?~> "Could not look up reserved file names."
+      fileNames <- uploadMetadataStore.findFileNames(uploadId) ?~> "Could not look up reserved file names."
       _ <- Fox.fromBool(fileCount == fileNames.size) ?~> "Reserved file count does not match file names length."
       _ <- Fox.serialCombined(fileNames) { fileName =>
         for {
-          chunkCountOpt <- uploadMetadataStore.getFileChunkCount(uploadId, fileName) ?~> "Could not look up file chunk count."
+          chunkCountOpt <- uploadMetadataStore.findFileChunkCount(uploadId, fileName) ?~> "Could not look up file chunk count."
           chunkCount <- chunkCountOpt.toFox
-          chunkSet <- uploadMetadataStore.getFileChunkSet(uploadId, fileName) ?~> "Could not look up file chunk set."
+          chunkSet <- uploadMetadataStore.findFileChunkSet(uploadId, fileName) ?~> "Could not look up file chunk set."
           _ <- Fox.fromBool(chunkCount == chunkSet.size) ?~> s"Chunks missing for uploaded file $fileName: expected $chunkCount, got ${chunkSet.size}."
         } yield ()
       }

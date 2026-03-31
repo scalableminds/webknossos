@@ -142,7 +142,7 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
 
   def insertNewPendingTransaction(transaction: CreditTransaction)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- readAccessQuery
+      _ <- updateAccessQuery
       _ <- run(
         q"""INSERT INTO webknossos.credit_transactions
           (_id, _organization, milli_credit_delta, comment, _paid_job,
@@ -168,7 +168,7 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
 
   def insertTransaction(transaction: CreditTransaction)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- readAccessQuery
+      _ <- updateAccessQuery
       _ <- run(q"""INSERT INTO webknossos.credit_transactions
           (_id, _organization, milli_credit_delta, _related_transaction, comment, _paid_job,
           transaction_state, credit_state, expiration_date, created_at, updated_at, is_deleted)
@@ -286,7 +286,6 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
             case Failure(e) =>
               logger.error(s"Failed to revoke some expired credits for organization ${transaction._organization}", e)
               DBIO.successful(transactionsWhereRevokingFailed :+ transaction)
-            case _ => DBIO.successful(transactionsWhereRevokingFailed)
           }
         } yield transactionsWhereRevokingFailedAfterRevoking
       }

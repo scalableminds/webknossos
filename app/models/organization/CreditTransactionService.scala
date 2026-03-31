@@ -29,8 +29,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
                                                      CreditState.Pending)
     for {
       _ <- creditTransactionDAO.insertNewPendingTransaction(pendingCreditTransaction)
-      insertedTransaction <- creditTransactionDAO.findOne(pendingCreditTransaction._id)
-    } yield insertedTransaction
+    } yield pendingCreditTransaction
   }
 
   def completeTransactionOfJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =

@@ -4,7 +4,7 @@ import CircleIcon from "@images/icons/icon-circle.svg?react";
 import { Col, Divider, Dropdown, type MenuProps, Popover, Row } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
-import { useCallback, useEffect, useState } from "react";
+import { type ReactElement, useCallback, useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { userSettings } from "types/schemas/user_settings.schema";
 import { Unicode } from "viewer/constants";
@@ -15,7 +15,7 @@ import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setMousePositionAction } from "viewer/model/actions/volumetracing_actions";
 import Store, { type BrushPresets } from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
-import { LogSliderSetting } from "viewer/view/components/setting_input_views";
+import { LogSliderSetting } from "viewer/view/left_border_tabs/components/log_slider_setting";
 
 function BrushPresetButton({
   name,
@@ -25,7 +25,7 @@ function BrushPresetButton({
 }: {
   name: string;
   onClick: () => void;
-  icon: JSX.Element;
+  icon: ReactElement;
   brushSize: number;
 }) {
   const { ThinSpace } = Unicode;

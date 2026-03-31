@@ -4,7 +4,7 @@ import { useDispatch } from "react-redux";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { getHideUnregisteredSegmentsForLayer } from "viewer/model/accessors/volumetracing_accessor";
 import { setHideUnregisteredSegmentsAction } from "viewer/model/actions/volumetracing_actions";
-import { SwitchSetting } from "viewer/view/components/setting_input_views";
+import SwitchSetting from "./components/switch_setting";
 
 export function HideUnregisteredSegmentsSwitch({ layerName }: { layerName: string }) {
   const dispatch = useDispatch();

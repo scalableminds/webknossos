@@ -9,7 +9,7 @@ import play.api.libs.json.{Format, Json}
 
 object VolumeTracingMags extends ProtoGeometryImplicits {
 
-  def magsForVolumeTracing(dataSource: UsableDataSource, fallbackLayer: Option[StaticLayer]): List[Vec3Int] = {
+  def magsForVolumeTracing(dataSource: UsableDataSource, fallbackLayer: Option[StaticLayer]): Seq[Vec3Int] = {
     val fallbackLayerMags = fallbackLayer.map(_.resolutions)
     fallbackLayerMags.getOrElse {
       val unionOfAllLayers = dataSource.dataLayers.flatMap(_.resolutions).distinct

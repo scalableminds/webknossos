@@ -114,7 +114,9 @@ class DataSourceController @Inject()(
           _ <- if (!isKnownUpload) {
             for {
               reserveUploadAdditionalInfo <- dsRemoteWebknossosClient.reserveDataSourceUpload(request.body) ?~> "dataset.upload.validation.failed"
-              _ <- uploadService.reserveUpload(request.body, reserveUploadAdditionalInfo)
+              _ <- uploadService.reserveUpload(request.body,
+                                               reserveUploadAdditionalInfo.newDatasetId,
+                                               reserveUploadAdditionalInfo.directoryName)
             } yield ()
           } else Fox.successful(())
         } yield Ok
@@ -127,7 +129,7 @@ class DataSourceController @Inject()(
         for {
           unfinishedUploads <- dsRemoteWebknossosClient.getUnfinishedUploadsForUser(organizationName)
           unfinishedUploadsWithUploadIds <- Fox.fromFuture(
-            uploadService.addUploadIdsToUnfinishedUploads(unfinishedUploads))
+            uploadService.enrichUnfinishedUploadInfoWithUploadIds(unfinishedUploads))
           unfinishedUploadsWithUploadIdsWithoutDataSourceId = unfinishedUploadsWithUploadIds.map(_.withoutDataSourceId)
         } yield Ok(Json.toJson(unfinishedUploadsWithUploadIdsWithoutDataSourceId))
       }

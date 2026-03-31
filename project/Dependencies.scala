@@ -57,8 +57,6 @@ object Dependencies {
     ws,
     // Dependency Injection. import javax.inject.Inject
     guice,
-    // Handling of unsigned integer types. import spire
-    "org.typelevel" %% "spire" % "0.18.0",
     // Redis database client. import com.redis
     "net.debasishg" %% "redisclient" % "3.42",
     // Read hdf5 files. import ch.systemsx.cisd.hdf5

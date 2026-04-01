@@ -9,7 +9,7 @@ import type { Vector3 } from "viewer/constants";
 import { isRotated } from "viewer/model/accessors/flycam_accessor";
 import { setRotationAction } from "viewer/model/actions/flycam_actions";
 import { setViewModeAction } from "viewer/model/actions/settings_actions";
-import { NumberSliderSetting } from "../components/setting_input_views";
+import NumberSliderSetting from "../left_border_tabs/components/number_slider_setting";
 
 const warningColors: React.CSSProperties = {
   color: "rgb(255, 155, 85)",

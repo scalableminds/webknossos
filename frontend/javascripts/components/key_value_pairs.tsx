@@ -86,20 +86,20 @@ export function KeyValuePairsInput({
   }
 
   return (
-    <Flex vertical gap={8}>
+    <Flex vertical gap="small">
       {entries.map((entry) => (
-        <Flex key={entry.id} gap={8} align="center">
+        <Flex key={entry.id} gap="small" align="center" style={{ width: "100%" }}>
           <Input
             placeholder="Key"
             value={entry.key}
             onChange={(e) => updateEntry(entry.id, { key: e.target.value })}
-            style={{ flex: "0 0 180px" }}
+            style={{ flex: 1, minWidth: 0 }}
           />
           <Input
             placeholder="Value"
             value={entry.rawValue}
             onChange={(e) => updateEntry(entry.id, { rawValue: e.target.value })}
-            style={{ flex: 1 }}
+            style={{ flex: 1, minWidth: 0 }}
           />
           <Button
             type="text"

@@ -325,19 +325,11 @@ export function startAlignSectionsJob(
   layerName: string,
   newDatasetName: string,
   annotationId?: string,
+  customConfiguration?: Record<string, string | number | boolean>,
 ): Promise<APIJob> {
-  const urlParams = annotationId
-    ? new URLSearchParams({
-        layerName,
-        newDatasetName,
-        annotationId,
-      })
-    : new URLSearchParams({
-        layerName,
-        newDatasetName,
-      });
-  return Request.receiveJSON(`/api/jobs/run/alignSections/${datasetId}?${urlParams.toString()}`, {
+  return Request.sendJSONReceiveJSON(`/api/jobs/run/alignSections/${datasetId}`, {
     method: "POST",
+    data: { layerName, newDatasetName, annotationId, customConfiguration },
   });
 }
 
@@ -360,6 +352,7 @@ type RunNeuronModelTrainingParameters = {
   aiModelCategory: APIAiModelCategory.EM_NEURONS;
   comment?: string;
   workflowYaml?: string;
+  customConfiguration?: Record<string, string | number | boolean>;
 };
 
 export function runNeuronTraining(params: RunNeuronModelTrainingParameters) {
@@ -376,6 +369,7 @@ type RunInstanceModelTrainingParameters = {
   instanceDiameterNm: number;
   comment?: string;
   workflowYaml?: string;
+  customConfiguration?: Record<string, string | number | boolean>;
 };
 
 export function runInstanceModelTraining(params: RunInstanceModelTrainingParameters) {

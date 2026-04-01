@@ -36,7 +36,8 @@ case class RunNeuronModelTrainingParameters(trainingAnnotations: List[TrainingAn
                                             name: String,
                                             aiModelCategory: Option[AiModelCategory],
                                             comment: Option[String],
-                                            workflowYaml: Option[String])
+                                            workflowYaml: Option[String],
+                                            customConfiguration: Option[JsObject])
 
 object RunNeuronModelTrainingParameters {
   implicit val jsonFormat: OFormat[RunNeuronModelTrainingParameters] = Json.format[RunNeuronModelTrainingParameters]
@@ -47,7 +48,8 @@ case class RunInstanceModelTrainingParameters(trainingAnnotations: List[Training
                                               aiModelCategory: Option[AiModelCategory],
                                               instanceDiameterNm: Option[Double],
                                               comment: Option[String],
-                                              workflowYaml: Option[String])
+                                              workflowYaml: Option[String],
+                                              customConfiguration: Option[JsObject])
 
 object RunInstanceModelTrainingParameters {
   implicit val jsonFormat: OFormat[RunInstanceModelTrainingParameters] = Json.format[RunInstanceModelTrainingParameters]
@@ -188,7 +190,8 @@ class AiModelController @Inject()(
           "organization_id" -> organization._id,
           "model_id" -> modelId,
           "model_name" -> request.body.name,
-          "custom_workflow_provided_by_user" -> request.body.workflowYaml
+          "custom_workflow_provided_by_user" -> request.body.workflowYaml,
+          "custom_configuration" -> request.body.customConfiguration
         )
         creditTransactionComment = s"AI training for neuron model $modelId"
         newTrainingJob <- jobService.submitPaidJob(jobCommand,
@@ -246,7 +249,8 @@ class AiModelController @Inject()(
           "model_id" -> modelId,
           "model_name" -> request.body.name,
           "custom_workflow_provided_by_user" -> request.body.workflowYaml,
-          "instance_diameter_nm" -> request.body.instanceDiameterNm
+          "instance_diameter_nm" -> request.body.instanceDiameterNm,
+          "custom_configuration" -> request.body.customConfiguration
         )
         creditTransactionComment = s"AI training for instance model $modelId"
         newTrainingJob <- jobService.submitPaidJob(jobCommand,
@@ -302,7 +306,8 @@ class AiModelController @Inject()(
           "custom_workflow_provided_by_user" -> request.body.workflowYaml,
           "invert_color_layer" -> request.body.invertColorLayer,
           "seed_generator_distance_threshold" -> request.body.seedGeneratorDistanceThreshold,
-        ) ++ request.body.customConfiguration.getOrElse(Json.obj())
+          "custom_configuration" -> request.body.customConfiguration
+        )
         creditTransactionComment = s"AI custom instance segmentation with model ${request.body.aiModelId} for dataset ${dataset.name}"
         targetMagBoundingBox <- aiModelService.inferenceBBoxToTargetMag(mag1BoundingBox,
                                                                         layer,
@@ -369,7 +374,8 @@ class AiModelController @Inject()(
           "eval_max_edge_length" -> request.body.evalMaxEdgeLength,
           "eval_sparse_tube_threshold_nm" -> request.body.evalSparseTubeThresholdNm,
           "eval_min_merger_path_length_nm" -> request.body.evalMinMergerPathLengthNm,
-        ) ++ request.body.customConfiguration.getOrElse(Json.obj())
+          "custom_configuration" -> request.body.customConfiguration
+        )
         creditTransactionComment = s"AI custom neuron segmentation with model ${request.body.aiModelId} for dataset ${dataset.name}"
         newInferenceJob <- jobService.submitPaidJob(jobCommand,
                                                     commandArgs,

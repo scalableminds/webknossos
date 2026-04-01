@@ -4,6 +4,7 @@ import {
   runNeuronModelInference,
   runPretrainedMitochondriaInferenceJob,
 } from "admin/rest_api";
+import type { KeyValuePairs } from "components/key_value_pairs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { computeArrayFromBoundingBox } from "libs/utils";
@@ -23,7 +24,6 @@ import {
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import { Model } from "viewer/singletons";
 import type { UserBoundingBox } from "viewer/store";
-import type { KeyValuePairs } from "components/key_value_pairs";
 import type { SplitMergerEvaluationSettings } from "viewer/view/ai_jobs/components/collapsible_split_merger_evaluation_settings";
 import type { PretrainedModel } from "./ai_model_selector";
 

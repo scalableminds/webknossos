@@ -253,13 +253,14 @@ class JobController @Inject()(jobDAO: JobDAO,
       }
     }
 
-  def runAlignSectionsJob(datasetId: ObjectId,
-                          layerName: String,
-                          newDatasetName: String,
-                          annotationId: Option[ObjectId] = None): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+  def runAlignSectionsJob(datasetId: ObjectId): Action[JsValue] =
+    sil.SecuredAction.async(parse.json) { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
+          layerName <- (request.body \ "layerName").validate[String].asOpt.toFox ?~> "request.body.missing"
+          newDatasetName <- (request.body \ "newDatasetName").validate[String].asOpt.toFox ?~> "request.body.missing"
+          annotationId = (request.body \ "annotationId").validate[ObjectId].asOpt
+          customConfiguration = (request.body \ "customConfiguration").validate[JsObject].asOpt
           dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
@@ -278,7 +279,8 @@ class JobController @Inject()(jobDAO: JobDAO,
             "dataset_directory_name" -> dataset.directoryName,
             "new_dataset_name" -> newDatasetName,
             "layer_name" -> layerName,
-            "annotation_id" -> annotationId
+            "annotation_id" -> annotationId,
+            "custom_configuration" -> customConfiguration
           )
           creditTransactionComment = s"Align dataset ${dataset.name}"
           job <- jobService.submitPaidJob(command,

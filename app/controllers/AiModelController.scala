@@ -63,7 +63,7 @@ case class RunInferenceParameters(datasetId: ObjectId,
                                   workflowYaml: Option[String],
                                   invertColorLayer: Option[Boolean],
                                   seedGeneratorDistanceThreshold: Option[Double],
-                                  doSplitMergerEvaluation: Boolean = false,
+                                  doSplitMergerEvaluation: Option[Boolean],
                                   evalUseSparseTracing: Option[Boolean],
                                   evalMaxEdgeLength: Option[Double],
                                   evalSparseTubeThresholdNm: Option[Double],
@@ -351,6 +351,7 @@ class AiModelController @Inject()(
                                                                         aiModelOpt,
                                                                         usePretrainedNeuronModel = aiModelOpt.isEmpty,
                                                                         dataStore)
+        doSplitMergerEvaluation: Boolean = request.body.doSplitMergerEvaluation.getOrElse(false)
         commandArgs = Json.obj(
           "dataset_id" -> dataset._id,
           "organization_id" -> dataset._organization,
@@ -363,7 +364,7 @@ class AiModelController @Inject()(
           "new_dataset_name" -> request.body.newDatasetName,
           "custom_workflow_provided_by_user" -> request.body.workflowYaml,
           "invert_color_layer" -> request.body.invertColorLayer,
-          "do_split_merger_evaluation" -> request.body.doSplitMergerEvaluation,
+          "do_split_merger_evaluation" -> doSplitMergerEvaluation,
           "eval_use_sparse_tracing" -> request.body.evalUseSparseTracing,
           "eval_max_edge_length" -> request.body.evalMaxEdgeLength,
           "eval_sparse_tube_threshold_nm" -> request.body.evalSparseTubeThresholdNm,

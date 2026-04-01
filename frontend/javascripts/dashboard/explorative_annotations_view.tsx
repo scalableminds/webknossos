@@ -7,7 +7,6 @@ import Icon, {
   PlusOutlined,
   TeamOutlined,
   UnlockOutlined,
-  UploadOutlined,
   UserOutlined,
 } from "@ant-design/icons";
 import ReadOnlyIcon from "@images/icons/icon-read-only.svg?react";
@@ -22,8 +21,8 @@ import {
   getReadableAnnotations,
   reOpenAnnotation,
 } from "admin/rest_api";
-import { Button, Card, Col, Flex, Input, Modal, Row, Space, Spin, Table, Tag } from "antd";
-import type { SearchProps } from "antd/lib/input";
+import { Modal, Space, Spin, Table, Tag } from "antd";
+import type { SearchProps } from "antd/es/input";
 import type { ColumnType } from "antd/lib/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
@@ -45,8 +44,7 @@ import uniqBy from "lodash-es/uniqBy";
 import without from "lodash-es/without";
 import messages from "messages";
 import type React from "react";
-import { PureComponent, useContext } from "react";
-import { useDispatch } from "react-redux";
+import { PureComponent } from "react";
 import { Link } from "react-router-dom";
 import {
   type APIAnnotationInfo,
@@ -56,16 +54,14 @@ import {
 } from "types/api_types";
 import { AnnotationContentTypes } from "viewer/constants";
 import { getVolumeDescriptors } from "viewer/model/accessors/volumetracing_accessor";
-import { setDropzoneModalVisibilityAction } from "viewer/model/actions/ui_actions";
 import CategorizationLabel, {
   CategorizationSearch,
 } from "viewer/view/components/categorization_label";
 import EditableTextIcon from "viewer/view/components/editable_text_icon";
-import { RenderToPortal } from "viewer/view/layouting/portal_utils";
 import { AnnotationStats } from "viewer/view/right_border_tabs/dataset_info_tab_view";
-import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
+import { DashboardEmptyAnnotationsPlaceholder } from "./dashboard_empty_annotations_placeholder";
+import { DashboardTopBar } from "./dashboard_top_bar";
 
-const { Search } = Input;
 const pageLength: number = 1000;
 
 type AnnotationModeState = {
@@ -479,39 +475,6 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     });
   };
 
-  getEmptyListPlaceholder = () => {
-    return this.state.isLoading ? null : (
-      <Row gutter={32} justify="center" style={{ padding: 50 }}>
-        <Col span="6">
-          <Card
-            variant="borderless"
-            cover={
-              <Flex justify="center">
-                <i className="drawing drawing-empty-list-annotations" />
-              </Flex>
-            }
-            style={{ background: "transparent" }}
-          >
-            <Card.Meta
-              title="Create an Annotation"
-              style={{ textAlign: "center" }}
-              description={
-                <>
-                  <p>Create your first annotation by opening a dataset from the datasets page.</p>
-                  <Link to="/dashboard/datasets">
-                    <Button type="primary" style={{ marginTop: 30 }}>
-                      Open Datasets Page
-                    </Button>
-                  </Link>
-                </>
-              }
-            />
-          </Card>
-        </Col>
-      </Row>
-    );
-  };
-
   handleOnSearch: SearchProps["onSearch"] = (value, _event) => {
     if (value !== "") {
       this.addTagToSearch(value);
@@ -608,8 +571,8 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
       },
     ];
 
-    if (filteredAndSortedAnnotations.length === 0) {
-      return this.getEmptyListPlaceholder();
+    if (filteredAndSortedAnnotations.length === 0 && !this.state.isLoading) {
+      return <DashboardEmptyAnnotationsPlaceholder />;
     }
 
     const columns: ColumnType<APIAnnotationInfo>[] = [
@@ -761,25 +724,10 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
     );
   }
 
-  renderSearchTags() {
-    return (
-      <CategorizationSearch
-        itemName="annotations"
-        searchTags={this.state.tags}
-        setTags={(tags) =>
-          this.setState({
-            tags,
-          })
-        }
-        localStorageSavingKey="lastDashboardSearchTags"
-      />
-    );
-  }
-
   render() {
     return (
       <div>
-        <TopBar
+        <DashboardTopBar
           isAdminView={this.props.isAdminView}
           handleOnSearch={this.handleOnSearch}
           handleSearchChanged={this.handleSearchChanged}
@@ -788,7 +736,16 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
           shouldShowArchivedAnnotations={this.state.shouldShowArchivedAnnotations}
           archiveAll={this.archiveAll}
         />
-        {this.renderSearchTags()}
+        <CategorizationSearch
+          itemName="annotations"
+          searchTags={this.state.tags}
+          setTags={(tags) =>
+            this.setState({
+              tags,
+            })
+          }
+          localStorageSavingKey="lastDashboardSearchTags"
+        />
         <Spin spinning={this.state.isLoading} size="large" style={{ marginTop: 4 }}>
           {this.renderTable()}
         </Spin>
@@ -809,63 +766,6 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
       </div>
     );
   }
-}
-
-function TopBar({
-  isAdminView,
-  handleOnSearch,
-  handleSearchChanged,
-  searchQuery,
-  toggleShowArchived,
-  shouldShowArchivedAnnotations,
-  archiveAll,
-}: {
-  isAdminView: boolean;
-  handleOnSearch: SearchProps["onSearch"];
-  handleSearchChanged: (event: React.ChangeEvent<HTMLInputElement>) => void;
-  searchQuery: string;
-  toggleShowArchived: () => void;
-  shouldShowArchivedAnnotations: boolean;
-  archiveAll: () => void;
-}) {
-  const dispatch = useDispatch();
-  const activeTab = useContext(ActiveTabContext);
-  const renderingTab = useContext(RenderingTabContext);
-
-  const search = (
-    <Search
-      style={{
-        width: 200,
-      }}
-      onSearch={handleOnSearch}
-      onChange={handleSearchChanged}
-      value={searchQuery}
-    />
-  );
-
-  const content = isAdminView ? (
-    search
-  ) : (
-    <Space>
-      <Button
-        icon={<UploadOutlined />}
-        onClick={() => dispatch(setDropzoneModalVisibilityAction(true))}
-      >
-        Upload Annotation(s)
-      </Button>
-      <Button onClick={toggleShowArchived}>
-        Show {shouldShowArchivedAnnotations ? "Open" : "Archived"} Annotations
-      </Button>
-      {!shouldShowArchivedAnnotations ? <Button onClick={archiveAll}>Archive All</Button> : null}
-      {search}
-    </Space>
-  );
-
-  return (
-    <RenderToPortal portalId="dashboard-TabBarExtraContent">
-      {activeTab === renderingTab ? content : null}
-    </RenderToPortal>
-  );
 }
 
 export default ExplorativeAnnotationsView;

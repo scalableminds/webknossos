@@ -248,7 +248,7 @@ const helpers = {
       url.searchParams.append(key, value);
     });
 
-    return url.pathname + url.search;
+    return url.toString();
   },
 };
 

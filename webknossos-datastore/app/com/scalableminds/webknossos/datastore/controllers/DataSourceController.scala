@@ -31,7 +31,6 @@ import com.scalableminds.webknossos.datastore.services.mesh.{
   MeshMappingHelper
 }
 import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndexFileService
-import com.scalableminds.webknossos.datastore.services.uploading._
 import com.scalableminds.webknossos.datastore.services.connectome.{
   ByAgglomerateIdsRequest,
   BySynapseIdsRequest,
@@ -39,13 +38,9 @@ import com.scalableminds.webknossos.datastore.services.connectome.{
 }
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
-import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
-import play.api.data.Form
-import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
-import play.api.i18n.Messages
-import play.api.libs.Files
+
 import play.api.libs.json.{Json, OFormat}
-import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import java.io.File
 import java.net.URI
@@ -71,11 +66,9 @@ class DataSourceController @Inject()(
     segmentIndexFileService: SegmentIndexFileService,
     agglomerateService: AgglomerateService,
     storageUsageService: DSUsedStorageService,
-    slackNotificationService: DSSlackNotificationService,
     datasetErrorLoggingService: DSDatasetErrorLoggingService,
     exploreRemoteLayerService: ExploreRemoteLayerService,
     fullMeshService: DSFullMeshService,
-    uploadService: UploadService,
     managedS3Service: ManagedS3Service,
     meshFileService: MeshFileService,
     dataVaultService: DataVaultService,
@@ -104,138 +97,6 @@ class DataSourceController @Inject()(
       } yield Ok
     }
   }
-
-  def reserveUpload(): Action[ReserveUploadInformation] =
-    Action.async(validateJson[ReserveUploadInformation]) { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.administrateDatasets(request.body.organization)) {
-        for {
-          isKnownUpload <- uploadService.isKnownUpload(request.body.uploadId)
-          _ <- if (!isKnownUpload) {
-            for {
-              reserveUploadAdditionalInfo <- dsRemoteWebknossosClient.reserveDataSourceUpload(request.body) ?~> "dataset.upload.validation.failed"
-              _ <- uploadService.reserveUpload(request.body,
-                                               reserveUploadAdditionalInfo.newDatasetId,
-                                               reserveUploadAdditionalInfo.directoryName)
-            } yield ()
-          } else Fox.successful(())
-        } yield Ok
-      }
-    }
-
-  def getUnfinishedUploads(organizationName: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.administrateDatasets(organizationName)) {
-        for {
-          unfinishedUploads <- dsRemoteWebknossosClient.getUnfinishedUploadsForUser(organizationName)
-          unfinishedUploadsWithUploadIds <- Fox.fromFuture(
-            uploadService.enrichUnfinishedUploadInfoWithUploadIds(unfinishedUploads))
-          unfinishedUploadsWithUploadIdsWithoutDataSourceId = unfinishedUploadsWithUploadIds.map(_.withoutDataSourceId)
-        } yield Ok(Json.toJson(unfinishedUploadsWithUploadIdsWithoutDataSourceId))
-      }
-    }
-
-  /* Upload a byte chunk for a new dataset
-  Expects:
-    - As file attachment: A raw byte chunk of the dataset
-    - As form parameter:
-    - name (string): dataset name
-    - owningOrganization (string): owning organization name
-    - resumableChunkNumber (int): chunk index
-    - resumableChunkSize (int): chunk size in bytes
-    - resumableTotalChunks (string): total chunk count of the upload
-    - totalFileCount (string): total file count of the upload
-    - resumableIdentifier (string): identifier of the resumable upload and file ("{uploadId}/{filepath}")
-    - As GET parameter:
-    - token (string): datastore token identifying the uploading user
-   */
-  def uploadChunk(): Action[MultipartFormData[Files.TemporaryFile]] =
-    Action.async(parse.multipartFormData) { implicit request =>
-      log(Some(slackNotificationService.noticeFailedUploadRequest)) {
-        val uploadForm = Form(
-          tuple(
-            "resumableChunkNumber" -> number,
-            "resumableChunkSize" -> number,
-            "resumableCurrentChunkSize" -> number,
-            "resumableTotalChunks" -> longNumber,
-            "resumableIdentifier" -> nonEmptyText
-          )).fill((-1, -1, -1, -1, ""))
-
-        uploadForm
-          .bindFromRequest(request.body.dataParts)
-          .fold(
-            hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
-            success = {
-              case (chunkNumber, chunkSize, currentChunkSize, totalChunkCount, uploadFileId) =>
-                for {
-                  datasetId <- uploadService
-                    .getDatasetIdByUploadId(uploadService.extractDatasetUploadId(uploadFileId)) ?~> "dataset.upload.validation.failed"
-                  result <- accessTokenService
-                    .validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
-                      for {
-                        isKnownUpload <- uploadService.isKnownUploadByFileId(uploadFileId)
-                        _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
-                        chunkFile <- request.body.file("file").toFox ?~> "zip.file.notFound"
-                        _ <- uploadService.handleUploadChunk(uploadFileId,
-                                                             chunkSize,
-                                                             currentChunkSize,
-                                                             totalChunkCount,
-                                                             chunkNumber,
-                                                             new File(chunkFile.ref.path.toString))
-                      } yield Ok
-                    }
-                } yield result
-            }
-          )
-      }
-    }
-
-  def testChunk(resumableChunkNumber: Int, resumableIdentifier: String): Action[AnyContent] =
-    Action.async { implicit request =>
-      for {
-        datasetId <- uploadService.getDatasetIdByUploadId(uploadService.extractDatasetUploadId(resumableIdentifier)) ?~> "dataset.upload.validation.failed"
-        result <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
-          for {
-            isKnownUpload <- uploadService.isKnownUploadByFileId(resumableIdentifier)
-            _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
-            isPresent <- uploadService.isChunkPresent(resumableIdentifier, resumableChunkNumber)
-          } yield if (isPresent) Ok else NoContent
-        }
-      } yield result
-    }
-
-  def finishUpload(): Action[UploadInformation] = Action.async(validateJson[UploadInformation]) { implicit request =>
-    log(Some(slackNotificationService.noticeFailedUploadRequest)) {
-      logTime(slackNotificationService.noticeSlowRequest) {
-        for {
-          datasetId <- uploadService
-            .getDatasetIdByUploadId(request.body.uploadId) ?~> s"Cannot find running upload with upload id ${request.body.uploadId}"
-          response <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
-            for {
-              _ <- uploadService.finishUpload(request.body, datasetId) ?~> Messages("dataset.upload.finishFailed",
-                                                                                    datasetId)
-            } yield Ok(Json.obj("newDatasetId" -> datasetId))
-          }
-        } yield response
-      }
-    }
-  }
-
-  def cancelUpload(): Action[CancelUploadInformation] =
-    Action.async(validateJson[CancelUploadInformation]) { implicit request =>
-      val datasetIdFox = uploadService.isKnownUpload(request.body.uploadId).flatMap {
-        case false => Fox.failure("dataset.upload.validation.failed")
-        case true  => uploadService.getDatasetIdByUploadId(request.body.uploadId)
-      }
-      datasetIdFox.flatMap { datasetId =>
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.deleteDataset(datasetId)) {
-          for {
-            _ <- dsRemoteWebknossosClient.deleteDataset(datasetId) ?~> "dataset.delete.webknossos.failed"
-            _ <- uploadService.cancelUpload(request.body) ?~> "Could not cancel the upload."
-          } yield Ok
-        }
-      }
-    }
 
   def listMappings(
       datasetId: ObjectId,

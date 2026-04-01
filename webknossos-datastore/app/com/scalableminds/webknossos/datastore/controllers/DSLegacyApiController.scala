@@ -12,7 +12,11 @@ import com.scalableminds.webknossos.datastore.models.{
 }
 import com.scalableminds.webknossos.datastore.models.datasource.{UnusableDataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services.mesh.FullMeshRequest
-import com.scalableminds.webknossos.datastore.services.uploading.{LinkedLayerIdentifier, ReserveUploadInformation}
+import com.scalableminds.webknossos.datastore.services.uploading.{
+  LinkedLayerIdentifier,
+  ReserveUploadInformation,
+  UploadDomain
+}
 import com.scalableminds.webknossos.datastore.services.{
   DSRemoteWebknossosClient,
   DataSourceService,
@@ -81,7 +85,8 @@ class DSLegacyApiController @Inject()(
     meshController: DSMeshController,
     dataSourceController: DataSourceController,
     dataSourceService: DataSourceService,
-    datasetCache: DatasetCache
+    datasetCache: DatasetCache,
+    uploadController: UploadController
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with Zarr3OutputHelper
@@ -110,7 +115,8 @@ class DSLegacyApiController @Inject()(
             isVirtual = None,
             needsConversion = None
           )
-          result <- Fox.fromFuture(dataSourceController.reserveUpload()(request.withBody(adaptedRequestBody)))
+          result <- Fox.fromFuture(
+            uploadController.reserveUpload(UploadDomain.dataset.toString)(request.withBody(adaptedRequestBody)))
         } yield result
       }
     }

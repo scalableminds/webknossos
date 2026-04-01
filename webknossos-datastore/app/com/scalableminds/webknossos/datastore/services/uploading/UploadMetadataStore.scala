@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.services.uploading
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.webknossos.datastore.services.uploading.UploadDomain.UploadDomain
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
 import play.api.libs.json.Json
 
@@ -11,7 +12,7 @@ import scala.concurrent.ExecutionContext
 
 trait UploadMetadataStore extends FoxImplicits {
 
-  protected def domain: String
+  protected def domain: UploadDomain
   protected def store: DataStoreRedisStore
 
   protected def keyPrefix = s"upload___${domain}___"
@@ -131,7 +132,7 @@ trait UploadMetadataStore extends FoxImplicits {
 }
 
 class DatasetUploadMetadataStore @Inject()(protected val store: DataStoreRedisStore) extends UploadMetadataStore {
-  protected val domain = "dataset"
+  protected val domain = UploadDomain.dataset
 
   private def redisKeyForUploadIdByDataSourceId(datasourceId: DataSourceId): String =
     s"upload___${Json.stringify(Json.toJson(datasourceId))}___datasourceId"
@@ -165,11 +166,11 @@ class DatasetUploadMetadataStore @Inject()(protected val store: DataStoreRedisSt
 }
 
 class MagUploadMetadataStore @Inject()(protected val store: DataStoreRedisStore) extends UploadMetadataStore {
-  protected val domain = "mag"
+  protected val domain: UploadDomain = UploadDomain.mag
 
 }
 
 class AttachmentUploadMetadataStore @Inject()(protected val store: DataStoreRedisStore) extends UploadMetadataStore {
-  protected val domain = "attachment"
+  protected val domain: UploadDomain = UploadDomain.attachment
 
 }

@@ -2,6 +2,7 @@ import { sendAnalyticsEvent } from "admin/rest_api";
 import { Button } from "antd";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
+import { sleep } from "libs/utils";
 import messages from "messages";
 import type * as React from "react";
 import Constants from "viewer/constants";
@@ -52,6 +53,7 @@ const registerWebGlCrashHandler = (canvas) => {
           const lowerGpuFactor = Number(lowerUtilizationEntry[0]);
           Store.dispatch(updateUserSettingAction("gpuMemoryFactor", lowerGpuFactor));
         }
+        await sleep(2 * Constants.SETTING_SAVE_DEBOUNCE_MS);
         location.reload();
       };
 

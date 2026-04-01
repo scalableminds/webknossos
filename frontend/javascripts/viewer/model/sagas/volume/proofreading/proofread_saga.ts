@@ -22,6 +22,7 @@ import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_type
 import { WkDevFlags } from "viewer/api/wk_dev";
 import Constants, {
   MappingStatusEnum,
+  OrthoViews,
   SagaIdentifier,
   TreeTypeEnum,
   type Vector3,
@@ -98,6 +99,7 @@ import {
   initializeEditableMappingAction,
   mergeSegmentItemsAction,
   removeSegmentAction,
+  setActiveCellAction,
   setHasEditableMappingAction,
   updateProofreadingMarkerPositionAction,
   updateSegmentAction,
@@ -182,6 +184,7 @@ export default function* proofreadRootSaga(): Saga<void> {
     runSagaAndCatchSoftError(checkForAgglomerateSkeletonModification),
   );
   yield* takeEvery(["UPDATE_USER_SETTING", "ESCAPE"], clearMinCutPartitionsOnMultiCutDeselect);
+  yield* takeEvery(["ESCAPE"], clearActiveSegmentIfTdViewportIsActive);
   yield* takeEvery("TOGGLE_SEGMENT_IN_PARTITION", showToastIfSegmentOfOtherAgglomerateWasSelected);
 }
 
@@ -203,6 +206,23 @@ function* clearMinCutPartitionsOnMultiCutDeselect(
   } else if (action.type === "ESCAPE") {
     // Clearing on all escape actions should be fine as in case the multi split isn't active, this clearing should also be fine.
     yield* put(resetMultiCutToolPartitionsAction());
+  }
+}
+
+function* clearActiveSegmentIfTdViewportIsActive(): Saga<void> {
+  // Clearing on all escape actions should be fine as in case the multi split isn't active, this clearing should also be fine.
+  const activeViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
+  const activeTool = yield* select((state) => state.uiInformation.activeTool);
+  const activeVolumeTracing = yield* select(getActiveSegmentationTracing);
+  const hasHighlightedSuperVoxel =
+    activeVolumeTracing?.activeCellId != null &&
+    activeVolumeTracing?.activeUnmappedSegmentId != null;
+  if (
+    hasHighlightedSuperVoxel &&
+    activeTool === AnnotationTool.PROOFREAD &&
+    activeViewport === OrthoViews.TDView
+  ) {
+    yield* put(setActiveCellAction(activeVolumeTracing?.activeCellId, undefined, undefined, null));
   }
 }
 

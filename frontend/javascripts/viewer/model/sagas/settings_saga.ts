@@ -3,7 +3,7 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
 import { all, call, debounce, put, retry, takeEvery } from "typed-redux-saga";
-import { Constants, ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
+import Constants, { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
 import {
   type SetViewModeAction,
   type UpdateUserSettingAction,

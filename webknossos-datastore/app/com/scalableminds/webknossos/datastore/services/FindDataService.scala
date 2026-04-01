@@ -21,7 +21,14 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     extends DataConverter
     with DataFinder
     with FoxImplicits {
-  val binaryDataService: BinaryDataService = dataServicesHolder.binaryDataService
+
+  private lazy val binaryDataService: BinaryDataService = dataServicesHolder.binaryDataService
+
+  def findPositionWithData(datasetId: ObjectId, dataSourceId: DataSourceId, dataLayer: DataLayer)(
+      implicit tc: TokenContext): Fox[Option[(Vec3Int, Vec3Int)]] =
+    for {
+      positionAndMagOpt <- checkAllPositionsForData(datasetId, dataSourceId, dataLayer)
+    } yield positionAndMagOpt
 
   private def getDataFor(datasetId: ObjectId,
                          dataSourceId: DataSourceId,
@@ -138,89 +145,87 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     magIter(createPositions(dataLayer).distinct, dataLayer.resolutions.sortBy(_.maxDim))
   }
 
-  def findPositionWithData(datasetId: ObjectId, dataSourceId: DataSourceId, dataLayer: DataLayer)(
-      implicit tc: TokenContext): Fox[Option[(Vec3Int, Vec3Int)]] =
-    for {
-      positionAndMagOpt <- checkAllPositionsForData(datasetId, dataSourceId, dataLayer)
-    } yield positionAndMagOpt
-
   def createHistogram(datasetId: ObjectId, dataSourceId: DataSourceId, dataLayer: DataLayer)(
-      implicit tc: TokenContext): Fox[List[Histogram]] = {
+      implicit tc: TokenContext): Fox[Seq[Histogram]] =
+    if (dataLayer.resolutions.nonEmpty) {
+      val positions = createPositions(dataLayer, 2).distinct
+      histogramForPositions(datasetId, dataSourceId, dataLayer, positions, dataLayer.resolutions.minBy(_.maxDim))
+    } else
+      Fox.failure("dataset.noMags")
 
-    def histogramBinForByte(v: Byte, isSigned: Boolean): Int =
-      if (isSigned) v.toInt + 128 else v & 0xFF
+  private def histogramForPositions(datasetId: ObjectId,
+                                    dataSourceId: DataSourceId,
+                                    dataLayer: DataLayer,
+                                    positions: List[Vec3Int],
+                                    mag: Vec3Int)(implicit tc: TokenContext): Fox[Seq[Histogram]] =
+    for {
+      dataConcatenated <- getConcatenatedDataFor(datasetId, dataSourceId, dataLayer, positions, mag) ?~> "dataset.noData"
+      isUint24 = dataLayer.elementClass == ElementClass.uint24
+      convertedData = filterZeroes(convertData(dataConcatenated, dataLayer.elementClass), skip = isUint24)
+    } yield calculateHistogramValues(convertedData, dataLayer.elementClass)
 
-    def histogramBinForShort(v: Short, isSigned: Boolean): Int =
-      if (isSigned) (v >> 8) + 128 else (v.toInt & 0xFFFF) >> 8
+  def calculateHistogramValues(data: Array[_ >: Byte with Short with Int with Long with Float],
+                               elementClass: ElementClass.Value): Seq[Histogram] = {
+    val bytesPerElement = ElementClass.bytesPerElement(elementClass)
+    val isUint24 = elementClass == ElementClass.uint24
+    val isSigned = ElementClass.isSigned(elementClass)
+    val counts = if (isUint24) Array.ofDim[Long](768) else Array.ofDim[Long](256)
+    var extrema: (Double, Double) =
+      if (isSigned)
+        (-math.pow(2, 8 * bytesPerElement - 1), math.pow(2, 8 * bytesPerElement - 1) - 1)
+      else
+        (0, math.pow(2, 8 * bytesPerElement) - 1)
 
-    def histogramBinForInt(v: Int, isSigned: Boolean): Int =
-      if (isSigned) (v >> 24) + 128 else v >>> 24
-
-    def histogramBinForLong(v: Long, isSigned: Boolean): Int =
-      if (isSigned) (v >> 56).toInt + 128 else (v >>> 56).toInt
-
-    def histogramBinForFloat(v: Float, min: Float, bucketSize: Float): Int =
-      ((v - min) / bucketSize).floor.toInt
-
-    def calculateHistogramValues(data: Array[_ >: Byte with Short with Int with Long with Float],
-                                 bytesPerElement: Int,
-                                 elementClass: ElementClass.Value) = {
-      val isUint24 = dataLayer.elementClass == ElementClass.uint24
-      val isSigned = ElementClass.isSigned(elementClass)
-      val counts = if (isUint24) Array.ofDim[Long](768) else Array.ofDim[Long](256)
-      var extrema: (Double, Double) =
-        if (isSigned)
-          (-math.pow(2, 8 * bytesPerElement - 1), math.pow(2, 8 * bytesPerElement - 1) - 1)
-        else
-          (0, math.pow(2, 8 * bytesPerElement) - 1)
-
-      if (data.nonEmpty) {
-        data match {
-          case byteData: Array[Byte] =>
-            if (isUint24) {
-              for (i <- byteData.indices by 3) {
-                counts(histogramBinForByte(byteData(i), isSigned = false)) += 1
-                counts(histogramBinForByte(byteData(i + 1), isSigned = false) + 256) += 1
-                counts(histogramBinForByte(byteData(i + 2), isSigned = false) + 512) += 1
-              }
-              extrema = (0, 255)
-            } else
-              byteData.foreach(el => counts(histogramBinForByte(el, isSigned)) += 1)
-          case shortData: Array[Short] =>
-            shortData.foreach(el => counts(histogramBinForShort(el, isSigned)) += 1)
-          case intData: Array[Int] =>
-            intData.foreach(el => counts(histogramBinForInt(el, isSigned)) += 1)
-          case longData: Array[Long] =>
-            longData.foreach(el => counts(histogramBinForLong(el, isSigned)) += 1)
-          case floatData: Array[Float] =>
-            val (min, max) = floatData.foldLeft((floatData(0), floatData(0))) {
-              case ((currMin, currMax), e) => (math.min(currMin, e), math.max(currMax, e))
+    if (data.nonEmpty) {
+      data match {
+        case byteData: Array[Byte] =>
+          if (isUint24) {
+            for (i <- byteData.indices by 3) {
+              counts(histogramBinForByte(byteData(i), isSigned = false)) += 1
+              counts(histogramBinForByte(byteData(i + 1), isSigned = false) + 256) += 1
+              counts(histogramBinForByte(byteData(i + 2), isSigned = false) + 512) += 1
             }
-            val bucketSize = (max - min) / 255
-            val finalBucketSize = if (bucketSize == 0f) 1f else bucketSize
-            floatData.foreach(el => counts(histogramBinForFloat(el, min, finalBucketSize)) += 1)
-            extrema = (min, max)
-        }
+            extrema = (0, 255)
+          } else
+            byteData.foreach(el => counts(histogramBinForByte(el, isSigned)) += 1)
+        case shortData: Array[Short] =>
+          shortData.foreach(el => counts(histogramBinForShort(el, isSigned)) += 1)
+        case intData: Array[Int] =>
+          intData.foreach(el => counts(histogramBinForInt(el, isSigned)) += 1)
+        case longData: Array[Long] =>
+          longData.foreach(el => counts(histogramBinForLong(el, isSigned)) += 1)
+        case floatData: Array[Float] =>
+          val (min, max) = floatData.foldLeft((floatData(0), floatData(0))) {
+            case ((currMin, currMax), e) => (math.min(currMin, e), math.max(currMax, e))
+          }
+          val bucketSize = (max - min) / 255
+          val finalBucketSize = if (bucketSize == 0f) 1f else bucketSize
+          floatData.foreach(el => counts(histogramBinForFloat(el, min, finalBucketSize)) += 1)
+          extrema = (min, max)
       }
-      if (isUint24) {
-        val listOfCounts = counts.grouped(256).toList
-        listOfCounts.map(counts => {
-          counts(0) = 0; Histogram(counts, counts.sum.toInt, extrema._1, extrema._2)
-        })
-      } else
-        List(Histogram(counts, data.length, extrema._1, extrema._2))
     }
-
-    def histogramForPositions(positions: List[Vec3Int], mag: Vec3Int) =
-      for {
-        dataConcatenated <- getConcatenatedDataFor(datasetId, dataSourceId, dataLayer, positions, mag) ?~> "dataset.noData"
-        isUint24 = dataLayer.elementClass == ElementClass.uint24
-        convertedData = filterZeroes(convertData(dataConcatenated, dataLayer.elementClass), skip = isUint24)
-      } yield calculateHistogramValues(convertedData, dataLayer.bytesPerElement, dataLayer.elementClass)
-
-    if (dataLayer.resolutions.nonEmpty)
-      histogramForPositions(createPositions(dataLayer, 2).distinct, dataLayer.resolutions.minBy(_.maxDim))
-    else
-      Fox.empty ?~> "dataset.noMags"
+    if (isUint24) {
+      val listOfCounts = counts.grouped(256).toList
+      listOfCounts.map(counts => {
+        counts(0) = 0;
+        Histogram(counts, counts.sum.toInt, extrema._1, extrema._2)
+      })
+    } else
+      List(Histogram(counts, data.length, extrema._1, extrema._2))
   }
+
+  private def histogramBinForByte(v: Byte, isSigned: Boolean): Int =
+    if (isSigned) v.toInt + 128 else v & 0xFF
+
+  private def histogramBinForShort(v: Short, isSigned: Boolean): Int =
+    if (isSigned) (v >> 8) + 128 else (v.toInt & 0xFFFF) >> 8
+
+  private def histogramBinForInt(v: Int, isSigned: Boolean): Int =
+    if (isSigned) (v >> 24) + 128 else v >>> 24
+
+  private def histogramBinForLong(v: Long, isSigned: Boolean): Int =
+    if (isSigned) (v >> 56).toInt + 128 else (v >>> 56).toInt
+
+  private def histogramBinForFloat(v: Float, min: Float, bucketSize: Float): Int =
+    ((v - min) / bucketSize).floor.toInt
 }

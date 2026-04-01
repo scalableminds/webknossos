@@ -29,6 +29,7 @@ import {
 import { loadAgglomerateTree1 } from "./proofreading_interaction_update_action_fixtures";
 import {
   expectSegmentList,
+  getPositionForSegmentId,
   initializeMappingAndTool,
   makeMappingEditableHelper,
   mockInitialBucketAndAgglomerateData,
@@ -107,7 +108,7 @@ describe("Proofreading (Poll only)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should update the mapping correctly when the server has first a new update action with a split then with a merge operation with segments unknown to the client", async (context: WebknossosTestContext) => {
     const { api } = context;
@@ -241,7 +242,7 @@ describe("Proofreading (Poll only)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should update the mapping when the server has a new update action with a split operation", async (context: WebknossosTestContext) => {
     const { api } = context;
@@ -300,7 +301,7 @@ describe("Proofreading (Poll only)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should update the mapping correctly when the server has a new update action with a split operation with segments unknown to the client", async (context: WebknossosTestContext) => {
     const { api } = context;
@@ -385,7 +386,7 @@ describe("Proofreading (Poll only)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should update the mapping correctly when the server has a new update action with a merge and split operation with segments unknown to the client", async (context: WebknossosTestContext) => {
     const { api } = context;
@@ -469,7 +470,7 @@ describe("Proofreading (Poll only)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should not perform a rebase when there are no local changes", async (context: WebknossosTestContext) => {
     const { api } = context;
@@ -535,7 +536,7 @@ describe("Proofreading (Poll only)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   async function testPollWithUserNotAllowedToSave(
     context: WebknossosTestContext,
@@ -608,12 +609,12 @@ describe("Proofreading (Poll only)", () => {
   it("should poll updates even when othersMayEdit it turned off and updating is not allowed by current user", async (context: WebknossosTestContext) => {
     const othersMayEdit = false;
     await testPollWithUserNotAllowedToSave(context, othersMayEdit);
-  }, 8000);
+  });
 
   it("should poll updates with othersMayEdit turned on but updating is not allowed by current user", async (context: WebknossosTestContext) => {
     const othersMayEdit = true;
     await testPollWithUserNotAllowedToSave(context, othersMayEdit);
-  }, 8000);
+  });
 
   it("should simply forward received update actions like agglomerate tree update actions without putting these changes to its own save queue or sending them to the backend", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
@@ -626,7 +627,7 @@ describe("Proofreading (Poll only)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
       yield makeMappingEditableHelper();
       yield put(setOthersMayEditForAnnotationAction(true));

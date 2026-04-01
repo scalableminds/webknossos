@@ -71,7 +71,7 @@ describe("Proofreading (with mesh actions)", () => {
 
     // Set up the merge-related segment partners. Normally, this would happen
     // due to the user's interactions.
-    yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+    yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
     yield put(setActiveCellAction(1, undefined, null, 1));
 
     yield makeMappingEditableHelper();
@@ -214,7 +214,7 @@ describe("Proofreading (with mesh actions)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   const mockEdgesForNormalAgglomerateMinCut = (mocks: WebknossosTestContext["mocks"]) =>
     vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockImplementation(
@@ -344,7 +344,7 @@ describe("Proofreading (with mesh actions)", () => {
           value: {
             actionTracingId: VOLUME_TRACING_ID,
             id: 1339,
-            anchorPosition: [101, 101, 101],
+            anchorPosition: getPositionForSegmentId(1338),
             name: null,
             color: null,
             groupId: null,
@@ -443,7 +443,7 @@ describe("Proofreading (with mesh actions)", () => {
           value: {
             actionTracingId: "volumeTracingId",
             id: 4,
-            anchorPosition: [100, 100, 100],
+            anchorPosition: getPositionForSegmentId(1337),
           },
         },
         {
@@ -451,7 +451,7 @@ describe("Proofreading (with mesh actions)", () => {
           value: {
             actionTracingId: VOLUME_TRACING_ID,
             additionalCoordinates: undefined,
-            anchorPosition: [101, 101, 101],
+            anchorPosition: getPositionForSegmentId(1338),
             color: null,
             creationTime: 1494695001688,
             groupId: null,

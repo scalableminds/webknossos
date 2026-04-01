@@ -3,7 +3,7 @@ import { Modal } from "antd";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
-import createProgressCallback from "libs/progress_callback";
+import createProgressCallback, { type HideFn } from "libs/progress_callback";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
 import { map3 } from "libs/utils";
@@ -32,6 +32,7 @@ import {
 import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
 import {
   enforceSkeletonTracing,
+  findTreeByAgglomerateId,
   findTreeByName,
   getActiveNode,
   getBranchPoints,
@@ -386,72 +387,75 @@ function handleAgglomerateLoadingError(
   ErrorHandling.notify(e);
 }
 
-function* loadAgglomerateSkeletonWithId(
-  action: LoadAgglomerateSkeletonAction,
-): Saga<[string, number] | null> {
+function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): Saga<void> {
   const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
-  if (!allowUpdate) return null;
+  if (!allowUpdate) return;
   const { layerName, mappingName, agglomerateId } = action;
 
   if (agglomerateId === 0) {
     Toast.error(messages["tracing.agglomerate_skeleton.no_cell"]);
-    return null;
+    return;
   }
-
-  const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
-  const trees = yield* select((state) =>
-    getTreesWithType(enforceSkeletonTracing(state.annotation), TreeTypeEnum.AGGLOMERATE),
-  );
-  const maybeTree = findTreeByName(trees, treeName);
-
-  if (maybeTree != null) {
-    console.warn(
-      `Skeleton for agglomerate ${agglomerateId} with mapping ${mappingName} is already loaded. Its tree name is "${treeName}".`,
-    );
-    return [treeName, maybeTree.treeId];
-  }
-
   const progressCallback = createProgressCallback({
     pauseDelay: 100,
     successMessageDelay: 2000,
   });
-  const { hideFn } = yield* call(
-    progressCallback,
-    false,
-    `Loading skeleton for agglomerate ${agglomerateId} with mapping ${mappingName}`,
-  );
 
-  let usedTreeIds: number[] | null = null;
-  let agglomerateSkeleton: ServerSkeletonTracing;
   const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
   const shouldGuardWithAnnotationMutex =
     othersMayEdit && (yield* call(getCurrentMutexFetchingStrategy)) === MutexFetchingStrategy.AdHoc;
   let unsubscribeFromAnnotationMutex = null;
-  try {
-    if (shouldGuardWithAnnotationMutex) {
-      unsubscribeFromAnnotationMutex = yield* call(
-        subscribeToAnnotationMutex,
-        "Agglomerate Skeleton Loading",
-      );
+  let hideFn: HideFn | undefined;
+  if (shouldGuardWithAnnotationMutex) {
+    ({ hideFn } = yield* call(
+      progressCallback,
+      false,
+      `Getting annotation write-lock and updating to latest version ...`,
+    ));
+    unsubscribeFromAnnotationMutex = yield* call(
+      subscribeToAnnotationMutex,
+      "Agglomerate Skeleton Loading",
+    );
 
-      // Fetch agglomerate skeleton in parallel to updating to latest version to make syncing with the server faster.
-      // We already sync here to make the save after adding the agglomerate skeleton a fast forward like update,
-      // which then only sends the whole save queue to the server.
-      yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
-      agglomerateSkeleton = yield* call(
-        getAgglomerateSkeletonTracing,
-        layerName,
-        mappingName,
-        agglomerateId,
+    // Fetch agglomerate skeleton in parallel to updating to latest version to make syncing with the server faster.
+    // We already sync here to make the save after adding the agglomerate skeleton a fast forward like update,
+    // which then only sends the whole save queue to the server.
+    yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
+  }
+
+  const trees = yield* select((state) =>
+    getTreesWithType(enforceSkeletonTracing(state.annotation), TreeTypeEnum.AGGLOMERATE),
+  );
+  const maybeTree = findTreeByAgglomerateId(trees, agglomerateId, layerName, mappingName);
+
+  try {
+    if (maybeTree != null) {
+      console.warn(
+        `Tree for agglomerate ${agglomerateId} with mapping ${mappingName} is already loaded. Its tree name is "${maybeTree.name}".`,
       );
-    } else {
-      agglomerateSkeleton = yield* call(
-        getAgglomerateSkeletonTracing,
-        layerName,
-        mappingName,
-        agglomerateId,
+      yield* call(
+        progressCallback,
+        true,
+        `Skeleton for agglomerate ${agglomerateId} is already present. If it not in sync with the mapping, please delete and reload it.`,
       );
+      return;
     }
+
+    ({ hideFn } = yield* call(
+      progressCallback,
+      true,
+      `Loading skeleton for agglomerate ${agglomerateId} with mapping ${mappingName}`,
+    ));
+
+    let usedTreeIds: number[] | null = null;
+    let agglomerateSkeleton: ServerSkeletonTracing;
+    let newTree: Tree | undefined;
+    agglomerateSkeleton = yield* call(
+      getAgglomerateSkeletonTracing,
+      layerName,
+      mappingName,
+      agglomerateId,
+    );
 
     yield* put(
       addTreesAndGroupsAction(
@@ -462,6 +466,30 @@ function* loadAgglomerateSkeletonWithId(
         },
       ),
     );
+
+    // @ts-expect-error TS infers usedTreeIds to be never, but it should be number[] if its not null
+    if (usedTreeIds == null || usedTreeIds.length !== 1) {
+      throw new Error(
+        "Assumption violated while adding agglomerate skeleton. Exactly one tree should have been added.",
+      );
+    }
+    newTree = yield* select((state) =>
+      // @ts-expect-error TS infers usedTreeIds to be be potentially null, but this cannot be the case.
+      state.annotation.skeleton?.trees.getNullable(usedTreeIds[0]),
+    );
+    if (!newTree) {
+      throw new Error("Could not find the newly loaded agglomerate tree in the annotation.");
+    }
+  } catch (e) {
+    if (unsubscribeFromAnnotationMutex) {
+      yield* call(unsubscribeFromAnnotationMutex);
+    }
+    // Hide the progress notification and handle the error
+    hideFn?.();
+    // @ts-expect-error
+    handleAgglomerateLoadingError(e);
+    return;
+  } finally {
     if (shouldGuardWithAnnotationMutex) {
       // Enforces to directly store the loaded agglomerate skeleton to the annotation on the server to enable easier syncing of update actions.
       // The saving includes releasing the mutex acquired earlier.
@@ -474,26 +502,9 @@ function* loadAgglomerateSkeletonWithId(
         );
       }
     }
-
-    // @ts-expect-error TS infers usedTreeIds to be never, but it should be number[] if its not null
-    if (usedTreeIds == null || usedTreeIds.length !== 1) {
-      throw new Error(
-        "Assumption violated while adding agglomerate skeleton. Exactly one tree should have been added.",
-      );
-    }
-  } catch (e) {
-    if (unsubscribeFromAnnotationMutex) {
-      yield* call(unsubscribeFromAnnotationMutex);
-    }
-    // Hide the progress notification and handle the error
-    hideFn();
-    // @ts-expect-error
-    handleAgglomerateLoadingError(e);
-    return null;
   }
 
   yield* call(progressCallback, true, "Skeleton generation done.");
-  return [treeName, usedTreeIds[0]];
 }
 
 function* loadConnectomeAgglomerateSkeletonWithId(

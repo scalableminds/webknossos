@@ -10,7 +10,6 @@ import {
   fork,
   put,
   retry,
-  spawn,
   take,
   takeEvery,
 } from "typed-redux-saga";
@@ -23,13 +22,18 @@ import {
 } from "viewer/model/actions/annotation_actions";
 import {
   type SetIsMutexAcquiredAction,
+  type SubscribeToAnnotationMutexAction,
   setIsMutexAcquiredAction,
   setUserHoldingMutexAction,
+  subscribeToAnnotationMutexAction,
+  type UnsubscribeFromAnnotationMutexAction,
+  unsubscribeFromAnnotationMutexAction,
 } from "viewer/model/actions/save_actions";
 import type { UpdateLayerSettingAction } from "viewer/model/actions/settings_actions";
 import type { CycleToolAction, SetToolAction } from "viewer/model/actions/ui_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
+import { startSaga } from "viewer/store";
 import { ensureWkInitialized } from "../ready_sagas";
 
 // Also refer to application.conf where annotation.mutex.expiryTime is defined
@@ -136,6 +140,7 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   yield* fork(watchForActiveVolumeTracingChange, mutexLogicState);
   yield* fork(watchForActiveToolChange, mutexLogicState);
   yield* fork(watchForHasEditableMappingChange, mutexLogicState);
+  yield* fork(watchForMutexSubscriptionActions, mutexLogicState);
 
   const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
   if (othersMayEdit) {
@@ -144,8 +149,12 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   }
 }
 
+const MUTEX_SUBSCRIPTION_TIMEOUT = 60 * 1000;
+
 function getUnsubscribeFromAnnotationMutexSaga(id: number): () => Saga<void> {
+  let didUnsubscribe = false;
   function* unsubscribe(): Saga<void> {
+    didUnsubscribe = true;
     const state = getMutexLogicState();
     const callerId = state.subscribersToMutex[id];
     if (!callerId) {
@@ -155,6 +164,7 @@ function getUnsubscribeFromAnnotationMutexSaga(id: number): () => Saga<void> {
       return;
     }
     delete state.subscribersToMutex[id];
+    yield* put(unsubscribeFromAnnotationMutexAction(id));
     if (!state.runningAdHocMutexAcquiringSaga) {
       console.warn(
         "Unsubscribing from annotation mutex, while no saga is running that takes care of acquiring the annotation mutex. Unsubscriber id:",
@@ -168,6 +178,14 @@ function getUnsubscribeFromAnnotationMutexSaga(id: number): () => Saga<void> {
       yield* call(releaseMutex);
     }
   }
+  function* timeoutUnsubscribe(): Saga<void> {
+    if (didUnsubscribe) {
+      return;
+    }
+    yield* call(unsubscribe);
+  }
+  // Let the subscription automatically timeout after one minute using a saga.
+  setTimeout(() => startSaga(timeoutUnsubscribe), MUTEX_SUBSCRIPTION_TIMEOUT);
   return unsubscribe;
 }
 
@@ -176,6 +194,8 @@ export function* subscribeToAnnotationMutex(callerId: string): Saga<() => Saga<v
    * Blocks until the mutex annotation has been acquired and returns a function
    * which should be used to release the annotation mutex (note, that the mutex
    * will only be released when no other "subscription" is pending).
+   * Note: There is default timeout on a subscription after which it will be invalid.
+   * The idea is in case an operation is stuck to not block other users infinitely.
    */
   const state = getMutexLogicState();
   let newId = Math.round(Math.random() * 10000);
@@ -183,13 +203,12 @@ export function* subscribeToAnnotationMutex(callerId: string): Saga<() => Saga<v
     newId = Math.round(Math.random() * 10000);
   }
   state.subscribersToMutex[newId] = callerId;
+  yield* put(subscribeToAnnotationMutexAction(newId, callerId));
 
   if (yield* call(getDoesHaveMutex)) {
     return getUnsubscribeFromAnnotationMutexSaga(newId);
   }
 
-  const taskPermanentlyAcquiringMutex = yield* spawn(tryAcquireMutexForSaving, state);
-  state.runningAdHocMutexAcquiringSaga = taskPermanentlyAcquiringMutex;
   while (true) {
     const doesHaveMutex = yield* call(getDoesHaveMutex);
     const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
@@ -475,6 +494,42 @@ function* watchForHasEditableMappingChange(mutexLogicState: MutexLogicState): Sa
     yield* call(restartMutexAcquiringSaga, mutexLogicState);
   }
   yield* takeEvery("SET_HAS_EDITABLE_MAPPING", reactToHasEditableMappingChange);
+}
+
+function* watchForMutexSubscriptionActions(mutexLogicState: MutexLogicState): Saga<void> {
+  // If a subscription is added or removed we may need to start/stop the ad-hoc mutex fetching.
+  function* reactToSubscriptionChange(
+    action: SubscribeToAnnotationMutexAction | UnsubscribeFromAnnotationMutexAction,
+  ): Saga<void> {
+    const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+    if (!othersMayEdit) {
+      return;
+    }
+    if (action.type === "SUBSCRIBE_TO_ANNOTATION_MUTEX") {
+      // Start the ad hoc mutex acquisition if needed.
+      yield* call(restartMutexAcquiringSaga, mutexLogicState);
+    } else {
+      const subscriptionCount = Object.keys(mutexLogicState.subscribersToMutex).length;
+      // Stop the mutex acquisition if needed.
+      if (subscriptionCount === 0) {
+        if (mutexLogicState.runningContinuousMutexAcquiringSaga != null) {
+          yield* cancel(mutexLogicState.runningContinuousMutexAcquiringSaga);
+          mutexLogicState.runningContinuousMutexAcquiringSaga = null;
+        }
+        const stillHasAnnotationMutex = yield* select(
+          (state) => state.save.mutexState.hasAnnotationMutex,
+        );
+        if (stillHasAnnotationMutex) {
+          yield* call(releaseMutex);
+        }
+      }
+    }
+  }
+
+  yield* takeEvery(
+    ["SUBSCRIBE_TO_ANNOTATION_MUTEX", "UNSUBSCRIBE_FROM_ANNOTATION_MUTEX"],
+    reactToSubscriptionChange,
+  );
 }
 
 function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState): Saga<void> {

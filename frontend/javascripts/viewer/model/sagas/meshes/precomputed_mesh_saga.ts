@@ -130,7 +130,7 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
   // should be canceled automatically to avoid populating mesh data even though
   // the mesh was removed. This is accomplished by redux-saga's race effect.
   console.log("Start loading mesh for", segmentId);
-  yield* race({
+  const { cancel } = yield* race({
     loadPrecomputedMeshForSegmentId: call(
       loadPrecomputedMeshForSegmentId,
       segmentId,
@@ -147,7 +147,11 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
         otherAction.layerName === layer.name) as ActionPattern,
     ),
   });
-  console.log("Finished loading mesh for", segmentId);
+  if (cancel) {
+    console.log("cancelled loading mesh for", segmentId);
+  } else {
+    console.log("Finished loading mesh for", segmentId);
+  }
 }
 
 type ChunksMap = Record<number, Vector3[] | meshApi.MeshChunk[] | null | undefined>;

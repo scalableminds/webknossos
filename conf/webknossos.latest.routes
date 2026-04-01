@@ -284,8 +284,6 @@ POST          /jobs/run/convertToWkw/:datasetId                                 
 POST          /jobs/run/computeMeshFile/:datasetId                                              controllers.JobController.runComputeMeshFileJob(datasetId: ObjectId, layerName: String, mag: String, agglomerateView: Option[String])
 POST          /jobs/run/computeSegmentIndexFile/:datasetId                                      controllers.JobController.runComputeSegmentIndexFileJob(datasetId: ObjectId, layerName: String)
 POST          /jobs/run/exportTiff/:datasetId                                                   controllers.JobController.runExportTiffJob(datasetId: ObjectId, bbox: String, additionalCoordinates: Option[String], layerName: Option[String], mag: Option[String], annotationLayerName: Option[String], annotationId: Option[ObjectId], asOmeTiff: Boolean)
-POST          /jobs/run/inferNuclei/:datasetId                                                  controllers.JobController.runInferNucleiJob(datasetId: ObjectId, layerName: String, newDatasetName: String, invertColorLayer: Option[Boolean])
-POST          /jobs/run/inferNeurons/:datasetId                                                 controllers.JobController.runInferNeuronsJob(datasetId: ObjectId, layerName: String, bbox: String, newDatasetName: String, doSplitMergerEvaluation: Boolean, annotationId: Option[String], evalUseSparseTracing: Option[Boolean], evalMaxEdgeLength: Option[Double], evalSparseTubeThresholdNm: Option[Double], evalMinMergerPathLengthNm: Option[Double], invertColorLayer: Option[Boolean])
 POST          /jobs/run/inferMitochondria/:datasetId                                            controllers.JobController.runInferMitochondriaJob(datasetId: ObjectId, layerName: String, bbox: String, newDatasetName: String)
 POST          /jobs/run/alignSections/:datasetId                                                controllers.JobController.runAlignSectionsJob(datasetId: ObjectId, layerName: String, newDatasetName: String, annotationId: Option[ObjectId])
 POST          /jobs/run/materializeVolumeAnnotation/:datasetId                                  controllers.JobController.runMaterializeVolumeAnnotationJob(datasetId: ObjectId, fallbackLayerName: String, annotationId: ObjectId, annotationType: String, newDatasetName: String, outputSegmentationLayerName: String, mergeSegments: Boolean, volumeLayerName: Option[String], includesEditableMapping: Boolean, boundingBox: Option[String])
@@ -302,14 +300,15 @@ GET           /jobs/:id/export                                                  
 # AI Models
 POST          /aiModels/runNeuronModelTraining                                                  controllers.AiModelController.runNeuronTraining
 POST          /aiModels/runInstanceModelTraining                                                controllers.AiModelController.runInstanceTraining
-POST          /aiModels/inferences/runCustomNeuronModelInference                                controllers.AiModelController.runCustomNeuronInference
-POST          /aiModels/inferences/runCustomInstanceModelInference                              controllers.AiModelController.runCustomInstanceModelInference
+POST          /aiModels/inferences/runNeuronModelInference                                      controllers.AiModelController.runNeuronModelInference
+POST          /aiModels/inferences/runInstanceModelInference                                    controllers.AiModelController.runInstanceModelInference
 GET           /aiModels/inferences/:id                                                          controllers.AiModelController.readAiInferenceInfo(id: ObjectId)
 GET           /aiModels/inferences                                                              controllers.AiModelController.listAiInferences
 GET           /aiModels                                                                         controllers.AiModelController.listAiModels
 POST          /aiModels/reserveUploadToPath                                                     controllers.AiModelController.reserveUploadToPath
 POST          /aiModels/:id/finishUploadToPath                                                  controllers.AiModelController.finishUploadToPath(id: ObjectId)
 GET           /aiModels/:id                                                                     controllers.AiModelController.readAiModelInfo(id: ObjectId)
+GET           /aiModels/:id/voxelSize                                                           controllers.AiModelController.aiModelVoxelSize(id: ObjectId)
 PUT           /aiModels/:id                                                                     controllers.AiModelController.updateAiModelInfo(id: ObjectId)
 DELETE        /aiModels/:id                                                                     controllers.AiModelController.deleteAiModel(id: ObjectId)
 

@@ -33,11 +33,15 @@ export type EnsureTracingsWereDiffedToSaveQueueAction = ReturnType<
   typeof ensureTracingsWereDiffedToSaveQueueAction
 >;
 export type EnsureHasNewestVersionAction = ReturnType<typeof ensureHasNewestVersionAction>;
+export type SetIsMutexAcquiredAction = ReturnType<typeof setIsMutexAcquiredAction>;
+export type SetUserHoldingMutexAction = ReturnType<typeof setUserHoldingMutexAction>;
+export type SubscribeToAnnotationMutexAction = ReturnType<typeof subscribeToAnnotationMutexAction>;
+export type UnsubscribeFromAnnotationMutexAction = ReturnType<
+  typeof unsubscribeFromAnnotationMutexAction
+>;
 export type SnapshotAnnotationStateForNextRebaseAction = ReturnType<
   typeof snapshotAnnotationStateForNextRebaseAction
 >;
-export type SetIsMutexAcquiredAction = ReturnType<typeof setIsMutexAcquiredAction>;
-export type SetUserHoldingMutexAction = ReturnType<typeof setUserHoldingMutexAction>;
 export type PrepareRebaseAction = ReturnType<typeof prepareRebaseAction>;
 export type FinishedRebaseAction = ReturnType<typeof finishedRebaseAction>;
 export type StartForwardingUpdateActionsAction = ReturnType<
@@ -71,9 +75,11 @@ export type SaveAction =
   | DisableSavingAction
   | EnsureTracingsWereDiffedToSaveQueueAction
   | EnsureHasNewestVersionAction
-  | SnapshotAnnotationStateForNextRebaseAction
   | SetIsMutexAcquiredAction
   | SetUserHoldingMutexAction
+  | SubscribeToAnnotationMutexAction
+  | UnsubscribeFromAnnotationMutexAction
+  | SnapshotAnnotationStateForNextRebaseAction
   | PrepareRebaseAction
   | FinishedRebaseAction
   | StartForwardingUpdateActionsAction
@@ -222,11 +228,6 @@ export const dispatchEnsureHasNewestVersionAsync = async (
   await readyDeferred.promise();
 };
 
-export const snapshotAnnotationStateForNextRebaseAction = () =>
-  ({
-    type: "SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE",
-  }) as const;
-
 export const setIsMutexAcquiredAction = (isMutexAcquired: boolean) =>
   ({
     type: "SET_IS_MUTEX_ACQUIRED",
@@ -237,6 +238,24 @@ export const setUserHoldingMutexAction = (blockedByUser: APIUserCompact | null |
   ({
     type: "SET_USER_HOLDING_MUTEX",
     blockedByUser,
+  }) as const;
+
+export const subscribeToAnnotationMutexAction = (subscriptionId: number, callerId: string) =>
+  ({
+    type: "SUBSCRIBE_TO_ANNOTATION_MUTEX",
+    subscriptionId,
+    callerId,
+  }) as const;
+
+export const unsubscribeFromAnnotationMutexAction = (subscriptionId: number) =>
+  ({
+    type: "UNSUBSCRIBE_FROM_ANNOTATION_MUTEX",
+    subscriptionId,
+  }) as const;
+
+export const snapshotAnnotationStateForNextRebaseAction = () =>
+  ({
+    type: "SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE",
   }) as const;
 
 export const prepareRebaseAction = () =>

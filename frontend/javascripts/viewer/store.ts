@@ -482,17 +482,16 @@ export type RebaseRelevantAnnotationState = {
 // before applying their own mapping changes. This info is e.g. needed to properly auto update the agglomerate skeletons
 // as part of the post processing of a proofreading interaction.
 // This info is also stored in ProofreadingPostProcessingInfo.
-// TODOM: Naming open to debate.
 
-export type ProofreadingActionInfo = {
+export type ProofreadingActionMappingInfo = {
   agglomerateId: number;
   unmappedId: number;
   position?: Vector3;
 };
 
 export type ProofreadingPostProcessingInfo = {
-  readonly sourceInfo: Readonly<ProofreadingActionInfo>;
-  readonly targetInfo: Readonly<ProofreadingActionInfo> | null;
+  readonly sourceInfo: Readonly<ProofreadingActionMappingInfo>;
+  readonly targetInfo: Readonly<ProofreadingActionMappingInfo> | null;
   readonly tracingId: string;
 };
 export type SaveState = {

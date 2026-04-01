@@ -41,6 +41,7 @@ import {
   mockInitialBucketAndAgglomerateData,
   performCutFromAllNeighbours,
   prepareGetNeighborsForAgglomerateNode,
+  getPositionForSegmentId,
 } from "./proofreading_test_utils";
 import { publishDebuggingState } from "test/helpers/debugging_state_serializer";
 import {
@@ -120,11 +121,11 @@ describe("Proofreading (Multi User)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      yield* prepareEditableMapping(context, tracingId, 1, [1, 1, 1]);
+      yield* prepareEditableMapping(context, tracingId, 1, getPositionForSegmentId(1));
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
-          [4, 4, 4], // At this position is: unmappedId=4 / mappedId=4
+          getPositionForSegmentId(4), // At this position is: unmappedId=4 / mappedId=4
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -173,12 +174,12 @@ describe("Proofreading (Multi User)", () => {
       const segment1AfterSaving = currentSegments.getNullable(1);
       expect(segment1AfterSaving).toMatchObject({
         name: "Segment 1",
-        anchorPosition: [1, 1, 1],
+        anchorPosition: getPositionForSegmentId(1),
       });
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("(II) should merge two agglomerates optimistically and incorporate a new merge action from backend", async (context: WebknossosTestContext) => {
     /*
@@ -206,7 +207,7 @@ describe("Proofreading (Multi User)", () => {
           value: {
             actionTracingId: VOLUME_TRACING_ID,
             id: 1,
-            anchorPosition: [1, 1, 1],
+            anchorPosition: getPositionForSegmentId(1),
             additionalCoordinates: undefined,
             name: "Custom Name 1",
             color: [1, 2, 3],
@@ -219,7 +220,7 @@ describe("Proofreading (Multi User)", () => {
           value: {
             actionTracingId: VOLUME_TRACING_ID,
             id: 4,
-            anchorPosition: [4, 4, 4],
+            anchorPosition: getPositionForSegmentId(4),
             additionalCoordinates: undefined,
             name: "Custom Name 4",
             color: [1, 2, 3],
@@ -236,12 +237,12 @@ describe("Proofreading (Multi User)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      yield* prepareEditableMapping(context, tracingId, 4, [4, 4, 4]);
+      yield* prepareEditableMapping(context, tracingId, 4, getPositionForSegmentId(4));
 
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
-          [6, 6, 6], // At this position is: unmappedId=6 / mappedId=6
+          getPositionForSegmentId(6), // At this position is: unmappedId=6 / mappedId=6
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -276,7 +277,7 @@ describe("Proofreading (Multi User)", () => {
           name: "updateSegmentPartial",
           value: {
             actionTracingId: "volumeTracingId",
-            anchorPosition: [4, 4, 4],
+            anchorPosition: getPositionForSegmentId(4),
             id: 1,
           },
         },
@@ -302,7 +303,7 @@ describe("Proofreading (Multi User)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should merge two agglomerates optimistically and incorporate a new split action from backend", async (context: WebknossosTestContext) => {
     /*
@@ -333,12 +334,12 @@ describe("Proofreading (Multi User)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      yield* prepareEditableMapping(context, tracingId, 1, [1, 1, 1]);
+      yield* prepareEditableMapping(context, tracingId, 1, getPositionForSegmentId(1));
 
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
-          [4, 4, 4], // At this position is: unmappedId=4 / mappedId=4
+          getPositionForSegmentId(4), // At this position is: unmappedId=4 / mappedId=4
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -376,7 +377,7 @@ describe("Proofreading (Multi User)", () => {
         value: {
           actionTracingId: VOLUME_TRACING_ID,
           id: 1339,
-          anchorPosition: [1, 1, 1],
+          anchorPosition: getPositionForSegmentId(1),
         },
       });
 
@@ -406,7 +407,7 @@ describe("Proofreading (Multi User)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should cut agglomerate from all neighbors after incorporating a new split action from backend", async (context: WebknossosTestContext) => {
     /*
@@ -434,7 +435,7 @@ describe("Proofreading (Multi User)", () => {
           value: {
             actionTracingId: "volumeTracingId",
             additionalCoordinates: undefined,
-            anchorPosition: [2, 2, 2],
+            anchorPosition: getPositionForSegmentId(2),
             color: null,
             creationTime: 1494695001688,
             groupId: null,
@@ -457,7 +458,7 @@ describe("Proofreading (Multi User)", () => {
           value: {
             actionTracingId: "volumeTracingId",
             additionalCoordinates: undefined,
-            anchorPosition: [3, 3, 3],
+            anchorPosition: getPositionForSegmentId(3),
             color: null,
             creationTime: 1494695001688,
             groupId: null,
@@ -501,7 +502,7 @@ describe("Proofreading (Multi User)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should not cut agglomerate from all neighbors due to interfering merge action", async (context: WebknossosTestContext) => {
     /*
@@ -539,7 +540,7 @@ describe("Proofreading (Multi User)", () => {
           value: {
             actionTracingId: "volumeTracingId",
             additionalCoordinates: undefined,
-            anchorPosition: [3, 3, 3],
+            anchorPosition: getPositionForSegmentId(3),
             color: null,
             creationTime: 1494695001688,
             groupId: null,
@@ -579,7 +580,7 @@ describe("Proofreading (Multi User)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should merge two agglomerates after incorporating a new split action from backend", async (context: WebknossosTestContext) => {
     /*
@@ -596,12 +597,12 @@ describe("Proofreading (Multi User)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      yield* prepareEditableMapping(context, tracingId, 1, [2, 2, 2]);
+      yield* prepareEditableMapping(context, tracingId, 1, getPositionForSegmentId(2));
 
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
-          [4, 4, 4], // At this position is: unmappedId=4 / mappedId=4
+          getPositionForSegmentId(4), // At this position is: unmappedId=4 / mappedId=4
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -684,12 +685,12 @@ describe("Proofreading (Multi User)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      yield* prepareEditableMapping(context, tracingId, 4, [4, 4, 4]);
+      yield* prepareEditableMapping(context, tracingId, 4, getPositionForSegmentId(4));
 
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
-          [1, 1, 1], // At this position is: unmappedId=1 / mappedId=1
+          getPositionForSegmentId(1), // At this position is: unmappedId=1 / mappedId=1
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -738,7 +739,7 @@ describe("Proofreading (Multi User)", () => {
           name: "updateSegmentPartial",
           value: {
             actionTracingId: "volumeTracingId",
-            anchorPosition: [4, 4, 4],
+            anchorPosition: getPositionForSegmentId(4),
             id: 1337,
           },
         },
@@ -834,12 +835,18 @@ describe("Proofreading (Multi User)", () => {
         [7, 1337],
         // [1337, 1337], not loaded
       ]);
-      yield* prepareEditableMapping(context, tracingId, 4, [4, 4, 4], initialExpectedMapping);
+      yield* prepareEditableMapping(
+        context,
+        tracingId,
+        4,
+        getPositionForSegmentId(4),
+        initialExpectedMapping,
+      );
 
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
-          [1, 1, 1], // At this position is: unmappedId=1 / mappedId=1
+          getPositionForSegmentId(1), // At this position is: unmappedId=1 / mappedId=1
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -872,7 +879,7 @@ describe("Proofreading (Multi User)", () => {
         const segment1337AfterSaving = currentSegments.getNullable(1337);
         expect(segment1337AfterSaving).toMatchObject({
           name: null,
-          anchorPosition: [7, 7, 7],
+          anchorPosition: getPositionForSegmentId(7),
         });
 
         const segment1339AfterSaving = currentSegments.getNullable(1339);
@@ -882,7 +889,7 @@ describe("Proofreading (Multi User)", () => {
             { key: "key1-1339", stringValue: "value for 1339" },
             { key: "key1-1", stringValue: "value for 1" },
           ],
-          anchorPosition: [4, 4, 4],
+          anchorPosition: getPositionForSegmentId(4),
         });
       }
 
@@ -914,7 +921,7 @@ describe("Proofreading (Multi User)", () => {
           value: {
             actionTracingId: "volumeTracingId",
             id: 1339,
-            anchorPosition: [4, 4, 4],
+            anchorPosition: getPositionForSegmentId(4),
           },
         },
       ]);
@@ -960,12 +967,12 @@ describe("Proofreading (Multi User)", () => {
     const task = startSaga(function* task() {
       const rebaseActionChannel = yield actionChannel(["PREPARE_REBASING", "FINISHED_REBASING"]);
 
-      yield* prepareEditableMapping(context, tracingId, 1, [1, 1, 1]);
+      yield* prepareEditableMapping(context, tracingId, 1, getPositionForSegmentId(1));
 
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
-          [4, 4, 4], // At this position is: unmappedId=4 / mappedId=4
+          getPositionForSegmentId(4), // At this position is: unmappedId=4 / mappedId=4
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -1025,7 +1032,7 @@ describe("Proofreading (Multi User)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should not deadlock upon proofreading action when not receiving mutex after some time and auto timeout polling already ends in the waiting-loop for the ui busy lock", async (context: WebknossosTestContext) => {
     mockInitialBucketAndAgglomerateData(context);
@@ -1035,7 +1042,7 @@ describe("Proofreading (Multi User)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      yield* prepareEditableMapping(context, tracingId, 1, [1, 1, 1]);
+      yield* prepareEditableMapping(context, tracingId, 1, getPositionForSegmentId(1));
       yield call(() => context.api.tracing.save());
       context.mocks.acquireAnnotationMutex.mockImplementation(async () => ({
         canEdit: false,
@@ -1044,8 +1051,8 @@ describe("Proofreading (Multi User)", () => {
       // Execute the actual merge and wait for the finished mapping.
       yield put(
         proofreadMergeAction(
-          [4, 4, 4], // unmappedId=4 / mappedId=4 at this position
-          1, // unmappedId=1 maps to 1
+          getPositionForSegmentId(4), // unmappedId=4 / mappedId=4 at this position
+          4, // unmappedId=4 maps to 4
         ),
       );
       const waitingTimeTillPollingTimeoutWasTriggered = VERSION_POLL_INTERVAL_COLLAB * 2 + 100;
@@ -1062,7 +1069,7 @@ describe("Proofreading (Multi User)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should not create a segment item after splitting when another user performed a merge that swallows that item", async (context: WebknossosTestContext) => {
     const { api, mocks } = context;
@@ -1084,14 +1091,20 @@ describe("Proofreading (Multi User)", () => {
         [7, 1337],
         // [1337, 1337], not loaded
       ]);
-      yield* prepareEditableMapping(context, tracingId, 4, [4, 4, 4], initialExpectedMapping);
+      yield* prepareEditableMapping(
+        context,
+        tracingId,
+        4,
+        getPositionForSegmentId(4),
+        initialExpectedMapping,
+      );
 
       // Prepare the server's reply for the upcoming split.
       vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
         Promise.resolve([
           {
-            position1: [4, 4, 4],
-            position2: [5, 5, 5],
+            position1: getPositionForSegmentId(4),
+            position2: getPositionForSegmentId(5),
             segmentId1: 4,
             segmentId2: 5,
           },
@@ -1101,7 +1114,7 @@ describe("Proofreading (Multi User)", () => {
       // Execute the actual min cut and wait for the finished mapping.
       yield put(
         minCutAgglomerateWithPositionAction(
-          [5, 5, 5], // At this position is: unmappedId=5 / mappedId=4
+          getPositionForSegmentId(5), // At this position is: unmappedId=5 / mappedId=4
         ),
       );
       yield call(waitUntilNotBusy);
@@ -1141,13 +1154,13 @@ describe("Proofreading (Multi User)", () => {
         const segment1337AfterSaving = currentSegments.getNullable(1337);
         expect(segment1337AfterSaving).toMatchObject({
           name: "Segment 1337 and Segment 4",
-          anchorPosition: [4, 4, 4],
+          anchorPosition: getPositionForSegmentId(4),
         });
 
         const segment1339AfterSaving = currentSegments.getNullable(1339);
         expect(segment1339AfterSaving).toMatchObject({
           name: null,
-          anchorPosition: [5, 5, 5],
+          anchorPosition: getPositionForSegmentId(5),
         });
       }
 
@@ -1165,7 +1178,7 @@ describe("Proofreading (Multi User)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should update correct segment item if that one was merged into another segment by another user", async (context: WebknossosTestContext) => {
     /*
@@ -1192,10 +1205,16 @@ describe("Proofreading (Multi User)", () => {
         [7, 1337],
         // [1337, 1337], not loaded
       ]);
-      yield* prepareEditableMapping(context, tracingId, 5, [5, 5, 5], initialExpectedMapping);
+      yield* prepareEditableMapping(
+        context,
+        tracingId,
+        5,
+        getPositionForSegmentId(5),
+        initialExpectedMapping,
+      );
 
       let name = "Some segment name";
-      const anchorPosition: Vector3 = [4, 4, 4];
+      const anchorPosition: Vector3 = getPositionForSegmentId(4);
       const metadata = [{ key: "key", stringValue: "stringValue" }];
       yield put(
         // Will result in a createSegment action (at least locally; it will
@@ -1248,7 +1267,7 @@ describe("Proofreading (Multi User)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should ignore segment item removal if that one was merged into another segment by another user", async (context: WebknossosTestContext) => {
     /*
@@ -1279,7 +1298,13 @@ describe("Proofreading (Multi User)", () => {
         [7, 1337],
         // [1337, 1337], not loaded
       ]);
-      yield* prepareEditableMapping(context, tracingId, 4, [4, 4, 4], initialExpectedMapping);
+      yield* prepareEditableMapping(
+        context,
+        tracingId,
+        4,
+        getPositionForSegmentId(4),
+        initialExpectedMapping,
+      );
 
       yield put(removeSegmentAction(4, tracingId));
 
@@ -1295,11 +1320,11 @@ describe("Proofreading (Multi User)", () => {
         const segment1337AfterSaving = currentSegments.getNullable(1337);
         expect(segment1337AfterSaving).toMatchObject({
           name: "Segment 1337 and Segment 4",
-          anchorPosition: [100, 100, 100],
+          anchorPosition: getPositionForSegmentId(1337),
         });
       }
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 });

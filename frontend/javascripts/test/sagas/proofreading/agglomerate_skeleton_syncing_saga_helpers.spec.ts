@@ -9,6 +9,7 @@ import {
 import type { Node, Tree } from "viewer/model/types/tree_types";
 import type { SkeletonTracing } from "viewer/store";
 import { describe, expect, it } from "vitest";
+import { getPositionForSegmentId } from "./proofreading_test_utils";
 
 function createNode(id: number): Node {
   return {
@@ -77,13 +78,13 @@ describe("Agglomerate Skeleton Syncing Helpers", () => {
   it("remapNodeIdsWithPositionMap should remap the ids of trees which are fully present in the PositionToIdMap.", () => {
     const positionToIdMap = { "1,1,1": 1, "2,2,2": 2, "3,3,3": 3, "4,4,4": 4, "5,5,5": 5 };
     const nodes1 = new DiffableMap<number, Node>([
-      [10, { ...createNode(10), untransformedPosition: [1, 1, 1] }],
-      [11, { ...createNode(11), untransformedPosition: [2, 2, 2] }],
-      [12, { ...createNode(12), untransformedPosition: [3, 3, 3] }],
+      [10, { ...createNode(10), untransformedPosition: getPositionForSegmentId(1) }],
+      [11, { ...createNode(11), untransformedPosition: getPositionForSegmentId(2) }],
+      [12, { ...createNode(12), untransformedPosition: getPositionForSegmentId(3) }],
     ]);
     const nodes2 = new DiffableMap<number, Node>([
-      [13, { ...createNode(13), untransformedPosition: [4, 4, 4] }],
-      [14, { ...createNode(14), untransformedPosition: [5, 5, 5] }],
+      [13, { ...createNode(13), untransformedPosition: getPositionForSegmentId(4) }],
+      [14, { ...createNode(14), untransformedPosition: getPositionForSegmentId(5) }],
     ]);
     const edges1 = new EdgeCollection().addEdges([
       { source: 10, target: 11 },
@@ -114,11 +115,11 @@ describe("Agglomerate Skeleton Syncing Helpers", () => {
   it("remapNodeIdsWithPositionMap should remap the ids of a tree which is partially present in the PositionToIdMap.", () => {
     const positionToIdMap = { "1,1,1": 1, "2,2,2": 2, "3,3,3": 3 };
     const nodes = new DiffableMap<number, Node>([
-      [10, { ...createNode(10), untransformedPosition: [1, 1, 1] }],
-      [11, { ...createNode(11), untransformedPosition: [2, 2, 2] }],
-      [12, { ...createNode(12), untransformedPosition: [3, 3, 3] }],
-      [13, { ...createNode(13), untransformedPosition: [4, 4, 4] }],
-      [14, { ...createNode(14), untransformedPosition: [5, 5, 5] }],
+      [10, { ...createNode(10), untransformedPosition: getPositionForSegmentId(1) }],
+      [11, { ...createNode(11), untransformedPosition: getPositionForSegmentId(2) }],
+      [12, { ...createNode(12), untransformedPosition: getPositionForSegmentId(3) }],
+      [13, { ...createNode(13), untransformedPosition: getPositionForSegmentId(4) }],
+      [14, { ...createNode(14), untransformedPosition: getPositionForSegmentId(5) }],
     ]);
     const edges = new EdgeCollection().addEdges([
       { source: 10, target: 11 },
@@ -136,8 +137,8 @@ describe("Agglomerate Skeleton Syncing Helpers", () => {
       createNode(1),
       createNode(2),
       createNode(3),
-      { ...createNode(6), untransformedPosition: [4, 4, 4] },
-      { ...createNode(7), untransformedPosition: [5, 5, 5] },
+      { ...createNode(6), untransformedPosition: getPositionForSegmentId(4) },
+      { ...createNode(7), untransformedPosition: getPositionForSegmentId(5) },
     ]);
     expect([...remappedTree.edges.values()]).toStrictEqual([
       { source: 1, target: 2 },
@@ -150,13 +151,13 @@ describe("Agglomerate Skeleton Syncing Helpers", () => {
   it("remapNodeIdsWithPositionMap should remap the ids of a tree according to cachedMaxNodeId when no node is present in the PositionToIdMap.", () => {
     const positionToIdMap = { "1,1,1": 1, "2,2,2": 2, "3,3,3": 3, "4,4,4": 4, "5,5,5": 5 };
     const nodes1 = new DiffableMap<number, Node>([
-      [10, { ...createNode(10), untransformedPosition: [1, 1, 1] }],
-      [11, { ...createNode(11), untransformedPosition: [2, 2, 2] }],
-      [12, { ...createNode(12), untransformedPosition: [3, 3, 3] }],
+      [10, { ...createNode(10), untransformedPosition: getPositionForSegmentId(1) }],
+      [11, { ...createNode(11), untransformedPosition: getPositionForSegmentId(2) }],
+      [12, { ...createNode(12), untransformedPosition: getPositionForSegmentId(3) }],
     ]);
     const nodes2 = new DiffableMap<number, Node>([
-      [13, { ...createNode(13), untransformedPosition: [4, 4, 4] }],
-      [14, { ...createNode(14), untransformedPosition: [5, 5, 5] }],
+      [13, { ...createNode(13), untransformedPosition: getPositionForSegmentId(4) }],
+      [14, { ...createNode(14), untransformedPosition: getPositionForSegmentId(5) }],
     ]);
     const edges1 = new EdgeCollection().addEdges([
       { source: 10, target: 11 },
@@ -233,7 +234,7 @@ describe("Agglomerate Skeleton Syncing Helpers", () => {
           radius: 5,
           timestamp: 0,
           interpolation: false,
-          position: [4, 4, 4],
+          position: getPositionForSegmentId(4),
           treeId: 1,
           resolution: 0,
         },
@@ -250,7 +251,7 @@ describe("Agglomerate Skeleton Syncing Helpers", () => {
           radius: 5,
           timestamp: 0,
           interpolation: false,
-          position: [5, 5, 5],
+          position: getPositionForSegmentId(5),
           treeId: 1,
           resolution: 0,
         },

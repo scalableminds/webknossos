@@ -12,6 +12,7 @@ import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Toast from "libs/toast";
 import { getAdaptToTypeFunction, isEditableEventTarget, isNumberMap, SoftError } from "libs/utils";
 import window from "libs/window";
+import { uniq } from "lodash-es";
 import isEqual from "lodash-es/isEqual";
 import union from "lodash-es/union";
 import uniqBy from "lodash-es/uniqBy";
@@ -84,6 +85,7 @@ import {
   type SetNodePositionAction,
   setTreeAgglomerateInfoIdAction,
   setTreeNameAction,
+  setTreesAgglomerateInfoTracingIdAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import {
   allowSagaWhileBusyAction,
@@ -95,6 +97,7 @@ import {
   clickSegmentAction,
   initializeEditableMappingAction,
   mergeSegmentItemsAction,
+  removeSegmentAction,
   setHasEditableMappingAction,
   updateProofreadingMarkerPositionAction,
   updateSegmentAction,
@@ -111,7 +114,7 @@ import type {
   ActiveMappingInfo,
   Mapping,
   NumberLikeMap,
-  ProofreadingActionInfo,
+  ProofreadingActionMappingInfo,
   VolumeTracing,
 } from "viewer/store";
 import {
@@ -361,8 +364,8 @@ function* checkForAgglomerateSkeletonModification(
 
 function* pushPendingProofreadingOperationInfo(
   volumeTracingId: string,
-  sourceInfo: ProofreadingActionInfo,
-  targetInfo: ProofreadingActionInfo | null = null,
+  sourceInfo: ProofreadingActionMappingInfo,
+  targetInfo: ProofreadingActionMappingInfo | null = null,
 ): Saga<void> {
   // For proper post processing, it is necessary that sourceInfo & targetInfo (does make sense in splitting operations)
   // have the correct agglomerate id values at the state on which this proofreading action
@@ -382,7 +385,7 @@ function* pushPendingProofreadingOperationInfo(
 }
 
 function* popPendingProofreadingOperationInfo(): Saga<
-  [ProofreadingActionInfo, ProofreadingActionInfo | null] | null
+  [ProofreadingActionMappingInfo, ProofreadingActionMappingInfo | null] | null
 > {
   // See comment above.
   // After the proofreading update actions were stored on the server, the updated source & targetInfo
@@ -451,6 +454,8 @@ export function* createEditableMapping(): Saga<string> {
     createdTimestamp: Date.now(),
   };
   yield* put(initializeEditableMappingAction(editableMapping));
+  yield* put(setTreesAgglomerateInfoTracingIdAction(volumeTracingId));
+
   return volumeTracingId;
 }
 
@@ -479,8 +484,6 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   // Note that the skeletontracing reducer already mutated the skeletons according to the
   // received action.
   if (
-    // TODOM!!!!: Change agglomerateInfo: tracingId
-    // to currently active editableMappingTracingId in case it is still the mapping name!
     action.type !== "MERGE_TREES" &&
     action.type !== "DELETE_EDGE" &&
     action.type !== "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS"
@@ -1635,7 +1638,6 @@ type Preparation = {
 
 export function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation | null> {
   const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
-  const annotationVersion = yield* select((state) => state.annotation.version);
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   if (volumeTracingLayer == null || volumeTracing == null) {
     return null;
@@ -1748,6 +1750,9 @@ export function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Prep
     return null;
   }
 
+  // Getting latest annotation version as it might have changed due to e.g. making the mapping editable.
+  const annotationVersion = yield* select((state) => state.annotation.version);
+
   return {
     agglomerateFileMag,
     getDataValue,
@@ -1853,6 +1858,14 @@ export function* refreshAffectedSegmentItems(
   // with proofreading. Once such datasets appear, this parameter needs to be
   // adapted.
   const additionalCoordinates = undefined;
+  // Remove old segments which are no longer present.
+  const outdatedIds = uniq(items.map((item) => item.oldAgglomerateId)).filter((id) => id != null);
+  const itemsToAddOrUpdate = uniqBy(items, (item) => item.newAgglomerateId);
+  const removedIds = new Set(outdatedIds).difference(
+    new Set(itemsToAddOrUpdate.map((item) => item.newAgglomerateId)),
+  );
+  const removeEffects = [...removedIds].map((id) => put(removeSegmentAction(id, layerName)));
+  yield* all(removeEffects);
 
   const ensureSegmentItemEffects = uniqBy(items, (item) => item.newAgglomerateId).map((item) =>
     call(

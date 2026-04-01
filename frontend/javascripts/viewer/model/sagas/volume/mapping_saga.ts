@@ -631,11 +631,15 @@ function* adaptActiveSegmentToProofreadingMarker(layerName: string) {
 
     if (activeSegmentId !== agglomerateId) {
       yield put(setActiveCellAction(agglomerateId, proofreadingMarkerPosition));
-      yield* call(() =>
-        Toast.info(
-          `The active segment id was automatically changed from ${activeSegmentId} to ${agglomerateId}, because the agglomerate id at the proofreading marker changed.`,
-        ),
+      // todop: undo
+      console.log(
+        `The active segment id was automatically changed from ${activeSegmentId} to ${agglomerateId}, because the agglomerate id at the proofreading marker changed.`,
       );
+      // yield* call(() =>
+      //   Toast.info(
+      //     `The active segment id was automatically changed from ${activeSegmentId} to ${agglomerateId}, because the agglomerate id at the proofreading marker changed.`,
+      //   ),
+      // );
     }
   }
 }

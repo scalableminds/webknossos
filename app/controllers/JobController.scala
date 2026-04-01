@@ -48,7 +48,10 @@ case class AnimationJobOptions(
     cameraPosition: CameraPositionSetting.Value,
     intensityMin: Double,
     intensityMax: Double,
-    magForTextures: Vec3Int
+    magForTextures: Vec3Int,
+    annotationId: Option[ObjectId],
+    includeSkeletons: Boolean,
+    saveBlenderFile: Boolean
 )
 
 object AnimationJobOptions {
@@ -119,7 +122,7 @@ class JobController @Inject()(jobDAO: JobDAO,
       _ <- jobDAO.updateManualState(id, JobState.CANCELLED)
       _ <- Fox.runIf(job.state == JobState.PENDING || job.state == JobState.STARTED) {
         creditTransactionService
-          .refundTransactionForJob(job._id)(GlobalAccessContext) ?~> "job.creditTransaction.refund.failed"
+          .refundTransactionForJob(job._id, isCancelled = true)(GlobalAccessContext) ?~> "job.creditTransaction.refund.failed"
       }
       js <- jobService.publicWrites(job)
     } yield Ok(js)
@@ -130,6 +133,7 @@ class JobController @Inject()(jobDAO: JobDAO,
       _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> "job.disabled"
       _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
       job <- jobDAO.findOne(id)
+      _ <- creditTransactionService.reserveCreditsForRetry(job._id)
       _ <- jobDAO.retryOne(id)
       js <- jobService.publicWrites(job)
     } yield Ok(js)
@@ -433,6 +437,9 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- Fox.runIf(!PricingPlan.isPaidPlan(userOrganization.pricingPlan)) {
             Fox.fromBool(animationJobOptions.movieResolution == MovieResolutionSetting.SD) ?~> "job.renderAnimation.resolutionMustBeSD"
           }
+          _ <- Fox.runIf(animationJobOptions.saveBlenderFile) {
+            userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+          }
           layerName = animationJobOptions.layerName
           _ <- datasetService.assertValidLayerNameLax(layerName)
           exportFileName = s"webknossos_animation_${formatDateForFilename(new Date())}__${dataset.name}__$layerName.mp4"
@@ -452,6 +459,9 @@ class JobController @Inject()(jobDAO: JobDAO,
             "intensity_min" -> animationJobOptions.intensityMin,
             "intensity_max" -> animationJobOptions.intensityMax,
             "mag_for_textures" -> animationJobOptions.magForTextures,
+            "annotation_id" -> animationJobOptions.annotationId,
+            "include_skeletons" -> animationJobOptions.includeSkeletons,
+            "save_blender_file" -> animationJobOptions.saveBlenderFile,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunRenderAnimation"
           js <- jobService.publicWrites(job)

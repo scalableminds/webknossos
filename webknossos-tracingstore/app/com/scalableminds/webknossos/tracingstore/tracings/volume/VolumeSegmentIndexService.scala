@@ -52,7 +52,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
 
   // Add segment index to merged tracing if all source tracings have a segment index
   def shouldCreateSegmentIndexForMerged(tracings: Seq[VolumeTracing]): Boolean =
-    tracings.forall(_.hasSegmentIndex.getOrElse(false))
+    tracings.forall(_.getHasSegmentIndex)
 
   def updateFromBucket(volumeLayer: VolumeTracingLayer,
                        segmentIndexBuffer: VolumeSegmentIndexBuffer,

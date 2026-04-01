@@ -1,7 +1,7 @@
 import { DownloadOutlined, DownOutlined, RetweetOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { getEditableUsers, getProjects, getTaskTypes } from "admin/rest_api";
-import { Button, Col, Dropdown, Flex, Form, Input, Row, Select } from "antd";
+import { Button, Col, Dropdown, Flex, Form, Grid, Input, Row, Select, theme } from "antd";
 import Persistence from "libs/persistence";
 import { useEffectOnlyOnce } from "libs/react_hooks";
 import size from "lodash-es/size";
@@ -45,6 +45,9 @@ const persistence = new Persistence<{ fieldValues: TaskFormFieldValues }>(
 
 function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAllTasks }: Props) {
   const [form] = Form.useForm<TaskFormFieldValues>();
+  const { token } = theme.useToken();
+  const screens = Grid.useBreakpoint();
+  const isCompact = !screens.lg;
   const [users, setUsers] = useState<APIUser[]>([]);
   const [projects, setProjects] = useState<APIProject[]>([]);
   const [taskTypes, setTaskTypes] = useState<APITaskType[]>([]);
@@ -128,83 +131,104 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
 
   const formItemLayout = {
     labelCol: {
-      span: 5,
+      flex: "80px",
     },
     wrapperCol: {
-      span: 19,
+      flex: "1 1 220px",
     },
   };
+
   return (
-    <Form
-      onFinish={(formValues) => handleSearchFormFinish(false, formValues)}
-      form={form}
-      onFieldsChange={onFormChange}
+    <div
+      style={{
+        maxWidth: 1120,
+      }}
     >
-      <Row gutter={40}>
-        <Col span={12}>
-          <FormItem name="taskId" {...formItemLayout} label="Task Id">
-            <Input placeholder="One or More Task IDs" />
-          </FormItem>
-        </Col>
-        <Col span={12}>
-          <FormItem name="taskTypeId" {...formItemLayout} label="Task Type">
-            <Select
-              showSearch={{ optionFilterProp: "label" }}
-              allowClear
-              placeholder="Select a Task Type"
-              style={{
-                width: "100%",
-              }}
-              loading={isFetchingData}
-              options={taskTypes.map((taskType: APITaskType) => ({
-                value: taskType.id,
-                label: `${taskType.summary}`,
-              }))}
-            />
-          </FormItem>
-        </Col>
-      </Row>
-      <Row gutter={40}>
-        <Col span={12}>
-          <FormItem name="projectId" {...formItemLayout} label="Project">
-            <Select
-              allowClear
-              showSearch={{ optionFilterProp: "label" }}
-              placeholder="Select a Project"
-              style={{
-                width: "100%",
-              }}
-              loading={isFetchingData}
-              options={projects.map((project: APIProject) => ({
-                value: project.id,
-                label: `${project.name}`,
-              }))}
-            />
-          </FormItem>
-        </Col>
-        <Col span={12}>
-          <FormItem name="userId" {...formItemLayout} label="User">
-            <Select
-              allowClear
-              showSearch={{ optionFilterProp: "label" }}
-              placeholder="Select a User"
-              style={{
-                width: "100%",
-              }}
-              loading={isFetchingData}
-              options={users
-                .filter((u) => u.isActive)
-                .map((user: APIUser) => ({
-                  value: user.id,
-                  label: `${user.lastName}, ${user.firstName} (${user.email})`,
-                }))}
-            />
-          </FormItem>
-        </Col>
-      </Row>
-      <Row>
-        <Col span={24}>
-          <Flex justify="flex-end" gap="small">
+      <Form
+        onFinish={(formValues) => handleSearchFormFinish(false, formValues)}
+        form={form}
+        onFieldsChange={onFormChange}
+        layout="horizontal"
+        labelAlign="left"
+        labelWrap
+      >
+        <Flex align="flex-start" gap={token.paddingLG} wrap={isCompact} style={{ width: "100%" }}>
+          <div
+            style={{
+              flex: "1 1 720px",
+              minWidth: 0,
+            }}
+          >
+            <Row gutter={[token.paddingMD, 0]}>
+              <Col xs={24} md={12}>
+                <FormItem {...formItemLayout} name="taskId" label="Task ID">
+                  <Input placeholder="One or more task IDs" />
+                </FormItem>
+              </Col>
+              <Col xs={24} md={12}>
+                <FormItem {...formItemLayout} name="taskTypeId" label="Task Type">
+                  <Select
+                    showSearch={{ optionFilterProp: "label" }}
+                    allowClear
+                    placeholder="Select a task type"
+                    style={{
+                      width: "100%",
+                    }}
+                    loading={isFetchingData}
+                    options={taskTypes.map((taskType: APITaskType) => ({
+                      value: taskType.id,
+                      label: `${taskType.summary}`,
+                    }))}
+                  />
+                </FormItem>
+              </Col>
+              <Col xs={24} md={12}>
+                <FormItem {...formItemLayout} name="projectId" label="Project">
+                  <Select
+                    allowClear
+                    showSearch={{ optionFilterProp: "label" }}
+                    placeholder="Select a project"
+                    style={{
+                      width: "100%",
+                    }}
+                    loading={isFetchingData}
+                    options={projects.map((project: APIProject) => ({
+                      value: project.id,
+                      label: `${project.name}`,
+                    }))}
+                  />
+                </FormItem>
+              </Col>
+              <Col xs={24} md={12}>
+                <FormItem {...formItemLayout} name="userId" label="User">
+                  <Select
+                    allowClear
+                    showSearch={{ optionFilterProp: "label" }}
+                    placeholder="Select a user"
+                    style={{
+                      width: "100%",
+                    }}
+                    loading={isFetchingData}
+                    options={users
+                      .filter((u) => u.isActive)
+                      .map((user: APIUser) => ({
+                        value: user.id,
+                        label: `${user.lastName}, ${user.firstName} (${user.email})`,
+                      }))}
+                  />
+                </FormItem>
+              </Col>
+            </Row>
+          </div>
+
+          <Flex
+            gap="small"
+            wrap={isCompact}
+            style={{
+              width: isCompact ? "100%" : 220,
+              marginLeft: isCompact ? 0 : "auto",
+            }}
+          >
             <Dropdown
               menu={{
                 onClick: () => handleSearchFormFinish(true),
@@ -224,24 +248,28 @@ function TaskSearchForm({ onChange, initialFieldValues, isLoading, onDownloadAll
                 loading={isLoading}
                 icon={<DownOutlined />}
                 iconPlacement="end"
+                block={!isCompact}
               >
                 Search
               </Button>
             </Dropdown>
 
-            <Button onClick={handleReset}>Clear</Button>
+            <Button onClick={handleReset} block={!isCompact}>
+              Clear
+            </Button>
             <Button
               onClick={handleDownloadAllTasks}
               disabled={isLoading}
               loading={isLoading}
               icon={<DownloadOutlined />}
+              block={!isCompact}
             >
               Download tasks as CSV
             </Button>
           </Flex>
-        </Col>
-      </Row>
-    </Form>
+        </Flex>
+      </Form>
+    </div>
   );
 }
 

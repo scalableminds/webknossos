@@ -233,11 +233,6 @@ export enum OverwriteModeEnum {
 }
 export type OverwriteMode = keyof typeof OverwriteModeEnum;
 
-export enum InterpolationModeEnum {
-  INTERPOLATE = "INTERPOLATE",
-  EXTRUDE = "EXTRUDE",
-}
-export type InterpolationMode = keyof typeof InterpolationModeEnum;
 export enum FillModeEnum {
   // The leading underscore is a workaround, since leading numbers are not valid identifiers
   // in JS.
@@ -346,6 +341,8 @@ const Constants = {
   REGISTER_SEGMENTS_BB_MAX_SEGMENT_COUNT: 5000,
   DEFAULT_MESH_OPACITY: 1,
   PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT: 32,
+  NARROW_SCREEN_WIDTH: 1400,
+  VERY_NARROW_SCREEN_WIDTH: 1200,
 } as const;
 
 /* Note that this must stay in sync with the back-end constant MaxMagForAgglomerateMapping

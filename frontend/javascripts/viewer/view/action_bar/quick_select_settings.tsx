@@ -14,7 +14,8 @@ import {
   fineTuneQuickSelectAction,
 } from "viewer/model/actions/volumetracing_actions";
 import ButtonComponent from "../components/button_component";
-import { NumberSliderSetting, SwitchSetting } from "../components/setting_input_views";
+import NumberSliderSetting from "../left_border_tabs/components/number_slider_setting";
+import SwitchSetting from "../left_border_tabs/components/switch_setting";
 
 // The maximum depth of 50 also needs to be adapted in the back-end
 // (at the time of writing, in segmentAnythingMask in DatasetController.scala).
@@ -89,6 +90,21 @@ function HeuristicQuickSelectControls() {
   );
 
   const dispatch = useDispatch();
+  const isAISelectAvailable = features().segmentAnythingEnabled;
+  const isQuickSelectHeuristic = quickSelectConfig.useHeuristic || !isAISelectAvailable;
+  const quickSelectTooltipText = isAISelectAvailable
+    ? isQuickSelectHeuristic
+      ? "The quick select tool is now working without AI. Activate AI for better results."
+      : "The quick select tool is now working with AI."
+    : "The quick select tool with AI is only available on webknossos.org";
+  const toggleQuickSelectStrategy = () => {
+    dispatch(
+      updateUserSettingAction("quickSelect", {
+        ...quickSelectConfig,
+        useHeuristic: !quickSelectConfig.useHeuristic,
+      }),
+    );
+  };
 
   const onResetValues = () => {
     const { segmentMode, threshold, closeValue, erodeValue, dilateValue, ...rest } =
@@ -152,6 +168,13 @@ function HeuristicQuickSelectControls() {
 
   return (
     <div>
+      <SwitchSetting
+        value={!isQuickSelectHeuristic}
+        onChange={toggleQuickSelectStrategy}
+        disabled={!isAISelectAvailable}
+        tooltipText={quickSelectTooltipText}
+        label="AI Mode"
+      ></SwitchSetting>
       <SwitchSetting
         label="Show Preview"
         value={quickSelectConfig.showPreview}

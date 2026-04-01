@@ -25,6 +25,9 @@ ThisBuild / javacOptions ++= Seq(
 // Keep asset timestamps when assembling jar
 ThisBuild / packageOptions += Package.FixedTimestamp(Package.keepTimestamps)
 
+// Allow Ctrl+C in interactive sbt to cancel commands, not sbt itself
+cancelable in Global := true
+
 PlayKeys.devSettings := Seq("play.server.pekko.requestTimeout" -> "10000s", "play.server.http.idleTimeout" -> "10000s")
 
 // Disable unused import warnings, only in sbt console REPL

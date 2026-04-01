@@ -58,8 +58,8 @@ The following interactions and modes become available when working with some of 
 ![Overwrite Empty Voxels Modifier](./images/overwrite-empty-modifier.jpg){align=left width="60"} 
 **Only Overwrite Empty Areas**: In contrast to the `Overwrite Everything` modifier, this modifier forces the brush & trace tools to only label voxels without any segment ID ("empty areas"). This is useful when annotating segments that directly touch each other to avoid accidental overwrites.
 
-![Interpolation/Extrusion Button](./images/interpolation-modifier.jpg){align=left width="60"} 
-**Interpolation/Extrusion**: Annotate a segment, skip a few sections in the Z direction, and annotate it again. Now, you can interpolate between the two segments. Read more on the [interpolation/extrusion](#volume-interpolation) below. 
+![Interpolation Button](./images/interpolation-modifier.jpg){align=left width="60"} 
+**Interpolation**: Annotate a segment, skip a few sections in the Z direction, and annotate it again. Now, you can interpolate between the two segments. Read more on the [interpolation](#volume-interpolation) below. 
 
 ![2D Fill Modifier](./images/2d-modifier.jpg){align=left width="60"} 
 ![3D Fill Modifier](./images/3d-modifier.jpg){align=left width="60"} 
@@ -113,21 +113,6 @@ The Volume Interpolation feature accelerates your annotation workflow by automat
 
 !!! warning
     Always review the interpolated slices, as the automated results are based on heuristics and may require adjustments.
-
-## Volume Extrusion
-
-Volume Extrusion is an alternative to interpolation that preserves the exact shape of your annotation across multiple slices:
-
-1. Label your structure in one slice (e.g., at z=10)
-2. Move to a target slice (e.g., z=12)
-3. Click the "Extrude" button in the toolbar to copy your annotation to all slices in between
-
-!!! note "Extrusion vs. Interpolation"
-    Unlike interpolation, extrusion maintains the exact shape of your source annotation. The structure is copied without any shape adaptation between slices.
-
-You can find the extrude button in the toolbar or use the dropdown menu next to the interpolation/extrusion button.
-
-![youtube-video](https://www.youtube.com/embed/GucpEA6Wev8)
 
 ## Volume Flood Fills
 

@@ -36,7 +36,6 @@ import type {
   ControlMode,
   ControlModeEnum,
   FillMode,
-  InterpolationMode,
   MappingStatus,
   OrthoView,
   OrthoViewWithoutTD,
@@ -371,7 +370,6 @@ export type UserConfiguration = {
   readonly overwriteMode: OverwriteMode;
   readonly fillMode: FillMode;
   readonly isFloodfillRestrictedToBoundingBox: boolean;
-  readonly interpolationMode: InterpolationMode;
   readonly useLegacyBindings: boolean;
   readonly quickSelect: QuickSelectConfig;
   readonly renderWatermark: boolean;

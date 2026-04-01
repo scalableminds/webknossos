@@ -1,7 +1,11 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.services.{AccessTokenService, DSRemoteWebknossosClient, UserAccessRequest}
+import com.scalableminds.webknossos.datastore.services.{
+  DSRemoteWebknossosClient,
+  DataStoreAccessTokenService,
+  UserAccessRequest
+}
 import com.scalableminds.webknossos.datastore.services.uploading.{
   CancelUploadInformation,
   ReserveUploadInformation,
@@ -23,7 +27,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class UploadController @Inject()(
-    accessTokenService: AccessTokenService,
+    accessTokenService: DataStoreAccessTokenService,
     uploadService: UploadService,
     dsRemoteWebknossosClient: DSRemoteWebknossosClient,
     slackNotificationService: DSSlackNotificationService)(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)

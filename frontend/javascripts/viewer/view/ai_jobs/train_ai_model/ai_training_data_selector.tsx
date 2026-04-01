@@ -234,22 +234,10 @@ const AiTrainingDataSelector = ({
         </Col>
       </Row>
       {bboxErrors.map((error) => (
-        <Alert
-          key={error}
-          title={error}
-          type="error"
-          showIcon
-          style={{ marginTop: 12 }}
-        />
+        <Alert key={error} title={error} type="error" showIcon style={{ marginTop: 12 }} />
       ))}
       {bboxWarnings.map((warning) => (
-        <Alert
-          key={warning}
-          title={warning}
-          type="warning"
-          showIcon
-          style={{ marginTop: 12 }}
-        />
+        <Alert key={warning} title={warning} type="warning" showIcon style={{ marginTop: 12 }} />
       ))}
       {(bboxErrors.length > 0 || bboxWarnings.length > 0) && (
         <Button

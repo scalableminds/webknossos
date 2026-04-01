@@ -240,15 +240,6 @@ const AiTrainingDataSelector = ({
           type="error"
           showIcon
           style={{ marginTop: 12 }}
-          action={
-            <Button
-              size="small"
-              icon={<AppstoreAddOutlined />}
-              onClick={() => setIsGenerateModalOpen(true)}
-            >
-              Generate
-            </Button>
-          }
         />
       ))}
       {bboxWarnings.map((warning) => (
@@ -258,17 +249,18 @@ const AiTrainingDataSelector = ({
           type="warning"
           showIcon
           style={{ marginTop: 12 }}
-          action={
-            <Button
-              size="small"
-              icon={<AppstoreAddOutlined />}
-              onClick={() => setIsGenerateModalOpen(true)}
-            >
-              Generate
-            </Button>
-          }
         />
       ))}
+      {(bboxErrors.length > 0 || bboxWarnings.length > 0) && (
+        <Button
+          size="small"
+          icon={<AppstoreAddOutlined />}
+          onClick={() => setIsGenerateModalOpen(true)}
+          style={{ marginTop: 12 }}
+        >
+          Generate
+        </Button>
+      )}
       {isGenerateModalOpen ? (
         <GenerateBoundingBoxesModal
           isOpen={isGenerateModalOpen}

@@ -1,39 +1,65 @@
-import { Form, InputNumber, Modal, Space, Typography } from "antd";
+import { Form, InputNumber, Modal, Select, Space, Typography } from "antd";
+import { formatVoxels } from "libs/format_utils";
+import { V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
+import Toast from "libs/toast";
 import { getRandomColor } from "libs/utils";
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import { APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
-import { getDatasetBoundingBox } from "viewer/model/accessors/dataset_accessor";
+import {
+  getDatasetBoundingBox,
+  getSomeMagInfoForDataset,
+} from "viewer/model/accessors/dataset_accessor";
+import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 
-// These values should be kept in sync with the documentation
+// These values should be kept in sync with the documentation:
 // docs/automation/choosing_mags_and_bboxes.md
-const DEFAULT_BOX_COUNT_NEURON = 25;
-const DEFAULT_BOX_COUNT_INSTANCE = 20;
-const DEFAULT_BOX_SIZE_NEURON: Vector3 = [85, 85, 32];
-const DEFAULT_BOX_SIZE_INSTANCE: Vector3 = [64, 64, 64];
+const CUSTOM_TRAINING_TYPE = "custom";
 
-function getDefaults(jobType: APIJobCommand | null) {
-  if (jobType === APIJobCommand.TRAIN_INSTANCE_MODEL) {
-    return { count: DEFAULT_BOX_COUNT_INSTANCE, size: DEFAULT_BOX_SIZE_INSTANCE };
-  }
-  return { count: DEFAULT_BOX_COUNT_NEURON, size: DEFAULT_BOX_SIZE_NEURON };
+const TRAINING_DEFAULTS: Record<
+  string,
+  { count: number; size: Vector3; minSize: Vector3 | null; minSizeLabel: string }
+> = {
+  [APIJobCommand.TRAIN_NEURON_MODEL]: {
+    count: 25,
+    size: [85, 85, 32],
+    minSize: [85, 85, 32],
+    minSizeLabel: "85×85×32",
+  },
+  [APIJobCommand.TRAIN_INSTANCE_MODEL]: {
+    count: 20,
+    size: [64, 64, 64],
+    minSize: [32, 32, 32],
+    minSizeLabel: "32×32×32 (64×64×64 recommended)",
+  },
+  [CUSTOM_TRAINING_TYPE]: {
+    count: 25,
+    size: [85, 85, 32],
+    minSize: null,
+    minSizeLabel: "",
+  },
+};
+
+const DEFAULT_TRAINING_TYPE = APIJobCommand.TRAIN_NEURON_MODEL;
+
+function getDefaults(jobType: string) {
+  return TRAINING_DEFAULTS[jobType] ?? TRAINING_DEFAULTS[DEFAULT_TRAINING_TYPE];
 }
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  // When provided, box positions are snapped to this magnification and sizes are interpreted
-  // as voxels at the selected magnification level (not mag 1).
+  // Pre-fills the magnification selector. When null, defaults to the finest available mag.
   magnification: Vector3 | null;
-  // When provided, sensible defaults are pre-filled based on the training type.
+  // Pre-fills the training type selector. When null, defaults to neuron segmentation.
   jobType: APIJobCommand | null;
 };
 
-export default function GenerateBoundingBoxesModal({
+export default function GenerateBoundingBoxesModalInner({
   isOpen,
   onClose,
   magnification,
@@ -41,100 +67,154 @@ export default function GenerateBoundingBoxesModal({
 }: Props) {
   const dispatch = useDispatch();
   const dataset = useWkSelector((state) => state.dataset);
+  const annotation = useWkSelector((state) => state.annotation);
+  const { userBoundingBoxes: existingBoundingBoxes } = getSomeTracing(annotation);
 
-  const defaults = getDefaults(jobType);
+  const [trainingType, setTrainingType] = useState<string>(jobType ?? DEFAULT_TRAINING_TYPE);
+
+  const defaults = getDefaults(trainingType);
   const [numberOfBoxes, setNumberOfBoxes] = useState(defaults.count);
   const [sizeX, setSizeX] = useState(defaults.size[0]);
   const [sizeY, setSizeY] = useState(defaults.size[1]);
   const [sizeZ, setSizeZ] = useState(defaults.size[2]);
 
-  useEffect(() => {
-    const { count, size } = getDefaults(jobType);
+  const availableMags = getSomeMagInfoForDataset(dataset).getMagList();
+
+  const initialMagIndex = useMemo(() => {
+    if (magnification == null) return 0;
+    const idx = availableMags.findIndex(
+      (m) => m[0] === magnification[0] && m[1] === magnification[1] && m[2] === magnification[2],
+    );
+    return idx >= 0 ? idx : 0;
+  }, [magnification, availableMags]);
+
+  const [selectedMagIndex, setSelectedMagIndex] = useState(initialMagIndex);
+  const selectedMag: Vector3 = availableMags[selectedMagIndex] ?? [1, 1, 1];
+
+  const handleTrainingTypeChange = (value: string) => {
+    setTrainingType(value);
+    const { count, size } = getDefaults(value);
     setNumberOfBoxes(count);
     setSizeX(size[0]);
     setSizeY(size[1]);
     setSizeZ(size[2]);
-  }, [jobType]);
-
-  const handleGenerate = () => {
-    const mag: Vector3 = magnification ?? [1, 1, 1];
-
-    // Convert mag-level dimensions to mag1 voxels
-    const sizeInMag1: Vector3 = [sizeX * mag[0], sizeY * mag[1], sizeZ * mag[2]];
-
-    const datasetBbox = getDatasetBoundingBox(dataset);
-    const { min, max } = datasetBbox;
-
-    // Valid range for the top-left corner of a generated box
-    const placementMax: Vector3 = [
-      max[0] - sizeInMag1[0],
-      max[1] - sizeInMag1[1],
-      max[2] - sizeInMag1[2],
-    ];
-
-    // Dataset too small in at least one dimension
-    if (placementMax[0] < min[0] || placementMax[1] < min[1] || placementMax[2] < min[2]) {
-      return;
-    }
-
-    const MAX_RETRIES = 500;
-    const placedBoxes: BoundingBox[] = [];
-
-    const samplePosition = (): Vector3 =>
-      [0, 1, 2].map((dim) => {
-        const range = placementMax[dim] - min[dim];
-        const rawOffset = Math.random() * range;
-        const snappedOffset = Math.floor(rawOffset / mag[dim]) * mag[dim];
-        return min[dim] + snappedOffset;
-      }) as Vector3;
-
-    let placed = 0;
-    let retries = 0;
-    while (placed < numberOfBoxes && retries < MAX_RETRIES) {
-      const boxMin = samplePosition();
-      const boxMax: Vector3 = [
-        boxMin[0] + sizeInMag1[0],
-        boxMin[1] + sizeInMag1[1],
-        boxMin[2] + sizeInMag1[2],
-      ];
-      const candidate = new BoundingBox({ min: boxMin, max: boxMax });
-
-      const overlaps = placedBoxes.some(
-        (existing) => existing.intersectedWith(candidate).getVolume() > 0,
-      );
-
-      if (overlaps) {
-        retries++;
-        continue;
-      }
-
-      placedBoxes.push(candidate);
-      dispatch(
-        addUserBoundingBoxAction({
-          boundingBox: { min: boxMin, max: boxMax },
-          name: `Box ${placed + 1}`,
-          color: getRandomColor(),
-          isVisible: true,
-        }),
-      );
-      placed++;
-    }
-
-    onClose();
   };
 
-  const magLabel = magnification
-    ? `${magnification[0]}-${magnification[1]}-${magnification[2]}`
-    : "1-1-1";
+  const { minSize, minSizeLabel } = getDefaults(trainingType);
+  const sizeXError = minSize != null && sizeX < minSize[0];
+  const sizeYError = minSize != null && sizeY < minSize[1];
+  const sizeZError = minSize != null && sizeZ < minSize[2];
+  const hasSizeError = sizeXError || sizeYError || sizeZError;
+
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  // Computed full-resolution size for display.
+  const sizeInMag1: Vector3 = [
+    sizeX * selectedMag[0],
+    sizeY * selectedMag[1],
+    sizeZ * selectedMag[2],
+  ];
+  const isMag1 = selectedMag[0] === 1 && selectedMag[1] === 1 && selectedMag[2] === 1;
+
+  /**
+   * Generates non-overlapping bounding boxes distributed randomly across the dataset:
+   * 1. Compute the valid placement range: positions where a box of `sizeInMag1` fits
+   *    entirely within the dataset bounds.
+   * 2. Seed the collision set with any bounding boxes already present in the annotation
+   *    so that new boxes do not overlap existing ones.
+   * 3. Repeatedly sample a random position, snap it to the magnification grid by
+   *    choosing uniformly from all discrete mag-aligned slots within the valid range,
+   *    and reject candidates that overlap any already-placed box.
+   * 4. Dispatch each accepted box to the Redux store and warn the user if the retry
+   *    budget is exhausted before all requested boxes are placed.
+   */
+  const handleGenerate = () => {
+    if (hasSizeError || isGenerating) return;
+    setIsGenerating(true);
+
+    // Defer the loop to allow the loading state to render first.
+    setTimeout(() => {
+      try {
+        const mag = selectedMag;
+        const datasetBbox = getDatasetBoundingBox(dataset);
+        const { min, max } = datasetBbox;
+
+        const placementMax: Vector3 = V3.sub(max, sizeInMag1);
+
+        if (placementMax[0] < min[0] || placementMax[1] < min[1] || placementMax[2] < min[2]) {
+          return;
+        }
+
+        const MAX_RETRIES = 500;
+        // Seed with existing boxes so new ones don't overlap them.
+        const placedBoxes: BoundingBox[] = existingBoundingBoxes.map(
+          (bb) => new BoundingBox(bb.boundingBox),
+        );
+
+        // Sample a position by choosing uniformly from the discrete set of mag-aligned
+        // slots within [min, placementMax]. Snapping is applied to the absolute coordinate
+        // (not the offset) to avoid misalignment when min is not itself a multiple of mag.
+        const samplePosition = (): Vector3 =>
+          [0, 1, 2].map((dim) => {
+            const firstSlot = Math.ceil(min[dim] / mag[dim]) * mag[dim];
+            const lastSlot = Math.floor(placementMax[dim] / mag[dim]) * mag[dim];
+            const slotCount = Math.floor((lastSlot - firstSlot) / mag[dim]) + 1;
+
+            if (slotCount <= 0) return firstSlot;
+
+            const k = Math.floor(Math.random() * slotCount);
+            return firstSlot + k * mag[dim];
+          }) as Vector3;
+
+        let placed = 0;
+        let retries = 0;
+
+        while (placed < numberOfBoxes && retries < MAX_RETRIES) {
+          const boxMin = samplePosition();
+          const boxMax: Vector3 = V3.add(boxMin, sizeInMag1);
+          const candidate = new BoundingBox({ min: boxMin, max: boxMax });
+
+          if (placedBoxes.some((existing) => existing.intersectedWith(candidate).getVolume() > 0)) {
+            retries++;
+            continue;
+          }
+
+          placedBoxes.push(candidate);
+          dispatch(
+            addUserBoundingBoxAction({
+              boundingBox: { min: boxMin, max: boxMax },
+              name: `Generated Bounding Box ${placed + 1}`,
+              color: getRandomColor(),
+              isVisible: true,
+            }),
+          );
+          placed++;
+        }
+
+        if (placed < numberOfBoxes) {
+          Toast.warning(
+            `Only ${placed} of ${numberOfBoxes} boxes could be placed without overlapping.`,
+          );
+        }
+
+        onClose();
+      } finally {
+        setIsGenerating(false);
+      }
+    }, 0);
+  };
+
+  const magLabel = `${selectedMag[0]}-${selectedMag[1]}-${selectedMag[2]}`;
 
   return (
     <Modal
-      title="Auto-generate Bounding Boxes"
+      title="Generate Bounding Boxes"
       open={isOpen}
       onCancel={onClose}
       onOk={handleGenerate}
       okText="Generate"
-      width={500}
+      okButtonProps={{ disabled: hasSizeError || isGenerating, loading: isGenerating }}
+      width={520}
     >
       <Typography.Paragraph type="secondary">
         Bounding boxes mark the regions used for AI model training. This tool places them at random
@@ -149,6 +229,33 @@ export default function GenerateBoundingBoxesModal({
         </Typography.Link>
       </Typography.Paragraph>
       <Form layout="vertical">
+        <Form.Item label="Presets for Training type">
+          <Select
+            value={trainingType}
+            onChange={handleTrainingTypeChange}
+            options={[
+              { value: APIJobCommand.TRAIN_NEURON_MODEL, label: "Neuron segmentation" },
+              {
+                value: APIJobCommand.TRAIN_INSTANCE_MODEL,
+                label: "Instance segmentation (e.g. nuclei, mitochondria)",
+              },
+              { value: CUSTOM_TRAINING_TYPE, label: "Custom (no size constraints)" },
+            ]}
+          />
+        </Form.Item>
+        <Form.Item
+          label="Magnification"
+          extra="Box sizes and positions are defined at this magnification level."
+        >
+          <Select
+            value={selectedMagIndex}
+            onChange={setSelectedMagIndex}
+            options={availableMags.map((mag, index) => ({
+              value: index,
+              label: `${mag[0]}-${mag[1]}-${mag[2]}`,
+            }))}
+          />
+        </Form.Item>
         <Form.Item label="Number of bounding boxes">
           <InputNumber
             min={1}
@@ -159,13 +266,14 @@ export default function GenerateBoundingBoxesModal({
           />
         </Form.Item>
         <Form.Item
-          label="Box size (voxels)"
-          extra={
-            <Typography.Text type="secondary">
-              {magnification
-                ? `Size in voxels at magnification ${magLabel}. Positions are automatically aligned to this magnification.`
-                : "Size in voxels at full resolution (mag 1-1-1)."}
-            </Typography.Text>
+          label={`Box size in voxels at magnification ${magLabel}`}
+          validateStatus={hasSizeError ? "error" : undefined}
+          help={
+            hasSizeError
+              ? `Minimum size for this training type: ${minSizeLabel} voxels.`
+              : !isMag1
+                ? `Full-resolution size (mag 1): ${sizeInMag1[0]}×${sizeInMag1[1]}×${sizeInMag1[2]} vx — ${formatVoxels(sizeInMag1[0] * sizeInMag1[1] * sizeInMag1[2])} per box`
+                : undefined
           }
         >
           <Space>
@@ -175,7 +283,8 @@ export default function GenerateBoundingBoxesModal({
                 min={1}
                 value={sizeX}
                 onChange={(v) => setSizeX(v ?? 1)}
-                style={{ width: 110 }}
+                status={sizeXError ? "error" : undefined}
+                style={{ width: 120 }}
               />
             </Space.Compact>
             <Space.Compact>
@@ -184,7 +293,8 @@ export default function GenerateBoundingBoxesModal({
                 min={1}
                 value={sizeY}
                 onChange={(v) => setSizeY(v ?? 1)}
-                style={{ width: 110 }}
+                status={sizeYError ? "error" : undefined}
+                style={{ width: 120 }}
               />
             </Space.Compact>
             <Space.Compact>
@@ -193,7 +303,8 @@ export default function GenerateBoundingBoxesModal({
                 min={1}
                 value={sizeZ}
                 onChange={(v) => setSizeZ(v ?? 1)}
-                style={{ width: 110 }}
+                status={sizeZError ? "error" : undefined}
+                style={{ width: 120 }}
               />
             </Space.Compact>
           </Space>
@@ -201,4 +312,8 @@ export default function GenerateBoundingBoxesModal({
       </Form>
     </Modal>
   );
+}
+
+export function GenerateBoundingBoxesModal(props: Props) {
+  return <GenerateBoundingBoxesModalInner key={props.jobType} {...props} />;
 }

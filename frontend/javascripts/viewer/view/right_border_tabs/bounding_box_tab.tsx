@@ -313,7 +313,7 @@ export default function BoundingBoxTab() {
           disabled={!allowUpdate}
           variant="text"
           color="default"
-          title="Auto-generate bounding boxes randomly distributed across the dataset."
+          title="Generate bounding boxes randomly distributed across the dataset."
           onClick={() => setIsGenerateModalOpen(true)}
           icon={<AppstoreAddOutlined />}
         />
@@ -351,7 +351,7 @@ export default function BoundingBoxTab() {
                 <Flex justify="center">
                   <Empty
                     image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    description="There are no bounding boxes. Create some using the + button above or with the bounding box tool."
+                    description="There are no bounding boxes yet. Add one with the + button, draw one with the bounding box tool, or generate several at once."
                   />
                 </Flex>
               ) : (

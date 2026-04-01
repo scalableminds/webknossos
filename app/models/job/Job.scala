@@ -171,7 +171,9 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           FROM webknossos.jobs_ j
           JOIN webknossos.users_ u on j._owner = u._id
           JOIN webknossos.multiusers_ mu on u._multiUser = mu._id
-          LEFT JOIN webknossos.credit_transactions_ ct ON j._id = ct._paid_job
+          -- due to retries multiple credit_transactions can be attached to this job.
+          -- They should all have the same milli_credit_delta, so this avoids fanout while returning the correct price
+          LEFT JOIN LATERAL (SELECT milli_credit_delta FROM webknossos.credit_transactions_ WHERE _paid_job = j._id LIMIT 1) ct ON TRUE
           WHERE $commandQuery AND $accessQuery AND $skipForDeletedQuery
           ORDER BY j.created DESC -- list newest first
          """.as[(ObjectId,

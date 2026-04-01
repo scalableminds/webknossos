@@ -144,7 +144,7 @@ function BrushToolMenu({ adaptedActiveTool }: ToolButtonProps) {
       name={AnnotationTool.BRUSH.readableName}
       disabledExplanation={disabledInfosForTools[AnnotationTool.BRUSH.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled}
-      value={AnnotationTool.BRUSH.id}
+      value={brushPreference === "BRUSH" ? AnnotationTool.BRUSH.id : AnnotationTool.TRACE.id}
     >
       <Dropdown
         menu={{

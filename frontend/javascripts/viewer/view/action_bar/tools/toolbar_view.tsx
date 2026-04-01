@@ -6,7 +6,6 @@ import features from "features";
 import { useKeyPress, useWindowWidth, useWkSelector } from "libs/react_hooks";
 import { useCallback, useMemo } from "react";
 import { useDispatch } from "react-redux";
-import { all } from "typed-redux-saga";
 import Constants, { ControlModeEnum } from "viewer/constants";
 import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import {

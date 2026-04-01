@@ -150,7 +150,7 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
 
   def updateUrlByName(name: String, url: String): Fox[Unit] =
     for {
-      _ <- run(q"UPDATE $collectionName SET url = $url WHERE name = $name".asUpdate)
+      _ <- run(q"UPDATE $collectionName SET url = $url WHERE name = $name AND NOT isDeleted".asUpdate)
     } yield ()
 
   def insertOne(d: DataStore): Fox[Unit] =

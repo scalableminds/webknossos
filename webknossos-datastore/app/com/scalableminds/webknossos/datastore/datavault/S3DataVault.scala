@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.storage.{
   CredentializedUPath,
@@ -11,6 +12,7 @@ import com.scalableminds.webknossos.datastore.storage.{
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Empty, Full, Failure => BoxFailure}
 import com.scalableminds.webknossos.datastore.helpers.{S3UriUtils, UPath}
+import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.lang3.builder.HashCodeBuilder
 
 import scala.util.{Failure => TryFailure, Success => TrySuccess}
@@ -38,6 +40,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
                   s3ClientPool: S3ClientPool,
                   implicit val ec: ExecutionContext)
     extends DataVault
+    with LazyLogging
     with FoxImplicits {
   private lazy val bucketName = S3UriUtils.hostBucketFromUri(uri) match {
     case Some(value) => value
@@ -106,7 +109,12 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
         case r: SuffixLengthByteRange      => getSuffixRangeRequest(bucketName, objectKey, r)
         case CompleteByteRange()           => getRequest(bucketName, objectKey)
       }
+      before = Instant.now
       (bytes, encodingString, rangeHeader) <- performGetObjectRequest(request)
+      _ = Instant.logSince(before,
+                           s"S3 getObject request for ${uri.toString} with range $range",
+                           logger,
+                           includeRawMillis = true)
       encoding <- Encoding.fromRfc7231String(encodingString).toFox
     } yield (bytes, encoding, rangeHeader)
 

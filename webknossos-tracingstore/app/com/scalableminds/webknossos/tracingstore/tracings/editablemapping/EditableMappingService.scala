@@ -304,6 +304,7 @@ class EditableMappingService @Inject()(
                                          agglomerateId: Long)(implicit tc: TokenContext): Fox[Array[Byte]] =
     for {
       agglomerateGraphBox <- getAgglomerateGraphForId(tracingId, version, agglomerateId).shiftBox
+      _ <- Fox.fromBool(agglomerateGraphBox.map(_.segments.nonEmpty).getOrElse(true)) ?~> "annotation.editableMapping.getAgglomerateSkeleton.empty"
       skeletonBytes <- agglomerateGraphBox match {
         case Full(agglomerateGraph) =>
           Fox.successful(agglomerateGraphToSkeleton(tracingId, agglomerateGraph, agglomerateId))

@@ -626,13 +626,15 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
 
           return (
             <>
-              <Space>
+              <Space align="start">
                 <UserOutlined />
                 {ownerName}
               </Space>
-              <Space wrap>
+              <Space align="start">
                 {teamTags.length > 0 ? <TeamOutlined /> : null}
-                {teamTags}
+                <Space wrap size="small">
+                  {teamTags}
+                </Space>
               </Space>
             </>
           );

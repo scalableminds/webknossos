@@ -110,12 +110,18 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
         case CompleteByteRange()           => getRequest(bucketName, objectKey)
       }
       before = Instant.now
-      (bytes, encodingString, rangeHeader) <- performGetObjectRequest(request)
+      resultBox <- performGetObjectRequest(request).shiftBox
       _ = Instant.logSince(
         before,
-        s"S3 getObject request for s3://${uri.getAuthority}/$bucketName/${objectKey} with range $range",
+        s"S3 getObject request for s3://${uri.getAuthority}/$bucketName/$objectKey with range $range",
         logger,
         includeRawMillis = true)
+      _ = resultBox match {
+        case f: BoxFailure =>
+          logger.warn(s"Got failure $f for S3 getObject request s3://${uri.getAuthority}/$bucketName/$objectKey")
+        case _ => ""
+      }
+      (bytes, encodingString, rangeHeader) <- resultBox.toFox
       encoding <- Encoding.fromRfc7231String(encodingString).toFox
     } yield (bytes, encoding, rangeHeader)
 

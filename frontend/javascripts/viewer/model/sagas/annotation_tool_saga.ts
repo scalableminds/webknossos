@@ -136,10 +136,10 @@ function* watchToolReset(): Saga<never> {
 function* setLastUsedToolQueue(setToolAction: SetToolAction): Saga<void> {
   const newTool = setToolAction.tool;
   const lastUsedToolQueue = yield* select((state) => state.userConfiguration.lastUsedToolQueue);
-  if (lastUsedToolQueue.some((tool) => tool === newTool.id)) return;
+  const prevToolsWithoutDuplicates = lastUsedToolQueue.filter((toolId) => toolId !== newTool.id);
   const updatedLastUsedToolQueue: [AnnotationToolId, AnnotationToolId, AnnotationToolId] = [
     newTool.id,
-    ...lastUsedToolQueue.slice(0, 2),
+    ...prevToolsWithoutDuplicates.slice(0, 2),
   ] as [AnnotationToolId, AnnotationToolId, AnnotationToolId];
   yield* put(updateUserSettingAction("lastUsedToolQueue", updatedLastUsedToolQueue));
 }

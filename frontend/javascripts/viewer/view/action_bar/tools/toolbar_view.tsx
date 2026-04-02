@@ -131,17 +131,12 @@ export default function ToolbarView() {
                 key: tool.id,
                 disabled: isDisabled,
                 title: isDisabled ? disabledInfoForTools[tool.id].explanation : undefined,
+                onClick: () => dispatch(setToolAction(tool)),
                 label: (
-                  <span
-                    onClick={() => {
-                      dispatch(setToolAction(tool));
-                    }}
-                  >
-                    <Space size="small">
-                      {tool.icon}
-                      {tool.readableName}
-                    </Space>
-                  </span>
+                  <Space size="small">
+                    {tool.icon}
+                    {tool.readableName}
+                  </Space>
                 ),
               };
             }),

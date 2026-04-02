@@ -19,6 +19,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader
 import com.scalableminds.webknossos.datastore.explore.ExploreLocalLayerService
 import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, DirectoryConstants, UPath}
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
 import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.services.uploading.UploadDomain.UploadDomain
@@ -70,6 +71,16 @@ object MagUploadInfo {
   implicit val jsonFormat: OFormat[MagUploadInfo] = Json.format[MagUploadInfo]
 }
 
+case class AttachmentUploadInfo(
+    resumableUploadInfo: ResumableUploadInfo,
+    datasetId: ObjectId,
+    attachmentType: LayerAttachmentType,
+    attachment: LayerAttachment
+)
+object AttachmentUploadInfo {
+  implicit val jsonFormat: OFormat[AttachmentUploadInfo] = Json.format[AttachmentUploadInfo]
+}
+
 case class DatasetUploadAdditionalInfo(newDatasetId: ObjectId, directoryName: String)
 object DatasetUploadAdditionalInfo {
   implicit val jsonFormat: OFormat[DatasetUploadAdditionalInfo] =
@@ -80,6 +91,12 @@ case class MagUploadAdditionalInfo(dataSourceId: DataSourceId)
 object MagUploadAdditionalInfo {
   implicit val jsonFormat: OFormat[MagUploadAdditionalInfo] =
     Json.format[MagUploadAdditionalInfo]
+}
+
+case class AttachmentUploadAdditionalInfo(dataSourceId: DataSourceId)
+object AttachmentUploadAdditionalInfo {
+  implicit val jsonFormat: OFormat[AttachmentUploadAdditionalInfo] =
+    Json.format[AttachmentUploadAdditionalInfo]
 }
 
 case class ReportDatasetUploadParameters(
@@ -166,6 +183,27 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       _ <- datasetUploadMetadataStore.insertLinkedLayerIdentifiers(uploadId, datasetUploadInfo.layersToLink)
     } yield ()
   }
+
+  def reserveMagUpload(magUploadInfo: MagUploadInfo, dataSourceId: DataSourceId): Fox[Unit] =
+    for {
+      _ <- reserveResumableUpload(magUploadInfo.resumableUploadInfo,
+                                  magUploadInfo.datasetId,
+                                  dataSourceId,
+                                  UploadDomain.mag)
+      uploadId = magUploadInfo.resumableUploadInfo.uploadId
+      _ <- magUploadMetadataStore.insertMag(uploadId, magUploadInfo.mag.withoutCredentials)
+    } yield ()
+
+  def reserveAttachmentUpload(attachmentUploadInfo: AttachmentUploadInfo, dataSourceId: DataSourceId): Fox[Unit] =
+    for {
+      _ <- reserveResumableUpload(attachmentUploadInfo.resumableUploadInfo,
+                                  attachmentUploadInfo.datasetId,
+                                  dataSourceId,
+                                  UploadDomain.attachment)
+      uploadId = attachmentUploadInfo.resumableUploadInfo.uploadId
+      _ <- attachmentUploadMetadataStore.insertAttachment(uploadId, attachmentUploadInfo.attachment.withoutCredential)
+      _ <- attachmentUploadMetadataStore.insertAttachmentType(uploadId, attachmentUploadInfo.attachmentType)
+    } yield ()
 
   private def reserveResumableUpload(resumableUploadInfo: ResumableUploadInfo,
                                      datasetId: ObjectId,

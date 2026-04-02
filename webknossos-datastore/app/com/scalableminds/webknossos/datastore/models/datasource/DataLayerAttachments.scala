@@ -158,6 +158,8 @@ case class LayerAttachment(name: String,
 
   def relativizedIn(dataSourcePath: UPath): LayerAttachment =
     this.copy(path = this.path.relativizedIn(dataSourcePath))
+
+  def withoutCredential: LayerAttachment = this.copy(credentialId = None)
 }
 
 object LayerAttachment {

@@ -6,18 +6,9 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  DataSource,
-  DataSourceId,
-  DataSourceStatus,
-  UnusableDataSource
-}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId, DataSourceStatus, UnusableDataSource}
 import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataStoreStatus}
-import com.scalableminds.webknossos.datastore.services.uploading.{
-  ReportDatasetUploadParameters,
-  DatasetUploadAdditionalInfo,
-  DatasetUploadInfo
-}
+import com.scalableminds.webknossos.datastore.services.uploading.{AttachmentUploadAdditionalInfo, AttachmentUploadInfo, DatasetUploadAdditionalInfo, DatasetUploadInfo, MagUploadAdditionalInfo, MagUploadInfo, ReportDatasetUploadParameters}
 import com.typesafe.scalalogging.LazyLogging
 import models.dataset._
 import models.dataset.credential.CredentialDAO
@@ -90,10 +81,24 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  def getUnfinishedUploadsForUser(name: String,
-                                  key: String,
-                                  token: String,
-                                  organizationId: String): Action[AnyContent] =
+  def reserveMagUpload(name: String, key: String, token: String): Action[MagUploadInfo] =
+    Action.async(validateJson[MagUploadInfo]) { implicit request =>
+      dataStoreService.validateAccess(name, key) { dataStore =>
+        Fox.successful(Ok(Json.toJson(MagUploadAdditionalInfo(DataSourceId("", "")))))
+      }
+    }
+
+  def reserveAttachmentUpload(name: String, key: String, token: String): Action[AttachmentUploadInfo] =
+    Action.async(validateJson[AttachmentUploadInfo]) { implicit request =>
+      dataStoreService.validateAccess(name, key) { dataStore =>
+        Fox.successful(Ok(Json.toJson(AttachmentUploadAdditionalInfo(DataSourceId("", "")))))
+      }
+    }
+
+  def getUnfinishedDatasetUploadsForUser(name: String,
+                                         key: String,
+                                         token: String,
+                                         organizationId: String): Action[AnyContent] =
     Action.async { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {

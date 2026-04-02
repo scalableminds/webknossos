@@ -2,7 +2,9 @@ package com.scalableminds.webknossos.datastore.services.uploading
 
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
+import com.scalableminds.webknossos.datastore.dataformats.MagLocator
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, LayerAttachment}
 import com.scalableminds.webknossos.datastore.services.uploading.UploadDomain.UploadDomain
 import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
 import play.api.libs.json.Json
@@ -132,7 +134,7 @@ trait UploadMetadataStore extends FoxImplicits {
 }
 
 class DatasetUploadMetadataStore @Inject()(protected val store: DataStoreRedisStore) extends UploadMetadataStore {
-  protected val domain = UploadDomain.dataset
+  protected val domain: UploadDomain = UploadDomain.dataset
 
   private def redisKeyForUploadIdByDataSourceId(datasourceId: DataSourceId): String =
     s"upload___${Json.stringify(Json.toJson(datasourceId))}___datasourceId"
@@ -168,9 +170,17 @@ class DatasetUploadMetadataStore @Inject()(protected val store: DataStoreRedisSt
 class MagUploadMetadataStore @Inject()(protected val store: DataStoreRedisStore) extends UploadMetadataStore {
   protected val domain: UploadDomain = UploadDomain.mag
 
+  def insertMag(uploadId: String, mag: MagLocator): Fox[Unit] =
+    store.insertSerialized[MagLocator](uploadId, mag)
 }
 
 class AttachmentUploadMetadataStore @Inject()(protected val store: DataStoreRedisStore) extends UploadMetadataStore {
   protected val domain: UploadDomain = UploadDomain.attachment
+
+  def insertAttachment(uploadId: String, attachment: LayerAttachment): Fox[Unit] =
+    store.insertSerialized[LayerAttachment](uploadId, attachment)
+
+  def insertAttachmentType(uploadId: String, attachmentType: LayerAttachmentType): Fox[Unit] =
+    store.insertSerialized[LayerAttachmentType](uploadId, attachmentType)
 
 }

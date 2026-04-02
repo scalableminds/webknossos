@@ -7,6 +7,7 @@ import com.scalableminds.webknossos.datastore.services.{
   UserAccessRequest
 }
 import com.scalableminds.webknossos.datastore.services.uploading.{
+  AttachmentUploadInfo,
   CancelUploadInformation,
   DatasetUploadInfo,
   MagUploadInfo,
@@ -15,6 +16,7 @@ import com.scalableminds.webknossos.datastore.services.uploading.{
   UploadService
 }
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
+import org.apache.pekko.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 import play.api.data.Form
 import play.api.data.Forms.tuple
 import play.api.i18n.Messages
@@ -52,13 +54,36 @@ class UploadController @Inject()(
       }
     }
 
-  def reserveMagUpload(): Action[MagUploadInfo] = Action.async(validateJson[MagUploadInfo]) { implicit request =>
-    Fox.successful(Ok)
-  }
+  def reserveMagUpload(): Action[MagUploadInfo] =
+    Action.async(validateJson[MagUploadInfo]) { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(request.body.datasetId)) {
+        for {
+          isKnownUpload <- uploadService.isKnownUpload(request.body.resumableUploadInfo.uploadId, UploadDomain.mag)
+          _ <- Fox.runIf(isKnownUpload) {
+            for {
+              reserveUploadAdditionalInfo <- dsRemoteWebknossosClient.reserveMagUpload(request.body) ?~> "dataset.upload.validation.failed"
+              _ <- uploadService.reserveMagUpload(request.body, reserveUploadAdditionalInfo.dataSourceId)
+            } yield ()
+          }
+        } yield Ok
+      }
+    }
 
-  def reserveAttachmentUpload(): Action[MagUploadInfo] = Action.async(validateJson[MagUploadInfo]) { implicit request =>
-    Fox.successful(Ok)
-  }
+  def reserveAttachmentUpload(): Action[AttachmentUploadInfo] =
+    Action.async(validateJson[AttachmentUploadInfo]) { implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(request.body.datasetId)) {
+        for {
+          isKnownUpload <- uploadService.isKnownUpload(request.body.resumableUploadInfo.uploadId,
+                                                       UploadDomain.attachment)
+          _ <- Fox.runIf(isKnownUpload) {
+            for {
+              reserveUploadAdditionalInfo <- dsRemoteWebknossosClient.reserveAttachmentUpload(request.body) ?~> "dataset.upload.validation.failed"
+              _ <- uploadService.reserveAttachmentUpload(request.body, reserveUploadAdditionalInfo.dataSourceId)
+            } yield ()
+          }
+        } yield Ok
+      }
+    }
 
   def getUnfinishedUploads(organizationName: String, uploadDomain: String): Action[AnyContent] =
     Action.async { implicit request =>
@@ -169,6 +194,7 @@ class UploadController @Inject()(
       }
   }
 
+  // TODO uploadId as GET param?
   def cancelUpload(uploadDomain: String): Action[CancelUploadInformation] =
     Action.async(validateJson[CancelUploadInformation]) { implicit request =>
       for {
@@ -180,6 +206,7 @@ class UploadController @Inject()(
         result <- datasetIdFox.flatMap { datasetId =>
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.deleteDataset(datasetId)) {
             for {
+              // TODO adapt also to other domains
               _ <- dsRemoteWebknossosClient.deleteDataset(datasetId) ?~> "dataset.delete.webknossos.failed"
               _ <- uploadService.cancelUpload(request.body, uploadDomainValidated) ?~> "Could not cancel the upload."
             } yield Ok

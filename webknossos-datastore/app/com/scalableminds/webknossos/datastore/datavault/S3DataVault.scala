@@ -119,7 +119,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
       _ = resultBox match {
         case f: BoxFailure =>
           logger.warn(s"Got failure $f for S3 getObject request s3://${uri.getAuthority}/$bucketName/$objectKey")
-        case _ => ""
+        case _ => ()
       }
       (bytes, encodingString, rangeHeader) <- resultBox.toFox
       encoding <- Encoding.fromRfc7231String(encodingString).toFox

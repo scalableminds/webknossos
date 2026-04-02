@@ -317,7 +317,7 @@ export class WebKnossosModel {
 
     while (
       // Wait while rebasing is in progress.
-      Store.getState().save.rebaseRelevantServerAnnotationState.isRebasing ||
+      Store.getState().save.rebaseRelevantServerAnnotationState.isRebasingOrForwarding ||
       // If no rebasing is in progress enforce diffed state to save queue.
       ((await waitForDifferResponses()) && !this.stateSaved())
     ) {

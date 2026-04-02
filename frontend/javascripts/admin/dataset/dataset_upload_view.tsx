@@ -342,23 +342,24 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       : `${dayjs(Date.now()).format("YYYY-MM-DD_HH-mm")}__${newDatasetName}__${getRandomString()}`;
     const filePaths = formValues.zipFile.map((file) => file.path || "");
     const totalFileSizeInBytes = getFileSize(formValues.zipFile);
-    const reserveUploadInformation = {
+    const resumableUploadInfo = {
       uploadId,
-      name: newDatasetName,
-      directoryName: "<filled by backend>",
-      newDatasetId: "<filled by backend>",
-      organization: activeUser.organization,
       totalFileCount: formValues.zipFile.length,
       filePaths: filePaths,
       totalFileSizeInBytes,
+    }
+    const datasetUploadInfo = {
+      resumableUploadInfo,
+      datasetName: newDatasetName,
+      organizationId: activeUser.organization,
       layersToLink: [],
-      initialTeams: formValues.initialTeams.map((team: APITeam) => team.id),
+      initialTeamIds: formValues.initialTeams.map((team: APITeam) => team.id),
       folderId: formValues.targetFolderId,
       needsConversion: this.state.needsConversion,
     };
     const datastoreUrl = formValues.datastoreUrl;
     await refreshToken();
-    await reserveDatasetUpload(datastoreUrl, reserveUploadInformation);
+    await reserveDatasetUpload(datastoreUrl, datasetUploadInfo);
     const resumableUpload = await createResumableUpload(datastoreUrl, uploadId);
     this.setState({
       uploadId,

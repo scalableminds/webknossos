@@ -13,9 +13,9 @@ import com.scalableminds.webknossos.datastore.models.{
 import com.scalableminds.webknossos.datastore.models.datasource.{UnusableDataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services.mesh.FullMeshRequest
 import com.scalableminds.webknossos.datastore.services.uploading.{
+  DatasetUploadInfo,
   LinkedLayerIdentifier,
-  ReserveUploadInformation,
-  UploadDomain
+  ResumableUploadInfo
 }
 import com.scalableminds.webknossos.datastore.services.{
   DSRemoteWebknossosClient,
@@ -32,7 +32,7 @@ import scala.concurrent.{ExecutionContext, Future}
 case class LegacyReserveManualUploadInformation(
     datasetName: String,
     organization: String,
-    initialTeamIds: List[ObjectId],
+    initialTeamIds: Seq[ObjectId],
     folderId: Option[ObjectId],
     requireUniqueName: Boolean = false,
 )
@@ -101,22 +101,23 @@ class DSLegacyApiController @Inject()(
 
         for {
           adaptedLayersToLink <- Fox.serialCombined(request.body.layersToLink.getOrElse(List.empty))(adaptLayerToLink)
-          adaptedRequestBody = ReserveUploadInformation(
-            uploadId = request.body.uploadId,
-            name = request.body.name,
-            organization = request.body.organization,
-            totalFileCount = request.body.totalFileCount,
-            filePaths = request.body.filePaths,
-            totalFileSizeInBytes = request.body.totalFileSizeInBytes,
+          adaptedRequestBody = DatasetUploadInfo(
+            resumableUploadInfo = ResumableUploadInfo(
+              uploadId = request.body.uploadId,
+              totalFileCount = request.body.totalFileCount,
+              filePaths = request.body.filePaths,
+              totalFileSizeInBytes = request.body.totalFileSizeInBytes,
+            ),
+            datasetName = request.body.name,
+            organizationId = request.body.organization,
             layersToLink = Some(adaptedLayersToLink),
-            initialTeams = request.body.initialTeams,
+            initialTeamIds = request.body.initialTeams,
             folderId = request.body.folderId,
             requireUniqueName = request.body.requireUniqueName,
             isVirtual = None,
             needsConversion = None
           )
-          result <- Fox.fromFuture(
-            uploadController.reserveUpload(UploadDomain.dataset.toString)(request.withBody(adaptedRequestBody)))
+          result <- Fox.fromFuture(uploadController.reserveDatasetUpload()(request.withBody(adaptedRequestBody)))
         } yield result
       }
     }
@@ -142,19 +143,21 @@ class DSLegacyApiController @Inject()(
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.administrateDatasets(request.body.organization)) {
         for {
-          reservedDatasetInfo <- remoteWebknossosClient.reserveDataSourceUpload(
-            ReserveUploadInformation(
-              "aManualUpload",
-              request.body.datasetName,
-              request.body.organization,
-              0,
-              Some(List.empty),
-              None,
-              None,
-              request.body.initialTeamIds,
-              request.body.folderId,
-              Some(request.body.requireUniqueName),
-              Some(false),
+          reservedDatasetInfo <- remoteWebknossosClient.reserveDatasetUpload(
+            DatasetUploadInfo(
+              resumableUploadInfo = ResumableUploadInfo(
+                uploadId = "aManualUpload",
+                totalFileCount = 0,
+                filePaths = Some(List.empty),
+                totalFileSizeInBytes = None
+              ),
+              datasetName = request.body.datasetName,
+              organizationId = request.body.organization,
+              layersToLink = None,
+              initialTeamIds = request.body.initialTeamIds,
+              folderId = request.body.folderId,
+              requireUniqueName = Some(request.body.requireUniqueName),
+              isVirtual = Some(false),
               needsConversion = None
             )
           ) ?~> "dataset.upload.validation.failed"

@@ -15,8 +15,8 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataStoreStatus}
 import com.scalableminds.webknossos.datastore.services.uploading.{
   ReportDatasetUploadParameters,
-  ReserveAdditionalInformation,
-  ReserveUploadInformation
+  DatasetUploadAdditionalInfo,
+  DatasetUploadInfo
 }
 import com.typesafe.scalalogging.LazyLogging
 import models.dataset._
@@ -54,28 +54,29 @@ class WKRemoteDataStoreController @Inject()(
   val bearerTokenService: WebknossosBearerTokenAuthenticatorService =
     wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
-  def reserveDatasetUpload(name: String, key: String, token: String): Action[ReserveUploadInformation] =
-    Action.async(validateJson[ReserveUploadInformation]) { implicit request =>
+  def reserveDatasetUpload(name: String, key: String, token: String): Action[DatasetUploadInfo] =
+    Action.async(validateJson[DatasetUploadInfo]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         val uploadInfo = request.body
         for {
           user <- bearerTokenService.userForToken(token) ~> FORBIDDEN
-          organization <- organizationDAO.findOne(uploadInfo.organization)(GlobalAccessContext) ?~> Messages(
+          organization <- organizationDAO.findOne(uploadInfo.organizationId)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
-            uploadInfo.organization) ~> NOT_FOUND
+            uploadInfo.organizationId) ~> NOT_FOUND
           usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
           _ <- Fox.runOptional(organization.includedStorageBytes)(includedStorage =>
-            Fox.fromBool(usedStorageBytes + uploadInfo.totalFileSizeInBytes.getOrElse(0L) <= includedStorage)) ?~> "dataset.upload.storageExceeded" ~> FORBIDDEN
+            Fox.fromBool(usedStorageBytes + uploadInfo.resumableUploadInfo.totalFileSizeInBytes
+              .getOrElse(0L) <= includedStorage)) ?~> "dataset.upload.storageExceeded" ~> FORBIDDEN
           _ <- Fox.fromBool(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
-          _ <- datasetService.assertValidDatasetName(uploadInfo.name)
+          _ <- datasetService.assertValidDatasetName(uploadInfo.datasetName)
           _ <- Fox.fromBool(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataset.upload.Datastore.restricted"
           _ <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l =>
             layerToLinkService.validateLayerToLink(l, user)) ?~> "dataset.upload.invalidLinkedLayers"
           _ <- Fox.runIf(request.body.requireUniqueName.getOrElse(false))(
-            datasetService.assertNewDatasetNameUnique(request.body.name, organization._id))
+            datasetService.assertNewDatasetNameUnique(request.body.datasetName, organization._id))
           preliminaryDataSource = UnusableDataSource(DataSourceId("", ""), None, DataSourceStatus.notYetUploaded)
           dataset <- datasetService.createAndSetUpDataset(
-            uploadInfo.name,
+            uploadInfo.datasetName,
             dataStore,
             preliminaryDataSource,
             uploadInfo.folderId,
@@ -83,8 +84,8 @@ class WKRemoteDataStoreController @Inject()(
             isVirtual = uploadInfo.isVirtual.getOrElse(true),
             creationType = DatasetCreationType.Upload
           ) ?~> "dataset.upload.creation.failed"
-          _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
-          additionalInfo = ReserveAdditionalInformation(dataset._id, dataset.directoryName)
+          _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeamIds, user)(AuthorizedAccessContext(user))
+          additionalInfo = DatasetUploadAdditionalInfo(dataset._id, dataset.directoryName)
         } yield Ok(Json.toJson(additionalInfo))
       }
     }

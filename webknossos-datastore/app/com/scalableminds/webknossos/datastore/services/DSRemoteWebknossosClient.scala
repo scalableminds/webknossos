@@ -16,8 +16,8 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, Dat
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.{
   ReportDatasetUploadParameters,
-  ReserveAdditionalInformation,
-  ReserveUploadInformation
+  DatasetUploadAdditionalInfo,
+  DatasetUploadInfo
 }
 import com.scalableminds.webknossos.datastore.storage.DataVaultCredential
 import com.typesafe.scalalogging.LazyLogging
@@ -117,13 +117,13 @@ class DSRemoteWebknossosClient @Inject()(
       .silent
       .putJson(dataSourcePaths)
 
-  def reserveDataSourceUpload(info: ReserveUploadInformation)(
-      implicit tc: TokenContext): Fox[ReserveAdditionalInformation] =
+  def reserveDatasetUpload(info: DatasetUploadInfo)(
+      implicit tc: TokenContext): Fox[DatasetUploadAdditionalInfo] =
     for {
       reserveUploadInfo <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveUpload")
         .addQueryParam("key", dataStoreKey)
         .withTokenFromContext
-        .postJsonWithJsonResponse[ReserveUploadInformation, ReserveAdditionalInformation](info)
+        .postJsonWithJsonResponse[DatasetUploadInfo, DatasetUploadAdditionalInfo](info)
     } yield reserveUploadInfo
 
   def updateDataSource(dataSource: DataSource, datasetId: ObjectId)(implicit tc: TokenContext): Fox[_] =

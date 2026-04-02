@@ -8,6 +8,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools._
 import com.scalableminds.webknossos.datastore.DataStoreConfig
+import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
 import com.scalableminds.webknossos.datastore.datareaders.n5.N5Header.FILENAME_ATTRIBUTES_JSON
 import com.scalableminds.webknossos.datastore.datareaders.n5.{N5Header, N5Metadata}
@@ -34,28 +35,51 @@ import java.nio.file.{Files, Path}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.FutureConverters._
 
-case class ReserveUploadInformation(
+case class ResumableUploadInfo(
     uploadId: String, // upload id that was also used in chunk upload (this time without file paths)
-    name: String, // dataset name
-    organization: String,
     totalFileCount: Long,
     filePaths: Option[Seq[String]],
     totalFileSizeInBytes: Option[Long],
+)
+object ResumableUploadInfo {
+  implicit val jsonFormat: OFormat[ResumableUploadInfo] = Json.format[ResumableUploadInfo]
+}
+
+// TODO build from legacy param set for LegacyApiController
+case class DatasetUploadInfo(
+    resumableUploadInfo: ResumableUploadInfo,
+    datasetName: String,
+    organizationId: String,
     layersToLink: Option[Seq[LinkedLayerIdentifier]],
-    initialTeams: Seq[ObjectId], // team ids
+    initialTeamIds: Seq[ObjectId], // team ids
     folderId: Option[ObjectId],
     requireUniqueName: Option[Boolean],
     isVirtual: Option[Boolean], // Only set (to false) for legacy manual uploads
     needsConversion: Option[Boolean] // None means false
 )
-object ReserveUploadInformation {
-  implicit val jsonFormat: OFormat[ReserveUploadInformation] = Json.format[ReserveUploadInformation]
+object DatasetUploadInfo {
+  implicit val jsonFormat: OFormat[DatasetUploadInfo] = Json.format[DatasetUploadInfo]
 }
 
-case class ReserveAdditionalInformation(newDatasetId: ObjectId, directoryName: String)
-object ReserveAdditionalInformation {
-  implicit val jsonFormat: OFormat[ReserveAdditionalInformation] =
-    Json.format[ReserveAdditionalInformation]
+case class MagUploadInfo(
+    resumableUploadInfo: ResumableUploadInfo,
+    datasetId: ObjectId,
+    mag: MagLocator
+)
+object MagUploadInfo {
+  implicit val jsonFormat: OFormat[MagUploadInfo] = Json.format[MagUploadInfo]
+}
+
+case class DatasetUploadAdditionalInfo(newDatasetId: ObjectId, directoryName: String)
+object DatasetUploadAdditionalInfo {
+  implicit val jsonFormat: OFormat[DatasetUploadAdditionalInfo] =
+    Json.format[DatasetUploadAdditionalInfo]
+}
+
+case class MagUploadAdditionalInfo(dataSourceId: DataSourceId)
+object MagUploadAdditionalInfo {
+  implicit val jsonFormat: OFormat[MagUploadAdditionalInfo] =
+    Json.format[MagUploadAdditionalInfo]
 }
 
 case class ReportDatasetUploadParameters(
@@ -122,36 +146,41 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
   def extractDatasetUploadId(uploadFileId: String): String = uploadFileId.split("/").headOption.getOrElse("")
 
-  private def uploadDirectoryFor(organizationId: String, uploadId: String): Path =
-    dataBaseDir.resolve(organizationId).resolve(uploadingDir).resolve(uploadId)
+  private def uploadDirectoryFor(organizationId: String, uploadId: String, uploadDomain: UploadDomain): Path =
+    dataBaseDir.resolve(organizationId).resolve(uploadingDir).resolve(uploadDomain.toString).resolve(uploadId)
 
   private def uploadBackupDirectoryFor(organizationId: String, uploadId: String): Path =
     dataBaseDir.resolve(organizationId).resolve(trashDir).resolve(s"uploadBackup__$uploadId")
 
-  def reserveUpload(reserveUploadInfo: ReserveUploadInformation,
-                    datasetId: ObjectId,
-                    directoryName: String,
-                    uploadDomain: UploadDomain): Fox[Unit] =
+  def reserveDatasetUpload(datasetUploadInfo: DatasetUploadInfo,
+                           datasetId: ObjectId,
+                           directoryName: String): Fox[Unit] = {
+    val dataSourceId = DataSourceId(directoryName, datasetUploadInfo.organizationId)
     for {
-      _ <- dataSourceService.assertDataDirWritable(reserveUploadInfo.organization)
-      uploadId = reserveUploadInfo.uploadId
-      newDataSourceId = DataSourceId(directoryName, reserveUploadInfo.organization)
-      _ = logger.info(f"Reserving ${uploadFullName(uploadId, datasetId, newDataSourceId)}...")
       _ <- Fox.fromBool(
-        !reserveUploadInfo.needsConversion.getOrElse(false) || !reserveUploadInfo.layersToLink
+        !datasetUploadInfo.needsConversion.getOrElse(false) || !datasetUploadInfo.layersToLink
           .exists(_.nonEmpty)) ?~> "Cannot use linked layers if the dataset needs conversion"
+      _ <- reserveResumableUpload(datasetUploadInfo.resumableUploadInfo, datasetId, dataSourceId, UploadDomain.dataset)
+      uploadId = datasetUploadInfo.resumableUploadInfo.uploadId
+      _ <- datasetUploadMetadataStore.insertUploadIdByDataSourceId(dataSourceId, uploadId)
+      _ <- datasetUploadMetadataStore.insertLinkedLayerIdentifiers(uploadId, datasetUploadInfo.layersToLink)
+    } yield ()
+  }
+
+  private def reserveResumableUpload(resumableUploadInfo: ResumableUploadInfo,
+                                     datasetId: ObjectId,
+                                     dataSourceId: DataSourceId,
+                                     uploadDomain: UploadDomain): Fox[Unit] =
+    for {
+      _ <- dataSourceService.ensureDataDirWritable(dataSourceId)
+      uploadId = resumableUploadInfo.uploadId
+      _ = logger.info(f"Reserving $uploadDomain ${uploadFullName(uploadId, datasetId, dataSourceId)}...")
       uploadMetadataStore = selectUploadMetadataStore(uploadDomain)
-      _ <- uploadMetadataStore.insertDataSourceId(uploadId, newDataSourceId)
+      _ <- uploadMetadataStore.insertDataSourceId(uploadId, dataSourceId)
       _ <- uploadMetadataStore.insertDatasetId(uploadId, datasetId)
-      _ <- uploadMetadataStore.insertTotalFileCount(uploadId, reserveUploadInfo.totalFileCount)
-      _ <- uploadMetadataStore.insertTotalFileSizeInBytes(uploadId, reserveUploadInfo.totalFileSizeInBytes)
-      _ <- uploadMetadataStore.insertFilePaths(uploadId, reserveUploadInfo.filePaths)
-      _ <- Fox.runIf(uploadDomain == UploadDomain.dataset) {
-        datasetUploadMetadataStore.insertUploadIdByDataSourceId(newDataSourceId, uploadId)
-      }
-      _ <- Fox.runIf(uploadDomain == UploadDomain.dataset) {
-        datasetUploadMetadataStore.insertLinkedLayerIdentifiers(uploadId, reserveUploadInfo.layersToLink)
-      }
+      _ <- uploadMetadataStore.insertTotalFileCount(uploadId, resumableUploadInfo.totalFileCount)
+      _ <- uploadMetadataStore.insertTotalFileSizeInBytes(uploadId, resumableUploadInfo.totalFileSizeInBytes)
+      _ <- uploadMetadataStore.insertFilePaths(uploadId, resumableUploadInfo.filePaths)
     } yield ()
 
   def enrichUnfinishedUploadInfoWithUploadIds(
@@ -184,7 +213,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     val uploadId = extractDatasetUploadId(uploadFileId)
     for {
       dataSourceId <- uploadMetadataStore.findDataSourceId(uploadId)
-      uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId)
+      uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId, uploadDomain)
       filePathRaw = uploadFileId.split("/").tail.mkString("/")
       filePath = if (filePathRaw.charAt(0) == '/') filePathRaw.drop(1) else filePathRaw
       _ <- Fox.fromBool(!isOutsideUploadDir(uploadDir, filePath)) ?~> s"Invalid file path: $filePath"
@@ -259,7 +288,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     } yield
       if (knownUpload) {
         logger.info(f"Cancelling ${uploadFullName(uploadId, datasetId, dataSourceId)}...")
-        cleanUpUploadedDataset(uploadDirectoryFor(dataSourceId.organizationId, uploadId),
+        cleanUpUploadedDataset(uploadDirectoryFor(dataSourceId.organizationId, uploadId, uploadDomain),
                                uploadId,
                                reason = "Cancelled by user",
                                uploadDomain)
@@ -267,7 +296,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   }
 
   private def uploadFullName(uploadId: String, datasetId: ObjectId, dataSourceId: DataSourceId) =
-    s"upload $uploadId of dataset $datasetId ($dataSourceId)"
+    s"upload $uploadId for dataset $datasetId ($dataSourceId)"
 
   def finishDatasetUpload(uploadInformation: UploadInformation, datasetId: ObjectId)(
       implicit tc: TokenContext): Fox[Unit] = {
@@ -278,7 +307,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       _ = logger.info(s"Finishing ${uploadFullName(uploadId, datasetId, dataSourceId)}...")
       linkedLayerIdentifiers <- datasetUploadMetadataStore.findLinkedLayerIdentifiers(uploadId)
       needsConversion = uploadInformation.needsConversion.getOrElse(false)
-      uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId)
+      uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId, UploadDomain.dataset)
       _ <- backupRawUploadedData(uploadDir, uploadBackupDirectoryFor(dataSourceId.organizationId, uploadId), datasetId).toFox
       _ <- checkWithinRequestedFileSize(uploadDir, uploadId, datasetId, UploadDomain.dataset) ?~> "dataset.upload.fileSizeCheck.failed"
       _ <- checkAllChunksUploaded(uploadId, UploadDomain.dataset) ?~> "dataset.upload.allChunksUploadedCheck.failed"

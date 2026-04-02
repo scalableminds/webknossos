@@ -1243,25 +1243,30 @@ export function createResumableUpload(
     return resumable;
   });
 }
-type ReserveUploadInformation = {
+
+type ResumableUploadInfo = {
   uploadId: string;
-  name: string;
-  directoryName: string;
-  newDatasetId: string;
-  organization: string;
   totalFileCount: number;
   filePaths: Array<string>;
-  initialTeams: Array<string>;
+  totalFileSizeInBytes: number;
+}
+type DatasetUploadInfo = {
+  resumableUploadInfo: ResumableUploadInfo,
+  datasetName: string;
+  organizationId: string;
+  layersToLink: Array<null>; // Always set as empty by frontend, only used by libs
+  initialTeamIds: Array<string>;
   folderId: string | null;
+  needsConversion: boolean;
 };
 
 export function reserveDatasetUpload(
   datastoreHost: string,
-  reserveUploadInformation: ReserveUploadInformation,
+  datasetUploadInfo: DatasetUploadInfo,
 ): Promise<void> {
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`/data/datasets/reserveUpload?token=${token}`, {
-      data: reserveUploadInformation,
+      data: datasetUploadInfo,
       host: datastoreHost,
     }),
   );

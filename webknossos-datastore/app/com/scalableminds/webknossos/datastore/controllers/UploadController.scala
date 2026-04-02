@@ -8,7 +8,8 @@ import com.scalableminds.webknossos.datastore.services.{
 }
 import com.scalableminds.webknossos.datastore.services.uploading.{
   CancelUploadInformation,
-  ReserveUploadInformation,
+  DatasetUploadInfo,
+  MagUploadInfo,
   UploadDomain,
   UploadInformation,
   UploadService
@@ -33,25 +34,31 @@ class UploadController @Inject()(
     slackNotificationService: DSSlackNotificationService)(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
     extends Controller {
 
-  def reserveUpload(uploadDomain: String): Action[ReserveUploadInformation] =
-    Action.async(validateJson[ReserveUploadInformation]) { implicit request =>
+  def reserveDatasetUpload(): Action[DatasetUploadInfo] =
+    Action.async(validateJson[DatasetUploadInfo]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
-        UserAccessRequest.administrateDatasets(request.body.organization)) {
+        UserAccessRequest.administrateDatasets(request.body.organizationId)) {
         for {
-          uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox
-          isKnownUpload <- uploadService.isKnownUpload(request.body.uploadId, uploadDomainValidated)
-          _ <- if (!isKnownUpload) {
+          isKnownUpload <- uploadService.isKnownUpload(request.body.resumableUploadInfo.uploadId, UploadDomain.dataset)
+          _ <- Fox.runIf(isKnownUpload) {
             for {
-              reserveUploadAdditionalInfo <- dsRemoteWebknossosClient.reserveDataSourceUpload(request.body) ?~> "dataset.upload.validation.failed"
-              _ <- uploadService.reserveUpload(request.body,
-                                               reserveUploadAdditionalInfo.newDatasetId,
-                                               reserveUploadAdditionalInfo.directoryName,
-                                               uploadDomainValidated)
+              reserveUploadAdditionalInfo <- dsRemoteWebknossosClient.reserveDatasetUpload(request.body) ?~> "dataset.upload.validation.failed"
+              _ <- uploadService.reserveDatasetUpload(request.body,
+                                                      reserveUploadAdditionalInfo.newDatasetId,
+                                                      reserveUploadAdditionalInfo.directoryName)
             } yield ()
-          } else Fox.successful(())
+          }
         } yield Ok
       }
     }
+
+  def reserveMagUpload(): Action[MagUploadInfo] = Action.async(validateJson[MagUploadInfo]) { implicit request =>
+    Fox.successful(Ok)
+  }
+
+  def reserveAttachmentUpload(): Action[MagUploadInfo] = Action.async(validateJson[MagUploadInfo]) { implicit request =>
+    Fox.successful(Ok)
+  }
 
   def getUnfinishedUploads(organizationName: String, uploadDomain: String): Action[AnyContent] =
     Action.async { implicit request =>

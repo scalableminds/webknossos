@@ -70,7 +70,12 @@ type UpdateNavigationListAction = ReturnType<typeof updateNavigationListAction>;
 type ApplySkeletonUpdateActionsFromServerAction = ReturnType<
   typeof applySkeletonUpdateActionsFromServerAction
 >;
-export type LoadAgglomerateSkeletonAction = ReturnType<typeof loadAgglomerateSkeletonAction>;
+export type LoadAgglomerateSkeletonFromIdAction = ReturnType<
+  typeof loadAgglomerateSkeletonFromIdAction
+>;
+export type LoadAgglomerateSkeletonAtPositionAction = ReturnType<
+  typeof loadAgglomerateSkeletonAtPositionAction
+>;
 export type NoAction = ReturnType<typeof noAction>;
 
 export type BatchableUpdateTreeAction =
@@ -139,7 +144,8 @@ export type SkeletonTracingAction =
   | SetShowSkeletonsAction
   | SetMergerModeEnabledAction
   | UpdateNavigationListAction
-  | LoadAgglomerateSkeletonAction
+  | LoadAgglomerateSkeletonFromIdAction
+  | LoadAgglomerateSkeletonAtPositionAction
   | ApplySkeletonUpdateActionsFromServerAction
   | AddNewUserBoundingBox;
 
@@ -619,13 +625,31 @@ export const applySkeletonUpdateActionsFromServerAction = (
     ignoreUnsupportedActionTypes,
   }) as const;
 
-export const loadAgglomerateSkeletonAction = (
+// loadAgglomerateSkeletonAtPositionAction should always be preferred over loadAgglomerateSkeletonFromIdAction.
+// It uses the position to defined the agglomerate id instead of the the id itself directly.
+// The benefit of passing the position is that this allows to first synchronize with the newest version of the annotation
+// in live-collab mode and then once up-to-date get the latest agglomerate id of the position.
+// Otherwise, if the id is passed to the action, the syncing with the backend might update the id which is requested by this action via e.g. an merge operation.
+// This would lead to the agglomerate id not existing anymore and thus the frontend requesting an agglomerate skeleton with an outdated agglomerate id.
+export const loadAgglomerateSkeletonAtPositionAction = (
+  layerName: string,
+  mappingName: string,
+  agglomeratePosition: Vector3,
+) =>
+  ({
+    type: "LOAD_AGGLOMERATE_SKELETON_AT_POSITION",
+    layerName,
+    mappingName,
+    agglomeratePosition,
+  }) as const;
+
+export const loadAgglomerateSkeletonFromIdAction = (
   layerName: string,
   mappingName: string,
   agglomerateId: number,
 ) =>
   ({
-    type: "LOAD_AGGLOMERATE_SKELETON",
+    type: "LOAD_AGGLOMERATE_SKELETON_FROM_ID",
     layerName,
     mappingName,
     agglomerateId,

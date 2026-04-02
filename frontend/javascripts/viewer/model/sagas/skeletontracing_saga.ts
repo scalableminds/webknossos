@@ -29,6 +29,7 @@ import {
   TreeTypeEnum,
   type Vector3,
 } from "viewer/constants";
+import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
 import {
   enforceSkeletonTracing,
@@ -50,7 +51,10 @@ import {
   setPositionAction,
   setRotationAction,
 } from "viewer/model/actions/flycam_actions";
-import type { LoadAgglomerateSkeletonAction } from "viewer/model/actions/skeletontracing_actions";
+import type {
+  LoadAgglomerateSkeletonAtPositionAction,
+  LoadAgglomerateSkeletonFromIdAction,
+} from "viewer/model/actions/skeletontracing_actions";
 import {
   addTreesAndGroupsAction,
   deleteBranchPointAction,
@@ -268,10 +272,13 @@ function* watchTreeNames(): Saga<void> {
 
 function* watchAgglomerateLoading(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_INITIALIZED
-  const channel = yield* actionChannel("LOAD_AGGLOMERATE_SKELETON");
+  const channel = yield* actionChannel([
+    "LOAD_AGGLOMERATE_SKELETON_FROM_ID",
+    "LOAD_AGGLOMERATE_SKELETON_AT_POSITION",
+  ]);
   yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
   yield* call(ensureWkInitialized);
-  yield* takeEvery(channel, loadAgglomerateSkeletonWithId);
+  yield* takeEvery(channel, loadAgglomerateSkeletonWithAtPosition);
 }
 function* watchConnectomeAgglomerateLoading(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_INITIALIZED
@@ -387,12 +394,14 @@ function handleAgglomerateLoadingError(
   ErrorHandling.notify(e);
 }
 
-function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): Saga<void> {
+function* loadAgglomerateSkeletonWithAtPosition(
+  action: LoadAgglomerateSkeletonFromIdAction | LoadAgglomerateSkeletonAtPositionAction,
+): Saga<void> {
   const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
   if (!allowUpdate) return;
-  const { layerName, mappingName, agglomerateId } = action;
+  const { layerName, mappingName } = action;
 
-  if (agglomerateId === 0) {
+  if (action.type === "LOAD_AGGLOMERATE_SKELETON_FROM_ID" && action.agglomerateId === 0) {
     Toast.error(messages["tracing.agglomerate_skeleton.no_cell"]);
     return;
   }
@@ -422,6 +431,12 @@ function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): 
     // which then only sends the whole save queue to the server.
     yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
   }
+
+  const agglomerateId =
+    action.type === "LOAD_AGGLOMERATE_SKELETON_FROM_ID"
+      ? action.agglomerateId
+      : // Ad-hoc lookup of agglomerate id after syncing in live-collab. Should be preferred over using the LoadAgglomerateSkeletonFromIdAction action.
+        yield call(getSegmentIdForPositionAsync, action.agglomeratePosition);
 
   const trees = yield* select((state) =>
     getTreesWithType(enforceSkeletonTracing(state.annotation), TreeTypeEnum.AGGLOMERATE),
@@ -508,7 +523,7 @@ function* loadAgglomerateSkeletonWithId(action: LoadAgglomerateSkeletonAction): 
 }
 
 function* loadConnectomeAgglomerateSkeletonWithId(
-  action: LoadAgglomerateSkeletonAction,
+  action: LoadAgglomerateSkeletonFromIdAction,
 ): Saga<void> {
   const { layerName, mappingName, agglomerateId } = action;
 
@@ -534,7 +549,7 @@ function* loadConnectomeAgglomerateSkeletonWithId(
 }
 
 function* removeConnectomeAgglomerateSkeletonWithId(
-  action: LoadAgglomerateSkeletonAction,
+  action: LoadAgglomerateSkeletonFromIdAction,
 ): Saga<void> {
   const { layerName, mappingName, agglomerateId } = action;
   const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);

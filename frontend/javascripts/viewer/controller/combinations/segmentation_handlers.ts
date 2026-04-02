@@ -15,7 +15,10 @@ import {
   hasConnectomeFile,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { setActiveConnectomeAgglomerateIdsAction } from "viewer/model/actions/connectome_actions";
-import { loadAgglomerateSkeletonAction } from "viewer/model/actions/skeletontracing_actions";
+import {
+  loadAgglomerateSkeletonAtPositionAction,
+  loadAgglomerateSkeletonFromIdAction,
+} from "viewer/model/actions/skeletontracing_actions";
 import { clickSegmentAction } from "viewer/model/actions/volumetracing_actions";
 import { Model } from "viewer/singletons";
 import Store from "viewer/store";
@@ -25,22 +28,13 @@ export async function handleAgglomerateSkeletonAtClick(clickPosition: Point2) {
   const globalPosition = calculateGlobalPos(state, clickPosition);
   loadAgglomerateSkeletonAtPosition(globalPosition.rounded);
 }
-export async function loadAgglomerateSkeletonAtPosition(position: Vector3): Promise<void> {
-  const segmentation = Model.getVisibleSegmentationLayer();
 
-  if (!segmentation) {
-    return;
-  }
-
-  const segmentId = await getSegmentIdForPositionAsync(position);
-  loadAgglomerateSkeletonForSegmentId(segmentId);
-}
-export function loadAgglomerateSkeletonForSegmentId(segmentId: number): void {
+function getAgglomerateSkeletonLoadingInfo(): [string, string] | null {
   const state = Store.getState();
   const segmentation = Model.getVisibleSegmentationLayer();
 
   if (!segmentation) {
-    return;
+    return null;
   }
 
   const { mappingName } = getMappingInfo(
@@ -50,13 +44,32 @@ export function loadAgglomerateSkeletonForSegmentId(segmentId: number): void {
   const isAgglomerateMappingEnabled = hasAgglomerateMapping(state);
 
   if (mappingName && isAgglomerateMappingEnabled.value) {
-    Store.dispatch(loadAgglomerateSkeletonAction(segmentation.name, mappingName, segmentId));
-    return;
-  } else {
-    Toast.error(isAgglomerateMappingEnabled.reason);
+    return [segmentation.name, mappingName];
   }
-  return;
+  Toast.error(isAgglomerateMappingEnabled.reason);
+  return null;
 }
+
+export function loadAgglomerateSkeletonAtPosition(position: Vector3): void {
+  const agglomerateSkeletonLoadingInfo = getAgglomerateSkeletonLoadingInfo();
+
+  if (agglomerateSkeletonLoadingInfo) {
+    const [layerName, mappingName] = agglomerateSkeletonLoadingInfo;
+    Store.dispatch(loadAgglomerateSkeletonAtPositionAction(layerName, mappingName, position));
+  }
+}
+
+// loadAgglomerateSkeletonAtPosition should be preferred as it allows to use the up-to-date agglomerate id at the given position.
+// Is needed in live-collab scenario.
+export function loadAgglomerateSkeletonFromId(agglomerateId: number): void {
+  const agglomerateSkeletonLoadingInfo = getAgglomerateSkeletonLoadingInfo();
+
+  if (agglomerateSkeletonLoadingInfo) {
+    const [layerName, mappingName] = agglomerateSkeletonLoadingInfo;
+    Store.dispatch(loadAgglomerateSkeletonFromIdAction(layerName, mappingName, agglomerateId));
+  }
+}
+
 export async function loadSynapsesOfAgglomerateAtPosition(position: Vector3) {
   const state = Store.getState();
   const segmentation = Model.getVisibleSegmentationLayer();

@@ -78,7 +78,10 @@ describe("Proofreading agglomerate skeleton syncing", () => {
 
       const versionBeforeSkeletonLoading = yield* select((state) => state.annotation.version);
 
-      const loadAgglomerateChannel = yield* actionChannel("LOAD_AGGLOMERATE_SKELETON");
+      const loadAgglomerateChannel = yield* actionChannel([
+        "LOAD_AGGLOMERATE_SKELETON_FROM_ID",
+        "LOAD_AGGLOMERATE_SKELETON_AT_POSITION",
+      ]);
       const ensureHasNewestVersionChannel = yield* actionChannel("ENSURE_HAS_NEWEST_VERSION");
       const saveNowChannel = yield* actionChannel("SAVE_NOW");
 
@@ -91,6 +94,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       // 3. The latest changes including the loading of thee agglomerate skeleton are stored in the backend.
       // Check whether the actions are dispatched via action channels to avoid race condition.
       yield take(loadAgglomerateChannel);
+      yield take("SUBSCRIBE_TO_ANNOTATION_MUTEX");
       const annotationMutexLogicState = getMutexLogicState();
       const amountOfMutexSubscribers = Object.keys(
         annotationMutexLogicState.subscribersToMutex,

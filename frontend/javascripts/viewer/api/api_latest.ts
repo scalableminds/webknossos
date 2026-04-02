@@ -42,7 +42,10 @@ import Constants, {
   TDViewDisplayModeEnum,
 } from "viewer/constants";
 import { rotate3DViewTo } from "viewer/controller/camera_controller";
-import { loadAgglomerateSkeletonForSegmentId } from "viewer/controller/combinations/segmentation_handlers";
+import {
+  loadAgglomerateSkeletonAtPosition,
+  loadAgglomerateSkeletonFromId,
+} from "viewer/controller/combinations/segmentation_handlers";
 import {
   createSkeletonNode,
   getOptionsForCreateSkeletonNode,
@@ -1025,6 +1028,19 @@ class TracingApi {
   }
 
   /**
+   * Loads the agglomerate skeleton for the agglomerate at the given position. Only possible if
+   * a segmentation layer is visible for which an agglomerate mapping is enabled.
+   * Should be preferred over using api.tracing.loadAgglomerateSkeletonForSegmentId as this version
+   * yields reliable results in live collaborative context.
+   *
+   * @example
+   * api.tracing.loadAgglomerateSkeletonAtPosition([3, 3, 3]);
+   */
+  loadAgglomerateSkeletonAtPosition(position: Vector3) {
+    loadAgglomerateSkeletonAtPosition(position);
+  }
+
+  /**
    * Loads the agglomerate skeleton for the given segment id. Only possible if
    * a segmentation layer is visible for which an agglomerate mapping is enabled.
    *
@@ -1032,7 +1048,7 @@ class TracingApi {
    * api.tracing.loadAgglomerateSkeletonForSegmentId(3);
    */
   loadAgglomerateSkeletonForSegmentId(segmentId: number) {
-    loadAgglomerateSkeletonForSegmentId(segmentId);
+    loadAgglomerateSkeletonFromId(segmentId);
   }
 
   /**

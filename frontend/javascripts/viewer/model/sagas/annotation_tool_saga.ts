@@ -146,7 +146,6 @@ function* setLastUsedToolQueue(setToolAction: SetToolAction): Saga<void> {
 
 function* rememberToolPreferences(setToolAction: SetToolAction): Saga<void> {
   const newTool = setToolAction.tool;
-  console.log("rememberToolPreferences", newTool);
   if (
     newTool.id === AnnotationTool.AREA_MEASUREMENT.id ||
     newTool.id === AnnotationTool.LINE_MEASUREMENT.id

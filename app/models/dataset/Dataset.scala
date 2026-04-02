@@ -792,7 +792,7 @@ case class DataSourceMagRow(_dataset: ObjectId,
                             _organization: String,
                             directoryName: String)
 
-class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class DatasetMagDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[MagWithPaths, DatasetMagsRow, DatasetMags](sqlClient) {
   protected val collection = DatasetMags
 
@@ -1018,7 +1018,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 }
 
 class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
-                                datasetMagsDAO: DatasetMagsDAO,
+                                datasetMagsDAO: DatasetMagDAO,
                                 datasetCoordinateTransformationsDAO: DatasetCoordinateTransformationsDAO,
                                 datasetLayerAdditionalAxesDAO: DatasetLayerAdditionalAxesDAO,
                                 datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO)(implicit ec: ExecutionContext)

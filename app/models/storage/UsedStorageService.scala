@@ -15,7 +15,7 @@ import models.dataset.{
   DataStoreDAO,
   Dataset,
   DatasetLayerAttachmentsDAO,
-  DatasetMagsDAO,
+  DatasetMagDAO,
   StorageRelevantDataLayerAttachment,
   WKRemoteDataStoreClient
 }
@@ -34,7 +34,7 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
                                    val lifecycle: ApplicationLifecycle,
                                    organizationDAO: OrganizationDAO,
                                    dataStoreDAO: DataStoreDAO,
-                                   datasetMagDAO: DatasetMagsDAO,
+                                   datasetMagDAO: DatasetMagDAO,
                                    datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
                                    rpc: RPC,
                                    config: WkConf)(implicit val ec: ExecutionContext)

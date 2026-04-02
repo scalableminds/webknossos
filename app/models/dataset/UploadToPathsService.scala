@@ -45,7 +45,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
                                      dataStoreDAO: DataStoreDAO,
                                      layerToLinkService: LayerToLinkService,
                                      datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
-                                     datasetMagsDAO: DatasetMagsDAO,
+                                     datasetMagsDAO: DatasetMagDAO,
                                      pathDeletionService: PathDeletionService,
                                      folderDAO: FolderDAO,
                                      conf: WkConf)

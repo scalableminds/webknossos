@@ -65,6 +65,7 @@ object DatasetUploadInfo {
 case class MagUploadInfo(
     resumableUploadInfo: ResumableUploadInfo,
     datasetId: ObjectId,
+    layerName: String,
     mag: MagLocator
 )
 object MagUploadInfo {
@@ -74,6 +75,7 @@ object MagUploadInfo {
 case class AttachmentUploadInfo(
     resumableUploadInfo: ResumableUploadInfo,
     datasetId: ObjectId,
+    layerName: String,
     attachmentType: LayerAttachmentType,
     attachment: LayerAttachment
 )
@@ -192,6 +194,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                                   UploadDomain.mag)
       uploadId = magUploadInfo.resumableUploadInfo.uploadId
       _ <- magUploadMetadataStore.insertMag(uploadId, magUploadInfo.mag.withoutCredentials)
+      _ <- magUploadMetadataStore.insertLayerName(uploadId, magUploadInfo.layerName)
     } yield ()
 
   def reserveAttachmentUpload(attachmentUploadInfo: AttachmentUploadInfo, dataSourceId: DataSourceId): Fox[Unit] =
@@ -203,6 +206,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       uploadId = attachmentUploadInfo.resumableUploadInfo.uploadId
       _ <- attachmentUploadMetadataStore.insertAttachment(uploadId, attachmentUploadInfo.attachment.withoutCredential)
       _ <- attachmentUploadMetadataStore.insertAttachmentType(uploadId, attachmentUploadInfo.attachmentType)
+      _ <- magUploadMetadataStore.insertLayerName(uploadId, attachmentUploadInfo.layerName)
     } yield ()
 
   private def reserveResumableUpload(resumableUploadInfo: ResumableUploadInfo,

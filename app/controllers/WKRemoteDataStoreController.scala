@@ -6,9 +6,22 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId, DataSourceStatus, UnusableDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataSource,
+  DataSourceId,
+  DataSourceStatus,
+  UnusableDataSource
+}
 import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataStoreStatus}
-import com.scalableminds.webknossos.datastore.services.uploading.{AttachmentUploadAdditionalInfo, AttachmentUploadInfo, DatasetUploadAdditionalInfo, DatasetUploadInfo, MagUploadAdditionalInfo, MagUploadInfo, ReportDatasetUploadParameters}
+import com.scalableminds.webknossos.datastore.services.uploading.{
+  AttachmentUploadAdditionalInfo,
+  AttachmentUploadInfo,
+  DatasetUploadAdditionalInfo,
+  DatasetUploadInfo,
+  MagUploadAdditionalInfo,
+  MagUploadInfo,
+  ReportDatasetUploadParameters
+}
 import com.typesafe.scalalogging.LazyLogging
 import models.dataset._
 import models.dataset.credential.CredentialDAO
@@ -84,7 +97,16 @@ class WKRemoteDataStoreController @Inject()(
   def reserveMagUpload(name: String, key: String, token: String): Action[MagUploadInfo] =
     Action.async(validateJson[MagUploadInfo]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
-        Fox.successful(Ok(Json.toJson(MagUploadAdditionalInfo(DataSourceId("", "")))))
+        // DS write access was asserted already at this point.
+        implicit val ctx: DBAccessContext = GlobalAccessContext
+        for {
+          dataset <- datasetDAO.findOne(request.body.datasetId)
+          (dataSource, dataLayer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.layerName)
+          _ <- Fox.fromBool(dataset._dataStore == dataStore.name) ?~> "Cannot upload mag to existing dataset via different datastore."
+        } yield Ok(Json.toJson(MagUploadAdditionalInfo(DataSourceId("", ""))))
+        // DS must not have the mag
+        // insert the mag
+        // return existing datasource id
       }
     }
 

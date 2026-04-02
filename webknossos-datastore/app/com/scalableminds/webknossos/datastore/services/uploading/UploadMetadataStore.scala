@@ -137,10 +137,10 @@ class DatasetUploadMetadataStore @Inject()(protected val store: DataStoreRedisSt
   protected val domain: UploadDomain = UploadDomain.dataset
 
   private def redisKeyForUploadIdByDataSourceId(datasourceId: DataSourceId): String =
-    s"upload___${Json.stringify(Json.toJson(datasourceId))}___datasourceId"
+    s"${keyPrefix}___${Json.stringify(Json.toJson(datasourceId))}___datasourceId"
 
   private def redisKeyForLinkedLayerIdentifier(uploadId: String): String =
-    s"upload___${uploadId}___linkedLayerIdentifier"
+    s"$keyPrefix${uploadId}___linkedLayerIdentifier"
 
   // TODO make this Fox[String]?
   def findUploadIdByDataSourceId(dataSourceId: DataSourceId): Fox[Option[String]] =
@@ -170,17 +170,37 @@ class DatasetUploadMetadataStore @Inject()(protected val store: DataStoreRedisSt
 class MagUploadMetadataStore @Inject()(protected val store: DataStoreRedisStore) extends UploadMetadataStore {
   protected val domain: UploadDomain = UploadDomain.mag
 
+  private def redisKeyForMag(uploadId: String): String =
+    s"$keyPrefix${uploadId}___mag"
+
+  private def redisKeyForLayerName(uploadId: String): String =
+    s"$keyPrefix${uploadId}___layerName"
+
   def insertMag(uploadId: String, mag: MagLocator): Fox[Unit] =
-    store.insertSerialized[MagLocator](uploadId, mag)
+    store.insertSerialized[MagLocator](redisKeyForMag(uploadId), mag)
+
+  def insertLayerName(uploadId: String, layerName: String): Fox[Unit] =
+    store.insert(redisKeyForLayerName(uploadId), layerName)
 }
 
 class AttachmentUploadMetadataStore @Inject()(protected val store: DataStoreRedisStore) extends UploadMetadataStore {
   protected val domain: UploadDomain = UploadDomain.attachment
 
+  private def redisKeyForAttachment(uploadId: String): String =
+    s"$keyPrefix${uploadId}___attachment"
+
+  private def redisKeyForAttachmentType(uploadId: String): String =
+    s"$keyPrefix${uploadId}___attachmentType"
+
+  private def redisKeyForLayerName(uploadId: String): String =
+    s"$keyPrefix${uploadId}___layerName"
+
   def insertAttachment(uploadId: String, attachment: LayerAttachment): Fox[Unit] =
-    store.insertSerialized[LayerAttachment](uploadId, attachment)
+    store.insertSerialized[LayerAttachment](redisKeyForAttachment(uploadId), attachment)
 
   def insertAttachmentType(uploadId: String, attachmentType: LayerAttachmentType): Fox[Unit] =
-    store.insertSerialized[LayerAttachmentType](uploadId, attachmentType)
+    store.insertSerialized[LayerAttachmentType](redisKeyForAttachmentType(uploadId), attachmentType)
 
+  def insertLayerName(uploadId: String, layerName: String): Fox[Unit] =
+    store.insert(redisKeyForLayerName(uploadId), layerName)
 }

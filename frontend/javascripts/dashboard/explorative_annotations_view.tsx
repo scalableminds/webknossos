@@ -626,16 +626,14 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
 
           return (
             <>
-              <div>
-                <UserOutlined className="icon-margin-right" />
+              <Space>
+                <UserOutlined />
                 {ownerName}
-              </div>
-              <div className="flex-container">
-                <div className="flex-item" style={{ flexGrow: 0 }}>
-                  {teamTags.length > 0 ? <TeamOutlined className="icon-margin-right" /> : null}
-                </div>
-                <div className="flex-item">{teamTags}</div>
-              </div>
+              </Space>
+              <Space wrap>
+                {teamTags.length > 0 ? <TeamOutlined /> : null}
+                {teamTags}
+              </Space>
             </>
           );
         },

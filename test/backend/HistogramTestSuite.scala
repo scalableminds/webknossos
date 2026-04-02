@@ -205,8 +205,8 @@ class HistogramTestSuite extends AsyncWordSpec {
     }
 
     "elementClass is float" should {
-      // Dynamic range: bin = floor((value - min) / bucketSize), bucketSize = (max - min) / 255
-      // For [0f, 1f, 2f]: min=0, max=2, bucketSize=2/255
+      // Dynamic range: bin = floor((value - min) / binSize), binSize = (max - min) / 255
+      // For [0f, 1f, 2f]: min=0, max=2, binSize=2/255
       // 0f → 0, 1f → floor(127.5) = 127, 2f → 254 (float precision)
       "distribute float values across 256 bins based on their range" in {
         val data = floats(0f, 1f, 2f)
@@ -215,13 +215,13 @@ class HistogramTestSuite extends AsyncWordSpec {
         val h = histograms.head
         assert(h.min == 0.0)
         assert(h.max == 2.0)
-        // bucketSize = 2/255; 0f → bin 0, 1f → floor(1/(2/255)) = floor(127.5) = 127
+        // binSize = 2/255; 0f → bin 0, 1f → floor(1/(2/255)) = floor(127.5) = 127
         // 2f → floor(2/(2/255)) falls to 254 due to float precision (not 255)
         assert(h.elementCounts(0) == 1L)
         assert(h.elementCounts(127) == 1L)
         assert(h.elementCounts(254) == 1L)
       }
-      "put all values into bin 0 when all are identical (bucketSize degenerates to 1)" in {
+      "put all values into bin 0 when all are identical (binSize degenerates to 1)" in {
         val data = floats(3.14f, 3.14f, 3.14f)
         val histograms = service.calculateHistogramValues(data, ElementClass.float)
         assert(histograms.length == 1)
@@ -237,7 +237,7 @@ class HistogramTestSuite extends AsyncWordSpec {
         val h = histograms.head
         assert(h.min == -2.0)
         assert(h.max == 2.0)
-        // bucketSize = 4/255; -2f → bin 0, 0f → floor(2/(4/255)) = floor(127.5) = 127
+        // binSize = 4/255; -2f → bin 0, 0f → floor(2/(4/255)) = floor(127.5) = 127
         // 2f → 254 due to float precision
         assert(h.elementCounts(0) == 1L)
         assert(h.elementCounts(127) == 1L)

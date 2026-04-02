@@ -198,9 +198,9 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
           val (min, max) = floatData.foldLeft((floatData(0), floatData(0))) {
             case ((currMin, currMax), e) => (math.min(currMin, e), math.max(currMax, e))
           }
-          val bucketSize = (max - min) / 255
-          val finalBucketSize = if (bucketSize == 0f) 1f else bucketSize
-          floatData.foreach(el => counts(histogramBinForFloat(el, min, finalBucketSize)) += 1)
+          val binSize = (max - min) / 255
+          val finalBinSize = if (binSize == 0f) 1f else binSize
+          floatData.foreach(el => counts(histogramBinForFloat(el, min, finalBinSize)) += 1)
           extrema = (min, max)
       }
     }
@@ -226,6 +226,6 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
   private def histogramBinForLong(v: Long, isSigned: Boolean): Int =
     if (isSigned) (v >> 56).toInt + 128 else (v >>> 56).toInt
 
-  private def histogramBinForFloat(v: Float, min: Float, bucketSize: Float): Int =
-    ((v - min) / bucketSize).floor.toInt
+  private def histogramBinForFloat(v: Float, min: Float, binSize: Float): Int =
+    ((v - min) / binSize).floor.toInt
 }

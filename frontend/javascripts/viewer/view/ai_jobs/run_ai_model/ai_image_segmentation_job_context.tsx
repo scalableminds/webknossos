@@ -3,6 +3,7 @@ import {
   runInstanceModelInference,
   runNeuronModelInference,
   runPretrainedMitochondriaInferenceJob,
+  runPretrainedSomaInferenceJob,
 } from "admin/rest_api";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -33,6 +34,7 @@ interface RunAiModelJobContextType {
     | APIJobCommand.INFER_NUCLEI
     | APIJobCommand.INFER_MITOCHONDRIA
     | APIJobCommand.INFER_INSTANCES
+    | APIJobCommand.INFER_SOMA
     | null;
   selectedBoundingBox: UserBoundingBox | null;
   newDatasetName: string;
@@ -45,7 +47,8 @@ interface RunAiModelJobContextType {
       | APIJobCommand.INFER_NEURONS
       | APIJobCommand.INFER_NUCLEI
       | APIJobCommand.INFER_MITOCHONDRIA
-      | APIJobCommand.INFER_INSTANCES,
+      | APIJobCommand.INFER_INSTANCES
+      | APIJobCommand.INFER_SOMA,
   ) => void;
   setSelectedModel: (model: AiModel | PretrainedModel) => void;
   setSelectedBoundingBox: (bbox: UserBoundingBox | null) => void;
@@ -76,6 +79,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     | APIJobCommand.INFER_NUCLEI
     | APIJobCommand.INFER_MITOCHONDRIA
     | APIJobCommand.INFER_INSTANCES
+    | APIJobCommand.INFER_SOMA
     | null
   >(null);
   const [selectedBoundingBox, setSelectedBoundingBox] = useState<UserBoundingBox | null>(null);
@@ -222,6 +226,14 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
           break;
         case APIJobCommand.INFER_MITOCHONDRIA:
           await runPretrainedMitochondriaInferenceJob(
+            dataset.id,
+            selectedLayer.name,
+            boundingBox,
+            newDatasetName,
+          );
+          break;
+        case APIJobCommand.INFER_SOMA:
+          await runPretrainedSomaInferenceJob(
             dataset.id,
             selectedLayer.name,
             boundingBox,

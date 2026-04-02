@@ -274,6 +274,7 @@ class JobService @Inject()(wkConf: WkConf,
       case JobCommand.infer_neurons        => Fox.successful(wkConf.Features.neuronInferralCostInMilliCreditsPerGVx)
       case JobCommand.infer_nuclei         => Fox.successful(wkConf.Features.nucleiInferralCostInMilliCreditsPerGVx)
       case JobCommand.infer_mitochondria   => Fox.successful(wkConf.Features.mitochondriaInferralCostInMilliCreditsPerGVx)
+      case JobCommand.infer_soma           => Fox.successful(wkConf.Features.somaInferralCostInMilliCreditsPerGVx)
       case JobCommand.infer_instances      => Fox.successful(wkConf.Features.instancesInferralCostInMilliCreditsPerGVx)
       case JobCommand.train_neuron_model   => Fox.successful(0)
       case JobCommand.train_instance_model => Fox.successful(0)

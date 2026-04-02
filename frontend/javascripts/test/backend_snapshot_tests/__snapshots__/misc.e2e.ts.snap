@@ -75,6 +75,7 @@ exports[`Misc APIs (E2E)  > getFeatureToggles() 1`] = `
   "mitochondriaInferralCostInMilliCreditsPerGVx": 1000,
   "neuronInferralCostInMilliCreditsPerGVx": 1000,
   "nucleiInferralCostInMilliCreditsPerGVx": 1000,
+  "somaInferralCostInMilliCreditsPerGVx": 1000,
   "openIdConnectEnabled": false,
   "optInTabs": [
     "ConnectomeView",

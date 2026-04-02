@@ -17,6 +17,7 @@ export const jobNameToImagePath = {
   infer_neurons: neuronInferralExample,
   infer_nuclei: nucleiInferralExample,
   infer_mitochondria: mitoInferralExample,
+  infer_soma: nucleiInferralExample,
   align_sections: alignExample,
   materialize_volume_annotation: materializeVolumeAnnotationExample,
   invisible: "",
@@ -30,13 +31,15 @@ export const MIN_BBOX_EXTENT: Record<
   | APIJobCommand.INFER_NEURONS
   | APIJobCommand.INFER_NUCLEI
   | APIJobCommand.INFER_MITOCHONDRIA
-  | APIJobCommand.INFER_INSTANCES,
+  | APIJobCommand.INFER_INSTANCES
+  | APIJobCommand.INFER_SOMA,
   Vector3
 > = {
   [APIJobCommand.INFER_NEURONS]: [16, 16, 4],
   [APIJobCommand.INFER_NUCLEI]: [4, 4, 4],
   [APIJobCommand.INFER_INSTANCES]: [4, 4, 4],
   [APIJobCommand.INFER_MITOCHONDRIA]: [4, 4, 4],
+  [APIJobCommand.INFER_SOMA]: [4, 4, 4],
 };
 
 export const MEAN_VX_SIZE: Record<

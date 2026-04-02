@@ -791,6 +791,7 @@ export type APIFeatureToggles = {
   readonly neuronInferralCostInMilliCreditsPerGVx: number;
   readonly nucleiInferralCostInMilliCreditsPerGVx: number;
   readonly mitochondriaInferralCostInMilliCreditsPerGVx: number;
+  readonly somaInferralCostInMilliCreditsPerGVx: number;
   readonly instancesInferralCostInMilliCreditsPerGVx: number;
   readonly alignmentCostInMilliCreditsPerGVx: number;
   readonly publicDemoDatasetUrl: string;
@@ -820,6 +821,7 @@ export enum APIJobCommand {
   INFER_NEURONS = "infer_neurons",
   INFER_MITOCHONDRIA = "infer_mitochondria",
   INFER_INSTANCES = "infer_instances",
+  INFER_SOMA = "infer_soma",
   MATERIALIZE_VOLUME_ANNOTATION = "materialize_volume_annotation",
   TRAIN_NEURON_MODEL = "train_neuron_model",
   TRAIN_INSTANCE_MODEL = "train_instance_model",

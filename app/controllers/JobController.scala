@@ -257,6 +257,46 @@ class JobController @Inject()(jobDAO: JobDAO,
       }
     }
 
+  def runInferSomaJob(datasetId: ObjectId,
+                      layerName: String,
+                      bbox: String,
+                      newDatasetName: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      log(Some(slackNotificationService.noticeFailedJobRequest)) {
+        for {
+          dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
+            "organization.notFound",
+            dataset._organization)
+          _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.inferSoma.notAllowed.organization" ~> FORBIDDEN
+          _ <- datasetService.assertValidDatasetName(newDatasetName)
+          _ <- datasetService.assertValidLayerNameLax(layerName)
+          (_, dataLayer) <- datasetService.getDataSourceAndLayerFor(dataset, layerName)
+          command = JobCommand.infer_soma
+          mag1BoundingBox <- BoundingBox.fromLiteral(bbox).toFox
+          targetMag <- dataLayer.finestMag.toFox
+          targetMagBoundingBox = mag1BoundingBox / targetMag
+          commandArgs = Json.obj(
+            "dataset_id" -> dataset._id,
+            "organization_id" -> dataset._organization,
+            "dataset_name" -> dataset.name,
+            "dataset_directory_name" -> dataset.directoryName,
+            "new_dataset_name" -> newDatasetName,
+            "layer_name" -> layerName,
+            "bbox" -> bbox,
+          )
+          creditTransactionComment = s"Run for AI soma segmentation for dataset ${dataset.name}"
+          job <- jobService.submitPaidJob(command,
+                                          commandArgs,
+                                          targetMagBoundingBox,
+                                          creditTransactionComment,
+                                          request.identity,
+                                          dataset._dataStore)
+          jobAsJs <- jobService.publicWrites(job)
+        } yield Ok(jobAsJs)
+      }
+    }
+
   def runAlignSectionsJob(datasetId: ObjectId,
                           layerName: String,
                           newDatasetName: String,

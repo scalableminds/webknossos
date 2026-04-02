@@ -168,6 +168,7 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
       [APIJobCommand.INFER_NEURONS]: features().neuronInferralCostInMilliCreditsPerGVx,
       [APIJobCommand.INFER_NUCLEI]: features().nucleiInferralCostInMilliCreditsPerGVx,
       [APIJobCommand.INFER_MITOCHONDRIA]: features().mitochondriaInferralCostInMilliCreditsPerGVx,
+      [APIJobCommand.INFER_SOMA]: features().somaInferralCostInMilliCreditsPerGVx,
       [APIJobCommand.INFER_INSTANCES]: features().instancesInferralCostInMilliCreditsPerGVx,
       [APIJobCommand.ALIGN_SECTIONS]: features().alignmentCostInMilliCreditsPerGVx,
       [APIJobCommand.TRAIN_INSTANCE_MODEL]: 0,

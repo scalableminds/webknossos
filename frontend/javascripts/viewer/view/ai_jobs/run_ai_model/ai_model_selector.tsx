@@ -22,7 +22,8 @@ export type PretrainedModel = {
     | APIJobCommand.INFER_NEURONS
     | APIJobCommand.INFER_NUCLEI
     | APIJobCommand.INFER_MITOCHONDRIA
-    | APIJobCommand.INFER_INSTANCES;
+    | APIJobCommand.INFER_INSTANCES
+    | APIJobCommand.INFER_SOMA;
   image: string;
   disabled?: boolean;
 };
@@ -50,6 +51,14 @@ const preTrainedModels: PretrainedModel[] = [
     id: "nuclei-detection",
     disabled: true,
     jobType: APIJobCommand.INFER_NUCLEI,
+    image: nucleiInferralExample,
+  },
+  {
+    name: "Soma Detection",
+    comment:
+      "Instance segmentation model for soma detection. Detects all somata in an EM dataset.",
+    id: "soma-detection",
+    jobType: APIJobCommand.INFER_SOMA,
     image: nucleiInferralExample,
   },
 ];
@@ -88,7 +97,8 @@ export const AiModelSelector: React.FC = () => {
       | APIJobCommand.INFER_NEURONS
       | APIJobCommand.INFER_NUCLEI
       | APIJobCommand.INFER_MITOCHONDRIA
-      | APIJobCommand.INFER_INSTANCES;
+      | APIJobCommand.INFER_INSTANCES
+      | APIJobCommand.INFER_SOMA;
     if ("category" in model) {
       jobType = mapCategoryToJobType(model.category as APIAiModelCategory);
     } else {

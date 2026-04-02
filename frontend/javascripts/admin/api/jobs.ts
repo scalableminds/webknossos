@@ -318,6 +318,25 @@ export function runPretrainedMitochondriaInferenceJob(
   );
 }
 
+export function runPretrainedSomaInferenceJob(
+  datasetId: string,
+  layerName: string,
+  bbox: Vector6,
+  newDatasetName: string,
+): Promise<APIJob> {
+  const urlParams = new URLSearchParams({
+    layerName,
+    bbox: bbox.join(","),
+    newDatasetName,
+  });
+  return Request.receiveJSON(
+    `/api/jobs/run/inferSoma/${datasetId}?${urlParams.toString()}`,
+    {
+      method: "POST",
+    },
+  );
+}
+
 export function startAlignSectionsJob(
   datasetId: string,
   layerName: string,

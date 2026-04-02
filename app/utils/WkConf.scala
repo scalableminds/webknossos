@@ -144,6 +144,7 @@ class WkConf @Inject()(configuration: Configuration, certificateValidationServic
     val neuronInferralCostInMilliCreditsPerGVx: Int = get[Int]("features.neuronInferralCostInMilliCreditsPerGVx")
     val mitochondriaInferralCostInMilliCreditsPerGVx: Int =
       get[Int]("features.mitochondriaInferralCostInMilliCreditsPerGVx")
+    val somaInferralCostInMilliCreditsPerGVx: Int = get[Int]("features.somaInferralCostInMilliCreditsPerGVx")
     val nucleiInferralCostInMilliCreditsPerGVx: Int = get[Int]("features.nucleiInferralCostInMilliCreditsPerGVx")
     val instancesInferralCostInMilliCreditsPerGVx: Int = get[Int]("features.instancesInferralCostInMilliCreditsPerGVx")
     val alignmentCostInMilliCreditsPerGVx: Int = get[Int]("features.alignmentCostInMilliCreditsPerGVx")

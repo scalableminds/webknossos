@@ -14,7 +14,7 @@ import play.api.libs.json.{Json, OFormat}
 import scala.annotation.tailrec
 import scala.concurrent.ExecutionContext
 
-case class Histogram(elementCounts: Array[Long], numberOfElements: Int, min: Double, max: Double)
+case class Histogram(elementCounts: Array[Long], min: Double, max: Double)
 object Histogram { implicit val jsonFormat: OFormat[Histogram] = Json.format[Histogram] }
 
 class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(implicit ec: ExecutionContext)
@@ -208,10 +208,10 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       val listOfCounts = counts.grouped(256).toList
       listOfCounts.map(counts => {
         counts(0) = 0;
-        Histogram(counts, counts.sum.toInt, extrema._1, extrema._2)
+        Histogram(counts, extrema._1, extrema._2)
       })
     } else
-      List(Histogram(counts, data.length, extrema._1, extrema._2))
+      List(Histogram(counts, extrema._1, extrema._2))
   }
 
   private def histogramBinForByte(v: Byte, isSigned: Boolean): Int =

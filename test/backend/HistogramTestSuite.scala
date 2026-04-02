@@ -30,7 +30,6 @@ class HistogramTestSuite extends AsyncWordSpec {
     val h = histograms.head
     assert(h.min == expectedMin)
     assert(h.max == expectedMax)
-    assert(h.numberOfElements == data.length)
     expectedBinCounts.foreach {
       case (bin, count) =>
         assert(h.elementCounts(bin) == count, s"bin $bin: expected $count, got ${h.elementCounts(bin)}")
@@ -216,7 +215,6 @@ class HistogramTestSuite extends AsyncWordSpec {
         val h = histograms.head
         assert(h.min == 0.0)
         assert(h.max == 2.0)
-        assert(h.numberOfElements == 3)
         // bucketSize = 2/255; 0f → bin 0, 1f → floor(1/(2/255)) = floor(127.5) = 127
         // 2f → floor(2/(2/255)) falls to 254 due to float precision (not 255)
         assert(h.elementCounts(0) == 1L)
@@ -230,7 +228,6 @@ class HistogramTestSuite extends AsyncWordSpec {
         val h = histograms.head
         assert(h.min == 3.14f.toDouble)
         assert(h.max == 3.14f.toDouble)
-        assert(h.numberOfElements == 3)
         assert(h.elementCounts(0) == 3L)
       }
       "handle negative float values" in {
@@ -240,7 +237,6 @@ class HistogramTestSuite extends AsyncWordSpec {
         val h = histograms.head
         assert(h.min == -2.0)
         assert(h.max == 2.0)
-        assert(h.numberOfElements == 3)
         // bucketSize = 4/255; -2f → bin 0, 0f → floor(2/(4/255)) = floor(127.5) = 127
         // 2f → 254 due to float precision
         assert(h.elementCounts(0) == 1L)
@@ -273,10 +269,6 @@ class HistogramTestSuite extends AsyncWordSpec {
         assert(histograms(0).elementCounts(0) == 0L) // bin 0 was zeroed
         assert(histograms(1).elementCounts(5) == 1L)
         assert(histograms(2).elementCounts(10) == 1L)
-        // numberOfElements reflects counts after zeroing bin 0
-        assert(histograms(0).numberOfElements == 0)
-        assert(histograms(1).numberOfElements == 1)
-        assert(histograms(2).numberOfElements == 1)
       }
       "handle multiple pixels correctly" in {
         // Two pixels: (1, 2, 3) and (1, 4, 6)
@@ -298,7 +290,6 @@ class HistogramTestSuite extends AsyncWordSpec {
         val histograms = service.calculateHistogramValues(data, ElementClass.uint8)
         assert(histograms.length == 1)
         val h = histograms.head
-        assert(h.numberOfElements == 0)
         assert(h.elementCounts.forall(_ == 0L))
       }
     }

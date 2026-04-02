@@ -112,7 +112,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
       before = Instant.now
       (bytes, encodingString, rangeHeader) <- performGetObjectRequest(request)
       _ = Instant.logSince(before,
-                           s"S3 getObject request for ${uri.toString} with range $range",
+                           s"S3 getObject request for ${uri.getAuthority}/${objectKey} with range $range",
                            logger,
                            includeRawMillis = true)
       encoding <- Encoding.fromRfc7231String(encodingString).toFox

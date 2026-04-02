@@ -208,7 +208,9 @@ export const AiAnalysisSettings: React.FC = () => {
                 )}
               </Row>
               <Row>
-                <KeyValuePairsFormItem name="customConfiguration" label="Custom Configuration" />
+                <Col span={24}>
+                  <KeyValuePairsFormItem name="customConfiguration" label="Custom Configuration" />
+                </Col>
               </Row>
 
               {isNeuronModel && (

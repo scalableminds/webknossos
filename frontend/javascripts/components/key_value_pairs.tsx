@@ -1,6 +1,7 @@
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
-import { Button, Flex, Form, Input } from "antd";
-import { useEffect, useId, useRef, useState } from "react";
+import { AutoComplete, Button, Flex, Form, Input } from "antd";
+import useDidMount from "beautiful-react-hooks/useDidMount";
+import { useId, useState } from "react";
 
 type JsonPrimitive = string | number | boolean;
 export type KeyValuePairs = Record<string, JsonPrimitive>;
@@ -8,7 +9,7 @@ export type KeyValuePairs = Record<string, JsonPrimitive>;
 type KeyValueEntry = {
   id: string;
   key: string;
-  rawValue: string; // always stored as string in the UI
+  rawValue: string;
 };
 
 function parseValue(raw: string): JsonPrimitive {
@@ -29,48 +30,34 @@ function entriesToPairs(entries: KeyValueEntry[]): KeyValuePairs {
   return result;
 }
 
-function pairsToEntries(pairs: KeyValuePairs, idPrefix: string): KeyValueEntry[] {
-  return Object.entries(pairs).map(([key, value], i) => ({
-    id: `${idPrefix}-${i}`,
-    key,
-    rawValue: String(value),
-  }));
-}
-
-// Stand-alone component (usable as a controlled antd FormItem child)
+/**
+ * An editable list of key-value pairs whose result is a JSON-serializable object.
+ * Values are entered as plain text and automatically coerced to numbers or booleans
+ * where applicable (e.g. "42" → 42, "true" → true). Keys support autocomplete from
+ * the known workflow config keys.
+ *
+ * Designed to be embedded in an antd Form.Item — the `onChange` prop is called with
+ * the current pairs whenever the list changes.
+ */
 export function KeyValuePairsInput({
-  value,
   onChange,
 }: {
-  // onChange and value should not be renamed, because these are the
-  // default property names for controlled antd FormItems.
-  value?: KeyValuePairs;
+  // onChange should not be renamed — it is the default prop name for controlled antd FormItems.
   onChange?: (pairs: KeyValuePairs) => void;
 }) {
   const idPrefix = useId();
-  // Internal state holds the full entry list including rows with empty keys that
-  // are filtered out of the serialized value. This prevents newly-added rows from
-  // disappearing immediately when the parent form re-renders with the filtered value.
-  const [entries, setEntries] = useState<KeyValueEntry[]>(() =>
-    pairsToEntries(value ?? {}, idPrefix),
-  );
-  // Track the last value we emitted so we can distinguish external value changes
-  // (e.g. form reset) from echoes of our own onChange calls.
-  const lastEmittedRef = useRef<string>(JSON.stringify(value ?? {}));
+  const [entries, setEntries] = useState<KeyValueEntry[]>([]);
+  const [configKeyOptions, setConfigKeyOptions] = useState<{ value: string }[]>([]);
 
-  useEffect(() => {
-    const incoming = JSON.stringify(value ?? {});
-    if (incoming !== lastEmittedRef.current) {
-      lastEmittedRef.current = incoming;
-      setEntries(pairsToEntries(value ?? {}, idPrefix));
-    }
-  }, [value]);
+  useDidMount(() => {
+    import("viewer/view/ai_jobs/workflow_config_keys").then(({ WORKFLOW_CONFIG_KEYS }) => {
+      setConfigKeyOptions(WORKFLOW_CONFIG_KEYS.map((k) => ({ value: k })));
+    });
+  });
 
   function notify(next: KeyValueEntry[]) {
     setEntries(next);
-    const pairs = entriesToPairs(next);
-    lastEmittedRef.current = JSON.stringify(pairs);
-    onChange?.(pairs);
+    onChange?.(entriesToPairs(next));
   }
 
   function addEntry() {
@@ -89,17 +76,23 @@ export function KeyValuePairsInput({
     <Flex vertical gap="small">
       {entries.map((entry) => (
         <Flex key={entry.id} gap="small" align="center" style={{ width: "100%" }}>
-          <Input
+          <AutoComplete
             placeholder="Key"
             value={entry.key}
-            onChange={(e) => updateEntry(entry.id, { key: e.target.value })}
-            style={{ flex: 1, minWidth: 0 }}
+            options={configKeyOptions}
+            showSearch={{
+              filterOption: (input, option) =>
+                (option?.value ?? "").toLowerCase().includes(input.toLowerCase()),
+            }}
+            onChange={(value) => updateEntry(entry.id, { key: value })}
+            style={{ flex: 1 }}
+            popupMatchSelectWidth={false}
           />
           <Input
             placeholder="Value"
             value={entry.rawValue}
             onChange={(e) => updateEntry(entry.id, { rawValue: e.target.value })}
-            style={{ flex: 1, minWidth: 0 }}
+            style={{ flex: 1 }}
           />
           <Button
             type="text"

@@ -190,7 +190,6 @@ class AiModelController @Inject()(
           "organization_id" -> organization._id,
           "model_id" -> modelId,
           "model_name" -> request.body.name,
-          "custom_workflow_provided_by_user" -> request.body.workflowYaml,
           "custom_configuration" -> request.body.customConfiguration
         )
         creditTransactionComment = s"AI training for neuron model $modelId"
@@ -248,7 +247,6 @@ class AiModelController @Inject()(
           "organization_id" -> organization._id,
           "model_id" -> modelId,
           "model_name" -> request.body.name,
-          "custom_workflow_provided_by_user" -> request.body.workflowYaml,
           "instance_diameter_nm" -> request.body.instanceDiameterNm,
           "custom_configuration" -> request.body.customConfiguration
         )
@@ -303,7 +301,6 @@ class AiModelController @Inject()(
           "model_organization_id" -> aiModelOpt.map(_._organization),
           "dataset_directory_name" -> dataset.directoryName,
           "new_dataset_name" -> request.body.newDatasetName,
-          "custom_workflow_provided_by_user" -> request.body.workflowYaml,
           "invert_color_layer" -> request.body.invertColorLayer,
           "seed_generator_distance_threshold" -> request.body.seedGeneratorDistanceThreshold,
           "custom_configuration" -> request.body.customConfiguration
@@ -367,7 +364,6 @@ class AiModelController @Inject()(
           "model_organization_id" -> aiModelOpt.map(_._organization),
           "dataset_directory_name" -> dataset.directoryName,
           "new_dataset_name" -> request.body.newDatasetName,
-          "custom_workflow_provided_by_user" -> request.body.workflowYaml,
           "invert_color_layer" -> request.body.invertColorLayer,
           "do_split_merger_evaluation" -> request.body.doSplitMergerEvaluation,
           "eval_use_sparse_tracing" -> request.body.evalUseSparseTracing,

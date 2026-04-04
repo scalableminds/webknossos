@@ -149,7 +149,7 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   }
 }
 
-const MUTEX_SUBSCRIPTION_TIMEOUT = 60 * 1000;
+const MUTEX_SUBSCRIPTION_TIMEOUT = 5 * 60 * 1000;
 
 function getUnsubscribeFromAnnotationMutexSaga(id: number): () => Saga<void> {
   let didUnsubscribe = false;
@@ -204,10 +204,6 @@ export function* subscribeToAnnotationMutex(callerId: string): Saga<() => Saga<v
   }
   state.subscribersToMutex[newId] = callerId;
   yield* put(subscribeToAnnotationMutexAction(newId, callerId));
-
-  if (yield* call(getDoesHaveMutex)) {
-    return getUnsubscribeFromAnnotationMutexSaga(newId);
-  }
 
   while (true) {
     const doesHaveMutex = yield* call(getDoesHaveMutex);

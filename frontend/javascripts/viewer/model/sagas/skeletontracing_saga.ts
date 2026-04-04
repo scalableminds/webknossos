@@ -416,19 +416,13 @@ function* loadAgglomerateSkeletonWithAtPosition(
   let unsubscribeFromAnnotationMutex = null;
   let hideFn: HideFn | undefined;
   if (shouldGuardWithAnnotationMutex) {
-    ({ hideFn } = yield* call(
-      progressCallback,
-      false,
-      `Getting annotation write-lock and updating to latest version ...`,
-    ));
+    ({ hideFn } = yield* call(progressCallback, false, `Updating annotation to latest version...`));
     unsubscribeFromAnnotationMutex = yield* call(
       subscribeToAnnotationMutex,
       "Agglomerate Skeleton Loading",
     );
 
-    // Fetch agglomerate skeleton in parallel to updating to latest version to make syncing with the server faster.
-    // We already sync here to make the save after adding the agglomerate skeleton a fast forward like update,
-    // which then only sends the whole save queue to the server.
+    // We already sync here to ensure to have the newest annotation version to get an up-to-date agglomerate skeleton.
     yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
   }
 
@@ -451,7 +445,7 @@ function* loadAgglomerateSkeletonWithAtPosition(
       yield* call(
         progressCallback,
         true,
-        `Skeleton for agglomerate ${agglomerateId} is already present. If it not in sync with the mapping, please delete and reload it.`,
+        `Skeleton for agglomerate ${agglomerateId} is already present. If it is not in sync with the mapping, please delete and reload it.`,
       );
       return;
     }
@@ -496,9 +490,6 @@ function* loadAgglomerateSkeletonWithAtPosition(
       throw new Error("Could not find the newly loaded agglomerate tree in the annotation.");
     }
   } catch (e) {
-    if (unsubscribeFromAnnotationMutex) {
-      yield* call(unsubscribeFromAnnotationMutex);
-    }
     // Hide the progress notification and handle the error
     hideFn?.();
     // @ts-expect-error
@@ -506,9 +497,10 @@ function* loadAgglomerateSkeletonWithAtPosition(
     return;
   } finally {
     if (shouldGuardWithAnnotationMutex) {
-      // Enforces to directly store the loaded agglomerate skeleton to the annotation on the server to enable easier syncing of update actions.
-      // The saving includes releasing the mutex acquired earlier.
+      // Enforces to directly store the loaded agglomerate skeleton to the annotation on the server
+      // to enforce that all users also have the agglomerate skeleton present upon the next sync.
       yield* call([Model, Model.ensureSavedState]);
+      // Then release the mutex if it was acquired.
       if (unsubscribeFromAnnotationMutex) {
         yield* call(unsubscribeFromAnnotationMutex);
       } else {

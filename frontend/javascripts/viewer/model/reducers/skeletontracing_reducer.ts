@@ -1226,24 +1226,26 @@ function SkeletonTracingReducer(
     }
 
     case "SET_TREES_AGGLOMERATE_INFO_TRACING_ID": {
-      const trees = getTreesWithType(
+      const agglomerateTrees = getTreesWithType(
         enforceSkeletonTracing(state.annotation),
         TreeTypeEnum.AGGLOMERATE,
       );
-      const newTrees = trees.values().reduce((currentTrees: TreeMap, agglomerateTree: Tree) => {
-        const updatedTree =
-          agglomerateTree.agglomerateInfo != null
-            ? {
-                ...agglomerateTree,
-                agglomerateInfo: {
-                  agglomerateId: agglomerateTree.agglomerateInfo.agglomerateId,
-                  tracingId: action.newAgglomerateMappingTracingId,
-                  mappingId: null,
-                },
-              }
-            : agglomerateTree;
-        return currentTrees.set(agglomerateTree.treeId, updatedTree);
-      }, skeletonTracing.trees);
+      const newTrees = agglomerateTrees
+        .values()
+        .reduce((currentTrees: TreeMap, agglomerateTree: Tree) => {
+          const updatedTree =
+            agglomerateTree.agglomerateInfo != null
+              ? {
+                  ...agglomerateTree,
+                  agglomerateInfo: {
+                    agglomerateId: agglomerateTree.agglomerateInfo.agglomerateId,
+                    tracingId: action.newAgglomerateMappingTracingId,
+                    mappingId: null,
+                  },
+                }
+              : agglomerateTree;
+          return currentTrees.set(agglomerateTree.treeId, updatedTree);
+        }, skeletonTracing.trees);
 
       return update(state, {
         annotation: {

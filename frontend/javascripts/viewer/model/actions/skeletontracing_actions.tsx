@@ -626,11 +626,14 @@ export const applySkeletonUpdateActionsFromServerAction = (
   }) as const;
 
 // loadAgglomerateSkeletonAtPositionAction should always be preferred over loadAgglomerateSkeletonFromIdAction.
-// It uses the position to defined the agglomerate id instead of the the id itself directly.
+// It uses the position to derive the agglomerate id instead of the the id itself directly.
 // The benefit of passing the position is that this allows to first synchronize with the newest version of the annotation
 // in live-collab mode and then once up-to-date get the latest agglomerate id of the position.
 // Otherwise, if the id is passed to the action, the syncing with the backend might update the id which is requested by this action via e.g. an merge operation.
 // This would lead to the agglomerate id not existing anymore and thus the frontend requesting an agglomerate skeleton with an outdated agglomerate id.
+
+// loadAgglomerateSkeletonFromIdAction only exists to keep supporting the frontend api function and
+// initially loading the agglomerate skeleton stored in the URL during annotation loading.
 export const loadAgglomerateSkeletonAtPositionAction = (
   layerName: string,
   mappingName: string,
@@ -643,6 +646,9 @@ export const loadAgglomerateSkeletonAtPositionAction = (
     agglomeratePosition,
   }) as const;
 
+// Is unsafe in live collab-scenario. It is only save in case the mutex has been acquired, the annotation is in sync with the server
+// and the latest mapping info was used to determine the passed agglomerate id.
+// Currently, only exists for legacy support: initial agglomerate skeleton loading via URL and old frontend api function.
 export const loadAgglomerateSkeletonFromIdAction = (
   layerName: string,
   mappingName: string,

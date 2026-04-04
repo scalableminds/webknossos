@@ -115,6 +115,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
     await task.toPromise();
   });
 
+  // Note: For editable mappings goes: volumeTracingId === editableMappingId.
   it("should put the mapping tracing id into the loaded agglomerate skeletons upon making the mapping editable", async (context: WebknossosTestContext) => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context);
     const task = startSaga(function* task() {
@@ -126,8 +127,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       yield put(setActiveCellAction(1));
 
       let trees = new DiffableMap<number, Tree>();
-      const state = yield* select((state) => state);
-      const simulatedAgglomerateTree = createTree(state, Date.now());
+      const simulatedAgglomerateTree = yield* select((state) => createTree(state, Date.now()));
       expect(simulatedAgglomerateTree).toBeDefined();
       if (!simulatedAgglomerateTree) {
         return;
@@ -154,7 +154,6 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
         expect(agglomerateTree.agglomerateInfo?.mappingName).toBe(sampleHdf5AgglomerateName);
         expect(agglomerateTree.agglomerateInfo?.tracingId).toBeUndefined();
       });
-      WkDevFlags.logActions = true;
       yield makeMappingEditableHelper();
 
       const treesAfterMakingMappingEditable = yield* select((state) =>

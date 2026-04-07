@@ -343,6 +343,16 @@ export function* getAgglomerateSkeletonTracing(
 
     // Make sure the tree is named as expected
     parsedTracing.trees[0].name = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
+    if (editableMapping && parsedTracing.trees[0].agglomerateInfo?.mappingName != null) {
+      // Ensure loaded agglomerate skeletons have the tracing id set in their agglomerateInfo.
+      // In case the matching agglomerate was never adjusted, the tracingstore asks the datastore which then
+      // sets the mappingName in the agglomerate info, but we prefer to have the tracingId set in case
+      // an editable mapping tracing exists.
+      parsedTracing.trees[0].agglomerateInfo = {
+        agglomerateId,
+        tracingId: editableMapping.tracingId,
+      };
+    }
 
     return parsedTracing;
   } catch (e) {

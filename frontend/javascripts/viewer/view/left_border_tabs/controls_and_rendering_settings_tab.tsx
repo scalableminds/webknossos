@@ -26,12 +26,10 @@ import {
 import { getGpuFactorsWithLabels } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import { api } from "viewer/singletons";
 import type { DatasetConfiguration, UserConfiguration, WebknossosState } from "viewer/store";
-import {
-  DropdownSetting,
-  LogSliderSetting,
-  NumberSliderSetting,
-  SwitchSetting,
-} from "viewer/view/components/setting_input_views";
+import { DropdownSetting } from "./components/dropdown_setting";
+import { LogSliderSetting } from "./components/log_slider_setting";
+import NumberSliderSetting from "./components/number_slider_setting";
+import SwitchSetting from "./components/switch_setting";
 
 type ControlsAndRenderingSettingsTabProps = {
   activeUser: APIUser | null | undefined;

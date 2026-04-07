@@ -12,12 +12,12 @@ import { updateLayerSettingAction } from "viewer/model/actions/settings_actions"
 import type { DatasetLayerConfiguration } from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import {
-  ColorSetting,
-  LogSliderSetting,
   SETTING_LEFT_SPAN,
   SETTING_MIDDLE_SPAN,
   SETTING_VALUE_SPAN,
-} from "viewer/view/components/setting_input_views";
+} from "viewer/view/left_border_tabs/components/setting_input_helper";
+import ColorSetting from "./color_setting";
+import { LogSliderSetting } from "./log_slider_setting";
 
 export default function ColorLayerSettings({
   layerName,

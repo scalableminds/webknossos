@@ -111,7 +111,7 @@ POST          /datasets/upload/:uploadDomain                                    
 POST          /datasets/upload/dataset/reserveUpload                                                                  @com.scalableminds.webknossos.datastore.controllers.UploadController.reserveDatasetUpload()
 POST          /datasets/upload/mag/reserveUpload                                                                      @com.scalableminds.webknossos.datastore.controllers.UploadController.reserveAttachmentUpload()
 POST          /datasets/upload/attachment/reserveUpload                                                               @com.scalableminds.webknossos.datastore.controllers.UploadController.reserveMagUpload()
-GET           /datasets/upload/:uploadDomain/getUnfinishedUploads                                                     @com.scalableminds.webknossos.datastore.controllers.UploadController.getUnfinishedUploads(organizationName: String, uploadDomain: String)
+GET           /datasets/upload/:uploadDomain/unfinishedUploads                                                        @com.scalableminds.webknossos.datastore.controllers.UploadController.getUnfinishedUploads(organizationName: String, uploadDomain: String)
 POST          /datasets/upload/:uploadDomain/finishUpload                                                             @com.scalableminds.webknossos.datastore.controllers.UploadController.finishUpload(uploadDomain: String, uploadId: String)
 POST          /datasets/upload/:uploadDomain/cancelUpload                                                             @com.scalableminds.webknossos.datastore.controllers.UploadController.cancelUpload(uploadDomain: String, uploadId: String)
 

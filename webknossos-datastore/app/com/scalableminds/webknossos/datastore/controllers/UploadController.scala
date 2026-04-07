@@ -39,7 +39,7 @@ class UploadController @Inject()(
         UserAccessRequest.administrateDatasets(request.body.organizationId)) {
         for {
           isKnownUpload <- uploadService.isKnownUpload(request.body.resumableUploadInfo.uploadId, UploadDomain.dataset)
-          _ <- Fox.runIf(isKnownUpload) {
+          _ <- Fox.runIf(!isKnownUpload) {
             for {
               reserveUploadAdditionalInfo <- dsRemoteWebknossosClient.reserveDatasetUpload(request.body) ?~> "dataset.upload.validation.failed"
               _ <- uploadService.reserveDatasetUpload(request.body,

@@ -6,13 +6,7 @@ import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, DatasetService}
 import models.job._
-import models.organization.{
-  CreditTransactionDAO,
-  CreditTransactionService,
-  OrganizationDAO,
-  OrganizationService,
-  PricingPlan
-}
+import models.organization.{CreditTransactionDAO, CreditTransactionService, OrganizationDAO, PricingPlan}
 import models.user.{MultiUserDAO, UserService}
 import play.api.i18n.Messages
 import play.api.libs.json._
@@ -71,7 +65,6 @@ class JobController @Inject()(jobDAO: JobDAO,
                               wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                               slackNotificationService: SlackNotificationService,
                               organizationDAO: OrganizationDAO,
-                              organizationService: OrganizationService,
                               creditTransactionService: CreditTransactionService,
                               creditTransactionDAO: CreditTransactionDAO,
                               dataStoreDAO: DataStoreDAO,
@@ -83,7 +76,7 @@ class JobController @Inject()(jobDAO: JobDAO,
     for {
       _ <- Fox.successful(())
       jobCountsByState <- jobDAO.countByState
-      workers <- workerDAO.findAll
+      workers <- workerDAO.findAll(GlobalAccessContext)
       workersJson = workers.map(workerService.publicWrites)
       jsStatus = Json.obj(
         "workers" -> workersJson,

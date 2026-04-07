@@ -90,7 +90,6 @@ const DUMMY_HISTOGRAM_DATA = [
   // This is used as a fallback for a nicer look. On top of that, an error
   // message will be rendered.
   {
-    numberOfElements: 255,
     elementCounts: range(255).map((idx) => Math.exp(-0.5 * ((idx - 128) / 30) ** 2)),
     min: 0,
     max: 255,

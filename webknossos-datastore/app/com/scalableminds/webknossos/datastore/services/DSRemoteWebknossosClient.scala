@@ -101,7 +101,7 @@ class DSRemoteWebknossosClient @Inject()(
         .getWithJsonResponse[List[UnfinishedUpload]]
     } yield unfinishedUploads
 
-  def reportUpload(datasetId: ObjectId, parameters: ReportDatasetUploadParameters)(implicit tc: TokenContext): Fox[_] =
+  def reportDatasetUpload(datasetId: ObjectId, parameters: ReportDatasetUploadParameters)(implicit tc: TokenContext): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
       .addQueryParam("key", dataStoreKey)
       .addQueryParam("datasetId", datasetId)

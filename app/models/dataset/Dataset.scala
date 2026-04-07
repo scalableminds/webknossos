@@ -1020,7 +1020,7 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
                                 datasetMagsDAO: DatasetMagDAO,
                                 datasetCoordinateTransformationsDAO: DatasetCoordinateTransformationsDAO,
                                 datasetLayerAdditionalAxesDAO: DatasetLayerAdditionalAxesDAO,
-                                datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO)(implicit ec: ExecutionContext)
+                                datasetLayerAttachmentsDAO: DatasetLayerAttachmentDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   private def parseRow(row: DatasetLayersRow, datasetId: ObjectId): Fox[StaticLayer] = {
@@ -1201,7 +1201,7 @@ case class StorageRelevantDataLayerAttachment(
     datasetDirectoryName: String,
 )
 
-class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class DatasetLayerAttachmentDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   private def parseRow(row: DatasetLayerAttachmentsRow): Fox[LayerAttachment] =

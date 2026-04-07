@@ -118,6 +118,7 @@ object LinkedLayerIdentifier {
   implicit val jsonFormat: OFormat[LinkedLayerIdentifier] = Json.format[LinkedLayerIdentifier]
 }
 
+// TODO move needsConversion to Redis, skip it here. Remove this entirely (except for legacy) and just take the uploadId as GET param?
 case class UploadInformation(uploadId: String, needsConversion: Option[Boolean])
 
 object UploadInformation {
@@ -370,7 +371,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                             label = s"processing dataset at $unpackToDir")
       datasetSizeBytes <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue).toFox ?~> "dataset.upload.measureTotalSize.failed"
       dataSourceWithAbsolutePathsOpt <- moveUnpackedToTarget(unpackToDir, needsConversion, datasetId, dataSourceId) ?~> "dataset.upload.moveUnpackedToTarget.failed"
-      _ <- remoteWebknossosClient.reportUpload(
+      _ <- remoteWebknossosClient.reportDatasetUpload(
         datasetId,
         ReportDatasetUploadParameters(
           uploadInformation.needsConversion.getOrElse(false),

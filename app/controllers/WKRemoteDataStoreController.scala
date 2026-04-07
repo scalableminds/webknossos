@@ -50,6 +50,8 @@ class WKRemoteDataStoreController @Inject()(
     userDAO: UserDAO,
     teamDAO: TeamDAO,
     jobDAO: JobDAO,
+    datasetMagDAO: DatasetMagDAO,
+    datasetAttachmentDAO: DatasetLayerAttachmentDAO,
     credentialDAO: CredentialDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
@@ -98,22 +100,46 @@ class WKRemoteDataStoreController @Inject()(
     Action.async(validateJson[MagUploadInfo]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         // DS write access was asserted already at this point.
-        implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
-          dataset <- datasetDAO.findOne(request.body.datasetId)
+          user <- bearerTokenService.userForToken(token)
+          dataset <- datasetDAO.findOne(request.body.datasetId)(AuthorizedAccessContext(user))
+          _ <- Fox.fromBool(dataset.isVirtual) ?~> "dataset.reserveMagUpload.notVirtual"
           (dataSource, dataLayer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.layerName)
+          _ <- Fox.fromBool(!dataLayer.mags.exists(_.mag.maxDim == request.body.mag.mag.maxDim)) ?~> s"New mag ${request.body.mag.mag} conflicts with existing mag of the layer."
           _ <- Fox.fromBool(dataset._dataStore == dataStore.name) ?~> "Cannot upload mag to existing dataset via different datastore."
-        } yield Ok(Json.toJson(MagUploadAdditionalInfo(DataSourceId("", ""))))
-        // DS must not have the mag
-        // insert the mag
-        // return existing datasource id
+          path <- request.body.mag.path.toFox ?~> "dataset.reserveMagUpload.pathNotSet" // TODO ensure caller sets path
+          _ <- datasetMagDAO.insertWithUploadPending(request.body.datasetId,
+                                                     request.body.layerName,
+                                                     request.body.mag.mag,
+                                                     request.body.mag.axisOrder,
+                                                     request.body.mag.channelIndex,
+                                                     path)
+        } yield Ok(Json.toJson(MagUploadAdditionalInfo(dataSource.id)))
       }
     }
 
   def reserveAttachmentUpload(name: String, key: String, token: String): Action[AttachmentUploadInfo] =
     Action.async(validateJson[AttachmentUploadInfo]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
-        Fox.successful(Ok(Json.toJson(AttachmentUploadAdditionalInfo(DataSourceId("", "")))))
+        // DS write access was asserted already at this point.
+        for {
+          user <- bearerTokenService.userForToken(token)
+          dataset <- datasetDAO.findOne(request.body.datasetId)(AuthorizedAccessContext(user))
+          _ <- Fox.fromBool(dataset.isVirtual) ?~> "dataset.reserveMagUpload.notVirtual"
+          (dataSource, dataLayer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.layerName)
+          existingAttachmentOpt = dataLayer.attachments.flatMap(
+            _.getByTypeAndName(request.body.attachmentType, request.body.attachment.name))
+          _ <- Fox.fromBool(existingAttachmentOpt.isEmpty) ?~> s"Layer already has ${request.body.attachmentType} attachment named ${request.body.attachment.name}"
+          _ <- Fox.fromBool(dataset._dataStore == dataStore.name) ?~> "Cannot upload mag to existing dataset via different datastore."
+          _ <- datasetAttachmentDAO.insertWithUploadPending(
+            request.body.datasetId,
+            request.body.layerName,
+            request.body.attachment.name,
+            request.body.attachmentType,
+            request.body.attachment.dataFormat,
+            request.body.attachment.path // TODO ensure caller sets correct path
+          )
+        } yield Ok(Json.toJson(AttachmentUploadAdditionalInfo(dataSource.id)))
       }
     }
 

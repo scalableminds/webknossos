@@ -18,6 +18,7 @@ import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_type
 import { MappingStatusEnum, SagaIdentifier, TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
+import { isAnnotationEditableByNonOwners } from "viewer/model/accessors/annotation_accessor";
 import {
   getLayerByName,
   getMagInfo,
@@ -1071,8 +1072,10 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   if (action.type === "MIN_CUT_AGGLOMERATE") {
     console.log("start updating the mapping after a min-cut");
     if (sourceAgglomerateId !== targetAgglomerateId) {
-      const isOthersMayEditEnabled = yield* select((state) => state.annotation.othersMayEdit);
-      const additionalErrorExplanation = isOthersMayEditEnabled
+      const othersMayEdit = yield* select((state) =>
+        isAnnotationEditableByNonOwners(state.annotation),
+      );
+      const additionalErrorExplanation = othersMayEdit
         ? " Maybe another user already split the agglomerate in the meantime."
         : "";
       Toast.error(

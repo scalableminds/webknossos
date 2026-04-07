@@ -7,7 +7,7 @@ import {
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
-import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
+import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import {
   removeSegmentAction,
   updateSegmentAction,
@@ -72,7 +72,7 @@ describe("Collaborative editing of segment items", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping0).toEqual(initialMapping);
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
       const updateSegmentProps = { name: "Some Other Name", color: [128, 0, 0] as Vector3 };
@@ -174,7 +174,7 @@ describe("Collaborative editing of segment items", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping0).toEqual(initialMapping);
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
       yield call(() => api.tracing.save()); // TODO (#9036): without this save, the mutex strategy is not switched correctly. can we improve this?
 
       // Create the segment (creation also uses the updateSegmentAction redux action)
@@ -321,7 +321,7 @@ describe("Collaborative editing of segment items", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping0).toEqual(initialMapping);
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
       // Create the segment (creation also uses the updateSegmentAction redux action)
@@ -400,7 +400,7 @@ describe("Collaborative editing of segment items", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping0).toEqual(initialMapping);
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
       // Create the segment (creation also uses the updateSegmentAction redux action)
@@ -463,7 +463,7 @@ describe("Collaborative editing of segment items", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping0).toEqual(initialMapping);
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
       // Create the segment (creation also uses the updateSegmentAction redux action)
@@ -539,7 +539,7 @@ describe("Collaborative editing of segment items", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping0).toEqual(initialMapping);
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
       // Create the segment (creation also uses the updateSegmentAction redux action)
@@ -612,7 +612,7 @@ describe("Collaborative editing of segment items", () => {
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
       expect(mapping0).toEqual(initialMapping);
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
       // Create the segment (creation also uses the updateSegmentAction redux action)

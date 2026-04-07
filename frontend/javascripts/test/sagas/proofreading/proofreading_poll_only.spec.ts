@@ -5,8 +5,8 @@ import { WkDevFlags } from "viewer/api/wk_dev";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
+  setCollaborationModeAction,
   setIsUpdatingAnnotationCurrentlyAllowedAction,
-  setOthersMayEditForAnnotationAction,
 } from "viewer/model/actions/annotation_actions";
 import {
   disableSavingAction,
@@ -65,7 +65,7 @@ describe("Proofreading (Poll only)", () => {
       // OthersMayEdit = true is needed for polling to work properly as this test and the simulated
       // other user (via backendMock.injectVersion) are both editing the annotation in this test
       // (although the user of this test only sends empty updates). Else the polling logic would not work.
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
 
       yield call(() => api.tracing.save());
       context.receivedDataPerSaveRequest.length = 0;
@@ -142,7 +142,7 @@ describe("Proofreading (Poll only)", () => {
       // OthersMayEdit = true is needed for polling to work properly as this test and the simulated
       // other user (via backendMock.injectVersion) are both editing the annotation in this test
       // (although the user of this test only sends empty updates). Else the polling logic would not work.
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
 
       yield call(() => api.tracing.save());
       context.receivedDataPerSaveRequest.length = 0;
@@ -253,7 +253,7 @@ describe("Proofreading (Poll only)", () => {
       // OthersMayEdit = true is needed for polling to work properly as this test and the simulated
       // other user (via backendMock.injectVersion) are both editing the annotation in this test
       // (although the user of this test only sends empty updates). Else the polling logic would not work.
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
 
       yield call(() => api.tracing.save());
       context.receivedDataPerSaveRequest.length = 0;
@@ -310,7 +310,7 @@ describe("Proofreading (Poll only)", () => {
       // OthersMayEdit = true is needed for polling to work properly as this test and the simulated
       // other user (via backendMock.injectVersion) are both editing the annotation in this test
       // (although the user of this test only sends empty updates). Else the polling logic would not work.
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
 
       yield call(() => api.tracing.save());
       context.receivedDataPerSaveRequest.length = 0;
@@ -393,7 +393,7 @@ describe("Proofreading (Poll only)", () => {
       // OthersMayEdit = true is needed for polling to work properly as this test and the simulated
       // other user (via backendMock.injectVersion) are both editing the annotation in this test
       // (although the user of this test only sends empty updates). Else the polling logic would not work.
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
 
       yield call(() => api.tracing.save());
       context.receivedDataPerSaveRequest.length = 0;
@@ -475,7 +475,7 @@ describe("Proofreading (Poll only)", () => {
       // OthersMayEdit = true is needed for polling to work properly as this test and the simulated
       // other user (via backendMock.injectVersion) are both editing the annotation in this test
       // (although the user of this test only sends empty updates). Else the polling logic would not work.
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
 
       yield call(() => api.tracing.save());
       context.receivedDataPerSaveRequest.length = 0;
@@ -540,7 +540,7 @@ describe("Proofreading (Poll only)", () => {
       expect(mapping0).toEqual(initialMapping);
 
       if (othersMayEdit) {
-        yield put(setOthersMayEditForAnnotationAction(true));
+        yield put(setCollaborationModeAction("Concurrent"));
       }
 
       yield call(() => api.tracing.save());
@@ -610,7 +610,7 @@ describe("Proofreading (Poll only)", () => {
       yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
       yield makeMappingEditableHelper();
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
 
       // Ensure all changes till here are saved in the backend.
       yield call(() => context.api.tracing.save());

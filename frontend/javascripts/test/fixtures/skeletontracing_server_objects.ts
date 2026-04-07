@@ -216,7 +216,7 @@ export const annotation: APIAnnotation = {
   tags: ["ROI2017_wkw", "skeleton"],
   tracingTime: 0,
   contributors: [],
-  othersMayEdit: false,
+  collaborationMode: "OwnerOnly",
   isLockedByOwner: false,
 };
 

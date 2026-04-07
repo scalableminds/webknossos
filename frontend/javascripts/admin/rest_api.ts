@@ -18,6 +18,7 @@ import zip from "lodash-es/zip";
 import messages from "messages";
 import {
   type AdditionalCoordinate,
+  type AnnotationCollaborationMode,
   type AnnotationLayerDescriptor,
   AnnotationLayerEnum,
   type AnnotationViewConfiguration,
@@ -542,12 +543,11 @@ export function editLockedState(
   );
 }
 
-export function setOthersMayEditForAnnotation(
+export function setCollaborationModeForAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
-  othersMayEdit: boolean,
+  collaborationMode: AnnotationCollaborationMode,
 ): Promise<void> {
-  const collaborationMode = othersMayEdit ? "Concurrent" : "OwnerOnly";
   return Request.receiveJSON(
     `/api/annotations/${annotationType}/${annotationId}/collaborationMode?collaborationMode=${collaborationMode}`,
     {

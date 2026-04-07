@@ -10,6 +10,7 @@ import { actionChannel, call, delay, flush, fork, put, race, takeEvery } from "t
 import type { APIUpdateActionBatch } from "types/api_types";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { SagaIdentifier } from "viewer/constants";
+import { isAnnotationEditableByNonOwners } from "viewer/model/accessors/annotation_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import { showManyBucketUpdatesWarningAction } from "viewer/model/actions/annotation_actions";
 import {
@@ -93,7 +94,7 @@ function* getPollInterval(): Saga<number> {
     return VERSION_POLL_INTERVAL_READ_ONLY;
   }
 
-  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+  const othersMayEdit = yield* select((state) => isAnnotationEditableByNonOwners(state.annotation));
   if (othersMayEdit) {
     // Other users may edit the annotation.
     return VERSION_POLL_INTERVAL_COLLAB;
@@ -108,10 +109,11 @@ function* shouldCheckForNewerAnnotationVersions(): Saga<boolean> {
     (state) =>
       state.annotation.restrictions.allowSave && state.annotation.isUpdatingCurrentlyAllowed,
   );
-  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+  const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
+  const othersMayEdit = yield* select((state) => isAnnotationEditableByNonOwners(state.annotation));
 
   const userCanSaveAndNoCollab = allowSave && !othersMayEdit;
-  const userCanSaveAndNoLiveCollab = allowSave && !WkDevFlags.liveCollab;
+  const userCanSaveAndNoLiveCollab = allowSave && collaborationMode !== "Concurrent";
   if (userCanSaveAndNoCollab || userCanSaveAndNoLiveCollab) {
     // The active user is currently the only one that is allowed to mutate the annotation.
     // Since we only acquire the mutex upon page load, there shouldn't be any unseen updates
@@ -286,7 +288,7 @@ function* reapplyUpdateActionsFromSaveQueue(
 
 type RebasingSuccessInfo = { successful: boolean; shouldTerminate: boolean };
 function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
-  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+  const othersMayEdit = yield* select((state) => isAnnotationEditableByNonOwners(state.annotation));
   const missingUpdateActions = yield* call(fetchNewestMissingUpdateActions);
   // saveQueueEntries should not change during performRebasing saga. When liveCollab is enabled, this is enforced via busy blocking.
   // When liveCollab is disabled, this code typically runs in read-only mode where the save queue is empty.

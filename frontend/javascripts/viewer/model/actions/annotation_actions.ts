@@ -4,6 +4,7 @@ import type { Dispatch } from "redux";
 import { batchActions } from "redux-batched-actions";
 import type {
   AdditionalCoordinate,
+  AnnotationCollaborationMode,
   APIAnnotationVisibility,
   APIDataLayer,
   APIDataset,
@@ -75,9 +76,7 @@ export type UpdateCurrentMeshFileAction = ReturnType<typeof updateCurrentMeshFil
 export type RemoveMeshAction = ReturnType<typeof removeMeshAction>;
 export type AddAdHocMeshAction = ReturnType<typeof addAdHocMeshAction>;
 export type AddPrecomputedMeshAction = ReturnType<typeof addPrecomputedMeshAction>;
-export type SetOthersMayEditForAnnotationAction = ReturnType<
-  typeof setOthersMayEditForAnnotationAction
->;
+export type SetCollaborationModeAction = ReturnType<typeof setCollaborationModeAction>;
 
 export type AnnotationActionTypes =
   | InitializeAnnotationAction
@@ -107,7 +106,7 @@ export type AnnotationActionTypes =
   | RemoveMeshAction
   | AddAdHocMeshAction
   | AddPrecomputedMeshAction
-  | SetOthersMayEditForAnnotationAction;
+  | SetCollaborationModeAction;
 
 export type UserBoundingBoxAction =
   | SetUserBoundingBoxesAction
@@ -361,10 +360,10 @@ export const addPrecomputedMeshAction = (
     opacity: opacity ?? Constants.DEFAULT_MESH_OPACITY,
   }) as const;
 
-export const setOthersMayEditForAnnotationAction = (othersMayEdit: boolean) =>
+export const setCollaborationModeAction = (collaborationMode: AnnotationCollaborationMode) =>
   ({
-    type: "SET_OTHERS_MAY_EDIT_FOR_ANNOTATION",
-    othersMayEdit,
+    type: "SET_COLLABORATION_MODE",
+    collaborationMode,
   }) as const;
 
 export const showManyBucketUpdatesWarningAction = () =>

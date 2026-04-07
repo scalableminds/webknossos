@@ -9,7 +9,7 @@ import { WkDevFlags } from "viewer/api/wk_dev";
 import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { restartSagaAction } from "viewer/model/actions/actions";
-import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
+import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { proofreadMergeAction } from "viewer/model/actions/proofread_actions";
@@ -102,6 +102,7 @@ const initialLiveCollab = WkDevFlags.liveCollab;
 
 async function setupWebknossosForTestingWithRestrictions(
   context: WebknossosTestContext,
+  // todop: also have tests for Exclusive?
   othersMayEdit: boolean,
   allowUpdate: boolean,
   makeProofread: boolean = false,
@@ -113,7 +114,7 @@ async function setupWebknossosForTestingWithRestrictions(
     ({ tracings, annotationProto, dataset, annotation }) => {
       const annotationWithUpdatingAllowedTrue = update(annotation, {
         restrictions: { allowUpdate: { $set: allowUpdate }, allowSave: { $set: allowUpdate } },
-        othersMayEdit: { $set: othersMayEdit },
+        collaborationMode: { $set: othersMayEdit ? "Concurrent" : "OwnerOnly" },
       });
       return {
         tracings: makeProofread ? makeProofreadAnnotation(tracings) : tracings,
@@ -188,7 +189,7 @@ describe("Save Mutex Saga", () => {
     await setupWebknossosForTesting(context, "hybrid");
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
     const task = startSaga(function* task() {
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
       const hasMutex = yield select((state) => state.save.mutexState.hasAnnotationMutex);
       expect(hasMutex).toBe(false);
       yield take("SET_IS_MUTEX_ACQUIRED");
@@ -212,7 +213,7 @@ describe("Save Mutex Saga", () => {
       blockedByUser: blockingUser,
     }));
     const task = startSaga(function* task() {
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
       const hasMutex = yield select((state) => state.save.mutexState.hasAnnotationMutex);
       expect(hasMutex).toBe(false);
       // Waiting for saga to update which user is holding the mutex.

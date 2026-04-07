@@ -30,8 +30,8 @@ export default function* idReservationSaga(): Saga<void> {
 function getUsableReservations(tracing: VolumeTracing, domain: "SegmentGroup") {
   /*
    * ID reservations are guaranteed to each user and don't expire as long as the id
-   * is not used. However, the invalidation of used ids is done lazily and not in an
-   * atomic manner by the front-end. Therefore, it can happen that an ID reservation
+   * is not used. However, the invalidation of used ids is not communicated to the
+   * back-end atomically. Therefore, it can happen that an ID reservation
    * is used while the invalidation of the id is never communicated to the back-end
    * (e.g., the user reloads the page right after saving).
    * However, we know that nobody else will have used our ID. Only the current user
@@ -73,6 +73,7 @@ function* handleReservationRequest(action: GetNewIdAction): Saga<void> {
     action.callback(usableReservations[0].id);
 
     if (usableReservations.length < IDEAL_ID_BUFFER_SIZE / 2) {
+      // todop: could be detached?
       yield* call(fetchNewReservations, action);
     }
 
@@ -90,7 +91,6 @@ function* handleReservationRequest(action: GetNewIdAction): Saga<void> {
 function* fetchNewReservations(action: GetNewIdAction) {
   const { domain, tracingId } = action;
 
-  // todop: DRY
   const tracing = yield* select((state) => getTracingById(state, tracingId));
 
   if (tracing.type !== "volume" || domain !== "SegmentGroup") {
@@ -99,7 +99,6 @@ function* fetchNewReservations(action: GetNewIdAction) {
     );
     return;
   }
-  // todop end
 
   const unfilteredReservations = tracing.idReservations[domain];
   const usableReservations = getUsableReservations(tracing, domain);
@@ -115,7 +114,7 @@ function* fetchNewReservations(action: GetNewIdAction) {
     annotationId,
     tracingId,
     domain,
-    IDEAL_ID_BUFFER_SIZE - usableReservations.length,
+    Math.max(1, IDEAL_ID_BUFFER_SIZE - usableReservations.length),
     idsToRelease,
   );
   yield* put(

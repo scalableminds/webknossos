@@ -6,7 +6,7 @@ import { WkDevFlags } from "viewer/api/wk_dev";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
-import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
+import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import { minCutAgglomerateAction } from "viewer/model/actions/proofread_actions";
 import { deleteEdgeAction, mergeTreesAction } from "viewer/model/actions/skeletontracing_actions";
 import {
@@ -49,7 +49,7 @@ function* performMergeTreesProofreading(
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
   yield* expectMapping(tracingId, initialMapping);
-  yield put(setOthersMayEditForAnnotationAction(true));
+  yield put(setCollaborationModeAction("Concurrent"));
   // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
   vi.mocked(context.mocks.parseProtoTracing).mockRestore();
   yield call(loadAgglomerateSkeletonAtPosition, [1, 1, 1]);
@@ -99,7 +99,7 @@ function* performSplitTreesProofreading(context: WebknossosTestContext): Generat
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
   yield* expectMapping(tracingId, initialMapping);
 
-  yield put(setOthersMayEditForAnnotationAction(true));
+  yield put(setCollaborationModeAction("Concurrent"));
   // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
   vi.mocked(context.mocks.parseProtoTracing).mockRestore();
   yield call(loadAgglomerateSkeletonAtPosition, [1, 1, 1]);
@@ -144,7 +144,7 @@ function* performMinCutWithNodesProofreading(
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
   yield* expectMapping(tracingId, initialMapping);
-  yield put(setOthersMayEditForAnnotationAction(true));
+  yield put(setCollaborationModeAction("Concurrent"));
   // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
   vi.mocked(context.mocks.parseProtoTracing).mockRestore();
   yield call(loadAgglomerateSkeletonAtPosition, [3, 3, 3]);

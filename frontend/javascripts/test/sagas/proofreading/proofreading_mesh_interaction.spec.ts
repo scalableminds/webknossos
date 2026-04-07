@@ -11,7 +11,6 @@ import { delay } from "typed-redux-saga";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
-import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import {
   minCutAgglomerateWithPositionAction,
   minCutPartitionsAction,
@@ -39,6 +38,7 @@ import {
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
+import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 
 describe("Proofreading (with mesh actions)", () => {
   const initialLiveCollab = WkDevFlags.liveCollab;
@@ -84,7 +84,7 @@ describe("Proofreading (with mesh actions)", () => {
         ).mapping,
     );
     expect(mapping1).toEqual(initialMapping);
-    yield put(setOthersMayEditForAnnotationAction(true));
+    yield put(setCollaborationModeAction("Concurrent"));
     // Execute the actual merge and wait for the finished mapping.
     yield put(
       proofreadMergeAction(
@@ -281,7 +281,7 @@ describe("Proofreading (with mesh actions)", () => {
         getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
     );
     expect(mapping1).toEqual(expectedInitialMapping);
-    yield put(setOthersMayEditForAnnotationAction(true));
+    yield put(setCollaborationModeAction("Concurrent"));
     // Execute the actual merge and wait for the finished mapping.
     yield put(
       minCutAgglomerateWithPositionAction(
@@ -541,7 +541,7 @@ describe("Proofreading (with mesh actions)", () => {
         getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
     );
     expect(mapping1).toEqual(expectedInitialMapping);
-    yield put(setOthersMayEditForAnnotationAction(true));
+    yield put(setCollaborationModeAction("Concurrent"));
 
     //Activate Multi-split tool
     yield put(updateUserSettingAction("isMultiSplitActive", true));

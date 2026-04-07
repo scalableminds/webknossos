@@ -5,6 +5,7 @@ import { enableBatching } from "redux-batched-actions";
 import createSagaMiddleware, { type Saga } from "redux-saga";
 import type {
   AdditionalAxis,
+  AnnotationCollaborationMode,
   AnnotationLayerDescriptor,
   APIAnnotationType,
   APIAnnotationVisibility,
@@ -133,7 +134,7 @@ export type Annotation = {
   readonly annotationType: APIAnnotationType;
   readonly owner: APIUserBase | null | undefined;
   readonly contributors: APIUserBase[];
-  readonly othersMayEdit: boolean;
+  readonly collaborationMode: AnnotationCollaborationMode;
   readonly isLockedByOwner: boolean;
   readonly isUpdatingCurrentlyAllowed: boolean;
 };

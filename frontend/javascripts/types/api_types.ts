@@ -524,7 +524,7 @@ export type APIAnnotationInfo = {
   // or due to missing permissions).
   readonly owner?: APIUserCompact;
   readonly teams: APITeam[];
-  readonly othersMayEdit: boolean;
+  readonly collaborationMode: AnnotationCollaborationMode;
 };
 
 export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInfo {
@@ -541,7 +541,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     typ,
     owner,
     teams,
-    othersMayEdit,
+    collaborationMode,
     organization,
     annotationLayers,
   } = annotation;
@@ -561,7 +561,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     typ,
     owner,
     teams,
-    othersMayEdit,
+    collaborationMode,
   };
 }
 
@@ -573,6 +573,8 @@ export type AnnotationViewConfiguration = {
     }
   >;
 };
+export type AnnotationCollaborationMode = "OwnerOnly" | "Exclusive" | "Concurrent";
+
 type APIAnnotationBase = APIAnnotationInfo & {
   readonly visibility: APIAnnotationVisibility;
   readonly tracingTime: number | null | undefined;
@@ -586,7 +588,7 @@ type APIAnnotationBase = APIAnnotationInfo & {
   // This `user` attribute is deprecated and should not be used, anymore. It only exists to satisfy e2e type checks
   readonly user?: APIUserBase;
   readonly contributors: APIUserBase[];
-  readonly othersMayEdit: boolean;
+  readonly collaborationMode: AnnotationCollaborationMode;
 };
 export type APIAnnotation = APIAnnotationBase & {
   readonly task: APITask | null | undefined;

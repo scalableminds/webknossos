@@ -1,4 +1,11 @@
-import { CompressOutlined, CopyOutlined, GlobalOutlined, LockOutlined, ShareAltOutlined, TeamOutlined } from "@ant-design/icons";
+import {
+  CompressOutlined,
+  CopyOutlined,
+  GlobalOutlined,
+  LockOutlined,
+  ShareAltOutlined,
+  TeamOutlined,
+} from "@ant-design/icons";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import {
   createShortLink,
@@ -7,13 +14,14 @@ import {
   getSharingTokenFromUrlParameters,
   getTeamsForSharedAnnotation,
   sendAnalyticsEvent,
-  setOthersMayEditForAnnotation,
+  setCollaborationModeForAnnotation,
   updateTeamsForSharedAnnotation,
 } from "admin/rest_api";
 import {
   Alert,
   Button,
   Checkbox,
+  type CheckboxChangeEvent,
   Col,
   Input,
   Modal,
@@ -44,11 +52,14 @@ import type {
 } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
 import UrlManager from "viewer/controller/url_manager";
-import { mayEditAnnotationProperties } from "viewer/model/accessors/annotation_accessor";
+import {
+  isAnnotationEditableByNonOwners,
+  mayEditAnnotationProperties,
+} from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import {
   setAnnotationVisibilityAction,
-  setOthersMayEditForAnnotationAction,
+  setCollaborationModeAction,
 } from "viewer/model/actions/annotation_actions";
 import { setShareModalVisibilityAction } from "viewer/model/actions/ui_actions";
 import Store from "viewer/store";
@@ -201,8 +212,11 @@ function _ShareModalView(props: Props) {
   const [sharedTeams, setSharedTeams] = useState<APITeam[]>([]);
   const sharingToken = useDatasetSharingToken(dataset);
 
-  const { othersMayEdit } = annotation;
+  const othersMayEdit = isAnnotationEditableByNonOwners(annotation);
+  const allowConcurrentEditing = annotation.collaborationMode === "Concurrent";
   const [newOthersMayEdit, setNewOthersMayEdit] = useState(othersMayEdit);
+  const [newAllowConcurrentEditing, setNewAllowConcurrentEditing] =
+    useState(allowConcurrentEditing);
 
   const hasUpdatePermissions = useWkSelector(mayEditAnnotationProperties);
   useEffect(() => setVisibility(annotationVisibility), [annotationVisibility]);
@@ -289,7 +303,7 @@ function _ShareModalView(props: Props) {
     }
   };
 
-  const handleOthersMayEditCheckboxChange = async (event: RadioChangeEvent) => {
+  const handleWhoCanEditRadioGroup = async (event: RadioChangeEvent) => {
     const value = event.target.value;
     if (typeof value !== "boolean") {
       throw new Error("Form element should return boolean value.");
@@ -298,15 +312,42 @@ function _ShareModalView(props: Props) {
     setIsChangingInProgress(true);
     setNewOthersMayEdit(value);
     if (value !== othersMayEdit) {
+      const collaborationMode = !value
+        ? "OwnerOnly"
+        : newAllowConcurrentEditing
+          ? "Concurrent"
+          : "Exclusive";
       try {
-        await setOthersMayEditForAnnotation(annotationId, annotationType, value);
-        dispatch(setOthersMayEditForAnnotationAction(value));
+        await setCollaborationModeForAnnotation(annotationId, annotationType, collaborationMode);
+        dispatch(setCollaborationModeAction(collaborationMode));
         reportSuccessfulChange(visibility);
       } catch (e) {
         console.error("Failed to update the edit option for others.", e);
-        // Resetting the others may edit option to the old value as the request failed
-        // so the user still sees the settings currently saved in the backend.
-        setNewOthersMayEdit(newOthersMayEdit);
+        setNewOthersMayEdit(othersMayEdit);
+        reportFailedChange();
+      } finally {
+        setIsChangingInProgress(false);
+      }
+    }
+  };
+
+  const handleConcurrentEditingCheckboxChange = async (event: CheckboxChangeEvent) => {
+    const value = event.target.checked;
+    setIsChangingInProgress(true);
+    setNewAllowConcurrentEditing(value);
+    if (value !== allowConcurrentEditing) {
+      const collaborationMode = !newOthersMayEdit
+        ? "OwnerOnly"
+        : value
+          ? "Concurrent"
+          : "Exclusive";
+      try {
+        await setCollaborationModeForAnnotation(annotationId, annotationType, collaborationMode);
+        dispatch(setCollaborationModeAction(collaborationMode));
+        reportSuccessfulChange(visibility);
+      } catch (e) {
+        console.error("Failed to update the concurrent editing option.", e);
+        setNewAllowConcurrentEditing(allowConcurrentEditing);
         reportFailedChange();
       } finally {
         setIsChangingInProgress(false);
@@ -484,7 +525,7 @@ function _ShareModalView(props: Props) {
           </Col>
           <Col span={18}>
             <RadioGroup
-              onChange={handleOthersMayEditCheckboxChange}
+              onChange={handleWhoCanEditRadioGroup}
               value={newOthersMayEdit}
               disabled={isChangingInProgress}
             >
@@ -517,7 +558,11 @@ function _ShareModalView(props: Props) {
             Can users edit simultaneously?
           </Col>
           <Col span={18}>
-            <Checkbox checked={true} onChange={() => {}}>
+            <Checkbox
+              checked={newAllowConcurrentEditing}
+              onChange={handleConcurrentEditingCheckboxChange}
+              disabled={!newOthersMayEdit || !hasUpdatePermissions || isChangingInProgress}
+            >
               Yes, allow simultaneous editing
             </Checkbox>
             <Hint

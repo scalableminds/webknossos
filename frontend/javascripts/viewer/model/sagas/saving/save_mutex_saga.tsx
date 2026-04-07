@@ -13,11 +13,11 @@ import {
   take,
   takeEvery,
 } from "typed-redux-saga";
-import { WkDevFlags } from "viewer/api/wk_dev";
+import { isAnnotationEditableByNonOwners } from "viewer/model/accessors/annotation_accessor";
 import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { getActiveSegmentationTracing } from "viewer/model/accessors/volumetracing_accessor";
 import {
-  type SetOthersMayEditForAnnotationAction,
+  type SetCollaborationModeAction,
   setIsUpdatingAnnotationCurrentlyAllowedAction,
 } from "viewer/model/actions/annotation_actions";
 import {
@@ -69,7 +69,9 @@ function* resolveEnsureHasAnnotationMutexActions(action: EnsureHasAnnotationMute
    */
   while (true) {
     const doesHaveMutex = yield* call(getDoesHaveMutex);
-    const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+    const othersMayEdit = yield* select((state) =>
+      isAnnotationEditableByNonOwners(state.annotation),
+    );
     if (doesHaveMutex || !othersMayEdit) {
       action.callback();
       return;
@@ -89,8 +91,9 @@ export function* getCurrentMutexFetchingStrategy(): Saga<MutexFetchingStrategy> 
   let fetchingStrategy = MutexFetchingStrategy.Continuously;
   const activeVolumeTracing = yield* select(getActiveSegmentationTracing);
   const activeTool = yield* select((state) => state.uiInformation.activeTool);
+  const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
   if (
-    WkDevFlags.liveCollab &&
+    collaborationMode === "Concurrent" &&
     activeVolumeTracing?.hasEditableMapping &&
     activeVolumeTracing?.mappingIsLocked &&
     TOOLS_WITH_AD_HOC_MUTEX_SUPPORT.includes(activeTool.id)
@@ -128,15 +131,15 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   const mutexLogicState = yield* call(determineInitialMutexLogicState);
 
   yield* fork(watchMutexStateChangesForNotification, mutexLogicState);
-  yield* fork(watchForOthersMayEditChange, mutexLogicState);
+  yield* fork(watchForCollaborationModeChange, mutexLogicState);
   yield* fork(watchForActiveVolumeTracingChange, mutexLogicState);
   yield* fork(watchForActiveToolChange, mutexLogicState);
   yield* fork(watchForHasEditableMappingChange, mutexLogicState);
   yield* takeEvery("ENSURE_HAS_ANNOTATION_MUTEX", resolveEnsureHasAnnotationMutexActions);
 
-  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+  const othersMayEdit = yield* select((state) => isAnnotationEditableByNonOwners(state.annotation));
   if (othersMayEdit) {
-    // Only start initial acquiring of mutex if othersMayEdit is already turned on.
+    // Only start initial acquiring of mutex if othersMayEdit is true.
     yield* call(restartMutexAcquiringSaga, mutexLogicState);
   }
 }
@@ -149,7 +152,7 @@ function* restartMutexAcquiringSaga(mutexLogicState: MutexLogicState): Saga<void
     yield* cancel(mutexLogicState.runningMutexAcquiringSaga);
     mutexLogicState.runningMutexAcquiringSaga = null;
   }
-  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+  const othersMayEdit = yield* select((state) => isAnnotationEditableByNonOwners(state.annotation));
   if (!othersMayEdit) {
     return;
   }
@@ -182,7 +185,7 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
   mutexLogicState.isInitialRequest = true;
 
   // We can simply use an infinite loop here, because the saga will be cancelled by
-  // reactToOthersMayEditChanges when othersMayEdit is set to false.
+  // reactToOthersMayEditChanges when collaborationMode changes.
   while (true) {
     const blockedByUser = yield* select((state) => state.save.mutexState.blockedByUser);
     if (blockedByUser == null || blockedByUser.id !== activeUser?.id) {
@@ -236,7 +239,7 @@ function* acquireMutexForSavingInitially(annotationId: string): Saga<void> {
   let showingToast = false;
 
   // We can simply use an infinite loop here, because the saga will be cancelled by
-  // reactToOthersMayEditChanges when othersMayEdit is set to false.
+  // reactToOthersMayEditChanges when collaborationMode changes.
   while (true) {
     try {
       const mutexResult = yield* call(acquireAnnotationMutex, annotationId);
@@ -337,14 +340,12 @@ function* tryAcquireMutexForSaving(mutexLogicState: MutexLogicState): Saga<void>
   yield* call(keepAnnotationMutex, annotationId);
 }
 
-function* watchForOthersMayEditChange(mutexLogicState: MutexLogicState): Saga<void> {
-  function* reactToOthersMayEditChanges({
-    othersMayEdit,
-  }: SetOthersMayEditForAnnotationAction): Saga<void> {
-    if (othersMayEdit) {
+function* watchForCollaborationModeChange(mutexLogicState: MutexLogicState): Saga<void> {
+  function* onChange({ collaborationMode }: SetCollaborationModeAction): Saga<void> {
+    if (collaborationMode !== "OwnerOnly") {
       yield* call(restartMutexAcquiringSaga, mutexLogicState);
     } else {
-      // othersMayEdit was turned off by the activeUser. Since this is only
+      // collaboration was turned off by the activeUser. Since this is only
       // allowed by the owner, they should be able to edit the annotation, too.
       // Still, let's check that owner === activeUser to be extra safe.
       const owner = yield* select((storeState) => storeState.annotation.owner);
@@ -354,7 +355,7 @@ function* watchForOthersMayEditChange(mutexLogicState: MutexLogicState): Saga<vo
       }
     }
   }
-  yield* takeEvery("SET_OTHERS_MAY_EDIT_FOR_ANNOTATION", reactToOthersMayEditChanges);
+  yield* takeEvery("SET_COLLABORATION_MODE", onChange);
 }
 
 function* watchForActiveVolumeTracingChange(mutexLogicState: MutexLogicState): Saga<void> {
@@ -364,7 +365,9 @@ function* watchForActiveVolumeTracingChange(mutexLogicState: MutexLogicState): S
     if (propertyName !== "isDisabled") {
       return;
     }
-    const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+    const othersMayEdit = yield* select((state) =>
+      isAnnotationEditableByNonOwners(state.annotation),
+    );
     if (!othersMayEdit) {
       return;
     }
@@ -375,7 +378,9 @@ function* watchForActiveVolumeTracingChange(mutexLogicState: MutexLogicState): S
 
 function* watchForActiveToolChange(mutexLogicState: MutexLogicState): Saga<void> {
   function* reactToActiveToolChange(_action: SetToolAction | CycleToolAction): Saga<void> {
-    const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+    const othersMayEdit = yield* select((state) =>
+      isAnnotationEditableByNonOwners(state.annotation),
+    );
     if (!othersMayEdit) {
       return;
     }

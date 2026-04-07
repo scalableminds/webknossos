@@ -7,7 +7,7 @@ import {
 import type { NeighborInfo } from "admin/rest_api";
 import { actionChannel, type ActionPattern, call, flush, put, take } from "redux-saga/effects";
 import { WkDevFlags } from "viewer/api/wk_dev";
-import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
+import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import {
   cutAgglomerateFromNeighborsAction,
   minCutAgglomerateWithPositionAction,
@@ -50,7 +50,7 @@ function* prepareEditableMapping(
   initialExpectedMapping = initialExpectedMapping ?? initialMapping;
   yield call(initializeMappingAndTool, context, tracingId);
   yield* expectMapping(tracingId, initialExpectedMapping);
-  yield put(setOthersMayEditForAnnotationAction(true));
+  yield put(setCollaborationModeAction("Concurrent"));
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
@@ -527,7 +527,7 @@ describe("Proofreading (Multi User)", () => {
     // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
     yield* expectMapping(tracingId, initialMapping);
 
-    yield put(setOthersMayEditForAnnotationAction(true));
+    yield put(setCollaborationModeAction("Concurrent"));
 
     // Execute the actual merge and wait for the finished mapping.
     yield put(

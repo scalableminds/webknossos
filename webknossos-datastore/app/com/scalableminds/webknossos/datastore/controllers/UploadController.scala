@@ -180,7 +180,6 @@ class UploadController @Inject()(
             .getDatasetIdByUploadId(uploadId, uploadDomainValidated) ?~> s"Cannot find running upload with upload id $uploadId"
           response <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
             for {
-              // TODO other domains
               _ <- (uploadDomainValidated match {
                 case UploadDomain.dataset    => uploadService.finishDatasetUpload(uploadId, datasetId)
                 case UploadDomain.mag        => uploadService.finishMagUpload(uploadId, datasetId)
@@ -197,6 +196,8 @@ class UploadController @Inject()(
   def cancelUpload(uploadDomain: String, uploadId: String): Action[AnyContent] = Action.async { implicit request =>
     for {
       uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox
+      _ <- Fox
+        .fromBool(uploadDomainValidated == UploadDomain.dataset) ?~> "Cancel upload is only supported for datasets."
       datasetIdFox = uploadService.isKnownUpload(uploadId, uploadDomainValidated).flatMap {
         case false => Fox.failure("dataset.upload.validation.failed")
         case true  => uploadService.getDatasetIdByUploadId(uploadId, uploadDomainValidated)
@@ -204,7 +205,6 @@ class UploadController @Inject()(
       result <- datasetIdFox.flatMap { datasetId =>
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.deleteDataset(datasetId)) {
           for {
-            // TODO adapt also to other domains
             _ <- dsRemoteWebknossosClient.deleteDataset(datasetId) ?~> "dataset.delete.webknossos.failed"
             _ <- uploadService.cancelUpload(uploadDomainValidated, uploadId) ?~> "Could not cancel the upload."
           } yield Ok

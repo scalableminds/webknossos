@@ -44,7 +44,6 @@ import slick.dbio.DBIO
 import slick.jdbc.GetResult
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
-import slick.lifted.Rep
 import slick.sql.SqlAction
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 
@@ -111,10 +110,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     extends SQLDAO[Dataset, DatasetsRow, Datasets](sqlClient)
     with DatasetDAOLike {
   protected val collection = Datasets
-
-  protected def idColumn(x: Datasets): Rep[String] = x._Id
-
-  protected def isDeletedColumn(x: Datasets): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultDatasetsRow
 
   private def parseVoxelSizeOpt(factorLiteralOpt: Option[String],
                                 unitLiteralOpt: Option[String]): Fox[Option[VoxelSize]] = factorLiteralOpt match {
@@ -211,13 +207,6 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
           )
         )
         """
-
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Dataset] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[DatasetsRow])
-      parsed <- parseFirst(r, id)
-    } yield parsed
 
   def findAllWithSearch(isActiveOpt: Option[Boolean],
                         isUnreported: Option[Boolean],
@@ -795,10 +784,7 @@ case class DataSourceMagRow(_dataset: ObjectId,
 class DatasetMagDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[MagWithPaths, DatasetMagsRow, DatasetMags](sqlClient) {
   protected val collection = DatasetMags
-
-  protected def idColumn(x: DatasetMags): Rep[String] = x._Dataset
-
-  protected def isDeletedColumn(x: DatasetMags): Rep[Boolean] = false
+  protected def resultConverter = GetResultDatasetMagsRow
 
   protected def parse(row: DatasetMagsRow): Fox[MagWithPaths] =
     for {
@@ -1452,15 +1438,16 @@ class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implic
     } yield CoordinateTransformation(CoordinateTransformationType.thin_plate_spline, None, Some(correspondences))
 
   def findCoordinateTransformationsForLayer(datasetId: ObjectId,
-                                            layerName: String): Fox[List[CoordinateTransformation]] =
+                                            layerName: String): Fox[Seq[CoordinateTransformation]] =
     for {
-      rows <- run(
-        DatasetLayerCoordinatetransformations
-          .filter(r => r._Dataset === datasetId.id && r.layername === layerName)
-          .sortBy(r => r.insertionorderindex)
-          .result).map(_.toList)
-      rowsParsed <- Fox.combined(rows.map(parseRow)) ?~> "could not parse transformations row"
-    } yield rowsParsed
+      r <- run(q"""SELECT _dataset, layerName, type, matrix, correspondences, insertionOrderIndex
+                   FROM webknossos.dataset_layer_coordinateTransformations
+                   WHERE _dataset = $datasetId
+                   AND layerName = $layerName
+                   ORDER BY insertionOrderIndex
+                   """.as[DatasetLayerCoordinatetransformationsRow])
+      parsed <- Fox.combined(r.map(parseRow)) ?~> "could not parse transformations row"
+    } yield parsed
 
   def updateCoordinateTransformations(datasetId: ObjectId, layers: List[DataLayer]): Fox[Unit] = {
     val clearQuery =

@@ -4,12 +4,11 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.schema.Tables.{Aiinferences, AiinferencesRow}
+import com.scalableminds.webknossos.schema.Tables.{Aiinferences, AiinferencesRow, GetResultAiinferencesRow}
 import models.dataset.{DataStoreDAO, DataStoreService, DatasetDAO, DatasetService}
 import models.job.{JobDAO, JobService}
 import models.user.{User, UserDAO, UserService}
 import play.api.libs.json.{JsObject, Json}
-import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
@@ -73,9 +72,7 @@ class AiInferenceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   protected val collection = Aiinferences
 
-  protected def idColumn(x: Aiinferences): Rep[String] = x._Id
-
-  protected def isDeletedColumn(x: Aiinferences): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultAiinferencesRow
 
   protected def parse(r: AiinferencesRow): Fox[AiInference] =
     for {
@@ -98,13 +95,6 @@ class AiInferenceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"_organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId)"
-
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[AiInference]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[AiinferencesRow])
-      parsed <- parseAll(r)
-    } yield parsed
 
   def insertOne(a: AiInference): Fox[Unit] =
     for {

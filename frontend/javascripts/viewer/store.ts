@@ -473,7 +473,7 @@ export type RebaseRelevantAnnotationState = {
   readonly activeMappingByLayer: Record<string, ActiveMappingInfo>;
   readonly skeleton: SkeletonTracing | null | undefined;
   readonly volumes: Array<VolumeTracing>;
-  readonly isRebasing: boolean;
+  readonly isRebasingOrForwarding: boolean;
 };
 export type SaveState = {
   readonly isBusy: boolean;

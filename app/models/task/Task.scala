@@ -38,9 +38,7 @@ case class Task(
 class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Task, TasksRow, Tasks](sqlClient) {
   protected val collection = Tasks
-
-  protected def idColumn(x: Tasks): profile.api.Rep[String] = x._Id
-  protected def isDeletedColumn(x: Tasks): profile.api.Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultTasksRow
 
   protected def parse(r: TasksRow): Fox[Task] =
     for {
@@ -82,13 +80,6 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         in (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin)))"""
 
   private def listAccessQ(requestingUserId: ObjectId) = deleteAccessQ(requestingUserId)
-
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Task] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[TasksRow])
-      parsed <- parseFirst(r, id)
-    } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Task]] =
     for {
@@ -317,15 +308,14 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         """.asUpdate)
     } yield ()
 
-  def updateTotalInstances(id: ObjectId, newTotalInstances: Long)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val query = for { c <- Tasks if c._Id === id.id } yield c.totalinstances
+  def updateTotalInstances(id: ObjectId, newTotalInstances: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
-      _ <- run(query.update(newTotalInstances).withTransactionIsolation(Serializable),
+      query = q"UPDATE $collectionName SET totalInstances = $newTotalInstances WHERE _id = $id".asUpdate
+      _ <- run(query.withTransactionIsolation(Serializable),
                retryCount = 50,
                retryIfErrorContains = List(transactionSerializationError))
     } yield ()
-  }
 
   def incrementTotalInstancesOfAllWithProject(projectId: ObjectId, delta: Long)(
       implicit ctx: DBAccessContext): Fox[Unit] =

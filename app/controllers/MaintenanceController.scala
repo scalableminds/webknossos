@@ -1,12 +1,12 @@
 package controllers
 
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.UserService
 import play.api.libs.json.{JsObject, Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
-import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
 
@@ -60,7 +60,7 @@ class MaintenanceController @Inject()(
   def listAll: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
-      maintenances <- maintenanceDAO.findAll
+      maintenances <- maintenanceDAO.findAll(GlobalAccessContext)
       js = maintenances.map(maintenanceService.publicWrites)
     } yield Ok(Json.toJson(js))
   }
@@ -119,10 +119,7 @@ class MaintenanceService @Inject()() {
 class MaintenanceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Maintenance, MaintenancesRow, Maintenances](sqlClient) {
   protected val collection = Maintenances
-
-  protected def idColumn(x: Maintenances): Rep[String] = x._Id
-
-  protected def isDeletedColumn(x: Maintenances): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultMaintenancesRow
 
   protected def parse(r: MaintenancesRow): Fox[Maintenance] =
     Fox.successful(
@@ -138,12 +135,6 @@ class MaintenanceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   def findCurrentAndUpcoming: Fox[List[Maintenance]] =
     for {
       rows <- run(q"SELECT $columns FROM $existingCollectionName WHERE endTime >= ${Instant.now}".as[MaintenancesRow])
-      parsed <- parseAll(rows)
-    } yield parsed
-
-  def findAll: Fox[List[Maintenance]] =
-    for {
-      rows <- run(q"SELECT $columns FROM $existingCollectionName".as[MaintenancesRow])
       parsed <- parseAll(rows)
     } yield parsed
 

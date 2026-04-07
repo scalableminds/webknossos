@@ -927,7 +927,7 @@ class AuthenticationController @Inject()(
                       teamMemberships = teamMemberships
                     ) ?~> "user.creation.failed"
                     _ = analyticsService.track(SignupEvent(user, hadInvite = false))
-                    multiUser <- multiUserDAO.findOne(user._multiUser)
+                    multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
                     _ <- organizationService
                       .createOrganizationDirectory(organization._id) ?~> "organization.folderCreation.failed"
                     _ <- Fox.runIf(conf.WebKnossos.TermsOfService.enabled)(

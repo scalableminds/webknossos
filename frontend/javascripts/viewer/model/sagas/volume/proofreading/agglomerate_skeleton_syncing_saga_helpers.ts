@@ -22,6 +22,7 @@ import {
   ApplicableSkeletonUpdateActionNamesHelperNamesList,
   type UpdateActionWithoutIsolationRequirement,
 } from "../update_actions";
+import { getEditableMappingForVolumeTracingId } from "viewer/model/accessors/volumetracing_accessor";
 
 /* This module contains helper functions necessary to keep agglomerate trees
  * in sync with the agglomerate mapping upon a proofreading action that is not
@@ -190,12 +191,12 @@ export function deepDiffTreesInSkeletonTracings(
   return Array.from(diffSkeletonTracing(prevSkeleton, newSkeletonWithCorrectProps, true));
 }
 
-function* getMappingAndSkeleton(tracingId: string) {
-  const activeMapping = yield* select(
-    (store) => store.temporaryConfiguration.activeMappingByLayer[tracingId],
-  );
+function* getEditableMappingAndSkeleton(tracingId: string) {
   const skeletonTracing = yield* select((state) => state.annotation.skeleton);
-  return { activeMapping, skeletonTracing };
+  const editableMapping = yield* select((state) =>
+    getEditableMappingForVolumeTracingId(state, tracingId),
+  );
+  return { skeletonTracing, editableMapping };
 }
 
 // Applies the missing update needed to transform tracingWithOldAggloTrees into the skeleton tracing updatedAgglomerateSkeleton.
@@ -235,16 +236,19 @@ export function* syncAgglomerateSkeletonsAfterMergeAction(
   newSourceAgglomerateId: number,
   tracingId: string,
 ): Saga<void> {
-  const { skeletonTracing, activeMapping } = yield* call(getMappingAndSkeleton, tracingId);
-  const { mappingName } = activeMapping;
-  if (!skeletonTracing || mappingName == null) {
+  const { skeletonTracing, editableMapping } = yield* call(
+    getEditableMappingAndSkeleton,
+    tracingId,
+  );
+  const baseMappingName = editableMapping?.baseMappingName;
+  if (!skeletonTracing || baseMappingName == null) {
     return;
   }
   const tracingWithOldAggloTrees = yield* call(
     getAgglomerateTreesAsSkeleton,
     [sourceAgglomerateIdBeforeMerge, targetAgglomerateIdBeforeMerge],
     tracingId,
-    mappingName,
+    baseMappingName,
   );
   if (!tracingWithOldAggloTrees) {
     return;
@@ -255,7 +259,7 @@ export function* syncAgglomerateSkeletonsAfterMergeAction(
     tracingWithOldAggloTrees.trees,
     sourceAgglomerateIdBeforeMerge,
     tracingId,
-    mappingName,
+    baseMappingName,
   );
   const assignedTreeIds = maybeOutdatedSourceAgglomerateTree
     ? [maybeOutdatedSourceAgglomerateTree.treeId]
@@ -267,7 +271,7 @@ export function* syncAgglomerateSkeletonsAfterMergeAction(
     positionToIdMap,
     assignedTreeIds,
     tracingId,
-    mappingName,
+    baseMappingName,
   );
 
   yield* call(
@@ -286,16 +290,19 @@ export function* syncAgglomerateSkeletonsAfterSplitAction(
   oldAgglomerateIds: number[],
   tracingId: string,
 ): Saga<void> {
-  const { skeletonTracing, activeMapping } = yield* call(getMappingAndSkeleton, tracingId);
-  const { mappingName } = activeMapping;
-  if (!skeletonTracing || mappingName == null) {
+  const { skeletonTracing, editableMapping } = yield* call(
+    getEditableMappingAndSkeleton,
+    tracingId,
+  );
+  const baseMappingName = editableMapping?.baseMappingName;
+  if (!skeletonTracing || baseMappingName == null) {
     return;
   }
   const tracingWithOldAggloTrees = yield* call(
     getAgglomerateTreesAsSkeleton,
     oldAgglomerateIds,
     tracingId,
-    mappingName,
+    baseMappingName,
   );
   if (!tracingWithOldAggloTrees) {
     return;
@@ -306,7 +313,7 @@ export function* syncAgglomerateSkeletonsAfterSplitAction(
 
   const assignedTreeIds = newAgglomerateIds
     .map((id) =>
-      findTreeByAgglomerateId(tracingWithOldAggloTrees.trees, id, tracingId, mappingName),
+      findTreeByAgglomerateId(tracingWithOldAggloTrees.trees, id, tracingId, baseMappingName),
     )
     .map((tree) => (tree ? tree.treeId : newTreeId++));
 
@@ -316,7 +323,7 @@ export function* syncAgglomerateSkeletonsAfterSplitAction(
     positionToIdMap,
     assignedTreeIds,
     tracingId,
-    mappingName,
+    baseMappingName,
   );
 
   yield* call(

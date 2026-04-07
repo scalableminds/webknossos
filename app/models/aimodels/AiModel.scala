@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, Full}
-import com.scalableminds.webknossos.schema.Tables.{Aimodels, AimodelsRow}
+import com.scalableminds.webknossos.schema.Tables.{Aimodels, AimodelsRow, GetResultAimodelsRow}
 import models.aimodels.AiModelCategory.AiModelCategory
 import models.dataset.{DataStore, DataStoreDAO, DataStoreService, WKRemoteDataStoreClient}
 import models.job.{JobDAO, JobService, JobState}
@@ -12,7 +12,6 @@ import models.user.{User, UserDAO, UserService}
 import play.api.libs.json.{JsObject, Json}
 import slick.dbio.{DBIO, Effect, NoStream}
 import slick.jdbc.PostgresProfile.api._
-import slick.lifted.Rep
 import slick.sql.SqlAction
 import com.scalableminds.util.objectid.ObjectId
 import models.organization.OrganizationDAO
@@ -153,10 +152,7 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[AiModel, AimodelsRow, Aimodels](sqlClient) {
 
   protected val collection = Aimodels
-
-  protected def idColumn(x: Aimodels): Rep[String] = x._Id
-
-  protected def isDeletedColumn(x: Aimodels): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultAimodelsRow
 
   protected def parse(r: AimodelsRow): Fox[AiModel] =
     for {
@@ -195,29 +191,22 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                   WHERE _id = $requestingUserId
               ))
           )
-        OR _id IN (
-          SELECT _id FROM webknossos.aiModels
-          WHERE _organization IN (
-                  SELECT _organization
-                  FROM webknossos.users_
-                  WHERE _id = $requestingUserId
-          )
-        )
+         OR
+        (_organization IN (
+            SELECT _organization
+            FROM webknossos.users_
+            WHERE _id = $requestingUserId
+        ))
      """
 
-  override def findOne(aiModelId: ObjectId)(implicit ctx: DBAccessContext): Fox[AiModel] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $aiModelId AND $accessQuery".as[AimodelsRow])
-      parsed <- parseFirst(r, "id")
-    } yield parsed
-
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[AiModel]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[AimodelsRow])
-      parsed <- parseAll(r)
-    } yield parsed
+  override protected def updateAccessQ(requestingUserId: ObjectId): SqlToken =
+    q"""
+       _organization IN (
+          SELECT _organization
+          FROM webknossos.users_
+          WHERE _id = $requestingUserId
+        )
+     """
 
   def countByNameAndOrganization(aiModelName: String, organizationId: String): Fox[Int] =
     for {

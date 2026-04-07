@@ -126,7 +126,6 @@ export type LayerLink = {
 
 export type APIHistogramData = HistogramDatum[];
 export type HistogramDatum = {
-  numberOfElements: number;
   elementCounts: Array<number>;
   min: number;
   max: number;

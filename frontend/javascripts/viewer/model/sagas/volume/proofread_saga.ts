@@ -1317,7 +1317,6 @@ function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation
       return null;
     }
   }
-  const annotationVersion = yield* select((state) => state.annotation.version);
 
   const magInfo = getMagInfo(volumeTracingLayer.mags);
   const currentMag = yield* select((state) => getCurrentMag(state, volumeTracingLayer.name));

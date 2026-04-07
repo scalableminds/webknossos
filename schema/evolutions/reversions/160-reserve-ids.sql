@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 153 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
+do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 160 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
 DROP VIEW webknossos.annotations_;
 
@@ -18,6 +18,6 @@ DROP TYPE webknossos.ANNOTATION_COLLABORATION_MODE;
 DROP TABLE webknossos.annotation_reserved_ids;
 DROP TYPE webknossos.ANNOTATION_ID_DOMAIN;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 152;
+UPDATE webknossos.releaseInformation SET schemaVersion = 159;
 
 COMMIT TRANSACTION;

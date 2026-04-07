@@ -1,4 +1,4 @@
-import { CompressOutlined, CopyOutlined, ShareAltOutlined } from "@ant-design/icons";
+import { CompressOutlined, CopyOutlined, GlobalOutlined, LockOutlined, ShareAltOutlined, TeamOutlined } from "@ant-design/icons";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import {
   createShortLink,

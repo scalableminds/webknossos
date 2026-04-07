@@ -7,7 +7,7 @@ import { getTracingById } from "../accessors/tracing_accessor";
 import type { GetNewIdAction } from "../actions/actions";
 import { setIdReservationsAction } from "../actions/volumetracing_actions";
 import { getMaximumGroupId } from "../reducers/skeletontracing_reducer_helpers";
-import { type Saga, select } from "./effect-generators";
+import { type Saga, select } from "./effect_generators";
 
 /*
  * todop:

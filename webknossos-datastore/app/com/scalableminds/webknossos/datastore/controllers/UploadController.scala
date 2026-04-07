@@ -8,11 +8,11 @@ import com.scalableminds.webknossos.datastore.services.{
 }
 import com.scalableminds.webknossos.datastore.services.uploading.{
   AttachmentUploadInfo,
-  CancelUploadInformation,
+  LegacyCancelUploadInformation,
   DatasetUploadInfo,
   MagUploadInfo,
   UploadDomain,
-  UploadInformation,
+  LegacyUploadInformation,
   UploadService
 }
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
@@ -173,46 +173,47 @@ class UploadController @Inject()(
       } yield result
     }
 
-  def finishUpload(uploadDomain: String): Action[UploadInformation] = Action.async(validateJson[UploadInformation]) {
-    implicit request =>
-      log(Some(slackNotificationService.noticeFailedUploadRequest)) {
-        logTime(slackNotificationService.noticeSlowRequest) {
-          for {
-            uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox
-            datasetId <- uploadService
-              .getDatasetIdByUploadId(request.body.uploadId, uploadDomainValidated) ?~> s"Cannot find running upload with upload id ${request.body.uploadId}"
-            response <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
-              for {
-                // TODO other domains
-                _ <- uploadService.finishDatasetUpload(request.body, datasetId) ?~> Messages(
-                  "dataset.upload.finishFailed",
-                  datasetId)
-              } yield Ok(Json.obj("newDatasetId" -> datasetId))
-            }
-          } yield response
-        }
+  // TODO legacy: still needs uploadId as body
+  def finishUpload(uploadDomain: String, uploadId: String): Action[AnyContent] = Action.async { implicit request =>
+    log(Some(slackNotificationService.noticeFailedUploadRequest)) {
+      logTime(slackNotificationService.noticeSlowRequest) {
+        for {
+          uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox
+          datasetId <- uploadService
+            .getDatasetIdByUploadId(uploadId, uploadDomainValidated) ?~> s"Cannot find running upload with upload id $uploadId"
+          response <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
+            for {
+              // TODO other domains
+              _ <- (uploadDomainValidated match {
+                case UploadDomain.dataset    => uploadService.finishDatasetUpload(uploadId, datasetId)
+                case UploadDomain.mag        => uploadService.finishMagUpload(uploadId, datasetId)
+                case UploadDomain.attachment => uploadService.finishAttachmentUpload(uploadId, datasetId)
+              }) ?~> Messages("dataset.upload.finishFailed", datasetId)
+            } yield Ok(Json.obj("datasetId" -> datasetId)) // TODO legacy needs to return this as "newDatasetid"
+          }
+        } yield response
       }
+    }
   }
 
-  // TODO uploadId as GET param?
-  def cancelUpload(uploadDomain: String): Action[CancelUploadInformation] =
-    Action.async(validateJson[CancelUploadInformation]) { implicit request =>
-      for {
-        uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox
-        datasetIdFox = uploadService.isKnownUpload(request.body.uploadId, uploadDomainValidated).flatMap {
-          case false => Fox.failure("dataset.upload.validation.failed")
-          case true  => uploadService.getDatasetIdByUploadId(request.body.uploadId, uploadDomainValidated)
+  // TODO legacy route needs to take uploadId as body
+  def cancelUpload(uploadDomain: String, uploadId: String): Action[AnyContent] = Action.async { implicit request =>
+    for {
+      uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox
+      datasetIdFox = uploadService.isKnownUpload(uploadId, uploadDomainValidated).flatMap {
+        case false => Fox.failure("dataset.upload.validation.failed")
+        case true  => uploadService.getDatasetIdByUploadId(uploadId, uploadDomainValidated)
+      }
+      result <- datasetIdFox.flatMap { datasetId =>
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.deleteDataset(datasetId)) {
+          for {
+            // TODO adapt also to other domains
+            _ <- dsRemoteWebknossosClient.deleteDataset(datasetId) ?~> "dataset.delete.webknossos.failed"
+            _ <- uploadService.cancelUpload(uploadDomainValidated, uploadId) ?~> "Could not cancel the upload."
+          } yield Ok
         }
-        result <- datasetIdFox.flatMap { datasetId =>
-          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.deleteDataset(datasetId)) {
-            for {
-              // TODO adapt also to other domains
-              _ <- dsRemoteWebknossosClient.deleteDataset(datasetId) ?~> "dataset.delete.webknossos.failed"
-              _ <- uploadService.cancelUpload(request.body, uploadDomainValidated) ?~> "Could not cancel the upload."
-            } yield Ok
-          }
-        }
-      } yield result
-    }
+      }
+    } yield result
+  }
 
 }

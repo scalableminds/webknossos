@@ -112,8 +112,8 @@ POST          /datasets/upload/dataset/reserveUpload                            
 POST          /datasets/upload/mag/reserveUpload                                                                      @com.scalableminds.webknossos.datastore.controllers.UploadController.reserveAttachmentUpload()
 POST          /datasets/upload/attachment/reserveUpload                                                               @com.scalableminds.webknossos.datastore.controllers.UploadController.reserveMagUpload()
 GET           /datasets/upload/:uploadDomain/getUnfinishedUploads                                                     @com.scalableminds.webknossos.datastore.controllers.UploadController.getUnfinishedUploads(organizationName: String, uploadDomain: String)
-POST          /datasets/upload/:uploadDomain/finishUpload                                                             @com.scalableminds.webknossos.datastore.controllers.UploadController.finishUpload(uploadDomain: String)
-POST          /datasets/upload/:uploadDomain/cancelUpload                                                             @com.scalableminds.webknossos.datastore.controllers.UploadController.cancelUpload(uploadDomain: String)
+POST          /datasets/upload/:uploadDomain/finishUpload                                                             @com.scalableminds.webknossos.datastore.controllers.UploadController.finishUpload(uploadDomain: String, uploadId: String)
+POST          /datasets/upload/:uploadDomain/cancelUpload                                                             @com.scalableminds.webknossos.datastore.controllers.UploadController.cancelUpload(uploadDomain: String, uploadId: String)
 
 # DataSource management
 GET           /datasets/baseDirAbsolute                                                                               @com.scalableminds.webknossos.datastore.controllers.DataSourceController.baseDirAbsolute

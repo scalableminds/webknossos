@@ -118,16 +118,16 @@ object LinkedLayerIdentifier {
   implicit val jsonFormat: OFormat[LinkedLayerIdentifier] = Json.format[LinkedLayerIdentifier]
 }
 
-// TODO move needsConversion to Redis, skip it here. Remove this entirely (except for legacy) and just take the uploadId as GET param?
-case class UploadInformation(uploadId: String, needsConversion: Option[Boolean])
+// TODO move to Legacy finishUpload, unpack uploadId
+case class LegacyUploadInformation(uploadId: String)
 
-object UploadInformation {
-  implicit val jsonFormat: OFormat[UploadInformation] = Json.format[UploadInformation]
+object LegacyUploadInformation {
+  implicit val jsonFormat: OFormat[LegacyUploadInformation] = Json.format[LegacyUploadInformation]
 }
 
-case class CancelUploadInformation(uploadId: String)
-object CancelUploadInformation {
-  implicit val jsonFormat: OFormat[CancelUploadInformation] = Json.format[CancelUploadInformation]
+case class LegacyCancelUploadInformation(uploadId: String)
+object LegacyCancelUploadInformation {
+  implicit val jsonFormat: OFormat[LegacyCancelUploadInformation] = Json.format[LegacyCancelUploadInformation]
 }
 
 class UploadService @Inject()(dataSourceService: DataSourceService,
@@ -176,14 +176,14 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                            datasetId: ObjectId,
                            directoryName: String): Fox[Unit] = {
     val dataSourceId = DataSourceId(directoryName, datasetUploadInfo.organizationId)
+    val needsConversion = datasetUploadInfo.needsConversion.getOrElse(false)
     for {
-      _ <- Fox.fromBool(
-        !datasetUploadInfo.needsConversion.getOrElse(false) || !datasetUploadInfo.layersToLink
-          .exists(_.nonEmpty)) ?~> "Cannot use linked layers if the dataset needs conversion"
+      _ <- Fox.fromBool(!needsConversion || !datasetUploadInfo.layersToLink.exists(_.nonEmpty)) ?~> "Cannot use linked layers if the dataset needs conversion"
       _ <- reserveResumableUpload(datasetUploadInfo.resumableUploadInfo, datasetId, dataSourceId, UploadDomain.dataset)
       uploadId = datasetUploadInfo.resumableUploadInfo.uploadId
       _ <- datasetUploadMetadataStore.insertUploadIdByDataSourceId(dataSourceId, uploadId)
       _ <- datasetUploadMetadataStore.insertLinkedLayerIdentifiers(uploadId, datasetUploadInfo.layersToLink)
+      _ <- datasetUploadMetadataStore.insertNeedsConversion(uploadId, needsConversion)
     } yield ()
   }
 
@@ -321,9 +321,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     } yield ()
   }
 
-  def cancelUpload(cancelUploadInformation: CancelUploadInformation, uploadDomain: UploadDomain): Fox[Unit] = {
+  def cancelUpload(uploadDomain: UploadDomain, uploadId: String): Fox[Unit] = {
     val uploadMetadataStore = selectUploadMetadataStore(uploadDomain)
-    val uploadId = cancelUploadInformation.uploadId
     for {
       dataSourceId <- uploadMetadataStore.findDataSourceId(uploadId)
       datasetId <- uploadMetadataStore.findDatasetId(uploadId)
@@ -341,22 +340,19 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def uploadFullName(uploadId: String, datasetId: ObjectId, dataSourceId: DataSourceId) =
     s"upload $uploadId for dataset $datasetId ($dataSourceId)"
 
-  def finishDatasetUpload(uploadInformation: UploadInformation, datasetId: ObjectId)(
-      implicit tc: TokenContext): Fox[Unit] = {
-    val uploadId = uploadInformation.uploadId
-
+  def finishDatasetUpload(uploadId: String, datasetId: ObjectId)(implicit tc: TokenContext): Fox[Unit] =
     for {
       dataSourceId <- datasetUploadMetadataStore.findDataSourceId(uploadId)
+      needsConversion <- datasetUploadMetadataStore.findNeedsConversion(uploadId)
       _ = logger.info(s"Finishing ${uploadFullName(uploadId, datasetId, dataSourceId)}...")
       linkedLayerIdentifiers <- datasetUploadMetadataStore.findLinkedLayerIdentifiers(uploadId)
-      needsConversion = uploadInformation.needsConversion.getOrElse(false)
       uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId, UploadDomain.dataset)
       _ <- backupRawUploadedData(uploadDir, uploadBackupDirectoryFor(dataSourceId.organizationId, uploadId), datasetId).toFox
       _ <- checkWithinRequestedFileSize(uploadDir, uploadId, datasetId, UploadDomain.dataset) ?~> "dataset.upload.fileSizeCheck.failed"
       _ <- checkAllChunksUploaded(uploadId, UploadDomain.dataset) ?~> "dataset.upload.allChunksUploadedCheck.failed"
       unpackToDir = unpackToDirFor(dataSourceId)
       _ <- PathUtils.ensureDirectoryBox(unpackToDir.getParent).toFox ?~> "dataset.import.fileAccessDenied"
-      unpackResult <- unpackDataset(uploadDir, unpackToDir, datasetId).shiftBox
+      unpackResult <- unpackOrMoveUploaded(uploadDir, unpackToDir, datasetId).shiftBox
       _ <- cleanUpUploadedDataset(uploadDir, uploadId, reason = "Upload complete, data unpacked.", UploadDomain.dataset)
       _ <- cleanUpOnFailure(unpackResult,
                             datasetId,
@@ -369,19 +365,34 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                             dataSourceId,
                             needsConversion,
                             label = s"processing dataset at $unpackToDir")
-      datasetSizeBytes <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue).toFox ?~> "dataset.upload.measureTotalSize.failed"
+      datasetSizeBytes <- measureDirectorySizeBytes(unpackToDir) ?~> "dataset.upload.measureTotalSize.failed"
       dataSourceWithAbsolutePathsOpt <- moveUnpackedToTarget(unpackToDir, needsConversion, datasetId, dataSourceId) ?~> "dataset.upload.moveUnpackedToTarget.failed"
       _ <- remoteWebknossosClient.reportDatasetUpload(
         datasetId,
         ReportDatasetUploadParameters(
-          uploadInformation.needsConversion.getOrElse(false),
+          needsConversion,
           datasetSizeBytes,
           dataSourceWithAbsolutePathsOpt,
           linkedLayerIdentifiers
         )
       ) ?~> "dataset.upload.reportUpload.failed"
     } yield ()
-  }
+
+  private def measureDirectorySizeBytes(path: Path): Fox[Long] =
+    tryo(FileUtils.sizeOfDirectoryAsBigInteger(path.toFile).longValue).toFox
+
+  def finishMagUpload(uploadId: String, datasetId: ObjectId)(implicit tc: TokenContext): Fox[Unit] = for {
+    dataSourceId <- magUploadMetadataStore.findDataSourceId(uploadId)
+    mag <- magUploadMetadataStore.findMag(uploadId)
+    layerName <- magUploadMetadataStore.findLayerName(uploadId)
+    uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId, UploadDomain.mag)
+    unpackToDir = unpackToDirFor(dataSourceId).resolve(mag.mag.toMagLiteral(allowScalar = true))
+    magSizeBytes <- measureDirectorySizeBytes(unpackToDir) ?~> "dataset.upload.measureTotalSize.failed"
+    _ <- unpackOrMoveUploaded(uploadDir, unpackToDir, datasetId, UploadDomain.mag)
+    _ <- remoteWebknossosClient.reportMagUpload(datasetId, layerName, mag.mag, magSizeBytes)
+  } yield ()
+
+  def finishAttachmentUpload(uploadId: String, datasetId: ObjectId)(implicit tc: TokenContext): Fox[Unit] = ??? // TODO
 
   private def checkWithinRequestedFileSize(uploadDir: Path,
                                            uploadId: String,
@@ -761,7 +772,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def getPathDepth(path: Path) =
     path.toString.count(_ == '/')
 
-  private def unpackDataset(uploadDir: Path, unpackToDir: Path, datasetId: ObjectId): Fox[Unit] =
+  private def unpackOrMoveUploaded(uploadDir: Path, unpackToDir: Path, datasetId: ObjectId, uploadDomain: UploadDomain): Fox[Unit] =
     for {
       shallowFileList <- PathUtils.listFiles(uploadDir, silent = false).toFox
       excludeFromPrefix = LayerCategory.values.map(_.toString).toList
@@ -770,7 +781,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                  _.toString.toLowerCase.endsWith(".zip"))) {
         for {
           zipFile <- firstFile.toFox
-          _ = logger.info(s"finishUpload for $datasetId: Unzipping dataset to $unpackToDir...")
+          _ = logger.info(s"finishUpload for $datasetId: Unzipping $uploadDomain to $unpackToDir...")
           _ <- ZipIO
             .unzipToDirectory(
               zipFile.toFile,
@@ -789,7 +800,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
           _ <- Fox.fromBool(deepFileList.nonEmpty) ?~> "dataset.upload.noFiles"
           commonPrefixPreliminary = PathUtils.commonPrefix(deepFileList)
           _ = logger.info(
-            s"Detected dataset root during upload of $datasetId from ${deepFileList.length} files in $uploadDir with commonPrefixPreliminary=$commonPrefixPreliminary")
+            s"Detected $uploadDomain root during finishUpload of $datasetId from ${deepFileList.length} files in $uploadDir with commonPrefixPreliminary=$commonPrefixPreliminary")
           strippedPrefix = PathUtils.cutOffPathAtLastOccurrenceOf(commonPrefixPreliminary, excludeFromPrefix)
           commonPrefix = PathUtils.removeSingleFileNameFromPrefix(strippedPrefix,
                                                                   deepFileList.map(_.getFileName.toString))

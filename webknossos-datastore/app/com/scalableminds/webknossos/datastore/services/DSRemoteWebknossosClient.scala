@@ -108,6 +108,8 @@ class DSRemoteWebknossosClient @Inject()(
       .withTokenFromContext
       .postJson[ReportDatasetUploadParameters](parameters)
 
+  def reportMagUpload(datasetId: ObjectId, parameters: ReportMagUploadParameters)
+
   def reportDataSources(dataSources: List[DataSource], organizationId: Option[String]): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources")
       .addQueryParam("key", dataStoreKey)

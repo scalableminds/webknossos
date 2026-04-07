@@ -10,6 +10,7 @@ import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
 import play.api.libs.json.Json
 
 import javax.inject.Inject
+import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext
 
 trait UploadMetadataStore extends FoxImplicits {
@@ -142,12 +143,18 @@ class DatasetUploadMetadataStore @Inject()(protected val store: DataStoreRedisSt
   private def redisKeyForLinkedLayerIdentifier(uploadId: String): String =
     s"$keyPrefix${uploadId}___linkedLayerIdentifier"
 
+  private def redisKeyForNeedsConversion(uploadId: String): String =
+    s"$keyPrefix${uploadId}___needsConversion"
+
   // TODO make this Fox[String]?
   def findUploadIdByDataSourceId(dataSourceId: DataSourceId): Fox[Option[String]] =
     store.find(redisKeyForUploadIdByDataSourceId(dataSourceId))
 
   def findLinkedLayerIdentifiers(uploadId: String)(implicit ec: ExecutionContext): Fox[Seq[LinkedLayerIdentifier]] =
     store.findParsed[Seq[LinkedLayerIdentifier]](redisKeyForLinkedLayerIdentifier(uploadId))
+
+  def findNeedsConversion(uploadId: String)(implicit ec: ExecutionContext): Fox[Boolean] =
+    store.findParsed[Boolean](redisKeyForNeedsConversion(uploadId))
 
   // Only here the uploadId is not key but value. This is used to re-connect to unfinished uploads.
   def insertUploadIdByDataSourceId(dataSourceId: DataSourceId, uploadId: String): Fox[Unit] =
@@ -157,10 +164,14 @@ class DatasetUploadMetadataStore @Inject()(protected val store: DataStoreRedisSt
                                    linkedLayerIdentifiers: Option[Seq[LinkedLayerIdentifier]]): Fox[_] =
     store.insertSerialized(redisKeyForLinkedLayerIdentifier(uploadId), linkedLayerIdentifiers.getOrElse(Seq.empty))
 
+  def insertNeedsConversion(uploadId: String, needsConversion: Boolean): Fox[_] =
+    store.insertSerialized(redisKeyForNeedsConversion(uploadId), needsConversion)
+
   override def cleanUp(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       dataSourceId <- findDataSourceId(uploadId)
       _ <- store.remove(redisKeyForLinkedLayerIdentifier(uploadId))
+      _ <- store.remove(redisKeyForNeedsConversion(uploadId))
       _ <- store.remove(redisKeyForUploadIdByDataSourceId(dataSourceId))
       _ <- super.cleanUp(uploadId)
     } yield ()
@@ -181,6 +192,12 @@ class MagUploadMetadataStore @Inject()(protected val store: DataStoreRedisStore)
 
   def insertLayerName(uploadId: String, layerName: String): Fox[Unit] =
     store.insert(redisKeyForLayerName(uploadId), layerName)
+
+  def findMag(uploadId: String)(implicit ec: ExecutionContext): Fox[MagLocator] =
+    store.findParsed[MagLocator](redisKeyForMag(uploadId))
+
+  def findLayerName(uploadId: String)(implicit ec: ExecutionContext): Fox[String] =
+    store.findParsed(redisKeyForLayerName(uploadId))
 }
 
 class AttachmentUploadMetadataStore @Inject()(protected val store: DataStoreRedisStore) extends UploadMetadataStore {

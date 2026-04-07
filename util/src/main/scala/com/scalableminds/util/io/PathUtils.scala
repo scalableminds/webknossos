@@ -44,7 +44,7 @@ object PathUtils extends LazyLogging {
   }
 
   def commonPrefix(ps: List[Path]): Path =
-    ps.reduce(commonPrefix)
+    if (ps.isEmpty) Path.of("") else ps.reduce(commonPrefix)
 
   def fileOption(p: Path): Option[File] =
     if (!Files.isDirectory(p))

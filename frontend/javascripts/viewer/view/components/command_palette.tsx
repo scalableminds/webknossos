@@ -1,3 +1,4 @@
+import { getUsersOrganizations } from "admin/api/organization";
 import {
   getAuthToken,
   getDatasets,
@@ -13,7 +14,7 @@ import capitalize from "lodash-es/capitalize";
 import compact from "lodash-es/compact";
 import noop from "lodash-es/noop";
 import sortBy from "lodash-es/sortBy";
-import { getAdministrationSubMenu, getAnalysisSubMenu } from "navbar";
+import { getAdministrationSubMenu, getAnalysisSubMenu, switchTo } from "navbar";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import ReactCommandPalette, { type Command } from "react-command-palette";
 import { useDispatch } from "react-redux";
@@ -47,6 +48,7 @@ type CommandWithoutId = Omit<ExtendedCommand, "id">;
 enum DynamicCommands {
   viewDataset = "View Dataset ",
   viewAnnotation = "View Annotation ",
+  switchOrganization = "Switch Organization ",
 }
 
 const getLabelForAction = (action: NonNullable<ItemType>) => {
@@ -178,6 +180,20 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
       return;
     }
 
+    if (command.name === DynamicCommands.switchOrganization) {
+      try {
+        const organizations = await getOrganizationItems();
+        if (organizations.length > 0) {
+          setCommands(organizations);
+        } else {
+          Toast.info("No other organizations available.");
+        }
+      } catch (_e) {
+        Toast.error("Failed to load organizations.");
+      }
+      return;
+    }
+
     closePalette();
   }, []);
 
@@ -215,8 +231,30 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
     });
   }, []);
 
-  const viewAnnotationItems = {
+  const viewAnnotationsItem = {
     name: DynamicCommands.viewAnnotation,
+    shortcut: "Enter to show list",
+    command: () => {},
+    color: commandEntryColor,
+  };
+
+  const getOrganizationItems = useCallback(async () => {
+    const organizations = await getUsersOrganizations();
+    const otherOrganizations = organizations.filter((orga) => orga.id !== activeUser?.organization);
+    return otherOrganizations.map((organization) => {
+      return {
+        name: `Switch to Organization: ${organization.name}`,
+        command: async () => {
+          await switchTo(organization);
+        },
+        color: commandEntryColor,
+        id: organization.id,
+      };
+    });
+  }, [activeUser?.organization]);
+
+  const switchOrganizationItem = {
+    name: DynamicCommands.switchOrganization,
     shortcut: "Enter to show list",
     command: () => {},
     color: commandEntryColor,
@@ -396,7 +434,8 @@ export const CommandPalette = ({ label }: { label: string | JSX.Element | null }
 
   const allStaticCommands = [
     viewDatasetsItem,
-    viewAnnotationItems,
+    viewAnnotationsItem,
+    switchOrganizationItem,
     ...getNavigationEntries(),
     ...getThemeEntries(),
     ...getToolEntries(),

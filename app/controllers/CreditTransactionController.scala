@@ -68,7 +68,7 @@ class CreditTransactionController @Inject()(organizationDAO: OrganizationDAO,
     } yield Ok
   }
 
-  def refundCreditTransaction(organizationId: String, transactionId: String): Action[AnyContent] =
+  def refundCreditTransaction(organizationId: String, transactionId: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can manually refund credits"
@@ -90,7 +90,9 @@ class CreditTransactionController @Inject()(organizationDAO: OrganizationDAO,
       isSuperUser <- userService.isSuperUser(request.identity._multiUser)
       _ <- Fox.fromBool(isSuperUser || request.identity.isAdmin) ?~> "organization.listCreditTransactions.onlyAdmin"
       transactions <- creditTransactionDAO.findAll
-      transactionsJs <- Fox.serialCombined(transactions)(creditTransactionPublicWritesService.publicWrites)
+      compactedTransactions = creditTransactionService.compactFreeCreditsForDisplay(transactions)
+      nonZeroTransactions = compactedTransactions.filter(_.milliCreditDelta != 0)
+      transactionsJs <- Fox.serialCombined(nonZeroTransactions)(creditTransactionPublicWritesService.publicWrites)
     } yield Ok(Json.toJson(transactionsJs))
   }
 

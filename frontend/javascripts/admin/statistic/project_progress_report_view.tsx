@@ -1,55 +1,38 @@
-import { PauseCircleOutlined, ReloadOutlined, SettingOutlined } from "@ant-design/icons";
+import { FilterOutlined, PauseCircleOutlined, ReloadOutlined } from "@ant-design/icons";
+import AdminPage from "admin/admin_page";
 import { getProjectProgressReport } from "admin/rest_api";
-import { Badge, Button, Card, Flex, Space, Spin, Table } from "antd";
+import { Badge, Button, Space, Spin, Table } from "antd";
 import FormattedDate from "components/formatted_date";
-import Loop from "components/loop";
 import StackedBarChart, { colors } from "components/stacked_bar_chart";
-import Toast from "libs/toast";
+import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
+import { useQueryWithErrorHandling } from "libs/react_hooks";
 import { compareBy, localeCompareBy, millisecondsToHours } from "libs/utils";
 import messages from "messages";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { APIProjectProgressReport, APITeam } from "types/api_types";
-import TeamSelectionForm from "./team_selection_form";
 
 const { Column, ColumnGroup } = Table;
 const RELOAD_INTERVAL = 10 * 60 * 1000; // 10 min
 
 function ProjectProgressReportView() {
   const [areSettingsVisible, setAreSettingsVisible] = useState(true);
-  const [data, setData] = useState<APIProjectProgressReport[]>([]);
   const [team, setTeam] = useState<APITeam | undefined>(undefined);
-  const [isLoading, setIsLoading] = useState(false);
-  const [updatedAt, setUpdatedAt] = useState<number | undefined>(undefined);
 
-  async function fetchData(team: APITeam | undefined, suppressLoadingState: boolean = false) {
-    if (team == null) {
-      setData([]);
-    } else if (suppressLoadingState) {
-      const errorToastKey = "progress-report-failed-to-refresh";
-
-      try {
-        const progessData = await getProjectProgressReport(team.id);
-        setData(progessData);
-        setUpdatedAt(Date.now());
-        Toast.close(errorToastKey);
-      } catch (_err) {
-        Toast.error(messages["project.report.failed_to_refresh"], {
-          sticky: true,
-          key: errorToastKey,
-        });
-      }
-    } else {
-      setIsLoading(true);
-      const progessData = await getProjectProgressReport(team.id);
-      setData(progessData);
-      setUpdatedAt(Date.now());
-      setIsLoading(false);
-    }
-  }
-  // biome-ignore lint/correctness/useExhaustiveDependencies(fetchData): fetchData does not change
-  useEffect(() => {
-    fetchData(team);
-  }, [team]);
+  const {
+    data = [],
+    isLoading,
+    isFetching,
+    refetch,
+    dataUpdatedAt,
+  } = useQueryWithErrorHandling(
+    {
+      queryKey: ["projectProgressReport", team?.id],
+      enabled: team != null,
+      queryFn: () => getProjectProgressReport(team!.id),
+      refetchInterval: RELOAD_INTERVAL,
+    },
+    messages["project.report.failed_to_refresh"],
+  );
 
   function handleTeamChange(newTeam: APITeam) {
     setTeam(newTeam);
@@ -60,42 +43,48 @@ function ProjectProgressReportView() {
     setAreSettingsVisible(true);
   }
 
-  function handleReload() {
-    fetchData(team);
-  }
-
-  function handleAutoReload() {
-    fetchData(team, true);
-  }
-
   return (
-    <div className="container">
-      <Loop onTick={handleAutoReload} interval={RELOAD_INTERVAL} />
-      <Flex justify="space-between" align="flex-start">
-        <h3>Project Progress</h3>
+    <AdminPage
+      title="Project Progress"
+      descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/projects.html"
+      description="Monitor project throughput, task instance status, and billed annotation time."
+      actions={
         <Space>
-          {updatedAt != null ? <FormattedDate timestamp={updatedAt} /> : null}{" "}
+          {dataUpdatedAt > 0 ? <FormattedDate timestamp={dataUpdatedAt} /> : null}
           <Button
-            icon={<SettingOutlined />}
-            shape="circle"
+            icon={<FilterOutlined />}
             variant="outlined"
             onClick={handleOpenSettings}
-          />
+            disabled={team == null}
+          >
+            Filter
+          </Button>
           <Button
-            icon={<ReloadOutlined />}
-            shape="circle"
+            icon={<ReloadOutlined spin={isFetching} />}
             variant="outlined"
-            onClick={handleReload}
-          />
+            onClick={() => refetch()}
+            disabled={team == null}
+          >
+            Refresh
+          </Button>
         </Space>
-      </Flex>
-
-      {areSettingsVisible ? (
-        <Card>
-          <TeamSelectionForm value={team} onChange={handleTeamChange} />
-        </Card>
-      ) : null}
-
+      }
+      filters={
+        areSettingsVisible ? (
+          <div style={{ maxWidth: 400 }}>
+            <TeamSelectionComponent
+              value={team}
+              onChange={(selectedTeam) => {
+                if (!Array.isArray(selectedTeam) && selectedTeam != null) {
+                  handleTeamChange(selectedTeam);
+                }
+              }}
+              prefix={<FilterOutlined />}
+            />
+          </div>
+        ) : null
+      }
+    >
       <Spin spinning={isLoading}>
         <Table
           dataSource={data}
@@ -103,9 +92,6 @@ function ProjectProgressReportView() {
             defaultPageSize: 100,
           }}
           rowKey="projectName"
-          style={{
-            marginTop: 30,
-          }}
           size="small"
           className="large-table"
         >
@@ -123,18 +109,21 @@ function ProjectProgressReportView() {
           <Column
             title="Tasks"
             dataIndex="totalTasks"
+            align="right"
             sorter={compareBy<APIProjectProgressReport>((project) => project.totalTasks)}
             render={(number) => number.toLocaleString()}
           />
           <Column
             title="Priority"
             dataIndex="priority"
+            align="right"
             sorter={compareBy<APIProjectProgressReport>((project) => project.priority)}
             render={(number) => number.toLocaleString()}
           />
           <Column
             title="Time [h]"
             dataIndex="billedMilliseconds"
+            align="right"
             sorter={compareBy<APIProjectProgressReport>((project) => project.billedMilliseconds)}
             render={(number) =>
               millisecondsToHours(number).toLocaleString(undefined, {
@@ -146,6 +135,7 @@ function ProjectProgressReportView() {
             <Column
               title="Total"
               width={100}
+              align="right"
               dataIndex="totalInstances"
               sorter={compareBy<APIProjectProgressReport>((project) => project.totalInstances)}
               render={(number) => number.toLocaleString()}
@@ -153,6 +143,7 @@ function ProjectProgressReportView() {
             <Column
               title="Progress"
               key="progress"
+              align="right"
               dataIndex="finishedInstances"
               width={100}
               sorter={compareBy<APIProjectProgressReport>(
@@ -234,7 +225,7 @@ function ProjectProgressReportView() {
           </ColumnGroup>
         </Table>
       </Spin>
-    </div>
+    </AdminPage>
   );
 }
 

@@ -6,7 +6,6 @@ import com.scalableminds.webknossos.schema.Tables._
 import models.annotation.AnnotationState.AnnotationState
 import models.annotation.AnnotationType.AnnotationType
 import play.api.libs.json.{JsObject, JsValue, Json}
-import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
 
@@ -47,9 +46,7 @@ object TimeSpan {
 class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[TimeSpan, TimespansRow, Timespans](sqlClient) {
   protected val collection = Timespans
-
-  protected def idColumn(x: Timespans): Rep[String] = x._Id
-  protected def isDeletedColumn(x: Timespans): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultTimespansRow
 
   protected def parse(r: TimespansRow): Fox[TimeSpan] =
     Fox.successful(
@@ -205,7 +202,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       val projectQuery = projectIdsFilterQuery(projectIds)
       val query =
         q"""
-          SELECT u._id, u.firstName, u.lastName, mu.email, SUM(ts.time), COUNT(DISTINCT a._id)
+          SELECT u._id, mu.firstName, mu.lastName, mu.email, SUM(ts.time), COUNT(DISTINCT a._id)
           FROM webknossos.timespans_ ts
           JOIN webknossos.annotations_ a ON ts._annotation = a._id
           JOIN webknossos.users_ u ON ts._user = u._id
@@ -219,7 +216,7 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           AND ts.time > 0
           AND ts.created >= $start
           AND ts.created < $end
-          GROUP BY u._id, u.firstName, u.lastName, mu.email
+          GROUP BY u._id, mu.firstName, mu.lastName, mu.email
          """
       for {
         tuples <- run(query.as[(ObjectId, String, String, String, Long, Int)])

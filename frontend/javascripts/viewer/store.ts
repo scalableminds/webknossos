@@ -36,7 +36,6 @@ import type {
   ControlMode,
   ControlModeEnum,
   FillMode,
-  InterpolationMode,
   MappingStatus,
   OrthoView,
   OrthoViewWithoutTD,
@@ -371,7 +370,6 @@ export type UserConfiguration = {
   readonly overwriteMode: OverwriteMode;
   readonly fillMode: FillMode;
   readonly isFloodfillRestrictedToBoundingBox: boolean;
-  readonly interpolationMode: InterpolationMode;
   readonly useLegacyBindings: boolean;
   readonly quickSelect: QuickSelectConfig;
   readonly renderWatermark: boolean;
@@ -475,7 +473,7 @@ export type RebaseRelevantAnnotationState = {
   readonly activeMappingByLayer: Record<string, ActiveMappingInfo>;
   readonly skeleton: SkeletonTracing | null | undefined;
   readonly volumes: Array<VolumeTracing>;
-  readonly isRebasing: boolean;
+  readonly isRebasingOrForwarding: boolean;
 };
 export type SaveState = {
   readonly isBusy: boolean;

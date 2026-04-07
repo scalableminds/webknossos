@@ -11,6 +11,7 @@ import {
   TeamOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import AdminPage from "admin/admin_page";
 import { getTasks } from "admin/api/tasks";
 import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
 import {
@@ -23,7 +24,7 @@ import {
   pauseProject,
   resumeProject,
 } from "admin/rest_api";
-import { App, Button, Flex, Input, Space, Spin, Table, Tooltip } from "antd";
+import { App, Button, Input, Spin, Table, Tooltip } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import { handleGenericError } from "libs/error_handling";
@@ -221,36 +222,27 @@ function ProjectListView() {
   );
 
   return (
-    <div className="container TestProjectListView">
-      <Flex justify="space-between" align="flex-start">
-        <h3>{taskTypeName ? `Projects for task type ${taskTypeName}` : "Projects"}</h3>
-        <Space>
-          {taskTypeId ? null : (
-            <Link to="/projects/create">
-              <Button icon={<PlusOutlined />} type="primary">
-                Add Project
-              </Button>
-            </Link>
-          )}
-          <Search
-            style={{
-              width: 200,
-            }}
-            onChange={handleSearch}
-            value={searchQuery}
-          />
-        </Space>
-      </Flex>
-
+    <AdminPage
+      title={taskTypeName ? `Projects for task type ${taskTypeName}` : "Projects"}
+      descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/projects.html"
+      description="Create projects, monitor progress, and manage annotation workload."
+      actions={
+        taskTypeId ? null : (
+          <Link to="/projects/create">
+            <Button icon={<PlusOutlined />} type="primary">
+              Add Project
+            </Button>
+          </Link>
+        )
+      }
+      search={<Search allowClear onChange={handleSearch} value={searchQuery} />}
+    >
       <Spin spinning={isLoading} size="large">
         <Table
           dataSource={filteredProjects}
           rowKey="id"
           pagination={{
             defaultPageSize: 50,
-          }}
-          style={{
-            marginTop: 30,
           }}
           locale={{
             emptyText: renderPlaceholder(),
@@ -270,6 +262,7 @@ function ProjectListView() {
           <Column
             title="Pending Task Instances"
             dataIndex="pendingInstances"
+            align="right"
             key="pendingInstances"
             sorter={compareBy<APIProjectWithStatus>((project) => project.pendingInstances)}
             filters={greaterThanZeroFilters}
@@ -283,6 +276,7 @@ function ProjectListView() {
           <Column
             title={<Tooltip title="Total annotating time spent on this project">Time [h]</Tooltip>}
             dataIndex="tracingTime"
+            align="right"
             key="tracingTime"
             sorter={compareBy<APIProjectWithStatus>((project) => project.tracingTime)}
             render={(tracingTimeMs) =>
@@ -346,6 +340,7 @@ function ProjectListView() {
             title="Priority"
             dataIndex="priority"
             key="priority"
+            align="right"
             sorter={compareBy<APIProjectWithStatus>((project) => project.priority)}
             render={(priority, project: APIProjectWithStatus) =>
               `${priority} ${project.paused ? "(paused)" : ""}`
@@ -361,6 +356,7 @@ function ProjectListView() {
           <Column
             title="Time Limit"
             dataIndex="expectedTime"
+            align="right"
             key="expectedTime"
             sorter={compareBy<APIProjectWithStatus>((project) => project.expectedTime)}
             render={(expectedTime) => `${expectedTime}m`}
@@ -456,7 +452,7 @@ function ProjectListView() {
           onComplete={onTaskTransferComplete}
         />
       ) : null}
-    </div>
+    </AdminPage>
   );
 }
 

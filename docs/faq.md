@@ -58,5 +58,5 @@ Use our free [Python library](https://docs.webknossos.org/webknossos-py/) to wor
 
 New user registrations need to be approved by the respective admin of your WEBKNOSSOS instance.
 
-Please go to the User list screen in the admin section.
+Please go to the User list page in the admin section.
 Deactivate the `Show Active Users Only` option above the User table.

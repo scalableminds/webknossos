@@ -1,3 +1,0 @@
-
-import type { APITeam } from "types/api_types";
-const a: Array<APITeam> = [{"id":"570b9f4b2a7c0e3b008da6ec","name":"team_X1","organization":"Organization_X","isOrganizationTeam":true},{"id":"69882b370d889b84020efd4f","name":"team_X2","organization":"Organization_X","isOrganizationTeam":false},{"id":"59882b370d889b84020efd3f","name":"team_X3","organization":"Organization_X","isOrganizationTeam":false},{"id":"59882b370d889b84020efd6f","name":"team_X4","organization":"Organization_X","isOrganizationTeam":false}]

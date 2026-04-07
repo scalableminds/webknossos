@@ -1,10 +1,11 @@
 package controllers
 
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{AnnotationDAO, AnnotationType}
 import models.team.TeamDAO
-import models.user.{User, UserDAO, UserService}
+import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent}
 import security.WkEnv
@@ -160,6 +161,7 @@ class ReportController @Inject()(reportDAO: ReportDAO,
                                  teamDAO: TeamDAO,
                                  userDAO: UserDAO,
                                  userService: UserService,
+                                 multiUserDAO: MultiUserDAO,
                                  sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
@@ -185,9 +187,10 @@ class ReportController @Inject()(reportDAO: ReportDAO,
     val foxes = users.map { user =>
       for {
         pendingTaskCountsByProjects <- reportDAO.getAvailableTaskCountsByProjectsFor(user._id)
+        multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       } yield {
         AvailableTaskCountsEntry(user._id.toString,
-                                 user.name,
+                                 multiUser.fullName,
                                  pendingTaskCountsByProjects.values.sum,
                                  pendingTaskCountsByProjects)
       }

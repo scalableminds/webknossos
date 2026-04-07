@@ -31,7 +31,7 @@ case class NgffMetadata(multiscales: List[NgffMultiscalesItem], omero: Option[Ng
 object NgffMetadata {
   def fromNameVoxelSizeAndMags(dataLayerName: String,
                                dataSourceVoxelSize: VoxelSize,
-                               mags: List[Vec3Int]): NgffMetadata = {
+                               mags: Seq[Vec3Int]): NgffMetadata = {
     val datasets = mags.map(
       mag =>
         NgffDataset(
@@ -49,7 +49,8 @@ object NgffMetadata {
       NgffAxis(name = "y", `type` = "space", unit = Some(lengthUnitStr)),
       NgffAxis(name = "z", `type` = "space", unit = Some(lengthUnitStr)),
     )
-    NgffMetadata(multiscales = List(NgffMultiscalesItem(name = Some(dataLayerName), datasets = datasets, axes = axes)),
+    NgffMetadata(multiscales =
+                   List(NgffMultiscalesItem(name = Some(dataLayerName), datasets = datasets.toList, axes = axes)),
                  None)
   }
 

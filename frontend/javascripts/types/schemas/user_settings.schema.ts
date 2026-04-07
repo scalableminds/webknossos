@@ -1,10 +1,5 @@
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
-import {
-  FillModeEnum,
-  InterpolationModeEnum,
-  OverwriteModeEnum,
-  TDViewDisplayModeEnum,
-} from "viewer/constants";
+import { FillModeEnum, OverwriteModeEnum, TDViewDisplayModeEnum } from "viewer/constants";
 import { getMaximumBrushSize } from "viewer/model/accessors/volumetracing_accessor";
 
 export const userSettings = {
@@ -140,10 +135,6 @@ export const userSettings = {
   fillMode: {
     type: "string",
     enum: Object.values(FillModeEnum),
-  },
-  interpolationMode: {
-    type: "string",
-    enum: Object.values(InterpolationModeEnum),
   },
   useLegacyBindings: {
     type: "boolean",

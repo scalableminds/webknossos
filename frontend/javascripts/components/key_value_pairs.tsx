@@ -55,21 +55,20 @@ export function KeyValuePairsInput({
     });
   });
 
-  function notify(next: KeyValueEntry[]) {
-    setEntries(next);
-    onChange?.(entriesToPairs(next));
-  }
-
   function addEntry() {
     setEntries((prev) => [...prev, { id: `${idPrefix}-${Date.now()}`, key: "", rawValue: "" }]);
   }
 
   function removeEntry(id: string) {
-    notify(entries.filter((e) => e.id !== id));
+    const newEntries = entries.filter((e) => e.id !== id);
+    setEntries(newEntries);
+    onChange?.(entriesToPairs(newEntries));
   }
 
   function updateEntry(id: string, patch: Partial<Omit<KeyValueEntry, "id">>) {
-    notify(entries.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+    const newEntries = entries.map((e) => (e.id === id ? { ...e, ...patch } : e));
+    setEntries(newEntries);
+    onChange?.(entriesToPairs(newEntries));
   }
 
   return (

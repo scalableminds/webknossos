@@ -1196,7 +1196,7 @@ export function createResumableUpload(
 
     const resumable = new ResumableUpload({
       testChunks: true,
-      target: `${datastoreUrl}/data/datasets`,
+      target: `${datastoreUrl}/data/datasets/upload/dataset`,
       query: function () {
         return {
           token: activeToken,
@@ -1249,9 +1249,9 @@ type ResumableUploadInfo = {
   totalFileCount: number;
   filePaths: Array<string>;
   totalFileSizeInBytes: number;
-}
+};
 type DatasetUploadInfo = {
-  resumableUploadInfo: ResumableUploadInfo,
+  resumableUploadInfo: ResumableUploadInfo;
   datasetName: string;
   organizationId: string;
   layersToLink: Array<null>; // Always set as empty by frontend, only used by libs
@@ -1265,7 +1265,7 @@ export function reserveDatasetUpload(
   datasetUploadInfo: DatasetUploadInfo,
 ): Promise<void> {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(`/data/datasets/reserveUpload?token=${token}`, {
+    Request.sendJSONReceiveJSON(`/data/datasets/upload/dataset/reserveUpload?token=${token}`, {
       data: datasetUploadInfo,
       host: datastoreHost,
     }),
@@ -1300,29 +1300,34 @@ type NewDatasetReply = {
   newDatasetId: string;
 };
 
+type FinishUploadReply = {
+  datasetId: string;
+};
+
 export function finishDatasetUpload(
   datastoreHost: string,
-  uploadInformation: ArbitraryObject,
-): Promise<NewDatasetReply> {
+  uploadId: string,
+): Promise<FinishUploadReply> {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(`/data/datasets/finishUpload?token=${token}`, {
-      data: uploadInformation,
-      host: datastoreHost,
-    }),
+    Request.receiveJSON(
+      `/data/datasets/upload/dataset/finishUpload?uploadId=${uploadId}&token=${token}`,
+      {
+        host: datastoreHost,
+        method: "POST",
+      },
+    ),
   );
 }
 
-export function cancelDatasetUpload(
-  datastoreHost: string,
-  cancelUploadInformation: {
-    uploadId: string;
-  },
-): Promise<void> {
+export function cancelDatasetUpload(datastoreHost: string, uploadId: string): Promise<void> {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(`/data/datasets/cancelUpload?token=${token}`, {
-      data: cancelUploadInformation,
-      host: datastoreHost,
-    }),
+    Request.receiveJSON(
+      `/data/datasets/upload/dataset/cancelUpload?uploadId=${uploadId}&token=${token}`,
+      {
+        host: datastoreHost,
+        method: "POST",
+      },
+    ),
   );
 }
 

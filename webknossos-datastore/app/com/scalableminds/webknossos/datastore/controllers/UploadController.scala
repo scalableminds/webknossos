@@ -8,15 +8,12 @@ import com.scalableminds.webknossos.datastore.services.{
 }
 import com.scalableminds.webknossos.datastore.services.uploading.{
   AttachmentUploadInfo,
-  LegacyCancelUploadInformation,
   DatasetUploadInfo,
   MagUploadInfo,
   UploadDomain,
-  LegacyUploadInformation,
   UploadService
 }
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
-import org.apache.pekko.http.scaladsl.model.HttpHeader.ParsingResult.Ok
 import play.api.data.Form
 import play.api.data.Forms.tuple
 import play.api.i18n.Messages

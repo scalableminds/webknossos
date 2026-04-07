@@ -111,6 +111,25 @@ object ReportDatasetUploadParameters {
   implicit val jsonFormat: OFormat[ReportDatasetUploadParameters] =
     Json.format[ReportDatasetUploadParameters]
 }
+case class ReportMagUploadParameters(
+    datasetId: ObjectId,
+    layerName: String,
+    mag: MagLocator,
+    magSizeBytes: Long
+)
+object ReportMagUploadParameters {
+  implicit val jsonFormat: OFormat[ReportMagUploadParameters] = Json.format[ReportMagUploadParameters]
+}
+case class ReportAttachmentUploadParameters(
+    datasetId: ObjectId,
+    layerName: String,
+    attachmentType: LayerAttachmentType,
+    attachment: LayerAttachment,
+    attachmentSizeBytes: Long
+)
+object ReportAttachmentUploadParameters {
+  implicit val jsonFormat: OFormat[ReportAttachmentUploadParameters] = Json.format[ReportAttachmentUploadParameters]
+}
 
 case class LinkedLayerIdentifier(datasetId: ObjectId, layerName: String, newLayerName: Option[String] = None)
 
@@ -351,8 +370,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       _ <- checkWithinRequestedFileSize(uploadDir, uploadId, datasetId, UploadDomain.dataset) ?~> "dataset.upload.fileSizeCheck.failed"
       _ <- checkAllChunksUploaded(uploadId, UploadDomain.dataset) ?~> "dataset.upload.allChunksUploadedCheck.failed"
       unpackToDir = unpackToDirFor(dataSourceId)
-      _ <- PathUtils.ensureDirectoryBox(unpackToDir.getParent).toFox ?~> "dataset.import.fileAccessDenied"
-      unpackResult <- unpackOrMoveUploaded(uploadDir, unpackToDir, datasetId).shiftBox
+      unpackResult <- unpackOrMoveUploaded(uploadDir, unpackToDir, datasetId, UploadDomain.dataset).shiftBox
       _ <- cleanUpUploadedDataset(uploadDir, uploadId, reason = "Upload complete, data unpacked.", UploadDomain.dataset)
       _ <- cleanUpOnFailure(unpackResult,
                             datasetId,
@@ -381,18 +399,40 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def measureDirectorySizeBytes(path: Path): Fox[Long] =
     tryo(FileUtils.sizeOfDirectoryAsBigInteger(path.toFile).longValue).toFox
 
-  def finishMagUpload(uploadId: String, datasetId: ObjectId)(implicit tc: TokenContext): Fox[Unit] = for {
-    dataSourceId <- magUploadMetadataStore.findDataSourceId(uploadId)
-    mag <- magUploadMetadataStore.findMag(uploadId)
-    layerName <- magUploadMetadataStore.findLayerName(uploadId)
-    uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId, UploadDomain.mag)
-    unpackToDir = unpackToDirFor(dataSourceId).resolve(mag.mag.toMagLiteral(allowScalar = true))
-    magSizeBytes <- measureDirectorySizeBytes(unpackToDir) ?~> "dataset.upload.measureTotalSize.failed"
-    _ <- unpackOrMoveUploaded(uploadDir, unpackToDir, datasetId, UploadDomain.mag)
-    _ <- remoteWebknossosClient.reportMagUpload(datasetId, layerName, mag.mag, magSizeBytes)
-  } yield ()
+  def finishMagUpload(uploadId: String, datasetId: ObjectId)(implicit tc: TokenContext): Fox[Unit] =
+    for {
+      dataSourceId <- magUploadMetadataStore.findDataSourceId(uploadId)
+      mag <- magUploadMetadataStore.findMag(uploadId)
+      layerName <- magUploadMetadataStore.findLayerName(uploadId)
+      uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId, UploadDomain.mag)
+      unpackToDir = unpackToDirFor(dataSourceId).resolve(mag.mag.toMagLiteral(allowScalar = true))
+      _ <- checkWithinRequestedFileSize(uploadDir, uploadId, datasetId, UploadDomain.mag) ?~> "dataset.upload.fileSizeCheck.failed"
+      _ <- checkAllChunksUploaded(uploadId, UploadDomain.mag) ?~> "dataset.upload.allChunksUploadedCheck.failed"
+      // TODO clean up on failure, clean up on success
+      magSizeBytes <- measureDirectorySizeBytes(unpackToDir) ?~> "dataset.upload.measureTotalSize.failed"
+      _ <- unpackOrMoveUploaded(uploadDir, unpackToDir, datasetId, UploadDomain.mag)
+      magAdapted = mag.copy(path = Some(UPath.fromLocalPath(unpackToDir)))
+      _ <- remoteWebknossosClient.reportMagUpload(
+        ReportMagUploadParameters(datasetId, layerName, magAdapted, magSizeBytes))
+    } yield ()
 
-  def finishAttachmentUpload(uploadId: String, datasetId: ObjectId)(implicit tc: TokenContext): Fox[Unit] = ??? // TODO
+  def finishAttachmentUpload(uploadId: String, datasetId: ObjectId)(implicit tc: TokenContext): Fox[Unit] =
+    for {
+      dataSourceId <- attachmentUploadMetadataStore.findDataSourceId(uploadId)
+      attachment <- attachmentUploadMetadataStore.findAttachment(uploadId)
+      attachmentType <- attachmentUploadMetadataStore.findAttachmentType(uploadId)
+      layerName <- attachmentUploadMetadataStore.findLayerName(uploadId)
+      uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId, UploadDomain.attachment)
+      unpackToDir = unpackToDirFor(dataSourceId).resolve(attachment.dataFormat.toString).resolve(attachment.name)
+      _ <- checkWithinRequestedFileSize(uploadDir, uploadId, datasetId, UploadDomain.mag) ?~> "dataset.upload.fileSizeCheck.failed"
+      _ <- checkAllChunksUploaded(uploadId, UploadDomain.mag) ?~> "dataset.upload.allChunksUploadedCheck.failed"
+      // TODO clean up on failure, clean up on success
+      attachmentSizeBytes <- measureDirectorySizeBytes(unpackToDir) ?~> "dataset.upload.measureTotalSize.failed"
+      _ <- unpackOrMoveUploaded(uploadDir, unpackToDir, datasetId, UploadDomain.attachment)
+      attachmentAdapted = attachment.copy(path = UPath.fromLocalPath(unpackToDir))
+      _ <- remoteWebknossosClient.reportAttachmentUpload(
+        ReportAttachmentUploadParameters(datasetId, layerName, attachmentType, attachmentAdapted, attachmentSizeBytes))
+    } yield ()
 
   private def checkWithinRequestedFileSize(uploadDir: Path,
                                            uploadId: String,
@@ -407,7 +447,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
           _ <- if (actualFileSize > reservedFileSize) {
             cleanUpDatasetExceedingSize(uploadDir, uploadId, uploadDomain)
             Fox.failure(
-              f"Uploaded dataset $datasetId exceeds the reserved size of $reservedFileSize bytes, got $actualFileSize bytes.")
+              f"Uploaded $uploadDomain $datasetId exceeds the reserved size of $reservedFileSize bytes, got $actualFileSize bytes.")
           } else Fox.successful(())
         } yield ()
       }.getOrElse(Fox.successful(()))
@@ -772,8 +812,12 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def getPathDepth(path: Path) =
     path.toString.count(_ == '/')
 
-  private def unpackOrMoveUploaded(uploadDir: Path, unpackToDir: Path, datasetId: ObjectId, uploadDomain: UploadDomain): Fox[Unit] =
+  private def unpackOrMoveUploaded(uploadDir: Path,
+                                   unpackToDir: Path,
+                                   datasetId: ObjectId,
+                                   uploadDomain: UploadDomain): Fox[Unit] =
     for {
+      _ <- PathUtils.ensureDirectoryBox(unpackToDir.getParent).toFox ?~> "dataset.import.fileAccessDenied"
       shallowFileList <- PathUtils.listFiles(uploadDir, silent = false).toFox
       excludeFromPrefix = LayerCategory.values.map(_.toString).toList
       firstFile = shallowFileList.headOption

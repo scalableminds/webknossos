@@ -347,7 +347,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       totalFileCount: formValues.zipFile.length,
       filePaths: filePaths,
       totalFileSizeInBytes,
-    }
+    };
     const datasetUploadInfo = {
       resumableUploadInfo,
       datasetName: newDatasetName,
@@ -384,15 +384,11 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         throw new Error("Form couldn't be initialized.");
       }
 
-      const uploadInfo = {
-        uploadId,
-        needsConversion: this.state.needsConversion,
-      };
       this.setState({
         isFinishing: true,
       });
-      finishDatasetUpload(datastoreUrl, uploadInfo).then(
-        async ({ newDatasetId }) => {
+      finishDatasetUpload(datastoreUrl, uploadId).then(
+        async ({ datasetId }) => {
           let maybeError;
 
           if (this.state.needsConversion) {
@@ -404,7 +400,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               }
 
               await startConvertToWkwJob(
-                newDatasetId,
+                datasetId,
                 formValues.voxelSizeFactor,
                 formValues.voxelSizeUnit,
               );
@@ -430,7 +426,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
               name: "",
               zipFile: [],
             });
-            this.props.onUploaded(newDatasetId, newDatasetName, this.state.needsConversion);
+            this.props.onUploaded(datasetId, newDatasetName, this.state.needsConversion);
           }
         },
         (error) => {
@@ -498,9 +494,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
     resumableUpload.cancel();
     if (uploadId) {
-      await cancelDatasetUpload(datastoreUrl, {
-        uploadId,
-      });
+      await cancelDatasetUpload(datastoreUrl, uploadId);
     }
     this.setState({
       isUploading: false,

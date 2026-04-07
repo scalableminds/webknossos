@@ -197,7 +197,7 @@ class MagUploadMetadataStore @Inject()(protected val store: DataStoreRedisStore)
     store.findParsed[MagLocator](redisKeyForMag(uploadId))
 
   def findLayerName(uploadId: String)(implicit ec: ExecutionContext): Fox[String] =
-    store.findParsed(redisKeyForLayerName(uploadId))
+    store.find(redisKeyForLayerName(uploadId)).map(_.toFox).flatten
 }
 
 class AttachmentUploadMetadataStore @Inject()(protected val store: DataStoreRedisStore) extends UploadMetadataStore {
@@ -220,4 +220,13 @@ class AttachmentUploadMetadataStore @Inject()(protected val store: DataStoreRedi
 
   def insertLayerName(uploadId: String, layerName: String): Fox[Unit] =
     store.insert(redisKeyForLayerName(uploadId), layerName)
+
+  def findAttachment(uploadId: String)(implicit ec: ExecutionContext): Fox[LayerAttachment] =
+    store.findParsed[LayerAttachment](redisKeyForAttachment(uploadId))
+
+  def findAttachmentType(uploadId: String)(implicit ec: ExecutionContext): Fox[LayerAttachmentType] =
+    store.findParsed[LayerAttachmentType](redisKeyForAttachment(uploadId))
+
+  def findLayerName(uploadId: String)(implicit ec: ExecutionContext): Fox[String] =
+    store.find(redisKeyForLayerName(uploadId)).map(_.toFox).flatten
 }

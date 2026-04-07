@@ -14,7 +14,6 @@ import models.organization.OrganizationDAO
 import models.team.TeamMembership
 import security.RandomIDGenerator
 import slick.jdbc.PostgresProfile.api._
-import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient}
 import utils.WkConf
 
@@ -101,10 +100,7 @@ class InviteService @Inject()(conf: WkConf,
 class InviteDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Invite, InvitesRow, Invites](sqlClient) {
   protected val collection = Invites
-
-  protected def idColumn(x: Invites): Rep[String] = x._Id
-
-  protected def isDeletedColumn(x: Invites): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultInvitesRow
 
   protected def parse(r: InvitesRow): Fox[Invite] =
     Fox.successful(
@@ -122,9 +118,8 @@ class InviteDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def findOneByTokenValue(tokenValue: String): Fox[Invite] =
     for {
-      rOpt <- run(Invites.filter(r => notdel(r) && r.tokenvalue === tokenValue).result.headOption)
-      r <- rOpt.toFox
-      parsed <- parse(r)
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE tokenValue = $tokenValue".as[InvitesRow])
+      parsed <- parseFirst(r, "tokenValue")
     } yield parsed
 
   def insertOne(i: Invite): Fox[Unit] =
@@ -156,11 +151,9 @@ class InviteDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed = rows.map(row => TeamMembership(row._1, row._2))
     } yield parsed
 
-  def deleteAllExpired(): Fox[Unit] = {
-    val query = for {
-      row <- collection if notdel(row) && row.expirationdatetime <= Instant.now.toSql
-    } yield isDeletedColumn(row)
-    for { _ <- run(query.update(true)) } yield ()
-  }
+  def deleteAllExpired(): Fox[Unit] =
+    for {
+      _ <- run(q"UPDATE $collectionName SET isDeleted = TRUE WHERE expirationDateTime <= ${Instant.now}".asUpdate)
+    } yield ()
 
 }

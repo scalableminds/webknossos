@@ -8,7 +8,6 @@ import models.annotation.{AnnotationDAO, AnnotationService}
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json.{JsObject, Json}
-import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
 
@@ -54,10 +53,7 @@ class PublicationService @Inject()(datasetService: DatasetService,
 class PublicationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Publication, PublicationsRow, Publications](sqlClient) {
   protected val collection = Publications
-
-  protected def idColumn(x: Publications): Rep[String] = x._Id
-
-  protected def isDeletedColumn(x: Publications): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultPublicationsRow
 
   protected def parse(r: PublicationsRow): Fox[Publication] =
     Fox.successful(
@@ -71,18 +67,6 @@ class PublicationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
         r.isdeleted
       )
     )
-
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Publication] =
-    for {
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id".as[PublicationsRow])
-      parsed <- parseFirst(r, id)
-    } yield parsed
-
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[Publication]] =
-    for {
-      r <- run(q"SELECT $columns FROM $existingCollectionName".as[PublicationsRow])
-      parsed <- parseAll(r)
-    } yield parsed
 
   def insertOne(p: Publication): Fox[Unit] =
     for {

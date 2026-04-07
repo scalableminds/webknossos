@@ -399,8 +399,7 @@ class AnnotationController @Inject()(
       } yield Ok(Json.toJson(othersMayEdit))
     }
 
-  private def duplicateAnnotation(annotation: Annotation, user: User)(implicit ctx: DBAccessContext,
-                                                                      m: MessagesProvider): Fox[Annotation] =
+  private def duplicateAnnotation(annotation: Annotation, user: User)(implicit m: MessagesProvider): Fox[Annotation] =
     for {
       // GlobalAccessContext is allowed here because the user was already allowed to see the annotation
       dataset <- datasetDAO.findOne(annotation._dataset)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND

@@ -270,10 +270,10 @@ class BinaryDataController @Inject()(
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Messages(
             "dataSource.notFound") ~> NOT_FOUND ?~> Messages("histogram.layerMissing", dataLayerName)
-          listOfHistograms <- findDataService.createHistogram(datasetId, dataSource.id, dataLayer) ?~> Messages(
+          histograms <- findDataService.createHistogram(datasetId, dataSource.id, dataLayer) ?~> Messages(
             "histogram.failed",
             dataLayerName)
-        } yield Ok(Json.toJson(listOfHistograms))
+        } yield Ok(Json.toJson(histograms))
       }
     }
 

@@ -3,7 +3,7 @@ import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
 import { all, call, debounce, put, retry, takeEvery } from "typed-redux-saga";
-import { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
+import Constants, { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
 import {
   type SetViewModeAction,
   type UpdateUserSettingAction,
@@ -148,11 +148,13 @@ export default function* watchPushSettingsAsync(): Saga<void> {
   const { originalDatasetSettings } = action;
 
   yield* all([
-    debounce(2500, "UPDATE_USER_SETTING", pushUserSettingsAsync),
-    debounce(2500, "UPDATE_DATASET_SETTING", () =>
+    debounce(Constants.SETTING_SAVE_DEBOUNCE_MS, "UPDATE_USER_SETTING", pushUserSettingsAsync),
+    debounce(Constants.SETTING_SAVE_DEBOUNCE_MS, "UPDATE_DATASET_SETTING", () =>
       pushDatasetSettingsAsync(originalDatasetSettings),
     ),
-    debounce(2500, "UPDATE_LAYER_SETTING", () => pushDatasetSettingsAsync(originalDatasetSettings)),
+    debounce(Constants.SETTING_SAVE_DEBOUNCE_MS, "UPDATE_LAYER_SETTING", () =>
+      pushDatasetSettingsAsync(originalDatasetSettings),
+    ),
     takeEvery("UPDATE_USER_SETTING", showUserSettingToast),
     call(ensureValidToolkit),
   ]);

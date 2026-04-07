@@ -15,7 +15,6 @@ import com.webauthn4j.data.extension.authenticator.{
   RegistrationExtensionAuthenticatorOutput
 }
 import com.scalableminds.util.tools.Box.tryo
-import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient}
 import play.api.libs.json._
 
@@ -75,9 +74,7 @@ class AttestationStatementEnvelope {
 class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[WebAuthnCredential, WebauthncredentialsRow, Webauthncredentials](sqlClient) {
   protected val collection = Webauthncredentials
-
-  override protected def idColumn(x: Webauthncredentials): Rep[String] = x._Id
-  override protected def isDeletedColumn(x: Webauthncredentials): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultWebauthncredentialsRow
 
   protected def parse(r: WebauthncredentialsRow): Fox[WebAuthnCredential] = {
     val objectConverter = new ObjectConverter()

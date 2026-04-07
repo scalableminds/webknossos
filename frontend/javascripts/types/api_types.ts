@@ -117,16 +117,15 @@ export type APIDataLayer = APIColorLayer | APISegmentationLayer;
 export type APISkeletonLayer = { category: "skeleton"; name: string };
 
 export type LayerLink = {
-  datasetId: string;
-  datasetName: string;
-  sourceName: string;
-  newName: string;
+  sourceDatasetId: string;
+  sourceDatasetName: string; // Only used in frontend
+  sourceLayerName: string;
+  targetLayerName: string;
   transformations: CoordinateTransformation[];
 };
 
 export type APIHistogramData = HistogramDatum[];
 export type HistogramDatum = {
-  numberOfElements: number;
   elementCounts: Array<number>;
   min: number;
   max: number;
@@ -1340,6 +1339,9 @@ export type RenderAnimationOptions = {
   magForTextures: Vector3;
   movieResolution: MOVIE_RESOLUTIONS;
   cameraPosition: CAMERA_POSITIONS;
+  annotationId: string | null;
+  includeSkeletons: boolean;
+  saveBlenderFile: boolean;
 };
 
 export type ServerErrorMessage = {

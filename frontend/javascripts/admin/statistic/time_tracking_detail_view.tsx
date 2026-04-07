@@ -2,9 +2,10 @@ import { getTimeTrackingForUserSummedPerAnnotation } from "admin/rest_api";
 import { Col, Divider, Row } from "antd";
 import dayjs from "dayjs";
 import { formatMilliseconds } from "libs/format_utils";
-import { useFetch } from "libs/react_helpers";
+import { useQueryWithErrorHandling } from "libs/react_hooks";
 import groupBy from "lodash-es/groupBy";
 import type { ReactElement } from "react";
+import { Fragment } from "react";
 import type { APITimeTrackingPerAnnotation } from "types/api_types";
 import type { AnnotationStateFilterEnum, AnnotationTypeFilterEnum } from "viewer/constants";
 import { AnnotationStats } from "viewer/view/right_border_tabs/dataset_info_tab_view";
@@ -54,7 +55,7 @@ const renderRow = (
     } else {
       // tasks
       taskRows.push(
-        <Row style={{ fontWeight: "bold", margin: "5px 20px" }}>
+        <Row key={project} style={{ fontWeight: "bold", margin: "5px 20px" }}>
           <Col>{project}</Col>
         </Row>,
       );
@@ -79,21 +80,32 @@ const renderRow = (
   return [annotationRows, taskRows];
 };
 
-function TimeTrackingDetailView(props: TimeTrackingDetailViewProps) {
-  const userData = useFetch(
-    async () => {
-      return await getTimeTrackingForUserSummedPerAnnotation(
-        props.userId,
-        dayjs(props.dateRange[0]),
-        dayjs(props.dateRange[1]),
-        props.annotationType,
-        props.annotationState,
-        props.projectIds,
-      );
-    },
-    [],
-    [props],
-  );
+function TimeTrackingDetailView({
+  userId,
+  dateRange,
+  annotationType,
+  annotationState,
+  projectIds,
+}: TimeTrackingDetailViewProps) {
+  const { data: userData = [] } = useQueryWithErrorHandling({
+    queryKey: [
+      "timeTrackingPerAnnotation",
+      userId,
+      dateRange,
+      annotationType,
+      annotationState,
+      projectIds,
+    ],
+    queryFn: () =>
+      getTimeTrackingForUserSummedPerAnnotation(
+        userId,
+        dayjs(dateRange[0]),
+        dayjs(dateRange[1]),
+        annotationType,
+        annotationState,
+        projectIds,
+      ),
+  });
 
   const [annotationRows, taskRows] = renderRow(userData);
   const rowsNoDivider = annotationRows.concat(taskRows);
@@ -101,9 +113,9 @@ function TimeTrackingDetailView(props: TimeTrackingDetailViewProps) {
   const rows = rowsNoDivider.map((row, index) => {
     if (index < rowLength - 1)
       return (
-        <>
+        <Fragment key={index}>
           {row} <Divider style={{ margin: 0 }} />
-        </>
+        </Fragment>
       );
     return row;
   });

@@ -15,7 +15,7 @@ import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setMousePositionAction } from "viewer/model/actions/volumetracing_actions";
 import Store, { type BrushPresets } from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
-import { LogSliderSetting } from "viewer/view/components/setting_input_views";
+import { LogSliderSetting } from "viewer/view/left_border_tabs/components/log_slider_setting";
 
 function BrushPresetButton({
   name,

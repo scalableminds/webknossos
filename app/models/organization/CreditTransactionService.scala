@@ -29,8 +29,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
                                                      CreditState.Pending)
     for {
       _ <- creditTransactionDAO.insertNewPendingTransaction(pendingCreditTransaction)
-      insertedTransaction <- creditTransactionDAO.findOne(pendingCreditTransaction._id)
-    } yield insertedTransaction
+    } yield pendingCreditTransaction
   }
 
   def completeTransactionOfJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
@@ -96,6 +95,26 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
 
   def findTransactionOfJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[CreditTransaction] =
     creditTransactionDAO.findTransactionForJob(jobId)
+
+  // For display purposes: pairs each expired free-credit grant with its revocation and replaces
+  // both with a single net entry. Net-zero pairs (credits granted but never used) are returned
+  // with milliCreditDelta == 0 so the caller can filter them out.
+  def compactFreeCreditsForDisplay(transactions: List[CreditTransaction]): List[CreditTransaction] = {
+    val revocationByGrantId: Map[ObjectId, CreditTransaction] =
+      transactions.filter(_.creditState == CreditState.Revoking).flatMap(t => t._relatedTransaction.map(_ -> t)).toMap
+    val revocationIds: Set[ObjectId] = revocationByGrantId.values.map(_._id).toSet
+    transactions
+      .filterNot(t => revocationIds.contains(t._id))
+      .map(t =>
+        revocationByGrantId.get(t._id) match {
+          case Some(revocation) =>
+            t.copy(
+              milliCreditDelta = t.milliCreditDelta + revocation.milliCreditDelta,
+              comment = s"${t.comment}: ${(t.milliCreditDelta + revocation.milliCreditDelta) / 1000.0} used"
+            )
+          case None => t
+      })
+  }
 
 }
 

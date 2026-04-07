@@ -14,7 +14,6 @@ import play.api.libs.json._
 import slick.jdbc.GetResult
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
-import slick.lifted.Rep
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
 import models.organization.PricingPlan
@@ -86,12 +85,11 @@ case class UserCompactInfo(
 
 class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[User, UsersRow, Users](sqlClient) {
-  private val PricingPlansAllowingGuestsQuery =
-    q"""(${PricingPlan.Team}, ${PricingPlan.Power}, ${PricingPlan.Custom}, ${PricingPlan.Team_Trial}, ${PricingPlan.Power_Trial})"""
   protected val collection = Users
+  protected def resultConverter = GetResultUsersRow
 
-  protected def idColumn(x: Users): Rep[String] = x._Id
-  protected def isDeletedColumn(x: Users): Rep[Boolean] = x.isdeleted
+  private val pricingPlansAllowingGuestsQuery =
+    q"""(${PricingPlan.Team}, ${PricingPlan.Power}, ${PricingPlan.Custom}, ${PricingPlan.Team_Trial}, ${PricingPlan.Power_Trial})"""
 
   protected def parse(r: UsersRow): Fox[User] =
     for {
@@ -142,13 +140,6 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
             )
           )
         )"""
-
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[UsersRow])
-      parsed <- parseFirst(r, id)
-    } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[User]] =
     for {
@@ -223,7 +214,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
               AND _organization IN (
                 SELECT _id
                 FROM webknossos.organizations
-                WHERE pricingPlan IN $PricingPlansAllowingGuestsQuery
+                WHERE pricingPlan IN $pricingPlansAllowingGuestsQuery
               )
             ORDER BY _multiUser, created ASC
          )
@@ -397,7 +388,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                       AND NOT isDeactivated
                       AND _organization IN (
                         SELECT _id FROM webknossos.organizations
-                        WHERE pricingPlan IN $PricingPlansAllowingGuestsQuery
+                        WHERE pricingPlan IN $pricingPlansAllowingGuestsQuery
                       )
                       ORDER BY created ASC
                       LIMIT 1""".as[ObjectId])
@@ -521,19 +512,15 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       _ <- run(q"""UPDATE webknossos.users SET isDeleted = true WHERE _organization = $organizationId""".asUpdate)
     } yield ()
 
-  def findTeamMembershipsForUser(userId: ObjectId): Fox[List[TeamMembership]] = {
-    val query = for {
-      (teamRoleRow, team) <- UserTeamRoles.filter(_._User === userId.id) join Teams on (_._Team === _._Id)
-    } yield (team._Id, team.name, teamRoleRow.isteammanager)
-
+  def findTeamMembershipsForUser(userId: ObjectId): Fox[List[TeamMembership]] =
     for {
-      rows: Seq[(String, String, Boolean)] <- run(query.result)
-      teamMemberships <- Fox.combined(rows.toList.map {
-        case (teamId, _, isTeamManager) =>
-          ObjectId.fromString(teamId).map(teamIdValidated => TeamMembership(teamIdValidated, isTeamManager))
+      rows <- run(
+        q"SELECT _user, _team, isTeamManager FROM webknossos.user_team_roles WHERE _user = $userId"
+          .as[UserTeamRolesRow])
+      teamMemberships <- Fox.combined(rows.map { r =>
+        ObjectId.fromString(r._Team).map(teamIdValidated => TeamMembership(teamIdValidated, r.isteammanager))
       })
     } yield teamMemberships
-  }
 
   private def insertTeamMembershipQuery(userId: ObjectId, teamMembership: TeamMembership) =
     q"INSERT INTO webknossos.user_team_roles(_user, _team, isTeamManager) VALUES($userId, ${teamMembership.teamId}, ${teamMembership.isTeamManager})".asUpdate
@@ -586,10 +573,9 @@ class UserExperiencesDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(impli
 
   def findAllExperiencesForUser(userId: ObjectId): Fox[Map[String, Int]] =
     for {
-      rows <- run(UserExperiences.filter(_._User === userId.id).result)
-    } yield {
-      rows.map(r => (r.domain, r.value)).toMap
-    }
+      rows <- run(
+        q"SELECT _user, domain, value FROM webknossos.user_experiences WHERE _user = $userId".as[UserExperiencesRow])
+    } yield rows.map(r => (r.domain, r.value)).toMap
 
   def updateExperiencesForUser(user: User, experiences: Map[String, Int])(implicit ctx: DBAccessContext): Fox[Unit] = {
     val clearQuery = q"DELETE FROM webknossos.user_experiences WHERE _user = ${user._id}".asUpdate

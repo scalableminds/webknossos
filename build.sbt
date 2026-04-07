@@ -33,13 +33,16 @@ PlayKeys.devSettings := Seq("play.server.pekko.requestTimeout" -> "10000s", "pla
 // Disable unused import warnings, only in sbt console REPL
 Compile / console / scalacOptions -= "-Xlint:unused"
 
-scapegoatIgnoredFiles := Seq(".*/Tables.scala", ".*/Routes.scala", ".*/.*mail.*template\\.scala")
-scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods")
-
 lazy val commonSettings = Seq(
   resolvers ++= Dependencies.dependencyResolvers,
   Compile / doc / sources := Seq.empty,
   Compile / packageDoc / publishArtifact := false,
+  scapegoatIgnoredFiles := Seq(".*/Tables.scala",
+                               ".*/Routes.scala",
+                               ".*/.*mail.*template\\.scala",
+                               ".*/src_managed/.*"),
+  scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods"),
+  scapegoatReports := Seq.empty
 )
 
 lazy val protocolBufferSettings = Seq(

@@ -58,7 +58,7 @@ class VersionedAgglomerateToGraphIterator(prefix: String,
   override def next(): (String, AgglomerateGraph, Long) = {
     val nextRes = nextGraph match {
       case Some(bucket) => bucket
-      case None         => getNextNonRevertedGraph.get
+      case None         => getNextNonRevertedGraph.getOrElse(throw new NoSuchElementException())
     }
     nextGraph = None
     (nextRes.key, nextRes.value, nextRes.version)
@@ -112,7 +112,7 @@ class VersionedSegmentToAgglomerateChunkIterator(prefix: String,
   override def next(): (String, SegmentToAgglomerateChunkProto, Long) = {
     val nextRes = nextChunk match {
       case Some(bucket) => bucket
-      case None         => getNextNonRevertedChunk.get
+      case None         => getNextNonRevertedChunk.getOrElse(throw new NoSuchElementException())
     }
     nextChunk = None
     (nextRes.key, nextRes.value, nextRes.version)

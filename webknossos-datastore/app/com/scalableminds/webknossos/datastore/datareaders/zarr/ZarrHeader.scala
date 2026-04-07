@@ -44,7 +44,7 @@ case class ZarrHeader(
     compressor.map(ZarrCompressorFactory.create).getOrElse(ZarrCompressorFactory.nullCompressor)
 
   lazy val resolvedDataType: ArrayDataType =
-    ArrayDataType.fromString(dtype.filter(char => char != '>' && char != '<' & char != '|')).get
+    ArrayDataType.fromString(dtype.filter(char => char != '>' && char != '<' & char != '|')).getOrElse(ArrayDataType.u1)
 
   lazy val voxelOffset: Array[Int] = Array.fill(rank)(0)
 }

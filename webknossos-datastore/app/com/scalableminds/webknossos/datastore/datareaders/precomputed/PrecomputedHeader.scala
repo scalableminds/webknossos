@@ -58,7 +58,8 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
   override lazy val byteOrder: ByteOrder = ByteOrder.LITTLE_ENDIAN
 
   override def resolvedDataType: ArrayDataType =
-    PrecomputedDataType.toArrayDataType(PrecomputedDataType.fromString(precomputedHeader.data_type.toLowerCase).get)
+    PrecomputedDataType.toArrayDataType(
+      PrecomputedDataType.fromString(precomputedHeader.data_type.toLowerCase).getOrElse(PrecomputedDataType.uint8))
 
   lazy val compressorImpl: Compressor = PrecomputedCompressorFactory.create(this)
 

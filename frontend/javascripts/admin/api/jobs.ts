@@ -362,6 +362,7 @@ export function runNeuronTraining(params: RunNeuronModelTrainingParameters) {
   });
 }
 
+export type JsonPrimitive = string | number | boolean;
 type RunInstanceModelTrainingParameters = {
   trainingAnnotations: AiModelTrainingAnnotationSpecification[];
   name: string;
@@ -369,7 +370,7 @@ type RunInstanceModelTrainingParameters = {
   instanceDiameterNm: number;
   comment?: string;
   workflowYaml?: string;
-  customConfiguration?: Record<string, string | number | boolean>;
+  customConfiguration?: Record<string, JsonPrimitive>;
 };
 
 export function runInstanceModelTraining(params: RunInstanceModelTrainingParameters) {

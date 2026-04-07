@@ -1,9 +1,9 @@
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import type { JsonPrimitive } from "admin/api/jobs";
 import { AutoComplete, Button, Flex, Form, Input } from "antd";
 import useDidMount from "beautiful-react-hooks/useDidMount";
 import { useId, useState } from "react";
 
-type JsonPrimitive = string | number | boolean;
 export type KeyValuePairs = Record<string, JsonPrimitive>;
 
 type KeyValueEntry = {

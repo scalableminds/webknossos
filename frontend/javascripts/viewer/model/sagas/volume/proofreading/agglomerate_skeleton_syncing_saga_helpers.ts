@@ -6,6 +6,7 @@ import {
   findTreeByAgglomerateId,
   getTreesWithType,
 } from "viewer/model/accessors/skeletontracing_accessor";
+import { getEditableMappingForVolumeTracingId } from "viewer/model/accessors/volumetracing_accessor";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
 import EdgeCollection from "viewer/model/edge_collection";
 import {
@@ -22,7 +23,6 @@ import {
   ApplicableSkeletonUpdateActionNamesHelperNamesList,
   type UpdateActionWithoutIsolationRequirement,
 } from "../update_actions";
-import { getEditableMappingForVolumeTracingId } from "viewer/model/accessors/volumetracing_accessor";
 
 /* This module contains helper functions necessary to keep agglomerate trees
  * in sync with the agglomerate mapping upon a proofreading action that is not

@@ -3,6 +3,7 @@ import sbt._
 ThisBuild / version := "wk"
 ThisBuild / scalaVersion := "2.13.18"
 ThisBuild / scapegoatVersion := "3.3.1"
+
 val failOnWarning = if (sys.props.contains("failOnWarning")) Seq("-Xfatal-warnings") else Seq()
 ThisBuild / scalacOptions ++= Seq(
   "-release:11",
@@ -42,7 +43,6 @@ lazy val commonSettings = Seq(
                                ".*/.*mail.*template\\.scala",
                                ".*/src_managed/.*"),
   scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods"),
-  scapegoatReports := Seq.empty
 )
 
 lazy val protocolBufferSettings = Seq(

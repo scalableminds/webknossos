@@ -30,10 +30,10 @@ import {
 import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox } from "viewer/store";
-import UserBoundingBoxInput from "viewer/view/components/setting_input_views";
 import DownloadModalView from "../action_bar/download_modal_view";
 import ButtonComponent from "../components/button_component";
 import { getContextMenuPositionFromEvent } from "../context_menu/helpers";
+import UserBoundingBoxInput from "../left_border_tabs/components/user_boundingbox_input";
 import AdvancedSearchPopover from "./advanced_search_popover";
 import { ContextMenuContainer } from "./sidebar_context_menu";
 

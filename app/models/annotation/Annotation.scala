@@ -14,7 +14,6 @@ import slick.jdbc.GetResult
 import slick.jdbc.GetResult._
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
-import slick.lifted.Rep
 import slick.sql.SqlAction
 import com.scalableminds.util.objectid.ObjectId
 import slick.dbio.DBIO
@@ -195,9 +194,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     implicit ec: ExecutionContext)
     extends SQLDAO[Annotation, AnnotationsRow, Annotations](sqlClient) {
   protected val collection = Annotations
-
-  protected def idColumn(x: Annotations): Rep[String] = x._Id
-  protected def isDeletedColumn(x: Annotations): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultAnnotationsRow
 
   protected def parse(r: AnnotationsRow): Fox[Annotation] =
     for {
@@ -289,13 +286,6 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     deleteAccessQ(requestingUserId)
 
   // read operations
-
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[AnnotationsRow])
-      parsed <- parseFirst(r, id)
-    } yield parsed
 
   private def getStateQuery(isFinished: Option[Boolean]) =
     isFinished match {
@@ -401,8 +391,8 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
               a.name,
               a.description,
               a._user,
-              u.firstname,
-              u.lastname,
+              mu.firstname,
+              mu.lastname,
               a.collaborationMode,
               a.modified,
               a.tags,
@@ -422,11 +412,12 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
             JOIN webknossos.datasets_ d ON d._id = a._dataset
             JOIN webknossos.organizations_ AS o ON o._id = d._organization
             JOIN webknossos.annotation_layers AS al ON al._annotation = a._id
+            JOIN webknossos.multiusers_ mu ON u._multiUser = mu._id
             WHERE $stateQuery AND $accessQuery AND $userQuery AND $typQuery
             GROUP BY
               a._id, a.name, a.description, a._user, a.collaborationMode, a.modified,
               a.tags, a.state,  a.islockedbyowner, a.typ, a.visibility, a.tracingtime,
-              u.firstname, u.lastname,
+              mu.firstname, mu.lastname,
               d.name, o._id
             ORDER BY a._id DESC
             LIMIT $limit

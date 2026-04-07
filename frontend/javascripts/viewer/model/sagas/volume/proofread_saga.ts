@@ -1410,6 +1410,9 @@ function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation
     return null;
   }
 
+  // Getting latest annotation version as it might have changed due to e.g. making the mapping editable.
+  const annotationVersion = yield* select((state) => state.annotation.version);
+
   return {
     agglomerateFileMag,
     getDataValue,

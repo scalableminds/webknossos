@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.Fox
+import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree, TreeTypeProto}
@@ -13,7 +13,7 @@ import com.scalableminds.webknossos.datastore.datareaders.{DatasetArray, MultiAr
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, NodeDefaults, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, ElementClass}
-import com.scalableminds.webknossos.datastore.services.{DSChunkCacheService, DataConverter}
+import com.scalableminds.webknossos.datastore.services.DSChunkCacheService
 import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, DataVaultService}
 import com.typesafe.scalalogging.LazyLogging
 import ucar.ma2.{Array => MultiArray}
@@ -25,8 +25,8 @@ import scala.concurrent.ExecutionContext
 class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
                                        dataVaultService: DataVaultService,
                                        chunkCacheService: DSChunkCacheService)
-    extends DataConverter
-    with AgglomerateFileUtils
+    extends AgglomerateFileUtils
+    with FoxImplicits
     with LazyLogging {
 
   private lazy val openArraysCache = AlfuCache[(AgglomerateFileKey, String), DatasetArray]()
@@ -232,7 +232,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
       tc: TokenContext): Fox[Seq[Long]] =
     for {
       segmentToAgglomerate <- openZarrArrayCached(agglomerateFileKey, keySegmentToAgglomerate)
-      agglomerateIds <- Fox.batchCombined(segmentIds, batchSize = 30) { segmentId =>
+      agglomerateIds <- Fox.batchCombined(segmentIds, parallelity = 30) { segmentId =>
         mapSingleSegment(segmentToAgglomerate, segmentId)
       }
     } yield agglomerateIds

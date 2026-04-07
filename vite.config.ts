@@ -23,14 +23,27 @@ export const viteConfig = {
   resolve: { alias },
   plugins: [
     // analyzer(), // Enable/Disable vite bundle analyzer for inspecting the output bundle
-    react(),
+    react({
+      babel: {
+        plugins: ["babel-plugin-react-compiler"],
+      },
+    }),
     svgr({
       svgrOptions: {
+        plugins: ["@svgr/plugin-svgo", "@svgr/plugin-jsx"],
         icon: true,
         jsx: {
           babelConfig: {
-            plugins: [[replaceSvgColorWithCurrentColor, { patchStroke: true, patchFill: false }]],
+            plugins: [[replaceSvgColorWithCurrentColor, { patchStroke: true, patchFill: true }]],
           },
+        },
+        svgoConfig: {
+          plugins: [
+            { name: "convertStyleToAttrs" }, // converts <SVG style="..."> to individual attrs
+            {
+              name: "preset-default",
+            },
+          ],
         },
       },
     }),

@@ -9,7 +9,7 @@ import models.annotation.{
   AnnotationReservedIdsService,
   AnnotationStore
 }
-import models.dataset.{DatasetService, ThumbnailCachingService}
+import models.dataset.{DatasetDAO, DatasetDAOLike, DatasetService, ThumbnailCachingService}
 import models.job.{JobService, WorkerLivenessService}
 import models.organization.FreeCreditTransactionService
 import models.storage.UsedStorageService
@@ -48,5 +48,6 @@ class WebknossosModule extends AbstractModule {
     bind(classOf[FreeCreditTransactionService]).asEagerSingleton()
     bind(classOf[AnalyticsService]).asEagerSingleton()
     bind(classOf[AnnotationReservedIdsService]).asEagerSingleton()
+    bind(classOf[DatasetDAOLike]).to(classOf[DatasetDAO])
   }
 }

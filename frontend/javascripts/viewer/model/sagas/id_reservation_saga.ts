@@ -1,4 +1,5 @@
 import { reserveIdsForAnnotation } from "admin/rest_api";
+import without from "lodash-es/without";
 import { actionChannel, call, put, take } from "typed-redux-saga";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import type { VolumeTracing } from "viewer/store";
@@ -7,7 +8,6 @@ import type { GetNewIdAction } from "../actions/actions";
 import { setIdReservationsAction } from "../actions/volumetracing_actions";
 import { getMaximumGroupId } from "../reducers/skeletontracing_reducer_helpers";
 import { type Saga, select } from "./effect-generators";
-import without from "lodash-es/without";
 
 /*
  * todop:

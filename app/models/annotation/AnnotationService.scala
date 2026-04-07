@@ -39,7 +39,7 @@ import models.organization.OrganizationDAO
 import models.project.ProjectDAO
 import models.task.{Task, TaskDAO, TaskService, TaskTypeDAO}
 import models.team.{TeamDAO, TeamService}
-import models.user.{User, UserDAO, UserService}
+import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import com.scalableminds.util.tools.{Box, Full}
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
@@ -60,7 +60,8 @@ case class DownloadAnnotation(skeletonTracingIdOpt: Option[String],
                               name: String,
                               voxelSizeOpt: Option[VoxelSize],
                               annotation: Annotation,
-                              user: User,
+                              annotationOwnerId: ObjectId,
+                              annotationOwnerName: String,
                               taskOpt: Option[Task],
                               organizationId: String,
                               datasetName: String,
@@ -84,6 +85,7 @@ class AnnotationService @Inject()(
     userService: UserService,
     teamService: TeamService,
     dataStoreDAO: DataStoreDAO,
+    multiUserDAO: MultiUserDAO,
     projectDAO: ProjectDAO,
     organizationDAO: OrganizationDAO,
     annotationRestrictionDefaults: AnnotationRestrictionDefaults,
@@ -530,7 +532,8 @@ class AnnotationService @Inject()(
                                 name,
                                 voxelSizeOpt,
                                 annotation,
-                                user,
+                                annotationOwnerId,
+                                annotationOwnerName,
                                 taskOpt,
                                 organizationId,
                                 datasetName,
@@ -553,7 +556,8 @@ class AnnotationService @Inject()(
               conf.Http.uri,
               datasetName,
               datasetId,
-              user,
+              annotationOwnerId,
+              annotationOwnerName,
               taskOpt,
               skipVolumeData,
               volumeDataZipFormat,
@@ -572,6 +576,7 @@ class AnnotationService @Inject()(
     def getSingleDownloadAnnotation(annotation: Annotation, voxelSizeOpt: Option[VoxelSize]) =
       for {
         user <- userService.findOneCached(annotation._user) ?~> "user.notFound"
+        multiUser <- multiUserDAO.findOne(user._multiUser)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne) ?~> "task.notFound"
         name <- savedTracingInformationHandler.nameForAnnotation(annotation)
         dataset <- datasetDAO.findOne(annotation._dataset)
@@ -579,19 +584,22 @@ class AnnotationService @Inject()(
         skeletonTracingIdOpt <- annotation.skeletonTracingId
         volumeTracingIdOpt <- annotation.volumeTracingId
       } yield
-        DownloadAnnotation(skeletonTracingIdOpt,
-                           volumeTracingIdOpt,
-                           None,
-                           None,
-                           None,
-                           name,
-                           voxelSizeOpt,
-                           annotation,
-                           user,
-                           taskOpt,
-                           organizationId,
-                           dataset.name,
-                           dataset._id)
+        DownloadAnnotation(
+          skeletonTracingIdOpt,
+          volumeTracingIdOpt,
+          None,
+          None,
+          None,
+          name,
+          voxelSizeOpt,
+          annotation,
+          annotation._user,
+          multiUser.fullName,
+          taskOpt,
+          organizationId,
+          dataset.name,
+          dataset._id
+        )
 
     def getSkeletonTracings(datasetId: ObjectId, tracingIds: List[Option[String]]): Fox[List[Option[SkeletonTracing]]] =
       for {

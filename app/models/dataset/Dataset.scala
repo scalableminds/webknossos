@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, JsonHelper}
+import com.scalableminds.util.tools.{Fox, Full, JsonHelper}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.helpers.UPath
@@ -44,7 +44,6 @@ import slick.dbio.DBIO
 import slick.jdbc.GetResult
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
-import slick.lifted.Rep
 import slick.sql.SqlAction
 import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient, SqlToken}
 
@@ -100,14 +99,18 @@ object DatasetCompactInfo {
   implicit val jsonFormat: Format[DatasetCompactInfo] = Json.format[DatasetCompactInfo]
 }
 
+trait DatasetDAOLike {
+  def findOneByIdOrNameAndOrganization(datasetIdOpt: Option[ObjectId], datasetName: String, organizationId: String)(
+      implicit ctx: DBAccessContext,
+      m: MessagesProvider): Fox[Dataset]
+}
+
 class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDAO, organizationDAO: OrganizationDAO)(
     implicit ec: ExecutionContext)
-    extends SQLDAO[Dataset, DatasetsRow, Datasets](sqlClient) {
+    extends SQLDAO[Dataset, DatasetsRow, Datasets](sqlClient)
+    with DatasetDAOLike {
   protected val collection = Datasets
-
-  protected def idColumn(x: Datasets): Rep[String] = x._Id
-
-  protected def isDeletedColumn(x: Datasets): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultDatasetsRow
 
   private def parseVoxelSizeOpt(factorLiteralOpt: Option[String],
                                 unitLiteralOpt: Option[String]): Fox[Option[VoxelSize]] = factorLiteralOpt match {
@@ -204,13 +207,6 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
           )
         )
         """
-
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Dataset] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[DatasetsRow])
-      parsed <- parseFirst(r, id)
-    } yield parsed
 
   def findAllWithSearch(isActiveOpt: Option[Boolean],
                         isUnreported: Option[Boolean],
@@ -471,14 +467,37 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       parsed <- parseFirst(r, s"$organizationId/$directoryName")
     } yield parsed
 
+  // Some users use legacy software to create NMLs with dataset names. For some datasets, this differs from dataset directoryName
+  // To support uploading these NMLs if the name happens to be unique in the orga, this is used.
+  private def findOneByNameAndOrganizationIfUnique(name: String, organizationId: String)(
+      implicit ctx: DBAccessContext): Fox[Dataset] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(q"""SELECT $columns
+            FROM $existingCollectionName
+            WHERE name = $name
+            AND _organization = $organizationId
+            AND $accessQuery
+            LIMIT 2
+         """.as[DatasetsRow])
+      _ <- Fox.fromBool(r.length <= 1) ?~> "Multiple datasets with this name exist in this organization. Specify dataset id to select correct one."
+      parsed <- parseFirst(r, s"$organizationId/$name (name, not directoryName)")
+    } yield parsed
+
   def findOneByIdOrNameAndOrganization(datasetIdOpt: Option[ObjectId], datasetName: String, organizationId: String)(
       implicit ctx: DBAccessContext,
       m: MessagesProvider): Fox[Dataset] =
-    datasetIdOpt
-      .map(datasetId => findOne(datasetId))
-      .getOrElse(findOneByNameAndOrganization(datasetName, organizationId)) ?~> Messages(
-      "dataset.notFound",
-      datasetIdOpt.map(_.toString).getOrElse(datasetName))
+    datasetIdOpt match {
+      case Some(datasetId) => findOne(datasetId) ?~> Messages("dataset.notFound", datasetId)
+      case None =>
+        (for {
+          fromDirectoryNameBox <- findOneByNameAndOrganization(datasetName, organizationId).shiftBox
+          orFromName <- fromDirectoryNameBox match {
+            case Full(fromDirectoryName) => Fox.successful(fromDirectoryName)
+            case _                       => findOneByNameAndOrganizationIfUnique(datasetName, organizationId)
+          }
+        } yield orFromName) ?~> Messages("dataset.notFound", datasetName)
+    }
 
   def findAllByDirectoryNamesAndOrganization(directoryNames: List[String], organizationId: String)(
       implicit ctx: DBAccessContext): Fox[List[Dataset]] =
@@ -585,7 +604,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       metadata = Some(metadata),
       folderId = Some(folderId),
       dataSource = None,
-      layerRenamings = None
+      layerRenamings = None,
+      attachmentRenamings = None
     )
     updatePartial(datasetId, updateParameters)
   }
@@ -764,10 +784,7 @@ case class DataSourceMagRow(_dataset: ObjectId,
 class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[MagWithPaths, DatasetMagsRow, DatasetMags](sqlClient) {
   protected val collection = DatasetMags
-
-  protected def idColumn(x: DatasetMags): Rep[String] = x._Dataset
-
-  protected def isDeletedColumn(x: DatasetMags): Rep[Boolean] = false
+  protected def resultConverter = GetResultDatasetMagsRow
 
   protected def parse(row: DatasetMagsRow): Fox[MagWithPaths] =
     for {
@@ -1421,15 +1438,16 @@ class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implic
     } yield CoordinateTransformation(CoordinateTransformationType.thin_plate_spline, None, Some(correspondences))
 
   def findCoordinateTransformationsForLayer(datasetId: ObjectId,
-                                            layerName: String): Fox[List[CoordinateTransformation]] =
+                                            layerName: String): Fox[Seq[CoordinateTransformation]] =
     for {
-      rows <- run(
-        DatasetLayerCoordinatetransformations
-          .filter(r => r._Dataset === datasetId.id && r.layername === layerName)
-          .sortBy(r => r.insertionorderindex)
-          .result).map(_.toList)
-      rowsParsed <- Fox.combined(rows.map(parseRow)) ?~> "could not parse transformations row"
-    } yield rowsParsed
+      r <- run(q"""SELECT _dataset, layerName, type, matrix, correspondences, insertionOrderIndex
+                   FROM webknossos.dataset_layer_coordinateTransformations
+                   WHERE _dataset = $datasetId
+                   AND layerName = $layerName
+                   ORDER BY insertionOrderIndex
+                   """.as[DatasetLayerCoordinatetransformationsRow])
+      parsed <- Fox.combined(r.map(parseRow)) ?~> "could not parse transformations row"
+    } yield parsed
 
   def updateCoordinateTransformations(datasetId: ObjectId, layers: List[DataLayer]): Fox[Unit] = {
     val clearQuery =

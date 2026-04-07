@@ -6,7 +6,6 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import PricingPlan.PricingPlan
-import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType
 import models.organization.AiPlan.AiPlan
@@ -61,10 +60,7 @@ case class DataLayerAttachmentStorageReport(
 class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Organization, OrganizationsRow, Organizations](sqlClient) {
   protected val collection = Organizations
-
-  protected def idColumn(x: Organizations): Rep[String] = x._Id
-
-  protected def isDeletedColumn(x: Organizations): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultOrganizationsRow
 
   protected def parse(r: OrganizationsRow): Fox[Organization] =
     for {
@@ -99,13 +95,6 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
     case Some(_) => q"TRUE"
     case _       => q"FALSE"
   }
-
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[Organization]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[OrganizationsRow])
-      parsed <- parseAll(r)
-    } yield parsed
 
   def isEmpty: Fox[Boolean] =
     for {
@@ -358,7 +347,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       aiPlanParsed: Option[AiPlan] <- Fox.runOptional(row.aiplan)(aiPlanStr => AiPlan.fromString(aiPlanStr).toFox)
       aiPlan = if (row.aiplanchanged) Some(aiPlanParsed) else None
       paidUntil = if (row.paiduntilchanged) Some(row.paiduntil.map(Instant.fromSql)) else None
-      includedStorageBytes = if (row.includedstoragechanged) Some(row.includedstorage) else None
+      includedStorageBytes = if (row.includedstoragechanged) Some(row.includedstorage.map(ByteCount(_))) else None
       includedUsers = if (row.includeduserschanged) Some(row.includedusers) else None
     } yield
       OrganizationPlanUpdate(

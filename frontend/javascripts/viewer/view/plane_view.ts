@@ -213,9 +213,9 @@ class PlaneView {
           return oldRaycasterHit;
         }
       } else if (allowMeshReuseOptimization) {
-        // In proofreading, there is no highlighting of parts of the meshes.
+        // Outside of proofreading, there is no highlighting of parts of the meshes.
         // If the parent group is identical, we can reuse the old hit object.
-        if (hitObject?.parent === oldRaycasterHit?.node.parent) {
+        if (hitObject?.parent === oldRaycasterHit?.node?.parent) {
           return oldRaycasterHit;
         }
       }

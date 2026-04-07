@@ -4,10 +4,12 @@ do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 160 
 
 DROP VIEW webknossos.jobs_;
 
-ALTER TABLE webknossos.jobs DROP COLUMN latestRunErrorDetails;
+ALTER TABLE webknossos.jobs ADD COLUMN latestRunErrorDetails JSONB;
+
+ALTER TABLE webknossos.jobs ADD CONSTRAINT latestRunErrorDetailsIsJsonObject CHECK(jsonb_typeof(latestRunErrorDetails) = 'object');
 
 CREATE VIEW webknossos.jobs_ AS SELECT * FROM webknossos.jobs WHERE NOT isDeleted;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 159;
+UPDATE webknossos.releaseInformation SET schemaVersion = 161;
 
 COMMIT TRANSACTION;

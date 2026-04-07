@@ -264,7 +264,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
                                               parameters.attachmentDataformat,
                                               parameters.attachmentType,
                                               datasetPath / parameters.layerName)
-      _ <- datasetLayerAttachmentsDAO.insertPending(dataset._id,
+      _ <- datasetLayerAttachmentsDAO.insertWithUploadToPathPending(dataset._id,
                                                     parameters.layerName,
                                                     parameters.attachmentName,
                                                     parameters.attachmentType,
@@ -281,12 +281,12 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
       datasetParent <- selectPathPrefixDatasetParent(parameters.pathPrefix, dataset._organization)
       datasetPath = datasetParent / dataset.directoryName
       magPath = generateMagPath(parameters.mag, datasetPath / parameters.layerName)
-      _ <- datasetMagsDAO.insertPending(dataset._id,
-                                        parameters.layerName,
-                                        parameters.mag,
-                                        parameters.axisOrder,
-                                        parameters.channelIndex,
-                                        magPath)
+      _ <- datasetMagsDAO.insertWithUploadToPathPending(dataset._id,
+                                                        parameters.layerName,
+                                                        parameters.mag,
+                                                        parameters.axisOrder,
+                                                        parameters.channelIndex,
+                                                        magPath)
     } yield magPath
 
   private def handleExistingPendingMagIfExists(dataset: Dataset,
@@ -294,14 +294,14 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
                                                mag: Vec3Int,
                                                overwritePending: Boolean)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      existingMagLocatorPathBox <- datasetMagsDAO.findPendingMagLocatorPath(dataset._id, layerName, mag).shiftBox
+      existingMagLocatorPathBox <- datasetMagsDAO.findMagLocatorPathWithPendingUploadToPath(dataset._id, layerName, mag).shiftBox
       _ <- existingMagLocatorPathBox match {
         case Full(existingMagLocatorPath) =>
           if (overwritePending) {
             for {
               client <- datasetService.clientFor(dataset)(GlobalAccessContext)
               _ <- pathDeletionService.deletePaths(client, Seq(existingMagLocatorPath))
-              _ <- datasetMagsDAO.deletePendingMagLocator(dataset._id, layerName, mag)
+              _ <- datasetMagsDAO.deleteMagLocatorWithUploadToPathPending(dataset._id, layerName, mag)
             } yield ()
           } else Fox.failure("dataset.reserveMagUploadToPath.exists")
         case Empty      => Fox.successful(())

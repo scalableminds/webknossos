@@ -801,8 +801,8 @@ class DatasetMagDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
   def findMagLocatorsForLayer(datasetId: ObjectId, dataLayerName: String): Fox[List[MagLocator]] =
     for {
       rows <- run(
-        q"""SELECT _dataset, dataLayerName, mag, path, realPath, hasLocalData, axisOrder, channelIndex, credentialId, uploadToPathIsPending
-       FROM webknossos.dataset_mags WHERE _dataset = $datasetId AND dataLayerName = $dataLayerName AND NOT uploadToPathIsPending"""
+        q"""SELECT _dataset, dataLayerName, mag, path, realPath, hasLocalData, axisOrder, channelIndex, credentialId, uploadToPathIsPending, uploadIsPending
+       FROM webknossos.dataset_mags WHERE _dataset = $datasetId AND dataLayerName = $dataLayerName AND NOT uploadToPathIsPending AND NOT uploadIsPending"""
           .as[DatasetMagsRow])
       magLocators <- Fox.combined(rows.map(parseMagLocator))
     } yield magLocators
@@ -841,11 +841,11 @@ class DatasetMagDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
 
   def updateMags(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
     val clearQuery =
-      q"DELETE FROM webknossos.dataset_mags WHERE _dataset = $datasetId AND NOT uploadToPathIsPending".asUpdate
+      q"DELETE FROM webknossos.dataset_mags WHERE _dataset = $datasetId AND NOT uploadToPathIsPending AND NOT uploadIsPending".asUpdate
     val insertQueries = dataLayers.flatMap { layer: StaticLayer =>
       layer.mags.map { mag =>
-        q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, path, axisOrder, channelIndex, credentialId, uploadToPathIsPending)
-            VALUES($datasetId, ${layer.name}, ${mag.mag}, ${mag.path}, ${mag.axisOrder.map(Json.toJson(_))}, ${mag.channelIndex}, ${mag.credentialId}, ${false})
+        q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, path, axisOrder, channelIndex, credentialId, uploadToPathIsPending, uploadIsPending)
+            VALUES($datasetId, ${layer.name}, ${mag.mag}, ${mag.path}, ${mag.axisOrder.map(Json.toJson(_))}, ${mag.channelIndex}, ${mag.credentialId}, ${false}, ${false})
            """.asUpdate
       }
     }
@@ -953,32 +953,45 @@ class DatasetMagDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         row.credentialid
       )
 
-  def insertPending(datasetId: ObjectId,
-                    layerName: String,
-                    mag: Vec3Int,
-                    axisOrder: Option[AxisOrder],
-                    channelIndex: Option[Int],
-                    path: UPath): Fox[Unit] =
+  def insertWithUploadToPathPending(datasetId: ObjectId,
+                                    layerName: String,
+                                    mag: Vec3Int,
+                                    axisOrder: Option[AxisOrder],
+                                    channelIndex: Option[Int],
+                                    path: UPath): Fox[Unit] =
     for {
       _ <- run(
-        q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, path, axisOrder, channelIndex, uploadToPathIsPending)
-          VALUES($datasetId, $layerName, $mag, $path, ${axisOrder.map(Json.toJson(_))}, $channelIndex, ${true})
-         """.asUpdate)
+        q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, path, axisOrder, channelIndex, uploadToPathIsPending, uploadIsPending)
+        VALUES($datasetId, $layerName, $mag, $path, ${axisOrder.map(Json.toJson(_))}, $channelIndex, ${true}, ${false})
+       """.asUpdate)
     } yield ()
 
-  def finishUploadToPath(datasetId: ObjectId, layerName: String, mag: Vec3Int): Fox[Unit] =
+  def insertWithUploadPending(datasetId: ObjectId,
+                              layerName: String,
+                              mag: Vec3Int,
+                              axisOrder: Option[AxisOrder],
+                              channelIndex: Option[Int],
+                              path: UPath): Fox[Unit] =
+    for {
+      _ <- run(
+        q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, path, axisOrder, channelIndex, uploadToPathIsPending, uploadIsPending)
+        VALUES($datasetId, $layerName, $mag, $path, ${axisOrder
+          .map(Json.toJson(_))}, $channelIndex, ${false}, ${true})""".asUpdate)
+    } yield ()
+
+  def finishUploadOrUploadToPath(datasetId: ObjectId, layerName: String, mag: Vec3Int): Fox[Unit] =
     for {
       _ <- run(
         q"""UPDATE webknossos.dataset_mags
-           SET uploadToPathIsPending = ${false}
+           SET uploadToPathIsPending = ${false},
+           uploadToPath = ${false},
            WHERE _dataset = $datasetId
            AND dataLayerName = $layerName
-           AND mag = $mag::webknossos.VECTOR3
-           AND uploadToPathIsPending""".asUpdate
+           AND mag = $mag::webknossos.VECTOR3""".asUpdate
       )
     } yield ()
 
-  def findPendingMagLocatorPath(datasetId: ObjectId, layerName: String, mag: Vec3Int): Fox[UPath] =
+  def findMagLocatorPathWithPendingUploadToPath(datasetId: ObjectId, layerName: String, mag: Vec3Int): Fox[UPath] =
     for {
       rows <- run(q"""SELECT path
             FROM webknossos.dataset_mags
@@ -992,7 +1005,7 @@ class DatasetMagDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
       firstAsUpath <- UPath.fromString(first).toFox
     } yield firstAsUpath
 
-  def deletePendingMagLocator(datasetId: ObjectId, layerName: String, mag: Vec3Int): Fox[Unit] =
+  def deleteMagLocatorWithUploadToPathPending(datasetId: ObjectId, layerName: String, mag: Vec3Int): Fox[Unit] =
     for {
       _ <- run(q"""DELETE FROM webknossos.dataset_mags
                    WHERE _dataset = $datasetId
@@ -1219,25 +1232,26 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
   def findAllForDatasetAndDataLayerName(datasetId: ObjectId, layerName: String): Fox[AttachmentWrapper] =
     for {
       rows <- run(
-        q"""SELECT _dataset, layerName, name, path, realpath, hasLocalData, type, dataFormat, uploadToPathIsPending
+        q"""SELECT _dataset, layerName, name, path, realpath, hasLocalData, type, dataFormat, uploadToPathIsPending, uploadIsPending
                 FROM webknossos.dataset_layer_attachments
                 WHERE _dataset = $datasetId
                 AND layerName = $layerName
-                AND NOT uploadToPathIsPending""".as[DatasetLayerAttachmentsRow])
+                AND NOT uploadToPathIsPending
+                AND NOT uploadIsPending""".as[DatasetLayerAttachmentsRow])
       attachments <- parseAttachments(rows.toList) ?~> "Could not parse attachments"
     } yield attachments
 
   def updateAttachments(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
     def insertQuery(attachment: LayerAttachment, layerName: String, attachmentType: LayerAttachmentType.Value) = {
       val query =
-        q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, uploadToPathIsPending)
+        q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, uploadToPathIsPending, uploadIsPending)
           VALUES($datasetId, $layerName, ${attachment.name}, ${attachment.path}, $attachmentType::webknossos.LAYER_ATTACHMENT_TYPE,
-          ${attachment.dataFormat}::webknossos.LAYER_ATTACHMENT_DATAFORMAT, ${false})"""
+          ${attachment.dataFormat}::webknossos.LAYER_ATTACHMENT_DATAFORMAT, ${false}, ${false})"""
       query.asUpdate
     }
 
     val clearQuery =
-      q"DELETE FROM webknossos.dataset_layer_attachments WHERE _dataset = $datasetId AND NOT uploadToPathIsPending".asUpdate
+      q"DELETE FROM webknossos.dataset_layer_attachments WHERE _dataset = $datasetId AND NOT uploadToPathIsPending AND NOT uploadIsPending".asUpdate
     val insertQueries = dataLayers.flatMap { layer: StaticLayer =>
       layer.attachments match {
         case Some(attachments) =>
@@ -1277,17 +1291,30 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
       )
     } yield ()
 
-  def insertPending(datasetId: ObjectId,
-                    layerName: String,
-                    attachmentName: String,
-                    attachmentType: LayerAttachmentType.Value,
-                    attachmentDataformat: LayerAttachmentDataformat.Value,
-                    attachmentPath: UPath): Fox[Unit] =
+  def insertWithUploadToPathPending(datasetId: ObjectId,
+                                    layerName: String,
+                                    attachmentName: String,
+                                    attachmentType: LayerAttachmentType.Value,
+                                    attachmentDataformat: LayerAttachmentDataformat.Value,
+                                    attachmentPath: UPath): Fox[Unit] =
     for {
       _ <- run(
-        q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, uploadToPathIsPending)
-            VALUES($datasetId, $layerName, $attachmentName, $attachmentPath, $attachmentType, $attachmentDataformat, ${true})
-         """.asUpdate)
+        q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, uploadToPathIsPending, uploadIsPending)
+          VALUES($datasetId, $layerName, $attachmentName, $attachmentPath, $attachmentType, $attachmentDataformat, ${true}, ${false})
+       """.asUpdate)
+    } yield ()
+
+  def insertWithUploadPending(datasetId: ObjectId,
+                              layerName: String,
+                              attachmentName: String,
+                              attachmentType: LayerAttachmentType.Value,
+                              attachmentDataformat: LayerAttachmentDataformat.Value,
+                              attachmentPath: UPath): Fox[Unit] =
+    for {
+      _ <- run(
+        q"""INSERT INTO webknossos.dataset_layer_attachments(_dataset, layerName, name, path, type, dataFormat, uploadToPathIsPending, uploadIsPending)
+              VALUES($datasetId, $layerName, $attachmentName, $attachmentPath, $attachmentType, $attachmentDataformat, ${false}, ${true})
+           """.asUpdate)
     } yield ()
 
   def countAttachmentsIncludingPending(datasetId: ObjectId,
@@ -1307,13 +1334,14 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
     } yield first
   }
 
-  def finishUploadToPath(datasetId: ObjectId,
-                         layerName: String,
-                         attachmentName: String,
-                         attachmentType: LayerAttachmentType.Value): Fox[Unit] =
+  def finishUploadOrUploadToPath(datasetId: ObjectId,
+                                 layerName: String,
+                                 attachmentName: String,
+                                 attachmentType: LayerAttachmentType.Value): Fox[Unit] =
     for {
       _ <- run(q"""UPDATE webknossos.dataset_layer_attachments
-                   SET uploadToPathIsPending = ${false}
+                   SET uploadToPathIsPending = ${false},
+                   uploadIsPending = ${false}
                    WHERE _dataset = $datasetId
                    AND layerName = $layerName
                    AND name = $attachmentName

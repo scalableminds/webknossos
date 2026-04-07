@@ -364,7 +364,7 @@ function CreateAnimationModal(props: Props) {
       onCancel={onClose}
       okText={isFeatureDisabled ? "This feature is not available" : "Start Animation"}
       footer={[
-        <Button key="cancel" onClick={() => onClose}>
+        <Button key="cancel" onClick={(evt: React.MouseEvent<HTMLButtonElement>) => onClose?.(evt)}>
           Cancel
         </Button>,
         isFeatureDisabled ? (

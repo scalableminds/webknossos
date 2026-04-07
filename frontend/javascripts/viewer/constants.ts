@@ -341,6 +341,7 @@ const Constants = {
   DEFAULT_MESH_OPACITY: 1,
   NARROW_SCREEN_WIDTH: 1400,
   VERY_NARROW_SCREEN_WIDTH: 1200,
+  SETTING_SAVE_DEBOUNCE_MS: 2500, // delay before user, layer and dataset settings are saved
 } as const;
 
 /* Note that this must stay in sync with the back-end constant MaxMagForAgglomerateMapping

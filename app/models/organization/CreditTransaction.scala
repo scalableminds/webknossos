@@ -190,13 +190,14 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
       )
     } yield ()
 
-  def refundTransaction(transactionId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def refundTransaction(transactionId: ObjectId, isCancelled: Boolean = false)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(transactionId)
       transactionToRefund <- findOne(transactionId)
       _ <- Fox.fromBool(transactionToRefund.transactionState == CreditTransactionState.Pending) ?~> "Can only refund pending transactions."
       refundComment = transactionToRefund._paidJob
-        .map(jobId => s"Refund for failed job $jobId.")
+        .map(jobId => if (isCancelled) s"Refund for cancelled job $jobId." else s"Refund for failed job $jobId.")
         .getOrElse(s"Refund for transaction $transactionId.")
       insertRefundTransaction = q"""
         INSERT INTO webknossos.credit_transactions
@@ -236,6 +237,15 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
       accessQuery <- readAccessQuery
       r <- run(
         q"SELECT $columns FROM $existingCollectionName WHERE _paid_job = $jobId AND $accessQuery"
+          .as[CreditTransactionsRow])
+      parsed <- parseFirst(r, jobId)
+    } yield parsed
+
+  def findPendingTransactionForJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[CreditTransaction] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(
+        q"SELECT $columns FROM $existingCollectionName WHERE _paid_job = $jobId AND transaction_state = ${CreditTransactionState.Pending} AND $accessQuery"
           .as[CreditTransactionsRow])
       parsed <- parseFirst(r, jobId)
     } yield parsed

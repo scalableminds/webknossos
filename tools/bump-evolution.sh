@@ -20,10 +20,9 @@ OLD_NUM=$(basename "$BRANCH_FILE" | grep -oE '^[0-9]+')
 
 OLD_PAD=$(printf "%d" "$OLD_NUM")  # normalised (drops leading zeros beyond single digit)
 
-# find the actual file matching that number
-OLD_FWD=$(ls "$EVOLUTIONS_DIR"/ | grep -E "^${OLD_PAD}-.*\.sql$" | head -1)
-if [[ -z "$OLD_FWD" ]]; then
-  echo "No evolution file starting with '${OLD_PAD}-' found in $EVOLUTIONS_DIR" >&2
+OLD_FWD=$(basename "$BRANCH_FILE")
+if [[ ! -f "$EVOLUTIONS_DIR/$OLD_FWD" ]]; then
+  echo "Evolution file '$OLD_FWD' not found in $EVOLUTIONS_DIR" >&2
   exit 1
 fi
 STEM=${OLD_FWD#${OLD_PAD}-}   # e.g. "job-error-details.sql"
@@ -38,7 +37,12 @@ NEW_NUM=$((MAX_NUM + 1))
 
 NEW_FWD="${NEW_NUM}-${STEM}"
 NEW_REV="${NEW_NUM}-${STEM}"
-OLD_REV=$(ls "$EVOLUTIONS_DIR/reversions"/ | grep -E "^${OLD_PAD}-.*\.sql$" | head -1 || true)
+OLD_REV_FILE="${OLD_PAD}-${STEM}"
+if [[ -f "$EVOLUTIONS_DIR/reversions/$OLD_REV_FILE" ]]; then
+  OLD_REV="$OLD_REV_FILE"
+else
+  OLD_REV=""
+fi
 
 echo "Renumbering evolution $OLD_PAD → $NEW_NUM  ($STEM)"
 

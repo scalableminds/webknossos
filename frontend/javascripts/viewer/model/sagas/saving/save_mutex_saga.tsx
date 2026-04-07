@@ -33,7 +33,6 @@ import type { UpdateLayerSettingAction } from "viewer/model/actions/settings_act
 import type { CycleToolAction, SetToolAction } from "viewer/model/actions/ui_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
-import { startSaga } from "viewer/store";
 import { ensureWkInitialized } from "../ready_sagas";
 
 // Also refer to application.conf where annotation.mutex.expiryTime is defined
@@ -141,6 +140,7 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   yield* fork(watchForActiveToolChange, mutexLogicState);
   yield* fork(watchForHasEditableMappingChange, mutexLogicState);
   yield* fork(watchForMutexSubscriptionActions, mutexLogicState);
+  yield* takeEvery(["SUBSCRIBE_TO_ANNOTATION_MUTEX"], autoTimeoutSubscription);
 
   const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
   if (othersMayEdit) {
@@ -149,18 +149,19 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   }
 }
 
-const MUTEX_SUBSCRIPTION_TIMEOUT = 5 * 60 * 1000;
-
-function getUnsubscribeFromAnnotationMutexSaga(id: number): () => Saga<void> {
-  let didUnsubscribe = false;
+function getUnsubscribeFromAnnotationMutexSaga(
+  id: number,
+  warnIfAlreadyUnsubscribed: boolean = true,
+): () => Saga<void> {
   function* unsubscribe(): Saga<void> {
-    didUnsubscribe = true;
     const state = getMutexLogicState();
     const callerId = state.subscribersToMutex[id];
     if (!callerId) {
-      console.warn(
-        `Tried to unsubscribe from annotation mutex with id ${id} but it was not found. Maybe the unsubscribe was called multiple times.`,
-      );
+      if (warnIfAlreadyUnsubscribed) {
+        console.warn(
+          `Tried to unsubscribe from annotation mutex with id ${id} but it was not found. Maybe the unsubscribe was called multiple times.`,
+        );
+      }
       return;
     }
     delete state.subscribersToMutex[id];
@@ -178,15 +179,16 @@ function getUnsubscribeFromAnnotationMutexSaga(id: number): () => Saga<void> {
       yield* call(releaseMutex);
     }
   }
-  function* timeoutUnsubscribe(): Saga<void> {
-    if (didUnsubscribe) {
-      return;
-    }
-    yield* call(unsubscribe);
-  }
-  // Let the subscription automatically timeout after one minute using a saga.
-  setTimeout(() => startSaga(timeoutUnsubscribe), MUTEX_SUBSCRIPTION_TIMEOUT);
   return unsubscribe;
+}
+
+const MUTEX_SUBSCRIPTION_TIMEOUT = 5 * 60 * 1000;
+function* autoTimeoutSubscription(action: SubscribeToAnnotationMutexAction): Saga<void> {
+  yield delay(MUTEX_SUBSCRIPTION_TIMEOUT);
+  const warnIfAlreadyUnsubscribed = false;
+  yield call(
+    getUnsubscribeFromAnnotationMutexSaga(action.subscriptionId, warnIfAlreadyUnsubscribed),
+  );
 }
 
 export function* subscribeToAnnotationMutex(callerId: string): Saga<() => Saga<void>> {

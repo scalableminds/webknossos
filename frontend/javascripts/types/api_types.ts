@@ -915,6 +915,7 @@ export type ServerBoundingBoxMinMaxTypeTuple = {
 
 export type TreeAgglomerateInfo = {
   agglomerateId: number;
+  // Note: The editable mapping's id is always equal to the id of it associated volume tracing.
   tracingId?: string | undefined;
   mappingName?: string | undefined;
 };

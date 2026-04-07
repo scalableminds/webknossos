@@ -20,7 +20,7 @@ class CredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
   protected val collection = Credentials
 
   protected def columnsList: List[String] = collection.baseTableRow.create_*.map(_.name).toList
-  override protected def collectionName: String = "credentials"
+  override protected def collectionName: SqlToken = SqlToken.raw("credentials")
   def columns: SqlToken = SqlToken.raw(columnsList.mkString(", "))
 
   private def parseAsHttpBasicAuthCredential(r: CredentialsRow): Fox[HttpBasicAuthCredential] =

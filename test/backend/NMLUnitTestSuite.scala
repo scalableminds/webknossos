@@ -2,7 +2,6 @@ package backend
 
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.time.Instant
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 
 import java.io.ByteArrayInputStream
@@ -13,17 +12,13 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFo
 import models.annotation.SharedParsingParameters
 import models.annotation.nml.{NmlParseSuccessWithoutFile, NmlParser, NmlWriter}
 import models.dataset.{Dataset, DatasetDAOLike}
-import models.user.User
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Empty, Failure, Fox, Full}
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.scalatest.Assertion
 import org.scalatest.wordspec.AsyncWordSpec
 import play.api.i18n.{DefaultMessagesApi, Messages, MessagesProvider}
-import play.api.libs.json.Json
 import play.api.test.FakeRequest
-import play.silhouette.api.LoginInfo
-import play.silhouette.impl.providers.CredentialsProvider
 
 import scala.concurrent.{ExecutionContext, Future}
 

@@ -7,7 +7,7 @@ import models.aimodels.{AiInference, AiInferenceDAO, AiInferenceService, AiModel
 import models.annotation.AnnotationDAO
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetService, UploadToPathsService}
 import models.job.{JobCommand, JobService}
-import models.user.{User, UserService}
+import models.user.User
 import play.api.libs.json.{JsObject, Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
@@ -65,7 +65,7 @@ case class RunInferenceParameters(datasetId: ObjectId,
                                   workflowYaml: Option[String],
                                   invertColorLayer: Option[Boolean],
                                   seedGeneratorDistanceThreshold: Option[Double],
-                                  doSplitMergerEvaluation: Boolean = false,
+                                  doSplitMergerEvaluation: Option[Boolean],
                                   evalUseSparseTracing: Option[Boolean],
                                   evalMaxEdgeLength: Option[Double],
                                   evalSparseTubeThresholdNm: Option[Double],
@@ -99,7 +99,6 @@ class AiModelController @Inject()(
     aiModelDAO: AiModelDAO,
     aiModelService: AiModelService,
     sil: Silhouette[WkEnv],
-    userService: UserService,
     annotationDAO: AnnotationDAO,
     aiInferenceService: AiInferenceService,
     aiInferenceDAO: AiInferenceDAO,
@@ -354,6 +353,7 @@ class AiModelController @Inject()(
                                                                         aiModelOpt,
                                                                         usePretrainedNeuronModel = aiModelOpt.isEmpty,
                                                                         dataStore)
+        doSplitMergerEvaluation: Boolean = request.body.doSplitMergerEvaluation.getOrElse(false)
         commandArgs = Json.obj(
           "dataset_id" -> dataset._id,
           "organization_id" -> dataset._organization,
@@ -365,7 +365,7 @@ class AiModelController @Inject()(
           "dataset_directory_name" -> dataset.directoryName,
           "new_dataset_name" -> request.body.newDatasetName,
           "invert_color_layer" -> request.body.invertColorLayer,
-          "do_split_merger_evaluation" -> request.body.doSplitMergerEvaluation,
+          "do_split_merger_evaluation" -> doSplitMergerEvaluation,
           "eval_use_sparse_tracing" -> request.body.evalUseSparseTracing,
           "eval_max_edge_length" -> request.body.evalMaxEdgeLength,
           "eval_sparse_tube_threshold_nm" -> request.body.evalSparseTubeThresholdNm,

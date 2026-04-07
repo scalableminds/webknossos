@@ -9,7 +9,6 @@ import models.team.{TeamDAO, TeamService}
 import models.user.User
 import play.api.libs.json.{JsArray, JsObject, Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
-import slick.lifted.Rep
 import slick.sql.SqlAction
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
@@ -133,8 +132,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Folder, FoldersRow, Folders](sqlClient) {
 
   protected val collection = Folders
-  protected def idColumn(x: Folders): Rep[String] = x._Id
-  protected def isDeletedColumn(x: Folders): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultFoldersRow
 
   protected def parse(r: FoldersRow): Fox[Folder] =
     for {
@@ -238,13 +236,6 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       _ <- run(DBIO.sequence(List(insertFolderQuery(f), insertPathQuery)).transactionally)
     } yield ()
   }
-
-  override def findOne(folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Folder] =
-    for {
-      accessQuery <- readAccessQuery
-      rows <- run(q"SELECT $columns FROM webknossos.folders WHERE _id = $folderId AND $accessQuery".as[FoldersRow])
-      parsed <- parseFirst(rows, "id")
-    } yield parsed
 
   def countChildren(folderId: ObjectId): Fox[Int] =
     for {

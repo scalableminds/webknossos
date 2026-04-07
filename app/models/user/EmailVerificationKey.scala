@@ -3,9 +3,11 @@ package models.user
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.schema.Tables
-import com.scalableminds.webknossos.schema.Tables.{Emailverificationkeys, EmailverificationkeysRow}
-import slick.lifted.{Rep, TableQuery}
+import com.scalableminds.webknossos.schema.Tables.{
+  Emailverificationkeys,
+  EmailverificationkeysRow,
+  GetResultEmailverificationkeysRow
+}
 import utils.sql.{SQLDAO, SqlClient}
 
 import javax.inject.Inject
@@ -20,11 +22,8 @@ case class EmailVerificationKey(_id: ObjectId,
 
 class EmailVerificationKeyDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[EmailVerificationKey, EmailverificationkeysRow, Emailverificationkeys](sqlClient) {
-  override protected def collection: TableQuery[Tables.Emailverificationkeys] = Emailverificationkeys
-
-  override protected def idColumn(x: Tables.Emailverificationkeys): Rep[String] = x._Id
-
-  override protected def isDeletedColumn(x: Tables.Emailverificationkeys): Rep[Boolean] = ???
+  override protected def collection = Emailverificationkeys
+  protected def resultConverter = GetResultEmailverificationkeysRow
 
   override protected def parse(
       row: _root_.com.scalableminds.webknossos.schema.Tables.EmailverificationkeysRow): Fox[EmailVerificationKey] =

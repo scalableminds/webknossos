@@ -34,7 +34,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
 
   def completeTransactionOfJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      transactionBox <- creditTransactionDAO.findTransactionForJob(jobId).shiftBox
+      transactionBox <- creditTransactionDAO.findPendingTransactionForJob(jobId).shiftBox
       _ <- transactionBox match {
         case Full(transaction) =>
           for {
@@ -46,15 +46,40 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
 
     } yield ()
 
-  def refundTransactionForJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def refundTransactionForJob(jobId: ObjectId, isCancelled: Boolean = false)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      transactionBox <- creditTransactionDAO.findTransactionForJob(jobId).shiftBox
+      transactionBox <- creditTransactionDAO.findPendingTransactionForJob(jobId).shiftBox
       _ <- transactionBox match {
         case Full(transaction) =>
           for {
-            _ <- creditTransactionDAO.refundTransaction(transaction._id)
+            _ <- creditTransactionDAO.refundTransaction(transaction._id, isCancelled)
           } yield ()
         case Empty      => Fox.successful(()) // Assume transaction-less Job
+        case f: Failure => f.toFox
+      }
+    } yield ()
+
+  def reserveCreditsForRetry(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      existingTransactionBox <- creditTransactionDAO.findTransactionForJob(jobId).shiftBox
+      _ <- existingTransactionBox match {
+        case Full(existingTransaction) =>
+          val milliCreditsToSpend = -existingTransaction.milliCreditDelta
+          for {
+            _ <- Fox.assertTrue(hasEnoughCredits(existingTransaction._organization, milliCreditsToSpend)) ?~> "job.notEnoughCredits"
+            newTransaction = CreditTransaction(
+              ObjectId.generate,
+              existingTransaction._organization,
+              None,
+              Some(jobId),
+              existingTransaction.milliCreditDelta,
+              existingTransaction.comment,
+              CreditTransactionState.Pending,
+              CreditState.Pending
+            )
+            _ <- creditTransactionDAO.insertNewPendingTransaction(newTransaction)
+          } yield ()
+        case Empty      => Fox.successful(()) // Assume transaction-less (non-paid) Job
         case f: Failure => f.toFox
       }
     } yield ()

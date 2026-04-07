@@ -4,15 +4,17 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.schema.Tables.CreditTransactionsRow
-import com.scalableminds.webknossos.schema.Tables.CreditTransactions
+import com.scalableminds.webknossos.schema.Tables.{
+  CreditTransactions,
+  CreditTransactionsRow,
+  GetResultCreditTransactionsRow
+}
 import models.organization.CreditState.CreditState
 import models.organization.CreditTransactionState.TransactionState
 import slick.dbio.DBIO
 import slick.jdbc.GetResult
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
-import slick.lifted.Rep
 import telemetry.SlackNotificationService
 import utils.WkConf
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
@@ -40,10 +42,7 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
     extends SQLDAO[CreditTransaction, CreditTransactionsRow, CreditTransactions](sqlClient) {
 
   protected val collection = CreditTransactions
-
-  protected def idColumn(x: CreditTransactions): Rep[String] = x._Id
-
-  override protected def isDeletedColumn(x: CreditTransactions): Rep[Boolean] = x.isDeleted
+  protected def resultConverter = GetResultCreditTransactionsRow
 
   override protected def parse(row: CreditTransactionsRow): Fox[CreditTransaction] =
     for {
@@ -114,22 +113,6 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
   override protected def updateAccessQ(requestingUserId: ObjectId): SqlToken = readAccessQ(requestingUserId)
 
   override protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken = q"FALSE"
-
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[CreditTransaction]] =
-    for {
-      accessQuery <- accessQueryFromAccessQ(listAccessQ)
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[CreditTransactionsRow])
-      parsed <- parseAll(r)
-    } yield parsed
-
-  def findOne(transactionId: String)(implicit ctx: DBAccessContext): Fox[CreditTransaction] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(
-        q"SELECT $columns FROM $existingCollectionName WHERE _id = $transactionId AND $accessQuery"
-          .as[CreditTransactionsRow])
-      parsed <- parseFirst(r, transactionId)
-    } yield parsed
 
   def getMilliCreditBalance(organizationId: String)(implicit ctx: DBAccessContext): Fox[Int] =
     for {
@@ -207,13 +190,14 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
       )
     } yield ()
 
-  def refundTransaction(transactionId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def refundTransaction(transactionId: ObjectId, isCancelled: Boolean = false)(
+      implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(transactionId)
       transactionToRefund <- findOne(transactionId)
       _ <- Fox.fromBool(transactionToRefund.transactionState == CreditTransactionState.Pending) ?~> "Can only refund pending transactions."
       refundComment = transactionToRefund._paidJob
-        .map(jobId => s"Refund for failed job $jobId.")
+        .map(jobId => if (isCancelled) s"Refund for cancelled job $jobId." else s"Refund for failed job $jobId.")
         .getOrElse(s"Refund for transaction $transactionId.")
       insertRefundTransaction = q"""
         INSERT INTO webknossos.credit_transactions
@@ -253,6 +237,15 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
       accessQuery <- readAccessQuery
       r <- run(
         q"SELECT $columns FROM $existingCollectionName WHERE _paid_job = $jobId AND $accessQuery"
+          .as[CreditTransactionsRow])
+      parsed <- parseFirst(r, jobId)
+    } yield parsed
+
+  def findPendingTransactionForJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[CreditTransaction] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(
+        q"SELECT $columns FROM $existingCollectionName WHERE _paid_job = $jobId AND transaction_state = ${CreditTransactionState.Pending} AND $accessQuery"
           .as[CreditTransactionsRow])
       parsed <- parseFirst(r, jobId)
     } yield parsed

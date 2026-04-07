@@ -1336,16 +1336,16 @@ class DatasetLayerAttachmentDAO @Inject()(sqlClient: SqlClient)(implicit ec: Exe
 
   def finishUploadOrUploadToPath(datasetId: ObjectId,
                                  layerName: String,
-                                 attachmentName: String,
-                                 attachmentType: LayerAttachmentType.Value): Fox[Unit] =
+                                 attachmentType: LayerAttachmentType.Value,
+                                 attachmentName: String): Fox[Unit] =
     for {
       _ <- run(q"""UPDATE webknossos.dataset_layer_attachments
                    SET uploadToPathIsPending = ${false},
                    uploadIsPending = ${false}
                    WHERE _dataset = $datasetId
                    AND layerName = $layerName
-                   AND name = $attachmentName
                    AND type = $attachmentType
+                   AND name = $attachmentName
          """.asUpdate)
     } yield ()
 

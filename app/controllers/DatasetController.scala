@@ -754,9 +754,9 @@ class DatasetController @Inject()(userService: UserService,
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
         _ <- datasetLayerAttachmentsDAO.finishUploadOrUploadToPath(datasetId,
-                                                           request.body.layerName,
-                                                           request.body.attachmentName,
-                                                           request.body.attachmentType)
+                                                                   request.body.layerName,
+                                                                   request.body.attachmentType,
+                                                                   request.body.attachmentName)
         dataStoreClient <- datasetService.clientFor(dataset)
         _ <- Fox.runIf(!dataset.isVirtual) {
           for {

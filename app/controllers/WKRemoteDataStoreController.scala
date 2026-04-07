@@ -20,7 +20,9 @@ import com.scalableminds.webknossos.datastore.services.uploading.{
   DatasetUploadInfo,
   MagUploadAdditionalInfo,
   MagUploadInfo,
-  ReportDatasetUploadParameters
+  ReportAttachmentUploadParameters,
+  ReportDatasetUploadParameters,
+  ReportMagUploadParameters
 }
 import com.typesafe.scalalogging.LazyLogging
 import models.dataset._
@@ -199,6 +201,35 @@ class WKRemoteDataStoreController @Inject()(
                                         isUsable = true)(GlobalAccessContext)
           }
           _ <- Fox.runIf(!request.body.needsConversion)(usedStorageService.refreshStorageReportForDataset(dataset))
+        } yield Ok
+      }
+    }
+
+  def reportMagUpload(name: String, key: String, token: String): Action[ReportMagUploadParameters] =
+    Action.async(validateJson[ReportMagUploadParameters]) { implicit request =>
+      dataStoreService.validateAccess(name, key) { _ =>
+        for {
+          dataset <- datasetDAO.findOne(request.body.datasetId)(GlobalAccessContext) ?~> Messages(
+            "dataset.notFound",
+            request.body.datasetId) ~> NOT_FOUND
+          _ <- datasetMagDAO.finishUploadOrUploadToPath(request.body.datasetId,
+                                                        request.body.layerName,
+                                                        request.body.mag.mag)
+        } yield Ok
+      }
+    }
+
+  def reportAttachmentUpload(name: String, key: String, token: String): Action[ReportAttachmentUploadParameters] =
+    Action.async(validateJson[ReportAttachmentUploadParameters]) { implicit request =>
+      dataStoreService.validateAccess(name, key) { _ =>
+        for {
+          dataset <- datasetDAO.findOne(request.body.datasetId)(GlobalAccessContext) ?~> Messages(
+            "dataset.notFound",
+            request.body.datasetId) ~> NOT_FOUND
+          _ <- datasetAttachmentDAO.finishUploadOrUploadToPath(request.body.datasetId,
+                                                               request.body.layerName,
+                                                               request.body.attachmentType,
+                                                               request.body.attachment.name)
         } yield Ok
       }
     }

@@ -101,7 +101,6 @@ export const viteConfig = {
       ignored: [
         "**/node_modules/**",
         "**/dist/**",
-        "**/frontend/javascripts/test/**",
         "**/app/**",
         "**/webknossos-tracingstore/**",
         "**/webknossos-datastore/**",
@@ -119,7 +118,6 @@ export const viteConfig = {
         "**/public/**",
         "**/public-test/**",
         "**/unreleased_changes/**",
-        "**/test/**",
       ],
     },
   },

@@ -70,7 +70,7 @@ function* prepareEditableMapping(
 
 describe("Proofreading (Multi User)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
-    await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, false, "hybrid");
+    await setupWebknossosForTestingWithRestrictions(context, "OwnerOnly", true, false, "hybrid");
   });
 
   afterEach<WebknossosTestContext>(async (context) => {

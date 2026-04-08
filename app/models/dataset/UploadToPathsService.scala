@@ -265,11 +265,11 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
                                               parameters.attachmentType,
                                               datasetPath / parameters.layerName)
       _ <- datasetLayerAttachmentsDAO.insertWithUploadToPathPending(dataset._id,
-                                                    parameters.layerName,
-                                                    parameters.attachmentName,
-                                                    parameters.attachmentType,
-                                                    parameters.attachmentDataformat,
-                                                    attachmentPath)
+                                                                    parameters.layerName,
+                                                                    parameters.attachmentName,
+                                                                    parameters.attachmentType,
+                                                                    parameters.attachmentDataformat,
+                                                                    attachmentPath)
     } yield attachmentPath
 
   def reserveMagUploadToPath(dataset: Dataset, parameters: ReserveMagUploadToPathRequest)(
@@ -294,7 +294,9 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
                                                mag: Vec3Int,
                                                overwritePending: Boolean)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      existingMagLocatorPathBox <- datasetMagsDAO.findMagLocatorPathWithPendingUploadToPath(dataset._id, layerName, mag).shiftBox
+      existingMagLocatorPathBox <- datasetMagsDAO
+        .findMagLocatorPathWithPendingUploadToPath(dataset._id, layerName, mag)
+        .shiftBox
       _ <- existingMagLocatorPathBox match {
         case Full(existingMagLocatorPath) =>
           if (overwritePending) {

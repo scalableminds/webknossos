@@ -232,7 +232,9 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
     val defaultDirName = LayerAttachmentType.defaultDirectoryNameFor(attachmentType)
     val suffix = LayerAttachmentDataformat.suffixFor(attachmentDataformat)
     val safeAttachmentName =
-      TextUtils.normalizeStrong(attachmentName).getOrElse(s"$attachmentType-${ObjectId.generate}")
+      TextUtils
+        .normalizeStrong(attachmentName)
+        .getOrElse(s"${attachmentType}__${RandomIDGenerator.generateBlocking(12)}")
     layerPath / defaultDirName / (safeAttachmentName + suffix)
   }
 

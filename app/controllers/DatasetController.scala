@@ -726,7 +726,7 @@ class DatasetController @Inject()(userService: UserService,
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- datasetMagsDAO.finishUploadOrUploadToPath(datasetId, request.body.layerName, request.body.mag)
+        _ <- datasetMagsDAO.finishUploadToPath(datasetId, request.body.layerName, request.body.mag)
         dataStoreClient <- datasetService.clientFor(dataset)
         _ <- Fox.runIf(!dataset.isVirtual) {
           for {
@@ -753,10 +753,10 @@ class DatasetController @Inject()(userService: UserService,
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- datasetLayerAttachmentsDAO.finishUploadOrUploadToPath(datasetId,
-                                                                   request.body.layerName,
-                                                                   request.body.attachmentType,
-                                                                   request.body.attachmentName)
+        _ <- datasetLayerAttachmentsDAO.finishUploadToPath(datasetId,
+                                                           request.body.layerName,
+                                                           request.body.attachmentType,
+                                                           request.body.attachmentName)
         dataStoreClient <- datasetService.clientFor(dataset)
         _ <- Fox.runIf(!dataset.isVirtual) {
           for {

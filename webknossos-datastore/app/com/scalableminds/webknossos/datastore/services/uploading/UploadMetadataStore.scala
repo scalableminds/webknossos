@@ -225,7 +225,7 @@ class AttachmentUploadMetadataStore @Inject()(protected val store: DataStoreRedi
     store.findParsed[LayerAttachment](redisKeyForAttachment(uploadId))
 
   def findAttachmentType(uploadId: String)(implicit ec: ExecutionContext): Fox[LayerAttachmentType] =
-    store.findParsed[LayerAttachmentType](redisKeyForAttachment(uploadId))
+    store.findParsed[LayerAttachmentType](redisKeyForAttachmentType(uploadId))
 
   def findLayerName(uploadId: String)(implicit ec: ExecutionContext): Fox[String] =
     store.find(redisKeyForLayerName(uploadId)).map(_.toFox).flatten

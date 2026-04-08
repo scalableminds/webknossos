@@ -5,6 +5,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.JobExportProperties
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSource,
@@ -109,13 +110,11 @@ class WKRemoteDataStoreController @Inject()(
           (dataSource, dataLayer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.layerName)
           _ <- Fox.fromBool(!dataLayer.mags.exists(_.mag.maxDim == request.body.mag.mag.maxDim)) ?~> s"New mag ${request.body.mag.mag} conflicts with existing mag of the layer."
           _ <- Fox.fromBool(dataset._dataStore == dataStore.name) ?~> "Cannot upload mag to existing dataset via different datastore."
-          path <- request.body.mag.path.toFox ?~> "dataset.reserveMagUpload.pathNotSet" // TODO ensure caller sets path
           _ <- datasetMagDAO.insertWithUploadPending(request.body.datasetId,
                                                      request.body.layerName,
                                                      request.body.mag.mag,
                                                      request.body.mag.axisOrder,
-                                                     request.body.mag.channelIndex,
-                                                     path)
+                                                     request.body.mag.channelIndex)
         } yield Ok(Json.toJson(MagUploadAdditionalInfo(dataSource.id)))
       }
     }
@@ -133,13 +132,14 @@ class WKRemoteDataStoreController @Inject()(
             _.getByTypeAndName(request.body.attachmentType, request.body.attachment.name))
           _ <- Fox.fromBool(existingAttachmentOpt.isEmpty) ?~> s"Layer already has ${request.body.attachmentType} attachment named ${request.body.attachment.name}"
           _ <- Fox.fromBool(dataset._dataStore == dataStore.name) ?~> "Cannot upload mag to existing dataset via different datastore."
+          dummyAttachmentPath <- UPath.fromString("<pending upload>").toFox
           _ <- datasetAttachmentDAO.insertWithUploadPending(
             request.body.datasetId,
             request.body.layerName,
             request.body.attachment.name,
             request.body.attachmentType,
             request.body.attachment.dataFormat,
-            request.body.attachment.path // TODO ensure caller sets correct path
+            dummyAttachmentPath
           )
         } yield Ok(Json.toJson(AttachmentUploadAdditionalInfo(dataSource.id)))
       }
@@ -209,12 +209,13 @@ class WKRemoteDataStoreController @Inject()(
     Action.async(validateJson[ReportMagUploadParameters]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          dataset <- datasetDAO.findOne(request.body.datasetId)(GlobalAccessContext) ?~> Messages(
+          _ <- datasetDAO.findOne(request.body.datasetId)(GlobalAccessContext) ?~> Messages(
             "dataset.notFound",
             request.body.datasetId) ~> NOT_FOUND
-          _ <- datasetMagDAO.finishUploadOrUploadToPath(request.body.datasetId,
-                                                        request.body.layerName,
-                                                        request.body.mag.mag)
+          // TODO assert pending exists?
+          _ <- request.body.mag.path.toFox ?~> "dataset.finishMagUpload.pathNotSet"
+          _ <- datasetMagDAO.finishUpload(request.body.datasetId, request.body.layerName, request.body.mag)
+          // TODO clear ds cache
         } yield Ok
       }
     }
@@ -223,13 +224,15 @@ class WKRemoteDataStoreController @Inject()(
     Action.async(validateJson[ReportAttachmentUploadParameters]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          dataset <- datasetDAO.findOne(request.body.datasetId)(GlobalAccessContext) ?~> Messages(
+          _ <- datasetDAO.findOne(request.body.datasetId)(GlobalAccessContext) ?~> Messages(
             "dataset.notFound",
             request.body.datasetId) ~> NOT_FOUND
-          _ <- datasetAttachmentDAO.finishUploadOrUploadToPath(request.body.datasetId,
-                                                               request.body.layerName,
-                                                               request.body.attachmentType,
-                                                               request.body.attachment.name)
+          // TODO assert pending exists?
+          _ <- datasetAttachmentDAO.finishUpload(request.body.datasetId,
+                                                 request.body.layerName,
+                                                 request.body.attachmentType,
+                                                 request.body.attachment)
+          // TODO clear ds cache
         } yield Ok
       }
     }

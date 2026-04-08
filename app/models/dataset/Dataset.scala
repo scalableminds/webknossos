@@ -38,6 +38,7 @@ import models.dataset.DatasetCreationType.DatasetCreationType
 
 import javax.inject.Inject
 import models.organization.OrganizationDAO
+import org.apache.pekko.http.scaladsl.model.headers.ContentDispositionTypes.attachment
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import slick.dbio.DBIO
@@ -970,24 +971,36 @@ class DatasetMagDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
                               layerName: String,
                               mag: Vec3Int,
                               axisOrder: Option[AxisOrder],
-                              channelIndex: Option[Int],
-                              path: UPath): Fox[Unit] =
+                              channelIndex: Option[Int]): Fox[Unit] =
     for {
       _ <- run(
         q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, path, axisOrder, channelIndex, uploadToPathIsPending, uploadIsPending)
-        VALUES($datasetId, $layerName, $mag, $path, ${axisOrder
+        VALUES($datasetId, $layerName, $mag, $None, ${axisOrder
           .map(Json.toJson(_))}, $channelIndex, ${false}, ${true})""".asUpdate)
     } yield ()
 
-  def finishUploadOrUploadToPath(datasetId: ObjectId, layerName: String, mag: Vec3Int): Fox[Unit] =
+  def finishUploadToPath(datasetId: ObjectId, layerName: String, mag: Vec3Int): Fox[Unit] =
     for {
       _ <- run(
         q"""UPDATE webknossos.dataset_mags
-           SET uploadToPathIsPending = ${false},
-           uploadToPath = ${false},
-           WHERE _dataset = $datasetId
-           AND dataLayerName = $layerName
-           AND mag = $mag::webknossos.VECTOR3""".asUpdate
+             SET uploadToPathIsPending = ${false},
+             uploadIsPending = ${false}
+             WHERE _dataset = $datasetId
+             AND dataLayerName = $layerName
+             AND mag = $mag::webknossos.VECTOR3""".asUpdate
+      )
+    } yield ()
+
+  def finishUpload(datasetId: ObjectId, layerName: String, mag: MagLocator): Fox[Unit] =
+    for {
+      _ <- run(
+        q"""UPDATE webknossos.dataset_mags
+             SET uploadToPathIsPending = ${false},
+             uploadIsPending = ${false},
+             path = ${mag.path}
+             WHERE _dataset = $datasetId
+             AND dataLayerName = $layerName
+             AND mag = ${mag.mag}::webknossos.VECTOR3""".asUpdate
       )
     } yield ()
 
@@ -1334,10 +1347,10 @@ class DatasetLayerAttachmentDAO @Inject()(sqlClient: SqlClient)(implicit ec: Exe
     } yield first
   }
 
-  def finishUploadOrUploadToPath(datasetId: ObjectId,
-                                 layerName: String,
-                                 attachmentType: LayerAttachmentType.Value,
-                                 attachmentName: String): Fox[Unit] =
+  def finishUploadToPath(datasetId: ObjectId,
+                         layerName: String,
+                         attachmentType: LayerAttachmentType.Value,
+                         attachmentName: String): Fox[Unit] =
     for {
       _ <- run(q"""UPDATE webknossos.dataset_layer_attachments
                    SET uploadToPathIsPending = ${false},
@@ -1347,6 +1360,22 @@ class DatasetLayerAttachmentDAO @Inject()(sqlClient: SqlClient)(implicit ec: Exe
                    AND type = $attachmentType
                    AND name = $attachmentName
          """.asUpdate)
+    } yield ()
+
+  def finishUpload(datasetId: ObjectId,
+                   layerName: String,
+                   attachmentType: LayerAttachmentType.Value,
+                   attachment: LayerAttachment): Fox[Unit] =
+    for {
+      _ <- run(q"""UPDATE webknossos.dataset_layer_attachments
+                     SET uploadToPathIsPending = ${false},
+                     uploadIsPending = ${false},
+                     path = ${attachment.path}
+                     WHERE _dataset = $datasetId
+                     AND layerName = $layerName
+                     AND type = $attachmentType
+                     AND name = ${attachment.name}
+           """.asUpdate)
     } yield ()
 
   implicit def GetResultStorageRelevantDataLayerAttachment: GetResult[StorageRelevantDataLayerAttachment] =

@@ -27,6 +27,7 @@ import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
+import org.apache.pekko.http.scaladsl.model.headers.ContentDispositionTypes.attachment
 import play.api.libs.json.{Json, OFormat}
 import software.amazon.awssdk.transfer.s3.model.UploadDirectoryRequest
 
@@ -230,7 +231,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       uploadId = attachmentUploadInfo.resumableUploadInfo.uploadId
       _ <- attachmentUploadMetadataStore.insertAttachment(uploadId, attachmentUploadInfo.attachment.withoutCredential)
       _ <- attachmentUploadMetadataStore.insertAttachmentType(uploadId, attachmentUploadInfo.attachmentType)
-      _ <- magUploadMetadataStore.insertLayerName(uploadId, attachmentUploadInfo.layerName)
+      _ <- attachmentUploadMetadataStore.insertLayerName(uploadId, attachmentUploadInfo.layerName)
     } yield ()
 
   private def reserveResumableUpload(resumableUploadInfo: ResumableUploadInfo,
@@ -373,7 +374,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       _ <- backupRawUploadedData(uploadDir, uploadBackupDirectoryFor(dataSourceId.organizationId, uploadId), datasetId).toFox
       _ <- checkWithinRequestedFileSize(uploadDir, uploadId, datasetId, UploadDomain.dataset) ?~> "dataset.upload.fileSizeCheck.failed"
       _ <- checkAllChunksUploaded(uploadId, UploadDomain.dataset) ?~> "dataset.upload.allChunksUploadedCheck.failed"
-      unpackToDir = unpackToDirFor(dataSourceId)
+      unpackToDir = unpackToDirFor(dataSourceId, UploadDomain.dataset, uploadId)
       unpackResult <- unpackOrMoveUploaded(uploadDir, unpackToDir, datasetId, UploadDomain.dataset).shiftBox
       _ <- cleanUpUploadedDataset(uploadDir, uploadId, reason = "Upload complete, data unpacked.", UploadDomain.dataset)
       _ <- cleanUpOnFailure(unpackResult,
@@ -388,7 +389,11 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                             needsConversion,
                             label = s"processing dataset at $unpackToDir")
       datasetSizeBytes <- measureDirectorySizeBytes(unpackToDir) ?~> "dataset.upload.measureTotalSize.failed"
-      dataSourceWithAbsolutePathsOpt <- moveUnpackedToTarget(unpackToDir, needsConversion, datasetId, dataSourceId) ?~> "dataset.upload.moveUnpackedToTarget.failed"
+      dataSourceWithAbsolutePathsOpt <- moveUnpackedDatasetToTarget(
+        unpackToDir,
+        needsConversion,
+        datasetId,
+        dataSourceId) ?~> "dataset.upload.moveUnpackedToTarget.failed"
       _ <- remoteWebknossosClient.reportDatasetUpload(
         datasetId,
         ReportDatasetUploadParameters(
@@ -409,13 +414,20 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       mag <- magUploadMetadataStore.findMag(uploadId)
       layerName <- magUploadMetadataStore.findLayerName(uploadId)
       uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId, UploadDomain.mag)
-      unpackToDir = unpackToDirFor(dataSourceId).resolve(mag.mag.toMagLiteral(allowScalar = true))
+      unpackToDir = unpackToDirFor(dataSourceId, UploadDomain.mag, uploadId)
+        .resolve(mag.mag.toMagLiteral(allowScalar = true))
       _ <- checkWithinRequestedFileSize(uploadDir, uploadId, datasetId, UploadDomain.mag) ?~> "dataset.upload.fileSizeCheck.failed"
       _ <- checkAllChunksUploaded(uploadId, UploadDomain.mag) ?~> "dataset.upload.allChunksUploadedCheck.failed"
       // TODO clean up on failure, clean up on success
       _ <- unpackOrMoveUploaded(uploadDir, unpackToDir, datasetId, UploadDomain.mag)
       magSizeBytes <- measureDirectorySizeBytes(unpackToDir) ?~> "dataset.upload.measureTotalSize.failed"
-      magAdapted = mag.copy(path = Some(UPath.fromLocalPath(unpackToDir)))
+      finalPath <- moveUnpackedMagOrAttachmentToTarget(unpackToDir,
+                                                       layerName,
+                                                       datasetId,
+                                                       dataSourceId,
+                                                       s"${mag.mag.toMagLiteral(true)}__${ObjectId.generate}",
+                                                       UploadDomain.attachment)
+      magAdapted = mag.copy(path = Some(finalPath))
       _ <- remoteWebknossosClient.reportMagUpload(
         ReportMagUploadParameters(datasetId, layerName, magAdapted, magSizeBytes))
     } yield ()
@@ -427,13 +439,21 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       attachmentType <- attachmentUploadMetadataStore.findAttachmentType(uploadId)
       layerName <- attachmentUploadMetadataStore.findLayerName(uploadId)
       uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId, UploadDomain.attachment)
-      unpackToDir = unpackToDirFor(dataSourceId).resolve(attachment.dataFormat.toString).resolve(attachment.name)
-      _ <- checkWithinRequestedFileSize(uploadDir, uploadId, datasetId, UploadDomain.mag) ?~> "dataset.upload.fileSizeCheck.failed"
-      _ <- checkAllChunksUploaded(uploadId, UploadDomain.mag) ?~> "dataset.upload.allChunksUploadedCheck.failed"
+      unpackToDir = unpackToDirFor(dataSourceId, UploadDomain.attachment, uploadId)
+      _ <- checkWithinRequestedFileSize(uploadDir, uploadId, datasetId, UploadDomain.attachment) ?~> "dataset.upload.fileSizeCheck.failed"
+      _ <- checkAllChunksUploaded(uploadId, UploadDomain.attachment) ?~> "dataset.upload.allChunksUploadedCheck.failed"
       // TODO clean up on failure, clean up on success
       _ <- unpackOrMoveUploaded(uploadDir, unpackToDir, datasetId, UploadDomain.attachment)
       attachmentSizeBytes <- measureDirectorySizeBytes(unpackToDir) ?~> "dataset.upload.measureTotalSize.failed"
-      attachmentAdapted = attachment.copy(path = UPath.fromLocalPath(unpackToDir))
+      finalPath <- moveUnpackedMagOrAttachmentToTarget(
+        unpackToDir,
+        layerName,
+        datasetId,
+        dataSourceId,
+        s"$attachmentType/${TextUtils.normalizeStrong(attachment.name)}__${ObjectId.generate}",
+        UploadDomain.attachment
+      )
+      attachmentAdapted = attachment.copy(path = finalPath)
       _ <- remoteWebknossosClient.reportAttachmentUpload(
         ReportAttachmentUploadParameters(datasetId, layerName, attachmentType, attachmentAdapted, attachmentSizeBytes))
     } yield ()
@@ -481,10 +501,40 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       })
     } yield ()
 
-  private def moveUnpackedToTarget(unpackedDir: Path,
-                                   needsConversion: Boolean,
-                                   datasetId: ObjectId,
-                                   dataSourceId: DataSourceId): Fox[Option[UsableDataSource]] =
+  private def moveUnpackedMagOrAttachmentToTarget(unpackedDir: Path,
+                                                  layerName: String,
+                                                  datasetId: ObjectId,
+                                                  dataSourceId: DataSourceId,
+                                                  dirName: String,
+                                                  domain: UploadDomain): Fox[UPath] =
+    if (dataStoreConfig.Datastore.S3Upload.enabled) {
+      for {
+        s3UploadBucket <- managedS3Service.s3UploadBucketOpt.toFox
+        _ = logger.info(s"finishUpload for $domain ($datasetId): Copying data to s3 bucket $s3UploadBucket...")
+        beforeS3Upload = Instant.now
+        s3ObjectKey = s"${dataStoreConfig.Datastore.S3Upload.objectKeyPrefix}/${dataSourceId.organizationId}/${dataSourceId.directoryName}/$layerName/$dirName"
+        _ <- uploadDirectoryToS3(unpackedDir, s3UploadBucket, s3ObjectKey)
+        _ = Instant.logSince(beforeS3Upload, s"Forwarding of uploaded mag for $datasetId ($dataSourceId) to S3", logger)
+        endPointHost = new URI(dataStoreConfig.Datastore.S3Upload.credentialName).getHost
+        finalUploadedS3Path <- UPath.fromString(s"s3://$endPointHost/$s3UploadBucket/$s3ObjectKey").toFox
+      } yield finalUploadedS3Path
+    } else {
+      val finalUploadedLocalPath =
+        dataBaseDir
+          .resolve(dataSourceId.organizationId)
+          .resolve(dataSourceId.directoryName)
+          .resolve(layerName)
+          .resolve(dirName)
+      logger.info(s"finishUpload for $domain ($datasetId): Moving data to final local path $finalUploadedLocalPath...")
+      for {
+        _ <- tryo(FileUtils.moveDirectory(unpackedDir.toFile, finalUploadedLocalPath.toFile)).toFox
+      } yield UPath.fromLocalPath(finalUploadedLocalPath)
+    }
+
+  private def moveUnpackedDatasetToTarget(unpackedDir: Path,
+                                          needsConversion: Boolean,
+                                          datasetId: ObjectId,
+                                          dataSourceId: DataSourceId): Fox[Option[UsableDataSource]] =
     if (needsConversion) {
       logger.info(s"finishUpload for $datasetId: Moving data to input dir for worker conversion...")
       val forConversionPath =
@@ -678,11 +728,13 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     } yield ()
   }
 
-  private def unpackToDirFor(dataSourceId: DataSourceId): Path =
+  private def unpackToDirFor(dataSourceId: DataSourceId, domain: UploadDomain, uploadId: String): Path =
     dataBaseDir
       .resolve(dataSourceId.organizationId)
       .resolve(uploadingDir)
       .resolve(unpackedDir)
+      .resolve(domain.toString)
+      .resolve(uploadId)
       .resolve(dataSourceId.directoryName)
 
   private def guessTypeOfUploadedDataSource(dataSourceDir: Path): UploadedDataSourceType.Value =

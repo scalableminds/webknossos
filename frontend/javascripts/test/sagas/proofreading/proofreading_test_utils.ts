@@ -403,13 +403,16 @@ export function mockInitialBucketAndAgglomerateData(
   return backendMock;
 }
 
+// todop: why does this helper exist when it's only used once? also, it broke
+// a test for me, because ensureSavedState wouldn't trigger saveNowAction then
+// (because wk is already busy).
 export function* makeMappingEditableHelper(): Saga<void> {
   // Usually the user creates an editable mapping via the first proofreading action.
   // Therefore the context is busy blocked by the proofreading saga.
   // As we do this manually here, we need to mock that wk is busy.
-  yield put(setBusyBlockingInfoAction(true, "Blocking in test for making mapping editable"));
+  // yield put(setBusyBlockingInfoAction(true, "Blocking in test for making mapping editable"));
   yield call(createEditableMapping);
-  yield put(setBusyBlockingInfoAction(false));
+  // yield put(setBusyBlockingInfoAction(false));
   // Delay is needed to avoid the auto mapping data reloading of mapping saga to interfere with tests.
   // Some tests check whether the missing agglomerate ids not present in the partial mapping in the frontend
   // are actually loaded during rebasing. Such a scenario might happen when doing proofreading via meshes.

@@ -35,7 +35,10 @@ case class N5Header(
     compression.map(N5CompressorFactory.create).getOrElse(N5CompressorFactory.nullCompressor)
 
   lazy val resolvedDataType: ArrayDataType =
-    N5DataType.toArrayDataType(N5DataType.fromString(dataType).get)
+    N5DataType.toArrayDataType(
+      N5DataType
+        .fromString(dataType)
+        .getOrElse(throw new IllegalArgumentException(s"Unsupported N5 dataType: $dataType")))
 
   lazy val voxelOffset: Array[Int] = Array.fill(rank)(0)
 }

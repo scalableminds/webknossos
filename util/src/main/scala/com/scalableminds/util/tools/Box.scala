@@ -116,6 +116,12 @@ object Box extends Tryo {
   }
 
   /**
+    * Create Box from Try, wrapping any errors captured in the Try.
+    */
+  def apply[T](t: scala.util.Try[T]): Box[T] =
+    t.fold(e => Failure(e.getMessage, Full(e), Empty), Full(_))
+
+  /**
     * Apply the specified `PartialFunction` to the specified `value` and return the result
     * in a `Full`; if the `pf`` is not defined at that point return `Empty`.
     *

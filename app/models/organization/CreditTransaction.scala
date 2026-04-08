@@ -114,6 +114,13 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
 
   override protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken = q"FALSE"
 
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[CreditTransaction]] =
+    for {
+      accessQuery <- accessQueryFromAccessQ(listAccessQ)
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[CreditTransactionsRow])
+      parsed <- parseAll(r)
+    } yield parsed
+
   def getMilliCreditBalance(organizationId: String)(implicit ctx: DBAccessContext): Fox[Int] =
     for {
       accessQuery <- readAccessQuery

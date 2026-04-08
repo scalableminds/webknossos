@@ -14,6 +14,7 @@ import {
   Select,
   Space,
 } from "antd";
+import { KeyValuePairsFormItem } from "components/key_value_pairs";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import type React from "react";
@@ -48,6 +49,8 @@ export const AiAnalysisSettings: React.FC = () => {
     setIsEvaluationActive,
     splitMergerEvaluationSettings,
     setSplitMergerEvaluationSettings,
+    customConfiguration,
+    setCustomConfiguration,
     selectedJobType,
   } = useRunAiModelJobContext();
   const dataset = useWkSelector((state) => state.dataset);
@@ -73,6 +76,9 @@ export const AiAnalysisSettings: React.FC = () => {
       setSplitMergerEvaluationSettings(
         allValues.splitMergerEvaluationSettings as SplitMergerEvaluationSettings,
       );
+    }
+    if ("customConfiguration" in changedValues) {
+      setCustomConfiguration(changedValues.customConfiguration);
     }
   };
 
@@ -103,6 +109,7 @@ export const AiAnalysisSettings: React.FC = () => {
       name: ["splitMergerEvaluationSettings", "minimumMergerPathLengthInNm"],
       value: splitMergerEvaluationSettings?.minimumMergerPathLengthInNm,
     },
+    { name: ["customConfiguration"], value: customConfiguration },
   ];
 
   return (
@@ -199,6 +206,11 @@ export const AiAnalysisSettings: React.FC = () => {
                     </Form.Item>
                   </Col>
                 )}
+              </Row>
+              <Row>
+                <Col span={24}>
+                  <KeyValuePairsFormItem name="customConfiguration" label="Custom Configuration" />
+                </Col>
               </Row>
 
               {isNeuronModel && (

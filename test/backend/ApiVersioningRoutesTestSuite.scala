@@ -18,8 +18,11 @@ class ApiVersioningRoutesTestSuite extends AsyncWordSpec with ApiVersioning {
 
   private def versionsInFile(path: String): Set[Int] = {
     val src = Source.fromFile(path)
-    try versionPattern.findAllMatchIn(src.mkString).map(_.group(1).toInt).toSet
-    finally src.close()
+    try {
+      versionPattern.findAllMatchIn(src.mkString).map(_.group(1).toInt).toSet
+    } finally {
+      src.close()
+    }
   }
 
   "Versioned routes files" should {

@@ -571,8 +571,8 @@ function _ShareModalView(props: Props) {
               }}
             >
               When enabled, users can edit the annotation in parallel. This feature is experimental
-              and is currently limited to the proofreading tool (skeleton and brushing will be
-              disabled). When disabled, only one user can edit at the same time. We recommend to
+              and is currently limited to the proofreading tool (<b>skeleton and brushing will be
+              disabled</b>). When disabled, only one user can edit at the same time. We recommend to
               coordinate the collaboration with your peers to avoid being blocked.
             </Hint>
           </Col>

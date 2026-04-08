@@ -76,7 +76,10 @@ case class Vec3Int(x: Int, y: Int, z: Int) {
   def alignWithGridFloor(gridCellSize: Vec3Int): Vec3Int =
     this / gridCellSize * gridCellSize
 
-  def sorted: Vec3Int = Vec3Int.fromList(toList.sorted).get
+  def sorted: Vec3Int = {
+    val sortedList = toList.sorted
+    Vec3Int(sortedList.head, sortedList(1), sortedList(2))
+  }
 
   def hasNegativeComponent: Boolean = x < 0 || y < 0 || z < 0
 

@@ -1,6 +1,7 @@
 import { SettingOutlined } from "@ant-design/icons";
 import type { FormProps } from "antd";
-import { Card, Col, Form, Input, InputNumber, Row, Space } from "antd";
+import { Card, Col, Collapse, ConfigProvider, Form, Input, InputNumber, Row, Space } from "antd";
+import { KeyValuePairsFormItem } from "components/key_value_pairs";
 import type React from "react";
 import { ColorWKBlue } from "theme";
 import { APIJobCommand } from "types/api_types";
@@ -15,6 +16,8 @@ export const AiTrainingSettings: React.FC = () => {
     selectedTask,
     instanceDiameterNm,
     setInstanceDiameterNm,
+    customConfiguration,
+    setCustomConfiguration,
   } = useAiTrainingJobContext();
 
   const handleValuesChange: FormProps["onValuesChange"] = (changedValues) => {
@@ -27,12 +30,16 @@ export const AiTrainingSettings: React.FC = () => {
     if ("instanceDiameterNm" in changedValues) {
       setInstanceDiameterNm(changedValues.instanceDiameterNm);
     }
+    if ("customConfiguration" in changedValues) {
+      setCustomConfiguration(changedValues.customConfiguration);
+    }
   };
 
   const formFields = [
     { name: ["modelName"], value: modelName },
     { name: ["comments"], value: comments },
     { name: ["instanceDiameterNm"], value: instanceDiameterNm },
+    { name: ["customConfiguration"], value: customConfiguration },
   ];
 
   return (
@@ -72,6 +79,20 @@ export const AiTrainingSettings: React.FC = () => {
             </Form.Item>
           </Col>
         </Row>
+
+        <ConfigProvider
+          theme={{
+            components: {
+              Collapse: { headerPadding: "12px 0px" },
+            },
+          }}
+        >
+          <Collapse ghost bordered={false}>
+            <Collapse.Panel header="Advanced Settings" key="1">
+              <KeyValuePairsFormItem name="customConfiguration" label="Custom Configuration" />
+            </Collapse.Panel>
+          </Collapse>
+        </ConfigProvider>
       </Form>
     </Card>
   );

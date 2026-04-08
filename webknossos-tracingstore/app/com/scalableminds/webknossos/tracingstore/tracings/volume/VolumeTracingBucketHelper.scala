@@ -436,7 +436,7 @@ class VersionedBucketIterator(prefix: String,
   override def next(): (BucketPosition, Array[Byte], Long) = {
     val nextRes = nextBucket match {
       case Some(bucket) => bucket
-      case None         => getNextNonRevertedBucket.get
+      case None         => getNextNonRevertedBucket.getOrElse(throw new NoSuchElementException())
     }
     nextBucket = None
     parseBucketKey(nextRes.key, additionalAxes)
@@ -444,7 +444,8 @@ class VersionedBucketIterator(prefix: String,
         val debugInfo = s"key: ${nextRes.key}, ${nextRes.value.length} bytes, version ${nextRes.version}"
         (key._2, decompressIfNeeded(nextRes.value, expectedUncompressedBucketSize, debugInfo), nextRes.version)
       })
-      .get
+      .getOrElse(
+        throw new IllegalStateException(s"parseBucketKey returned None for key ${nextRes.key} despite prior filtering"))
   }
 
 }

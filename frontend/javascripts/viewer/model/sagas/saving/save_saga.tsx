@@ -8,7 +8,6 @@ import sum from "lodash-es/sum";
 import { buffers, type Channel } from "redux-saga";
 import { actionChannel, call, delay, flush, fork, put, race, takeEvery } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import { SagaIdentifier } from "viewer/constants";
 import { isAnnotationEditableByNonOwners } from "viewer/model/accessors/annotation_accessor";
 import type { Action } from "viewer/model/actions/actions";
@@ -110,9 +109,8 @@ function* shouldCheckForNewerAnnotationVersions(): Saga<boolean> {
       state.annotation.restrictions.allowSave && state.annotation.isUpdatingCurrentlyAllowed,
   );
   const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
-  const othersMayEdit = yield* select((state) => isAnnotationEditableByNonOwners(state.annotation));
 
-  const userCanSaveAndNoCollab = allowSave && !othersMayEdit;
+  const userCanSaveAndNoCollab = allowSave && collaborationMode === "OwnerOnly";
   const userCanSaveAndNoLiveCollab = allowSave && collaborationMode !== "Concurrent";
   if (userCanSaveAndNoCollab || userCanSaveAndNoLiveCollab) {
     // The active user is currently the only one that is allowed to mutate the annotation.
@@ -288,18 +286,17 @@ function* reapplyUpdateActionsFromSaveQueue(
 
 type RebasingSuccessInfo = { successful: boolean; shouldTerminate: boolean };
 function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
-  const othersMayEdit = yield* select((state) => isAnnotationEditableByNonOwners(state.annotation));
+  const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
   const missingUpdateActions = yield* call(fetchNewestMissingUpdateActions);
-  // saveQueueEntries should not change during performRebasing saga. When liveCollab is enabled, this is enforced via busy blocking.
-  // When liveCollab is disabled, this code typically runs in read-only mode where the save queue is empty.
+  // saveQueueEntries should not change during performRebasing saga. When collaborationMode==Concurrent, this is enforced via busy blocking.
+  // When concurrent editing is disabled, this code typically runs in read-only mode where the save queue is empty.
   const saveQueueEntries = yield* select((state) => state.save.queue);
 
   // Side note: In a scenario where a user has an annotation open that they are not allowed to edit but another user is actively editing,
   // this code will notice that there are missingUpdateActions and apply them. This should not trigger a full rebase and should
   // be ensured because "not allowed to edit" means the save queue would be empty. Thus no needsRebasing = true.
   const needsRebasing =
-    WkDevFlags.liveCollab &&
-    othersMayEdit &&
+    collaborationMode === "Concurrent" &&
     missingUpdateActions.length > 0 &&
     saveQueueEntries.length > 0;
   const annotationBeforeRebase = yield* select((state) => state.annotation);
@@ -377,7 +374,8 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
     const isUpdatingCurrentlyAllowed = yield* select(
       (state) => state.annotation.isUpdatingCurrentlyAllowed,
     );
-    const guardAsBlocking = WkDevFlags.liveCollab && isUpdatingCurrentlyAllowed;
+    const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
+    const guardAsBlocking = collaborationMode === "Concurrent" && isUpdatingCurrentlyAllowed;
     const { successful, shouldTerminate } = guardAsBlocking
       ? yield* call(
           // Ensuring wk is in busy state while rebasing so no user update actions can interfere potential syncing with the backend.

@@ -1,12 +1,11 @@
 // biome-ignore assist/source/organizeImports: apiHelpers need to be imported first for proper mocking of modules
 import {
   type WebknossosTestContext,
-  setupWebknossosForTesting,
   getFlattenedUpdateActions,
+  setupWebknossosForTestingWithRestrictions,
 } from "test/helpers/apiHelpers";
 import type { NeighborInfo } from "admin/rest_api";
 import { actionChannel, type ActionPattern, call, flush, put, take } from "redux-saga/effects";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import {
   cutAgglomerateFromNeighborsAction,
@@ -70,14 +69,11 @@ function* prepareEditableMapping(
 }
 
 describe("Proofreading (Multi User)", () => {
-  const initialLiveCollab = WkDevFlags.liveCollab;
   beforeEach<WebknossosTestContext>(async (context) => {
-    WkDevFlags.liveCollab = true;
-    await setupWebknossosForTesting(context, "hybrid");
+    await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, false, "hybrid");
   });
 
   afterEach<WebknossosTestContext>(async (context) => {
-    WkDevFlags.liveCollab = initialLiveCollab;
     context.tearDownPullQueues();
     // Saving after each test and checking that the root saga didn't crash,
     expect(hasRootSagaCrashed()).toBe(false);

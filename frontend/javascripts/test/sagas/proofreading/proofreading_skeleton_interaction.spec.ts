@@ -1,8 +1,10 @@
 import type { MinCutTargetEdge } from "admin/rest_api";
 import isEqual from "lodash-es/isEqual";
 import { call, put, take } from "redux-saga/effects";
-import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
-import { WkDevFlags } from "viewer/api/wk_dev";
+import {
+  setupWebknossosForTestingWithRestrictions,
+  type WebknossosTestContext,
+} from "test/helpers/apiHelpers";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
@@ -215,14 +217,11 @@ const mockEdgesForAgglomerateMinCut = (
   );
 
 describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
-  const initialLiveCollab = WkDevFlags.liveCollab;
   beforeEach<WebknossosTestContext>(async (context) => {
-    WkDevFlags.liveCollab = true;
-    await setupWebknossosForTesting(context, "hybrid");
+    await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, false, "hybrid");
   });
 
   afterEach<WebknossosTestContext>(async (context) => {
-    WkDevFlags.liveCollab = initialLiveCollab;
     context.tearDownPullQueues();
     // Saving after each test and checking that the root saga didn't crash,
     expect(hasRootSagaCrashed()).toBe(false);

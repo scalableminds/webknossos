@@ -1,10 +1,9 @@
 import { call, put } from "redux-saga/effects";
 import {
   getFlattenedUpdateActions,
-  setupWebknossosForTesting,
+  setupWebknossosForTestingWithRestrictions,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
@@ -24,14 +23,11 @@ import {
 } from "../proofreading/proofreading_test_utils";
 
 describe("Collaborative editing of segment items", () => {
-  const initialLiveCollab = WkDevFlags.liveCollab;
   beforeEach<WebknossosTestContext>(async (context) => {
-    WkDevFlags.liveCollab = true;
-    await setupWebknossosForTesting(context, "hybrid");
+    await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, false, "hybrid");
   });
 
   afterEach<WebknossosTestContext>(async (context) => {
-    WkDevFlags.liveCollab = initialLiveCollab;
     context.tearDownPullQueues();
     // Saving after each test and checking that the root saga didn't crash,
     expect(hasRootSagaCrashed()).toBe(false);

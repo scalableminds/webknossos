@@ -1,7 +1,9 @@
 import { call, put } from "redux-saga/effects";
-import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
+import {
+  setupWebknossosForTestingWithRestrictions,
+  type WebknossosTestContext,
+} from "test/helpers/apiHelpers";
 import { actionChannel, flush } from "typed-redux-saga";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
@@ -34,15 +36,12 @@ import {
 } from "./proofreading_test_utils";
 
 describe("Proofreading (Poll only)", () => {
-  const initialLiveCollab = WkDevFlags.liveCollab;
   beforeEach<WebknossosTestContext>(async (context) => {
-    WkDevFlags.liveCollab = true;
-    await setupWebknossosForTesting(context, "hybrid");
+    await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, false, "hybrid");
     //Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
   });
 
   afterEach<WebknossosTestContext>(async (context) => {
-    WkDevFlags.liveCollab = initialLiveCollab;
     context.tearDownPullQueues();
     expect(hasRootSagaCrashed()).toBe(false);
   });

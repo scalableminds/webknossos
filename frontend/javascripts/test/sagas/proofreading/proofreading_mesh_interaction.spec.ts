@@ -1,14 +1,13 @@
 // biome-ignore assist/source/organizeImports: apiHelpers need to be imported first for proper mocking of modules
 import {
   type WebknossosTestContext,
-  setupWebknossosForTesting,
+  setupWebknossosForTestingWithRestrictions,
   getFlattenedUpdateActions,
 } from "test/helpers/apiHelpers";
 import type { MinCutTargetEdge } from "admin/rest_api";
 import isEqual from "lodash-es/isEqual";
 import { call, put, take } from "redux-saga/effects";
 import { delay } from "typed-redux-saga";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import {
@@ -41,14 +40,11 @@ import {
 import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 
 describe("Proofreading (with mesh actions)", () => {
-  const initialLiveCollab = WkDevFlags.liveCollab;
   beforeEach<WebknossosTestContext>(async (context) => {
-    WkDevFlags.liveCollab = true;
-    await setupWebknossosForTesting(context, "hybrid");
+    await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, false, "hybrid");
   });
 
   afterEach<WebknossosTestContext>(async (context) => {
-    WkDevFlags.liveCollab = initialLiveCollab;
     context.tearDownPullQueues();
     // Saving after each test and checking that the root saga didn't crash,
     expect(hasRootSagaCrashed()).toBe(false);

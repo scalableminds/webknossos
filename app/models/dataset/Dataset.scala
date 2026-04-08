@@ -38,7 +38,6 @@ import models.dataset.DatasetCreationType.DatasetCreationType
 
 import javax.inject.Inject
 import models.organization.OrganizationDAO
-import org.apache.pekko.http.scaladsl.model.headers.ContentDispositionTypes.attachment
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import slick.dbio.DBIO

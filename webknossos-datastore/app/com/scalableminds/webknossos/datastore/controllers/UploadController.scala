@@ -170,7 +170,6 @@ class UploadController @Inject()(
       } yield result
     }
 
-  // TODO legacy: still needs uploadId as body
   def finishUpload(uploadDomain: String, uploadId: String): Action[AnyContent] = Action.async { implicit request =>
     log(Some(slackNotificationService.noticeFailedUploadRequest)) {
       logTime(slackNotificationService.noticeSlowRequest) {
@@ -185,14 +184,13 @@ class UploadController @Inject()(
                 case UploadDomain.mag        => uploadService.finishMagUpload(uploadId, datasetId)
                 case UploadDomain.attachment => uploadService.finishAttachmentUpload(uploadId, datasetId)
               }) ?~> Messages("dataset.upload.finishFailed", datasetId)
-            } yield Ok(Json.obj("datasetId" -> datasetId)) // TODO legacy needs to return this as "newDatasetid"
+            } yield Ok(Json.obj("datasetId" -> datasetId))
           }
         } yield response
       }
     }
   }
 
-  // TODO legacy route needs to take uploadId as body
   def cancelUpload(uploadDomain: String, uploadId: String): Action[AnyContent] = Action.async { implicit request =>
     for {
       uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox

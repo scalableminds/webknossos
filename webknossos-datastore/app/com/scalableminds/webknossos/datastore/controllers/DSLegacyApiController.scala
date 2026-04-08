@@ -15,7 +15,8 @@ import com.scalableminds.webknossos.datastore.services.mesh.FullMeshRequest
 import com.scalableminds.webknossos.datastore.services.uploading.{
   DatasetUploadInfo,
   LinkedLayerIdentifier,
-  ResumableUploadInfo
+  ResumableUploadInfo,
+  UploadDomain
 }
 import com.scalableminds.webknossos.datastore.services.{
   DSRemoteWebknossosClient,
@@ -24,8 +25,9 @@ import com.scalableminds.webknossos.datastore.services.{
   DatasetCache,
   UserAccessRequest
 }
-import play.api.libs.json.{Json, OFormat}
-import play.api.mvc.{Action, AnyContent, PlayBodyParsers, RawBuffer, Result}
+import play.api.libs.Files
+import play.api.libs.json.{JsObject, Json, OFormat}
+import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers, RawBuffer, Result}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -41,7 +43,7 @@ object LegacyReserveManualUploadInformation {
     Json.format[LegacyReserveManualUploadInformation]
 }
 
-case class LegacyReserveUploadInformation(
+case class LegacyReserveUploadInformationV11(
     uploadId: String, // upload id that was also used in chunk upload (this time without file paths)
     name: String, // dataset name
     organization: String,
@@ -51,10 +53,12 @@ case class LegacyReserveUploadInformation(
     layersToLink: Option[List[LegacyLinkedLayerIdentifier]],
     initialTeams: List[ObjectId], // team ids
     folderId: Option[ObjectId],
-    requireUniqueName: Option[Boolean]
+    requireUniqueName: Option[Boolean],
+    isVirtual: Option[Boolean], // Only set (to false) for legacy manual uploads
+    needsConversion: Option[Boolean] // None means false
 )
-object LegacyReserveUploadInformation {
-  implicit val jsonFormat: OFormat[LegacyReserveUploadInformation] = Json.format[LegacyReserveUploadInformation]
+object LegacyReserveUploadInformationV11 {
+  implicit val jsonFormat: OFormat[LegacyReserveUploadInformationV11] = Json.format[LegacyReserveUploadInformationV11]
 }
 
 case class LegacyLinkedLayerIdentifier(organizationId: Option[String],
@@ -77,6 +81,30 @@ object LegacyLinkedLayerIdentifier {
   implicit val jsonFormat: OFormat[LegacyLinkedLayerIdentifier] = Json.format[LegacyLinkedLayerIdentifier]
 }
 
+case class LegacyUploadInformation(uploadId: String, needsConversion: Option[Boolean])
+
+object LegacyUploadInformation {
+  implicit val jsonFormat: OFormat[LegacyUploadInformation] = Json.format[LegacyUploadInformation]
+}
+
+case class ReserveUploadInformationV13(
+    uploadId: String, // upload id that was also used in chunk upload (this time without file paths)
+    name: String, // dataset name
+    organization: String,
+    totalFileCount: Long,
+    filePaths: Option[List[String]],
+    totalFileSizeInBytes: Option[Long],
+    layersToLink: Option[List[LinkedLayerIdentifier]],
+    initialTeams: List[ObjectId], // team ids
+    folderId: Option[ObjectId],
+    requireUniqueName: Option[Boolean],
+    isVirtual: Option[Boolean], // Only set (to false) for legacy manual uploads
+    needsConversion: Option[Boolean] // None means false
+)
+object ReserveUploadInformationV13 {
+  implicit val jsonFormat: OFormat[ReserveUploadInformationV13] = Json.format[ReserveUploadInformationV13]
+}
+
 class DSLegacyApiController @Inject()(
     accessTokenService: DataStoreAccessTokenService,
     remoteWebknossosClient: DSRemoteWebknossosClient,
@@ -94,8 +122,57 @@ class DSLegacyApiController @Inject()(
 
   override def allowRemoteOrigin: Boolean = true
 
-  def reserveUploadV11(): Action[LegacyReserveUploadInformation] =
-    Action.async(validateJson[LegacyReserveUploadInformation]) { implicit request =>
+  def testChunkV13(resumableChunkNumber: Int, resumableIdentifier: String): Action[AnyContent] =
+    uploadController.testChunk(resumableChunkNumber, resumableIdentifier, UploadDomain.dataset.toString)
+
+  def finishUploadV13(): Action[LegacyUploadInformation] = Action.async(validateJson[LegacyUploadInformation]) {
+    implicit request =>
+      for {
+        result <- uploadController.finishUpload(UploadDomain.dataset.toString, request.body.uploadId)(
+          request.withBody(play.api.mvc.AnyContentAsEmpty))
+      } yield if (result.header.status == OK) {
+        result.body match {
+          case play.api.http.HttpEntity.Strict(data, _) =>
+            val json = Json.parse(data.toArray).as[JsObject]
+            Ok((json - "datasetId") ++ Json.obj("newDatasetId" -> (json \ "datasetId").get))
+          case _ => result
+        }
+      } else result
+  }
+
+  def reserveDatasetUploadV13(): Action[ReserveUploadInformationV13] =
+    Action.async(validateJson[ReserveUploadInformationV13]) { implicit request =>
+      uploadController.reserveDatasetUpload()(
+        request.withBody(DatasetUploadInfo(
+          resumableUploadInfo = ResumableUploadInfo(
+            uploadId = request.body.uploadId,
+            totalFileCount = request.body.totalFileCount,
+            filePaths = request.body.filePaths,
+            totalFileSizeInBytes = request.body.totalFileSizeInBytes
+          ),
+          datasetName = request.body.name,
+          organizationId = request.body.organization,
+          layersToLink = request.body.layersToLink,
+          initialTeamIds = request.body.initialTeams,
+          folderId = request.body.folderId,
+          requireUniqueName = request.body.requireUniqueName,
+          isVirtual = request.body.isVirtual,
+          needsConversion = request.body.needsConversion
+        )))
+    }
+
+  def uploadChunkV13(): Action[MultipartFormData[Files.TemporaryFile]] =
+    Action.async(parse.multipartFormData) { implicit request =>
+      uploadController.uploadChunk(UploadDomain.dataset.toString)(request)
+    }
+
+  def getUnfinishedUploadsV13(organizationName: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      uploadController.getUnfinishedUploads(organizationName, UploadDomain.dataset.toString)(request)
+    }
+
+  def reserveUploadV11(): Action[LegacyReserveUploadInformationV11] =
+    Action.async(validateJson[LegacyReserveUploadInformationV11]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
         UserAccessRequest.administrateDatasets(request.body.organization)) {
 

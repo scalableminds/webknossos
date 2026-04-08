@@ -204,20 +204,23 @@ class PlaneView {
       }
 
       // Check whether we are hitting the same object as before, since we can return early
-      // in this case.
+      // in this case, if not explicitly disabled by the allowMeshReuseOptimization parameter.
       if (storeState.uiInformation.activeTool === AnnotationTool.PROOFREAD) {
         if (hitObject == null && oldRaycasterHit == null) {
           return null;
         }
-        if (unmappedSegmentId != null && unmappedSegmentId === oldRaycasterHit?.unmappedSegmentId) {
+        if (
+          allowMeshReuseOptimization &&
+          unmappedSegmentId != null &&
+          unmappedSegmentId === oldRaycasterHit?.unmappedSegmentId
+        ) {
           return oldRaycasterHit;
         }
-      } else if (allowMeshReuseOptimization) {
-        // Outside of proofreading, there is no highlighting of parts of the meshes.
-        // If the parent group is identical, we can reuse the old hit object.
-        if (hitObject?.parent === oldRaycasterHit?.node?.parent) {
-          return oldRaycasterHit;
-        }
+      }
+      // Outside of proofreading, there is no highlighting of parts of the meshes.
+      // If the parent group is identical, we can reuse the old hit object.
+      else if (allowMeshReuseOptimization && hitObject?.parent === oldRaycasterHit?.node?.parent) {
+        return oldRaycasterHit;
       }
 
       // Undo highlighting of old hit

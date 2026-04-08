@@ -1,4 +1,7 @@
 # Note: keep this in sync with the reported version numbers in the com.scalableminds.util.mvc.ApiVersioning trait
+# Version log in webknossos.versioned.routes
+
+->  /v14/ datastore.latest.Routes
 
 ->  /v13/ datastore.latest.Routes
 ->  /v12/ datastore.latest.Routes

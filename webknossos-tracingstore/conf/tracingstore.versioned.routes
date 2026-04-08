@@ -1,5 +1,7 @@
 # Note: keep this in sync with the reported version numbers in the com.scalableminds.util.mvc.ApiVersioning trait
+# Version log in webknossos.versioned.routes
 
+->  /v14/ tracingstore.latest.Routes
 ->  /v13/ tracingstore.latest.Routes
 ->  /v12/ tracingstore.latest.Routes
 ->  /v11/ tracingstore.latest.Routes

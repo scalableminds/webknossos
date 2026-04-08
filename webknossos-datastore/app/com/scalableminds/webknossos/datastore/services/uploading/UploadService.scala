@@ -66,7 +66,8 @@ case class MagUploadInfo(
     resumableUploadInfo: ResumableUploadInfo,
     datasetId: ObjectId,
     layerName: String,
-    mag: MagLocator
+    mag: MagLocator,
+    overwritePending: Boolean
 )
 object MagUploadInfo {
   implicit val jsonFormat: OFormat[MagUploadInfo] = Json.format[MagUploadInfo]
@@ -77,7 +78,8 @@ case class AttachmentUploadInfo(
     datasetId: ObjectId,
     layerName: String,
     attachmentType: LayerAttachmentType,
-    attachment: LayerAttachment
+    attachment: LayerAttachment,
+    overwritePending: Boolean
 )
 object AttachmentUploadInfo {
   implicit val jsonFormat: OFormat[AttachmentUploadInfo] = Json.format[AttachmentUploadInfo]
@@ -208,6 +210,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
   def reserveMagUpload(magUploadInfo: MagUploadInfo, dataSourceId: DataSourceId): Fox[Unit] =
     for {
+      // TODO if overwritePending, cancel pending if exists (disk, redis, postgres)
       _ <- reserveResumableUpload(magUploadInfo.resumableUploadInfo,
                                   magUploadInfo.datasetId,
                                   dataSourceId,
@@ -219,6 +222,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
   def reserveAttachmentUpload(attachmentUploadInfo: AttachmentUploadInfo, dataSourceId: DataSourceId): Fox[Unit] =
     for {
+      // TODO if overwritePending, cancel pending if exists (disk, redis, postgres)
       _ <- reserveResumableUpload(attachmentUploadInfo.resumableUploadInfo,
                                   attachmentUploadInfo.datasetId,
                                   dataSourceId,

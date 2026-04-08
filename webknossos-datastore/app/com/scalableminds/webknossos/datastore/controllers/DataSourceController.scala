@@ -653,11 +653,8 @@ class DataSourceController @Inject()(
             fullMeshService.segmentSurfaceAreaCache.getOrLoad(
               (datasetId, dataLayer.name, fullMeshRequest),
               _ =>
-                for {
-                  data: Array[Byte] <- fullMeshService
-                    .loadFor(datasetId, dataSource, dataLayer, fullMeshRequest) ?~> "mesh.loadFull.failed"
-                  surfaceArea <- fullMeshService.surfaceAreaFromStlBytes(data).toFox
-                } yield surfaceArea
+                fullMeshService
+                  .computeSurfaceArea(datasetId, dataSource, dataLayer, fullMeshRequest) ?~> "mesh.loadFull.failed"
             )
           }
         } yield Ok(Json.toJson(surfaceAreas))

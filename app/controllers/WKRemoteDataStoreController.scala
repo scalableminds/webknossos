@@ -205,26 +205,27 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  def reportMagUpload(name: String, key: String, token: String): Action[ReportMagUploadParameters] =
+  def reportMagUpload(name: String, key: String): Action[ReportMagUploadParameters] =
     Action.async(validateJson[ReportMagUploadParameters]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          _ <- datasetDAO.findOne(request.body.datasetId)(GlobalAccessContext) ?~> Messages(
+          dataset <- datasetDAO.findOne(request.body.datasetId)(GlobalAccessContext) ?~> Messages(
             "dataset.notFound",
             request.body.datasetId) ~> NOT_FOUND
           // TODO assert pending exists?
           _ <- request.body.mag.path.toFox ?~> "dataset.finishMagUpload.pathNotSet"
           _ <- datasetMagDAO.finishUpload(request.body.datasetId, request.body.layerName, request.body.mag)
-          // TODO clear ds cache
+          dataStoreClient <- datasetService.clientFor(dataset)(GlobalAccessContext)
+          _ <- dataStoreClient.invalidateDatasetInDSCache(dataset._id)
         } yield Ok
       }
     }
 
-  def reportAttachmentUpload(name: String, key: String, token: String): Action[ReportAttachmentUploadParameters] =
+  def reportAttachmentUpload(name: String, key: String): Action[ReportAttachmentUploadParameters] =
     Action.async(validateJson[ReportAttachmentUploadParameters]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          _ <- datasetDAO.findOne(request.body.datasetId)(GlobalAccessContext) ?~> Messages(
+          dataset <- datasetDAO.findOne(request.body.datasetId)(GlobalAccessContext) ?~> Messages(
             "dataset.notFound",
             request.body.datasetId) ~> NOT_FOUND
           // TODO assert pending exists?
@@ -232,7 +233,8 @@ class WKRemoteDataStoreController @Inject()(
                                                  request.body.layerName,
                                                  request.body.attachmentType,
                                                  request.body.attachment)
-          // TODO clear ds cache
+          dataStoreClient <- datasetService.clientFor(dataset)(GlobalAccessContext)
+          _ <- dataStoreClient.invalidateDatasetInDSCache(dataset._id)
         } yield Ok
       }
     }

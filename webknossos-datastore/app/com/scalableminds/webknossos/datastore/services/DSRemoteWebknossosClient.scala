@@ -114,13 +114,11 @@ class DSRemoteWebknossosClient @Inject()(
   def reportMagUpload(parameters: ReportMagUploadParameters)(implicit tc: TokenContext): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportMagUpload")
       .addQueryParam("key", dataStoreKey)
-      .withTokenFromContext
       .postJson[ReportMagUploadParameters](parameters)
 
   def reportAttachmentUpload(parameters: ReportAttachmentUploadParameters)(implicit tc: TokenContext): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportAttachmentUpload")
       .addQueryParam("key", dataStoreKey)
-      .withTokenFromContext
       .postJson[ReportAttachmentUploadParameters](parameters)
 
   def reportDataSources(dataSources: List[DataSource], organizationId: Option[String]): Fox[_] =

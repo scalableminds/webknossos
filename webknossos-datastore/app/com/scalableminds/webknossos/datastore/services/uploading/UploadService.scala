@@ -27,7 +27,6 @@ import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
-import org.apache.pekko.http.scaladsl.model.headers.ContentDispositionTypes.attachment
 import play.api.libs.json.{Json, OFormat}
 import software.amazon.awssdk.transfer.s3.model.UploadDirectoryRequest
 
@@ -138,18 +137,6 @@ case class LinkedLayerIdentifier(datasetId: ObjectId, layerName: String, newLaye
 
 object LinkedLayerIdentifier {
   implicit val jsonFormat: OFormat[LinkedLayerIdentifier] = Json.format[LinkedLayerIdentifier]
-}
-
-// TODO move to Legacy finishUpload, unpack uploadId
-case class LegacyUploadInformation(uploadId: String)
-
-object LegacyUploadInformation {
-  implicit val jsonFormat: OFormat[LegacyUploadInformation] = Json.format[LegacyUploadInformation]
-}
-
-case class LegacyCancelUploadInformation(uploadId: String)
-object LegacyCancelUploadInformation {
-  implicit val jsonFormat: OFormat[LegacyCancelUploadInformation] = Json.format[LegacyCancelUploadInformation]
 }
 
 class UploadService @Inject()(dataSourceService: DataSourceService,

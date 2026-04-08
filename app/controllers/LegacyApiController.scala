@@ -46,6 +46,12 @@ object LegacyTaskParameters {
   implicit val taskParametersFormat: Format[LegacyTaskParameters] = Json.format[LegacyTaskParameters]
 }
 
+case class LegacyUploadInformation(uploadId: String)
+
+object LegacyUploadInformation {
+  implicit val jsonFormat: OFormat[LegacyUploadInformation] = Json.format[LegacyUploadInformation]
+}
+
 class LegacyApiController @Inject()(datasetController: DatasetController,
                                     projectController: ProjectController,
                                     taskController: TaskController,

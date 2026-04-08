@@ -395,7 +395,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def measureDirectorySizeBytes(path: Path): Fox[Long] =
     tryo(FileUtils.sizeOfDirectoryAsBigInteger(path.toFile).longValue).toFox
 
-  def finishMagUpload(uploadId: String, datasetId: ObjectId)(implicit tc: TokenContext): Fox[Unit] =
+  def finishMagUpload(uploadId: String, datasetId: ObjectId): Fox[Unit] =
     for {
       dataSourceId <- magUploadMetadataStore.findDataSourceId(uploadId)
       mag <- magUploadMetadataStore.findMag(uploadId)
@@ -419,7 +419,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         ReportMagUploadParameters(datasetId, layerName, magAdapted, magSizeBytes))
     } yield ()
 
-  def finishAttachmentUpload(uploadId: String, datasetId: ObjectId)(implicit tc: TokenContext): Fox[Unit] =
+  def finishAttachmentUpload(uploadId: String, datasetId: ObjectId): Fox[Unit] =
     for {
       dataSourceId <- attachmentUploadMetadataStore.findDataSourceId(uploadId)
       attachment <- attachmentUploadMetadataStore.findAttachment(uploadId)

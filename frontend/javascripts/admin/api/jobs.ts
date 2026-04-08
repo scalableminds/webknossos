@@ -200,7 +200,7 @@ type RunNeuronInferenceParameters = {
   evalMaxEdgeLength?: number;
   evalSparseTubeThresholdNm?: number;
   evalMinMergerPathLengthNm?: number;
-  customConfiguration?: Record<string, string | number | boolean>;
+  customConfiguration?: Record<string, JsonPrimitive>;
 };
 
 type RunInstanceInferenceParameters = {
@@ -214,7 +214,7 @@ type RunInstanceInferenceParameters = {
   workflowYaml?: string;
   invertColorLayer?: boolean;
   seedGeneratorDistanceThreshold?: number | null;
-  customConfiguration?: Record<string, string | number | boolean>;
+  customConfiguration?: Record<string, JsonPrimitive>;
 };
 
 export function runNeuronModelInference(params: RunNeuronInferenceParameters): Promise<APIJob> {
@@ -325,7 +325,7 @@ export function startAlignSectionsJob(
   layerName: string,
   newDatasetName: string,
   annotationId?: string,
-  customConfiguration?: Record<string, string | number | boolean>,
+  customConfiguration?: Record<string, JsonPrimitive>,
 ): Promise<APIJob> {
   return Request.sendJSONReceiveJSON(`/api/jobs/run/alignSections/${datasetId}`, {
     method: "POST",
@@ -352,7 +352,7 @@ type RunNeuronModelTrainingParameters = {
   aiModelCategory: APIAiModelCategory.EM_NEURONS;
   comment?: string;
   workflowYaml?: string;
-  customConfiguration?: Record<string, string | number | boolean>;
+  customConfiguration?: Record<string, JsonPrimitive>;
 };
 
 export function runNeuronTraining(params: RunNeuronModelTrainingParameters) {

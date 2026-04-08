@@ -56,7 +56,7 @@ class UploadController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(request.body.datasetId)) {
         for {
           isKnownUpload <- uploadService.isKnownUpload(request.body.resumableUploadInfo.uploadId, UploadDomain.mag)
-          _ <- Fox.runIf(isKnownUpload) {
+          _ <- Fox.runIf(!isKnownUpload) {
             for {
               reserveUploadAdditionalInfo <- dsRemoteWebknossosClient.reserveMagUpload(request.body) ?~> "dataset.upload.validation.failed"
               _ <- uploadService.reserveMagUpload(request.body, reserveUploadAdditionalInfo.dataSourceId)
@@ -72,7 +72,7 @@ class UploadController @Inject()(
         for {
           isKnownUpload <- uploadService.isKnownUpload(request.body.resumableUploadInfo.uploadId,
                                                        UploadDomain.attachment)
-          _ <- Fox.runIf(isKnownUpload) {
+          _ <- Fox.runIf(!isKnownUpload) {
             for {
               reserveUploadAdditionalInfo <- dsRemoteWebknossosClient.reserveAttachmentUpload(request.body) ?~> "dataset.upload.validation.failed"
               _ <- uploadService.reserveAttachmentUpload(request.body, reserveUploadAdditionalInfo.dataSourceId)

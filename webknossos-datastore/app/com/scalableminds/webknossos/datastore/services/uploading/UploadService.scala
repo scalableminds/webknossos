@@ -413,8 +413,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       _ <- checkWithinRequestedFileSize(uploadDir, uploadId, datasetId, UploadDomain.mag) ?~> "dataset.upload.fileSizeCheck.failed"
       _ <- checkAllChunksUploaded(uploadId, UploadDomain.mag) ?~> "dataset.upload.allChunksUploadedCheck.failed"
       // TODO clean up on failure, clean up on success
-      magSizeBytes <- measureDirectorySizeBytes(unpackToDir) ?~> "dataset.upload.measureTotalSize.failed"
       _ <- unpackOrMoveUploaded(uploadDir, unpackToDir, datasetId, UploadDomain.mag)
+      magSizeBytes <- measureDirectorySizeBytes(unpackToDir) ?~> "dataset.upload.measureTotalSize.failed"
       magAdapted = mag.copy(path = Some(UPath.fromLocalPath(unpackToDir)))
       _ <- remoteWebknossosClient.reportMagUpload(
         ReportMagUploadParameters(datasetId, layerName, magAdapted, magSizeBytes))
@@ -431,8 +431,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       _ <- checkWithinRequestedFileSize(uploadDir, uploadId, datasetId, UploadDomain.mag) ?~> "dataset.upload.fileSizeCheck.failed"
       _ <- checkAllChunksUploaded(uploadId, UploadDomain.mag) ?~> "dataset.upload.allChunksUploadedCheck.failed"
       // TODO clean up on failure, clean up on success
-      attachmentSizeBytes <- measureDirectorySizeBytes(unpackToDir) ?~> "dataset.upload.measureTotalSize.failed"
       _ <- unpackOrMoveUploaded(uploadDir, unpackToDir, datasetId, UploadDomain.attachment)
+      attachmentSizeBytes <- measureDirectorySizeBytes(unpackToDir) ?~> "dataset.upload.measureTotalSize.failed"
       attachmentAdapted = attachment.copy(path = UPath.fromLocalPath(unpackToDir))
       _ <- remoteWebknossosClient.reportAttachmentUpload(
         ReportAttachmentUploadParameters(datasetId, layerName, attachmentType, attachmentAdapted, attachmentSizeBytes))

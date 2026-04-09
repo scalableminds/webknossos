@@ -200,6 +200,7 @@ type RunNeuronInferenceParameters = {
   evalMaxEdgeLength?: number;
   evalSparseTubeThresholdNm?: number;
   evalMinMergerPathLengthNm?: number;
+  customConfiguration?: Record<string, JsonPrimitive>;
 };
 
 type RunInstanceInferenceParameters = {
@@ -213,6 +214,7 @@ type RunInstanceInferenceParameters = {
   workflowYaml?: string;
   invertColorLayer?: boolean;
   seedGeneratorDistanceThreshold?: number | null;
+  customConfiguration?: Record<string, JsonPrimitive>;
 };
 
 export function runNeuronModelInference(params: RunNeuronInferenceParameters): Promise<APIJob> {
@@ -323,19 +325,11 @@ export function startAlignSectionsJob(
   layerName: string,
   newDatasetName: string,
   annotationId?: string,
+  customConfiguration?: Record<string, JsonPrimitive>,
 ): Promise<APIJob> {
-  const urlParams = annotationId
-    ? new URLSearchParams({
-        layerName,
-        newDatasetName,
-        annotationId,
-      })
-    : new URLSearchParams({
-        layerName,
-        newDatasetName,
-      });
-  return Request.receiveJSON(`/api/jobs/run/alignSections/${datasetId}?${urlParams.toString()}`, {
+  return Request.sendJSONReceiveJSON(`/api/jobs/run/alignSections/${datasetId}`, {
     method: "POST",
+    data: { layerName, newDatasetName, annotationId, customConfiguration },
   });
 }
 
@@ -358,6 +352,7 @@ type RunNeuronModelTrainingParameters = {
   aiModelCategory: APIAiModelCategory.EM_NEURONS;
   comment?: string;
   workflowYaml?: string;
+  customConfiguration?: Record<string, JsonPrimitive>;
 };
 
 export function runNeuronTraining(params: RunNeuronModelTrainingParameters) {
@@ -367,6 +362,7 @@ export function runNeuronTraining(params: RunNeuronModelTrainingParameters) {
   });
 }
 
+export type JsonPrimitive = string | number | boolean;
 type RunInstanceModelTrainingParameters = {
   trainingAnnotations: AiModelTrainingAnnotationSpecification[];
   name: string;
@@ -374,6 +370,7 @@ type RunInstanceModelTrainingParameters = {
   instanceDiameterNm: number;
   comment?: string;
   workflowYaml?: string;
+  customConfiguration?: Record<string, JsonPrimitive>;
 };
 
 export function runInstanceModelTraining(params: RunInstanceModelTrainingParameters) {

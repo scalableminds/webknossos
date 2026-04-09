@@ -55,6 +55,8 @@ You can access and run scripts directly from within the WEBKNOSSOS annotation vi
 3. Either select an available script from the list or enter your script code directly in the text box.
 4. Click "Run Script".
 
+!!! warning "Security Warning"
+    Scripts are loaded from external URLs (GitHub Gists) and executed directly in the browser with full access to the WEBKNOSSOS annotation API. **Always review a script's source before running it.** Never run scripts from untrusted authors or URLs you do not control, as malicious code could modify your annotations or exfiltrate data.
 
 ## Assign a Script to Tasks
 

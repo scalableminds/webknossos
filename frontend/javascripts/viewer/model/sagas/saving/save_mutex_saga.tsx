@@ -14,8 +14,6 @@ import {
   takeEvery,
 } from "typed-redux-saga";
 import { isAnnotationEditableByNonOwners } from "viewer/model/accessors/annotation_accessor";
-import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
-import { getActiveSegmentationTracing } from "viewer/model/accessors/volumetracing_accessor";
 import {
   type SetCollaborationModeAction,
   setIsUpdatingAnnotationCurrentlyAllowedAction,
@@ -80,24 +78,10 @@ function* resolveEnsureHasAnnotationMutexActions(action: EnsureHasAnnotationMute
   }
 }
 
-const TOOLS_WITH_AD_HOC_MUTEX_SUPPORT = [
-  AnnotationTool.MOVE.id,
-  AnnotationTool.PROOFREAD.id,
-  AnnotationTool.LINE_MEASUREMENT.id,
-  AnnotationTool.AREA_MEASUREMENT.id,
-] as AnnotationToolId[];
-
 export function* getCurrentMutexFetchingStrategy(): Saga<MutexFetchingStrategy> {
   let fetchingStrategy = MutexFetchingStrategy.Continuously;
-  const activeVolumeTracing = yield* select(getActiveSegmentationTracing);
-  const activeTool = yield* select((state) => state.uiInformation.activeTool);
   const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
-  if (
-    collaborationMode === "Concurrent" &&
-    activeVolumeTracing?.hasEditableMapping &&
-    activeVolumeTracing?.mappingIsLocked &&
-    TOOLS_WITH_AD_HOC_MUTEX_SUPPORT.includes(activeTool.id)
-  ) {
+  if (collaborationMode === "Concurrent") {
     // The active annotation is currently in proofreading state. Thus, having the mutex only on save demand works in regards to the current milestone.
     fetchingStrategy = MutexFetchingStrategy.AdHoc;
   }

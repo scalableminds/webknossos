@@ -689,7 +689,7 @@ class VolumeTracingService @Inject()(
   def createAdHocMesh(annotationId: ObjectId,
                       tracingId: String,
                       tracing: VolumeTracing,
-                      request: WebknossosAdHocMeshRequest)(implicit tc: TokenContext): Fox[(Array[Float], List[Int])] =
+                      request: WebknossosAdHocMeshRequest)(implicit tc: TokenContext): Fox[(Array[Float], Array[Int], List[Int])] =
     for {
       isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
       volumeLayer = volumeTracingLayer(annotationId,

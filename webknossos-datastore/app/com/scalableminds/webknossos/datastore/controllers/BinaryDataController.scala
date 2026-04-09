@@ -237,11 +237,21 @@ class BinaryDataController @Inject()(
           // The client expects the ad-hoc mesh as a flat float-array. Three consecutive floats form a 3D point, three
           // consecutive 3D points (i.e., nine floats) form a triangle.
           // There are no shared vertices between triangles.
-          (vertices, neighbors) <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
+          (vertices, indices, neighbors) <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
         } yield {
+          // Expand indexed mesh back to the flat unindexed format the client expects
+          val flatVertices = new Array[Float](indices.length * 3)
+          var i = 0
+          while (i < indices.length) {
+            val base = indices(i) * 3
+            flatVertices(i * 3) = vertices(base)
+            flatVertices(i * 3 + 1) = vertices(base + 1)
+            flatVertices(i * 3 + 2) = vertices(base + 2)
+            i += 1
+          }
           // We need four bytes for each float
-          val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
-          responseBuffer.asFloatBuffer().put(vertices)
+          val responseBuffer = ByteBuffer.allocate(flatVertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
+          responseBuffer.asFloatBuffer().put(flatVertices)
           Ok(responseBuffer.array()).withHeaders(getNeighborIndices(neighbors): _*)
         }
       }

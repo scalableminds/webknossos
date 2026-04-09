@@ -304,14 +304,24 @@ class VolumeTracingController @Inject()(
           // There are no shared vertices between triangles.
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
           tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound")
-          (vertices: Array[Float], neighbors: List[Int]) <- if (tracing.getHasEditableMapping) {
+          (vertices: Array[Float], indices: Array[Int], neighbors: List[Int]) <- if (tracing.getHasEditableMapping) {
             val editableMappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
             editableMappingService.createAdHocMesh(editableMappingLayer, request.body)
           } else volumeTracingService.createAdHocMesh(annotationId, tracingId, tracing, request.body)
         } yield {
+          // Expand indexed mesh back to the flat unindexed format the client expects
+          val flatVertices = new Array[Float](indices.length * 3)
+          var i = 0
+          while (i < indices.length) {
+            val base = indices(i) * 3
+            flatVertices(i * 3) = vertices(base)
+            flatVertices(i * 3 + 1) = vertices(base + 1)
+            flatVertices(i * 3 + 2) = vertices(base + 2)
+            i += 1
+          }
           // We need four bytes for each float
-          val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
-          responseBuffer.asFloatBuffer().put(vertices)
+          val responseBuffer = ByteBuffer.allocate(flatVertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
+          responseBuffer.asFloatBuffer().put(flatVertices)
           Ok(responseBuffer.array()).withHeaders(getNeighborIndices(neighbors): _*)
         }
       }

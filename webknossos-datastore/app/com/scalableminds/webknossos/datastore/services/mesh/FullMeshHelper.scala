@@ -38,30 +38,56 @@ trait FullMeshHelper extends LazyLogging {
     neighborPositions.filterNot(visited.contains)
   }
 
-  protected def adHocMeshToStl(vertexBuffer: Array[Float]): Array[Byte] = {
-    val numFaces = vertexBuffer.length / (3 * 3) // a face has three vertices, a vertex has three floats.
+  protected def adHocMeshToStl(vertices: Array[Float], indices: Array[Int]): Array[Byte] = {
+    val numFaces = indices.length / 3
     val outputNumBytesLong = numFaces.toLong * 50L
     if (outputNumBytesLong > Int.MaxValue)
       throw new IllegalStateException(
         s"Single mesh chunk is too large to encode as STL: $outputNumBytesLong bytes ($numFaces faces)")
     val output = ByteBuffer.allocate(outputNumBytesLong.toInt).order(ByteOrder.LITTLE_ENDIAN)
     val unused = Array.fill[Byte](2)(0)
-    for (faceIndex <- 0 until numFaces) {
-      val v1 = Vec3Float(vertexBuffer(faceIndex), vertexBuffer(faceIndex + 1), vertexBuffer(faceIndex + 2))
-      val v2 = Vec3Float(vertexBuffer(faceIndex + 3), vertexBuffer(faceIndex + 4), vertexBuffer(faceIndex + 5))
-      val v3 = Vec3Float(vertexBuffer(faceIndex + 6), vertexBuffer(faceIndex + 7), vertexBuffer(faceIndex + 8))
+    var i = 0
+    while (i < indices.length) {
+      val b0 = indices(i) * 3
+      val b1 = indices(i + 1) * 3
+      val b2 = indices(i + 2) * 3
+      val v1 = Vec3Float(vertices(b0), vertices(b0 + 1), vertices(b0 + 2))
+      val v2 = Vec3Float(vertices(b1), vertices(b1 + 1), vertices(b1 + 2))
+      val v3 = Vec3Float(vertices(b2), vertices(b2 + 1), vertices(b2 + 2))
       val norm = Vec3Float.crossProduct(v2 - v1, v3 - v1).normalize
       output.putFloat(norm.x)
       output.putFloat(norm.y)
       output.putFloat(norm.z)
-      for (vertexIndex <- 0 until 3) {
-        for (dimIndex <- 0 until 3) {
-          output.putFloat(vertexBuffer(9 * faceIndex + 3 * vertexIndex + dimIndex))
-        }
-      }
+      output.putFloat(v1.x); output.putFloat(v1.y); output.putFloat(v1.z)
+      output.putFloat(v2.x); output.putFloat(v2.y); output.putFloat(v2.z)
+      output.putFloat(v3.x); output.putFloat(v3.y); output.putFloat(v3.z)
       output.put(unused)
+      i += 3
     }
     output.array()
+  }
+
+  def surfaceAreaFromIndexedMesh(vertices: Array[Float], indices: Array[Int]): Float = {
+    var surfaceSum = 0.0f
+    var i = 0
+    while (i < indices.length) {
+      val b0 = indices(i) * 3
+      val b1 = indices(i + 1) * 3
+      val b2 = indices(i + 2) * 3
+      val v1x = vertices(b0); val v1y = vertices(b0 + 1); val v1z = vertices(b0 + 2)
+      val v2x = vertices(b1); val v2y = vertices(b1 + 1); val v2z = vertices(b1 + 2)
+      val v3x = vertices(b2); val v3y = vertices(b2 + 1); val v3z = vertices(b2 + 2)
+      // Edge vectors from v1
+      val e1x = v2x - v1x; val e1y = v2y - v1y; val e1z = v2z - v1z // v1→v2
+      val e2x = v3x - v1x; val e2y = v3y - v1y; val e2z = v3z - v1z // v1→v3
+      // |e1 × e2| = twice the triangle area
+      val cx = e1y * e2z - e1z * e2y
+      val cy = e1z * e2x - e1x * e2z
+      val cz = e1x * e2y - e1y * e2x
+      surfaceSum += Math.sqrt(cx * cx + cy * cy + cz * cz).toFloat / 2.0f
+      i += 3
+    }
+    surfaceSum
   }
 
   protected def combineEncodedChunksToStl(stlEncodedChunks: Seq[Array[Byte]]): Array[Byte] = {

@@ -72,14 +72,14 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
   private val actor: ActorRef =
     actorSystem.actorOf(RoundRobinPool(adHocMeshActorPoolSize).props(Props(new AdHocMeshActor(this, timeout.duration))))
 
-  def requestAdHocMeshViaActor(request: AdHocMeshRequest): Fox[(Array[Float], List[Int])] =
+  def requestAdHocMeshViaActor(request: AdHocMeshRequest): Fox[(Array[Float], Array[Int], List[Int])] =
     Fox.fromFutureBox {
-      actor.ask(request).mapTo[Box[(Array[Float], List[Int])]].recover {
+      actor.ask(request).mapTo[Box[(Array[Float], Array[Int], List[Int])]].recover {
         case e: Exception => Failure(e.getMessage)
       }
     }
 
-  def requestAdHocMesh(request: AdHocMeshRequest)(implicit tc: TokenContext): Fox[(Array[Float], List[Int])] =
+  def requestAdHocMesh(request: AdHocMeshRequest)(implicit tc: TokenContext): Fox[(Array[Float], Array[Int], List[Int])] =
     request.dataLayer.elementClass match {
       case ElementClass.uint8 | ElementClass.int8 =>
         generateAdHocMeshImpl[Byte, ByteBuffer](request,
@@ -100,7 +100,7 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
 
   private def generateAdHocMeshImpl[T: ClassTag, B <: Buffer](
       request: AdHocMeshRequest,
-      dataTypeFunctors: DataTypeFunctors[T, B])(implicit tc: TokenContext): Fox[(Array[Float], List[Int])] = {
+      dataTypeFunctors: DataTypeFunctors[T, B])(implicit tc: TokenContext): Fox[(Array[Float], Array[Int], List[Int])] = {
 
     def applyJsonMappingIfNeeded(data: Array[T]): Fox[Array[T]] =
       request.mapping match {
@@ -200,6 +200,9 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
     val typedSegmentId = dataTypeFunctors.fromLong(request.segmentId)
 
     val vertexBuffer = mutable.ArrayBuffer[Float]()
+    val indexBuffer = mutable.ArrayBuffer[Int]()
+    // Shared across all sub-chunk calls so vertices on sub-chunk boundaries are also deduplicated
+    val vertexIndex = mutable.HashMap[(Int, Int, Int), Int]()
 
     for {
       data <- binaryDataService.handleDataRequest(dataRequest)
@@ -225,10 +228,11 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
         )
         if (subVolumeContainsSegmentId(mappedData, dataDimensions, boundingBox, mappedSegmentId)) {
           MarchingCubes
-            .marchingCubes[T](mappedData, dataDimensions, boundingBox, mappedSegmentId, offset, scale, vertexBuffer)
+            .marchingCubes[T](mappedData, dataDimensions, boundingBox, mappedSegmentId, offset, scale,
+                              vertexBuffer, indexBuffer, vertexIndex)
         }
       }
-      (vertexBuffer.toArray, neighbors)
+      (vertexBuffer.toArray, indexBuffer.toArray, neighbors)
     }
   }
 }

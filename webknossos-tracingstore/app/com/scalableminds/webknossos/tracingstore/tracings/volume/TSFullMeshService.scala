@@ -86,7 +86,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
           fullMeshRequest.seedPosition.map(sp => VoxelPosition(sp.x, sp.y, sp.z, mag)),
           adHocChunkSize
         )
-      encoded = verticesForChunks.map(adHocMeshToStl)
+      encoded = verticesForChunks.map { case (verts, idxs) => adHocMeshToStl(verts, idxs) }
       array = combineEncodedChunksToStl(encoded)
       _ = logMeshingDuration(before, "ad-hoc meshing (tracingstore)", array.length)
     } yield array
@@ -97,7 +97,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       tracing: VolumeTracing,
       mag: Vec3Int,
       voxelSize: VoxelSize,
-      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] =
+      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[(Array[Float], Array[Int])]] =
     for {
       fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracing)
       mappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
@@ -116,7 +116,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
         .map(_ * mag * DataLayer.bucketLength)
         .map(bp => BucketPosition(bp.x, bp.y, bp.z, mag, fullMeshRequest.additionalCoordinates))
         .toList
-      vertexChunksWithNeighbors: List[(Array[Float], List[Int])] <- Fox.serialCombined(bucketPositions) {
+      vertexChunksWithNeighbors: List[(Array[Float], Array[Int], List[Int])] <- Fox.serialCombined(bucketPositions) {
         bucketPosition =>
           val adHocMeshRequest = WebknossosAdHocMeshRequest(
             position = Vec3Int(bucketPosition.voxelMag1X, bucketPosition.voxelMag1Y, bucketPosition.voxelMag1Z),
@@ -131,8 +131,8 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
           )
           loadMeshChunkFromAdHoc(annotationId, tracingId, tracing, adHocMeshRequest)
       }
-      allVertices = vertexChunksWithNeighbors.map(_._1)
-    } yield allVertices
+      allChunkMeshes = vertexChunksWithNeighbors.map(c => (c._1, c._2))
+    } yield allChunkMeshes
 
   private def getAllAdHocChunksWithNeighborLogic(annotationId: ObjectId,
                                                  tracingId: String,
@@ -145,7 +145,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
                                                  visited: collection.mutable.Set[VoxelPosition] =
                                                    collection.mutable.Set[VoxelPosition]())(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[List[Array[Float]]] =
+      tc: TokenContext): Fox[List[(Array[Float], Array[Int])]] =
     for {
       topLeft <- topLeftOpt.toFox ?~> "seedPosition.neededForAdHoc"
       adHocMeshRequest = WebknossosAdHocMeshRequest(
@@ -159,10 +159,10 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
         fullMeshRequest.additionalCoordinates
       )
       _ = visited += topLeft
-      (vertices: Array[Float], neighbors) <- loadMeshChunkFromAdHoc(annotationId, tracingId, tracing, adHocMeshRequest)
+      (vertices: Array[Float], indices: Array[Int], neighbors) <- loadMeshChunkFromAdHoc(annotationId, tracingId, tracing, adHocMeshRequest)
       nextPositions: List[VoxelPosition] = generateNextTopLeftsFromNeighbors(topLeft, neighbors, chunkSize, visited)
       _ = visited ++= nextPositions
-      neighborVerticesNested <- Fox.serialCombined(nextPositions) { position: VoxelPosition =>
+      neighborMeshesNested <- Fox.serialCombined(nextPositions) { position: VoxelPosition =>
         getAllAdHocChunksWithNeighborLogic(annotationId,
                                            tracingId,
                                            tracing,
@@ -173,14 +173,14 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
                                            chunkSize,
                                            visited)
       }
-      allVertices: List[Array[Float]] = vertices +: neighborVerticesNested.flatten
-    } yield allVertices
+      allChunkMeshes: List[(Array[Float], Array[Int])] = (vertices, indices) +: neighborMeshesNested.flatten
+    } yield allChunkMeshes
 
   private def loadMeshChunkFromAdHoc(
       annotationId: ObjectId,
       tracingId: String,
       tracing: VolumeTracing,
-      adHocMeshRequest: WebknossosAdHocMeshRequest)(implicit tc: TokenContext): Fox[(Array[Float], List[Int])] =
+      adHocMeshRequest: WebknossosAdHocMeshRequest)(implicit tc: TokenContext): Fox[(Array[Float], Array[Int], List[Int])] =
     if (tracing.getHasEditableMapping) {
       val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
       editableMappingService.createAdHocMesh(mappingLayer, adHocMeshRequest)

@@ -102,7 +102,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
             adHocChunkSize)
         } yield chunks
       }
-    } yield verticesForChunks.map(adHocMeshToStl).map(surfaceAreaFromRawChunkStlBytes).sum
+    } yield verticesForChunks.map { case (verts, idxs) => surfaceAreaFromIndexedMesh(verts, idxs) }.sum
 
   def loadFor(datasetId: ObjectId,
               dataSource: UsableDataSource,
@@ -140,7 +140,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
         } yield chunks
       }
 
-      encoded = verticesForChunks.map(adHocMeshToStl)
+      encoded = verticesForChunks.map { case (verts, idxs) => adHocMeshToStl(verts, idxs) }
       array = combineEncodedChunksToStl(encoded)
       _ = logMeshingDuration(before, "ad-hoc meshing", array.length)
     } yield array
@@ -151,7 +151,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       segmentationLayer: SegmentationLayer,
       fullMeshRequest: FullMeshRequest,
       mag: Vec3Int,
-  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] =
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[(Array[Float], Array[Int])]] =
     for {
       segmentIndexFileKey <- segmentIndexFileService.lookUpSegmentIndexFileKey(dataSource.id, segmentationLayer)
       segmentIds <- segmentIdsForAgglomerateIdIfNeeded(
@@ -169,7 +169,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       targetMagPositions = segmentIndexFileService.topLeftsToDistinctTargetMagBucketPositions(topLefts, mag)
       // Dispatch chunks to the actor pool in batches sized to the pool, so all actors stay
       // busy without queuing more in-flight data than the pool can process concurrently.
-      vertexChunksWithNeighbors: List[(Array[Float], List[Int])] <- Fox.serialCombined(
+      chunkMeshesWithNeighbors: List[(Array[Float], Array[Int], List[Int])] <- Fox.serialCombined(
           targetMagPositions.grouped(config.Datastore.AdHocMesh.actorPoolSize).toList) { batch =>
         Fox.combined(batch.toSeq.map { targetMagPosition =>
           val adHocMeshRequest = AdHocMeshRequest(
@@ -198,8 +198,8 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
           adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
         })
       }.map(_.flatten)
-      allVertices = vertexChunksWithNeighbors.map(_._1)
-    } yield allVertices
+      allChunkMeshes = chunkMeshesWithNeighbors.map(c => (c._1, c._2))
+    } yield allChunkMeshes
 
   private def getAllAdHocChunksWithNeighborLogic(datasetId: ObjectId,
                                                  dataSource: UsableDataSource,
@@ -210,7 +210,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
                                                  visited: collection.mutable.Set[VoxelPosition] =
                                                    collection.mutable.Set[VoxelPosition]())(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[List[Array[Float]]] = {
+      tc: TokenContext): Fox[List[(Array[Float], Array[Int])]] = {
     val adHocMeshRequest = AdHocMeshRequest(
       Some(datasetId),
       Some(dataSource.id),
@@ -225,10 +225,11 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
     )
     visited += topLeft
     for {
-      (vertices: Array[Float], neighbors) <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
+      (vertices: Array[Float], indices: Array[Int], neighbors) <- adHocMeshService.requestAdHocMeshViaActor(
+        adHocMeshRequest)
       nextPositions: List[VoxelPosition] = generateNextTopLeftsFromNeighbors(topLeft, neighbors, chunkSize, visited)
       _ = visited ++= nextPositions
-      neighborVerticesNested <- Fox.serialCombined(nextPositions) { position: VoxelPosition =>
+      neighborMeshesNested <- Fox.serialCombined(nextPositions) { position: VoxelPosition =>
         getAllAdHocChunksWithNeighborLogic(datasetId,
                                            dataSource,
                                            segmentationLayer,
@@ -237,8 +238,8 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
                                            chunkSize,
                                            visited)
       }
-      allVertices: List[Array[Float]] = vertices +: neighborVerticesNested.flatten
-    } yield allVertices
+      allChunkMeshes: List[(Array[Float], Array[Int])] = (vertices, indices) +: neighborMeshesNested.flatten
+    } yield allChunkMeshes
   }
 
   // Returns individual raw STL chunks (50 bytes/face, no header) for a mesh-file request.

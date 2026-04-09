@@ -19,16 +19,17 @@ import type { WebknossosState } from "viewer/store";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
 import { areGeometriesTransformed, isSkeletonLayerVisible } from "./skeletontracing_accessor";
-import { AnnotationTool, type AnnotationToolId, VolumeTools } from "./tool_accessor";
+import {
+  AnnotationTool,
+  type AnnotationToolId,
+  Toolkits,
+  VolumeTools,
+  VolumeToolsWithProofreading,
+} from "./tool_accessor";
 
 export type DisabledInfo = {
   isDisabled: boolean;
   explanation: string;
-};
-
-const NOT_DISABLED_INFO = {
-  isDisabled: false,
-  explanation: "",
 };
 
 const zoomInToUseToolMessage =
@@ -56,7 +57,6 @@ type Params = {
   isJSONMappingActive: boolean;
   isFlycamRotated: boolean;
   isConcurrentCollabMode: boolean;
-  isVolumeDisabled: boolean;
   hasSkeleton: boolean;
   areSkeletonsVisible: boolean;
   areGeometriesTransformed: boolean;
@@ -70,10 +70,13 @@ type Params = {
 };
 
 class DisableRule {
+  affectedTools: Set<AnnotationTool>;
   constructor(
-    public affectedTools: AnnotationTool[],
-    public validateFn: (params: Params) => string | null,
-  ) {}
+    affectedTools: AnnotationTool[],
+    public validateFn: (params: Params, tool: AnnotationTool) => string | null,
+  ) {
+    this.affectedTools = new Set(affectedTools);
+  }
 
   validate(tool: AnnotationTool, params: Params) {
     /* If the tool should be disabled because of the current DisableRule instance,
@@ -82,60 +85,54 @@ class DisableRule {
      * If the tool doesn't need to be disabled because of the current rule, the function
      * will return null.
      */
-    if (this.affectedTools.includes(tool)) {
-      return this.validateFn(params)
+    if (this.affectedTools.has(tool)) {
+      return this.validateFn(params, tool);
     }
     return null;
   }
 }
 
 // Rules for VolumeTools (BRUSH, ERASE_BRUSH, TRACE, ERASE_TRACE, FILL_CELL, QUICK_SELECT).
-// Ordered according to getExplanationForDisabledVolume.
 const noVisibleSegmentationTracingRule = new DisableRule(
-  VolumeTools,
+  VolumeToolsWithProofreading,
   ({ isSegmentationTracingVisible }) =>
     isSegmentationTracingVisible
       ? null
       : "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable one in the left settings sidebar or make a segmentation layer editable via the lock icon.",
 );
 
-const rotationVolumeRule = new DisableRule(
-  VolumeTools,
-  ({ isFlycamRotated }) => (isFlycamRotated ? rotationActiveDisabledExplanation : null),
+const rotationVolumeRule = new DisableRule(VolumeToolsWithProofreading, ({ isFlycamRotated }) =>
+  isFlycamRotated ? rotationActiveDisabledExplanation : null,
 );
 
 const zoomInvalidForTracingVolumeRule = new DisableRule(
-  VolumeTools,
+  VolumeToolsWithProofreading,
   ({ isZoomInvalidForTracing }) =>
     isZoomInvalidForTracing
       ? "Volume annotation is disabled since the current zoom value is not in the required range. Please adjust the zoom level."
       : null,
 );
 
-const mergerModeVolumeRule = new DisableRule(
-  VolumeTools,
-  ({ isInMergerMode }) =>
-    isInMergerMode ? "Volume annotation is disabled while the merger mode is active." : null,
+const mergerModeVolumeRule = new DisableRule(VolumeToolsWithProofreading, ({ isInMergerMode }) =>
+  isInMergerMode ? "Volume annotation is disabled while the merger mode is active." : null,
 );
 
 const noSegmentationForMagRule = new DisableRule(
-  VolumeTools,
+  VolumeToolsWithProofreading,
   ({ isSegmentationTracingVisibleForMag }) =>
     isSegmentationTracingVisibleForMag
       ? null
       : "Volume annotation is disabled since no segmentation data can be shown at the current magnification. Please adjust the zoom level.",
 );
 
-const editableMappingActiveRule = new DisableRule(
-  VolumeTools,
-  ({ isEditableMappingActive }) =>
-    isEditableMappingActive
-      ? "Volume annotation is disabled while an editable mapping is active."
-      : null,
+const editableMappingActiveRule = new DisableRule(VolumeTools, ({ isEditableMappingActive }) =>
+  isEditableMappingActive
+    ? "Volume annotation is disabled while an editable mapping is active."
+    : null,
 );
 
 const segmentationTransformedRule = new DisableRule(
-  VolumeTools,
+  VolumeToolsWithProofreading,
   ({ isSegmentationTracingTransformed }) =>
     isSegmentationTracingTransformed
       ? "Volume annotation is disabled because the visible segmentation layer is transformed. Use the left sidebar to render the segmentation layer without any transformations."
@@ -143,18 +140,10 @@ const segmentationTransformedRule = new DisableRule(
 );
 
 const jsonMappingActiveRule = new DisableRule(
-  VolumeTools,
+  VolumeToolsWithProofreading,
   ({ isJSONMappingActive }) =>
     isJSONMappingActive
       ? "Volume annotation is disabled because a JSON mapping is currently active for the the visible segmentation layer. Disable the JSON mapping to enable volume annotation."
-      : null,
-);
-
-const concurrentCollabVolumeRule = new DisableRule(
-  VolumeTools,
-  ({ isConcurrentCollabMode }) =>
-    isConcurrentCollabMode
-      ? `Volume annotation ${TOOL_DISABLED_BECAUSE_OF_LIVE_COLLAB_MODE}`
       : null,
 );
 
@@ -178,69 +167,30 @@ const fillZoomRule = new DisableRule(
     isZoomStepTooHighForFilling ? zoomInToUseToolMessage : null,
 );
 
-// PROOFREAD is not in VolumeTools, so it needs its own rule. It covers two cases:
-// 1. Volume is globally disabled (isVolumeDisabled) — uses the same explanation ordering as
-//    getExplanationForDisabledVolume, but only actually disables the tool when isVolumeDisabled
-//    is true (not when it's only rotation/editableMapping/concurrentCollab).
-// 2. Volume is enabled — checks proofreading-specific requirements (agglomerate, pricing, skeleton).
-// Ordered according to _getDisabledInfoWhenVolumeIsDisabled and _getDisabledInfoForProofreadTool.
-const proofreadRule = new DisableRule(
-  [AnnotationTool.PROOFREAD],
-  (params) => {
-    const {
-      isVolumeDisabled,
-      isSegmentationTracingVisible,
-      isInMergerMode,
-      isSegmentationTracingVisibleForMag,
-      isZoomInvalidForTracing,
-      isEditableMappingActive,
-      isSegmentationTracingTransformed,
-      isJSONMappingActive,
-      isFlycamRotated,
-      isConcurrentCollabMode,
-      hasSkeleton,
-      agglomerateState,
-      isUneditableMappingLocked,
+const proofreadRule = new DisableRule([AnnotationTool.PROOFREAD], (params) => {
+  const { agglomerateState, isUneditableMappingLocked, activeOrganization, activeUser } = params;
+
+  const isAllowedByPricingPlan = isFeatureAllowedByPricingPlan(
+    activeOrganization,
+    PricingPlanEnum.Power,
+  );
+
+  if (isUneditableMappingLocked) {
+    return "A mapping that does not support proofreading actions is locked to this annotation. Most likely, the annotation layer was modified earlier (e.g. by brushing).";
+  }
+  if (!agglomerateState.value) return agglomerateState.reason;
+  if (!isAllowedByPricingPlan) {
+    return getFeatureNotAvailableInPlanMessage(
+      PricingPlanEnum.Power,
       activeOrganization,
       activeUser,
-    } = params;
-
-    if (isVolumeDisabled) {
-      return getExplanationForDisabledVolume(
-        isSegmentationTracingVisible,
-        isInMergerMode,
-        isSegmentationTracingVisibleForMag,
-        isZoomInvalidForTracing,
-        isEditableMappingActive,
-        isSegmentationTracingTransformed,
-        isJSONMappingActive,
-        isFlycamRotated,
-        isConcurrentCollabMode,
-      );
-    }
-
-    const isProofReadingToolAllowed = isFeatureAllowedByPricingPlan(
-      activeOrganization,
-      PricingPlanEnum.Power,
     );
-    const isDisabled =
-      !hasSkeleton || !agglomerateState.value || !isProofReadingToolAllowed || isUneditableMappingLocked;
-    if (!isDisabled) return null;
+  }
+  return null;
+});
 
-    if (!isUneditableMappingLocked) {
-      if (!agglomerateState.value) return agglomerateState.reason;
-      if (!isProofReadingToolAllowed) {
-        return getFeatureNotAvailableInPlanMessage(PricingPlanEnum.Power, activeOrganization, activeUser);
-      }
-      return noSkeletonsExplanation;
-    }
-    return "A mapping that does not support proofreading actions is locked to this annotation. Most likely, the annotation layer was modified earlier (e.g. by brushing).";
-  },
-);
-
-// Rules for SKELETON. Ordered according to _getSkeletonToolInfo.
 const noSkeletonRule = new DisableRule(
-  [AnnotationTool.SKELETON],
+  [AnnotationTool.SKELETON, AnnotationTool.PROOFREAD],
   ({ hasSkeleton }) => (hasSkeleton ? null : noSkeletonsExplanation),
 );
 
@@ -257,15 +207,14 @@ const skeletonTransformedRule = new DisableRule(
       : null,
 );
 
-const skeletonConcurrentCollabRule = new DisableRule(
-  [AnnotationTool.SKELETON],
-  ({ isConcurrentCollabMode }) =>
+const concurrentCollabModeRule = new DisableRule(
+  [AnnotationTool.SKELETON, ...VolumeTools, AnnotationTool.BOUNDING_BOX],
+  ({ isConcurrentCollabMode }, tool) =>
     isConcurrentCollabMode
-      ? `Skeleton annotation ${TOOL_DISABLED_BECAUSE_OF_LIVE_COLLAB_MODE}`
+      ? `The ${tool.readableName} ${TOOL_DISABLED_BECAUSE_OF_LIVE_COLLAB_MODE}`
       : null,
 );
 
-// Rules for BOUNDING_BOX. Ordered according to _getBoundingBoxToolInfo.
 const boundingBoxRotationRule = new DisableRule(
   [AnnotationTool.BOUNDING_BOX],
   ({ isFlycamRotated }) => (isFlycamRotated ? rotationActiveDisabledExplanation : null),
@@ -281,22 +230,15 @@ const boundingBoxTransformedRule = new DisableRule(
       : null,
 );
 
-const boundingBoxConcurrentCollabRule = new DisableRule(
-  [AnnotationTool.BOUNDING_BOX],
-  ({ isConcurrentCollabMode }) =>
-    isConcurrentCollabMode
-      ? `The bounding box tool ${TOOL_DISABLED_BECAUSE_OF_LIVE_COLLAB_MODE}`
-      : null,
-);
-
-// Rules for AREA_MEASUREMENT. Ordered according to _getAreaMeasurementToolInfo.
 const areaMeasurementRotationRule = new DisableRule(
   [AnnotationTool.AREA_MEASUREMENT],
   ({ isFlycamRotated }) => (isFlycamRotated ? rotationActiveDisabledExplanation : null),
 );
 
 const rules = [
-  // Volume tool rules (VolumeTools = BRUSH, ERASE_BRUSH, TRACE, ERASE_TRACE, FILL_CELL, QUICK_SELECT)
+  // Sorted roughly by descending user-effort to enable a tool.
+  proofreadRule,
+  // Volume tool rules
   noVisibleSegmentationTracingRule,
   rotationVolumeRule,
   zoomInvalidForTracingVolumeRule,
@@ -305,358 +247,44 @@ const rules = [
   editableMappingActiveRule,
   segmentationTransformedRule,
   jsonMappingActiveRule,
-  concurrentCollabVolumeRule,
-  // Per-tool zoom rules (only reached when volume is not globally disabled)
-  brushZoomRule,
-  traceZoomRule,
-  fillZoomRule,
-  proofreadRule,
   // Skeleton rules
   noSkeletonRule,
   skeletonNotVisibleRule,
   skeletonTransformedRule,
-  skeletonConcurrentCollabRule,
+  concurrentCollabModeRule,
   // Bounding box rules
   boundingBoxRotationRule,
   boundingBoxTransformedRule,
-  boundingBoxConcurrentCollabRule,
   // Area measurement rules
   areaMeasurementRotationRule,
+  // Per-tool zoom rules (only reached when volume is not globally disabled)
+  brushZoomRule,
+  traceZoomRule,
+  fillZoomRule,
 ];
 
-function getToolDisabledReason(tool: AnnotationTool, params: Params) {
+function getToolDisabledReason(tool: AnnotationTool, params: Params): DisabledInfo {
   for (const rule of rules) {
     const disabledReason = rule.validate(tool, params);
     if (disabledReason) {
-      return {
-        [tool.id]: {
-          isDisabled: true,
-          explanation: disabledReason,
-        },
-      }
+      return { isDisabled: true, explanation: disabledReason };
     }
   }
-
-  return {
-    [tool.id]: {
-      isDisabled: false,
-      explanation: "",
-    },
-  }
+  return { isDisabled: false, explanation: "" };
 }
 
-const getExplanationForDisabledVolume = (
-  isSegmentationTracingVisible: boolean,
-  isInMergerMode: boolean,
-  isSegmentationTracingVisibleForMag: boolean,
-  isZoomInvalidForTracing: boolean,
-  isEditableMappingActive: boolean,
-  isSegmentationTracingTransformed: boolean,
-  isJSONMappingActive: boolean,
-  isFlycamRotated: boolean,
-  isConcurrentCollabMode: boolean,
-) => {
-  if (!isSegmentationTracingVisible) {
-    return "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable one in the left settings sidebar or make a segmentation layer editable via the lock icon.";
-  }
-
-  if (isFlycamRotated) {
-    return rotationActiveDisabledExplanation;
-  }
-
-  if (isZoomInvalidForTracing) {
-    return "Volume annotation is disabled since the current zoom value is not in the required range. Please adjust the zoom level.";
-  }
-
-  if (isInMergerMode) {
-    return "Volume annotation is disabled while the merger mode is active.";
-  }
-
-  if (!isSegmentationTracingVisibleForMag) {
-    return "Volume annotation is disabled since no segmentation data can be shown at the current magnification. Please adjust the zoom level.";
-  }
-
-  if (isEditableMappingActive) {
-    return "Volume annotation is disabled while an editable mapping is active.";
-  }
-
-  if (isSegmentationTracingTransformed) {
-    return "Volume annotation is disabled because the visible segmentation layer is transformed. Use the left sidebar to render the segmentation layer without any transformations.";
-  }
-  if (isJSONMappingActive) {
-    return "Volume annotation is disabled because a JSON mapping is currently active for the the visible segmentation layer. Disable the JSON mapping to enable volume annotation.";
-  }
-
-  if (isConcurrentCollabMode) {
-    return `Volume annotation ${TOOL_DISABLED_BECAUSE_OF_LIVE_COLLAB_MODE}`;
-  }
-
-  return "Volume annotation is currently disabled.";
-};
-
-const ALWAYS_ENABLED_TOOL_INFOS = {
-  [AnnotationTool.MOVE.id]: NOT_DISABLED_INFO,
-  [AnnotationTool.LINE_MEASUREMENT.id]: NOT_DISABLED_INFO,
-  [AnnotationTool.VOXEL_PIPETTE.id]: NOT_DISABLED_INFO,
-};
-
-function _getAreaMeasurementToolInfo(isFlycamRotated: boolean) {
-  return {
-    [AnnotationTool.AREA_MEASUREMENT.id]: isFlycamRotated
-      ? {
-          isDisabled: true,
-          explanation: rotationActiveDisabledExplanation,
-        }
-      : NOT_DISABLED_INFO,
-  };
-}
-
-const getAreaMeasurementToolInfo = memoizeOne(_getAreaMeasurementToolInfo);
-
-function _getSkeletonToolInfo(
-  hasSkeleton: boolean,
-  isSkeletonLayerTransformed: boolean,
-  areSkeletonsVisible: boolean,
-  isConcurrentCollabMode: boolean,
-) {
-  if (!hasSkeleton) {
-    return {
-      [AnnotationTool.SKELETON.id]: {
-        isDisabled: true,
-        explanation: noSkeletonsExplanation,
-      },
-    };
-  }
-
-  if (!areSkeletonsVisible) {
-    return {
-      [AnnotationTool.SKELETON.id]: {
-        isDisabled: true,
-        explanation: disabledSkeletonExplanation,
-      },
-    };
-  }
-
-  if (isSkeletonLayerTransformed) {
-    return {
-      [AnnotationTool.SKELETON.id]: {
-        isDisabled: true,
-        explanation:
-          "Skeleton annotation is disabled because the skeleton layer is transformed. Use the left sidebar to render the skeleton layer without any transformations.",
-      },
-    };
-  }
-  if (isConcurrentCollabMode) {
-    return {
-      [AnnotationTool.SKELETON.id]: {
-        isDisabled: true,
-        explanation: `Skeleton annotation ${TOOL_DISABLED_BECAUSE_OF_LIVE_COLLAB_MODE}`,
-      },
-    };
-  }
-
-  return {
-    [AnnotationTool.SKELETON.id]: NOT_DISABLED_INFO,
-  };
-}
-const getSkeletonToolInfo = memoizeOne(_getSkeletonToolInfo);
-
-function _getBoundingBoxToolInfo(
-  hasSkeleton: boolean,
-  areGeometriesTransformed: boolean,
-  isFlycamRotated: boolean,
-  isConcurrentCollabMode: boolean,
-) {
-  if (isFlycamRotated) {
-    return {
-      [AnnotationTool.BOUNDING_BOX.id]: {
-        isDisabled: true,
-        explanation: rotationActiveDisabledExplanation,
-      },
-    };
-  }
-  if (areGeometriesTransformed) {
-    return {
-      [AnnotationTool.BOUNDING_BOX.id]: {
-        isDisabled: true,
-        explanation: hasSkeleton
-          ? "The bounding box tool is disabled because the bounding boxes are currently transformed according to the skeleton layer. To use the tool, ensure that the skeleton layer is rendered natively in the left sidebar."
-          : "The bounding box tool is disabled because the bounding boxes are rendered with transforms.",
-      },
-    };
-  }
-
-  if (isConcurrentCollabMode) {
-    return {
-      [AnnotationTool.BOUNDING_BOX.id]: {
-        isDisabled: true,
-        explanation: `The bounding box tool ${TOOL_DISABLED_BECAUSE_OF_LIVE_COLLAB_MODE}`,
-      },
-    };
-  }
-
-  return {
-    [AnnotationTool.BOUNDING_BOX.id]: {
-      isDisabled: false,
-      explanation: "",
-    },
-  };
-}
-
-const getBoundingBoxToolInfo = memoizeOne(_getBoundingBoxToolInfo);
-
-function _getDisabledInfoWhenVolumeIsDisabled(
-  isSegmentationTracingVisible: boolean,
-  isInMergerMode: boolean,
-  isSegmentationTracingVisibleForMag: boolean,
-  isZoomInvalidForTracing: boolean,
-  isEditableMappingActive: boolean,
-  isSegmentationTracingTransformed: boolean,
-  isVolumeDisabled: boolean,
-  isJSONMappingActive: boolean,
-  isFlycamRotated: boolean,
-  isConcurrentCollabMode: boolean,
-) {
-  const genericDisabledExplanation = getExplanationForDisabledVolume(
-    isSegmentationTracingVisible,
-    isInMergerMode,
-    isSegmentationTracingVisibleForMag,
-    isZoomInvalidForTracing,
-    isEditableMappingActive,
-    isSegmentationTracingTransformed,
-    isJSONMappingActive,
-    isFlycamRotated,
-    isConcurrentCollabMode,
-  );
-
-  const disabledInfo = {
-    isDisabled: true,
-    explanation: genericDisabledExplanation,
-  };
-  return {
-    [AnnotationTool.BRUSH.id]: disabledInfo,
-    [AnnotationTool.ERASE_BRUSH.id]: disabledInfo,
-    [AnnotationTool.TRACE.id]: disabledInfo,
-    [AnnotationTool.ERASE_TRACE.id]: disabledInfo,
-    [AnnotationTool.FILL_CELL.id]: disabledInfo,
-    [AnnotationTool.QUICK_SELECT.id]: disabledInfo,
-    [AnnotationTool.PROOFREAD.id]: {
-      isDisabled: isVolumeDisabled,
-      explanation: genericDisabledExplanation,
-    },
-  };
-}
-
-function _getDisabledInfoForProofreadTool(
-  hasSkeleton: boolean,
-  agglomerateState: AgglomerateState,
-  isProofReadingToolAllowed: boolean,
-  isUneditableMappingLocked: boolean,
-  activeOrganization: APIOrganization | null,
-  activeUser: APIUser | null | undefined,
-) {
-  // The explanations are prioritized according to the effort the user has to put into
-  // activating proofreading.
-  // 1) If a non editable mapping is locked to the annotation, proofreading actions are
-  //    not allowed for this annotation.
-  // 2) If no agglomerate mapping is available (or activated), the user should know
-  //    about this requirement and be able to set it up (this can be the most difficult
-  //    step).
-  // 3) If a mapping is available, the pricing plan is potentially warned upon.
-  // 4) In the end, a potentially missing skeleton is warned upon (quite rare, because
-  //    most annotations have a skeleton).
-  const isDisabled =
-    !hasSkeleton ||
-    !agglomerateState.value ||
-    !isProofReadingToolAllowed ||
-    isUneditableMappingLocked;
-  let explanation = "Proofreading actions are not supported after modifying the segmentation.";
-  if (!isUneditableMappingLocked) {
-    if (!agglomerateState.value) {
-      explanation = agglomerateState.reason;
-    } else if (!isProofReadingToolAllowed) {
-      explanation = getFeatureNotAvailableInPlanMessage(
-        PricingPlanEnum.Power,
-        activeOrganization,
-        activeUser,
-      );
-    } else {
-      explanation = noSkeletonsExplanation;
-    }
-  } else {
-    explanation =
-      "A mapping that does not support proofreading actions is locked to this annotation. Most likely, the annotation layer was modified earlier (e.g. by brushing).";
-  }
-  return {
-    isDisabled,
-    explanation,
-  };
-}
-
-const getDisabledInfoWhenVolumeIsDisabled = memoizeOne(_getDisabledInfoWhenVolumeIsDisabled);
-const getDisabledInfoForProofreadTool = memoizeOne(_getDisabledInfoForProofreadTool);
-
-function _getVolumeDisabledWhenVolumeIsEnabled(
-  hasSkeleton: boolean,
-  isZoomStepTooHighForBrushing: boolean,
-  isZoomStepTooHighForTracing: boolean,
-  isZoomStepTooHighForFilling: boolean,
-  isUneditableMappingLocked: boolean,
-  agglomerateState: AgglomerateState,
-  activeOrganization: APIOrganization | null,
-  activeUser: APIUser | null | undefined,
-) {
-  const isProofReadingToolAllowed = isFeatureAllowedByPricingPlan(
-    activeOrganization,
-    PricingPlanEnum.Power,
-  );
-
-  return {
-    [AnnotationTool.BRUSH.id]: {
-      isDisabled: isZoomStepTooHighForBrushing,
-      explanation: zoomInToUseToolMessage,
-    },
-    [AnnotationTool.ERASE_BRUSH.id]: {
-      isDisabled: isZoomStepTooHighForBrushing,
-      explanation: zoomInToUseToolMessage,
-    },
-    [AnnotationTool.ERASE_TRACE.id]: {
-      isDisabled: isZoomStepTooHighForTracing,
-      explanation: zoomInToUseToolMessage,
-    },
-    [AnnotationTool.TRACE.id]: {
-      isDisabled: isZoomStepTooHighForTracing,
-      explanation: zoomInToUseToolMessage,
-    },
-    [AnnotationTool.FILL_CELL.id]: {
-      isDisabled: isZoomStepTooHighForFilling,
-      explanation: zoomInToUseToolMessage,
-    },
-    [AnnotationTool.VOXEL_PIPETTE.id]: NOT_DISABLED_INFO,
-    [AnnotationTool.QUICK_SELECT.id]: {
-      isDisabled: isZoomStepTooHighForFilling,
-      explanation: zoomInToUseToolMessage,
-    },
-    [AnnotationTool.PROOFREAD.id]: getDisabledInfoForProofreadTool(
-      hasSkeleton,
-      agglomerateState,
-      isProofReadingToolAllowed,
-      isUneditableMappingLocked,
-      activeOrganization,
-      activeUser,
-    ),
-  };
-}
-
-function getDisabledVolumeInfo(state: WebknossosState, isConcurrentCollabMode: boolean) {
-  // This function extracts a couple of variables from the state
-  // so that it can delegate to memoized functions.
-  const isInMergerMode = state.temporaryConfiguration.isMergerModeEnabled;
+const _getDisabledInfoForTools = (
+  state: WebknossosState,
+): Record<AnnotationToolId, DisabledInfo> => {
+  const { annotation } = state;
   const { activeMappingByLayer } = state.temporaryConfiguration;
-  const isZoomInvalidForTracing = isMagRestrictionViolated(state);
-  const hasVolume = state.annotation.volumes.length > 0;
+
+  const hasSkeleton = annotation.skeleton != null;
+  const isConcurrentCollabMode = annotation.collaborationMode === "Concurrent";
   const isFlycamRotated = isRotated(state.flycam);
-  const hasSkeleton = state.annotation.skeleton != null;
+  const isInMergerMode = state.temporaryConfiguration.isMergerModeEnabled;
+  const isZoomInvalidForTracing = isMagRestrictionViolated(state);
+
   const segmentationTracingLayer = getActiveSegmentationTracing(state);
   const labeledMag = getRenderableMagForSegmentationTracing(state, segmentationTracingLayer)?.mag;
   const isSegmentationTracingVisibleForMag = labeledMag != null;
@@ -670,87 +298,47 @@ function getDisabledVolumeInfo(state: WebknossosState, isConcurrentCollabMode: b
     segmentationTracingLayer != null &&
     visibleSegmentationLayer != null &&
     visibleSegmentationLayer.name === segmentationTracingLayer.tracingId;
-  const isEditableMappingActive =
-    segmentationTracingLayer != null && !!segmentationTracingLayer.hasEditableMapping;
-
+  const isEditableMappingActive = segmentationTracingLayer?.hasEditableMapping ?? false;
   const isJSONMappingActive =
     segmentationTracingLayer != null &&
     activeMappingByLayer[segmentationTracingLayer.tracingId]?.mappingType === "JSON" &&
     activeMappingByLayer[segmentationTracingLayer.tracingId]?.mappingStatus === "ENABLED";
-
-  const isVolumeDisabled =
-    !hasVolume ||
-    !isSegmentationTracingVisible ||
-    // isSegmentationTracingVisibleForMag is false if isZoomInvalidForTracing is true which is why
-    // this condition doesn't need to be checked here
-    !isSegmentationTracingVisibleForMag ||
-    isInMergerMode ||
-    isJSONMappingActive ||
-    isSegmentationTracingTransformed;
-
   const isUneditableMappingLocked =
     (segmentationTracingLayer?.mappingIsLocked && !segmentationTracingLayer?.hasEditableMapping) ??
-      false;
+    false;
 
-  return isVolumeDisabled || isEditableMappingActive || isFlycamRotated || isConcurrentCollabMode
-    ? // All segmentation-related tools are disabled (except for maybe proofreading).
-      getDisabledInfoWhenVolumeIsDisabled(
-        isSegmentationTracingVisible,
-        isInMergerMode,
-        isSegmentationTracingVisibleForMag,
-        isZoomInvalidForTracing,
-        isEditableMappingActive,
-        isSegmentationTracingTransformed,
-        isVolumeDisabled,
-        isJSONMappingActive,
-        isFlycamRotated,
-        isConcurrentCollabMode,
-      )
-    : // Volume tools are not ALL disabled, but some of them might be.
-      getVolumeDisabledWhenVolumeIsEnabled(
-        hasSkeleton,
-        isVolumeAnnotationDisallowedForZoom(AnnotationTool.BRUSH, state),
-        isVolumeAnnotationDisallowedForZoom(AnnotationTool.TRACE, state),
-        isVolumeAnnotationDisallowedForZoom(AnnotationTool.FILL_CELL, state),
-        isUneditableMappingLocked,
-        hasAgglomerateMapping(state),
-        state.activeOrganization,
-        state.activeUser,
-      );
-}
-
-const getVolumeDisabledWhenVolumeIsEnabled = memoizeOne(_getVolumeDisabledWhenVolumeIsEnabled);
-const _getDisabledInfoForTools = (
-  state: WebknossosState,
-): Record<AnnotationToolId, DisabledInfo> => {
-  const { annotation } = state;
-  const hasSkeleton = annotation.skeleton != null;
-  const isConcurrentCollabMode = annotation.collaborationMode === "Concurrent";
-  const isFlycamRotated = isRotated(state.flycam);
-  const geometriesTransformed = areGeometriesTransformed(state);
-  const areaMeasurementToolInfo = getAreaMeasurementToolInfo(isFlycamRotated);
-  const skeletonToolInfo = getSkeletonToolInfo(
-    hasSkeleton,
-    geometriesTransformed,
-    isSkeletonLayerVisible(annotation),
-    isConcurrentCollabMode,
-  );
-  const boundingBoxInfo = getBoundingBoxToolInfo(
-    hasSkeleton,
-    geometriesTransformed,
+  const params: Params = {
+    isSegmentationTracingVisible,
+    isInMergerMode,
+    isSegmentationTracingVisibleForMag,
+    isZoomInvalidForTracing,
+    isEditableMappingActive,
+    isSegmentationTracingTransformed,
+    isJSONMappingActive,
     isFlycamRotated,
     isConcurrentCollabMode,
-  );
-
-  const disabledVolumeInfo = getDisabledVolumeInfo(state, isConcurrentCollabMode);
-  return {
-    ...ALWAYS_ENABLED_TOOL_INFOS,
-    ...areaMeasurementToolInfo,
-    ...skeletonToolInfo,
-    ...disabledVolumeInfo,
-    ...boundingBoxInfo,
+    hasSkeleton,
+    areSkeletonsVisible: isSkeletonLayerVisible(annotation),
+    areGeometriesTransformed: areGeometriesTransformed(state),
+    isZoomStepTooHighForBrushing: isVolumeAnnotationDisallowedForZoom(AnnotationTool.BRUSH, state),
+    isZoomStepTooHighForTracing: isVolumeAnnotationDisallowedForZoom(AnnotationTool.TRACE, state),
+    isZoomStepTooHighForFilling: isVolumeAnnotationDisallowedForZoom(
+      AnnotationTool.FILL_CELL,
+      state,
+    ),
+    agglomerateState: hasAgglomerateMapping(state),
+    isUneditableMappingLocked,
+    activeOrganization: state.activeOrganization,
+    activeUser: state.activeUser,
   };
+
+  const result = {} as Record<AnnotationToolId, DisabledInfo>;
+  for (const tool of Toolkits.ALL_TOOLS) {
+    result[tool.id] = getToolDisabledReason(tool, params);
+  }
+  return result;
 };
+
 export const getDisabledInfoForTools = reuseInstanceOnEquality(
   memoizeOne(_getDisabledInfoForTools),
 );

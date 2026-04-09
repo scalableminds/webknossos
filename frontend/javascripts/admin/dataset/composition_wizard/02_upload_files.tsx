@@ -188,7 +188,7 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
 
   const areDatasetNamesKnown = datasetDirectoryName1 != null && datasetDirectoryName2 != null;
   const areDatasetIdsKnown = datasetId1 != null && datasetId2 != null;
-  if (!areDatasetNamesKnown || !areDatasetIdsKnown) {
+  if (!areDatasetNamesKnown && !areDatasetIdsKnown) {
     throw new SoftError("Could not extract dataset names.");
   }
 

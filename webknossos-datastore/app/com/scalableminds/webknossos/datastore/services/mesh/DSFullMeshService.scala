@@ -129,7 +129,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       targetMagPositions = segmentIndexFileService.topLeftsToDistinctTargetMagBucketPositions(topLefts, mag)
       // Dispatch chunks to the actor pool keeping actorPoolSize requests in flight at a time.
       vertexChunksWithNeighbors: List[(Array[Float], List[Int])] <- Fox.batchCombined(
-        targetMagPositions,
+        targetMagPositions.toIndexedSeq,
         config.Datastore.AdHocMesh.actorPoolSize) { targetMagPosition =>
         val adHocMeshRequest = AdHocMeshRequest(
           Some(datasetId),

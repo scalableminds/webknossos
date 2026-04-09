@@ -130,14 +130,15 @@ class DSLegacyApiController @Inject()(
       for {
         result <- uploadController.finishUpload(UploadDomain.dataset.toString, request.body.uploadId)(
           request.withBody(play.api.mvc.AnyContentAsEmpty))
-      } yield if (result.header.status == OK) {
-        result.body match {
-          case play.api.http.HttpEntity.Strict(data, _) =>
-            val json = Json.parse(data.toArray).as[JsObject]
-            Ok((json - "datasetId") ++ Json.obj("newDatasetId" -> (json \ "datasetId").get))
-          case _ => result
-        }
-      } else result
+      } yield
+        if (result.header.status == OK) {
+          result.body match {
+            case play.api.http.HttpEntity.Strict(data, _) =>
+              val json = Json.parse(data.toArray).as[JsObject]
+              Ok((json - "datasetId") ++ Json.obj("newDatasetId" -> (json \ "datasetId").get))
+            case _ => result
+          }
+        } else result
   }
 
   def reserveDatasetUploadV13(): Action[ReserveUploadInformationV13] =

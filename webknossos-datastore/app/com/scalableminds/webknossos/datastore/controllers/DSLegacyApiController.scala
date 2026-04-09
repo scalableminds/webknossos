@@ -192,8 +192,8 @@ class DSLegacyApiController @Inject()(
             initialTeamIds = request.body.initialTeams,
             folderId = request.body.folderId,
             requireUniqueName = request.body.requireUniqueName,
-            isVirtual = None,
-            needsConversion = None
+            isVirtual = request.body.isVirtual,
+            needsConversion = request.body.needsConversion
           )
           result <- Fox.fromFuture(uploadController.reserveDatasetUpload()(request.withBody(adaptedRequestBody)))
         } yield result

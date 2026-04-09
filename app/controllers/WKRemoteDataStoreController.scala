@@ -11,6 +11,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSource,
   DataSourceId,
   DataSourceStatus,
+  LayerAttachmentType,
   UnusableDataSource
 }
 import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataStoreStatus}
@@ -133,9 +134,11 @@ class WKRemoteDataStoreController @Inject()(
           dataset <- datasetDAO.findOne(request.body.datasetId)(AuthorizedAccessContext(user))
           _ <- Fox.fromBool(dataset.isVirtual) ?~> "dataset.reserveAttachmentUpload.notVirtual"
           (dataSource, dataLayer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.layerName)
+          isSingletonAttachment = LayerAttachmentType.isSingletonAttachment(request.body.attachmentType)
+          existsError = if (isSingletonAttachment) "attachment.singleton.alreadyFilled" else "attachment.name.taken"
           existingAttachmentOpt = dataLayer.attachments.flatMap(
-            _.getByTypeAndName(request.body.attachmentType, request.body.attachment.name))
-          _ <- Fox.fromBool(existingAttachmentOpt.isEmpty) ?~> s"Layer already has ${request.body.attachmentType} attachment named ${request.body.attachment.name}"
+            _.getByTypeAndNameAlwaysReturnSingletons(request.body.attachmentType, request.body.attachment.name))
+          _ <- Fox.fromBool(existingAttachmentOpt.isEmpty) ?~> existsError
           _ <- Fox.fromBool(dataset._dataStore == dataStore.name) ?~> "Cannot upload attachment to existing dataset via different datastore."
           dummyAttachmentPath <- UPath.fromString("<pending upload>").toFox
           _ <- uploadToPathsService.handleExistingPendingAttachment(dataset,
@@ -229,6 +232,7 @@ class WKRemoteDataStoreController @Inject()(
           _ <- datasetMagDAO.finishUpload(request.body.datasetId, request.body.layerName, request.body.mag)
           dataStoreClient <- datasetService.clientFor(dataset)(GlobalAccessContext)
           _ <- dataStoreClient.invalidateDatasetInDSCache(dataset._id)
+          _ <- usedStorageService.refreshStorageReportForDataset(dataset)
         } yield Ok
       }
     }
@@ -251,6 +255,7 @@ class WKRemoteDataStoreController @Inject()(
                                                  request.body.attachment)
           dataStoreClient <- datasetService.clientFor(dataset)(GlobalAccessContext)
           _ <- dataStoreClient.invalidateDatasetInDSCache(dataset._id)
+          _ <- usedStorageService.refreshStorageReportForDataset(dataset)
         } yield Ok
       }
     }

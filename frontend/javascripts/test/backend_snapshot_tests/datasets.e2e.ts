@@ -195,7 +195,7 @@ describe("Dataset API (E2E)", () => {
       }),
       body: JSON.stringify({
         resumableUploadInfo: {
-          filePaths: ["test-dataset-upload.zip"],
+          filePaths: ["test-dataset.zip"],
           totalFileCount: 1,
           uploadId: uploadId,
         },

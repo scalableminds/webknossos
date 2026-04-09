@@ -54,11 +54,20 @@ case class DataLayerAttachments(
 
   def getByTypeAndName(attachmentType: LayerAttachmentType, name: String): Option[LayerAttachment] =
     attachmentType match {
-      case LayerAttachmentType.mesh         => meshes.find(_.name == name)
-      case LayerAttachmentType.agglomerate  => agglomerates.find(_.name == name)
+      case LayerAttachmentType.mesh => meshes.find(_.name == name)
+      case LayerAttachmentType.agglomerate => agglomerates.find(_.name == name)
       case LayerAttachmentType.segmentIndex => segmentIndex.find(_.name == name)
-      case LayerAttachmentType.connectome   => connectomes.find(_.name == name)
-      case LayerAttachmentType.cumsum       => cumsum.find(_.name == name)
+      case LayerAttachmentType.connectome => connectomes.find(_.name == name)
+      case LayerAttachmentType.cumsum => cumsum.find(_.name == name)
+    }
+
+  def getByTypeAndNameAlwaysReturnSingletons(attachmentType: LayerAttachmentType, name: String): Option[LayerAttachment] =
+    attachmentType match {
+      case LayerAttachmentType.mesh => meshes.find(_.name == name)
+      case LayerAttachmentType.agglomerate => agglomerates.find(_.name == name)
+      case LayerAttachmentType.segmentIndex => segmentIndex
+      case LayerAttachmentType.connectome => connectomes.find(_.name == name)
+      case LayerAttachmentType.cumsum => cumsum
     }
 
   def mapped(attachmentMapping: LayerAttachment => LayerAttachment): DataLayerAttachments =

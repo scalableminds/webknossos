@@ -418,7 +418,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                                                        datasetId,
                                                        dataSourceId,
                                                        s"${mag.mag.toMagLiteral(true)}__${ObjectId.generate}",
-                                                       UploadDomain.attachment)
+                                                       UploadDomain.mag)
       magAdapted = mag.copy(path = Some(finalPath))
       _ <- remoteWebknossosClient.reportMagUpload(
         ReportMagUploadParameters(datasetId, layerName, magAdapted, magSizeBytes))

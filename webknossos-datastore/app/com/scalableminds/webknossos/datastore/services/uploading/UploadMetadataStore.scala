@@ -196,6 +196,14 @@ class MagUploadMetadataStore @Inject()(protected val store: DataStoreRedisStore)
 
   def findLayerName(uploadId: String): Fox[String] =
     store.find(redisKeyForLayerName(uploadId))
+
+  override def cleanUp(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      dataSourceId <- findDataSourceId(uploadId)
+      _ <- store.remove(redisKeyForMag(uploadId))
+      _ <- store.remove(redisKeyForLayerName(uploadId))
+      _ <- super.cleanUp(uploadId)
+    } yield ()
 }
 
 class AttachmentUploadMetadataStore @Inject()(protected val store: DataStoreRedisStore) extends UploadMetadataStore {
@@ -227,4 +235,13 @@ class AttachmentUploadMetadataStore @Inject()(protected val store: DataStoreRedi
 
   def findLayerName(uploadId: String): Fox[String] =
     store.find(redisKeyForLayerName(uploadId))
+
+  override def cleanUp(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      dataSourceId <- findDataSourceId(uploadId)
+      _ <- store.remove(findAttachmentType(uploadId))
+      _ <- store.remove(findAttachment(uploadId))
+      _ <- store.remove(redisKeyForLayerName(uploadId))
+      _ <- super.cleanUp(uploadId)
+    } yield ()
 }

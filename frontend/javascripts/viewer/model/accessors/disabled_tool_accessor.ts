@@ -56,6 +56,17 @@ type Params = {
   isJSONMappingActive: boolean;
   isFlycamRotated: boolean;
   isConcurrentCollabMode: boolean;
+  isVolumeDisabled: boolean;
+  hasSkeleton: boolean;
+  areSkeletonsVisible: boolean;
+  areGeometriesTransformed: boolean;
+  isZoomStepTooHighForBrushing: boolean;
+  isZoomStepTooHighForTracing: boolean;
+  isZoomStepTooHighForFilling: boolean;
+  agglomerateState: AgglomerateState;
+  isUneditableMappingLocked: boolean;
+  activeOrganization: APIOrganization | null;
+  activeUser: APIUser | null | undefined;
 };
 
 class DisableRule {
@@ -78,6 +89,8 @@ class DisableRule {
   }
 }
 
+// Rules for VolumeTools (BRUSH, ERASE_BRUSH, TRACE, ERASE_TRACE, FILL_CELL, QUICK_SELECT).
+// Ordered according to getExplanationForDisabledVolume.
 const noVisibleSegmentationTracingRule = new DisableRule(
   VolumeTools,
   ({ isSegmentationTracingVisible }) =>
@@ -86,7 +99,230 @@ const noVisibleSegmentationTracingRule = new DisableRule(
       : "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable one in the left settings sidebar or make a segmentation layer editable via the lock icon.",
 );
 
-const rules = [noVisibleSegmentationTracingRule];
+const rotationVolumeRule = new DisableRule(
+  VolumeTools,
+  ({ isFlycamRotated }) => (isFlycamRotated ? rotationActiveDisabledExplanation : null),
+);
+
+const zoomInvalidForTracingVolumeRule = new DisableRule(
+  VolumeTools,
+  ({ isZoomInvalidForTracing }) =>
+    isZoomInvalidForTracing
+      ? "Volume annotation is disabled since the current zoom value is not in the required range. Please adjust the zoom level."
+      : null,
+);
+
+const mergerModeVolumeRule = new DisableRule(
+  VolumeTools,
+  ({ isInMergerMode }) =>
+    isInMergerMode ? "Volume annotation is disabled while the merger mode is active." : null,
+);
+
+const noSegmentationForMagRule = new DisableRule(
+  VolumeTools,
+  ({ isSegmentationTracingVisibleForMag }) =>
+    isSegmentationTracingVisibleForMag
+      ? null
+      : "Volume annotation is disabled since no segmentation data can be shown at the current magnification. Please adjust the zoom level.",
+);
+
+const editableMappingActiveRule = new DisableRule(
+  VolumeTools,
+  ({ isEditableMappingActive }) =>
+    isEditableMappingActive
+      ? "Volume annotation is disabled while an editable mapping is active."
+      : null,
+);
+
+const segmentationTransformedRule = new DisableRule(
+  VolumeTools,
+  ({ isSegmentationTracingTransformed }) =>
+    isSegmentationTracingTransformed
+      ? "Volume annotation is disabled because the visible segmentation layer is transformed. Use the left sidebar to render the segmentation layer without any transformations."
+      : null,
+);
+
+const jsonMappingActiveRule = new DisableRule(
+  VolumeTools,
+  ({ isJSONMappingActive }) =>
+    isJSONMappingActive
+      ? "Volume annotation is disabled because a JSON mapping is currently active for the the visible segmentation layer. Disable the JSON mapping to enable volume annotation."
+      : null,
+);
+
+const concurrentCollabVolumeRule = new DisableRule(
+  VolumeTools,
+  ({ isConcurrentCollabMode }) =>
+    isConcurrentCollabMode
+      ? `Volume annotation ${TOOL_DISABLED_BECAUSE_OF_LIVE_COLLAB_MODE}`
+      : null,
+);
+
+// Zoom-based rules that only apply per individual tool type when volume is not globally disabled.
+// Ordered according to _getVolumeDisabledWhenVolumeIsEnabled.
+const brushZoomRule = new DisableRule(
+  [AnnotationTool.BRUSH, AnnotationTool.ERASE_BRUSH],
+  ({ isZoomStepTooHighForBrushing }) =>
+    isZoomStepTooHighForBrushing ? zoomInToUseToolMessage : null,
+);
+
+const traceZoomRule = new DisableRule(
+  [AnnotationTool.TRACE, AnnotationTool.ERASE_TRACE],
+  ({ isZoomStepTooHighForTracing }) =>
+    isZoomStepTooHighForTracing ? zoomInToUseToolMessage : null,
+);
+
+const fillZoomRule = new DisableRule(
+  [AnnotationTool.FILL_CELL, AnnotationTool.QUICK_SELECT],
+  ({ isZoomStepTooHighForFilling }) =>
+    isZoomStepTooHighForFilling ? zoomInToUseToolMessage : null,
+);
+
+// PROOFREAD is not in VolumeTools, so it needs its own rule. It covers two cases:
+// 1. Volume is globally disabled (isVolumeDisabled) — uses the same explanation ordering as
+//    getExplanationForDisabledVolume, but only actually disables the tool when isVolumeDisabled
+//    is true (not when it's only rotation/editableMapping/concurrentCollab).
+// 2. Volume is enabled — checks proofreading-specific requirements (agglomerate, pricing, skeleton).
+// Ordered according to _getDisabledInfoWhenVolumeIsDisabled and _getDisabledInfoForProofreadTool.
+const proofreadRule = new DisableRule(
+  [AnnotationTool.PROOFREAD],
+  (params) => {
+    const {
+      isVolumeDisabled,
+      isSegmentationTracingVisible,
+      isInMergerMode,
+      isSegmentationTracingVisibleForMag,
+      isZoomInvalidForTracing,
+      isEditableMappingActive,
+      isSegmentationTracingTransformed,
+      isJSONMappingActive,
+      isFlycamRotated,
+      isConcurrentCollabMode,
+      hasSkeleton,
+      agglomerateState,
+      isUneditableMappingLocked,
+      activeOrganization,
+      activeUser,
+    } = params;
+
+    if (isVolumeDisabled) {
+      return getExplanationForDisabledVolume(
+        isSegmentationTracingVisible,
+        isInMergerMode,
+        isSegmentationTracingVisibleForMag,
+        isZoomInvalidForTracing,
+        isEditableMappingActive,
+        isSegmentationTracingTransformed,
+        isJSONMappingActive,
+        isFlycamRotated,
+        isConcurrentCollabMode,
+      );
+    }
+
+    const isProofReadingToolAllowed = isFeatureAllowedByPricingPlan(
+      activeOrganization,
+      PricingPlanEnum.Power,
+    );
+    const isDisabled =
+      !hasSkeleton || !agglomerateState.value || !isProofReadingToolAllowed || isUneditableMappingLocked;
+    if (!isDisabled) return null;
+
+    if (!isUneditableMappingLocked) {
+      if (!agglomerateState.value) return agglomerateState.reason;
+      if (!isProofReadingToolAllowed) {
+        return getFeatureNotAvailableInPlanMessage(PricingPlanEnum.Power, activeOrganization, activeUser);
+      }
+      return noSkeletonsExplanation;
+    }
+    return "A mapping that does not support proofreading actions is locked to this annotation. Most likely, the annotation layer was modified earlier (e.g. by brushing).";
+  },
+);
+
+// Rules for SKELETON. Ordered according to _getSkeletonToolInfo.
+const noSkeletonRule = new DisableRule(
+  [AnnotationTool.SKELETON],
+  ({ hasSkeleton }) => (hasSkeleton ? null : noSkeletonsExplanation),
+);
+
+const skeletonNotVisibleRule = new DisableRule(
+  [AnnotationTool.SKELETON],
+  ({ areSkeletonsVisible }) => (areSkeletonsVisible ? null : disabledSkeletonExplanation),
+);
+
+const skeletonTransformedRule = new DisableRule(
+  [AnnotationTool.SKELETON],
+  ({ areGeometriesTransformed }) =>
+    areGeometriesTransformed
+      ? "Skeleton annotation is disabled because the skeleton layer is transformed. Use the left sidebar to render the skeleton layer without any transformations."
+      : null,
+);
+
+const skeletonConcurrentCollabRule = new DisableRule(
+  [AnnotationTool.SKELETON],
+  ({ isConcurrentCollabMode }) =>
+    isConcurrentCollabMode
+      ? `Skeleton annotation ${TOOL_DISABLED_BECAUSE_OF_LIVE_COLLAB_MODE}`
+      : null,
+);
+
+// Rules for BOUNDING_BOX. Ordered according to _getBoundingBoxToolInfo.
+const boundingBoxRotationRule = new DisableRule(
+  [AnnotationTool.BOUNDING_BOX],
+  ({ isFlycamRotated }) => (isFlycamRotated ? rotationActiveDisabledExplanation : null),
+);
+
+const boundingBoxTransformedRule = new DisableRule(
+  [AnnotationTool.BOUNDING_BOX],
+  ({ areGeometriesTransformed, hasSkeleton }) =>
+    areGeometriesTransformed
+      ? hasSkeleton
+        ? "The bounding box tool is disabled because the bounding boxes are currently transformed according to the skeleton layer. To use the tool, ensure that the skeleton layer is rendered natively in the left sidebar."
+        : "The bounding box tool is disabled because the bounding boxes are rendered with transforms."
+      : null,
+);
+
+const boundingBoxConcurrentCollabRule = new DisableRule(
+  [AnnotationTool.BOUNDING_BOX],
+  ({ isConcurrentCollabMode }) =>
+    isConcurrentCollabMode
+      ? `The bounding box tool ${TOOL_DISABLED_BECAUSE_OF_LIVE_COLLAB_MODE}`
+      : null,
+);
+
+// Rules for AREA_MEASUREMENT. Ordered according to _getAreaMeasurementToolInfo.
+const areaMeasurementRotationRule = new DisableRule(
+  [AnnotationTool.AREA_MEASUREMENT],
+  ({ isFlycamRotated }) => (isFlycamRotated ? rotationActiveDisabledExplanation : null),
+);
+
+const rules = [
+  // Volume tool rules (VolumeTools = BRUSH, ERASE_BRUSH, TRACE, ERASE_TRACE, FILL_CELL, QUICK_SELECT)
+  noVisibleSegmentationTracingRule,
+  rotationVolumeRule,
+  zoomInvalidForTracingVolumeRule,
+  mergerModeVolumeRule,
+  noSegmentationForMagRule,
+  editableMappingActiveRule,
+  segmentationTransformedRule,
+  jsonMappingActiveRule,
+  concurrentCollabVolumeRule,
+  // Per-tool zoom rules (only reached when volume is not globally disabled)
+  brushZoomRule,
+  traceZoomRule,
+  fillZoomRule,
+  proofreadRule,
+  // Skeleton rules
+  noSkeletonRule,
+  skeletonNotVisibleRule,
+  skeletonTransformedRule,
+  skeletonConcurrentCollabRule,
+  // Bounding box rules
+  boundingBoxRotationRule,
+  boundingBoxTransformedRule,
+  boundingBoxConcurrentCollabRule,
+  // Area measurement rules
+  areaMeasurementRotationRule,
+];
 
 function getToolDisabledReason(tool: AnnotationTool, params: Params) {
   for (const rule of rules) {
@@ -454,7 +690,7 @@ function getDisabledVolumeInfo(state: WebknossosState, isConcurrentCollabMode: b
 
   const isUneditableMappingLocked =
     (segmentationTracingLayer?.mappingIsLocked && !segmentationTracingLayer?.hasEditableMapping) ??
-    false;
+      false;
 
   return isVolumeDisabled || isEditableMappingActive || isFlycamRotated || isConcurrentCollabMode
     ? // All segmentation-related tools are disabled (except for maybe proofreading).

@@ -97,7 +97,7 @@ describe("Proofreading (Multi User)", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    backendMock.planVersionInjection(5, [
+    backendMock.planVersionInjection(7, [
       {
         name: "updateSegmentPartial",
         value: {
@@ -208,7 +208,7 @@ describe("Proofreading (Multi User)", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    backendMock.planVersionInjection(5, [
+    backendMock.planVersionInjection(7, [
       {
         name: "updateSegmentPartial",
         value: {
@@ -361,7 +361,7 @@ describe("Proofreading (Multi User)", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    backendMock.planVersionInjection(5, [
+    backendMock.planVersionInjection(7, [
       {
         name: "createSegment",
         value: {
@@ -679,7 +679,7 @@ describe("Proofreading (Multi User)", () => {
      */
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    backendMock.planVersionInjection(5, [
+    backendMock.planVersionInjection(7, [
       {
         name: "splitAgglomerate",
         value: {
@@ -768,7 +768,7 @@ describe("Proofreading (Multi User)", () => {
      *  [ 1337, 1337 ]
      *  [ 1338, 1337 ]]
      */
-    backendMock.planVersionInjection(5, [
+    backendMock.planVersionInjection(7, [
       {
         name: "mergeAgglomerate",
         value: {
@@ -780,7 +780,7 @@ describe("Proofreading (Multi User)", () => {
         },
       },
     ]);
-    backendMock.planVersionInjection(6, [
+    backendMock.planVersionInjection(8, [
       {
         name: "mergeSegmentItems",
         value: {
@@ -900,7 +900,7 @@ describe("Proofreading (Multi User)", () => {
      *  [ 1337, 1339 ],
      *  [ 1338, 1339 ]]
      */
-    backendMock.planVersionInjection(5, [
+    backendMock.planVersionInjection(7, [
       {
         name: "splitAgglomerate",
         value: {
@@ -923,7 +923,7 @@ describe("Proofreading (Multi User)", () => {
      *  [ 1337, 1339 ],
      *  [ 1338, 1339 ]]
      */
-    backendMock.planVersionInjection(6, [
+    backendMock.planVersionInjection(8, [
       {
         name: "mergeAgglomerate",
         value: {
@@ -1152,7 +1152,7 @@ describe("Proofreading (Multi User)", () => {
     const { api, mocks } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
 
-    backendMock.planVersionInjection(5, [
+    backendMock.planVersionInjection(7, [
       {
         name: "mergeAgglomerate",
         value: {
@@ -1164,7 +1164,7 @@ describe("Proofreading (Multi User)", () => {
         },
       },
     ]);
-    backendMock.planVersionInjection(6, [
+    backendMock.planVersionInjection(8, [
       {
         name: "mergeSegmentItems",
         value: {
@@ -1283,7 +1283,7 @@ describe("Proofreading (Multi User)", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
 
-    backendMock.planVersionInjection(5, [
+    backendMock.planVersionInjection(7, [
       {
         name: "mergeAgglomerate",
         value: {
@@ -1295,7 +1295,7 @@ describe("Proofreading (Multi User)", () => {
         },
       },
     ]);
-    backendMock.planVersionInjection(6, [
+    backendMock.planVersionInjection(8, [
       {
         name: "mergeSegmentItems",
         value: {
@@ -1393,7 +1393,7 @@ describe("Proofreading (Multi User)", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
 
-    backendMock.planVersionInjection(5, [
+    backendMock.planVersionInjection(7, [
       {
         name: "mergeAgglomerate",
         value: {
@@ -1405,7 +1405,7 @@ describe("Proofreading (Multi User)", () => {
         },
       },
     ]);
-    backendMock.planVersionInjection(6, [
+    backendMock.planVersionInjection(8, [
       {
         name: "mergeSegmentItems",
         value: {

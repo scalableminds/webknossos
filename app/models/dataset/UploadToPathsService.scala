@@ -300,7 +300,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
       implicit ec: ExecutionContext): Fox[Unit] =
     for {
       withPendingUploadToPathsBox <- datasetMagDAO.findOneWithPendingUploadToPath(dataset._id, layerName, mag).shiftBox
-      withPendingUploadBox <- datasetMagDAO.findOneWithPendingUploadToPath(dataset._id, layerName, mag).shiftBox
+      withPendingUploadBox <- datasetMagDAO.findOneWithPendingUpload(dataset._id, layerName, mag).shiftBox
       _ <- if (overwritePending) {
         for {
           _ <- Fox.runOptional(withPendingUploadToPathsBox.toOption) { oldPending =>

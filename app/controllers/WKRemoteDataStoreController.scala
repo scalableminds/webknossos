@@ -131,12 +131,12 @@ class WKRemoteDataStoreController @Inject()(
         for {
           user <- bearerTokenService.userForToken(token)
           dataset <- datasetDAO.findOne(request.body.datasetId)(AuthorizedAccessContext(user))
-          _ <- Fox.fromBool(dataset.isVirtual) ?~> "dataset.reserveMagUpload.notVirtual"
+          _ <- Fox.fromBool(dataset.isVirtual) ?~> "dataset.reserveAttachmentUpload.notVirtual"
           (dataSource, dataLayer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.layerName)
           existingAttachmentOpt = dataLayer.attachments.flatMap(
             _.getByTypeAndName(request.body.attachmentType, request.body.attachment.name))
           _ <- Fox.fromBool(existingAttachmentOpt.isEmpty) ?~> s"Layer already has ${request.body.attachmentType} attachment named ${request.body.attachment.name}"
-          _ <- Fox.fromBool(dataset._dataStore == dataStore.name) ?~> "Cannot upload mag to existing dataset via different datastore."
+          _ <- Fox.fromBool(dataset._dataStore == dataStore.name) ?~> "Cannot upload attachment to existing dataset via different datastore."
           dummyAttachmentPath <- UPath.fromString("<pending upload>").toFox
           _ <- uploadToPathsService.handleExistingPendingAttachment(dataset,
                                                                     request.body.layerName,

@@ -4,7 +4,7 @@
 # Note: keep this in sync with the reported version numbers in the com.scalableminds.util.mvc.ApiVersioning trait
 
 # version log
- # chnaged in v14: Dataset upload routes and parameters have been refactored, introduced upload domain
+ # changed in v14: Dataset upload routes and parameters have been refactored, introduced upload domain
  # changed in v13: Attachments not mentioned in the dataSource passed to updatePartial will now be deleted.
  # changed in v12: Dataset upload now expects layersToLink in new format with datasetId instead of orgaId+directoryName
  # changed in v11: Datasets reserveManualUpload flow via WK side. Note: older versions of the route are *not* supported for security reasons.

@@ -167,8 +167,11 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
         segmentIndexFileService.readSegmentIndex(segmentIndexFileKey, sId))
       topLefts: Array[Vec3Int] = topLeftsNested.toArray.flatten
       targetMagPositions = segmentIndexFileService.topLeftsToDistinctTargetMagBucketPositions(topLefts, mag)
-      vertexChunksWithNeighbors: List[(Array[Float], List[Int])] <- Fox.serialCombined(targetMagPositions) {
-        targetMagPosition =>
+      // Dispatch chunks to the actor pool in batches sized to the pool, so all actors stay
+      // busy without queuing more in-flight data than the pool can process concurrently.
+      vertexChunksWithNeighbors: List[(Array[Float], List[Int])] <- Fox.serialCombined(
+          targetMagPositions.grouped(config.Datastore.AdHocMesh.actorPoolSize).toList) { batch =>
+        Fox.combined(batch.toSeq.map { targetMagPosition =>
           val adHocMeshRequest = AdHocMeshRequest(
             Some(datasetId),
             Some(dataSource.id),
@@ -193,7 +196,8 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
             findNeighbors = false,
           )
           adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
-      }
+        })
+      }.map(_.flatten)
       allVertices = vertexChunksWithNeighbors.map(_._1)
     } yield allVertices
 

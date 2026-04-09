@@ -46,7 +46,6 @@ object ResumableUploadInfo {
   implicit val jsonFormat: OFormat[ResumableUploadInfo] = Json.format[ResumableUploadInfo]
 }
 
-// TODO build from legacy param set for LegacyApiController
 case class DatasetUploadInfo(
     resumableUploadInfo: ResumableUploadInfo,
     datasetName: String,
@@ -245,8 +244,10 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         unfinishedUploadsWithoutIds.map(
           unfinishedUpload => {
             for {
-              uploadIdOpt <- datasetUploadMetadataStore.findUploadIdByDataSourceId(unfinishedUpload.dataSourceId)
-              updatedUploadOpt = uploadIdOpt.map(uploadId => unfinishedUpload.copy(uploadId = uploadId))
+              uploadIdBox <- datasetUploadMetadataStore
+                .findUploadIdByDataSourceId(unfinishedUpload.dataSourceId)
+                .shiftBox
+              updatedUploadOpt = uploadIdBox.toOption.map(uploadId => unfinishedUpload.copy(uploadId = uploadId))
               updatedUploadWithFilePathsOpt <- Fox.runOptional(updatedUploadOpt)(updatedUpload =>
                 for {
                   filePaths <- datasetUploadMetadataStore.findFilePaths(updatedUpload.uploadId)
@@ -451,8 +452,10 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                                            uploadDomain: UploadDomain): Fox[Unit] = {
     val uploadMetadataStore = selectUploadMetadataStore(uploadDomain)
     for {
-      totalFileSizeInBytesOpt <- uploadMetadataStore.findTotalFileSizeInBytes(uploadId) ?~> "Could not look up reserved total file size"
-      _ <- totalFileSizeInBytesOpt.map { reservedFileSize =>
+      totalFileSizeInBytesBox <- uploadMetadataStore
+        .findTotalFileSizeInBytes(uploadId)
+        .shiftBox ?~> "Could not look up reserved total file size"
+      _ <- totalFileSizeInBytesBox.map { reservedFileSize =>
         for {
           actualFileSize <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(uploadDir.toFile).longValue).toFox ?~> "Could not measure actual file size"
           _ <- if (actualFileSize > reservedFileSize) {
@@ -700,14 +703,12 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def checkAllChunksUploaded(uploadId: String, uploadDomain: UploadDomain): Fox[Unit] = {
     val uploadMetadataStore = selectUploadMetadataStore(uploadDomain)
     for {
-      fileCountOpt <- uploadMetadataStore.findFileCount(uploadId) ?~> "Could not look up reserved file count."
-      fileCount <- fileCountOpt.toFox ?~> "Could not look up reserved file count."
+      fileCount <- uploadMetadataStore.findFileCount(uploadId) ?~> "Could not look up reserved file count."
       fileNames <- uploadMetadataStore.findFileNames(uploadId) ?~> "Could not look up reserved file names."
       _ <- Fox.fromBool(fileCount == fileNames.size) ?~> "Reserved file count does not match file names length."
       _ <- Fox.serialCombined(fileNames) { fileName =>
         for {
-          chunkCountOpt <- uploadMetadataStore.findFileChunkCount(uploadId, fileName) ?~> "Could not look up file chunk count."
-          chunkCount <- chunkCountOpt.toFox
+          chunkCount <- uploadMetadataStore.findFileChunkCount(uploadId, fileName) ?~> "Could not look up file chunk count."
           chunkSet <- uploadMetadataStore.findFileChunkSet(uploadId, fileName) ?~> "Could not look up file chunk set."
           _ <- Fox.fromBool(chunkCount == chunkSet.size) ?~> s"Chunks missing for uploaded file $fileName: expected $chunkCount, got ${chunkSet.size}."
         } yield ()

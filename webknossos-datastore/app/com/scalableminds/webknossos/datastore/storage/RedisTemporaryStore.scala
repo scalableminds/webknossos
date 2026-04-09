@@ -15,11 +15,11 @@ trait RedisTemporaryStore extends LazyLogging with FoxImplicits {
   lazy val authority: String = f"$address:$port"
   private lazy val r = new RedisClientPool(address, port)
 
-  def find(id: String): Fox[Option[String]] =
-    withExceptionHandler(_.get(id))
+  def find(id: String): Fox[String] =
+    withExceptionHandler(_.get(id)).map(_.toFox).flatten
 
-  def findLong(id: String): Fox[Option[Long]] =
-    withExceptionHandler(_.get(id).map(s => s.toLong))
+  def findLong(id: String): Fox[Long] =
+    withExceptionHandler(_.get(id).map(s => s.toLong)).map(_.toFox).flatten
 
   def removeAllConditional(pattern: String): Fox[Unit] =
     withExceptionHandler { client =>
@@ -84,8 +84,7 @@ trait RedisTemporaryStore extends LazyLogging with FoxImplicits {
 
   def findParsed[T: Reads](key: String)(implicit ec: ExecutionContext): Fox[T] =
     for {
-      objectStringOption <- find(key)
-      objectString <- objectStringOption.toFox
+      objectString <- find(key)
       parsed <- JsonHelper.parseAs[T](objectString).toFox
     } yield parsed
 

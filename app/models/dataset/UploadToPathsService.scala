@@ -252,6 +252,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
       mp: MessagesProvider): Fox[UPath] =
     for {
       _ <- datasetService.usableDataSourceFor(dataset)
+      // TODO overwrite pending functionality here too?
       isSingletonAttachment = LayerAttachmentType.isSingletonAttachment(parameters.attachmentType)
       existingAttachmentsCount <- datasetLayerAttachmentsDAO.countAttachmentsIncludingPending(
         dataset._id,

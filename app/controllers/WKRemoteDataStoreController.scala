@@ -110,6 +110,7 @@ class WKRemoteDataStoreController @Inject()(
           (dataSource, dataLayer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.layerName)
           _ <- Fox.fromBool(!dataLayer.mags.exists(_.mag.maxDim == request.body.mag.mag.maxDim)) ?~> s"New mag ${request.body.mag.mag} conflicts with existing mag of the layer."
           _ <- Fox.fromBool(dataset._dataStore == dataStore.name) ?~> "Cannot upload mag to existing dataset via different datastore."
+          // TODO if pending exists, and overwritePending is set, remove it and delete its paths
           _ <- datasetMagDAO.insertWithUploadPending(request.body.datasetId,
                                                      request.body.layerName,
                                                      request.body.mag.mag,
@@ -133,6 +134,7 @@ class WKRemoteDataStoreController @Inject()(
           _ <- Fox.fromBool(existingAttachmentOpt.isEmpty) ?~> s"Layer already has ${request.body.attachmentType} attachment named ${request.body.attachment.name}"
           _ <- Fox.fromBool(dataset._dataStore == dataStore.name) ?~> "Cannot upload mag to existing dataset via different datastore."
           dummyAttachmentPath <- UPath.fromString("<pending upload>").toFox
+          // TODO if pending exists, and overwritePending is set, remove it and delete its paths
           _ <- datasetAttachmentDAO.insertWithUploadPending(
             request.body.datasetId,
             request.body.layerName,
@@ -212,7 +214,9 @@ class WKRemoteDataStoreController @Inject()(
           dataset <- datasetDAO.findOne(request.body.datasetId)(GlobalAccessContext) ?~> Messages(
             "dataset.notFound",
             request.body.datasetId) ~> NOT_FOUND
-          // TODO assert pending exists?
+          _ <- datasetMagDAO.findOneWithPendingUpload(request.body.datasetId,
+                                                      request.body.layerName,
+                                                      request.body.mag.mag) ?~> "dataset.finishMagUpload.notPending"
           _ <- request.body.mag.path.toFox ?~> "dataset.finishMagUpload.pathNotSet"
           _ <- datasetMagDAO.finishUpload(request.body.datasetId, request.body.layerName, request.body.mag)
           dataStoreClient <- datasetService.clientFor(dataset)(GlobalAccessContext)
@@ -228,7 +232,11 @@ class WKRemoteDataStoreController @Inject()(
           dataset <- datasetDAO.findOne(request.body.datasetId)(GlobalAccessContext) ?~> Messages(
             "dataset.notFound",
             request.body.datasetId) ~> NOT_FOUND
-          // TODO assert pending exists?
+          _ <- datasetAttachmentDAO.findOneWithPendingUpload(
+            request.body.datasetId,
+            request.body.layerName,
+            request.body.attachmentType,
+            request.body.attachment.name) ?~> "dataset.finishAttachmentUpload.notPending"
           _ <- datasetAttachmentDAO.finishUpload(request.body.datasetId,
                                                  request.body.layerName,
                                                  request.body.attachmentType,

@@ -61,16 +61,16 @@ trait UploadMetadataStore extends FoxImplicits {
     store.findParsed[Seq[String]](redisKeyForFilePaths(uploadId))
 
   // TODO make this Fox[Long]?
-  def findTotalFileSizeInBytes(uploadId: String): Fox[Option[Long]] =
+  def findTotalFileSizeInBytes(uploadId: String): Fox[Long] =
     store.findLong(redisKeyForTotalFileSizeInBytes(uploadId))
 
-  def findFileCount(uploadId: String): Fox[Option[Long]] =
+  def findFileCount(uploadId: String): Fox[Long] =
     store.findLong(redisKeyForFileCount(uploadId))
 
   def findFileNames(uploadId: String): Fox[Set[String]] =
     store.findSet(redisKeyForFileNameSet(uploadId))
 
-  def findFileChunkCount(uploadId: String, filePath: String): Fox[Option[Long]] =
+  def findFileChunkCount(uploadId: String, filePath: String): Fox[Long] =
     store.findLong(redisKeyForFileChunkCount(uploadId, filePath))
 
   def findFileChunkSet(uploadId: String, filePath: String): Fox[Set[String]] =
@@ -146,8 +146,7 @@ class DatasetUploadMetadataStore @Inject()(protected val store: DataStoreRedisSt
   private def redisKeyForNeedsConversion(uploadId: String): String =
     s"$keyPrefix${uploadId}___needsConversion"
 
-  // TODO make this Fox[String]?
-  def findUploadIdByDataSourceId(dataSourceId: DataSourceId): Fox[Option[String]] =
+  def findUploadIdByDataSourceId(dataSourceId: DataSourceId): Fox[String] =
     store.find(redisKeyForUploadIdByDataSourceId(dataSourceId))
 
   def findLinkedLayerIdentifiers(uploadId: String)(implicit ec: ExecutionContext): Fox[Seq[LinkedLayerIdentifier]] =
@@ -196,8 +195,8 @@ class MagUploadMetadataStore @Inject()(protected val store: DataStoreRedisStore)
   def findMag(uploadId: String)(implicit ec: ExecutionContext): Fox[MagLocator] =
     store.findParsed[MagLocator](redisKeyForMag(uploadId))
 
-  def findLayerName(uploadId: String)(implicit ec: ExecutionContext): Fox[String] =
-    store.find(redisKeyForLayerName(uploadId)).map(_.toFox).flatten
+  def findLayerName(uploadId: String): Fox[String] =
+    store.find(redisKeyForLayerName(uploadId))
 }
 
 class AttachmentUploadMetadataStore @Inject()(protected val store: DataStoreRedisStore) extends UploadMetadataStore {
@@ -227,6 +226,6 @@ class AttachmentUploadMetadataStore @Inject()(protected val store: DataStoreRedi
   def findAttachmentType(uploadId: String)(implicit ec: ExecutionContext): Fox[LayerAttachmentType] =
     store.findParsed[LayerAttachmentType](redisKeyForAttachmentType(uploadId))
 
-  def findLayerName(uploadId: String)(implicit ec: ExecutionContext): Fox[String] =
-    store.find(redisKeyForLayerName(uploadId)).map(_.toFox).flatten
+  def findLayerName(uploadId: String): Fox[String] =
+    store.find(redisKeyForLayerName(uploadId))
 }

@@ -6,7 +6,6 @@ import {
   setupWebknossosForTestingWithRestrictions,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
-import type { AnnotationCollaborationMode } from "types/api_types";
 import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { restartSagaAction } from "viewer/model/actions/actions";
@@ -18,7 +17,6 @@ import {
   doneSavingAction,
   ensureHasAnnotationMutexAction,
 } from "viewer/model/actions/save_actions";
-import { updateLayerSettingAction } from "viewer/model/actions/settings_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import {
   setActiveCellAction,

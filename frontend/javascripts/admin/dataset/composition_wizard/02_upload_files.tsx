@@ -6,6 +6,7 @@ import ErrorHandling from "libs/error_handling";
 import { readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
 import { SoftError } from "libs/utils";
+import compact from "lodash-es/compact";
 import zip from "lodash-es/zip";
 import type { Vector3 } from "viewer/constants";
 import { parseNml } from "viewer/model/helpers/nml_helpers";
@@ -231,7 +232,7 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
   }
 
   const datasets = await tryToFetchDatasetsByNameOrId(
-    areDatasetIdsKnown ? [] : [datasetDirectoryName1, datasetDirectoryName2], // fetch by name
+    areDatasetIdsKnown ? [] : compact([datasetDirectoryName1, datasetDirectoryName2]), // fetch by name
     areDatasetIdsKnown ? [datasetId1, datasetId2] : [], // fetch by id
     "Could not derive datasets from NML. Please specify these manually.",
   );

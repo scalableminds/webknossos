@@ -118,7 +118,8 @@ case class ReserveAttachmentUploadToPathRequest(
     attachmentName: String,
     attachmentType: LayerAttachmentType.Value,
     attachmentDataformat: LayerAttachmentDataformat.Value,
-    pathPrefix: Option[UPath]
+    pathPrefix: Option[UPath],
+    overwritePending: Option[Boolean] = None
 )
 
 object ReserveAttachmentUploadToPathRequest {
@@ -727,7 +728,7 @@ class DatasetController @Inject()(userService: UserService,
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
         _ <- datasetMagsDAO.finishUploadToPath(datasetId, request.body.layerName, request.body.mag)
-        // TODO assert pending exists
+        _ <- datasetMagsDAO.findOneWithPendingUploadToPath(datasetId, request.body.layerName, request.body.mag) ?~> "dataset.finishMagUploadToPath.notPending"
         dataStoreClient <- datasetService.clientFor(dataset)
         _ <- Fox.runIf(!dataset.isVirtual) {
           for {
@@ -754,7 +755,11 @@ class DatasetController @Inject()(userService: UserService,
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-        // TODO assert pending exists
+        _ <- datasetLayerAttachmentsDAO.findOneWithPendingUploadToPath(
+          datasetId,
+          request.body.layerName,
+          request.body.attachmentType,
+          request.body.attachmentName) ?~> "dataset.finishAttachmentUploadToPath.notPending"
         _ <- datasetLayerAttachmentsDAO.finishUploadToPath(datasetId,
                                                            request.body.layerName,
                                                            request.body.attachmentType,

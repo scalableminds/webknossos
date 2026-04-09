@@ -60,7 +60,6 @@ trait UploadMetadataStore extends FoxImplicits {
   def findFilePaths(uploadId: String)(implicit ec: ExecutionContext): Fox[Seq[String]] =
     store.findParsed[Seq[String]](redisKeyForFilePaths(uploadId))
 
-  // TODO make this Fox[Long]?
   def findTotalFileSizeInBytes(uploadId: String): Fox[Long] =
     store.findLong(redisKeyForTotalFileSizeInBytes(uploadId))
 

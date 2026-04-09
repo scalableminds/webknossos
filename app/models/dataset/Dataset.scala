@@ -1031,36 +1031,13 @@ class DatasetMagDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
       magLocator <- parseMagLocator(row)
     } yield magLocator
 
-  def findMagLocatorPathWithPendingUploadToPath(datasetId: ObjectId, layerName: String, mag: Vec3Int): Fox[UPath] =
-    for {
-      rows <- run(q"""SELECT path
-            FROM webknossos.dataset_mags
-            WHERE _dataset = $datasetId
-            AND dataLayerName = $layerName
-            AND mag = $mag::webknossos.VECTOR3
-            AND uploadToPathIsPending
-            AND path IS NOT NULL
-            """.as[String])
-      first <- rows.headOption.toFox
-      firstAsUpath <- UPath.fromString(first).toFox
-    } yield firstAsUpath
-
-  def deleteMagLocatorWithUploadToPathPending(datasetId: ObjectId, layerName: String, mag: Vec3Int): Fox[Unit] =
+  def deletePendingMagLocator(datasetId: ObjectId, layerName: String, mag: Vec3Int): Fox[Unit] =
     for {
       _ <- run(q"""DELETE FROM webknossos.dataset_mags
-                     WHERE _dataset = $datasetId
-                     AND dataLayerName = $layerName
-                     AND mag = $mag::webknossos.VECTOR3
-                     AND uploadToPathIsPending""".asUpdate)
-    } yield ()
-
-  def deleteMagLocatorWithUploadPending(datasetId: ObjectId, layerName: String, mag: Vec3Int): Fox[Unit] =
-    for {
-      _ <- run(q"""DELETE FROM webknossos.dataset_mags
-                     WHERE _dataset = $datasetId
-                     AND dataLayerName = $layerName
-                     AND mag = $mag::webknossos.VECTOR3
-                     AND uploadIsPending""".asUpdate)
+                   WHERE _dataset = $datasetId
+                   AND dataLayerName = $layerName
+                   AND mag = $mag::webknossos.VECTOR3
+                   AND (uploadToPathIsPending OR uploadIsPending)""".asUpdate)
     } yield ()
 
 }
@@ -1434,30 +1411,17 @@ class DatasetLayerAttachmentDAO @Inject()(sqlClient: SqlClient)(implicit ec: Exe
       attachment <- parseRow(row)
     } yield attachment
 
-  def deleteAttachmentWithUploadToPathPending(datasetId: ObjectId,
-                                              layerName: String,
-                                              attachmentType: LayerAttachmentType.Value,
-                                              attachmentName: String): Fox[Unit] =
+  def deletePendingAttachment(datasetId: ObjectId,
+                              layerName: String,
+                              attachmentType: LayerAttachmentType.Value,
+                              attachmentName: String): Fox[Unit] =
     for {
       _ <- run(q"""DELETE FROM webknossos.dataset_layer_attachments
                    WHERE _dataset = $datasetId
                    AND layerName = $layerName
                    AND type = $attachmentType
                    AND name = $attachmentName
-                   AND uploadToPathIsPending""".asUpdate)
-    } yield ()
-
-  def deleteAttachmentWithUploadPending(datasetId: ObjectId,
-                                        layerName: String,
-                                        attachmentType: LayerAttachmentType.Value,
-                                        attachmentName: String): Fox[Unit] =
-    for {
-      _ <- run(q"""DELETE FROM webknossos.dataset_layer_attachments
-                   WHERE _dataset = $datasetId
-                   AND layerName = $layerName
-                   AND type = $attachmentType
-                   AND name = $attachmentName
-                   AND uploadIsPending""".asUpdate)
+                   AND (uploadIsPending OR uploadToPathIsPending)""".asUpdate)
     } yield ()
 
   def finishUpload(datasetId: ObjectId,

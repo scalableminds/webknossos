@@ -3,7 +3,7 @@ package models.dataset
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Box, Empty, Failure, Fox, FoxImplicits, Full, TextUtils}
+import com.scalableminds.util.tools.{Box, Failure, Fox, FoxImplicits, Full, TextUtils}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentDataformat.LayerAttachmentDataformat
@@ -45,7 +45,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
                                      dataStoreDAO: DataStoreDAO,
                                      layerToLinkService: LayerToLinkService,
                                      datasetLayerAttachmentsDAO: DatasetLayerAttachmentDAO,
-                                     datasetMagsDAO: DatasetMagDAO,
+                                     datasetMagDAO: DatasetMagDAO,
                                      pathDeletionService: PathDeletionService,
                                      folderDAO: FolderDAO,
                                      conf: WkConf)
@@ -252,7 +252,11 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
       mp: MessagesProvider): Fox[UPath] =
     for {
       _ <- datasetService.usableDataSourceFor(dataset)
-      // TODO overwrite pending functionality here too?
+      _ <- handleExistingPendingAttachment(dataset,
+                                           parameters.layerName,
+                                           parameters.attachmentType,
+                                           parameters.attachmentName,
+                                           parameters.overwritePending.getOrElse(false))
       isSingletonAttachment = LayerAttachmentType.isSingletonAttachment(parameters.attachmentType)
       existingAttachmentsCount <- datasetLayerAttachmentsDAO.countAttachmentsIncludingPending(
         dataset._id,
@@ -280,38 +284,63 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
       mp: MessagesProvider): Fox[UPath] =
     for {
       _ <- datasetService.usableDataSourceFor(dataset)
-      _ <- handleExistingPendingMagIfExists(dataset, parameters.layerName, parameters.mag, parameters.overwritePending)
+      _ <- handleExistingPendingMag(dataset, parameters.layerName, parameters.mag, parameters.overwritePending)
       datasetParent <- selectPathPrefixDatasetParent(parameters.pathPrefix, dataset._organization)
       datasetPath = datasetParent / dataset.directoryName
       magPath = generateMagPath(parameters.mag, datasetPath / parameters.layerName)
-      _ <- datasetMagsDAO.insertWithUploadToPathPending(dataset._id,
-                                                        parameters.layerName,
-                                                        parameters.mag,
-                                                        parameters.axisOrder,
-                                                        parameters.channelIndex,
-                                                        magPath)
+      _ <- datasetMagDAO.insertWithUploadToPathPending(dataset._id,
+                                                       parameters.layerName,
+                                                       parameters.mag,
+                                                       parameters.axisOrder,
+                                                       parameters.channelIndex,
+                                                       magPath)
     } yield magPath
 
-  private def handleExistingPendingMagIfExists(dataset: Dataset,
-                                               layerName: String,
-                                               mag: Vec3Int,
-                                               overwritePending: Boolean)(implicit ec: ExecutionContext): Fox[Unit] =
+  def handleExistingPendingMag(dataset: Dataset, layerName: String, mag: Vec3Int, overwritePending: Boolean)(
+      implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      existingMagLocatorPathBox <- datasetMagsDAO
-        .findMagLocatorPathWithPendingUploadToPath(dataset._id, layerName, mag)
-        .shiftBox
-      _ <- existingMagLocatorPathBox match {
-        case Full(existingMagLocatorPath) =>
-          if (overwritePending) {
-            for {
-              client <- datasetService.clientFor(dataset)(GlobalAccessContext)
-              _ <- pathDeletionService.deletePaths(client, Seq(existingMagLocatorPath))
-              _ <- datasetMagsDAO.deleteMagLocatorWithUploadToPathPending(dataset._id, layerName, mag)
-            } yield ()
-          } else Fox.failure("dataset.reserveMagUploadToPath.exists")
-        case Empty      => Fox.successful(())
-        case f: Failure => f.toFox
-      }
+      withPendingUploadToPathsBox <- datasetMagDAO.findOneWithPendingUploadToPath(dataset._id, layerName, mag).shiftBox
+      withPendingUploadBox <- datasetMagDAO.findOneWithPendingUploadToPath(dataset._id, layerName, mag).shiftBox
+      _ <- if (overwritePending) {
+        for {
+          _ <- Fox.runOptional(withPendingUploadToPathsBox.toOption) { oldPending =>
+            deletePathsForOldPending(dataset, oldPending.path)
+          }
+          _ <- datasetMagDAO.deletePendingMagLocator(dataset._id, layerName, mag)
+        } yield ()
+      } else
+        Fox.runIf(withPendingUploadToPathsBox.isDefined || withPendingUploadBox.isDefined) {
+          Fox.failure("Conflict with existing pending mag. Pass overwritePending to overwrite.")
+        }
     } yield ()
+
+  def handleExistingPendingAttachment(dataset: Dataset,
+                                      layerName: String,
+                                      attachmentType: LayerAttachmentType,
+                                      attachmentName: String,
+                                      overwritePending: Boolean)(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      withPendingUploadToPathsBox <- datasetLayerAttachmentsDAO
+        .findOneWithPendingUploadToPath(dataset._id, layerName, attachmentType, attachmentName)
+        .shiftBox
+      withPendingUploadBox <- datasetLayerAttachmentsDAO
+        .findOneWithPendingUpload(dataset._id, layerName, attachmentType, attachmentName)
+        .shiftBox
+      _ <- if (overwritePending) {
+        datasetLayerAttachmentsDAO.deletePendingAttachment(dataset._id, layerName, attachmentType, attachmentName)
+      } else
+        Fox.runIf(withPendingUploadToPathsBox.isDefined || withPendingUploadBox.isDefined) {
+          Fox.failure("Conflict with existing pending attachment. Pass overwritePending to overwrite.")
+        }
+    } yield ()
+
+  private def deletePathsForOldPending(dataset: Dataset, pathOpt: Option[UPath])(
+      implicit ec: ExecutionContext): Fox[_] =
+    Fox.runOptional(pathOpt) { path =>
+      for {
+        client <- datasetService.clientFor(dataset)(GlobalAccessContext)
+        _ <- pathDeletionService.deletePaths(client, Seq(path))
+      } yield ()
+    }
 
 }

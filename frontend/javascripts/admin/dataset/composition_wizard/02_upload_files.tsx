@@ -174,8 +174,6 @@ async function parseNmlFiles(fileList: FileList): Promise<Partial<WizardContext>
     throw new SoftError("NML files should not be empty.");
   }
 
-  // TODO: Now the datasetName stored in the nml is interpreted as the path of the dataset. -> call to legacy route is necessary.
-  //  Discussion: how to handle this better?
   const {
     trees: trees1,
     datasetName: datasetDirectoryName1,

@@ -19,7 +19,7 @@ import type { WebknossosState } from "viewer/store";
 import { reuseInstanceOnEquality } from "./accessor_helpers";
 import { getTransformsPerLayer } from "./dataset_layer_transformation_accessor";
 import { areGeometriesTransformed, isSkeletonLayerVisible } from "./skeletontracing_accessor";
-import { AnnotationTool, type AnnotationToolId } from "./tool_accessor";
+import { AnnotationTool, type AnnotationToolId, VolumeTools } from "./tool_accessor";
 
 export type DisabledInfo = {
   isDisabled: boolean;
@@ -43,8 +43,71 @@ const disabledSkeletonExplanation =
 const rotationActiveDisabledExplanation =
   "The tool is disabled because you are currently viewing the dataset rotated. Please reset the rotation to 0,0,0 to be able to use this tool.";
 
-const TOOL_DISABLED_BECAUSE_OF_LIVE_COLLAB_MODE = "is disabled because simultaneous editing is enabled in the sharing settings. Currently, only proofreading is allowed in that mode."
+const TOOL_DISABLED_BECAUSE_OF_LIVE_COLLAB_MODE =
+  "is disabled because simultaneous editing is enabled in the sharing settings. Currently, only proofreading is allowed in that mode.";
 
+type Params = {
+  isSegmentationTracingVisible: boolean;
+  isInMergerMode: boolean;
+  isSegmentationTracingVisibleForMag: boolean;
+  isZoomInvalidForTracing: boolean;
+  isEditableMappingActive: boolean;
+  isSegmentationTracingTransformed: boolean;
+  isJSONMappingActive: boolean;
+  isFlycamRotated: boolean;
+  isConcurrentCollabMode: boolean;
+};
+
+class DisableRule {
+  constructor(
+    public affectedTools: AnnotationTool[],
+    public validateFn: (params: Params) => string | null,
+  ) {}
+
+  validate(tool: AnnotationTool, params: Params) {
+    /* If the tool should be disabled because of the current DisableRule instance,
+     * this method will return a string which is the explanation for the tool being
+     * disabled.
+     * If the tool doesn't need to be disabled because of the current rule, the function
+     * will return null.
+     */
+    if (this.affectedTools.includes(tool)) {
+      return this.validateFn(params)
+    }
+    return null;
+  }
+}
+
+const noVisibleSegmentationTracingRule = new DisableRule(
+  VolumeTools,
+  ({ isSegmentationTracingVisible }) =>
+    isSegmentationTracingVisible
+      ? null
+      : "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable one in the left settings sidebar or make a segmentation layer editable via the lock icon.",
+);
+
+const rules = [noVisibleSegmentationTracingRule];
+
+function getToolDisabledReason(tool: AnnotationTool, params: Params) {
+  for (const rule of rules) {
+    const disabledReason = rule.validate(tool, params);
+    if (disabledReason) {
+      return {
+        [tool.id]: {
+          isDisabled: true,
+          explanation: disabledReason,
+        },
+      }
+    }
+  }
+
+  return {
+    [tool.id]: {
+      isDisabled: false,
+      explanation: "",
+    },
+  }
+}
 
 const getExplanationForDisabledVolume = (
   isSegmentationTracingVisible: boolean,
@@ -151,10 +214,9 @@ function _getSkeletonToolInfo(
     return {
       [AnnotationTool.SKELETON.id]: {
         isDisabled: true,
-        explanation:
-          `Skeleton annotation ${TOOL_DISABLED_BECAUSE_OF_LIVE_COLLAB_MODE}`,
+        explanation: `Skeleton annotation ${TOOL_DISABLED_BECAUSE_OF_LIVE_COLLAB_MODE}`,
       },
-    }
+    };
   }
 
   return {
@@ -192,10 +254,9 @@ function _getBoundingBoxToolInfo(
     return {
       [AnnotationTool.BOUNDING_BOX.id]: {
         isDisabled: true,
-        explanation:
-          `The bounding box tool ${TOOL_DISABLED_BECAUSE_OF_LIVE_COLLAB_MODE}`,
+        explanation: `The bounding box tool ${TOOL_DISABLED_BECAUSE_OF_LIVE_COLLAB_MODE}`,
       },
-    }
+    };
   }
 
   return {
@@ -229,7 +290,7 @@ function _getDisabledInfoWhenVolumeIsDisabled(
     isSegmentationTracingTransformed,
     isJSONMappingActive,
     isFlycamRotated,
-    isConcurrentCollabMode
+    isConcurrentCollabMode,
   );
 
   const disabledInfo = {
@@ -407,7 +468,7 @@ function getDisabledVolumeInfo(state: WebknossosState, isConcurrentCollabMode: b
         isVolumeDisabled,
         isJSONMappingActive,
         isFlycamRotated,
-        isConcurrentCollabMode
+        isConcurrentCollabMode,
       )
     : // Volume tools are not ALL disabled, but some of them might be.
       getVolumeDisabledWhenVolumeIsEnabled(

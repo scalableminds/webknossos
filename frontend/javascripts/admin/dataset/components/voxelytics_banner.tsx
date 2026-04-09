@@ -148,6 +148,7 @@ export default function VoxelyticsBanner() {
       className="hide-on-small-screen"
       width={300}
       theme={theme}
+      style={{ backgroundColor: "var(--ant-layout-body-bg)" }}
     >
       {banners[bannerIndex]}
     </Sider>

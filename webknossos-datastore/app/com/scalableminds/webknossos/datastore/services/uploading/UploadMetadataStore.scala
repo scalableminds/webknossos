@@ -199,7 +199,6 @@ class MagUploadMetadataStore @Inject()(protected val store: DataStoreRedisStore)
 
   override def cleanUp(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      dataSourceId <- findDataSourceId(uploadId)
       _ <- store.remove(redisKeyForMag(uploadId))
       _ <- store.remove(redisKeyForLayerName(uploadId))
       _ <- super.cleanUp(uploadId)
@@ -238,9 +237,8 @@ class AttachmentUploadMetadataStore @Inject()(protected val store: DataStoreRedi
 
   override def cleanUp(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      dataSourceId <- findDataSourceId(uploadId)
-      _ <- store.remove(findAttachmentType(uploadId))
-      _ <- store.remove(findAttachment(uploadId))
+      _ <- store.remove(redisKeyForAttachmentType(uploadId))
+      _ <- store.remove(redisKeyForAttachment(uploadId))
       _ <- store.remove(redisKeyForLayerName(uploadId))
       _ <- super.cleanUp(uploadId)
     } yield ()

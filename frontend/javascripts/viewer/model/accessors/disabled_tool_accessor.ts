@@ -43,6 +43,9 @@ const disabledSkeletonExplanation =
 const rotationActiveDisabledExplanation =
   "The tool is disabled because you are currently viewing the dataset rotated. Please reset the rotation to 0,0,0 to be able to use this tool.";
 
+const TOOL_DISABLED_BECAUSE_OF_LIVE_COLLAB_MODE = "is disabled because simultaneous editing is enabled in the sharing settings. Currently, only proofreading is allowed in that mode."
+
+
 const getExplanationForDisabledVolume = (
   isSegmentationTracingVisible: boolean,
   isInMergerMode: boolean,
@@ -52,6 +55,7 @@ const getExplanationForDisabledVolume = (
   isSegmentationTracingTransformed: boolean,
   isJSONMappingActive: boolean,
   isFlycamRotated: boolean,
+  isConcurrentCollabMode: boolean,
 ) => {
   if (!isSegmentationTracingVisible) {
     return "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable one in the left settings sidebar or make a segmentation layer editable via the lock icon.";
@@ -84,6 +88,10 @@ const getExplanationForDisabledVolume = (
     return "Volume annotation is disabled because a JSON mapping is currently active for the the visible segmentation layer. Disable the JSON mapping to enable volume annotation.";
   }
 
+  if (isConcurrentCollabMode) {
+    return `Volume annotation ${TOOL_DISABLED_BECAUSE_OF_LIVE_COLLAB_MODE}`;
+  }
+
   return "Volume annotation is currently disabled.";
 };
 
@@ -110,6 +118,7 @@ function _getSkeletonToolInfo(
   hasSkeleton: boolean,
   isSkeletonLayerTransformed: boolean,
   areSkeletonsVisible: boolean,
+  isConcurrentCollabMode: boolean,
 ) {
   if (!hasSkeleton) {
     return {
@@ -138,6 +147,15 @@ function _getSkeletonToolInfo(
       },
     };
   }
+  if (isConcurrentCollabMode) {
+    return {
+      [AnnotationTool.SKELETON.id]: {
+        isDisabled: true,
+        explanation:
+          `Skeleton annotation ${TOOL_DISABLED_BECAUSE_OF_LIVE_COLLAB_MODE}`,
+      },
+    }
+  }
 
   return {
     [AnnotationTool.SKELETON.id]: NOT_DISABLED_INFO,
@@ -149,6 +167,7 @@ function _getBoundingBoxToolInfo(
   hasSkeleton: boolean,
   areGeometriesTransformed: boolean,
   isFlycamRotated: boolean,
+  isConcurrentCollabMode: boolean,
 ) {
   if (isFlycamRotated) {
     return {
@@ -168,6 +187,17 @@ function _getBoundingBoxToolInfo(
       },
     };
   }
+
+  if (isConcurrentCollabMode) {
+    return {
+      [AnnotationTool.BOUNDING_BOX.id]: {
+        isDisabled: true,
+        explanation:
+          `The bounding box tool ${TOOL_DISABLED_BECAUSE_OF_LIVE_COLLAB_MODE}`,
+      },
+    }
+  }
+
   return {
     [AnnotationTool.BOUNDING_BOX.id]: {
       isDisabled: false,
@@ -188,6 +218,7 @@ function _getDisabledInfoWhenVolumeIsDisabled(
   isVolumeDisabled: boolean,
   isJSONMappingActive: boolean,
   isFlycamRotated: boolean,
+  isConcurrentCollabMode: boolean,
 ) {
   const genericDisabledExplanation = getExplanationForDisabledVolume(
     isSegmentationTracingVisible,
@@ -198,6 +229,7 @@ function _getDisabledInfoWhenVolumeIsDisabled(
     isSegmentationTracingTransformed,
     isJSONMappingActive,
     isFlycamRotated,
+    isConcurrentCollabMode
   );
 
   const disabledInfo = {
@@ -319,7 +351,7 @@ function _getVolumeDisabledWhenVolumeIsEnabled(
   };
 }
 
-function getDisabledVolumeInfo(state: WebknossosState) {
+function getDisabledVolumeInfo(state: WebknossosState, isConcurrentCollabMode: boolean) {
   // This function extracts a couple of variables from the state
   // so that it can delegate to memoized functions.
   const isInMergerMode = state.temporaryConfiguration.isMergerModeEnabled;
@@ -363,8 +395,8 @@ function getDisabledVolumeInfo(state: WebknossosState) {
     (segmentationTracingLayer?.mappingIsLocked && !segmentationTracingLayer?.hasEditableMapping) ??
     false;
 
-  return isVolumeDisabled || isEditableMappingActive || isFlycamRotated
-    ? // All segmentation-related tools are disabled.
+  return isVolumeDisabled || isEditableMappingActive || isFlycamRotated || isConcurrentCollabMode
+    ? // All segmentation-related tools are disabled (except for maybe proofreading).
       getDisabledInfoWhenVolumeIsDisabled(
         isSegmentationTracingVisible,
         isInMergerMode,
@@ -375,6 +407,7 @@ function getDisabledVolumeInfo(state: WebknossosState) {
         isVolumeDisabled,
         isJSONMappingActive,
         isFlycamRotated,
+        isConcurrentCollabMode
       )
     : // Volume tools are not ALL disabled, but some of them might be.
       getVolumeDisabledWhenVolumeIsEnabled(
@@ -395,6 +428,7 @@ const _getDisabledInfoForTools = (
 ): Record<AnnotationToolId, DisabledInfo> => {
   const { annotation } = state;
   const hasSkeleton = annotation.skeleton != null;
+  const isConcurrentCollabMode = annotation.collaborationMode === "Concurrent";
   const isFlycamRotated = isRotated(state.flycam);
   const geometriesTransformed = areGeometriesTransformed(state);
   const areaMeasurementToolInfo = getAreaMeasurementToolInfo(isFlycamRotated);
@@ -402,14 +436,16 @@ const _getDisabledInfoForTools = (
     hasSkeleton,
     geometriesTransformed,
     isSkeletonLayerVisible(annotation),
+    isConcurrentCollabMode,
   );
   const boundingBoxInfo = getBoundingBoxToolInfo(
     hasSkeleton,
     geometriesTransformed,
     isFlycamRotated,
+    isConcurrentCollabMode,
   );
 
-  const disabledVolumeInfo = getDisabledVolumeInfo(state);
+  const disabledVolumeInfo = getDisabledVolumeInfo(state, isConcurrentCollabMode);
   return {
     ...ALWAYS_ENABLED_TOOL_INFOS,
     ...areaMeasurementToolInfo,

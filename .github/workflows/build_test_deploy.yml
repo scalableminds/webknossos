@@ -39,6 +39,7 @@ jobs:
 
   frontend-tests:
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -83,7 +84,7 @@ jobs:
 
   backend-tests:
     runs-on: ubuntu-22.04
-    if: github.ref != 'refs/heads/master'
+    if: github.event_name == 'push' && github.ref != 'refs/heads/master'
     steps:
       - uses: actions/checkout@v4
         with:
@@ -143,6 +144,7 @@ jobs:
 
   build-smoketest-push:
     runs-on: ubuntu-22.04
+    if: github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
         with:

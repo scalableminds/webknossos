@@ -352,9 +352,15 @@ export function* createEditableMapping(): Saga<string> {
   };
   yield* put(initializeEditableMappingAction(editableMapping));
   // Ensure a saved state so that the mapping is locked and editable before doing the first proofreading operation.
-  // todop: is this the correct fix? ask michael
-  // yield* call([Model, Model.ensureSavedState]);
-  yield* call(syncWithBackend);
+  // todop: discuss with michael
+  const isBusy = yield select((state) => state.uiInformation.busyBlockingInfo.isBusy);
+  if (isBusy) {
+    // todop: this branch was necessary for me during browser testing
+    yield* call(syncWithBackend);
+  } else {
+    // todop: this branch was necessary for me during vite tests
+    yield* call([Model, Model.ensureSavedState]);
+  }
   return volumeTracingId;
 }
 

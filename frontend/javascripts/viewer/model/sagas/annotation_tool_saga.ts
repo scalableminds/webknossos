@@ -144,35 +144,22 @@ function* setLastUsedToolQueue(setToolAction: SetToolAction): Saga<void> {
   yield* put(updateUserSettingAction("lastUsedToolQueue", updatedLastUsedToolQueue));
 }
 
-function* rememberToolPreferences(setToolAction: SetToolAction): Saga<void> {
-  const newTool = setToolAction.tool;
-  if (
-    newTool.id === AnnotationTool.AREA_MEASUREMENT.id ||
-    newTool.id === AnnotationTool.LINE_MEASUREMENT.id
-  ) {
-    yield* put(
-      updateUserSettingAction(
-        "measurementPreference",
-        newTool.id === AnnotationTool.AREA_MEASUREMENT.id ? "AREA_MEASUREMENT" : "LINE_MEASUREMENT",
-      ),
-    );
-  } else if (newTool.id === AnnotationTool.BRUSH.id || newTool.id === AnnotationTool.TRACE.id) {
-    yield* put(
-      updateUserSettingAction(
-        "writePreference",
-        newTool.id === AnnotationTool.BRUSH.id ? "BRUSH" : "TRACE",
-      ),
-    );
-  } else if (
-    newTool.id === AnnotationTool.ERASE_BRUSH.id ||
-    newTool.id === AnnotationTool.ERASE_TRACE.id
-  ) {
-    yield* put(
-      updateUserSettingAction(
-        "erasePreference",
-        newTool.id === AnnotationTool.ERASE_BRUSH.id ? "ERASE_BRUSH" : "ERASE_TRACE",
-      ),
-    );
+function* rememberToolPreferences({ tool }: SetToolAction): Saga<void> {
+  switch (tool.id) {
+    case AnnotationTool.BRUSH.id:
+    case AnnotationTool.TRACE.id:
+      yield* put(updateUserSettingAction("writePreference", tool.id));
+      return;
+    case AnnotationTool.ERASE_BRUSH.id:
+    case AnnotationTool.ERASE_TRACE.id:
+      yield* put(updateUserSettingAction("erasePreference", tool.id));
+      return;
+    case AnnotationTool.LINE_MEASUREMENT.id:
+    case AnnotationTool.AREA_MEASUREMENT.id:
+      yield* put(updateUserSettingAction("measurementPreference", tool.id));
+      return;
+    default:
+      return;
   }
 }
 

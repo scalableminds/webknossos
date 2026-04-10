@@ -84,8 +84,7 @@ export default function ToolbarView() {
     [dispatch],
   );
 
-  //const showAllTools = isWiderScreen || toolkit === Toolkit.READ_ONLY_TOOLS || isViewMode; //TODO_c
-  const showAllTools = true;
+  const showAllTools = isWiderScreen || toolkit === Toolkit.READ_ONLY_TOOLS || isViewMode;
 
   const toolsForButtons = useMemo(() => {
     if (showAllTools) return Toolkits[toolkit];
@@ -135,7 +134,7 @@ export default function ToolbarView() {
                 onClick: () => dispatch(setToolAction(tool)),
                 label: (
                   <Space size="small">
-                    {tool.icon}
+                    tool.icon ? <Icon component={tool.icon} /> : null
                     {tool.readableName}
                   </Space>
                 ),

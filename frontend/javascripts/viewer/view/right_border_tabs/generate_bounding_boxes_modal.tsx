@@ -1,11 +1,12 @@
-import { Form, InputNumber, Modal, Select, Space, Typography } from "antd";
+import { Checkbox, Form, InputNumber, Modal, Select, Space, Typography } from "antd";
 import { formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { getRandomColor } from "libs/utils";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useDispatch } from "react-redux";
+import { batchActions } from "redux-batched-actions";
 import { APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import {
@@ -13,6 +14,7 @@ import {
   getSomeMagInfoForDataset,
 } from "viewer/model/accessors/dataset_accessor";
 import { getSomeTracing } from "viewer/model/accessors/tracing_accessor";
+import type { Action } from "viewer/model/actions/actions";
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 
@@ -59,12 +61,7 @@ type Props = {
   jobType: APIJobCommand | null;
 };
 
-export default function GenerateBoundingBoxesModalInner({
-  isOpen,
-  onClose,
-  magnification,
-  jobType,
-}: Props) {
+function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobType }: Props) {
   const dispatch = useDispatch();
   const dataset = useWkSelector((state) => state.dataset);
   const annotation = useWkSelector((state) => state.annotation);
@@ -80,16 +77,16 @@ export default function GenerateBoundingBoxesModalInner({
 
   const availableMags = getSomeMagInfoForDataset(dataset).getMagList();
 
-  const initialMagIndex = useMemo(() => {
+  const initialMagIndex = (() => {
     if (magnification == null) return 0;
-    const idx = availableMags.findIndex(
-      (m) => m[0] === magnification[0] && m[1] === magnification[1] && m[2] === magnification[2],
-    );
+    const idx = availableMags.findIndex((m) => V3.equals(m, magnification));
     return idx >= 0 ? idx : 0;
-  }, [magnification, availableMags]);
+  })();
 
   const [selectedMagIndex, setSelectedMagIndex] = useState(initialMagIndex);
   const selectedMag: Vector3 = availableMags[selectedMagIndex] ?? [1, 1, 1];
+
+  const [avoidExistingBoxes, setAvoidExistingBoxes] = useState(true);
 
   const handleTrainingTypeChange = (value: string) => {
     setTrainingType(value);
@@ -109,24 +106,20 @@ export default function GenerateBoundingBoxesModalInner({
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Computed full-resolution size for display.
-  const sizeInMag1: Vector3 = [
-    sizeX * selectedMag[0],
-    sizeY * selectedMag[1],
-    sizeZ * selectedMag[2],
-  ];
-  const isMag1 = selectedMag[0] === 1 && selectedMag[1] === 1 && selectedMag[2] === 1;
+  const sizeInMag1: Vector3 = V3.scale3([sizeX, sizeY, sizeZ], selectedMag);
+  const isMag1 = V3.equals(selectedMag, [1, 1, 1]);
 
   /**
    * Generates non-overlapping bounding boxes distributed randomly across the dataset:
    * 1. Compute the valid placement range: positions where a box of `sizeInMag1` fits
    *    entirely within the dataset bounds.
-   * 2. Seed the collision set with any bounding boxes already present in the annotation
-   *    so that new boxes do not overlap existing ones.
+   * 2. Optionally seed the collision set with any bounding boxes already present in the
+   *    annotation so that new boxes do not overlap existing ones.
    * 3. Repeatedly sample a random position, snap it to the magnification grid by
    *    choosing uniformly from all discrete mag-aligned slots within the valid range,
    *    and reject candidates that overlap any already-placed box.
-   * 4. Dispatch each accepted box to the Redux store and warn the user if the retry
-   *    budget is exhausted before all requested boxes are placed.
+   * 4. Dispatch all accepted boxes to the Redux store in a single batched action and
+   *    warn the user if the retry budget is exhausted before all requested boxes are placed.
    */
   const handleGenerate = () => {
     if (hasSizeError || isGenerating) return;
@@ -142,14 +135,17 @@ export default function GenerateBoundingBoxesModalInner({
         const placementMax: Vector3 = V3.sub(max, sizeInMag1);
 
         if (placementMax[0] < min[0] || placementMax[1] < min[1] || placementMax[2] < min[2]) {
+          Toast.warning(
+            "The selected box size does not fit into the dataset at the chosen magnification.",
+          );
           return;
         }
 
         const MAX_RETRIES = 500;
-        // Seed with existing boxes so new ones don't overlap them.
-        const placedBoxes: BoundingBox[] = existingBoundingBoxes.map(
-          (bb) => new BoundingBox(bb.boundingBox),
-        );
+        // Optionally seed with existing boxes so new ones don't overlap them.
+        const placedBoxes: BoundingBox[] = avoidExistingBoxes
+          ? existingBoundingBoxes.map((bb) => new BoundingBox(bb.boundingBox))
+          : [];
 
         // Sample a position by choosing uniformly from the discrete set of mag-aligned
         // slots within [min, placementMax]. Snapping is applied to the absolute coordinate
@@ -168,19 +164,25 @@ export default function GenerateBoundingBoxesModalInner({
 
         let placed = 0;
         let retries = 0;
+        const actions: ReturnType<typeof addUserBoundingBoxAction>[] = [];
 
         while (placed < numberOfBoxes && retries < MAX_RETRIES) {
           const boxMin = samplePosition();
           const boxMax: Vector3 = V3.add(boxMin, sizeInMag1);
           const candidate = new BoundingBox({ min: boxMin, max: boxMax });
 
-          if (placedBoxes.some((existing) => existing.intersectedWith(candidate).getVolume() > 0)) {
+          if (
+            placedBoxes.some((existing) => {
+              const r = existing.intersectedWithFast(candidate);
+              return (r.max[0] - r.min[0]) * (r.max[1] - r.min[1]) * (r.max[2] - r.min[2]) > 0;
+            })
+          ) {
             retries++;
             continue;
           }
 
           placedBoxes.push(candidate);
-          dispatch(
+          actions.push(
             addUserBoundingBoxAction({
               boundingBox: { min: boxMin, max: boxMax },
               name: `Generated Bounding Box ${placed + 1}`,
@@ -189,6 +191,10 @@ export default function GenerateBoundingBoxesModalInner({
             }),
           );
           placed++;
+        }
+
+        if (actions.length > 0) {
+          dispatch(batchActions(actions, "ADD_NEW_USER_BOUNDING_BOX") as unknown as Action);
         }
 
         if (placed < numberOfBoxes) {
@@ -217,9 +223,9 @@ export default function GenerateBoundingBoxesModalInner({
       width={520}
     >
       <Typography.Paragraph type="secondary">
-        Bounding boxes mark the regions used for AI model training. This tool places them at random
-        positions throughout your dataset to give the model a varied sample. After generating,
-        review and remove any that fall in empty or uninformative areas.{" "}
+        Bounding boxes mark the regions used for AI model training. This tool places non-overlapping
+        boxes at random positions throughout your dataset to give the model a varied sample. After
+        generating, review and remove any that fall in empty or uninformative areas.{" "}
         <Typography.Link
           href="https://docs.webknossos.org/webknossos/automation/choosing_mags_and_bboxes.html"
           target="_blank"
@@ -309,11 +315,19 @@ export default function GenerateBoundingBoxesModalInner({
             </Space.Compact>
           </Space>
         </Form.Item>
+        <Form.Item>
+          <Checkbox
+            checked={avoidExistingBoxes}
+            onChange={(e) => setAvoidExistingBoxes(e.target.checked)}
+          >
+            Avoid overlapping with existing bounding boxes
+          </Checkbox>
+        </Form.Item>
       </Form>
     </Modal>
   );
 }
 
-export function GenerateBoundingBoxesModal(props: Props) {
+export default function GenerateBoundingBoxesModal(props: Props) {
   return <GenerateBoundingBoxesModalInner key={props.jobType} {...props} />;
 }

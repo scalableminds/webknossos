@@ -6,6 +6,8 @@ on:
       - '*'
     tags:
       - '*'
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch: {}
 
 env:
@@ -18,6 +20,23 @@ env:
   CERTIFICATE_PUBLIC_KEY: ${{ secrets.CERTIFICATE_PUBLIC_KEY }}
 
 jobs:
+  check-todos:
+    runs-on: ubuntu-22.04
+    if: github.event_name == 'pull_request' && !github.event.pull_request.draft
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for TODO comments without issue links
+        run: |
+          TODOS=$(git grep -niI -E 'todo[a-z]?([ :]|$)' | grep -viE '#[0-9]{1,5}' || true)
+          if [ -n "$TODOS" ]; then
+            echo "Found TODO comments without a linked issue. Each TODO must reference a GitHub issue number (e.g. '# TODO #1234')."
+            echo "Note: If you need a dev build and prefer to keep unlinked todo comments (because they relate to your PR), set convert your PR to a draft PR."
+            echo ""
+            echo "$TODOS"
+            exit 1
+          fi
+
   frontend-tests:
     runs-on: ubuntu-22.04
     steps:

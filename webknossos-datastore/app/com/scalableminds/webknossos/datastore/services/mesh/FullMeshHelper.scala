@@ -106,11 +106,11 @@ trait FullMeshHelper extends LazyLogging {
       val v3x = dataBuffer.getFloat(base + 24)
       val v3y = dataBuffer.getFloat(base + 28)
       val v3z = dataBuffer.getFloat(base + 32)
-      
+
       // Build two edge vectors from v1
       val e1x = v2x - v1x; val e1y = v2y - v1y; val e1z = v2z - v1z // edge v1→v2
       val e2x = v3x - v1x; val e2y = v3y - v1y; val e2z = v3z - v1z // edge v1→v3
-      
+
       // Cross product e1 × e2; its magnitude equals twice the triangle area
       val cx = e1y * e2z - e1z * e2y
       val cy = e1z * e2x - e1x * e2z

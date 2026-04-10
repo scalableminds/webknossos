@@ -352,7 +352,9 @@ export function* createEditableMapping(): Saga<string> {
   };
   yield* put(initializeEditableMappingAction(editableMapping));
   // Ensure a saved state so that the mapping is locked and editable before doing the first proofreading operation.
-  yield* call([Model, Model.ensureSavedState]);
+  // todop: is this the correct fix? ask michael
+  // yield* call([Model, Model.ensureSavedState]);
+  yield* call(syncWithBackend);
   return volumeTracingId;
 }
 

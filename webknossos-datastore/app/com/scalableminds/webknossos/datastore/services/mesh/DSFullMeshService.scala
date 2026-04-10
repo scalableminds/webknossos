@@ -127,32 +127,34 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
         segmentIndexFileService.readSegmentIndex(segmentIndexFileKey, sId))
       topLefts: Array[Vec3Int] = topLeftsNested.toArray.flatten
       targetMagPositions = segmentIndexFileService.topLeftsToDistinctTargetMagBucketPositions(topLefts, mag)
-      vertexChunksWithNeighbors: List[(Array[Float], List[Int])] <- Fox.serialCombined(targetMagPositions) {
-        targetMagPosition =>
-          val adHocMeshRequest = AdHocMeshRequest(
-            Some(datasetId),
-            Some(dataSource.id),
-            segmentationLayer,
-            Cuboid(
-              VoxelPosition(
-                targetMagPosition.x * mag.x * DataLayer.bucketLength,
-                targetMagPosition.y * mag.y * DataLayer.bucketLength,
-                targetMagPosition.z * mag.z * DataLayer.bucketLength,
-                mag
-              ),
-              DataLayer.bucketLength + 1,
-              DataLayer.bucketLength + 1,
-              DataLayer.bucketLength + 1
+      // Dispatch chunks to the actor pool keeping actorPoolSize requests in flight at a time.
+      vertexChunksWithNeighbors: List[(Array[Float], List[Int])] <- Fox.batchCombined(
+        targetMagPositions.toIndexedSeq,
+        config.Datastore.AdHocMesh.actorPoolSize) { targetMagPosition =>
+        val adHocMeshRequest = AdHocMeshRequest(
+          Some(datasetId),
+          Some(dataSource.id),
+          segmentationLayer,
+          Cuboid(
+            VoxelPosition(
+              targetMagPosition.x * mag.x * DataLayer.bucketLength,
+              targetMagPosition.y * mag.y * DataLayer.bucketLength,
+              targetMagPosition.z * mag.z * DataLayer.bucketLength,
+              mag
             ),
-            fullMeshRequest.segmentId,
-            dataSource.scale.factor,
-            tc,
-            fullMeshRequest.mappingName,
-            fullMeshRequest.mappingType,
-            fullMeshRequest.additionalCoordinates,
-            findNeighbors = false,
-          )
-          adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
+            DataLayer.bucketLength + 1,
+            DataLayer.bucketLength + 1,
+            DataLayer.bucketLength + 1
+          ),
+          fullMeshRequest.segmentId,
+          dataSource.scale.factor,
+          tc,
+          fullMeshRequest.mappingName,
+          fullMeshRequest.mappingType,
+          fullMeshRequest.additionalCoordinates,
+          findNeighbors = false,
+        )
+        adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
       }
       allVertices = vertexChunksWithNeighbors.map(_._1)
     } yield allVertices

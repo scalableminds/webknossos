@@ -78,7 +78,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       case Some(invite) => organizationDAO.findOne(invite._organization) ?~> "organization.notFound.byInvite"
       case None =>
         for {
-          allOrganizations <- organizationDAO.findAll
+          allOrganizations <- organizationDAO.findAll(GlobalAccessContext)
           _ <- Fox.fromBool(allOrganizations.length == 1) ?~> "organization.ambiguous"
           defaultOrganization <- allOrganizations.headOption.toFox
         } yield defaultOrganization

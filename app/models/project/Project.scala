@@ -12,7 +12,6 @@ import models.user.{User, UserService}
 import com.scalableminds.util.tools.Full
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
 
@@ -57,9 +56,7 @@ object Project {
 class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Project, ProjectsRow, Projects](sqlClient) {
   protected val collection = Projects
-
-  protected def idColumn(x: Projects): Rep[String] = x._Id
-  protected def isDeletedColumn(x: Projects): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultProjectsRow
 
   protected def parse(r: ProjectsRow): Fox[Project] =
     Fox.successful(
@@ -83,13 +80,6 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   override protected def deleteAccessQ(requestingUserId: ObjectId) = q"_owner = $requestingUserId"
 
   // read operations
-
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Project] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[ProjectsRow])
-      parsed <- parseFirst(r, id)
-    } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Project]] =
     for {
@@ -166,7 +156,10 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield ()
 
   def updatePaused(id: ObjectId, isPaused: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
-    updateBooleanCol(id, _.paused, isPaused)
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(q"UPDATE webknossos.projects SET paused = $isPaused WHERE _id = $id".asUpdate)
+    } yield ()
 
   def countForTeam(teamId: ObjectId): Fox[Int] =
     for {

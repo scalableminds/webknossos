@@ -17,9 +17,11 @@ import {
   type EnsureHasNewestVersionAction,
   finishedApplyingMissingUpdatesAction,
   finishedRebaseAction,
+  finishForwardingUpdateActionsAction,
   type NotifyAboutUpdatedBucketsAction,
   prepareRebaseAction,
   setVersionNumberAction,
+  startForwardingUpdateActionsAction,
 } from "viewer/model/actions/save_actions";
 import { setMappingAction } from "viewer/model/actions/settings_actions";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
@@ -173,6 +175,7 @@ const SAVING_CONFLICT_TOAST_KEY = "save_conflicts_warning";
 
 function* applyNewestMissingUpdateActions(
   actions: APIUpdateActionBatch[],
+  isRebasing: boolean,
 ): Saga<{ successful: boolean }> {
   if (actions.length === 0) {
     Toast.close(SAVING_CONFLICT_TOAST_KEY);
@@ -183,9 +186,17 @@ function* applyNewestMissingUpdateActions(
       state.annotation.restrictions.allowSave && state.annotation.isUpdatingCurrentlyAllowed,
   );
   try {
+    if (!isRebasing) {
+      // If no rebasing is currently done, we still need to inform the diffing saga, that the currently replayed
+      // update actions originate from the server and should not be considered during diffing.
+      yield put(startForwardingUpdateActionsAction());
+    }
     if ((yield* tryToIncorporateActions(actions, false)).success) {
       // Updates the annotation state used for future rebase operation the the current state with the missingUpdateActions applied.
       yield* put(finishedApplyingMissingUpdatesAction());
+      if (!isRebasing) {
+        yield* put(finishForwardingUpdateActionsAction());
+      }
       return { successful: true };
     }
   } catch (exc) {
@@ -298,7 +309,11 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
 
   try {
     if (missingUpdateActions.length > 0) {
-      const { successful } = yield* call(applyNewestMissingUpdateActions, missingUpdateActions);
+      const { successful } = yield* call(
+        applyNewestMissingUpdateActions,
+        missingUpdateActions,
+        needsRebasing,
+      );
       if (!successful) {
         return { successful: false, shouldTerminate: false };
       }

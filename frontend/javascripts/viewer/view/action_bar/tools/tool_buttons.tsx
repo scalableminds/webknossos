@@ -1,18 +1,5 @@
 import Icon, { CaretDownOutlined } from "@ant-design/icons";
-import AreaMeasurementIcon from "@images/icons/icon-area-measurement.svg?react";
-import BoundingBoxIcon from "@images/icons/icon-bounding-box.svg?react";
-import BrushIcon from "@images/icons/icon-brush.svg?react";
-import EraserBrushIcon from "@images/icons/icon-eraser-brush.svg?react";
-import EraserLassoIcon from "@images/icons/icon-eraser-lasso.svg?react";
-import FillIcon from "@images/icons/icon-fill.svg?react";
-import LassoIcon from "@images/icons/icon-lasso.svg?react";
 import LayerGroupIcon from "@images/icons/icon-layer-group.svg?react";
-import LineMeasurementIcon from "@images/icons/icon-line-measurement.svg?react";
-import MoveIcon from "@images/icons/icon-move.svg?react";
-import PipetteIcon from "@images/icons/icon-pipette.svg?react";
-import ProofreadingIcon from "@images/icons/icon-proofreading.svg?react";
-import QuickSelectToolIcon from "@images/icons/icon-quick-select.svg?react";
-import SkeletonIcon from "@images/icons/icon-skeleton.svg?react";
 import { Dropdown } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
@@ -81,7 +68,7 @@ function MoveTool(_props: ToolButtonProps) {
       disabled={false}
       value={AnnotationTool.MOVE.id}
     >
-      <Icon component={MoveIcon} />
+      <Icon component={AnnotationTool.MOVE.icon} />
     </ToolRadioButton>
   );
 }
@@ -108,7 +95,7 @@ function SkeletonTool(_props: ToolButtonProps) {
       value={AnnotationTool.SKELETON.id}
     >
       <Icon
-        component={SkeletonIcon}
+        component={AnnotationTool.SKELETON.icon}
         style={{
           opacity: disabledInfosForTools[AnnotationTool.SKELETON.id].isDisabled ? 0.5 : 1,
         }}
@@ -151,7 +138,10 @@ function BrushToolMenu({ adaptedActiveTool }: ToolButtonProps) {
               key: AnnotationTool.BRUSH.id,
               label: "Brush",
               icon: (
-                <Icon component={BrushIcon} style={getMaybeDisabledButtonStyle(isBrushDisabled)} />
+                <Icon
+                  component={AnnotationTool.BRUSH.icon}
+                  style={getMaybeDisabledButtonStyle(isBrushDisabled)}
+                />
               ),
               disabled: isBrushDisabled,
               title: isBrushDisabled
@@ -162,7 +152,10 @@ function BrushToolMenu({ adaptedActiveTool }: ToolButtonProps) {
               key: AnnotationTool.TRACE.id,
               label: "Trace",
               icon: (
-                <Icon component={LassoIcon} style={getMaybeDisabledButtonStyle(isTraceDisabled)} />
+                <Icon
+                  component={AnnotationTool.TRACE.icon}
+                  style={getMaybeDisabledButtonStyle(isTraceDisabled)}
+                />
               ),
               disabled: isTraceDisabled,
               title: isTraceDisabled
@@ -175,9 +168,15 @@ function BrushToolMenu({ adaptedActiveTool }: ToolButtonProps) {
         trigger={["hover"]}
       >
         {brushPreference === "BRUSH" ? (
-          <Icon component={BrushIcon} style={getMaybeDisabledButtonStyle(isBrushDisabled)} />
+          <Icon
+            component={AnnotationTool.BRUSH.icon}
+            style={getMaybeDisabledButtonStyle(isBrushDisabled)}
+          />
         ) : (
-          <Icon component={LassoIcon} style={getMaybeDisabledButtonStyle(isTraceDisabled)} />
+          <Icon
+            component={AnnotationTool.TRACE.icon}
+            style={getMaybeDisabledButtonStyle(isTraceDisabled)}
+          />
         )}
       </Dropdown>
       <CaretDownOutlined
@@ -219,7 +218,7 @@ function EraseToolMenu({ adaptedActiveTool }: ToolButtonProps) {
               label: "Erase Brush",
               icon: (
                 <Icon
-                  component={EraserBrushIcon}
+                  component={AnnotationTool.ERASE_BRUSH.icon}
                   style={getMaybeDisabledButtonStyle(isEraseBrushDisabled)}
                 />
               ),
@@ -233,7 +232,7 @@ function EraseToolMenu({ adaptedActiveTool }: ToolButtonProps) {
               label: "Erase Trace",
               icon: (
                 <Icon
-                  component={EraserLassoIcon}
+                  component={AnnotationTool.ERASE_TRACE.icon}
                   style={getMaybeDisabledButtonStyle(isEraseTraceDisabled)}
                 />
               ),
@@ -249,12 +248,12 @@ function EraseToolMenu({ adaptedActiveTool }: ToolButtonProps) {
       >
         {erasePreference === "ERASE_BRUSH" ? (
           <Icon
-            component={EraserBrushIcon}
+            component={AnnotationTool.ERASE_BRUSH.icon}
             style={getMaybeDisabledButtonStyle(isEraseBrushDisabled)}
           />
         ) : (
           <Icon
-            component={EraserLassoIcon}
+            component={AnnotationTool.ERASE_TRACE.icon}
             style={getMaybeDisabledButtonStyle(isEraseTraceDisabled)}
           />
         )}
@@ -287,7 +286,7 @@ function FillCellTool({ adaptedActiveTool }: ToolButtonProps) {
       value={AnnotationTool.FILL_CELL.id}
     >
       <Icon
-        component={FillIcon}
+        component={AnnotationTool.FILL_CELL.icon}
         style={{
           opacity: disabledInfosForTools[AnnotationTool.FILL_CELL.id].isDisabled ? 0.5 : 1,
           transform: "scaleX(-1)",
@@ -311,7 +310,7 @@ function VoxelPipetteTool(_props: ToolButtonProps) {
       value={AnnotationTool.VOXEL_PIPETTE.id}
     >
       <Icon
-        component={PipetteIcon}
+        component={AnnotationTool.VOXEL_PIPETTE.icon}
         style={{
           opacity: disabledInfosForTools[AnnotationTool.VOXEL_PIPETTE.id].isDisabled ? 0.5 : 1,
         }}
@@ -335,7 +334,7 @@ function QuickSelectTool(_props: ToolButtonProps) {
       value={AnnotationTool.QUICK_SELECT.id}
     >
       <Icon
-        component={QuickSelectToolIcon}
+        component={AnnotationTool.QUICK_SELECT.icon}
         aria-label="Quick Select Icon"
         style={{
           opacity: disabledInfosForTools[AnnotationTool.QUICK_SELECT.id].isDisabled ? 0.5 : 1,
@@ -360,7 +359,7 @@ function BoundingBoxTool(_props: ToolButtonProps) {
       value={AnnotationTool.BOUNDING_BOX.id}
     >
       <Icon
-        component={BoundingBoxIcon}
+        component={AnnotationTool.BOUNDING_BOX.icon}
         aria-label="Bounding Box Icon"
         style={{
           opacity: disabledInfosForTools[AnnotationTool.BOUNDING_BOX.id].isDisabled ? 0.5 : 1,
@@ -408,7 +407,7 @@ function ProofreadTool(_props: ToolButtonProps) {
       style={NARROW_BUTTON_STYLE}
     >
       <Icon
-        component={ProofreadingIcon}
+        component={AnnotationTool.PROOFREAD.icon}
         style={{
           opacity: disabledInfosForTools[AnnotationTool.PROOFREAD.id].isDisabled ? 0.5 : 1,
         }}
@@ -447,7 +446,7 @@ function MeasurementToolMenu() {
               label: "Line Measurement",
               icon: (
                 <Icon
-                  component={LineMeasurementIcon}
+                  component={AnnotationTool.LINE_MEASUREMENT.icon}
                   style={getMaybeDisabledButtonStyle(isLineMeasurementDisabled)}
                 />
               ),
@@ -461,7 +460,7 @@ function MeasurementToolMenu() {
               label: "Area Measurement",
               icon: (
                 <Icon
-                  component={AreaMeasurementIcon}
+                  component={AnnotationTool.AREA_MEASUREMENT.icon}
                   style={getMaybeDisabledButtonStyle(isAreaMeasurementDisabled)}
                 />
               ),
@@ -477,12 +476,12 @@ function MeasurementToolMenu() {
       >
         {measurementPreference === "LINE_MEASUREMENT" ? (
           <Icon
-            component={LineMeasurementIcon}
+            component={AnnotationTool.LINE_MEASUREMENT.icon}
             style={getMaybeDisabledButtonStyle(isLineMeasurementDisabled)}
           />
         ) : (
           <Icon
-            component={AreaMeasurementIcon}
+            component={AnnotationTool.AREA_MEASUREMENT.icon}
             style={getMaybeDisabledButtonStyle(isAreaMeasurementDisabled)}
           />
         )}

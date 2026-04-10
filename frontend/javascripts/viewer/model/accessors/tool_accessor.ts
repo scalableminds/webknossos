@@ -12,13 +12,14 @@ import ProofreadingIcon from "@images/icons/icon-proofreading.svg?react";
 import QuickSelectToolIcon from "@images/icons/icon-quick-select.svg?react";
 import SkeletonIcon from "@images/icons/icon-skeleton.svg?react";
 import without from "lodash-es/without";
+import type { FunctionComponent } from "react";
 
 abstract class AbstractAnnotationTool {
   static id: keyof typeof _AnnotationToolHelper;
   static readableName: string;
   static hasOverwriteCapabilities: boolean = false;
   static hasInterpolationCapabilities: boolean = false;
-  static icon: React.ReactNode = null;
+  static icon: FunctionComponent | null = null;
 }
 
 export type AnnotationToolId = (typeof AbstractAnnotationTool)["id"];
@@ -42,76 +43,76 @@ const _AnnotationToolHelper = {
 class MoveTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.MOVE;
   static readableName = "Move Tool";
-  static icon = <MoveIcon />;
+  static icon = MoveIcon;
 }
 class SkeletonTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.SKELETON;
   static readableName = "Skeleton Tool";
-  static icon = <SkeletonIcon />;
+  static icon = SkeletonIcon;
 }
 class BrushTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.BRUSH;
   static readableName = "Brush Tool";
   static hasOverwriteCapabilities = true;
   static hasInterpolationCapabilities = true;
-  static icon = <BrushIcon />;
+  static icon = BrushIcon;
 }
 class EraseBrushTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.ERASE_BRUSH;
   static readableName = "Erase Tool (via Brush)";
   static hasOverwriteCapabilities = true;
-  static icon = <EraserBrushIcon />;
+  static icon = EraserBrushIcon;
 }
 class TraceTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.TRACE;
   static readableName = "Trace Tool";
   static hasOverwriteCapabilities = true;
   static hasInterpolationCapabilities = true;
-  static icon = <LassoIcon />;
+  static icon = LassoIcon;
 }
 class EraseTraceTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.ERASE_TRACE;
   static readableName = "Erase Tool";
   static hasOverwriteCapabilities = true;
-  static icon = <EraserLassoIcon />;
+  static icon = EraserLassoIcon;
 }
 
 class FillCellTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.FILL_CELL;
   static readableName = "Fill Tool";
-  static icon = <FillIcon />;
+  static icon = FillIcon;
 }
 class VoxelPipetteTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.VOXEL_PIPETTE;
   static readableName = "Voxel Pipette Tool";
-  static icon = <PipetteIcon />;
+  static icon = PipetteIcon;
 }
 class QuickSelectTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.QUICK_SELECT;
   static readableName = "Quick Select Tool";
   static hasOverwriteCapabilities = true;
   static hasInterpolationCapabilities = true;
-  static icon = <QuickSelectToolIcon />;
+  static icon = QuickSelectToolIcon;
 }
 class BoundingBoxTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.BOUNDING_BOX;
   static readableName = "Bounding Box Tool";
-  static icon = <BoundingBoxIcon />;
+  static icon = BoundingBoxIcon;
 }
 class ProofreadTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.PROOFREAD;
   static readableName = "Proofreading Tool";
-  static icon = <ProofreadingIcon />;
+  static icon = ProofreadingIcon;
 }
 class LineMeasurementTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.LINE_MEASUREMENT;
   static readableName = "Measurement Tool";
-  static icon = <LineMeasurementIcon />;
+  static icon = LineMeasurementIcon;
 }
 class AreaMeasurementTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.AREA_MEASUREMENT;
   static readableName = "Area Measurement Tool";
-  static icon = <AreaMeasurementIcon />;
+  static icon = AreaMeasurementIcon;
 }
 
 export const AnnotationTool = {

@@ -137,10 +137,11 @@ function* setLastUsedToolQueue(setToolAction: SetToolAction): Saga<void> {
   const newTool = setToolAction.tool;
   const lastUsedToolQueue = yield* select((state) => state.userConfiguration.lastUsedToolQueue);
   const prevToolsWithoutDuplicates = lastUsedToolQueue.filter((toolId) => toolId !== newTool.id);
-  const updatedLastUsedToolQueue: [AnnotationToolId, AnnotationToolId, AnnotationToolId] = [
-    newTool.id,
-    ...prevToolsWithoutDuplicates.slice(0, 2),
-  ] as [AnnotationToolId, AnnotationToolId, AnnotationToolId];
+  const updatedLastUsedToolQueue = [newTool.id, ...prevToolsWithoutDuplicates.slice(0, 2)] as [
+    AnnotationToolId,
+    AnnotationToolId,
+    AnnotationToolId,
+  ];
   yield* put(updateUserSettingAction("lastUsedToolQueue", updatedLastUsedToolQueue));
 }
 

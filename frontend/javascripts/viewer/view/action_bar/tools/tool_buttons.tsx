@@ -19,7 +19,7 @@ import type { WebknossosState } from "viewer/store";
 import { NARROW_BUTTON_STYLE, ToolRadioButton } from "./tool_helpers";
 
 const getMaybeDisabledButtonStyle = (isDisabled: boolean): React.CSSProperties =>
-  isDisabled ? { opacity: 0.5 } : {};
+  isDisabled ? { color: "rgb(255 255 255 / 25%)" } : {};
 
 type ToolButtonProps = { adaptedActiveTool: AnnotationTool };
 
@@ -136,7 +136,17 @@ function BrushToolMenu({ adaptedActiveTool }: ToolButtonProps) {
           items: [
             {
               key: AnnotationTool.BRUSH.id,
-              label: "Brush",
+              label: (
+                <FastTooltip
+                  title={
+                    isBrushDisabled
+                      ? disabledInfosForTools[AnnotationTool.BRUSH.id].explanation
+                      : "Draw over the voxels you would like to label. Adjust the brush size with Shift + Mousewheel."
+                  }
+                >
+                  Brush
+                </FastTooltip>
+              ),
               icon: (
                 <Icon
                   component={AnnotationTool.BRUSH.icon}
@@ -144,13 +154,20 @@ function BrushToolMenu({ adaptedActiveTool }: ToolButtonProps) {
                 />
               ),
               disabled: isBrushDisabled,
-              title: isBrushDisabled
-                ? disabledInfosForTools[AnnotationTool.BRUSH.id].explanation
-                : "Draw over the voxels you would like to label. Adjust the brush size with Shift + Mousewheel.",
             },
             {
               key: AnnotationTool.TRACE.id,
-              label: "Trace",
+              label: (
+                <FastTooltip
+                  title={
+                    isTraceDisabled
+                      ? disabledInfosForTools[AnnotationTool.TRACE.id].explanation
+                      : "Draw outlines around the voxels you would like to label."
+                  }
+                >
+                  Trace
+                </FastTooltip>
+              ),
               icon: (
                 <Icon
                   component={AnnotationTool.TRACE.icon}
@@ -158,9 +175,6 @@ function BrushToolMenu({ adaptedActiveTool }: ToolButtonProps) {
                 />
               ),
               disabled: isTraceDisabled,
-              title: isTraceDisabled
-                ? disabledInfosForTools[AnnotationTool.TRACE.id].explanation
-                : "Draw outlines around the voxels you would like to label.",
             },
           ],
           onClick: (key) => dispatch(setToolAction(AnnotationTool[key.key as AnnotationToolId])),
@@ -215,7 +229,17 @@ function EraseToolMenu({ adaptedActiveTool }: ToolButtonProps) {
           items: [
             {
               key: AnnotationTool.ERASE_BRUSH.id,
-              label: "Erase Brush",
+              label: (
+                <FastTooltip
+                  title={
+                    isEraseBrushDisabled
+                      ? disabledInfosForTools[AnnotationTool.ERASE_BRUSH.id].explanation
+                      : "Erase the voxels by brushing over them. Adjust the brush size with Shift + Mousewheel."
+                  }
+                >
+                  Erase Brush
+                </FastTooltip>
+              ),
               icon: (
                 <Icon
                   component={AnnotationTool.ERASE_BRUSH.icon}
@@ -223,13 +247,20 @@ function EraseToolMenu({ adaptedActiveTool }: ToolButtonProps) {
                 />
               ),
               disabled: isEraseBrushDisabled,
-              title: isEraseBrushDisabled
-                ? disabledInfosForTools[AnnotationTool.ERASE_BRUSH.id].explanation
-                : "Erase the voxels by brushing over them. Adjust the brush size with Shift + Mousewheel.",
             },
             {
               key: AnnotationTool.ERASE_TRACE.id,
-              label: "Erase Trace",
+              label: (
+                <FastTooltip
+                  title={
+                    isEraseTraceDisabled
+                      ? disabledInfosForTools[AnnotationTool.ERASE_TRACE.id].explanation
+                      : "Draw outlines around the voxel you would like to erase."
+                  }
+                >
+                  Erase Trace
+                </FastTooltip>
+              ),
               icon: (
                 <Icon
                   component={AnnotationTool.ERASE_TRACE.icon}
@@ -237,9 +268,6 @@ function EraseToolMenu({ adaptedActiveTool }: ToolButtonProps) {
                 />
               ),
               disabled: isEraseTraceDisabled,
-              title: isEraseTraceDisabled
-                ? disabledInfosForTools[AnnotationTool.ERASE_TRACE.id].explanation
-                : "Draw outlines around the voxel you would like to erase.",
             },
           ],
           onClick: (key) => dispatch(setToolAction(AnnotationTool[key.key as AnnotationToolId])),
@@ -416,7 +444,7 @@ function ProofreadTool(_props: ToolButtonProps) {
   );
 }
 
-function MeasurementToolMenu() {
+function MeasurementToolMenu({ adaptedActiveTool: _adaptedActiveTool }: ToolButtonProps) {
   const measurementPreference = useWkSelector(
     (state) => state.userConfiguration.measurementPreference,
   );
@@ -443,7 +471,17 @@ function MeasurementToolMenu() {
           items: [
             {
               key: AnnotationTool.LINE_MEASUREMENT.id,
-              label: "Line Measurement",
+              label: (
+                <FastTooltip
+                  title={
+                    isLineMeasurementDisabled
+                      ? disabledInfosForTools[AnnotationTool.LINE_MEASUREMENT.id].explanation
+                      : "Measure distances with connected lines by using Left Click."
+                  }
+                >
+                  Line Measurement
+                </FastTooltip>
+              ),
               icon: (
                 <Icon
                   component={AnnotationTool.LINE_MEASUREMENT.icon}
@@ -451,13 +489,20 @@ function MeasurementToolMenu() {
                 />
               ),
               disabled: isLineMeasurementDisabled,
-              title: isLineMeasurementDisabled
-                ? disabledInfosForTools[AnnotationTool.LINE_MEASUREMENT.id].explanation
-                : "Measure distances with connected lines by using Left Click.",
             },
             {
               key: AnnotationTool.AREA_MEASUREMENT.id,
-              label: "Area Measurement",
+              label: (
+                <FastTooltip
+                  title={
+                    isAreaMeasurementDisabled
+                      ? disabledInfosForTools[AnnotationTool.AREA_MEASUREMENT.id].explanation
+                      : "Measure areas by using Left Drag. Avoid self-crossing polygon structure for accurate results."
+                  }
+                >
+                  Area Measurement
+                </FastTooltip>
+              ),
               icon: (
                 <Icon
                   component={AnnotationTool.AREA_MEASUREMENT.icon}
@@ -465,9 +510,6 @@ function MeasurementToolMenu() {
                 />
               ),
               disabled: isAreaMeasurementDisabled,
-              title: isAreaMeasurementDisabled
-                ? disabledInfosForTools[AnnotationTool.AREA_MEASUREMENT.id].explanation
-                : "Measure areas by using Left Drag. Avoid self-crossing polygon structure for accurate results.",
             },
           ],
           onClick: (key) => dispatch(setToolAction(AnnotationTool[key.key as AnnotationToolId])),

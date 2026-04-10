@@ -8,7 +8,7 @@ Part 1 covers magnification selection, Part 2 explains how to define bounding bo
 ## Checklist: key requirements
 
 - Use the coarsest magnification that still allows accurate annotation
-- Enter box sizes in voxels at the chosen magnification level (not at full resolution)
+Ensure box sizes are defined relative to magnification
 - Use ≥ 230,000 voxels per box
 - Respect the hard minimum dimensions: 85x85x32 for neuron training and 32x32x32 for instance segmentation (recommendation: 64x64x64). Use multiple of these values if larger boxes.
 - Ensure box position and size are divisible by magnification
@@ -34,8 +34,8 @@ Training at a coarser magnification has two important effects:
 There are several constraints on bounding box dimensions to ensure that enough data is annotated and used as efficiently as possible. In this section, we list these constraints and then describe two example use cases.
 
 ### Constraints for Bounding Box Dimensions
-
-Bounding box dimensions are always entered **in voxels at the chosen magnification level**. For example, a box of size **64×64×64** at magnification **16–16–8** covers **1024×1024×512** voxels at full resolution (magnification 1). The Generate Bounding Boxes dialog (available in the [Bounding Boxes tab](../ui/object_info.md#bounding-boxes-tab) and the AI training dialog) accepts sizes at the magnification level and handles the conversion automatically. When drawing boxes manually in WEBKNOSSOS, you enter the full-resolution coordinates, so you would enter **1024×1024×512** for the same box.
+Bounding box dimensions are always interpreted **relative to the chosen magnification**. Internally, the model effectively sees the box size divided by the magnification.
+For example, a box of size **64×64×64** at magnification **16–16–8** covers **1024×1024×512** voxels at full resolution (magnification 1). The Generate Bounding Boxes dialog (available in the [Bounding Boxes tab](../ui/object_info.md#bounding-boxes-tab) and the AI training dialog) accepts sizes at any magnification level and handles the conversion automatically. When drawing boxes manually in WEBKNOSSOS, you enter the full-resolution (mag 1) coordinates, so you would enter **1024×1024×512** for the same box.
 
 We recommend that each bounding box contains at least **230,000 voxels** at the chosen magnification. There are hard minimum dimensions for bounding boxes. To use the annotated data efficiently, bounding box dimensions should ideally be integer multiples of these minimum values. This means that:
 

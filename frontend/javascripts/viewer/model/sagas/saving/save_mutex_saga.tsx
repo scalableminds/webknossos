@@ -24,8 +24,6 @@ import {
   setIsMutexAcquiredAction,
   setUserHoldingMutexAction,
 } from "viewer/model/actions/save_actions";
-import type { UpdateLayerSettingAction } from "viewer/model/actions/settings_actions";
-import type { CycleToolAction, SetToolAction } from "viewer/model/actions/ui_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { ensureWkInitialized } from "../ready_sagas";
@@ -116,9 +114,6 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
 
   yield* fork(watchMutexStateChangesForNotification, mutexLogicState);
   yield* fork(watchForCollaborationModeChange, mutexLogicState);
-  yield* fork(watchForActiveVolumeTracingChange, mutexLogicState);
-  yield* fork(watchForActiveToolChange, mutexLogicState);
-  yield* fork(watchForHasEditableMappingChange, mutexLogicState);
   yield* takeEvery("ENSURE_HAS_ANNOTATION_MUTEX", resolveEnsureHasAnnotationMutexActions);
 
   const othersMayEdit = yield* select((state) => isAnnotationEditableByNonOwners(state.annotation));
@@ -340,44 +335,6 @@ function* watchForCollaborationModeChange(mutexLogicState: MutexLogicState): Sag
     }
   }
   yield* takeEvery("SET_COLLABORATION_MODE", onChange);
-}
-
-function* watchForActiveVolumeTracingChange(mutexLogicState: MutexLogicState): Saga<void> {
-  function* reactToActiveVolumeAnnotationChange({
-    propertyName,
-  }: UpdateLayerSettingAction): Saga<void> {
-    if (propertyName !== "isDisabled") {
-      return;
-    }
-    const othersMayEdit = yield* select((state) =>
-      isAnnotationEditableByNonOwners(state.annotation),
-    );
-    if (!othersMayEdit) {
-      return;
-    }
-    yield* call(restartMutexAcquiringSaga, mutexLogicState);
-  }
-  yield* takeEvery("UPDATE_LAYER_SETTING", reactToActiveVolumeAnnotationChange);
-}
-
-function* watchForActiveToolChange(mutexLogicState: MutexLogicState): Saga<void> {
-  function* reactToActiveToolChange(_action: SetToolAction | CycleToolAction): Saga<void> {
-    const othersMayEdit = yield* select((state) =>
-      isAnnotationEditableByNonOwners(state.annotation),
-    );
-    if (!othersMayEdit) {
-      return;
-    }
-    yield* call(restartMutexAcquiringSaga, mutexLogicState);
-  }
-  yield* takeEvery(["SET_TOOL", "CYCLE_TOOL"], reactToActiveToolChange);
-}
-
-function* watchForHasEditableMappingChange(mutexLogicState: MutexLogicState): Saga<void> {
-  function* reactToHasEditableMappingChange(): Saga<void> {
-    yield* call(restartMutexAcquiringSaga, mutexLogicState);
-  }
-  yield* takeEvery("SET_HAS_EDITABLE_MAPPING", reactToHasEditableMappingChange);
 }
 
 function* tryAcquireMutexAdHoc(mutexLogicState: MutexLogicState): Saga<never> {

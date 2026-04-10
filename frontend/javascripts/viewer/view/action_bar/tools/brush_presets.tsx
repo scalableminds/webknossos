@@ -168,7 +168,7 @@ export function ChangeBrushSizePopover() {
         content={
           <div
             style={{
-              width: 230,
+              width: 240,
             }}
             onMouseEnter={() => centerBrushInViewport()}
           >

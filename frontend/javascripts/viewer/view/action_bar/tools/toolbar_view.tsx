@@ -84,7 +84,8 @@ export default function ToolbarView() {
     [dispatch],
   );
 
-  const showAllTools = isWiderScreen || toolkit === Toolkit.READ_ONLY_TOOLS || isViewMode;
+  //const showAllTools = isWiderScreen || toolkit === Toolkit.READ_ONLY_TOOLS || isViewMode; //TODO_c
+  const showAllTools = true;
 
   const toolsForButtons = useMemo(() => {
     if (showAllTools) return Toolkits[toolkit];

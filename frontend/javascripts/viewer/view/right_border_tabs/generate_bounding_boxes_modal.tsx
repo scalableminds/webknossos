@@ -103,6 +103,13 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
   const sizeZError = minSize != null && sizeZ < minSize[2];
   const hasSizeError = sizeXError || sizeYError || sizeZError;
 
+  // Warn when a dimension is not a multiple of the minimum — training will work but
+  // may be less efficient (the training backend pads or crops to the nearest multiple).
+  const sizeXWarning = !sizeXError && minSize != null && minSize[0] > 0 && sizeX % minSize[0] !== 0;
+  const sizeYWarning = !sizeYError && minSize != null && minSize[1] > 0 && sizeY % minSize[1] !== 0;
+  const sizeZWarning = !sizeZError && minSize != null && minSize[2] > 0 && sizeZ % minSize[2] !== 0;
+  const hasSizeWarning = sizeXWarning || sizeYWarning || sizeZWarning;
+
   const [isGenerating, setIsGenerating] = useState(false);
 
   // Computed full-resolution size for display.
@@ -273,13 +280,15 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
         </Form.Item>
         <Form.Item
           label={`Box size in voxels at magnification ${magLabel}`}
-          validateStatus={hasSizeError ? "error" : undefined}
+          validateStatus={hasSizeError ? "error" : hasSizeWarning ? "warning" : undefined}
           help={
             hasSizeError
               ? `Minimum size for this training type: ${minSizeLabel} voxels.`
-              : !isMag1
-                ? `Full-resolution size (mag 1): ${sizeInMag1[0]}×${sizeInMag1[1]}×${sizeInMag1[2]} vx — ${formatVoxels(sizeInMag1[0] * sizeInMag1[1] * sizeInMag1[2])} per box`
-                : undefined
+              : hasSizeWarning
+                ? `For optimal training, each dimension should be a multiple of the minimum size (${minSizeLabel} voxels).`
+                : !isMag1
+                  ? `Full-resolution size (mag 1): ${sizeInMag1[0]}×${sizeInMag1[1]}×${sizeInMag1[2]} vx — ${formatVoxels(sizeInMag1[0] * sizeInMag1[1] * sizeInMag1[2])} per box`
+                  : undefined
           }
         >
           <Space>
@@ -289,7 +298,7 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
                 min={1}
                 value={sizeX}
                 onChange={(v) => setSizeX(v ?? 1)}
-                status={sizeXError ? "error" : undefined}
+                status={sizeXError ? "error" : sizeXWarning ? "warning" : undefined}
                 style={{ width: 120 }}
               />
             </Space.Compact>
@@ -299,7 +308,7 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
                 min={1}
                 value={sizeY}
                 onChange={(v) => setSizeY(v ?? 1)}
-                status={sizeYError ? "error" : undefined}
+                status={sizeYError ? "error" : sizeYWarning ? "warning" : undefined}
                 style={{ width: 120 }}
               />
             </Space.Compact>
@@ -309,7 +318,7 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
                 min={1}
                 value={sizeZ}
                 onChange={(v) => setSizeZ(v ?? 1)}
-                status={sizeZError ? "error" : undefined}
+                status={sizeZError ? "error" : sizeZWarning ? "warning" : undefined}
                 style={{ width: 120 }}
               />
             </Space.Compact>

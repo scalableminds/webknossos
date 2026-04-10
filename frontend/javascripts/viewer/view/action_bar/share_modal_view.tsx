@@ -1,6 +1,7 @@
 import {
   CompressOutlined,
   CopyOutlined,
+  ExclamationCircleOutlined,
   GlobalOutlined,
   LockOutlined,
   ShareAltOutlined,
@@ -29,9 +30,11 @@ import {
   type RadioChangeEvent,
   Row,
   Space,
+  Tag,
   Tooltip,
 } from "antd";
 import { AsyncButton } from "components/async_clickables";
+import FastTooltip from "components/fast_tooltip";
 import { PricingEnforcedBlur } from "components/pricing_enforcers";
 import { DividerWithSubtitle } from "dashboard/dataset/helper_components";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
@@ -564,6 +567,16 @@ function _ShareModalView(props: Props) {
               disabled={!newOthersMayEdit || !hasUpdatePermissions || isChangingInProgress}
             >
               Yes, allow simultaneous editing
+              <FastTooltip title="Currently not recommended for production use.">
+                <Tag
+                  style={{ marginLeft: 4 }}
+                  color="warning"
+                  icon={<ExclamationCircleOutlined />}
+                  variant="outlined"
+                >
+                  Experimental
+                </Tag>
+              </FastTooltip>
             </Checkbox>
             <Hint
               style={{

@@ -1,4 +1,4 @@
-import { M4x4, V3 } from "libs/mjs";
+import { M4x4 } from "libs/mjs";
 import range from "lodash-es/range";
 import type { Matrix4x4 } from "mjs";
 import type { OrthoViewWithoutTD, Vector2, Vector3, Vector4, ViewMode } from "viewer/constants";
@@ -78,8 +78,14 @@ function addNecessaryBucketsToPriorityQueueOblique(
 
   const planeIds: Array<OrthoViewWithoutTD> =
     viewMode === "orthogonal" ? ["PLANE_XY", "PLANE_XZ", "PLANE_YZ"] : ["PLANE_XY"];
-  const traversedBuckets: Vector3[] = [];
   const seenBucketHashes = new Set<number>();
+
+  // null is passed as additionalCoordinates, since the bucket picker doesn't care about the
+  // additional coordinates. It simply sticks to 3D and the caller is responsible for augmenting
+  // potential other coordinates.
+  const centerAddress = globalPositionToBucketPosition(position, denseMags, logZoomStep, null);
+  const additionalPriorityWeight = getPriorityWeightForZoomStepDiff(loadingStrategy, zoomStepDiff);
+
   for (const planeId of planeIds) {
     let extent: Vector2;
     let enlargedExtent: Vector2;
@@ -137,36 +143,27 @@ function addNecessaryBucketsToPriorityQueueOblique(
     );
 
     for (const [a, b] of chunk2(scanLinesPoints)) {
-      for (const bucket of traverse(a, b, denseMags, logZoomStep)) {
-        const bucketHash = hashPosition(bucket);
-        if (!seenBucketHashes.has(bucketHash)) {
-          seenBucketHashes.add(bucketHash);
-          traversedBuckets.push(bucket);
-          if (abortLimit != null && traversedBuckets.length > abortLimit) {
-            return;
-          }
+      for (const bucketAddress of traverse(a, b, denseMags, logZoomStep)) {
+        const bucketHash = hashPosition(bucketAddress);
+        if (seenBucketHashes.has(bucketHash)) {
+          // Ignore bucket as we already saw it
+          continue;
         }
-        traversedBuckets.push(bucket);
+        seenBucketHashes.add(bucketHash);
+        if (abortLimit != null && seenBucketHashes.size > abortLimit) {
+          return;
+        }
+        const priority =
+          // No V3.sub for performance reasons
+          Math.abs(bucketAddress[0] - centerAddress[0]) +
+          Math.abs(bucketAddress[1] - centerAddress[1]) +
+          Math.abs(bucketAddress[2] - centerAddress[2]);
+        enqueueFunction(
+          // Don't use ...bucketAddress for performance and better typechecking
+          [bucketAddress[0], bucketAddress[1], bucketAddress[2], logZoomStep],
+          priority + additionalPriorityWeight,
+        );
       }
     }
-  }
-
-  const traversedBucketsVec4 = traversedBuckets.map((addr): Vector4 => [...addr, logZoomStep]);
-
-  // null is passed as additionalCoordinates, since the bucket picker doesn't care about the
-  // additional coordinates. It simply sticks to 3D and the caller is responsible for augmenting
-  // potential other coordinates.
-  const centerAddress = globalPositionToBucketPosition(position, denseMags, logZoomStep, null);
-
-  for (const bucketAddress of traversedBucketsVec4) {
-    const priority = V3.sub(
-      bucketAddress as unknown as Vector3,
-      centerAddress as unknown as Vector3,
-    ).reduce((a, b) => a + Math.abs(b), 0);
-    const additionalPriorityWeight = getPriorityWeightForZoomStepDiff(
-      loadingStrategy,
-      zoomStepDiff,
-    );
-    enqueueFunction(bucketAddress, priority + additionalPriorityWeight);
   }
 }

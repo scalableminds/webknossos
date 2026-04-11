@@ -119,7 +119,7 @@ export default function ToolbarView() {
       .filter((tool): tool is AnnotationTool => tool != null);
   }, [showAllTools, toolkit, lastRecentlyUsedToolsFromUserConfig]);
 
-  const getToolDropdown = useMemo(() => {
+  const ToolDropdown = () => {
     if (showAllTools) return null;
     return (
       <ToolRadioButton name="More tools" value={null} style={NARROW_BUTTON_STYLE}>
@@ -130,13 +130,17 @@ export default function ToolbarView() {
               return {
                 key: tool.id,
                 disabled: isDisabled,
-                title: isDisabled ? disabledInfoForTools[tool.id].explanation : undefined,
                 onClick: () => dispatch(setToolAction(tool)),
                 label: (
-                  <Space size="small">
-                    tool.icon ? <Icon component={tool.icon} /> : null
-                    {tool.readableName}
-                  </Space>
+                  <FastTooltip
+                    title={isDisabled ? disabledInfoForTools[tool.id].explanation : null} //TODO_c insert description
+                    placement="left"
+                  >
+                    <Space size="small">
+                      {tool.icon ? <Icon component={tool.icon} /> : null}
+                      {tool.readableName}
+                    </Space>
+                  </FastTooltip>
                 ),
               };
             }),
@@ -146,7 +150,7 @@ export default function ToolbarView() {
         </Dropdown>
       </ToolRadioButton>
     );
-  }, [showAllTools, toolkit, dispatch, disabledInfoForTools]);
+  };
 
   return (
     <>
@@ -155,7 +159,7 @@ export default function ToolbarView() {
           const ToolButton = ToolIdToComponent[tool.id];
           return <ToolButton key={tool.id} adaptedActiveTool={adaptedActiveTool} />;
         })}
-        {getToolDropdown}
+        <ToolDropdown />
       </Radio.Group>
 
       <ToolSpecificSettings

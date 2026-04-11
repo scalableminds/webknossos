@@ -84,13 +84,12 @@ export default function ToolbarView() {
     [dispatch],
   );
 
-  //const showAllTools = isWiderScreen || toolkit === Toolkit.READ_ONLY_TOOLS || isViewMode;
-  const showAllTools = true; // TODO_c testing only
+  const showAllTools = isWiderScreen || toolkit === Toolkit.READ_ONLY_TOOLS || isViewMode;
+  //const showAllTools = true; // TODO_c testing only
 
   const toolsForButtons = useMemo(() => {
     if (showAllTools) return Toolkits[toolkit];
     const allToolsInToolkit = Toolkits[toolkit];
-    const allToolIdsInToolkit = allToolsInToolkit.map((tool) => tool.id);
     const adaptToolId = (toolId: AnnotationToolId): AnnotationToolId => {
       // fix tools with tool menus
       if (toolId === AnnotationTool.TRACE.id) return AnnotationTool.BRUSH.id;
@@ -98,26 +97,12 @@ export default function ToolbarView() {
       if (toolId === AnnotationTool.AREA_MEASUREMENT.id) return AnnotationTool.LINE_MEASUREMENT.id;
       return toolId;
     };
-
-    const lruToolsInToolkit = lastRecentlyUsedToolsFromUserConfig
-      .filter((toolId) => allToolIdsInToolkit.includes(toolId))
-      .map(adaptToolId)
-      .filter((toolId, index, array) => array.indexOf(toolId) === index); // remove duplicates
-
-    // fill up remaining slots with tools from the toolkit
-    if (lruToolsInToolkit.length < 3) {
-      allToolsInToolkit.some((tool) => {
-        if (lruToolsInToolkit.length >= 3) return true;
-        const adaptedToolId = adaptToolId(tool.id);
-        if (!lruToolsInToolkit.includes(adaptedToolId)) {
-          lruToolsInToolkit.push(adaptedToolId);
-        }
-        return false;
-      });
-    }
-    return lruToolsInToolkit
-      .map((toolId) => allToolsInToolkit.find((tool) => tool.id === toolId))
-      .filter((tool): tool is AnnotationTool => tool != null);
+    const allToolIdsInToolkit = allToolsInToolkit.map((tool) => adaptToolId(tool.id));
+    return allToolsInToolkit.filter(
+      (tool) =>
+        allToolIdsInToolkit.includes(tool.id) &&
+        lastRecentlyUsedToolsFromUserConfig.includes(tool.id),
+    );
   }, [showAllTools, toolkit, lastRecentlyUsedToolsFromUserConfig]);
 
   const ToolDropdown = () => {

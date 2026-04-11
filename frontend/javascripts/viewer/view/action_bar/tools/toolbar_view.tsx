@@ -84,8 +84,8 @@ export default function ToolbarView() {
     [dispatch],
   );
 
-  //const showAllTools = isWiderScreen || toolkit === Toolkit.READ_ONLY_TOOLS || isViewMode;
-  const showAllTools = true; // TODO_c testing only
+  const showAllTools = isWiderScreen || toolkit === Toolkit.READ_ONLY_TOOLS || isViewMode;
+  //const showAllTools = true; // TODO_c testing only
 
   const toolsForButtons = useMemo(() => {
     if (showAllTools) return Toolkits[toolkit];
@@ -97,6 +97,9 @@ export default function ToolbarView() {
       if (toolId === AnnotationTool.AREA_MEASUREMENT.id) return AnnotationTool.LINE_MEASUREMENT.id;
       return toolId;
     };
+    //TODO_c: problem remains: due to adaptToolId, there can be only 2 or 1 tools
+    // -> store 2 tools more than shown to fill up the buttons
+    // maybe rethink data structure in userconfig
     const allToolIdsInToolkit = allToolsInToolkit.map((tool) => adaptToolId(tool.id));
     return allToolsInToolkit.filter(
       (tool) =>

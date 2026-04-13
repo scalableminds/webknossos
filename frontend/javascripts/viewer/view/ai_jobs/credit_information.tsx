@@ -166,7 +166,6 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
   const jobTypeToCreditCostPerGVxInMillis: Partial<Record<APIJobCommand, number>> = useMemo(
     () => ({
       [APIJobCommand.INFER_NEURONS]: features().neuronInferralCostInMilliCreditsPerGVx,
-      [APIJobCommand.INFER_NUCLEI]: features().nucleiInferralCostInMilliCreditsPerGVx,
       [APIJobCommand.INFER_MITOCHONDRIA]: features().mitochondriaInferralCostInMilliCreditsPerGVx,
       [APIJobCommand.INFER_INSTANCES]: features().instancesInferralCostInMilliCreditsPerGVx,
       [APIJobCommand.ALIGN_SECTIONS]: features().alignmentCostInMilliCreditsPerGVx,

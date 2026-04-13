@@ -210,7 +210,7 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
     try {
       if (selectedJobType === APIJobCommand.TRAIN_INSTANCE_MODEL) {
         await runInstanceModelTraining({
-          aiModelCategory: APIAiModelCategory.EM_NUCLEI,
+          aiModelCategory: APIAiModelCategory.EM_GENERIC,
           instanceDiameterNm: instanceDiameterNm,
           ...commonJobArgmuments,
           customConfiguration,

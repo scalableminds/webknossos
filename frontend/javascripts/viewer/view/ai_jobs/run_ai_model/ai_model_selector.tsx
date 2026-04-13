@@ -2,6 +2,7 @@ import { ExperimentOutlined } from "@ant-design/icons";
 import mitoInferralExample from "@images/mito-inferral-example.jpg";
 import neuronInferralExample from "@images/neuron-inferral-example.jpg";
 import nucleiInferralExample from "@images/nuclei-inferral-example.jpg";
+import somaInferralExample from "@images/soma-inferral-example.png";
 import { APIAiModelCategory, getAiModels } from "admin/rest_api";
 import { Avatar, Card, Input, List, Space, Spin, Tag, Typography } from "antd";
 import Markdown from "libs/markdown_adapter";
@@ -20,9 +21,10 @@ export type PretrainedModel = {
   id: string;
   jobType:
     | APIJobCommand.INFER_NEURONS
-    | APIJobCommand.INFER_NUCLEI
     | APIJobCommand.INFER_MITOCHONDRIA
     | APIJobCommand.INFER_INSTANCES;
+  aiModelId?: string;
+  category?: APIAiModelCategory;
   image: string;
   disabled?: boolean;
 };
@@ -34,6 +36,8 @@ const preTrainedModels: PretrainedModel[] = [
       "Advanced neuron segmentation and reconstruction pipeline. Optimized for dense neuronal tissue from SEM, FIB-SEM, SBEM, Multi-SEM microscopes.",
     id: "neuron-segmentation",
     jobType: APIJobCommand.INFER_NEURONS,
+    aiModelId: "neuron_inferral_model",
+    category: APIAiModelCategory.EM_NEURONS,
     image: neuronInferralExample,
   },
   {
@@ -49,8 +53,20 @@ const preTrainedModels: PretrainedModel[] = [
     comment: "Instance segmentation model for nuclei detection. Optimized for EM data",
     id: "nuclei-detection",
     disabled: true,
-    jobType: APIJobCommand.INFER_NUCLEI,
+    jobType: APIJobCommand.INFER_INSTANCES,
+    aiModelId: "nuclei_inferral_model",
+    category: APIAiModelCategory.EM_NUCLEI,
     image: nucleiInferralExample,
+  },
+  {
+    name: "Soma Detection",
+    comment: "Instance segmentation model for soma detection. Optimized for EM data",
+    id: "soma-detection",
+    disabled: true,
+    jobType: APIJobCommand.INFER_INSTANCES,
+    aiModelId: "soma_inferral_model",
+    category: APIAiModelCategory.EM_SOMATA,
+    image: somaInferralExample,
   },
 ];
 
@@ -61,6 +77,8 @@ const mapCategoryToJobType = (
     case APIAiModelCategory.EM_NEURONS:
       return APIJobCommand.INFER_NEURONS;
     case APIAiModelCategory.EM_NUCLEI:
+    case APIAiModelCategory.EM_GENERIC:
+    case APIAiModelCategory.EM_SOMATA:
       return APIJobCommand.INFER_INSTANCES;
     default:
       throw new Error(`Unsupported category: ${category}`);
@@ -86,7 +104,6 @@ export const AiModelSelector: React.FC = () => {
   const onSelectModel = (model: AiModel | PretrainedModel) => {
     let jobType:
       | APIJobCommand.INFER_NEURONS
-      | APIJobCommand.INFER_NUCLEI
       | APIJobCommand.INFER_MITOCHONDRIA
       | APIJobCommand.INFER_INSTANCES;
     if ("category" in model) {

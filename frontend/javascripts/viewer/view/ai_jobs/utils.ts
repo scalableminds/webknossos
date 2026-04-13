@@ -11,12 +11,11 @@ import { getColorLayers, getMagInfo } from "viewer/model/accessors/dataset_acces
 import { getSegmentationLayerByHumanReadableName } from "viewer/model/accessors/volumetracing_accessor";
 import { convertVoxelSizeToUnit } from "viewer/model/scaleinfo";
 import type { UserBoundingBox, VolumeTracing } from "viewer/store";
-import { MEAN_VX_SIZE, MIN_BBOX_EXTENT } from "./constants";
+import { MIN_BBOX_EXTENT } from "./constants";
 
 const getMinimumDSSize = (jobType: APIJobCommand) => {
   switch (jobType) {
     case APIJobCommand.INFER_NEURONS:
-    case APIJobCommand.INFER_NUCLEI:
     case APIJobCommand.INFER_INSTANCES:
       return MIN_BBOX_EXTENT[jobType].map((dim) => dim * 2);
     case APIJobCommand.INFER_MITOCHONDRIA:
@@ -47,7 +46,6 @@ export const getBestFittingMagComparedToTrainingDS = async (
   jobType:
     | APIJobCommand.INFER_MITOCHONDRIA
     | APIJobCommand.INFER_NEURONS
-    | APIJobCommand.INFER_NUCLEI
     | APIJobCommand.INFER_INSTANCES,
   aiModelId?: string,
   showToast = true,
@@ -62,11 +60,8 @@ export const getBestFittingMagComparedToTrainingDS = async (
   if (aiModelId) {
     const voxelSize = await getAiModelVoxelSize(aiModelId);
     modelScale = convertVoxelSizeToUnit(voxelSize, UnitShort.nm);
-  } else if (jobType === APIJobCommand.INFER_INSTANCES) {
-    // Pretrained instance inferral uses the nuclei model
-    modelScale = MEAN_VX_SIZE[APIJobCommand.INFER_NUCLEI];
   } else {
-    modelScale = MEAN_VX_SIZE[jobType];
+    throw new Error(`Expected aiModelId for job type: ${jobType}`);
   }
 
   let closestMagOfCurrentDS = colorLayer.mags[0].mag;
@@ -107,8 +102,7 @@ const isBBoxTooSmall = (
   segmentationType:
     | APIJobCommand.INFER_INSTANCES
     | APIJobCommand.INFER_MITOCHONDRIA
-    | APIJobCommand.INFER_NEURONS
-    | APIJobCommand.INFER_NUCLEI,
+    | APIJobCommand.INFER_NEURONS,
   mag: Vector3,
   bboxOrDS: "bbox" | "dataset" = "bbox",
 ) => {
@@ -136,8 +130,7 @@ export const isDatasetOrBoundingBoxTooSmall = (
   segmentationType:
     | APIJobCommand.INFER_INSTANCES
     | APIJobCommand.INFER_MITOCHONDRIA
-    | APIJobCommand.INFER_NEURONS
-    | APIJobCommand.INFER_NUCLEI,
+    | APIJobCommand.INFER_NEURONS,
 ): boolean => {
   const datasetExtent: Vector3 = [
     colorLayer.boundingBox.width,

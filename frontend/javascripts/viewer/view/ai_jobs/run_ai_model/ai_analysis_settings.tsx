@@ -19,7 +19,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import type React from "react";
 import { ColorWKBlue } from "theme";
-import type { APIDataLayer } from "types/api_types";
+import { type APIDataLayer, APIJobCommand } from "types/api_types";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import type { UserBoundingBox } from "viewer/store";
 import {
@@ -82,11 +82,11 @@ export const AiAnalysisSettings: React.FC = () => {
     }
   };
 
-  const isInstanceModel =
+  const isInstanceModel = selectedJobType === APIJobCommand.INFER_INSTANCES;
+  const isNeuronModel =
     selectedModel != null &&
     "category" in selectedModel &&
-    selectedModel.category === APIAiModelCategory.EM_NUCLEI;
-  const isNeuronModel = selectedModel ? !isInstanceModel : false;
+    selectedModel.category === APIAiModelCategory.EM_NEURONS;
 
   const formFields = [
     { name: ["newDatasetName"], value: newDatasetName },

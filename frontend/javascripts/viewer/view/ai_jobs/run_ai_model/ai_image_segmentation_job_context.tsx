@@ -31,7 +31,6 @@ interface RunAiModelJobContextType {
   selectedModel: AiModel | PretrainedModel | null;
   selectedJobType:
     | APIJobCommand.INFER_NEURONS
-    | APIJobCommand.INFER_NUCLEI
     | APIJobCommand.INFER_MITOCHONDRIA
     | APIJobCommand.INFER_INSTANCES
     | null;
@@ -45,7 +44,6 @@ interface RunAiModelJobContextType {
   setSelectedJobType: (
     jobType:
       | APIJobCommand.INFER_NEURONS
-      | APIJobCommand.INFER_NUCLEI
       | APIJobCommand.INFER_MITOCHONDRIA
       | APIJobCommand.INFER_INSTANCES,
   ) => void;
@@ -76,7 +74,6 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
   const [selectedModel, setSelectedModel] = useState<AiModel | PretrainedModel | null>(null);
   const [selectedJobType, setSelectedJobType] = useState<
     | APIJobCommand.INFER_NEURONS
-    | APIJobCommand.INFER_NUCLEI
     | APIJobCommand.INFER_MITOCHONDRIA
     | APIJobCommand.INFER_INSTANCES
     | null
@@ -179,7 +176,12 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     }
 
     const isColorLayerInverted = datasetConfiguration.layers[selectedLayer.name].isInverted;
-    const aiModelId = "trainingJob" in selectedModel ? selectedModel.id : undefined;
+    const aiModelId =
+      "trainingJob" in selectedModel
+        ? selectedModel.id
+        : "aiModelId" in selectedModel
+          ? selectedModel.aiModelId
+          : undefined;
 
     try {
       switch (selectedJobType) {
@@ -202,16 +204,6 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
                     splitMergerEvaluationSettings.minimumMergerPathLengthInNm,
                 }
               : {}),
-            customConfiguration,
-          });
-          break;
-        case APIJobCommand.INFER_NUCLEI:
-          await runInstanceModelInference({
-            datasetId: dataset.id,
-            colorLayerName: selectedLayer.name,
-            boundingBox: boundingBox.join(","),
-            newDatasetName,
-            invertColorLayer: isColorLayerInverted,
             customConfiguration,
           });
           break;

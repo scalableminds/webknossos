@@ -63,7 +63,7 @@ function MoveTool(_props: ToolButtonProps) {
   return (
     <ToolRadioButton
       name={AnnotationTool.MOVE.readableName}
-      description="Use left-click to move around and right-click to open a context menu."
+      description={AnnotationTool.MOVE.description}
       disabledExplanation=""
       disabled={false}
       value={AnnotationTool.MOVE.id}
@@ -77,7 +77,7 @@ function SkeletonTool(_props: ToolButtonProps) {
   const useLegacyBindings = useWkSelector((state) => state.userConfiguration.useLegacyBindings);
   const skeletonToolDescription = useLegacyBindings
     ? "Use left-click to move around and right-click to create new skeleton nodes"
-    : "Use left-click to move around or to create/select/move nodes. Right-click opens a context menu with further options.";
+    : AnnotationTool.SKELETON.description;
   const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
   const hasSkeleton = useWkSelector((state) => state.annotation?.skeleton != null);
   const isReadOnly = useWkSelector((state) => !state.annotation.restrictions.allowUpdate);
@@ -308,7 +308,7 @@ function FillCellTool({ adaptedActiveTool }: ToolButtonProps) {
   return (
     <ToolRadioButton
       name={AnnotationTool.FILL_CELL.readableName}
-      description="Flood-fill the clicked region."
+      description={AnnotationTool.FILL_CELL.description}
       disabledExplanation={disabledInfosForTools[AnnotationTool.FILL_CELL.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.FILL_CELL.id].isDisabled}
       value={AnnotationTool.FILL_CELL.id}
@@ -332,7 +332,7 @@ function VoxelPipetteTool(_props: ToolButtonProps) {
   return (
     <ToolRadioButton
       name={AnnotationTool.VOXEL_PIPETTE.readableName}
-      description="Inspect a voxel by showing the data values per layer in a tooltip. Clicking on a voxel will pin the tooltip to make the values selectable with the mouse cursor."
+      description={AnnotationTool.VOXEL_PIPETTE.description}
       disabledExplanation={disabledInfosForTools[AnnotationTool.VOXEL_PIPETTE.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.VOXEL_PIPETTE.id].isDisabled}
       value={AnnotationTool.VOXEL_PIPETTE.id}
@@ -356,7 +356,7 @@ function QuickSelectTool(_props: ToolButtonProps) {
   return (
     <ToolRadioButton
       name={AnnotationTool.QUICK_SELECT.readableName}
-      description="Click on a segment or draw a rectangle around it to automatically detect it"
+      description={AnnotationTool.QUICK_SELECT.description}
       disabledExplanation={disabledInfosForTools[AnnotationTool.QUICK_SELECT.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.QUICK_SELECT.id].isDisabled}
       value={AnnotationTool.QUICK_SELECT.id}
@@ -381,7 +381,7 @@ function BoundingBoxTool(_props: ToolButtonProps) {
   return (
     <ToolRadioButton
       name={AnnotationTool.BOUNDING_BOX.readableName}
-      description="Create, resize and modify bounding boxes."
+      description={AnnotationTool.BOUNDING_BOX.description}
       disabledExplanation={disabledInfosForTools[AnnotationTool.BOUNDING_BOX.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.BOUNDING_BOX.id].isDisabled}
       value={AnnotationTool.BOUNDING_BOX.id}
@@ -414,9 +414,7 @@ function ProofreadTool(_props: ToolButtonProps) {
   return (
     <ToolRadioButton
       name={AnnotationTool.PROOFREAD.readableName}
-      description={
-        "Modify an agglomerated segmentation. Other segmentation modifications, like brushing, are not allowed if this tool is used."
-      }
+      description={AnnotationTool.PROOFREAD.description}
       disabledExplanation={
         areEditableMappingsEnabled
           ? isAgglomerateMappingEnabled.reason ||

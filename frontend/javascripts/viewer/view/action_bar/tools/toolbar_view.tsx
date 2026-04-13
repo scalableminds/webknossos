@@ -122,7 +122,11 @@ export default function ToolbarView() {
                 onClick: () => dispatch(setToolAction(tool)),
                 label: (
                   <FastTooltip
-                    title={isDisabled ? disabledInfoForTools[tool.id].explanation : null} //TODO_c insert description
+                    title={
+                      isDisabled
+                        ? disabledInfoForTools[tool.id].explanation
+                        : AnnotationTool[tool.id].description
+                    }
                     placement="left"
                   >
                     <Space size="small">

@@ -4,6 +4,7 @@ import {
   runNeuronModelInference,
   runPretrainedMitochondriaInferenceJob,
 } from "admin/rest_api";
+import type { KeyValuePairs } from "components/key_value_pairs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { computeArrayFromBoundingBox } from "libs/utils";
@@ -40,6 +41,7 @@ interface RunAiModelJobContextType {
   seedGeneratorDistanceThreshold: number | null;
   isEvaluationActive: boolean;
   splitMergerEvaluationSettings: SplitMergerEvaluationSettings;
+  customConfiguration: KeyValuePairs;
   setSelectedJobType: (
     jobType:
       | APIJobCommand.INFER_NEURONS
@@ -54,6 +56,7 @@ interface RunAiModelJobContextType {
   setSeedGeneratorDistanceThreshold: (threshold: number | null) => void;
   setIsEvaluationActive: (isActive: boolean) => void;
   setSplitMergerEvaluationSettings: (settings: SplitMergerEvaluationSettings) => void;
+  setCustomConfiguration: (config: KeyValuePairs) => void;
   handleStartAnalysis: () => void;
   areParametersValid: boolean;
 }
@@ -85,6 +88,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     number | null
   >(null);
   const [isEvaluationActive, setIsEvaluationActive] = useState(false);
+  const [customConfiguration, setCustomConfiguration] = useState<KeyValuePairs>({});
   const [splitMergerEvaluationSettings, setSplitMergerEvaluationSettings] =
     useState<SplitMergerEvaluationSettings>({
       useSparseTracing: true,
@@ -198,6 +202,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
                     splitMergerEvaluationSettings.minimumMergerPathLengthInNm,
                 }
               : {}),
+            customConfiguration,
           });
           break;
         case APIJobCommand.INFER_NUCLEI:
@@ -207,6 +212,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
             boundingBox: boundingBox.join(","),
             newDatasetName,
             invertColorLayer: isColorLayerInverted,
+            customConfiguration,
           });
           break;
         case APIJobCommand.INFER_INSTANCES:
@@ -218,6 +224,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
             newDatasetName,
             invertColorLayer: isColorLayerInverted,
             seedGeneratorDistanceThreshold,
+            customConfiguration,
           });
           break;
         case APIJobCommand.INFER_MITOCHONDRIA:
@@ -266,6 +273,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     seedGeneratorDistanceThreshold,
     isEvaluationActive,
     splitMergerEvaluationSettings,
+    customConfiguration,
     setSelectedModel,
     setSelectedJobType,
     setSelectedBoundingBox,
@@ -274,6 +282,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     setSeedGeneratorDistanceThreshold,
     setIsEvaluationActive,
     setSplitMergerEvaluationSettings,
+    setCustomConfiguration,
     handleStartAnalysis,
     areParametersValid,
   };

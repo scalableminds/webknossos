@@ -19,9 +19,8 @@ trait LRUConcurrentCache[K, V] {
 
   def put(key: K, value: V): Unit =
     cache.synchronized {
-      val previous = cache.put(key, value)
-      if (previous != null)
-        onElementRemoval(key, previous)
+      val previousOpt = Option(cache.put(key, value))
+      previousOpt.foreach(onElementRemoval(key, _))
     }
 
   def get(key: K): Option[V] =
@@ -48,9 +47,8 @@ trait LRUConcurrentCache[K, V] {
 
   def remove(key: K): Unit =
     cache.synchronized {
-      val previous = cache.remove(key)
-      if (previous != null)
-        onElementRemoval(key, previous)
+      val previousOpt = Option(cache.remove(key))
+      previousOpt.foreach(onElementRemoval(key, _))
     }
 
   def size(): Int =

@@ -204,39 +204,45 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
                                                  segmentationLayer: SegmentationLayer,
                                                  fullMeshRequest: FullMeshRequest,
                                                  topLeft: VoxelPosition,
-                                                 chunkSize: Vec3Int,
-                                                 visited: collection.mutable.Set[VoxelPosition] =
-                                                   collection.mutable.Set[VoxelPosition]())(
+                                                 chunkSize: Vec3Int)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[List[Array[Float]]] = {
-    val adHocMeshRequest = AdHocMeshRequest(
-      Some(datasetId),
-      Some(dataSource.id),
-      segmentationLayer,
-      Cuboid(topLeft, chunkSize.x + 1, chunkSize.y + 1, chunkSize.z + 1),
-      fullMeshRequest.segmentId,
-      dataSource.scale.factor,
-      tc,
-      fullMeshRequest.mappingName,
-      fullMeshRequest.mappingType,
-      fullMeshRequest.additionalCoordinates
-    )
-    visited += topLeft
-    for {
-      (vertices: Array[Float], neighbors) <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
-      nextPositions: List[VoxelPosition] = generateNextTopLeftsFromNeighbors(topLeft, neighbors, chunkSize, visited)
-      _ = visited ++= nextPositions
-      neighborVerticesNested <- Fox.serialCombined(nextPositions) { position: VoxelPosition =>
-        getAllAdHocChunksWithNeighborLogic(datasetId,
-                                           dataSource,
-                                           segmentationLayer,
-                                           fullMeshRequest,
-                                           position,
-                                           chunkSize,
-                                           visited)
+    // Iterative parallel BFS. Each wave dispatches all frontier positions concurrently
+    // (in actorPoolSize batches) rather than serially one at a time.
+    // visited is marked before dispatch so parallel wave members don't queue the same position.
+    val visited = collection.mutable.Set[VoxelPosition]()
+
+    def processFrontier(frontier: List[VoxelPosition], acc: List[Array[Float]]): Fox[List[Array[Float]]] =
+      if (frontier.isEmpty) Fox.successful(acc)
+      else {
+        visited ++= frontier
+        Fox.serialCombined(frontier.grouped(config.Datastore.AdHocMesh.actorPoolSize).toList) { batch =>
+          Fox.combined(batch.map { position =>
+            val adHocMeshRequest = AdHocMeshRequest(
+              Some(datasetId),
+              Some(dataSource.id),
+              segmentationLayer,
+              Cuboid(position, chunkSize.x + 1, chunkSize.y + 1, chunkSize.z + 1),
+              fullMeshRequest.segmentId,
+              dataSource.scale.factor,
+              tc,
+              fullMeshRequest.mappingName,
+              fullMeshRequest.mappingType,
+              fullMeshRequest.additionalCoordinates
+            )
+            adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest).map { case (vertices, neighbors) =>
+              (vertices, generateNextTopLeftsFromNeighbors(position, neighbors, chunkSize, visited))
+            }
+          })
+        }.map(_.flatten).flatMap { results =>
+          val newVertices = results.map(_._1)
+          // Two wave members may share a border and independently report the same neighbor position
+          val nextFrontier = results.flatMap(_._2).distinct
+          processFrontier(nextFrontier, newVertices ::: acc)
+        }
       }
-      allVertices: List[Array[Float]] = vertices +: neighborVerticesNested.flatten
-    } yield allVertices
+
+    processFrontier(List(topLeft), Nil)
   }
 
   // Returns individual raw STL chunks (50 bytes/face, no header) for a mesh-file request.

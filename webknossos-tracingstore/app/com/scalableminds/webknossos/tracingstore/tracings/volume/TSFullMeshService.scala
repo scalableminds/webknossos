@@ -141,40 +141,45 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
                                                  voxelSize: VoxelSize,
                                                  fullMeshRequest: FullMeshRequest,
                                                  topLeftOpt: Option[VoxelPosition],
-                                                 chunkSize: Vec3Int,
-                                                 visited: collection.mutable.Set[VoxelPosition] =
-                                                   collection.mutable.Set[VoxelPosition]())(
+                                                 chunkSize: Vec3Int)(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[List[Array[Float]]] =
+      tc: TokenContext): Fox[List[Array[Float]]] = {
+    val visited = collection.mutable.Set[VoxelPosition]()
+
+    def processFrontier(frontier: List[VoxelPosition], acc: List[Array[Float]]): Fox[List[Array[Float]]] =
+      if (frontier.isEmpty) Fox.successful(acc)
+      else {
+        visited ++= frontier
+        Fox.serialCombined(frontier.grouped(adHocMeshingBatchSize).toList) { batch =>
+          Fox.combined(batch.map { position =>
+            val adHocMeshRequest = WebknossosAdHocMeshRequest(
+              position = Vec3Int(position.mag1X, position.mag1Y, position.mag1Z),
+              mag = mag,
+              cubeSize = Vec3Int(chunkSize.x + 1, chunkSize.y + 1, chunkSize.z + 1),
+              fullMeshRequest.segmentId,
+              voxelSize.factor,
+              fullMeshRequest.mappingName,
+              fullMeshRequest.mappingType,
+              fullMeshRequest.additionalCoordinates
+            )
+            loadMeshChunkFromAdHoc(annotationId, tracingId, tracing, adHocMeshRequest).map { case (vertices, neighbors) =>
+              (vertices, generateNextTopLeftsFromNeighbors(position, neighbors, chunkSize, visited))
+            }
+          })
+        }.map(_.flatten).flatMap { results =>
+          val newVertices = results.map(_._1)
+          val nextFrontier = results.flatMap(_._2).distinct
+          processFrontier(nextFrontier, newVertices ::: acc)
+        }
+      }
+
     for {
       topLeft <- topLeftOpt.toFox ?~> "seedPosition.neededForAdHoc"
-      adHocMeshRequest = WebknossosAdHocMeshRequest(
-        position = Vec3Int(topLeft.mag1X, topLeft.mag1Y, topLeft.mag1Z),
-        mag = mag,
-        cubeSize = Vec3Int(chunkSize.x + 1, chunkSize.y + 1, chunkSize.z + 1),
-        fullMeshRequest.segmentId,
-        voxelSize.factor,
-        fullMeshRequest.mappingName,
-        fullMeshRequest.mappingType,
-        fullMeshRequest.additionalCoordinates
-      )
-      _ = visited += topLeft
-      (vertices: Array[Float], neighbors) <- loadMeshChunkFromAdHoc(annotationId, tracingId, tracing, adHocMeshRequest)
-      nextPositions: List[VoxelPosition] = generateNextTopLeftsFromNeighbors(topLeft, neighbors, chunkSize, visited)
-      _ = visited ++= nextPositions
-      neighborVerticesNested <- Fox.serialCombined(nextPositions) { position: VoxelPosition =>
-        getAllAdHocChunksWithNeighborLogic(annotationId,
-                                           tracingId,
-                                           tracing,
-                                           mag,
-                                           voxelSize,
-                                           fullMeshRequest,
-                                           Some(position),
-                                           chunkSize,
-                                           visited)
-      }
-      allVertices: List[Array[Float]] = vertices +: neighborVerticesNested.flatten
-    } yield allVertices
+      result <- processFrontier(List(topLeft), Nil)
+    } yield result
+  }
+
+  private val adHocMeshingBatchSize = 8
 
   private def loadMeshChunkFromAdHoc(
       annotationId: ObjectId,

@@ -120,6 +120,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
         segmentationLayer,
         fullMeshRequest.mappingName,
         fullMeshRequest.editableMappingTracingId,
+        fullMeshRequest.annotationVersion,
         fullMeshRequest.segmentId,
         mappingNameForMeshFile = None,
         omitMissing = false
@@ -181,7 +182,8 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       tc,
       fullMeshRequest.mappingName,
       fullMeshRequest.mappingType,
-      fullMeshRequest.additionalCoordinates
+      fullMeshRequest.additionalCoordinates,
+      fullMeshRequest.annotationVersion,
     )
     visited += topLeft
     for {
@@ -216,6 +218,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
         dataLayer,
         fullMeshRequest.mappingName,
         fullMeshRequest.editableMappingTracingId,
+        fullMeshRequest.annotationVersion,
         fullMeshRequest.segmentId,
         mappingNameForMeshFile,
         omitMissing = false

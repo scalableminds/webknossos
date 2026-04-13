@@ -345,22 +345,19 @@ export function* createEditableMapping(): Saga<string> {
   const baseMappingName = volumeTracing.mappingName;
   yield* put(setMappingNameAction(layerName, volumeTracingId, "HDF5"));
   yield* put(setHasEditableMappingAction(volumeTracingId));
+
+  // Ensure a saved state so that the mapping is locked and editable before doing the first proofreading operation.
+  // This needs to happen before initializeEditableMappingAction is dispatched, because the backend wouldn't be
+  // able to handle mapping requests that might be triggered right after initializing the mapping.
+  yield* call(syncWithBackend);
+
   const editableMapping: ServerEditableMapping = {
     baseMappingName: baseMappingName,
     tracingId: volumeTracingId,
     createdTimestamp: Date.now(),
   };
   yield* put(initializeEditableMappingAction(editableMapping));
-  // Ensure a saved state so that the mapping is locked and editable before doing the first proofreading operation.
-  // todop: discuss with michael
-  const isBusy = yield select((state) => state.uiInformation.busyBlockingInfo.isBusy);
-  if (isBusy) {
-    // todop: this branch was necessary for me during browser testing
-    yield* call(syncWithBackend);
-  } else {
-    // todop: this branch was necessary for me during vite tests
-    yield* call([Model, Model.ensureSavedState]);
-  }
+
   return volumeTracingId;
 }
 

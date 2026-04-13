@@ -32,6 +32,7 @@ import {
 import {
   expectMapping,
   initializeMappingAndTool,
+  makeMappingEditableForTest,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
 import type { Vector3 } from "viewer/constants";
@@ -62,7 +63,7 @@ function* prepareEditableMapping(
   );
   yield put(setActiveCellAction(activeSegmentId));
 
-  yield call(createEditableMapping);
+  yield call(makeMappingEditableForTest);
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
   yield* expectMapping(tracingId, initialExpectedMapping);
@@ -519,7 +520,7 @@ describe("Proofreading (Multi User)", () => {
     yield put(updateSegmentAction(2, { anchorPosition: [2, 2, 2] }, tracingId));
     yield put(setActiveCellAction(2));
 
-    yield call(createEditableMapping);
+    yield call(makeMappingEditableForTest);
     // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
     yield* expectMapping(tracingId, initialMapping);
 

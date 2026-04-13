@@ -31,7 +31,7 @@ import {
 import { loadAgglomerateTree1 } from "./proofreading_interaction_update_action_fixtures";
 import {
   initializeMappingAndTool,
-  makeMappingEditableHelper,
+  makeMappingEditableForTest,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
 
@@ -608,7 +608,7 @@ describe("Proofreading (Poll only)", () => {
       // due to the user's interactions.
       yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
       yield put(setActiveCellAction(1));
-      yield makeMappingEditableHelper();
+      yield makeMappingEditableForTest();
       yield put(setCollaborationModeAction("Concurrent"));
 
       // Ensure all changes till here are saved in the backend.

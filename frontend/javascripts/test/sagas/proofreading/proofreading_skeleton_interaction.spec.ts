@@ -17,7 +17,6 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { createEditableMapping } from "viewer/model/sagas/volume/proofread_saga";
 import { Store } from "viewer/singletons";
 import {
   type NumberLike,
@@ -30,6 +29,7 @@ import { expectedMappingAfterMerge, initialMapping } from "./proofreading_fixtur
 import {
   expectMapping,
   initializeMappingAndTool,
+  makeMappingEditableForTest,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
 
@@ -47,7 +47,7 @@ function* performMergeTreesProofreading(
   yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
   yield put(setActiveCellAction(1));
 
-  yield call(createEditableMapping);
+  yield call(makeMappingEditableForTest);
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
   yield* expectMapping(tracingId, initialMapping);
@@ -96,7 +96,7 @@ function* performSplitTreesProofreading(context: WebknossosTestContext): Generat
   yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
   yield put(setActiveCellAction(1));
 
-  yield call(createEditableMapping);
+  yield call(makeMappingEditableForTest);
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
   yield* expectMapping(tracingId, initialMapping);
@@ -142,7 +142,7 @@ function* performMinCutWithNodesProofreading(
   yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
   yield put(setActiveCellAction(1));
 
-  yield call(createEditableMapping);
+  yield call(makeMappingEditableForTest);
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
   yield* expectMapping(tracingId, initialMapping);

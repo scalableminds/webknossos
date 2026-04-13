@@ -35,6 +35,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { initialMapping } from "./proofreading_fixtures";
 import {
   initializeMappingAndTool,
+  makeMappingEditableForTest,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
 import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
@@ -67,7 +68,7 @@ describe("Proofreading (with mesh actions)", () => {
     yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
     yield put(setActiveCellAction(1, undefined, null, 1));
 
-    yield call(createEditableMapping);
+    yield call(makeMappingEditableForTest);
 
     // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
     const mapping1 = yield select(
@@ -269,7 +270,7 @@ describe("Proofreading (with mesh actions)", () => {
     yield put(updateSegmentAction(6, { anchorPosition: [1337, 1337, 1337] }, tracingId));
     yield put(setActiveCellAction(6, undefined, null, 1337));
 
-    yield call(createEditableMapping);
+    yield call(makeMappingEditableForTest);
 
     // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
     const mapping1 = yield select(
@@ -529,7 +530,7 @@ describe("Proofreading (with mesh actions)", () => {
     yield put(updateSegmentAction(6, { anchorPosition: [1337, 1337, 1337] }, tracingId));
     yield put(setActiveCellAction(6, undefined, null, 1337));
 
-    yield call(createEditableMapping);
+    yield call(makeMappingEditableForTest);
 
     // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
     const mapping1 = yield select(

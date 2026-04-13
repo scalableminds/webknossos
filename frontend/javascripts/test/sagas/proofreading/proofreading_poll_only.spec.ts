@@ -31,7 +31,7 @@ import {
   expectSegmentList,
   getPositionForSegmentId,
   initializeMappingAndTool,
-  makeMappingEditableHelper,
+  makeMappingEditableForTest,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
 
@@ -629,7 +629,7 @@ describe("Proofreading (Poll only)", () => {
       // due to the user's interactions.
       yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
-      yield makeMappingEditableHelper();
+      yield makeMappingEditableForTest();
       yield put(setOthersMayEditForAnnotationAction(true));
 
       // Ensure all changes till here are saved in the backend.

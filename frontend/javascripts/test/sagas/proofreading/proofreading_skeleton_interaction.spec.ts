@@ -40,7 +40,7 @@ import {
 import {
   expectSegmentList,
   initializeMappingAndTool,
-  makeMappingEditableHelper,
+  makeMappingEditableForTest,
   mockInitialBucketAndAgglomerateData,
   getPositionForSegmentId,
 } from "./proofreading_test_utils";
@@ -90,7 +90,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
       yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
 
-      yield makeMappingEditableHelper();
+      yield makeMappingEditableForTest();
 
       // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
       // Load agglomerate skeleton for agglomerate id 1.
@@ -154,7 +154,7 @@ describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
         expect(agglomerateTree.agglomerateInfo?.mappingName).toBe(sampleHdf5AgglomerateName);
         expect(agglomerateTree.agglomerateInfo?.tracingId).toBeUndefined();
       });
-      yield makeMappingEditableHelper();
+      yield makeMappingEditableForTest();
 
       const treesAfterMakingMappingEditable = yield* select((state) =>
         getTreesWithType(enforceSkeletonTracing(state.annotation), TreeTypeEnum.AGGLOMERATE),

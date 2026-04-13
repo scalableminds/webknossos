@@ -48,7 +48,7 @@ import {
   getPositionForSegmentId,
   initializeMappingAndTool,
   loadAgglomerateMeshes,
-  makeMappingEditableHelper,
+  makeMappingEditableForTest,
   mockEdgesForPartitionedAgglomerateMinCut,
   mockInitialBucketAndAgglomerateData,
   performCutFromAllNeighbours,
@@ -385,7 +385,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
 
-      yield makeMappingEditableHelper();
+      yield makeMappingEditableForTest();
 
       const [removedMeshes, forkedEffect1] = yield* trackRemovedMeshActions();
       const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
@@ -442,7 +442,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
 
-      yield makeMappingEditableHelper();
+      yield makeMappingEditableForTest();
 
       const [removedMeshes, forkedEffect1] = yield* trackRemovedMeshActions();
       const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
@@ -505,7 +505,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       // due to the user's interactions.
       yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
-      yield makeMappingEditableHelper();
+      yield makeMappingEditableForTest();
 
       // Prepare the server's reply for the upcoming split.
       vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
@@ -576,7 +576,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       // due to the user's interactions.
       yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
-      yield makeMappingEditableHelper();
+      yield makeMappingEditableForTest();
 
       // Prepare the server's reply for the upcoming split.
       vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(

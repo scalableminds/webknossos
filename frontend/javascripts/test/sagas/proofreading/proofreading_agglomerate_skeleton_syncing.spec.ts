@@ -42,7 +42,7 @@ import {
   getPositionForSegmentId,
   initializeMappingAndTool,
   loadAgglomerateMeshes,
-  makeMappingEditableHelper,
+  makeMappingEditableForTest,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
 
@@ -73,7 +73,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       // due to the user's interactions.
       yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
-      yield makeMappingEditableHelper();
+      yield makeMappingEditableForTest();
       yield put(setOthersMayEditForAnnotationAction(true));
 
       const versionBeforeSkeletonLoading = yield* select((state) => state.annotation.version);
@@ -140,7 +140,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
           updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
         );
         yield put(setActiveCellAction(1));
-        yield makeMappingEditableHelper();
+        yield makeMappingEditableForTest();
         if (othersMayEdit) {
           yield put(setOthersMayEditForAnnotationAction(true));
         }
@@ -200,7 +200,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
           updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
         );
         yield put(setActiveCellAction(1));
-        yield makeMappingEditableHelper();
+        yield makeMappingEditableForTest();
         if (othersMayEdit) {
           yield put(setOthersMayEditForAnnotationAction(true));
         }
@@ -263,7 +263,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
           updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
         );
         yield put(setActiveCellAction(1));
-        yield makeMappingEditableHelper();
+        yield makeMappingEditableForTest();
         if (othersMayEdit) {
           yield put(setOthersMayEditForAnnotationAction(true));
         }
@@ -329,7 +329,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
           updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
         );
         yield put(setActiveCellAction(1));
-        yield makeMappingEditableHelper();
+        yield makeMappingEditableForTest();
         if (othersMayEdit) {
           yield put(setOthersMayEditForAnnotationAction(true));
         }
@@ -397,7 +397,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         yield call(initializeMappingAndTool, context, tracingId);
 
         // Load relevant meshes.
-        yield makeMappingEditableHelper();
+        yield makeMappingEditableForTest();
         yield loadAgglomerateMeshes([1, 6]);
         if (othersMayEdit) {
           yield put(setOthersMayEditForAnnotationAction(true));
@@ -451,7 +451,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         yield call(initializeMappingAndTool, context, tracingId);
 
         // Load relevant meshes.
-        yield makeMappingEditableHelper();
+        yield makeMappingEditableForTest();
         yield loadAgglomerateMeshes([1, 6]);
         if (othersMayEdit) {
           yield put(setOthersMayEditForAnnotationAction(true));
@@ -550,7 +550,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
         yield call(initializeMappingAndTool, context, tracingId);
 
         // Load relevant meshes.
-        yield makeMappingEditableHelper();
+        yield makeMappingEditableForTest();
         if (othersMayEdit) {
           yield put(setOthersMayEditForAnnotationAction(true));
         }
@@ -629,7 +629,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       // due to the user's interactions.
       yield put(updateSegmentAction(4, { anchorPosition: getPositionForSegmentId(4) }, tracingId));
       yield put(setActiveCellAction(4));
-      yield makeMappingEditableHelper();
+      yield makeMappingEditableForTest();
       const othersMayEdit = true;
       yield put(setOthersMayEditForAnnotationAction(true));
 
@@ -690,7 +690,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       // due to the user's interactions.
       yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(4) }, tracingId));
       yield put(setActiveCellAction(1));
-      yield makeMappingEditableHelper();
+      yield makeMappingEditableForTest();
       const othersMayEdit = true;
       yield put(setOthersMayEditForAnnotationAction(true));
 
@@ -753,7 +753,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       // due to the user's interactions.
       yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
-      yield makeMappingEditableHelper();
+      yield makeMappingEditableForTest();
       yield put(setOthersMayEditForAnnotationAction(true));
 
       yield* loadAgglomerateSkeletons(context, [1, 4, 6], false, true);
@@ -829,7 +829,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       // due to the user's interactions.
       yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(2) }, tracingId));
       yield put(setActiveCellAction(1));
-      yield makeMappingEditableHelper();
+      yield makeMappingEditableForTest();
       yield put(setOthersMayEditForAnnotationAction(true));
 
       yield* loadAgglomerateSkeletons(context, [1, 4, 6], false, true);
@@ -932,7 +932,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       // Activate segment 2, setup editable mapping, make it shared and load agglomerate skeletons.
       yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(2) }, tracingId));
       yield put(setActiveCellAction(1));
-      yield makeMappingEditableHelper();
+      yield makeMappingEditableForTest();
       yield put(setOthersMayEditForAnnotationAction(true));
 
       yield* loadAgglomerateSkeletons(context, [1, 4, 6], false, true);
@@ -1053,7 +1053,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       );
       yield put(setActiveCellAction(1, undefined, null, 1337));
 
-      yield makeMappingEditableHelper();
+      yield makeMappingEditableForTest();
       yield put(setOthersMayEditForAnnotationAction(true));
 
       yield* loadAgglomerateSkeletons(context, [1, 4, 6], false, true);
@@ -1138,7 +1138,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       // due to the user's interactions.
       yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
-      yield makeMappingEditableHelper();
+      yield makeMappingEditableForTest();
       yield put(setOthersMayEditForAnnotationAction(true));
 
       // Execute the actual merge and wait for the finished mapping.
@@ -1195,7 +1195,7 @@ describe("Proofreading agglomerate skeleton syncing", () => {
       // due to the user's interactions.
       yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
-      yield makeMappingEditableHelper();
+      yield makeMappingEditableForTest();
       yield put(setOthersMayEditForAnnotationAction(true));
 
       // Prepare the server's reply for the upcoming split.

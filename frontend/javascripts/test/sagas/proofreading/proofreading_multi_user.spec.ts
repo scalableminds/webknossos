@@ -37,7 +37,7 @@ import {
   expectMapping,
   expectSegmentList,
   initializeMappingAndTool,
-  makeMappingEditableHelper,
+  makeMappingEditableForTest,
   mockInitialBucketAndAgglomerateData,
   performCutFromAllNeighbours,
   prepareGetNeighborsForAgglomerateNode,
@@ -77,7 +77,7 @@ function* prepareEditableMapping(
   );
   yield put(setActiveCellAction(activeSegmentId));
 
-  yield call(makeMappingEditableHelper);
+  yield call(makeMappingEditableForTest);
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
   yield* expectMapping(tracingId, initialExpectedMapping);

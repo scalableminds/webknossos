@@ -59,7 +59,7 @@ import {
 import {
   getPositionForSegmentId,
   initializeMappingAndTool,
-  makeMappingEditableHelper,
+  makeMappingEditableForTest,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
 
@@ -119,7 +119,7 @@ describe("Proofreading should generate correct update actions", () => {
         ),
       );
       yield put(setActiveCellAction(agglomerateId));
-      yield makeMappingEditableHelper();
+      yield makeMappingEditableForTest();
       yield put(setOthersMayEditForAnnotationAction(true));
 
       vi.mocked(context.mocks.parseProtoTracing).mockRestore();
@@ -156,7 +156,7 @@ describe("Proofreading should generate correct update actions", () => {
       // due to the user's interactions.
       yield put(updateSegmentAction(sourceAgglomerateId, { anchorPosition }, tracingId));
       yield put(setActiveCellAction(sourceAgglomerateId));
-      yield makeMappingEditableHelper();
+      yield makeMappingEditableForTest();
       if (othersMayEdit) {
         yield put(setOthersMayEditForAnnotationAction(true));
       }
@@ -206,7 +206,7 @@ describe("Proofreading should generate correct update actions", () => {
       // due to the user's interactions.
       yield put(updateSegmentAction(sourceAgglomerateId, { anchorPosition }, tracingId));
       yield put(setActiveCellAction(sourceAgglomerateId));
-      yield makeMappingEditableHelper();
+      yield makeMappingEditableForTest();
       if (othersMayEdit) {
         yield put(setOthersMayEditForAnnotationAction(true));
       }

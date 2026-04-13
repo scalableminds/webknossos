@@ -32,7 +32,7 @@ import {
   getPositionForSegmentId,
   initializeMappingAndTool,
   loadAgglomerateMeshes,
-  makeMappingEditableHelper,
+  makeMappingEditableForTest,
 } from "./proofreading_test_utils";
 
 export function encodeServerTracing(
@@ -230,7 +230,7 @@ export function* performMergeTreesProofreading(
   // due to the user's interactions.
   yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
   yield put(setActiveCellAction(1));
-  yield makeMappingEditableHelper();
+  yield makeMappingEditableForTest();
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
   yield* expectMapping(tracingId, initialMapping);
@@ -265,7 +265,7 @@ export function* performSplitTreesProofreading(
   yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
   yield put(setActiveCellAction(1));
 
-  yield makeMappingEditableHelper();
+  yield makeMappingEditableForTest();
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
   yield* expectMapping(tracingId, initialMapping);
@@ -297,7 +297,7 @@ export function* performMinCutWithNodesProofreading(
   yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
   yield put(setActiveCellAction(1));
 
-  yield makeMappingEditableHelper();
+  yield makeMappingEditableForTest();
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
   yield* expectMapping(tracingId, initialMapping);

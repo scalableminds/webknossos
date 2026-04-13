@@ -440,7 +440,7 @@ export function mockInitialBucketAndAgglomerateData(
   return backendMock;
 }
 
-export function* makeMappingEditableHelper(): Saga<void> {
+export function* makeMappingEditableForTest(): Saga<void> {
   // Usually the user creates an editable mapping via the first proofreading action.
   // Therefore the context is busy blocked by the proofreading saga.
   // As we do this manually here, we need to mock that wk is busy.
@@ -554,7 +554,7 @@ export function* performCutFromAllNeighbours(
   yield put(updateSegmentAction(1, { anchorPosition: [2, 2, 2] }, tracingId));
   yield put(setActiveCellAction(1));
 
-  yield makeMappingEditableHelper();
+  yield makeMappingEditableForTest();
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
   yield* expectMapping(tracingId, initialMapping);
   yield put(setOthersMayEditForAnnotationAction(true));
@@ -604,7 +604,7 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
   yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
   yield put(setActiveCellAction(1, undefined, null, 1));
 
-  yield makeMappingEditableHelper();
+  yield makeMappingEditableForTest();
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
   const mapping1 = yield* select(
     (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,

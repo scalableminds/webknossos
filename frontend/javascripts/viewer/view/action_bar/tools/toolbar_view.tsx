@@ -1,4 +1,4 @@
-import Icon, { CaretDownOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import Icon, { DownOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import NewBoundingBoxIcon from "@images/icons/icon-bounding-box-new.svg?react";
 import { Dropdown, Radio, type RadioChangeEvent, Space, Tag } from "antd";
 import FastTooltip from "components/fast_tooltip";
@@ -135,7 +135,7 @@ export default function ToolbarView() {
             }),
           }}
         >
-          <CaretDownOutlined />
+          <DownOutlined />
         </Dropdown>
       </ToolRadioButton>
     );

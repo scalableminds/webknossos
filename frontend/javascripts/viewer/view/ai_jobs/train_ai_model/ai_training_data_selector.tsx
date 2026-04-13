@@ -13,7 +13,7 @@ import { useMemo, useState } from "react";
 import { ColorWKBlue } from "theme";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
-import GenerateBoundingBoxesModal from "viewer/view/right_border_tabs/generate_bounding_boxes_modal";
+import { useGenerateBBModalContext } from "viewer/view/ai_jobs/generate_BB_modal_context";
 import { colorLayerMustNotBeUint24Rule, getIntersectingMagList } from "../utils";
 import {
   type AiTrainingAnnotationSelection,
@@ -28,6 +28,7 @@ const AiTrainingDataSelector = ({
 }: {
   selectedAnnotation: AiTrainingAnnotationSelection;
 }) => {
+  const { openGenerateBBModal } = useGenerateBBModalContext();
   const { handleSelectionChange, setSelectedAnnotations, selectedJobType } =
     useAiTrainingJobContext();
 
@@ -64,8 +65,6 @@ const AiTrainingDataSelector = ({
     }
     return [];
   }, [imageDataLayer, groundTruthLayer, annotation, dataset, volumeTracingMags]);
-
-  const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
 
   const boundingBoxCount = useMemo(() => userBoundingBoxes.length, [userBoundingBoxes]);
   const boundingBoxVolume = useMemo(
@@ -243,20 +242,12 @@ const AiTrainingDataSelector = ({
         <Button
           size="small"
           icon={<AppstoreAddOutlined />}
-          onClick={() => setIsGenerateModalOpen(true)}
+          onClick={() => openGenerateBBModal(magnification ?? null, selectedJobType)}
           style={{ marginTop: 12 }}
         >
           Generate
         </Button>
       )}
-      {isGenerateModalOpen ? (
-        <GenerateBoundingBoxesModal
-          isOpen={isGenerateModalOpen}
-          onClose={() => setIsGenerateModalOpen(false)}
-          magnification={magnification ?? null}
-          jobType={selectedJobType}
-        />
-      ) : null}
     </Card>
   );
 };

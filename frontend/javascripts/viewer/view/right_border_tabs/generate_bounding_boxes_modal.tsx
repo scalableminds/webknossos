@@ -1,5 +1,4 @@
 import { Checkbox, Form, InputNumber, Modal, Select, Space, Typography } from "antd";
-import { formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -287,7 +286,7 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
               : hasSizeWarning
                 ? `For optimal training, each dimension should be a multiple of the minimum size (${minSizeLabel} voxels).`
                 : !isMag1
-                  ? `Full-resolution size (mag 1): ${sizeInMag1[0]}×${sizeInMag1[1]}×${sizeInMag1[2]} vx — ${formatVoxels(sizeInMag1[0] * sizeInMag1[1] * sizeInMag1[2])} per box`
+                  ? `Full-resolution size (mag 1): ${sizeInMag1[0]}×${sizeInMag1[1]}×${sizeInMag1[2]} vx`
                   : undefined
           }
         >

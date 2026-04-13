@@ -174,7 +174,7 @@ jobs:
           PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: "true"
 
       - name: Build webknossos (vite)
-        run: NODE_ENV=development vite build --mode development
+        run: NODE_ENV=development yarn vite build --mode development
 
       # - name: Build frontend documentation
       #   run: yarn run docs --project-version "$WK_VERSION"

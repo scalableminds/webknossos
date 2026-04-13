@@ -537,6 +537,10 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
   yield* takeEvery(
     "SET_IS_MUTEX_ACQUIRED",
     function* ({ isMutexAcquired }: SetIsMutexAcquiredAction) {
+      const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+      if (!othersMayEdit) {
+        return;
+      }
       if (mutexLogicState.fetchingStrategy === MutexFetchingStrategy.AdHoc) {
         return;
       }

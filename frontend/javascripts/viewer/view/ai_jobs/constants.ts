@@ -25,9 +25,7 @@ export const jobNameToImagePath = {
 // Thus when changing the default model, consider changing these values as well.
 // See https://github.com/scalableminds/webknossos/issues/8198#issuecomment-2782684436
 export const MIN_BBOX_EXTENT: Record<
-  | APIJobCommand.INFER_NEURONS
-  | APIJobCommand.INFER_MITOCHONDRIA
-  | APIJobCommand.INFER_INSTANCES,
+  APIJobCommand.INFER_NEURONS | APIJobCommand.INFER_MITOCHONDRIA | APIJobCommand.INFER_INSTANCES,
   Vector3
 > = {
   [APIJobCommand.INFER_NEURONS]: [16, 16, 4],

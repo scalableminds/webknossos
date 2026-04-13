@@ -257,7 +257,11 @@ function JobListView() {
           <Link to={linkToDataset}>{job.args.datasetName}</Link>{" "}
         </span>
       );
-    } else if (job.command === APIJobCommand.DEPRECATED_INFER_NUCLEI && linkToDataset != null && layerName) {
+    } else if (
+      job.command === APIJobCommand.DEPRECATED_INFER_NUCLEI &&
+      linkToDataset != null &&
+      layerName
+    ) {
       return (
         <span>
           Nuclei inferral for layer {layerName} of{" "}

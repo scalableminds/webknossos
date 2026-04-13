@@ -475,6 +475,8 @@ export function* createEditableMapping(): Saga<string> {
   };
   yield* put(initializeEditableMappingAction(editableMapping));
   yield* put(setTreesAgglomerateInfoTracingIdAction(volumeTracingId));
+  // Save, that the agglomerate info of all agglomerate trees was updated.
+  yield* call(syncWithBackend);
 
   return volumeTracingId;
 }

@@ -2,12 +2,7 @@ import { type ActionPattern, delay, fork } from "redux-saga/effects";
 import { call, put, take, takeEvery } from "typed-redux-saga";
 import { getToolControllerForAnnotationTool } from "viewer/controller/combinations/tool_controls";
 import getSceneController from "viewer/controller/scene_controller_provider";
-import {
-  AnnotationTool,
-  type AnnotationToolId,
-  MeasurementTools,
-  Toolkit,
-} from "viewer/model/accessors/tool_accessor";
+import { AnnotationTool, MeasurementTools, Toolkit } from "viewer/model/accessors/tool_accessor";
 import {
   type CycleToolAction,
   hideMeasurementTooltipAction,
@@ -133,16 +128,14 @@ function* watchToolReset(): Saga<never> {
   }
 }
 
-function* setLastUsedToolQueue(setToolAction: SetToolAction): Saga<void> {
+function* updateToolTimestamp(setToolAction: SetToolAction): Saga<void> {
   const newTool = setToolAction.tool;
-  const lastUsedToolQueue = yield* select((state) => state.userConfiguration.lastUsedToolQueue);
-  const prevToolsWithoutDuplicates = lastUsedToolQueue.filter((toolId) => toolId !== newTool.id);
-  const updatedLastUsedToolQueue = [newTool.id, ...prevToolsWithoutDuplicates.slice(0, 2)] as [
-    AnnotationToolId,
-    AnnotationToolId,
-    AnnotationToolId,
-  ];
-  yield* put(updateUserSettingAction("lastUsedToolQueue", updatedLastUsedToolQueue));
+  const toolTimestamps = yield* select((state) => state.userConfiguration.timestampsForTools);
+  const updatedTimestamps = {
+    ...toolTimestamps,
+    [newTool.id]: Date.now(),
+  };
+  yield* put(updateUserSettingAction("timestampsForTools", updatedTimestamps));
 }
 
 function* rememberToolPreferences({ tool }: SetToolAction): Saga<void> {
@@ -182,6 +175,6 @@ export default function* toolSaga() {
     ] as ActionPattern,
     ensureActiveToolIsInToolkit,
   );
-  yield* takeEvery("SET_TOOL", setLastUsedToolQueue);
+  yield* takeEvery("SET_TOOL", updateToolTimestamp);
   yield* takeEvery("SET_TOOL", rememberToolPreferences);
 }

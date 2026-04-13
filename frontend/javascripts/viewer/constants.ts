@@ -341,6 +341,7 @@ const Constants = {
   DEFAULT_MESH_OPACITY: 1,
   NARROW_SCREEN_WIDTH: 1400,
   VERY_NARROW_SCREEN_WIDTH: 1200,
+  NUMBER_OF_TOOLS_IN_TOOLBAR: 5,
 } as const;
 
 /* Note that this must stay in sync with the back-end constant MaxMagForAgglomerateMapping

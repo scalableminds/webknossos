@@ -59,9 +59,7 @@ export default function ToolbarView() {
   const windowWidth = useWindowWidth();
   const disabledInfoForTools = useWkSelector(getDisabledInfoForTools);
   const isWiderScreen = useMemo(() => windowWidth >= Constants.NARROW_SCREEN_WIDTH, [windowWidth]);
-  const lastRecentlyUsedToolsFromUserConfig = useWkSelector(
-    (state) => state.userConfiguration.lastUsedToolQueue,
-  );
+  const toolTimestamps = useWkSelector((state) => state.userConfiguration.timestampsForTools);
   const isViewMode = useWkSelector(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
@@ -89,7 +87,6 @@ export default function ToolbarView() {
 
   const toolsForButtons = useMemo(() => {
     if (showAllTools) return Toolkits[toolkit];
-    const allToolsInToolkit = Toolkits[toolkit];
     const adaptToolId = (toolId: AnnotationToolId): AnnotationToolId => {
       // fix tools with tool menus
       if (toolId === AnnotationTool.TRACE.id) return AnnotationTool.BRUSH.id;
@@ -97,16 +94,19 @@ export default function ToolbarView() {
       if (toolId === AnnotationTool.AREA_MEASUREMENT.id) return AnnotationTool.LINE_MEASUREMENT.id;
       return toolId;
     };
-    //TODO_c: problem remains: due to adaptToolId, there can be only 2 or 1 tools
-    // -> store 2 tools more than shown to fill up the buttons
-    // maybe rethink data structure in userconfig
-    const allToolIdsInToolkit = allToolsInToolkit.map((tool) => adaptToolId(tool.id));
-    return allToolsInToolkit.filter(
-      (tool) =>
-        allToolIdsInToolkit.includes(tool.id) &&
-        lastRecentlyUsedToolsFromUserConfig.includes(tool.id),
-    );
-  }, [showAllTools, toolkit, lastRecentlyUsedToolsFromUserConfig]);
+    const allToolsInToolkit = Toolkits[toolkit];
+    const lruTools = Object.entries(toolTimestamps)
+      .sort(([, timestampA], [, timestampB]) => timestampB - timestampA)
+      .map(([toolId]) => toolId as AnnotationToolId);
+    const lastUsedTools = lruTools
+      .map((toolId) => adaptToolId(toolId))
+      .filter(
+        (toolId, index, toolIds) =>
+          allToolsInToolkit.some((tool) => tool.id === toolId) && toolIds.indexOf(toolId) === index,
+      )
+      .slice(0, Constants.NUMBER_OF_TOOLS_IN_TOOLBAR);
+    return allToolsInToolkit.filter((tool) => lastUsedTools.includes(tool.id));
+  }, [showAllTools, toolkit, toolTimestamps]);
 
   const ToolDropdown = () => {
     if (showAllTools) return null;

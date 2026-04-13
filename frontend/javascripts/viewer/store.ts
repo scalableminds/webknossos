@@ -375,7 +375,7 @@ export type UserConfiguration = {
   readonly renderWatermark: boolean;
   readonly antialiasRendering: boolean;
   readonly activeToolkit: Toolkit;
-  readonly lastUsedToolQueue: [AnnotationToolId, AnnotationToolId, AnnotationToolId];
+  readonly timestampsForTools: Record<AnnotationToolId, number>;
   readonly erasePreference: "ERASE_BRUSH" | "ERASE_TRACE";
   readonly writePreference: "BRUSH" | "TRACE";
   readonly measurementPreference: "LINE_MEASUREMENT" | "AREA_MEASUREMENT";

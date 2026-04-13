@@ -775,7 +775,13 @@ export function* tryToIncorporateActions(
             let volumeDataLayer = yield* select((state) =>
               getSegmentationLayerByName(state.dataset, actionTracingId),
             );
-            if (volumeDataLayer.mappings == null || volumeDataLayer.agglomerates == null) {
+            // Load mappings if needed and enforce reloading if mapping is editable
+            // to ensure the new mapping is available in the store data.
+            if (
+              volumeDataLayer.mappings == null ||
+              volumeDataLayer.agglomerates == null ||
+              isEditable
+            ) {
               const setMappingsChannel =
                 yield* actionChannel<SetLayerMappingsAction>("SET_LAYER_MAPPINGS");
               yield* put(ensureLayerMappingsAreLoadedAction(actionTracingId));

@@ -154,9 +154,9 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
           fullMeshRequest.mappingType,
           fullMeshRequest.additionalCoordinates,
           fullMeshRequest.annotationVersion,
-            findNeighbors = false,
-          )
-          adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
+          findNeighbors = false,
+        )
+        adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
       }
       allVertices = vertexChunksWithNeighbors.map(_._1)
     } yield allVertices

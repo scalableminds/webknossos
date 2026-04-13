@@ -1,12 +1,11 @@
 import { CodeSandboxOutlined, FileAddOutlined } from "@ant-design/icons";
 import { withAuthentication } from "admin/auth/authentication_modal";
-import { createExplorational, duplicateAnnotation } from "admin/rest_api";
-import { Button, Space, Tooltip } from "antd";
-import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
+import { createExplorational } from "admin/rest_api";
+import { Button, type ButtonProps, Space, Tooltip } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { location } from "libs/window";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useDispatch } from "react-redux";
 import { type APIUser, TracingTypeEnum } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
@@ -18,11 +17,10 @@ import { api, Model } from "viewer/singletons";
 import Store from "viewer/store";
 import SaveButton from "viewer/view/action_bar/save_button";
 import ButtonComponent from "viewer/view/components/button_component";
+import { DuplicateAnnotationModal } from "./tools/duplicate_annotation_modal";
 import UndoRedoActions from "./undo_redo_actions";
 
-const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
-  AsyncButton,
-);
+const ButtonWithAuthentication = withAuthentication<ButtonProps, typeof Button>(Button);
 
 function ReadOnlyActions({
   activeUser,
@@ -33,13 +31,7 @@ function ReadOnlyActions({
 }) {
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
   const annotationType = useWkSelector((state) => state.annotation.annotationType);
-
-  const handleCopyToAccount = useCallback(async () => {
-    // duplicates the annotation in the current user account
-    const newAnnotation = await duplicateAnnotation(annotationId, annotationType);
-    location.href = `/annotations/${newAnnotation.id}`;
-  }, [annotationId, annotationType]);
-
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   return (
     <Space.Compact>
       <ButtonComponent
@@ -52,16 +44,21 @@ function ReadOnlyActions({
       >
         Read only
       </ButtonComponent>
-      <AsyncButtonWithAuthentication
+      <DuplicateAnnotationModal
+        annotationId={annotationId}
+        annotationType={annotationType}
+        open={showDuplicateModal}
+      />
+      <ButtonWithAuthentication
         activeUser={activeUser}
         authenticationMessage="Please register or login to copy the tracing to your account."
         key="copy-button"
         icon={<FileAddOutlined />}
-        onClick={handleCopyToAccount}
+        onClick={() => setShowDuplicateModal(true)}
         title={copyAnnotationText}
       >
         <span className="hide-on-small-screen">{copyAnnotationText}</span>
-      </AsyncButtonWithAuthentication>
+      </ButtonWithAuthentication>
     </Space.Compact>
   );
 }
@@ -119,7 +116,7 @@ function SandboxActions({
           <span className="hide-on-small-screen">Sandbox</span>
         </Button>
       </Tooltip>
-      <AsyncButtonWithAuthentication
+      <ButtonWithAuthentication
         activeUser={activeUser}
         authenticationMessage="Please register or login to copy the sandbox tracing to your account."
         key="copy-sandbox-button"
@@ -128,7 +125,7 @@ function SandboxActions({
         title={copyAnnotationText}
       >
         <span className="hide-on-small-screen">Copy To My Account</span>
-      </AsyncButtonWithAuthentication>
+      </ButtonWithAuthentication>
     </Space.Compact>
   );
 }

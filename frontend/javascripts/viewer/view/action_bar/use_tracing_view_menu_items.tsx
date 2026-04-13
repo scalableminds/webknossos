@@ -11,7 +11,7 @@ import {
   StopOutlined,
   UnlockOutlined,
 } from "@ant-design/icons";
-import { duplicateAnnotation, editLockedState, finishAnnotation } from "admin/rest_api";
+import { editLockedState, finishAnnotation } from "admin/rest_api";
 import { App } from "antd";
 import type { useAppProps } from "antd/es/app/context";
 import type { ItemType, SubMenuType } from "antd/es/menu/interface";
@@ -20,7 +20,7 @@ import Toast from "libs/toast";
 import { sleep } from "libs/utils";
 import { location } from "libs/window";
 import messages from "messages";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { APIAnnotationType, APIUser, APIUserBase } from "types/api_types";
 import Constants, { ControlModeEnum } from "viewer/constants";
 import { disableSavingAction } from "viewer/model/actions/save_actions";
@@ -39,6 +39,7 @@ import {
   renderAnimationMenuItem,
   screenshotMenuItem,
 } from "viewer/view/action_bar/view_dataset_actions_view";
+import { DuplicateAnnotationModal } from "./tools/duplicate_annotation_modal";
 
 // These handlers are moved from TracingActionsView.tsx
 const handleRestore = async () => {
@@ -111,12 +112,6 @@ const handleFinish = async (
   });
 };
 
-const handleDuplicate = async (annotationId: string, annotationType: APIAnnotationType) => {
-  await Model.ensureSavedState();
-  const newAnnotation = await duplicateAnnotation(annotationId, annotationType);
-  window.open(`/annotations/${newAnnotation.id}`, "_blank", "noopener,noreferrer");
-};
-
 export type TracingViewMenuProps = {
   restrictions: RestrictionsAndSettings;
   task: Task | null | undefined;
@@ -134,7 +129,7 @@ export const useTracingViewMenuItems = (
   // Explicitly use very "precise" selectors to avoid unnecessary re-renders
   const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
-
+  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const { modal } = App.useApp();
 
   const {
@@ -146,6 +141,11 @@ export const useTracingViewMenuItems = (
     isAnnotationLockedByUser,
     annotationOwner,
   } = props;
+
+  const handleDuplicate = async () => {
+    await Model.ensureSavedState();
+    setShowDuplicateModal(true);
+  };
 
   return useMemo(() => {
     const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
@@ -187,9 +187,18 @@ export const useTracingViewMenuItems = (
     if (activeUser != null) {
       menuItems.push({
         key: "duplicate-button",
-        onClick: () => handleDuplicate(annotationId, annotationType),
+        onClick: handleDuplicate,
         icon: <CopyOutlined />,
-        label: "Duplicate",
+        label: (
+          <>
+            <DuplicateAnnotationModal
+              annotationId={annotationId}
+              annotationType={annotationType}
+              open={showDuplicateModal}
+            />
+            Duplicate
+          </>
+        ),
       });
     }
 

@@ -120,7 +120,6 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
         segmentationLayer,
         fullMeshRequest.mappingName,
         fullMeshRequest.editableMappingTracingId,
-        fullMeshRequest.annotationVersion,
         fullMeshRequest.segmentId,
         mappingNameForMeshFile = None,
         omitMissing = false
@@ -129,30 +128,32 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
         segmentIndexFileService.readSegmentIndex(segmentIndexFileKey, sId))
       topLefts: Array[Vec3Int] = topLeftsNested.toArray.flatten
       targetMagPositions = segmentIndexFileService.topLeftsToDistinctTargetMagBucketPositions(topLefts, mag)
-      vertexChunksWithNeighbors: List[(Array[Float], List[Int])] <- Fox.serialCombined(targetMagPositions) {
-        targetMagPosition =>
-          val adHocMeshRequest = AdHocMeshRequest(
-            Some(datasetId),
-            Some(dataSource.id),
-            segmentationLayer,
-            Cuboid(
-              VoxelPosition(
-                targetMagPosition.x * mag.x * DataLayer.bucketLength,
-                targetMagPosition.y * mag.y * DataLayer.bucketLength,
-                targetMagPosition.z * mag.z * DataLayer.bucketLength,
-                mag
-              ),
-              DataLayer.bucketLength + 1,
-              DataLayer.bucketLength + 1,
-              DataLayer.bucketLength + 1
+      // Dispatch chunks to the actor pool keeping actorPoolSize requests in flight at a time.
+      vertexChunksWithNeighbors: List[(Array[Float], List[Int])] <- Fox.batchCombined(
+        targetMagPositions.toIndexedSeq,
+        config.Datastore.AdHocMesh.actorPoolSize) { targetMagPosition =>
+        val adHocMeshRequest = AdHocMeshRequest(
+          Some(datasetId),
+          Some(dataSource.id),
+          segmentationLayer,
+          Cuboid(
+            VoxelPosition(
+              targetMagPosition.x * mag.x * DataLayer.bucketLength,
+              targetMagPosition.y * mag.y * DataLayer.bucketLength,
+              targetMagPosition.z * mag.z * DataLayer.bucketLength,
+              mag
             ),
-            fullMeshRequest.segmentId,
-            dataSource.scale.factor,
-            tc,
-            fullMeshRequest.mappingName,
-            fullMeshRequest.mappingType,
-            fullMeshRequest.additionalCoordinates,
-            fullMeshRequest.annotationVersion,
+            DataLayer.bucketLength + 1,
+            DataLayer.bucketLength + 1,
+            DataLayer.bucketLength + 1
+          ),
+          fullMeshRequest.segmentId,
+          dataSource.scale.factor,
+          tc,
+          fullMeshRequest.mappingName,
+          fullMeshRequest.mappingType,
+          fullMeshRequest.additionalCoordinates,
+          fullMeshRequest.annotationVersion,
             findNeighbors = false,
           )
           adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
@@ -180,8 +181,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       tc,
       fullMeshRequest.mappingName,
       fullMeshRequest.mappingType,
-      fullMeshRequest.additionalCoordinates,
-      fullMeshRequest.annotationVersion
+      fullMeshRequest.additionalCoordinates
     )
     visited += topLeft
     for {
@@ -216,7 +216,6 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
         dataLayer,
         fullMeshRequest.mappingName,
         fullMeshRequest.editableMappingTracingId,
-        fullMeshRequest.annotationVersion,
         fullMeshRequest.segmentId,
         mappingNameForMeshFile,
         omitMissing = false

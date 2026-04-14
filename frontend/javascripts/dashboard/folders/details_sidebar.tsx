@@ -286,7 +286,7 @@ function DatasetsDetails({
 
   const cancelButton = <Button onClick={onCancel}>Cancel</Button>;
 
-  // TODO delete once soft-delete is implemented: https://github.com/scalableminds/webknossos/issues/9061
+  // TODO (#9061): Delete once soft-delete is implemented.
   const cantBeUndoneMessage = (
     <Typography.Text type="warning" strong>
       This action cannot be undone.

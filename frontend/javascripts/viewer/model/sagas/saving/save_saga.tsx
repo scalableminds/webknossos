@@ -585,7 +585,7 @@ export function* tryToIncorporateActions(
         /*
          * Currently NOT supported:
          */
-        // TODO: These actions should be supported if applied from own save queue!
+        // TODO (#9052): These actions should be supported if applied from own save queue!
 
         // High-level annotation specific
         case "addLayerToAnnotation":

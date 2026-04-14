@@ -28,8 +28,10 @@ import {
 } from "./proofreading_fixtures";
 import { loadAgglomerateTree1 } from "./proofreading_interaction_update_action_fixtures";
 import {
+  expectSegmentList,
+  getPositionForSegmentId,
   initializeMappingAndTool,
-  makeMappingEditableHelper,
+  makeMappingEditableForTest,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
 
@@ -49,7 +51,7 @@ describe("Proofreading (Poll only)", () => {
 
   it("should update the mapping when the server has a new update action with a merge operation", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -57,7 +59,7 @@ describe("Proofreading (Poll only)", () => {
     const task = startSaga(function* () {
       yield call(initializeMappingAndTool, context, tracingId);
 
-      const mapping0 = yield select(
+      const mapping0 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -83,7 +85,7 @@ describe("Proofreading (Poll only)", () => {
       backendMock.injectVersion([foreignMergeAction], 4);
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
-      const mapping1 = yield select(
+      const mapping1 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -99,19 +101,25 @@ describe("Proofreading (Poll only)", () => {
       expect(updateBatch.actions.length).toBe(1);
       expect(updateBatch.actions).toEqual([foreignMergeAction]);
 
-      const activeTool = yield select((state) => state.uiInformation.activeTool);
+      yield expectSegmentList(tracingId, []);
+
+      const activeTool = yield* select((state) => state.uiInformation.activeTool);
       expect(activeTool).toBe(AnnotationTool.PROOFREAD);
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should update the mapping correctly when the server has first a new update action with a split then with a merge operation with segments unknown to the client", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [
-      [7, 1337],
-      [4, 1338],
-    ]);
+    const backendMock = mockInitialBucketAndAgglomerateData(
+      context,
+      [
+        [7, 1337],
+        [4, 1338],
+      ],
+      Store.getState(),
+    );
     // Initial Mapping
     // 1-2-3
     // 5-4-1338-1337-7-6
@@ -123,7 +131,7 @@ describe("Proofreading (Poll only)", () => {
     const task = startSaga(function* () {
       yield call(initializeMappingAndTool, context, tracingId);
 
-      const mapping0 = yield select(
+      const mapping0 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -159,7 +167,7 @@ describe("Proofreading (Poll only)", () => {
 
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
-      const mapping1 = yield select(
+      const mapping1 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -198,7 +206,7 @@ describe("Proofreading (Poll only)", () => {
 
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
-      const mapping2 = yield select(
+      const mapping2 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -229,14 +237,16 @@ describe("Proofreading (Poll only)", () => {
       const updateBatch3 = context.receivedDataPerSaveRequest[1][0];
       expect(updateBatch3.actions.length).toBe(1);
       expect(updateBatch3.actions).toEqual([foreignMergeAction]);
+
+      yield expectSegmentList(tracingId, []);
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should update the mapping when the server has a new update action with a split operation", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -244,7 +254,7 @@ describe("Proofreading (Poll only)", () => {
     const task = startSaga(function* () {
       yield call(initializeMappingAndTool, context, tracingId);
 
-      const mapping0 = yield select(
+      const mapping0 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -271,7 +281,7 @@ describe("Proofreading (Poll only)", () => {
 
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
-      const mapping1 = yield select(
+      const mapping1 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -286,14 +296,16 @@ describe("Proofreading (Poll only)", () => {
       const updateBatch = context.receivedDataPerSaveRequest[0][0];
       expect(updateBatch.actions.length).toBe(1);
       expect(updateBatch.actions).toEqual([foreignSplitAction]);
+
+      yield expectSegmentList(tracingId, []);
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should update the mapping correctly when the server has a new update action with a split operation with segments unknown to the client", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [[7, 1337]]);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [[7, 1337]], Store.getState());
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -301,7 +313,7 @@ describe("Proofreading (Poll only)", () => {
     const task = startSaga(function* () {
       yield call(initializeMappingAndTool, context, tracingId);
 
-      const mapping0 = yield select(
+      const mapping0 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -338,7 +350,7 @@ describe("Proofreading (Poll only)", () => {
 
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
-      const mapping1 = yield select(
+      const mapping1 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -369,14 +381,16 @@ describe("Proofreading (Poll only)", () => {
       const updateBatch2 = context.receivedDataPerSaveRequest[1][0];
       expect(updateBatch2.actions.length).toBe(1);
       expect(updateBatch2.actions).toEqual([foreignSplitAction2]);
+
+      yield expectSegmentList(tracingId, []);
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should update the mapping correctly when the server has a new update action with a merge and split operation with segments unknown to the client", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -384,7 +398,7 @@ describe("Proofreading (Poll only)", () => {
     const task = startSaga(function* () {
       yield call(initializeMappingAndTool, context, tracingId);
 
-      const mapping0 = yield select(
+      const mapping0 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -422,7 +436,7 @@ describe("Proofreading (Poll only)", () => {
 
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
-      const mapping1 = yield select(
+      const mapping1 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -451,14 +465,16 @@ describe("Proofreading (Poll only)", () => {
       const updateBatch2 = context.receivedDataPerSaveRequest[1][0];
       expect(updateBatch2.actions.length).toBe(1);
       expect(updateBatch2.actions).toEqual([foreignSplitAction]);
+
+      yield expectSegmentList(tracingId, []);
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should not perform a rebase when there are no local changes", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -467,7 +483,7 @@ describe("Proofreading (Poll only)", () => {
       const rebaseActionChannel = yield actionChannel(["PREPARE_REBASING", "FINISHED_REBASING"]);
       yield call(initializeMappingAndTool, context, tracingId);
 
-      const mapping0 = yield select(
+      const mapping0 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -493,7 +509,7 @@ describe("Proofreading (Poll only)", () => {
       backendMock.injectVersion([foreignMergeAction], 4);
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
-      const mapping1 = yield select(
+      const mapping1 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -513,19 +529,21 @@ describe("Proofreading (Poll only)", () => {
       const rebasingActions = yield flush(rebaseActionChannel);
       expect(rebasingActions.length).toBe(0);
 
-      const activeTool = yield select((state) => state.uiInformation.activeTool);
+      const activeTool = yield* select((state) => state.uiInformation.activeTool);
       expect(activeTool).toBe(AnnotationTool.PROOFREAD);
+
+      yield expectSegmentList(tracingId, []);
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   async function testPollWithUserNotAllowedToSave(
     context: WebknossosTestContext,
     othersMayEdit: boolean,
   ) {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -533,7 +551,7 @@ describe("Proofreading (Poll only)", () => {
     const task = startSaga(function* () {
       yield call(initializeMappingAndTool, context, tracingId);
 
-      const mapping0 = yield select(
+      const mapping0 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -563,7 +581,7 @@ describe("Proofreading (Poll only)", () => {
       backendMock.injectVersion([foreignMergeAction], 4);
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
 
-      const mapping1 = yield select(
+      const mapping1 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -579,8 +597,10 @@ describe("Proofreading (Poll only)", () => {
       expect(updateBatch.actions.length).toBe(1);
       expect(updateBatch.actions).toEqual([foreignMergeAction]);
 
-      const activeTool = yield select((state) => state.uiInformation.activeTool);
+      const activeTool = yield* select((state) => state.uiInformation.activeTool);
       expect(activeTool).toBe(AnnotationTool.PROOFREAD);
+
+      yield expectSegmentList(tracingId, []);
     });
 
     await task.toPromise();
@@ -589,15 +609,15 @@ describe("Proofreading (Poll only)", () => {
   it("should poll updates even when othersMayEdit it turned off and updating is not allowed by current user", async (context: WebknossosTestContext) => {
     const othersMayEdit = false;
     await testPollWithUserNotAllowedToSave(context, othersMayEdit);
-  }, 8000);
+  });
 
   it("should poll updates with othersMayEdit turned on but updating is not allowed by current user", async (context: WebknossosTestContext) => {
     const othersMayEdit = true;
     await testPollWithUserNotAllowedToSave(context, othersMayEdit);
-  }, 8000);
+  });
 
   it("should simply forward received update actions like agglomerate tree update actions without putting these changes to its own save queue or sending them to the backend", async (context: WebknossosTestContext) => {
-    const backendMock = mockInitialBucketAndAgglomerateData(context);
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -607,9 +627,9 @@ describe("Proofreading (Poll only)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { anchorPosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
-      yield makeMappingEditableHelper();
+      yield makeMappingEditableForTest();
       yield put(setOthersMayEditForAnnotationAction(true));
 
       // Ensure all changes till here are saved in the backend.
@@ -617,7 +637,7 @@ describe("Proofreading (Poll only)", () => {
 
       // Store current annotation version, calculate expected version after injecting updates and inject the agglomerate tree loading.
       const receivedAmountOfUpdateRequests = context.receivedDataPerSaveRequest.length;
-      const versionBeforeForwardingAgglomerateTreeLoading = yield select(
+      const versionBeforeForwardingAgglomerateTreeLoading = yield* select(
         (state) => state.annotation.version,
       );
       const injectedAgglomerateTreeLoadingUpdates = loadAgglomerateTree1;
@@ -633,7 +653,7 @@ describe("Proofreading (Poll only)", () => {
 
       // Expect no pending or additional sent update requests.
       expect(context.receivedDataPerSaveRequest.length).toBe(expectedAmountOfUpdatesAfterInjection);
-      let saveQueue = yield select((state) => state.save.queue);
+      let saveQueue = yield* select((state) => state.save.queue);
       expect(saveQueue.length).toBe(0);
 
       // Enforce saved state including diffing tracings and storing their changes.
@@ -641,8 +661,10 @@ describe("Proofreading (Poll only)", () => {
 
       // Expect no pending or additional sent update requests.
       expect(context.receivedDataPerSaveRequest.length).toBe(expectedAmountOfUpdatesAfterInjection);
-      saveQueue = yield select((state) => state.save.queue);
+      saveQueue = yield* select((state) => state.save.queue);
       expect(saveQueue.length).toBe(0);
+
+      yield expectSegmentList(tracingId, [{ id: 1, anchorPosition: [1, 1, 1] }]);
     });
 
     await task.toPromise();

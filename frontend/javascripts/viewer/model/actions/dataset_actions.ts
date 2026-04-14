@@ -2,7 +2,7 @@ import type { CoordinateTransformation } from "types/api_types";
 import type { StoreDataset } from "viewer/store";
 
 type SetDatasetAction = ReturnType<typeof setDatasetAction>;
-type SetLayerMappingsAction = ReturnType<typeof setLayerMappingsAction>;
+export type SetLayerMappingsAction = ReturnType<typeof setLayerMappingsAction>;
 type SetLayerTransformsAction = ReturnType<typeof setLayerTransformsAction>;
 export type EnsureLayerMappingsAreLoadedAction = ReturnType<
   typeof ensureLayerMappingsAreLoadedAction

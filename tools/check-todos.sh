@@ -2,14 +2,16 @@
 set -e
 
 # Files to exclude from the TODO check (paths relative to repo root).
+# Keep the list sorted to avoid merge conflicts!
 BLACKLIST=(
   .github/PULL_REQUEST_TEMPLATE.md
   .github/workflows/check_todos.yml
+  docs/images/raw/tracing_ui_overview.svg
+  schema/evolutions/008-task-instances-triggers.sql
   tools/check-todos.sh
+  tools/obj_models/obj_parser.py
   webknossos-datastore/deployment/config/datastore-docker.conf
   webknossos-tracingstore/deployment/config/tracingstore-docker.conf
-  docs/images/raw/tracing_ui_overview.svg
-  tools/obj_models/obj_parser.py
 )
 
 TODOS=$(git grep -niI -E 'todo[a-z]?([ :]|$)' | grep -viE '#[0-9]+' || true)

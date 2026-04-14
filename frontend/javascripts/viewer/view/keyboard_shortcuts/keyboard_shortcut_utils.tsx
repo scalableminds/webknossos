@@ -11,21 +11,20 @@ import type {
 import { flatten } from "lodash-es";
 import type { AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { Store } from "viewer/singletons";
+import {
+  ALL_KEYBOARD_SHORTCUT_META_INFOS,
+  KeyboardShortcutCollisionHierarchy,
+} from "./keyboard_shortcut_constants";
 import type {
   KeyboardComboChain,
+  KeyboardShortcutCollisionEntityName,
   KeyboardShortcutLoopedHandlerMap,
   KeyboardShortcutNoLoopedHandlerMap,
   KeyboardShortcutsMap,
 } from "./keyboard_shortcut_types";
-import {
-  KeyboardShortcutCollisionHierarchy,
-  ALL_KEYBOARD_SHORTCUT_META_INFOS,
-} from "./keyboard_shortcut_constants";
 
 const { Text } = Typography;
 export const MODIFIER_KEYS = new Set(["Control", "Meta", "Meta", "Alt", "Shift"]);
-
-// TODOM Refactor to not converte between keyevent name and back too often!
 
 export function keyToUiElement(key: string): React.ReactNode {
   switch (key) {
@@ -188,7 +187,7 @@ function areComboChainsEqual(
   return true;
 }
 
-export function invertKeyboardShortcutMap<T extends string>(
+export function keyboardShortcutMapToCollidingTuples<T extends string>(
   config: KeyboardShortcutsMap<T>,
 ): [ComparableKeyComboChain, T[]][] {
   const result: [ComparableKeyComboChain, T[]][] = [];
@@ -247,7 +246,7 @@ export const buildKeyBindingsFromConfigAndMappingForTools = (
     KeyboardShortcutNoLoopedHandlerMap<string>
   >,
 ): KeyBindingMap => {
-  const keyComboChainAndHandlerIds = invertKeyboardShortcutMap(config);
+  const keyComboChainAndHandlerIds = keyboardShortcutMapToCollidingTuples(config);
   const bindings: KeyBindingMap = {};
   keyComboChainAndHandlerIds.forEach(([comparableComboChain, handlers]) => {
     const stringifiedComboChain = comparableKeyComboChainToKeyCombo(comparableComboChain);
@@ -276,7 +275,18 @@ export const buildKeyBindingsFromConfigAndLoopedMappingForTools = (
     KeyboardShortcutLoopedHandlerMap<string>
   >,
 ): KeyBindingLoopMap => {
-  const keyComboChainAndHandlerIds = invertKeyboardShortcutMap(config);
+  const toolOnlyShortcuts: KeyboardShortcutsMap<string> = {};
+  for (const annotationToolIdStr of Object.keys(handlerIdMappingPerAnnotationTool)) {
+    const annotationToolId = annotationToolIdStr as AnnotationToolId;
+    for (const handlerId of Object.keys(handlerIdMappingPerAnnotationTool[annotationToolId])) {
+      const handlerAlreadyAdded = handlerId in toolOnlyShortcuts;
+      if (!handlerAlreadyAdded && handlerId in config) {
+        toolOnlyShortcuts[handlerId] = config[handlerId];
+      }
+    }
+  }
+
+  const keyComboChainAndHandlerIds = keyboardShortcutMapToCollidingTuples(toolOnlyShortcuts);
   const bindings: KeyBindingLoopMap = {};
   keyComboChainAndHandlerIds.forEach(([comparableComboChain, handlers]) => {
     const stringifiedComboChain = comparableKeyComboChainToKeyCombo(comparableComboChain);
@@ -342,55 +352,91 @@ function getCollidableEntities(
   return collidable;
 }
 
+// Returns all collision tuples (comboChain, handlerIds[]) for a given entity. Only handlers whose
+// collision entity is an ancestor, descendant, or equal to `entity` are compared — i.e. shortcuts
+// that can genuinely be active at the same time.
+function getCollisionsForEntityInMap(
+  entity: KeyboardShortcutCollisionEntityName,
+  shortcutMap: KeyboardShortcutsMap<string>,
+  parentMap: Record<string, string | null>,
+): [ComparableKeyComboChain, string[]][] {
+  const collidableEntities = getCollidableEntities(
+    entity,
+    KeyboardShortcutCollisionHierarchy,
+    parentMap,
+  );
+  const relevantHandlerIds: string[] = [];
+  for (const [handlerId, meta] of Object.entries(ALL_KEYBOARD_SHORTCUT_META_INFOS)) {
+    if (collidableEntities.has(meta.collisionEntityName)) {
+      relevantHandlerIds.push(handlerId);
+    }
+  }
+  const relevantShortcuts: KeyboardShortcutsMap<string> = {};
+  for (const id of relevantHandlerIds) {
+    if (id in shortcutMap) {
+      relevantShortcuts[id] = shortcutMap[id];
+    }
+  }
+  return keyboardShortcutMapToCollidingTuples(relevantShortcuts);
+}
+
+const acceptedCollisions: Collision[] = [
+  // This collision is accepted as the CYCLE_VIEWMODE handler disables itself in case the proofreading tool is active.
+  // The shortcut collision was decided to be ok.
+  {
+    keyCombo: [new Set(["m"])],
+    conflictingHandlerIds: ["CYCLE_VIEWMODE", "TOGGLE_MULTICUT_MODE"],
+  },
+];
+
+function isAcceptedCollision(collision: Collision): boolean {
+  return acceptedCollisions.some((accepted) => {
+    if (!areComboChainsEqual(collision.keyCombo, accepted.keyCombo)) {
+      return false;
+    }
+    const ids = new Set(collision.conflictingHandlerIds);
+    const acceptedIds = new Set(accepted.conflictingHandlerIds);
+    return ids.symmetricDifference(acceptedIds).size === 0;
+  });
+}
+
 export function checkCollisionsInShortcutMap(
   shortcutMap: KeyboardShortcutsMap<string>,
 ): Collision[] {
   const parentMap = buildParentMap(KeyboardShortcutCollisionHierarchy);
-  const allCollisions: Collision[] = [];
-  const uniqueCollisions = new Set<string>();
+  // Keyed by the canonical combo string so that handler IDs from different leaf
+  // traversals that share the same shortcut are merged into one Collision entry.
+  const collisionsByCombo = new Map<string, Collision>();
 
-  // For each entity, check collisions within its collidable set
-  // TODO: only compare top down -> do not include comparing with parent collision entities.
-  for (const entity of Object.keys(KeyboardShortcutCollisionHierarchy)) {
-    const collidableEntities = getCollidableEntities(
-      entity,
-      KeyboardShortcutCollisionHierarchy,
-      parentMap,
-    );
-    // Collect handler ids with collisionEntityName in collidableEntities
-    const relevantHandlerIds: string[] = [];
-    for (const [handlerId, meta] of Object.entries(ALL_KEYBOARD_SHORTCUT_META_INFOS)) {
-      if (collidableEntities.has(meta.collisionEntityName)) {
-        relevantHandlerIds.push(handlerId);
-      }
-    }
-    // Get the shortcuts for these handlers
-    const relevantShortcuts: KeyboardShortcutsMap<string> = {};
-    for (const id of relevantHandlerIds) {
-      if (id in shortcutMap) {
-        relevantShortcuts[id] = shortcutMap[id];
-      }
-    }
-    // Invert to find duplicates
-    const inverted = invertKeyboardShortcutMap(relevantShortcuts);
+  // Only iterate leaf entities. Two sibling leaf nodes (e.g. ARBITRARY_MODE and PLANE_MODE) are
+  // never simultaneously active, so they never appear together via a leaf traversal. This avoids
+  // false-positive cross-domain collisions.
+  const leafEntities = Object.entries(KeyboardShortcutCollisionHierarchy)
+    .filter(([, children]) => children.length === 0)
+    .map(([entity]) => entity as KeyboardShortcutCollisionEntityName);
+
+  for (const entity of leafEntities) {
+    const inverted = getCollisionsForEntityInMap(entity, shortcutMap, parentMap);
     for (const [comboChain, handlerIds] of inverted) {
       if (handlerIds.length > 1) {
-        const collision: Collision = {
-          keyCombo: comboChain,
-          conflictingHandlerIds: handlerIds,
-        };
-        const key = JSON.stringify([
-          Array.from(comboChain.map((set) => Array.from(set).sort())),
-          handlerIds.sort(),
-        ]);
-        if (!uniqueCollisions.has(key)) {
-          uniqueCollisions.add(key);
-          allCollisions.push(collision);
+        const comboKey = JSON.stringify(comboChain.map((set) => Array.from(set).sort()));
+        const existing = collisionsByCombo.get(comboKey);
+        if (existing) {
+          for (const id of handlerIds) {
+            if (!existing.conflictingHandlerIds.includes(id)) {
+              existing.conflictingHandlerIds.push(id);
+            }
+          }
+        } else {
+          collisionsByCombo.set(comboKey, {
+            keyCombo: comboChain,
+            conflictingHandlerIds: [...handlerIds],
+          });
         }
       }
     }
   }
-  return allCollisions;
+  return [...collisionsByCombo.values()].filter((collision) => !isAcceptedCollision(collision));
 }
 
 export function checkCollisionForShortcut(
@@ -400,33 +446,17 @@ export function checkCollisionForShortcut(
 ): Collision[] {
   const metaInfoOfShortcut = ALL_KEYBOARD_SHORTCUT_META_INFOS[handlerIdOfShortcut];
   if (!metaInfoOfShortcut) return [];
-  const collisionEntityNameOfShortcut = metaInfoOfShortcut.collisionEntityName;
   const parentMap = buildParentMap(KeyboardShortcutCollisionHierarchy);
-  const collidableEntities = getCollidableEntities(
-    collisionEntityNameOfShortcut,
-    KeyboardShortcutCollisionHierarchy,
-    parentMap,
-  );
-  // Collect other handler ids
-  // TODOM: include own shortcuts but before remove potentially currently edited short.
-  const otherHandlerIds: string[] = [];
-  for (const [id, metaInfo] of Object.entries(ALL_KEYBOARD_SHORTCUT_META_INFOS)) {
-    if (id !== handlerIdOfShortcut && collidableEntities.has(metaInfo.collisionEntityName)) {
-      otherHandlerIds.push(id);
-    }
-  }
-  // Create temp map with new combos
+
+  // Replace the handler's existing shortcuts with the new combos being validated.
   const tempMap: KeyboardShortcutsMap<string> = { ...existingShortcutMap };
   tempMap[handlerIdOfShortcut] = newKeyCombos;
-  // Get relevant shortcuts
-  const relevantShortcuts: KeyboardShortcutsMap<string> = {};
-  for (const id of [...otherHandlerIds, handlerIdOfShortcut]) {
-    if (id in tempMap) {
-      relevantShortcuts[id] = tempMap[id];
-    }
-  }
-  // Invert and find collisions involving handlerId
-  const inverted = invertKeyboardShortcutMap(relevantShortcuts);
+
+  const inverted = getCollisionsForEntityInMap(
+    metaInfoOfShortcut.collisionEntityName,
+    tempMap,
+    parentMap,
+  );
   const collisions: Collision[] = [];
   for (const [comboChain, handlerIds] of inverted) {
     if (handlerIds.includes(handlerIdOfShortcut) && handlerIds.length > 1) {

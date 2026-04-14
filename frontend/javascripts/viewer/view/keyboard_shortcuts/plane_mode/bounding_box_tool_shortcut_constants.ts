@@ -1,8 +1,8 @@
 import {
   KeyboardShortcutCollisionEntityName,
   KeyboardShortcutDomain,
-  type KeyboardShortcutMetaInfo,
   type KeyboardShortcutHandlerMetaInfoMap,
+  type KeyboardShortcutMetaInfo,
   type KeyboardShortcutsMap,
 } from "../keyboard_shortcut_types";
 

@@ -1,5 +1,6 @@
 import { CloseOutlined, EditOutlined, PlusOutlined, RollbackOutlined } from "@ant-design/icons";
 import {
+  Alert,
   Button,
   Flex,
   Input,
@@ -15,7 +16,7 @@ import type { ColumnsType } from "antd/es/table";
 import app from "app";
 import Toast from "libs/toast";
 import { isEqual } from "lodash-es";
-import { useMemo, useState } from "react";
+import { type SetStateAction, useCallback, useMemo, useState } from "react";
 import {
   ALL_KEYBOARD_SHORTCUT_META_INFOS,
   getAllDefaultKeyboardShortcuts,
@@ -25,8 +26,16 @@ import {
   saveKeyboardShortcuts,
   validateShortcutMapText,
 } from "./keyboard_shortcut_persistence";
-import { type KeyboardComboChain, KeyboardShortcutDomain } from "./keyboard_shortcut_types";
-import { keyComboChainToUiElements } from "./keyboard_shortcut_utils";
+import {
+  type KeyboardComboChain,
+  KeyboardShortcutDomain,
+  type KeyboardShortcutsMap,
+} from "./keyboard_shortcut_types";
+import {
+  type Collision,
+  checkCollisionsInShortcutMap,
+  keyComboChainToUiElements,
+} from "./keyboard_shortcut_utils";
 import { ShortcutRecorderModal } from "./shortcut_recorder_modal";
 
 const { Text, Title } = Typography;
@@ -74,7 +83,27 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
   const [recorderEditingKeyCombo, setRecorderEditingKeyCombo] = useState<KeyboardComboChain | null>(
     null,
   );
-  const [localConfig, setLocalConfig] = useState(loadKeyboardShortcuts());
+  const [localConfig, _setLocalConfig] = useState(loadKeyboardShortcuts());
+  const [collisions, setCollisions] = useState<Collision[]>(
+    checkCollisionsInShortcutMap(localConfig),
+  );
+  const setLocalConfig = useCallback(
+    (newConfigOrUpdateFunction: SetStateAction<KeyboardShortcutsMap<string>>) => {
+      if (typeof newConfigOrUpdateFunction === "function") {
+        _setLocalConfig((prevConfig) => {
+          const newConfig = newConfigOrUpdateFunction(prevConfig);
+          const newCollisions = checkCollisionsInShortcutMap(newConfig);
+          setCollisions(newCollisions);
+          return newConfig;
+        });
+      } else {
+        const newCollisions = checkCollisionsInShortcutMap(newConfigOrUpdateFunction);
+        setCollisions(newCollisions);
+        _setLocalConfig(newConfigOrUpdateFunction);
+      }
+    },
+    [_setLocalConfig, setCollisions],
+  );
 
   const [jsonString, setJsonString] = useState(() => JSON.stringify(localConfig, null, 2));
   const [jsonError, setJsonError] = useState<string | null>(null);
@@ -370,6 +399,38 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
         },
       }}
     >
+      {collisions.length > 0 && (
+        <Alert
+          type="warning"
+          style={{ marginTop: 16, marginBottom: 16 }}
+          title="Shortcut Collisions Detected"
+          description={
+            <ul style={{ margin: 0, paddingLeft: 16 }}>
+              {collisions.map((collision, index) => {
+                const comboChain = collision.keyCombo.map((s) => [...s]);
+                return (
+                  <li key={index}>
+                    <Space wrap>
+                      <span>{keyComboChainToUiElements(comboChain)}</span>
+                      <Text>is used by:</Text>
+                    </Space>
+                    <ul style={{ margin: "2px 0 0", paddingLeft: 20 }}>
+                      {collision.conflictingHandlerIds.map((id) => {
+                        const meta = ALL_KEYBOARD_SHORTCUT_META_INFOS[id];
+                        return (
+                          <li key={id}>
+                            <Text>{meta ? `${meta.description} (${meta.domain})` : id}</Text>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </li>
+                );
+              })}
+            </ul>
+          }
+        />
+      )}
       <Flex justify={"flex-end"} align={"flex-start"}>
         <Space style={{ marginBottom: 16 }}>
           <Text>Edit Mode</Text>

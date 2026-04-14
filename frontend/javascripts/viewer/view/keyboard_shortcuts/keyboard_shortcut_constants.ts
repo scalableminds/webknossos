@@ -48,6 +48,11 @@ import {
   PlaneSkeletonToolNoLoopedKeyboardShortcuts,
 } from "./plane_mode/skeleton_tool_shortcut_constants";
 import {
+  DEFAULT_PLANE_TOOL_SWITCHING_KEYBOARD_SHORTCUTS,
+  PlaneControllerToolSwitchingKeyboardShortcuts,
+  PlaneToolSwitchingKeyboardShortcutMetaInfo,
+} from "./plane_mode/tool_switching_shortcut_constants";
+import {
   DEFAULT_PLANE_VOLUME_TOOL_LOOP_DELAYED_CONFIG_KEYBOARD_SHORTCUTS,
   DEFAULT_PLANE_VOLUME_TOOL_NO_LOOPED_KEYBOARD_SHORTCUTS,
   PlaneVolumeToolLoopDelayedConfigKeyboardShortcutMetaInfo,
@@ -55,11 +60,6 @@ import {
   PlaneVolumeToolNoLoopedKeyboardShortcutMetaInfo,
   PlaneVolumeToolNoLoopedKeyboardShortcuts,
 } from "./plane_mode/volume_tools_shortcut_constants";
-import {
-  DEFAULT_PLANE_TOOL_SWITCHING_KEYBOARD_SHORTCUTS,
-  PlaneControllerToolSwitchingKeyboardShortcuts,
-  PlaneToolSwitchingKeyboardShortcutMetaInfo,
-} from "./plane_mode/tool_switching_shortcut_constants";
 
 // ----------------------------------------------------- Shortcuts used by controller.ts -----------------------------------------------------------------
 export enum GeneralKeyboardShortcuts {

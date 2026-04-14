@@ -346,7 +346,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
     if (this.keyboardNoLoop) {
       this.keyboardNoLoop.destroy();
     }
-    const keybindingConfig = Store.getState().keyboardShortcuts;
+    const keybindingConfig = Store.getState().keyboardShortcutsConfig;
     const keyboardControls = buildKeyBindingsFromConfigAndMapping(
       keybindingConfig,
       this.getKeyboardShortcutsHandlerMap(),

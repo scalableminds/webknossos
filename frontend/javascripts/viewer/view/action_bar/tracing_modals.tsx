@@ -6,6 +6,7 @@ import { getAntdTheme, getThemeFromUser } from "theme";
 import Constants from "viewer/constants";
 import {
   setDownloadModalVisibilityAction,
+  setDuplicateAnnotationModalVisibilityAction,
   setMergeModalVisibilityAction,
   setRenderAnimationModalVisibilityAction,
   setShareModalVisibilityAction,
@@ -18,6 +19,7 @@ import ShareModalView from "viewer/view/action_bar/share_modal_view";
 import UserScriptsModalView from "viewer/view/action_bar/user_scripts_modal_view";
 import CreateAnimationModal from "./create_animation_modal";
 import { PrivateLinksModal } from "./private_links_view";
+import { DuplicateAnnotationModal } from "./tools/duplicate_annotation_modal";
 
 function TracingModals() {
   const dispatch = useDispatch();
@@ -37,6 +39,9 @@ function TracingModals() {
   const showAddScriptModal = useWkSelector((state) => state.uiInformation.showAddScriptModal);
   const showZarrPrivateLinksModal = useWkSelector(
     (state) => state.uiInformation.showZarrPrivateLinksModal,
+  );
+  const showDuplicateAnnotationModal = useWkSelector(
+    (state) => state.uiInformation.showDuplicateAnnotationModal,
   );
   const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
 
@@ -58,6 +63,10 @@ function TracingModals() {
 
   const handleZarrLinksClose = useCallback(() => {
     dispatch(setZarrLinksModalVisibilityAction(false));
+  }, [dispatch]);
+
+  const handleDuplicateClose = useCallback(() => {
+    dispatch(setDuplicateAnnotationModalVisibilityAction(false));
   }, [dispatch]);
 
   const handleRenderAnimationClose = useCallback(() => {
@@ -83,6 +92,16 @@ function TracingModals() {
         isOpen={showZarrPrivateLinksModal}
         onOk={handleZarrLinksClose}
         annotationId={annotationId}
+      />,
+    );
+
+    modalList.push(
+      <DuplicateAnnotationModal
+        key="duplicate-annotation-modal"
+        annotationId={annotationId}
+        annotationType={annotationType}
+        open={showDuplicateAnnotationModal}
+        onClose={handleDuplicateClose}
       />,
     );
 
@@ -132,6 +151,7 @@ function TracingModals() {
     showShareModal,
     showAddScriptModal,
     showRenderAnimationModal,
+    showDuplicateAnnotationModal,
     viewMode,
     annotationId,
     annotationType,
@@ -141,6 +161,7 @@ function TracingModals() {
     handleMergeClose,
     handleUserScriptsClose,
     handleZarrLinksClose,
+    handleDuplicateClose,
     handleRenderAnimationClose,
   ]);
 

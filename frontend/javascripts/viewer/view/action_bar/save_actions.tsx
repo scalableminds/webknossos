@@ -5,7 +5,7 @@ import { Button, type ButtonProps, Space, Tooltip } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { location } from "libs/window";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { type APIUser, TracingTypeEnum } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
@@ -13,11 +13,11 @@ import UrlManager from "viewer/controller/url_manager";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getTracingType } from "viewer/model/accessors/tracing_accessor";
 import { setSkeletonTracingAction } from "viewer/model/actions/skeletontracing_actions";
+import { setDuplicateAnnotationModalVisibilityAction } from "viewer/model/actions/ui_actions";
 import { api, Model } from "viewer/singletons";
 import Store from "viewer/store";
 import SaveButton from "viewer/view/action_bar/save_button";
 import ButtonComponent from "viewer/view/components/button_component";
-import { DuplicateAnnotationModal } from "./tools/duplicate_annotation_modal";
 import UndoRedoActions from "./undo_redo_actions";
 
 const ButtonWithAuthentication = withAuthentication<ButtonProps, typeof Button>(Button);
@@ -29,9 +29,7 @@ function ReadOnlyActions({
   activeUser: APIUser | null | undefined;
   copyAnnotationText: string;
 }) {
-  const annotationId = useWkSelector((state) => state.annotation.annotationId);
-  const annotationType = useWkSelector((state) => state.annotation.annotationType);
-  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
+  const dispatch = useDispatch();
   return (
     <Space.Compact>
       <ButtonComponent
@@ -44,17 +42,12 @@ function ReadOnlyActions({
       >
         Read only
       </ButtonComponent>
-      <DuplicateAnnotationModal
-        annotationId={annotationId}
-        annotationType={annotationType}
-        open={showDuplicateModal}
-      />
       <ButtonWithAuthentication
         activeUser={activeUser}
         authenticationMessage="Please register or login to copy the tracing to your account."
         key="copy-button"
         icon={<FileAddOutlined />}
-        onClick={() => setShowDuplicateModal(true)}
+        onClick={() => dispatch(setDuplicateAnnotationModalVisibilityAction(true))}
         title={copyAnnotationText}
       >
         <span className="hide-on-small-screen">{copyAnnotationText}</span>

@@ -43,6 +43,9 @@ type SetRenderAnimationModalVisibilityAction = ReturnType<
 type SetUserScriptsModalVisibilityAction = ReturnType<typeof setUserScriptsModalVisibilityAction>;
 type SetZarrLinksModalVisibilityAction = ReturnType<typeof setZarrLinksModalVisibilityAction>;
 type SetMergeModalVisibilityAction = ReturnType<typeof setMergeModalVisibilityAction>;
+type SetDuplicateAnnotationModalVisibilityAction = ReturnType<
+  typeof setDuplicateAnnotationModalVisibilityAction
+>;
 
 export type UiAction =
   | SetDropzoneModalVisibilityAction
@@ -63,6 +66,7 @@ export type UiAction =
   | SetMergeModalVisibilityAction
   | SetUserScriptsModalVisibilityAction
   | SetZarrLinksModalVisibilityAction
+  | SetDuplicateAnnotationModalVisibilityAction
   | SetBusyBlockingInfoAction
   | AllowSagaWhileBusyAction
   | DisallowSagaWhileBusyAction
@@ -164,6 +168,11 @@ export const setUserScriptsModalVisibilityAction = (visible: boolean) =>
 export const setZarrLinksModalVisibilityAction = (visible: boolean) =>
   ({
     type: "SET_ZARR_LINKS_MODAL_VISIBILITY",
+    visible,
+  }) as const;
+export const setDuplicateAnnotationModalVisibilityAction = (visible: boolean) =>
+  ({
+    type: "SET_DUPLICATE_ANNOTATION_MODAL_VISIBILITY",
     visible,
   }) as const;
 export const setBusyBlockingInfoAction = (isBusy: boolean, reason?: string) =>

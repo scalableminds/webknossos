@@ -20,12 +20,13 @@ import Toast from "libs/toast";
 import { sleep } from "libs/utils";
 import { location } from "libs/window";
 import messages from "messages";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { APIAnnotationType, APIUser, APIUserBase } from "types/api_types";
 import Constants, { ControlModeEnum } from "viewer/constants";
 import { disableSavingAction } from "viewer/model/actions/save_actions";
 import {
   setDownloadModalVisibilityAction,
+  setDuplicateAnnotationModalVisibilityAction,
   setMergeModalVisibilityAction,
   setShareModalVisibilityAction,
   setUserScriptsModalVisibilityAction,
@@ -39,7 +40,6 @@ import {
   renderAnimationMenuItem,
   screenshotMenuItem,
 } from "viewer/view/action_bar/view_dataset_actions_view";
-import { DuplicateAnnotationModal } from "./tools/duplicate_annotation_modal";
 
 // These handlers are moved from TracingActionsView.tsx
 const handleRestore = async () => {
@@ -129,7 +129,6 @@ export const useTracingViewMenuItems = (
   // Explicitly use very "precise" selectors to avoid unnecessary re-renders
   const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
-  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const { modal } = App.useApp();
 
   const {
@@ -144,7 +143,7 @@ export const useTracingViewMenuItems = (
 
   const handleDuplicate = async () => {
     await Model.ensureSavedState();
-    setShowDuplicateModal(true);
+    Store.dispatch(setDuplicateAnnotationModalVisibilityAction(true));
   };
 
   return useMemo(() => {
@@ -189,16 +188,7 @@ export const useTracingViewMenuItems = (
         key: "duplicate-button",
         onClick: handleDuplicate,
         icon: <CopyOutlined />,
-        label: (
-          <>
-            <DuplicateAnnotationModal
-              annotationId={annotationId}
-              annotationType={annotationType}
-              open={showDuplicateModal}
-            />
-            Duplicate
-          </>
-        ),
+        label: "Duplicate",
       });
     }
 

@@ -232,6 +232,7 @@ class BinaryDataController @Inject()(
             request.body.mapping,
             request.body.mappingType,
             request.body.additionalCoordinates,
+            request.body.annotationVersion,
             request.body.findNeighbors,
           )
           // The client expects the ad-hoc mesh as a flat float-array. Three consecutive floats form a 3D point, three
@@ -270,10 +271,10 @@ class BinaryDataController @Inject()(
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Messages(
             "dataSource.notFound") ~> NOT_FOUND ?~> Messages("histogram.layerMissing", dataLayerName)
-          listOfHistograms <- findDataService.createHistogram(datasetId, dataSource.id, dataLayer) ?~> Messages(
+          histograms <- findDataService.createHistogram(datasetId, dataSource.id, dataLayer) ?~> Messages(
             "histogram.failed",
             dataLayerName)
-        } yield Ok(Json.toJson(listOfHistograms))
+        } yield Ok(Json.toJson(histograms))
       }
     }
 

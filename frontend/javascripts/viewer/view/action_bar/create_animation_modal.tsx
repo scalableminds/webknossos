@@ -5,7 +5,19 @@ import {
 } from "admin/organization/pricing_plan_utils";
 
 import { startRenderAnimationJob } from "admin/rest_api";
-import { Alert, Button, Checkbox, Col, Divider, Modal, Radio, Row, Space, Tooltip } from "antd";
+import {
+  Alert,
+  Button,
+  Checkbox,
+  Col,
+  Divider,
+  Modal,
+  type ModalProps,
+  Radio,
+  Row,
+  Space,
+  Tooltip,
+} from "antd";
 import { LayerSelection } from "components/layer_selection";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import { useWkSelector } from "libs/react_hooks";
@@ -43,7 +55,7 @@ import { BoundingBoxSelection } from "viewer/view/ai_jobs/components/bounding_bo
 
 type Props = {
   isOpen: boolean;
-  onClose: React.MouseEventHandler;
+  onClose: ModalProps["onCancel"];
 };
 
 // When creating the texture for the dataset animation, we aim for for texture with the largest side of roughly this size
@@ -164,6 +176,14 @@ function CreateAnimationModal(props: Props) {
   const [selectedMovieResolution, setMovieResolution] = useState(MOVIE_RESOLUTIONS.SD);
   const [isWatermarkEnabled, setWatermarkEnabled] = useState(true);
   const [areMeshesEnabled, setMeshesEnabled] = useState(true);
+  const [areSkeletonsEnabled, setSkeletonsEnabled] = useState(false);
+  const [isSaveBlenderFileEnabled, setSaveBlenderFileEnabled] = useState(false);
+
+  const annotationType = useWkSelector((state) => state.annotation.annotationType);
+  const annotationId = useWkSelector((state) => state.annotation.annotationId);
+  const isAnnotationMode = annotationType !== "View";
+  const hasSkeleton = useWkSelector((state) => state.annotation.skeleton != null);
+  const isSuperUser = activeUser?.isSuperUser ?? false;
 
   const arePaidFeaturesAllowed = isFeatureAllowedByPricingPlan(
     activeOrganization,
@@ -238,7 +258,7 @@ function CreateAnimationModal(props: Props) {
     return validationStatus;
   };
 
-  const submitJob = (evt: React.MouseEvent) => {
+  const submitJob = (evt: React.MouseEvent<HTMLButtonElement>) => {
     const state = Store.getState();
     const boundingBox = userBoundingBoxes.find(
       (bb) => bb.id === selectedBoundingBoxId,
@@ -301,6 +321,9 @@ function CreateAnimationModal(props: Props) {
       includeWatermark: isWatermarkEnabled,
       movieResolution: selectedMovieResolution,
       cameraPosition: selectedCameraPosition,
+      annotationId: isAnnotationMode ? annotationId : null,
+      includeSkeletons: isAnnotationMode && hasSkeleton && areSkeletonsEnabled,
+      saveBlenderFile: isSuperUser && isSaveBlenderFileEnabled,
     };
 
     if (
@@ -325,7 +348,7 @@ function CreateAnimationModal(props: Props) {
       </>,
     );
 
-    onClose(evt);
+    onClose?.(evt);
   };
 
   const isFeatureDisabled = !(
@@ -341,7 +364,7 @@ function CreateAnimationModal(props: Props) {
       onCancel={onClose}
       okText={isFeatureDisabled ? "This feature is not available" : "Start Animation"}
       footer={[
-        <Button key="cancel" onClick={onClose}>
+        <Button key="cancel" onClick={(evt: React.MouseEvent<HTMLButtonElement>) => onClose?.(evt)}>
           Cancel
         </Button>,
         isFeatureDisabled ? (
@@ -446,7 +469,7 @@ function CreateAnimationModal(props: Props) {
                 title="When enabled, all meshes currently visible in WEBKNOSSOS will be included in the animation."
                 placement="right"
               >
-                <InfoCircleOutlined style={{ marginLeft: 10 }} />
+                <InfoCircleOutlined className="icon-margin-left" />
               </Tooltip>
             </Checkbox>
             <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
@@ -458,6 +481,34 @@ function CreateAnimationModal(props: Props) {
                 Include WEBKNOSSOS Watermark
               </Checkbox>
             </PricingEnforcedSpan>
+            {isAnnotationMode && hasSkeleton ? (
+              <Checkbox
+                checked={areSkeletonsEnabled}
+                onChange={(ev) => setSkeletonsEnabled(ev.target.checked)}
+              >
+                Include skeletons
+                <Tooltip
+                  title="When enabled, the visible skeleton trees of the current annotation will be included in the animation."
+                  placement="right"
+                >
+                  <InfoCircleOutlined className="icon-margin-left" />
+                </Tooltip>
+              </Checkbox>
+            ) : null}
+            {isSuperUser ? (
+              <Checkbox
+                checked={isSaveBlenderFileEnabled}
+                onChange={(ev) => setSaveBlenderFileEnabled(ev.target.checked)}
+              >
+                Save Blender file (super user only)
+                <Tooltip
+                  title="When enabled, the intermediate Blender file will be saved alongside the animation output for debugging purposes."
+                  placement="right"
+                >
+                  <InfoCircleOutlined className="icon-margin-left" />
+                </Tooltip>
+              </Checkbox>
+            ) : null}
           </Space>
         </Col>
       </Row>

@@ -24,6 +24,7 @@ export type MeshSegmentInfo = {
 type ListMeshChunksRequest = {
   meshFileName: string;
   segmentId: number;
+  annotationVersion: number | undefined | null;
 };
 
 export function getMeshFileChunksForSegment(
@@ -41,6 +42,7 @@ export function getMeshFileChunksForSegment(
   // editableMappingTracingId should be the tracing id, not the editable mapping id.
   // If this is set, it is assumed that the request is about an editable mapping.
   editableMappingTracingId: string | null | undefined,
+  annotationVersion: number | undefined | null,
 ): Promise<MeshSegmentInfo> {
   return doWithToken((token) => {
     const params = new URLSearchParams();
@@ -54,6 +56,7 @@ export function getMeshFileChunksForSegment(
     const payload: ListMeshChunksRequest = {
       meshFileName: meshFile.name,
       segmentId,
+      annotationVersion,
     };
     return Request.sendJSONReceiveJSON(
       `${dataStoreUrl}/data/datasets/${datasetId}/layers/${layerName}/meshes/chunks?${params}`,
@@ -71,7 +74,7 @@ type MeshChunkDataRequest = {
   segmentId: number | null; // Only relevant for neuroglancer precomputed meshes
 };
 
-type MeshChunkDataRequestList = {
+export type MeshChunkDataRequestList = {
   meshFileName: string;
   requests: MeshChunkDataRequest[];
 };

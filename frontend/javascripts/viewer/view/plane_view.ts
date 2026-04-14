@@ -154,105 +154,112 @@ class PlaneView {
     }
   }
 
-  performMeshHitTest = throttle((mousePosition: [number, number]): RaycasterHit => {
-    const storeState = Store.getState();
-    const sceneController = getSceneController();
-    const { segmentMeshController } = sceneController;
-    const { meshesLayerLODRootGroup } = segmentMeshController;
-    const tdViewport = getInputCatcherRect(storeState, "TDView");
-    const { hoveredSegmentId } = storeState.temporaryConfiguration;
+  performMeshHitTest = throttle(
+    (mousePosition: [number, number], allowMeshReuseOptimization: boolean = true): RaycasterHit => {
+      const storeState = Store.getState();
+      const sceneController = getSceneController();
+      const { segmentMeshController } = sceneController;
+      const { meshesLayerLODRootGroup } = segmentMeshController;
+      const tdViewport = getInputCatcherRect(storeState, "TDView");
+      const { hoveredSegmentId } = storeState.temporaryConfiguration;
 
-    // Outside of the 3D viewport, we don't do mesh hit tests
-    if (storeState.viewModeData.plane.activeViewport !== OrthoViews.TDView) {
-      if (hoveredSegmentId !== 0) {
-        // Reset hoveredSegmentId if we are outside of the 3D viewport,
-        // since that id takes precedence over the shader-calculated cell id
-        // under the mouse cursor
-        Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", 0));
-      }
-
-      return null;
-    }
-
-    // Perform ray casting
-    const mouse = new ThreeVector2(
-      (mousePosition[0] / tdViewport.width) * 2 - 1,
-      ((mousePosition[1] / tdViewport.height) * 2 - 1) * -1,
-    );
-    raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
-    const intersectableObjects = meshesLayerLODRootGroup.children;
-    // The second parameter of intersectObjects is set to true to ensure that
-    // the groups which contain the actual meshes are traversed.
-    const intersections = raycaster.intersectObjects(intersectableObjects, true);
-    const face = intersections.length > 0 ? intersections[0].face : null;
-    const hitObject = intersections.length > 0 ? (intersections[0].object as MeshSceneNode) : null;
-    let unmappedSegmentId = null;
-    let highlightEntry = null;
-
-    if (hitObject && face) {
-      if ("vertexSegmentMapping" in hitObject.geometry) {
-        const vertexSegmentMapping = hitObject.geometry
-          .vertexSegmentMapping as VertexSegmentMapping;
-        unmappedSegmentId = vertexSegmentMapping.getUnmappedSegmentIdForPosition(face.a);
-        const indexRange = vertexSegmentMapping.getRangeForUnmappedSegmentId(unmappedSegmentId);
-        if (indexRange) {
-          highlightEntry = { range: indexRange, color: undefined };
+      // Outside of the 3D viewport, we don't do mesh hit tests
+      if (storeState.viewModeData.plane.activeViewport !== OrthoViews.TDView) {
+        if (hoveredSegmentId !== 0) {
+          // Reset hoveredSegmentId if we are outside of the 3D viewport,
+          // since that id takes precedence over the shader-calculated cell id
+          // under the mouse cursor
+          Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", 0));
         }
-      }
-    }
 
-    // Check whether we are hitting the same object as before, since we can return early
-    // in this case.
-    if (storeState.uiInformation.activeTool === AnnotationTool.PROOFREAD) {
-      if (hitObject == null && oldRaycasterHit == null) {
         return null;
       }
-      if (unmappedSegmentId != null && unmappedSegmentId === oldRaycasterHit?.unmappedSegmentId) {
-        return oldRaycasterHit;
-      }
-    } else {
-      // In proofreading, there is no highlighting of parts of the meshes.
-      // If the parent group is identical, we can reuse the old hit object.
-      if (hitObject?.parent === oldRaycasterHit?.node.parent) {
-        return oldRaycasterHit;
-      }
-    }
 
-    // Undo highlighting of old hit
-    this.clearLastMeshHitTest();
+      // Perform ray casting
+      const mouse = new ThreeVector2(
+        (mousePosition[0] / tdViewport.width) * 2 - 1,
+        ((mousePosition[1] / tdViewport.height) * 2 - 1) * -1,
+      );
+      raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
+      const intersectableObjects = meshesLayerLODRootGroup.children;
+      // The second parameter of intersectObjects is set to true to ensure that
+      // the groups which contain the actual meshes are traversed.
+      const intersections = raycaster.intersectObjects(intersectableObjects, true);
+      const face = intersections.length > 0 ? intersections[0].face : null;
+      const hitObject =
+        intersections.length > 0 ? (intersections[0].object as MeshSceneNode) : null;
+      let unmappedSegmentId = null;
+      let highlightEntry = null;
 
-    oldRaycasterHit =
-      hitObject != null
-        ? {
-            node: hitObject,
-            indexRange: highlightEntry?.range || null,
-            unmappedSegmentId,
-            point: intersections[0].point.toArray(),
+      if (hitObject && face) {
+        if ("vertexSegmentMapping" in hitObject.geometry) {
+          const vertexSegmentMapping = hitObject.geometry
+            .vertexSegmentMapping as VertexSegmentMapping;
+          unmappedSegmentId = vertexSegmentMapping.getUnmappedSegmentIdForPosition(face.a);
+          const indexRange = vertexSegmentMapping.getRangeForUnmappedSegmentId(unmappedSegmentId);
+          if (indexRange) {
+            highlightEntry = { range: indexRange, color: undefined };
           }
-        : null;
+        }
+      }
 
-    // Highlight new hit
-    if (hitObject?.parent != null) {
-      segmentMeshController.updateMeshAppearance(
-        hitObject,
-        true,
-        undefined,
-        undefined,
-        highlightEntry ? [highlightEntry] : "full",
-      );
+      // Check whether we are hitting the same object as before, since we can return early
+      // in this case, if not explicitly disabled by the allowMeshReuseOptimization parameter.
+      if (storeState.uiInformation.activeTool === AnnotationTool.PROOFREAD) {
+        if (hitObject == null && oldRaycasterHit == null) {
+          return null;
+        }
+        if (
+          allowMeshReuseOptimization &&
+          unmappedSegmentId != null &&
+          unmappedSegmentId === oldRaycasterHit?.unmappedSegmentId
+        ) {
+          return oldRaycasterHit;
+        }
+      }
+      // Outside of proofreading, there is no highlighting of parts of the meshes.
+      // If the parent group is identical, we can reuse the old hit object.
+      else if (allowMeshReuseOptimization && hitObject?.parent === oldRaycasterHit?.node?.parent) {
+        return oldRaycasterHit;
+      }
 
-      Store.dispatch(
-        updateTemporarySettingAction(
-          "hoveredSegmentId",
-          (hitObject.parent as SceneGroupForMeshes).segmentId,
-        ),
-      );
-      return oldRaycasterHit;
-    } else {
-      Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", null));
-      return null;
-    }
-  }, MESH_HOVER_THROTTLING_DELAY);
+      // Undo highlighting of old hit
+      this.clearLastMeshHitTest();
+
+      oldRaycasterHit =
+        hitObject != null
+          ? {
+              node: hitObject,
+              indexRange: highlightEntry?.range || null,
+              unmappedSegmentId,
+              point: intersections[0].point.toArray(),
+            }
+          : null;
+
+      // Highlight new hit
+      if (hitObject?.parent != null) {
+        segmentMeshController.updateMeshAppearance(
+          hitObject,
+          true,
+          undefined,
+          undefined,
+          highlightEntry ? [highlightEntry] : "full",
+        );
+
+        Store.dispatch(
+          updateTemporarySettingAction(
+            "hoveredSegmentId",
+            (hitObject.parent as SceneGroupForMeshes).segmentId,
+          ),
+        );
+        return oldRaycasterHit;
+      } else {
+        Store.dispatch(updateTemporarySettingAction("hoveredSegmentId", null));
+        return null;
+      }
+    },
+    MESH_HOVER_THROTTLING_DELAY,
+  );
 
   clearLastMeshHitTest = () => {
     if (oldRaycasterHit?.node.parent != null) {

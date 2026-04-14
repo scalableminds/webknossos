@@ -6,13 +6,7 @@ import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, DatasetService}
 import models.job._
-import models.organization.{
-  CreditTransactionDAO,
-  CreditTransactionService,
-  OrganizationDAO,
-  OrganizationService,
-  PricingPlan
-}
+import models.organization.{CreditTransactionDAO, CreditTransactionService, OrganizationDAO, PricingPlan}
 import models.user.{MultiUserDAO, UserService}
 import play.api.i18n.Messages
 import play.api.libs.json._
@@ -48,11 +42,25 @@ case class AnimationJobOptions(
     cameraPosition: CameraPositionSetting.Value,
     intensityMin: Double,
     intensityMax: Double,
-    magForTextures: Vec3Int
+    magForTextures: Vec3Int,
+    annotationId: Option[ObjectId],
+    includeSkeletons: Boolean,
+    saveBlenderFile: Boolean
 )
 
 object AnimationJobOptions {
   implicit val jsonFormat: OFormat[AnimationJobOptions] = Json.format[AnimationJobOptions]
+}
+
+case class AlignSectionsJobOptions(
+    layerName: String,
+    newDatasetName: String,
+    annotationId: Option[ObjectId],
+    customConfiguration: Option[JsObject]
+)
+
+object AlignSectionsJobOptions {
+  implicit val jsonFormat: OFormat[AlignSectionsJobOptions] = Json.format[AlignSectionsJobOptions]
 }
 
 class JobController @Inject()(jobDAO: JobDAO,
@@ -68,7 +76,6 @@ class JobController @Inject()(jobDAO: JobDAO,
                               wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                               slackNotificationService: SlackNotificationService,
                               organizationDAO: OrganizationDAO,
-                              organizationService: OrganizationService,
                               creditTransactionService: CreditTransactionService,
                               creditTransactionDAO: CreditTransactionDAO,
                               dataStoreDAO: DataStoreDAO,
@@ -80,7 +87,7 @@ class JobController @Inject()(jobDAO: JobDAO,
     for {
       _ <- Fox.successful(())
       jobCountsByState <- jobDAO.countByState
-      workers <- workerDAO.findAll
+      workers <- workerDAO.findAll(GlobalAccessContext)
       workersJson = workers.map(workerService.publicWrites)
       jsStatus = Json.obj(
         "workers" -> workersJson,
@@ -119,7 +126,7 @@ class JobController @Inject()(jobDAO: JobDAO,
       _ <- jobDAO.updateManualState(id, JobState.CANCELLED)
       _ <- Fox.runIf(job.state == JobState.PENDING || job.state == JobState.STARTED) {
         creditTransactionService
-          .refundTransactionForJob(job._id)(GlobalAccessContext) ?~> "job.creditTransaction.refund.failed"
+          .refundTransactionForJob(job._id, isCancelled = true)(GlobalAccessContext) ?~> "job.creditTransaction.refund.failed"
       }
       js <- jobService.publicWrites(job)
     } yield Ok(js)
@@ -130,6 +137,7 @@ class JobController @Inject()(jobDAO: JobDAO,
       _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> "job.disabled"
       _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
       job <- jobDAO.findOne(id)
+      _ <- creditTransactionService.reserveCreditsForRetry(job._id)
       _ <- jobDAO.retryOne(id)
       js <- jobService.publicWrites(job)
     } yield Ok(js)
@@ -253,11 +261,8 @@ class JobController @Inject()(jobDAO: JobDAO,
       }
     }
 
-  def runAlignSectionsJob(datasetId: ObjectId,
-                          layerName: String,
-                          newDatasetName: String,
-                          annotationId: Option[ObjectId] = None): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+  def runAlignSectionsJob(datasetId: ObjectId): Action[AlignSectionsJobOptions] =
+    sil.SecuredAction.async(validateJson[AlignSectionsJobOptions]) { implicit request =>
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
@@ -265,9 +270,9 @@ class JobController @Inject()(jobDAO: JobDAO,
             "organization.notFound",
             dataset._organization)
           _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.alignSections.notAllowed.organization" ~> FORBIDDEN
-          _ <- datasetService.assertValidDatasetName(newDatasetName)
-          _ <- datasetService.assertValidLayerNameLax(layerName)
-          (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, layerName) ?~> "dataset.notUsable"
+          _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
+          _ <- datasetService.assertValidLayerNameLax(request.body.layerName)
+          (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.layerName) ?~> "dataset.notUsable"
           layerMag <- layer.finestMag.toFox ?~> "dataset.noMags"
           finestMagDatasetBoundingBox = dataSource.boundingBox / layerMag
           command = JobCommand.align_sections
@@ -276,9 +281,10 @@ class JobController @Inject()(jobDAO: JobDAO,
             "organization_id" -> organization._id,
             "dataset_name" -> dataset.name,
             "dataset_directory_name" -> dataset.directoryName,
-            "new_dataset_name" -> newDatasetName,
-            "layer_name" -> layerName,
-            "annotation_id" -> annotationId
+            "new_dataset_name" -> request.body.newDatasetName,
+            "layer_name" -> request.body.layerName,
+            "annotation_id" -> request.body.annotationId,
+            "custom_configuration" -> request.body.customConfiguration
           )
           creditTransactionComment = s"Align dataset ${dataset.name}"
           job <- jobService.submitPaidJob(command,
@@ -433,6 +439,9 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- Fox.runIf(!PricingPlan.isPaidPlan(userOrganization.pricingPlan)) {
             Fox.fromBool(animationJobOptions.movieResolution == MovieResolutionSetting.SD) ?~> "job.renderAnimation.resolutionMustBeSD"
           }
+          _ <- Fox.runIf(animationJobOptions.saveBlenderFile) {
+            userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+          }
           layerName = animationJobOptions.layerName
           _ <- datasetService.assertValidLayerNameLax(layerName)
           exportFileName = s"webknossos_animation_${formatDateForFilename(new Date())}__${dataset.name}__$layerName.mp4"
@@ -452,6 +461,9 @@ class JobController @Inject()(jobDAO: JobDAO,
             "intensity_min" -> animationJobOptions.intensityMin,
             "intensity_max" -> animationJobOptions.intensityMax,
             "mag_for_textures" -> animationJobOptions.magForTextures,
+            "annotation_id" -> animationJobOptions.annotationId,
+            "include_skeletons" -> animationJobOptions.includeSkeletons,
+            "save_blender_file" -> animationJobOptions.saveBlenderFile,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunRenderAnimation"
           js <- jobService.publicWrites(job)

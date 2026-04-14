@@ -50,7 +50,7 @@ import {
 } from "viewer/view/layouting/layout_persistence";
 import { ACTIONBAR_MARGIN_LEFT } from "./action_bar/tools/tool_helpers";
 import ToolkitView from "./action_bar/tools/toolkit_switcher_view";
-import { NumberSliderSetting } from "./components/setting_input_views";
+import NumberSliderSetting from "./left_border_tabs/components/number_slider_setting";
 
 const VersionRestoreWarning = (
   <Alert

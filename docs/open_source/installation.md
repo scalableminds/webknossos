@@ -33,7 +33,7 @@ docker compose up webknossos nginx nginx-letsencrypt
 
 # Wait a couple of minutes for WEBKNOSSOS to become available under your domain
 # e.g. https://webknossos.example.com
-# Set up your organization and admin account using the onboarding screens (see below)
+# Set up your organization and admin account using the onboarding pages (see below)
 
 # After the initial run, you can start WEBKNOSSOS in the background
 DOCKER_TAG=xx.yy.z PUBLIC_HOST=webknossos.example.com LETSENCRYPT_EMAIL=admin@example.com \
@@ -70,7 +70,7 @@ Create your first user
 
 ## Your First Dataset
 Without any data, WEBKNOSSOS is not fun.
-Luckily, there are some sample datasets that you can download directly from the onboarding screens.
+Luckily, there are some sample datasets that you can download directly from the onboarding pages.
 Once you've completed the onboarding, you can also import your own datasets.
 
 For small datasets (max. 1GB), you can use the upload functionality provided in the web interface.
@@ -92,16 +92,14 @@ Confirm the detected dataset properties
 ///
 
 ## Activating New Users
-TODO revise this section
 
 On private WEBKNOSSOS instances, users can only join through an email invitation.
 
-If newly registered users did not join via an email invite link, they join a WEBKNOSSOS organization with the status "deactivated". An admin or a team manager needs to approve them and activate their user account before they can access anything on your WEBKNOSSOS instance. 
-Users that registered within the last 14 days are shown above the `Users` list (accessible from the Admin menu) and can be activated quickly from there.
-After that time or by default for any other inactive users, the `Users` list only shows active users, so make sure to deactivate the `Show Active Users Only` filter at the top of the user list to see/activate new users.
+If a newly registered user did not join via an email invite link, they join with the status "deactivated". An admin or team manager must activate their account before they can access anything on your WEBKNOSSOS instance.
 
+Users who registered within the last 14 days appear above the `Users` list (accessible from the Admin menu) for quick activation. For older inactive users, open the `Users` list and disable the `Show Active Users Only` filter to make them visible.
 
-When activating new users, a popup opens for
+When activating a user, a popup lets you configure:
 
   - team assignment
   - access role assignment

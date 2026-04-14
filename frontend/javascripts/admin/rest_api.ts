@@ -2,6 +2,7 @@ import dayjs from "dayjs";
 import update from "immutability-helper";
 import type { RequestOptions, RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";
+import ResumableUpload from "libs/resumable-upload";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
 import {
@@ -15,7 +16,6 @@ import window from "libs/window";
 import memoize from "lodash-es/memoize";
 import zip from "lodash-es/zip";
 import messages from "messages";
-import ResumableJS from "resumablejs";
 import {
   type AdditionalCoordinate,
   type AnnotationLayerDescriptor,
@@ -880,11 +880,12 @@ export function getSegmentVolumes(
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
+  annotationVersion: number | undefined,
 ): Promise<number[]> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/volume?token=${token}`, {
-      data: { additionalCoordinates, mag, segmentIds, mappingName },
+      data: { additionalCoordinates, mag, segmentIds, mappingName, annotationVersion },
       method: "POST",
     }),
   );
@@ -896,6 +897,7 @@ type SegmentStatisticsParametersMeshBased = {
   mappingName?: string | null;
   additionalCoordinates?: AdditionalCoordinate[] | null;
   meshFileName?: string | null;
+  annotationVersion: number | undefined;
 };
 
 export function getSegmentSurfaceArea(
@@ -905,6 +907,7 @@ export function getSegmentSurfaceArea(
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
+  annotationVersion: number | undefined,
 ): Promise<number[]> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) => {
@@ -914,6 +917,7 @@ export function getSegmentSurfaceArea(
       mappingName,
       additionalCoordinates,
       meshFileName,
+      annotationVersion,
     };
     return Request.sendJSONReceiveJSON(
       `${requestUrl}/segmentStatistics/surfaceArea?token=${token}`,
@@ -931,11 +935,12 @@ export function getSegmentBoundingBoxes(
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
+  annotationVersion: number | undefined,
 ): Promise<Array<{ topLeft: Vector3; width: number; height: number; depth: number }>> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/boundingBox?token=${token}`, {
-      data: { additionalCoordinates, mag, segmentIds, mappingName },
+      data: { additionalCoordinates, mag, segmentIds, mappingName, annotationVersion },
       method: "POST",
     }),
   );
@@ -1171,7 +1176,10 @@ export function createDatasetComposition(
   );
 }
 
-export function createResumableUpload(datastoreUrl: string, uploadId: string): Promise<any> {
+export function createResumableUpload(
+  datastoreUrl: string,
+  uploadId: string,
+): Promise<ResumableUpload> {
   // @ts-expect-error ts-migrate(7006) FIXME: Parameter 'file' implicitly has an 'any' type.
   const generateUniqueIdentifier = (file) => {
     if (file.path == null) {
@@ -1191,7 +1199,7 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
       activeToken = newToken;
     };
 
-    const resumable = new ResumableJS({
+    const resumable = new ResumableUpload({
       testChunks: true,
       target: `${datastoreUrl}/data/datasets`,
       query: function () {
@@ -1203,10 +1211,9 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
       simultaneousUploads: 3,
       chunkRetryInterval: 2000,
       maxChunkRetries: undefined,
-      xhrTimeout: 10 * 60 * 1000, // 10m
-      // @ts-expect-error ts-migrate(2322) FIXME: Type '(file: any) => string' is not assignable to ... Remove this comment to see the full error message
+      fetchTimeout: 10 * 60 * 1000, // 10m
       generateUniqueIdentifier,
-      // The following errors only tell ResumableJS to not
+      // The following errors only tell Resumable-upload to not
       // retry automatically when they appear.
       // 403 is explicitly listed because we want to get a fileError
       // event. Then, we can invalidate the token and trigger
@@ -1215,7 +1222,8 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
     });
 
     let lastFileErrorTimestamp: number | null = null;
-    resumable.on("fileError", function (file, message) {
+    resumable.addEventListener("fileError", (event: Event) => {
+      const { file, message } = (event as CustomEvent).detail;
       // When a file could not be uploaded, assume that the token is invalid. Then,
       // refresh the token (unless we already did this in the last hour) and
       // retry the file upload.
@@ -1227,14 +1235,11 @@ export function createResumableUpload(datastoreUrl: string, uploadId: string): P
           })
           .catch(() => {
             // Note that "terminalFileError" is an event which is only triggered by WK
-            // and not by the ResumableUpload library itself. We merely use the event bus
-            // of the ResumableUpload object.
-            // @ts-expect-error The type definitions are incorrect. fire accepts these parameters.
-            resumable.fire("terminalFileError", file, message);
+            // and not by the ResumableUpload library itself.
+            resumable.dispatchFromDetail({ type: "terminalFileError", file, message });
           });
       } else {
-        // @ts-expect-error See above.
-        resumable.fire("terminalFileError", file, message);
+        resumable.dispatchFromDetail({ type: "terminalFileError", file, message });
       }
 
       lastFileErrorTimestamp = Date.now();
@@ -1823,6 +1828,7 @@ type MeshRequest = {
   mappingName: string | null | undefined;
   mappingType: MappingType | null | undefined;
   findNeighbors: boolean;
+  annotationVersion: number;
 };
 
 export function computeAdHocMesh(
@@ -1880,6 +1886,7 @@ export function getBucketPositionsForAdHocMesh(
   mag: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   mappingName: string | null | undefined,
+  annotationVersion: number,
 ): Promise<Vector3[]> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken(async (token) => {
@@ -1893,6 +1900,7 @@ export function getBucketPositionsForAdHocMesh(
           mag,
           additionalCoordinates,
           mappingName,
+          annotationVersion,
         },
         method: "POST",
       },

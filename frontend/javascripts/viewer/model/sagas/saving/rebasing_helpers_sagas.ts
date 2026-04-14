@@ -469,5 +469,10 @@ function getUpToDateSegmentIdViaPosition(
   }
 
   const mappingSyncedWithBackend = new NumberLikeMapWrapper(mappingSyncedWithBackendUnwrapped);
-  return mappingSyncedWithBackend.getAsNumber(unmappedId);
+  return (
+    mappingSyncedWithBackend.getAsNumber(unmappedId) ??
+    // This fallback should not happen because addMissingSegmentsToLoadedMappings
+    // is called earlier.
+    originalSegmentId
+  );
 }

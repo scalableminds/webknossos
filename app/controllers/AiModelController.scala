@@ -7,8 +7,8 @@ import models.aimodels.{AiInference, AiInferenceDAO, AiInferenceService, AiModel
 import models.annotation.AnnotationDAO
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetService, UploadToPathsService}
 import models.job.{JobCommand, JobService}
-import models.user.{User, UserService}
-import play.api.libs.json.{Json, OFormat}
+import models.user.User
+import play.api.libs.json.{JsObject, Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
 import security.WkEnv
@@ -36,7 +36,8 @@ case class RunNeuronModelTrainingParameters(trainingAnnotations: List[TrainingAn
                                             name: String,
                                             aiModelCategory: Option[AiModelCategory],
                                             comment: Option[String],
-                                            workflowYaml: Option[String])
+                                            workflowYaml: Option[String],
+                                            customConfiguration: Option[JsObject])
 
 object RunNeuronModelTrainingParameters {
   implicit val jsonFormat: OFormat[RunNeuronModelTrainingParameters] = Json.format[RunNeuronModelTrainingParameters]
@@ -47,7 +48,8 @@ case class RunInstanceModelTrainingParameters(trainingAnnotations: List[Training
                                               aiModelCategory: Option[AiModelCategory],
                                               instanceDiameterNm: Option[Double],
                                               comment: Option[String],
-                                              workflowYaml: Option[String])
+                                              workflowYaml: Option[String],
+                                              customConfiguration: Option[JsObject])
 
 object RunInstanceModelTrainingParameters {
   implicit val jsonFormat: OFormat[RunInstanceModelTrainingParameters] = Json.format[RunInstanceModelTrainingParameters]
@@ -63,11 +65,12 @@ case class RunInferenceParameters(datasetId: ObjectId,
                                   workflowYaml: Option[String],
                                   invertColorLayer: Option[Boolean],
                                   seedGeneratorDistanceThreshold: Option[Double],
-                                  doSplitMergerEvaluation: Boolean = false,
+                                  doSplitMergerEvaluation: Option[Boolean],
                                   evalUseSparseTracing: Option[Boolean],
                                   evalMaxEdgeLength: Option[Double],
                                   evalSparseTubeThresholdNm: Option[Double],
-                                  evalMinMergerPathLengthNm: Option[Double])
+                                  evalMinMergerPathLengthNm: Option[Double],
+                                  customConfiguration: Option[JsObject])
 
 object RunInferenceParameters {
   implicit val jsonFormat: OFormat[RunInferenceParameters] = Json.format[RunInferenceParameters]
@@ -96,7 +99,6 @@ class AiModelController @Inject()(
     aiModelDAO: AiModelDAO,
     aiModelService: AiModelService,
     sil: Silhouette[WkEnv],
-    userService: UserService,
     annotationDAO: AnnotationDAO,
     aiInferenceService: AiInferenceService,
     aiInferenceDAO: AiInferenceDAO,
@@ -187,7 +189,7 @@ class AiModelController @Inject()(
           "organization_id" -> organization._id,
           "model_id" -> modelId,
           "model_name" -> request.body.name,
-          "custom_workflow_provided_by_user" -> request.body.workflowYaml
+          "custom_configuration" -> request.body.customConfiguration
         )
         creditTransactionComment = s"AI training for neuron model $modelId"
         newTrainingJob <- jobService.submitPaidJob(jobCommand,
@@ -244,8 +246,8 @@ class AiModelController @Inject()(
           "organization_id" -> organization._id,
           "model_id" -> modelId,
           "model_name" -> request.body.name,
-          "custom_workflow_provided_by_user" -> request.body.workflowYaml,
-          "instance_diameter_nm" -> request.body.instanceDiameterNm
+          "instance_diameter_nm" -> request.body.instanceDiameterNm,
+          "custom_configuration" -> request.body.customConfiguration
         )
         creditTransactionComment = s"AI training for instance model $modelId"
         newTrainingJob <- jobService.submitPaidJob(jobCommand,
@@ -298,9 +300,9 @@ class AiModelController @Inject()(
           "model_organization_id" -> aiModelOpt.map(_._organization),
           "dataset_directory_name" -> dataset.directoryName,
           "new_dataset_name" -> request.body.newDatasetName,
-          "custom_workflow_provided_by_user" -> request.body.workflowYaml,
           "invert_color_layer" -> request.body.invertColorLayer,
           "seed_generator_distance_threshold" -> request.body.seedGeneratorDistanceThreshold,
+          "custom_configuration" -> request.body.customConfiguration
         )
         creditTransactionComment = s"AI custom instance segmentation with model ${request.body.aiModelId} for dataset ${dataset.name}"
         targetMagBoundingBox <- aiModelService.inferenceBBoxToTargetMag(mag1BoundingBox,
@@ -351,6 +353,7 @@ class AiModelController @Inject()(
                                                                         aiModelOpt,
                                                                         usePretrainedNeuronModel = aiModelOpt.isEmpty,
                                                                         dataStore)
+        doSplitMergerEvaluation: Boolean = request.body.doSplitMergerEvaluation.getOrElse(false)
         commandArgs = Json.obj(
           "dataset_id" -> dataset._id,
           "organization_id" -> dataset._organization,
@@ -361,13 +364,13 @@ class AiModelController @Inject()(
           "model_organization_id" -> aiModelOpt.map(_._organization),
           "dataset_directory_name" -> dataset.directoryName,
           "new_dataset_name" -> request.body.newDatasetName,
-          "custom_workflow_provided_by_user" -> request.body.workflowYaml,
           "invert_color_layer" -> request.body.invertColorLayer,
-          "do_split_merger_evaluation" -> request.body.doSplitMergerEvaluation,
+          "do_split_merger_evaluation" -> doSplitMergerEvaluation,
           "eval_use_sparse_tracing" -> request.body.evalUseSparseTracing,
           "eval_max_edge_length" -> request.body.evalMaxEdgeLength,
           "eval_sparse_tube_threshold_nm" -> request.body.evalSparseTubeThresholdNm,
           "eval_min_merger_path_length_nm" -> request.body.evalMinMergerPathLengthNm,
+          "custom_configuration" -> request.body.customConfiguration
         )
         creditTransactionComment = s"AI custom neuron segmentation with model ${request.body.aiModelId} for dataset ${dataset.name}"
         newInferenceJob <- jobService.submitPaidJob(jobCommand,

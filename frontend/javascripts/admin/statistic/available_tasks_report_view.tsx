@@ -1,63 +1,49 @@
-import { InfoCircleOutlined } from "@ant-design/icons";
+import { FilterOutlined } from "@ant-design/icons";
+import AdminPage from "admin/admin_page";
 import { getAvailableTasksReport } from "admin/rest_api";
-import { Card, Spin, Table, Tag, Tooltip, Typography } from "antd";
-import { handleGenericError } from "libs/error_handling";
+import { Spin, Table, Tag, Tooltip } from "antd";
+import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
+import { useQueryWithErrorHandling } from "libs/react_hooks";
 import { compareBy, localeCompareBy } from "libs/utils";
 import { useState } from "react";
 import type { APIAvailableTasksReport } from "types/api_types";
-import TeamSelectionForm from "./team_selection_form";
 
 const { Column } = Table;
 
 /*
- * Note that the phrasing “available” tasks is chosen here over “pending” to
+ * Note that the phrasing "available" tasks is chosen here over "pending" to
  * emphasize that tasks are still available for individual users.
  * From the project viewpoint they are tasks with pending instances.
  */
 function AvailableTasksReportView() {
-  const [data, setData] = useState<APIAvailableTasksReport[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
 
-  async function fetchData(teamId: string | null | undefined) {
-    if (teamId == null) {
-      setData([]);
-    } else {
-      try {
-        setIsLoading(true);
-        const progressData = await getAvailableTasksReport(teamId);
-        setData(progressData);
-      } catch (error) {
-        handleGenericError(error as Error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-  }
+  const { data = [], isLoading } = useQueryWithErrorHandling({
+    queryKey: ["availableTasksReport", selectedTeamId],
+    enabled: selectedTeamId != null,
+    queryFn: () => getAvailableTasksReport(selectedTeamId!),
+  });
 
   return (
-    <div className="container">
-      <h3>Available Task Assignments</h3>
-      <Typography.Paragraph type="secondary">
-        Select a team to show an overview of its users and the number of available task assignments
-        they qualify for. Task availability for each user is determined by assigned experiences,
-        team memberships, the number of pending task instances, etc. For tasks with multiple
-        instances, each user will get at most one. Note that individual tasks may be listed as
-        available to multiple users here, but each will only be handed to the first user to request
-        it.
-        <a
-          href="https://docs.webknossos.org/webknossos/tasks_projects/index.html"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Tooltip title="Read more in the documentation">
-            <InfoCircleOutlined style={{ marginLeft: 10 }} />
-          </Tooltip>
-        </a>
-      </Typography.Paragraph>
-      <Card>
-        <TeamSelectionForm onChange={(team) => fetchData(team.id)} />
-      </Card>
-
+    <AdminPage
+      title="Available Task Assignments"
+      descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/tasks.html"
+      description={
+        "Select a team to view available task assignments for its users. Availability depends on experience, team membership, and pending instances. Each task instance is assigned to the first user who requests it."
+      }
+      filters={
+        <div style={{ maxWidth: 400 }}>
+          <TeamSelectionComponent
+            onChange={(selectedTeam) => {
+              if (!Array.isArray(selectedTeam) && selectedTeam != null) {
+                setSelectedTeamId(selectedTeam.id);
+              }
+            }}
+            prefix={<FilterOutlined />}
+          />
+        </div>
+      }
+    >
       <Spin spinning={isLoading}>
         <Table
           dataSource={data}
@@ -65,10 +51,6 @@ function AvailableTasksReportView() {
             defaultPageSize: 500,
           }}
           rowKey="id"
-          style={{
-            marginTop: 30,
-            marginBottom: 30,
-          }}
           size="small"
           scroll={{
             x: "max-content",
@@ -83,6 +65,7 @@ function AvailableTasksReportView() {
           />
           <Column
             title="# Available Tasks"
+            align="right"
             dataIndex="totalAvailableTasks"
             defaultSortOrder="ascend"
             sorter={compareBy<APIAvailableTasksReport>((task) => task.totalAvailableTasks)}
@@ -116,7 +99,7 @@ function AvailableTasksReportView() {
           />
         </Table>
       </Spin>
-    </div>
+    </AdminPage>
   );
 }
 

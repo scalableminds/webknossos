@@ -198,8 +198,9 @@ const defaultState: WebknossosState = {
       skeleton: undefined,
       volumes: [],
       activeMappingByLayer: {},
-      isRebasing: false,
+      isRebasingOrForwarding: false,
     },
+    proofreadingPostProcessingInfo: null,
   },
   flycam: {
     zoomStep: 1.3,

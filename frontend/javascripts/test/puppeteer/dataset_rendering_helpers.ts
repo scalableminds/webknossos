@@ -236,7 +236,6 @@ async function waitForTracingViewLoad(page: Page) {
   let inputCatchers;
   let iterationCount = 0;
 
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'length' does not exist on type 'ElementH... Remove this comment to see the full error message
   while (inputCatchers == null || inputCatchers.length < 4) {
     iterationCount++;
     if (iterationCount > 5) {
@@ -244,15 +243,19 @@ async function waitForTracingViewLoad(page: Page) {
     }
     await sleep(500);
     const inputCatcherPromise = page
-      .$(".inputcatcher")
+      .waitForSelector(".inputcatcher")
+      .then(() => page.$$(".inputcatcher"))
       .then((elements) => ({ type: "inputcatchers", elements }));
+
     const errorPromise = page
-      .$(".initialization-error-message")
-      .then((elements) => ({ type: "error", elements }));
+      .waitForSelector(".initialization-error-message")
+      .then((element) => ({ type: "error", elements: [element] }));
 
     const raceResult = await Promise.race([inputCatcherPromise, errorPromise]);
 
     if (raceResult.type === "error") {
+      // Sleep a bit so that we can visually inspect the error in (recorded) sessions.
+      await sleep(1000);
       throw new Error("Initialization error detected");
     }
 
@@ -402,7 +405,7 @@ export async function screenshotTracingView(
 
   await revertOpacityIfNecessary();
   // Concatenate all screenshots
-  const img = await mergeImg(screenshots);
+  const img = await mergeImg(screenshots as Array<Buffer>);
 
   return new Promise((resolve) => {
     img.getBuffer("image/png", (_, buffer) =>
@@ -457,17 +460,17 @@ export async function setupBeforeEach(context: ScreenshotTestContext) {
   if (USE_LOCAL_CHROME) {
     // Use this for connecting to local Chrome browser instance
     context.browser = await puppeteer.launch({
-      args: HEADLESS
+      args: (HEADLESS
         ? [
-            "--headless=false",
             "--hide-scrollbars",
             "--no-sandbox",
             "--disable-setuid-sandbox",
             "--disable-dev-shm-usage",
             "--use-angle=gl-egl",
           ]
-        : [],
-      headless: HEADLESS ? "new" : false, // use "new" to suppress warnings
+        : []
+      ).concat([`--window-size=${PAGE_WIDTH},${PAGE_HEIGHT}`]),
+      headless: HEADLESS,
       dumpio: true,
       executablePath: "/usr/bin/google-chrome", // Linux; this might need to be adapted to your local setup
       // executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", // Mac

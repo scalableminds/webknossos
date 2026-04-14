@@ -20,6 +20,9 @@ import {
   isPixelEquivalent,
   SCREENSHOTS_BASE_PATH,
 } from "./screenshot_helpers";
+import path from "path";
+
+const SCREENSHOTS_PATH = path.join(SCREENSHOTS_BASE_PATH, "misc");
 
 if (!WK_AUTH_TOKEN) {
   throw new Error("No WK_AUTH_TOKEN specified.");
@@ -145,7 +148,7 @@ describe("Dataset Rendering", () => {
           screenshot,
           width,
           height,
-          SCREENSHOTS_BASE_PATH,
+          SCREENSHOTS_PATH,
           datasetName,
         );
         await page.close();
@@ -195,7 +198,7 @@ describe("Dataset Rendering", () => {
           screenshot,
           width,
           height,
-          SCREENSHOTS_BASE_PATH,
+          SCREENSHOTS_PATH,
           `annotation_${datasetName}_${fallbackLabel}`,
         );
         await page.close();
@@ -233,7 +236,7 @@ describe("Dataset Rendering", () => {
           screenshot,
           width,
           height,
-          SCREENSHOTS_BASE_PATH,
+          SCREENSHOTS_PATH,
           `${datasetName}_with_mapping_${mappingName}`,
         );
         await page.close();
@@ -271,7 +274,7 @@ describe("Dataset Rendering", () => {
           screenshot,
           width,
           height,
-          SCREENSHOTS_BASE_PATH,
+          SCREENSHOTS_PATH,
           `${datasetName}_with_mapping_link`,
         );
         await page.close();
@@ -308,7 +311,7 @@ describe("Dataset Rendering", () => {
           screenshot,
           width,
           height,
-          SCREENSHOTS_BASE_PATH,
+          SCREENSHOTS_PATH,
           `${datasetName}_with_mapping_link`,
         );
         await page.close();
@@ -346,7 +349,7 @@ describe("Dataset Rendering", () => {
           screenshot,
           width,
           height,
-          SCREENSHOTS_BASE_PATH,
+          SCREENSHOTS_PATH,
           `${datasetName}_with_meshes_link`,
         );
         await page.close();

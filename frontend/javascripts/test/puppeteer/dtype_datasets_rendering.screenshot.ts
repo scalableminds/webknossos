@@ -29,6 +29,9 @@ import {
   isPixelEquivalent,
   SCREENSHOTS_BASE_PATH,
 } from "./screenshot_helpers";
+import path from "path";
+
+const SCREENSHOTS_PATH = path.join(SCREENSHOTS_BASE_PATH, "dtype");
 
 const testColor = true;
 const testSegmentation = true;
@@ -265,7 +268,7 @@ describe("DType Dataset Rendering", () => {
             screenshot,
             width,
             height,
-            SCREENSHOTS_BASE_PATH,
+            SCREENSHOTS_PATH,
             spec.name,
           );
           console.timeEnd("Comparing screenshot...");
@@ -298,7 +301,7 @@ describe("DType Dataset Rendering", () => {
               screenshot,
               width,
               height,
-              SCREENSHOTS_BASE_PATH,
+              SCREENSHOTS_PATH,
               spec.name + "_selective_segment",
             );
             console.timeEnd("Comparing screenshot...");

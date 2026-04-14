@@ -1,4 +1,9 @@
-import { DeleteOutlined, FolderOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+  AppstoreAddOutlined,
+  DeleteOutlined,
+  FolderOutlined,
+  PlusOutlined,
+} from "@ant-design/icons";
 import { Alert, Button, Card, Col, Form, Popover, Row, Select, Space, Statistic } from "antd";
 import { formatVoxels } from "libs/format_utils";
 import { V3 } from "libs/mjs";
@@ -8,6 +13,7 @@ import { useMemo, useState } from "react";
 import { ColorWKBlue } from "theme";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import { useGenerateBBModalContext } from "viewer/view/ai_jobs/generate_BB_modal_context";
 import { colorLayerMustNotBeUint24Rule, getIntersectingMagList } from "../utils";
 import {
   type AiTrainingAnnotationSelection,
@@ -22,7 +28,9 @@ const AiTrainingDataSelector = ({
 }: {
   selectedAnnotation: AiTrainingAnnotationSelection;
 }) => {
-  const { handleSelectionChange, setSelectedAnnotations } = useAiTrainingJobContext();
+  const { openGenerateBBModal } = useGenerateBBModalContext();
+  const { handleSelectionChange, setSelectedAnnotations, selectedJobType } =
+    useAiTrainingJobContext();
 
   const {
     annotation,
@@ -230,6 +238,16 @@ const AiTrainingDataSelector = ({
       {bboxWarnings.map((warning) => (
         <Alert key={warning} title={warning} type="warning" showIcon style={{ marginTop: 12 }} />
       ))}
+      {(bboxErrors.length > 0 || bboxWarnings.length > 0) && (
+        <Button
+          size="small"
+          icon={<AppstoreAddOutlined />}
+          onClick={() => openGenerateBBModal(magnification ?? null, selectedJobType)}
+          style={{ marginTop: 12 }}
+        >
+          Generate
+        </Button>
+      )}
     </Card>
   );
 };

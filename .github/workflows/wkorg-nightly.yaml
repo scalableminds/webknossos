@@ -37,7 +37,7 @@ jobs:
         if: always()
         with:
           name: screenshots
-          path: frontend/javascripts/test/screenshots-wkorg
+          path: frontend/javascripts/test/screenshots
 
 
   nightly-gzip-test:

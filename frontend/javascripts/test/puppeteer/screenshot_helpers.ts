@@ -103,7 +103,9 @@ export async function compareScreenshot(
   }
 
   if (width !== existingScreenshot.width || height !== existingScreenshot.height) {
-    console.warn("Width/height differs between screenshots. Using Infinity as pixelErrors value.");
+    console.warn(
+      "Width/height differs between screenshots. Using Infinity as pixelErrors value. Not writing diff file.",
+    );
     await saveScreenshot(newScreenshot, path, `${name}.new`);
     return Number.POSITIVE_INFINITY;
   }

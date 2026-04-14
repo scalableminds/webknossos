@@ -267,18 +267,18 @@ async function waitForRenderingFinish(page: Page) {
   const width = PAGE_WIDTH;
   const height = PAGE_HEIGHT;
   let currentShot;
-  let lastShot = await page.screenshot({
-    fullPage: true,
-  });
+  const screenshotOptions = {
+    // Screenshotting the full page may cause resize events which can lead
+    // to react errors (also see comment about captureBeyondViewport=false).
+    fullPage: false,
+  };
+  let lastShot = (await page.screenshot(screenshotOptions)) as Buffer<ArrayBufferLike>;
   let changedPixels = Number.POSITIVE_INFINITY;
 
   // If the screenshot of the page didn't change in the last x seconds, rendering should be finished
   while (currentShot == null || !isPixelEquivalent(changedPixels, width, height)) {
     console.log(`Waiting for rendering to finish. Changed pixels: ${changedPixels}`);
-    await sleep(1000);
-    currentShot = await page.screenshot({
-      fullPage: true,
-    });
+    currentShot = (await page.screenshot(screenshotOptions)) as Buffer<ArrayBufferLike>;
 
     if (lastShot != null) {
       changedPixels = pixelmatch(
@@ -399,7 +399,10 @@ export async function screenshotTracingView(
     if (element == null)
       throw new Error(`Element ${planeId} not present, although page is loaded.`);
 
-    const screenshot = await element.screenshot();
+    // captureBeyondViewport=false prevents a react callstack error which was apparently
+    // triggered by a resize event when capturing beyond the viewport. Concretely, some
+    // antd observers got into an infinite loop. The symptom was an error toast in the UI.
+    const screenshot = await element.screenshot({ captureBeyondViewport: false });
     screenshots.push(screenshot);
   }
 

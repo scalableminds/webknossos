@@ -442,7 +442,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
 
     // Workaround so that onLayoutChange is called after the update of flexlayout.
     // Calling the method without a timeout results in incorrect calculation of the viewport positions for the rendering.
-    setTimeout(() => this.props.onLayoutChange(currentLayoutModel, this.props.layoutName), 1);
+    setTimeout(() => this.props.onLayoutChange(currentLayoutModel, this.props.layoutName), 50);
   };
 
   onMaximizeToggle = () => {

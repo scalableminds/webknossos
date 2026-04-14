@@ -49,7 +49,7 @@ export const DEFAULT_PLANE_TOOL_SWITCHING_KEYBOARD_SHORTCUTS: KeyboardShortcutsM
       [["Control", "k"], ["x"]],
     ],
     [PlaneControllerToolSwitchingKeyboardShortcuts.SWITCH_TO_PROOFREADING_TOOL]: [
-      [["Control", "k"], ["q"]],
+      [["Control", "k"], ["o"]],
     ],
   } as const;
 

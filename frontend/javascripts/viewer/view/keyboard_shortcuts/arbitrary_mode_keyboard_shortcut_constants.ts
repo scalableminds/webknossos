@@ -139,8 +139,8 @@ export enum ArbitraryControllerNoLoopKeyboardShortcuts {
   CREATE_BRANCH_POINT_ARBITRARY = "CREATE_BRANCH_POINT",
   DELETE_BRANCH_POINT_ARBITRARY = "DELETE_BRANCH_POINT",
   RECENTER_ACTIVE_NODE_ARBITRARY = "RECENTER_ACTIVE_NODE",
-  NEXT_NODE_FORWARD_ARBITRARY = "NEXT_NODE_FORWARD",
-  NEXT_NODE_BACKWARD_ARBITRARY = "NEXT_NODE_BACKWARD",
+  NEXT_NODE_FORWARD_ARBITRARY = "NEXT_NODE_FORWARD_ARBITRARY",
+  NEXT_NODE_BACKWARD_ARBITRARY = "NEXT_NODE_BACKWARD_ARBITRARY",
   ROTATE_VIEW_180 = "ROTATE_VIEW_180",
   DOWNLOAD_SCREENSHOT_ARBITRARY = "DOWNLOAD_SCREENSHOT",
 }
@@ -158,8 +158,8 @@ export const DEFAULT_ARBITRARY_NO_LOOP_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<
     [ArbitraryControllerNoLoopKeyboardShortcuts.CREATE_BRANCH_POINT_ARBITRARY]: [[["b"]]],
     [ArbitraryControllerNoLoopKeyboardShortcuts.DELETE_BRANCH_POINT_ARBITRARY]: [[["j"]]],
     [ArbitraryControllerNoLoopKeyboardShortcuts.RECENTER_ACTIVE_NODE_ARBITRARY]: [[["s"]]],
-    [ArbitraryControllerNoLoopKeyboardShortcuts.NEXT_NODE_FORWARD_ARBITRARY]: [[["."]]],
-    [ArbitraryControllerNoLoopKeyboardShortcuts.NEXT_NODE_BACKWARD_ARBITRARY]: [[[","]]],
+    [ArbitraryControllerNoLoopKeyboardShortcuts.NEXT_NODE_FORWARD_ARBITRARY]: [[["Control", "."]]],
+    [ArbitraryControllerNoLoopKeyboardShortcuts.NEXT_NODE_BACKWARD_ARBITRARY]: [[["Control", ","]]],
     [ArbitraryControllerNoLoopKeyboardShortcuts.ROTATE_VIEW_180]: [[["r"]]],
     [ArbitraryControllerNoLoopKeyboardShortcuts.DOWNLOAD_SCREENSHOT_ARBITRARY]: [[["q"]]],
   } as const;

@@ -42,7 +42,10 @@ import Constants, {
   TDViewDisplayModeEnum,
 } from "viewer/constants";
 import { rotate3DViewTo } from "viewer/controller/camera_controller";
-import { loadAgglomerateSkeletonForSegmentId } from "viewer/controller/combinations/segmentation_handlers";
+import {
+  loadAgglomerateSkeletonAtPosition,
+  loadAgglomerateSkeletonFromId,
+} from "viewer/controller/combinations/segmentation_handlers";
 import {
   createSkeletonNode,
   getOptionsForCreateSkeletonNode,
@@ -1025,14 +1028,36 @@ class TracingApi {
   }
 
   /**
+   * Loads the agglomerate skeleton for the agglomerate at the given position. Only possible if
+   * a segmentation layer is visible for which an agglomerate mapping is enabled.
+   * Should be preferred over using api.tracing.loadAgglomerateSkeletonForSegmentId as this version
+   * yields more reliable results in live collaborative context. A conflicting merge can result in the
+   * agglomerate id at the give position to change. That's why passing the position is safer than
+   * passing the agglomerate id via api.tracing.loadAgglomerateSkeletonForSegmentId as the
+   * agglomerate id lookup is done after applying such an interfering merge.
+   *
+   * @example
+   * api.tracing.loadAgglomerateSkeletonAtPosition([3, 3, 3]);
+   */
+  loadAgglomerateSkeletonAtPosition(position: Vector3) {
+    loadAgglomerateSkeletonAtPosition(position);
+  }
+
+  /**
    * Loads the agglomerate skeleton for the given segment id. Only possible if
    * a segmentation layer is visible for which an agglomerate mapping is enabled.
+   * Please consider using api.tracing.loadAgglomerateSkeletonAtPosition as it yields
+   * more reliable results in a live collaborative context. A conflicting merge of another
+   * user can make the passed agglomerate id invalid just before loading the agglomerate
+   * skeleton from the backend. By passing any position of the agglomerate instead its id via using
+   * api.tracing.loadAgglomerateSkeletonAtPosition WEBKNOSSOS can ensure to use the up-to-date agglomerate
+   * id to request the correct agglomerate skeleton.
    *
    * @example
    * api.tracing.loadAgglomerateSkeletonForSegmentId(3);
    */
   loadAgglomerateSkeletonForSegmentId(segmentId: number) {
-    loadAgglomerateSkeletonForSegmentId(segmentId);
+    loadAgglomerateSkeletonFromId(segmentId);
   }
 
   /**

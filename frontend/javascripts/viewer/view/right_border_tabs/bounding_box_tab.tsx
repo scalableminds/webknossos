@@ -1,4 +1,9 @@
-import { DeleteOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
+import {
+  AppstoreAddOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+  SearchOutlined,
+} from "@ant-design/icons";
 import {
   Divider,
   Empty,
@@ -35,6 +40,7 @@ import ButtonComponent from "../components/button_component";
 import { getContextMenuPositionFromEvent } from "../context_menu/helpers";
 import UserBoundingBoxInput from "../left_border_tabs/components/user_boundingbox_input";
 import AdvancedSearchPopover from "./advanced_search_popover";
+import GenerateBoundingBoxesModal from "./generate_bounding_boxes_modal";
 import { ContextMenuContainer } from "./sidebar_context_menu";
 
 const BBOX_BUTTONS_HEADER_HEIGHT = 40;
@@ -55,6 +61,7 @@ export default function BoundingBoxTab() {
   const [contextMenuPosition, setContextMenuPosition] = useState<[number, number] | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
   const [menu, setMenu] = useState<MenuProps | null>(null);
+  const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   const dispatch = useDispatch();
 
   const setChangeBoundingBoxBounds = useCallback(
@@ -303,6 +310,14 @@ export default function BoundingBoxTab() {
           icon={<PlusOutlined />}
         />
         <ButtonComponent
+          disabled={!allowUpdate}
+          variant="text"
+          color="default"
+          title="Generate bounding boxes randomly distributed across the dataset."
+          onClick={() => setIsGenerateModalOpen(true)}
+          icon={<AppstoreAddOutlined />}
+        />
+        <ButtonComponent
           disabled={!allowUpdate || selectedRowKeys.length === 0}
           variant="text"
           color="default"
@@ -336,7 +351,7 @@ export default function BoundingBoxTab() {
                 <Flex justify="center">
                   <Empty
                     image={Empty.PRESENTED_IMAGE_SIMPLE}
-                    description="There are no bounding boxes. Create some using the + button above or with the bounding box tool."
+                    description="There are no bounding boxes yet. Add one with the + button, draw one with the bounding box tool, or generate several at once."
                   />
                 </Flex>
               ) : (
@@ -363,6 +378,14 @@ export default function BoundingBoxTab() {
         </AutoSizer>
       )}
       <Typography.Text type="secondary">{maybeUneditableExplanation}</Typography.Text>
+      {isGenerateModalOpen ? (
+        <GenerateBoundingBoxesModal
+          isOpen={isGenerateModalOpen}
+          onClose={() => setIsGenerateModalOpen(false)}
+          magnification={null}
+          jobType={null}
+        />
+      ) : null}
       {selectedBoundingBoxForExport != null ? (
         <DownloadModalView
           isOpen

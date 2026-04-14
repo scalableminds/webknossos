@@ -533,7 +533,8 @@ class DataSourceController @Inject()(
             dataSource.id,
             dataLayer,
             request.body.mappingName,
-            request.body.editableMappingTracingId,
+            None,
+            request.body.annotationVersion,
             segmentId.toLong,
             mappingNameForMeshFile = None,
             omitMissing = false
@@ -570,6 +571,7 @@ class DataSourceController @Inject()(
                 dataLayer,
                 request.body.mappingName,
                 request.body.editableMappingTracingId,
+                request.body.annotationVersion,
                 segmentOrAgglomerateId,
                 mappingNameForMeshFile = None,
                 omitMissing = true // assume agglomerate ids not present in the mapping belong to user-brushed segments
@@ -646,6 +648,7 @@ class DataSourceController @Inject()(
               mappingName = request.body.mappingName,
               mappingType = request.body.mappingName.map(_ => "HDF5"),
               editableMappingTracingId = None,
+              annotationVersion = None,
               mag = Some(request.body.mag),
               seedPosition = None,
               additionalCoordinates = request.body.additionalCoordinates,

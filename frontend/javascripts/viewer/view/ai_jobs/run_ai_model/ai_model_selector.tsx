@@ -7,10 +7,12 @@ import { APIAiModelCategory, getAiModels } from "admin/rest_api";
 import { Avatar, Card, Input, List, Space, Spin, Tag, Typography } from "antd";
 import Markdown from "libs/markdown_adapter";
 import { useGuardedFetch } from "libs/react_helpers";
+import { useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { useMemo, useState } from "react";
 import { ColorWKBlue } from "theme";
 import { type AiModel, APIJobCommand } from "types/api_types";
+import { enforceActiveUser } from "viewer/model/accessors/user_accessor";
 import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
 
 const { Title, Text } = Typography;
@@ -23,10 +25,10 @@ export type PretrainedModel = {
     | APIJobCommand.INFER_NEURONS
     | APIJobCommand.INFER_MITOCHONDRIA
     | APIJobCommand.INFER_INSTANCES;
-  aiModelId?: string;
   category?: APIAiModelCategory;
   image: string;
   disabled?: boolean;
+  superUserOnly?: boolean;
 };
 
 const preTrainedModels: PretrainedModel[] = [
@@ -34,9 +36,8 @@ const preTrainedModels: PretrainedModel[] = [
     name: "Neuron Segmentation",
     comment:
       "Advanced neuron segmentation and reconstruction pipeline. Optimized for dense neuronal tissue from SEM, FIB-SEM, SBEM, Multi-SEM microscopes.",
-    id: "neuron-segmentation",
+    id: "neuron_inferral_model",
     jobType: APIJobCommand.INFER_NEURONS,
-    aiModelId: "neuron_inferral_model",
     category: APIAiModelCategory.EM_NEURONS,
     image: neuronInferralExample,
   },
@@ -51,20 +52,18 @@ const preTrainedModels: PretrainedModel[] = [
   {
     name: "Nuclei Detection",
     comment: "Instance segmentation model for nuclei detection. Optimized for EM data",
-    id: "nuclei-detection",
-    disabled: true,
+    id: "nuclei_inferral_model",
+    superUserOnly: true,
     jobType: APIJobCommand.INFER_INSTANCES,
-    aiModelId: "nuclei_inferral_model",
     category: APIAiModelCategory.EM_NUCLEI,
     image: nucleiInferralExample,
   },
   {
     name: "Soma Detection",
     comment: "Instance segmentation model for soma detection. Optimized for EM data",
-    id: "soma-detection",
-    disabled: true,
+    id: "soma_inferral_model",
+    superUserOnly: true,
     jobType: APIJobCommand.INFER_INSTANCES,
-    aiModelId: "soma_inferral_model",
     category: APIAiModelCategory.EM_SOMATA,
     image: somaInferralExample,
   },
@@ -88,6 +87,7 @@ const mapCategoryToJobType = (
 export const AiModelSelector: React.FC = () => {
   const { selectedModel, setSelectedModel, setSelectedJobType } = useRunAiModelJobContext();
   const [searchTerm, setSearchTerm] = useState("");
+  const isSuperUser = useWkSelector((state) => enforceActiveUser(state.activeUser).isSuperUser);
 
   const [customModels, isLoading] = useGuardedFetch(
     async function () {
@@ -169,34 +169,37 @@ export const AiModelSelector: React.FC = () => {
         itemLayout="horizontal"
         dataSource={filteredPreTrainedModels}
         locale={{ emptyText: "No pre-trained models match your search." }}
-        renderItem={(item) => (
-          <List.Item
-            style={{
-              opacity: item.disabled ? 0.5 : 1,
-              cursor: item.disabled ? "not-allowed" : "pointer",
-            }}
-            className={"hoverable-list-item " + (selectedModel?.id === item.id ? "selected" : "")}
-            onClick={() => !item.disabled && onSelectModel(item)}
-          >
-            <List.Item.Meta
-              avatar={
-                <Avatar
-                  shape="square"
-                  size={64}
-                  src={(item as PretrainedModel).image}
-                  alt={item.name}
-                />
-              }
-              title={
-                <Space>
-                  <Text strong>{item.name}</Text>
-                  {item.disabled && <Tag>Coming Soon</Tag>}
-                </Space>
-              }
-              description={<Markdown>{item.comment}</Markdown>}
-            />
-          </List.Item>
-        )}
+        renderItem={(item) => {
+          const isDisabled = !!item.disabled || (!!item.superUserOnly && !isSuperUser);
+          return (
+            <List.Item
+              style={{
+                opacity: isDisabled ? 0.5 : 1,
+                cursor: isDisabled ? "not-allowed" : "pointer",
+              }}
+              className={"hoverable-list-item " + (selectedModel?.id === item.id ? "selected" : "")}
+              onClick={() => !isDisabled && onSelectModel(item)}
+            >
+              <List.Item.Meta
+                avatar={
+                  <Avatar
+                    shape="square"
+                    size={64}
+                    src={(item as PretrainedModel).image}
+                    alt={item.name}
+                  />
+                }
+                title={
+                  <Space>
+                    <Text strong>{item.name}</Text>
+                    {item.disabled && <Tag>Coming Soon</Tag>}
+                  </Space>
+                }
+                description={<Markdown>{item.comment}</Markdown>}
+              />
+            </List.Item>
+          );
+        }}
       />
 
       <Title level={5} style={{ marginTop: "24px" }}>

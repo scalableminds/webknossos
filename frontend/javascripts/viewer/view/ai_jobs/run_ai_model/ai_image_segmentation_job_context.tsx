@@ -176,12 +176,7 @@ export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode 
     }
 
     const isColorLayerInverted = datasetConfiguration.layers[selectedLayer.name].isInverted;
-    const aiModelId =
-      "trainingJob" in selectedModel
-        ? selectedModel.id
-        : "aiModelId" in selectedModel
-          ? selectedModel.aiModelId
-          : undefined;
+    const aiModelId = selectedModel.id;
 
     try {
       switch (selectedJobType) {

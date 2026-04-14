@@ -93,10 +93,20 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
                                layer: StaticLayer,
                                datasetVoxelSize: VoxelSize,
                                aiModelOpt: Option[AiModel],
-                               usePretrainedNeuronModel: Boolean,
+                               pretrainedModelIdOpt: Option[String],
                                dataStore: DataStore)(implicit ec: ExecutionContext): Fox[BoundingBox] =
     for {
-      modelVoxelSize <- findModelVoxelSize(aiModelOpt, usePretrainedNeuronModel, dataStore)
+      modelVoxelSize <- (aiModelOpt, pretrainedModelIdOpt.flatMap(findPretrainedModelVoxelSize)) match {
+        case (Some(aiModel), _) =>
+          for {
+            modelPath <- pathWithFallback(aiModel)
+            dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
+            voxelSize <- dataStoreClient.getEffectiveAiModelVoxelSize(modelPath)
+          } yield voxelSize
+        case (None, Some(pretrainedVoxelSize)) => Fox.successful(pretrainedVoxelSize)
+        case (None, None) =>
+          Fox.failure("Expected either a custom AI model or a known pretrained model ID")
+      }
       targetMag <- findBestMatchingMag(modelVoxelSize, datasetVoxelSize, layer)
       targetMagBoundingBox = mag1BoundingBox / targetMag
     } yield targetMagBoundingBox
@@ -128,6 +138,15 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
 
   private lazy val PretrainedNeuronModelVoxelSize = VoxelSize(Vec3Double(7.96, 7.96, 31.2), LengthUnit.nanometer)
   private lazy val PretrainedNucleiModelVoxelSize = VoxelSize(Vec3Double(179.84, 179.84, 224.0), LengthUnit.nanometer)
+  private lazy val PretrainedSomataModelVoxelSize = VoxelSize(Vec3Double(179.84, 179.84, 224.0), LengthUnit.nanometer)
+
+  def findPretrainedModelVoxelSize(pretrainedModelId: String): Option[VoxelSize] =
+    pretrainedModelId match {
+      case "neuron_inferral_model" => Some(PretrainedNeuronModelVoxelSize)
+      case "nuclei_inferral_model" => Some(PretrainedNucleiModelVoxelSize)
+      case "soma_inferral_model"   => Some(PretrainedSomataModelVoxelSize)
+      case _                       => None
+    }
 
   def findModelVoxelSize(aiModelOpt: Option[AiModel], usePretrainedNeuronModel: Boolean, dataStore: DataStore)(
       implicit ec: ExecutionContext): Fox[VoxelSize] =

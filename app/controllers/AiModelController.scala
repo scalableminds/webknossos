@@ -56,7 +56,7 @@ object RunInstanceModelTrainingParameters {
 }
 
 case class RunInferenceParameters(datasetId: ObjectId,
-                                  aiModelId: Option[ObjectId],
+                                  aiModelId: Option[String],
                                   colorLayerName: String,
                                   boundingBox: String, // Always in mag1
                                   annotationId: Option[ObjectId],
@@ -121,12 +121,19 @@ class AiModelController @Inject()(
     } yield Ok(jsResult)
   }
 
-  def aiModelVoxelSize(aiModelId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def aiModelVoxelSize(aiModelId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(request.identity)
-      aiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
-      dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)
-      voxelSize <- aiModelService.findModelVoxelSize(Some(aiModel), usePretrainedNeuronModel = false, dataStore)
+      voxelSize <- aiModelService.findPretrainedModelVoxelSize(aiModelId) match {
+        case Some(pretrainedVoxelSize) => Fox.successful(pretrainedVoxelSize)
+        case None =>
+          for {
+            objectId <- ObjectId.fromString(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
+            aiModel <- aiModelDAO.findOne(objectId) ?~> "aiModel.notFound" ~> NOT_FOUND
+            dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)
+            voxelSize <- aiModelService.findModelVoxelSize(Some(aiModel), usePretrainedNeuronModel = false, dataStore)
+          } yield voxelSize
+      }
     } yield Ok(Json.toJson(voxelSize))
   }
 
@@ -281,7 +288,8 @@ class AiModelController @Inject()(
       for {
         dataset <- datasetDAO.findOne(request.body.datasetId)
         _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
-        aiModelOpt <- Fox.runOptional(request.body.aiModelId)(aiModelDAO.findOne) ?~> "aiModel.notFound"
+        (aiModelOpt, pretrainedModelIdOpt) <- resolveAiModel(request.body.aiModelId)
+        effectivePretrainedModelId = pretrainedModelIdOpt.orElse(if (aiModelOpt.isEmpty) Some("nuclei_inferral_model") else None)
         _ <- Fox.runOptional(aiModelOpt) { aiModel =>
           Fox.fromBool(aiModel._dataStore == dataset._dataStore) ?~> "aiModel.dataStoreMismatch"
         }
@@ -309,7 +317,7 @@ class AiModelController @Inject()(
                                                                         layer,
                                                                         dataSource.scale,
                                                                         aiModelOpt,
-                                                                        usePretrainedNeuronModel = false,
+                                                                        effectivePretrainedModelId,
                                                                         dataStore)
         newInferenceJob <- jobService.submitPaidJob(jobCommand,
                                                     commandArgs,
@@ -320,7 +328,7 @@ class AiModelController @Inject()(
         newAiInference = AiInference(
           _id = ObjectId.generate,
           _organization = request.identity._organization,
-          _aiModel = request.body.aiModelId,
+          _aiModel = aiModelOpt.map(_._id),
           _newDataset = None,
           _annotation = request.body.annotationId,
           boundingBox = mag1BoundingBox,
@@ -338,7 +346,8 @@ class AiModelController @Inject()(
       for {
         dataset <- datasetDAO.findOne(request.body.datasetId)
         _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
-        aiModelOpt <- Fox.runOptional(request.body.aiModelId)(aiModelDAO.findOne) ?~> "aiModel.notFound"
+        (aiModelOpt, pretrainedModelIdOpt) <- resolveAiModel(request.body.aiModelId)
+        effectivePretrainedModelId = pretrainedModelIdOpt.orElse(if (aiModelOpt.isEmpty) Some("neuron_inferral_model") else None)
         _ <- Fox.runOptional(aiModelOpt) { aiModel =>
           Fox.fromBool(aiModel._dataStore == dataset._dataStore) ?~> "aiModel.dataStoreMismatch"
         }
@@ -351,7 +360,7 @@ class AiModelController @Inject()(
                                                                         layer,
                                                                         dataSource.scale,
                                                                         aiModelOpt,
-                                                                        usePretrainedNeuronModel = aiModelOpt.isEmpty,
+                                                                        effectivePretrainedModelId,
                                                                         dataStore)
         doSplitMergerEvaluation: Boolean = request.body.doSplitMergerEvaluation.getOrElse(false)
         commandArgs = Json.obj(
@@ -382,7 +391,7 @@ class AiModelController @Inject()(
         newAiInference = AiInference(
           _id = ObjectId.generate,
           _organization = request.identity._organization,
-          _aiModel = request.body.aiModelId,
+          _aiModel = aiModelOpt.map(_._id),
           _newDataset = None,
           _annotation = request.body.annotationId,
           boundingBox = mag1BoundingBox,
@@ -445,6 +454,21 @@ class AiModelController @Inject()(
         aiModel <- aiModelDAO.findOne(aiModelId)
         aiModelJs <- aiModelService.publicWrites(aiModel, request.identity)
       } yield Ok(aiModelJs)
+    }
+
+  // Resolves a raw model ID string into either a DB-backed AiModel or a known pretrained model ID.
+  // Returns (aiModelOpt, pretrainedModelIdOpt).
+  private def resolveAiModel(modelIdOpt: Option[String])(
+      implicit ctx: DBAccessContext): Fox[(Option[AiModel], Option[String])] =
+    modelIdOpt match {
+      case None => Fox.successful((None, None))
+      case Some(id) if aiModelService.findPretrainedModelVoxelSize(id).isDefined =>
+        Fox.successful((None, Some(id)))
+      case Some(id) =>
+        for {
+          objectId <- ObjectId.fromString(id) ?~> "aiModel.notFound" ~> NOT_FOUND
+          aiModel <- aiModelDAO.findOne(objectId) ?~> "aiModel.notFound" ~> NOT_FOUND
+        } yield (Some(aiModel), None)
     }
 
   private def reserveUploadToPathForPreliminary(existingAiModelId: ObjectId,

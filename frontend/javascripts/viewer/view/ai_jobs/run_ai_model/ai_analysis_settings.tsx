@@ -159,10 +159,7 @@ export const AiAnalysisSettings: React.FC = () => {
               validator: async (_, value: UserBoundingBox) => {
                 if (value && selectedLayer && selectedJobType) {
                   const boundingBox = computeArrayFromBoundingBox(value.boundingBox);
-                  const aiModelId =
-                    selectedModel != null && "trainingJob" in selectedModel
-                      ? selectedModel.id
-                      : undefined;
+                  const aiModelId = selectedModel?.id;
                   const mag = await getBestFittingMagComparedToTrainingDS(
                     selectedLayer,
                     dataset.dataSource.scale,

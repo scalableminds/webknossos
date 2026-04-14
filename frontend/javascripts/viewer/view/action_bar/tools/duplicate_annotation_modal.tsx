@@ -1,57 +1,62 @@
 import { duplicateAnnotation } from "admin/rest_api";
-import { Modal, Radio } from "antd";
-import Toast from "libs/toast";
+import { Button, Modal } from "antd";
 import { sleep } from "libs/utils";
 import { useState } from "react";
 import type { APIAnnotationType } from "types/api_types";
-import { Model } from "viewer/singletons";
+import { setDuplicateAnnotationModalVisibilityAction } from "viewer/model/actions/ui_actions";
+import { Store } from "viewer/singletons";
 
 export function DuplicateAnnotationModal({
   annotationId,
   annotationType,
   open,
-  onClose,
+  copyToOwnAccount,
 }: {
   annotationId: string;
   annotationType: APIAnnotationType;
   open: boolean;
-  onClose: () => void;
+  copyToOwnAccount: boolean;
 }) {
-  const [openInNewTab, setOpenInNewTab] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [newAnnotation, setNewAnnotation] = useState<null | string>(null);
+  const toOwnAccountText = copyToOwnAccount ? " to your account" : "";
+  const modalContent = () => {
+    if (isLoading) {
+      return `Copying annotation${toOwnAccountText}...`;
+    } else if (newAnnotation) {
+      return `The annotation was copied successfully${toOwnAccountText}.`;
+    }
+  };
+  const openAnnotationButton = (
+    <Button
+      loading={isLoading}
+      type="primary"
+      href={`/annotations/${newAnnotation}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={() => Store.dispatch(setDuplicateAnnotationModalVisibilityAction(false))}
+    >
+      Open
+    </Button>
+  );
   return (
     <Modal
+      closable={false}
       title="Duplicate Annotation"
       open={open}
-      onOk={async () => {
-        setIsLoading(true);
-        await Model.ensureSavedState();
-        try {
-          const newAnnotation = await duplicateAnnotation(annotationId, annotationType);
+      afterOpenChange={async (open) => {
+        if (open) {
+          setIsLoading(true);
+          const { id: newAnnotationId } = await duplicateAnnotation(annotationId, annotationType);
+          setNewAnnotation(newAnnotationId);
           await sleep(10000);
-          window.open(
-            `/annotations/${newAnnotation.id}`,
-            openInNewTab ? "_blank" : "_self",
-            "noopener noreferrer",
-          );
-        } catch (error) {
-          Toast.error("Failed to duplicate annotation. See console for details.");
-          console.error("Error duplicating annotation:", error);
+          setIsLoading(false);
         }
-        setIsLoading(false);
-        onClose();
       }}
-      onCancel={onClose}
       confirmLoading={isLoading}
+      footer={openAnnotationButton}
     >
-      <Radio.Group
-        onChange={(e) => setOpenInNewTab(e.target.value === "newTab")}
-        value={openInNewTab ? "newTab" : "thisTab"}
-        options={[
-          { label: "Open in Current Tab", value: "thisTab" },
-          { label: "Open in New Tab", value: "newTab" },
-        ]}
-      ></Radio.Group>
+      {modalContent()}
     </Modal>
   );
 }

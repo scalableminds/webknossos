@@ -77,6 +77,10 @@ const handleZarrLinksOpen = () => {
   Store.dispatch(setZarrLinksModalVisibilityAction(true));
 };
 
+const handleDuplicateOpen = () => {
+  Store.dispatch(setDuplicateAnnotationModalVisibilityAction(true));
+};
+
 const handleChangeLockedStateOfAnnotation = async (
   isLocked: boolean,
   annotationId: string,
@@ -141,11 +145,6 @@ export const useTracingViewMenuItems = (
     annotationOwner,
   } = props;
 
-  const handleDuplicate = async () => {
-    await Model.ensureSavedState();
-    Store.dispatch(setDuplicateAnnotationModalVisibilityAction(true));
-  };
-
   return useMemo(() => {
     const isSkeletonMode = Constants.MODES_SKELETON.includes(viewMode);
     const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
@@ -186,7 +185,7 @@ export const useTracingViewMenuItems = (
     if (activeUser != null) {
       menuItems.push({
         key: "duplicate-button",
-        onClick: handleDuplicate,
+        onClick: handleDuplicateOpen,
         icon: <CopyOutlined />,
         label: "Duplicate",
       });

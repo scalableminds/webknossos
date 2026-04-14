@@ -25,7 +25,7 @@ function TracingModals() {
   const dispatch = useDispatch();
 
   const annotationType = useWkSelector((state) => state.annotation.annotationType);
-  const annotationId = useWkSelector((state) => state.annotation.annotationId);
+  const { annotationId, owner: annotationOwner } = useWkSelector((state) => state.annotation);
   const restrictions = useWkSelector((state) => state.annotation.restrictions);
   const activeUser = useWkSelector((state) => state.activeUser);
   const showDownloadModal = useWkSelector((state) => state.uiInformation.showDownloadModal);
@@ -101,7 +101,7 @@ function TracingModals() {
         annotationId={annotationId}
         annotationType={annotationType}
         open={showDuplicateAnnotationModal}
-        onClose={handleDuplicateClose}
+        copyToOwnAccount={annotationOwner?.id !== activeUser?.id}
       />,
     );
 

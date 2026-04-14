@@ -697,6 +697,9 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
           agglomerateId: proofreadingPostProcessingInfo[1].agglomerateId,
         };
       }
+    } else {
+      Toast.error(messages["proofreading.post_processing_info_not_found"]);
+      return;
     }
 
     activeMapping = yield* select(
@@ -1001,9 +1004,11 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
   try {
     yield* call(syncWithBackend);
     const proofreadingPostProcessingInfo = yield* call(popPendingProofreadingOperationInfo);
-    const agglomerateIdBeforeSplit = proofreadingPostProcessingInfo
-      ? proofreadingPostProcessingInfo[0].agglomerateId
-      : agglomerateId;
+    if (!proofreadingPostProcessingInfo) {
+      Toast.error(messages["proofreading.post_processing_info_not_found"]);
+      return;
+    }
+    const agglomerateIdBeforeSplit = proofreadingPostProcessingInfo[0].agglomerateId;
 
     yield* put(resetMultiCutToolPartitionsAction());
 
@@ -1360,6 +1365,9 @@ function* handleProofreadMergeOrMinCut(action: Action) {
           agglomerateId: proofreadingPostProcessingInfo[1].agglomerateId,
         };
       }
+    } else {
+      Toast.error(messages["proofreading.post_processing_info_not_found"]);
+      return;
     }
 
     if (action.type === "MIN_CUT_AGGLOMERATE" && sourceAgglomerateId !== targetAgglomerateId) {
@@ -1564,9 +1572,11 @@ function* handleProofreadCutFromNeighbors(action: Action) {
     yield* call(syncWithBackend);
 
     const proofreadingPostProcessingInfo = yield* call(popPendingProofreadingOperationInfo);
-    const targetAgglomerateIdBeforeSplit = proofreadingPostProcessingInfo
-      ? proofreadingPostProcessingInfo[0].agglomerateId
-      : targetAgglomerateId;
+    if (!proofreadingPostProcessingInfo) {
+      Toast.error(messages["proofreading.post_processing_info_not_found"]);
+      return;
+    }
+    const targetAgglomerateIdBeforeSplit = proofreadingPostProcessingInfo[0].agglomerateId;
 
     // Get active mapping after saving and thus syncing with the backend as this might have changed the mapping.
     const activeMapping = yield* select(

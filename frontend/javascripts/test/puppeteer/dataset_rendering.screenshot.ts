@@ -1,3 +1,4 @@
+import path from "path";
 import type { PartialDatasetConfiguration } from "viewer/store";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, test } from "vitest";
 import {
@@ -20,7 +21,6 @@ import {
   isPixelEquivalent,
   SCREENSHOTS_BASE_PATH,
 } from "./screenshot_helpers";
-import path from "path";
 
 const SCREENSHOTS_PATH = path.join(SCREENSHOTS_BASE_PATH, "misc");
 

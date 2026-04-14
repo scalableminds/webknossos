@@ -1,4 +1,5 @@
 import uniq from "lodash-es/uniq";
+import path from "path";
 import type { Action } from "viewer/model/actions/actions";
 import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import {
@@ -29,7 +30,6 @@ import {
   isPixelEquivalent,
   SCREENSHOTS_BASE_PATH,
 } from "./screenshot_helpers";
-import path from "path";
 
 const SCREENSHOTS_PATH = path.join(SCREENSHOTS_BASE_PATH, "dtype");
 

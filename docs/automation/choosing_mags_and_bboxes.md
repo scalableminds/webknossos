@@ -1,7 +1,8 @@
 # Choosing Magnification and Bounding Boxes for Custom AI Training in WEBKNOSSOS
 
-This guide explains how to choose the right magnification for training and how to define bounding boxes for ground truth annotation. 
+This guide explains how to choose the right magnification for [AI training](./ai_training.md) and how to define bounding boxes for ground truth annotation. 
 The checklist below summarizes the key requirements. 
+
 Part 1 covers magnification selection, Part 2 explains how to define bounding box dimensions, and Part 3 presents two example use cases.
 
 ## Checklist: key requirements
@@ -33,13 +34,13 @@ Training at a coarser magnification has two important effects:
 There are several constraints on bounding box dimensions to ensure that enough data is annotated and used as efficiently as possible. In this section, we list these constraints and then describe two example use cases.
 
 ### Constraints for Bounding Box Dimensions
-
 Bounding box dimensions are always interpreted **relative to the chosen magnification**. Internally, the model effectively sees the box size divided by the magnification.
+For example, a box of size **64×64×64** at magnification **16–16–8** covers **1024×1024×512** voxels at full resolution (magnification 1). The Generate Bounding Boxes dialog (available in the [Bounding Boxes tab](../ui/object_info.md#bounding-boxes-tab) and the AI training dialog) accepts sizes at any magnification level and handles the conversion automatically. When creating boxes manually in WEBKNOSSOS, you enter the full-resolution (mag 1) coordinates, so you would enter **1024×1024×512** for the same box.
 
 We recommend that each bounding box contains at least **230,000 voxels** at the chosen magnification. There are hard minimum dimensions for bounding boxes. To use the annotated data efficiently, bounding box dimensions should ideally be integer multiples of these minimum values. This means that:
 
-- For neuron segmentation, the hard minimum bounding box dimensions are **`85 × 85 × 30`**, corresponding to approximately **230,000 voxels** at the chosen magnification.
-- For instance segmentation, the hard minimum dimensions are **`32 × 32 × 32`** (approximately **33,000 voxels**). This is not sufficient, so we recommend using at least **`64 × 64 × 64`** or **`96 x 96 x 32`** to reach approximately **260,000 voxels** at the chosen magnification.
+- For neuron segmentation, the hard minimum bounding box dimensions are **`85 × 85 × 32`**, corresponding to approximately **231,000 voxels** at the chosen magnification.
+- For instance segmentation, the hard minimum dimensions are **`32 × 32 × 32`** (approximately **33,000 voxels**). This is not sufficient, so we recommend using at least **`64 × 64 × 64`** or **`96 × 96 × 32`** to reach approximately **260,000 voxels** at the chosen magnification.
 
 Bounding box dimensions may vary and should ideally be integer multiples of the minimum values, but the training will also work as long as the boxes exceed the minimum size. The scaling factor does not need to be the same for all three dimensions.
 
@@ -47,7 +48,7 @@ In addition, the position of the top-left corner of each bounding box must be di
 
 The recommended total annotated ground truth volume for training (both neuron and instance segmentation) is **5–10 million voxels** at the chosen magnification. A smaller volume may be sufficient for small or very homogeneous datasets.
 
-When distributing this total annotated volume of 5–10 million voxels, **many smaller, well-distributed boxes are preferable to a few large contiguous ones**. For example, ten spatially distributed boxes of size **85 × 85 × 32** voxels usually yield better results than a single larger volume of **170 × 425 × 32** voxels, as they capture more variability in the data.
+When distributing this total annotated volume of 5–10 million voxels, **many smaller, well-distributed boxes are preferable to a few large contiguous ones**. WEBKNOSSOS can auto-generate a set of non-overlapping, randomly distributed bounding boxes for you — use the grid icon button in the [Bounding Boxes tab](../ui/object_info.md#bounding-boxes-tab) or the **Generate** button in the Training Data section of the AI training dialog. The tool pre-fills the recommended box count and size for your chosen training type and ensures all generated boxes are aligned to the selected magnification. For example, ten spatially distributed boxes of size **85 × 85 × 32** voxels usually yield better results than a single larger volume of **170 × 425 × 32** voxels, as they capture more variability in the data.
 
 ### Part 3: Example Use Cases
 
@@ -59,7 +60,7 @@ In this example, we create ground truth data to train an EM neuron segmentation 
 
 **Instance segmentation training: detecting nuclei**
 
-In this example, we create ground truth data to train an instance segmentation model for nuclei detection. Nuclei are clearly visible and can be reliably annotated at **magnification 16–16–8**. We use bounding boxes of size **64 × 64 × 64** voxels (the recommended size for instance segmentation) at this magnification. This corresponds to **1024 × 1024 × 512** voxels at magnification 1: size that needs to be defined in WEBKNOSSOS. Each box therefore contains approximately **260,000 voxels** at magnification 16. 
+In this example, we create ground truth data to train an instance segmentation model for nuclei detection. Nuclei are clearly visible and can be reliably annotated at **magnification 16–16–8**. We use bounding boxes of size **64 × 64 × 64** voxels at this magnification (the recommended size for instance segmentation), which corresponds to **1024 × 1024 × 512** voxels at full resolution. Each box therefore contains approximately **260,000 voxels** at magnification 16. When using the Generate Bounding Boxes dialog, enter **64 × 64 × 64** and select magnification 16–16–8; the conversion to full resolution is handled automatically.
 
 To reach the recommended total annotated volume of 5–10 million voxels, we annotate **20 boxes** distributed across the dataset, resulting in approximately **5.2 million annotated voxels** in total. The top-left position of each bounding box is divisible by 16. 
 

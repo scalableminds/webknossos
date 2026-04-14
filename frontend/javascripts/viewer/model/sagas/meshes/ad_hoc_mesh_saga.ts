@@ -391,6 +391,7 @@ function* loadFullAdHocMesh(
         clippedPosition,
         additionalCoordinates,
         mappingName,
+        annotation.version,
       )
     : [clippedPosition];
 
@@ -438,6 +439,7 @@ function* getChunkPositionsFromSegmentIndex(
   clippedPosition: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   mappingName: string | null | undefined,
+  tracingVersion: number,
 ) {
   const targetMagPositions = yield* call(
     getBucketPositionsForAdHocMesh,
@@ -447,6 +449,7 @@ function* getChunkPositionsFromSegmentIndex(
     mag,
     additionalCoordinates,
     mappingName,
+    tracingVersion,
   );
   const mag1Positions = targetMagPositions.map((pos) => V3.scale3(pos, mag));
   return sortByDistanceTo(mag1Positions, clippedPosition) as Vector3[];
@@ -469,6 +472,7 @@ function* maybeLoadMeshChunk(
   findNeighbors: boolean,
 ): Saga<Vector3[]> {
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  const annotationVersion = yield* select((state) => state.annotation.version);
   const threeDMap = getOrAddMapForSegment(layer.name, segmentId, additionalCoordinates);
   const mag = magInfo.getMagByIndexOrThrow(zoomStep);
 
@@ -525,6 +529,7 @@ function* maybeLoadMeshChunk(
           cubeSize: paddedCubeSize,
           scaleFactor,
           findNeighbors,
+          annotationVersion,
           ...meshExtraInfo,
         },
       );

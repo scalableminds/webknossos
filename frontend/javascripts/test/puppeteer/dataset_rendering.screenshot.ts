@@ -303,11 +303,12 @@ describe("Dataset Rendering", () => {
           datasetNameToId[datasetName],
           viewOverride,
         );
+        // Should look the same as an explorative tracing on the same dataset with the same mapping link
         const changedPixels = await compareScreenshot(
           screenshot,
           width,
           height,
-          SCREENSHOTS_BASE_PATH, // Should look the same as an explorative tracing on the same dataset with the same mapping link
+          SCREENSHOTS_BASE_PATH,
           `${datasetName}_with_mapping_link`,
         );
         await page.close();

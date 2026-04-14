@@ -150,7 +150,7 @@ class AbstractTreeRenderer {
     // set global mode
     const mode = MODE_NOCHAIN;
 
-    // TODO: This might not need to be done on every single draw...
+    // This could probably be optimized because it might not need to be done on every single draw...
     try {
       root = this.buildTree();
     } catch (e) {

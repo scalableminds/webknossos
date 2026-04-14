@@ -77,7 +77,7 @@ describe("TransformedSectionLabeler", () => {
   });
 
   it.skip("[L4] Rotation by 90deg around Y should be handled correctly", async () => {
-    // TODO: Implement in a follow-up.
+    // TODO (#8965): Implement in a follow-up.
   });
 
   it("[L4] Rotation by 90deg around Z should be handled correctly", async () => {

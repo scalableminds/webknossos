@@ -624,7 +624,7 @@ export function mapTransformedPlane(
     }
   }
 
-  // TODO: Sometimes the u and v coordinates need to be swapped.
+  // TODO (#8965): Sometimes the u and v coordinates need to be swapped.
   // However, the detection for this doesn't fully work yet.
   // See transformed_section_labeler.spec.ts for tests.
   // The code was already added during a refactoring (#9023)
@@ -649,7 +649,7 @@ export class TransformedSectionLabeler {
    * and should enable labelling a transformed dataset
    * by mapping the annotated plane to another one.
    *
-   * TODO: The class does not fully work yet.
+   * TODO (#8965): The class does not fully work yet.
    * See transformed_section_labeler.spec.ts for tests.
    * It was already added during a refactoring (#9023)
    * and needs to be fixed and finished as a follow-up.
@@ -719,7 +719,7 @@ export class TransformedSectionLabeler {
       getBaseVoxelFactorsInUnit(Store.getState().dataset.dataSource.scale),
     );
 
-    // TODO: does this need a transformation?
+    // TODO (#8965): does this need a transformation?
     return this.base.getCircleVoxelBuffer2D(position, scale);
   }
 

@@ -630,7 +630,7 @@ export function* tryToIncorporateActions(
       );
       const splitMapping = yield* splitAgglomerateInMapping(
         activeMapping,
-        //  TODO: Add 64 bit support
+        //  TODO (#6921): Add 64 bit support
         Number(agglomerateIdToRefresh),
         volumeTracingIdOfMapping,
         actionBatch.version,

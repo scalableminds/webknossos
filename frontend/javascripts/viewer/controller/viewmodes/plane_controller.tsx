@@ -1,4 +1,3 @@
-import app from "app";
 import {
   InputKeyboard,
   InputKeyboardNoLoop,
@@ -52,7 +51,6 @@ import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { BrushPresets, StoreAnnotation, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import { getDefaultBrushSizes } from "viewer/view/action_bar/tools/brush_presets";
-import { loadKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_persistence";
 import type {
   KeyboardShortcutLoopedHandlerMap,
   KeyboardShortcutNoLoopedHandlerMap,
@@ -377,7 +375,7 @@ class PlaneController extends PureComponent<Props> {
     this.input.keyboardLoopDelayed?.destroy();
     this.input.keyboardNoLoop?.destroy();
 
-    const keybindingConfig = loadKeyboardShortcuts();
+    const keybindingConfig = Store.getState().keyboardShortcutsConfig;
 
     // looped keyboard
     const loopedControllerBindings = buildKeyBindingsFromConfigAndLoopedMapping(
@@ -439,9 +437,10 @@ class PlaneController extends PureComponent<Props> {
     // create keyboards from persisted config
     this.reloadKeyboardShortcuts();
 
-    // register refresh listener
-    this.unsubscribeKeyboardListener = app.vent.on("refreshKeyboardShortcuts", () =>
-      this.reloadKeyboardShortcuts(),
+    // register refresh listener: reload whenever the store's keyboard shortcuts change
+    this.unsubscribeKeyboardListener = listenToStoreProperty(
+      (state) => state.keyboardShortcutsConfig,
+      () => this.reloadKeyboardShortcuts(),
     );
 
     // keep existing listener for keyboardDelay change

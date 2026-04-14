@@ -13,6 +13,7 @@ import Constants, {
 } from "viewer/constants";
 import { AnnotationTool, Toolkit } from "viewer/model/accessors/tool_accessor";
 import type { WebknossosState } from "viewer/store";
+import { getAllDefaultKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 
 const defaultViewportRect = {
   top: 0,
@@ -100,6 +101,7 @@ const defaultState: WebknossosState = {
     antialiasRendering: false,
     activeToolkit: Toolkit.ALL_TOOLS,
   },
+  keyboardShortcutsConfig: getAllDefaultKeyboardShortcuts(),
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,
     histogramData: {},

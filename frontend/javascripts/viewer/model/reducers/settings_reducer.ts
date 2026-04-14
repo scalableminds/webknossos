@@ -301,6 +301,10 @@ function SettingsReducer(state: WebknossosState, action: Action): WebknossosStat
       return updateActiveMapping(state, { mappingName }, layerName);
     }
 
+    case "SET_KEYBOARD_SHORTCUTS_CONFIG": {
+      return { ...state, keyboardShortcutsConfig: action.shortcuts };
+    }
+
     default: // pass;
   }
 

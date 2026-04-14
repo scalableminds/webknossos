@@ -3,6 +3,7 @@ package controllers
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.tools.Fox
 
 import javax.inject.Inject
 import models.dataset.{DatasetDAO, DatasetService}
@@ -33,6 +34,22 @@ class ConfigurationController @Inject()(
       configuration <- request.body.asOpt[JsObject].toFox ?~> "user.configuration.invalid"
       _ <- userService.updateUserConfiguration(request.identity, configuration)
     } yield JsonOk(Messages("user.configuration.updated"))
+  }
+
+  def readKeyboardShortcutsConfig: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+    for {
+      shortcuts <- request.identity
+        .map(u => userService.getKeyboardShortcutsConfig(u._id))
+        .getOrElse(Fox.successful(Json.obj()))
+    } yield addNoCacheHeaderFallback(Ok(shortcuts))
+  }
+
+  def updateKeyboardShortcutsConfig(): Action[JsValue] = sil.SecuredAction.async(parse.json(maxLength = 204800)) {
+    implicit request =>
+      for {
+        shortcuts <- request.body.asOpt[JsObject].toFox ?~> "user.keyboardShortcutsConfig.invalid"
+        _ <- userService.updateKeyboardShortcutsConfig(request.identity, shortcuts)
+      } yield JsonOk(Messages("user.keyboardShortcutsConfig.updated"))
   }
 
   def readDatasetViewConfiguration(datasetId: ObjectId, sharingToken: Option[String]): Action[List[String]] =

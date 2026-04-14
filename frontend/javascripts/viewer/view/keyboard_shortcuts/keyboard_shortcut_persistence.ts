@@ -3,6 +3,7 @@ import {
   ALL_KEYBOARD_HANDLER_IDS,
   getAllDefaultKeyboardShortcuts,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
+import Store from "viewer/store";
 import type { KeyboardShortcutsMap } from "./keyboard_shortcut_types";
 
 export const KeyboardShortcutsSchema = {
@@ -59,34 +60,15 @@ export function validateShortcutMapText(input: string): {
   };
 }
 
-// STORAGE KEY
-const STORAGE_KEY = "webknossosCustomShortcuts";
-
 /**
- * Load persisted keyboard shortcuts.
- * Falls back to merged defaults when not available or invalid.
+ * Load keyboard shortcuts from the Redux store.
+ * The store is populated from the backend on viewer initialization.
+ * Falls back to defaults when the store value is not yet populated.
  */
 export function loadKeyboardShortcuts(): KeyboardShortcutsMap<string> {
-  const returnDefaults = () => {
-    const defaults = getAllDefaultKeyboardShortcuts();
-    saveKeyboardShortcuts(defaults);
-    return defaults;
-  };
-  const json = localStorage.getItem(STORAGE_KEY);
-  if (!json) return returnDefaults();
-
-  const { valid, parsed, errors } = validateShortcutMapText(json);
-  if (valid) {
-    return parsed as KeyboardShortcutsMap<string>;
+  const state = Store.getState();
+  if (state.keyboardShortcutsConfig != null) {
+    return state.keyboardShortcutsConfig;
   }
-  console.error("Could not parse stored keyboard shortcuts.", errors);
-  console.error("Resetting with defaults.");
-  return returnDefaults();
-}
-
-/**
- * Persist the entire keyboard shortcut map.
- */
-export function saveKeyboardShortcuts(map: KeyboardShortcutsMap<string>): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(map));
+  return getAllDefaultKeyboardShortcuts();
 }

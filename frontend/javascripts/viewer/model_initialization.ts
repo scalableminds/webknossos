@@ -9,6 +9,7 @@ import {
   getDatasetViewConfiguration,
   getEditableMappingInfo,
   getEmptySandboxAnnotationInformation,
+  getKeyboardShortcutsConfig,
   getSharingTokenFromUrlParameters,
   getTracingsForAnnotation,
   getUnversionedAnnotationInformation,
@@ -88,6 +89,7 @@ import {
   initializeGpuSetupAction,
   initializeSettingsAction,
   setControlModeAction,
+  setKeyboardShortcutsConfigAction,
   setMappingAction,
   setMappingEnabledAction,
   setViewModeAction,
@@ -120,6 +122,9 @@ import type {
   UserConfiguration,
 } from "viewer/store";
 import Store from "viewer/store";
+import { getAllDefaultKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
+import { validateShortcutMapText } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_persistence";
+import type { KeyboardShortcutsMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import { getUserStateForTracing } from "./model/accessors/annotation_accessor";
 import { doAllLayersHaveTheSameRotation } from "./model/accessors/dataset_layer_transformation_accessor";
 import {
@@ -243,6 +248,15 @@ export async function initialize(
     annotationSpecificDatasetSettings,
     initialDatasetSettings,
   );
+
+  // Load keyboard shortcuts from backend; fall back to defaults if the call fails or the user is not logged in.
+  const rawShortcuts = await getKeyboardShortcutsConfig().catch(() => ({}));
+  const { valid, parsed } = validateShortcutMapText(JSON.stringify(rawShortcuts));
+  const shortcuts: KeyboardShortcutsMap<string> = valid && parsed
+    ? (parsed as KeyboardShortcutsMap<string>)
+    : getAllDefaultKeyboardShortcuts();
+  Store.dispatch(setKeyboardShortcutsConfigAction(shortcuts));
+
   let initializationInformation = null;
 
   // There is no need to reinstantiate the DataLayers if the dataset didn't change.

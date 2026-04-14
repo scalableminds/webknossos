@@ -1,4 +1,3 @@
-import app from "app";
 import type { ModifierKeys } from "libs/input";
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse } from "libs/input";
 import type { Matrix4x4 } from "libs/mjs";
@@ -55,7 +54,6 @@ import {
   ArbitraryControllerNavigationKeyboardShortcuts,
   ArbitraryControllerNoLoopKeyboardShortcuts,
 } from "viewer/view/keyboard_shortcuts/arbitrary_mode_keyboard_shortcut_constants";
-import { loadKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_persistence";
 import type {
   KeyboardShortcutLoopedHandlerMap,
   KeyboardShortcutNoLoopedHandlerMap,
@@ -341,7 +339,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     if (this.input.keyboardNoLoop) {
       this.input.keyboardNoLoop.destroy();
     }
-    const keybindingConfig = loadKeyboardShortcuts();
+    const keybindingConfig = Store.getState().keyboardShortcutsConfig;
     const navigationKeyboardBindings = buildKeyBindingsFromConfigAndLoopedMapping(
       keybindingConfig,
       this.getKeyboardNavigationShortcutsHandlerMap(),
@@ -366,8 +364,9 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   initKeyboard(): void {
     this.reloadKeyboardShortcuts();
-    this.unsubscribeKeyboardListener = app.vent.on("refreshKeyboardShortcuts", () =>
-      this.reloadKeyboardShortcuts(),
+    this.unsubscribeKeyboardListener = listenToStoreProperty(
+      (state) => state.keyboardShortcutsConfig,
+      () => this.reloadKeyboardShortcuts(),
     );
   }
 

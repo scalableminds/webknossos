@@ -35,6 +35,7 @@ class UserService @Inject()(conf: WkConf,
                             userExperiencesDAO: UserExperiencesDAO,
                             userDatasetConfigurationDAO: UserDatasetConfigurationDAO,
                             userDatasetLayerConfigurationDAO: UserDatasetLayerConfigurationDAO,
+                            userKeyboardShortcutsConfigsDAO: UserKeyboardShortcutsConfigsDAO,
                             organizationDAO: OrganizationDAO,
                             teamDAO: TeamDAO,
                             teamMembershipService: TeamMembershipService,
@@ -256,6 +257,12 @@ class UserService @Inject()(conf: WkConf,
       removeUserFromCache(user._id)
       result
     }
+
+  def getKeyboardShortcutsConfig(userId: ObjectId): Fox[JsObject] =
+    userKeyboardShortcutsConfigsDAO.findOneForUser(userId)
+
+  def updateKeyboardShortcutsConfig(user: User, shortcuts: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =
+    userKeyboardShortcutsConfigsDAO.updateForUser(user._id, shortcuts)
 
   def updateDatasetViewConfiguration(
       user: User,

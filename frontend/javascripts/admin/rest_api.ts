@@ -1654,6 +1654,17 @@ export function updateUserConfiguration(
   });
 }
 
+export function getKeyboardShortcutsConfig(): Promise<Record<string, string[][][]>> {
+  return Request.receiveJSON("/api/user/keyboardShortcutsConfig");
+}
+
+export function updateKeyboardShortcutsConfig(shortcuts: Record<string, string[][][]>): Promise<void> {
+  return Request.sendJSONReceiveJSON("/api/user/keyboardShortcutsConfig", {
+    method: "PUT",
+    data: shortcuts,
+  });
+}
+
 export async function getTimeTrackingForUserSummedPerAnnotation(
   userId: string,
   startDate: dayjs.Dayjs,

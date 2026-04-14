@@ -9,6 +9,7 @@ import type {
   TemporaryConfiguration,
   UserConfiguration,
 } from "viewer/store";
+import type { KeyboardShortcutsMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 
 export type UpdateUserSettingAction = ReturnType<typeof updateUserSettingAction>;
 type UpdateDatasetSettingAction = ReturnType<typeof updateDatasetSettingAction>;
@@ -31,6 +32,7 @@ export type ClearMappingAction = ReturnType<typeof clearMappingAction>;
 export type SetMappingAction = ReturnType<typeof setMappingAction>;
 export type SetMappingNameAction = ReturnType<typeof setMappingNameAction>;
 type SetHideUnmappedIdsAction = ReturnType<typeof setHideUnmappedIdsAction>;
+export type SetKeyboardShortcutsConfigAction = ReturnType<typeof setKeyboardShortcutsConfigAction>;
 
 export type SettingAction =
   | UpdateUserSettingAction
@@ -50,7 +52,8 @@ export type SettingAction =
   | SetHideUnmappedIdsAction
   | SetHistogramDataForLayerAction
   | ReloadHistogramAction
-  | InitializeGpuSetupAction;
+  | InitializeGpuSetupAction
+  | SetKeyboardShortcutsConfigAction;
 
 export const updateUserSettingAction = <Key extends keyof UserConfiguration>(
   propertyName: Key,
@@ -259,4 +262,10 @@ export const initializeGpuSetupAction = (
     bucketCapacity,
     gpuFactor,
     maximumLayerCountToRender,
+  }) as const;
+
+export const setKeyboardShortcutsConfigAction = (shortcuts: KeyboardShortcutsMap<string>) =>
+  ({
+    type: "SET_KEYBOARD_SHORTCUTS_CONFIG",
+    shortcuts,
   }) as const;

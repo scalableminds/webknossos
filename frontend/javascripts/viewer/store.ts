@@ -48,6 +48,7 @@ import type {
   ViewMode,
 } from "viewer/constants";
 import defaultState from "viewer/default_state";
+import type { KeyboardShortcutsMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import type { TracingStats } from "viewer/model/accessors/annotation_accessor";
 import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { Action } from "viewer/model/actions/actions";
@@ -662,6 +663,7 @@ export type StoreDataset = APIDataset & {
 export type WebknossosState = {
   readonly datasetConfiguration: DatasetConfiguration;
   readonly userConfiguration: UserConfiguration;
+  readonly keyboardShortcutsConfig: KeyboardShortcutsMap<string>;
   readonly temporaryConfiguration: TemporaryConfiguration;
   readonly dataset: StoreDataset;
   readonly annotation: StoreAnnotation;

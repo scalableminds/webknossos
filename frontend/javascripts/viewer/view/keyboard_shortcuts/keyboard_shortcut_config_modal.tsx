@@ -13,19 +13,18 @@ import {
   Typography,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import app from "app";
+import { updateKeyboardShortcutsConfig } from "admin/rest_api";
 import Toast from "libs/toast";
 import { isEqual } from "lodash-es";
 import { type SetStateAction, useCallback, useMemo, useState } from "react";
+import { useSelector } from "react-redux";
 import {
   ALL_KEYBOARD_SHORTCUT_META_INFOS,
   getAllDefaultKeyboardShortcuts,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
-import {
-  loadKeyboardShortcuts,
-  saveKeyboardShortcuts,
-  validateShortcutMapText,
-} from "./keyboard_shortcut_persistence";
+import { setKeyboardShortcutsConfigAction } from "viewer/model/actions/settings_actions";
+import Store, { type WebknossosState } from "viewer/store";
+import { validateShortcutMapText } from "./keyboard_shortcut_persistence";
 import {
   type KeyboardComboChain,
   KeyboardShortcutDomain,
@@ -77,13 +76,14 @@ const ShortcutDomainTable: React.FC<ShortcutDomainTableProps> = ({
 };
 
 export default function KeyboardShortcutConfigModal({ isOpen, onClose }: ShortcutConfigModalProps) {
+  const storeShortcuts = useSelector((state: WebknossosState) => state.keyboardShortcutsConfig);
   const [isJsonView, setIsJsonView] = useState(false);
   const [isRecorderOpen, setIsRecorderOpen] = useState(false);
   const [recorderTargetHandlerId, setRecorderTargetHandlerId] = useState<string | null>(null);
   const [recorderEditingKeyCombo, setRecorderEditingKeyCombo] = useState<KeyboardComboChain | null>(
     null,
   );
-  const [localConfig, _setLocalConfig] = useState(loadKeyboardShortcuts());
+  const [localConfig, _setLocalConfig] = useState(storeShortcuts);
   const [collisions, setCollisions] = useState<Collision[]>(
     checkCollisionsInShortcutMap(localConfig),
   );
@@ -263,12 +263,16 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (isJsonView && jsonError) {
       return;
     }
-    saveKeyboardShortcuts(localConfig);
-    app.vent.emit("refreshKeyboardShortcuts");
+    try {
+      await updateKeyboardShortcutsConfig(localConfig);
+    } catch (e) {
+      console.error("Failed to save keyboard shortcuts to backend.", e);
+    }
+    Store.dispatch(setKeyboardShortcutsConfigAction(localConfig));
     onClose();
   };
   const onReset = () => {

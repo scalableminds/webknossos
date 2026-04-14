@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(160);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(161);
 COMMIT TRANSACTION;
 
 
@@ -494,6 +494,14 @@ CREATE TABLE webknossos.user_datasetLayerConfigurations(
 );
 
 
+CREATE TABLE webknossos.user_keyboardShortcutsConfigs(
+  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
+  shortcutsConfig JSONB NOT NULL DEFAULT '{}'::json,
+  PRIMARY KEY (_user),
+  CONSTRAINT shortcutsConfigIsJsonObject CHECK(jsonb_typeof(shortcutsConfig) = 'object')
+);
+
+
 CREATE TYPE webknossos.THEME AS ENUM ('light', 'dark', 'auto');
 CREATE TABLE webknossos.multiUsers(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
@@ -956,6 +964,8 @@ ALTER TABLE webknossos.credit_transactions
 ALTER TABLE webknossos.user_datasetLayerConfigurations
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE,
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.user_keyboardShortcutsConfigs
+  ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.multiUsers
   ADD CONSTRAINT lastLoggedInIdentity_ref FOREIGN KEY(_lastLoggedInIdentity) REFERENCES webknossos.users(_id) ON DELETE SET NULL;
 ALTER TABLE webknossos.experienceDomains

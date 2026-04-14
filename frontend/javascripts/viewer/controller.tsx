@@ -25,6 +25,7 @@ import { redoAction, saveNowAction, undoAction } from "viewer/model/actions/save
 import { setIsInAnnotationViewAction } from "viewer/model/actions/ui_actions";
 import { HANDLED_ERROR } from "viewer/model_initialization";
 import { Model } from "viewer/singletons";
+import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { TraceOrViewCommand, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import { AnnotationTool } from "./model/accessors/tool_accessor";
@@ -34,7 +35,6 @@ import {
   GeneralEditingKeyboardShortcuts,
   GeneralKeyboardShortcuts,
 } from "./view/keyboard_shortcuts/keyboard_shortcut_constants";
-import { loadKeyboardShortcuts } from "./view/keyboard_shortcuts/keyboard_shortcut_persistence";
 import type { KeyboardShortcutNoLoopedHandlerMap } from "./view/keyboard_shortcuts/keyboard_shortcut_types";
 import { buildKeyBindingsFromConfigAndMapping } from "./view/keyboard_shortcuts/keyboard_shortcut_utils";
 
@@ -336,8 +336,9 @@ class Controller extends PureComponent<PropsWithRouter, State> {
       }
     });
     this.reloadKeyboardShortcuts();
-    this.unsubscribeKeyboardListener = app.vent.on("refreshKeyboardShortcuts", () =>
-      this.reloadKeyboardShortcuts(),
+    this.unsubscribeKeyboardListener = listenToStoreProperty(
+      (state) => state.keyboardShortcutsConfig,
+      () => this.reloadKeyboardShortcuts(),
     );
   }
 
@@ -345,7 +346,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
     if (this.keyboardNoLoop) {
       this.keyboardNoLoop.destroy();
     }
-    const keybindingConfig = loadKeyboardShortcuts();
+    const keybindingConfig = Store.getState().keyboardShortcuts;
     const keyboardControls = buildKeyBindingsFromConfigAndMapping(
       keybindingConfig,
       this.getKeyboardShortcutsHandlerMap(),

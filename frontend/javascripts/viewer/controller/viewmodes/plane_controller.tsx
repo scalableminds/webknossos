@@ -604,7 +604,6 @@ class PlaneController extends PureComponent<Props> {
       ...BoundingBoxKeybindings.getExtendedKeyboardControls(),
     };
 
-    // TODO: Find a nicer way to express this, while satisfying flow
     const emptyDefaultHandler = {
       c: null,
     };

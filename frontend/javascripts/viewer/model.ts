@@ -28,7 +28,7 @@ import { initialize } from "./model_initialization";
 
 const WAIT_AFTER_SAVE_TRIGGER = import.meta.env.MODE === "test" ? 50 : 500;
 
-// TODO: This class should be moved into the store and sagas.
+// TODO (#9482): This class should be moved into the store and sagas.
 export class WebKnossosModel {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'dataLayers' has no initializer and is no... Remove this comment to see the full error message
   dataLayers: Record<string, DataLayer>;

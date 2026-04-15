@@ -67,7 +67,7 @@ function assertUpdatesMatchInjectedUpdates(
 
 describe("Proofreading (With Agglomerate Skeleton interactions)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
-    await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, false, "hybrid");
+    await setupWebknossosForTestingWithRestrictions(context, "Exclusive", true, false, "hybrid");
   });
 
   afterEach<WebknossosTestContext>(async (context) => {

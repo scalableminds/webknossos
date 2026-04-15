@@ -60,7 +60,7 @@ import {
 
 describe("Proofreading (with auxiliary mesh loading enabled)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
-    await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, false, "hybrid");
+    await setupWebknossosForTestingWithRestrictions(context, "Exclusive", true, false, "hybrid");
   });
 
   afterEach<WebknossosTestContext>(async (context) => {

@@ -39,8 +39,7 @@ import {
 
 describe("Proofreading (Poll only)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
-    await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, false, "hybrid");
-    //Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
+    await setupWebknossosForTestingWithRestrictions(context, "Exclusive", true, false, "hybrid");
   });
 
   afterEach<WebknossosTestContext>(async (context) => {

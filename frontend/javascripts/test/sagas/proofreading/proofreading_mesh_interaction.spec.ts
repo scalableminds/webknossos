@@ -46,7 +46,7 @@ import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_server_objects";
 
 describe("Proofreading (with mesh actions)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
-    await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, false, "hybrid");
+    await setupWebknossosForTestingWithRestrictions(context, "Exclusive", true, false, "hybrid");
   });
 
   afterEach<WebknossosTestContext>(async (context) => {

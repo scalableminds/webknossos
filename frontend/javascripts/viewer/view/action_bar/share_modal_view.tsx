@@ -387,10 +387,6 @@ function _ShareModalView(props: Props) {
     ) : null;
   };
 
-  const radioStyle = {
-    height: "20px",
-    lineHeight: "20px",
-  };
   const iconMap = {
     Public: <GlobalOutlined />,
     Internal: <TeamOutlined />,
@@ -456,7 +452,7 @@ function _ShareModalView(props: Props) {
             value={visibility}
             disabled={isChangingInProgress}
           >
-            <Radio style={radioStyle} value="Private" disabled={!hasUpdatePermissions}>
+            <Radio value="Private" disabled={!hasUpdatePermissions}>
               Private
             </Radio>
             <Hint
@@ -467,7 +463,7 @@ function _ShareModalView(props: Props) {
               Only you and your team manager can view this annotation.
             </Hint>
 
-            <Radio style={radioStyle} value="Internal" disabled={!hasUpdatePermissions}>
+            <Radio value="Internal" disabled={!hasUpdatePermissions}>
               Internal
             </Radio>
             <Hint
@@ -480,7 +476,7 @@ function _ShareModalView(props: Props) {
               and copy it to their accounts to edit it.
             </Hint>
 
-            <Radio style={radioStyle} value="Public" disabled={!hasUpdatePermissions}>
+            <Radio value="Public" disabled={!hasUpdatePermissions}>
               Public
             </Radio>
             <Hint
@@ -532,9 +528,7 @@ function _ShareModalView(props: Props) {
               value={newOthersMayEdit}
               disabled={isChangingInProgress}
             >
-              <Radio style={radioStyle} value={false} disabled={!hasUpdatePermissions}>
-                Owner
-              </Radio>
+              <Radio disabled={!hasUpdatePermissions}>No, keep it read-only</Radio>
               <Hint
                 style={{
                   marginLeft: 24,
@@ -543,7 +537,7 @@ function _ShareModalView(props: Props) {
                 Only the owner can edit the content of this annotation.
               </Hint>
 
-              <Radio style={radioStyle} value={true} disabled={!hasUpdatePermissions}>
+              <Radio value={true} disabled={!hasUpdatePermissions}>
                 Everybody who can view
               </Radio>
               <Hint

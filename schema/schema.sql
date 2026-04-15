@@ -1112,11 +1112,10 @@ FOR EACH ROW EXECUTE PROCEDURE webknossos.onDeleteAnnotation();
 
 CREATE FUNCTION webknossos.enforce_non_negative_balance() RETURNS TRIGGER AS $$
 BEGIN
-  -- Assert that the new balance is non-negative
-    ASSERT (SELECT COALESCE(SUM(milli_credit_delta), 0) + COALESCE(NEW.milli_credit_delta, 0)
-            FROM webknossos.credit_transactions_
-            WHERE _organization = NEW._organization AND _id != NEW._id) >= 0, 'Transaction would result in a negative credit balance for organization %', NEW._organization;
-    -- Assertion passed, transaction can go ahead
+  ASSERT (SELECT COALESCE(SUM(milli_credit_delta), 0) + COALESCE(NEW.milli_credit_delta, 0)
+          FROM webknossos.credit_transactions_
+          WHERE _organization = NEW._organization AND _id != NEW._id) >= 0,
+         format('Transaction would result in a negative credit balance for organization %s', NEW._organization);
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;

@@ -114,6 +114,13 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
 
   override protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken = q"FALSE"
 
+  override def findAll(implicit ctx: DBAccessContext): Fox[List[CreditTransaction]] =
+    for {
+      accessQuery <- accessQueryFromAccessQ(listAccessQ)
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[CreditTransactionsRow])
+      parsed <- parseAll(r)
+    } yield parsed
+
   def getMilliCreditBalance(organizationId: String)(implicit ctx: DBAccessContext): Fox[Int] =
     for {
       accessQuery <- readAccessQuery
@@ -170,10 +177,10 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
     assert(transaction.milliCreditDelta <= 0, "Revoking transactions must have a negative or zero credit change.")
     assert(transaction.expirationDate.isEmpty)
     q"""INSERT INTO webknossos.credit_transactions
-          (_id, _organization, milli_credit_delta, comment, _paid_job,
+          (_id, _organization, _related_transaction, milli_credit_delta, comment, _paid_job,
           transaction_state, credit_state, expiration_date, created_at, updated_at, is_deleted)
           VALUES
-          (${transaction._id}, ${transaction._organization}, ${transaction.milliCreditDelta}::INT,
+          (${transaction._id}, ${transaction._organization}, ${transaction._relatedTransaction}, ${transaction.milliCreditDelta}::INT,
           ${transaction.comment}, ${transaction._paidJob}, ${transaction.transactionState}, ${transaction.creditState},
           ${transaction.expirationDate}, ${transaction.createdAt}, ${transaction.updatedAt}, ${transaction.isDeleted})
           """.asUpdate
@@ -279,7 +286,6 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
             case Failure(e) =>
               logger.error(s"Failed to revoke some expired credits for organization ${transaction._organization}", e)
               DBIO.successful(transactionsWhereRevokingFailed :+ transaction)
-            case _ => DBIO.successful(transactionsWhereRevokingFailed)
           }
         } yield transactionsWhereRevokingFailedAfterRevoking
       }
@@ -312,13 +318,14 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
         val creditStateOfExpiredTransaction = if (freeCreditsAvailable == transaction.milliCreditDelta) {
           CreditState.Revoked
         } else { CreditState.PartiallyRevoked }
+        val grantMonth = f"${transaction.createdAt.year}%04d-${transaction.createdAt.monthOfYear}%02d"
         val revokingTransaction = CreditTransaction(
           ObjectId.generate,
           transaction._organization,
           Some(transaction._id),
           None,
           -freeCreditsAvailable,
-          s"Revoked expired credits for transaction ${transaction._id}",
+          s"Revoked unused complimentary credits ($grantMonth)",
           CreditTransactionState.Complete,
           CreditState.Revoking,
         )

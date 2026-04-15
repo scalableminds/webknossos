@@ -5,6 +5,7 @@
 import mjs, { type Matrix4x4, type Vector16 } from "mjs";
 import type { Vector2, Vector3, Vector4 } from "viewer/constants";
 import { chunk3 } from "viewer/model/helpers/chunk";
+import { mod } from "./utils";
 
 const { M4x4: BareM4x4, V2: BareV2, V3: BareV3 } = mjs(Array);
 
@@ -359,6 +360,10 @@ const V3 = {
   },
 
   multiply: scale3,
+
+  mod(a: Vector3, m: number): Vector3 {
+    return [mod(a[0], m), mod(a[1], m), mod(a[2], m)];
+  },
 };
 
 const V4 = {

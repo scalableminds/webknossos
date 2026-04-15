@@ -1,4 +1,5 @@
 import uniq from "lodash-es/uniq";
+import path from "path";
 import type { Action } from "viewer/model/actions/actions";
 import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import {
@@ -29,6 +30,8 @@ import {
   isPixelEquivalent,
   SCREENSHOTS_BASE_PATH,
 } from "./screenshot_helpers";
+
+const SCREENSHOTS_PATH = path.join(SCREENSHOTS_BASE_PATH, "dtype");
 
 const testColor = true;
 const testSegmentation = true;
@@ -265,7 +268,7 @@ describe("DType Dataset Rendering", () => {
             screenshot,
             width,
             height,
-            SCREENSHOTS_BASE_PATH,
+            SCREENSHOTS_PATH,
             spec.name,
           );
           console.timeEnd("Comparing screenshot...");
@@ -298,7 +301,7 @@ describe("DType Dataset Rendering", () => {
               screenshot,
               width,
               height,
-              SCREENSHOTS_BASE_PATH,
+              SCREENSHOTS_PATH,
               spec.name + "_selective_segment",
             );
             console.timeEnd("Comparing screenshot...");

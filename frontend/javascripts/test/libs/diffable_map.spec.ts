@@ -397,4 +397,119 @@ describe("DiffableMap", () => {
     expect(merged).not.toBe(mapA);
     expect(merged).not.toBe(mapB);
   });
+
+  it("diffDiffableMaps should not find differences when maps are not based on each other but content is equal", () => {
+    const objectCount = 20;
+
+    // Load all objects into one map
+    const map1 = new DiffableMap<number, any>(
+      range(0, objectCount).map((index) => [index, {}] as [number, any]),
+      10,
+    );
+
+    const map2 = new DiffableMap<number, any>(
+      range(0, objectCount).map((index) => [index, {}] as [number, any]),
+      10,
+    );
+
+    const diff = diffDiffableMaps(map1, map2, true);
+    const expectedDiff = {
+      changed: [],
+      onlyA: [],
+      onlyB: [],
+    };
+
+    expect(sort(diff.changed)).toEqual(expectedDiff.changed);
+    expect(sort(diff.onlyA)).toEqual(expectedDiff.onlyA);
+    expect(sort(diff.onlyB)).toEqual(expectedDiff.onlyB);
+  });
+
+  it("diffDiffableMaps should not find differences when maps are based on each other but content is equal", () => {
+    const objectCount = 20;
+
+    // Load all objects into one map
+    const map1 = new DiffableMap<number, any>(
+      range(0, objectCount).map((index) => [index, {}] as [number, any]),
+      10,
+    );
+
+    // Change some values in map 2 and keep the value equal but not instance equal.
+    let map2 = map1;
+    map2 = map2.set(0, {});
+    map2 = map2.set(2, {});
+    map2 = map2.set(4, {});
+    map2 = map2.set(6, {});
+    map2 = map2.set(8, {});
+
+    const diff = diffDiffableMaps(map1, map2, true);
+    const expectedDiff = {
+      changed: [],
+      onlyA: [],
+      onlyB: [],
+    };
+
+    expect(sort(diff.changed)).toEqual(expectedDiff.changed);
+    expect(sort(diff.onlyA)).toEqual(expectedDiff.onlyA);
+    expect(sort(diff.onlyB)).toEqual(expectedDiff.onlyB);
+  });
+
+  it("diffDiffableMaps should find differences when maps are not based on each other", () => {
+    const objectCount = 20;
+
+    // Load all objects into one map
+    const map1 = new DiffableMap<number, any>(
+      range(0, objectCount).map((index) => [index, {}] as [number, any]),
+      10,
+    );
+
+    const additionalKeyInMap2 = objectCount + 5;
+
+    const map2 = new DiffableMap<number, any>(
+      range(0, objectCount).map((index) =>
+        index % 2 === 0
+          ? ([index, { some: "diff" }] as [number, any])
+          : ([index, {}] as [number, any]),
+      ),
+      10,
+    ).set(additionalKeyInMap2, {});
+
+    const diff = diffDiffableMaps(map1, map2, true);
+    const expectedDiff = {
+      changed: range(0, objectCount).filter((index) => index % 2 === 0),
+      onlyA: [],
+      onlyB: [additionalKeyInMap2],
+    };
+
+    expect(sort(diff.changed)).toEqual(expectedDiff.changed);
+    expect(sort(diff.onlyA)).toEqual(expectedDiff.onlyA);
+    expect(sort(diff.onlyB)).toEqual(expectedDiff.onlyB);
+  });
+
+  it("diffDiffableMaps should find differences when maps are based on each other", () => {
+    const objectCount = 20;
+
+    // Load all objects into one map
+    const map1 = new DiffableMap<number, any>(
+      range(0, objectCount).map((index) => [index, {}] as [number, any]),
+      10,
+    );
+
+    // Change some values in map 2 and keep the value equal but not instance equal.
+    const keysToChange = range(0, objectCount).filter((index) => index % 2 === 0);
+    let map2 = map1;
+    for (const key of keysToChange) {
+      map2 = map2.set(key, { some: "diff" });
+    }
+
+    const diff = diffDiffableMaps(map1, map2, true);
+    const expectedDiff = {
+      changed: keysToChange,
+      onlyA: [],
+      onlyB: [],
+    };
+
+    expect(sort(diff.changed)).toEqual(expectedDiff.changed);
+    expect(sort(diff.onlyA)).toEqual(expectedDiff.onlyA);
+    expect(sort(diff.onlyB)).toEqual(expectedDiff.onlyB);
+  });
 });

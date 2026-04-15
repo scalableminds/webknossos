@@ -631,10 +631,14 @@ function* adaptActiveSegmentToProofreadingMarker(layerName: string) {
 
     if (activeSegmentId !== agglomerateId) {
       yield put(setActiveCellAction(agglomerateId, proofreadingMarkerPosition));
-      yield* call(() =>
-        Toast.info(
-          `The active segment id was automatically changed from ${activeSegmentId} to ${agglomerateId}, because the agglomerate id at the proofreading marker changed.`,
-        ),
+      // TODO #9456: Look for a solution that this toast notification does not appear frequently in live collab scenario.
+      // yield* call(() =>
+      //   Toast.info(
+      //     `The active segment id was automatically changed from ${activeSegmentId} to ${agglomerateId}, because the agglomerate id at the proofreading marker changed.`,
+      //   ),
+      // );
+      console.log(
+        `The active segment id was automatically changed from ${activeSegmentId} to ${agglomerateId}, because the agglomerate id at the proofreading marker changed.`,
       );
     }
   }

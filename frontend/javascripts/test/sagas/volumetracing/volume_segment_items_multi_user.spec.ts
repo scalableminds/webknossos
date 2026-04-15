@@ -63,7 +63,7 @@ describe("Collaborative editing of segment items", () => {
 
     const task = startSaga(function* task() {
       yield call(initializeMappingAndTool, context, tracingId);
-      const mapping0 = yield select(
+      const mapping0 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -165,7 +165,7 @@ describe("Collaborative editing of segment items", () => {
 
     const task = startSaga(function* task() {
       yield call(initializeMappingAndTool, context, tracingId);
-      const mapping0 = yield select(
+      const mapping0 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -312,7 +312,7 @@ describe("Collaborative editing of segment items", () => {
 
     const task = startSaga(function* task() {
       yield call(initializeMappingAndTool, context, tracingId);
-      const mapping0 = yield select(
+      const mapping0 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -391,7 +391,7 @@ describe("Collaborative editing of segment items", () => {
 
     const task = startSaga(function* task() {
       yield call(initializeMappingAndTool, context, tracingId);
-      const mapping0 = yield select(
+      const mapping0 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -454,7 +454,7 @@ describe("Collaborative editing of segment items", () => {
 
     const task = startSaga(function* task() {
       yield call(initializeMappingAndTool, context, tracingId);
-      const mapping0 = yield select(
+      const mapping0 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -530,7 +530,7 @@ describe("Collaborative editing of segment items", () => {
 
     const task = startSaga(function* task() {
       yield call(initializeMappingAndTool, context, tracingId);
-      const mapping0 = yield select(
+      const mapping0 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -603,7 +603,7 @@ describe("Collaborative editing of segment items", () => {
 
     const task = startSaga(function* task() {
       yield call(initializeMappingAndTool, context, tracingId);
-      const mapping0 = yield select(
+      const mapping0 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );

@@ -49,6 +49,10 @@ type DeselectActiveTreeGroupAction = ReturnType<typeof deselectActiveTreeGroupAc
 export type MergeTreesAction = ReturnType<typeof mergeTreesAction>;
 type SetTreeNameAction = ReturnType<typeof setTreeNameAction>;
 type SetTreeMetadataAction = ReturnType<typeof setTreeMetadataAction>;
+type SetTreeAgglomerateIdAction = ReturnType<typeof setTreeAgglomerateInfoIdAction>;
+type SetTreesAgglomerateInfoTracingIdAction = ReturnType<
+  typeof setTreesAgglomerateInfoTracingIdAction
+>;
 type SelectNextTreeAction = ReturnType<typeof selectNextTreeAction>;
 type SetTreeColorIndexAction = ReturnType<typeof setTreeColorIndexAction>;
 type ShuffleTreeColorAction = ReturnType<typeof shuffleTreeColorAction>;
@@ -66,7 +70,12 @@ type UpdateNavigationListAction = ReturnType<typeof updateNavigationListAction>;
 type ApplySkeletonUpdateActionsFromServerAction = ReturnType<
   typeof applySkeletonUpdateActionsFromServerAction
 >;
-export type LoadAgglomerateSkeletonAction = ReturnType<typeof loadAgglomerateSkeletonAction>;
+export type LoadAgglomerateSkeletonFromIdAction = ReturnType<
+  typeof loadAgglomerateSkeletonFromIdAction
+>;
+export type LoadAgglomerateSkeletonAtPositionAction = ReturnType<
+  typeof loadAgglomerateSkeletonAtPositionAction
+>;
 export type NoAction = ReturnType<typeof noAction>;
 
 export type BatchableUpdateTreeAction =
@@ -109,6 +118,8 @@ export type SkeletonTracingAction =
   | MergeTreesAction
   | SetTreeNameAction
   | SetTreeMetadataAction
+  | SetTreeAgglomerateIdAction
+  | SetTreesAgglomerateInfoTracingIdAction
   | SelectNextTreeAction
   | SetTreeColorAction
   | SetTreeTypeAction
@@ -133,7 +144,8 @@ export type SkeletonTracingAction =
   | SetShowSkeletonsAction
   | SetMergerModeEnabledAction
   | UpdateNavigationListAction
-  | LoadAgglomerateSkeletonAction
+  | LoadAgglomerateSkeletonFromIdAction
+  | LoadAgglomerateSkeletonAtPositionAction
   | ApplySkeletonUpdateActionsFromServerAction
   | AddNewUserBoundingBox;
 
@@ -157,6 +169,8 @@ export const SkeletonTracingSaveRelevantActions = [
   "SET_ACTIVE_TREE",
   "SET_ACTIVE_TREE_BY_NAME",
   "SET_TREE_NAME",
+  "SET_TREE_AGGLOMERATE_INFO_ID",
+  "SET_TREES_AGGLOMERATE_INFO_TRACING_ID",
   "SET_TREE_METADATA",
   "MERGE_TREES",
   "SELECT_NEXT_TREE",
@@ -232,7 +246,7 @@ export const deleteEdgeAction = (
   sourceNodeId: number,
   targetNodeId: number,
   timestamp: number = Date.now(),
-  initiator: "PROOFREADING" | "UNKNOWN" = "UNKNOWN",
+  initiator: "PROOFREADING" | "USER" = "USER",
 ) =>
   ({
     type: "DELETE_EDGE",
@@ -465,11 +479,16 @@ export const deselectActiveTreeGroupAction = () =>
     type: "DESELECT_ACTIVE_TREE_GROUP",
   }) as const;
 
-export const mergeTreesAction = (sourceNodeId: number, targetNodeId: number) =>
+export const mergeTreesAction = (
+  sourceNodeId: number,
+  targetNodeId: number,
+  initiator: "PROOFREADING" | "USER" = "USER",
+) =>
   ({
     type: "MERGE_TREES",
     sourceNodeId,
     targetNodeId,
+    initiator,
   }) as const;
 
 export const setTreeNameAction = (
@@ -490,6 +509,19 @@ export const setTreeMetadataAction = (
     type: "SET_TREE_METADATA",
     metadata,
     treeId,
+  }) as const;
+
+export const setTreeAgglomerateInfoIdAction = (agglomerateId: number, treeId: number) =>
+  ({
+    type: "SET_TREE_AGGLOMERATE_INFO_ID",
+    agglomerateId,
+    treeId,
+  }) as const;
+
+export const setTreesAgglomerateInfoTracingIdAction = (newAgglomerateMappingTracingId: string) =>
+  ({
+    type: "SET_TREES_AGGLOMERATE_INFO_TRACING_ID",
+    newAgglomerateMappingTracingId,
   }) as const;
 
 export const selectNextTreeAction = (forward: boolean | null | undefined = true) =>
@@ -593,13 +625,37 @@ export const applySkeletonUpdateActionsFromServerAction = (
     ignoreUnsupportedActionTypes,
   }) as const;
 
-export const loadAgglomerateSkeletonAction = (
+// loadAgglomerateSkeletonAtPositionAction should always be preferred over loadAgglomerateSkeletonFromIdAction.
+// It uses the position to derive the agglomerate id instead of the the id itself directly.
+// The benefit of passing the position is that this allows to first synchronize with the newest version of the annotation
+// in live-collab mode and then once up-to-date get the latest agglomerate id of the position.
+// Otherwise, if the id is passed to the action, the syncing with the backend might update the id which is requested by this action via e.g. an merge operation.
+// This would lead to the agglomerate id not existing anymore and thus the frontend requesting an agglomerate skeleton with an outdated agglomerate id.
+
+// loadAgglomerateSkeletonFromIdAction only exists to keep supporting the frontend api function and
+// initially loading the agglomerate skeleton stored in the URL during annotation loading.
+export const loadAgglomerateSkeletonAtPositionAction = (
+  layerName: string,
+  mappingName: string,
+  agglomeratePosition: Vector3,
+) =>
+  ({
+    type: "LOAD_AGGLOMERATE_SKELETON_AT_POSITION",
+    layerName,
+    mappingName,
+    agglomeratePosition,
+  }) as const;
+
+// Is unsafe in live collab-scenario. It is only save in case the mutex has been acquired, the annotation is in sync with the server
+// and the latest mapping info was used to determine the passed agglomerate id.
+// Currently, only exists for legacy support: initial agglomerate skeleton loading via URL and old frontend api function.
+export const loadAgglomerateSkeletonFromIdAction = (
   layerName: string,
   mappingName: string,
   agglomerateId: number,
 ) =>
   ({
-    type: "LOAD_AGGLOMERATE_SKELETON",
+    type: "LOAD_AGGLOMERATE_SKELETON_FROM_ID",
     layerName,
     mappingName,
     agglomerateId,

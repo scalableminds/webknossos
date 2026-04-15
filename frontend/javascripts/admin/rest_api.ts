@@ -881,11 +881,12 @@ export function getSegmentVolumes(
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
+  annotationVersion: number | undefined,
 ): Promise<number[]> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/volume?token=${token}`, {
-      data: { additionalCoordinates, mag, segmentIds, mappingName },
+      data: { additionalCoordinates, mag, segmentIds, mappingName, annotationVersion },
       method: "POST",
     }),
   );
@@ -897,6 +898,7 @@ type SegmentStatisticsParametersMeshBased = {
   mappingName?: string | null;
   additionalCoordinates?: AdditionalCoordinate[] | null;
   meshFileName?: string | null;
+  annotationVersion: number | undefined;
 };
 
 export function getSegmentSurfaceArea(
@@ -906,6 +908,7 @@ export function getSegmentSurfaceArea(
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
+  annotationVersion: number | undefined,
 ): Promise<number[]> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) => {
@@ -915,6 +918,7 @@ export function getSegmentSurfaceArea(
       mappingName,
       additionalCoordinates,
       meshFileName,
+      annotationVersion,
     };
     return Request.sendJSONReceiveJSON(
       `${requestUrl}/segmentStatistics/surfaceArea?token=${token}`,
@@ -932,11 +936,12 @@ export function getSegmentBoundingBoxes(
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
+  annotationVersion: number | undefined,
 ): Promise<Array<{ topLeft: Vector3; width: number; height: number; depth: number }>> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/boundingBox?token=${token}`, {
-      data: { additionalCoordinates, mag, segmentIds, mappingName },
+      data: { additionalCoordinates, mag, segmentIds, mappingName, annotationVersion },
       method: "POST",
     }),
   );
@@ -1870,6 +1875,7 @@ type MeshRequest = {
   mappingName: string | null | undefined;
   mappingType: MappingType | null | undefined;
   findNeighbors: boolean;
+  annotationVersion: number;
 };
 
 export function computeAdHocMesh(
@@ -1927,6 +1933,7 @@ export function getBucketPositionsForAdHocMesh(
   mag: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   mappingName: string | null | undefined,
+  annotationVersion: number,
 ): Promise<Vector3[]> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken(async (token) => {
@@ -1940,6 +1947,7 @@ export function getBucketPositionsForAdHocMesh(
           mag,
           additionalCoordinates,
           mappingName,
+          annotationVersion,
         },
         method: "POST",
       },

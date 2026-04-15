@@ -1,5 +1,5 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
-import { ConfigProvider, Flex, Grid, Space, Tooltip, Typography, theme } from "antd";
+import { Flex, Grid, Space, Tooltip, Typography, theme } from "antd";
 import type { CSSProperties, ReactElement, ReactNode } from "react";
 import { cloneElement, isValidElement } from "react";
 
@@ -114,51 +114,39 @@ export default function AdminPage({
           </Flex>
         ) : null}
         {filters != null ? filters : null}
-        <ConfigProvider
-          theme={{
-            components: {
-              Table: {
-                headerBg: token.colorFillTertiary,
-                headerColor: token.colorTextSecondary,
-                rowHoverBg: token.colorFillQuaternary,
-              },
-            },
+        <div
+          style={{
+            border: `1px solid ${token.colorBorder}`,
+            borderRadius: token.borderRadius,
+            boxShadow: token.boxShadow,
+            overflow: "hidden",
+            background: token.colorBgContainer,
           }}
         >
-          <div
-            style={{
-              border: `1px solid ${token.colorBorder}`,
-              borderRadius: token.borderRadius,
-              boxShadow: token.boxShadow,
-              overflow: "hidden",
-              background: token.colorBgContainer,
-            }}
-          >
-            {subNavigation != null ? (
-              <div
-                style={{
-                  padding: `${token.paddingSM}px ${token.paddingLG}px 0`,
-                  background: token.colorBgContainer,
-                }}
-              >
-                {subNavigation}
-              </div>
-            ) : null}
-            {contentMaxWidth != null ? (
-              <div
-                style={{
-                  maxWidth: contentMaxWidth,
-                  width: "100%",
-                  marginInline: "auto",
-                }}
-              >
-                {children}
-              </div>
-            ) : (
-              children
-            )}
-          </div>
-        </ConfigProvider>
+          {subNavigation != null ? (
+            <div
+              style={{
+                padding: `${token.paddingSM}px ${token.paddingLG}px 0`,
+                background: token.colorBgContainer,
+              }}
+            >
+              {subNavigation}
+            </div>
+          ) : null}
+          {contentMaxWidth != null ? (
+            <div
+              style={{
+                maxWidth: contentMaxWidth,
+                width: "100%",
+                marginInline: "auto",
+              }}
+            >
+              {children}
+            </div>
+          ) : (
+            children
+          )}
+        </div>
       </Space>
     </div>
   );

@@ -133,9 +133,9 @@ export function* synchronizeAnnotationWithBackend(
   //    would be present here, too (note the risk would be greater, because the
   //    user didn't use the save button which is usually accompanied by a small pause).
   // 3) In a live collab scenario we need to drain the whole save queue to get a state
-  //    where we are sure that server is in sync with the backend and after the saving the
+  //    where we are sure that server is in sync with the backend and after saving the
   //    annotation state can be used as a new rebase-able version (RebaseRelevantAnnotationState).
-  //    TODO: Later iterations of live collaboration might need to change this behaviour here.
+  //    TODO (#4259): Later iterations of live collaboration might need to change this behaviour here.
   //    e.g. continuous skeleton tracing might save too long / endlessly if traced very fast.
   //    See https://github.com/scalableminds/webknossos/pull/8723#discussion_r2419981285
   const currentMutexFetchingStrategy = yield* call(getCurrentMutexFetchingStrategy);

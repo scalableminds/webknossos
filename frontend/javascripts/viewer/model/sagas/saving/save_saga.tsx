@@ -807,7 +807,7 @@ export function* tryToIncorporateActions(
         /*
          * Currently NOT supported:
          */
-        // TODO: These actions should be supported if applied from own save queue!
+        // TODO (#9052): These actions should be supported if applied from own save queue!
 
         // High-level annotation specific
         case "addLayerToAnnotation":
@@ -846,7 +846,7 @@ export function* tryToIncorporateActions(
       agglomerateIdsToRefreshSet,
     ] of agglomerateIdsToRefreshPerLayer.entries()) {
       if (agglomerateIdsToRefreshSet && agglomerateIdsToRefreshSet.size > 0) {
-        //  TODO: Add 64 bit support
+        //  TODO (#6921): Add 64 bit support
         const agglomerateIdToRefresh = [...agglomerateIdsToRefreshSet.values().map(Number)];
         if (agglomerateIdToRefresh == null) {
           continue;

@@ -1242,26 +1242,6 @@ class TracingApi {
     rotate3DViewTo(OrthoViews.TDView, animate);
   };
 
-  getShortestRotation(curRotation: Vector3, newRotation: Vector3): Vector3 {
-    // TODO
-    // interpolating Euler angles does not lead to the shortest rotation
-    // interpolate the Quaternion representation instead
-    // https://theory.org/software/qfa/writeup/node12.html
-    const result = [newRotation[0], newRotation[1], newRotation[2]];
-
-    for (let i = 0; i <= 2; i++) {
-      // a rotation about more than 180° is shorter when rotating the other direction
-      if (newRotation[i] - curRotation[i] > 180) {
-        result[i] = newRotation[i] - 360;
-      } else if (newRotation[i] - curRotation[i] < -180) {
-        result[i] = newRotation[i] + 360;
-      }
-    }
-
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
-    return result;
-  }
-
   /**
    * Measures the length of the given tree and returns the length in dataset unit and in voxels.
    */

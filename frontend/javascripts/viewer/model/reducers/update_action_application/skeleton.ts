@@ -58,10 +58,11 @@ function applySingleAction(
   switch (ua.name) {
     case "createTree": {
       // updatedId is part of the updateAction format but was never really used.
-      const { id, updatedId: _updatedId, ...rest } = withoutServerSpecificFields(ua).value;
+      // We explicitly remove it from the treeRest props to not include this property in the tree object.
+      const { id, updatedId: _updatedId, ...treeRest } = withoutServerSpecificFields(ua).value;
       const newTree: Tree = {
         treeId: id,
-        ...rest,
+        ...treeRest,
         nodes: new DiffableMap(),
         edges: new EdgeCollection(),
       };
@@ -81,6 +82,7 @@ function applySingleAction(
       const {
         id: treeId,
         // updatedId is part of the updateAction format but was never really used.
+        // We explicitly remove it from the treeRest props to not include this property in the tree object.
         updatedId: _updatedId,
         ...treeRest
       } = withoutServerSpecificFields(ua).value;

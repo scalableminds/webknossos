@@ -50,7 +50,7 @@ class VersionedFossilDbIterator(prefix: String, fossilDbClient: FossilDBClient, 
   override def next(): VersionedKeyValuePair[Array[Byte]] = {
     val nextRes = nextKeyValuePair match {
       case Some(value) => value
-      case None        => getNextKeyValuePair.get
+      case None        => getNextKeyValuePair.getOrElse(throw new NoSuchElementException())
     }
     nextKeyValuePair = None
     nextRes

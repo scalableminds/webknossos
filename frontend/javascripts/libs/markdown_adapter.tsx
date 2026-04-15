@@ -3,7 +3,6 @@ import loadable from "./lazy_loader";
 
 type Props = {
   children?: React.ReactNode;
-  className?: string;
   components?: Record<string, any>;
 };
 

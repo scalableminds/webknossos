@@ -440,13 +440,16 @@ export function handleMergeSegments(state: WebknossosState, action: MergeSegment
   }
   const { volumeTracing } = updateInfo;
   const { segments } = volumeTracing;
+  const isSameAgglomerate = action.sourceAgglomerateId === action.targetAgglomerateId;
   const sourceSegment = segments.getNullable(action.sourceAgglomerateId);
   const targetSegment = segments.getNullable(action.targetAgglomerateId);
 
-  let newState = handleRemoveSegment(
-    state,
-    removeSegmentAction(action.targetAgglomerateId, action.layerName),
-  );
+  // If the agglomerates are equal, do not remove the entry as this would empty the whole segment information.
+  // This can happen in a concurrent editing scenario of the same segment.
+  // Usually the later users client would notice a duplicate merge operation, be we do not want to rely on this here.
+  let newState = isSameAgglomerate
+    ? state
+    : handleRemoveSegment(state, removeSegmentAction(action.targetAgglomerateId, action.layerName));
   const entryIndex = (volumeTracing.segmentJournal.at(-1)?.entryIndex ?? -1) + 1;
 
   newState = updateVolumeTracing(newState, volumeTracing.tracingId, {

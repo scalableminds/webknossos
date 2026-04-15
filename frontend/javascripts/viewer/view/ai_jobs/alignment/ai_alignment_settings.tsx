@@ -1,14 +1,21 @@
 import { SettingOutlined } from "@ant-design/icons";
 import type { FormProps } from "antd";
-import { Card, Col, Form, Input, Row, Space } from "antd";
+import { Card, Col, Collapse, ConfigProvider, Form, Input, Row, Space } from "antd";
+import { KeyValuePairsFormItem } from "components/key_value_pairs";
 import type React from "react";
 import { ColorWKBlue } from "theme";
 import { ShouldUseManualMatchesFormItem } from "../components/should_use_trees_form_item";
 import { useAlignmentJobContext } from "./ai_alignment_job_context";
 
 export const AiAlignmentSettings: React.FC = () => {
-  const { newDatasetName, setNewDatasetName, shouldUseManualMatches, setShouldUseManualMatches } =
-    useAlignmentJobContext();
+  const {
+    newDatasetName,
+    setNewDatasetName,
+    shouldUseManualMatches,
+    setShouldUseManualMatches,
+    customConfiguration,
+    setCustomConfiguration,
+  } = useAlignmentJobContext();
 
   const handleValuesChange: FormProps["onValuesChange"] = (changedValues) => {
     if ("newDatasetName" in changedValues) {
@@ -17,11 +24,15 @@ export const AiAlignmentSettings: React.FC = () => {
     if ("useAnnotation" in changedValues) {
       setShouldUseManualMatches(changedValues.useAnnotation);
     }
+    if ("customConfiguration" in changedValues) {
+      setCustomConfiguration(changedValues.customConfiguration);
+    }
   };
 
   const formFields = [
     { name: ["newDatasetName"], value: newDatasetName },
     { name: ["useAnnotation"], value: shouldUseManualMatches },
+    { name: ["customConfiguration"], value: customConfiguration },
   ];
 
   return (
@@ -49,6 +60,20 @@ export const AiAlignmentSettings: React.FC = () => {
             <ShouldUseManualMatchesFormItem />
           </Col>
         </Row>
+
+        <ConfigProvider
+          theme={{
+            components: {
+              Collapse: { headerPadding: "12px 0px" },
+            },
+          }}
+        >
+          <Collapse ghost bordered={false}>
+            <Collapse.Panel header="Advanced Settings" key="1">
+              <KeyValuePairsFormItem name="customConfiguration" label="Custom Configuration" />
+            </Collapse.Panel>
+          </Collapse>
+        </ConfigProvider>
       </Form>
     </Card>
   );

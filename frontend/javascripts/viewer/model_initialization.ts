@@ -96,7 +96,7 @@ import {
 } from "viewer/model/actions/settings_actions";
 import {
   initializeSkeletonTracingAction,
-  loadAgglomerateSkeletonAction,
+  loadAgglomerateSkeletonFromIdAction,
   setActiveNodeAction,
   setShowSkeletonsAction,
 } from "viewer/model/actions/skeletontracing_actions";
@@ -915,7 +915,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
 
         for (const agglomerateId of agglomerateIdsToImport) {
           Store.dispatch(
-            loadAgglomerateSkeletonAction(effectiveLayerName, mappingName, agglomerateId),
+            loadAgglomerateSkeletonFromIdAction(effectiveLayerName, mappingName, agglomerateId),
           );
         }
       }

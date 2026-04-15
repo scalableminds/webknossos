@@ -1,13 +1,63 @@
-import { Button, Flex, Modal, Typography } from "antd";
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { KeyboardComboChain } from "./keyboard_shortcut_types";
-import { keyComboChainToUiElements } from "./keyboard_shortcut_utils";
+import { Alert, Button, Flex, Modal, Space, Typography } from "antd";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ALL_KEYBOARD_SHORTCUT_META_INFOS } from "./keyboard_shortcut_constants";
+import type { KeyboardComboChain, KeyboardShortcutsMap } from "./keyboard_shortcut_types";
+import {
+  type Collision,
+  checkCollisionForShortcut,
+  keyComboChainToUiElements,
+} from "./keyboard_shortcut_utils";
 
 const { Text } = Typography;
+
+type CollisionWarningAlertProps = {
+  shortcutCollisions: Collision[];
+};
+
+export const CollisionWarningAlert: React.FC<CollisionWarningAlertProps> = ({
+  shortcutCollisions,
+}) => {
+  return (
+    shortcutCollisions.length > 0 && (
+      <Alert
+        type="warning"
+        style={{ marginTop: 16, marginBottom: 16 }}
+        title="Shortcut Collisions Detected"
+        description={
+          <ul style={{ margin: 0, paddingLeft: 16 }}>
+            {shortcutCollisions.map((collision, index) => {
+              const comboChain = collision.keyCombo.map((s) => [...s]);
+              return (
+                <li key={index}>
+                  <Space wrap>
+                    <span>{keyComboChainToUiElements(comboChain)}</span>
+                    <Text>is used by:</Text>
+                  </Space>
+                  <ul style={{ margin: "2px 0 0", paddingLeft: 20 }}>
+                    {collision.conflictingHandlerIds.map((id) => {
+                      const meta = ALL_KEYBOARD_SHORTCUT_META_INFOS[id];
+                      return (
+                        <li key={id}>
+                          <Text>{meta ? `${meta.description} (${meta.domain})` : id}</Text>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </li>
+              );
+            })}
+          </ul>
+        }
+      />
+    )
+  );
+};
 
 const SampleKeyCombo: KeyboardComboChain = [["Control", "a"], ["o"]];
 
 type ShortcutRecorderModalProps = {
+  keyboardShortcutConfig: KeyboardShortcutsMap<string>;
+  handlerId: string | null; // The handlerId for which the shortcut should be added.
   isOpen: boolean;
   initialKeyComboChain?: KeyboardComboChain; // optional preview of current binding
   onCancel: () => void; // do not overwrite
@@ -16,6 +66,8 @@ type ShortcutRecorderModalProps = {
 
 export function ShortcutRecorderModal({
   isOpen,
+  handlerId,
+  keyboardShortcutConfig,
   initialKeyComboChain,
   onCancel,
   onSave,
@@ -24,6 +76,17 @@ export function ShortcutRecorderModal({
     initialKeyComboChain ?? [],
   );
   const [previewKeyCombo, setPreviewKeyCombo] = useState<string[]>([]);
+  const shortcutCollisions = useMemo(
+    () =>
+      handlerId
+        ? checkCollisionForShortcut(
+            handlerId,
+            [...keyboardShortcutConfig[handlerId], keyComboChain],
+            keyboardShortcutConfig,
+          )
+        : [],
+    [keyComboChain, handlerId, keyboardShortcutConfig],
+  );
 
   const currentDownSetRef = useRef<Set<string>>(new Set());
   const currentSeenSetRef = useRef<Set<string>>(new Set());
@@ -159,9 +222,10 @@ export function ShortcutRecorderModal({
       onOk={handleOk}
       okButtonProps={{ disabled: keyComboChain.length <= 0 || currentDownSetRef.current.size > 0 }}
       title="Record Shortcut"
-      destroyOnClose={true}
+      destroyOnHidden={true}
     >
       <div style={{ padding: 8 }}>
+        <CollisionWarningAlert shortcutCollisions={shortcutCollisions} />
         <Text type="secondary">
           Press keys now. Release all keys to finish the current stroke. Press keys again to add a
           subsequent stroke. Example: {keyComboChainToUiElements(SampleKeyCombo)}. Reset everything

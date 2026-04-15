@@ -416,8 +416,8 @@ export function checkCollisionsInShortcutMap(
     .map(([entity]) => entity as KeyboardShortcutCollisionEntityName);
 
   for (const entity of leafEntities) {
-    const inverted = getCollisionsForEntityInMap(entity, shortcutMap, parentMap);
-    for (const [comboChain, handlerIds] of inverted) {
+    const keyCombosToHandlerIds = getCollisionsForEntityInMap(entity, shortcutMap, parentMap);
+    for (const [comboChain, handlerIds] of keyCombosToHandlerIds) {
       if (handlerIds.length > 1) {
         const comboKey = JSON.stringify(comboChain.map((set) => Array.from(set).sort()));
         const existing = collisionsByCombo.get(comboKey);
@@ -452,18 +452,21 @@ export function checkCollisionForShortcut(
   const tempMap: KeyboardShortcutsMap<string> = { ...existingShortcutMap };
   tempMap[handlerIdOfShortcut] = newKeyCombos;
 
-  const inverted = getCollisionsForEntityInMap(
+  const keyCombosToHandlerIds = getCollisionsForEntityInMap(
     metaInfoOfShortcut.collisionEntityName,
     tempMap,
     parentMap,
   );
   const collisions: Collision[] = [];
-  for (const [comboChain, handlerIds] of inverted) {
+  for (const [comboChain, handlerIds] of keyCombosToHandlerIds) {
     if (handlerIds.includes(handlerIdOfShortcut) && handlerIds.length > 1) {
-      collisions.push({
-        keyCombo: comboChain,
-        conflictingHandlerIds: handlerIds.filter((id) => id !== handlerIdOfShortcut),
-      });
+      const fullCollision: Collision = { keyCombo: comboChain, conflictingHandlerIds: handlerIds };
+      if (!isAcceptedCollision(fullCollision)) {
+        collisions.push({
+          keyCombo: comboChain,
+          conflictingHandlerIds: handlerIds.filter((id) => id !== handlerIdOfShortcut),
+        });
+      }
     }
   }
   return collisions;

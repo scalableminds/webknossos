@@ -30,7 +30,7 @@ export const CollisionWarningAlert: React.FC<CollisionWarningAlertProps> = ({
               return (
                 <li key={index}>
                   <Space wrap>
-                    <span>{keyComboChainToUiElements(comboChain)}</span>
+                    <span>{keyComboChainToUiElements(comboChain, false)}</span>
                     <Text>is used by:</Text>
                   </Space>
                   <ul style={{ margin: "2px 0 0", paddingLeft: 20 }}>
@@ -228,8 +228,8 @@ export function ShortcutRecorderModal({
         <CollisionWarningAlert shortcutCollisions={shortcutCollisions} />
         <Text type="secondary">
           Press keys now. Release all keys to finish the current stroke. Press keys again to add a
-          subsequent stroke. Example: {keyComboChainToUiElements(SampleKeyCombo)}. Reset everything
-          with Esc + Ctrl.
+          subsequent stroke. Example: {keyComboChainToUiElements(SampleKeyCombo, false)}. Reset
+          everything with Esc + Ctrl.
         </Text>
 
         <div
@@ -257,7 +257,7 @@ export function ShortcutRecorderModal({
               <div style={{ width: "100%", overflow: "auto" }}>
                 <Text strong>Recorded:</Text>{" "}
                 <span style={{ marginLeft: 8 }}>
-                  {keyComboChainToUiElements(keyComboChain) || "— waiting —"}
+                  {keyComboChainToUiElements(keyComboChain, false) || "— waiting —"}
                 </span>
               </div>
             </div>
@@ -283,7 +283,7 @@ export function ShortcutRecorderModal({
           >
             <Text italic>
               {previewKeyCombo.length > 0
-                ? keyComboChainToUiElements([previewKeyCombo])
+                ? keyComboChainToUiElements([previewKeyCombo], false)
                 : "— no keys down —"}
             </Text>
           </div>

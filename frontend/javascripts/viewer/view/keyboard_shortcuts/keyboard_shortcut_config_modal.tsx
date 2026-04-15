@@ -172,7 +172,9 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
                   borderColor: "var(--ant-color-border)",
                 }}
               >
-                <span style={{ padding: "0px 4px" }}>{keyComboChainToUiElements(comboChain)}</span>
+                <span style={{ padding: "0px 4px" }}>
+                  {keyComboChainToUiElements(comboChain, false)}
+                </span>
                 <Button
                   type="text"
                   icon={<EditOutlined />}

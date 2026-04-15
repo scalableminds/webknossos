@@ -86,13 +86,14 @@ type ShortcutInfo = {
   action: string;
 };
 
+// TODOM: check whether the icons looks the same now
 const getShortcuts = (
   keyboardShortcutsConfig: KeyboardShortcutsMap<string>,
   isInPlaneMode: boolean,
 ): ShortcutInfo[] => {
   const toUiElement = (keyboardShortcutHandlerId: AnyKeyboardHandlerId) =>
     keyboardShortcutsConfig[keyboardShortcutHandlerId].map((keyCombo) =>
-      keyComboChainToUiElements(keyCombo),
+      keyComboChainToUiElements(keyCombo, true),
     );
   return [
     {
@@ -143,7 +144,7 @@ const getShortcuts = (
         "/",
         isInPlaneMode
           ? toUiElement(
-              PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_FORWARD_DIRECTION_AWARE,
+              PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_BACKWARD_DIRECTION_AWARE,
             )
           : toUiElement(
               ArbitraryControllerNavigationKeyboardShortcuts.MOVE_BACKWARD_WITHOUT_RECORDING,

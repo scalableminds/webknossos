@@ -22,6 +22,7 @@ import type {
   KeyboardShortcutNoLoopedHandlerMap,
   KeyboardShortcutsMap,
 } from "./keyboard_shortcut_types";
+import { KeyboardKeyIcon } from "../components/keyboard_key_icon";
 
 const { Text } = Typography;
 export const MODIFIER_KEYS = new Set(["Control", "Meta", "Meta", "Alt", "Shift"]);
@@ -108,15 +109,26 @@ export function comparableKeyComboChainToKeyCombo(comboChain: ComparableKeyCombo
   return comboChain.map((combo) => formatKeyCombo([...combo])).join(", ");
 }
 
-export function keyComboChainToUiElements(comboChain: KeyboardComboChain): React.ReactNode[] {
+export function keyComboChainToUiElements(
+  comboChain: KeyboardComboChain,
+  useFancy: boolean,
+): React.ReactNode[] {
   const uiElements: React.ReactNode[] = [];
   comboChain.forEach((combo, outerIndex) => {
     sortKeyCombo(combo).forEach((key, innerIndex) => {
-      uiElements.push(
-        <Text key={uiElements.length} keyboard style={{ whiteSpace: "nowrap" }}>
-          {keyToUiElement(key)}
-        </Text>,
-      );
+      if (useFancy) {
+        uiElements.push(
+          <KeyboardKeyIcon key={uiElements.length} className="keyboard-key-icon">
+            {keyToUiElement(key)}
+          </KeyboardKeyIcon>,
+        );
+      } else {
+        uiElements.push(
+          <Text key={uiElements.length} keyboard style={{ whiteSpace: "nowrap" }}>
+            {keyToUiElement(key)}
+          </Text>,
+        );
+      }
       if (innerIndex < combo.length - 1) {
         uiElements.push(<Text key={uiElements.length}>+</Text>);
       }

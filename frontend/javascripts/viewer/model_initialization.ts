@@ -22,6 +22,7 @@ import { location } from "libs/window";
 import cloneDeep from "lodash-es/cloneDeep";
 import extend from "lodash-es/extend";
 import first from "lodash-es/first";
+import isEmpty from "lodash-es/isEmpty";
 import isEqual from "lodash-es/isEqual";
 import merge from "lodash-es/merge";
 import messages from "messages";
@@ -136,7 +137,6 @@ import {
   convertServerAdditionalAxesToFrontEnd,
   convertServerAnnotationToFrontendAnnotation,
 } from "./model/reducers/reducer_helpers";
-import { isEmpty } from "lodash-es";
 
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;

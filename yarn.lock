@@ -3667,7 +3667,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@vitejs/devtools@npm:^0.1.11":
+"@vitejs/devtools@npm:^0.1.13":
   version: 0.1.13
   resolution: "@vitejs/devtools@npm:0.1.13"
   dependencies:
@@ -13269,7 +13269,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vite@npm:^6.0.0 || ^7.0.0 || ^8.0.0, vite@npm:^8.0.5":
+"vite@npm:^6.0.0 || ^7.0.0 || ^8.0.0, vite@npm:^8.0.8":
   version: 8.0.8
   resolution: "vite@npm:8.0.8"
   dependencies:
@@ -13528,7 +13528,7 @@ __metadata:
     "@types/shelljs": "npm:^0.8.5"
     "@types/three": "npm:^0.169.0"
     "@types/url-join": "npm:^4.0.0"
-    "@vitejs/devtools": "npm:^0.1.11"
+    "@vitejs/devtools": "npm:^0.1.13"
     "@vitejs/plugin-react": "npm:^6.0.1"
     "@vitest/coverage-v8": "npm:^4.1.0"
     "@zip.js/zip.js": "npm:^2.7.32"
@@ -13618,7 +13618,7 @@ __metadata:
     typescript-coverage-report: "npm:^0.8.0"
     url: "npm:^0.11.0"
     url-join: "npm:^4.0.0"
-    vite: "npm:^8.0.5"
+    vite: "npm:^8.0.8"
     vite-plugin-svgr: "npm:^4.5.0"
     vite-plugin-wasm: "npm:^3.6.0"
     vitest: "npm:^4.1.1"

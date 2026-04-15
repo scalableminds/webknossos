@@ -1,7 +1,7 @@
 import { duplicateAnnotation } from "admin/rest_api";
 import { Button, Modal } from "antd";
 import { sleep } from "libs/utils";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { APIAnnotationType } from "types/api_types";
 import { setDuplicateAnnotationModalVisibilityAction } from "viewer/model/actions/ui_actions";
 import { Store } from "viewer/singletons";
@@ -20,13 +20,17 @@ export function DuplicateAnnotationModal({
   const [isLoading, setIsLoading] = useState(true);
   const [newAnnotation, setNewAnnotation] = useState<null | string>(null);
   const toOwnAccountText = copyToOwnAccount ? " to your account" : "";
-  const modalContent = () => {
+  const handleClose = () => {
+    Store.dispatch(setDuplicateAnnotationModalVisibilityAction(false));
+  };
+  const modalContent = useMemo(() => {
     if (isLoading) {
       return `Copying annotation${toOwnAccountText}...`;
     } else if (newAnnotation) {
       return `The annotation was copied successfully${toOwnAccountText}.`;
     }
-  };
+  }, [isLoading, newAnnotation, toOwnAccountText]);
+
   const openAnnotationButton = (
     <Button
       loading={isLoading}
@@ -41,8 +45,6 @@ export function DuplicateAnnotationModal({
   );
   return (
     <Modal
-      closable={false}
-      title="Duplicate Annotation"
       open={open}
       afterOpenChange={async (open) => {
         if (open) {
@@ -53,10 +55,18 @@ export function DuplicateAnnotationModal({
           setIsLoading(false);
         }
       }}
-      confirmLoading={isLoading}
       footer={openAnnotationButton}
+      onCancel={handleClose}
     >
-      {modalContent()}
+      <div
+        style={{
+          fontSize: 20,
+          paddingTop: 13,
+          textAlign: "center",
+        }}
+      >
+        {modalContent}
+      </div>
     </Modal>
   );
 }

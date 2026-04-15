@@ -72,10 +72,14 @@ function adaptInputCatcher(inputCatcherDOM: HTMLElement, makeQuadratic: boolean)
 
 const renderedInputCatchers = new Map();
 
+// todop
 export async function initializeInputCatcherSizes() {
   // In an interval of 100 ms we check whether the input catchers can be initialized
   const pollInterval = 100;
-  await waitForCondition(() => renderedInputCatchers.size > 0, pollInterval);
+  await waitForCondition(() => {
+    const { tdCamera } = Store.getState().viewModeData.plane;
+    return renderedInputCatchers.size > 0 && !Number.isNaN(tdCamera.left);
+  }, pollInterval);
   recalculateInputCatcherSizes();
 }
 

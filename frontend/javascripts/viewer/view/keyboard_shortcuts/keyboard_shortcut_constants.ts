@@ -262,6 +262,25 @@ export const ALL_KEYBOARD_HANDLER_IDS = [
   ...Object.values(PlaneProofreadingToolNoLoopedKeyboardShortcuts),
 ] as const;
 
+export type AnyKeyboardHandlerId =
+  | GeneralKeyboardShortcuts
+  | GeneralEditingKeyboardShortcuts
+  | GeneralLayoutKeyboardShortcuts
+  | CommentsTabKeyboardShortcuts
+  | ArbitraryControllerNavigationKeyboardShortcuts
+  | ArbitraryControllerNavigationConfigKeyboardShortcuts
+  | ArbitraryControllerNoLoopKeyboardShortcuts
+  | PlaneControllerLoopedNavigationKeyboardShortcuts
+  | PlaneControllerLoopDelayedNavigationKeyboardShortcuts
+  | PlaneControllerNoLoopGeneralKeyboardShortcuts
+  | PlaneControllerToolSwitchingKeyboardShortcuts
+  | PlaneSkeletonToolLoopedKeyboardShortcuts
+  | PlaneSkeletonToolNoLoopedKeyboardShortcuts
+  | PlaneVolumeToolNoLoopedKeyboardShortcuts
+  | PlaneVolumeToolLoopDelayedConfigKeyboardShortcuts
+  | PlaneBoundingBoxToolNoLoopedKeyboardShortcuts
+  | PlaneProofreadingToolNoLoopedKeyboardShortcuts;
+
 export const ALL_KEYBOARD_SHORTCUT_META_INFOS: KeyboardShortcutHandlerMetaInfoMap<string> = {
   ...GeneralKeyboardShortcutMetaInfo,
   ...GeneralEditingKeyboardShortcutMetaInfo,

@@ -26,7 +26,7 @@ import type { Dispatch } from "redux";
 import type { APIDataset, APIUser } from "types/api_types";
 import type { EmptyObject } from "types/type_utils";
 import { WkDevFlags } from "viewer/api/wk_dev";
-import { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
+import constants, { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
 import {
   getSkeletonStats,
   getStats,
@@ -53,6 +53,11 @@ import { ensureHasNewestVersionAction } from "viewer/model/actions/save_actions"
 import type { StoreAnnotation, Task, WebknossosState } from "viewer/store";
 import { KeyboardKeyIcon } from "../components/keyboard_key_icon";
 import { MarkdownModal } from "../components/markdown_modal";
+import { ArbitraryControllerNavigationKeyboardShortcuts } from "../keyboard_shortcuts/arbitrary_mode_keyboard_shortcut_constants";
+import type { AnyKeyboardHandlerId } from "../keyboard_shortcuts/keyboard_shortcut_constants";
+import type { KeyboardShortcutsMap } from "../keyboard_shortcuts/keyboard_shortcut_types";
+import { keyComboChainToUiElements } from "../keyboard_shortcuts/keyboard_shortcut_utils";
+import { PlaneControllerLoopDelayedNavigationKeyboardShortcuts } from "../keyboard_shortcuts/plane_mode/general_keyboard_shortcuts_constants";
 
 type StateProps = {
   annotation: StoreAnnotation;
@@ -61,7 +66,9 @@ type StateProps = {
   activeUser: APIUser | null | undefined;
   activeMagInfo: ReturnType<typeof getActiveMagInfo>;
   isDatasetViewMode: boolean;
+  isPlaneMode: boolean;
   mayEditAnnotation: boolean;
+  keyboardShortcutsConfig: KeyboardShortcutsMap<string>;
 };
 type DispatchProps = {
   setAnnotationName: (arg0: string) => void;
@@ -73,73 +80,106 @@ type State = {
   isMarkdownModalOpen: boolean;
 };
 
-const shortcuts = [
-  {
-    key: "1",
-    keybinding: [
-      <KeyboardKeyIcon label="I" key="zoom-1" className="keyboard-key-icon" />,
-      "/",
-      <KeyboardKeyIcon label="O" key="zoom-2" className="keyboard-key-icon" />,
-      "or",
-      <KeyboardKeyIcon label="ALT" key="zoom-3" className="keyboard-key-icon" />,
-      "+",
-      <Icon
-        component={IconMousewheel}
-        key="zoom-4"
-        className="keyboard-mouse-icon"
-        aria-label="Mouse Wheel"
-        title="Mouse Wheel"
-        style={{ color: "var(--ant-color-primary)" }}
-      />,
-    ],
-    action: "Zoom in/out",
-  },
-  {
-    key: "2",
-    keybinding: [
-      <Icon
-        component={IconMousewheel}
-        key="move-1"
-        className="keyboard-mouse-icon"
-        aria-label="Mouse Wheel"
-        title="Mouse Wheel"
-        style={{ color: "var(--ant-color-primary)" }}
-      />,
-      "or",
-      <KeyboardKeyIcon label="D" key="move-2" className="keyboard-key-icon" />,
-      "/",
-      <KeyboardKeyIcon label="F" key="move-3" className="keyboard-key-icon" />,
-    ],
-    action: "Move Along 3rd Axis",
-  },
-  {
-    key: "3",
-    keybinding: [
-      <ThemedIcon
-        name="icon-mouse-left"
-        key="move"
-        className="keyboard-mouse-icon"
-        aria-label="Left Mouse Button Drag"
-        style={{ color: "var(--ant-color-primary)" }}
-      />,
-    ],
-    action: "Move",
-  },
-  {
-    key: "4",
-    keybinding: [
-      <ThemedIcon
-        name="icon-mouse-right"
-        key="rotate"
-        className="keyboard-mouse-icon"
-        aria-label="Right Mouse Button Drag"
-        style={{ color: "var(--ant-color-primary)" }}
-      />,
-      "in 3D View",
-    ],
-    action: "Rotate 3D View",
-  },
-];
+type ShortcutInfo = {
+  key: string;
+  keybinding: React.ReactNode[];
+  action: string;
+};
+
+const getShortcuts = (
+  keyboardShortcutsConfig: KeyboardShortcutsMap<string>,
+  isInPlaneMode: boolean,
+): ShortcutInfo[] => {
+  const toUiElement = (keyboardShortcutHandlerId: AnyKeyboardHandlerId) =>
+    keyboardShortcutsConfig[keyboardShortcutHandlerId].map((keyCombo) =>
+      keyComboChainToUiElements(keyCombo),
+    );
+  return [
+    {
+      key: "1",
+      keybinding: [
+        isInPlaneMode
+          ? toUiElement(PlaneControllerLoopDelayedNavigationKeyboardShortcuts.ZOOM_IN_PLANE)
+          : toUiElement(ArbitraryControllerNavigationKeyboardShortcuts.ZOOM_IN_ARBITRARY),
+        "/",
+        isInPlaneMode
+          ? toUiElement(PlaneControllerLoopDelayedNavigationKeyboardShortcuts.ZOOM_OUT_PLANE)
+          : toUiElement(ArbitraryControllerNavigationKeyboardShortcuts.ZOOM_OUT_ARBITRARY),
+
+        "or",
+        <KeyboardKeyIcon label="ALT" key="zoom-3" className="keyboard-key-icon" />,
+        "+",
+
+        <Icon
+          component={IconMousewheel}
+          key="zoom-4"
+          className="keyboard-mouse-icon"
+          aria-label="Mouse Wheel"
+          title="Mouse Wheel"
+          style={{ color: "var(--ant-color-primary)" }}
+        />,
+      ],
+      action: "Zoom in/out",
+    },
+    {
+      key: "2",
+      keybinding: [
+        <Icon
+          component={IconMousewheel}
+          key="move-1"
+          className="keyboard-mouse-icon"
+          aria-label="Mouse Wheel"
+          title="Mouse Wheel"
+          style={{ color: "var(--ant-color-primary)" }}
+        />,
+        "or",
+        isInPlaneMode
+          ? toUiElement(
+              PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_FORWARD_DIRECTION_AWARE,
+            )
+          : toUiElement(
+              ArbitraryControllerNavigationKeyboardShortcuts.MOVE_FORWARD_WITHOUT_RECORDING,
+            ),
+        "/",
+        isInPlaneMode
+          ? toUiElement(
+              PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_FORWARD_DIRECTION_AWARE,
+            )
+          : toUiElement(
+              ArbitraryControllerNavigationKeyboardShortcuts.MOVE_BACKWARD_WITHOUT_RECORDING,
+            ),
+      ],
+      action: "Move Along 3rd Axis",
+    },
+    {
+      key: "3",
+      keybinding: [
+        <ThemedIcon
+          name="icon-mouse-left"
+          key="move"
+          className="keyboard-mouse-icon"
+          aria-label="Left Mouse Button Drag"
+          style={{ color: "var(--ant-color-primary)" }}
+        />,
+      ],
+      action: "Move",
+    },
+    {
+      key: "4",
+      keybinding: [
+        <ThemedIcon
+          name="icon-mouse-right"
+          key="rotate"
+          className="keyboard-mouse-icon"
+          aria-label="Right Mouse Button Drag"
+          style={{ color: "var(--ant-color-primary)" }}
+        />,
+        "in 3D View",
+      ],
+      action: "Rotate 3D View",
+    },
+  ];
+};
 
 export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
   const extentInVoxel = getDatasetExtentAsString(dataset, true);
@@ -333,20 +373,22 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
         </p>
         <table className="shortcut-table">
           <tbody>
-            {shortcuts.map((shortcut) => (
-              <tr key={shortcut.key}>
-                <td
-                  style={{
-                    width: 170,
-                  }}
-                >
-                  <Space size={4} align="center">
-                    {shortcut.keybinding}
-                  </Space>
-                </td>
-                <td>{shortcut.action}</td>
-              </tr>
-            ))}
+            {getShortcuts(this.props.keyboardShortcutsConfig, this.props.isPlaneMode).map(
+              (shortcut) => (
+                <tr key={shortcut.key}>
+                  <td
+                    style={{
+                      width: 170,
+                    }}
+                  >
+                    <Space size={4} align="center">
+                      {shortcut.keybinding}
+                    </Space>
+                  </td>
+                  <td>{shortcut.action}</td>
+                </tr>
+              ),
+            )}
           </tbody>
         </table>
       </div>
@@ -679,6 +721,8 @@ const mapStateToProps = (state: WebknossosState): StateProps => ({
   task: state.task,
   activeUser: state.activeUser,
   isDatasetViewMode: state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
+  isPlaneMode: constants.MODES_PLANE.includes(state.temporaryConfiguration.viewMode),
+  keyboardShortcutsConfig: state.keyboardShortcutsConfig,
   activeMagInfo: getActiveMagInfo(state),
   mayEditAnnotation: mayEditAnnotationProperties(state),
 });

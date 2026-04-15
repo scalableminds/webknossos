@@ -778,7 +778,6 @@ describe("Proofreading (Multi User)", () => {
 
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
 
-    // todop: correct version number?
     backendMock.planMultipleVersionInjections(7, [
       ...splitSegment7And1337AndMerge1337And5,
       [

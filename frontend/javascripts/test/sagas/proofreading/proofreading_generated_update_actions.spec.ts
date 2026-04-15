@@ -1,5 +1,4 @@
 import type { MinCutTargetEdge } from "admin/rest_api";
-import type { ActionPattern } from "redux-saga/effects";
 import {
   getNestedUpdateActions,
   setupWebknossosForTestingWithRestrictions,
@@ -7,9 +6,6 @@ import {
 } from "test/helpers/apiHelpers";
 import { call, delay, put, take } from "typed-redux-saga";
 import type { Vector3 } from "viewer/constants";
-import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
-import type { Action } from "viewer/model/actions/actions";
-import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import {
   minCutAgglomerateWithPositionAction,
   proofreadMergeAction,
@@ -96,48 +92,12 @@ describe("Proofreading should generate correct update actions", () => {
     expect(hasRootSagaCrashed()).toBe(false);
   });
 
-  async function loadAgglomerateSkeleton(context: WebknossosTestContext, agglomerateId: number) {
-    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
-
-    const { annotation } = Store.getState();
-    const { tracingId } = annotation.volumes[0];
-
-    const task = startSaga(function* () {
-      yield call(initializeMappingAndTool, context, tracingId);
-
-      // Set up the merge-related segment partners. Normally, this would happen
-      // due to the user's interactions.
-      yield put(
-        updateSegmentAction(
-          agglomerateId,
-          { anchorPosition: getPositionForSegmentId(agglomerateId) },
-          tracingId,
-        ),
-      );
-      yield put(setActiveCellAction(agglomerateId));
-      yield makeMappingEditableForTest();
-      // todop: isn't it weird to have this as a side-effect of loadAgglomerateSkeleton() ?
-      yield put(setCollaborationModeAction("Concurrent"));
-
-      vi.mocked(context.mocks.parseProtoTracing).mockRestore();
-      yield call(loadAgglomerateSkeletonAtPosition, getPositionForSegmentId(agglomerateId));
-      // Wait till mutex is released after sending loaded skeleton updates to the mocked backend.
-      yield take(
-        ((action: Action) =>
-          action.type === "SET_IS_MUTEX_ACQUIRED" && !action.isMutexAcquired) as ActionPattern,
-      );
-    });
-
-    await task.toPromise();
-  }
-
   async function makeProofreadMerge(
     context: WebknossosTestContext,
     skeletonsToLoad: number[],
     sourceSegmentId: number,
     targetSegmentId: number,
     sourceAgglomerateId: number,
-    othersMayEdit: boolean,
     voxelPositionsToLoad: Vector3[] = [],
   ): Promise<void> {
     const { annotation } = Store.getState();
@@ -154,13 +114,9 @@ describe("Proofreading should generate correct update actions", () => {
       yield put(updateSegmentAction(sourceAgglomerateId, { anchorPosition }, tracingId));
       yield put(setActiveCellAction(sourceAgglomerateId));
       yield makeMappingEditableForTest();
-      if (othersMayEdit) {
-        // todop: the param seems unused?
-        // yield put(setCollaborationModeAction("Concurrent"));
-      }
 
       if (skeletonsToLoad.length > 0) {
-        yield loadAgglomerateSkeletons(context, skeletonsToLoad, false, othersMayEdit);
+        yield call(loadAgglomerateSkeletons, context, skeletonsToLoad, false, false);
       }
 
       const skeletonTrees = Store.getState().annotation.skeleton?.trees;
@@ -189,7 +145,6 @@ describe("Proofreading should generate correct update actions", () => {
     targetSegmentId: number,
     sourceAgglomerateId: number,
     minCutEdges: Array<MinCutTargetEdge>,
-    othersMayEdit: boolean,
     voxelPositionsToLoad: Vector3[] = [],
   ): Promise<void> {
     const { annotation } = Store.getState();
@@ -205,13 +160,9 @@ describe("Proofreading should generate correct update actions", () => {
       yield put(updateSegmentAction(sourceAgglomerateId, { anchorPosition }, tracingId));
       yield put(setActiveCellAction(sourceAgglomerateId));
       yield makeMappingEditableForTest();
-      if (othersMayEdit) {
-        // todop: the param seems unused?
-        // yield put(setCollaborationModeAction("Concurrent"));
-      }
 
       if (skeletonsToLoad.length > 0) {
-        yield loadAgglomerateSkeletons(context, skeletonsToLoad, false, othersMayEdit);
+        yield call(loadAgglomerateSkeletons, context, skeletonsToLoad, false, false);
       }
 
       // Prepare the server's reply for the upcoming split.
@@ -250,14 +201,33 @@ describe("Proofreading should generate correct update actions", () => {
   }
 
   it("when loading agglomerate skeleton 1", async (context: WebknossosTestContext) => {
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
     const agglomerateId = 1;
-    const task = startSaga(function* task() {
-      yield call(loadAgglomerateSkeleton, context, agglomerateId);
-      yield call(() => context.api.tracing.save());
+
+    const task = startSaga(function* () {
+      yield call(initializeMappingAndTool, context, tracingId);
+
+      // Set up the merge-related segment partners. Normally, this would happen
+      // due to the user's interactions.
+      yield put(
+        updateSegmentAction(
+          agglomerateId,
+          { anchorPosition: getPositionForSegmentId(agglomerateId) },
+          tracingId,
+        ),
+      );
+      yield put(setActiveCellAction(agglomerateId));
+      yield makeMappingEditableForTest();
+
+      yield call(loadAgglomerateSkeletons, context, [agglomerateId], true, false);
+
       const activateSegmentAndLoadTreeUpdates = removeBlacklistedActions(
         getNestedUpdateActions(context),
         true,
       );
+
       expect(activateSegmentAndLoadTreeUpdates).toStrictEqual(loadAgglomerateTree1);
     });
 
@@ -268,7 +238,7 @@ describe("Proofreading should generate correct update actions", () => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
-      yield call(makeProofreadMerge, context, [1, 4], 5, 6, 4, false);
+      yield call(makeProofreadMerge, context, [1, 4], 5, 6, 4);
       const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
 
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment4And6WithAgglomerateTree1And4);
@@ -281,7 +251,7 @@ describe("Proofreading should generate correct update actions", () => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
-      yield call(makeProofreadMerge, context, [1, 4], 3, 4, 1, false);
+      yield call(makeProofreadMerge, context, [1, 4], 3, 4, 1);
       const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
 
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment3And4WithAgglomerateTree1And4);
@@ -294,7 +264,7 @@ describe("Proofreading should generate correct update actions", () => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
-      yield call(makeProofreadMerge, context, [], 1, 4, 1, false);
+      yield call(makeProofreadMerge, context, [], 1, 4, 1);
       const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment1And4);
     });
@@ -306,7 +276,7 @@ describe("Proofreading should generate correct update actions", () => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
-      yield call(makeProofreadMerge, context, [], 2, 4, 1, false);
+      yield call(makeProofreadMerge, context, [], 2, 4, 1);
       const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment2And4);
     });
@@ -318,7 +288,7 @@ describe("Proofreading should generate correct update actions", () => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
-      yield call(makeProofreadMerge, context, [1, 4, 6], 1, 4, 1, false);
+      yield call(makeProofreadMerge, context, [1, 4, 6], 1, 4, 1);
       const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment1And4WithAgglomerateTrees1And4And6);
     });
@@ -330,7 +300,7 @@ describe("Proofreading should generate correct update actions", () => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
-      yield call(makeProofreadMerge, context, [1], 3, 4, 1, false);
+      yield call(makeProofreadMerge, context, [1], 3, 4, 1);
       const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment3And4WithAgglomerateTree1);
     });
@@ -342,7 +312,7 @@ describe("Proofreading should generate correct update actions", () => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
-      yield call(makeProofreadMerge, context, [1, 4], 5, 6, 4, false);
+      yield call(makeProofreadMerge, context, [1, 4], 5, 6, 4);
       const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment5And6WithAgglomerateTree1And4);
     });
@@ -354,7 +324,7 @@ describe("Proofreading should generate correct update actions", () => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
-      yield call(makeProofreadMerge, context, [], 5, 6, 4, false);
+      yield call(makeProofreadMerge, context, [], 5, 6, 4);
       const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment5And6);
     });
@@ -373,7 +343,6 @@ describe("Proofreading should generate correct update actions", () => {
         1337,
         5,
         1337,
-        false,
         // load segment id (1337) at 100, 100, 100 so that the mapping
         // saga will look up the mapped id (1337) for it. Otherwise,
         // the proofread saga would early-out and ask for a retry.
@@ -391,7 +360,7 @@ describe("Proofreading should generate correct update actions", () => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
-      yield call(makeProofreadMerge, context, [1], 5, 6, 4, false);
+      yield call(makeProofreadMerge, context, [1], 5, 6, 4);
       // There are no agglomerate tree updates as no loaded tree is affected by the merge
       const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment5And6WithAgglomerateTree1);
@@ -404,7 +373,7 @@ describe("Proofreading should generate correct update actions", () => {
     mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const task = startSaga(function* task() {
-      yield call(makeProofreadMerge, context, [1], 3, 6, 1, false);
+      yield call(makeProofreadMerge, context, [1], 3, 6, 1);
       const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment3And6WithAgglomerateTree1);
     });
@@ -424,7 +393,7 @@ describe("Proofreading should generate correct update actions", () => {
           segmentId2: 2,
         } as MinCutTargetEdge,
       ];
-      yield call(makeProofreadSplit, context, [], 2, 3, 1, minCutEdges, false);
+      yield call(makeProofreadSplit, context, [], 2, 3, 1, minCutEdges);
       const splitAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(splitAndTreeUpdates).toStrictEqual(splitSegment2And3);
     });
@@ -444,7 +413,7 @@ describe("Proofreading should generate correct update actions", () => {
           segmentId2: 2,
         } as MinCutTargetEdge,
       ];
-      yield call(makeProofreadSplit, context, [1], 2, 3, 1, minCutEdges, false);
+      yield call(makeProofreadSplit, context, [1], 2, 3, 1, minCutEdges);
       const splitAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(splitAndTreeUpdates).toStrictEqual(splitSegment2And3WithAgglomerateTree1);
     });
@@ -464,7 +433,7 @@ describe("Proofreading should generate correct update actions", () => {
           segmentId2: 2,
         } as MinCutTargetEdge,
       ];
-      yield call(makeProofreadSplit, context, [1], 1, 2, 1, minCutEdges, false);
+      yield call(makeProofreadSplit, context, [1], 1, 2, 1, minCutEdges);
       const splitAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(splitAndTreeUpdates).toStrictEqual(splitSegment1And2WithAgglomerateTree1);
     });
@@ -484,7 +453,7 @@ describe("Proofreading should generate correct update actions", () => {
           segmentId2: 2,
         } as MinCutTargetEdge,
       ];
-      yield call(makeProofreadSplit, context, [], 1, 2, 1, minCutEdges, false);
+      yield call(makeProofreadSplit, context, [], 1, 2, 1, minCutEdges);
       const splitAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
 
       expect(splitAndTreeUpdates).toStrictEqual(splitSegment1And2);
@@ -519,7 +488,7 @@ describe("Proofreading should generate correct update actions", () => {
         } as MinCutTargetEdge,
       ];
 
-      yield call(makeProofreadSplit, context, [1, 4, 6], 2, 3, 1, minCutEdges, false);
+      yield call(makeProofreadSplit, context, [1, 4, 6], 2, 3, 1, minCutEdges);
 
       const splitAndTreeAndSegmentUpdates = removeBlacklistedActions(
         getNestedUpdateActions(context),
@@ -544,7 +513,7 @@ describe("Proofreading should generate correct update actions", () => {
           segmentId2: 2,
         } as MinCutTargetEdge,
       ];
-      yield call(makeProofreadSplit, context, [1, 6, 4], 1, 2, 1, minCutEdges, false);
+      yield call(makeProofreadSplit, context, [1, 6, 4], 1, 2, 1, minCutEdges);
       const splitAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(splitAndTreeUpdates).toStrictEqual(splitSegment1And2WithAgglomerateTrees1And6And4);
     });
@@ -564,7 +533,7 @@ describe("Proofreading should generate correct update actions", () => {
           segmentId2: 2,
         } as MinCutTargetEdge,
       ];
-      yield call(makeProofreadSplit, context, [1, 4, 6], 1, 2, 1, minCutEdges, false);
+      yield call(makeProofreadSplit, context, [1, 4, 6], 1, 2, 1, minCutEdges);
       const splitAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(splitAndTreeUpdates).toStrictEqual(splitSegment1And2WithAgglomerateTrees1And4And6);
     });
@@ -588,11 +557,11 @@ describe("Proofreading should generate correct update actions", () => {
           segmentId2: 1337,
         } as MinCutTargetEdge,
       ];
-      yield call(makeProofreadSplit, context, [], 7, 1337, 1337, minCutEdges, false, [
+      yield call(makeProofreadSplit, context, [], 7, 1337, 1337, minCutEdges, [
         getPositionForSegmentId(1337),
       ]);
 
-      yield call(makeProofreadMerge, context, [], 1337, 5, 1339, false);
+      yield call(makeProofreadMerge, context, [], 1337, 5, 1339);
       const splitAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
       expect(splitAndTreeUpdates).toStrictEqual(splitSegment7And1337AndMerge1337And5);
     });

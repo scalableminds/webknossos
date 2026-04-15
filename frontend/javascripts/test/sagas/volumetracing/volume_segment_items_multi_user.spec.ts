@@ -7,15 +7,18 @@ import {
 import type { Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
+import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import {
   removeSegmentAction,
+  setIdReservationsAction,
+  setSegmentGroupsAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { initialMapping } from "../proofreading/proofreading_fixtures";
 import {
   initializeMappingAndTool,
@@ -645,4 +648,217 @@ describe("Collaborative editing of segment items", () => {
 
     await task.toPromise();
   }, 8000);
+});
+
+describe.only("ID reservation saga", () => {
+  beforeEach<WebknossosTestContext>(async (context) => {
+    await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, false, "hybrid");
+    vi.mocked(context.mocks.Request.sendJSONReceiveJSON).mockClear();
+  });
+
+  afterEach<WebknossosTestContext>(async (context) => {
+    context.tearDownPullQueues();
+    expect(hasRootSagaCrashed()).toBe(false);
+  });
+
+  function mockReserveIdsEndpoint(mocks: WebknossosTestContext["mocks"], ids: number[]) {
+    vi.mocked(mocks.Request.sendJSONReceiveJSON).mockImplementation((url: string) => {
+      if (url.includes("reserveIds")) {
+        return Promise.resolve(ids);
+      }
+      return Promise.resolve({});
+    });
+  }
+
+  it("should fetch new IDs and return the first when no reservations exist", async (context: WebknossosTestContext) => {
+    const { mocks } = context;
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    mockReserveIdsEndpoint(mocks, [100, 101, 102, 103, 104]);
+
+    const task = startSaga(function* task() {
+      const id = yield call(() => dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"));
+
+      expect(id).toBe(100);
+
+      const reservations = Store.getState().annotation.volumes[0].idReservations.SegmentGroup;
+      expect(reservations).toEqual([
+        { id: 100, used: true },
+        { id: 101, used: false },
+        { id: 102, used: false },
+        { id: 103, used: false },
+        { id: 104, used: false },
+      ]);
+    });
+
+    await task.toPromise();
+  });
+
+  it("should use an existing reservation without calling the API when the buffer is sufficient", async (context: WebknossosTestContext) => {
+    const { mocks } = context;
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    // 3 usable reservations: 3 >= IDEAL_ID_BUFFER_SIZE / 2 (2.5), so no replenishment is triggered
+    Store.dispatch(
+      setIdReservationsAction(tracingId, "SegmentGroup", [
+        { id: 100, used: false },
+        { id: 101, used: false },
+        { id: 102, used: false },
+      ]),
+    );
+
+    const task = startSaga(function* task() {
+      const id = yield call(() => dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"));
+
+      expect(id).toBe(100);
+
+      const reserveIdsCalls = vi
+        .mocked(mocks.Request.sendJSONReceiveJSON)
+        .mock.calls.filter(([url]) => url.includes("reserveIds"));
+      expect(reserveIdsCalls).toHaveLength(0);
+    });
+
+    await task.toPromise();
+  });
+
+  it("should skip reservation IDs at or below the maximum segment group ID", async () => {
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    // Set up a segment group with groupId=10, making maxGroupId=10
+    Store.dispatch(
+      setSegmentGroupsAction([{ name: "Existing Group", groupId: 10, children: [] }], tracingId),
+    );
+
+    // 5 reservations: IDs 5 and 10 are stale (not > maxGroupId=10), IDs 15, 20, 25 are valid
+    // 3 valid reservations >= IDEAL_ID_BUFFER_SIZE / 2 (2.5), so no replenishment is triggered
+    Store.dispatch(
+      setIdReservationsAction(tracingId, "SegmentGroup", [
+        { id: 5, used: false },
+        { id: 10, used: false },
+        { id: 15, used: false },
+        { id: 20, used: false },
+        { id: 25, used: false },
+      ]),
+    );
+
+    const task = startSaga(function* task() {
+      const id = yield call(() => dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"));
+
+      // IDs 5 and 10 are filtered; 15 is the first valid ID
+      expect(id).toBe(15);
+    });
+
+    await task.toPromise();
+  });
+
+  it("should replenish the buffer after an ID is returned when the remaining count falls below the threshold", async (context: WebknossosTestContext) => {
+    const { mocks } = context;
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    // 2 reservations: 2 < IDEAL_ID_BUFFER_SIZE / 2 (2.5), so replenishment fires after the first use
+    Store.dispatch(
+      setIdReservationsAction(tracingId, "SegmentGroup", [
+        { id: 200, used: false },
+        { id: 201, used: false },
+      ]),
+    );
+
+    // After using 200 there is 1 usable left, so the saga requests max(1, 5-1)=4 new IDs
+    mockReserveIdsEndpoint(mocks, [300, 301, 302, 303]);
+
+    const task = startSaga(function* task() {
+      // First request: uses 200, then blocks to replenish (channel serialises both requests)
+      const id1 = yield call(() =>
+        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
+      );
+      expect(id1).toBe(200);
+
+      // Second request: guaranteed to execute after replenishment because the channel is FIFO
+      const id2 = yield call(() =>
+        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
+      );
+      expect(id2).toBe(201);
+
+      const reservations = Store.getState().annotation.volumes[0].idReservations.SegmentGroup;
+      expect(reservations).toEqual(
+        expect.arrayContaining([
+          { id: 201, used: true },
+          { id: 300, used: false },
+          { id: 301, used: false },
+          { id: 302, used: false },
+          { id: 303, used: false },
+        ]),
+      );
+    });
+
+    await task.toPromise();
+  });
+
+  it("should release stale (already-used) IDs when fetching new reservations", async (context: WebknossosTestContext) => {
+    const { mocks } = context;
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    // Both existing reservations are marked used — no usable IDs, so the saga must fetch
+    Store.dispatch(
+      setIdReservationsAction(tracingId, "SegmentGroup", [
+        { id: 5, used: true },
+        { id: 10, used: true },
+      ]),
+    );
+
+    mockReserveIdsEndpoint(mocks, [100, 101, 102, 103, 104]);
+
+    const task = startSaga(function* task() {
+      const id = yield call(() => dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"));
+
+      expect(id).toBe(100);
+
+      const reserveIdsCalls = vi
+        .mocked(mocks.Request.sendJSONReceiveJSON)
+        .mock.calls.filter(([url]) => url.includes("reserveIds"));
+      expect(reserveIdsCalls).toHaveLength(1);
+
+      const [, options] = reserveIdsCalls[0];
+      expect((options.data as Record<string, unknown>).numberOfIdsToReserve).toBe(5);
+      // Used IDs must be released so the backend can reassign them
+      expect((options.data as Record<string, unknown>).idsToRelease).toEqual(
+        expect.arrayContaining([5, 10]),
+      );
+    });
+
+    await task.toPromise();
+  });
+
+  it("should return a different ID for each sequential request", async () => {
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    // Enough reservations to avoid replenishment across three requests
+    Store.dispatch(
+      setIdReservationsAction(tracingId, "SegmentGroup", [
+        { id: 100, used: false },
+        { id: 101, used: false },
+        { id: 102, used: false },
+        { id: 103, used: false },
+        { id: 104, used: false },
+      ]),
+    );
+
+    const task = startSaga(function* task() {
+      const id1 = yield call(() =>
+        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
+      );
+      const id2 = yield call(() =>
+        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
+      );
+      const id3 = yield call(() =>
+        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
+      );
+
+      expect(id1).toBe(100);
+      expect(id2).toBe(101);
+      expect(id3).toBe(102);
+    });
+
+    await task.toPromise();
+  });
 });

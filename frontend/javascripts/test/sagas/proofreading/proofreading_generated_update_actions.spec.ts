@@ -9,6 +9,7 @@ import { call, delay, put, take } from "typed-redux-saga";
 import type { Vector3 } from "viewer/constants";
 import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
 import type { Action } from "viewer/model/actions/actions";
+import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import {
   minCutAgglomerateWithPositionAction,
   proofreadMergeAction,
@@ -60,7 +61,6 @@ import {
   makeMappingEditableForTest,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
-import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 
 const ACTION_TYPES_BLACKLIST = ["updateCamera", "updateMappingName", "updateActiveSegmentId"];
 const ACTION_TYPES_TREE_LOADING = ["createTree", "createNode", "createEdge"];

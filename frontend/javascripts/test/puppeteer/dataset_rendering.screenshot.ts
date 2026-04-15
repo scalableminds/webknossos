@@ -1,3 +1,4 @@
+import path from "path";
 import type { PartialDatasetConfiguration } from "viewer/store";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, test } from "vitest";
 import {
@@ -20,6 +21,8 @@ import {
   isPixelEquivalent,
   SCREENSHOTS_BASE_PATH,
 } from "./screenshot_helpers";
+
+const SCREENSHOTS_PATH = path.join(SCREENSHOTS_BASE_PATH, "misc");
 
 if (!WK_AUTH_TOKEN) {
   throw new Error("No WK_AUTH_TOKEN specified.");
@@ -145,7 +148,7 @@ describe("Dataset Rendering", () => {
           screenshot,
           width,
           height,
-          SCREENSHOTS_BASE_PATH,
+          SCREENSHOTS_PATH,
           datasetName,
         );
         await page.close();
@@ -195,7 +198,7 @@ describe("Dataset Rendering", () => {
           screenshot,
           width,
           height,
-          SCREENSHOTS_BASE_PATH,
+          SCREENSHOTS_PATH,
           `annotation_${datasetName}_${fallbackLabel}`,
         );
         await page.close();
@@ -233,7 +236,7 @@ describe("Dataset Rendering", () => {
           screenshot,
           width,
           height,
-          SCREENSHOTS_BASE_PATH,
+          SCREENSHOTS_PATH,
           `${datasetName}_with_mapping_${mappingName}`,
         );
         await page.close();
@@ -271,7 +274,7 @@ describe("Dataset Rendering", () => {
           screenshot,
           width,
           height,
-          SCREENSHOTS_BASE_PATH,
+          SCREENSHOTS_PATH,
           `${datasetName}_with_mapping_link`,
         );
         await page.close();
@@ -303,11 +306,12 @@ describe("Dataset Rendering", () => {
           datasetNameToId[datasetName],
           viewOverride,
         );
+        // Should look the same as an explorative tracing on the same dataset with the same mapping link
         const changedPixels = await compareScreenshot(
           screenshot,
           width,
           height,
-          SCREENSHOTS_BASE_PATH, // Should look the same as an explorative tracing on the same dataset with the same mapping link
+          SCREENSHOTS_PATH,
           `${datasetName}_with_mapping_link`,
         );
         await page.close();
@@ -345,7 +349,7 @@ describe("Dataset Rendering", () => {
           screenshot,
           width,
           height,
-          SCREENSHOTS_BASE_PATH,
+          SCREENSHOTS_PATH,
           `${datasetName}_with_meshes_link`,
         );
         await page.close();

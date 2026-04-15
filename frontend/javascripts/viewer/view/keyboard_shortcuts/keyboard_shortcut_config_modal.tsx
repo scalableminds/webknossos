@@ -1,4 +1,5 @@
 import { CloseOutlined, EditOutlined, PlusOutlined, RollbackOutlined } from "@ant-design/icons";
+import { updateKeyboardShortcutsConfig } from "admin/rest_api";
 import {
   Alert,
   Button,
@@ -13,17 +14,16 @@ import {
   Typography,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { updateKeyboardShortcutsConfig } from "admin/rest_api";
 import Toast from "libs/toast";
 import { isEqual } from "lodash-es";
 import { type SetStateAction, useCallback, useMemo, useState } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { setKeyboardShortcutsConfigAction } from "viewer/model/actions/settings_actions";
+import type { WebknossosState } from "viewer/store";
 import {
   ALL_KEYBOARD_SHORTCUT_META_INFOS,
   getAllDefaultKeyboardShortcuts,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
-import { setKeyboardShortcutsConfigAction } from "viewer/model/actions/settings_actions";
-import Store, { type WebknossosState } from "viewer/store";
 import { validateShortcutMapText } from "./keyboard_shortcut_persistence";
 import {
   type KeyboardComboChain,
@@ -76,40 +76,43 @@ const ShortcutDomainTable: React.FC<ShortcutDomainTableProps> = ({
 };
 
 export default function KeyboardShortcutConfigModal({ isOpen, onClose }: ShortcutConfigModalProps) {
-  const storeShortcuts = useSelector((state: WebknossosState) => state.keyboardShortcutsConfig);
+  const dispatch = useDispatch();
+  const keyboardShortcutsConfigFromStore = useSelector(
+    (state: WebknossosState) => state.keyboardShortcutsConfig,
+  );
   const [isJsonView, setIsJsonView] = useState(false);
   const [isRecorderOpen, setIsRecorderOpen] = useState(false);
   const [recorderTargetHandlerId, setRecorderTargetHandlerId] = useState<string | null>(null);
   const [recorderEditingKeyCombo, setRecorderEditingKeyCombo] = useState<KeyboardComboChain | null>(
     null,
   );
-  const [localConfig, _setLocalConfig] = useState(storeShortcuts);
-  const [collisions, setCollisions] = useState<Collision[]>(
-    checkCollisionsInShortcutMap(localConfig),
+  const [localShortcutConfig, _setLocalShortcutConfig] = useState(keyboardShortcutsConfigFromStore);
+  const [shortcutCollisions, setShortcutCollisions] = useState<Collision[]>(
+    checkCollisionsInShortcutMap(localShortcutConfig),
   );
-  const setLocalConfig = useCallback(
+  const setLocalShortcutConfig = useCallback(
     (newConfigOrUpdateFunction: SetStateAction<KeyboardShortcutsMap<string>>) => {
       if (typeof newConfigOrUpdateFunction === "function") {
-        _setLocalConfig((prevConfig) => {
+        _setLocalShortcutConfig((prevConfig) => {
           const newConfig = newConfigOrUpdateFunction(prevConfig);
           const newCollisions = checkCollisionsInShortcutMap(newConfig);
-          setCollisions(newCollisions);
+          setShortcutCollisions(newCollisions);
           return newConfig;
         });
       } else {
         const newCollisions = checkCollisionsInShortcutMap(newConfigOrUpdateFunction);
-        setCollisions(newCollisions);
-        _setLocalConfig(newConfigOrUpdateFunction);
+        setShortcutCollisions(newCollisions);
+        _setLocalShortcutConfig(newConfigOrUpdateFunction);
       }
     },
-    [_setLocalConfig, setCollisions],
+    [_setLocalShortcutConfig, setShortcutCollisions],
   );
 
-  const [jsonString, setJsonString] = useState(() => JSON.stringify(localConfig, null, 2));
+  const [jsonString, setJsonString] = useState(() => JSON.stringify(localShortcutConfig, null, 2));
   const [jsonError, setJsonError] = useState<string | null>(null);
 
   const handleRemoveComboChain = (handlerId: string, comboChain: string[][]) => {
-    setLocalConfig((prevConfig) => {
+    setLocalShortcutConfig((prevConfig) => {
       const updatedCombos = prevConfig[handlerId].filter((c) => c !== comboChain);
 
       if (updatedCombos.length > 0) {
@@ -139,7 +142,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       [KeyboardShortcutDomain.PLANE_BOUNDING_BOX_TOOL]: [],
       [KeyboardShortcutDomain.PLANE_PROOFREADING_TOOL]: [],
     };
-    Object.entries(localConfig).forEach(([handlerId, keyCombos]) => {
+    Object.entries(localShortcutConfig).forEach(([handlerId, keyCombos]) => {
       const metaInfo =
         ALL_KEYBOARD_SHORTCUT_META_INFOS[
           handlerId as keyof typeof ALL_KEYBOARD_SHORTCUT_META_INFOS
@@ -153,7 +156,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       });
     });
     return domainToEntries;
-  }, [localConfig]);
+  }, [localShortcutConfig]);
 
   const columns = [
     {
@@ -254,7 +257,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
     setJsonString(value);
     const { valid, errors, parsed } = validateShortcutMapText(value);
     if (valid && parsed) {
-      setLocalConfig(parsed);
+      setLocalShortcutConfig(parsed);
     }
     if (valid) {
       setJsonError(null);
@@ -268,15 +271,16 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       return;
     }
     try {
-      await updateKeyboardShortcutsConfig(localConfig);
+      await updateKeyboardShortcutsConfig(localShortcutConfig);
     } catch (e) {
       console.error("Failed to save keyboard shortcuts to backend.", e);
+      return;
     }
-    Store.dispatch(setKeyboardShortcutsConfigAction(localConfig));
+    dispatch(setKeyboardShortcutsConfigAction(localShortcutConfig));
     onClose();
   };
   const onReset = () => {
-    setLocalConfig(getAllDefaultKeyboardShortcuts());
+    setLocalShortcutConfig(getAllDefaultKeyboardShortcuts());
   };
 
   const shortcutsTabItems: TabsProps["items"] = [
@@ -403,14 +407,14 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
         },
       }}
     >
-      {collisions.length > 0 && (
+      {shortcutCollisions.length > 0 && (
         <Alert
           type="warning"
           style={{ marginTop: 16, marginBottom: 16 }}
           title="Shortcut Collisions Detected"
           description={
             <ul style={{ margin: 0, paddingLeft: 16 }}>
-              {collisions.map((collision, index) => {
+              {shortcutCollisions.map((collision, index) => {
                 const comboChain = collision.keyCombo.map((s) => [...s]);
                 return (
                   <li key={index}>
@@ -484,11 +488,11 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
           // Build updated map: remove any existing key(s) that pointed to this handlerId
           const updated: Record<string, KeyboardComboChain[]> = {};
           const updatedKeyComboChains = recorderEditingKeyCombo
-            ? localConfig[recorderTargetHandlerId].map((keyComboChain) =>
+            ? localShortcutConfig[recorderTargetHandlerId].map((keyComboChain) =>
                 isEqual(keyComboChain, recorderEditingKeyCombo) ? newComboChain : keyComboChain,
               )
-            : [...localConfig[recorderTargetHandlerId], newComboChain];
-          for (const [handlerId, keyComboChains] of Object.entries(localConfig)) {
+            : [...localShortcutConfig[recorderTargetHandlerId], newComboChain];
+          for (const [handlerId, keyComboChains] of Object.entries(localShortcutConfig)) {
             if (handlerId !== recorderTargetHandlerId) {
               updated[handlerId] = keyComboChains;
             }
@@ -496,7 +500,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
           // assign the new combo
           updated[recorderTargetHandlerId] = updatedKeyComboChains;
 
-          setLocalConfig(updated);
+          setLocalShortcutConfig(updated);
           setJsonString(JSON.stringify(updated, null, 2));
 
           setIsRecorderOpen(false);

@@ -261,8 +261,8 @@ class UserService @Inject()(conf: WkConf,
   def getKeyboardShortcutsConfig(userId: ObjectId): Fox[JsObject] =
     userKeyboardShortcutsConfigsDAO.findOneForUser(userId)
 
-  def updateKeyboardShortcutsConfig(user: User, shortcuts: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =
-    userKeyboardShortcutsConfigsDAO.updateForUser(user._id, shortcuts)
+  def updateKeyboardShortcutsConfig(user: User, shortcutsConfig: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =
+    userKeyboardShortcutsConfigsDAO.updateForUser(user._id, shortcutsConfig)
 
   def updateDatasetViewConfiguration(
       user: User,

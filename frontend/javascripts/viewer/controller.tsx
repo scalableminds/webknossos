@@ -23,9 +23,9 @@ import PlaneController from "viewer/controller/viewmodes/plane_controller";
 import { wkInitializedAction } from "viewer/model/actions/actions";
 import { redoAction, saveNowAction, undoAction } from "viewer/model/actions/save_actions";
 import { setIsInAnnotationViewAction } from "viewer/model/actions/ui_actions";
+import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { HANDLED_ERROR } from "viewer/model_initialization";
 import { Model } from "viewer/singletons";
-import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { TraceOrViewCommand, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import { AnnotationTool } from "./model/accessors/tool_accessor";
@@ -35,7 +35,10 @@ import {
   GeneralEditingKeyboardShortcuts,
   GeneralKeyboardShortcuts,
 } from "./view/keyboard_shortcuts/keyboard_shortcut_constants";
-import type { KeyboardShortcutNoLoopedHandlerMap } from "./view/keyboard_shortcuts/keyboard_shortcut_types";
+import type {
+  KeyboardShortcutNoLoopedHandlerMap,
+  KeyboardShortcutsMap,
+} from "./view/keyboard_shortcuts/keyboard_shortcut_types";
 import { buildKeyBindingsFromConfigAndMapping } from "./view/keyboard_shortcuts/keyboard_shortcut_utils";
 
 export type ControllerStatus = "loading" | "loaded" | "failedLoading";
@@ -335,20 +338,19 @@ class Controller extends PureComponent<PropsWithRouter, State> {
         event.preventDefault();
       }
     });
-    this.reloadKeyboardShortcuts();
     this.unsubscribeKeyboardListener = listenToStoreProperty(
       (state) => state.keyboardShortcutsConfig,
-      () => this.reloadKeyboardShortcuts(),
+      (keyboardShortcutsConfig) => this.reloadKeyboardShortcuts(keyboardShortcutsConfig),
+      true,
     );
   }
 
-  reloadKeyboardShortcuts() {
+  reloadKeyboardShortcuts(keyboardShortcutsConfig: KeyboardShortcutsMap<string>) {
     if (this.keyboardNoLoop) {
       this.keyboardNoLoop.destroy();
     }
-    const keybindingConfig = Store.getState().keyboardShortcutsConfig;
     const keyboardControls = buildKeyBindingsFromConfigAndMapping(
-      keybindingConfig,
+      keyboardShortcutsConfig,
       this.getKeyboardShortcutsHandlerMap(),
     );
 

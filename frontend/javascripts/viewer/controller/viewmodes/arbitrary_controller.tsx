@@ -57,6 +57,7 @@ import {
 import type {
   KeyboardShortcutLoopedHandlerMap,
   KeyboardShortcutNoLoopedHandlerMap,
+  KeyboardShortcutsMap,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import {
   buildKeyBindingsFromConfigAndLoopedMapping,
@@ -329,7 +330,7 @@ class ArbitraryController extends React.PureComponent<Props> {
     };
   }
 
-  reloadKeyboardShortcuts() {
+  reloadKeyboardShortcuts(keyboardShortcutsConfig: KeyboardShortcutsMap<string>) {
     if (this.input.keyboard) {
       this.input.keyboard.destroy();
     }
@@ -339,15 +340,14 @@ class ArbitraryController extends React.PureComponent<Props> {
     if (this.input.keyboardNoLoop) {
       this.input.keyboardNoLoop.destroy();
     }
-    const keybindingConfig = Store.getState().keyboardShortcutsConfig;
     const navigationKeyboardBindings = buildKeyBindingsFromConfigAndLoopedMapping(
-      keybindingConfig,
+      keyboardShortcutsConfig,
       this.getKeyboardNavigationShortcutsHandlerMap(),
     );
     this.input.keyboard = new InputKeyboard(navigationKeyboardBindings);
 
     const navigationConfigKeyboardBindings = buildKeyBindingsFromConfigAndLoopedMapping(
-      keybindingConfig,
+      keyboardShortcutsConfig,
       this.getKeyboardNavigationConfigShortcutsHandlerMap(),
     );
     // Own InputKeyboard with delay for changing the Move Value, because otherwise the values changes to drastically
@@ -356,17 +356,17 @@ class ArbitraryController extends React.PureComponent<Props> {
     });
 
     const noLoopKeyboardBindings = buildKeyBindingsFromConfigAndMapping(
-      keybindingConfig,
+      keyboardShortcutsConfig,
       this.getKeyboardNoLoopShortcutsHandlerMap(),
     );
     this.input.keyboardNoLoop = new InputKeyboardNoLoop(noLoopKeyboardBindings);
   }
 
   initKeyboard(): void {
-    this.reloadKeyboardShortcuts();
     this.unsubscribeKeyboardListener = listenToStoreProperty(
       (state) => state.keyboardShortcutsConfig,
-      () => this.reloadKeyboardShortcuts(),
+      (keyboardShortcutsConfig) => this.reloadKeyboardShortcuts(keyboardShortcutsConfig),
+      true,
     );
   }
 

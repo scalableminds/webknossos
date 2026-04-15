@@ -136,6 +136,7 @@ import {
   convertServerAdditionalAxesToFrontEnd,
   convertServerAnnotationToFrontendAnnotation,
 } from "./model/reducers/reducer_helpers";
+import { isEmpty } from "lodash-es";
 
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;
@@ -219,11 +220,8 @@ export async function initialize(
     datasetId = initialCommandType.datasetId;
   }
 
-  const [apiDataset, initialUserSettings, serverTracings] = await fetchParallel(
-    annotation,
-    datasetId,
-    version,
-  );
+  const [apiDataset, initialUserSettings, serverTracings, keyboardShortcutsConfig] =
+    await fetchParallel(annotation, datasetId, version);
   assertUsableDataset(apiDataset as StoreDataset, initialCommandType);
   maybeFixDatasetNameInURL(apiDataset, initialCommandType);
 
@@ -250,11 +248,15 @@ export async function initialize(
   );
 
   // Load keyboard shortcuts from backend; fall back to defaults if the call fails or the user is not logged in.
-  const rawShortcuts = await getKeyboardShortcutsConfig().catch(() => ({}));
-  const { valid, parsed } = validateShortcutMapText(JSON.stringify(rawShortcuts));
-  const shortcuts: KeyboardShortcutsMap<string> = valid && parsed
-    ? (parsed as KeyboardShortcutsMap<string>)
-    : getAllDefaultKeyboardShortcuts();
+  const { valid, parsed, errors } = validateShortcutMapText(
+    JSON.stringify(keyboardShortcutsConfig),
+  );
+  if (!valid && !isEmpty(keyboardShortcutsConfig)) {
+    Toast.warning(messages["users.failed_parsing_keyboard_shortcuts_config"]);
+    console.warn("Found errors while parsing user's keyboard shortcut configurations:", errors);
+  }
+  const shortcuts: KeyboardShortcutsMap<string> =
+    valid && parsed ? (parsed as KeyboardShortcutsMap<string>) : getAllDefaultKeyboardShortcuts();
   Store.dispatch(setKeyboardShortcutsConfigAction(shortcuts));
 
   let initializationInformation = null;
@@ -329,11 +331,12 @@ async function fetchParallel(
   annotation: APIAnnotation | null | undefined,
   datasetId: string,
   version: number | undefined | null,
-): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>]> {
+): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>, KeyboardShortcutsMap<string>]> {
   return Promise.all([
     getDataset(datasetId, getSharingTokenFromUrlParameters()),
     getUserConfiguration(), // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
     annotation ? getTracingsForAnnotation(annotation, version) : [],
+    getKeyboardShortcutsConfig(),
   ]);
 }
 

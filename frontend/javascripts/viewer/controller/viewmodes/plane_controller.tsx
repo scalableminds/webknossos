@@ -54,6 +54,7 @@ import { getDefaultBrushSizes } from "viewer/view/action_bar/tools/brush_presets
 import type {
   KeyboardShortcutLoopedHandlerMap,
   KeyboardShortcutNoLoopedHandlerMap,
+  KeyboardShortcutsMap,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import {
   buildKeyBindingsFromConfigAndLoopedMapping,
@@ -369,29 +370,27 @@ class PlaneController extends PureComponent<Props> {
     } as KeyboardShortcutNoLoopedHandlerMap<PlaneControllerNoLoopGeneralKeyboardShortcuts>;
   }
 
-  reloadKeyboardShortcuts() {
+  reloadKeyboardShortcuts(keyboardShortcutsConfig: KeyboardShortcutsMap<string>) {
     // destroy existing keyboards
     this.input.keyboard?.destroy();
     this.input.keyboardLoopDelayed?.destroy();
     this.input.keyboardNoLoop?.destroy();
 
-    const keybindingConfig = Store.getState().keyboardShortcutsConfig;
-
     // looped keyboard
     const loopedControllerBindings = buildKeyBindingsFromConfigAndLoopedMapping(
-      keybindingConfig,
+      keyboardShortcutsConfig,
       this.getLoopedHandlerMap(),
     );
     this.input.keyboard = new InputKeyboard(loopedControllerBindings);
 
     const toolDependentLoopedBindings = buildKeyBindingsFromConfigAndLoopedMappingForTools(
-      keybindingConfig,
+      keyboardShortcutsConfig,
       AllLoopDelayedToolKeyboardControls,
     );
 
     // delayed looped keyboard
     const delayedControllerBindings = buildKeyBindingsFromConfigAndLoopedMapping(
-      keybindingConfig,
+      keyboardShortcutsConfig,
       this.getLoopDelayedHandlerMap(),
     );
     const withAdditionalActions: KeyBindingLoopMap = {
@@ -409,11 +408,11 @@ class PlaneController extends PureComponent<Props> {
 
     // no-loop keyboard
     const noLoopControllerBindings = buildKeyBindingsFromConfigAndMapping(
-      keybindingConfig,
+      keyboardShortcutsConfig,
       this.getNoLoopHandlerMap(),
     );
     const toolDependentNoLoopedBindings = buildKeyBindingsFromConfigAndMappingForTools(
-      keybindingConfig,
+      keyboardShortcutsConfig,
       AllNoLoopedToolKeyboardControls,
     );
 
@@ -434,13 +433,11 @@ class PlaneController extends PureComponent<Props> {
       }
     });
 
-    // create keyboards from persisted config
-    this.reloadKeyboardShortcuts();
-
     // register refresh listener: reload whenever the store's keyboard shortcuts change
     this.unsubscribeKeyboardListener = listenToStoreProperty(
       (state) => state.keyboardShortcutsConfig,
-      () => this.reloadKeyboardShortcuts(),
+      (keyboardShortcutsConfig) => this.reloadKeyboardShortcuts(keyboardShortcutsConfig),
+      true,
     );
 
     // keep existing listener for keyboardDelay change

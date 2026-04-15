@@ -106,6 +106,7 @@ import type {
   UserConfiguration,
   VolumeTracing,
 } from "viewer/store";
+import type { KeyboardShortcutsMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import { assertResponseLimit } from "./api/api_utils";
 import { getDatasetIdFromNameAndOrganization } from "./api/disambiguate_legacy_routes";
 import { getOrganization } from "./api/organization";
@@ -1654,11 +1655,13 @@ export function updateUserConfiguration(
   });
 }
 
-export function getKeyboardShortcutsConfig(): Promise<Record<string, string[][][]>> {
+export function getKeyboardShortcutsConfig(): Promise<KeyboardShortcutsMap<string>> {
   return Request.receiveJSON("/api/user/keyboardShortcutsConfig");
 }
 
-export function updateKeyboardShortcutsConfig(shortcuts: Record<string, string[][][]>): Promise<void> {
+export function updateKeyboardShortcutsConfig(
+  shortcuts: KeyboardShortcutsMap<string>,
+): Promise<void> {
   return Request.sendJSONReceiveJSON("/api/user/keyboardShortcutsConfig", {
     method: "PUT",
     data: shortcuts,

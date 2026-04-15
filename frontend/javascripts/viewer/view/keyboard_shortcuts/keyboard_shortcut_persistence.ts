@@ -1,9 +1,9 @@
 import { Validator } from "jsonschema";
+import Store from "viewer/store";
 import {
   ALL_KEYBOARD_HANDLER_IDS,
   getAllDefaultKeyboardShortcuts,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
-import Store from "viewer/store";
 import type { KeyboardShortcutsMap } from "./keyboard_shortcut_types";
 
 export const KeyboardShortcutsSchema = {
@@ -61,9 +61,7 @@ export function validateShortcutMapText(input: string): {
 }
 
 /**
- * Load keyboard shortcuts from the Redux store.
- * The store is populated from the backend on viewer initialization.
- * Falls back to defaults when the store value is not yet populated.
+ * Load keyboard shortcuts from the store.
  */
 export function loadKeyboardShortcuts(): KeyboardShortcutsMap<string> {
   const state = Store.getState();

@@ -9,12 +9,7 @@ import { setIdReservationsAction } from "../actions/volumetracing_actions";
 import { getMaximumGroupId } from "../reducers/skeletontracing_reducer_helpers";
 import { type Saga, select } from "./effect_generators";
 
-/*
- * todop:
- * - handle non collab case
- */
-
-const IDEAL_ID_BUFFER_SIZE = 5; // todo: maybe 10?
+const IDEAL_ID_BUFFER_SIZE = 5;
 
 export default function* idReservationSaga(): Saga<void> {
   yield* call(ensureWkInitialized);
@@ -102,21 +97,33 @@ function* fetchNewReservations(action: GetNewIdAction) {
 
   const unfilteredReservations = tracing.idReservations[domain];
   const usableReservations = getUsableReservations(tracing, domain);
+  const numberOfIdsToReserve = Math.max(1, IDEAL_ID_BUFFER_SIZE - usableReservations.length);
 
-  const annotationId = yield* select((state) => state.annotation.annotationId);
-  const idsToRelease: number[] = without(
-    unfilteredReservations.map(({ id }) => id),
-    ...usableReservations.map(({ id }) => id),
-  );
+  const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
+  let newIds: number[];
 
-  const newIds = yield* call(
-    reserveIdsForAnnotation,
-    annotationId,
-    tracingId,
-    domain,
-    Math.max(1, IDEAL_ID_BUFFER_SIZE - usableReservations.length),
-    idsToRelease,
-  );
+  if (collaborationMode === "Concurrent") {
+    const annotationId = yield* select((state) => state.annotation.annotationId);
+    const idsToRelease: number[] = without(
+      unfilteredReservations.map(({ id }) => id),
+      ...usableReservations.map(({ id }) => id),
+    );
+    newIds = yield* call(
+      reserveIdsForAnnotation,
+      annotationId,
+      tracingId,
+      domain,
+      numberOfIdsToReserve,
+      idsToRelease,
+    );
+  } else {
+    const maxGroupId = getMaximumGroupId(tracing.segmentGroups);
+    const maxReservationId =
+      unfilteredReservations.length > 0 ? Math.max(...unfilteredReservations.map((r) => r.id)) : 0;
+    const startId = Math.max(maxGroupId, maxReservationId) + 1;
+    newIds = Array.from({ length: numberOfIdsToReserve }, (_, i) => startId + i);
+  }
+
   yield* put(
     setIdReservationsAction(tracingId, domain, [
       ...usableReservations,

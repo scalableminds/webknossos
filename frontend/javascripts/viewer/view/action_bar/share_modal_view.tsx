@@ -60,6 +60,7 @@ import {
   mayEditAnnotationProperties,
 } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
+import { hasEditableMapping } from "viewer/model/accessors/volumetracing_accessor";
 import {
   setAnnotationVisibilityAction,
   setCollaborationModeAction,
@@ -306,7 +307,7 @@ function _ShareModalView(props: Props) {
     }
   };
 
-  const handleWhoCanEditRadioGroup = async (event: RadioChangeEvent) => {
+  const handleOthersCanEditCheckboxChange = async (event: RadioChangeEvent) => {
     const value = event.target.value;
     if (typeof value !== "boolean") {
       throw new Error("Form element should return boolean value.");
@@ -336,6 +337,12 @@ function _ShareModalView(props: Props) {
 
   const handleConcurrentEditingCheckboxChange = async (event: CheckboxChangeEvent) => {
     const value = event.target.checked;
+    if (value && !hasEditableMapping(Store.getState())) {
+      Toast.warning(
+        "Concurrent editing is currently only supported for proofreading annotations. Please select a mapping and perform one proofreading action. Afterwards, you may select the Concurrent mode.",
+      );
+      return;
+    }
     setIsChangingInProgress(true);
     setNewAllowConcurrentEditing(value);
     if (value !== allowConcurrentEditing) {
@@ -524,11 +531,13 @@ function _ShareModalView(props: Props) {
           </Col>
           <Col span={18}>
             <RadioGroup
-              onChange={handleWhoCanEditRadioGroup}
+              onChange={handleOthersCanEditCheckboxChange}
               value={newOthersMayEdit}
               disabled={isChangingInProgress}
             >
-              <Radio disabled={!hasUpdatePermissions}>No, keep it read-only</Radio>
+              <Radio value={false} disabled={!hasUpdatePermissions}>
+                No, keep it read-only
+              </Radio>
               <Hint
                 style={{
                   marginLeft: 24,

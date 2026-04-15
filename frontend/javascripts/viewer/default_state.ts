@@ -200,6 +200,7 @@ const defaultState: WebknossosState = {
       activeMappingByLayer: {},
       isRebasingOrForwarding: false,
     },
+    proofreadingPostProcessingInfo: null,
   },
   flycam: {
     zoomStep: 1.3,

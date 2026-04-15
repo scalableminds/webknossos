@@ -15,7 +15,7 @@ import compact from "lodash-es/compact";
 import noop from "lodash-es/noop";
 import sortBy from "lodash-es/sortBy";
 import { getAdministrationSubMenu, getAnalysisSubMenu, switchTo } from "navbar";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { type ReactElement, useCallback, useEffect, useMemo, useState } from "react";
 import ReactCommandPalette, { type Command } from "react-command-palette";
 import { useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -98,7 +98,7 @@ const shortCutDictForTools: Record<string, string> = {
   [AnnotationTool.PROOFREAD.id]: "Ctrl + K, O",
 };
 
-export const CommandPalette = ({ label }: { label: string | JSX.Element | null }) => {
+export const CommandPalette = ({ label }: { label: string | ReactElement | null }) => {
   const dispatch = useDispatch();
 
   const userConfig = useWkSelector((state) => state.userConfiguration);

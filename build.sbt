@@ -3,6 +3,7 @@ import sbt._
 ThisBuild / version := "wk"
 ThisBuild / scalaVersion := "2.13.18"
 ThisBuild / scapegoatVersion := "3.3.1"
+
 val failOnWarning = if (sys.props.contains("failOnWarning")) Seq("-Xfatal-warnings") else Seq()
 ThisBuild / scalacOptions ++= Seq(
   "-release:11",
@@ -33,13 +34,15 @@ PlayKeys.devSettings := Seq("play.server.pekko.requestTimeout" -> "10000s", "pla
 // Disable unused import warnings, only in sbt console REPL
 Compile / console / scalacOptions -= "-Xlint:unused"
 
-scapegoatIgnoredFiles := Seq(".*/Tables.scala", ".*/Routes.scala", ".*/.*mail.*template\\.scala")
-scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods")
-
 lazy val commonSettings = Seq(
   resolvers ++= Dependencies.dependencyResolvers,
   Compile / doc / sources := Seq.empty,
   Compile / packageDoc / publishArtifact := false,
+  scapegoatIgnoredFiles := Seq(".*/Tables.scala",
+                               ".*/Routes.scala",
+                               ".*/.*mail.*template\\.scala",
+                               ".*/src_managed/.*"),
+  scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods"),
 )
 
 lazy val protocolBufferSettings = Seq(

@@ -60,7 +60,7 @@ trait DataConverter extends FoxImplicits {
         case d: Array[Short] => d.filter(_ != zeroShort)
         case d: Array[Int]   => d.filter(_ != zeroInt)
         case d: Array[Long]  => d.filter(_ != zeroLong)
-        case d: Array[Float] => d.filter(!_.isNaN).filter(_ != 0f)
+        case d: Array[Float] => d.filter(!_.isNaN).filter(v => math.abs(v) >= 1e-7f)
       }
     }
 

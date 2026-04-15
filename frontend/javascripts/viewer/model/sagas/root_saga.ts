@@ -16,7 +16,7 @@ import SkeletontracingSagas from "viewer/model/sagas/skeletontracing_saga";
 import watchTasksAsync, { warnAboutMagRestriction } from "viewer/model/sagas/task_saga";
 import UndoSaga from "viewer/model/sagas/undo_saga";
 import MappingSaga from "viewer/model/sagas/volume/mapping_saga";
-import ProofreadSaga from "viewer/model/sagas/volume/proofread_saga";
+import ProofreadSaga from "viewer/model/sagas/volume/proofreading/proofread_saga";
 import VolumetracingSagas from "viewer/model/sagas/volumetracing_saga";
 import type { EscalateErrorAction } from "../actions/actions";
 import { setIsWkInitializedAction } from "../actions/ui_actions";

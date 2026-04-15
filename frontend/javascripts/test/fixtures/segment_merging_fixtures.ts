@@ -1,3 +1,4 @@
+import { getPositionForSegmentId } from "test/sagas/proofreading/proofreading_test_utils";
 import { updateSegmentAction } from "viewer/model/actions/volumetracing_actions";
 import type { Segment, WebknossosState } from "viewer/store";
 import { VOLUME_TRACING_ID } from "./volumetracing_server_objects";
@@ -8,7 +9,7 @@ export const createAction = (id: number, properties: Partial<Segment>) =>
   updateSegmentAction(
     id,
     {
-      anchorPosition: [id, id, id],
+      anchorPosition: getPositionForSegmentId(id),
       groupId: id,
       ...properties,
     },

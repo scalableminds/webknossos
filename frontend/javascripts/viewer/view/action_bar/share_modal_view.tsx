@@ -344,11 +344,6 @@ function _ShareModalView(props: Props) {
     ) : null;
   };
 
-  const radioStyle = {
-    display: "block",
-    height: "30px",
-    lineHeight: "30px",
-  };
   const iconMap = {
     Public: <GlobalOutlined />,
     Internal: <TeamOutlined />,
@@ -418,7 +413,7 @@ function _ShareModalView(props: Props) {
             value={visibility}
             disabled={isChangingInProgress}
           >
-            <Radio style={radioStyle} value="Private" disabled={!hasUpdatePermissions}>
+            <Radio value="Private" disabled={!hasUpdatePermissions}>
               Private
             </Radio>
             <Hint
@@ -429,7 +424,7 @@ function _ShareModalView(props: Props) {
               Only you and your team manager can view this annotation.
             </Hint>
 
-            <Radio style={radioStyle} value="Internal" disabled={!hasUpdatePermissions}>
+            <Radio value="Internal" disabled={!hasUpdatePermissions}>
               Internal
             </Radio>
             <Hint
@@ -442,7 +437,7 @@ function _ShareModalView(props: Props) {
               and copy it to their accounts to edit it.
             </Hint>
 
-            <Radio style={radioStyle} value="Public" disabled={!hasUpdatePermissions}>
+            <Radio value="Public" disabled={!hasUpdatePermissions}>
               Public
             </Radio>
             <Hint
@@ -505,7 +500,7 @@ function _ShareModalView(props: Props) {
               value={newOthersMayEdit}
               disabled={isChangingInProgress}
             >
-              <Radio style={radioStyle} value={false} disabled={!hasUpdatePermissions}>
+              <Radio value={false} disabled={!hasUpdatePermissions}>
                 No, keep it read-only
               </Radio>
               <Hint
@@ -516,7 +511,7 @@ function _ShareModalView(props: Props) {
                 Only you can edit the content of this annotation.
               </Hint>
 
-              <Radio style={radioStyle} value disabled={!hasUpdatePermissions}>
+              <Radio value disabled={!hasUpdatePermissions}>
                 Yes, allow editing
               </Radio>
               <Hint

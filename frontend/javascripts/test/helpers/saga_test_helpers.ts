@@ -27,7 +27,7 @@ export function execCall(expect: ExpectStatic, block: any) {
 }
 
 export function* waitUntilNotBusy(): Saga<void> {
-  const isBusy = yield select((state) => state.uiInformation.busyBlockingInfo.isBusy);
+  const isBusy = yield* select((state) => state.uiInformation.busyBlockingInfo.isBusy);
   if (!isBusy) {
     return;
   }

@@ -45,6 +45,7 @@ The `Segments` tab is for managing volume annotations. It lists all the segments
 The `BBoxes` tab lists all the bounding boxes in the annotation. From here, you can:
 
 - **Create and Delete:** Add new bounding boxes or remove existing ones.
+- **Generate:** Use the grid icon button to automatically place a set of bounding boxes at random positions across the dataset. This is useful when preparing ground truth data for [AI model training](../automation/ai_training.md). You can configure the number of boxes and their size, and generated boxes are guaranteed not to overlap each other.
 - **Navigate:** Jump to a specific bounding box in the viewport.
 - **Rename:** Change the name of a bounding box.
 

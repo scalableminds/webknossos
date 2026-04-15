@@ -9,7 +9,6 @@ import { call, delay, put, take } from "typed-redux-saga";
 import type { Vector3 } from "viewer/constants";
 import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
 import type { Action } from "viewer/model/actions/actions";
-import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import {
   minCutAgglomerateWithPositionAction,
   proofreadMergeAction,
@@ -61,6 +60,7 @@ import {
   makeMappingEditableForTest,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
+import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 
 const ACTION_TYPES_BLACKLIST = ["updateCamera", "updateMappingName", "updateActiveSegmentId"];
 const ACTION_TYPES_TREE_LOADING = ["createTree", "createNode", "createEdge"];
@@ -87,7 +87,7 @@ function removeBlacklistedActions(
 
 describe("Proofreading should generate correct update actions", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
-    await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, false, "hybrid");
+    await setupWebknossosForTestingWithRestrictions(context, "OwnerOnly", true, false, "hybrid");
   });
 
   afterEach<WebknossosTestContext>(async (context) => {
@@ -116,6 +116,7 @@ describe("Proofreading should generate correct update actions", () => {
       );
       yield put(setActiveCellAction(agglomerateId));
       yield makeMappingEditableForTest();
+      // todop: isn't it weird to have this as a side-effect of loadAgglomerateSkeleton() ?
       yield put(setCollaborationModeAction("Concurrent"));
 
       vi.mocked(context.mocks.parseProtoTracing).mockRestore();
@@ -154,7 +155,8 @@ describe("Proofreading should generate correct update actions", () => {
       yield put(setActiveCellAction(sourceAgglomerateId));
       yield makeMappingEditableForTest();
       if (othersMayEdit) {
-        yield put(setCollaborationModeAction("Concurrent"));
+        // todop: the param seems unused?
+        // yield put(setCollaborationModeAction("Concurrent"));
       }
 
       if (skeletonsToLoad.length > 0) {
@@ -204,7 +206,8 @@ describe("Proofreading should generate correct update actions", () => {
       yield put(setActiveCellAction(sourceAgglomerateId));
       yield makeMappingEditableForTest();
       if (othersMayEdit) {
-        yield put(setCollaborationModeAction("Concurrent"));
+        // todop: the param seems unused?
+        // yield put(setCollaborationModeAction("Concurrent"));
       }
 
       if (skeletonsToLoad.length > 0) {

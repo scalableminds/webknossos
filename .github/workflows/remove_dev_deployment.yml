@@ -1,0 +1,23 @@
+name: Remove Dev Deployment on PR Merge
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  remove-dev-deployment:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Derive TAG_NAME from branch name
+        run: |
+          TAG_NAME=$(echo "${{ github.head_ref }}" | sed 's/[\/-]/_/g')
+          echo "TAG_NAME=$TAG_NAME" >> $GITHUB_ENV
+          echo "Tag name: $TAG_NAME"
+
+      - name: Remove dev-deployment
+        run: |
+          curl -X POST \
+            -H "X-Auth-Token: ${{ secrets.RELEASE_API_TOKEN }}" \
+            "https://kubernetix.scm.io/hooks/remove/webknossos/dev/${{ env.TAG_NAME }}?user=CI+%28PR+merge%29"

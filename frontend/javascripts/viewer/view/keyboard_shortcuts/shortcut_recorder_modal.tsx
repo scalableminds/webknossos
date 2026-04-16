@@ -55,6 +55,49 @@ export const CollisionWarningAlert: React.FC<CollisionWarningAlertProps> = ({
 
 const SampleKeyCombo: KeyboardComboChain = [["Control", "a"], ["o"]];
 
+// Derive a layout-independent key identifier from a keyboard event.
+// - Modifier keys (Shift, Control, Alt, Meta) are returned as-is.
+// - ASCII letter keys use e.code ("KeyJ" → "j") so Shift+j stays "j", not "J".
+// - Digit keys use e.code ("Digit2" → "2") so Shift+2 stays "2" on any layout.
+// - Non-ASCII letter keys (ü, ö, ä, ß, …) are normalized to lowercase so that
+//   Shift+ü records as "ü", not "Ü".
+// - Dead keys (e.g. ^ on German keyboards fires e.key === "Dead") are resolved to
+//   their base character via an e.code lookup table.
+// - F-keys, Enter, Space, arrows, and all remaining named keys fall back to e.key.
+function getKeyIdentifier(e: KeyboardEvent): string {
+  if (["Shift", "Control", "Alt", "Meta"].includes(e.key)) {
+    return e.key;
+  }
+  // ASCII letters: always lowercase regardless of Shift
+  const letterMatch = e.code.match(/^Key([A-Z])$/);
+  if (letterMatch) {
+    return letterMatch[1].toLowerCase();
+  }
+  // Digits: always the digit character regardless of Shift
+  const digitMatch = e.code.match(/^Digit([0-9])$/);
+  if (digitMatch) {
+    return digitMatch[1];
+  }
+  // Non-ASCII single-character letter keys (ü, ö, ä, ß, é, …):
+  // toLowerCase() !== toUpperCase() is true for any cased letter.
+  if (e.key.length === 1 && e.key.toLowerCase() !== e.key.toUpperCase()) {
+    return e.key.toLowerCase();
+  }
+  // Dead keys: certain sign keys act as dead keys on some layouts and fire
+  // e.key === "Dead" instead of the actual character (e.g. ^ on German keyboards).
+  // Resolve them to the base character via their physical key code.
+  if (e.key === "Dead") {
+    const deadKeyCharMap: Partial<Record<string, string>> = {
+      Backquote: "^", // ^ on German keyboard (shifted: °)
+      Equal: "´", // ´ acute-accent dead key on German keyboard
+    };
+    return deadKeyCharMap[e.code] ?? e.code;
+  }
+  // All other keys: single printable sign characters (+, #, -, ., ,, …),
+  // F-keys, Enter, Space, arrows, etc. — use e.key directly.
+  return e.key;
+}
+
 type ShortcutRecorderModalProps = {
   keyboardShortcutConfig: KeyboardShortcutsMap<string>;
   handlerId: string | null; // The handlerId for which the shortcut should be added.
@@ -119,7 +162,7 @@ export function ShortcutRecorderModal({
       e.preventDefault();
       e.stopPropagation();
 
-      const pressedKeyId = e.key;
+      const pressedKeyId = getKeyIdentifier(e);
 
       // ignore repeated keydown for held keys (auto-repeat)
       if (currentDownSetRef.current.has(pressedKeyId)) {
@@ -142,7 +185,7 @@ export function ShortcutRecorderModal({
       e.preventDefault();
       e.stopPropagation();
 
-      const pressedKeyId = e.key;
+      const pressedKeyId = getKeyIdentifier(e);
 
       // Remove from currentDown
       currentDownSetRef.current.delete(pressedKeyId);

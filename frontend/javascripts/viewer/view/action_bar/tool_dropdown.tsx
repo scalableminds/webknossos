@@ -20,7 +20,6 @@ export const ToolDropdown = () => {
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
   const showAllTools = isWiderScreen || toolkit === Toolkit.READ_ONLY_TOOLS || isViewMode;
-  // todo_c
   if (showAllTools) return null;
   return (
     <ToolRadioButton name="More tools" value={null} style={NARROW_BUTTON_STYLE}>

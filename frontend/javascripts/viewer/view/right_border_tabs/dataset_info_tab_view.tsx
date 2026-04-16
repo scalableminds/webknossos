@@ -92,9 +92,10 @@ const getShortcuts = (
   isInPlaneMode: boolean,
 ): ShortcutInfo[] => {
   const toUiElement = (keyboardShortcutHandlerId: AnyKeyboardHandlerId) =>
-    keyboardShortcutsConfig[keyboardShortcutHandlerId].map((keyCombo) =>
-      keyComboChainToUiElements(keyCombo, true),
-    );
+    keyboardShortcutsConfig[keyboardShortcutHandlerId].map((keyCombo) => {
+      const capitalizedKeyCombo = keyCombo.map((keys) => keys.map((key) => key.toUpperCase()));
+      return keyComboChainToUiElements(capitalizedKeyCombo, true);
+    });
   return [
     {
       key: "1",
@@ -136,18 +137,18 @@ const getShortcuts = (
         "or",
         isInPlaneMode
           ? toUiElement(
-              PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_FORWARD_DIRECTION_AWARE,
-            )
-          : toUiElement(
-              ArbitraryControllerNavigationKeyboardShortcuts.MOVE_FORWARD_WITHOUT_RECORDING,
-            ),
-        "/",
-        isInPlaneMode
-          ? toUiElement(
               PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_BACKWARD_DIRECTION_AWARE,
             )
           : toUiElement(
               ArbitraryControllerNavigationKeyboardShortcuts.MOVE_BACKWARD_WITHOUT_RECORDING,
+            ),
+        "/",
+        isInPlaneMode
+          ? toUiElement(
+              PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_FORWARD_DIRECTION_AWARE,
+            )
+          : toUiElement(
+              ArbitraryControllerNavigationKeyboardShortcuts.MOVE_FORWARD_WITHOUT_RECORDING,
             ),
       ],
       action: "Move Along 3rd Axis",

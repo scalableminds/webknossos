@@ -1,10 +1,26 @@
+import AreaMeasurementIcon from "@images/icons/icon-area-measurement.svg?react";
+import BoundingBoxIcon from "@images/icons/icon-bounding-box.svg?react";
+import BrushIcon from "@images/icons/icon-brush.svg?react";
+import EraserBrushIcon from "@images/icons/icon-eraser-brush.svg?react";
+import EraserLassoIcon from "@images/icons/icon-eraser-lasso.svg?react";
+import FillIcon from "@images/icons/icon-fill.svg?react";
+import LassoIcon from "@images/icons/icon-lasso.svg?react";
+import LineMeasurementIcon from "@images/icons/icon-line-measurement.svg?react";
+import MoveIcon from "@images/icons/icon-move.svg?react";
+import PipetteIcon from "@images/icons/icon-pipette.svg?react";
+import ProofreadingIcon from "@images/icons/icon-proofreading.svg?react";
+import QuickSelectToolIcon from "@images/icons/icon-quick-select.svg?react";
+import SkeletonIcon from "@images/icons/icon-skeleton.svg?react";
 import without from "lodash-es/without";
+import type { FunctionComponent } from "react";
 
 abstract class AbstractAnnotationTool {
   static id: keyof typeof _AnnotationToolHelper;
   static readableName: string;
   static hasOverwriteCapabilities: boolean = false;
   static hasInterpolationCapabilities: boolean = false;
+  static icon: FunctionComponent | null = null;
+  static description: string | null = null;
 }
 
 export type AnnotationToolId = (typeof AbstractAnnotationTool)["id"];
@@ -28,63 +44,96 @@ const _AnnotationToolHelper = {
 class MoveTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.MOVE;
   static readableName = "Move Tool";
+  static icon = MoveIcon;
+  static description = "Use left-click to move around and right-click to open a context menu.";
 }
 class SkeletonTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.SKELETON;
   static readableName = "Skeleton Tool";
+  static icon = SkeletonIcon;
+  static description =
+    "Use left-click to move around or to create/select/move nodes. Right-click opens a context menu with further options.";
 }
 class BrushTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.BRUSH;
   static readableName = "Brush Tool";
   static hasOverwriteCapabilities = true;
   static hasInterpolationCapabilities = true;
+  static icon = BrushIcon;
+  static description =
+    "Draw over the voxels you would like to label. Adjust the brush size with Shift + Mousewheel.";
 }
 class EraseBrushTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.ERASE_BRUSH;
   static readableName = "Erase Tool (via Brush)";
   static hasOverwriteCapabilities = true;
+  static icon = EraserBrushIcon;
+  static description =
+    "Erase the voxels by brushing over them. Adjust the brush size with Shift + Mousewheel.";
 }
 class TraceTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.TRACE;
   static readableName = "Trace Tool";
   static hasOverwriteCapabilities = true;
   static hasInterpolationCapabilities = true;
+  static icon = LassoIcon;
+  static description = "Draw outlines around the voxels you would like to label.";
 }
 class EraseTraceTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.ERASE_TRACE;
   static readableName = "Erase Tool";
   static hasOverwriteCapabilities = true;
+  static icon = EraserLassoIcon;
+  static description = "Draw outlines around the voxel you would like to erase.";
 }
 
 class FillCellTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.FILL_CELL;
   static readableName = "Fill Tool";
+  static icon = FillIcon;
+  static description = "Flood-fill the clicked region.";
 }
 class VoxelPipetteTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.VOXEL_PIPETTE;
   static readableName = "Voxel Pipette Tool";
+  static icon = PipetteIcon;
+  static description =
+    "Inspect a voxel by showing the data values per layer in a tooltip. Clicking on a voxel will pin the tooltip to make the values selectable with the mouse cursor.";
 }
 class QuickSelectTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.QUICK_SELECT;
   static readableName = "Quick Select Tool";
   static hasOverwriteCapabilities = true;
   static hasInterpolationCapabilities = true;
+  static icon = QuickSelectToolIcon;
+  static description =
+    "Click on a segment or draw a rectangle around it to automatically detect it";
 }
 class BoundingBoxTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.BOUNDING_BOX;
   static readableName = "Bounding Box Tool";
+  static icon = BoundingBoxIcon;
+  static description = "Create, resize and modify bounding boxes.";
 }
 class ProofreadTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.PROOFREAD;
   static readableName = "Proofreading Tool";
+  static icon = ProofreadingIcon;
+  static description =
+    "Modify an agglomerated segmentation. Other segmentation modifications, like brushing, are not allowed if this tool is used.";
 }
 class LineMeasurementTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.LINE_MEASUREMENT;
   static readableName = "Measurement Tool";
+  static icon = LineMeasurementIcon;
+  static description = "Measure distances with connected lines by using Left Click.";
 }
 class AreaMeasurementTool extends AbstractAnnotationTool {
   static id = _AnnotationToolHelper.AREA_MEASUREMENT;
   static readableName = "Area Measurement Tool";
+  static icon = AreaMeasurementIcon;
+  static description =
+    "Measure areas by using Left Drag. Avoid self-crossing polygon structure for accurate results.";
 }
 
 export const AnnotationTool = {

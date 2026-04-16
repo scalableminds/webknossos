@@ -368,7 +368,8 @@ function UserListView() {
           }}
           onChange={(_pagination, filters) => {
             // @ts-expect-error ts-migrate(2322) FIXME: Type 'FilterValue' is not assignable to type '("tr... Remove this comment to see the full error(message)
-            const newFilter: ActivationFilterType = filters.isActive != null ? filters.isActive : [];
+            const newFilter: ActivationFilterType =
+              filters.isActive != null ? filters.isActive : [];
             setActivationFilter(newFilter);
             persistence.persist({ searchQuery, activationFilter: newFilter });
           }}

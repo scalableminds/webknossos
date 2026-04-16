@@ -54,8 +54,8 @@ function TaskTypeListView() {
     refetchOnWindowFocus: false,
   });
 
-  const [searchQuery, setSearchQuery] = useState(
-    () => (initialSearchValue !== "" ? initialSearchValue : persistence.load().searchQuery || ""),
+  const [searchQuery, setSearchQuery] = useState(() =>
+    initialSearchValue !== "" ? initialSearchValue : persistence.load().searchQuery || "",
   );
   const [isLoadingMutation, setIsLoadingMutation] = useState(false);
 

@@ -94,8 +94,8 @@ function ProjectListView() {
   });
   const taskTypeName = taskType?.summary;
 
-  const [searchQuery, setSearchQuery] = useState(
-    () => (initialSearchValue !== "" ? initialSearchValue : persistence.load().searchQuery || ""),
+  const [searchQuery, setSearchQuery] = useState(() =>
+    initialSearchValue !== "" ? initialSearchValue : persistence.load().searchQuery || "",
   );
   const [isLoadingMutation, setIsLoadingMutation] = useState(false);
   const [isTransferTasksVisible, setIsTransferTasksVisible] = useState(false);

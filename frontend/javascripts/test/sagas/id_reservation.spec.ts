@@ -4,11 +4,8 @@ import {
   setupWebknossosForTestingWithRestrictions,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
-import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
-import {
-  setIdReservationsAction,
-  setSegmentGroupsAction,
-} from "viewer/model/actions/volumetracing_actions";
+import { dispatchGetNewIdAsync, setIdReservationsAction } from "viewer/model/actions/actions";
+import { setSegmentGroupsAction } from "viewer/model/actions/volumetracing_actions";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";

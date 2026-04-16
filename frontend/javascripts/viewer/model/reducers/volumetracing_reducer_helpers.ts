@@ -60,13 +60,15 @@ import {
 import type { TreeGroup } from "../types/tree_types";
 import { sanitizeMetadata } from "./skeletontracing_reducer";
 import { forEachGroups } from "./skeletontracing_reducer_helpers";
+import type { SetIdReservationsAction } from "../actions/actions";
 
 export type VolumeTracingReducerAction =
   | VolumeTracingAction
   | SetMappingAction
   | FinishMappingInitializationAction
   | SetMappingEnabledAction
-  | SetMappingNameAction;
+  | SetMappingNameAction
+  | SetIdReservationsAction;
 
 export function updateVolumeTracing(
   state: WebknossosState,

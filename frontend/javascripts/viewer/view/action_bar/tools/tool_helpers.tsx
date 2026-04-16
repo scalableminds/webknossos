@@ -19,7 +19,7 @@ export function RadioButtonWithTooltip({
   onMouseEnter,
   ...props
 }: {
-  title: string;
+  title: string | null;
   disabledTitle?: string;
   disabled?: boolean;
   children: React.ReactNode;
@@ -65,7 +65,7 @@ export function ToolRadioButton({
   ...props
 }: {
   name: string;
-  description: string;
+  description?: string;
   disabledExplanation?: string;
   disabled?: boolean;
   children: React.ReactNode;
@@ -76,7 +76,7 @@ export function ToolRadioButton({
 }) {
   return (
     <RadioButtonWithTooltip
-      title={`${name} – ${description}`}
+      title={description != null ? `${name} – ${description}` : null}
       disabledTitle={`${name} – ${disabledExplanation}`}
       onMouseEnter={onMouseEnter}
       {...props}

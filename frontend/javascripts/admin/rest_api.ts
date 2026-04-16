@@ -1024,7 +1024,7 @@ export async function getIdReservationsForAnnotation(
   const params = new URLSearchParams({ tracingId, domain });
 
   const ids: number[] = await Request.receiveJSON(
-    `api/annotations/${annotationId}/reservedIds?${params}`,
+    `/api/annotations/${annotationId}/reservedIds?${params}`,
   );
   return ids;
 }
@@ -1040,7 +1040,7 @@ export async function reserveIdsForAnnotation(
    * Will newly reserved ids for the specified domain.
    */
   const ids: number[] = await Request.sendJSONReceiveJSON(
-    `api/annotations/${annotationId}/reserveIds`,
+    `/api/annotations/${annotationId}/reserveIds`,
     {
       data: {
         domain,

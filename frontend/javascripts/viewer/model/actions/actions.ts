@@ -20,6 +20,9 @@ import type { VolumeTracingAction } from "viewer/model/actions/volumetracing_act
 
 export type EscalateErrorAction = ReturnType<typeof escalateErrorAction>;
 export type GetNewIdAction = ReturnType<typeof getNewIdAction>;
+export type SetIdReservationsAction = ReturnType<typeof setIdReservationsAction>;
+export type RequestIdReplenishmentAction = ReturnType<typeof requestIdReplenishmentAction>;
+export type IdsReplenishedAction = ReturnType<typeof idsReplenishedAction>;
 
 export type Action =
   | SkeletonTracingAction
@@ -45,7 +48,10 @@ export type Action =
   | ReturnType<typeof resetStoreAction>
   | ReturnType<typeof cancelSagaAction>
   | EscalateErrorAction
-  | GetNewIdAction;
+  | GetNewIdAction
+  | SetIdReservationsAction
+  | RequestIdReplenishmentAction
+  | IdsReplenishedAction;
 
 // This action indicates that webknossos was initialized successfully, meaning all relevant data
 // was fetched and the controllers, sagas and keyboard handlers were initialized.
@@ -110,3 +116,32 @@ export const dispatchGetNewIdAsync = async (
   dispatch(action);
   return await readyDeferred.promise();
 };
+
+export const setIdReservationsAction = (
+  tracingId: string,
+  domain: "SegmentGroup" | "Segment",
+  reservations: { id: number; used: boolean }[],
+) =>
+  ({
+    type: "SET_ID_RESERVATIONS",
+    tracingId,
+    domain,
+    reservations,
+  }) as const;
+
+export const requestIdReplenishmentAction = (
+  tracingId: string,
+  domain: "SegmentGroup" | "Segment",
+) =>
+  ({
+    type: "REQUEST_ID_REPLENISHMENT",
+    tracingId,
+    domain,
+  }) as const;
+
+export const idsReplenishedAction = (tracingId: string, domain: "SegmentGroup" | "Segment") =>
+  ({
+    type: "IDS_REPLENISHED",
+    tracingId,
+    domain,
+  }) as const;

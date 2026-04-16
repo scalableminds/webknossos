@@ -64,9 +64,7 @@ export type SetMappingIsLockedAction = ReturnType<typeof setMappingIsLockedActio
 export type SetVolumeBucketDataHasChangedAction = ReturnType<
   typeof setVolumeBucketDataHasChangedAction
 >;
-export type SetIdReservationsAction = ReturnType<typeof setIdReservationsAction>;
-export type RequestIdReplenishmentAction = ReturnType<typeof requestIdReplenishmentAction>;
-export type IdsReplenishedAction = ReturnType<typeof idsReplenishedAction>;
+
 export type ApplyVolumeUpdateActionsFromServerAction = ReturnType<
   typeof applyVolumeUpdateActionsFromServerAction
 >;
@@ -130,9 +128,6 @@ export type VolumeTracingAction =
   | CancelQuickSelectAction
   | ConfirmQuickSelectAction
   | SetVolumeBucketDataHasChangedAction
-  | SetIdReservationsAction
-  | RequestIdReplenishmentAction
-  | IdsReplenishedAction
   | BatchUpdateGroupsAndSegmentsAction
   | ApplyVolumeUpdateActionsFromServerAction;
 
@@ -530,35 +525,6 @@ export const setVolumeBucketDataHasChangedAction = (tracingId: string) =>
   ({
     type: "SET_VOLUME_BUCKET_DATA_HAS_CHANGED",
     tracingId,
-  }) as const;
-
-export const setIdReservationsAction = (
-  tracingId: string,
-  domain: "SegmentGroup" | "Segment",
-  reservations: { id: number; used: boolean }[],
-) =>
-  ({
-    type: "SET_ID_RESERVATIONS",
-    tracingId,
-    domain,
-    reservations,
-  }) as const;
-
-export const requestIdReplenishmentAction = (
-  tracingId: string,
-  domain: "SegmentGroup" | "Segment",
-) =>
-  ({
-    type: "REQUEST_ID_REPLENISHMENT",
-    tracingId,
-    domain,
-  }) as const;
-
-export const idsReplenishedAction = (tracingId: string, domain: "SegmentGroup" | "Segment") =>
-  ({
-    type: "IDS_REPLENISHED",
-    tracingId,
-    domain,
   }) as const;
 
 export const applyVolumeUpdateActionsFromServerAction = (

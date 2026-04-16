@@ -215,7 +215,9 @@ describe("ID reservation saga", () => {
       const allReleasedIds = vi
         .mocked(mocks.Request.sendJSONReceiveJSON)
         .mock.calls.filter(([url]) => url.includes("/reserveIds"))
-        .flatMap(([, options]) => (options.data as Record<string, unknown>).idsToRelease as number[]);
+        .flatMap(
+          ([, options]) => (options.data as Record<string, unknown>).idsToRelease as number[],
+        );
 
       // When id1 was requested, replenishment was initiated (therefore, only id 5 and 100
       // are released here).
@@ -265,7 +267,9 @@ describe("ID reservation saga", () => {
       const allReleasedIds = vi
         .mocked(mocks.Request.sendJSONReceiveJSON)
         .mock.calls.filter(([url]) => url.includes("/reserveIds"))
-        .flatMap(([, options]) => (options.data as Record<string, unknown>).idsToRelease as number[]);
+        .flatMap(
+          ([, options]) => (options.data as Record<string, unknown>).idsToRelease as number[],
+        );
 
       // id=100 was already used before the fetch started, so it must appear in idsToRelease.
       expect(allReleasedIds).toEqual([100]);

@@ -296,7 +296,7 @@ export function createGroupHelper(
 
   const newSegmentGroups = cloneDeep(segmentGroups);
   const newGroup = {
-    name: name || `Group ${newGroupId}`,
+    name: name || `Unnamed Group`,
     groupId: newGroupId,
     children: [],
   };

@@ -1,9 +1,9 @@
+import { sleep } from "libs/utils";
 import { call } from "redux-saga/effects";
 import {
   setupWebknossosForTestingWithRestrictions,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
-import { sleep } from "libs/utils";
 import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
 import {
   setIdReservationsAction,
@@ -172,6 +172,109 @@ describe("ID reservation saga", () => {
           { id: 303, used: false },
         ]),
       );
+    });
+
+    await task.toPromise();
+  });
+
+  it("should include pre-existing used IDs in idsToRelease", async (context: WebknossosTestContext) => {
+    const { mocks } = context;
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    // id=5 is already used (e.g. from a previous session) and must eventually be released to the
+    // backend. 2 usable IDs are below the IDEAL_ID_BUFFER_SIZE / 2 threshold, so a non-blocking
+    // replenishment will be triggered after the first request.
+    Store.dispatch(
+      setIdReservationsAction(tracingId, "SegmentGroup", [
+        { id: 5, used: true },
+        { id: 100, used: false },
+        { id: 101, used: false },
+      ]),
+    );
+
+    mockReserveIdsEndpoint(mocks, [300, 301, 302, 303]);
+
+    const task = startSaga(function* task() {
+      // Requesting id1 will already trigger a replenishment.
+      const id1 = yield call(() =>
+        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
+      );
+      expect(id1).toBe(100);
+
+      // Exhaust the buffer so replenishment must complete before the third request returns.
+      const id2 = yield call(() =>
+        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
+      );
+      expect(id2).toBe(101);
+
+      const id3 = yield call(() =>
+        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
+      );
+      expect(id3).toBe(300);
+
+      const allReleasedIds = vi
+        .mocked(mocks.Request.sendJSONReceiveJSON)
+        .mock.calls.filter(([url]) => url.includes("/reserveIds"))
+        .flatMap(([, options]) => (options.data as Record<string, unknown>).idsToRelease as number[]);
+
+      // When id1 was requested, replenishment was initiated (therefore, only id 5 and 100
+      // are released here).
+      expect(allReleasedIds).toEqual([5, 100]);
+    });
+
+    await task.toPromise();
+  });
+
+  it("should not lose IDs that are marked used during an async replenishment call", async (context: WebknossosTestContext) => {
+    const { mocks } = context;
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    // 2 usable IDs exist which is below the threshold. Thus, replenishment will fire (non-blocking)
+    // after the first getNewId request.
+    Store.dispatch(
+      setIdReservationsAction(tracingId, "SegmentGroup", [
+        { id: 100, used: false },
+        { id: 101, used: false },
+      ]),
+    );
+
+    // The delay ensures the replenishment network call suspends long enough for request 2 to
+    // run inside handleReservationRequest, which writes {101: used} and drops {100: used} from
+    // the store. When fetchNewReservations later writes freshUsableReservations + newIds, id=101
+    // is gone too, and never appears in any subsequent idsToRelease call.
+    mockReserveIdsEndpoint(mocks, [300, 301, 302, 303], 20);
+
+    const task = startSaga(function* task() {
+      // Request 1: uses 100, triggers non-blocking replenishment, returns immediately.
+      const id1 = yield call(() =>
+        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
+      );
+      expect(id1).toBe(100);
+
+      const id2 = yield call(() =>
+        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
+      );
+      expect(id2).toBe(101);
+
+      // Request 3 forces waiting for replenishment to complete.
+      const id3 = yield call(() =>
+        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
+      );
+      expect(id3).toBe(300);
+
+      const allReleasedIds = vi
+        .mocked(mocks.Request.sendJSONReceiveJSON)
+        .mock.calls.filter(([url]) => url.includes("/reserveIds"))
+        .flatMap(([, options]) => (options.data as Record<string, unknown>).idsToRelease as number[]);
+
+      // id=100 was already used before the fetch started, so it must appear in idsToRelease.
+      expect(allReleasedIds).toEqual([100]);
+
+      // id=101 was marked used *during* the async fetch. It must not be silently dropped from the
+      // store — it should be preserved as {used:true} so it can be included in idsToRelease in the
+      // next replenishment fetch.
+      const reservations = Store.getState().annotation.volumes[0].idReservations.SegmentGroup;
+      expect(reservations).toContainEqual({ id: 101, used: true });
     });
 
     await task.toPromise();

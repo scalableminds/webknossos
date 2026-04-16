@@ -93,14 +93,17 @@ function* handleReservationRequest(action: GetNewIdAction): Saga<void> {
   const usableReservations = getUsableReservations(tracing, domain);
 
   if (usableReservations.length > 0) {
-    // Mark the first reservation as used...
+    const allReservations = tracing.idReservations[domain];
+    // Mark the first usable reservation as used, preserving all other entries (including
+    // already-used ones) so they can be included in idsToRelease in the next replenishment.
     yield* put(
       setIdReservationsAction(
         tracingId,
         domain,
-        // todop: what about the other reservations?
-        usableReservations.map((reservation, index) =>
-          index === 0 ? { ...reservation, used: true } : reservation,
+        allReservations.map((reservation) =>
+          reservation.id === usableReservations[0].id
+            ? { ...reservation, used: true }
+            : reservation,
         ),
       ),
     );
@@ -141,10 +144,11 @@ function* fetchNewReservations(tracingId: string, domain: "SegmentGroup"): Saga<
 
   const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
   let newIds: number[];
+  let releasedIds: number[] = [];
 
   if (collaborationMode === "Concurrent") {
     const annotationId = yield* select((state) => state.annotation.annotationId);
-    const idsToRelease: number[] = without(
+    releasedIds = without(
       unfilteredReservations.map(({ id }) => id),
       ...usableReservations.map(({ id }) => id),
     );
@@ -154,7 +158,7 @@ function* fetchNewReservations(tracingId: string, domain: "SegmentGroup"): Saga<
       tracingId,
       domain,
       numberOfIdsToReserve,
-      idsToRelease,
+      releasedIds,
     );
   } else {
     const maxGroupId = getMaximumGroupId(tracing.segmentGroups);
@@ -167,13 +171,19 @@ function* fetchNewReservations(tracingId: string, domain: "SegmentGroup"): Saga<
   // Re-read fresh state: the async call above may have suspended this saga long enough for
   // another request to mark some reservations as used in the meantime.
   const freshTracing = yield* select((state) => getTracingById(state, tracingId));
+  const freshUnfilteredReservations =
+    freshTracing.type === "volume" ? freshTracing.idReservations[domain] : [];
   const freshUsableReservations =
     freshTracing.type === "volume" ? getUsableReservations(freshTracing, domain) : [];
+  // Preserve IDs that were marked used during the async call (not already sent in releasedIds),
+  // so they can be included in idsToRelease on the next replenishment.
+  const usedDuringCall = freshUnfilteredReservations.filter(
+    ({ used, id }) => used && !releasedIds.includes(id),
+  );
 
   yield* put(
     setIdReservationsAction(tracingId, domain, [
-      // todop: what about the unusable ones? don't they need to be kept (except for the ones that were
-      // released)?
+      ...usedDuringCall,
       ...freshUsableReservations,
       ...newIds.map((id) => ({ id, used: false })),
     ]),

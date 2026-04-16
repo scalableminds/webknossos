@@ -650,7 +650,7 @@ describe("Collaborative editing of segment items", () => {
   }, 8000);
 });
 
-describe.only("ID reservation saga", () => {
+describe("ID reservation saga", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
     await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, false, "hybrid");
     vi.mocked(context.mocks.Request.sendJSONReceiveJSON).mockClear();

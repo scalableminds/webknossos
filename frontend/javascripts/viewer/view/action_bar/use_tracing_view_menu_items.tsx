@@ -4,6 +4,7 @@ import {
   DownloadOutlined,
   FolderOpenOutlined,
   HistoryOutlined,
+  LaptopOutlined,
   LinkOutlined,
   LockOutlined,
   SettingOutlined,
@@ -228,7 +229,7 @@ export const useTracingViewMenuItems = (
     menuItems.push({
       key: "Keyboard Shortcuts",
       onClick: handleShowKeyboardShortcutConfigModal,
-      icon: <i className="fas fa-keyboard" />,
+      icon: <LaptopOutlined />,
       label: "Keyboard Shortcuts",
     });
 

@@ -13,8 +13,8 @@ import {
   setIdReservationsAction,
 } from "../actions/volumetracing_actions";
 import { getMaximumGroupId } from "../reducers/skeletontracing_reducer_helpers";
-import { type Saga, select, take } from "./effect_generators";
 import { getGroupIdSet } from "../reducers/volumetracing_reducer_helpers";
+import { type Saga, select, take } from "./effect_generators";
 
 const IDEAL_ID_BUFFER_SIZE = 5;
 

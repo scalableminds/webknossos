@@ -14,6 +14,7 @@ import {
 } from "../actions/volumetracing_actions";
 import { getMaximumGroupId } from "../reducers/skeletontracing_reducer_helpers";
 import { type Saga, select, take } from "./effect_generators";
+import { getGroupIdSet } from "../reducers/volumetracing_reducer_helpers";
 
 const IDEAL_ID_BUFFER_SIZE = 5;
 
@@ -47,9 +48,9 @@ function getUsableReservations(tracing: VolumeTracing, domain: "SegmentGroup") {
    * clean up by that.
    */
   const unfilteredReservations = tracing.idReservations[domain];
-  const maximumGroupId = getMaximumGroupId(tracing.segmentGroups);
+  const existingIdSet = getGroupIdSet(tracing.segmentGroups);
 
-  return unfilteredReservations.filter(({ used, id }) => !used && id > maximumGroupId);
+  return unfilteredReservations.filter(({ used, id }) => !used && !existingIdSet.has(id));
 }
 
 function* replenishmentLoop(domain: "SegmentGroup"): Saga<void> {
@@ -127,7 +128,7 @@ function* handleReservationRequest(action: GetNewIdAction): Saga<void> {
   }
 
   // Recurse to re-evaluate the now-replenished reservations, filtering against
-  // the maximum known ID again in case time has passed since the fetch.
+  // known ID again in case time has passed since the fetch.
   yield* call(handleReservationRequest, action);
 }
 

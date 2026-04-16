@@ -92,15 +92,26 @@ describe("ID reservation saga", () => {
     await task.toPromise();
   });
 
-  it("should skip reservation IDs at or below the maximum segment group ID", async () => {
+  it("should skip 'unused' reservation IDs for which groups already exist", async () => {
+    /*
+     * Even when a reservation is marked as "unused", it can happen that they are in fact
+     * used. This can happen when the page is reloaded after an id was marked as used, but
+     * before usage was communicated to the server.
+     */
     const { tracingId } = Store.getState().annotation.volumes[0];
 
-    // Set up a segment group with groupId=10, making maxGroupId=10
+    // Set up a segment group with groupId 5 and 10
     Store.dispatch(
-      setSegmentGroupsAction([{ name: "Existing Group", groupId: 10, children: [] }], tracingId),
+      setSegmentGroupsAction(
+        [
+          { name: "Existing Group", groupId: 5, children: [] },
+          { name: "Existing Group", groupId: 10, children: [] },
+        ],
+        tracingId,
+      ),
     );
 
-    // 5 reservations: IDs 5 and 10 are stale (not > maxGroupId=10), IDs 15, 20, 25 are valid.
+    // 5 reservations: IDs 5 and 10 are not usable because such groups already exist.
     // 3 valid reservations >= IDEAL_ID_BUFFER_SIZE / 2 (2.5), so no replenishment is triggered
     Store.dispatch(
       setIdReservationsAction(tracingId, "SegmentGroup", [
@@ -322,7 +333,7 @@ describe("ID reservation saga", () => {
   it("should return a different ID for each sequential request", async () => {
     const { tracingId } = Store.getState().annotation.volumes[0];
 
-    // Set up a segment group with groupId=101, making maxGroupId=101
+    // Set up a segment group with groupId=101
     Store.dispatch(
       setSegmentGroupsAction([{ name: "Existing Group", groupId: 101, children: [] }], tracingId),
     );
@@ -331,7 +342,7 @@ describe("ID reservation saga", () => {
     Store.dispatch(
       setIdReservationsAction(tracingId, "SegmentGroup", [
         { id: 100, used: true },
-        { id: 101, used: false }, // the ID wasn't marked as used, but maxGroupId should still exclude it.
+        { id: 101, used: false }, // the ID wasn't marked as used, but it should still be excluded as it exists.
         { id: 102, used: false },
         { id: 103, used: false },
         { id: 104, used: false },

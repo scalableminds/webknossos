@@ -219,12 +219,16 @@ export function setMappingNameReducer(
   });
 }
 
+export function getGroupIdSet(segmentGroups: Array<SegmentGroup>) {
+  return new Set(mapGroupsToGenerator(segmentGroups, (group) => group.groupId));
+}
+
 function removeMissingGroupsFromSegments(
   volumeTracing: VolumeTracing,
   segmentGroups: Array<SegmentGroup>,
 ): SegmentMap {
   // Change the groupId of segments for groups that no longer exist
-  const groupIds = new Set(mapGroupsToGenerator(segmentGroups, (group) => group.groupId));
+  const groupIds = getGroupIdSet(segmentGroups);
   const newSegments = volumeTracing.segments.clone();
   let hasChanged = false;
   for (const [segmentId, segment] of volumeTracing.segments.entries()) {

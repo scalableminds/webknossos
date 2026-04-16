@@ -5,7 +5,6 @@
       "**/*.ts",
       "**/*.tsx",
       "**/*.css",
-      "**/*.jsonc",
       "!**/libs/stl_exporter.ts",
       "!**/libs/DRACOLoader.ts",
       "!**/libs/DRACOWorker.worker.js",

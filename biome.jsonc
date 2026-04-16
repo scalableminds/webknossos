@@ -2,7 +2,11 @@
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "files": {
     "includes": [
-      "**",
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.css",
+      "**/*.json",
+      "**/*.jsonc",
       "!**/libs/stl_exporter.ts",
       "!**/libs/DRACOLoader.ts",
       "!**/libs/DRACOWorker.worker.js",
@@ -16,7 +20,9 @@
       "!**/*.ts.snap",
       "!**/__snapshots__",
       "!**/frontend/stylesheets/fontawesome*",
-      "!**/frontend/javascripts/test/snapshots"
+      "!**/frontend/javascripts/test/snapshots",
+      "!webknossos-jni",
+      "!binaryData"
     ]
   },
   "assist": {

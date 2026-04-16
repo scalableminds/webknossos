@@ -11,6 +11,7 @@ import type {
 import { flatten } from "lodash-es";
 import type { AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { Store } from "viewer/singletons";
+import { KeyboardKeyIcon } from "../components/keyboard_key_icon";
 import {
   ALL_KEYBOARD_SHORTCUT_META_INFOS,
   KeyboardShortcutCollisionHierarchy,
@@ -22,10 +23,9 @@ import type {
   KeyboardShortcutNoLoopedHandlerMap,
   KeyboardShortcutsMap,
 } from "./keyboard_shortcut_types";
-import { KeyboardKeyIcon } from "../components/keyboard_key_icon";
 
 const { Text } = Typography;
-export const MODIFIER_KEYS = new Set(["Control", "Meta", "Meta", "Alt", "Shift"]);
+export const MODIFIER_KEYS = new Set(["Control", "Meta", "Alt", "Shift"]);
 
 export function keyToUiElement(key: string): React.ReactNode {
   switch (key) {
@@ -67,7 +67,7 @@ function escapeReservedKeystrokeCharacters(key: string): string {
 function sortKeyCombo(combo: string[]): string[] {
   // Ensure modifiers appear first in canonical order,
   // then non-modifier keys in the order they were pressed (preserved in `order`)
-  const modifiersOrder = ["Control", "Meta", "Meta", "Alt", "Shift"];
+  const modifiersOrder = ["Control", "Meta", "Alt", "Shift"];
   const presentModifiers: string[] = [];
   const nonModifiers: string[] = [];
 

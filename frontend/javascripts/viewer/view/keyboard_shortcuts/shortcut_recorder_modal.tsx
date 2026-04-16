@@ -137,19 +137,16 @@ export function ShortcutRecorderModal({
   const clearCurrentPreview = useCallback(() => {
     currentDownSetRef.current.clear();
     currentSeenSetRef.current.clear();
-    console.log("clearing");
     setPreviewKeyCombo([]);
   }, []);
 
   const handleReset = useCallback(() => {
     setKeyComboChain([]);
-    console.log("resetting");
     clearCurrentPreview();
   }, [clearCurrentPreview]);
 
   useEffect(() => {
     if (!isOpen) {
-      console.log("resetting as not open");
       handleReset();
     }
   }, [isOpen, handleReset]);
@@ -201,7 +198,6 @@ export function ShortcutRecorderModal({
           return prevPreviewKeyCombo; // TODO maybe undo
         });
         // clear order and last snapshot
-        console.log("clearing as no keys pressed");
         clearCurrentPreview();
       }
     }
@@ -213,7 +209,6 @@ export function ShortcutRecorderModal({
         e.stopPropagation();
         // behave like cancel: clear in-progress state but do not call onCancel
         // keep strokes previously completed strokes.
-        console.log("resetting as escape combo used");
         handleReset();
       }
     }
@@ -227,14 +222,12 @@ export function ShortcutRecorderModal({
       window.removeEventListener("keyup", handleKeyUp, true);
       window.removeEventListener("keydown", handleEscapeAndCtrlKey, true);
       // cleanup
-      console.log("clearing as useEffect remount");
       clearCurrentPreview();
     };
   }, [clearCurrentPreview, isOpen, handleReset, keyComboChain]);
 
   function handleCancel() {
     // do not overwrite; simply call onCancel
-    console.log("resetting due to handle cancel");
     handleReset();
     onCancel();
   }
@@ -247,7 +240,6 @@ export function ShortcutRecorderModal({
       // nothing recorded -> treat as cancel (or you can choose to save empty)
       onCancel();
     }
-    console.log("resetting due to handleOk");
     handleReset();
   }
 
@@ -255,8 +247,6 @@ export function ShortcutRecorderModal({
   function handleRemoveLastStroke() {
     setKeyComboChain((prev) => prev.slice(0, -1));
   }
-
-  console.log("rendering", previewKeyCombo);
 
   return (
     <Modal

@@ -20,6 +20,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { setKeyboardShortcutsConfigAction } from "viewer/model/actions/settings_actions";
 import type { WebknossosState } from "viewer/store";
 import {
+  ALL_KEYBOARD_HANDLER_IDS,
   ALL_KEYBOARD_SHORTCUT_META_INFOS,
   getAllDefaultKeyboardShortcuts,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
@@ -117,11 +118,17 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       [KeyboardShortcutDomain.PLANE_BOUNDING_BOX_TOOL]: [],
       [KeyboardShortcutDomain.PLANE_PROOFREADING_TOOL]: [],
     };
-    Object.entries(localShortcutConfig).forEach(([handlerId, keyCombos]) => {
+    // Iterate over ALL_KEYBOARD_HANDLER_IDS (stable array) rather than
+    // Object.entries(localShortcutConfig) so the table order is always
+    // deterministic and never changes when a shortcut is edited.
+    ALL_KEYBOARD_HANDLER_IDS.forEach((handlerId) => {
+      const keyCombos = localShortcutConfig[handlerId];
+      if (keyCombos == null) return;
       const metaInfo =
         ALL_KEYBOARD_SHORTCUT_META_INFOS[
           handlerId as keyof typeof ALL_KEYBOARD_SHORTCUT_META_INFOS
         ];
+      if (metaInfo == null) return;
       domainToEntries[metaInfo.domain].push({
         key: handlerId,
         combos: keyCombos,
@@ -434,20 +441,14 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
         onSave={(newComboChain) => {
           if (!recorderTargetHandlerId) return;
 
-          // Build updated map: remove any existing key(s) that pointed to this handlerId
-          const updated: Record<string, KeyboardComboChain[]> = {};
           const updatedKeyComboChains = recorderEditingKeyCombo
             ? localShortcutConfig[recorderTargetHandlerId].map((keyComboChain) =>
                 isEqual(keyComboChain, recorderEditingKeyCombo) ? newComboChain : keyComboChain,
               )
             : [...localShortcutConfig[recorderTargetHandlerId], newComboChain];
-          for (const [handlerId, keyComboChains] of Object.entries(localShortcutConfig)) {
-            if (handlerId !== recorderTargetHandlerId) {
-              updated[handlerId] = keyComboChains;
-            }
-          }
-          // assign the new combo
-          updated[recorderTargetHandlerId] = updatedKeyComboChains;
+          // Use spread to preserve the existing key insertion order — building a
+          // fresh object with a loop would move the edited key to the end.
+          const updated = { ...localShortcutConfig, [recorderTargetHandlerId]: updatedKeyComboChains };
 
           setLocalShortcutConfig(updated);
           setJsonString(JSON.stringify(updated, null, 2));

@@ -33,11 +33,8 @@ describe("ID reservation saga", () => {
     vi.mocked(mocks.Request.sendJSONReceiveJSON).mockImplementation(async (url: string) => {
       if (url.includes("/reserveIds")) {
         if (delay > 0) {
-          console.log("sleep...");
           await sleep(delay);
-          console.log("sleep done.");
         }
-        console.log("return ids");
         return ids;
       }
       return {};

@@ -2,9 +2,9 @@ import { duplicateAnnotation } from "admin/rest_api";
 import { Button, Modal } from "antd";
 import { sleep } from "libs/utils";
 import { useMemo, useState } from "react";
+import { useDispatch } from "react-redux";
 import type { APIAnnotationType } from "types/api_types";
 import { setDuplicateAnnotationModalVisibilityAction } from "viewer/model/actions/ui_actions";
-import { Store } from "viewer/singletons";
 
 export function DuplicateAnnotationModal({
   annotationId,
@@ -19,9 +19,10 @@ export function DuplicateAnnotationModal({
 }) {
   const [isLoading, setIsLoading] = useState(true);
   const [newAnnotation, setNewAnnotation] = useState<null | string>(null);
+  const dispatch = useDispatch();
   const toOwnAccountText = copyToOwnAccount ? " to your account" : "";
   const handleClose = () => {
-    Store.dispatch(setDuplicateAnnotationModalVisibilityAction(false));
+    dispatch(setDuplicateAnnotationModalVisibilityAction(false));
   };
   const modalContent = useMemo(() => {
     if (isLoading) {
@@ -38,7 +39,7 @@ export function DuplicateAnnotationModal({
       href={`/annotations/${newAnnotation}`}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={() => Store.dispatch(setDuplicateAnnotationModalVisibilityAction(false))}
+      onClick={() => dispatch(setDuplicateAnnotationModalVisibilityAction(false))}
     >
       Open
     </Button>

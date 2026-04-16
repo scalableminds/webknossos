@@ -755,7 +755,8 @@ describe.only("ID reservation saga", () => {
     const { mocks } = context;
     const { tracingId } = Store.getState().annotation.volumes[0];
 
-    // 2 reservations: 2 < IDEAL_ID_BUFFER_SIZE / 2 (2.5), so replenishment fires after the first use
+    // 2 usable reservations: 2 < IDEAL_ID_BUFFER_SIZE / 2 (2.5), so replenishment fires after the
+    // first use. But replenishment is async — it runs concurrently with the next request.
     Store.dispatch(
       setIdReservationsAction(tracingId, "SegmentGroup", [
         { id: 200, used: false },
@@ -763,27 +764,30 @@ describe.only("ID reservation saga", () => {
       ]),
     );
 
-    // After using 200 there is 1 usable left, so the saga requests max(1, 5-1)=4 new IDs
     mockReserveIdsEndpoint(mocks, [300, 301, 302, 303]);
 
     const task = startSaga(function* task() {
-      // First request: uses 200, then blocks to replenish (channel serialises both requests)
       const id1 = yield call(() =>
         dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
       );
       expect(id1).toBe(200);
 
-      // Second request: guaranteed to execute after replenishment because the channel is FIFO
       const id2 = yield call(() =>
         dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
       );
       expect(id2).toBe(201);
 
+      // Buffer is now empty; this request must wait for the replenishment saga to complete.
+      // After it returns we are guaranteed replenishment has run.
+      const id3 = yield call(() =>
+        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
+      );
+      expect(id3).toBe(300);
+
       const reservations = Store.getState().annotation.volumes[0].idReservations.SegmentGroup;
       expect(reservations).toEqual(
         expect.arrayContaining([
-          { id: 201, used: true },
-          { id: 300, used: false },
+          { id: 300, used: true },
           { id: 301, used: false },
           { id: 302, used: false },
           { id: 303, used: false },

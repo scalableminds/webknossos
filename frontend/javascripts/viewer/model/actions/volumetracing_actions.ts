@@ -65,6 +65,8 @@ export type SetVolumeBucketDataHasChangedAction = ReturnType<
   typeof setVolumeBucketDataHasChangedAction
 >;
 export type SetIdReservationsAction = ReturnType<typeof setIdReservationsAction>;
+export type RequestIdReplenishmentAction = ReturnType<typeof requestIdReplenishmentAction>;
+export type IdsReplenishedAction = ReturnType<typeof idsReplenishedAction>;
 export type ApplyVolumeUpdateActionsFromServerAction = ReturnType<
   typeof applyVolumeUpdateActionsFromServerAction
 >;
@@ -129,6 +131,8 @@ export type VolumeTracingAction =
   | ConfirmQuickSelectAction
   | SetVolumeBucketDataHasChangedAction
   | SetIdReservationsAction
+  | RequestIdReplenishmentAction
+  | IdsReplenishedAction
   | BatchUpdateGroupsAndSegmentsAction
   | ApplyVolumeUpdateActionsFromServerAction;
 
@@ -538,6 +542,26 @@ export const setIdReservationsAction = (
     tracingId,
     domain,
     reservations,
+  }) as const;
+
+export const requestIdReplenishmentAction = (
+  tracingId: string,
+  domain: "SegmentGroup" | "Segment",
+) =>
+  ({
+    type: "REQUEST_ID_REPLENISHMENT",
+    tracingId,
+    domain,
+  }) as const;
+
+export const idsReplenishedAction = (
+  tracingId: string,
+  domain: "SegmentGroup" | "Segment",
+) =>
+  ({
+    type: "IDS_REPLENISHED",
+    tracingId,
+    domain,
   }) as const;
 
 export const applyVolumeUpdateActionsFromServerAction = (

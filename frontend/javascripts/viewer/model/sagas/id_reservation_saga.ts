@@ -1,13 +1,19 @@
 import { reserveIdsForAnnotation } from "admin/rest_api";
 import without from "lodash-es/without";
-import { actionChannel, call, put, take } from "typed-redux-saga";
+import { actionChannel, call, fork, put } from "typed-redux-saga";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import type { VolumeTracing } from "viewer/store";
 import { getTracingById } from "../accessors/tracing_accessor";
 import type { GetNewIdAction } from "../actions/actions";
-import { setIdReservationsAction } from "../actions/volumetracing_actions";
+import {
+  idsReplenishedAction,
+  type IdsReplenishedAction,
+  requestIdReplenishmentAction,
+  type RequestIdReplenishmentAction,
+  setIdReservationsAction,
+} from "../actions/volumetracing_actions";
 import { getMaximumGroupId } from "../reducers/skeletontracing_reducer_helpers";
-import { type Saga, select } from "./effect_generators";
+import { type Saga, select, take } from "./effect_generators";
 
 const IDEAL_ID_BUFFER_SIZE = 5;
 
@@ -16,8 +22,10 @@ export default function* idReservationSaga(): Saga<void> {
 
   const getNewIdActionChannel = yield* actionChannel<GetNewIdAction>("GET_NEW_ID");
 
+  yield* fork(replenishmentLoop, "SegmentGroup");
+
   while (true) {
-    const action = yield* take(getNewIdActionChannel);
+    const action = (yield* take(getNewIdActionChannel)) as GetNewIdAction;
     yield* call(handleReservationRequest, action);
   }
 }
@@ -38,6 +46,32 @@ function getUsableReservations(tracing: VolumeTracing, domain: "SegmentGroup") {
   const maximumGroupId = getMaximumGroupId(tracing.segmentGroups);
 
   return unfilteredReservations.filter(({ used, id }) => !used && id > maximumGroupId);
+}
+
+function* replenishmentLoop(domain: "SegmentGroup"): Saga<void> {
+  const replenishChannel =
+    yield* actionChannel<RequestIdReplenishmentAction>("REQUEST_ID_REPLENISHMENT");
+
+  while (true) {
+    const action = (yield* take(replenishChannel)) as RequestIdReplenishmentAction;
+    if (action.domain !== domain) {
+      continue;
+    }
+
+    const tracing = yield* select((state) => getTracingById(state, action.tracingId));
+    if (tracing.type !== "volume") {
+      continue;
+    }
+
+    const usableReservations = getUsableReservations(tracing, domain);
+    if (usableReservations.length < IDEAL_ID_BUFFER_SIZE / 2) {
+      yield* call(fetchNewReservations, action.tracingId, domain);
+    } else {
+      // Buffer is already sufficient (e.g., a previous replenishment already ran);
+      // no fetch needed but still signal completion so any waiter can proceed.
+      yield* put(idsReplenishedAction(action.tracingId, domain));
+    }
+  }
 }
 
 function* handleReservationRequest(action: GetNewIdAction): Saga<void> {
@@ -68,30 +102,29 @@ function* handleReservationRequest(action: GetNewIdAction): Saga<void> {
     action.callback(usableReservations[0].id);
 
     if (usableReservations.length < IDEAL_ID_BUFFER_SIZE / 2) {
-      // todop: could be detached?
-      yield* call(fetchNewReservations, action);
+      // Trigger pre-fetching without blocking — the replenishment loop handles it.
+      yield* put(requestIdReplenishmentAction(tracingId, domain));
     }
 
     return;
   }
 
-  yield* call(fetchNewReservations, action);
+  // No usable IDs: request replenishment and wait for it to complete before recursing.
+  yield* put(requestIdReplenishmentAction(tracingId, domain));
+  while (true) {
+    const replenished = (yield* take("IDS_REPLENISHED")) as IdsReplenishedAction;
+    if (replenished.tracingId === tracingId && replenished.domain === domain) break;
+  }
 
-  // Simply call the current saga recursively to re-access the new reservations.
-  // This ensures that the filtering against the maximum known ID is done again
-  // now that some time has passed after the back-end replied with reservations.
+  // Recurse to re-evaluate the now-replenished reservations, filtering against
+  // the maximum known ID again in case time has passed since the fetch.
   yield* call(handleReservationRequest, action);
 }
 
-function* fetchNewReservations(action: GetNewIdAction) {
-  const { domain, tracingId } = action;
-
+function* fetchNewReservations(tracingId: string, domain: "SegmentGroup"): Saga<void> {
   const tracing = yield* select((state) => getTracingById(state, tracingId));
 
-  if (tracing.type !== "volume" || domain !== "SegmentGroup") {
-    console.warn(
-      "Ignored getNewId action because it's not implemented for non-volume tracings and non-segment domains, yet.",
-    );
+  if (tracing.type !== "volume") {
     return;
   }
 
@@ -124,10 +157,18 @@ function* fetchNewReservations(action: GetNewIdAction) {
     newIds = Array.from({ length: numberOfIdsToReserve }, (_, i) => startId + i);
   }
 
+  // Re-read fresh state: the async call above may have suspended this saga long enough for
+  // another request to mark some reservations as used in the meantime.
+  const freshTracing = yield* select((state) => getTracingById(state, tracingId));
+  const freshUsableReservations =
+    freshTracing.type === "volume" ? getUsableReservations(freshTracing, domain) : [];
+
   yield* put(
     setIdReservationsAction(tracingId, domain, [
-      ...usableReservations,
+      ...freshUsableReservations,
       ...newIds.map((id) => ({ id, used: false })),
     ]),
   );
+  yield* put(idsReplenishedAction(tracingId, domain));
+
 }

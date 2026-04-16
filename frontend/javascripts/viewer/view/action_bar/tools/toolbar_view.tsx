@@ -1,19 +1,17 @@
-import Icon, { InfoCircleOutlined } from "@ant-design/icons";
-import AreaMeasurementIcon from "@images/icons/icon-area-measurement.svg?react";
+import Icon, { DownOutlined, InfoCircleOutlined } from "@ant-design/icons";
 import NewBoundingBoxIcon from "@images/icons/icon-bounding-box-new.svg?react";
-import LineMeasurementIcon from "@images/icons/icon-line-measurement.svg?react";
-import { Radio, type RadioChangeEvent, Space, Tag } from "antd";
+import { Dropdown, Radio, type RadioChangeEvent, Space, Tag } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
-import { useKeyPress, useWkSelector } from "libs/react_hooks";
-import { useCallback } from "react";
+import { useKeyPress, useWindowWidth, useWkSelector } from "libs/react_hooks";
+import { useCallback, useMemo } from "react";
 import { useDispatch } from "react-redux";
+import Constants, { ControlModeEnum } from "viewer/constants";
 import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import {
   AnnotationTool,
   type AnnotationToolId,
   adaptActiveToolToShortcuts,
-  MeasurementTools,
   Toolkit,
   Toolkits,
   VolumeTools,
@@ -24,7 +22,7 @@ import ButtonComponent from "viewer/view/components/button_component";
 import { ChangeBrushSizePopover } from "./brush_presets";
 import { SkeletonSpecificButtons } from "./skeleton_specific_ui";
 import { ToolIdToComponent } from "./tool_buttons";
-import { ACTIONBAR_MARGIN_LEFT, NARROW_BUTTON_STYLE, RadioButtonWithTooltip } from "./tool_helpers";
+import { ACTIONBAR_MARGIN_LEFT, NARROW_BUTTON_STYLE, ToolRadioButton } from "./tool_helpers";
 import {
   CreateSegmentButton,
   FloodFillSettings,
@@ -51,20 +49,6 @@ function CreateNewBoundingBoxButton() {
   );
 }
 
-function toolToRadioGroupValue(adaptedActiveTool: AnnotationTool): AnnotationToolId {
-  /*
-   * The tool radio buttons only contain one button for both measurement tools (area
-   * and line). The selection of the "sub tool" can be done when one of them is active
-   * with extra buttons next to the radio group.
-   * To ensure that the highlighting of the generic measurement tool button works properly,
-   * we map both measurement tools to the line tool here.
-   */
-  if (adaptedActiveTool === AnnotationTool.AREA_MEASUREMENT) {
-    return AnnotationTool.LINE_MEASUREMENT.id;
-  }
-  return adaptedActiveTool.id;
-}
-
 export default function ToolbarView() {
   const dispatch = useDispatch();
   const hasVolume = useWkSelector((state) => state.annotation?.volumes.length > 0);
@@ -72,6 +56,13 @@ export default function ToolbarView() {
   const toolkit = useWkSelector((state) => state.userConfiguration.activeToolkit);
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
   const isSplitToolkit = toolkit === Toolkit.SPLIT_SEGMENTS;
+  const windowWidth = useWindowWidth();
+  const disabledInfoForTools = useWkSelector(getDisabledInfoForTools);
+  const isWiderScreen = useMemo(() => windowWidth >= Constants.NARROW_SCREEN_WIDTH, [windowWidth]);
+  const toolTimestamps = useWkSelector((state) => state.userConfiguration.timestampsForTools);
+  const isViewMode = useWkSelector(
+    (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
+  );
 
   const isShiftPressed = useKeyPress("Shift");
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
@@ -85,19 +76,83 @@ export default function ToolbarView() {
 
   const handleSetTool = useCallback(
     (event: RadioChangeEvent) => {
-      const value = event.target.value as AnnotationToolId;
-      dispatch(setToolAction(AnnotationTool[value]));
+      const value = event.target.value as AnnotationToolId | null; // null if dropdown for more tools is clicked
+      if (value != null) dispatch(setToolAction(AnnotationTool[value]));
     },
     [dispatch],
   );
 
+  const showAllTools = isWiderScreen || toolkit === Toolkit.READ_ONLY_TOOLS || isViewMode;
+  //const showAllTools = true; // TODO_c testing only
+
+  const toolsForButtons = useMemo(() => {
+    if (showAllTools) return Toolkits[toolkit];
+    const adaptToolId = (toolId: AnnotationToolId): AnnotationToolId => {
+      // fix tools with tool menus
+      if (toolId === AnnotationTool.TRACE.id) return AnnotationTool.BRUSH.id;
+      if (toolId === AnnotationTool.ERASE_TRACE.id) return AnnotationTool.ERASE_BRUSH.id;
+      if (toolId === AnnotationTool.AREA_MEASUREMENT.id) return AnnotationTool.LINE_MEASUREMENT.id;
+      return toolId;
+    };
+    const allToolsInToolkit = Toolkits[toolkit];
+    const lruTools = Object.entries(toolTimestamps)
+      .sort(([, timestampA], [, timestampB]) => timestampB - timestampA)
+      .map(([toolId]) => toolId as AnnotationToolId);
+    const lastUsedTools = lruTools
+      .map((toolId) => adaptToolId(toolId))
+      .filter(
+        (toolId, index, toolIds) =>
+          allToolsInToolkit.some((tool) => tool.id === toolId) && toolIds.indexOf(toolId) === index,
+      )
+      .slice(0, Constants.NUMBER_OF_TOOLS_IN_TOOLBAR);
+    return allToolsInToolkit.filter((tool) => lastUsedTools.includes(tool.id));
+  }, [showAllTools, toolkit, toolTimestamps]);
+
+  const ToolDropdown = () => {
+    if (showAllTools) return null;
+    return (
+      <ToolRadioButton name="More tools" value={null} style={NARROW_BUTTON_STYLE}>
+        <Dropdown
+          menu={{
+            items: Toolkits[toolkit].map((tool) => {
+              const isDisabled = disabledInfoForTools[tool.id].isDisabled;
+              return {
+                key: tool.id,
+                disabled: isDisabled,
+                onClick: () => dispatch(setToolAction(tool)),
+                label: (
+                  <FastTooltip
+                    title={
+                      isDisabled
+                        ? disabledInfoForTools[tool.id].explanation
+                        : AnnotationTool[tool.id].description
+                    }
+                    placement="left"
+                  >
+                    <Space size="small">
+                      {tool.icon ? <Icon component={tool.icon} /> : null}
+                      {tool.readableName}
+                    </Space>
+                  </FastTooltip>
+                ),
+              };
+            }),
+          }}
+        >
+          <DownOutlined />
+        </Dropdown>
+      </ToolRadioButton>
+    );
+  };
+
   return (
     <>
-      <Radio.Group onChange={handleSetTool} value={toolToRadioGroupValue(adaptedActiveTool)}>
-        {Toolkits[toolkit].map((tool) => {
+      <Radio.Group onChange={handleSetTool} value={adaptedActiveTool.id}>
+        {toolsForButtons.map((tool) => {
           const ToolButton = ToolIdToComponent[tool.id];
           return <ToolButton key={tool.id} adaptedActiveTool={adaptedActiveTool} />;
         })}
+        <ToolDropdown />
       </Radio.Group>
 
       <ToolSpecificSettings
@@ -179,43 +234,6 @@ function ToolSpecificSettings({
       {adaptedActiveTool === AnnotationTool.PROOFREAD && areEditableMappingsEnabled ? (
         <ProofreadingComponents />
       ) : null}
-
-      {MeasurementTools.includes(adaptedActiveTool) ? (
-        <MeasurementToolSwitch activeTool={adaptedActiveTool} />
-      ) : null}
     </>
-  );
-}
-
-function MeasurementToolSwitch({ activeTool }: { activeTool: AnnotationTool }) {
-  const dispatch = useDispatch();
-  const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
-  const { isDisabled, explanation } = disabledInfosForTools[AnnotationTool.AREA_MEASUREMENT.id];
-
-  const handleSetMeasurementTool = (evt: RadioChangeEvent) => {
-    const value = evt.target.value as AnnotationToolId;
-    dispatch(setToolAction(AnnotationTool[value]));
-  };
-  return (
-    <Radio.Group value={activeTool.id} onChange={handleSetMeasurementTool}>
-      <RadioButtonWithTooltip
-        title="Measure distances with connected lines by using Left Click."
-        style={NARROW_BUTTON_STYLE}
-        value={AnnotationTool.LINE_MEASUREMENT.id}
-      >
-        <Icon component={LineMeasurementIcon} aria-label="Line Measurement Tool Icon" />
-      </RadioButtonWithTooltip>
-      <RadioButtonWithTooltip
-        disabledTitle={explanation}
-        title={
-          "Measure areas by using Left Drag. Avoid self-crossing polygon structure for accurate results."
-        }
-        style={NARROW_BUTTON_STYLE}
-        value={AnnotationTool.AREA_MEASUREMENT.id}
-        disabled={isDisabled}
-      >
-        <Icon component={AreaMeasurementIcon} aria-label="Area Measurement Tool Icon" />
-      </RadioButtonWithTooltip>
-    </Radio.Group>
   );
 }

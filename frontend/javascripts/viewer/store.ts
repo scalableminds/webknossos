@@ -49,7 +49,7 @@ import type {
 } from "viewer/constants";
 import defaultState from "viewer/default_state";
 import type { TracingStats } from "viewer/model/accessors/annotation_accessor";
-import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import type { AnnotationTool, AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import actionLoggerMiddleware from "viewer/model/helpers/action_logger_middleware";
 import overwriteActionMiddleware from "viewer/model/helpers/overwrite_action_middleware";
@@ -375,6 +375,10 @@ export type UserConfiguration = {
   readonly renderWatermark: boolean;
   readonly antialiasRendering: boolean;
   readonly activeToolkit: Toolkit;
+  readonly timestampsForTools: Record<AnnotationToolId, number>;
+  readonly erasePreference: "ERASE_BRUSH" | "ERASE_TRACE";
+  readonly writePreference: "BRUSH" | "TRACE";
+  readonly measurementPreference: "LINE_MEASUREMENT" | "AREA_MEASUREMENT";
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &

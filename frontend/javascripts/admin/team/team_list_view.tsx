@@ -75,12 +75,11 @@ export function filterTeamMembersOf(team: APITeam, user: APIUser): boolean {
 
 export function renderUsersForTeam(
   team: APITeam,
-  allUsers: APIUser[] | null,
+  allUsers: APIUser[],
   renderAdditionalContent = (_teamMember: APIUser, _team: APITeam): React.ReactNode => {
     return null;
   },
 ) {
-  if (allUsers === null) return;
   const teamMembers = allUsers
     .filter((user) => filterTeamMembersOf(team, user))
     .filter((user) => user.isActive);
@@ -133,7 +132,7 @@ function TeamListView() {
     queryFn: getEditableTeams,
     refetchOnWindowFocus: false,
   });
-  const { data: users = [] } = useQueryWithErrorHandling({
+  const { data: users = [], isFetching: isLoadingUsers } = useQueryWithErrorHandling({
     queryKey: ["editableUsers"],
     queryFn: getEditableUsers,
     refetchOnWindowFocus: false,
@@ -145,7 +144,7 @@ function TeamListView() {
   const [isTeamEditModalVisible, setIsTeamEditModalVisible] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<APITeam | null>(null);
 
-  const isLoading = isLoadingTeams || isLoadingMutation;
+  const isLoading = isLoadingTeams || isLoadingUsers || isLoadingMutation;
 
   const { modal } = App.useApp();
 

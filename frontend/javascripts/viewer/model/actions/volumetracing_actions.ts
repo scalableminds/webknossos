@@ -554,10 +554,7 @@ export const requestIdReplenishmentAction = (
     domain,
   }) as const;
 
-export const idsReplenishedAction = (
-  tracingId: string,
-  domain: "SegmentGroup" | "Segment",
-) =>
+export const idsReplenishedAction = (tracingId: string, domain: "SegmentGroup" | "Segment") =>
   ({
     type: "IDS_REPLENISHED",
     tracingId,

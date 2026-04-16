@@ -6,10 +6,10 @@ import type { VolumeTracing } from "viewer/store";
 import { getTracingById } from "../accessors/tracing_accessor";
 import type { GetNewIdAction } from "../actions/actions";
 import {
-  idsReplenishedAction,
   type IdsReplenishedAction,
-  requestIdReplenishmentAction,
+  idsReplenishedAction,
   type RequestIdReplenishmentAction,
+  requestIdReplenishmentAction,
   setIdReservationsAction,
 } from "../actions/volumetracing_actions";
 import { getMaximumGroupId } from "../reducers/skeletontracing_reducer_helpers";
@@ -49,8 +49,9 @@ function getUsableReservations(tracing: VolumeTracing, domain: "SegmentGroup") {
 }
 
 function* replenishmentLoop(domain: "SegmentGroup"): Saga<void> {
-  const replenishChannel =
-    yield* actionChannel<RequestIdReplenishmentAction>("REQUEST_ID_REPLENISHMENT");
+  const replenishChannel = yield* actionChannel<RequestIdReplenishmentAction>(
+    "REQUEST_ID_REPLENISHMENT",
+  );
 
   while (true) {
     const action = (yield* take(replenishChannel)) as RequestIdReplenishmentAction;
@@ -170,5 +171,4 @@ function* fetchNewReservations(tracingId: string, domain: "SegmentGroup"): Saga<
     ]),
   );
   yield* put(idsReplenishedAction(tracingId, domain));
-
 }

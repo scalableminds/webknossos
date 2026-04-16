@@ -6,8 +6,8 @@ import {
 } from "test/helpers/apiHelpers";
 import type { Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
-import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import { dispatchGetNewIdAsync } from "viewer/model/actions/actions";
+import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import {
   removeSegmentAction,
   setIdReservationsAction,

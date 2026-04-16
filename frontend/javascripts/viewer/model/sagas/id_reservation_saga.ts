@@ -22,6 +22,10 @@ export default function* idReservationSaga(): Saga<void> {
 
   const getNewIdActionChannel = yield* actionChannel<GetNewIdAction>("GET_NEW_ID");
 
+  // Currently, there is one replenishmentLoop per supported domain type (which is only
+  // SegmentGroup, currently). In theory, one could have a replenishmentLoop per
+  // supported domain x tracing. This approach would allow parallel replenishment requests
+  // for multiple tracings. However, this is probably overkill right now.
   yield* fork(replenishmentLoop, "SegmentGroup");
 
   while (true) {
@@ -50,14 +54,13 @@ function getUsableReservations(tracing: VolumeTracing, domain: "SegmentGroup") {
 
 function* replenishmentLoop(domain: "SegmentGroup"): Saga<void> {
   const replenishChannel = yield* actionChannel<RequestIdReplenishmentAction>(
-    "REQUEST_ID_REPLENISHMENT",
+    (action: { type: string }) =>
+      action.type === "REQUEST_ID_REPLENISHMENT" &&
+      (action as RequestIdReplenishmentAction).domain === domain,
   );
 
   while (true) {
     const action = (yield* take(replenishChannel)) as RequestIdReplenishmentAction;
-    if (action.domain !== domain) {
-      continue;
-    }
 
     const tracing = yield* select((state) => getTracingById(state, action.tracingId));
     if (tracing.type !== "volume") {
@@ -66,6 +69,7 @@ function* replenishmentLoop(domain: "SegmentGroup"): Saga<void> {
 
     const usableReservations = getUsableReservations(tracing, domain);
     if (usableReservations.length < IDEAL_ID_BUFFER_SIZE / 2) {
+      // This will block until new reservations were fetched.
       yield* call(fetchNewReservations, action.tracingId, domain);
     } else {
       // Buffer is already sufficient (e.g., a previous replenishment already ran);
@@ -94,6 +98,7 @@ function* handleReservationRequest(action: GetNewIdAction): Saga<void> {
       setIdReservationsAction(
         tracingId,
         domain,
+        // todop: what about the other reservations?
         usableReservations.map((reservation, index) =>
           index === 0 ? { ...reservation, used: true } : reservation,
         ),
@@ -111,9 +116,10 @@ function* handleReservationRequest(action: GetNewIdAction): Saga<void> {
   }
 
   // No usable IDs: request replenishment and wait for it to complete before recursing.
+  const replenishedChannel = yield* actionChannel<IdsReplenishedAction>("IDS_REPLENISHED");
   yield* put(requestIdReplenishmentAction(tracingId, domain));
   while (true) {
-    const replenished = (yield* take("IDS_REPLENISHED")) as IdsReplenishedAction;
+    const replenished = (yield* take(replenishedChannel)) as IdsReplenishedAction;
     if (replenished.tracingId === tracingId && replenished.domain === domain) break;
   }
 
@@ -166,6 +172,8 @@ function* fetchNewReservations(tracingId: string, domain: "SegmentGroup"): Saga<
 
   yield* put(
     setIdReservationsAction(tracingId, domain, [
+      // todop: what about the unusable ones? don't they need to be kept (except for the ones that were
+      // released)?
       ...freshUsableReservations,
       ...newIds.map((id) => ({ id, used: false })),
     ]),

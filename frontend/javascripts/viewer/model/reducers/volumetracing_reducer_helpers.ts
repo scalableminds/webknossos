@@ -41,6 +41,7 @@ import {
   isInSupportedValueRangeForLayer,
 } from "../accessors/dataset_accessor";
 import { mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
+import type { SetIdReservationsAction } from "../actions/actions";
 import type {
   FinishMappingInitializationAction,
   SetMappingAction,
@@ -60,7 +61,6 @@ import {
 import type { TreeGroup } from "../types/tree_types";
 import { sanitizeMetadata } from "./skeletontracing_reducer";
 import { forEachGroups } from "./skeletontracing_reducer_helpers";
-import type { SetIdReservationsAction } from "../actions/actions";
 
 export type VolumeTracingReducerAction =
   | VolumeTracingAction

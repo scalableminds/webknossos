@@ -1037,8 +1037,18 @@ export async function reserveIdsForAnnotation(
   idsToRelease: number[] = [],
 ): Promise<number[]> {
   /*
-   * Will newly reserved ids for the specified domain.
+   * Will reserve new ids for the specified domain.
    */
+  if (numberOfIdsToReserve <= 0) {
+    // Otherwise, the backend cannot reliably use the largest id
+    // in a domain as a starting point to generate new ids.
+    // For example:
+    // User 1 has reservations for ids 1 and 2.
+    // User 2 has reservations for ids 3 and 4 and releases
+    // these (without reserving new ones).
+    // Then, the known maximum is 2 (instead of 4).
+    throw new Error("Must reserve at least 1 id");
+  }
   const ids: number[] = await Request.sendJSONReceiveJSON(
     `/api/annotations/${annotationId}/reserveIds`,
     {

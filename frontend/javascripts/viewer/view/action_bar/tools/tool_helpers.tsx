@@ -1,4 +1,5 @@
-import { Radio } from "antd";
+import { Dropdown, Radio } from "antd";
+import type { MenuItemType } from "antd/es/menu/interface";
 import FastTooltip from "components/fast_tooltip";
 
 import { document } from "libs/window";
@@ -17,6 +18,7 @@ export function RadioButtonWithTooltip({
   onClick,
   children,
   onMouseEnter,
+  dropdownItems,
   ...props
 }: {
   title: string | null;
@@ -26,6 +28,7 @@ export function RadioButtonWithTooltip({
   style?: React.CSSProperties;
   value: unknown;
   onClick?: (event: React.MouseEvent) => void;
+  dropdownItems?: MenuItemType[];
   onMouseEnter?: () => void;
 }) {
   // FastTooltip adds data-* properties so that the centralized ReactTooltip
@@ -49,10 +52,12 @@ export function RadioButtonWithTooltip({
       }}
       {...props}
     >
-      <FastTooltip title={disabled ? disabledTitle : title} onMouseEnter={onMouseEnter}>
-        {/* See comments above. */}
-        <div style={{ ...NARROW_BUTTON_STYLE, display: "block" }}>{children}</div>
-      </FastTooltip>
+      <Dropdown menu={{ items: dropdownItems ?? [] }} trigger={dropdownItems ? ["click"] : []}>
+        <FastTooltip title={disabled ? disabledTitle : title} onMouseEnter={onMouseEnter}>
+          {/* See comments above. */}
+          <div style={{ ...NARROW_BUTTON_STYLE, display: "block" }}>{children}</div>
+        </FastTooltip>
+      </Dropdown>
     </Radio.Button>
   );
 }
@@ -62,6 +67,7 @@ export function ToolRadioButton({
   description,
   disabledExplanation,
   onMouseEnter,
+  dropdownItems,
   ...props
 }: {
   name: string;
@@ -73,12 +79,14 @@ export function ToolRadioButton({
   value: unknown;
   onClick?: (event: React.MouseEvent) => void;
   onMouseEnter?: () => void;
+  dropdownItems?: MenuItemType[];
 }) {
   return (
     <RadioButtonWithTooltip
       title={description != null ? `${name} – ${description}` : null}
       disabledTitle={`${name} – ${disabledExplanation}`}
       onMouseEnter={onMouseEnter}
+      dropdownItems={dropdownItems}
       {...props}
     />
   );

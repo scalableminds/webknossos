@@ -181,25 +181,29 @@ function BrushToolMenu({ adaptedActiveTool }: ToolButtonProps) {
         }}
         trigger={["hover"]}
       >
-        {brushPreference === "BRUSH" ? (
-          <Icon
-            component={AnnotationTool.BRUSH.icon}
-            style={getMaybeDisabledButtonStyle(isBrushDisabled)}
+        <div>
+          {brushPreference === "BRUSH" ? (
+            <Icon
+              component={AnnotationTool.BRUSH.icon}
+              style={getMaybeDisabledButtonStyle(isBrushDisabled)}
+            />
+          ) : (
+            <Icon
+              component={AnnotationTool.TRACE.icon}
+              style={getMaybeDisabledButtonStyle(isTraceDisabled)}
+            />
+          )}
+          <CaretDownOutlined
+            title="test"
+            className="triangle-icon"
+            style={getMaybeDisabledButtonStyle(isBrushDisabled && isTraceDisabled)}
           />
-        ) : (
-          <Icon
-            component={AnnotationTool.TRACE.icon}
-            style={getMaybeDisabledButtonStyle(isTraceDisabled)}
-          />
-        )}
+          {adaptedActiveTool === AnnotationTool.BRUSH ||
+          adaptedActiveTool === AnnotationTool.TRACE ? (
+            <MaybeMultiSliceAnnotationInfoIcon />
+          ) : null}
+        </div>
       </Dropdown>
-      <CaretDownOutlined
-        className="triangle-icon"
-        style={getMaybeDisabledButtonStyle(isBrushDisabled && isTraceDisabled)}
-      />
-      {adaptedActiveTool === AnnotationTool.BRUSH || adaptedActiveTool === AnnotationTool.TRACE ? (
-        <MaybeMultiSliceAnnotationInfoIcon />
-      ) : null}
     </ToolRadioButton>
   );
 }
@@ -272,28 +276,30 @@ function EraseToolMenu({ adaptedActiveTool }: ToolButtonProps) {
           ],
           onClick: (key) => dispatch(setToolAction(AnnotationTool[key.key as AnnotationToolId])),
         }}
-        trigger={["hover"]}
+        trigger={["click", "hover"]}
       >
-        {erasePreference === "ERASE_BRUSH" ? (
-          <Icon
-            component={AnnotationTool.ERASE_BRUSH.icon}
-            style={getMaybeDisabledButtonStyle(isEraseBrushDisabled)}
+        <div>
+          {erasePreference === "ERASE_BRUSH" ? (
+            <Icon
+              component={AnnotationTool.ERASE_BRUSH.icon}
+              style={getMaybeDisabledButtonStyle(isEraseBrushDisabled)}
+            />
+          ) : (
+            <Icon
+              component={AnnotationTool.ERASE_TRACE.icon}
+              style={getMaybeDisabledButtonStyle(isEraseTraceDisabled)}
+            />
+          )}
+          <CaretDownOutlined
+            className="triangle-icon"
+            style={getMaybeDisabledButtonStyle(isEraseBrushDisabled && isEraseTraceDisabled)}
           />
-        ) : (
-          <Icon
-            component={AnnotationTool.ERASE_TRACE.icon}
-            style={getMaybeDisabledButtonStyle(isEraseTraceDisabled)}
-          />
-        )}
+          {adaptedActiveTool === AnnotationTool.ERASE_BRUSH ||
+          adaptedActiveTool === AnnotationTool.ERASE_TRACE ? (
+            <MaybeMultiSliceAnnotationInfoIcon />
+          ) : null}
+        </div>
       </Dropdown>
-      <CaretDownOutlined
-        className="triangle-icon"
-        style={getMaybeDisabledButtonStyle(isEraseBrushDisabled && isEraseTraceDisabled)}
-      />
-      {adaptedActiveTool === AnnotationTool.ERASE_BRUSH ||
-      adaptedActiveTool === AnnotationTool.ERASE_TRACE ? (
-        <MaybeMultiSliceAnnotationInfoIcon />
-      ) : null}
     </ToolRadioButton>
   );
 }
@@ -463,69 +469,62 @@ function MeasurementToolMenu({ adaptedActiveTool: _adaptedActiveTool }: ToolButt
       disabled={isAreaMeasurementDisabled && isLineMeasurementDisabled}
       value={favoriteMeasurementTool.id}
       style={NARROW_BUTTON_STYLE}
+      dropdownItems={[
+        {
+          key: AnnotationTool.LINE_MEASUREMENT.id,
+          label: (
+            <FastTooltip
+              title={
+                isLineMeasurementDisabled
+                  ? disabledInfosForTools[AnnotationTool.LINE_MEASUREMENT.id].explanation
+                  : "Measure distances with connected lines by using Left Click."
+              }
+            >
+              Line Measurement
+            </FastTooltip>
+          ),
+          icon: (
+            <Icon
+              component={AnnotationTool.LINE_MEASUREMENT.icon}
+              style={getMaybeDisabledButtonStyle(isLineMeasurementDisabled)}
+            />
+          ),
+          disabled: isLineMeasurementDisabled,
+        },
+        {
+          key: AnnotationTool.AREA_MEASUREMENT.id,
+          label: (
+            <FastTooltip
+              title={
+                isAreaMeasurementDisabled
+                  ? disabledInfosForTools[AnnotationTool.AREA_MEASUREMENT.id].explanation
+                  : "Measure areas by using Left Drag. Avoid self-crossing polygon structure for accurate results."
+              }
+            >
+              Area Measurement
+            </FastTooltip>
+          ),
+          icon: (
+            <Icon
+              component={AnnotationTool.AREA_MEASUREMENT.icon}
+              style={getMaybeDisabledButtonStyle(isAreaMeasurementDisabled)}
+            />
+          ),
+          disabled: isAreaMeasurementDisabled,
+        },
+      ]}
     >
-      <Dropdown
-        menu={{
-          items: [
-            {
-              key: AnnotationTool.LINE_MEASUREMENT.id,
-              label: (
-                <FastTooltip
-                  title={
-                    isLineMeasurementDisabled
-                      ? disabledInfosForTools[AnnotationTool.LINE_MEASUREMENT.id].explanation
-                      : "Measure distances with connected lines by using Left Click."
-                  }
-                >
-                  Line Measurement
-                </FastTooltip>
-              ),
-              icon: (
-                <Icon
-                  component={AnnotationTool.LINE_MEASUREMENT.icon}
-                  style={getMaybeDisabledButtonStyle(isLineMeasurementDisabled)}
-                />
-              ),
-              disabled: isLineMeasurementDisabled,
-            },
-            {
-              key: AnnotationTool.AREA_MEASUREMENT.id,
-              label: (
-                <FastTooltip
-                  title={
-                    isAreaMeasurementDisabled
-                      ? disabledInfosForTools[AnnotationTool.AREA_MEASUREMENT.id].explanation
-                      : "Measure areas by using Left Drag. Avoid self-crossing polygon structure for accurate results."
-                  }
-                >
-                  Area Measurement
-                </FastTooltip>
-              ),
-              icon: (
-                <Icon
-                  component={AnnotationTool.AREA_MEASUREMENT.icon}
-                  style={getMaybeDisabledButtonStyle(isAreaMeasurementDisabled)}
-                />
-              ),
-              disabled: isAreaMeasurementDisabled,
-            },
-          ],
-          onClick: (key) => dispatch(setToolAction(AnnotationTool[key.key as AnnotationToolId])),
-        }}
-        trigger={["hover"]}
-      >
-        {measurementPreference === "LINE_MEASUREMENT" ? (
-          <Icon
-            component={AnnotationTool.LINE_MEASUREMENT.icon}
-            style={getMaybeDisabledButtonStyle(isLineMeasurementDisabled)}
-          />
-        ) : (
-          <Icon
-            component={AnnotationTool.AREA_MEASUREMENT.icon}
-            style={getMaybeDisabledButtonStyle(isAreaMeasurementDisabled)}
-          />
-        )}
-      </Dropdown>
+      {measurementPreference === "LINE_MEASUREMENT" ? (
+        <Icon
+          component={AnnotationTool.LINE_MEASUREMENT.icon}
+          style={getMaybeDisabledButtonStyle(isLineMeasurementDisabled)}
+        />
+      ) : (
+        <Icon
+          component={AnnotationTool.AREA_MEASUREMENT.icon}
+          style={getMaybeDisabledButtonStyle(isAreaMeasurementDisabled)}
+        />
+      )}
       <CaretDownOutlined
         className="triangle-icon"
         style={getMaybeDisabledButtonStyle(isLineMeasurementDisabled && isAreaMeasurementDisabled)}

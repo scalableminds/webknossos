@@ -17,7 +17,7 @@ import { getCurrentMappingName } from "viewer/model/accessors/volumetracing_acce
 import { saveAsCSV, transformToCSVRow } from "viewer/model/helpers/csv_helpers";
 import { getBoundingBoxInMag1 } from "viewer/model/sagas/volume/helpers";
 import { voxelToVolumeInUnit } from "viewer/model/scaleinfo";
-import { api } from "viewer/singletons";
+import { api, Store } from "viewer/singletons";
 import type { Segment } from "viewer/store";
 import type { SegmentHierarchyGroup, SegmentHierarchyNode } from "./segments_view_helper";
 
@@ -171,12 +171,14 @@ export function SegmentStatisticsModal({
     ],
     queryFn: async () => {
       await api.tracing.save();
+      const annotationVersion = Store.getState().annotation.version;
       return getSegmentVolumes(
         storeInfoType,
         layersFinestMag,
         segmentIds,
         additionalCoordinates,
         mappingName,
+        annotationVersion,
       );
     },
     gcTime: 0,
@@ -197,12 +199,14 @@ export function SegmentStatisticsModal({
     ],
     queryFn: async () => {
       await api.tracing.save();
+      const annotationVersion = Store.getState().annotation.version;
       return getSegmentBoundingBoxes(
         storeInfoType,
         layersFinestMag,
         segmentIds,
         additionalCoordinates,
         mappingName,
+        annotationVersion,
       );
     },
     gcTime: 0,
@@ -224,6 +228,7 @@ export function SegmentStatisticsModal({
     ],
     queryFn: async () => {
       await api.tracing.save();
+      const annotationVersion = Store.getState().annotation.version;
       return getSegmentSurfaceArea(
         storeInfoType,
         layersFinestMag,
@@ -231,6 +236,7 @@ export function SegmentStatisticsModal({
         segmentIds,
         additionalCoordinates,
         mappingName,
+        annotationVersion,
       );
     },
     gcTime: 0,

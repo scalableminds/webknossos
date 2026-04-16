@@ -69,6 +69,7 @@ export function useSegmentStatistics(
           [clickedSegmentOrMeshId],
           additionalCoordinates,
           mappingName,
+          annotation.version,
         );
         const [boundingBoxInRequestedMag] = await getSegmentBoundingBoxes(
           layerSourceInfo,
@@ -76,6 +77,7 @@ export function useSegmentStatistics(
           [clickedSegmentOrMeshId],
           additionalCoordinates,
           mappingName,
+          annotation.version,
         );
         const [surfaceArea] = await getSegmentSurfaceArea(
           layerSourceInfo,
@@ -84,6 +86,7 @@ export function useSegmentStatistics(
           [clickedSegmentOrMeshId],
           additionalCoordinates,
           mappingName,
+          annotation.version,
         );
         const boundingBoxInMag1 = getBoundingBoxInMag1(boundingBoxInRequestedMag, layersFinestMag);
         const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;

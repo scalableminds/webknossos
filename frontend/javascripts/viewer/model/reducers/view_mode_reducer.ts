@@ -51,6 +51,7 @@ function ViewModeReducer(state: WebknossosState, action: Action): WebknossosStat
 
     case "SET_INPUT_CATCHER_RECTS": {
       const { viewportRects } = action;
+      console.log("viewportRects", viewportRects);
       let newState = state;
 
       for (const viewport of Object.keys(viewportRects)) {

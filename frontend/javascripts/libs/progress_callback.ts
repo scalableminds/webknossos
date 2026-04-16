@@ -1,7 +1,7 @@
 import { message } from "antd";
 import { sleep } from "libs/utils";
 
-type HideFn = () => void;
+export type HideFn = () => void;
 
 export type ProgressCallback = (
   isDone: boolean,

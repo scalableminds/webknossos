@@ -67,10 +67,7 @@ export function renderTeamRolesAndPermissionsForUser(user: APIUser) {
 }
 
 export function filterTeamMembersOf(team: APITeam, user: APIUser): boolean {
-  return (
-    user.teams.some((userTeam: APITeamMembership) => userTeam.id === team.id) ||
-    (user.isAdmin && user.isActive)
-  );
+  return user.teams.some((userTeam: APITeamMembership) => userTeam.id === team.id) || user.isAdmin;
 }
 
 export function renderUsersForTeam(
@@ -89,9 +86,13 @@ export function renderUsersForTeam(
     <ul>
       {teamMembers.map((teamMember) => (
         <li key={`team_member_${teamMember.id}`}>
-          {teamMember.firstName} {teamMember.lastName} ({teamMember.email}){" "}
-          {renderTeamRolesForUser(teamMember, team)}
-          {renderAdditionalContent(teamMember, team)}
+          <Space size="small">
+            <span>
+              {teamMember.firstName} {teamMember.lastName} ({teamMember.email})
+            </span>
+            {renderTeamRolesForUser(teamMember, team)}
+            {renderAdditionalContent(teamMember, team)}
+          </Space>
         </li>
       ))}
     </ul>

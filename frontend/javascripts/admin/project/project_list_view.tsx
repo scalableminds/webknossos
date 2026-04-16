@@ -11,6 +11,7 @@ import {
   TeamOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import { useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
 import { getTasks } from "admin/api/tasks";
 import TransferAllTasksModal from "admin/project/transfer_all_tasks_modal";
@@ -29,7 +30,7 @@ import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
-import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
+import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import {
   compareBy,
@@ -40,7 +41,7 @@ import {
 import partial from "lodash-es/partial";
 import uniqBy from "lodash-es/uniqBy";
 import messages from "messages";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 import {
   type APIProject,
@@ -68,70 +69,64 @@ function ProjectListView() {
   const initialSearchValue = location.hash.slice(1);
 
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
-  const [isLoading, setIsLoading] = useState(true);
-  const [projects, setProjects] = useState<APIProjectWithStatus[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const queryClient = useQueryClient();
+
+  const {
+    data: projects = [],
+    isFetching: isLoadingProjects,
+    refetch,
+  } = useQueryWithErrorHandling({
+    queryKey: ["projectsWithStatus", taskTypeId],
+    queryFn: async () => {
+      const projects = taskTypeId
+        ? await getProjectsForTaskType(taskTypeId)
+        : await getProjectsWithStatus();
+      return projects.filter((p) => p.owner != null);
+    },
+    refetchOnWindowFocus: false,
+  });
+
+  const { data: taskType } = useQueryWithErrorHandling({
+    queryKey: ["taskType", taskTypeId],
+    queryFn: () => getTaskType(taskTypeId!),
+    enabled: taskTypeId != null,
+    refetchOnWindowFocus: false,
+  });
+  const taskTypeName = taskType?.summary;
+
+  const [searchQuery, setSearchQuery] = useState(
+    () => (initialSearchValue !== "" ? initialSearchValue : persistence.load().searchQuery || ""),
+  );
+  const [isLoadingMutation, setIsLoadingMutation] = useState(false);
   const [isTransferTasksVisible, setIsTransferTasksVisible] = useState(false);
   const [selectedProject, setSelectedProject] = useState<APIProjectWithStatus | undefined>(
     undefined,
   );
-  const [taskTypeName, setTaskTypeName] = useState<string | undefined>("");
 
-  useEffectOnlyOnce(() => {
-    const { searchQuery } = persistence.load();
-    setSearchQuery(searchQuery || "");
-    if (initialSearchValue != null && initialSearchValue !== "") {
-      // Only override the persisted value if the provided initialSearchValue is not empty
-      setSearchQuery(initialSearchValue);
-    }
-    fetchData(taskTypeId);
-  });
-
-  useEffect(() => {
-    fetchData(taskTypeId);
-  }, [taskTypeId]);
-
-  useEffect(() => {
-    persistence.persist({ searchQuery });
-  }, [searchQuery]);
-
-  async function fetchData(taskTypeId?: string): Promise<void> {
-    let projects;
-    let taskTypeName;
-    let taskType;
-
-    if (taskTypeId) {
-      [projects, taskType] = await Promise.all([
-        getProjectsForTaskType(taskTypeId),
-        getTaskType(taskTypeId || ""),
-      ]);
-      taskTypeName = taskType.summary;
-    } else {
-      projects = await getProjectsWithStatus();
-    }
-
-    setIsLoading(false);
-    setProjects(projects.filter((p) => p.owner != null));
-    setTaskTypeName(taskTypeName);
-  }
+  const isLoading = isLoadingProjects || isLoadingMutation;
 
   function handleSearch(event: React.ChangeEvent<HTMLInputElement>): void {
-    setSearchQuery(event.target.value);
+    const newSearchQuery = event.target.value;
+    setSearchQuery(newSearchQuery);
+    persistence.persist({ searchQuery: newSearchQuery });
   }
 
   function deleteProject(project: APIProjectWithStatus) {
     modal.confirm({
       title: messages["project.delete"],
       onOk: async () => {
-        setIsLoading(true);
-
+        setIsLoadingMutation(true);
         try {
           await deleteProjectAPI(project.id);
-          setProjects(projects.filter((p) => p.id !== project.id));
+          queryClient.setQueryData(
+            ["projectsWithStatus", taskTypeId],
+            (currentProjects: APIProjectWithStatus[]) =>
+              currentProjects.filter((p) => p.id !== project.id),
+          );
         } catch (error) {
           handleGenericError(error as Error);
         } finally {
-          setIsLoading(false);
+          setIsLoadingMutation(false);
         }
       },
     });
@@ -149,8 +144,12 @@ function ProjectListView() {
     APICall: (arg0: string) => Promise<APIProject>,
   ) {
     const updatedProject = await APICall(project.id);
-    setProjects(
-      projects.map((p) => (p.id === project.id ? mergeProjectWithUpdated(p, updatedProject) : p)),
+    queryClient.setQueryData(
+      ["projectsWithStatus", taskTypeId],
+      (currentProjects: APIProjectWithStatus[]) =>
+        currentProjects.map((p) =>
+          p.id === project.id ? mergeProjectWithUpdated(p, updatedProject) : p,
+        ),
     );
   }
 
@@ -159,13 +158,17 @@ function ProjectListView() {
       title: messages["project.increase_instances"],
       onOk: async () => {
         try {
-          setIsLoading(true);
+          setIsLoadingMutation(true);
           const updatedProject = await increaseProjectTaskInstancesAPI(project.id);
-          setProjects(projects.map((p) => (p.id === project.id ? updatedProject : p)));
+          queryClient.setQueryData(
+            ["projectsWithStatus", taskTypeId],
+            (currentProjects: APIProjectWithStatus[]) =>
+              currentProjects.map((p) => (p.id === project.id ? updatedProject : p)),
+          );
         } catch (error) {
           handleGenericError(error as Error);
         } finally {
-          setIsLoading(false);
+          setIsLoadingMutation(false);
         }
       },
     });
@@ -190,7 +193,7 @@ function ProjectListView() {
 
   function onTaskTransferComplete() {
     setIsTransferTasksVisible(false);
-    fetchData(taskTypeId);
+    refetch();
   }
 
   function renderPlaceholder() {

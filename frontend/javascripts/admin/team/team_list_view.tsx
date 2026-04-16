@@ -1,5 +1,6 @@
 import { DeleteOutlined, PlusOutlined, UserOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import { useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
 import { deleteTeam as deleteTeamAPI, getEditableTeams, getEditableUsers } from "admin/rest_api";
 import CreateTeamModal from "admin/team/create_team_modal_view";
@@ -8,11 +9,12 @@ import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";
 import Persistence from "libs/persistence";
+import { useQueryWithErrorHandling } from "libs/react_hooks";
 import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import partial from "lodash-es/partial";
 import messages from "messages";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { APITeam, APITeamMembership, APIUser } from "types/api_types";
 import EditTeamModalView from "./edit_team_modal_view";
 
@@ -124,36 +126,33 @@ const persistence = new Persistence<Pick<{ searchQuery: string }, "searchQuery">
 );
 
 function TeamListView() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [teams, setTeams] = useState<APITeam[]>([]);
-  const [users, setUsers] = useState<APIUser[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const queryClient = useQueryClient();
+
+  const { data: teams = [], isFetching: isLoadingTeams } = useQueryWithErrorHandling({
+    queryKey: ["editableTeams"],
+    queryFn: getEditableTeams,
+    refetchOnWindowFocus: false,
+  });
+  const { data: users = [] } = useQueryWithErrorHandling({
+    queryKey: ["editableUsers"],
+    queryFn: getEditableUsers,
+    refetchOnWindowFocus: false,
+  });
+
+  const [searchQuery, setSearchQuery] = useState(() => persistence.load().searchQuery || "");
+  const [isLoadingMutation, setIsLoadingMutation] = useState(false);
   const [isTeamCreationModalVisible, setIsTeamCreationModalVisible] = useState(false);
   const [isTeamEditModalVisible, setIsTeamEditModalVisible] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<APITeam | null>(null);
 
+  const isLoading = isLoadingTeams || isLoadingMutation;
+
   const { modal } = App.useApp();
 
-  useEffect(() => {
-    const { searchQuery } = persistence.load();
-    setSearchQuery(searchQuery || "");
-    fetchData();
-  }, []);
-
-  useEffect(() => {
-    persistence.persist({ searchQuery });
-  }, [searchQuery]);
-
-  async function fetchData(): Promise<void> {
-    const [teams, users] = await Promise.all([getEditableTeams(), getEditableUsers()]);
-
-    setUsers(users);
-    setTeams(teams);
-    setIsLoading(false);
-  }
-
   function handleSearch(event: React.ChangeEvent<HTMLInputElement>): void {
-    setSearchQuery(event.target.value);
+    const newSearchQuery = event.target.value;
+    setSearchQuery(newSearchQuery);
+    persistence.persist({ searchQuery: newSearchQuery });
   }
 
   function deleteTeam(team: APITeam) {
@@ -161,13 +160,15 @@ function TeamListView() {
       title: messages["team.delete"],
       onOk: async () => {
         try {
-          setIsLoading(true);
+          setIsLoadingMutation(true);
           await deleteTeamAPI(team.id);
-          setTeams(teams.filter((t: APITeam) => t.id !== team.id));
+          queryClient.setQueryData(["editableTeams"], (currentTeams: APITeam[]) =>
+            currentTeams.filter((t) => t.id !== team.id),
+          );
         } catch (error) {
           handleGenericError(error as Error);
         } finally {
-          setIsLoading(false);
+          setIsLoadingMutation(false);
         }
       },
     });
@@ -175,7 +176,10 @@ function TeamListView() {
 
   function createTeam(newTeam: APITeam) {
     setIsTeamCreationModalVisible(false);
-    setTeams([...teams, newTeam]);
+    queryClient.setQueryData(["editableTeams"], (currentTeams: APITeam[]) => [
+      ...currentTeams,
+      newTeam,
+    ]);
   }
 
   return (

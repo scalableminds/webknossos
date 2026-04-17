@@ -143,10 +143,11 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
   const onRegisterSegmentsForBB = async (value: Vector6, name: string): Promise<void> => {
     const min: Vector3 = [value[0], value[1], value[2]];
     const max: Vector3 = [value[0] + value[3], value[1] + value[4], value[2] + value[5]];
+    // Close before the async call to avoid that the user can easily click twice.
+    maybeCloseContextMenu();
     await api.tracing
       .registerSegmentsForBoundingBox(min, max, name)
       .catch((error) => Toast.error(error.message));
-    maybeCloseContextMenu();
   };
 
   const upscaledColor = color.map((colorPart) => colorPart * 255) as any as Vector3;

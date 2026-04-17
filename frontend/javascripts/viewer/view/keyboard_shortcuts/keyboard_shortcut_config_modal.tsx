@@ -1,15 +1,4 @@
-import Icon, {
-  CloseOutlined,
-  EditOutlined,
-  PlusOutlined,
-  RollbackOutlined,
-} from "@ant-design/icons";
-import IconStatusbarMouseLeft from "@images/icons/icon-statusbar-mouse-left.svg?react";
-import IconStatusbarMouseLeftDrag from "@images/icons/icon-statusbar-mouse-left-drag.svg?react";
-import IconStatusbarMouseMove from "@images/icons/icon-statusbar-mouse-move.svg?react";
-import IconStatusbarMouseRight from "@images/icons/icon-statusbar-mouse-right.svg?react";
-import IconStatusbarMouseRightDrag from "@images/icons/icon-statusbar-mouse-right-drag.svg?react";
-import IconStatusbarMouseWheel from "@images/icons/icon-statusbar-mouse-wheel.svg?react";
+import { CloseOutlined, EditOutlined, PlusOutlined, RollbackOutlined } from "@ant-design/icons";
 import { updateKeyboardShortcutsConfig } from "admin/rest_api";
 import {
   Button,
@@ -36,6 +25,19 @@ import {
   getAllDefaultKeyboardShortcuts,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 import { validateShortcutMapText } from "./keyboard_shortcut_persistence";
+import {
+  ArbitraryNavigationMouseShortcutsTable,
+  PlaneGeneralEditingMouseShortcutsTable,
+  PlaneNavigationMouseShortcutsTable,
+  PlaneTdViewportMouseShortcutsTable,
+  ProofreadingToolMouseShortcutsTable,
+  ProofreadingToolOrthoMouseShortcutsTable,
+  ProofreadingToolTDMouseShortcutsTable,
+  SkeletonToolClassicControlsMouseShortcutsTable,
+  SkeletonToolMouseShortcutsTable,
+  VolumeToolClassicControlsMouseShortcutsTable,
+  VolumeToolMouseShortcutsTable,
+} from "./keyboard_shortcut_mouse_tables";
 import { type KeyboardComboChain, KeyboardShortcutDomain } from "./keyboard_shortcut_types";
 import { checkCollisionsInShortcutMap, keyComboChainToUiElements } from "./keyboard_shortcut_utils";
 import { CollisionWarningAlert, ShortcutRecorderModal } from "./shortcut_recorder_modal";
@@ -53,21 +55,18 @@ type KeyboardShortcutTableDataEntry = {
   domain: string;
   description: string;
 };
-type MouseShortcutTableDataEntry = {
-  shortcuts: React.ReactNode;
-  action: string;
-};
-type ShortcutDomainTableProps<
-  T extends KeyboardShortcutTableDataEntry | MouseShortcutTableDataEntry,
-> = {
+
+type KeyboardShortcutDomainTableProps = {
   domainName: KeyboardShortcutDomain;
-  tableData: T[];
-  columns: ColumnsType<T>;
+  tableData: KeyboardShortcutTableDataEntry[];
+  columns: ColumnsType<KeyboardShortcutTableDataEntry>;
 };
 
-const KeyboardShortcutDomainTable: React.FC<
-  ShortcutDomainTableProps<KeyboardShortcutTableDataEntry>
-> = ({ domainName, tableData, columns }) => {
+const KeyboardShortcutDomainTable: React.FC<KeyboardShortcutDomainTableProps> = ({
+  domainName,
+  tableData,
+  columns,
+}) => {
   return (
     <div key={domainName}>
       <Title level={5}>{domainName} Shortcuts</Title>
@@ -76,26 +75,7 @@ const KeyboardShortcutDomainTable: React.FC<
         columns={columns}
         pagination={false}
         size="small"
-        style={{ marginBottom: 24 }}
-      />
-    </div>
-  );
-};
-
-const MouseShortcutDomainTable: React.FC<ShortcutDomainTableProps<MouseShortcutTableDataEntry>> = ({
-  domainName,
-  tableData,
-  columns,
-}) => {
-  return (
-    <div key={domainName}>
-      <Title level={5}>{domainName} Mouse Shortcuts</Title>
-      <Table
-        dataSource={tableData}
-        columns={columns}
-        pagination={false}
-        size="small"
-        style={{ marginBottom: 24 }}
+        className="shortcut-table-modal"
       />
     </div>
   );
@@ -174,387 +154,16 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
     return domainToEntries;
   }, [localShortcutConfig]);
 
-  const mouseShortcutColumns = [
-    {
-      title: "Shortcuts",
-      dataIndex: "shortcuts",
-      key: "shortcuts",
-      render: (shortcuts: React.ReactNode[]) => (
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 8,
-            alignItems: "center", // flex-start
-            width: "100%",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 8,
-              alignItems: "center",
-              flex: 1,
-              minWidth: 0,
-            }}
-          >
-            {shortcuts.map((shortcut, index) => (
-              <div
-                key={index}
-                style={{
-                  display: "inline-flex",
-                  gap: 4,
-                  alignItems: "center",
-                  padding: 2,
-                  whiteSpace: "nowrap",
-                  border: "1px solid gray",
-                  borderRadius: 4,
-                  borderColor: "var(--ant-color-border)",
-                }}
-              >
-                {shortcut}
-              </div>
-            ))}
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: "Action",
-      dataIndex: "action",
-      key: "action",
-    },
-  ];
-
-  const arbitraryNavigationMouseShortcuts = [
-    {
-      shortcuts: [
-        <Icon key="1" component={IconStatusbarMouseLeft} aria-label="Left Mouse Click" />,
-      ],
-      action: "Select And Move To Node",
-    },
-    {
-      shortcuts: [
-        <Icon key="1" component={IconStatusbarMouseLeftDrag} aria-label="Left Mouse Drag" />,
-      ],
-      action: "Rotate around current position",
-    },
-    {
-      shortcuts: [
-        <React.Fragment key="1">
-          {keyComboChainToUiElements([["Shift"]], false)} +{" "}
-          {keyComboChainToUiElements([["Alt"]], false)} +{" "}
-          <Icon key="1" component={IconStatusbarMouseLeft} aria-label="Left Mouse Click" />
-        </React.Fragment>,
-      ],
-      action: "Merge with Active Node and Combine Trees",
-    },
-    {
-      shortcuts: [
-        <React.Fragment key="1">
-          {keyComboChainToUiElements([["Shift"]], false)} +{" "}
-          {keyComboChainToUiElements([["Ctrl"]], false)}/
-          {keyComboChainToUiElements([["Meta"]], false)} +{" "}
-          <Icon key="1" component={IconStatusbarMouseLeft} aria-label="Left Mouse Click" />
-        </React.Fragment>,
-      ],
-      action: "Delete Edge to this Node and Split Trees",
-    },
-  ];
-
-  const planeNavigationMouseShortcuts = [
-    {
-      shortcuts: [
-        <Icon key="1" component={IconStatusbarMouseLeftDrag} aria-label="Left Mouse Drag" />,
-      ],
-      action: "Move In-Plane",
-    },
-    {
-      shortcuts: [<Icon key="1" component={IconStatusbarMouseWheel} aria-label="Mouse Wheel" />],
-      action: "Move One Slice Forward or Backward ",
-    },
-    {
-      shortcuts: [
-        <Icon key="1" component={IconStatusbarMouseLeftDrag} aria-label="Left Mouse Drag" />,
-      ],
-      action: "Move 3D viewport ",
-    },
-    {
-      shortcuts: [
-        <Icon key="1" component={IconStatusbarMouseRightDrag} aria-label="Right Mouse Drag" />,
-      ],
-      action: "Rotate 3D viewport ",
-    },
-  ];
-
-  const skeletonToolMouseShortcuts = [
-    {
-      shortcuts: [
-        <React.Fragment key="1">
-          {keyComboChainToUiElements([["Shift"]], false)} +{" "}
-          <Icon component={IconStatusbarMouseWheel} aria-label="Mouse Wheel" />
-        </React.Fragment>,
-      ],
-      action: "Change Node Radius",
-    },
-    {
-      shortcuts: [
-        <Icon key="1" component={IconStatusbarMouseLeft} aria-label="Left Mouse Click" />,
-      ],
-      action: "Create New Node / Select Hovered Node",
-    },
-    {
-      shortcuts: [
-        <Icon key="1" component={IconStatusbarMouseLeftDrag} aria-label="Left Mouse Drag" />,
-      ],
-      action: "Move Node Under Cursor",
-    },
-    {
-      shortcuts: [
-        <Icon key="1" component={IconStatusbarMouseRight} aria-label="Right Mouse Click" />,
-      ],
-      action: "Open Context Menu with Hovered Node Related Options",
-    },
-    {
-      shortcuts: [
-        <React.Fragment key="1">
-          {keyComboChainToUiElements([["Shift"]], false)} +{" "}
-          {keyComboChainToUiElements([["Alt"]], false)} +{" "}
-          <Icon key="1" component={IconStatusbarMouseLeft} aria-label="Left Mouse Click" />
-        </React.Fragment>,
-      ],
-      action: "Merge with Active Node and Combine Trees",
-    },
-    {
-      shortcuts: [
-        <React.Fragment key="1">
-          {keyComboChainToUiElements([["Shift"]], false)} +{" "}
-          {keyComboChainToUiElements([["Ctrl"]], false)}/
-          {keyComboChainToUiElements([["Meta"]], false)} +{" "}
-          <Icon key="1" component={IconStatusbarMouseLeft} aria-label="Left Mouse Click" />
-        </React.Fragment>,
-      ],
-      action: "Delete Edge to this Node and Split Trees",
-    },
-  ];
-
-  const skeletonToolMouseShortcutsClassicControls = [
-    // TODOM: highlight this as special
-    {
-      shortcuts: [
-        <Icon key="1" component={IconStatusbarMouseRight} aria-label="Right Mouse Click" />,
-      ],
-      action: "Create New Node",
-    },
-    {
-      shortcuts: [
-        <React.Fragment key="1">
-          {keyComboChainToUiElements([["Shift"]], false)} +{" "}
-          <Icon key="1" component={IconStatusbarMouseLeft} aria-label="Left Mouse Click" />
-        </React.Fragment>,
-      ],
-      action: "Select Hovered Node",
-    },
-  ];
-
-  const planeGeneralEditingMouseShortcuts = [
-    {
-      shortcuts: [
-        <Icon key="1" component={IconStatusbarMouseRight} aria-label="Right Mouse Click" />,
-      ],
-      action: "Open Context Menu",
-    },
-  ];
-
-  const volumeToolMouseShortcuts = [
-    {
-      shortcuts: [
-        <Icon key="1" component={IconStatusbarMouseLeftDrag} aria-label="Left Mouse Drag" />,
-      ],
-      action: "Add to Current Segment (Draw)",
-    },
-    {
-      shortcuts: [
-        <React.Fragment key="1">
-          {keyComboChainToUiElements([["Ctrl"]], false)}/
-          {keyComboChainToUiElements([["Meta"]], false)} +{" "}
-          <Icon key="1" component={IconStatusbarMouseLeftDrag} aria-label="Left Mouse Drag" />
-        </React.Fragment>,
-      ],
-      action: "Add to Current Segment (Draw) with Inverted Overwrite Mode",
-    },
-    {
-      shortcuts: [
-        <React.Fragment key="1">{keyComboChainToUiElements([["Shift"]], false)}</React.Fragment>,
-      ],
-      action: "Quick Switch to Segment Picker Tool",
-    },
-    {
-      shortcuts: [
-        <React.Fragment key="1">
-          {keyComboChainToUiElements([["Ctrl"]], false)}/
-          {keyComboChainToUiElements([["Meta"]], false)} +{" "}
-          {keyComboChainToUiElements([["Shift"]], false)}
-        </React.Fragment>,
-      ],
-      action: "Quick Switch to Eraser Tool",
-    },
-    {
-      shortcuts: [
-        // TODOM: should be moved to general navigation I think.
-        <React.Fragment key="1">
-          {keyComboChainToUiElements([["Alt"]], false)} +{" "}
-          <Icon component={IconStatusbarMouseMove} aria-label="Mouse Move" />
-        </React.Fragment>,
-      ],
-      action: "Move In-Plane",
-    },
-    {
-      shortcuts: [
-        <React.Fragment key="1">
-          {keyComboChainToUiElements([["Shift"]], false)} +{" "}
-          <Icon component={IconStatusbarMouseWheel} aria-label="Mouse Wheel" />
-        </React.Fragment>,
-      ],
-      action: "Change Brush Size",
-    },
-  ];
-
-  const volumeToolMouseShortcutsClassicControls = [
-    // TODO mark as classic controls only
-    {
-      shortcuts: [
-        <Icon key="1" component={IconStatusbarMouseRightDrag} aria-label="Right Mouse Drag" />,
-      ],
-      action: "Remove Voxels (Erase)",
-    },
-    {
-      shortcuts: [
-        <React.Fragment key="1">
-          {keyComboChainToUiElements([["Ctrl"]], false)}/
-          {keyComboChainToUiElements([["Meta"]], false)} +{" "}
-          <Icon component={IconStatusbarMouseRightDrag} aria-label="Right Mouse Drag" />
-        </React.Fragment>,
-      ],
-      action: "Remove Voxels (Erase) with Inverted Overwrite Mode",
-    },
-  ];
-
-  const proofreadingToolMouseShortcuts = [
-    {
-      shortcuts: [
-        <React.Fragment key="1">
-          {keyComboChainToUiElements([["Ctrl"]], false)}/
-          {keyComboChainToUiElements([["Meta"]], false)} +{" "}
-          <Icon component={IconStatusbarMouseLeft} aria-label="Left Mouse Click" />
-        </React.Fragment>,
-      ],
-      action: "Add Segment to Partition One for Multi Cut",
-    },
-    {
-      shortcuts: [
-        <React.Fragment key="1">
-          {keyComboChainToUiElements([["Ctrl"]], false)}/
-          {keyComboChainToUiElements([["Meta"]], false)} +{" "}
-          {keyComboChainToUiElements([["Shift"]], false)} +{" "}
-          <Icon component={IconStatusbarMouseLeft} aria-label="Left Mouse Click" />
-        </React.Fragment>,
-      ],
-      action: "Add Segment to Partition Two for Multi Cut",
-    },
-  ];
-
-  const proofreadingToolMouseShortcutsOrthoViewportsOnly = [
-    // TODO mark as ortho viewports only
-    {
-      shortcuts: [
-        <Icon key="1" component={IconStatusbarMouseLeft} aria-label="Left Mouse Click" />,
-      ],
-      action: "Activate Segment of Agglomerate for Proofreading Actions",
-    },
-    {
-      shortcuts: [
-        <React.Fragment key="1">
-          {keyComboChainToUiElements([["Shift"]], false)} +{" "}
-          <Icon component={IconStatusbarMouseWheel} aria-label="Mouse Wheel Click" />
-        </React.Fragment>,
-      ],
-      action: "Import Agglomerate Skeleton of Hovered Agglomerate",
-    },
-    {
-      shortcuts: [
-        <React.Fragment key="1">
-          {keyComboChainToUiElements([["Shift"]], false)} +{" "}
-          <Icon component={IconStatusbarMouseLeft} aria-label="Left Mouse Click" />
-        </React.Fragment>,
-      ],
-      action: "Merge with Active Segment",
-    },
-    {
-      shortcuts: [
-        <React.Fragment key="1">
-          {keyComboChainToUiElements([["Ctrl"]], false)}/
-          {keyComboChainToUiElements([["Meta"]], false)} +{" "}
-          <Icon component={IconStatusbarMouseLeft} aria-label="Left Mouse Click" />
-        </React.Fragment>,
-      ],
-      action: "Split from Active Segment",
-    },
-  ];
-  const proofreadingToolMouseShortcutsTDViewportsOnly = [
-    // TODO mark as 3d viewport only
-    {
-      shortcuts: [
-        <React.Fragment key="1">
-          {keyComboChainToUiElements([["Ctrl"]], false)}/
-          {keyComboChainToUiElements([["Meta"]], false)} +{" "}
-          <Icon component={IconStatusbarMouseWheel} aria-label="Mouse Wheel Click" />
-        </React.Fragment>,
-      ],
-      action: "Activate Segment of Agglomerate",
-    },
-  ];
-
   const keyboardShortcutsColumns = [
     {
       title: "Shortcuts",
       dataIndex: "combos",
       key: "combos",
       render: (combos: KeyboardComboChain[], record: KeyboardShortcutTableDataEntry) => (
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: 8,
-            alignItems: "center", // flex-start
-            width: "100%",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 8,
-              alignItems: "center",
-              flex: 1,
-              minWidth: 0,
-            }}
-          >
+        <>
+          <div className="shortcuts-container">
             {combos.map((comboChain, index) => (
-              <div
-                key={index}
-                style={{
-                  display: "inline-flex",
-                  gap: 4,
-                  alignItems: "center",
-                  padding: 2,
-                  whiteSpace: "nowrap",
-                  border: "1px solid gray",
-                  borderRadius: 4,
-                  borderColor: "var(--ant-color-border)",
-                }}
-              >
+              <div key={index} className="single-shortcut-container">
                 <span style={{ padding: "0px 4px" }}>
                   {keyComboChainToUiElements(comboChain, false)}
                 </span>
@@ -576,15 +185,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
             ))}
           </div>
 
-          <div
-            style={{
-              order: 1,
-              display: "flex",
-              justifyContent: "flex-end",
-              marginLeft: "auto",
-              minWidth: 0,
-            }}
-          >
+          <div className="add-button-container">
             <Button
               icon={<PlusOutlined />}
               onClick={() => {
@@ -594,7 +195,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
               }}
             />
           </div>
-        </div>
+        </>
       ),
     },
     {
@@ -683,11 +284,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
             tableData={keyboardShortcutsTableDataMap[KeyboardShortcutDomain.ARBITRARY_NAVIGATION]}
             columns={keyboardShortcutsColumns}
           />
-          <MouseShortcutDomainTable
-            domainName={KeyboardShortcutDomain.ARBITRARY_NAVIGATION}
-            tableData={arbitraryNavigationMouseShortcuts}
-            columns={mouseShortcutColumns}
-          />
+          <ArbitraryNavigationMouseShortcutsTable />
           <KeyboardShortcutDomainTable
             domainName={KeyboardShortcutDomain.ARBITRARY_EDITING}
             tableData={keyboardShortcutsTableDataMap[KeyboardShortcutDomain.ARBITRARY_EDITING]}
@@ -706,16 +303,9 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
             tableData={keyboardShortcutsTableDataMap[KeyboardShortcutDomain.PLANE_NAVIGATION]}
             columns={keyboardShortcutsColumns}
           />
-          <MouseShortcutDomainTable
-            domainName={KeyboardShortcutDomain.PLANE_NAVIGATION}
-            tableData={planeNavigationMouseShortcuts}
-            columns={mouseShortcutColumns}
-          />
-          <MouseShortcutDomainTable
-            domainName={KeyboardShortcutDomain.GENERAL_EDITING} // TODO improve domain
-            tableData={planeGeneralEditingMouseShortcuts}
-            columns={mouseShortcutColumns}
-          />
+          <PlaneNavigationMouseShortcutsTable />
+          <PlaneGeneralEditingMouseShortcutsTable />
+          <PlaneTdViewportMouseShortcutsTable />
           <KeyboardShortcutDomainTable
             domainName={KeyboardShortcutDomain.PLANE_CONFIGURATIONS}
             tableData={keyboardShortcutsTableDataMap[KeyboardShortcutDomain.PLANE_CONFIGURATIONS]}
@@ -747,31 +337,15 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
             tableData={keyboardShortcutsTableDataMap[KeyboardShortcutDomain.PLANE_SKELETON_TOOL]}
             columns={keyboardShortcutsColumns}
           />
-          <MouseShortcutDomainTable
-            domainName={KeyboardShortcutDomain.PLANE_SKELETON_TOOL}
-            tableData={skeletonToolMouseShortcuts}
-            columns={mouseShortcutColumns}
-          />
-          <MouseShortcutDomainTable
-            domainName={KeyboardShortcutDomain.PLANE_SKELETON_TOOL}
-            tableData={skeletonToolMouseShortcutsClassicControls}
-            columns={mouseShortcutColumns}
-          />
+          <SkeletonToolMouseShortcutsTable />
+          <SkeletonToolClassicControlsMouseShortcutsTable />
           <KeyboardShortcutDomainTable
             domainName={KeyboardShortcutDomain.PLANE_VOLUME_TOOL}
             tableData={keyboardShortcutsTableDataMap[KeyboardShortcutDomain.PLANE_VOLUME_TOOL]}
             columns={keyboardShortcutsColumns}
           />
-          <MouseShortcutDomainTable
-            domainName={KeyboardShortcutDomain.PLANE_VOLUME_TOOL}
-            tableData={volumeToolMouseShortcuts}
-            columns={mouseShortcutColumns}
-          />
-          <MouseShortcutDomainTable
-            domainName={KeyboardShortcutDomain.PLANE_VOLUME_TOOL}
-            tableData={volumeToolMouseShortcutsClassicControls}
-            columns={mouseShortcutColumns}
-          />
+          <VolumeToolMouseShortcutsTable />
+          <VolumeToolClassicControlsMouseShortcutsTable />
 
           <KeyboardShortcutDomainTable
             domainName={KeyboardShortcutDomain.PLANE_BOUNDING_BOX_TOOL}
@@ -787,21 +361,9 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
             }
             columns={keyboardShortcutsColumns}
           />
-          <MouseShortcutDomainTable
-            domainName={KeyboardShortcutDomain.PLANE_PROOFREADING_TOOL}
-            tableData={proofreadingToolMouseShortcuts}
-            columns={mouseShortcutColumns}
-          />
-          <MouseShortcutDomainTable
-            domainName={KeyboardShortcutDomain.PLANE_PROOFREADING_TOOL}
-            tableData={proofreadingToolMouseShortcutsOrthoViewportsOnly}
-            columns={mouseShortcutColumns}
-          />
-          <MouseShortcutDomainTable
-            domainName={KeyboardShortcutDomain.PLANE_PROOFREADING_TOOL}
-            tableData={proofreadingToolMouseShortcutsTDViewportsOnly}
-            columns={mouseShortcutColumns}
-          />
+          <ProofreadingToolMouseShortcutsTable />
+          <ProofreadingToolOrthoMouseShortcutsTable />
+          <ProofreadingToolTDMouseShortcutsTable />
         </>
       ),
     },

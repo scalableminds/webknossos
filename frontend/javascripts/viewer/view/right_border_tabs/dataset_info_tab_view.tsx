@@ -373,7 +373,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
           </a>
           .
         </p>
-        <table className="shortcut-table">
+        <table className="shortcut-table-info-tab">
           <tbody>
             {getShortcuts(this.props.keyboardShortcutsConfig, this.props.isPlaneMode).map(
               (shortcut) => (

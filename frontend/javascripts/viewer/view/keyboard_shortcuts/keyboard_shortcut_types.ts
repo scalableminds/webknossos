@@ -7,13 +7,13 @@ export enum KeyboardShortcutDomain {
   GENERAL_COMMENT_TAB = "Comment Tab",
   ARBITRARY_NAVIGATION = "Navigation in Arbitrary Mode",
   ARBITRARY_EDITING = "Editing in Arbitrary Mode",
-  PLANE_NAVIGATION = "Navigation in Plane Mode",
-  PLANE_CONFIGURATIONS = "Change Configurations in Plane Mode",
+  PLANE_NAVIGATION = "Navigation",
+  PLANE_CONFIGURATIONS = "Change Configurations",
   PLANE_TOOL_SWITCHING = "Tool Switching",
-  PLANE_SKELETON_TOOL = "Skeleton Tool Shortcuts in Plane Mode",
-  PLANE_VOLUME_TOOL = "Volume Tools Shortcuts in Plane Mode",
-  PLANE_BOUNDING_BOX_TOOL = "Bounding Box Tool Shortcuts in Plane Mode",
-  PLANE_PROOFREADING_TOOL = "Proofreading Tool Shortcuts in Plane Mode",
+  PLANE_SKELETON_TOOL = "Skeleton Tool",
+  PLANE_VOLUME_TOOL = "Volume Tools",
+  PLANE_BOUNDING_BOX_TOOL = "Bounding Box Tool",
+  PLANE_PROOFREADING_TOOL = "Proofreading Tool",
 }
 
 // Default is general -> colliding with all other shortcuts.

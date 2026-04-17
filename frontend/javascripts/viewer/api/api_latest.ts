@@ -93,6 +93,7 @@ import {
   getVolumeDescriptors,
   getVolumeTracingById,
   getVolumeTracingByLayerName,
+  getVolumeTracingByNameOrActive,
   getVolumeTracings,
   hasVolumeTracings,
 } from "viewer/model/accessors/volumetracing_accessor";
@@ -866,9 +867,7 @@ class TracingApi {
     parentGroupId: number | null = MISSING_GROUP_ID,
     volumeLayerName?: string,
   ): Promise<number> {
-    const volumeTracing = volumeLayerName
-      ? getVolumeTracingByLayerName(Store.getState().annotation, volumeLayerName)
-      : getActiveSegmentationTracing(Store.getState());
+    const volumeTracing = getVolumeTracingByNameOrActive(volumeLayerName);
     if (volumeTracing == null) {
       throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
     }
@@ -896,9 +895,7 @@ class TracingApi {
    * );
    */
   renameSegmentGroup(groupId: number, newName: string, volumeLayerName?: string) {
-    const volumeTracing = volumeLayerName
-      ? getVolumeTracingByLayerName(Store.getState().annotation, volumeLayerName)
-      : getActiveSegmentationTracing(Store.getState());
+    const volumeTracing = getVolumeTracingByNameOrActive(volumeLayerName);
     if (volumeTracing == null) {
       throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
     }
@@ -930,9 +927,7 @@ class TracingApi {
    * );
    */
   deleteSegmentGroup(groupId: number, deleteChildren: boolean = false, volumeLayerName?: string) {
-    const volumeTracing = volumeLayerName
-      ? getVolumeTracingByLayerName(Store.getState().annotation, volumeLayerName)
-      : getActiveSegmentationTracing(Store.getState());
+    const volumeTracing = getVolumeTracingByNameOrActive(volumeLayerName);
     if (volumeTracing == null) {
       throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
     }

@@ -101,7 +101,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         );
         yield call(initializeMappingAndTool, context, tracingId);
         if (othersMayEdit) {
-          yield put(setCollaborationModeAction(othersMayEdit ? "OwnerOnly" : "Concurrent"));
+          yield put(setCollaborationModeAction(othersMayEdit ? "Concurrent" : "OwnerOnly"));
         }
 
         // Set up the merge-related segment partners. Normally, this would happen
@@ -122,7 +122,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         );
         yield call(initializeMappingAndTool, context, tracingId);
         if (othersMayEdit) {
-          yield put(setCollaborationModeAction(othersMayEdit ? "OwnerOnly" : "Concurrent"));
+          yield put(setCollaborationModeAction(othersMayEdit ? "Concurrent" : "OwnerOnly"));
         }
 
         // Set up the merge-related segment partners. Normally, this would happen
@@ -188,7 +188,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         );
         yield call(initializeMappingAndTool, context, tracingId);
         if (othersMayEdit) {
-          yield put(setCollaborationModeAction(othersMayEdit ? "OwnerOnly" : "Concurrent"));
+          yield put(setCollaborationModeAction(othersMayEdit ? "Concurrent" : "OwnerOnly"));
         }
         // Set up the merge-related segment partners. Normally, this would happen
         // due to the user's interactions.

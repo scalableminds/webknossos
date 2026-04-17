@@ -281,12 +281,37 @@ class CameraController extends PureComponent<Props> {
       // Interpret left/right/top/bottom as viewplane extents at the target depth and
       // use an off-axis perspective projection to preserve pan/zoom semantics.
       const distance = V3.length(V3.sub(target, cameraData.position)) || 1;
-      // Increase the near plane with distance to improve depth precision (reduces z-fighting),
-      // while keeping the visible projection identical (left/right/top/bottom are scaled by near/distance).
-      const near = Math.max(0.1, distance / 1000);
-      const farPadding = Math.max(1000, this.tdViewDiagonalDatasetExtent * 2);
-      const far = Math.max(near + 1, distance + farPadding);
-      const scale = near / distance;
+
+      // When zoomed out far, plane vertices can go behind the camera, which causes
+      // severe distortion because the perspective divide produces garbage clip-space
+      // coordinates for w < 0 vertices (they don't just get cleanly clipped).
+      // From the geometry of the diagonal TDView, the nearest plane vertex goes behind
+      // the camera when distance < max_viewport_extent * ~0.9. We use a 1.5× safety
+      // margin and pull the camera back along its existing view direction so that the
+      // stored position (and TrackballControls state) is not affected.
+      const maxViewExtent = Math.max(
+        Math.abs(cameraData.left),
+        Math.abs(cameraData.right),
+        Math.abs(cameraData.top),
+        Math.abs(cameraData.bottom),
+      );
+      const minSafeDistance = maxViewExtent * 1.5;
+      const effectiveDistance = Math.max(distance, minSafeDistance);
+
+      if (effectiveDistance > distance) {
+        const viewDir = new ThreeVector3(...cameraData.position)
+          .sub(new ThreeVector3(...target))
+          .normalize();
+        tdCamera.position.copy(
+          new ThreeVector3(...target).addScaledVector(viewDir, effectiveDistance),
+        );
+        tdCamera.lookAt(new ThreeVector3(...target));
+      }
+
+      const near = Math.max(0.001, effectiveDistance / 100000);
+      const farPadding = Math.max(1000, this.tdViewDiagonalDatasetExtent * 2, maxViewExtent * 2);
+      const far = Math.max(near + 1, effectiveDistance + farPadding);
+      const scale = near / effectiveDistance;
       const left = cameraData.left * scale;
       const right = cameraData.right * scale;
       const top = cameraData.top * scale;
@@ -296,12 +321,19 @@ class CameraController extends PureComponent<Props> {
       tdCamera.projectionMatrix.makePerspective(left, right, top, bottom, near, far);
       tdCamera.projectionMatrixInverse.copy(tdCamera.projectionMatrix).invert();
     } else {
+      // When zoomed out far, data planes can extend behind the orthographic TDView camera.
+      // Setting near to a large negative value ensures those vertices are not clipped.
+      const viewExtent = Math.max(
+        Math.abs(cameraData.right - cameraData.left),
+        Math.abs(cameraData.top - cameraData.bottom),
+      );
+      const dynamicFar = Math.max(cameraData.far, viewExtent * 2);
       tdCamera.left = cameraData.left;
       tdCamera.right = cameraData.right;
       tdCamera.top = cameraData.top;
       tdCamera.bottom = cameraData.bottom;
-      tdCamera.near = cameraData.near;
-      tdCamera.far = cameraData.far;
+      tdCamera.near = -dynamicFar;
+      tdCamera.far = dynamicFar;
       tdCamera.updateProjectionMatrix();
     }
     this.props.onCameraPositionChanged();

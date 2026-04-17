@@ -146,9 +146,9 @@ export function convertServerAnnotationToFrontendAnnotation(
   };
 
   const isUpdatingCurrentlyAllowed =
-    annotation.collaborationMode === "OwnerOnly"
-      ? annotation.restrictions.allowUpdate
-      : annotation.collaborationMode === "Concurrent";
+    // If the collab mode is exclusive, the user may only edit once a mutex was acquired.
+    // the mutex saga will update isUpdatingCurrentlyAllowed then.
+    annotation.restrictions.allowUpdate && annotation.collaborationMode !== "Exclusive";
 
   return {
     annotationId,

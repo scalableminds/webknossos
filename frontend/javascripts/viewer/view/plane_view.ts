@@ -409,6 +409,7 @@ class PlaneView {
       listenToStoreProperty(
         (storeState) => storeState.userConfiguration.tdViewUsePerspectiveCamera,
         (usePerspective) => this.switchTDCamera(usePerspective),
+        true,
       ),
     );
     this.unsubscribeFunctions.push(

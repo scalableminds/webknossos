@@ -167,6 +167,9 @@ class TDController extends PureComponent<Props> {
     // Ensure that external target updates don't shift the camera (TrackballControls
     // derives the eye vector from `lastTarget`).
     this.controls.lastTarget = target.clone();
+    // Keep controls in sync with the current TDView camera. This is needed when
+    // switchTDCamera replaces the Three.js camera object (e.g., on perspective/ortho toggle).
+    this.controls.object = this.props.cameras[OrthoViews.TDView];
   };
 
   getTDViewMouseControls(): Record<string, any> {

@@ -36,6 +36,7 @@ interface ITrackballControls {
     updateCallback: (args: any) => void,
   ): ITrackballControls;
 
+  object: OrthographicCamera | PerspectiveCamera;
   enabled: boolean;
   keyboardEnabled: boolean;
   rotateSpeed: number;

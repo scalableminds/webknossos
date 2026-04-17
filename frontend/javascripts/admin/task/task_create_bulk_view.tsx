@@ -1,7 +1,7 @@
 import { InboxOutlined } from "@ant-design/icons";
 import { createTasks } from "admin/api/tasks";
 import { handleTaskCreationResponse } from "admin/task/task_create_form_view";
-import { App, Button, Card, Divider, Form, Input, Progress, Spin, Typography, Upload } from "antd";
+import { App, Button, Divider, Form, Input, Progress, Spin, Typography, theme, Upload } from "antd";
 import Toast from "libs/toast";
 import isString from "lodash-es/isString";
 import uniq from "lodash-es/uniq";
@@ -20,6 +20,7 @@ const { TextArea } = Input;
 
 function TaskCreateBulkView() {
   const { modal } = App.useApp();
+  const { token } = theme.useToken();
 
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [tasksCount, setTasksCount] = useState<number>(0);
@@ -208,119 +209,117 @@ function TaskCreateBulkView() {
 
   return (
     <div
-      className="container"
       style={{
-        paddingTop: 20,
+        padding: token.paddingLG,
       }}
     >
       <Spin spinning={isUploading}>
-        <Card title={<h3>Bulk Create Tasks</h3>}>
-          <Typography.Paragraph>
-            Specify each task on a separate line as comma-separated values (CSV) in the below
-            format. To define a subset of optional values, list all optional columns but leave the
-            fields you want to skip empty (e.g., val1,,val3). To omit the bounding box, use 0, 0, 0,
-            0, 0, 0 for its values.
-          </Typography.Paragraph>
-          <Typography.Paragraph>
-            <Typography.Text code>
-              <a href="/dashboard">datasetId</a>, <a href="/taskTypes">taskTypeId</a>,
-              experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY,
-              minZ, width, height, depth, <a href="/projects">project</a>,{" "}
-              <a href="/scripts">scriptId</a> (optional), baseAnnotationId (optional)
-            </Typography.Text>
-          </Typography.Paragraph>
-          <Form onFinish={handleSubmit} layout="vertical" form={form}>
-            <FormItem
-              name="bulkText"
-              label="Bulk Task Specification"
-              hasFeedback
-              rules={[
-                ({ getFieldValue }) => ({
-                  validator: (_rule, value) => {
-                    // If a csv file has been uploaded it takes precedence and this form item doesn't need to validate
-                    const csvFile = getFieldValue("csvFile");
+        <Typography.Paragraph>
+          Specify each task on a separate line as comma-separated values (CSV) in the below format.
+          To define a subset of optional values, list all optional columns but leave the fields you
+          want to skip empty (for example, <Typography.Text code>val1,,val3</Typography.Text>). To
+          omit the bounding box, use <Typography.Text code>0, 0, 0, 0, 0, 0</Typography.Text> for
+          its values.
+        </Typography.Paragraph>
+        <Typography.Paragraph>
+          <Typography.Text code>
+            <a href="/dashboard">datasetId</a>, <a href="/taskTypes">taskTypeId</a>,
+            experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ,
+            width, height, depth, <a href="/projects">project</a>, <a href="/scripts">scriptId</a>{" "}
+            (optional), baseAnnotationId (optional)
+          </Typography.Text>
+        </Typography.Paragraph>
+        <Form onFinish={handleSubmit} layout="vertical" form={form}>
+          <FormItem
+            name="bulkText"
+            label="Bulk Task Specification"
+            hasFeedback
+            rules={[
+              ({ getFieldValue }) => ({
+                validator: (_rule, value) => {
+                  // If a csv file has been uploaded it takes precedence and this form item doesn't need to validate
+                  const csvFile = getFieldValue("csvFile");
 
-                    if (csvFile?.length) {
-                      return Promise.resolve();
-                    }
-
-                    const tasks = parseText(value);
-                    const invalidTaskIndices = getInvalidTaskIndices(tasks);
-                    return isString(value) && invalidTaskIndices.length === 0
-                      ? Promise.resolve()
-                      : Promise.reject(
-                          new Error(
-                            `${
-                              Messages["task.bulk_create_invalid"]
-                            } Error in line ${invalidTaskIndices.join(", ")}`,
-                          ),
-                        );
-                  },
-                }),
-              ]}
-            >
-              <TextArea
-                placeholder="dataset, datasetId, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height, depth, project[, scriptId, baseAnnotationId]"
-                autoSize={{
-                  minRows: 6,
-                }}
-                styles={{
-                  textarea: {
-                    fontFamily:
-                      'SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier, monospace',
-                  },
-                }}
-              />
-            </FormItem>
-            <Divider>Alternatively upload a CSV file</Divider>
-            <FormItem
-              hasFeedback
-              name="csvFile"
-              valuePropName="fileList"
-              getValueFromEvent={normalizeFileEvent}
-            >
-              <Upload.Dragger
-                accept=".csv,.txt"
-                name="csvFile"
-                beforeUpload={(file) => {
-                  const isValidType =
-                    file.type === "text/csv" ||
-                    file.type === "text/plain" ||
-                    /\.(csv|txt)$/i.test(file.name);
-
-                  if (!isValidType) {
-                    Toast.error("Only CSV and TXT files are accepted");
-                    // @ts-expect-error
-                    file.status = "error";
+                  if (csvFile?.length) {
+                    return Promise.resolve();
                   }
 
-                  form.setFieldsValue({
-                    csvFile: [file],
-                  });
-                  return false;
-                }}
-              >
-                <p className="ant-upload-drag-icon">
-                  <InboxOutlined />
-                </p>
-                <p className="ant-upload-text">Click or drag file to this area to upload</p>
-                <p>
-                  Upload a CSV file with your task specification in the same format as mentioned
-                  above.
-                </p>
-              </Upload.Dragger>
-            </FormItem>
-            <FormItem>
-              {isUploading ? (
-                <Progress percent={(tasksProcessed / tasksCount) * 100} showInfo status="active" />
-              ) : null}
+                  const tasks = parseText(value);
+                  const invalidTaskIndices = getInvalidTaskIndices(tasks);
+                  return isString(value) && invalidTaskIndices.length === 0
+                    ? Promise.resolve()
+                    : Promise.reject(
+                        new Error(
+                          `${
+                            Messages["task.bulk_create_invalid"]
+                          } Error in line ${invalidTaskIndices.join(", ")}`,
+                        ),
+                      );
+                },
+              }),
+            ]}
+          >
+            <TextArea
+              placeholder="dataset, datasetId, taskTypeId, experienceDomain, minExperience, x, y, z, rotX, rotY, rotZ, instances, minX, minY, minZ, width, height, depth, project[, scriptId, baseAnnotationId]"
+              autoSize={{
+                minRows: 6,
+              }}
+              styles={{
+                textarea: {
+                  fontFamily:
+                    'SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier, monospace',
+                },
+              }}
+            />
+          </FormItem>
+          <Divider>Alternatively upload a CSV file</Divider>
+          <FormItem
+            hasFeedback
+            name="csvFile"
+            valuePropName="fileList"
+            getValueFromEvent={normalizeFileEvent}
+          >
+            <Upload.Dragger
+              accept=".csv,.txt"
+              name="csvFile"
+              beforeUpload={(file) => {
+                const isValidType =
+                  file.type === "text/csv" ||
+                  file.type === "text/plain" ||
+                  /\.(csv|txt)$/i.test(file.name);
 
-              <Button type="primary" htmlType="submit">
-                Create Tasks
-              </Button>
-            </FormItem>
-          </Form>
-        </Card>
+                if (!isValidType) {
+                  Toast.error("Only CSV and TXT files are accepted");
+                  // @ts-expect-error
+                  file.status = "error";
+                }
+
+                form.setFieldsValue({
+                  csvFile: [file],
+                });
+                return false;
+              }}
+            >
+              <p className="ant-upload-drag-icon">
+                <InboxOutlined />
+              </p>
+              <p className="ant-upload-text">Click or drag file to this area to upload</p>
+              <p>
+                Upload a CSV file with your task specification in the same format as mentioned
+                above.
+              </p>
+            </Upload.Dragger>
+          </FormItem>
+          <FormItem>
+            {isUploading ? (
+              <Progress percent={(tasksProcessed / tasksCount) * 100} showInfo status="active" />
+            ) : null}
+
+            <Button type="primary" htmlType="submit">
+              Create Tasks
+            </Button>
+          </FormItem>
+        </Form>
       </Spin>
     </div>
   );

@@ -17,7 +17,9 @@ type FilterProps = {
   setTags: (arg0: Array<string>) => void;
   localStorageSavingKey: string;
 };
+
 const LOCKED_TAG_COLOR = "var(--ant-color-warning)";
+
 export default function CategorizationLabel({ tag, kind, onClick, onClose, closable }: LabelProps) {
   const color = tag === "locked" ? LOCKED_TAG_COLOR : stringToColor(tag);
   return (
@@ -37,6 +39,7 @@ export default function CategorizationLabel({ tag, kind, onClick, onClose, closa
     </Tooltip>
   );
 }
+
 export function CategorizationSearch({
   itemName,
   searchTags,

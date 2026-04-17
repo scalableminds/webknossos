@@ -137,7 +137,7 @@ class DSRemoteWebknossosClient @Inject()(
       .addQueryParam("key", dataStoreKey)
       .postJson(datasetId)
 
-  def getJobExportProperties(jobId: String): Fox[JobExportProperties] =
+  def getJobExportProperties(jobId: ObjectId): Fox[JobExportProperties] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/jobExportProperties")
       .addQueryParam("jobId", jobId)
       .addQueryParam("key", dataStoreKey)

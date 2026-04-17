@@ -58,7 +58,11 @@ case class PrecomputedScaleHeader(precomputedScale: PrecomputedScale, precompute
   override lazy val byteOrder: ByteOrder = ByteOrder.LITTLE_ENDIAN
 
   override def resolvedDataType: ArrayDataType =
-    PrecomputedDataType.toArrayDataType(PrecomputedDataType.fromString(precomputedHeader.data_type.toLowerCase).get)
+    PrecomputedDataType.toArrayDataType(
+      PrecomputedDataType
+        .fromString(precomputedHeader.data_type.toLowerCase)
+        .getOrElse(throw new IllegalArgumentException(
+          s"Unsupported NeuroglancerPrecomputed dataType: ${precomputedHeader.data_type}")))
 
   lazy val compressorImpl: Compressor = PrecomputedCompressorFactory.create(this)
 

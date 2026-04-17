@@ -1,18 +1,17 @@
 package models.annotation
 
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.schema.Tables._
 import com.typesafe.scalalogging.LazyLogging
+
 import javax.inject.Inject
 import models.dataset.Dataset
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Result, Results}
-import slick.jdbc.PostgresProfile.api._
-import slick.lifted.Rep
-import utils.sql.{SqlClient, SQLDAO}
+import utils.sql.{SQLDAO, SqlClient}
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -55,7 +54,7 @@ class TracingStoreService @Inject()(
           Forbidden(Messages("tracingStore.notFound"))
         }) // Default error
 
-  def clientFor(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[WKRemoteTracingStoreClient] =
+  def clientFor(dataset: Dataset): Fox[WKRemoteTracingStoreClient] =
     for {
       tracingStore <- tracingStoreDAO.findFirst ?~> "tracingStore.notFound"
     } yield new WKRemoteTracingStoreClient(tracingStore, dataset, rpc, tracingDataSourceTemporaryStore)
@@ -64,9 +63,7 @@ class TracingStoreService @Inject()(
 class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[TracingStore, TracingstoresRow, Tracingstores](sqlClient) {
   protected val collection = Tracingstores
-
-  protected def idColumn(x: Tracingstores): Rep[String] = x.name
-  protected def isDeletedColumn(x: Tracingstores): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultTracingstoresRow
 
   protected def parse(r: TracingstoresRow): Fox[TracingStore] =
     Fox.successful(
@@ -80,16 +77,14 @@ class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
 
   def findOneByKey(key: String): Fox[TracingStore] =
     for {
-      rOpt <- run(Tracingstores.filter(r => notdel(r) && r.key === key).result.headOption)
-      r <- rOpt.toFox
-      parsed <- parse(r)
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE key = $key".as[TracingstoresRow])
+      parsed <- parseFirst(r, "key")
     } yield parsed
 
   def findOneByName(name: String): Fox[TracingStore] =
     for {
-      rOpt <- run(Tracingstores.filter(r => notdel(r) && r.name === name).result.headOption)
-      r <- rOpt.toFox
-      parsed <- parse(r)
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE name = $name".as[TracingstoresRow])
+      parsed <- parseFirst(r, name)
     } yield parsed
 
   def findOneByUrl(url: String)(implicit ctx: DBAccessContext): Fox[TracingStore] =
@@ -99,9 +94,9 @@ class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       parsed <- parseFirst(r, url)
     } yield parsed
 
-  def findFirst(implicit ctx: DBAccessContext): Fox[TracingStore] =
+  def findFirst: Fox[TracingStore] =
     for {
-      all <- findAll
+      all <- findAll(GlobalAccessContext)
       first <- all.headOption.toFox
     } yield first
 

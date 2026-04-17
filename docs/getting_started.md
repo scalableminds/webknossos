@@ -58,7 +58,7 @@ See the full list of [gestures and keyboard shortcuts](./ui/keyboard_shortcuts.m
 ## Your First Annotation
 
 To create your first annotation, click the `Create Annotation` button while in “View” mode.
-WEBKNOSSOS will launch the main annotation screen allowing you to navigate your dataset, place markers to reconstruct skeletons, or annotate segments as volume annotations.
+WEBKNOSSOS will launch the main annotation page allowing you to navigate your dataset, place markers to reconstruct skeletons, or annotate segments as volume annotations.
 
 You can perform various actions depending on the current tool - selectable in the toolbar at the top of the screen.
 Note that the most important controls are always shown in the status bar at the bottom of your screen.
@@ -84,6 +84,7 @@ We have tutorials on a wide range of topics to get you started. Also check out o
 - [Tutorial: Volume Annotation](./tutorials/volume_annotation.md)
 - [Tutorial: Data Sharing with WEBKNOSSOS](./tutorials/data_sharing.md)
 - [Tutorial: Automation and Interoperability](./tutorials/automation.md)
+- [Tutorial: Annotating Ground Truth Data for Machine Learning](./tutorials/trainingdata_annotation.md)
 
 ## Learn More
 

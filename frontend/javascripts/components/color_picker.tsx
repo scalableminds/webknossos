@@ -1,7 +1,7 @@
 import { InputNumber, Popover } from "antd";
 import useThrottledCallback from "beautiful-react-hooks/useThrottledCallback";
 import { hexToRgb, map3, rgbToHex } from "libs/utils";
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactElement } from "react";
 import { useEffect, useRef, useState } from "react";
 import { HexColorInput, HexColorPicker, type RgbaColor, RgbaColorPicker } from "react-colorful";
 import type { Vector3, Vector4 } from "viewer/constants";
@@ -9,7 +9,7 @@ import type { Vector3, Vector4 } from "viewer/constants";
 const COLOR_PICKER_WIDTH = 200;
 const RELATIVE_OPACITY_INPUT_WIDTH = 0.25;
 
-const getPopover = (title: string, content: JSX.Element | null) => {
+const getPopover = (title: string, content: ReactElement | null) => {
   return (
     <Popover content={content} trigger="click" overlayStyle={{ zIndex: 10000 }}>
       <div style={{ position: "relative", display: "inline-block", width: "100%" }}>{title}</div>

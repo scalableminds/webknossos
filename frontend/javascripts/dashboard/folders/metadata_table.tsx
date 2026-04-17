@@ -6,6 +6,7 @@ import {
   PlusOutlined,
   TagsOutlined,
 } from "@ant-design/icons";
+import metadataTeaserImage from "@images/backgrounds/metadata-teaser.svg";
 import {
   Button,
   Dropdown,
@@ -28,7 +29,7 @@ import isEqual from "lodash-es/isEqual";
 import noop from "lodash-es/noop";
 import uniq from "lodash-es/uniq";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { type ReactElement, useEffect, useState } from "react";
 import {
   type APIDataset,
   type APIMetadataEntry,
@@ -86,7 +87,7 @@ const EmptyMetadataPlaceholder: React.FC<EmptyMetadataPlaceholderProps> = ({
     <Tag variant="outlined">
       <div className="flex-center-child empty-metadata-placeholder">
         <img
-          src="/assets/images/metadata-teaser.svg"
+          src={metadataTeaserImage}
           alt="Metadata preview"
           style={{ width: "60%", marginBottom: 16 }}
         />
@@ -484,9 +485,9 @@ export function InnerMetadataTable({
   readOnly,
 }: {
   metadata: APIMetadataWithError[];
-  getKeyInput: (entry: APIMetadataWithError, index: number) => JSX.Element;
-  getValueInput: (entry: APIMetadataWithError, index: number) => JSX.Element;
-  getDeleteEntryButton: (_: APIMetadataWithError, index: number) => JSX.Element;
+  getKeyInput: (entry: APIMetadataWithError, index: number) => ReactElement;
+  getValueInput: (entry: APIMetadataWithError, index: number) => ReactElement;
+  getDeleteEntryButton: (_: APIMetadataWithError, index: number) => ReactElement;
   addNewEntryMenuItems: MenuProps;
   onlyReturnRows?: boolean;
   readOnly?: boolean;
@@ -516,9 +517,10 @@ export function InnerMetadataTable({
                     ghost
                     size="small"
                     style={{ border: "none" }}
-                  >
-                    <PlusOutlined size={18} style={{ color: "var(--ant-color-text-tertiary)" }} />
-                  </Button>
+                    icon={
+                      <PlusOutlined size={18} style={{ color: "var(--ant-color-text-tertiary)" }} />
+                    }
+                  />
                 </Dropdown>
               </FastTooltip>
             </div>

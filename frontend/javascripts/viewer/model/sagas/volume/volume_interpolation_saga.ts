@@ -7,7 +7,6 @@ import ndarray, { type NdArray } from "ndarray";
 import { call, put } from "typed-redux-saga";
 import {
   ContourModeEnum,
-  InterpolationModeEnum,
   OrthoViews,
   type TypedArrayWithoutBigInt,
   type Vector3,
@@ -31,40 +30,25 @@ import {
   registerLabelPointAction,
 } from "viewer/model/actions/volumetracing_actions";
 import Dimensions from "viewer/model/dimensions";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import type { VoxelBuffer2D } from "viewer/model/volumetracing/section_labeling";
 import { api, Model } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
 import { requestBucketModificationInVolumeTracing } from "../saga_helpers";
 import { createSectionLabeler, getBoundingBoxForViewport, labelWithVoxelBuffer2D } from "./helpers";
 
-/*
- * This saga is capable of doing segment interpolation between two slices.
- * Additionally, it also provides means to do a segment extrusion (in other words,
- * a segment is simply copied from one slice to n other slices).
- * Since the interpolation mechanism is a super set of the extrusion, this module
- * can do both operations and switches between them via the interpolationMode.
- * Beware of the following differences:
- * - for extrusion, the segment only has to be labeled on _one_ slice (for interpolation,
- *   two input slices are necessary)
- * - for extrusion, the active slice (active when triggering the operation) also has to be labeled
- *   (for interpolation, the active slice is assumed to already have the segment labeled)
- * - for extrusion, no distance transform is necessary (since a simple copy operation is done)
- */
-
 const MAXIMUM_INTERPOLATION_DEPTH = 100;
 
 function _getInterpolationInfo(state: WebknossosState, explanationPrefix: string) {
   const isAllowed = state.annotation.restrictions.volumeInterpolationAllowed;
-  const onlyExtrude = state.userConfiguration.interpolationMode === InterpolationModeEnum.EXTRUDE;
   const volumeTracing = getActiveSegmentationTracing(state);
   let interpolationDepth = 0;
   let directionFactor = 1;
   if (!volumeTracing) {
     // Return dummy values, since the feature should be disabled, anyway
     return {
-      tooltipTitle: "Volume Interpolation/Extrusion",
+      tooltipTitle: "Volume Interpolation",
       disabledExplanation: "Only available when a volume annotation exists.",
       isDisabled: true,
       activeViewport: OrthoViews.PLANE_XY,
@@ -73,7 +57,6 @@ function _getInterpolationInfo(state: WebknossosState, explanationPrefix: string
       labeledZoomStep: 0,
       interpolationDepth,
       directionFactor,
-      onlyExtrude,
     };
   }
   const mostRecentLabelAction = getLastLabelAction(volumeTracing);
@@ -112,10 +95,10 @@ function _getInterpolationInfo(state: WebknossosState, explanationPrefix: string
 
     if (interpolationDepth > MAXIMUM_INTERPOLATION_DEPTH) {
       disabledExplanation = `${explanationPrefix} last labeled slice is too many slices away (distance > ${MAXIMUM_INTERPOLATION_DEPTH}).`;
-    } else if (interpolationDepth < 2 && !onlyExtrude) {
+    } else if (interpolationDepth < 2) {
       disabledExplanation = `${explanationPrefix} last labeled slice should be at least 2 slices away.`;
     } else {
-      const labelCount = onlyExtrude ? interpolationDepth : interpolationDepth - 1;
+      const labelCount = interpolationDepth - 1;
       tooltipAddendum = `Labels ${labelCount} ${pluralize(
         "slice",
         labelCount,
@@ -128,12 +111,10 @@ function _getInterpolationInfo(state: WebknossosState, explanationPrefix: string
   const isPossible = disabledExplanation == null;
   tooltipAddendum = disabledExplanation || tooltipAddendum;
 
-  const tooltipMain = onlyExtrude
-    ? "Extrude (copy) current segment from last labeled until current slice (V)"
-    : "Interpolate current segment between last labeled and current slice (V)";
+  const tooltipMain = "Interpolate current segment between last labeled and current slice (V)";
   const tooltipTitle = isAllowed
     ? `${tooltipMain} – ${tooltipAddendum}`
-    : "Volume Interpolation/Extrusion was disabled for this annotation.";
+    : "Volume Interpolation was disabled for this annotation.";
   const isDisabled = !(isAllowed && isPossible);
   return {
     tooltipTitle,
@@ -145,17 +126,30 @@ function _getInterpolationInfo(state: WebknossosState, explanationPrefix: string
     labeledZoomStep,
     interpolationDepth,
     directionFactor,
-    onlyExtrude,
   };
 }
 
 export const getInterpolationInfo = reuseInstanceOnEquality(_getInterpolationInfo);
 
+/*
+ A general note about cwise usages:
+ cwise parses and compiles the 'body' function into a minimal, optimized JS loop
+ that is applied to each element of the input arrays. However, since the body
+ function does not return anything, our build system (Vite/Rollup)
+ incorrectly treats it as dead code and eliminates it during the production build.
+
+ As a workaround, we pass the function as a stringified version to prevent it from
+ being dropped by the optimizer.
+
+ In case the approach here is changed in the future, it should be tested both in
+ dev and production, because the behavior can differ.
+ */
+
 const isEqual = cwise({
   args: ["array", "scalar"],
-  body: function body(a: number, b: number) {
+  body: `function body(a, b) {
     a = a === b ? 1 : 0;
-  },
+  }` as unknown as () => void,
 });
 
 const isEqualFromBigUint64: (
@@ -164,9 +158,9 @@ const isEqualFromBigUint64: (
   b: bigint,
 ) => void = cwise({
   args: ["array", "array", "scalar"],
-  body: function body(output: number, a: bigint, b: bigint) {
+  body: `function body(output, a, b) {
     output = a === b ? 1 : 0;
-  },
+  }` as unknown as () => void,
 });
 
 const isNonZero = cwise({
@@ -192,23 +186,23 @@ const isNonZero = cwise({
 
 const mul = cwise({
   args: ["array", "scalar"],
-  body: function body(a: number, b: number) {
+  body: `function body(a, b) {
     a = a * b;
-  },
+  }` as unknown as () => void,
 });
 
 const absMax = cwise({
   args: ["array", "array"],
-  body: function body(a: number, b: number) {
+  body: `function body(a, b) {
     a = Math.abs(a) > Math.abs(b) ? a : b;
-  },
+  }` as unknown as () => void,
 });
 
 const assign = cwise({
   args: ["array", "array"],
-  body: function body(a: number, b: number) {
+  body: `function body(a, b) {
     a = b;
-  },
+  }` as unknown as () => void,
 });
 
 export function copyNdArray(
@@ -298,7 +292,6 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     labeledZoomStep,
     interpolationDepth,
     directionFactor,
-    onlyExtrude,
   } = yield* select((state) =>
     getInterpolationInfo(state, "Could not interpolate segment because"),
   );
@@ -349,20 +342,12 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
   const stride = [1, size[0], size[0] * size[1]];
   const inputNd = ndarray(inputData, size, stride).transpose(firstDim, secondDim, thirdDim);
 
-  const adaptedInterpolationRange = onlyExtrude
-    ? // When extruding and...
-      directionFactor > 0
-      ? // ...tracing forwards, the latest (== current) slice also has to be labeled
-        [1, interpolationDepth + 1]
-      : // ...tracing backwards, the first (== current) slice also has to be labeled
-        [0, interpolationDepth]
-    : // When interpolating, only the slices between start and end slice have to be labeled
-      [1, interpolationDepth];
+  const interpolationRange = [1, interpolationDepth];
 
   const interpolationVoxelBuffers: Record<number, VoxelBuffer2D> = {};
   for (
-    let targetOffsetW = adaptedInterpolationRange[0];
-    targetOffsetW < adaptedInterpolationRange[1];
+    let targetOffsetW = interpolationRange[0];
+    targetOffsetW < interpolationRange[1];
     targetOffsetW++
   ) {
     const sectionLabeler = yield* call(
@@ -426,14 +411,6 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     isEqual(lastSlice, activeCellId);
   }
 
-  if (onlyExtrude) {
-    if (directionFactor > 0) {
-      lastSlice = firstSlice;
-    } else {
-      firstSlice = lastSlice;
-    }
-  }
-
   if (!isNonZero(firstSlice) || !isNonZero(lastSlice)) {
     Toast.warning(
       `Could not interpolate segment, because id ${activeCellId} was not found in source/target slice.`,
@@ -449,23 +426,21 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
     return;
   }
 
-  // In the extrusion case, we don't need any distance transforms. The binary
-  // masks are enough to decide whether a voxel needs to be written.
-  const firstSliceDists = onlyExtrude ? firstSlice : signedDist(firstSlice);
-  const lastSliceDists = onlyExtrude ? lastSlice : signedDist(lastSlice);
+  const firstSliceDists = signedDist(firstSlice);
+  const lastSliceDists = signedDist(lastSlice);
 
   for (let u = 0; u < size[firstDim]; u++) {
     for (let v = 0; v < size[secondDim]; v++) {
       const firstVal = firstSliceDists.get(u, v);
       const lastVal = lastSliceDists.get(u, v);
       for (
-        let targetOffsetW = adaptedInterpolationRange[0];
-        targetOffsetW < adaptedInterpolationRange[1];
+        let targetOffsetW = interpolationRange[0];
+        targetOffsetW < interpolationRange[1];
         targetOffsetW++
       ) {
         const k = targetOffsetW / interpolationDepth;
         const weightedAverage = firstVal * (1 - k) + lastVal * k;
-        const shouldDraw = onlyExtrude ? weightedAverage > 0 : weightedAverage < 0;
+        const shouldDraw = weightedAverage < 0;
         if (shouldDraw) {
           const voxelBuffer2D = interpolationVoxelBuffers[targetOffsetW];
           voxelBuffer2D.setValue(u, v, 1);
@@ -487,9 +462,9 @@ export default function* maybeInterpolateSegmentationLayer(): Saga<void> {
 
   yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
 
-  // Theoretically, the user might extrude (or interpolate, even though this is less likely) multiple
+  // Theoretically, even though unlikely, the user might interpolate multiple
   // times (e.g., from slice 0 to 5, then from 5 to 10 etc) without labeling anything in between manually.
-  // In that case, the interpolation/extrusion would always start from slice 0 which is unexpected and leads
+  // In that case, the interpolation would always start from slice 0 which is unexpected and leads
   // to additional performance overhead (also the maximum interpolation depth will be exceeded at some point).
   // As a counter measure, we simply use the current position to update the current direction (and with it
   // the last label actions).

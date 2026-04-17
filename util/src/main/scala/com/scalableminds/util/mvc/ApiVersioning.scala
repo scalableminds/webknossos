@@ -5,8 +5,8 @@ import play.api.mvc.RequestHeader
 
 trait ApiVersioning {
 
-  private lazy val CURRENT_API_VERSION: Int = 12
-  private lazy val OLDEST_SUPPORTED_API_VERSION: Int = 5
+  protected val CURRENT_API_VERSION: Int = 13
+  protected val OLDEST_SUPPORTED_API_VERSION: Int = 5
 
   protected lazy val apiVersioningInfo: JsObject =
     Json.obj(
@@ -25,9 +25,10 @@ trait ApiVersioning {
   }
 
   private def extractRequestedApiVersion(request: RequestHeader): Int =
-    "^/(api|data|tracings)/v(\\d+).*$".r.findFirstMatchIn(request.uri) match {
+    "^/(?:api|data|tracings)/v(\\d+)".r.findFirstMatchIn(request.uri) match {
       case Some(m) =>
-        m.group(2).toInt
+        m.group(1).toInt
       case None => CURRENT_API_VERSION
     }
+
 }

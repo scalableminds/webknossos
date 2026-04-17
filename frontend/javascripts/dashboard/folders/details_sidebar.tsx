@@ -24,7 +24,7 @@ import {
   DatasetExtentRow,
   OwningOrganizationRow,
   VoxelSizeRow,
-} from "viewer/view/right-border-tabs/dataset_info_tab_view";
+} from "viewer/view/right_border_tabs/dataset_info_tab_view";
 import { DatasetLayerTags, DatasetTags, TeamTags } from "../advanced_dataset/dataset_table";
 import { useDatasetCollectionContext } from "../dataset/dataset_collection_context";
 import { SEARCH_RESULTS_LIMIT, useDatasetQuery, useFolderQuery } from "../dataset/queries";
@@ -286,7 +286,7 @@ function DatasetsDetails({
 
   const cancelButton = <Button onClick={onCancel}>Cancel</Button>;
 
-  // TODO delete once soft-delete is implemented: https://github.com/scalableminds/webknossos/issues/9061
+  // TODO (#9061): Delete once soft-delete is implemented.
   const cantBeUndoneMessage = (
     <Typography.Text type="warning" strong>
       This action cannot be undone.

@@ -8,7 +8,7 @@ import type {
   UpdateActionWithIsolationRequirement,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
-import type { SaveQueueEntry, StoreAnnotation } from "viewer/store";
+import type { ProofreadingPostProcessingInfo, SaveQueueEntry, StoreAnnotation } from "viewer/store";
 export type SaveQueueType = "skeleton" | "volume" | "mapping";
 
 import { areSetsEqual } from "libs/utils";
@@ -32,18 +32,32 @@ type DisableSavingAction = ReturnType<typeof disableSavingAction>;
 export type EnsureTracingsWereDiffedToSaveQueueAction = ReturnType<
   typeof ensureTracingsWereDiffedToSaveQueueAction
 >;
-export type EnsureHasAnnotationMutexAction = ReturnType<typeof ensureHasAnnotationMutexAction>;
 export type EnsureHasNewestVersionAction = ReturnType<typeof ensureHasNewestVersionAction>;
-export type DoneSavingAction = ReturnType<typeof doneSavingAction>;
 export type SetIsMutexAcquiredAction = ReturnType<typeof setIsMutexAcquiredAction>;
 export type SetUserHoldingMutexAction = ReturnType<typeof setUserHoldingMutexAction>;
+export type SubscribeToAnnotationMutexAction = ReturnType<typeof subscribeToAnnotationMutexAction>;
+export type UnsubscribeFromAnnotationMutexAction = ReturnType<
+  typeof unsubscribeFromAnnotationMutexAction
+>;
+export type SnapshotAnnotationStateForNextRebaseAction = ReturnType<
+  typeof snapshotAnnotationStateForNextRebaseAction
+>;
 export type PrepareRebaseAction = ReturnType<typeof prepareRebaseAction>;
 export type FinishedRebaseAction = ReturnType<typeof finishedRebaseAction>;
+export type StartForwardingUpdateActionsAction = ReturnType<
+  typeof startForwardingUpdateActionsAction
+>;
+export type FinishForwardingUpdateActionsAction = ReturnType<
+  typeof finishForwardingUpdateActionsAction
+>;
 export type UpdateMappingRebaseInformationAction = ReturnType<
   typeof snapshotMappingDataForNextRebaseAction
 >;
 export type FinishedApplyingMissingUpdatesAction = ReturnType<
   typeof finishedApplyingMissingUpdatesAction
+>;
+export type SetPendingProofreadingOperationInfoAction = ReturnType<
+  typeof setPendingProofreadingOperationInfoAction
 >;
 export type ReplaceSaveQueueAction = ReturnType<typeof replaceSaveQueueAction>;
 
@@ -60,17 +74,23 @@ export type SaveAction =
   | RedoAction
   | DisableSavingAction
   | EnsureTracingsWereDiffedToSaveQueueAction
-  | EnsureHasAnnotationMutexAction
   | EnsureHasNewestVersionAction
-  | DoneSavingAction
   | SetIsMutexAcquiredAction
   | SetUserHoldingMutexAction
+  | SubscribeToAnnotationMutexAction
+  | UnsubscribeFromAnnotationMutexAction
+  | SnapshotAnnotationStateForNextRebaseAction
   | PrepareRebaseAction
   | FinishedRebaseAction
+  | StartForwardingUpdateActionsAction
+  | FinishForwardingUpdateActionsAction
   | UpdateMappingRebaseInformationAction
   | FinishedApplyingMissingUpdatesAction
+  | SetPendingProofreadingOperationInfoAction
   | ReplaceSaveQueueAction;
 
+// The following actions can be used to "push" update actions into the local save queue
+// of the Store.
 // The action creators pushSaveQueueTransaction and pushSaveQueueTransactionIsolated
 // are typed so that update actions that need isolation are isolated in a group each.
 // From this point on, we can assume that the groups fulfill the isolation requirement.
@@ -193,21 +213,6 @@ export const dispatchEnsureTracingsWereDiffedToSaveQueueAction = async (
   }
 };
 
-export const ensureHasAnnotationMutexAction = (callback: () => void) =>
-  ({
-    type: "ENSURE_HAS_ANNOTATION_MUTEX",
-    callback,
-  }) as const;
-
-export const dispatchEnsureHasAnnotationMutexAsync = async (
-  dispatch: Dispatch<any>,
-): Promise<void> => {
-  const readyDeferred = new Deferred();
-  const action = ensureHasAnnotationMutexAction(() => readyDeferred.resolve(null));
-  dispatch(action);
-  await readyDeferred.promise();
-};
-
 export const ensureHasNewestVersionAction = (callback: () => void) =>
   ({
     type: "ENSURE_HAS_NEWEST_VERSION",
@@ -223,11 +228,6 @@ export const dispatchEnsureHasNewestVersionAsync = async (
   await readyDeferred.promise();
 };
 
-export const doneSavingAction = () =>
-  ({
-    type: "DONE_SAVING",
-  }) as const;
-
 export const setIsMutexAcquiredAction = (isMutexAcquired: boolean) =>
   ({
     type: "SET_IS_MUTEX_ACQUIRED",
@@ -240,6 +240,24 @@ export const setUserHoldingMutexAction = (blockedByUser: APIUserCompact | null |
     blockedByUser,
   }) as const;
 
+export const subscribeToAnnotationMutexAction = (subscriptionId: number, callerId: string) =>
+  ({
+    type: "SUBSCRIBE_TO_ANNOTATION_MUTEX",
+    subscriptionId,
+    callerId,
+  }) as const;
+
+export const unsubscribeFromAnnotationMutexAction = (subscriptionId: number) =>
+  ({
+    type: "UNSUBSCRIBE_FROM_ANNOTATION_MUTEX",
+    subscriptionId,
+  }) as const;
+
+export const snapshotAnnotationStateForNextRebaseAction = () =>
+  ({
+    type: "SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE",
+  }) as const;
+
 export const prepareRebaseAction = () =>
   ({
     // Sets the annotation in the store to the info stored in RebaseRelevantAnnotationState.
@@ -249,6 +267,16 @@ export const prepareRebaseAction = () =>
 export const finishedRebaseAction = () =>
   ({
     type: "FINISHED_REBASING",
+  }) as const;
+
+export const startForwardingUpdateActionsAction = () =>
+  ({
+    type: "START_FORWARDING_UPDATE_ACTIONS",
+  }) as const;
+
+export const finishForwardingUpdateActionsAction = () =>
+  ({
+    type: "FINISH_FORWARDING_UPDATE_ACTIONS",
   }) as const;
 
 export const snapshotMappingDataForNextRebaseAction = (volumeLayerIdToUpdate: string) =>
@@ -264,6 +292,13 @@ export const snapshotMappingDataForNextRebaseAction = (volumeLayerIdToUpdate: st
 export const finishedApplyingMissingUpdatesAction = () =>
   ({
     type: "FINISHED_APPLYING_MISSING_UPDATES",
+  }) as const;
+export const setPendingProofreadingOperationInfoAction = (
+  proofreadingPostProcessingInfo: ProofreadingPostProcessingInfo | null | undefined,
+) =>
+  ({
+    type: "SET_PENDING_PROOFREADING_OPERATION_INFO",
+    proofreadingPostProcessingInfo,
   }) as const;
 
 export const replaceSaveQueueAction = (newSaveQueue: SaveQueueEntry[]) =>

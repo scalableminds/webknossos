@@ -41,7 +41,7 @@ import {
   Route,
   redirect,
 } from "react-router-dom";
-import type { EmptyObject } from "types/globals";
+import type { EmptyObject } from "types/type_utils";
 import { CommandPalette } from "viewer/view/components/command_palette";
 
 const { Content } = Layout;
@@ -89,7 +89,7 @@ function RootLayout() {
 
   return (
     <Layout>
-      {/* TODO: always show command palette; remove logic from router
+      {/* TODO (#9483): always show command palette; remove logic from router
       within tracing view, the command palette is rendered in the status bar. */}
       {isAuthenticated && isAdminView && <CommandPalette label={null} />}
       <Navbar isAuthenticated={isAuthenticated} />
@@ -456,7 +456,28 @@ const routes = createRoutesFromElements(
       }
     />
     <Route
-      path="/workflows/:workflowName"
+      path="/workflows/:workflowHash"
+      loader={({ params, request }) => {
+        const url = new URL(request.url);
+        const runId = url.searchParams.get("runId");
+        if (runId) {
+          url.searchParams.delete("runId");
+          const search = url.searchParams.toString();
+
+          return redirect(
+            `/workflows/${params.workflowHash}/run/${encodeURIComponent(runId)}${search ? `?${search}` : ""}`,
+          );
+        }
+        return null;
+      }}
+      element={
+        <SecuredRoute>
+          <AsyncWorkflowView />
+        </SecuredRoute>
+      }
+    />
+    <Route
+      path="/workflows/:workflowHash/run/:runId"
       element={
         <SecuredRoute>
           <AsyncWorkflowView />

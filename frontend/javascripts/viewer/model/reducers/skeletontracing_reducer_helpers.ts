@@ -17,6 +17,7 @@ import type {
   ServerBranchPoint,
   ServerNode,
   ServerSkeletonTracingTree,
+  TreeAgglomerateInfo,
 } from "types/api_types";
 import Constants, {
   NODE_ID_REF_REGEX,
@@ -53,7 +54,7 @@ import {
 } from "viewer/model/types/tree_types";
 import type { RestrictionsAndSettings, SkeletonTracing, WebknossosState } from "viewer/store";
 
-import { mapGroups } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { mapGroups } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 import { max, maxBy, min } from "../helpers/iterator_utils";
 
 export function generateTreeName(state: WebknossosState, timestamp: number, treeId: number) {
@@ -372,6 +373,7 @@ function splitTreeByNodes(
             type: activeTree.type,
             edgesAreVisible: true,
             metadata: activeTree.metadata,
+            agglomerateInfo: activeTree.agglomerateInfo,
           };
         } else {
           // Create new tree
@@ -379,8 +381,11 @@ function splitTreeByNodes(
             intermediateState,
             timestamp,
             true,
-            undefined,
+            activeTree.name,
             activeTree.type,
+            activeTree.edgesAreVisible,
+            [],
+            activeTree.agglomerateInfo,
           );
 
           // Cast to mutable tree type since we want to mutably do the split
@@ -495,6 +500,7 @@ export function createTree(
   type: TreeType = TreeTypeEnum.DEFAULT,
   edgesAreVisible: boolean = true,
   metadata: MetadataEntryProto[] = [],
+  agglomerateInfo?: TreeAgglomerateInfo | undefined,
 ): Tree | null {
   const skeletonTracing = getSkeletonTracing(state.annotation);
   if (skeletonTracing == null) {
@@ -526,6 +532,7 @@ export function createTree(
     type,
     edgesAreVisible,
     metadata,
+    agglomerateInfo,
   };
   return tree;
 }
@@ -920,6 +927,7 @@ export function createMutableTreeMapFromTreeArray(
         type: tree.type != null ? tree.type : TreeTypeEnum.DEFAULT,
         edgesAreVisible: tree.edgesAreVisible != null ? tree.edgesAreVisible : true,
         metadata: tree.metadata,
+        agglomerateInfo: tree.agglomerateInfo,
       }),
     );
   }

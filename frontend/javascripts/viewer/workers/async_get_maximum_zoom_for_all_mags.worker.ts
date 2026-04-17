@@ -2,7 +2,7 @@ import type { Matrix4x4 } from "mjs";
 import type { OrthoViewRects, Vector3, ViewMode } from "viewer/constants";
 import { _getMaximumZoomForAllMags } from "viewer/model/accessors/flycam_accessor";
 import type { LoadingStrategy } from "viewer/store";
-import { expose } from "./comlink_wrapper";
+import { expose } from "./comlink_core";
 
 function asyncGetMaximumZoomForAllMags(
   viewMode: ViewMode,

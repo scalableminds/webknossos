@@ -2,11 +2,11 @@ package backend
 
 import com.scalableminds.util.geometry.Vec3Float
 import com.scalableminds.webknossos.datastore.services.mesh.NeuroglancerSegmentManifest
-import org.scalatestplus.play.PlaySpec
+import org.scalatest.wordspec.AsyncWordSpec
 
 import java.util.Base64
 
-class NeuroglancerMeshTestSuite extends PlaySpec {
+class NeuroglancerMeshTestSuite extends AsyncWordSpec {
 
   "Neuroglancer Meshes" when {
     "parsing the segment manifest" should {

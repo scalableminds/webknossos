@@ -2,9 +2,9 @@ package backend
 
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
-import org.scalatestplus.play.PlaySpec
+import org.scalatest.wordspec.AsyncWordSpec
 
-class AdditionalCoordinateTestSuite extends PlaySpec with ProtoGeometryImplicits {
+class AdditionalCoordinateTestSuite extends AsyncWordSpec with ProtoGeometryImplicits {
 
   private def definitionsEqual(a: AdditionalAxis, b: AdditionalAxis) =
     a.name == b.name && a.index == b.index && a.lowerBound == b.lowerBound && a.upperBound == b.upperBound

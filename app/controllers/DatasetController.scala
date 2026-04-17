@@ -9,6 +9,7 @@ import com.scalableminds.util.tools.{Empty, Failure, Fox, Full, TristateOptionJs
 import com.scalableminds.webknossos.datastore.datareaders.AxisOrder
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
 import com.scalableminds.webknossos.datastore.models.datasource.{
   DataSourceId,
   DataSourceStatus,
@@ -52,12 +53,21 @@ case class DatasetUpdateParameters(
     metadata: Option[JsArray],
     folderId: Option[ObjectId],
     dataSource: Option[UsableDataSource],
-    layerRenamings: Option[Seq[LayerRenaming]]
+    layerRenamings: Option[Seq[LayerRenaming]],
+    attachmentRenamings: Option[Seq[AttachmentRenaming]]
 )
 
 case class LayerRenaming(oldName: String, newName: String)
 object LayerRenaming {
   implicit val jsonFormat: OFormat[LayerRenaming] = Json.format[LayerRenaming]
+}
+case class AttachmentRenaming(
+    layerName: String, // Note: if a request contains a layer renaming *and* attachment renaming, this must use the *new* layerName.
+    oldName: String,
+    attachmentType: LayerAttachmentType,
+    newName: String)
+object AttachmentRenaming {
+  implicit val jsonFormat: OFormat[AttachmentRenaming] = Json.format[AttachmentRenaming]
 }
 
 object DatasetUpdateParameters extends TristateOptionJsonHelper {
@@ -157,7 +167,7 @@ class DatasetController @Inject()(userService: UserService,
                                   teamService: TeamService,
                                   datasetDAO: DatasetDAO,
                                   datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
-                                  datasetUploadToPathsService: DatasetUploadToPathsService,
+                                  datasetUploadToPathsService: UploadToPathsService,
                                   folderService: FolderService,
                                   thumbnailService: ThumbnailService,
                                   thumbnailCachingService: ThumbnailCachingService,
@@ -465,7 +475,8 @@ class DatasetController @Inject()(userService: UserService,
           dataSourceUpdates =>
             datasetService.updateDataSourceFromUserChanges(dataset,
                                                            dataSourceUpdates,
-                                                           request.body.layerRenamings.getOrElse(Seq.empty)))
+                                                           request.body.layerRenamings.getOrElse(Seq.empty),
+                                                           request.body.attachmentRenamings.getOrElse(Seq.empty)))
         updated <- datasetDAO.findOne(datasetId)
         _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
         js <- datasetService.publicWrites(updated, Some(request.identity))
@@ -679,6 +690,27 @@ class DatasetController @Inject()(userService: UserService,
       } yield Ok(Json.obj("newDatasetId" -> newDatasetId))
     }
 
+  def composeAddLayer(datasetId: ObjectId): Action[ComposeRequestLayer] =
+    sil.SecuredAction.async(validateJson[ComposeRequestLayer]) { implicit request =>
+      for {
+        _ <- composeService.addLayer(datasetId, request.body) ?~> "dataset.compose.addLayer.failed"
+      } yield Ok
+    }
+
+  def composeAddMag(datasetId: ObjectId): Action[ComposeAddMagRequest] =
+    sil.SecuredAction.async(validateJson[ComposeAddMagRequest]) { implicit request =>
+      for {
+        _ <- composeService.addMag(datasetId, request.body) ?~> "dataset.compose.addMag.failed"
+      } yield Ok
+    }
+
+  def composeAddAttachment(datasetId: ObjectId): Action[ComposeAddAttachmentRequest] =
+    sil.SecuredAction.async(validateJson[ComposeAddAttachmentRequest]) { implicit request =>
+      for {
+        _ <- composeService.addAttachment(datasetId, request.body) ?~> "dataset.compose.addAttachment.failed"
+      } yield Ok
+    }
+
   def reserveMagUploadToPath(datasetId: ObjectId): Action[ReserveMagUploadToPathRequest] =
     sil.SecuredAction.async(validateJson[ReserveMagUploadToPathRequest]) { implicit request =>
       for {
@@ -725,13 +757,14 @@ class DatasetController @Inject()(userService: UserService,
                                                            request.body.layerName,
                                                            request.body.attachmentName,
                                                            request.body.attachmentType)
+        dataStoreClient <- datasetService.clientFor(dataset)
         _ <- Fox.runIf(!dataset.isVirtual) {
           for {
             updatedDataSource <- datasetService.usableDataSourceFor(dataset)
-            dataStoreClient <- datasetService.clientFor(dataset)
             _ <- dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource)
           } yield ()
         }
+        _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
       } yield Ok
     }
 

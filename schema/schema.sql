@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(155);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(160);
 COMMIT TRANSACTION;
 
 
@@ -440,8 +440,6 @@ CREATE TABLE webknossos.users(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   _multiUser TEXT CONSTRAINT _multiUser_objectId CHECK (_multiUser ~ '^[0-9a-f]{24}$') NOT NULL,
   _organization TEXT NOT NULL,
-  firstName TEXT NOT NULL, -- CHECK (firstName ~* '^[A-Za-z0-9\-_ ]+$'),
-  lastName TEXT NOT NULL, -- CHECK (lastName ~* '^[A-Za-z0-9\-_ ]+$'),
   lastActivity TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   userConfiguration JSONB NOT NULL,
   isDeactivated BOOLEAN NOT NULL DEFAULT FALSE,
@@ -502,6 +500,8 @@ CREATE TABLE webknossos.multiUsers(
   email TEXT NOT NULL UNIQUE CHECK (email ~* '^.+@.+$'),
   passwordInfo_hasher webknossos.USER_PASSWORDINFO_HASHERS NOT NULL DEFAULT 'SCrypt',
   passwordInfo_password TEXT NOT NULL,
+  firstName TEXT NOT NULL,
+  lastName TEXT NOT NULL,
   isSuperUser BOOLEAN NOT NULL DEFAULT FALSE,
   novelUserExperienceInfos JSONB NOT NULL DEFAULT '{}'::json,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -564,6 +564,7 @@ CREATE TABLE webknossos.workers(
   maxParallelLowPriorityJobs INT NOT NULL DEFAULT 1,
   supportedJobCommands TEXT[] NOT NULL DEFAULT array[]::TEXT[],
   lastHeartBeat TIMESTAMPTZ NOT NULL DEFAULT '2000-01-01T00:00:00Z',
+  lastReportedVersion TEXT,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE
 );
@@ -669,6 +670,8 @@ CREATE TABLE webknossos.aiModels(
   _dataStore TEXT NOT NULL, -- redundant to job, but must be available for jobless models
   _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
   _trainingJob TEXT CONSTRAINT _trainingJob_objectId CHECK (_trainingJob ~ '^[0-9a-f]{24}$'),
+  path TEXT,
+  uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
   name TEXT NOT NULL,
   comment TEXT,
   category webknossos.AI_MODEL_CATEGORY,
@@ -693,7 +696,7 @@ CREATE TABLE webknossos.aiModel_trainingAnnotations(
 CREATE TABLE webknossos.aiInferences(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   _organization TEXT NOT NULL,
-  _aiModel TEXT CONSTRAINT _aiModel_objectId CHECK (_aiModel ~ '^[0-9a-f]{24}$') NOT NULL,
+  _aiModel TEXT CONSTRAINT _aiModel_objectId CHECK (_aiModel ~ '^[0-9a-f]{24}$'),
   _newDataset TEXT CONSTRAINT _newDataset_objectId CHECK (_newDataset ~ '^[0-9a-f]{24}$'),
   _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$'),
   _inferenceJob TEXT CONSTRAINT _inferenceJob_objectId CHECK (_inferenceJob ~ '^[0-9a-f]{24}$') NOT NULL,
@@ -848,7 +851,7 @@ CREATE VIEW webknossos.webauthnCredentials_ as SELECT * FROM webknossos.webauthn
 
 CREATE VIEW webknossos.userInfos AS
 SELECT
-u._id AS _user, m.email, u.firstName, u.lastname, o.name AS organization_name,
+u._id AS _user, m.email, m.firstName, m.lastName, o.name AS organization_name,
 u.isDeactivated, u.isDatasetManager, u.isAdmin, m.isSuperUser,
 u._organization, o._id AS organization_id, u.created AS user_created,
 m.created AS multiuser_created, u._multiUser, m._lastLoggedInIdentity, u.lastActivity, m.isEmailVerified
@@ -1096,11 +1099,10 @@ FOR EACH ROW EXECUTE PROCEDURE webknossos.onDeleteAnnotation();
 
 CREATE FUNCTION webknossos.enforce_non_negative_balance() RETURNS TRIGGER AS $$
 BEGIN
-  -- Assert that the new balance is non-negative
-    ASSERT (SELECT COALESCE(SUM(milli_credit_delta), 0) + COALESCE(NEW.milli_credit_delta, 0)
-            FROM webknossos.credit_transactions_
-            WHERE _organization = NEW._organization AND _id != NEW._id) >= 0, 'Transaction would result in a negative credit balance for organization %', NEW._organization;
-    -- Assertion passed, transaction can go ahead
+  ASSERT (SELECT COALESCE(SUM(milli_credit_delta), 0) + COALESCE(NEW.milli_credit_delta, 0)
+          FROM webknossos.credit_transactions_
+          WHERE _organization = NEW._organization AND _id != NEW._id) >= 0,
+         format('Transaction would result in a negative credit balance for organization %s', NEW._organization);
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;

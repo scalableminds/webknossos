@@ -1,3 +1,4 @@
+import logoScreenshot from "@images/logo-screenshot.svg";
 import { saveAs } from "file-saver";
 import { convertBufferToImage } from "libs/utils";
 import {
@@ -54,6 +55,7 @@ export function renderToTexture(
   // this behavior is not problematic for us.
   withFarClipping?: boolean,
   clearColor?: number,
+  enableAntialiasing: boolean = false,
 ): Uint8Array {
   const SceneController = getSceneController();
   const { renderer, scene: defaultScene } = SceneController;
@@ -97,6 +99,7 @@ export function renderToTexture(
   renderer.setScissorTest(false);
   renderer.setClearColor(clearColor === 0xffffff ? getBackgroundColor() : clearColor, 1);
   const renderTarget = new WebGLRenderTarget(width, height);
+  if (enableAntialiasing) renderTarget.samples = 4;
   const buffer = new Uint8Array(width * height * 4);
 
   if (plane !== ArbitraryViewport) {
@@ -112,7 +115,7 @@ export function renderToTexture(
 
 function getScreenshotLogoImage(): Promise<HTMLImageElement> {
   const logo = document.createElement("img");
-  logo.src = "/assets/images/logo-screenshot.svg";
+  logo.src = logoScreenshot;
   return new Promise((resolve) => {
     logo.onload = () => resolve(logo);
   });
@@ -134,7 +137,8 @@ export async function downloadScreenshot() {
     if (width === 0 || height === 0) continue;
     const clearColor = planeId !== "arbitraryViewport" ? OrthoViewColors[planeId] : 0xffffff;
 
-    const buffer = renderToTexture(planeId, undefined, undefined, false, clearColor);
+    // Always anti-alias when creating screenshots since it looks better and performance is mostly irrelevant
+    const buffer = renderToTexture(planeId, undefined, undefined, false, clearColor, true);
 
     const inputCatcherElement = document.querySelector(`#inputcatcher_${planeId}`);
     const drawImageIntoCanvasCallback =

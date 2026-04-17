@@ -1,5 +1,5 @@
 import type { MeshLodInfo } from "admin/api/mesh";
-import { getMeshfilesForDatasetLayer, meshApi } from "admin/rest_api";
+import { getMeshFilesForDatasetLayer, meshApi } from "admin/rest_api";
 import Deferred from "libs/async/deferred";
 import processTaskWithPool from "libs/async/task_pool";
 import { mergeGeometries } from "libs/BufferGeometryUtils";
@@ -19,6 +19,7 @@ import type {
   APISegmentationLayer,
 } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
+import Constants from "viewer/constants";
 import CustomLOD from "viewer/controller/custom_lod";
 import {
   type BufferGeometryWithInfo,
@@ -48,14 +49,13 @@ import {
   updateMeshFileListAction,
 } from "viewer/model/actions/annotation_actions";
 import type { LoadPrecomputedMeshAction } from "viewer/model/actions/segmentation_actions";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import Store from "viewer/store";
-import { getBaseSegmentationName } from "viewer/view/right-border-tabs/segments_tab/segments_view_helper";
+import { getBaseSegmentationName } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 import { ensureSceneControllerInitialized, ensureWkInitialized } from "../ready_sagas";
 import { getMeshExtraInfo } from "./ad_hoc_mesh_saga";
 
-const PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT = 32;
 const MIN_BATCH_SIZE_IN_BYTES = 2 ** 16;
 
 // Avoid redundant fetches of mesh files for the same layer by
@@ -99,7 +99,7 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
   fetchDeferredsPerLayer[layerName] = deferred;
 
   const availableMeshFiles = yield* call(
-    getMeshfilesForDatasetLayer,
+    getMeshFilesForDatasetLayer,
     dataset.dataStore.url,
     dataset,
     getBaseSegmentationName(segmentationLayer),
@@ -129,7 +129,8 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
   // here before loadPrecomputedMeshForSegmentId is finished, the latter saga
   // should be canceled automatically to avoid populating mesh data even though
   // the mesh was removed. This is accomplished by redux-saga's race effect.
-  yield* race({
+  console.log("Start loading mesh for", segmentId);
+  const { cancel } = yield* race({
     loadPrecomputedMeshForSegmentId: call(
       loadPrecomputedMeshForSegmentId,
       segmentId,
@@ -146,6 +147,11 @@ function* loadPrecomputedMesh(action: LoadPrecomputedMeshAction) {
         otherAction.layerName === layer.name) as ActionPattern,
     ),
   });
+  if (cancel) {
+    console.log("cancelled loading mesh for", segmentId);
+  } else {
+    console.log("Finished loading mesh for", segmentId);
+  }
 }
 
 type ChunksMap = Record<number, Vector3[] | meshApi.MeshChunk[] | null | undefined>;
@@ -159,6 +165,7 @@ function* loadPrecomputedMeshForSegmentId(
   opacity: number | undefined,
 ): Saga<void> {
   const layerName = segmentationLayer.name;
+  const annotationVersion = yield* select((state) => state.annotation.version);
   const mappingName = yield* call(getMappingName, segmentationLayer);
   yield* put(
     addPrecomputedMeshAction(
@@ -205,6 +212,7 @@ function* loadPrecomputedMeshForSegmentId(
       dataset,
       segmentationLayer,
       meshFile,
+      annotationVersion,
     );
     lods = chunkDescriptors.segmentInfo.lods;
     availableChunksMap = chunkDescriptors.availableChunksMap;
@@ -260,6 +268,7 @@ function* _getChunkLoadingDescriptors(
   dataset: APIDataset,
   segmentationLayer: APISegmentationLayer,
   meshFile: APIMeshFileInfo,
+  annotationVersion: number,
 ) {
   const availableChunksMap: ChunksMap = {};
   let loadingOrder: number[] = [];
@@ -287,7 +296,7 @@ function* _getChunkLoadingDescriptors(
   }
 
   const segmentInfo = yield* call(
-    meshApi.getMeshfileChunksForSegment,
+    meshApi.getMeshFileChunksForSegment,
     dataset.dataStore.url,
     dataset.id,
     getBaseSegmentationName(segmentationLayer),
@@ -299,6 +308,7 @@ function* _getChunkLoadingDescriptors(
     // without a mapping.
     meshFile.mappingName == null ? mappingName : null,
     editableMapping != null && tracing ? tracing.tracingId : null,
+    annotationVersion,
   );
   segmentInfo.lods.forEach((meshLodInfo, lodIndex) => {
     availableChunksMap[lodIndex] = meshLodInfo?.chunks;
@@ -367,7 +377,7 @@ function* loadPrecomputedMeshesInChunksForLod(
     (chunks) =>
       function* loadChunks(): Saga<void> {
         const dataForChunks = yield* call(
-          meshApi.getMeshfileChunkData,
+          meshApi.getMeshFileChunkData,
           dataset.dataStore.url,
           dataset.id,
           getBaseSegmentationName(segmentationLayer),
@@ -440,7 +450,7 @@ function* loadPrecomputedMeshesInChunksForLod(
   );
 
   try {
-    yield* call(processTaskWithPool, tasks, PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
+    yield* call(processTaskWithPool, tasks, Constants.PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT);
   } catch (exception) {
     Toast.warning(`Some mesh chunks could not be loaded for segment ${segmentId}.`);
     console.error(exception);
@@ -497,8 +507,8 @@ function* loadPrecomputedMeshesInChunksForLod(
 export default function* precomputedMeshSaga(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_INITIALIZED
   fetchDeferredsPerLayer = {};
-  const loadPrecomputedMeshActionChannel = yield* actionChannel("LOAD_PRECOMPUTED_MESH_ACTION");
   const maybeFetchMeshFilesActionChannel = yield* actionChannel("MAYBE_FETCH_MESH_FILES");
+  const loadPrecomputedMeshActionChannel = yield* actionChannel("LOAD_PRECOMPUTED_MESH_ACTION");
 
   yield* call(ensureSceneControllerInitialized);
   yield* call(ensureWkInitialized);

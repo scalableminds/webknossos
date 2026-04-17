@@ -13,7 +13,7 @@ import { getNmlName, parseNml, serializeToNml } from "viewer/model/helpers/nml_h
 import SkeletonTracingReducer from "viewer/model/reducers/skeletontracing_reducer";
 import type { Node } from "viewer/model/types/tree_types";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
-import { findGroup } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { findGroup } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 import { describe, expect, it } from "vitest";
 import { buildInfo as BUILD_INFO } from "../fixtures/build_info";
 import { annotation as TASK_ANNOTATION } from "../fixtures/tasktracing_server_objects";

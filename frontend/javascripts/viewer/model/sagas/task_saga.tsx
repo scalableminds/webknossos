@@ -20,8 +20,8 @@ import {
 } from "viewer/model/actions/settings_actions";
 import { setMergerModeEnabledAction } from "viewer/model/actions/skeletontracing_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import Store, { type RecommendedConfiguration } from "viewer/store";
 import NewTaskDescriptionModal from "viewer/view/new_task_description_modal";
 import RecommendedConfigurationModal from "viewer/view/recommended_configuration_modal";

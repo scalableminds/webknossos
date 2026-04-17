@@ -12,7 +12,6 @@ import models.user.{User, UserService}
 import com.scalableminds.util.tools.Full
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
 
@@ -57,9 +56,7 @@ object Project {
 class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Project, ProjectsRow, Projects](sqlClient) {
   protected val collection = Projects
-
-  protected def idColumn(x: Projects): Rep[String] = x._Id
-  protected def isDeletedColumn(x: Projects): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultProjectsRow
 
   protected def parse(r: ProjectsRow): Fox[Project] =
     Fox.successful(
@@ -83,13 +80,6 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   override protected def deleteAccessQ(requestingUserId: ObjectId) = q"_owner = $requestingUserId"
 
   // read operations
-
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Project] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[ProjectsRow])
-      parsed <- parseFirst(r, id)
-    } yield parsed
 
   override def findAll(implicit ctx: DBAccessContext): Fox[List[Project]] =
     for {
@@ -124,7 +114,7 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def findUsersWithActiveTasks(projectId: ObjectId): Fox[List[(String, String, String, Int)]] =
     for {
-      rSeq <- run(q"""SELECT m.email, u.firstName, u.lastName, count(a._id)
+      rSeq <- run(q"""SELECT m.email, m.firstName, m.lastName, count(a._id)
                       FROM webknossos.annotations_ a
                       JOIN webknossos.tasks_ t ON a._task = t._id
                       JOIN webknossos.projects_ p ON t._project = p._id
@@ -133,7 +123,7 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                       WHERE p._id = $projectId
                       AND a.state = ${AnnotationState.Active}
                       AND a.typ = ${AnnotationType.Task}
-                      GROUP BY m.email, u.firstName, u.lastName
+                      GROUP BY m.email, m.firstName, m.lastName
                      """.as[(String, String, String, Int)])
     } yield rSeq.toList
 
@@ -166,7 +156,10 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield ()
 
   def updatePaused(id: ObjectId, isPaused: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
-    updateBooleanCol(id, _.paused, isPaused)
+    for {
+      _ <- assertUpdateAccess(id)
+      _ <- run(q"UPDATE webknossos.projects SET paused = $isPaused WHERE _id = $id".asUpdate)
+    } yield ()
 
   def countForTeam(teamId: ObjectId): Fox[Int] =
     for {

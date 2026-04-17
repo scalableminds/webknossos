@@ -6,7 +6,6 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import models.user.{UserDAO, UserService}
 import play.api.libs.json._
-import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
@@ -51,9 +50,7 @@ object Script {
 class ScriptDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Script, ScriptsRow, Scripts](sqlClient) {
   protected val collection = Scripts
-
-  protected def idColumn(x: Scripts): Rep[String] = x._Id
-  protected def isDeletedColumn(x: Scripts): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultScriptsRow
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"(SELECT _organization FROM webknossos.users_ u WHERE u._id = _owner) = (SELECT _organization FROM webknossos.users_ u WHERE u._id = $requestingUserId)"
@@ -87,10 +84,4 @@ class ScriptDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    WHERE _id = ${s._id}""".asUpdate)
     } yield ()
 
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[Script]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[ScriptsRow])
-      parsed <- Fox.combined(r.toList.map(parse))
-    } yield parsed
 }

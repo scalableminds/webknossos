@@ -57,7 +57,8 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext)
                   wkUrl: String,
                   datasetName: String,
                   datasetId: ObjectId,
-                  annotationOwner: User,
+                  annotationOwnerId: ObjectId,
+                  annotationOwnerName: String,
                   annotationTask: Option[Task],
                   skipVolumeData: Boolean = false,
                   volumeDataZipFormat: VolumeDataZipFormat,
@@ -71,7 +72,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext)
           renderUserState(annotationProto,
                           annotationLayers,
                           requestingUser.map(_._id.toString),
-                          annotationOwner._id.toString)
+                          annotationOwnerId.toString)
         for {
           nml <- toNmlWithImplicitWriter(
             annotationLayersWithAppliedUserState,
@@ -82,7 +83,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext)
             wkUrl,
             datasetName,
             datasetId,
-            annotationOwner,
+            annotationOwnerName,
             annotationTask,
             skipVolumeData,
             volumeDataZipFormat
@@ -100,14 +101,14 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext)
       wkUrl: String,
       datasetName: String,
       datasetId: ObjectId,
-      annotationOwner: User,
+      annotationOwnerName: String,
       annotationTask: Option[Task],
       skipVolumeData: Boolean,
       volumeDataZipFormat: VolumeDataZipFormat)(implicit writer: XMLStreamWriter): Fox[Unit] =
     for {
       _ <- Xml.withinElement("things") {
         for {
-          _ <- Fox.successful(writeMetaData(annotation, annotationOwner, annotationTask))
+          _ <- Fox.successful(writeMetaData(annotation, annotationOwnerName, annotationTask))
           skeletonLayers = annotationLayers.filter(_.typ == AnnotationLayerType.Skeleton)
           volumeLayers = annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
           _ <- Fox.fromBool(skeletonLayers.length <= 1) ?~> "annotation.download.multipleSkeletons"
@@ -435,7 +436,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext)
       }
     }
 
-  private def writeMetaData(annotationOpt: Option[Annotation], annotationOwner: User, taskOpt: Option[Task])(
+  private def writeMetaData(annotationOpt: Option[Annotation], annotationOwnerName: String, taskOpt: Option[Task])(
       implicit writer: XMLStreamWriter): Unit = {
     Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "writer")
@@ -457,7 +458,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext)
     }
     Xml.withinElementSync("meta") {
       writer.writeAttribute("name", "username")
-      writer.writeAttribute("content", annotationOwner.name)
+      writer.writeAttribute("content", annotationOwnerName)
     }
     taskOpt.foreach { task =>
       Xml.withinElementSync("meta") {

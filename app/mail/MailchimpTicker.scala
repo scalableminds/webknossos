@@ -31,7 +31,7 @@ class MailchimpTicker @Inject()(val lifecycle: ApplicationLifecycle,
   override protected def tick(): Fox[Unit] = {
     logger.info("Checking if any users need mailchimp tagging...")
     for {
-      multiUsers: List[MultiUser] <- multiUserDAO.findAll
+      multiUsers: List[MultiUser] <- multiUserDAO.findAll(GlobalAccessContext)
       _ = multiUsers.foreach(withErrorLogging(_, tagUserByActivity))
     } yield ()
   }

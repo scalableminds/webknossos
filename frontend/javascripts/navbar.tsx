@@ -1,6 +1,5 @@
-import {
+import Icon, {
   BarChartOutlined,
-  BellOutlined,
   ExperimentOutlined,
   HomeOutlined,
   QuestionCircleOutlined,
@@ -8,6 +7,7 @@ import {
   TeamOutlined,
   UserOutlined,
 } from "@ant-design/icons";
+import WkLogoIcon from "@images/wk-logo.svg?react";
 import { getUsersOrganizations, switchToOrganization } from "admin/api/organization";
 import LoginForm from "admin/auth/login_form";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
@@ -21,7 +21,6 @@ import type { MenuProps } from "antd";
 import {
   Avatar,
   Badge,
-  Button,
   ConfigProvider,
   Flex,
   Input,
@@ -62,6 +61,7 @@ import {
 } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
+import { Store } from "viewer/singletons";
 import { HelpModal } from "viewer/view/help_modal";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
 
@@ -432,6 +432,7 @@ function getHelpSubMenu(
 
   return {
     key: HELP_MENU_KEY,
+    className: "hide-on-small-screen",
     label: getCollapsibleMenuTitle(
       "Help",
       <QuestionCircleOutlined className="icon-margin-right" />,
@@ -461,21 +462,12 @@ function getDashboardSubMenu(collapse: boolean): SubMenuType {
   };
 }
 
-function NotificationIcon({
-  activeUser,
-  navbarHeight,
-}: {
-  activeUser: APIUser;
-  navbarHeight: number;
-}) {
-  const dispatch = useDispatch();
-  const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
-
+function getWhatsNewMenuEntry(activeUser: APIUser, maybeUnreadReleaseCount: number | null) {
   const handleShowWhatsNewView = () => {
     const [newUserSync] = updateNovelUserExperienceInfos(activeUser, {
       lastViewedWhatsNewTimestamp: Date.now(),
     });
-    dispatch(setActiveUserAction(newUserSync));
+    Store.dispatch(setActiveUserAction(newUserSync));
     sendAnalyticsEvent("open_whats_new_view");
 
     if (window.Olvy) {
@@ -485,19 +477,20 @@ function NotificationIcon({
     }
   };
 
-  return (
-    <div
-      style={{
-        paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
-      }}
-    >
-      <Tooltip title="See what's new in WEBKNOSSOS" placement="bottomLeft">
-        <Badge count={maybeUnreadReleaseCount || 0} size="small">
-          <Button onClick={handleShowWhatsNewView} shape="circle" icon={<BellOutlined />} />
-        </Badge>
-      </Tooltip>
-    </div>
-  );
+  return {
+    key: "whatsNew",
+    label: (
+      <Badge
+        className="navbar-whats-new-badge"
+        count={maybeUnreadReleaseCount || 0}
+        size="small"
+        offset={[10, 0]}
+      >
+        What's new
+      </Badge>
+    ),
+    onClick: handleShowWhatsNewView,
+  };
 }
 
 export const switchTo = async (org: APIOrganizationCompact) => {
@@ -573,6 +566,7 @@ function LoggedInAvatar({
     activeOrganization != null ? activeOrganization.name || activeOrganization.id : organizationId;
   const [organizationFilter, onChangeOrganizationFilter] = useState("");
   const [openKeys, setOpenKeys] = useState<string[]>([]);
+  const maybeUnreadReleaseCount = useOlvyUnreadReleasesCount(activeUser);
 
   const filteredOrganizations = filterWithSearchQueryAND(
     switchableOrganizations,
@@ -609,6 +603,7 @@ function LoggedInAvatar({
       style={{
         paddingTop: navbarHeight > constants.DEFAULT_NAVBAR_HEIGHT ? constants.BANNER_HEIGHT : 0,
         lineHeight: `${constants.DEFAULT_NAVBAR_HEIGHT}px`,
+        marginInlineStart: "10px",
       }}
       theme="dark"
       subMenuCloseDelay={subMenuCloseDelay}
@@ -632,9 +627,8 @@ function LoggedInAvatar({
               label: orgName,
               disabled: true,
             },
-            {
-              type: "divider",
-            },
+            { type: "divider" },
+            getWhatsNewMenuEntry(activeUser, maybeUnreadReleaseCount),
             {
               key: "account",
               label: <Link to="/account">Account Settings</Link>,
@@ -829,11 +823,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
         >
           {getCollapsibleMenuTitle(
             "WEBKNOSSOS",
-            <img
-              src="/assets/images/logo-icon-only.svg"
-              className="logo icon-margin-right"
-              alt="logo"
-            />,
+            <Icon component={WkLogoIcon} className="logo icon-margin-right" />,
             collapseAllNavItems,
           )}
         </Link>
@@ -879,13 +869,6 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
         />,
       );
     }
-    trailingNavItems.push(
-      <NotificationIcon
-        key="notification-icon"
-        activeUser={loggedInUser}
-        navbarHeight={navbarHeight}
-      />,
-    );
     trailingNavItems.push(
       <LoggedInAvatar
         key="logged-in-avatar"

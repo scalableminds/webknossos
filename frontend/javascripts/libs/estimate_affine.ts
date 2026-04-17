@@ -38,7 +38,7 @@ export default function estimateAffine(
   if (optInfoOut) {
     optInfoOut.meanError = meanError;
   }
-  if (!process.env.IS_TESTING) {
+  if (import.meta.env.MODE !== "test") {
     console.log("Affine estimation error: ", error, `(mean=${meanError})`);
   }
 

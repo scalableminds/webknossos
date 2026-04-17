@@ -57,8 +57,8 @@ object UserAccessRequest {
   def writeAnnotation(annotationId: ObjectId): UserAccessRequest =
     UserAccessRequest(Some(annotationId.toString), AccessResourceType.annotation, AccessMode.write)
 
-  def downloadJobExport(jobId: String): UserAccessRequest =
-    UserAccessRequest(Some(jobId), AccessResourceType.jobExport, AccessMode.read)
+  def downloadJobExport(jobId: ObjectId): UserAccessRequest =
+    UserAccessRequest(Some(jobId.toString), AccessResourceType.jobExport, AccessMode.read)
 
   def webknossos: UserAccessRequest =
     UserAccessRequest(None, AccessResourceType.webknossos, AccessMode.administrate)

@@ -1,3 +1,6 @@
+import type { QueryKey, UseQueryOptions } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+import { handleGenericError } from "libs/error_handling";
 import debounce from "lodash-es/debounce";
 import noop from "lodash-es/noop";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -297,6 +300,28 @@ export function useIsMounted() {
  * @param fn - Selector function that receives the Webknossos state
  * @returns Selected state value
  */
+/**
+ * Wrapper around `useQuery` that automatically calls `handleGenericError` when the query fails.
+ * This ensures the user sees a toast notification for any unhandled query error.
+ * Pass `fallbackMessage` to override the default generic error message.
+ */
+export function useQueryWithErrorHandling<
+  TQueryFnData = unknown,
+  TError extends Error = Error,
+  TData = TQueryFnData,
+  TQueryKey extends QueryKey = QueryKey,
+>(options: UseQueryOptions<TQueryFnData, TError, TData, TQueryKey>, fallbackMessage?: string) {
+  const result = useQuery(options);
+
+  useEffect(() => {
+    if (result.error != null) {
+      handleGenericError(result.error, fallbackMessage ?? null);
+    }
+  }, [result.error, fallbackMessage]);
+
+  return result;
+}
+
 export function useWkSelector<T>(fn: (state: WebknossosState) => T, equalityFn?: EqualityFn<T>): T {
   return useSelector(fn, equalityFn);
 }
@@ -330,4 +355,18 @@ export function useDebouncedValue<T>(value: T, delay: number): T {
   }, [debouncedSetter]);
 
   return debouncedValue;
+}
+
+export function useWindowWidth() {
+  const [width, setWidth] = useState<number>(window.innerWidth);
+
+  useEffect(() => {
+    const handler = () => setWidth(window.innerWidth);
+    window.addEventListener("resize", handler);
+    return () => {
+      window.removeEventListener("resize", handler);
+    };
+  }, []);
+
+  return width;
 }

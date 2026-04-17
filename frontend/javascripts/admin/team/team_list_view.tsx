@@ -1,8 +1,9 @@
 import { DeleteOutlined, PlusOutlined, UserOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import AdminPage from "admin/admin_page";
 import { deleteTeam as deleteTeamAPI, getEditableTeams, getEditableUsers } from "admin/rest_api";
 import CreateTeamModal from "admin/team/create_team_modal_view";
-import { Alert, App, Button, Flex, Input, Space, Spin, Table, Tag, Tooltip } from "antd";
+import { App, Button, Input, Space, Spin, Table, Tag, Tooltip } from "antd";
 import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";
@@ -11,7 +12,7 @@ import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import partial from "lodash-es/partial";
 import messages from "messages";
 import type React from "react";
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { APITeam, APITeamMembership, APIUser } from "types/api_types";
 import EditTeamModalView from "./edit_team_modal_view";
 
@@ -177,47 +178,23 @@ function TeamListView() {
     setTeams([...teams, newTeam]);
   }
 
-  function renderPlaceholder() {
-    const teamMessage = (
-      <Fragment>
-        {"You can "}
-        <a onClick={() => setIsTeamCreationModalVisible(true)}>add a team</a>
-        {" to control access to specific datasets and manage which users can be assigned to tasks."}
-      </Fragment>
-    );
-    return isLoading ? null : (
-      <Alert title="Add more teams" description={teamMessage} type="info" showIcon />
-    );
-  }
-
   return (
-    <div className="container">
-      <Flex
-        justify="space-between"
-        align="flex-start"
-        style={{ marginBottom: "var(--ant-padding-xs)" }}
-      >
-        <h3>Teams</h3>
-        <Space>
-          <Button
-            icon={<PlusOutlined />}
-            type="primary"
-            onClick={() => setIsTeamCreationModalVisible(true)}
-          >
-            Add Team
-          </Button>
-          <Search
-            style={{
-              width: 200,
-            }}
-            onChange={handleSearch}
-            value={searchQuery}
-          />
-        </Space>
-      </Flex>
-
+    <AdminPage
+      title="Teams"
+      descriptionURI="https://docs.webknossos.org/webknossos/users/teams.html"
+      description="Manage team membership and dataset access boundaries."
+      actions={
+        <Button
+          icon={<PlusOutlined />}
+          type="primary"
+          onClick={() => setIsTeamCreationModalVisible(true)}
+        >
+          Add Team
+        </Button>
+      }
+      search={<Search allowClear onChange={handleSearch} value={searchQuery} />}
+    >
       <Spin spinning={isLoading} size="large">
-        {teams.length <= 1 ? renderPlaceholder() : null}
         <Table
           dataSource={filterWithSearchQueryAND(teams, ["name"], searchQuery)}
           rowKey="id"
@@ -227,9 +204,6 @@ function TeamListView() {
           expandable={{
             expandedRowRender: (team) => renderUsersForTeam(team, users),
             rowExpandable: (_team) => true,
-          }}
-          style={{
-            marginTop: 30,
           }}
         >
           <Column
@@ -277,7 +251,7 @@ function TeamListView() {
         }}
         team={selectedTeam}
       />
-    </div>
+    </AdminPage>
   );
 }
 

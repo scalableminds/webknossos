@@ -14,7 +14,6 @@ import models.task.TaskTypeDAO
 import models.user.User
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
-import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
 
@@ -94,9 +93,7 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
 class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Team, TeamsRow, Teams](sqlClient) {
   protected val collection = Teams
-
-  protected def idColumn(x: Teams): Rep[String] = x._Id
-  protected def isDeletedColumn(x: Teams): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultTeamsRow
 
   protected def parse(r: TeamsRow): Fox[Team] =
     Fox.successful(
@@ -117,26 +114,12 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     q"""NOT isOrganizationTeam
         AND _organization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin)"""
 
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Team] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[TeamsRow])
-      parsed <- parseFirst(r, id)
-    } yield parsed
-
   def countByNameAndOrganization(teamName: String, organizationId: String): Fox[Int] =
     for {
       countList <- run(
         q"SELECT COUNT(*) FROM webknossos.teams WHERE name = $teamName AND _organization = $organizationId".as[Int])
       count <- countList.headOption.toFox
     } yield count
-
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[Team]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[TeamsRow])
-      parsed <- parseAll(r)
-    } yield parsed
 
   def findAllEditable(implicit ctx: DBAccessContext): Fox[List[Team]] =
     for {

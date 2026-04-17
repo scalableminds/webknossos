@@ -10,14 +10,14 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.SegmentToAgglomerateChunkProto
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Tree, TreeTypeProto}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Tree, TreeTypeProto, TreeAgglomerateInfoProto}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.helpers.{
   NativeBucketScanner,
   NodeDefaults,
   ProtoGeometryImplicits,
-  SkeletonTracingDefaults
+  SkeletonTracingDefaults,
 }
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models._
@@ -304,6 +304,7 @@ class EditableMappingService @Inject()(
                                          agglomerateId: Long)(implicit tc: TokenContext): Fox[Array[Byte]] =
     for {
       agglomerateGraphBox <- getAgglomerateGraphForId(tracingId, version, agglomerateId).shiftBox
+      _ <- Fox.fromBool(agglomerateGraphBox.map(_.segments.nonEmpty).getOrElse(true)) ?~> "annotation.editableMapping.getAgglomerateSkeleton.empty"
       skeletonBytes <- agglomerateGraphBox match {
         case Full(agglomerateGraph) =>
           Fox.successful(agglomerateGraphToSkeleton(tracingId, agglomerateGraph, agglomerateId))
@@ -339,7 +340,8 @@ class EditableMappingService @Inject()(
         nodes = nodes,
         edges = skeletonEdges,
         name = s"agglomerate $agglomerateId ($tracingId)",
-        `type` = Some(TreeTypeProto.AGGLOMERATE)
+        `type` = Some(TreeTypeProto.AGGLOMERATE),
+        agglomerateInfo = Some(TreeAgglomerateInfoProto(agglomerateId, Some(tracingId), None)),
       ))
 
     val skeleton = SkeletonTracingDefaults.createInstance.copy(
@@ -409,7 +411,8 @@ class EditableMappingService @Inject()(
       tokenContext = tc,
       mapping = None,
       mappingType = None,
-      findNeighbors = request.findNeighbors
+      findNeighbors = request.findNeighbors,
+      annotationVersion = request.annotationVersion,
     )
     adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
   }

@@ -10,8 +10,6 @@ import javax.inject.Inject
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{Format, JsObject, Json}
 import play.api.mvc.{Result, Results}
-import slick.jdbc.PostgresProfile.api._
-import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import utils.WkConf
 
@@ -88,14 +86,13 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO, jobService: JobServ
       _ <- Fox.fromBool(key == dataStore.key)
       result <- Fox.fromFuture(block(dataStore))
     } yield result).getOrElse(Forbidden(Json.obj("granted" -> false, "msg" -> Messages("dataStore.notFound")))))
+
 }
 
 class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[DataStore, DatastoresRow, Datastores](sqlClient) {
   protected val collection = Datastores
-
-  protected def idColumn(x: Datastores): Rep[String] = x.name
-  protected def isDeletedColumn(x: Datastores): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultDatastoresRow
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"(onlyAllowedOrganization IS NULL) OR (onlyAllowedOrganization IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId))"
@@ -129,13 +126,6 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
       parsed <- parseFirst(r, url)
     } yield parsed
 
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[DataStore]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery ORDER BY name".as[DatastoresRow])
-      parsed <- parseAll(r)
-    } yield parsed
-
   def findAllWithStorageReporting: Fox[List[DataStore]] =
     for {
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE reportUsedStorageEnabled".as[DatastoresRow])
@@ -158,10 +148,10 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
       parsed <- parseFirst(r, "find one with uploads allowed")
     } yield parsed
 
-  def updateUrlByName(name: String, url: String): Fox[Unit] = {
-    val query = for { row <- Datastores if notdel(row) && row.name === name } yield row.url
-    for { _ <- run(query.update(url)) } yield ()
-  }
+  def updateUrlByName(name: String, url: String): Fox[Unit] =
+    for {
+      _ <- run(q"UPDATE $collectionName SET url = $url WHERE name = $name AND NOT isDeleted".asUpdate)
+    } yield ()
 
   def insertOne(d: DataStore): Fox[Unit] =
     for {

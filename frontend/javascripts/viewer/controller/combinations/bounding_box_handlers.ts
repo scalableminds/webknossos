@@ -315,7 +315,7 @@ export function handleResizingBoundingBox(
   secondaryEdge: SelectedEdge | null | undefined,
 ) {
   const state = Store.getState();
-  const globalMousePosition = calculateGlobalPos(state, mousePosition, planeId);
+  const globalMousePosition = calculateGlobalPos(state, mousePosition, planeId, true);
   const bboxToResize = getBoundingBoxOfPrimaryEdge(primaryEdge, state);
 
   if (!bboxToResize || globalMousePosition == null || globalMousePosition.rounded == null) {
@@ -390,23 +390,42 @@ export function handleMovingBoundingBox(
   delta: Point2,
   planeId: OrthoView,
   primaryEdge: SelectedEdge,
+  movementAccumulator: Vector3,
 ) {
   const state = Store.getState();
   const globalDelta = calculateGlobalDelta(state, delta, planeId);
   const bboxToResize = getBoundingBoxOfPrimaryEdge(primaryEdge, state);
 
   if (!bboxToResize) {
-    return;
+    return movementAccumulator;
   }
 
-  const updatedBounds = {
-    min: V3.toArray(V3.add(bboxToResize.boundingBox.min, globalDelta)),
-    max: V3.toArray(V3.add(bboxToResize.boundingBox.max, globalDelta)),
-  };
+  const accumulatedDelta = V3.add(movementAccumulator, globalDelta);
 
-  Store.dispatch(
-    changeUserBoundingBoxAction(primaryEdge.boxId, {
-      boundingBox: updatedBounds,
-    }),
-  );
+  // As bounding box positions are stored as integers, only move by whole numbers.
+  const roundedDelta = V3.round(accumulatedDelta);
+
+  if (roundedDelta.some((delta) => delta !== 0)) {
+    const minPosition = V3.add(bboxToResize.boundingBox.min, roundedDelta);
+    const maxPosition = V3.add(bboxToResize.boundingBox.max, roundedDelta);
+
+    const updatedBounds = {
+      min: minPosition,
+      max: maxPosition,
+    };
+
+    Store.dispatch(
+      changeUserBoundingBoxAction(primaryEdge.boxId, {
+        boundingBox: updatedBounds,
+      }),
+    );
+  }
+
+  // Store the fractional remainder for next time
+  movementAccumulator = [
+    accumulatedDelta[0] - roundedDelta[0],
+    accumulatedDelta[1] - roundedDelta[1],
+    accumulatedDelta[2] - roundedDelta[2],
+  ];
+  return movementAccumulator;
 }

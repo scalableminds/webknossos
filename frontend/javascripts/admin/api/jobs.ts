@@ -8,11 +8,11 @@ import type {
   APIAnnotationType,
   APIJob,
   RenderAnimationOptions,
+  VoxelSize,
 } from "types/api_types";
 import type { UnitLong, Vector3, Vector6 } from "viewer/constants";
 import { setActiveOrganizationsCreditBalance } from "viewer/model/actions/organization_actions";
 import { Store } from "viewer/singletons";
-import type { SplitMergerEvaluationSettings } from "viewer/view/ai_jobs/components/collapsible_split_merger_evaluation_settings";
 import { assertResponseLimit } from "./api_utils";
 import { getOrganization } from "./organization";
 
@@ -181,67 +181,53 @@ export function startComputeSegmentIndexFileJob(
   });
 }
 
-export function runPretrainedNucleiInferenceJob(
-  datasetId: string,
-  layerName: string,
-  newDatasetName: string,
-  invertColorLayer: boolean,
-): Promise<APIJob> {
-  const urlParams = new URLSearchParams({
-    layerName,
-    newDatasetName,
-    invertColorLayer: invertColorLayer.toString(),
-  });
-  return Request.receiveJSON(`/api/jobs/run/inferNuclei/${datasetId}?${urlParams.toString()}`, {
+export async function getAiModelVoxelSize(aiModelId: string): Promise<VoxelSize> {
+  return Request.receiveJSON(`/api/aiModels/${aiModelId}/voxelSize`);
+}
+
+type RunNeuronInferenceParameters = {
+  datasetId: string;
+  aiModelId?: string;
+  colorLayerName: string;
+  boundingBox: string;
+  annotationId?: string;
+  maskAnnotationLayerName?: string;
+  newDatasetName: string;
+  workflowYaml?: string;
+  invertColorLayer?: boolean;
+  doSplitMergerEvaluation: boolean;
+  evalUseSparseTracing?: boolean;
+  evalMaxEdgeLength?: number;
+  evalSparseTubeThresholdNm?: number;
+  evalMinMergerPathLengthNm?: number;
+  customConfiguration?: Record<string, JsonPrimitive>;
+};
+
+type RunInstanceInferenceParameters = {
+  datasetId: string;
+  aiModelId?: string;
+  colorLayerName: string;
+  boundingBox: string;
+  annotationId?: string;
+  maskAnnotationLayerName?: string;
+  newDatasetName: string;
+  workflowYaml?: string;
+  invertColorLayer?: boolean;
+  seedGeneratorDistanceThreshold?: number | null;
+  customConfiguration?: Record<string, JsonPrimitive>;
+};
+
+export function runNeuronModelInference(params: RunNeuronInferenceParameters): Promise<APIJob> {
+  return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runNeuronModelInference", {
     method: "POST",
+    data: params,
   });
 }
 
-export function runPretrainedNeuronInferenceJob(
-  datasetId: string,
-  layerName: string,
-  bbox: Vector6,
-  newDatasetName: string,
-  invertColorLayer: boolean,
-  doSplitMergerEvaluation: boolean,
-  annotationId?: string,
-  splitMergerEvaluationSettings?: SplitMergerEvaluationSettings,
-): Promise<APIJob> {
-  const urlParams = new URLSearchParams({
-    layerName,
-    bbox: bbox.join(","),
-    newDatasetName,
-    doSplitMergerEvaluation: doSplitMergerEvaluation.toString(),
-    invertColorLayer: invertColorLayer.toString(),
-  });
-  if (doSplitMergerEvaluation) {
-    if (!annotationId) {
-      throw new Error("annotationId is required when doSplitMergerEvaluation is true");
-    }
-    urlParams.append("annotationId", `${annotationId}`);
-    if (splitMergerEvaluationSettings != null) {
-      const {
-        useSparseTracing,
-        maxEdgeLength,
-        sparseTubeThresholdInNm,
-        minimumMergerPathLengthInNm,
-      } = splitMergerEvaluationSettings;
-      if (useSparseTracing != null) {
-        urlParams.append("evalUseSparseTracing", `${useSparseTracing}`);
-      }
-      if (maxEdgeLength != null) {
-        urlParams.append("evalMaxEdgeLength", `${maxEdgeLength}`);
-      }
-      if (sparseTubeThresholdInNm != null) {
-        urlParams.append("evalSparseTubeThresholdNm", `${sparseTubeThresholdInNm}`);
-      }
-      if (minimumMergerPathLengthInNm != null) {
-        urlParams.append("evalMinMergerPathLengthNm", `${minimumMergerPathLengthInNm}`);
-      }
-    }
-  }
-  return Request.receiveJSON(`/api/jobs/run/inferNeurons/${datasetId}?${urlParams.toString()}`, {
+export function runInstanceModelInference(params: RunInstanceInferenceParameters): Promise<APIJob> {
+  return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runInstanceModelInference", {
     method: "POST",
+    data: params,
   });
 }
 
@@ -339,19 +325,11 @@ export function startAlignSectionsJob(
   layerName: string,
   newDatasetName: string,
   annotationId?: string,
+  customConfiguration?: Record<string, JsonPrimitive>,
 ): Promise<APIJob> {
-  const urlParams = annotationId
-    ? new URLSearchParams({
-        layerName,
-        newDatasetName,
-        annotationId,
-      })
-    : new URLSearchParams({
-        layerName,
-        newDatasetName,
-      });
-  return Request.receiveJSON(`/api/jobs/run/alignSections/${datasetId}?${urlParams.toString()}`, {
+  return Request.sendJSONReceiveJSON(`/api/jobs/run/alignSections/${datasetId}`, {
     method: "POST",
+    data: { layerName, newDatasetName, annotationId, customConfiguration },
   });
 }
 
@@ -374,6 +352,7 @@ type RunNeuronModelTrainingParameters = {
   aiModelCategory: APIAiModelCategory.EM_NEURONS;
   comment?: string;
   workflowYaml?: string;
+  customConfiguration?: Record<string, JsonPrimitive>;
 };
 
 export function runNeuronTraining(params: RunNeuronModelTrainingParameters) {
@@ -383,6 +362,7 @@ export function runNeuronTraining(params: RunNeuronModelTrainingParameters) {
   });
 }
 
+export type JsonPrimitive = string | number | boolean;
 type RunInstanceModelTrainingParameters = {
   trainingAnnotations: AiModelTrainingAnnotationSpecification[];
   name: string;
@@ -390,46 +370,13 @@ type RunInstanceModelTrainingParameters = {
   instanceDiameterNm: number;
   comment?: string;
   workflowYaml?: string;
+  customConfiguration?: Record<string, JsonPrimitive>;
 };
 
 export function runInstanceModelTraining(params: RunInstanceModelTrainingParameters) {
   return Request.sendJSONReceiveJSON("/api/aiModels/runInstanceModelTraining", {
     method: "POST",
     data: JSON.stringify(params),
-  });
-}
-
-export type BaseCustomModelInferenceParameters = {
-  annotationId?: string;
-  aiModelId: string;
-  datasetDirectoryName: string;
-  organizationId: string;
-  colorLayerName: string;
-  boundingBox: Vector6;
-  newDatasetName: string;
-  workflowYaml?: string;
-  invertColorLayer: boolean;
-  // maskAnnotationLayerName?: string | null
-};
-type RunCustomNeuronModelInferenceParameters = BaseCustomModelInferenceParameters;
-
-type RunCustomInstanceModelInferenceParameters = BaseCustomModelInferenceParameters & {
-  seedGeneratorDistanceThreshold: number | null;
-};
-
-export function runCustomNeuronModelInferenceJob(params: RunCustomNeuronModelInferenceParameters) {
-  return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runCustomNeuronModelInference", {
-    method: "POST",
-    data: JSON.stringify({ ...params, boundingBox: params.boundingBox.join(",") }),
-  });
-}
-
-export function runCustomInstanceModelInferenceJob(
-  params: RunCustomInstanceModelInferenceParameters,
-) {
-  return Request.sendJSONReceiveJSON("/api/aiModels/inferences/runCustomInstanceModelInference", {
-    method: "POST",
-    data: JSON.stringify({ ...params, boundingBox: params.boundingBox.join(",") }),
   });
 }
 

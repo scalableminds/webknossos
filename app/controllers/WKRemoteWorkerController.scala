@@ -28,10 +28,12 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
                                          wkConf: WkConf)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
-  def requestJobs(key: String): Action[AnyContent] = Action.async { implicit request =>
+  def requestJobs(key: String, workerVersion: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     for {
       worker <- workerDAO.findOneByKey(key) ?~> "job.worker.notFound"
       _ = workerDAO.updateHeartBeat(worker._id)
+      _ = if (workerVersion != worker.lastReportedVersion)
+        workerVersion.map(workerDAO.updateLastReportedVersion(worker._id, _))
       _ <- reserveNextJobs(worker, pendingIterationCount = 10)
       assignedUnfinishedJobs: List[Job] <- jobDAO.findAllUnfinishedByWorker(worker._id)
       jobsToCancel: List[Job] <- jobDAO.findAllCancellingByWorker(worker._id)
@@ -89,8 +91,9 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
         }
         _ <- Fox.runIf(
           jobBeforeChange.state != request.body.state && (request.body.state == JobState.FAILURE || request.body.state == JobState.CANCELLED)) {
-          creditTransactionService
-            .refundTransactionForJob(jobBeforeChange._id)(GlobalAccessContext) ?~> "job.creditTransaction.refund.failed"
+          creditTransactionService.refundTransactionForJob(jobBeforeChange._id,
+                                                           isCancelled = request.body.state == JobState.CANCELLED)(
+            GlobalAccessContext) ?~> "job.creditTransaction.refund.failed"
         }
       } yield Ok
   }

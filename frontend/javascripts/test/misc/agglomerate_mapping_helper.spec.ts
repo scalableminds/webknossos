@@ -95,4 +95,29 @@ describe("AgglomerateMapping", () => {
     expect(agglomerateMapping.mapSegment(1, 4)).toBe(9);
     expect(agglomerateMapping.mapSegment(7, 4)).toBe(9);
   });
+
+  it("shouldn't perform a split if a component is still connected", () => {
+    const agglomerateMapping = new AgglomerateMapping([
+      [6, 7],
+      [1337, 6],
+      [1337, 7],
+      [1337, 1338],
+    ]);
+
+    // V0 and V1 (still not connected)
+    agglomerateMapping.removeEdge(1337, 7, true);
+    for (const version of [0, 1]) {
+      expect(agglomerateMapping.mapSegment(6, version)).toBe(1337);
+      expect(agglomerateMapping.mapSegment(7, version)).toBe(1337);
+      expect(agglomerateMapping.mapSegment(1337, version)).toBe(1337);
+      expect(agglomerateMapping.mapSegment(1338, version)).toBe(1337);
+    }
+
+    // V2
+    agglomerateMapping.removeEdge(1337, 6, true); // source component will keep its agglomerate id
+    expect(agglomerateMapping.mapSegment(1337, 2)).toBe(1337);
+    expect(agglomerateMapping.mapSegment(1338, 2)).toBe(1337);
+    expect(agglomerateMapping.mapSegment(6, 2)).toBe(1339);
+    expect(agglomerateMapping.mapSegment(7, 2)).toBe(1339);
+  });
 });

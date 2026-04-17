@@ -1,8 +1,7 @@
 import { FilterOutlined } from "@ant-design/icons";
 import { getProjects } from "admin/rest_api";
 import { Select } from "antd";
-import { useFetch } from "libs/react_helpers";
-import { useWkSelector } from "libs/react_hooks";
+import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import { isUserAdminOrTeamManager } from "libs/utils";
 import type React from "react";
 import { useEffect, useState } from "react";
@@ -55,17 +54,15 @@ function ProjectAndAnnotationTypeDropdown({
 }: ProjectAndTypeDropdownProps) {
   // This state property is derived from selectedProjectIds and selectedAnnotationType.
   // It is mainly used to determine the selected items in the multiselect form item.
-  const [selectedFilters, setSelectedFilters] = useState(Array<string>);
+  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
   const [filterOptions, setFilterOptions] = useState<Array<NestedSelectOptions>>([]);
   const activeUser = useWkSelector((state) => state.activeUser);
-  const allProjects = useFetch(
-    async () => {
-      if (activeUser == null || !isUserAdminOrTeamManager(activeUser)) return [];
-      return await getProjects();
-    },
-    [],
-    [],
-  );
+
+  const { data: allProjects = [] } = useQueryWithErrorHandling({
+    queryKey: ["projects"],
+    enabled: activeUser != null && isUserAdminOrTeamManager(activeUser),
+    queryFn: getProjects,
+  });
 
   useEffect(() => {
     const selectedKeys =
@@ -84,7 +81,10 @@ function ProjectAndAnnotationTypeDropdown({
         value: project.id,
       };
     });
-    let allOptions = [ANNOTATION_TYPE_FILTERS, ANNOTATION_STATE_FILTERS];
+    const allOptions: Array<NestedSelectOptions> = [
+      ANNOTATION_TYPE_FILTERS,
+      ANNOTATION_STATE_FILTERS,
+    ];
     if (projectOptions.length > 0) {
       allOptions.push({ label: "Filter projects (only tasks)", options: projectOptions });
     }
@@ -119,12 +119,13 @@ function ProjectAndAnnotationTypeDropdown({
     <Select
       className="project-and-annotation-type-dropdown"
       mode="multiple"
-      placeholder="Filter type or projects"
-      style={style}
+      placeholder="Filter tasks, annotations and projects"
+      style={{ minWidth: "400px", ...style }}
       options={filterOptions}
       showSearch={{ optionFilterProp: "label" }}
       value={selectedFilters}
-      popupMatchSelectWidth={400}
+      popupMatchSelectWidth={false}
+      maxTagCount="responsive"
       onDeselect={(removedKey: string) => onDeselect(removedKey)}
       onSelect={(newSelection: string) => setSelectedProjects(selectedFilters, newSelection)}
       prefix={<FilterOutlined />}

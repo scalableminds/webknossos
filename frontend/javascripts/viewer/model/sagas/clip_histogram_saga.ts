@@ -4,7 +4,7 @@ import { OrthoViews, type Vector3 } from "viewer/constants";
 import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
 import type { ClipHistogramAction } from "viewer/model/actions/settings_actions";
 import { updateLayerSettingAction } from "viewer/model/actions/settings_actions";
-import type { Saga } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
 import { api } from "viewer/singletons";
 import Store from "viewer/store";
 import { getActiveMagIndexForLayer } from "../accessors/flycam_accessor";

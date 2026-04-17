@@ -38,7 +38,6 @@ import {
   glslTypeForElementClass,
   inverse,
   isFlightMode,
-  isNan,
   scaleToFloat,
   transDim,
 } from "./utils.glsl";
@@ -192,7 +191,6 @@ in mat4 savedModelMatrix;
 ${compileShader(
   inverse,
   div,
-  isNan,
   isFlightMode,
   transDim,
   getAbsoluteCoords,
@@ -456,7 +454,6 @@ ${SHARED_UNIFORM_DECLARATIONS}
 ${compileShader(
   inverse,
   div,
-  isNan,
   isFlightMode,
   transDim,
   getAbsoluteCoords,

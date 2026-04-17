@@ -52,6 +52,7 @@ import {
 import { Unicode } from "viewer/constants";
 import { CategorizationSearch } from "viewer/view/components/categorization_label";
 import { RenderToPortal } from "viewer/view/layouting/portal_utils";
+import { FolderBreadcrumb } from "./advanced_dataset/folder_breadcrumb";
 import { ActiveTabContext, RenderingTabContext } from "./dashboard_contexts";
 import type { DatasetCollectionContextValue } from "./dataset/dataset_collection_context";
 import {
@@ -239,11 +240,13 @@ function DatasetView({
     <Space.Compact>
       {searchBox}
       <Dropdown menu={filterMenu} trigger={["click"]}>
-        <Button>
-          <Badge dot={datasetFilteringMode !== "showAllDatasets"}>
-            <SettingOutlined />
-          </Badge>
-        </Button>
+        <Button
+          icon={
+            <Badge dot={datasetFilteringMode !== "showAllDatasets"}>
+              <SettingOutlined />
+            </Badge>
+          }
+        />
       </Dropdown>
     </Space.Compact>
   ) : (
@@ -310,6 +313,7 @@ function DatasetView({
         setTags={setSearchTags}
         localStorageSavingKey={LOCAL_STORAGE_FILTER_TAGS_KEY}
       />
+      {!searchQuery && <FolderBreadcrumb context={context} />}
       <NewJobsAlert jobs={jobs} />
       <Spin size="large" spinning={datasets.length === 0 && context.isLoading}>
         {content}
@@ -327,16 +331,18 @@ export function DatasetRefreshButton({ context }: { context: DatasetCollectionCo
       <FastTooltip
         title={showLoadingIndicator ? "Refreshing the dataset list." : "Refresh the dataset list."}
       >
-        <Button onClick={() => context.fetchDatasets()} disabled={context.isChecking}>
-          {showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />} Refresh
+        <Button
+          onClick={() => context.fetchDatasets()}
+          disabled={context.isChecking}
+          icon={showLoadingIndicator ? <LoadingOutlined /> : <ReloadOutlined />}
+        >
+          Refresh
         </Button>
       </FastTooltip>
       <Dropdown
         menu={{ onClick: () => context.checkDatasets(organizationId), items: refreshMenuItems }}
       >
-        <Button disabled={context.isChecking}>
-          <EllipsisOutlined />
-        </Button>
+        <Button disabled={context.isChecking} icon={<EllipsisOutlined />} />
       </Dropdown>
     </Space.Compact>
   );

@@ -2,9 +2,9 @@ package backend
 
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.JsonHelper
-import org.scalatestplus.play.PlaySpec
+import org.scalatest.wordspec.AsyncWordSpec
 
-class InstantTestSuite extends PlaySpec {
+class InstantTestSuite extends AsyncWordSpec {
   val handleFoxJustification = "Handling Fox in Unit Test Context"
 
   "Instant" should {

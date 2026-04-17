@@ -3,7 +3,7 @@ import ErrorHandling from "libs/error_handling";
 import extend from "lodash-es/extend";
 import isEqual from "lodash-es/isEqual";
 import pick from "lodash-es/pick";
-import type { EmptyObject } from "types/globals";
+import type { EmptyObject } from "types/type_utils";
 
 class Persistence<T extends Record<string, any>> {
   stateProperties: Record<keyof T, any>;

@@ -34,10 +34,16 @@ export function applySkeletonUpdateActionsFromServer(
   SkeletonTracingReducer: Reducer,
   actions: ApplicableSkeletonServerUpdateAction[],
   state: WebknossosState,
+  ignoreUnsupportedActionTypes: boolean,
 ): WebknossosState {
   let newState = state;
   for (const ua of actions) {
-    newState = applySingleAction(SkeletonTracingReducer, ua, newState);
+    newState = applySingleAction(
+      SkeletonTracingReducer,
+      ua,
+      newState,
+      ignoreUnsupportedActionTypes,
+    );
   }
 
   return newState;
@@ -47,14 +53,16 @@ function applySingleAction(
   SkeletonTracingReducer: Reducer,
   ua: ApplicableSkeletonServerUpdateAction,
   state: WebknossosState,
+  ignoreUnsupportedActionTypes: boolean,
 ): WebknossosState {
   switch (ua.name) {
     case "createTree": {
       // updatedId is part of the updateAction format but was never really used.
-      const { id, updatedId: _updatedId, ...rest } = withoutServerSpecificFields(ua).value;
+      // We explicitly remove it from the treeRest props to not include this property in the tree object.
+      const { id, updatedId: _updatedId, ...treeRest } = withoutServerSpecificFields(ua).value;
       const newTree: Tree = {
         treeId: id,
-        ...rest,
+        ...treeRest,
         nodes: new DiffableMap(),
         edges: new EdgeCollection(),
       };
@@ -74,6 +82,7 @@ function applySingleAction(
       const {
         id: treeId,
         // updatedId is part of the updateAction format but was never really used.
+        // We explicitly remove it from the treeRest props to not include this property in the tree object.
         updatedId: _updatedId,
         ...treeRest
       } = withoutServerSpecificFields(ua).value;
@@ -463,6 +472,9 @@ function applySingleAction(
   }
   ua satisfies never;
 
+  if (ignoreUnsupportedActionTypes) {
+    return state;
+  }
   // Satisfy TS.
   throw new Error("Reached unexpected part of function.");
 }

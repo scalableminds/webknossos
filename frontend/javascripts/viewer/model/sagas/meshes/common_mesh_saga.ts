@@ -1,4 +1,3 @@
-import { BlobReader, BlobWriter, ZipWriter } from "@zip.js/zip.js";
 import { saveAs } from "file-saver";
 import ErrorHandling from "libs/error_handling";
 import exportToStl from "libs/stl_exporter";
@@ -15,13 +14,16 @@ import {
   type UpdateMeshVisibilityAction,
   updateMeshVisibilityAction,
 } from "viewer/model/actions/annotation_actions";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
-import { stlMeshConstants } from "viewer/view/right-border-tabs/segments_tab/segments_view";
+import { withoutServerSpecificFields } from "viewer/model/reducers/update_action_application/shared_update_helper";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
+import { stlMeshConstants } from "viewer/view/right_border_tabs/segments_tab/segments_view";
 import { getAdditionalCoordinatesAsString } from "../../accessors/flycam_accessor";
 import type { FlycamAction } from "../../actions/flycam_actions";
 import type {
+  ApplyVolumeUpdateActionsFromServerAction,
   BatchUpdateGroupsAndSegmentsAction,
+  MergeSegmentItemsAction,
   RemoveSegmentAction,
   UpdateSegmentAction,
 } from "../../actions/volumetracing_actions";
@@ -60,6 +62,7 @@ function* downloadMeshCellsAsZIP(
   segments: Array<{ segmentName: string; segmentId: number; layerName: string }>,
 ): Saga<void> {
   const { segmentMeshController } = getSceneController();
+  const { BlobReader, BlobWriter, ZipWriter } = yield* call(() => import("@zip.js/zip.js"));
   const zipWriter = new ZipWriter(new BlobWriter("application/zip"));
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   try {
@@ -113,6 +116,12 @@ function* handleRemoveSegment(action: RemoveSegmentAction) {
   // The dispatched action will make sure that the mesh entry is removed from the
   // store and from the scene.
   yield* put(removeMeshAction(action.layerName, action.segmentId));
+}
+
+function* handleMergeSegmentItems(action: MergeSegmentItemsAction) {
+  // The dispatched action will make sure that the mesh entry is removed from the
+  // store and from the scene.
+  yield* put(removeMeshAction(action.layerName, action.targetAgglomerateId));
 }
 
 function* handleMeshVisibilityChange(action: UpdateMeshVisibilityAction): Saga<void> {
@@ -187,6 +196,25 @@ function* handleSegmentColorChange(action: UpdateSegmentAction): Saga<void> {
   }
 }
 
+function* handleSegmentColorChangeFromOtherUsers(
+  action: ApplyVolumeUpdateActionsFromServerAction,
+): Saga<void> {
+  const { segmentMeshController } = yield* call(getSceneController);
+  const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+  for (const updateAction of action.actions) {
+    if (updateAction.name === "updateSegmentPartial" && "color" in updateAction.value) {
+      const { actionTracingId } = updateAction.value;
+      const actionWithoutMetaInfo = withoutServerSpecificFields(updateAction);
+      const segmentUpdateInfo = actionWithoutMetaInfo.value;
+      if (
+        segmentMeshController.hasMesh(segmentUpdateInfo.id, actionTracingId, additionalCoordinates)
+      ) {
+        segmentMeshController.setMeshColor(segmentUpdateInfo.id, actionTracingId);
+      }
+    }
+  }
+}
+
 function* handleMeshOpacityChange(action: UpdateMeshOpacityAction): Saga<void> {
   const { segmentMeshController } = yield* call(getSceneController);
   segmentMeshController.setMeshOpacity(action.id, action.layerName, action.opacity);
@@ -212,8 +240,13 @@ export default function* commonMeshSaga(): Saga<void> {
   yield* takeEvery("TRIGGER_MESH_DOWNLOAD", downloadMeshCell);
   yield* takeEvery("TRIGGER_MESHES_DOWNLOAD", downloadMeshCells);
   yield* takeEvery("REMOVE_SEGMENT", handleRemoveSegment);
+  yield* takeEvery("MERGE_SEGMENTS_ITEMS", handleMergeSegmentItems);
   yield* takeEvery("UPDATE_MESH_VISIBILITY", handleMeshVisibilityChange);
   yield* takeEvery("UPDATE_SEGMENT", handleSegmentColorChange);
   yield* takeEvery("UPDATE_MESH_OPACITY", handleMeshOpacityChange);
   yield* takeEvery("BATCH_UPDATE_GROUPS_AND_SEGMENTS", handleBatchSegmentColorChange);
+  yield* takeEvery(
+    "APPLY_VOLUME_UPDATE_ACTIONS_FROM_SERVER",
+    handleSegmentColorChangeFromOtherUsers,
+  );
 }

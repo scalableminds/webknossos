@@ -233,11 +233,6 @@ export enum OverwriteModeEnum {
 }
 export type OverwriteMode = keyof typeof OverwriteModeEnum;
 
-export enum InterpolationModeEnum {
-  INTERPOLATE = "INTERPOLATE",
-  EXTRUDE = "EXTRUDE",
-}
-export type InterpolationMode = keyof typeof InterpolationModeEnum;
 export enum FillModeEnum {
   // The leading underscore is a workaround, since leading numbers are not valid identifiers
   // in JS.
@@ -301,6 +296,7 @@ const Constants = {
   MODES_SKELETON: ["orthogonal", "flight", "oblique"] as ViewMode[],
   BUCKET_WIDTH: 32,
   BUCKET_SIZE: 32 ** 3,
+  BUCKET_SHAPE: [32, 32, 32] as Vector3,
   VIEWPORT_WIDTH,
   DEFAULT_NAVBAR_HEIGHT: 48,
   BANNER_HEIGHT: 38,
@@ -331,8 +327,8 @@ const Constants = {
   MAXIMUM_BUCKET_COUNT_PER_LAYER: 5000,
   FLOOD_FILL_EXTENTS: {
     // In 2D mode, the third axis is set to 1 later in the code.
-    _2D: (process.env.IS_TESTING ? [512, 512, 512] : [768, 768, 768]) as Vector3,
-    _3D: (process.env.IS_TESTING ? [64, 64, 32] : [200, 200, 200]) as Vector3,
+    _2D: (import.meta.env.MODE === "test" ? [512, 512, 512] : [768, 768, 768]) as Vector3,
+    _3D: (import.meta.env.MODE === "test" ? [64, 64, 32] : [200, 200, 200]) as Vector3,
   },
   // When the user uses the "isFloodfillRestrictedToBoundingBox" setting,
   // we are more lax with the flood fill extent.
@@ -344,6 +340,11 @@ const Constants = {
   REGISTER_SEGMENTS_BB_MAX_VOLUME_VX: 512 * 512 * 512,
   REGISTER_SEGMENTS_BB_MAX_SEGMENT_COUNT: 5000,
   DEFAULT_MESH_OPACITY: 1,
+  PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT: 32,
+  NARROW_SCREEN_WIDTH: 1400,
+  VERY_NARROW_SCREEN_WIDTH: 1200,
+  NUMBER_OF_TOOLS_IN_TOOLBAR: 5,
+  SETTING_SAVE_DEBOUNCE_MS: 2500, // delay before user, layer and dataset settings are saved
 } as const;
 
 /* Note that this must stay in sync with the back-end constant MaxMagForAgglomerateMapping

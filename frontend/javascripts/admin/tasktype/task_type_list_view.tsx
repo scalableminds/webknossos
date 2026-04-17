@@ -4,15 +4,17 @@ import {
   EditOutlined,
   EyeOutlined,
   PlusOutlined,
+  ProjectOutlined,
   ScheduleOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import AdminPage from "admin/admin_page";
 import {
   deleteTaskType as deleteTaskTypeAPI,
   downloadAnnotation,
   getTaskTypes,
 } from "admin/rest_api";
-import { App, Button, Flex, Input, Space, Spin, Table, Tag } from "antd";
+import { App, Button, Input, Space, Spin, Table, Tag } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
@@ -97,27 +99,27 @@ function TaskTypeListView() {
   }
 
   return (
-    <div className="container">
-      <Flex justify="space-between" align="flex-start">
-        <h3>Task Types</h3>
-        <Space>
-          <Link to="/taskTypes/create">
-            <Button icon={<PlusOutlined />} type="primary">
-              Add Task Type
-            </Button>
-          </Link>
-          <Search
-            style={{
-              width: 200,
-            }}
-            // @ts-expect-error ts-migrate(2322) FIXME: Type '(event: React.ChangeEvent<HTMLInputElement>)... Remove this comment to see the full error message
-            onPressEnter={handleSearch}
-            onChange={handleSearch}
-            value={searchQuery}
-          />
-        </Space>
-      </Flex>
-
+    <AdminPage
+      title="Task Types"
+      descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/concepts.html"
+      description="Define task templates, supported modes, and settings for annotation projects."
+      actions={
+        <Link to="/taskTypes/create">
+          <Button icon={<PlusOutlined />} type="primary">
+            Add Task Type
+          </Button>
+        </Link>
+      }
+      search={
+        <Search
+          allowClear
+          // @ts-expect-error ts-migrate(2322) FIXME: Type '(event: React.ChangeEvent<HTMLInputElement>)... Remove this comment to see the full error message
+          onPressEnter={handleSearch}
+          onChange={handleSearch}
+          value={searchQuery}
+        />
+      }
+    >
       <Spin spinning={isLoading} size="large">
         <Table
           dataSource={filterWithSearchQueryAND(
@@ -128,9 +130,6 @@ function TaskTypeListView() {
           rowKey="id"
           pagination={{
             defaultPageSize: 50,
-          }}
-          style={{
-            marginTop: 30,
           }}
           locale={{
             emptyText: renderPlaceholder(),
@@ -255,7 +254,7 @@ function TaskTypeListView() {
                 </Link>
                 <br />
                 <Link to={`/taskTypes/${taskType.id}/projects`} title="View Projects">
-                  <EyeOutlined className="icon-margin-right" />
+                  <ProjectOutlined className="icon-margin-right" />
                   Projects
                 </Link>
                 <br />
@@ -278,7 +277,7 @@ function TaskTypeListView() {
           />
         </Table>
       </Spin>
-    </div>
+    </AdminPage>
   );
 }
 

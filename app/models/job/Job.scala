@@ -9,7 +9,6 @@ import models.job.JobCommand.JobCommand
 import play.api.libs.json.{JsObject, Json, OFormat}
 import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
-import slick.lifted.Rep
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceStatus
@@ -39,10 +38,8 @@ case class Job(
 ) extends JobResultLinks {
   protected def id: ObjectId = _id
 
-  def isEnded: Boolean = {
-    val relevantState = manualState.getOrElse(state)
-    relevantState == JobState.SUCCESS || state == JobState.FAILURE
-  }
+  def isEnded: Boolean =
+    effectiveState == JobState.SUCCESS || effectiveState == JobState.FAILURE
 
   def duration: Option[FiniteDuration] =
     for {
@@ -103,9 +100,7 @@ object JobCompactInfo {
 class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Job, JobsRow, Jobs](sqlClient) {
   protected val collection = Jobs
-
-  protected def idColumn(x: Jobs): Rep[String] = x._Id
-  protected def isDeletedColumn(x: Jobs): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultJobsRow
 
   protected def parse(r: JobsRow): Fox[Job] =
     for {
@@ -168,12 +163,14 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       else q"TRUE"
       rows <- run(
         q"""
-          SELECT j._id, j.command, u._organization, u.firstName, u.lastName, mu.email, j.commandArgs, COALESCE(j.manualState, j.state),
+          SELECT j._id, j.command, u._organization, mu.firstName, mu.lastName, mu.email, j.commandArgs, COALESCE(j.manualState, j.state),
                  j.returnValue, j._voxelytics_workflowHash, j.created, j.started, j.ended, ct.milli_credit_delta
           FROM webknossos.jobs_ j
           JOIN webknossos.users_ u on j._owner = u._id
           JOIN webknossos.multiusers_ mu on u._multiUser = mu._id
-          LEFT JOIN webknossos.credit_transactions_ ct ON j._id = ct._paid_job
+          -- due to retries multiple credit_transactions can be attached to this job.
+          -- They should all have the same milli_credit_delta, so this avoids fanout while returning the correct price
+          LEFT JOIN LATERAL (SELECT milli_credit_delta FROM webknossos.credit_transactions_ WHERE _paid_job = j._id LIMIT 1) ct ON TRUE
           WHERE $commandQuery AND $accessQuery AND $skipForDeletedQuery
           ORDER BY j.created DESC -- list newest first
          """.as[(ObjectId,
@@ -214,13 +211,6 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
             costInMilliCredits = row._14.map(_ * -1) // delta is negative, so cost should be positive.
           )
       }
-    } yield parsed
-
-  override def findOne(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Job] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery AND _id = $jobId".as[JobsRow])
-      parsed <- parseFirst(r, jobId)
     } yield parsed
 
   def cancelConvertToWkwJobForDataset(datasetId: ObjectId): Fox[Unit] =

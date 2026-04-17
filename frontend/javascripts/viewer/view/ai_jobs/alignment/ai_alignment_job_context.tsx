@@ -1,9 +1,11 @@
 import { refreshOrganizationCredits, startAlignSectionsJob } from "admin/rest_api";
+import type { KeyValuePairs } from "components/key_value_pairs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import type React from "react";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
+import type { APIDataLayer } from "types/api_types";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox } from "viewer/store";
@@ -16,9 +18,12 @@ interface AlignmentJobContextType {
   selectedTask: AlignmentTask | null;
   setSelectedTask: (task: AlignmentTask) => void;
   selectedBoundingBox: UserBoundingBox | null;
+  colorLayer: APIDataLayer;
   setNewDatasetName: (name: string) => void;
   shouldUseManualMatches: boolean;
   setShouldUseManualMatches: (shouldUseManualMatches: boolean) => void;
+  customConfiguration: KeyValuePairs;
+  setCustomConfiguration: (config: KeyValuePairs) => void;
   areParametersValid: boolean;
 }
 
@@ -30,6 +35,7 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
   const [selectedTask, setSelectedTask] = useState<AlignmentTask | null>(null);
   const [newDatasetName, setNewDatasetName] = useState("");
   const [shouldUseManualMatches, setShouldUseManualMatches] = useState(false);
+  const [customConfiguration, setCustomConfiguration] = useState<KeyValuePairs>({});
   const dispatch = useDispatch();
 
   const dataset = useWkSelector((state) => state.dataset);
@@ -63,6 +69,7 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
         colorLayer.name,
         newDatasetName,
         shouldUseManualMatches ? annotationId : undefined,
+        customConfiguration,
       );
       Toast.success("Alignment started successfully!");
       dispatch(setAIJobDrawerStateAction("invisible"));
@@ -70,17 +77,28 @@ export const AlignmentJobContextProvider: React.FC<{ children: React.ReactNode }
       console.error(error);
       Toast.error("Failed to start alignment.");
     }
-  }, [dataset.id, dispatch, colorLayer.name, newDatasetName, annotationId, shouldUseManualMatches]);
+  }, [
+    dataset.id,
+    dispatch,
+    colorLayer.name,
+    newDatasetName,
+    annotationId,
+    shouldUseManualMatches,
+    customConfiguration,
+  ]);
 
   const value = {
     selectedTask,
     selectedBoundingBox,
+    colorLayer,
     newDatasetName,
     setNewDatasetName,
     setSelectedTask,
     handleStartAnalysis,
     shouldUseManualMatches,
     setShouldUseManualMatches,
+    customConfiguration,
+    setCustomConfiguration,
     areParametersValid,
   };
 

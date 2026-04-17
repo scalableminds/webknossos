@@ -37,11 +37,11 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
       case _                => Failure(s"Invalid layer dataformat ${layer.dataFormat}, can only explore zarr, zarr3 as WebknossosZarr")
     }
 
-  private def adaptMags(mags: List[MagLocator],
+  private def adaptMags(mags: Seq[MagLocator],
                         remoteDatasetPath: VaultPath,
                         layerName: String,
                         headerFilename: String,
-                        credentialId: Option[String])(implicit tc: TokenContext): Fox[List[MagLocator]] =
+                        credentialId: Option[String])(implicit tc: TokenContext): Fox[Seq[MagLocator]] =
     Fox.serialCombined(mags)(m =>
       for {
         magPath <- fixRemoteMagPath(m, remoteDatasetPath, layerName, headerFilename)

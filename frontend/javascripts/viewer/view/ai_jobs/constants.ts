@@ -1,3 +1,8 @@
+import alignExample from "@images/align-example.png";
+import materializeVolumeAnnotationExample from "@images/materialize-volume-annotation-example.jpg";
+import mitoInferralExample from "@images/mito-inferral-example.jpg";
+import neuronInferralExample from "@images/neuron-inferral-example.jpg";
+import nucleiInferralExample from "@images/nuclei-inferral-example.jpg";
 import { APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 
@@ -9,11 +14,11 @@ export type StartAiJobDrawerState =
 
 // "materialize_volume_annotation" is only used in this module
 export const jobNameToImagePath = {
-  infer_neurons: "neuron_inferral_example.jpg",
-  infer_nuclei: "nuclei_inferral_example.jpg",
-  infer_mitochondria: "mito_inferral_example.jpg",
-  align_sections: "align_example.png",
-  materialize_volume_annotation: "materialize_volume_annotation_example.jpg",
+  infer_neurons: neuronInferralExample,
+  infer_nuclei: nucleiInferralExample,
+  infer_mitochondria: mitoInferralExample,
+  align_sections: alignExample,
+  materialize_volume_annotation: materializeVolumeAnnotationExample,
   invisible: "",
   infer_with_model: "",
 } as const;

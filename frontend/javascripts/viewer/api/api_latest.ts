@@ -24,7 +24,7 @@ import TWEEN from "tween.js";
 import type { AdditionalCoordinate } from "types/api_types";
 import { type APICompoundType, APICompoundTypeEnum, type ElementClass } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
-import type { Writeable } from "types/globals";
+import type { Writeable } from "types/type_utils";
 import type {
   BucketAddress,
   ControlMode,
@@ -42,7 +42,10 @@ import Constants, {
   TDViewDisplayModeEnum,
 } from "viewer/constants";
 import { rotate3DViewTo } from "viewer/controller/camera_controller";
-import { loadAgglomerateSkeletonForSegmentId } from "viewer/controller/combinations/segmentation_handlers";
+import {
+  loadAgglomerateSkeletonAtPosition,
+  loadAgglomerateSkeletonFromId,
+} from "viewer/controller/combinations/segmentation_handlers";
 import {
   createSkeletonNode,
   getOptionsForCreateSkeletonNode,
@@ -185,11 +188,12 @@ import type {
 import Store from "viewer/store";
 import {
   callDeep,
+  createGroupHelper,
   createGroupToSegmentsMap,
   MISSING_GROUP_ID,
   mapGroups,
   moveGroupsHelper,
-} from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+} from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 
 type TransformSpec =
   | { type: "scale"; args: [Vector3, Vector3] }
@@ -650,13 +654,11 @@ class TracingApi {
    */
   registerSegment(
     segmentId: number,
-    somePosition: Vector3,
-    someAdditionalCoordinates: AdditionalCoordinate[] | undefined = undefined,
+    anchorPosition: Vector3,
+    additionalCoordinates: AdditionalCoordinate[] | undefined = undefined,
     layerName?: string,
   ) {
-    Store.dispatch(
-      clickSegmentAction(segmentId, somePosition, someAdditionalCoordinates, layerName),
-    );
+    Store.dispatch(clickSegmentAction(segmentId, anchorPosition, additionalCoordinates, layerName));
   }
 
   /**
@@ -801,8 +803,8 @@ class TracingApi {
    *   3,
    *   {
    *     name: "A name",
-   *     somePosition: [1, 2, 3],
-   *     someAdditionalCoordinates: [],
+   *     anchorPosition: [1, 2, 3],
+   *     additionalCoordinates: [],
    *     color: [1, 2, 3],
    *     groupId: 1,
    *   },
@@ -854,13 +856,9 @@ class TracingApi {
    */
   createSegmentGroup(
     name: string | null = null,
-    parentGroupId: number = MISSING_GROUP_ID,
+    parentGroupId: number | null = MISSING_GROUP_ID,
     volumeLayerName?: string,
   ): number {
-    if (parentGroupId == null) {
-      // Guard against explicitly passed null or undefined.
-      parentGroupId = MISSING_GROUP_ID;
-    }
     const volumeTracing = volumeLayerName
       ? getVolumeTracingByLayerName(Store.getState().annotation, volumeLayerName)
       : getActiveSegmentationTracing(Store.getState());
@@ -868,23 +866,12 @@ class TracingApi {
       throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
     }
     const { segmentGroups } = volumeTracing;
-
-    const newSegmentGroups = cloneDeep(segmentGroups);
-    const newGroupId = getMaximumGroupId(newSegmentGroups) + 1;
-    const newGroup = {
-      name: name || `Group ${newGroupId}`,
-      groupId: newGroupId,
-      children: [],
-      isExpanded: false,
-    };
-
-    if (parentGroupId === MISSING_GROUP_ID) {
-      newSegmentGroups.push(newGroup);
-    } else {
-      callDeep(newSegmentGroups, parentGroupId, (item) => {
-        item.children.push(newGroup);
-      });
-    }
+    const { newSegmentGroups, newGroupId } = createGroupHelper(
+      segmentGroups,
+      name,
+      getMaximumGroupId(segmentGroups) + 1,
+      parentGroupId,
+    );
 
     Store.dispatch(setSegmentGroupsAction(newSegmentGroups, volumeTracing.tracingId));
 
@@ -1041,14 +1028,36 @@ class TracingApi {
   }
 
   /**
+   * Loads the agglomerate skeleton for the agglomerate at the given position. Only possible if
+   * a segmentation layer is visible for which an agglomerate mapping is enabled.
+   * Should be preferred over using api.tracing.loadAgglomerateSkeletonForSegmentId as this version
+   * yields more reliable results in live collaborative context. A conflicting merge can result in the
+   * agglomerate id at the give position to change. That's why passing the position is safer than
+   * passing the agglomerate id via api.tracing.loadAgglomerateSkeletonForSegmentId as the
+   * agglomerate id lookup is done after applying such an interfering merge.
+   *
+   * @example
+   * api.tracing.loadAgglomerateSkeletonAtPosition([3, 3, 3]);
+   */
+  loadAgglomerateSkeletonAtPosition(position: Vector3) {
+    loadAgglomerateSkeletonAtPosition(position);
+  }
+
+  /**
    * Loads the agglomerate skeleton for the given segment id. Only possible if
    * a segmentation layer is visible for which an agglomerate mapping is enabled.
+   * Please consider using api.tracing.loadAgglomerateSkeletonAtPosition as it yields
+   * more reliable results in a live collaborative context. A conflicting merge of another
+   * user can make the passed agglomerate id invalid just before loading the agglomerate
+   * skeleton from the backend. By passing any position of the agglomerate instead its id via using
+   * api.tracing.loadAgglomerateSkeletonAtPosition WEBKNOSSOS can ensure to use the up-to-date agglomerate
+   * id to request the correct agglomerate skeleton.
    *
    * @example
    * api.tracing.loadAgglomerateSkeletonForSegmentId(3);
    */
   loadAgglomerateSkeletonForSegmentId(segmentId: number) {
-    loadAgglomerateSkeletonForSegmentId(segmentId);
+    loadAgglomerateSkeletonFromId(segmentId);
   }
 
   /**
@@ -1212,7 +1221,8 @@ class TracingApi {
     if (!treeAndNode) return;
 
     const [_activeTree, node] = treeAndNode;
-    Store.dispatch(setPositionAction(getNodePosition(node, Store.getState())));
+    const nodePosition = getNodePosition(node, Store.getState(), true);
+    Store.dispatch(setPositionAction(nodePosition));
   };
 
   /**
@@ -1231,26 +1241,6 @@ class TracingApi {
   rotate3DViewToDiagonal = (animate: boolean = true): void => {
     rotate3DViewTo(OrthoViews.TDView, animate);
   };
-
-  getShortestRotation(curRotation: Vector3, newRotation: Vector3): Vector3 {
-    // TODO
-    // interpolating Euler angles does not lead to the shortest rotation
-    // interpolate the Quaternion representation instead
-    // https://theory.org/software/qfa/writeup/node12.html
-    const result = [newRotation[0], newRotation[1], newRotation[2]];
-
-    for (let i = 0; i <= 2; i++) {
-      // a rotation about more than 180° is shorter when rotating the other direction
-      if (newRotation[i] - curRotation[i] > 180) {
-        result[i] = newRotation[i] - 360;
-      } else if (newRotation[i] - curRotation[i] < -180) {
-        result[i] = newRotation[i] + 360;
-      }
-    }
-
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
-    return result;
-  }
 
   /**
    * Measures the length of the given tree and returns the length in dataset unit and in voxels.
@@ -1417,6 +1407,7 @@ class TracingApi {
     position: Vector3,
     skipCenteringAnimationInThirdDimension: boolean = true,
     rotation?: Vector3,
+    useVoxelCenter: boolean = false,
   ): void {
     const { viewModeData, flycam } = Store.getState();
     const { activeViewport } = viewModeData.plane;
@@ -1442,6 +1433,10 @@ class TracingApi {
       positionY: number;
       positionZ: number;
     };
+
+    // The given offset is added when going to a position in the center of a voxel.
+    const targetPosition = useVoxelCenter ? V3.add(V3.floor(position), [0.5, 0.5, 0.5]) : position;
+
     const tween = new TWEEN.Tween({
       positionX: curPosition[0],
       positionY: curPosition[1],
@@ -1450,9 +1445,9 @@ class TracingApi {
     tween
       .to(
         {
-          positionX: position[0],
-          positionY: position[1],
-          positionZ: position[2],
+          positionX: targetPosition[0],
+          positionY: targetPosition[1],
+          positionZ: targetPosition[2],
         },
         200,
       )
@@ -2348,8 +2343,8 @@ class DataApi {
       updateSegmentAction(
         segmentId,
         {
-          somePosition: globalPositionsMag1[0],
-          someAdditionalCoordinates: additionalCoordinates || undefined,
+          anchorPosition: globalPositionsMag1[0],
+          additionalCoordinates: additionalCoordinates || undefined,
         },
         volumeTracing.tracingId,
       ),
@@ -3043,6 +3038,7 @@ export type ApiInterface = {
   user: UserApi;
   utils: UtilsApi;
 };
+
 export default function createApiInterface(model: WebKnossosModel): ApiInterface {
   return {
     tracing: new TracingApi(model),

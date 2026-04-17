@@ -37,7 +37,7 @@ import type {
   ServerTracing,
   ServerVolumeTracing,
 } from "types/api_types";
-import type { Mutable } from "types/globals";
+import type { Mutable } from "types/type_utils";
 import constants, { ControlModeEnum, type Vector3 } from "viewer/constants";
 import type {
   DirectLayerSpecificProps,
@@ -96,7 +96,7 @@ import {
 } from "viewer/model/actions/settings_actions";
 import {
   initializeSkeletonTracingAction,
-  loadAgglomerateSkeletonAction,
+  loadAgglomerateSkeletonFromIdAction,
   setActiveNodeAction,
   setShowSkeletonsAction,
 } from "viewer/model/actions/skeletontracing_actions";
@@ -555,7 +555,7 @@ function initializeDataLayerInstances(gpuFactor: number | null | undefined): {
     maximumTextureCountForLayer,
   } = validateSpecsForLayers(dataset, requiredBucketCapacity);
 
-  if (!process.env.IS_TESTING) {
+  if (import.meta.env.MODE !== "test") {
     console.log("Supporting", smallestCommonBucketCapacity, "buckets");
   }
 
@@ -915,7 +915,7 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
 
         for (const agglomerateId of agglomerateIdsToImport) {
           Store.dispatch(
-            loadAgglomerateSkeletonAction(effectiveLayerName, mappingName, agglomerateId),
+            loadAgglomerateSkeletonFromIdAction(effectiveLayerName, mappingName, agglomerateId),
           );
         }
       }

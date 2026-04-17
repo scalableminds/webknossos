@@ -83,17 +83,17 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with 
       }
     } yield ()
 
-  private def parseZarrChunkPath(path: String, zarr3ArrayHeader: Zarr3ArrayHeader): Option[BucketPosition] = {
+  protected def parseZarrChunkPath(path: String, zarr3ArrayHeader: Zarr3ArrayHeader): Option[BucketPosition] = {
     val dimensionNames = zarr3ArrayHeader.dimension_names.getOrElse(Array("x", "y", "z"))
     val additionalAxesNames: Seq[String] = dimensionNames.toSeq.drop(1).dropRight(3) // drop channel left, and xyz right
 
     // assume additionalAxes,x,y,z
     // the c. at the beginning of chunk names is optional
     // (used in "default" chunk encoding, which was used for volume downloads previously)
-    val chunkPathRegex = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/(c\\.)?(.+)".r
+    val chunkPathRegex = """^(?:[^/]*+/)*(\d+-\d+-\d+|\d+)/(?:c\.)?(.+)$""".r
 
     path match {
-      case chunkPathRegex(_, magStr, _, dimsStr) =>
+      case chunkPathRegex(magStr, dimsStr) =>
         val dims: Seq[String] = dimsStr.split("\\.").toSeq
         val additionalAxesDims = dims.drop(1).dropRight(3) // drop channel left, and xyz right
         val additionalCoordinates: Seq[AdditionalCoordinate] = additionalAxesNames.zip(additionalAxesDims).map {
@@ -129,13 +129,13 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with 
     magSet.toSet
   }
 
-  private def getMagFromWkwOrZarrHeaderFilePath(path: String): Option[Vec3Int] = {
-    val wkwHeaderRx = s"(|.*/)(\\d+|\\d+-\\d+-\\d+)/$FILENAME_HEADER_WKW".r
-    val zarr3HeaderRx = s"(|.*/)(\\d+-\\d+-\\d+)/${Zarr3ArrayHeader.FILENAME_ZARR_JSON}".r
+  protected def getMagFromWkwOrZarrHeaderFilePath(path: String): Option[Vec3Int] = {
+    val wkwHeaderRx = """(?:[^/]*/)*(\d+-\d+-\d+|\d+)/header.wkw$""".r
+    val zarr3HeaderRx = """(?:[^/]*/)*(\d+-\d+-\d+|\d+)/zarr.json$""".r
     path match {
-      case wkwHeaderRx(_, magLiteral) =>
+      case wkwHeaderRx(magLiteral) =>
         Vec3Int.fromMagLiteral(magLiteral, allowScalar = true)
-      case zarr3HeaderRx(_, magLiteral) =>
+      case zarr3HeaderRx(magLiteral) =>
         Vec3Int.fromMagLiteral(magLiteral, allowScalar = true)
       case _ => None
     }

@@ -8,7 +8,11 @@ import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.datavault.{ByteRange, Encoding}
 import com.scalableminds.webknossos.datastore.datavault.Encoding.Encoding
 import com.scalableminds.webknossos.datastore.helpers.UPath
-import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerAttachments, UsableDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.{
+  DataLayerAttachments,
+  LayerAttachmentType,
+  UsableDataSource
+}
 import com.scalableminds.webknossos.datastore.services.{DataStoreAccessTokenService, DatasetCache, UserAccessRequest}
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import play.api.http.Writeable
@@ -55,6 +59,7 @@ class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenServ
 
   def proxyAttachment(datasetId: ObjectId,
                       dataLayerName: String,
+                      attachmentType: String,
                       attachmentName: String,
                       path: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
@@ -62,10 +67,10 @@ class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenServ
         _ <- validatePath(path)
         (_, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Messages("dataLayer.notFound",
                                                                                            dataLayerName) ~> NOT_FOUND
-        attachment <- dataLayer.allAttachments.find(_.name == attachmentName).toFox ?~> Messages(
-          "dataLayer.wrongAttachment",
-          dataLayerName,
-          attachmentName) ~> NOT_FOUND
+        attachmentTypeValidated <- LayerAttachmentType.fromString(attachmentType).toFox
+        attachment <- dataLayer.attachments
+          .flatMap(_.getByTypeAndName(attachmentTypeValidated, attachmentName))
+          .toFox ?~> Messages("dataLayer.wrongAttachment", dataLayerName, attachmentName) ~> NOT_FOUND
         attachmentPath <- dataVaultService.vaultPathFor(attachment)
         requestedPath = attachmentPath / path
         byteRange <- ByteRange.fromRequest(request)
@@ -97,10 +102,10 @@ class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenServ
       path = Some(UPath.fromStringUnsafe(s"./layers/$layerName/mags/${mag.mag.toMagLiteral(allowScalar = true)}")))
 
   private def adaptPathsForAttachments(attachments: DataLayerAttachments, layerName: String): DataLayerAttachments =
-    attachments.mapped(
-      attachment =>
+    attachments.mappedWithType(
+      (attachment, attachmentType) =>
         attachment.copy(
-          path = UPath.fromStringUnsafe(s"./layers/$layerName/attachments/${attachment.name}")
+          path = UPath.fromStringUnsafe(s"./layers/$layerName/attachments/$attachmentType/${attachment.name}")
       ))
 
   private def validatePath(path: String): Fox[Unit] =

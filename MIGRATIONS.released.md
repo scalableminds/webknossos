@@ -6,6 +6,15 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [26.04.0](https://github.com/scalableminds/webknossos/releases/tag/26.04.0) - 2026-04-07
+[Commits](https://github.com/scalableminds/webknossos/compare/26.03.0...26.04.0)
+
+### Postgres Evolutions
+- [156-worker-version.sql](schema/evolutions/156-worker-version.sql)
+- [157-aimodel-path.sql](schema/evolutions/157-aimodel-path.sql)
+- [158-move-names-to-multiusers.sql](schema/evolutions/158-move-names-to-multiusers.sql)
+- [159-inference-without-custom-model.sql](schema/evolutions/159-inference-without-custom-model.sql)
+
 ## [26.03.0](https://github.com/scalableminds/webknossos/releases/tag/26.03.0) - 2026-02-23
 [Commits](https://github.com/scalableminds/webknossos/compare/26.01.0...26.03.0)
 
@@ -26,8 +35,8 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
 ### Postgres Evolutions
 - [146-invite-roles.sql](schema/evolutions/146-invite-roles.sql)
-- [148-job-last-retry.sql](schema/evolutions/148-job-last-retry.sql)
 - [147-organization-plan-updates.sql](schema/evolutions/147-organization-plan-updates.sql)
+- [148-job-last-retry.sql](schema/evolutions/148-job-last-retry.sql)
 
 ## [25.12.0](https://github.com/scalableminds/webknossos/releases/tag/25.12.0) - 2025-12-03
 [Commits](https://github.com/scalableminds/webknossos/compare/25.11.0...25.12.0)

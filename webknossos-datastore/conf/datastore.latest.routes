@@ -13,7 +13,7 @@ GET           /datasets/:datasetId/layers/:dataLayerName/histogram              
 
 # Read mag and attachment data via proxy
 GET           /datasets/:datasetId/proxy/layers/:dataLayerName/mags/:mag/*path                                                                        @com.scalableminds.webknossos.datastore.controllers.DataProxyController.proxyMag(datasetId: ObjectId, dataLayerName: String, mag: String, path: String)
-GET           /datasets/:datasetId/proxy/layers/:dataLayerName/attachments/:attachmentName/*path                                                      @com.scalableminds.webknossos.datastore.controllers.DataProxyController.proxyAttachment(datasetId: ObjectId, dataLayerName: String, attachmentName: String, path: String)
+GET           /datasets/:datasetId/proxy/layers/:dataLayerName/attachments/:attachmentType/:attachmentName/*path                                      @com.scalableminds.webknossos.datastore.controllers.DataProxyController.proxyAttachment(datasetId: ObjectId, dataLayerName: String, attachmentType: String, attachmentName: String, path: String)
 GET           /datasets/:datasetId/proxy/datasource-properties.json                                                                                   @com.scalableminds.webknossos.datastore.controllers.DataProxyController.proxyDatasource(datasetId: ObjectId)
 
 # Knossos compatible routes
@@ -127,4 +127,7 @@ POST          /triggers/createOrganizationDirectory                             
 POST          /triggers/reload/:organizationId/:datasetId                                                                                             @com.scalableminds.webknossos.datastore.controllers.DataSourceController.reload(organizationId: String, datasetId: ObjectId, layerName: Option[String])
 
 # Exports
-GET           /exports/:jobId/download                                                                                                                @com.scalableminds.webknossos.datastore.controllers.ExportsController.download(jobId: String)
+GET           /exports/:jobId/download                                                                                                                @com.scalableminds.webknossos.datastore.controllers.ExportsController.download(jobId: ObjectId)
+
+# AI Models
+POST          /aiModels/effectiveVoxelSize                                                                                                            @com.scalableminds.webknossos.datastore.controllers.DSAiModelController.effectiveVoxelSize

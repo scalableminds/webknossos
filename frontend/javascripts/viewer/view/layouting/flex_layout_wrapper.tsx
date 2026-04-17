@@ -1,6 +1,5 @@
 import { sendAnalyticsEvent } from "admin/rest_api";
 import { ConfigProvider, Layout } from "antd";
-import FastTooltip from "components/fast_tooltip";
 import features from "features";
 import type { Action, BorderNode, TabNode, TabSetNode } from "flexlayout-react";
 import { Actions, DockLocation, Layout as FlexLayoutComponent, Model } from "flexlayout-react";
@@ -26,16 +25,16 @@ import {
   getTabDescriptorForBorderTab,
   resetDefaultLayouts,
 } from "viewer/view/layouting/default_layout_configs";
-import ControlsAndRenderingSettingsTab from "viewer/view/left-border-tabs/controls_and_rendering_settings_tab";
-import LayerSettingsTab from "viewer/view/left-border-tabs/layer_settings_tab";
+import ControlsAndRenderingSettingsTab from "viewer/view/left_border_tabs/controls_and_rendering_settings_tab";
+import LayerSettingsTab from "viewer/view/left_border_tabs/layer_settings_tab";
 import RecordingSwitch from "viewer/view/recording_switch";
-import AbstractTreeTab from "viewer/view/right-border-tabs/abstract_tree_tab";
-import BoundingBoxTab from "viewer/view/right-border-tabs/bounding_box_tab";
-import CommentTabView from "viewer/view/right-border-tabs/comment_tab/comment_tab_view";
-import ConnectomeView from "viewer/view/right-border-tabs/connectome_tab/connectome_view";
-import DatasetInfoTabView from "viewer/view/right-border-tabs/dataset_info_tab_view";
-import SegmentsView from "viewer/view/right-border-tabs/segments_tab/segments_view";
-import SkeletonTabView from "viewer/view/right-border-tabs/trees_tab/skeleton_tab_view";
+import AbstractTreeTab from "viewer/view/right_border_tabs/abstract_tree_tab";
+import BoundingBoxTab from "viewer/view/right_border_tabs/bounding_box_tab";
+import CommentTabView from "viewer/view/right_border_tabs/comment_tab/comment_tab_view";
+import ConnectomeView from "viewer/view/right_border_tabs/connectome_tab/connectome_view";
+import DatasetInfoTabView from "viewer/view/right_border_tabs/dataset_info_tab_view";
+import SegmentsView from "viewer/view/right_border_tabs/segments_tab/segments_view";
+import SkeletonTabView from "viewer/view/right_border_tabs/trees_tab/skeleton_tab_view";
 import Statusbar from "viewer/view/statusbar";
 import TDViewControls from "viewer/view/td_view_controls";
 import BorderToggleButton from "../components/border_toggle_button";
@@ -400,11 +399,6 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
       <FlexLayoutComponent
         model={model}
         factory={(...args) => this.layoutFactory(...args)}
-        titleFactory={(renderedNode) => (
-          <FastTooltip title={BorderTabs[renderedNode.getId()].description}>
-            {renderedNode.getName()}{" "}
-          </FastTooltip>
-        )}
         onModelChange={() => {
           // Update / inform parent layout about the changes.
           // This will trigger the parents onModelChange and this will then save the model changes.
@@ -448,7 +442,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
 
     // Workaround so that onLayoutChange is called after the update of flexlayout.
     // Calling the method without a timeout results in incorrect calculation of the viewport positions for the rendering.
-    setTimeout(() => this.props.onLayoutChange(currentLayoutModel, this.props.layoutName), 1);
+    setTimeout(() => this.props.onLayoutChange(currentLayoutModel, this.props.layoutName), 50);
   };
 
   onMaximizeToggle = () => {
@@ -527,11 +521,13 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
   onRenderTabSet = (
     tabSetNode: TabSetNode | BorderNode,
     renderValues: {
+      leading?: React.ReactNode;
       buttons: Array<React.ReactNode>;
+      stickyButtons: Array<React.ReactNode>;
       headerContent?: React.ReactNode;
     },
   ) => {
-    const { isTopMost, isRightMost } = getPositionStatusOf(tabSetNode);
+    const { isTopMost, isRightMost, isLeftMost } = getPositionStatusOf(tabSetNode);
 
     if (isTopMost && isRightMost) {
       renderValues.buttons.push(
@@ -542,27 +538,11 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
         />,
       );
     }
-  };
 
-  onRenderTab = (tabNode: TabNode, renderValues: Record<string, any>) => {
-    const parent = tabNode.getParent();
-
-    if (parent?.getType() !== "tabset") {
-      // Do not consider borders, only tabsets in the center layout.
-      return;
-    }
-
-    const parentTabSetNode = parent;
-
-    if (parentTabSetNode.getChildren()[0].getId() === tabNode.getId()) {
-      // @ts-expect-error ts-migrate(2345) FIXME: Argument of type 'Node' is not assignable to param... Remove this comment to see the full error message
-      const { isTopMost, isLeftMost } = getPositionStatusOf(parentTabSetNode);
-
-      if (isTopMost && isLeftMost) {
-        renderValues.leading = (
-          <BorderToggleButton side="left" onClick={() => this.toggleBorder("left")} />
-        );
-      }
+    if (isTopMost && isLeftMost) {
+      renderValues.leading = (
+        <BorderToggleButton side="left" onClick={() => this.toggleBorder("left")} />
+      );
     }
   };
 
@@ -588,7 +568,6 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
             onModelChange={() => this.onLayoutChange()}
             onAction={this.onAction}
             onRenderTabSet={this.onRenderTabSet}
-            onRenderTab={this.onRenderTab}
             classNameMapper={this.classNameMapper}
           />
         </div>

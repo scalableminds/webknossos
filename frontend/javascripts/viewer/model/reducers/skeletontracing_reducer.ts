@@ -6,15 +6,18 @@ import { zeroPad } from "libs/utils";
 import clamp from "lodash-es/clamp";
 import identity from "lodash-es/identity";
 import orderBy from "lodash-es/orderBy";
+import uniqBy from "lodash-es/uniqBy";
 import type { MetadataEntryProto } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
 import { TreeTypeEnum } from "viewer/constants";
 import {
   areGeometriesTransformed,
+  enforceSkeletonTracing,
   findTreeByNodeId,
   getSkeletonTracing,
   getTree,
   getTreeAndNode,
+  getTreesWithType,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import type { Action } from "viewer/model/actions/actions";
@@ -48,13 +51,13 @@ import {
   toggleAllTreesReducer,
   toggleTreeGroupReducer,
 } from "viewer/model/reducers/skeletontracing_reducer_helpers";
-import { type TreeGroup, TreeMap } from "viewer/model/types/tree_types";
+import { type Tree, type TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import {
   additionallyExpandGroup,
   GroupTypeEnum,
   getNodeKey,
-} from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+} from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 import { getUserStateForTracing } from "../accessors/annotation_accessor";
 import { max, maxBy } from "../helpers/iterator_utils";
 import { applySkeletonUpdateActionsFromServer } from "./update_action_application/skeleton";
@@ -672,6 +675,7 @@ function SkeletonTracingReducer(
         (state: WebknossosState, action: Action) => SkeletonTracingReducer(state, action, true),
         actions,
         state,
+        action.ignoreUnsupportedActionTypes,
       );
     }
 
@@ -798,6 +802,13 @@ function SkeletonTracingReducer(
         return state;
       }
       const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
+      if (isProofreadingActive && action.initiator === "USER") {
+        // Ignore this action as proofreading is active and the action originates from the user.
+        // The proofreading saga will take care of replaying the same action but with initiator = "PROOFREADING"
+        // to perform the desired tree manipulation.
+        return state;
+      }
+
       const treeType = isProofreadingActive ? TreeTypeEnum.AGGLOMERATE : TreeTypeEnum.DEFAULT;
 
       const sourceTree = getTreeAndNode(skeletonTracing, sourceNodeId, null, treeType);
@@ -1111,6 +1122,13 @@ function SkeletonTracingReducer(
     case "MERGE_TREES": {
       const { sourceNodeId, targetNodeId } = action;
       const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
+      if (isProofreadingActive && action.initiator === "USER") {
+        // Ignore this action as proofreading is active and the action originates from the user.
+        // The proofreading saga will take care of replaying the same action but with initiator = "PROOFREADING"
+        // to perform the desired tree manipulation.
+        return state;
+      }
+
       const treeType = isProofreadingActive ? TreeTypeEnum.AGGLOMERATE : TreeTypeEnum.DEFAULT;
       const oldTrees = skeletonTracing.trees;
       const mergeResult = mergeTrees(oldTrees, sourceNodeId, targetNodeId, treeType);
@@ -1173,6 +1191,61 @@ function SkeletonTracingReducer(
         ...tree,
         metadata: sanitizeMetadata(action.metadata),
       });
+
+      return update(state, {
+        annotation: {
+          skeleton: {
+            trees: {
+              $set: newTrees,
+            },
+          },
+        },
+      });
+    }
+
+    case "SET_TREE_AGGLOMERATE_INFO_ID": {
+      const tree = getTree(skeletonTracing, action.treeId);
+      if (tree == null || tree.agglomerateInfo == null) {
+        return state;
+      }
+
+      const newTrees = skeletonTracing.trees.set(tree.treeId, {
+        ...tree,
+        agglomerateInfo: { ...tree.agglomerateInfo, agglomerateId: action.agglomerateId },
+      });
+
+      return update(state, {
+        annotation: {
+          skeleton: {
+            trees: {
+              $set: newTrees,
+            },
+          },
+        },
+      });
+    }
+
+    case "SET_TREES_AGGLOMERATE_INFO_TRACING_ID": {
+      const agglomerateTrees = getTreesWithType(
+        enforceSkeletonTracing(state.annotation),
+        TreeTypeEnum.AGGLOMERATE,
+      );
+      const newTrees = agglomerateTrees
+        .values()
+        .reduce((currentTrees: TreeMap, agglomerateTree: Tree) => {
+          const updatedTree =
+            agglomerateTree.agglomerateInfo != null
+              ? {
+                  ...agglomerateTree,
+                  agglomerateInfo: {
+                    agglomerateId: agglomerateTree.agglomerateInfo.agglomerateId,
+                    tracingId: action.newAgglomerateMappingTracingId,
+                    mappingId: null,
+                  },
+                }
+              : agglomerateTree;
+          return currentTrees.set(agglomerateTree.treeId, updatedTree);
+        }, skeletonTracing.trees);
 
       return update(state, {
         annotation: {
@@ -1315,23 +1388,30 @@ function SkeletonTracingReducer(
 export function sanitizeMetadata(metadata: MetadataEntryProto[]) {
   // Workaround for stringList values that are [], even though they
   // should be null. This workaround is necessary because protobuf cannot
-  // distinguish between an empty list and an not existent property.
+  // distinguish between an empty list and a not existent property.
   // Therefore, we clean this up here.
-  return metadata.map((prop) => {
-    // If stringList value is defined, but it's an empty array, it should
-    // be switched to undefined
-    const needsCorrection =
-      prop.stringListValue != null &&
-      prop.stringListValue.length === 0 &&
-      (prop.stringValue != null || prop.numberValue != null || prop.boolValue != null);
-    if (needsCorrection) {
-      return {
-        ...prop,
-        stringListValue: undefined,
-      };
-    }
-    return prop;
-  });
+  // Additionally, we ensure uniqueness of the metadata keys just to be
+  // extra safe. Actually, duplicate keys should never be saved to the back-end,
+  // as duplicate keys will collapse during diffing and only one of the entries
+  // will survive.
+  return uniqBy(
+    metadata.map((prop) => {
+      // If stringList value is defined, but it's an empty array, it should
+      // be switched to undefined
+      const needsCorrection =
+        prop.stringListValue != null &&
+        prop.stringListValue.length === 0 &&
+        (prop.stringValue != null || prop.numberValue != null || prop.boolValue != null);
+      if (needsCorrection) {
+        return {
+          ...prop,
+          stringListValue: undefined,
+        };
+      }
+      return prop;
+    }),
+    (entry) => entry.key,
+  );
 }
 
 export default SkeletonTracingReducer;

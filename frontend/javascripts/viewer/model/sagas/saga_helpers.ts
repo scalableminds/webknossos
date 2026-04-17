@@ -6,8 +6,8 @@ import { call, fork, put, take, takeEvery } from "typed-redux-saga";
 import { MappingStatusEnum, type SagaIdentifier } from "viewer/constants";
 import type { Action } from "viewer/model/actions/actions";
 import { setBusyBlockingInfoAction } from "viewer/model/actions/ui_actions";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { Store } from "viewer/singletons";
 import type { ActiveMappingInfo, VolumeTracing } from "viewer/store";
 import {
@@ -58,7 +58,7 @@ export function* enforceExecutionAsBusyBlockingUnlessAllowed<T>(
 ): Saga<T> {
   let busyInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
   while (busyInfo.isBusy && !busyInfo.allowedSagas.includes(sagaIdentifier)) {
-    yield* take("SET_BUSY_BLOCKING_INFO_ACTION");
+    yield* take(["SET_BUSY_BLOCKING_INFO_ACTION", "ALLOW_SAGA_WHILE_BUSY_ACTION"]);
     busyInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
   }
 

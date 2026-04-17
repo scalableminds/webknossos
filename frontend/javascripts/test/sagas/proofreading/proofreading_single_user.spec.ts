@@ -1,5 +1,10 @@
+// biome-ignore assist/source/organizeImports: apiHelpers need to be imported first for proper mocking of modules
+import {
+  type WebknossosTestContext,
+  setupWebknossosForTesting,
+  getFlattenedUpdateActions,
+} from "test/helpers/apiHelpers";
 import { call, put, take } from "redux-saga/effects";
-import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   minCutAgglomerateWithPositionAction,
@@ -9,7 +14,7 @@ import {
   setActiveCellAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { select } from "viewer/model/sagas/effect-generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
@@ -20,9 +25,12 @@ import {
   initialMapping,
 } from "./proofreading_fixtures";
 import {
+  expectSegmentList,
   initializeMappingAndTool,
   mockInitialBucketAndAgglomerateData,
+  getPositionForSegmentId,
 } from "./proofreading_test_utils";
+import { waitUntilNotBusy } from "test/helpers/saga_test_helpers";
 
 describe("Proofreading (Single User)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
@@ -37,14 +45,14 @@ describe("Proofreading (Single User)", () => {
 
   it("should merge two agglomerates and update the mapping accordingly", async (context: WebknossosTestContext) => {
     const { api } = context;
-    mockInitialBucketAndAgglomerateData(context);
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* () {
       yield call(initializeMappingAndTool, context, tracingId);
-      const mapping0 = yield select(
+      const mapping0 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -52,14 +60,14 @@ describe("Proofreading (Single User)", () => {
 
       // Set up the merge-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
 
       // Execute the actual merge and wait for the finished mapping.
-      yield put(proofreadMergeAction([4, 4, 4], 1));
+      yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
       yield take("FINISH_MAPPING_INITIALIZATION");
 
-      const mapping = yield select(
+      const mapping = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -68,11 +76,28 @@ describe("Proofreading (Single User)", () => {
 
       yield call(() => api.tracing.save());
 
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [1, 1, 1],
+        },
+      ]);
 
-      expect(mergeSaveActionBatch).toEqual([
+      const receivedUpdateActions = getFlattenedUpdateActions(context).slice(-2);
+
+      expect(receivedUpdateActions).toEqual([
         {
           name: "mergeAgglomerate",
+          value: {
+            actionTracingId: "volumeTracingId",
+            agglomerateId1: 1,
+            agglomerateId2: 4,
+            segmentId1: 1,
+            segmentId2: 4,
+          },
+        },
+        {
+          name: "mergeSegmentItems",
           value: {
             actionTracingId: "volumeTracingId",
             agglomerateId1: 1,
@@ -85,11 +110,11 @@ describe("Proofreading (Single User)", () => {
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 
   it("should split two agglomerates and update the mapping accordingly", async (context: WebknossosTestContext) => {
     const { api, mocks } = context;
-    mockInitialBucketAndAgglomerateData(context);
+    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -97,7 +122,7 @@ describe("Proofreading (Single User)", () => {
     const task = startSaga(function* () {
       yield call(initializeMappingAndTool, context, tracingId);
 
-      const mapping0 = yield select(
+      const mapping0 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -105,15 +130,15 @@ describe("Proofreading (Single User)", () => {
 
       // Set up the split-related segment partners. Normally, this would happen
       // due to the user's interactions.
-      yield put(updateSegmentAction(1, { somePosition: [1, 1, 1] }, tracingId));
+      yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
 
       // Prepare the server's reply for the upcoming split.
       vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockReturnValue(
         Promise.resolve([
           {
-            position1: [1, 1, 1],
-            position2: [2, 2, 2],
+            position1: getPositionForSegmentId(1),
+            position2: getPositionForSegmentId(2),
             segmentId1: 1,
             segmentId2: 2,
           },
@@ -121,10 +146,10 @@ describe("Proofreading (Single User)", () => {
       );
 
       // Execute the split and wait for the finished mapping.
-      yield put(minCutAgglomerateWithPositionAction([2, 2, 2], 2, 10));
+      yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
       yield take("FINISH_MAPPING_INITIALIZATION");
 
-      const mapping1 = yield select(
+      const mapping1 = yield* select(
         (state) =>
           getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
       );
@@ -132,10 +157,23 @@ describe("Proofreading (Single User)", () => {
       expect(mapping1).toEqual(expectedMappingAfterSplit);
 
       yield call(() => api.tracing.save());
+      yield call(waitUntilNotBusy);
+      yield call(() => api.tracing.save());
 
-      const mergeSaveActionBatch = context.receivedDataPerSaveRequest.at(-1)![0]?.actions;
+      yield expectSegmentList(tracingId, [
+        {
+          id: 1,
+          anchorPosition: [1, 1, 1],
+        },
+        {
+          id: 1339,
+          anchorPosition: [2, 2, 2],
+        },
+      ]);
 
-      expect(mergeSaveActionBatch).toEqual([
+      const receivedUpdateActions = getFlattenedUpdateActions(context);
+
+      expect(receivedUpdateActions.slice(-2)).toEqual([
         {
           name: "splitAgglomerate",
           value: {
@@ -145,9 +183,23 @@ describe("Proofreading (Single User)", () => {
             segmentId2: 2,
           },
         },
+        {
+          name: "createSegment",
+          value: {
+            actionTracingId: "volumeTracingId",
+            additionalCoordinates: undefined,
+            anchorPosition: getPositionForSegmentId(2),
+            color: null,
+            creationTime: 1494695001688,
+            groupId: null,
+            id: 1339,
+            metadata: [],
+            name: null,
+          },
+        },
       ]);
     });
 
     await task.toPromise();
-  }, 8000);
+  });
 });

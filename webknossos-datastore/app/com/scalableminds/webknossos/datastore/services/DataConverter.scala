@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.datastore.services
 import com.scalableminds.util.tools.FoxImplicits
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
 import com.scalableminds.webknossos.datastore.services.mesh.DataTypeFunctors
-import spire.math.{UByte, UInt, ULong, UShort}
 
 import java.nio._
 import scala.reflect.ClassTag
@@ -48,18 +47,6 @@ trait DataConverter extends FoxImplicits {
     dstArray
   }
 
-  def toUnsignedIfNeeded(
-      data: Array[_ >: Byte with Short with Int with Long with Float],
-      isSigned: Boolean
-  ): Array[_ >: UByte with Byte with UShort with Short with UInt with Int with ULong with Long with Float] =
-    data match {
-      case d: Array[Byte]  => if (isSigned) d else d.map(UByte(_))
-      case d: Array[Short] => if (isSigned) d else d.map(UShort(_))
-      case d: Array[Int]   => if (isSigned) d else d.map(UInt(_))
-      case d: Array[Long]  => if (isSigned) d else d.map(ULong(_))
-      case d: Array[Float] => d // Float is always signed
-    }
-
   def filterZeroes(data: Array[_ >: Byte with Short with Int with Long with Float],
                    skip: Boolean = false): Array[_ >: Byte with Short with Int with Long with Float] =
     if (skip) data
@@ -73,7 +60,7 @@ trait DataConverter extends FoxImplicits {
         case d: Array[Short] => d.filter(_ != zeroShort)
         case d: Array[Int]   => d.filter(_ != zeroInt)
         case d: Array[Long]  => d.filter(_ != zeroLong)
-        case d: Array[Float] => d.filter(!_.isNaN).filter(_ != 0f)
+        case d: Array[Float] => d.filter(!_.isNaN).filter(v => math.abs(v) >= 1e-7f)
       }
     }
 

@@ -13,7 +13,12 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.{
   SkeletonUserStateProto,
   Tree
 }
-import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.datastore.helpers.{
+  NodeDefaults,
+  ProtoGeometryImplicits,
+  SkeletonTracingDefaults,
+  TreeAgglomerateInfo
+}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.tracingstore.annotation.{LayerUpdateAction, UpdateAction, UserStateUpdateAction}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.TreeType.TreeType
@@ -58,6 +63,7 @@ case class CreateTreeSkeletonAction(id: Int,
                                     `type`: Option[TreeType] = None,
                                     edgesAreVisible: Option[Boolean],
                                     metadata: Option[Seq[MetadataEntry]] = None,
+                                    agglomerateInfo: Option[TreeAgglomerateInfo],
                                     actionTracingId: String,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[ObjectId] = None,
@@ -78,7 +84,8 @@ case class CreateTreeSkeletonAction(id: Int,
       isVisible,
       `type`.map(TreeType.toProto),
       edgesAreVisible,
-      metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata))
+      metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata)),
+      agglomerateInfo.map(_.toProto),
     )
     tracing.withTrees(newTree +: tracing.trees)
   }
@@ -123,6 +130,7 @@ case class UpdateTreeSkeletonAction(id: Int,
                                     groupId: Option[Int],
                                     `type`: Option[TreeType] = None,
                                     metadata: Option[Seq[MetadataEntry]] = None,
+                                    agglomerateInfo: Option[TreeAgglomerateInfo],
                                     actionTracingId: String,
                                     actionTimestamp: Option[Long] = None,
                                     actionAuthorId: Option[ObjectId] = None,
@@ -139,7 +147,8 @@ case class UpdateTreeSkeletonAction(id: Int,
         name = name,
         groupId = groupId,
         `type` = `type`.map(TreeType.toProto),
-        metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata))
+        metadata = MetadataEntry.toProtoMultiple(MetadataEntry.deduplicate(metadata)),
+        agglomerateInfo = agglomerateInfo.map(_.toProto),
       )
 
     tracing.withTrees(mapTrees(tracing, id, treeTransform))

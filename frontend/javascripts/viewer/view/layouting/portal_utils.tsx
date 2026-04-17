@@ -47,7 +47,13 @@ export class PortalTarget extends Component<any, any> {
     );
   }
 }
-// This component is used to render the provided children into a PortalTarget (referenced by id) if that portal exists
+// This component is used to render the provided children into a PortalTarget (referenced by id).
+// We use getOrCreatePortalTargetNode instead of document.getElementById to avoid a race condition:
+// if this component renders before PortalTarget has mounted and appended the node to the DOM,
+// getElementById returns null and nothing renders. Since RenderToPortal has no way to observe
+// DOM changes, it would stay blank until an unrelated re-render. Using the cached node directly
+// works because React portals render into detached nodes — the content becomes visible as soon
+// as PortalTarget appends the node to the DOM.
 export function RenderToPortal({
   children,
   portalId,
@@ -55,6 +61,6 @@ export function RenderToPortal({
   children: React.ReactNode;
   portalId: string;
 }) {
-  const portalEl = document.getElementById(getPortalId(portalId));
-  return portalEl && ReactDOM.createPortal(children, portalEl);
+  const portalEl = getOrCreatePortalTargetNode(portalId);
+  return ReactDOM.createPortal(children, portalEl);
 }

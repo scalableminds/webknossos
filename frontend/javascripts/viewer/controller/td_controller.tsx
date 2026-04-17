@@ -295,7 +295,7 @@ class TDController extends PureComponent<Props> {
 
   getMeshIntersection(pos: Point2) {
     if (this.props.planeView == null) return null;
-    const hitResult = this.props.planeView.performMeshHitTest([pos.x, pos.y]);
+    const hitResult = this.props.planeView.performMeshHitTest([pos.x, pos.y], false);
     if (hitResult == null) {
       return null;
     }

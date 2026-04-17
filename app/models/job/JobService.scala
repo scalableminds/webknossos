@@ -91,7 +91,7 @@ class JobService @Inject()(wkConf: WkConf,
         s"Successful job$superUserLabel",
         msg
       )
-      _ = sendSuccessEmailNotification(user, jobAfterChange, resultLink.getOrElse(""))
+      _ = sendSuccessEmailNotification(user, jobAfterChange, resultLink.getOrElse(wkConf.Http.uri))
       _ = if (jobAfterChange.command == JobCommand.convert_to_wkw)
         mailchimpClient.tagUser(user, MailchimpTag.HasUploadedOwnDataset)
     } yield ()
@@ -100,25 +100,34 @@ class JobService @Inject()(wkConf: WkConf,
 
   private def sendSuccessEmailNotification(user: User, job: Job, resultLink: String): Unit =
     for {
-      userEmail <- userService.emailFor(user)(GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       datasetName = job.datasetName.getOrElse("")
-      genericEmailTemplate = defaultMails.jobSuccessfulGenericMail(user, userEmail, datasetName, resultLink, _, _)
+      genericEmailTemplate = defaultMails.jobSuccessfulGenericMail(multiUser, datasetName, resultLink, _, _)
       emailTemplate <- (job.command match {
         case JobCommand.convert_to_wkw =>
-          Some(defaultMails.jobSuccessfulUploadConvertMail(user, userEmail, datasetName, resultLink))
+          Some(defaultMails.jobSuccessfulUploadConvertMail(multiUser, datasetName, resultLink))
         case JobCommand.export_tiff =>
           Some(
             genericEmailTemplate(
               "Tiff Export",
               "Your dataset has been exported as Tiff and is ready for download."
             ))
-        case JobCommand.infer_nuclei =>
-          Some(
-            defaultMails.jobSuccessfulSegmentationMail(user, userEmail, datasetName, resultLink, "Nuclei Segmentation"))
         case JobCommand.infer_neurons =>
+          Some(defaultMails.jobSuccessfulNeuronSegmentationMail(multiUser, datasetName, resultLink))
+        case JobCommand.infer_instances =>
           Some(
-            defaultMails.jobSuccessfulSegmentationMail(user, userEmail, datasetName, resultLink, "Neuron Segmentation",
+            genericEmailTemplate(
+              "Instance Segmentation",
+              "Your instance segmentation is ready."
             ))
+        case JobCommand.infer_mitochondria =>
+          Some(defaultMails.jobSuccessfulMitoSegmentationMail(multiUser, datasetName, resultLink))
+        case JobCommand.align_sections =>
+          Some(defaultMails.jobSuccessfulAlignmentMail(multiUser, datasetName, resultLink))
+        case JobCommand.train_neuron_model =>
+          Some(defaultMails.jobSuccessfulModelTrainingMail(multiUser, resultLink))
+        case JobCommand.train_instance_model =>
+          Some(defaultMails.jobSuccessfulModelTrainingMail(multiUser, resultLink))
         case JobCommand.materialize_volume_annotation =>
           Some(
             genericEmailTemplate(
@@ -129,13 +138,13 @@ class JobService @Inject()(wkConf: WkConf,
           Some(
             genericEmailTemplate(
               "Mesh Generation",
-              "WEBKNOSSOS created 3D meshes for the whole segmentation layer of your dataset. Load pre-computed meshes by right-clicking any segment and choosing the corresponding option for near instant visualizations."
+              "Your 3D meshes for the whole segmentation layer of your dataset are ready. Load pre-computed meshes by right-clicking any segment and choosing the corresponding option for near instant visualizations."
             ))
         case JobCommand.render_animation =>
           Some(
             genericEmailTemplate(
               "Dataset Animation",
-              "Your animation of a WEBKNOSSOS dataset has been successfully created and is ready for download."
+              "Your WEBKNOSSOS dataset animation is ready."
             ))
         case _ => None
       }).toFox ?~> "job.emailNotifactionsDisabled"
@@ -145,11 +154,11 @@ class JobService @Inject()(wkConf: WkConf,
 
   private def sendFailedEmailNotification(user: User, job: Job): Unit =
     for {
-      userEmail <- userService.emailFor(user)(GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       datasetName = job.datasetName.getOrElse("")
       emailTemplate = job.command match {
-        case JobCommand.convert_to_wkw => defaultMails.jobFailedUploadConvertMail(user, userEmail, datasetName)
-        case _                         => defaultMails.jobFailedGenericMail(user, userEmail, datasetName, job.command.toString)
+        case JobCommand.convert_to_wkw => defaultMails.jobFailedUploadConvertMail(multiUser, datasetName)
+        case _                         => defaultMails.jobFailedGenericMail(multiUser, datasetName, job.command.toString)
       }
       _ = Mailer ! Send(emailTemplate)
     } yield ()
@@ -171,8 +180,8 @@ class JobService @Inject()(wkConf: WkConf,
   def publicWrites(job: Job)(implicit ctx: DBAccessContext): Fox[JsValue] =
     for {
       owner <- userDAO.findOne(job._owner) ?~> "user.notFound"
+      ownerMultiUser <- multiUserDAO.findOne(owner._multiUser)
       organization <- organizationDAO.findOne(owner._organization) ?~> "organization.notFound"
-      ownerEmail <- userService.emailFor(owner)
       creditTransactionBox <- creditTransactionService.findTransactionOfJob(job._id).shiftBox
     } yield
       Json.toJson(
@@ -180,9 +189,9 @@ class JobService @Inject()(wkConf: WkConf,
           id = job._id,
           command = job.command,
           organizationId = organization._id,
-          ownerFirstName = owner.firstName,
-          ownerLastName = owner.lastName,
-          ownerEmail = ownerEmail,
+          ownerFirstName = ownerMultiUser.firstName,
+          ownerLastName = ownerMultiUser.lastName,
+          ownerEmail = ownerMultiUser.email,
           args = job.args - "webknossos_token" - "user_auth_token",
           state = job.effectiveState,
           returnValue = job.returnValue,
@@ -220,14 +229,14 @@ class JobService @Inject()(wkConf: WkConf,
 
   def submitPaidJob(command: JobCommand,
                     commandArgs: JsObject,
-                    jobBoundingBox: BoundingBox,
+                    jobBoundingBoxInTargetMag: BoundingBox,
                     creditTransactionComment: String,
                     user: User,
                     datastoreName: String)(implicit ctx: DBAccessContext): Fox[Job] =
     for {
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
       _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ?~> "job.paid.noAdminOrManager"
-      costInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBox, command)
+      costInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBoxInTargetMag, command)
       _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costInMilliCredits)) ?~> "job.notEnoughCredits"
       creditTransaction <- creditTransactionService.reserveCredits(user._organization,
                                                                    costInMilliCredits,

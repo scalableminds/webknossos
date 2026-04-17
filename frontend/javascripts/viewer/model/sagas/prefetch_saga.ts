@@ -2,7 +2,11 @@ import { call, throttle } from "typed-redux-saga";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
 import constants from "viewer/constants";
-import { getMagInfo, isLayerVisible } from "viewer/model/accessors/dataset_accessor";
+import {
+  getLayerByName,
+  getMagInfo,
+  isLayerVisible,
+} from "viewer/model/accessors/dataset_accessor";
 import {
   getActiveMagIndexForLayer,
   getAreasFromState,
@@ -18,10 +22,11 @@ import {
 } from "viewer/model/bucket_data_handling/prefetch_strategy_plane";
 import { getGlobalDataConnectionInfo } from "viewer/model/data_connection_info";
 import type DataLayer from "viewer/model/data_layer";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { Model } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
+import { getTransformsForLayerOrNull } from "../accessors/dataset_layer_transformation_accessor";
 import { ensureWkInitialized } from "./ready_sagas";
 
 const PREFETCH_THROTTLE_TIME = 50;
@@ -44,11 +49,18 @@ export function* watchDataRelevantChanges(): Saga<void> {
 }
 
 function* shouldPrefetchForDataLayer(dataLayer: DataLayer): Saga<boolean> {
-  // There is no need to prefetch data for layers that are not visible
   return yield* select((state) => {
     const isNotRotated = !isRotated(state.flycam);
+    const hasNoTransforms =
+      getTransformsForLayerOrNull(
+        state.dataset,
+        getLayerByName(state.dataset, dataLayer.name, true),
+        state.datasetConfiguration.nativelyRenderedLayerName,
+      ) == null;
     return (
       isNotRotated &&
+      hasNoTransforms &&
+      // There is no need to prefetch data for layers that are not visible
       isLayerVisible(
         state.dataset,
         dataLayer.name,

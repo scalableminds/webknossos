@@ -1,21 +1,25 @@
 package models.aimodels
 
-import com.scalableminds.util.accesscontext.DBAccessContext
+import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.schema.Tables.{Aimodels, AimodelsRow}
+import com.scalableminds.util.tools.{Fox, FoxImplicits, Full}
+import com.scalableminds.webknossos.schema.Tables.{Aimodels, AimodelsRow, GetResultAimodelsRow}
 import models.aimodels.AiModelCategory.AiModelCategory
-import models.dataset.{DataStoreDAO, DataStoreService}
-import models.job.{JobDAO, JobService}
+import models.dataset.{DataStore, DataStoreDAO, DataStoreService, WKRemoteDataStoreClient}
+import models.job.{JobDAO, JobService, JobState}
 import models.user.{User, UserDAO, UserService}
 import play.api.libs.json.{JsObject, Json}
 import slick.dbio.{DBIO, Effect, NoStream}
 import slick.jdbc.PostgresProfile.api._
-import slick.lifted.Rep
 import slick.sql.SqlAction
 import com.scalableminds.util.objectid.ObjectId
 import models.organization.OrganizationDAO
-import com.scalableminds.util.tools.Full
+import com.scalableminds.webknossos.datastore.helpers.UPath
+import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
+import com.scalableminds.webknossos.datastore.models.datasource.StaticLayer
+import com.scalableminds.webknossos.datastore.rpc.RPC
+import com.typesafe.scalalogging.LazyLogging
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
@@ -28,6 +32,8 @@ case class AiModel(_id: ObjectId,
                    _user: ObjectId,
                    _trainingJob: Option[ObjectId],
                    _trainingAnnotations: List[ObjectId],
+                   path: Option[UPath],
+                   uploadToPathIsPending: Boolean,
                    name: String,
                    comment: Option[String],
                    category: Option[AiModelCategory],
@@ -41,7 +47,11 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
                                userService: UserService,
                                organizationDAO: OrganizationDAO,
                                jobDAO: JobDAO,
-                               jobService: JobService) {
+                               jobService: JobService,
+                               rpc: RPC)
+    extends FoxImplicits
+    with LazyLogging {
+
   def publicWrites(aiModel: AiModel, requestingUser: User)(implicit ec: ExecutionContext,
                                                            ctx: DBAccessContext): Fox[JsObject] =
     for {
@@ -61,6 +71,8 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
         sharedOrgasIdsUserCanAccess = aiModel._sharedOrganizations.filter(orgaIdsUserCanAccess.contains)
       } yield Some(sharedOrgasIdsUserCanAccess)
       else Fox.successful(None)
+      path <- pathWithFallback(aiModel)
+      isUsable = !aiModel.uploadToPathIsPending && trainingJobOpt.flatten.forall(_.effectiveState == JobState.SUCCESS)
     } yield
       Json.obj(
         "id" -> aiModel._id,
@@ -72,22 +84,80 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
         "trainingJob" -> trainingJobJsOpt,
         "created" -> aiModel.created,
         "sharedOrganizationIds" -> sharedOrganizationIds,
-        "category" -> aiModel.category
+        "category" -> aiModel.category,
+        "path" -> path,
+        "isUsable" -> isUsable
       )
+
+  def inferenceBBoxToTargetMag(mag1BoundingBox: BoundingBox,
+                               layer: StaticLayer,
+                               datasetVoxelSize: VoxelSize,
+                               aiModelOpt: Option[AiModel],
+                               usePretrainedNeuronModel: Boolean,
+                               dataStore: DataStore)(implicit ec: ExecutionContext): Fox[BoundingBox] =
+    for {
+      modelVoxelSize <- findModelVoxelSize(aiModelOpt, usePretrainedNeuronModel, dataStore)
+      targetMag <- findBestMatchingMag(modelVoxelSize, datasetVoxelSize, layer)
+      targetMagBoundingBox = mag1BoundingBox / targetMag
+    } yield targetMagBoundingBox
+
+  private def findBestMatchingMag(modelVoxelSize: VoxelSize, datasetVoxelSize: VoxelSize, layer: StaticLayer)(
+      implicit ec: ExecutionContext): Fox[Vec3Int] =
+    for {
+      _ <- Fox.fromBool(layer.mags.nonEmpty) ?~> "dataset.noMags"
+      modelVoxelSizeNm = modelVoxelSize.toNanometer
+      datasetVoxelSizeNm = datasetVoxelSize.toNanometer
+      bestMag = layer.mags.map(_.mag).minBy { mag =>
+        Math.abs(Math.log(datasetVoxelSizeNm.x * mag.x) - Math.log(modelVoxelSizeNm.x))
+      }
+    } yield bestMag
+
+  private def pathWithFallback(aiModel: AiModel)(implicit ec: ExecutionContext): Fox[UPath] =
+    aiModel.path match {
+      case Some(path) => Fox.successful(path)
+      case None =>
+        for {
+          dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)(GlobalAccessContext)
+          dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
+          dataStoreBaseDir <- dataStoreClient.getBaseDirAbsolute
+          baseDirUPath <- UPath.fromString(dataStoreBaseDir).toFox
+          // No custom path, use legacy path schema:
+          fallbackPath = baseDirUPath / aiModel._organization / ".aiModels" / aiModel._id.toString
+        } yield fallbackPath
+    }
+
+  private lazy val PretrainedNeuronModelVoxelSize = VoxelSize(Vec3Double(7.96, 7.96, 31.2), LengthUnit.nanometer)
+  private lazy val PretrainedNucleiModelVoxelSize = VoxelSize(Vec3Double(179.84, 179.84, 224.0), LengthUnit.nanometer)
+
+  def findModelVoxelSize(aiModelOpt: Option[AiModel], usePretrainedNeuronModel: Boolean, dataStore: DataStore)(
+      implicit ec: ExecutionContext): Fox[VoxelSize] =
+    aiModelOpt match {
+      case None =>
+        if (usePretrainedNeuronModel) Fox.successful(PretrainedNeuronModelVoxelSize)
+        else {
+          // No custom model, not pretrained neuron model. Assume pretrained nuclei model.
+          Fox.successful(PretrainedNucleiModelVoxelSize)
+        }
+      case Some(aiModel) =>
+        for {
+          modelPath <- pathWithFallback(aiModel)
+          dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
+          modelVoxelSize <- dataStoreClient.getEffectiveAiModelVoxelSize(modelPath)
+        } yield modelVoxelSize
+    }
+
 }
 
 class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[AiModel, AimodelsRow, Aimodels](sqlClient) {
 
   protected val collection = Aimodels
-
-  protected def idColumn(x: Aimodels): Rep[String] = x._Id
-
-  protected def isDeletedColumn(x: Aimodels): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultAimodelsRow
 
   protected def parse(r: AimodelsRow): Fox[AiModel] =
     for {
       trainingAnnotationIds <- findTrainingAnnotationIdsFor(ObjectId(r._Id))
+      path <- Fox.runOptional(r.path)(UPath.fromString(_).toFox)
       aiModelWithoutSharedOrgas = AiModel(
         ObjectId(r._Id),
         r._Organization,
@@ -96,6 +166,8 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         ObjectId(r._User),
         r._Trainingjob.map(ObjectId(_)),
         trainingAnnotationIds,
+        path,
+        r.uploadtopathispending,
         r.name,
         r.comment,
         r.category.flatMap(AiModelCategory.fromString),
@@ -119,22 +191,22 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                   WHERE _id = $requestingUserId
               ))
           )
-        OR _id IN (
-          SELECT _id FROM webknossos.aiModels
-          WHERE _organization IN (
-                  SELECT _organization
-                  FROM webknossos.users_
-                  WHERE _id = $requestingUserId
-          )
-        )
+         OR
+        (_organization IN (
+            SELECT _organization
+            FROM webknossos.users_
+            WHERE _id = $requestingUserId
+        ))
      """
 
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[AiModel]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[AimodelsRow])
-      parsed <- parseAll(r)
-    } yield parsed
+  override protected def updateAccessQ(requestingUserId: ObjectId): SqlToken =
+    q"""
+       _organization IN (
+          SELECT _organization
+          FROM webknossos.users_
+          WHERE _id = $requestingUserId
+        )
+     """
 
   def countByNameAndOrganization(aiModelName: String, organizationId: String): Fox[Int] =
     for {
@@ -147,10 +219,10 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def insertOne(a: AiModel): Fox[Unit] = {
     val insertModelQuery =
       q"""INSERT INTO webknossos.aiModels (
-                      _id, _organization, _dataStore, _user, _trainingJob, name,
+                      _id, _organization, _dataStore, _user, _trainingJob, path, uploadToPathIsPending, name,
                        comment, category, created, modified, isDeleted
                     ) VALUES (
-                      ${a._id}, ${a._organization}, ${a._dataStore}, ${a._user}, ${a._trainingJob}, ${a.name},
+                      ${a._id}, ${a._organization}, ${a._dataStore}, ${a._user}, ${a._trainingJob}, ${a.path}, ${a.uploadToPathIsPending}, ${a.name},
                       ${a.comment}, ${a.category}, ${a.created}, ${a.modified}, ${a.isDeleted}
                     )
            """.asUpdate
@@ -208,5 +280,15 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       q"INSERT INTO webknossos.aiModel_organizations (_aiModel, _organization) VALUES ($aiModelId, $organizationId)".asUpdate)
     run(DBIO.sequence(deleteQuery +: insertQueries).transactionally).map(_ => ())
   }
+
+  def updatePath(aiModelId: ObjectId, path: UPath): Fox[Unit] =
+    for {
+      _ <- run(q"UPDATE webknossos.aiModels SET path = $path WHERE _id = $aiModelId".asUpdate)
+    } yield ()
+
+  def finishUploadToPath(aiModelId: ObjectId): Fox[Unit] =
+    for {
+      _ <- run(q"UPDATE webknossos.aiModels SET uploadToPathIsPending = ${false} WHERE _id = $aiModelId".asUpdate)
+    } yield ()
 
 }

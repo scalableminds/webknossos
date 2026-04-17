@@ -98,9 +98,9 @@ case class VolumeTracingLayer(
   override val defaultViewConfiguration: Option[LayerViewConfiguration] = None
   override val adminViewConfiguration: Option[LayerViewConfiguration] = None
   override val mappings: Option[Set[String]] = None
-  override val coordinateTransformations: Option[List[CoordinateTransformation]] = None
+  override val coordinateTransformations: Option[Seq[CoordinateTransformation]] = None
 
-  private lazy val volumeMags: List[Vec3Int] = tracing.mags.map(vec3IntFromProto).toList
+  private lazy val volumeMags: Seq[Vec3Int] = tracing.mags.map(vec3IntFromProto)
 
   lazy val tracingId: String = name
 
@@ -121,8 +121,8 @@ case class VolumeTracingLayer(
 
   def bucketProvider: AbstractVolumeTracingBucketProvider = volumeBucketProvider
 
-  override val resolutions: List[Vec3Int] =
-    if (volumeMags.nonEmpty) volumeMags else List(Vec3Int.ones)
+  override val resolutions: Seq[Vec3Int] =
+    if (volumeMags.nonEmpty) volumeMags else Seq(Vec3Int.ones)
 
   override def containsMag(mag: Vec3Int) =
     true // allow requesting buckets of all mags. database takes care of missing.

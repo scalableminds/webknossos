@@ -251,6 +251,7 @@ class ArbitraryController extends React.PureComponent<Props> {
             getNodePosition(activeNode, state),
             false,
             activeNode.rotation,
+            true,
           );
         }
       },

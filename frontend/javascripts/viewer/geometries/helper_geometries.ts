@@ -318,7 +318,7 @@ export class QuickSelectGeometry {
     return this.meshGroup;
   }
 
-  attachTextureMask(ndData: Uint8Array, width: number, height: number) {
+  attachTextureMask(ndData: Uint8Array<ArrayBuffer>, width: number, height: number) {
     // Attach the array as a binary mask so that the rectangle preview
     // is only rendered where the passed array is 1.
     const texture = new DataTexture(ndData, width, height, RGBAFormat);

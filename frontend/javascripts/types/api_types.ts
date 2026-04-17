@@ -26,7 +26,7 @@ import type {
   RecommendedConfiguration,
   SegmentGroup,
 } from "viewer/store";
-import type { EmptyObject } from "./globals";
+import type { EmptyObject } from "./type_utils";
 
 // Re-export
 export type { BoundingBoxProto } from "types/bounding_box";
@@ -117,16 +117,15 @@ export type APIDataLayer = APIColorLayer | APISegmentationLayer;
 export type APISkeletonLayer = { category: "skeleton"; name: string };
 
 export type LayerLink = {
-  datasetId: string;
-  datasetName: string;
-  sourceName: string;
-  newName: string;
+  sourceDatasetId: string;
+  sourceDatasetName: string; // Only used in frontend
+  sourceLayerName: string;
+  targetLayerName: string;
   transformations: CoordinateTransformation[];
 };
 
 export type APIHistogramData = HistogramDatum[];
 export type HistogramDatum = {
-  numberOfElements: number;
   elementCounts: Array<number>;
   min: number;
   max: number;
@@ -913,6 +912,13 @@ export type ServerBoundingBoxMinMaxTypeTuple = {
   height: number;
   depth: number;
 };
+
+export type TreeAgglomerateInfo = {
+  agglomerateId: number;
+  // Note: The editable mapping's id is always equal to the id of it associated volume tracing.
+  tracingId?: string | undefined;
+  mappingName?: string | undefined;
+};
 export type ServerSkeletonTracingTree = {
   branchPoints: Array<ServerBranchPoint>;
   color: ColorObject | null | undefined;
@@ -927,6 +933,7 @@ export type ServerSkeletonTracingTree = {
   type?: TreeType;
   edgesAreVisible?: boolean;
   metadata: MetadataEntryProto[];
+  agglomerateInfo?: TreeAgglomerateInfo | undefined;
 };
 
 // Note that this differs from APIMetadataEntry, because
@@ -949,7 +956,7 @@ type ServerSegment = {
   additionalCoordinates: AdditionalCoordinate[] | null;
   creationTime: number | null | undefined;
   color: ColorObject | null;
-  groupId: number | null | undefined;
+  groupId?: number | null | undefined;
   isVisible?: boolean;
   metadata: MetadataEntryProto[];
 };
@@ -1340,6 +1347,9 @@ export type RenderAnimationOptions = {
   magForTextures: Vector3;
   movieResolution: MOVIE_RESOLUTIONS;
   cameraPosition: CAMERA_POSITIONS;
+  annotationId: string | null;
+  includeSkeletons: boolean;
+  saveBlenderFile: boolean;
 };
 
 export type ServerErrorMessage = {

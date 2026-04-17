@@ -1,3 +1,4 @@
+import { V3 } from "libs/mjs";
 import {
   type AnnotationLayerDescriptor,
   AnnotationLayerEnum,
@@ -15,7 +16,7 @@ import {
   TreeMap,
 } from "viewer/model/types/tree_types";
 import type { NumberLike, SkeletonTracing, StoreAnnotation, WebknossosState } from "viewer/store";
-import { findGroup } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { findGroup } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 import { max } from "../helpers/iterator_utils";
 import { invertTransform, transformPointUnscaled } from "../helpers/transformation_helpers";
 import {
@@ -120,6 +121,23 @@ export function hasEmptyTrees(trees: TreeMap): boolean {
 
 export function findTreeByName(trees: TreeMap, treeName: string): Tree | undefined {
   return trees.values().find((tree: Tree) => tree.name === treeName);
+}
+
+export function findTreeByAgglomerateId(
+  trees: TreeMap,
+  agglomerateId: number,
+  editableMappingId: string,
+  mappingName: string,
+): Tree | undefined {
+  return trees
+    .values()
+    .find(
+      (tree: Tree) =>
+        tree.agglomerateInfo &&
+        tree.agglomerateInfo.agglomerateId === agglomerateId &&
+        (tree.agglomerateInfo.tracingId === editableMappingId ||
+          tree.agglomerateInfo.mappingName === mappingName),
+    );
 }
 
 export function getTreesWithType(
@@ -247,8 +265,16 @@ export function isSkeletonLayerVisible(annotation: StoreAnnotation) {
   return skeletonLayer == null ? false : skeletonLayer.showSkeletons;
 }
 
-export function getNodePosition(node: Node, state: WebknossosState): Vector3 {
-  return transformNodePosition(node.untransformedPosition, state);
+export function getNodePosition(
+  node: Node,
+  state: WebknossosState,
+  useOffsetToCenterNode: boolean = false,
+): Vector3 {
+  let position = transformNodePosition(node.untransformedPosition, state);
+  if (useOffsetToCenterNode) {
+    return V3.add(position, [0.5, 0.5, 0.5]);
+  }
+  return position;
 }
 
 export function transformNodePosition(position: Vector3, state: WebknossosState): Vector3 {

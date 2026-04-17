@@ -23,7 +23,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.Tree
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.{MultiComponentTreeSplitter, TreeValidator}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{SharedParsingParameters, UploadedVolumeLayer}
-import models.dataset.DatasetDAO
+import models.dataset.DatasetDAOLike
 import com.scalableminds.util.tools.Box._
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import play.api.i18n.{Messages, MessagesProvider}
@@ -34,7 +34,7 @@ import scala.collection.{immutable, mutable}
 import scala.concurrent.ExecutionContext
 import scala.xml.{Attribute, NodeSeq, XML, Node => XMLNode}
 
-class NmlParser @Inject()(datasetDAO: DatasetDAO)
+class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
     extends LazyLogging
     with ProtoGeometryImplicits
     with ColorGenerator

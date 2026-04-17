@@ -9,7 +9,7 @@ const importSelectFromTypedReduxSaga =
 // Relative paths from repo root to allow with untyped select statements.
 const WHITELIST = [
   // Our typed wrapper is allowed to import the not well typed variation of the select saga effect.
-  "frontend/javascripts/viewer/model/sagas/effect-generators.ts",
+  "frontend/javascripts/viewer/model/sagas/effect_generators.ts",
   "frontend/javascripts/test/sagas/proofreading/__snapshots__/",
 ];
 
@@ -32,9 +32,9 @@ if (violations.length > 0) {
     console.error("  -", file);
   }
   console.error(
-    "\n👉 Use your custom `select` from your own effect-generators module instead. E.g.:",
+    "\n👉 Use your custom `select` from your own effect_generators module instead. E.g.:",
   );
-  console.error(`import { select } from "viewer/model/sagas/effect-generators"`);
+  console.error(`import { select } from "viewer/model/sagas/effect_generators"`);
   process.exit(1);
 } else {
   console.log("✅ No forbidden `select` imports found.");

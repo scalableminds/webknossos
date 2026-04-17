@@ -2,8 +2,8 @@ import { V2 } from "libs/mjs";
 import type { OrthoView, Vector2 } from "viewer/constants";
 import { getPlaneExtentInVoxelFromStore } from "viewer/model/accessors/view_mode_accessor";
 import Dimensions from "viewer/model/dimensions";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
 import type { WebknossosState } from "viewer/store";
 

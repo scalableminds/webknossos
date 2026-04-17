@@ -29,13 +29,12 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
                                                      CreditState.Pending)
     for {
       _ <- creditTransactionDAO.insertNewPendingTransaction(pendingCreditTransaction)
-      insertedTransaction <- creditTransactionDAO.findOne(pendingCreditTransaction._id)
-    } yield insertedTransaction
+    } yield pendingCreditTransaction
   }
 
   def completeTransactionOfJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      transactionBox <- creditTransactionDAO.findTransactionForJob(jobId).shiftBox
+      transactionBox <- creditTransactionDAO.findPendingTransactionForJob(jobId).shiftBox
       _ <- transactionBox match {
         case Full(transaction) =>
           for {
@@ -47,15 +46,40 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
 
     } yield ()
 
-  def refundTransactionForJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def refundTransactionForJob(jobId: ObjectId, isCancelled: Boolean = false)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      transactionBox <- creditTransactionDAO.findTransactionForJob(jobId).shiftBox
+      transactionBox <- creditTransactionDAO.findPendingTransactionForJob(jobId).shiftBox
       _ <- transactionBox match {
         case Full(transaction) =>
           for {
-            _ <- creditTransactionDAO.refundTransaction(transaction._id)
+            _ <- creditTransactionDAO.refundTransaction(transaction._id, isCancelled)
           } yield ()
         case Empty      => Fox.successful(()) // Assume transaction-less Job
+        case f: Failure => f.toFox
+      }
+    } yield ()
+
+  def reserveCreditsForRetry(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      existingTransactionBox <- creditTransactionDAO.findTransactionForJob(jobId).shiftBox
+      _ <- existingTransactionBox match {
+        case Full(existingTransaction) =>
+          val milliCreditsToSpend = -existingTransaction.milliCreditDelta
+          for {
+            _ <- Fox.assertTrue(hasEnoughCredits(existingTransaction._organization, milliCreditsToSpend)) ?~> "job.notEnoughCredits"
+            newTransaction = CreditTransaction(
+              ObjectId.generate,
+              existingTransaction._organization,
+              None,
+              Some(jobId),
+              existingTransaction.milliCreditDelta,
+              existingTransaction.comment,
+              CreditTransactionState.Pending,
+              CreditState.Pending
+            )
+            _ <- creditTransactionDAO.insertNewPendingTransaction(newTransaction)
+          } yield ()
+        case Empty      => Fox.successful(()) // Assume transaction-less (non-paid) Job
         case f: Failure => f.toFox
       }
     } yield ()
@@ -71,6 +95,26 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
 
   def findTransactionOfJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[CreditTransaction] =
     creditTransactionDAO.findTransactionForJob(jobId)
+
+  // For display purposes: pairs each expired free-credit grant with its revocation and replaces
+  // both with a single net entry. Net-zero pairs (credits granted but never used) are returned
+  // with milliCreditDelta == 0 so the caller can filter them out.
+  def compactFreeCreditsForDisplay(transactions: List[CreditTransaction]): List[CreditTransaction] = {
+    val revocationByGrantId: Map[ObjectId, CreditTransaction] =
+      transactions.filter(_.creditState == CreditState.Revoking).flatMap(t => t._relatedTransaction.map(_ -> t)).toMap
+    val revocationIds: Set[ObjectId] = revocationByGrantId.values.map(_._id).toSet
+    transactions
+      .filterNot(t => revocationIds.contains(t._id))
+      .map(t =>
+        revocationByGrantId.get(t._id) match {
+          case Some(revocation) =>
+            t.copy(
+              milliCreditDelta = t.milliCreditDelta + revocation.milliCreditDelta,
+              comment = s"${t.comment}: ${(t.milliCreditDelta + revocation.milliCreditDelta) / 1000.0} used"
+            )
+          case None => t
+      })
+  }
 
 }
 

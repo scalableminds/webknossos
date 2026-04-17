@@ -4,7 +4,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.config.ConfigRenderOptions
 import mail.{DefaultMails, Send}
 import models.organization.OrganizationDAO
-import models.user.UserService
+import models.user.MultiUserDAO
 import org.apache.pekko.actor.ActorSystem
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, Result}
@@ -17,7 +17,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class Application @Inject()(actorSystem: ActorSystem,
-                            userService: UserService,
+                            multiUserDAO: MultiUserDAO,
                             buildInfoService: BuildInfoService,
                             organizationDAO: OrganizationDAO,
                             conf: WkConf,
@@ -58,8 +58,8 @@ class Application @Inject()(actorSystem: ActorSystem,
   def helpEmail(message: String, currentUrl: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       organization <- organizationDAO.findOne(request.identity._organization)
-      userEmail <- userService.emailFor(request.identity)
-      _ = Mailer ! Send(defaultMails.helpMail(request.identity, userEmail, organization.name, message, currentUrl))
+      multiUser <- multiUserDAO.findOne(request.identity._multiUser)
+      _ = Mailer ! Send(defaultMails.helpMail(multiUser, organization.name, message, currentUrl))
     } yield Ok
   }
 

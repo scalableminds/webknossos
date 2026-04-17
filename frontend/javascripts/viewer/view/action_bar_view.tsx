@@ -1,6 +1,6 @@
-import { ExperimentOutlined } from "@ant-design/icons";
+import Icon from "@ant-design/icons";
+import AiAnalysisIcon from "@images/icons/icon-ai-analysis.svg?react";
 import { withAuthentication } from "admin/auth/authentication_modal";
-import { hasSomePaidPlan } from "admin/organization/pricing_plan_utils";
 import { createExplorational } from "admin/rest_api";
 import { Alert, Button, Dropdown, Modal, Popover, Space } from "antd";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
@@ -33,15 +33,14 @@ import { setAdditionalCoordinatesAction } from "viewer/model/actions/flycam_acti
 import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import type { WebknossosState } from "viewer/store";
 import Store from "viewer/store";
-import AddNewLayoutModal from "viewer/view/action-bar/add_new_layout_modal";
-import DatasetPositionAndRotationView from "viewer/view/action-bar/dataset_position_view";
-import ToolbarView from "viewer/view/action-bar/tools/toolbar_view";
+import AddNewLayoutModal from "viewer/view/action_bar/add_new_layout_modal";
+import DatasetPositionAndRotationView from "viewer/view/action_bar/dataset_position_view";
+import ToolbarView from "viewer/view/action_bar/tools/toolbar_view";
 import TracingActionsView, {
   getLayoutMenu,
   type LayoutProps,
-} from "viewer/view/action-bar/tracing_actions_view";
-import ViewDatasetActionsView from "viewer/view/action-bar/view_dataset_actions_view";
-import ViewModesView from "viewer/view/action-bar/view_modes_view";
+} from "viewer/view/action_bar/tracing_actions_view";
+import ViewDatasetActionsView from "viewer/view/action_bar/view_dataset_actions_view";
 import {
   addNewLayout,
   deleteLayout,
@@ -49,10 +48,9 @@ import {
   LayoutEvents,
   layoutEmitter,
 } from "viewer/view/layouting/layout_persistence";
-import { ACTIONBAR_MARGIN_LEFT } from "./action-bar/tools/tool_helpers";
-
-import ToolkitView from "./action-bar/tools/toolkit_switcher_view";
-import { NumberSliderSetting } from "./components/setting_input_views";
+import { ACTIONBAR_MARGIN_LEFT } from "./action_bar/tools/tool_helpers";
+import ToolkitView from "./action_bar/tools/toolkit_switcher_view";
+import NumberSliderSetting from "./left_border_tabs/components/number_slider_setting";
 
 const VersionRestoreWarning = (
   <Alert
@@ -78,6 +76,7 @@ type OwnProps = {
 type Props = OwnProps & StateProps;
 type State = {
   isNewLayoutModalOpen: boolean;
+  windowWidth: number;
 };
 
 function AdditionalCoordinatesInputView() {
@@ -250,8 +249,6 @@ function CreateAnnotationButton() {
 }
 
 function ModesView() {
-  const hasSkeleton = useWkSelector((state) => state.annotation.skeleton != null);
-  const is2d = useWkSelector((state) => is2dDataset(state.dataset));
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
   const isViewMode = controlMode === ControlModeEnum.VIEW;
   const isReadOnly = useWkSelector((state) => !state.annotation.isUpdatingCurrentlyAllowed);
@@ -259,14 +256,11 @@ function ModesView() {
     (state) => state.temporaryConfiguration.viewMode === "orthogonal",
   );
 
-  const isArbitrarySupported = hasSkeleton || isViewMode;
-
   // The outer div is necessary for proper spacing.
-  return (
+  return isViewMode || isReadOnly || !isOrthoMode ? null : (
     <div>
       <Space.Compact>
-        {isArbitrarySupported && !is2d ? <ViewModesView /> : null}
-        {isViewMode || isReadOnly || !isOrthoMode ? null : <ToolkitView />}
+        <ToolkitView />
       </Space.Compact>
     </div>
   );
@@ -275,7 +269,20 @@ function ModesView() {
 class ActionBarView extends PureComponent<Props, State> {
   state: State = {
     isNewLayoutModalOpen: false,
+    windowWidth: window.innerWidth,
   };
+
+  handleResize = () => {
+    this.setState({ windowWidth: window.innerWidth });
+  };
+
+  componentDidMount() {
+    window.addEventListener("resize", this.handleResize);
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener("resize", this.handleResize);
+  }
 
   handleResetLayout = () => {
     layoutEmitter.emit(
@@ -305,7 +312,6 @@ class ActionBarView extends PureComponent<Props, State> {
 
   renderStartAIJobButton(disabled: boolean, tooltipTextIfDisabled: string): React.ReactNode {
     const tooltipText = disabled ? tooltipTextIfDisabled : "Start a processing job using AI";
-    const orgaHasSomePaidPlan = hasSomePaidPlan(this.props.activeOrganization);
 
     const menuItems = [
       {
@@ -313,21 +319,25 @@ class ActionBarView extends PureComponent<Props, State> {
         onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_inference")),
         label: "Run AI model",
       },
-      ...(orgaHasSomePaidPlan
-        ? [
-            {
-              key: "open_ai_training_button",
-              onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_training")),
-              label: "Train new AI model",
-            },
-          ]
-        : []),
+      {
+        key: "open_ai_training_button",
+        onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_training")),
+        label: "Train new AI model",
+      },
       {
         key: "open_ai_alignment_button",
         onClick: () => Store.dispatch(setAIJobDrawerStateAction("open_ai_alignment")),
         label: "Run AI Alignment",
       },
     ];
+
+    let buttonText = "AI Analysis";
+    if (this.state.windowWidth < constants.NARROW_SCREEN_WIDTH) {
+      buttonText = "AI";
+    }
+    if (this.state.windowWidth < constants.VERY_NARROW_SCREEN_WIDTH) {
+      buttonText = "";
+    }
 
     return (
       // div is for left spacing through CSS
@@ -339,8 +349,15 @@ class ActionBarView extends PureComponent<Props, State> {
           }}
           disabled={disabled}
         >
-          <Button disabled={disabled} icon={<ExperimentOutlined />} title={tooltipText}>
-            AI Analysis
+          <Button
+            disabled={disabled}
+            icon={<Icon component={AiAnalysisIcon} />}
+            title={tooltipText}
+            type={
+              this.state.windowWidth < constants.VERY_NARROW_SCREEN_WIDTH ? "primary" : "default"
+            }
+          >
+            {buttonText}
           </Button>
         </Dropdown>
       </div>
@@ -404,11 +421,11 @@ class ActionBarView extends PureComponent<Props, State> {
           {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionAndRotationView />
           <AdditionalCoordinatesInputView />
-          <ModesView />
           {getIsAIAnalysisEnabled() && isAdminOrDatasetManager
             ? this.renderStartAIJobButton(shouldDisableAIJobButton, tooltip)
             : null}
           {isViewMode ? this.renderStartTracingButton() : null}
+          <ModesView />
           {constants.MODES_PLANE.indexOf(viewMode) > -1 ? <ToolbarView /> : null}
         </div>
         <AddNewLayoutModal

@@ -3,11 +3,12 @@ package backend
 import com.scalableminds.webknossos.tracingstore.annotation.{RevertToVersionAnnotationAction, UpdateGroupHandling}
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating.MergeTreeSkeletonAction
 import com.scalableminds.util.tools.Failure
-import org.scalatestplus.play.PlaySpec
+import org.scalatest.wordspec.AsyncWordSpec
 
-class UpdateGroupHandlingUnitTestSuite extends PlaySpec with UpdateGroupHandling {
+class UpdateGroupHandlingUnitTestSuite extends AsyncWordSpec with UpdateGroupHandling {
 
   "reorderAndRegroupByIsolationSensitiveActions" should {
+
     "isolate sensitive actions, group the rest, reverse group order" in {
       val updateGroupsBefore = List(
         (8L,

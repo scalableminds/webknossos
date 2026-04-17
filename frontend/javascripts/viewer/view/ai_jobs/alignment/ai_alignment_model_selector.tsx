@@ -1,4 +1,6 @@
 import { ExperimentOutlined } from "@ant-design/icons";
+import alignExample from "@images/align-example.png";
+import alignStitchingExample from "@images/align-stitching-example.jpg";
 import { Avatar, Card, List, Space, Tag, Typography } from "antd";
 import type React from "react";
 import { useCallback } from "react";
@@ -24,7 +26,7 @@ const alignmentTasks: AlignmentTask[] = [
       "Aligns all sections of this dataset along the Z axis using features in neighboring sections. Only supported for datasets with a single tile per sections (no stitching needed).",
     id: "align-sections",
     jobType: APIJobCommand.ALIGN_SECTIONS,
-    image: "/assets/images/align_example.png",
+    image: alignExample,
   },
   {
     name: "Align & stitch multiple tiles",
@@ -33,7 +35,7 @@ const alignmentTasks: AlignmentTask[] = [
     id: "align-tiles",
     disabled: true,
     jobType: null,
-    image: "/assets/images/align_stitching_example.jpg",
+    image: alignStitchingExample,
   },
 ];
 

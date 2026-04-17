@@ -47,6 +47,7 @@ export const proofreadMergeAction = (
   segmentId?: number | null, // the target segment id
   agglomerateId?: number | null, // the target agglomerate id
 ) =>
+  // Note that the source ID is derived by the active segment ID and is NOT encoded in this action.
   ({
     type: "PROOFREAD_MERGE",
     position,

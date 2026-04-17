@@ -533,7 +533,8 @@ class DataSourceController @Inject()(
             dataSource.id,
             dataLayer,
             request.body.mappingName,
-            request.body.editableMappingTracingId,
+            None,
+            request.body.annotationVersion,
             segmentId.toLong,
             mappingNameForMeshFile = None,
             omitMissing = false
@@ -570,6 +571,7 @@ class DataSourceController @Inject()(
                 dataLayer,
                 request.body.mappingName,
                 request.body.editableMappingTracingId,
+                request.body.annotationVersion,
                 segmentOrAgglomerateId,
                 mappingNameForMeshFile = None,
                 omitMissing = true // assume agglomerate ids not present in the mapping belong to user-brushed segments
@@ -646,6 +648,7 @@ class DataSourceController @Inject()(
               mappingName = request.body.mappingName,
               mappingType = request.body.mappingName.map(_ => "HDF5"),
               editableMappingTracingId = None,
+              annotationVersion = None,
               mag = Some(request.body.mag),
               seedPosition = None,
               additionalCoordinates = request.body.additionalCoordinates,
@@ -653,11 +656,8 @@ class DataSourceController @Inject()(
             fullMeshService.segmentSurfaceAreaCache.getOrLoad(
               (datasetId, dataLayer.name, fullMeshRequest),
               _ =>
-                for {
-                  data: Array[Byte] <- fullMeshService
-                    .loadFor(datasetId, dataSource, dataLayer, fullMeshRequest) ?~> "mesh.loadFull.failed"
-                  surfaceArea <- fullMeshService.surfaceAreaFromStlBytes(data).toFox
-                } yield surfaceArea
+                fullMeshService
+                  .computeSurfaceArea(datasetId, dataSource, dataLayer, fullMeshRequest) ?~> "mesh.loadFull.failed"
             )
           }
         } yield Ok(Json.toJson(surfaceAreas))

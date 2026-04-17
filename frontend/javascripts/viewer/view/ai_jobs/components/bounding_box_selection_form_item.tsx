@@ -3,11 +3,11 @@ import { Form, Space, Tooltip } from "antd";
 import type { RuleObject } from "antd/es/form";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
-import { useCallback } from "react";
+import { type ReactElement, useCallback } from "react";
 import { ControlModeEnum } from "viewer/constants";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import type { UserBoundingBox } from "viewer/store";
-import { isBoundingBoxExportable } from "viewer/view/action-bar/download_modal_view";
+import { isBoundingBoxExportable } from "viewer/view/action_bar/download_modal_view";
 import { BoundingBoxSelection } from "./bounding_box_selection";
 
 type BoundingBoxSelectionProps = {
@@ -26,7 +26,7 @@ export function BoundingBoxSelectionFormItem({
   showVolume = false,
   onChangeSelectedBoundingBox,
   value: selectedBoundingBoxId,
-}: BoundingBoxSelectionProps): JSX.Element {
+}: BoundingBoxSelectionProps): ReactElement {
   const dataset = useWkSelector((state) => state.dataset);
   const isInDatasetViewMode = useWkSelector(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,

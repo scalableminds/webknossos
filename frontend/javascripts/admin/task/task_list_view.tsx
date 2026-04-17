@@ -11,6 +11,8 @@ import {
   UserAddOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import AdminPage from "admin/admin_page";
+import AnnotationServicesAd from "admin/ads/annotation_services_alert";
 import {
   assignTaskToUser as assignTaskToUserAPI,
   deleteTask as deleteTaskAPI,
@@ -22,7 +24,7 @@ import { downloadTasksAsCSV } from "admin/task/task_create_form_view";
 import type { QueryObject, TaskFormFieldValues } from "admin/task/task_search_form";
 import TaskSearchForm from "admin/task/task_search_form";
 import UserSelectionComponent from "admin/user/user_selection_component";
-import { Alert, App, Button, Card, Flex, Input, Modal, Space, Spin, Tag } from "antd";
+import { Alert, App, Button, Input, Modal, Spin, Tag } from "antd";
 import type { ColumnType } from "antd/lib/table/interface";
 import { AsyncLink } from "components/async_clickables";
 import FixedExpandableTable from "components/fixed_expandable_table";
@@ -419,82 +421,28 @@ function TaskListView({ initialFieldValues }: Props) {
   ];
 
   return (
-    <div className="container">
-      <Flex justify="space-between" align="flex-start">
-        <h3>Tasks</h3>
-        <Space>
-          <Link to="/tasks/create">
-            <Button icon={<PlusOutlined />} type="primary">
-              Add Task
-            </Button>
-          </Link>
-          <Search
-            style={{
-              width: 200,
-            }}
-            onChange={handleSearch}
-            value={searchQuery}
-          />
-        </Space>
-      </Flex>
-      {features().isWkorgInstance ? (
-        <>
-          <a
-            href="https://webknossos.org/services/annotations"
-            className="crosslink-box"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              background:
-                'url("/assets/images/vx/manual-annotations-horizontal.png") center center / 110%',
-              height: "73px",
-              padding: "0px",
-              width: "800px",
-              overflow: "hidden",
-              display: "inline-block",
-              marginLeft: "100px",
-              marginBottom: 0,
-              opacity: "0.9",
-              marginTop: 0,
-            }}
-          >
-            <div
-              style={{
-                padding: "10px 170px",
-                background:
-                  "linear-gradient(181deg, #1414147a, rgb(59 59 59 / 45%), rgba(20, 19, 31, 0.84))",
-              }}
-            >
-              <h4
-                style={{
-                  color: "white",
-                  textAlign: "center",
-                }}
-              >
-                Need more workforce for annotating your dataset?
-                <br />
-                Have a look at our annotation services.
-              </h4>
-            </div>
-          </a>
-          <div
-            className="clearfix"
-            style={{
-              margin: "20px 0px",
-            }}
-          />
-        </>
-      ) : null}
-
-      <Card title="Search for Tasks">
+    <AdminPage
+      title="Tasks"
+      descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/tasks.html"
+      description="Search, inspect, and manage task instances across projects and datasets."
+      actions={
+        <Link to="/tasks/create">
+          <Button icon={<PlusOutlined />} type="primary">
+            Add Task
+          </Button>
+        </Link>
+      }
+      search={<Search allowClear onChange={handleSearch} value={searchQuery} />}
+      alerts={features().isWkorgInstance ? <AnnotationServicesAd /> : null}
+      filters={
         <TaskSearchForm
           onChange={(queryObject) => fetchData(queryObject)}
           initialFieldValues={initialFieldValues}
           isLoading={isLoading}
           onDownloadAllTasks={downloadSettingsFromAllTasks}
         />
-      </Card>
-
+      }
+    >
       <Spin spinning={isLoading} size="large">
         <FixedExpandableTable
           dataSource={getFilteredTasks()}
@@ -502,10 +450,6 @@ function TaskListView({ initialFieldValues }: Props) {
           columns={columns}
           pagination={{
             defaultPageSize: 50,
-          }}
-          style={{
-            marginTop: 30,
-            marginBottom: 30,
           }}
           expandable={{
             expandedRowRender: (task) => <TaskAnnotationView task={task} />,
@@ -517,7 +461,7 @@ function TaskListView({ initialFieldValues }: Props) {
 
         {getAnonymousTaskLinkModal()}
       </Spin>
-    </div>
+    </AdminPage>
   );
 }
 

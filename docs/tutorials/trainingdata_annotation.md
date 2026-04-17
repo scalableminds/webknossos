@@ -1,6 +1,8 @@
 # Tutorial: Annotating Ground Truth Data for ML in WEBKNOSSOS
 
-When preparing ground truth data for machine learning, accurate and consistent annotations are essential. The following guidelines will help you create high-quality training data in WEBKNOSSOS for [training AI models](./../automation/ai_training.md) for segmentation.
+When preparing ground truth data for machine learning, accurate and consistent annotations are essential. The following guidelines will help you create high-quality training data in WEBKNOSSOS for [training AI models](./../automation/ai_training.md) for segmentation. 
+
+While this guide focuses on dense neuron segmentation, the same principles largely apply to instance segmentation; see the end of the page for specific considerations when annotating large instances such as somata or nuclei.
 
 For detailed instructions on using WEBKNOSSOS for annotation, please watch our [Beginner’s Guide](../getting_started.md) and/or our tutorial on [Volume Annotations](./volume_annotation.md).
 
@@ -98,6 +100,19 @@ A careful review of your annotations can prevent mistakes that might impact mode
 
 *Data attribution: Briggman et al., 2024, GAUSS-EM, guided accumulation of ultrathin serial sections with a static magnetic field for volume electron microscopy*
     
+## Annotation for instance segmentation (e.g. nuclei, somata)
+
+When annotating instances for model training, only label the specific structures of interest instead of performing dense segmentation of the entire bounding box. Each instance should still be assigned a unique segment ID, and consistency across annotations remains critical. 
+
+![Example of soma ground truth annotation.](./images/tutorial_trainingdata_08_soma_ground_truth_example.png)
+
+*Data attribution: Loomba et al., Science 2022, Connectomic comparison of mouse and human cortex*
+
+For large structures such as somata, nuclei, or blood vessels, it is recommended to work at a lower resolution (e.g. Mag 16), using the coarsest magnification that still allows accurate annotation. In WEBKNOSSOS, this can be achieved by creating a new volume layer with restricted resolution. 
+
+![youtube-video](https://www.youtube.com/embed/i6aFzvztK74)
+
+The annotation does not need to exceed the precision of the chosen magnification, which enables more efficient use of annotation tools while maintaining sufficient quality. As with dense annotations, verify the 3D shape of each instance and ensure that no relevant structures within the defined bounding box are missed.
 
 ---
 

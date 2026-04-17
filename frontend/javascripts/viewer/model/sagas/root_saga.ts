@@ -6,7 +6,7 @@ import AnnotationSagas from "viewer/model/sagas/annotation_saga";
 import toolSaga from "viewer/model/sagas/annotation_tool_saga";
 import listenToClipHistogramSaga from "viewer/model/sagas/clip_histogram_saga";
 import DatasetSagas from "viewer/model/sagas/dataset_saga";
-import type { Saga } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
 import loadHistogramDataSaga from "viewer/model/sagas/load_histogram_data_saga";
 import { watchDataRelevantChanges } from "viewer/model/sagas/prefetch_saga";
 import ReadySagas from "viewer/model/sagas/ready_sagas";
@@ -16,7 +16,7 @@ import SkeletontracingSagas from "viewer/model/sagas/skeletontracing_saga";
 import watchTasksAsync, { warnAboutMagRestriction } from "viewer/model/sagas/task_saga";
 import UndoSaga from "viewer/model/sagas/undo_saga";
 import MappingSaga from "viewer/model/sagas/volume/mapping_saga";
-import ProofreadSaga from "viewer/model/sagas/volume/proofread_saga";
+import ProofreadSaga from "viewer/model/sagas/volume/proofreading/proofread_saga";
 import VolumetracingSagas from "viewer/model/sagas/volumetracing_saga";
 import type { EscalateErrorAction } from "../actions/actions";
 import { setIsWkInitializedAction } from "../actions/ui_actions";
@@ -95,7 +95,7 @@ function* restartableSaga(): Saga<void> {
     rootSagaCrashed = true;
     console.error("The sagas crashed because of the following error:", err);
 
-    if (!process.env.IS_TESTING) {
+    if (import.meta.env.MODE !== "test") {
       ErrorHandling.notifyWithPrefix(err, "Root saga crashed: ");
 
       // Hide potentially old error highlighting which mentions a retry mechanism.

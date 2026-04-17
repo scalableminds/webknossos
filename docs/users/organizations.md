@@ -22,7 +22,7 @@ The overview tab provides a summary of your organization, including:
 - **Plan Details:** Information about your current subscription plan.
 - **Storage Usage:** A report on the total disk space used by your organization's datasets.
 - **Member Information:** A count of the total users in the organization.
-- **WEBKNOSSOS Credits:** The amount of credits available to the organization.
+- **WEBKNOSSOS Credits:** The amount of credits available to the organization for AI jobs.
 
 ### Notifications
 
@@ -31,6 +31,30 @@ This tab allows admins to configure email notifications for the organization:
 - **WEBKNOSSOS Plan & Subscription:** The email address to receive plan and subscription notifications.
 - **AI Job Completion:** Configure who receives notifications about completed AI [jobs](../automation/jobs.md).
 - **New User Signup:** The email address to receive notifications about new user signups.
+
+### Credit Activity
+
+The Credit Activity tab displays a table tracking credit purchases, spending, and refunds for your organization.
+You can review the following details for each transaction:
+- **Date:** When the transaction occurred.
+- **Credit Change:** The amount of credits added or deducted.
+- **Details:** A description of the transaction.
+- **Job:** If the transaction is related to an AI job, it will list the job type, dataset, and ID.
+- **User:** The user who initiated the transaction (or "System" if automated).
+
+You can also filter the activity list by a specific date range, job type, or user.
+
+### Plan Updates
+
+The Plan Updates tab displays a history of recent changes to your organization's subscription plan.
+The table includes:
+- **Changed:** The date the plan was updated.
+- **Description:** A description of the update.
+- **Plan:** The name of the new pricing plan.
+- **Paid Until:** The date until which the plan is active.
+- **Included Users:** The number of users included in the plan.
+- **Included Storage:** The amount of dataset storage included.
+- **AI Plan:** The associated AI features plan.
 
 ### Delete Organization
 

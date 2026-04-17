@@ -14,6 +14,7 @@ import {
   Select,
   Space,
 } from "antd";
+import { KeyValuePairsFormItem } from "components/key_value_pairs";
 import { useWkSelector } from "libs/react_hooks";
 import { computeArrayFromBoundingBox } from "libs/utils";
 import type React from "react";
@@ -48,6 +49,8 @@ export const AiAnalysisSettings: React.FC = () => {
     setIsEvaluationActive,
     splitMergerEvaluationSettings,
     setSplitMergerEvaluationSettings,
+    customConfiguration,
+    setCustomConfiguration,
     selectedJobType,
   } = useRunAiModelJobContext();
   const dataset = useWkSelector((state) => state.dataset);
@@ -74,9 +77,15 @@ export const AiAnalysisSettings: React.FC = () => {
         allValues.splitMergerEvaluationSettings as SplitMergerEvaluationSettings,
       );
     }
+    if ("customConfiguration" in changedValues) {
+      setCustomConfiguration(changedValues.customConfiguration);
+    }
   };
 
-  const isInstanceModel = selectedModel?.category === APIAiModelCategory.EM_NUCLEI;
+  const isInstanceModel =
+    selectedModel != null &&
+    "category" in selectedModel &&
+    selectedModel.category === APIAiModelCategory.EM_NUCLEI;
   const isNeuronModel = selectedModel ? !isInstanceModel : false;
 
   const formFields = [
@@ -100,6 +109,7 @@ export const AiAnalysisSettings: React.FC = () => {
       name: ["splitMergerEvaluationSettings", "minimumMergerPathLengthInNm"],
       value: splitMergerEvaluationSettings?.minimumMergerPathLengthInNm,
     },
+    { name: ["customConfiguration"], value: customConfiguration },
   ];
 
   return (
@@ -146,14 +156,18 @@ export const AiAnalysisSettings: React.FC = () => {
           rules={[
             { required: true, message: "Please select a bounding box" },
             {
-              validator: (_, value: UserBoundingBox) => {
+              validator: async (_, value: UserBoundingBox) => {
                 if (value && selectedLayer && selectedJobType) {
                   const boundingBox = computeArrayFromBoundingBox(value.boundingBox);
-
-                  const mag = getBestFittingMagComparedToTrainingDS(
+                  const aiModelId =
+                    selectedModel != null && "trainingJob" in selectedModel
+                      ? selectedModel.id
+                      : undefined;
+                  const mag = await getBestFittingMagComparedToTrainingDS(
                     selectedLayer,
                     dataset.dataSource.scale,
                     selectedJobType,
+                    aiModelId,
                   );
                   if (
                     isDatasetOrBoundingBoxTooSmall(boundingBox, mag, selectedLayer, selectedJobType)
@@ -192,6 +206,11 @@ export const AiAnalysisSettings: React.FC = () => {
                     </Form.Item>
                   </Col>
                 )}
+              </Row>
+              <Row>
+                <Col span={24}>
+                  <KeyValuePairsFormItem name="customConfiguration" label="Custom Configuration" />
+                </Col>
               </Row>
 
               {isNeuronModel && (

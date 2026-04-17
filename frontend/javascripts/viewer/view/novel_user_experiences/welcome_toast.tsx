@@ -1,3 +1,6 @@
+import Icon from "@ant-design/icons";
+import drawingWavingPerson from "@images/backgrounds/waving-person.svg";
+import WKLogoIcon from "@images/wk-logo.svg?react";
 import { Button, ConfigProvider, Flex, notification, Space, Typography } from "antd";
 import type { NotificationInstance } from "antd/es/notification/interface";
 import features from "features";
@@ -17,9 +20,8 @@ function showWelcomeToast(notification: NotificationInstance) {
     duration: 0,
     placement: "bottomRight",
     icon: (
-      <img
-        src="/assets/images/logo-icon-only.svg"
-        alt="logo"
+      <Icon
+        component={WKLogoIcon}
         style={{
           filter: "brightness(4)",
           width: 45,
@@ -49,7 +51,7 @@ function showWelcomeToast(notification: NotificationInstance) {
           </Button>
           <span style={{ position: "relative" }}>
             <img
-              src="/assets/images/drawings/waving-person.svg"
+              src={drawingWavingPerson}
               alt="waving person"
               style={{
                 height: 100,

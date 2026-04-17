@@ -23,8 +23,8 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import Dimensions from "viewer/model/dimensions";
-import type { Saga } from "viewer/model/sagas/effect-generators";
-import { select } from "viewer/model/sagas/effect-generators";
+import type { Saga } from "viewer/model/sagas/effect_generators";
+import { select } from "viewer/model/sagas/effect_generators";
 import { requestBucketModificationInVolumeTracing } from "viewer/model/sagas/saga_helpers";
 import { Model } from "viewer/singletons";
 import { getUserBoundingBoxesThatContainPosition } from "../../accessors/tracing_accessor";
@@ -307,8 +307,8 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
     updateSegmentAction(
       volumeTracing.activeCellId,
       {
-        somePosition: seedPosition,
-        someAdditionalCoordinates: additionalCoordinates || undefined,
+        anchorPosition: seedPosition,
+        additionalCoordinates: additionalCoordinates || undefined,
       },
       volumeTracing.tracingId,
     ),

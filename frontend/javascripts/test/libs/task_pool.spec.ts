@@ -1,7 +1,7 @@
 import processTaskWithPool from "libs/async/task_pool";
 import { sleep } from "libs/utils";
 import { runSaga } from "redux-saga";
-import { call, type Saga } from "viewer/model/sagas/effect-generators";
+import { call, type Saga } from "viewer/model/sagas/effect_generators";
 import { describe, expect, it } from "vitest";
 
 /*eslint func-names: ["warn", "always", { "generators": "never" }]*/

@@ -64,6 +64,7 @@ class AnnotationIOController @Inject()(
     datasetService: DatasetService,
     userService: UserService,
     taskDAO: TaskDAO,
+    multiUserDAO: MultiUserDAO,
     taskTypeDAO: TaskTypeDAO,
     tracingStoreService: TracingStoreService,
     tempFileService: WkTempFileService,
@@ -453,6 +454,7 @@ class AnnotationIOController @Inject()(
           tracingStoreClient.getSkeletonTracing(annotation._id, _, version))
         annotationProto <- tracingStoreClient.getAnnotationProto(annotation._id, version)
         annotationOwner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
+        ownerMultiUser <- multiUserDAO.findOne(annotationOwner._multiUser)(GlobalAccessContext)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne)
         nmlStream = nmlWriter.toNmlStream(
           "temp",
@@ -465,7 +467,8 @@ class AnnotationIOController @Inject()(
           conf.Http.uri,
           dataset.name,
           dataset._id,
-          annotationOwner,
+          annotation._user,
+          ownerMultiUser.fullName,
           taskOpt,
           skipVolumeData,
           volumeDataZipFormat,
@@ -497,6 +500,7 @@ class AnnotationIOController @Inject()(
             tracingStoreClient.getSkeletonTracing(annotation._id, skeletonAnnotationLayer, version)
         } ?~> "annotation.download.fetchSkeletonLayer.failed"
         annotationOwner <- userService.findOneCached(annotation._user)(GlobalAccessContext) ?~> "annotation.download.findUser.failed"
+        ownerMultiUser <- multiUserDAO.findOne(annotationOwner._multiUser)(GlobalAccessContext)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne(_)(GlobalAccessContext)) ?~> "task.notFound"
         annotationProto <- tracingStoreClient.getAnnotationProto(annotation._id, version)
         nmlStream = nmlWriter.toNmlStream(
@@ -510,7 +514,8 @@ class AnnotationIOController @Inject()(
           conf.Http.uri,
           dataset.name,
           dataset._id,
-          annotationOwner,
+          annotation._user,
+          ownerMultiUser.fullName,
           taskOpt,
           skipVolumeData,
           volumeDataZipFormat,

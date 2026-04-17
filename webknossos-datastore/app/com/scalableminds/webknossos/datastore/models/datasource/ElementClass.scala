@@ -138,6 +138,20 @@ object ElementClass extends ExtendedEnumeration {
     case ElementClass.int64  => (1, "<i8")
   }
 
+  def toChannelAndZarr3String(elementClass: ElementClass.Value): (Int, String) = elementClass match {
+    case ElementClass.uint8  => (1, "uint8")
+    case ElementClass.uint16 => (1, "uint16")
+    case ElementClass.uint24 => (3, "uint8")
+    case ElementClass.uint32 => (1, "uint32")
+    case ElementClass.uint64 => (1, "uint64")
+    case ElementClass.float  => (1, "float32")
+    case ElementClass.double => (1, "float64")
+    case ElementClass.int8   => (1, "int8")
+    case ElementClass.int16  => (1, "int16")
+    case ElementClass.int32  => (1, "int32")
+    case ElementClass.int64  => (1, "int64")
+  }
+
   def fromArrayDataType(arrayDataType: ArrayDataType): Option[ElementClass.Value] = arrayDataType match {
     case ArrayDataType.u1 => Some(ElementClass.uint8)
     case ArrayDataType.u2 => Some(ElementClass.uint16)

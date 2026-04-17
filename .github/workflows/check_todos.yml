@@ -1,0 +1,15 @@
+name: Check TODOs
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+jobs:
+  check-todos:
+    runs-on: ubuntu-22.04
+    if: "!github.event.pull_request.draft"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for TODO comments without issue links
+        run: tools/check-todos.sh

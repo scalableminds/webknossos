@@ -1,9 +1,23 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
+import AdminPage from "admin/admin_page";
 import { createTaskType, getEditableTeams, getTaskType, updateTaskType } from "admin/rest_api";
 import RecommendedConfigurationView, {
   getDefaultRecommendedConfiguration,
 } from "admin/tasktype/recommended_configuration_view";
-import { Button, Card, Checkbox, Form, Input, InputNumber, Radio, Select, Tooltip } from "antd";
+import {
+  Button,
+  Checkbox,
+  Col,
+  Form,
+  Input,
+  InputNumber,
+  Radio,
+  Row,
+  Select,
+  Tooltip,
+  Typography,
+  theme,
+} from "antd";
 import type { RuleObject } from "antd/es/form";
 import { useFetch } from "libs/react_helpers";
 import { jsonStringify } from "libs/utils";
@@ -71,6 +85,7 @@ function isMaximumMagnificationSmallerThenMinRule(value: number | undefined, min
 
 function TaskTypeCreateView() {
   const { taskTypeId } = useParams();
+  const { token } = theme.useToken();
 
   const navigate = useNavigate();
   const [useRecommendedConfiguration, setUseRecommendedConfiguration] = useState(false);
@@ -173,14 +188,17 @@ function TaskTypeCreateView() {
   const isEditingMode = taskTypeId != null;
   const titlePrefix = isEditingMode ? "Update" : "Create";
   return (
-    <div
-      className="container"
-      style={{
-        maxWidth: 1600,
-        margin: "0 auto",
-      }}
+    <AdminPage
+      title={`${titlePrefix} Task Type`}
+      descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/concepts.html"
+      description="Define task type behavior, allowed modes, annotation settings, and optional recommended configuration."
+      contentMaxWidth={960}
     >
-      <Card title={<h3>{`${titlePrefix} Task Type`}</h3>}>
+      <div
+        style={{
+          padding: token.paddingLG,
+        }}
+      >
         <Form
           form={form}
           onFinish={onFinish}
@@ -189,52 +207,61 @@ function TaskTypeCreateView() {
             tracingType: TracingTypeEnum.skeleton,
           }}
         >
-          <FormItem
-            name="summary"
-            label="Summary"
-            hasFeedback
-            rules={[
-              {
-                required: true,
-              },
-              {
-                min: 3,
-              },
-              {
-                validator: syncValidator(
-                  (value) => !value.includes(","),
-                  "The summary must not contain commas.",
-                ),
-              },
-            ]}
-          >
-            <Input />
-          </FormItem>
+          <Typography.Title level={5} style={{ marginTop: 0 }}>
+            Basics
+          </Typography.Title>
 
-          <FormItem
-            name="teamId"
-            label="Team"
-            hasFeedback
-            rules={[
-              {
-                required: true,
-              },
-            ]}
-          >
-            <Select
-              allowClear
-              showSearch={{ optionFilterProp: "label" }}
-              placeholder="Select a Team"
-              style={{
-                width: "100%",
-              }}
-              loading={isFetchingData}
-              options={teams.map((team: APITeam) => ({
-                value: team.id,
-                label: `${team.name}`,
-              }))}
-            />
-          </FormItem>
+          <Row gutter={token.paddingMD}>
+            <Col xs={24} md={14}>
+              <FormItem
+                name="summary"
+                label="Summary"
+                hasFeedback
+                rules={[
+                  {
+                    required: true,
+                  },
+                  {
+                    min: 3,
+                  },
+                  {
+                    validator: syncValidator(
+                      (value) => !value.includes(","),
+                      "The summary must not contain commas.",
+                    ),
+                  },
+                ]}
+              >
+                <Input />
+              </FormItem>
+            </Col>
+            <Col xs={24} md={10}>
+              <FormItem
+                name="teamId"
+                label="Team"
+                hasFeedback
+                rules={[
+                  {
+                    required: true,
+                  },
+                ]}
+              >
+                <Select
+                  allowClear
+                  showSearch={{ optionFilterProp: "label" }}
+                  placeholder="Select a Team"
+                  style={{
+                    width: "100%",
+                  }}
+                  loading={isFetchingData}
+                  options={teams.map((team: APITeam) => ({
+                    value: team.id,
+                    label: `${team.name}`,
+                  }))}
+                />
+              </FormItem>
+            </Col>
+          </Row>
 
           <FormItem
             name="description"
@@ -257,83 +284,90 @@ function TaskTypeCreateView() {
             <TextArea rows={10} />
           </FormItem>
 
-          <FormItem name="tracingType" label="Annotation Type">
-            <RadioGroup>
-              <Radio value="skeleton" disabled={isEditingMode}>
-                Skeleton
-              </Radio>
-              <Radio value="volume" disabled={isEditingMode}>
-                Volume
-              </Radio>
-              <Radio value="hybrid" disabled={isEditingMode}>
-                Skeleton and Volume
-              </Radio>
-            </RadioGroup>
-          </FormItem>
+          <Typography.Title level={5}>Annotation Behavior</Typography.Title>
 
-          <FormItem
-            name={["settings", "allowedModes"]}
-            label="Allowed Modes"
-            hasFeedback
-            rules={[
-              {
-                required: true,
-              },
-            ]}
-          >
-            <Select
-              mode="multiple"
-              allowClear
-              placeholder="Select all Allowed Modes"
-              optionFilterProp="label"
-              style={{
-                width: "100%",
-              }}
-              options={[
-                {
-                  value: "orthogonal",
-                  label: "Orthogonal",
-                },
-                {
-                  value: "oblique",
-                  label: "Oblique",
-                },
-                {
-                  value: "flight",
-                  label: "Flight",
-                },
-              ]}
-            />
-          </FormItem>
-
-          <FormItem name={["settings", "preferredMode"]} label="Preferred Mode" hasFeedback>
-            <Select
-              allowClear
-              showSearch={{ optionFilterProp: "label" }}
-              style={{
-                width: "100%",
-              }}
-              options={[
-                {
-                  value: "",
-                  label: "Any",
-                },
-                {
-                  value: "orthogonal",
-                  label: "Orthogonal",
-                },
-                {
-                  value: "oblique",
-                  label: "Oblique",
-                },
-                {
-                  value: "flight",
-                  label: "Flight",
-                },
-              ]}
-            />
-          </FormItem>
-
+          <Row gutter={token.paddingMD}>
+            <Col xs={24} md={24}>
+              <FormItem name="tracingType" label="Annotation Type">
+                <RadioGroup>
+                  <Radio value="skeleton" disabled={isEditingMode}>
+                    Skeleton
+                  </Radio>
+                  <Radio value="volume" disabled={isEditingMode}>
+                    Volume
+                  </Radio>
+                  <Radio value="hybrid" disabled={isEditingMode}>
+                    Skeleton and Volume
+                  </Radio>
+                </RadioGroup>
+              </FormItem>
+            </Col>
+            <Col xs={24} md={12}>
+              <FormItem
+                name={["settings", "allowedModes"]}
+                label="Allowed Modes"
+                hasFeedback
+                rules={[
+                  {
+                    required: true,
+                  },
+                ]}
+              >
+                <Select
+                  mode="multiple"
+                  allowClear
+                  placeholder="Select all Allowed Modes"
+                  showSearch={{ optionFilterProp: "label" }}
+                  style={{
+                    width: "100%",
+                  }}
+                  options={[
+                    {
+                      value: "orthogonal",
+                      label: "Orthogonal",
+                    },
+                    {
+                      value: "oblique",
+                      label: "Oblique",
+                    },
+                    {
+                      value: "flight",
+                      label: "Flight",
+                    },
+                  ]}
+                />
+              </FormItem>
+            </Col>
+            <Col xs={24} md={12}>
+              <FormItem name={["settings", "preferredMode"]} label="Preferred Mode" hasFeedback>
+                <Select
+                  allowClear
+                  showSearch={{ optionFilterProp: "label" }}
+                  style={{
+                    width: "100%",
+                  }}
+                  options={[
+                    {
+                      value: "",
+                      label: "Any",
+                    },
+                    {
+                      value: "orthogonal",
+                      label: "Orthogonal",
+                    },
+                    {
+                      value: "oblique",
+                      label: "Oblique",
+                    },
+                    {
+                      value: "flight",
+                      label: "Flight",
+                    },
+                  ]}
+                />
+              </FormItem>
+            </Col>
+          </Row>
           <FormItem
             noStyle
             shouldUpdate={(prevValues, curValues) =>
@@ -353,20 +387,23 @@ function TaskTypeCreateView() {
                       getFieldValue(["tracingType"]) === TracingTypeEnum.volume ? "none" : "block",
                   }}
                 >
-                  <FormItem
-                    name={["settings", "somaClickingAllowed"]}
-                    label="Settings"
-                    valuePropName="checked"
-                  >
-                    <Checkbox>Allow Single-node-tree mode (&quot;Soma clicking&quot;)</Checkbox>
-                  </FormItem>
-
-                  <FormItem name={["settings", "branchPointsAllowed"]} valuePropName="checked">
-                    <Checkbox>Allow Branchpoints</Checkbox>
-                  </FormItem>
-                  <FormItem name={["settings", "mergerMode"]} valuePropName="checked">
-                    <Checkbox>Merger Mode</Checkbox>
-                  </FormItem>
+                  <Row gutter={token.paddingMD}>
+                    <Col xs={24} md={12}>
+                      <FormItem name={["settings", "somaClickingAllowed"]} valuePropName="checked">
+                        <Checkbox>Allow Single-node-tree mode (&quot;Soma clicking&quot;)</Checkbox>
+                      </FormItem>
+                    </Col>
+                    <Col xs={24} md={12}>
+                      <FormItem name={["settings", "branchPointsAllowed"]} valuePropName="checked">
+                        <Checkbox>Allow Branchpoints</Checkbox>
+                      </FormItem>
+                    </Col>
+                    <Col xs={24} md={12}>
+                      <FormItem name={["settings", "mergerMode"]} valuePropName="checked">
+                        <Checkbox>Merger Mode</Checkbox>
+                      </FormItem>
+                    </Col>
+                  </Row>
                 </div>
 
                 {/* Volume-specific */}
@@ -382,24 +419,30 @@ function TaskTypeCreateView() {
                         : "block",
                   }}
                 >
-                  <FormItem
-                    name={["settings", "volumeInterpolationAllowed"]}
-                    valuePropName="checked"
-                  >
-                    <Checkbox>
-                      Allow Volume Interpolation{" "}
-                      <Tooltip
-                        title="When enabled, it suffices to only label every 2nd slice. The skipped slices will be filled automatically by interpolating between the labeled slices."
-                        placement="right"
+                  <Row gutter={token.paddingMD}>
+                    <Col xs={24} md={12}>
+                      <FormItem
+                        name={["settings", "volumeInterpolationAllowed"]}
+                        valuePropName="checked"
                       >
-                        <InfoCircleOutlined />
-                      </Tooltip>
-                    </Checkbox>
-                  </FormItem>
+                        <Checkbox>
+                          Allow Volume Interpolation{" "}
+                          <Tooltip
+                            title="When enabled, it suffices to only label every 2nd slice. The skipped slices will be filled automatically by interpolating between the labeled slices."
+                            placement="right"
+                          >
+                            <InfoCircleOutlined />
+                          </Tooltip>
+                        </Checkbox>
+                      </FormItem>
+                    </Col>
+                  </Row>
                 </div>
               </div>
             )}
           </FormItem>
+
+          <Typography.Title level={5}>Magnification</Typography.Title>
 
           <FormItem
             name={["isMagRestricted"]}
@@ -433,51 +476,59 @@ function TaskTypeCreateView() {
                     marginLeft: 24,
                   }}
                 >
-                  <FormItem
-                    name={["settings", "magRestrictions", "min"]}
-                    hasFeedback
-                    label="Minimum"
-                    style={{
-                      marginBottom: 6,
-                    }}
-                    rules={[
-                      {
-                        validator: isValidMagnification,
-                      },
-                      {
-                        validator: (_rule, value) =>
-                          isMinimumMagnifactionLargerThenMaxRule(
-                            value,
-                            getFieldValue(["settings", "magRestrictions", "max"]),
-                          ),
-                      },
-                    ]}
-                  >
-                    <InputNumber min={1} size="small" disabled={isEditingMode} />
-                  </FormItem>
-                  <FormItem
-                    name={["settings", "magRestrictions", "max"]}
-                    hasFeedback
-                    label="Maximum"
-                    rules={[
-                      {
-                        validator: isValidMagnification,
-                      },
-                      {
-                        validator: (_rule, value) =>
-                          isMaximumMagnificationSmallerThenMinRule(
-                            value,
-                            getFieldValue(["settings", "magRestrictions", "min"]),
-                          ),
-                      },
-                    ]}
-                  >
-                    <InputNumber min={1} size="small" disabled={isEditingMode} />
-                  </FormItem>
+                  <Row gutter={token.paddingMD}>
+                    <Col xs={24} sm={12}>
+                      <FormItem
+                        name={["settings", "magRestrictions", "min"]}
+                        hasFeedback
+                        label="Minimum"
+                        style={{
+                          marginBottom: 6,
+                        }}
+                        rules={[
+                          {
+                            validator: isValidMagnification,
+                          },
+                          {
+                            validator: (_rule, value) =>
+                              isMinimumMagnifactionLargerThenMaxRule(
+                                value,
+                                getFieldValue(["settings", "magRestrictions", "max"]),
+                              ),
+                          },
+                        ]}
+                      >
+                        <InputNumber min={1} size="small" disabled={isEditingMode} />
+                      </FormItem>
+                    </Col>
+                    <Col xs={24} sm={12}>
+                      <FormItem
+                        name={["settings", "magRestrictions", "max"]}
+                        hasFeedback
+                        label="Maximum"
+                        rules={[
+                          {
+                            validator: isValidMagnification,
+                          },
+                          {
+                            validator: (_rule, value) =>
+                              isMaximumMagnificationSmallerThenMinRule(
+                                value,
+                                getFieldValue(["settings", "magRestrictions", "min"]),
+                              ),
+                          },
+                        ]}
+                      >
+                        <InputNumber min={1} size="small" disabled={isEditingMode} />
+                      </FormItem>
+                    </Col>
+                  </Row>
                 </div>
               ) : null
             }
           </FormItem>
+
+          <Typography.Title level={5}>Recommended Configuration</Typography.Title>
 
           <FormItem>
             <RecommendedConfigurationView
@@ -493,8 +544,8 @@ function TaskTypeCreateView() {
             </Button>
           </FormItem>
         </Form>
-      </Card>
-    </div>
+      </div>
+    </AdminPage>
   );
 }
 

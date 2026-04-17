@@ -1,6 +1,6 @@
 # The Toolbar
 
-The toolbar is your primary interface for switching between different tools and modes within WEBKNOSSOS. Located at the top of the screen, it provides quick access to essential functions for viewing, annotating, and sharing your work. This guide explains each component and its purpose in your workflow.
+The toolbar is your primary interface for switching between tools and modes in WEBKNOSSOS. Located at the top of the screen, it provides quick access to essential functions for viewing, annotating, and sharing your work.
 
 ![The WEBKNOSSOS toolbar contains many useful features for quick access such as Saving and Undo/Redo](../images/ui_toolbar_menu.png)
 /// caption
@@ -78,7 +78,7 @@ Some of these also fine-tune the behavior of the tools so that they are tailored
 Currently, there are four toolkits available:
 
 - All Tools: This toolkit contains all available tools and is the default.
-- Read Only: Only tools that cannot mutate the annotation are available (i.e., move and measuring tools).
+- Read Only: Only non-editing tools are available (Move, Voxel Pipette, and measurement tools).
 - Volume: Only volume tools are listed here.
 - Split Segments: This toolkit allows splitting a labeled segment into two parts. Tools in this toolkit behave a bit differently to streamline this workflow. Read more about this toolkit [here](../proofreading/split_segments_toolkit.md).
 
@@ -117,23 +117,23 @@ WEBKNOSSOS provides several tools for volume annotation:
 **Brush Tool**: Paint directly onto the dataset to mark regions of interest. The brush size is adjustable to match your needs. If you draw around objects in one continuous motion, the inside will be filled automatically.
 
 ![Quick Select Tool](./images/quickselect-tool.jpg){align=left width="60"} 
-**AI Quick Select**: Annotate a segment automatically with our AI by drawing a rectangular selection over it. Alternatively, single click in the center of a cell to automatically label it.
+**Quick Select**: Annotate a segment automatically by drawing a rectangular selection over it. You can also single-click near the center of a structure for fast selection. As an alternative to the AI mode you can use a threshold-based mode for selections. 
 
 And many other tools. For detailed information, see the [volume annotation guide](../volume_annotation/tools.md).
 
 ### Measurement and Analysis
 ![Measurement Tool](./images/measure-tool.jpg){align=left width="60"}
-**Measurement Tool**: Allows you to calculate distances between points of interest, measure surface areas of segmented structures, and place waypoints for complex measurements. See also [statistics for volume annotations](../volume_annotation/segments_statistics.md). 
+**Measurement Tool**: Use line measurement to calculate distances between points of interest and area measurement to estimate 2D areas. See also [statistics for volume annotations](../volume_annotation/segments_statistics.md). 
 
 ![Voxel Pipette Tool](../ui/images/segment-picker-tool.jpg){align=left width="60"} 
-**Voxel Pipette**: Hover over your data to see the exact values at a specific voxel. A tooltip will be shown that shows the intensity values for color layers and the segment id for the visible segmentation layer. The tooltip can be pinned by clicking so that the values can be copied. Pressing shift while clicking will activate the hovered segment id. This is alternative to selecting the segment ID from the [Segments list](../volume_annotation/segments_list.md) sidebar or context menu.
+**Voxel Pipette**: Hover over your data to inspect values at a specific voxel. The tooltip shows intensity values for color layers and the segment ID for the visible segmentation layer. Click to pin the tooltip and copy values. Press ++shift++ while clicking to activate the hovered segment ID. This is an alternative to selecting the segment ID in the [Segments list](../volume_annotation/segments_list.md) sidebar or context menu.
 
 ![AI Analysis Tools](./images/ai-analysis-tools.jpg){align=left width="60"}
 **AI Analysis**: Launch automated segmentation processes using various analysis workflows. The AI tools can significantly speed up your annotation work. Learn more about [AI-assisted analysis](../automation/ai_segmentation.md).
 
 
 ![Bounding Box Tool](./images/boundingbox-tool.jpg){align=left width="60"}
-**Bounding Box Tool**: Create a bounding box to define a region of interest for analysis, subdivide a dataset into smaller regions for the builtin automated workflows, or quickly export a region of interest.
+**Bounding Box Tool**: Create a bounding box to define a region of interest for analysis, subdivide a dataset into smaller regions for built-in automated workflows, or quickly export a region of interest.
 
 To create a bounding box, select the tool and then click and drag with the mouse on one of the 2D viewports. You can resize the bounding box by dragging its corners or edges.
 

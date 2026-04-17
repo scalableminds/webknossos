@@ -46,7 +46,7 @@ import {
   TreeMap,
 } from "viewer/model/types/tree_types";
 import type { WebknossosState } from "viewer/store";
-import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 import { describe, expect, it } from "vitest";
 
 const initialState: WebknossosState = update(defaultState, {

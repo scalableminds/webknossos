@@ -105,6 +105,7 @@ function _calculateMaybeGlobalPos(
   state: WebknossosState,
   clickPos: Point2,
   planeIdOpt?: OrthoView | null | undefined,
+  useRound: boolean = false,
 ): PositionWithRounding | null | undefined {
   let roundedPosition: Vector3, floatingPosition: Vector3;
   const planeId = planeIdOpt || state.viewModeData.plane.activeViewport;
@@ -127,6 +128,7 @@ function _calculateMaybeGlobalPos(
 
   const globalFloatingPosition = scaledRotatedPosition.applyMatrix4(flycamPositionMatrix);
   floatingPosition = globalFloatingPosition.toArray() as Vector3;
+  const discretize = useRound ? Math.round : Math.floor;
 
   // Regarding round and floor in the following code:
   // The objective is to obtain integer positional values here that correspond "the most" to clicked input
@@ -137,8 +139,8 @@ function _calculateMaybeGlobalPos(
   switch (planeId) {
     case OrthoViews.PLANE_XY: {
       roundedPosition = [
-        Math.round(globalFloatingPosition.x),
-        Math.round(globalFloatingPosition.y),
+        discretize(globalFloatingPosition.x),
+        discretize(globalFloatingPosition.y),
         Math.floor(globalFloatingPosition.z),
       ];
       break;
@@ -147,17 +149,17 @@ function _calculateMaybeGlobalPos(
     case OrthoViews.PLANE_YZ: {
       roundedPosition = [
         Math.floor(globalFloatingPosition.x),
-        Math.round(globalFloatingPosition.y),
-        Math.round(globalFloatingPosition.z),
+        discretize(globalFloatingPosition.y),
+        discretize(globalFloatingPosition.z),
       ];
       break;
     }
 
     case OrthoViews.PLANE_XZ: {
       roundedPosition = [
-        Math.round(globalFloatingPosition.x),
+        discretize(globalFloatingPosition.x),
         Math.floor(globalFloatingPosition.y),
-        Math.round(globalFloatingPosition.z),
+        discretize(globalFloatingPosition.z),
       ];
       break;
     }
@@ -255,24 +257,23 @@ function _calculateMaybeGlobalDelta(
 
   switch (planeId) {
     case OrthoViews.PLANE_XY: {
-      position = [Math.round(diffX * planeRatio[0]), Math.round(diffY * planeRatio[1]), 0];
+      position = [diffX * planeRatio[0], diffY * planeRatio[1], 0];
       break;
     }
 
     case OrthoViews.PLANE_YZ: {
-      position = [0, Math.round(diffY * planeRatio[1]), Math.round(diffX * planeRatio[2])];
+      position = [0, diffY * planeRatio[1], diffX * planeRatio[2]];
       break;
     }
 
     case OrthoViews.PLANE_XZ: {
-      position = [Math.round(diffX * planeRatio[0]), 0, Math.round(diffY * planeRatio[2])];
+      position = [diffX * planeRatio[0], 0, diffY * planeRatio[2]];
       break;
     }
 
     default:
       return null;
   }
-
   return position;
 }
 
@@ -280,8 +281,9 @@ function _calculateGlobalPos(
   state: WebknossosState,
   clickPos: Point2,
   planeId?: OrthoView | null | undefined,
+  useRound: boolean = false,
 ): PositionWithRounding {
-  const positions = _calculateMaybeGlobalPos(state, clickPos, planeId);
+  const positions = _calculateMaybeGlobalPos(state, clickPos, planeId, useRound);
 
   if (!positions || !positions.rounded) {
     console.error("Trying to calculate the global position, but no data viewport is active.");

@@ -1,3 +1,4 @@
+import DRACOWASM from "@wasm/draco_decoder.wasm?url";
 import { DRACOLoader } from "libs/DRACOLoader";
 import type { BufferGeometry } from "three";
 
@@ -21,7 +22,7 @@ export function getDracoLoader(): CustomDRACOLoader {
   // @ts-expect-error
   _dracoLoader = new CustomDRACOLoader();
 
-  _dracoLoader.setDecoderPath("/assets/wasm/");
+  _dracoLoader.setDecoderUri(DRACOWASM);
   _dracoLoader.setDecoderConfig({ type: "wasm" });
   _dracoLoader.preload();
   // The loader could theoretically be disposed like this:

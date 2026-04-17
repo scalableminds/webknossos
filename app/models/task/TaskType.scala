@@ -11,7 +11,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
 import models.annotation.{AnnotationSettings, TracingMode}
 import models.team.TeamDAO
 import play.api.libs.json._
-import slick.lifted.Rep
 import utils.sql.{EnumerationArrayValue, SQLDAO, SqlClient}
 
 import javax.inject.Inject
@@ -62,8 +61,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[TaskType, TasktypesRow, Tasktypes](sqlClient) {
   protected val collection = Tasktypes
 
-  protected def idColumn(x: Tasktypes): Rep[String] = x._Id
-  protected def isDeletedColumn(x: Tasktypes): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultTasktypesRow
 
   protected def parse(r: TasktypesRow): Fox[TaskType] =
     for {
@@ -103,13 +101,6 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     q"""(_team IN (SELECT _team FROM webknossos.user_team_roles WHERE isTeamManager AND _user = $requestingUserId)
        OR _organization = (SELECT _organization from webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))"""
 
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[TaskType] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[TasktypesRow])
-      parsed <- parseFirst(r, id.toString)
-    } yield parsed
-
   def findOneBySummaryAndOrganization(summary: String, organizationId: String)(
       implicit ctx: DBAccessContext): Fox[TaskType] =
     for {
@@ -120,13 +111,6 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    AND _organization = $organizationId
                    AND $accessQuery""".as[TasktypesRow])
       parsed <- parseFirst(r, summary)
-    } yield parsed
-
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[TaskType]] =
-    for {
-      accessQuery <- readAccessQuery
-      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[TasktypesRow])
-      parsed <- parseAll(r)
     } yield parsed
 
   def insertOne(t: TaskType, organizationId: String): Fox[Unit] =

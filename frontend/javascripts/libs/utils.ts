@@ -16,7 +16,7 @@ import uniq from "lodash-es/uniq";
 import zipObject from "lodash-es/zipObject";
 import type { APIDataset, APIUser, MapEntries } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
-import type { ArbitraryObject, Comparator } from "types/globals";
+import type { ArbitraryObject, Comparator } from "types/type_utils";
 import type { ColorObject, Point3, TypedArray, Vector3, Vector4, Vector6 } from "viewer/constants";
 import type { TreeGroup } from "viewer/model/types/tree_types";
 import type { BoundingBoxObject, Mapping, NumberLike, SegmentGroup } from "viewer/store";
@@ -593,17 +593,71 @@ export function diffArrays<T>(
   };
 }
 
+/*
+ * Diffs two number based arrays. The input is not manipulated.
+ * Returns three arrays in the from of { both, onlyA, onlyB }.
+ * both contains the numbers present in both arrays;
+ * onlyA the numbers present only in array a;
+ * onlyB the numbers present only in array b.
+ */
+export function diffNumberArrays(
+  a: number[],
+  b: number[],
+): { both: number[]; onlyA: number[]; onlyB: number[] } {
+  // Create sorted copies to avoid mutating inputs
+  const A = [...a].sort((x, y) => x - y);
+  const B = [...b].sort((x, y) => x - y);
+
+  const both: number[] = [];
+  const onlyA: number[] = [];
+  const onlyB: number[] = [];
+
+  let indexA = 0;
+  let indexB = 0;
+
+  while (indexA < A.length && indexB < B.length) {
+    if (A[indexA] === B[indexB]) {
+      both.push(A[indexA]);
+      indexA++;
+      indexB++;
+    } else if (A[indexA] < B[indexB]) {
+      onlyA.push(A[indexA]);
+      indexA++;
+    } else {
+      onlyB.push(B[indexB]);
+      indexB++;
+    }
+  }
+
+  // Remaining elements
+  while (indexA < A.length) {
+    onlyA.push(A[indexA]);
+    indexA++;
+  }
+
+  while (indexB < B.length) {
+    onlyB.push(B[indexB]);
+    indexB++;
+  }
+
+  return { both, onlyA, onlyB };
+}
+
 export function diffMaps<K, V>(
   stateA: Map<K, V>,
   stateB: Map<K, V>,
+  maybeEqualityFn?: (v1: V, v2: V) => boolean,
 ): {
-  changed: Iterable<K>;
-  onlyA: Iterable<K>;
-  onlyB: Iterable<K>;
+  changed: Iterable<K>; // Contains the keys K for which stateA[K] !== stateB[K]
+  onlyA: Iterable<K>; // Contains the keys K that only exist in A
+  onlyB: Iterable<K>; // Contains the keys K that only exist in B
 } {
+  const equalityFn = maybeEqualityFn ?? ((a, b) => a === b);
   const keysOfA = Array.from(stateA.keys());
   const keysOfB = Array.from(stateB.keys());
-  const changed = keysOfA.filter((x) => stateB.has(x) && stateB.get(x) !== stateA.get(x));
+  const changed = keysOfA.filter(
+    (x) => stateB.has(x) && !equalityFn(stateB.get(x)!, stateA.get(x)!),
+  );
   const onlyA = keysOfA.filter((x) => !stateB.has(x));
   const onlyB = keysOfB.filter((x) => !stateA.has(x));
   return {
@@ -1335,16 +1389,16 @@ export const ColoredLogger = {
     console.log(...args);
   },
   logRed: (str: string, ...args: unknown[]) => {
-    console.log(chalk.bgRed(str), ...args);
+    console.log(chalk.bgRed.black(str), ...args);
   },
   logGreen: (str: string, ...args: unknown[]) => {
-    console.log(chalk.bgGreen(str), ...args);
+    console.log(chalk.bgGreen.black(str), ...args);
   },
   logYellow: (str: string, ...args: unknown[]) => {
-    console.log(chalk.bgYellow(str), ...args);
+    console.log(chalk.bgYellow.black(str), ...args);
   },
   logBlue: (str: string, ...args: unknown[]) => {
-    console.log(chalk.bgBlue(str), ...args);
+    console.log(chalk.bgBlue.black(str), ...args);
   },
 };
 
@@ -1381,4 +1435,27 @@ function _stringToBoolean(value: string): boolean {
 
 export function isWindows(): boolean {
   return navigator.platform.includes("Win");
+}
+
+export function replaceOrAdd<T>(
+  elements: T[],
+  newElement: T,
+  predicate: (element: T) => boolean,
+): T[] {
+  /*
+   * Insert `newElement` into `elements`. `predicate` will
+   * be called for all existing elements. If it returns true
+   * for one, that element will be replaced with newElement.
+   * If the predicate always returns false, the newElement
+   * will be appended.
+   *
+   * Returns a new array (and doesn't modify the input).
+   */
+  const index = elements.findIndex(predicate);
+  if (index === -1) {
+    return elements.concat([newElement]);
+  }
+  const copy = elements.slice();
+  copy.splice(index, 1, newElement);
+  return copy;
 }

@@ -6,7 +6,7 @@ import Toast from "libs/toast";
 import type React from "react";
 import { useEffect, useState } from "react";
 import { MarkdownModal } from "viewer/view/components/markdown_modal";
-import type { ValidationResult } from "../left-border-tabs/modals/add_volume_layer_modal";
+import type { ValidationResult } from "../left_border_tabs/modals/add_volume_layer_modal";
 
 type Rule = {
   message?: string;
@@ -14,6 +14,7 @@ type Rule = {
   min?: number;
   validator?: (arg0: string) => ValidationResult;
 };
+
 export type EditableTextLabelProp = {
   value: string;
   onChange: (newValue: string) => any;
@@ -33,6 +34,7 @@ export type EditableTextLabelProp = {
   onRenameStart?: (() => void) | undefined;
   onRenameEnd?: (() => void) | undefined;
 };
+
 function EditableTextLabel(props: EditableTextLabelProp) {
   const {
     value: propValue,

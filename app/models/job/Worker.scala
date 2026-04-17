@@ -13,7 +13,6 @@ import com.typesafe.scalalogging.LazyLogging
 import models.job.JobCommand.JobCommand
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
-import slick.lifted.Rep
 import telemetry.SlackNotificationService
 import utils.sql.{SQLDAO, SqlClient}
 import utils.WkConf
@@ -30,16 +29,14 @@ case class Worker(_id: ObjectId,
                   maxParallelLowPriorityJobs: Int,
                   supportedJobCommands: Set[JobCommand],
                   lastHeartBeat: Instant = Instant.zero,
+                  lastReportedVersion: Option[String] = None,
                   created: Instant = Instant.now,
                   isDeleted: Boolean = false)
 
 class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Worker, WorkersRow, Workers](sqlClient) {
   protected val collection = Workers
-
-  protected def idColumn(x: Workers): Rep[String] = x._Id
-
-  protected def isDeletedColumn(x: Workers): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultWorkersRow
 
   protected def parse(r: WorkersRow): Fox[Worker] =
     for {
@@ -56,6 +53,7 @@ class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.maxparallellowpriorityjobs,
         supportedJobCommands.toSet,
         Instant.fromSql(r.lastheartbeat),
+        r.lastreportedversion,
         Instant.fromSql(r.created),
         r.isdeleted
       )
@@ -73,8 +71,14 @@ class WorkerDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def updateHeartBeat(_id: ObjectId): Unit = {
-    run(q"UPDATE webknossos.workers SET lastHeartBeat = NOW() WHERE _id = ${_id}".asUpdate)
+  def updateHeartBeat(workerId: ObjectId): Unit = {
+    run(q"UPDATE webknossos.workers SET lastHeartBeat = NOW() WHERE _id = $workerId".asUpdate)
+    // Note that this should not block the jobs polling operation, failures here are not critical
+    ()
+  }
+
+  def updateLastReportedVersion(workerId: ObjectId, reportedVersion: String): Unit = {
+    run(q"UPDATE webknossos.workers SET lastReportedVersion = $reportedVersion WHERE _id = $workerId".asUpdate)
     // Note that this should not block the jobs polling operation, failures here are not critical
     ()
   }
@@ -94,7 +98,8 @@ class WorkerService @Inject()(conf: WkConf) {
       "supportedJobCommands" -> worker.supportedJobCommands,
       "created" -> worker.created,
       "lastHeartBeat" -> worker.lastHeartBeat,
-      "lastHeartBeatIsRecent" -> lastHeartBeatIsRecent(worker)
+      "lastHeartBeatIsRecent" -> lastHeartBeatIsRecent(worker),
+      "lastReportedVersion" -> worker.lastReportedVersion
     )
 
 }

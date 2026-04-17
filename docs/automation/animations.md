@@ -9,7 +9,7 @@ A picture is worth a thousand words. In this spirit, you can use WEBKNOSSOS to c
 Creating an animation is easy:
 
 1. Open any dataset or annotation that you want to use for your animation.
-2. Optionally, load some [3D meshes](../meshes/index.md) for any segments that you wish to highlight.
+2. Optionally, load some [3D meshes](../meshes/index.md) for any segments that you wish to highlight. When working in an annotation, skeleton trees can also be included in the animation.
 3. For larger datasets, use the bounding box tool to create a bounding box around your area of interest. Smaller datasets can be used in their entirety.
 4. From the `Menu` dropdown in the navbar at the top of the screen, select "Create Animation".
 5. Configure the animation options in the modal that opens.
@@ -40,6 +40,7 @@ You can choose between two resolutions for your animation video:
 
 - **Include the currently selected 3D meshes:** If checked, the animation will include any meshes that are currently loaded in the 3D view.
 - **Include WEBKNOSSOS Watermark:** If checked, the WEBKNOSSOS logo will be displayed as a watermark on the animation video. Access to this option may depend on your WEBKNOSSOS plan.
+- **Include skeleton annotation:** If checked, the visible skeleton trees of the current annotation will be included in the animation. This option is only available when viewing an annotation that contains a skeleton layer (not in view-only mode).
 
 ### Layer & Bounding Box
 

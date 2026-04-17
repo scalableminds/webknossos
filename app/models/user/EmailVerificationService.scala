@@ -37,7 +37,7 @@ class EmailVerificationService @Inject()(conf: WkConf,
       _ <- emailVerificationKeyDAO.insertOne(evk)
       fullVerificationLink = s"${conf.Http.uri}/verifyEmail/$key"
       _ = logger.info(s"Sending email verification mail for user with email ${multiUser.email}")
-      _ = Mailer ! Send(defaultMails.emailVerificationMail(user, multiUser.email, fullVerificationLink))
+      _ = Mailer ! Send(defaultMails.emailVerificationMail(multiUser, fullVerificationLink))
     } yield ()
 
   def verify(key: String)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Unit] =

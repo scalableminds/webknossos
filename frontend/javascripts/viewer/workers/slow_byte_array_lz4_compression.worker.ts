@@ -3,7 +3,7 @@
  * allows to introduce an artificial delay for compression/decompression.
  */
 import { sleep } from "libs/utils";
-import { compress, decompress } from "lz4-wasm-nodejs";
+import { compress, decompress } from "lz4-wasm";
 
 let isSleepEnabled = false;
 

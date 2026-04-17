@@ -1,4 +1,4 @@
-import { idUserA } from "test/e2e-setup";
+import { idUserA } from "test/e2e_setup";
 import dummyUser from "test/fixtures/dummy_user";
 import type { TracingStats } from "viewer/model/accessors/annotation_accessor";
 import type { UpdateActionWithoutIsolationRequirement } from "viewer/model/sagas/volume/update_actions";
@@ -31,10 +31,4 @@ export function withoutUpdateTree(
   items: UpdateActionWithoutIsolationRequirement[],
 ): UpdateActionWithoutIsolationRequirement[] {
   return items.filter((item) => item.name !== "updateTree");
-}
-
-export function withoutUpdateSegment(
-  items: UpdateActionWithoutIsolationRequirement[],
-): UpdateActionWithoutIsolationRequirement[] {
-  return items.filter((item) => item.name !== "updateSegment");
 }

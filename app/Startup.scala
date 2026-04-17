@@ -97,6 +97,8 @@ class Startup @Inject()(actorSystem: ActorSystem,
     case _ => ()
   }
 
+  slackNotificationService.noticeStartup(webknossos.BuildInfo.version)
+
   private def ensurePostgresSchema(): Unit = {
     logger.info("Checking database schema...")
 

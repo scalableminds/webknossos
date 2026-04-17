@@ -7,8 +7,6 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.schema.Tables._
 import TokenType.TokenType
-import slick.jdbc.PostgresProfile.api._
-import slick.lifted.Rep
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
 
@@ -62,9 +60,7 @@ object Token {
 class TokenDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Token, TokensRow, Tokens](sqlClient) {
   protected val collection = Tokens
-
-  protected def idColumn(x: Tokens): Rep[String] = x._Id
-  protected def isDeletedColumn(x: Tokens): Rep[Boolean] = x.isdeleted
+  protected def resultConverter = GetResultTokensRow
 
   protected def parse(r: TokensRow): Fox[Token] =
     for {
@@ -85,20 +81,17 @@ class TokenDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   def findOneByValue(value: String): Fox[Token] =
     for {
-      rOpt <- run(Tokens.filter(r => notdel(r) && r.value === value).result.headOption)
-      r <- rOpt.toFox
-      parsed <- parse(r)
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE value = $value".as[TokensRow])
+      parsed <- parseFirst(r, "value")
     } yield parsed
 
   def findOneByLoginInfo(providerID: String, providerKey: String, tokenType: TokenType): Fox[Token] =
     for {
-      rOpt <- run(Tokens
-        .filter(r =>
-          notdel(r) && r.logininfoProviderid === providerID && r.logininfoProviderkey === providerKey && r.tokentype === tokenType.toString)
-        .result
-        .headOption)
-      r <- rOpt.toFox
-      parsed <- parse(r)
+      r <- run(q"""SELECT $columns from $existingCollectionName
+            WHERE loginInfo_providerID::TEXT = $providerID
+            AND loginInfo_providerKey = $providerKey
+            AND tokenType = $tokenType""".as[TokensRow])
+      parsed <- parseFirst(r, "loginInfo")
     } yield parsed
 
   def insertOne(t: Token): Fox[Unit] =
@@ -122,17 +115,15 @@ class TokenDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    WHERE value = $value""".asUpdate)
     } yield ()
 
-  def deleteOneByValue(value: String): Fox[Unit] = {
-    val query = for { row <- collection if notdel(row) && row.value === value } yield isDeletedColumn(row)
-    for { _ <- run(query.update(true)) } yield ()
-  }
+  def deleteOneByValue(value: String): Fox[Unit] =
+    for {
+      _ <- run(q"UPDATE $collectionName SET isDeleted = TRUE WHERE value = $value".asUpdate)
+    } yield ()
 
-  def deleteAllExpired(): Fox[Unit] = {
-    val query = for {
-      row <- collection if notdel(row) && row.expirationdatetime <= Instant.now.toSql
-    } yield isDeletedColumn(row)
-    for { _ <- run(query.update(true)) } yield ()
-  }
+  def deleteAllExpired(): Fox[Unit] =
+    for {
+      _ <- run(q"UPDATE $collectionName SET isDeleted = TRUE WHERE expirationDateTime <= ${Instant.now}".asUpdate)
+    } yield ()
 
   def deleteDataStoreTokensForMultiUser(multiUserId: ObjectId): Fox[Unit] =
     for {

@@ -6,7 +6,7 @@ import { TreeTypeEnum } from "viewer/constants";
 import EdgeCollection from "viewer/model/edge_collection";
 import { type Tree, TreeMap } from "viewer/model/types/tree_types";
 import type { SkeletonTracing } from "viewer/store";
-import { MISSING_GROUP_ID } from "viewer/view/right-border-tabs/trees_tab/tree_hierarchy_view_helpers";
+import { MISSING_GROUP_ID } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 
 export const colorLayer: APIColorLayer = {
   name: "color",

@@ -1,4 +1,5 @@
 import { DownloadOutlined, InboxOutlined, ReloadOutlined } from "@ant-design/icons";
+import AdminPage from "admin/admin_page";
 import { createTaskFromNML, createTasks, getTask, updateTask } from "admin/api/tasks";
 import {
   getActiveDatasetsOfMyOrganization,
@@ -11,7 +12,6 @@ import {
   Alert,
   App,
   Button,
-  Card,
   Col,
   Divider,
   Flex,
@@ -25,6 +25,7 @@ import {
   Spin,
   Tooltip,
   Typography,
+  theme,
   Upload,
   type UploadFile,
 } from "antd";
@@ -289,10 +290,11 @@ type FormValues = {
   neededExperience: NewTask["neededExperience"];
 };
 
-function TaskCreateFormView() {
+function TaskCreateFormView({ embedded = false }: { embedded?: boolean }) {
   const { taskId } = useParams();
   const navigate = useNavigate();
   const { modal } = App.useApp();
+  const { token } = theme.useToken();
   const [form] = Form.useForm<FormValues>();
 
   const [datasets, setDatasets] = useState<APIDataset[]>([]);
@@ -583,208 +585,222 @@ function TaskCreateFormView() {
   const isEditingMode = taskId != null;
   const titleLabel = isEditingMode ? `Update Task ${taskId || ""}` : "Create Task";
   const instancesLabel = isEditingMode ? "Remaining Instances" : "Task Instances";
-  return (
+
+  const content = (
     <div
       style={{
-        paddingTop: 20,
+        padding: token.paddingLG,
       }}
     >
       <Spin spinning={isUploading}>
-        <Card title={<h3>{titleLabel}</h3>}>
-          <Form
-            onFinish={onFinish}
-            layout="vertical"
-            form={form}
-            initialValues={{
-              editPosition: [0, 0, 0],
-              editRotation: [0, 0, 0],
-            }}
-          >
-            <Row gutter={8} align="bottom" wrap={false}>
-              <Col flex="auto">
-                <FormItem
-                  name="taskTypeId"
-                  label="Task Type"
-                  hasFeedback
-                  rules={[
-                    {
-                      required: true,
-                    },
-                  ]}
-                >
-                  <Select
-                    placeholder="Select a Task Type"
-                    showSearch={{ optionFilterProp: "label" }}
-                    style={fullWidth}
-                    disabled={isEditingMode}
-                    loading={isFetchingData}
-                    options={taskTypes.map((taskType: APITaskType) => ({
-                      value: taskType.id,
-                      label: taskType.summary,
-                    }))}
-                  />
-                </FormItem>
-              </Col>
-              <ReloadResourceButton
-                tooltip="Reload to show new Task Types"
-                onReload={async () => setTaskTypes(await getTaskTypes())}
-              />
-              <CreateResourceButton text="Create new Task Type" link="/taskTypes/create" />
-            </Row>
-
-            <Row gutter={8} align="bottom" wrap={false}>
-              <Col span={10}>
-                <FormItem
-                  name={["neededExperience", "domain"]}
-                  label="Experience Domain"
-                  hasFeedback
-                  rules={[
-                    {
-                      required: true,
-                    },
-                  ]}
-                >
-                  <SelectExperienceDomain
-                    disabled={isEditingMode}
-                    placeholder="Select an Experience Domain"
-                    notFoundContent={messages["task.domain_does_not_exist"]}
-                    width={100}
-                    allowCreation
-                  />
-                </FormItem>
-              </Col>
-              <Col flex="auto">
-                <FormItem
-                  name={["neededExperience", "value"]}
-                  label="Experience Value"
-                  hasFeedback
-                  rules={[
-                    {
-                      required: true,
-                    },
-                    {
-                      type: "number",
-                    },
-                  ]}
-                >
-                  <InputNumber style={fullWidth} disabled={isEditingMode} />
-                </FormItem>
-              </Col>
-              <CreateResourceButton text="Assign Experience" link="/users" />
-            </Row>
-
-            <FormItem
-              name="pendingInstances"
-              label={instancesLabel}
-              hasFeedback
-              rules={[
-                {
-                  required: true,
-                },
-                {
-                  type: "number",
-                },
-              ]}
-            >
-              <InputNumber style={fullWidth} min={0} />
-            </FormItem>
-
-            <Row gutter={8} align="bottom" wrap={false}>
-              <Col flex="auto">
-                <FormItem
-                  name="projectName"
-                  label="Project"
-                  hasFeedback
-                  rules={[
-                    {
-                      required: true,
-                    },
-                  ]}
-                >
-                  <Select
-                    showSearch={{ optionFilterProp: "label" }}
-                    placeholder="Select a Project"
-                    style={fullWidth}
-                    disabled={isEditingMode}
-                    loading={isFetchingData}
-                    options={projects.map((project: APIProject) => ({
-                      value: project.name,
-                      label: project.name,
-                    }))}
-                  />
-                </FormItem>
-              </Col>
-              <ReloadResourceButton
-                tooltip="Reload to show new Projects"
-                onReload={async () => setProjects(await getProjects())}
-              />
-              <CreateResourceButton text="Create new Project" link="/projects/create" />
-            </Row>
-
-            <Row gutter={8} align="bottom" wrap={false}>
-              <Col flex="auto">
-                <FormItem name="scriptId" label="Script" hasFeedback>
-                  <Select
-                    showSearch={{ optionFilterProp: "label" }}
-                    placeholder="Select a Script"
-                    style={fullWidth}
-                    disabled={isEditingMode}
-                    loading={isFetchingData}
-                    options={scripts.map((script: APIScript) => ({
-                      value: script.id,
-                      label: script.name,
-                    }))}
-                  />
-                </FormItem>
-              </Col>
-              <ReloadResourceButton
-                tooltip="Reload to show new Scripts"
-                onReload={async () => setScripts(await getScripts())}
-              />
-              <CreateResourceButton text="Create new Script" link="/scripts/create" />
-            </Row>
-
-            <FormItem
-              name="boundingBox"
-              label="Bounding Box"
-              extra="topLeft.x, topLeft.y, topLeft.z, width, height, depth"
-              hasFeedback
-            >
-              <Vector6Input disabled={isEditingMode} />
-            </FormItem>
-
-            <FormItem label="Task Specification" hasFeedback>
-              <RadioGroup
-                value={specificationType}
-                onChange={(evt: RadioChangeEvent) =>
-                  setSpecificationType(
-                    coalesce(SpecificationEnum, evt.target.value) || specificationType,
-                  )
-                }
+        <Form
+          onFinish={onFinish}
+          layout="vertical"
+          form={form}
+          initialValues={{
+            editPosition: [0, 0, 0],
+            editRotation: [0, 0, 0],
+          }}
+        >
+          <Row gutter={8} align="bottom" wrap={false}>
+            <Col flex="auto">
+              <FormItem
+                name="taskTypeId"
+                label="Task Type"
+                hasFeedback
+                rules={[
+                  {
+                    required: true,
+                  },
+                ]}
               >
-                <Radio value={SpecificationEnum.Manual} disabled={isEditingMode}>
-                  Manual Specification
-                </Radio>
-                <Radio value={SpecificationEnum.Nml} disabled={isEditingMode}>
-                  Upload NML File
-                </Radio>
-                <Radio value={SpecificationEnum.BaseAnnotation} disabled={isEditingMode}>
-                  Use Annotation ID as Base
-                </Radio>
-              </RadioGroup>
-            </FormItem>
+                <Select
+                  placeholder="Select a Task Type"
+                  showSearch={{ optionFilterProp: "label" }}
+                  style={fullWidth}
+                  disabled={isEditingMode}
+                  loading={isFetchingData}
+                  options={taskTypes.map((taskType: APITaskType) => ({
+                    value: taskType.id,
+                    label: taskType.summary,
+                  }))}
+                />
+              </FormItem>
+            </Col>
+            <ReloadResourceButton
+              tooltip="Reload to show new Task Types"
+              onReload={async () => setTaskTypes(await getTaskTypes())}
+            />
+            <CreateResourceButton text="Create new Task Type" link="/taskTypes/create" />
+          </Row>
 
-            {renderSpecification()}
+          <Row gutter={8} align="bottom" wrap={false}>
+            <Col span={10}>
+              <FormItem
+                name={["neededExperience", "domain"]}
+                label="Experience Domain"
+                hasFeedback
+                rules={[
+                  {
+                    required: true,
+                  },
+                ]}
+              >
+                <SelectExperienceDomain
+                  disabled={isEditingMode}
+                  placeholder="Select an Experience Domain"
+                  notFoundContent={messages["task.domain_does_not_exist"]}
+                  width={100}
+                  allowCreation
+                />
+              </FormItem>
+            </Col>
+            <Col flex="auto">
+              <FormItem
+                name={["neededExperience", "value"]}
+                label="Experience Value"
+                hasFeedback
+                rules={[
+                  {
+                    required: true,
+                  },
+                  {
+                    type: "number",
+                  },
+                ]}
+              >
+                <InputNumber style={fullWidth} disabled={isEditingMode} />
+              </FormItem>
+            </Col>
+            <CreateResourceButton text="Assign Experience" link="/users" />
+          </Row>
 
-            <FormItem>
-              <Button type="primary" htmlType="submit">
-                {titleLabel}
-              </Button>
-            </FormItem>
-          </Form>
-        </Card>
+          <FormItem
+            name="pendingInstances"
+            label={instancesLabel}
+            hasFeedback
+            rules={[
+              {
+                required: true,
+              },
+              {
+                type: "number",
+              },
+            ]}
+          >
+            <InputNumber style={fullWidth} min={0} />
+          </FormItem>
+
+          <Row gutter={8} align="bottom" wrap={false}>
+            <Col flex="auto">
+              <FormItem
+                name="projectName"
+                label="Project"
+                hasFeedback
+                rules={[
+                  {
+                    required: true,
+                  },
+                ]}
+              >
+                <Select
+                  showSearch={{ optionFilterProp: "label" }}
+                  placeholder="Select a Project"
+                  style={fullWidth}
+                  disabled={isEditingMode}
+                  loading={isFetchingData}
+                  options={projects.map((project: APIProject) => ({
+                    value: project.name,
+                    label: project.name,
+                  }))}
+                />
+              </FormItem>
+            </Col>
+            <ReloadResourceButton
+              tooltip="Reload to show new Projects"
+              onReload={async () => setProjects(await getProjects())}
+            />
+            <CreateResourceButton text="Create new Project" link="/projects/create" />
+          </Row>
+
+          <Row gutter={8} align="bottom" wrap={false}>
+            <Col flex="auto">
+              <FormItem name="scriptId" label="Script" hasFeedback>
+                <Select
+                  showSearch={{ optionFilterProp: "label" }}
+                  placeholder="Select a Script"
+                  style={fullWidth}
+                  disabled={isEditingMode}
+                  loading={isFetchingData}
+                  options={scripts.map((script: APIScript) => ({
+                    value: script.id,
+                    label: script.name,
+                  }))}
+                />
+              </FormItem>
+            </Col>
+            <ReloadResourceButton
+              tooltip="Reload to show new Scripts"
+              onReload={async () => setScripts(await getScripts())}
+            />
+            <CreateResourceButton text="Create new Script" link="/scripts/create" />
+          </Row>
+
+          <FormItem
+            name="boundingBox"
+            label="Bounding Box"
+            extra="topLeft.x, topLeft.y, topLeft.z, width, height, depth"
+            hasFeedback
+          >
+            <Vector6Input disabled={isEditingMode} />
+          </FormItem>
+
+          <FormItem label="Task Specification" hasFeedback>
+            <RadioGroup
+              value={specificationType}
+              onChange={(evt: RadioChangeEvent) =>
+                setSpecificationType(
+                  coalesce(SpecificationEnum, evt.target.value) || specificationType,
+                )
+              }
+            >
+              <Radio value={SpecificationEnum.Manual} disabled={isEditingMode}>
+                Manual Specification
+              </Radio>
+              <Radio value={SpecificationEnum.Nml} disabled={isEditingMode}>
+                Upload NML File
+              </Radio>
+              <Radio value={SpecificationEnum.BaseAnnotation} disabled={isEditingMode}>
+                Use Annotation ID as Base
+              </Radio>
+            </RadioGroup>
+          </FormItem>
+
+          {renderSpecification()}
+
+          <FormItem>
+            <Button type="primary" htmlType="submit">
+              {titleLabel}
+            </Button>
+          </FormItem>
+        </Form>
       </Spin>
     </div>
+  );
+
+  if (embedded) {
+    return content;
+  }
+
+  return (
+    <AdminPage
+      title={titleLabel}
+      descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/tasks.html"
+      description="Create or update task metadata, assignment settings, and task specification details."
+      contentMaxWidth={960}
+    >
+      {content}
+    </AdminPage>
   );
 }
 

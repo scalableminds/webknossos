@@ -1,7 +1,8 @@
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import AdminPage from "admin/admin_page";
 import { deleteScript as deleteScriptAPI, getScripts } from "admin/rest_api";
-import { App, Button, Flex, Input, Space, Spin, Table } from "antd";
+import { App, Button, Input, Space, Spin, Table } from "antd";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
@@ -87,25 +88,19 @@ function ScriptListView() {
   }
 
   return (
-    <div className="container">
-      <Flex justify="space-between" align="flex-start">
-        <h3>Scripts</h3>
-        <Space>
-          <Link to="/scripts/create">
-            <Button icon={<PlusOutlined />} type="primary">
-              Add Script
-            </Button>
-          </Link>
-          <Search
-            style={{
-              width: 200,
-            }}
-            onChange={handleSearch}
-            value={searchQuery}
-          />
-        </Space>
-      </Flex>
-
+    <AdminPage
+      title="Scripts"
+      descriptionURI="https://docs.webknossos.org/webknossos/tasks_projects/scripts.html"
+      description="Maintain reusable frontend scripts for automated task workflows."
+      actions={
+        <Link to="/scripts/create">
+          <Button icon={<PlusOutlined />} type="primary">
+            Add Script
+          </Button>
+        </Link>
+      }
+      search={<Search allowClear onChange={handleSearch} value={searchQuery} />}
+    >
       <Spin spinning={isLoading} size="large">
         <Table
           dataSource={filterWithSearchQueryAND(
@@ -116,9 +111,6 @@ function ScriptListView() {
           rowKey="id"
           pagination={{
             defaultPageSize: 50,
-          }}
-          style={{
-            marginTop: 30,
           }}
           locale={{
             emptyText: renderPlaceholder(),
@@ -168,22 +160,20 @@ function ScriptListView() {
             fixed="right"
             width={180}
             render={(__, script: APIScript) => (
-              <span>
+              <Space orientation="vertical" size={0}>
                 <Link to={`/scripts/${script.id}/edit`}>
                   <EditOutlined className="icon-margin-right" />
                   Edit
                 </Link>
-                <br />
-                <LinkButton onClick={partial(deleteScript, script)}>
-                  <DeleteOutlined className="icon-margin-right" />
+                <LinkButton onClick={partial(deleteScript, script)} icon={<DeleteOutlined />}>
                   Delete
                 </LinkButton>
-              </span>
+              </Space>
             )}
           />
         </Table>
       </Spin>
-    </div>
+    </AdminPage>
   );
 }
 

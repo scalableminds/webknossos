@@ -30,15 +30,18 @@ class End2EndSpec(arguments: Arguments) extends Specification with GuiceFakeAppl
 
     "pass the e2e tests" in new WithServer(app = application, port = testPort) {
 
+      runFrontendBuild()
       ensureTestDataset()
 
-      val resp: WSResponse = Await.result(ws.url(s"http://localhost:$testPort").get(), 2 seconds)
+      val resp: WSResponse = Await.result(ws.url(s"http://localhost:$testPort/api/health").get(), 2 seconds)
       resp.status === 200
 
       runWebdriverTests === 0
     }
 
   }
+
+  private def runFrontendBuild() = "yarn build".run().exitValue()
 
   private def runWebdriverTests = "yarn test-e2e".run().exitValue()
 

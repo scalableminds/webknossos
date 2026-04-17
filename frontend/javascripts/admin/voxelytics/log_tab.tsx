@@ -1,7 +1,7 @@
 import { SyncOutlined } from "@ant-design/icons";
 import { getVoxelyticsLogs } from "admin/rest_api";
 import Ansi from "ansi-to-react";
-import { Button, message, Select, Switch } from "antd";
+import { Button, Flex, message, Select, Switch } from "antd";
 import chalk from "chalk";
 import classnames from "classnames";
 import { usePolling } from "libs/react_hooks";
@@ -149,8 +149,8 @@ export default function LogTab({
 
   return (
     <div className={classnames("log-tab", { "log-tab-fullscreen": isFullscreen })}>
-      <div className="log-tab-header">
-        <span style={{ marginRight: 16 }}>
+      <Flex gap="small" justify="end" align="center" className="log-tab-header">
+        <span>
           <Switch
             checked={showTimestamps}
             size="small"
@@ -161,7 +161,7 @@ export default function LogTab({
           Show Timestamps
         </span>
 
-        <span style={{ marginRight: 16 }}>
+        <span>
           <Switch
             checked={isFullscreen}
             size="small"
@@ -171,8 +171,8 @@ export default function LogTab({
           />{" "}
           Fullscreen
         </span>
-        <Button onClick={() => loadLog()}>
-          <SyncOutlined spin={isLoading} /> Refresh
+        <Button onClick={() => loadLog()} icon={<SyncOutlined spin={isLoading} />}>
+          Refresh
         </Button>
         <Button onClick={downloadFullLog}>Download</Button>
         <Select onChange={(value) => setLevel(value)} value={level} style={{ marginLeft: -1 }}>
@@ -182,7 +182,7 @@ export default function LogTab({
             </Select.Option>
           ))}
         </Select>
-      </div>
+      </Flex>
       {logText.length >= LOG_LINE_LIMIT && (
         <p className="log-tab-warning">
           Only the {LOG_LINE_LIMIT} latest log lines are shown.{" "}

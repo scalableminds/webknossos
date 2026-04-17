@@ -3,11 +3,12 @@ package backend
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.MetadataEntry.MetadataEntryProto
+import com.scalableminds.webknossos.datastore.helpers.TreeAgglomerateInfo
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.updating._
-import org.scalatestplus.play._
+import org.scalatest.wordspec.AsyncWordSpec
 
-class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
+class SkeletonUpdateActionsUnitTestSuite extends AsyncWordSpec {
 
   private def applyUpdateAction(action: SkeletonUpdateAction): SkeletonTracing =
     action.applyOn(Dummies.skeletonTracing)
@@ -31,7 +32,12 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
         groupId = None,
         isVisible = Option(true),
         edgesAreVisible = Option(true),
-        actionTracingId = Dummies.tracingId
+        actionTracingId = Dummies.tracingId,
+        `type` = Some(TreeType.AGGLOMERATE),
+        metadata = Some(
+          List(MetadataEntry("myKey", numberValue = Some(5.0)),
+               MetadataEntry("anotherKey", stringListValue = Some(Seq("hello", "there"))))),
+        agglomerateInfo = Some(TreeAgglomerateInfo(1, Some(Dummies.tracingId), None))
       )
       val result = applyUpdateAction(createTreeAction)
 
@@ -43,6 +49,9 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       assert(tree.name === createTreeAction.name)
       assert(tree.isVisible == createTreeAction.isVisible)
       assert(tree.edgesAreVisible == createTreeAction.edgesAreVisible)
+      assert(tree.`type` == createTreeAction.`type`.map(TreeType.toProto))
+      assert(tree.metadata == MetadataEntry.toProtoMultiple(createTreeAction.metadata))
+      assert(tree.agglomerateInfo == createTreeAction.agglomerateInfo.map(_.toProto))
     }
   }
 
@@ -52,10 +61,7 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       val result = applyUpdateAction(deleteTreeAction)
 
       assert(result.trees.length == Dummies.skeletonTracing.trees.length - 1)
-      result.trees.find(_.treeId == deleteTreeAction.id) match {
-        case Some(_) => throw new Exception
-        case None    =>
-      }
+      assert(!result.trees.exists(_.treeId == deleteTreeAction.id))
     }
   }
 
@@ -69,10 +75,12 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
         branchPoints = List(UpdateActionBranchPoint(0, Dummies.timestamp)),
         comments = List[UpdateActionComment](),
         groupId = None,
+        `type` = Some(TreeType.AGGLOMERATE),
         metadata = Some(
           List(MetadataEntry("myKey", numberValue = Some(5.0)),
                MetadataEntry("anotherKey", stringListValue = Some(Seq("hello", "there"))))),
-        actionTracingId = Dummies.tracingId
+        actionTracingId = Dummies.tracingId,
+        agglomerateInfo = Some(TreeAgglomerateInfo(1, Some(Dummies.tracingId), None))
       )
       val result = applyUpdateAction(updateTreeAction)
 
@@ -82,9 +90,9 @@ class SkeletonUpdateActionsUnitTestSuite extends PlaySpec {
       assert(tree.createdTimestamp == Dummies.timestamp)
       assert(tree.comments == updateTreeAction.comments)
       assert(tree.name == updateTreeAction.name)
-      assert(
-        tree.metadata == List(MetadataEntryProto("myKey", numberValue = Some(5.0)),
-                              MetadataEntryProto("anotherKey", stringListValue = Seq("hello", "there"))))
+      assert(tree.`type` == updateTreeAction.`type`.map(TreeType.toProto))
+      assert(tree.metadata == MetadataEntry.toProtoMultiple(updateTreeAction.metadata))
+      assert(tree.agglomerateInfo == updateTreeAction.agglomerateInfo.map(_.toProto))
     }
   }
 

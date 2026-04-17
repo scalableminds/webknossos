@@ -95,7 +95,6 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'storePropertyUnsubscribers' has no initi... Remove this comment to see the full error message
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
-  unsubscribeKeyboardListener: any = () => {};
 
   componentDidMount() {
     this.input = {
@@ -107,7 +106,6 @@ class ArbitraryController extends React.PureComponent<Props> {
 
   componentWillUnmount() {
     this.stop();
-    this.unsubscribeKeyboardListener();
   }
 
   initMouse(): void {
@@ -363,10 +361,12 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   initKeyboard(): void {
-    this.unsubscribeKeyboardListener = listenToStoreProperty(
-      (state) => state.keyboardShortcutsConfig,
-      (keyboardShortcutsConfig) => this.reloadKeyboardShortcuts(keyboardShortcutsConfig),
-      true,
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (state) => state.keyboardShortcutsConfig,
+        (keyboardShortcutsConfig) => this.reloadKeyboardShortcuts(keyboardShortcutsConfig),
+        true,
+      ),
     );
   }
 

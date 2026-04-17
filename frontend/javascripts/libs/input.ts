@@ -175,7 +175,7 @@ export class InputKeyboardNoLoop {
     }
 
     const hasLegacyExtendedKeyboardShortcut = Object.keys(initialBindings).some((keyCombo) =>
-      keyCombo.includes("control + k"),
+      keyCombo.includes("Control + k"),
     );
     if (hasLegacyExtendedKeyboardShortcut) {
       document.addEventListener("keydown", this.preventBrowserSearchbarShortcut);

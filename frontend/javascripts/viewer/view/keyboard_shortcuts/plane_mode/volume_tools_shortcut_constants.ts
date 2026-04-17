@@ -67,14 +67,14 @@ export const PlaneVolumeToolLoopDelayedConfigKeyboardShortcutMetaInfo: KeyboardS
   {
     [PlaneVolumeToolLoopDelayedConfigKeyboardShortcuts.DECREASE_BRUSH_SIZE]: {
       description: "Decrease brush size",
-      domain: KeyboardShortcutDomain.PLANE_CONFIGURATIONS,
+      domain: KeyboardShortcutDomain.PLANE_VOLUME_TOOL,
       looped: true,
-      collisionEntityName: KeyboardShortcutCollisionEntityName.PLANE_MODE,
+      collisionEntityName: KeyboardShortcutCollisionEntityName.PLANE_VOLUME_TOOL,
     },
     [PlaneVolumeToolLoopDelayedConfigKeyboardShortcuts.INCREASE_BRUSH_SIZE]: {
       description: "Increase brush size",
-      domain: KeyboardShortcutDomain.PLANE_CONFIGURATIONS,
+      domain: KeyboardShortcutDomain.PLANE_VOLUME_TOOL,
       looped: true,
-      collisionEntityName: KeyboardShortcutCollisionEntityName.PLANE_MODE,
+      collisionEntityName: KeyboardShortcutCollisionEntityName.PLANE_VOLUME_TOOL,
     },
   };

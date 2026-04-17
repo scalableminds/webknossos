@@ -358,7 +358,7 @@ class PlaneController extends PureComponent<Props> {
 
   getNoLoopHandlerMap(): KeyboardShortcutNoLoopedHandlerMap<PlaneControllerNoLoopGeneralKeyboardShortcuts> {
     return {
-      [PlaneControllerNoLoopGeneralKeyboardShortcuts.DOWNLOAD_SCREENSHOT]: {
+      [PlaneControllerNoLoopGeneralKeyboardShortcuts.DOWNLOAD_SCREENSHOT_PLANE]: {
         onPressed: () => downloadScreenshot(),
       },
       [PlaneControllerNoLoopGeneralKeyboardShortcuts.CYCLE_TOOLS]: {

@@ -139,14 +139,14 @@ export const PlaneLoopDelayedNavigationKeyboardShortcutMetaInfo: KeyboardShortcu
   })();
 
 export enum PlaneControllerNoLoopGeneralKeyboardShortcuts {
-  DOWNLOAD_SCREENSHOT = "DOWNLOAD_SCREENSHOT",
+  DOWNLOAD_SCREENSHOT_PLANE = "DOWNLOAD_SCREENSHOT_PLANE",
   CYCLE_TOOLS = "CYCLE_TOOLS",
   CYCLE_TOOLS_BACKWARDS = "CYCLE_TOOLS_BACKWARDS",
 }
 
 export const DEFAULT_PLANE_NO_LOOPED_GENERAL_KEYBOARD_SHORTCUTS: KeyboardShortcutsMap<PlaneControllerNoLoopGeneralKeyboardShortcuts> =
   {
-    [PlaneControllerNoLoopGeneralKeyboardShortcuts.DOWNLOAD_SCREENSHOT]: [[["q"]]],
+    [PlaneControllerNoLoopGeneralKeyboardShortcuts.DOWNLOAD_SCREENSHOT_PLANE]: [[["q"]]],
     [PlaneControllerNoLoopGeneralKeyboardShortcuts.CYCLE_TOOLS]: [[["w"]]],
     [PlaneControllerNoLoopGeneralKeyboardShortcuts.CYCLE_TOOLS_BACKWARDS]: [[["Shift", "w"]]],
   } as const;
@@ -154,7 +154,7 @@ export const DEFAULT_PLANE_NO_LOOPED_GENERAL_KEYBOARD_SHORTCUTS: KeyboardShortcu
 export const PlaneGeneralKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<PlaneControllerNoLoopGeneralKeyboardShortcuts> =
   (() => {
     const withDescription: Record<PlaneControllerNoLoopGeneralKeyboardShortcuts, string> = {
-      [PlaneControllerNoLoopGeneralKeyboardShortcuts.DOWNLOAD_SCREENSHOT]:
+      [PlaneControllerNoLoopGeneralKeyboardShortcuts.DOWNLOAD_SCREENSHOT_PLANE]:
         "Download Screenshot(s) of Viewport(s)",
       [PlaneControllerNoLoopGeneralKeyboardShortcuts.CYCLE_TOOLS]:
         "Cycle Through Tools (Move / Skeleton / Brush/ ...)",

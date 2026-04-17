@@ -179,12 +179,6 @@ class CameraController extends PureComponent<Props> {
       const oldWidth = tdCameraData.right - tdCameraData.left;
       const oldHeight = tdCameraData.top - tdCameraData.bottom;
       if (oldHeight === 0) {
-        Store.dispatch(
-          setTDCameraWithoutTimeTrackingAction({
-            left: tdCameraData.left,
-            right: tdCameraData.right,
-          }),
-        );
         return;
       }
       const oldAspectRatio = oldWidth / oldHeight;

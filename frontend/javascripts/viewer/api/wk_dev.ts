@@ -267,6 +267,15 @@ export default class WkDev {
     const areQueuesEmpty = () => Model.getAllLayers().every((layer) => layer.pullQueue.isEmpty());
     return new Promise((resolve, reject) => {
       let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+      let timeoutTimer: ReturnType<typeof setTimeout> | null = null;
+
+      if (timeout != null) {
+        timeoutTimer = setTimeout(() => {
+          if (debounceTimer != null) clearTimeout(debounceTimer);
+          unsubscribe();
+          reject(new Error("Waiting for completed data loading timed out."));
+        }, timeout);
+      }
 
       const checkAndSettle = () => {
         if (!areQueuesEmpty()) {
@@ -278,19 +287,13 @@ export default class WkDev {
           // Re-check whether new requests have started during the debounce window.
           // If so, a new pullqueue:empty event will arrive, so we don't need to
           // do anything else here.
-          if (!areQueuesEmpty()) {
+          if (areQueuesEmpty()) {
             unsubscribe();
+            if (timeoutTimer != null) clearTimeout(timeoutTimer);
             resolve();
           }
         }, debounceMs);
       };
-
-      if (timeout != null) {
-        setTimeout(() => {
-          unsubscribe();
-          reject(new Error("Waiting for completed data loading timed out."));
-        }, timeout);
-      }
 
       const unsubscribe = app.vent.on("pullqueue:empty", checkAndSettle);
       // Check immediately in case all queues are already empty at call time.

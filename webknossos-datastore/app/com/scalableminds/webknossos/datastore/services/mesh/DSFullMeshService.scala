@@ -28,6 +28,7 @@ case class FullMeshRequest(
     mappingName: Option[String],
     mappingType: Option[String], // json, agglomerate, editableMapping
     editableMappingTracingId: Option[String],
+    annotationVersion: Option[Long],
     mag: Option[Vec3Int], // required for ad-hoc meshing
     seedPosition: Option[Vec3Int], // required for ad-hoc meshing
     additionalCoordinates: Option[Seq[AdditionalCoordinate]]
@@ -159,6 +160,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
         segmentationLayer,
         fullMeshRequest.mappingName,
         fullMeshRequest.editableMappingTracingId,
+        fullMeshRequest.annotationVersion,
         fullMeshRequest.segmentId,
         mappingNameForMeshFile = None,
         omitMissing = false
@@ -192,6 +194,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
           fullMeshRequest.mappingName,
           fullMeshRequest.mappingType,
           fullMeshRequest.additionalCoordinates,
+          fullMeshRequest.annotationVersion,
           findNeighbors = false,
         )
         adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
@@ -199,14 +202,13 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       allVertices = vertexChunksWithNeighbors.map(_._1)
     } yield allVertices
 
-  private def getAllAdHocChunksWithNeighborLogic(datasetId: ObjectId,
-                                                 dataSource: UsableDataSource,
-                                                 segmentationLayer: SegmentationLayer,
-                                                 fullMeshRequest: FullMeshRequest,
-                                                 topLeft: VoxelPosition,
-                                                 chunkSize: Vec3Int)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[List[Array[Float]]] = {
+  private def getAllAdHocChunksWithNeighborLogic(
+      datasetId: ObjectId,
+      dataSource: UsableDataSource,
+      segmentationLayer: SegmentationLayer,
+      fullMeshRequest: FullMeshRequest,
+      topLeft: VoxelPosition,
+      chunkSize: Vec3Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] = {
     // Iterative parallel BFS. Each wave dispatches all frontier positions concurrently
     // (in actorPoolSize batches) rather than serially one at a time.
     // visited is marked before dispatch so parallel wave members don't queue the same position.
@@ -216,30 +218,35 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       if (frontier.isEmpty) Fox.successful(acc)
       else {
         visited ++= frontier
-        Fox.serialCombined(frontier.grouped(config.Datastore.AdHocMesh.actorPoolSize).toList) { batch =>
-          Fox.combined(batch.map { position =>
-            val adHocMeshRequest = AdHocMeshRequest(
-              Some(datasetId),
-              Some(dataSource.id),
-              segmentationLayer,
-              Cuboid(position, chunkSize.x + 1, chunkSize.y + 1, chunkSize.z + 1),
-              fullMeshRequest.segmentId,
-              dataSource.scale.factor,
-              tc,
-              fullMeshRequest.mappingName,
-              fullMeshRequest.mappingType,
-              fullMeshRequest.additionalCoordinates
-            )
-            adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest).map { case (vertices, neighbors) =>
-              (vertices, generateNextTopLeftsFromNeighbors(position, neighbors, chunkSize, visited))
-            }
-          })
-        }.map(_.flatten).flatMap { results =>
-          val newVertices = results.map(_._1)
-          // Two wave members may share a border and independently report the same neighbor position
-          val nextFrontier = results.flatMap(_._2).distinct
-          processFrontier(nextFrontier, newVertices ::: acc)
-        }
+        Fox
+          .serialCombined(frontier.grouped(config.Datastore.AdHocMesh.actorPoolSize).toList) { batch =>
+            Fox.combined(batch.map { position =>
+              val adHocMeshRequest = AdHocMeshRequest(
+                Some(datasetId),
+                Some(dataSource.id),
+                segmentationLayer,
+                Cuboid(position, chunkSize.x + 1, chunkSize.y + 1, chunkSize.z + 1),
+                fullMeshRequest.segmentId,
+                dataSource.scale.factor,
+                tc,
+                fullMeshRequest.mappingName,
+                fullMeshRequest.mappingType,
+                fullMeshRequest.additionalCoordinates,
+                fullMeshRequest.annotationVersion
+              )
+              adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest).map {
+                case (vertices, neighbors) =>
+                  (vertices, generateNextTopLeftsFromNeighbors(position, neighbors, chunkSize, visited))
+              }
+            })
+          }
+          .map(_.flatten)
+          .flatMap { results =>
+            val newVertices = results.map(_._1)
+            // Two wave members may share a border and independently report the same neighbor position
+            val nextFrontier = results.flatMap(_._2).distinct
+            processFrontier(nextFrontier, newVertices ::: acc)
+          }
       }
 
     processFrontier(List(topLeft), Nil)
@@ -261,6 +268,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
         dataLayer,
         fullMeshRequest.mappingName,
         fullMeshRequest.editableMappingTracingId,
+        fullMeshRequest.annotationVersion,
         fullMeshRequest.segmentId,
         mappingNameForMeshFile,
         omitMissing = false

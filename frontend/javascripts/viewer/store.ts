@@ -49,7 +49,7 @@ import type {
 } from "viewer/constants";
 import defaultState from "viewer/default_state";
 import type { TracingStats } from "viewer/model/accessors/annotation_accessor";
-import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import type { AnnotationTool, AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import actionLoggerMiddleware from "viewer/model/helpers/action_logger_middleware";
 import overwriteActionMiddleware from "viewer/model/helpers/overwrite_action_middleware";
@@ -375,6 +375,10 @@ export type UserConfiguration = {
   readonly renderWatermark: boolean;
   readonly antialiasRendering: boolean;
   readonly activeToolkit: Toolkit;
+  readonly timestampsForTools: Record<AnnotationToolId, number>;
+  readonly erasePreference: "ERASE_BRUSH" | "ERASE_TRACE";
+  readonly writePreference: "BRUSH" | "TRACE";
+  readonly measurementPreference: "LINE_MEASUREMENT" | "AREA_MEASUREMENT";
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &
@@ -475,6 +479,23 @@ export type RebaseRelevantAnnotationState = {
   readonly volumes: Array<VolumeTracing>;
   readonly isRebasingOrForwarding: boolean;
 };
+
+// Additionally, the proofreading sagas need knowledge of the mapping info last stored in the backend,
+// before applying their own mapping changes. This info is e.g. needed to properly auto update the agglomerate skeletons
+// as part of the post processing of a proofreading interaction.
+// This info is also stored in ProofreadingPostProcessingInfo.
+
+export type ProofreadingActionMappingInfo = {
+  agglomerateId: number;
+  unmappedId: number;
+  position?: Vector3;
+};
+
+export type ProofreadingPostProcessingInfo = {
+  readonly sourceInfo: Readonly<ProofreadingActionMappingInfo>;
+  readonly targetInfo: Readonly<ProofreadingActionMappingInfo> | null;
+  readonly tracingId: string;
+};
 export type SaveState = {
   readonly isBusy: boolean;
   readonly queue: Array<SaveQueueEntry>;
@@ -482,6 +503,7 @@ export type SaveState = {
   readonly progressInfo: ProgressInfo;
   readonly mutexState: AnnotationMutexInformation;
   readonly rebaseRelevantServerAnnotationState: RebaseRelevantAnnotationState;
+  readonly proofreadingPostProcessingInfo: ProofreadingPostProcessingInfo | undefined | null;
 };
 export type Flycam = {
   readonly zoomStep: number;
@@ -608,10 +630,13 @@ type ConnectomeData = {
   readonly skeleton: SkeletonTracing | null | undefined;
 };
 export type MinCutPartitions = { 1: number[]; 2: number[]; agglomerateId: number | null };
+export type LocalMeshesInfo =
+  | Record<string, Record<number, MeshInformation> | undefined>
+  | undefined;
 export type LocalSegmentationData = {
   // For meshes, the string represents additional coordinates, number is the segment ID.
   // The undefined types were added to enforce null checks when using this structure.
-  readonly meshes: Record<string, Record<number, MeshInformation> | undefined> | undefined;
+  readonly meshes: LocalMeshesInfo;
   readonly availableMeshFiles: Array<APIMeshFileInfo> | null | undefined;
   readonly currentMeshFile: APIMeshFileInfo | null | undefined;
   // Note that for a volume tracing, this information should be stored

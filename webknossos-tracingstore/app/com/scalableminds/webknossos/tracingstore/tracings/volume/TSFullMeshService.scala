@@ -37,11 +37,11 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     with FoxImplicits
     with LazyLogging {
 
-  def loadFor(annotationId: ObjectId, tracingId: String, fullMeshRequest: FullMeshRequest)(
+  def loadFor(annotationId: ObjectId, tracingId: String, fullMeshRequest: FullMeshRequest, version: Option[Long])(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Array[Byte]] =
     for {
-      tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
+      tracing <- annotationService.findVolume(annotationId, tracingId, version) ?~> "tracing.notFound"
       data <- if (fullMeshRequest.meshFileName.isDefined)
         loadFullMeshFromMeshFile(annotationId, tracingId, tracing, fullMeshRequest)
       else loadFullMeshFromAdHoc(annotationId, tracingId, tracing, fullMeshRequest)
@@ -56,9 +56,12 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       remoteFallbackLayer <- remoteFallbackLayerForVolumeTracing(tracing, annotationId)
       baseMappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
       fullMeshRequestAdapted = if (tracing.getHasEditableMapping)
-        fullMeshRequest.copy(mappingName = baseMappingName,
-                             editableMappingTracingId = Some(tracingId),
-                             mappingType = Some("HDF5"))
+        fullMeshRequest.copy(
+          mappingName = baseMappingName,
+          editableMappingTracingId = Some(tracingId),
+          annotationVersion = fullMeshRequest.annotationVersion.orElse(Some(tracing.version)),
+          mappingType = Some("HDF5")
+        )
       else fullMeshRequest
       array <- remoteDatastoreClient.loadFullMeshStl(remoteFallbackLayer, fullMeshRequestAdapted)
     } yield array
@@ -109,6 +112,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
         mag,
         mappingName,
         volumeTracingService.editableMappingTracingId(tracing, tracingId),
+        tracing.version,
         fullMeshRequest.additionalCoordinates
       )
       bucketPositions = bucketPositionsRaw.toSeq
@@ -127,6 +131,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
             fullMeshRequest.mappingName,
             fullMeshRequest.mappingType,
             fullMeshRequest.additionalCoordinates,
+            fullMeshRequest.annotationVersion,
             findNeighbors = false
           )
           loadMeshChunkFromAdHoc(annotationId, tracingId, tracing, adHocMeshRequest)
@@ -134,43 +139,47 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       allVertices = vertexChunksWithNeighbors.map(_._1)
     } yield allVertices
 
-  private def getAllAdHocChunksWithNeighborLogic(annotationId: ObjectId,
-                                                 tracingId: String,
-                                                 tracing: VolumeTracing,
-                                                 mag: Vec3Int,
-                                                 voxelSize: VoxelSize,
-                                                 fullMeshRequest: FullMeshRequest,
-                                                 topLeftOpt: Option[VoxelPosition],
-                                                 chunkSize: Vec3Int)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[List[Array[Float]]] = {
+  private def getAllAdHocChunksWithNeighborLogic(
+      annotationId: ObjectId,
+      tracingId: String,
+      tracing: VolumeTracing,
+      mag: Vec3Int,
+      voxelSize: VoxelSize,
+      fullMeshRequest: FullMeshRequest,
+      topLeftOpt: Option[VoxelPosition],
+      chunkSize: Vec3Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] = {
     val visited = collection.mutable.Set[VoxelPosition]()
 
     def processFrontier(frontier: List[VoxelPosition], acc: List[Array[Float]]): Fox[List[Array[Float]]] =
       if (frontier.isEmpty) Fox.successful(acc)
       else {
         visited ++= frontier
-        Fox.serialCombined(frontier.grouped(adHocMeshingBatchSize).toList) { batch =>
-          Fox.combined(batch.map { position =>
-            val adHocMeshRequest = WebknossosAdHocMeshRequest(
-              position = Vec3Int(position.mag1X, position.mag1Y, position.mag1Z),
-              mag = mag,
-              cubeSize = Vec3Int(chunkSize.x + 1, chunkSize.y + 1, chunkSize.z + 1),
-              fullMeshRequest.segmentId,
-              voxelSize.factor,
-              fullMeshRequest.mappingName,
-              fullMeshRequest.mappingType,
-              fullMeshRequest.additionalCoordinates
-            )
-            loadMeshChunkFromAdHoc(annotationId, tracingId, tracing, adHocMeshRequest).map { case (vertices, neighbors) =>
-              (vertices, generateNextTopLeftsFromNeighbors(position, neighbors, chunkSize, visited))
-            }
-          })
-        }.map(_.flatten).flatMap { results =>
-          val newVertices = results.map(_._1)
-          val nextFrontier = results.flatMap(_._2).distinct
-          processFrontier(nextFrontier, newVertices ::: acc)
-        }
+        Fox
+          .serialCombined(frontier.grouped(adHocMeshingBatchSize).toList) { batch =>
+            Fox.combined(batch.map { position =>
+              val adHocMeshRequest = WebknossosAdHocMeshRequest(
+                position = Vec3Int(position.mag1X, position.mag1Y, position.mag1Z),
+                mag = mag,
+                cubeSize = Vec3Int(chunkSize.x + 1, chunkSize.y + 1, chunkSize.z + 1),
+                fullMeshRequest.segmentId,
+                voxelSize.factor,
+                fullMeshRequest.mappingName,
+                fullMeshRequest.mappingType,
+                fullMeshRequest.additionalCoordinates,
+                fullMeshRequest.annotationVersion,
+              )
+              loadMeshChunkFromAdHoc(annotationId, tracingId, tracing, adHocMeshRequest).map {
+                case (vertices, neighbors) =>
+                  (vertices, generateNextTopLeftsFromNeighbors(position, neighbors, chunkSize, visited))
+              }
+            })
+          }
+          .map(_.flatten)
+          .flatMap { results =>
+            val newVertices = results.map(_._1)
+            val nextFrontier = results.flatMap(_._2).distinct
+            processFrontier(nextFrontier, newVertices ::: acc)
+          }
       }
 
     for {

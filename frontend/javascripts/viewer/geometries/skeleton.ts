@@ -348,6 +348,7 @@ class Skeleton {
       skeletonTracing.tracingId,
       this.prevTracing.trees,
       skeletonTracing.trees,
+      false,
     );
 
     const flycamAdditionalCoordinateNames = new Set(

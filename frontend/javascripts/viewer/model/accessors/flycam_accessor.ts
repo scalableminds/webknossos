@@ -160,7 +160,7 @@ export function _getMaximumZoomForAllMags(
   // Since the viewports can be quite large, it can happen that even a zoom value of 1 is not feasible.
   // That's why we start the search with a smaller value than 1. We use the ZOOM_STEP_INTERVAL factor
   // to ensure that the calculated thresholds correspond to the normal zoom behavior.
-  const ZOOM_IN_START_EXPONENT = 20;
+  const ZOOM_IN_START_EXPONENT = 70;
   let currentMaxZoomValue = 1 / ZOOM_STEP_INTERVAL ** ZOOM_IN_START_EXPONENT;
   const maximumIterationCount =
     Math.log(maxSupportedZoomValue) / Math.log(ZOOM_STEP_INTERVAL) + ZOOM_IN_START_EXPONENT;

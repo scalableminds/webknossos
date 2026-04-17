@@ -59,8 +59,8 @@ export const moveW = (
 
   if (oneSlide) {
     // The following logic might not always make sense when having layers
-    // that are transformed each. Todo: Rethink / adapt the logic once
-    // problems occur. Tracked in #6926.
+    // that are transformed each. Todo (#6926): Rethink / adapt the logic once
+    // problems occur.
     const { representativeMag } = getActiveMagInfo(state);
     const wDim = Dimensions.getIndices(activeViewport)[2];
     const wStep = (representativeMag || [1, 1, 1])[wDim];

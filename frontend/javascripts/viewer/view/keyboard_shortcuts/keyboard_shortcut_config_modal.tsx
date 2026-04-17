@@ -14,11 +14,11 @@ import {
   Typography,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { isEqual } from "lodash-es";
 import type React from "react";
 import { useMemo, useState } from "react";
-import { useWkSelector } from "libs/react_hooks";
 import { useDispatch } from "react-redux";
 import { setKeyboardShortcutsConfigAction } from "viewer/model/actions/settings_actions";
 import {
@@ -26,7 +26,6 @@ import {
   ALL_KEYBOARD_SHORTCUT_META_INFOS,
   getAllDefaultKeyboardShortcuts,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
-import { validateShortcutMapText } from "./keyboard_shortcut_persistence";
 import {
   ArbitraryNavigationMouseShortcutsTable,
   PlaneGeneralEditingMouseShortcutsTable,
@@ -40,6 +39,7 @@ import {
   VolumeToolClassicControlsMouseShortcutsTable,
   VolumeToolMouseShortcutsTable,
 } from "./keyboard_shortcut_mouse_tables";
+import { validateShortcutMapText } from "./keyboard_shortcut_persistence";
 import { type KeyboardComboChain, KeyboardShortcutDomain } from "./keyboard_shortcut_types";
 import { checkCollisionsInShortcutMap, keyComboChainToUiElements } from "./keyboard_shortcut_utils";
 import { CollisionWarningAlert, ShortcutRecorderModal } from "./shortcut_recorder_modal";

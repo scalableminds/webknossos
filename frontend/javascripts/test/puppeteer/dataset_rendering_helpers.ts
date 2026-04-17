@@ -257,9 +257,7 @@ async function waitForTracingViewLoad(page: Page) {
 async function waitForRenderingFinish(page: Page) {
   await sleep(1000);
   await page.evaluate(() =>
-    (window as any).webknossos.DEV.waitForCompletedDataLoading(
-      MAXIMUM_WAIT_TIME_FOR_DATASET_LOADING,
-    ),
+    window.webknossos.DEV.waitForCompletedDataLoading(MAXIMUM_WAIT_TIME_FOR_DATASET_LOADING),
   );
 }
 

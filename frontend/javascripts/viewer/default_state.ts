@@ -81,6 +81,7 @@ const defaultState: WebknossosState = {
     tdViewDisplayPlanes: TDViewDisplayModeEnum.DATA,
     tdViewDisplayDatasetBorders: true,
     tdViewDisplayLayerBorders: false,
+    tdViewUsePerspectiveCamera: true,
     gpuMemoryFactor: Constants.DEFAULT_GPU_MEMORY_FACTOR,
     overwriteMode: OverwriteModeEnum.OVERWRITE_ALL,
     fillMode: FillModeEnum._2D,

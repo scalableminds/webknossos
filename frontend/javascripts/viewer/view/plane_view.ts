@@ -32,6 +32,7 @@ import { getInputCatcherRect } from "viewer/model/accessors/view_mode_accessor";
 import { getActiveSegmentationTracing } from "viewer/model/accessors/volumetracing_accessor";
 import { uiReadyAction } from "viewer/model/actions/actions";
 import { updateTemporarySettingAction } from "viewer/model/actions/settings_actions";
+import { setTDCameraWithoutTimeTrackingAction } from "viewer/model/actions/view_mode_actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import Store from "viewer/store";
 import { getGroundTruthLayoutRect } from "viewer/view/layouting/default_layout_configs";
@@ -73,12 +74,15 @@ class PlaneView {
     // Initialize main js components
     const cameras = {} as OrthoViewMap<OrthographicCamera | PerspectiveCamera>;
 
+    const usePerspectiveCamera = Store.getState().userConfiguration.tdViewUsePerspectiveCamera;
     for (const plane of OrthoViewValues) {
       // Let's set up cameras
       // No need to set any properties, because the cameras controller will deal with that
       cameras[plane] =
         plane === OrthoViews.TDView
-          ? new PerspectiveCamera(45, 1, 0.1, 1000)
+          ? usePerspectiveCamera
+            ? new PerspectiveCamera(45, 1, 0.1, 1000)
+            : new OrthographicCamera(0, 0, 0, 0)
           : new OrthographicCamera(0, 0, 0, 0);
       // This name can be used to retrieve the camera from the scene
       cameras[plane].name = plane;
@@ -301,6 +305,35 @@ class PlaneView {
     return this.cameras;
   }
 
+  switchTDCamera(usePerspective: boolean): void {
+    const { scene } = getSceneController();
+    const oldCamera = this.cameras[OrthoViews.TDView];
+
+    const newCamera = usePerspective
+      ? new PerspectiveCamera(45, 1, 0.1, 1000)
+      : new OrthographicCamera(0, 0, 0, 0);
+    newCamera.name = OrthoViews.TDView;
+    newCamera.position.copy(oldCamera.position);
+    newCamera.up.copy(oldCamera.up);
+    newCamera.quaternion.copy(oldCamera.quaternion);
+
+    // Move children (directional lights) to the new camera
+    while (oldCamera.children.length > 0) {
+      newCamera.add(oldCamera.children[0]);
+    }
+    scene.remove(oldCamera);
+    scene.add(newCamera);
+    this.cameras[OrthoViews.TDView] = newCamera;
+    // Re-apply camera data from store so CameraController sets up the new camera correctly
+    const tdCameraData = Store.getState().viewModeData.plane.tdCamera;
+    Store.dispatch(
+      setTDCameraWithoutTimeTrackingAction({
+        ...tdCameraData,
+        near: usePerspective ? Math.max(0.1, tdCameraData.near) : 0,
+      }),
+    );
+  }
+
   stop(): void {
     this.isRunning = false;
 
@@ -370,6 +403,12 @@ class PlaneView {
         (storeState) => storeState.uiInformation.navbarHeight,
         () => this.resizeThrottled(),
         true,
+      ),
+    );
+    this.unsubscribeFunctions.push(
+      listenToStoreProperty(
+        (storeState) => storeState.userConfiguration.tdViewUsePerspectiveCamera,
+        (usePerspective) => this.switchTDCamera(usePerspective),
       ),
     );
     this.unsubscribeFunctions.push(

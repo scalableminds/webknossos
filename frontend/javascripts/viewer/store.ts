@@ -525,17 +525,6 @@ export type CameraData = {
   readonly position: Vector3;
   readonly target: Vector3;
 };
-export type PartialCameraData = {
-  readonly near?: number;
-  readonly far?: number;
-  readonly left?: number;
-  readonly right?: number;
-  readonly top?: number;
-  readonly bottom?: number;
-  readonly up?: Vector3;
-  readonly position?: Vector3;
-  readonly target?: Vector3;
-};
 export type PlaneRects = {
   readonly PLANE_XY: Rect;
   readonly PLANE_YZ: Rect;

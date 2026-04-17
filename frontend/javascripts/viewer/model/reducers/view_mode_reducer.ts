@@ -4,7 +4,7 @@ import { ArbitraryViewport } from "viewer/constants";
 import { getTDViewportSize } from "viewer/model/accessors/view_mode_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import { zoomReducer } from "viewer/model/reducers/flycam_reducer";
-import type { PartialCameraData, WebknossosState } from "viewer/store";
+import type { CameraData, WebknossosState } from "viewer/store";
 
 function ViewModeReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
@@ -113,7 +113,7 @@ function moveTDViewByVectorReducer(state: WebknossosState, x: number, y: number)
 
 function setTDCameraReducer(
   state: WebknossosState,
-  cameraData: PartialCameraData,
+  cameraData: Partial<CameraData>,
 ): WebknossosState {
   return update(state, {
     viewModeData: {

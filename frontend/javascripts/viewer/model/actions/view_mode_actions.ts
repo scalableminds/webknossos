@@ -1,7 +1,7 @@
 import type { OrthoView, Point2, Rect, Viewport, ViewportRects } from "viewer/constants";
 import constants from "viewer/constants";
 import { getTDViewportSize } from "viewer/model/accessors/view_mode_accessor";
-import type { PartialCameraData } from "viewer/store";
+import type { CameraData } from "viewer/store";
 import Store from "viewer/store";
 
 type SetViewportAction = ReturnType<typeof setViewportAction>;
@@ -28,14 +28,14 @@ export const setViewportAction = (viewport: OrthoView) =>
     viewport,
   }) as const;
 
-export const setTDCameraAction = (cameraData: PartialCameraData) =>
+export const setTDCameraAction = (cameraData: Partial<CameraData>) =>
   ({
     type: "SET_TD_CAMERA",
     cameraData,
   }) as const;
 
 // See the explanation further up for when to use this action instead of the setTDCameraAction
-export const setTDCameraWithoutTimeTrackingAction = (cameraData: PartialCameraData) =>
+export const setTDCameraWithoutTimeTrackingAction = (cameraData: Partial<CameraData>) =>
   ({
     type: "SET_TD_CAMERA_WITHOUT_TIME_TRACKING",
     cameraData,

@@ -261,18 +261,25 @@ export default class WkDev {
      * are empty and stay empty for debounceMs milliseconds. Useful in
      * screenshot tests to wait for data loading to truly finish.
      */
+    const areQueuesEmpty = () => Model.getAllLayers().every((layer) => layer.pullQueue.isEmpty());
     return new Promise((resolve) => {
       let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
       const checkAndSettle = () => {
-        const allEmpty = Model.getAllLayers().every((layer) => layer.pullQueue.isEmpty());
-        if (allEmpty) {
-          if (debounceTimer != null) clearTimeout(debounceTimer);
-          debounceTimer = setTimeout(() => {
+        if (!areQueuesEmpty()) {
+          // Ignore event.
+          return;
+        }
+        if (debounceTimer != null) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          // Re-check whether new requests have started during the debounce window.
+          // If so, a new pullqueue:empty event will arrive, so we don't need to
+          // do anything else here.
+          if (!areQueuesEmpty()) {
             unsubscribe();
             resolve();
-          }, debounceMs);
-        }
+          }
+        }, debounceMs);
       };
 
       const unsubscribe = app.vent.on("pullqueue:empty", checkAndSettle);

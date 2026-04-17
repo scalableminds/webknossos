@@ -53,8 +53,14 @@ class S3ClientPool(ws: WSClient) {
     } yield client
   }
 
+  private def isHetznerEndpoint(customEndpointOpt: Option[URI]): Boolean =
+    customEndpointOpt.exists(_.getHost.endsWith(".your-objectstorage.com"))
+
   private def buildS3Client(credentialsProvider: AwsCredentialsProvider,
                             customEndpointOpt: Option[URI]): S3AsyncClient = {
+    // HTTP/2 multiplexes bucket fetches over fewer TCP connections, but AWS S3 does not support it.
+    // Hetzner Object Storage (e.g. fsn1.your-objectstorage.com) does support HTTP/2.
+    val protocol = if (isHetznerEndpoint(customEndpointOpt)) Protocol.HTTP2 else Protocol.HTTP1_1
     val basic =
       S3AsyncClient
         .builder()
@@ -65,7 +71,7 @@ class S3ClientPool(ws: WSClient) {
         .httpClientBuilder(
           NettyNioAsyncHttpClient
             .builder()
-            .protocol(Protocol.HTTP2) // multiplexes bucket fetches over fewer TCP connections
+            .protocol(protocol)
             .maxConcurrency(64)
             .tcpKeepAlive(true)
             .connectionAcquisitionTimeout((2 minutes).toJava))

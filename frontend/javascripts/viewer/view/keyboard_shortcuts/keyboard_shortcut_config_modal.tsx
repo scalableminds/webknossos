@@ -1,6 +1,7 @@
 import { CloseOutlined, EditOutlined, PlusOutlined, RollbackOutlined } from "@ant-design/icons";
 import { updateKeyboardShortcutsConfig } from "admin/rest_api";
 import {
+  Alert,
   Button,
   Flex,
   Input,
@@ -15,10 +16,11 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import Toast from "libs/toast";
 import { isEqual } from "lodash-es";
-import React, { useMemo, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import type React from "react";
+import { useMemo, useState } from "react";
+import { useWkSelector } from "libs/react_hooks";
+import { useDispatch } from "react-redux";
 import { setKeyboardShortcutsConfigAction } from "viewer/model/actions/settings_actions";
-import type { WebknossosState } from "viewer/store";
 import {
   ALL_KEYBOARD_HANDLER_IDS,
   ALL_KEYBOARD_SHORTCUT_META_INFOS,
@@ -83,9 +85,9 @@ const KeyboardShortcutDomainTable: React.FC<KeyboardShortcutDomainTableProps> = 
 
 export default function KeyboardShortcutConfigModal({ isOpen, onClose }: ShortcutConfigModalProps) {
   const dispatch = useDispatch();
-  const keyboardShortcutsConfigFromStore = useSelector(
-    (state: WebknossosState) => state.keyboardShortcutsConfig,
-  );
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const isEditable = activeUser != null;
+  const keyboardShortcutsConfigFromStore = useWkSelector((state) => state.keyboardShortcutsConfig);
   const [isJsonView, setIsJsonView] = useState(false);
   const [isRecorderOpen, setIsRecorderOpen] = useState(false);
   const [recorderTargetHandlerId, setRecorderTargetHandlerId] = useState<string | null>(null);
@@ -170,6 +172,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
                 <Button
                   type="text"
                   icon={<EditOutlined />}
+                  disabled={!isEditable}
                   onClick={() => {
                     setRecorderTargetHandlerId(record.handlerId);
                     setRecorderEditingKeyCombo(comboChain);
@@ -178,6 +181,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
                 />
                 <Button
                   type="text"
+                  disabled={!isEditable}
                   icon={<CloseOutlined />}
                   onClick={() => handleRemoveComboChain(record.handlerId, comboChain)}
                 />
@@ -187,6 +191,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
 
           <div className="add-button-container">
             <Button
+              disabled={!isEditable}
               icon={<PlusOutlined />}
               onClick={() => {
                 setRecorderTargetHandlerId(record.handlerId);
@@ -373,6 +378,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
     <Modal
       open={isOpen}
       onCancel={onClose}
+      okButtonProps={{ disabled: activeUser == null }}
       onOk={handleSave}
       width={1000}
       style={{ padding: 20 }}
@@ -386,6 +392,14 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       }}
     >
       <CollisionWarningAlert shortcutCollisions={shortcutCollisions} />
+      {activeUser == null ? (
+        <Alert
+          type="info"
+          style={{ marginTop: 16, marginBottom: 16 }}
+          title="You are not logged in"
+          description="Only logged in users can modify and persist shortcuts."
+        />
+      ) : null}
 
       <Flex justify={"flex-end"} align={"flex-start"}>
         <Space style={{ marginBottom: 16 }}>

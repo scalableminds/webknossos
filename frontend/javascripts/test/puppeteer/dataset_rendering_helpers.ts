@@ -53,19 +53,12 @@ export async function writeDatasetNameToIdMapping(
   datasetNameToId: Record<string, string>,
 ) {
   for (const datasetName of datasetNames) {
-    await withRetry(
-      3,
-      async () => {
-        const options = getDefaultRequestOptions(baseUrl);
-        const path = `/api/datasets/disambiguate/sample_organization/${datasetName}/toId`;
-        const url = urljoin(baseUrl, path);
-        const response = await fetch(url, options);
-        const { id } = await response.json();
-        datasetNameToId[datasetName] = id;
-        return true;
-      },
-      () => {},
-    );
+    const options = getDefaultRequestOptions(baseUrl);
+    const path = `/api/datasets/disambiguate/sample_organization/${datasetName}/toId`;
+    const url = urljoin(baseUrl, path);
+    const response = await fetch(url, options);
+    const { id } = await response.json();
+    datasetNameToId[datasetName] = id;
   }
 }
 
@@ -428,24 +421,6 @@ export async function getNewPage(browser: Browser) {
   });
 
   return page;
-}
-
-export async function withRetry(
-  retryCount: number,
-  testFn: () => Promise<boolean>,
-  resolveFn: (arg0: boolean) => void,
-) {
-  for (let i = 0; i < retryCount; i++) {
-    const condition = await testFn();
-
-    if (condition || i === retryCount - 1) {
-      // Either the test passed or we executed the last attempt
-      resolveFn(condition);
-      return;
-    }
-
-    console.error(`Test failed, retrying. This will be attempt ${i + 2}/${retryCount}.`);
-  }
 }
 
 // Define the test context type to be compatible with the test files

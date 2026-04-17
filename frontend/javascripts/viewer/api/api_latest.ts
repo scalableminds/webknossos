@@ -83,7 +83,6 @@ import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/to
 import {
   enforceActiveVolumeTracing,
   getActiveCellId,
-  getActiveSegmentationTracing,
   getNameOfRequestedOrVisibleSegmentationLayer,
   getRequestedOrDefaultSegmentationTracingLayer,
   getRequestedOrVisibleSegmentationLayer,
@@ -92,7 +91,6 @@ import {
   getSegmentsForLayer,
   getVolumeDescriptors,
   getVolumeTracingById,
-  getVolumeTracingByLayerName,
   getVolumeTracingByNameOrActive,
   getVolumeTracings,
   hasVolumeTracings,
@@ -147,6 +145,7 @@ import {
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import { centerTDViewAction } from "viewer/model/actions/view_mode_actions";
 import {
+  addSegmentGroupAction,
   type BatchableUpdateSegmentAction,
   batchUpdateGroupsAndSegmentsAction,
   clickSegmentAction,
@@ -192,7 +191,6 @@ import type {
 import Store from "viewer/store";
 import {
   callDeep,
-  createGroupHelper,
   createGroupToSegmentsMap,
   MISSING_GROUP_ID,
   mapGroups,
@@ -871,15 +869,13 @@ class TracingApi {
     if (volumeTracing == null) {
       throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
     }
-    const { segmentGroups } = volumeTracing;
     const newGroupId = await dispatchGetNewIdAsync(
       Store.dispatch,
       volumeTracing.tracingId,
       "SegmentGroup",
     );
-    const newSegmentGroups = createGroupHelper(segmentGroups, name, newGroupId, parentGroupId);
 
-    Store.dispatch(setSegmentGroupsAction(newSegmentGroups, volumeTracing.tracingId));
+    Store.dispatch(addSegmentGroupAction(volumeTracing.tracingId, newGroupId, name, parentGroupId));
 
     return newGroupId;
   }

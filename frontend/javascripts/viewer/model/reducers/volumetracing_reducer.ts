@@ -21,6 +21,7 @@ import {
   convertUserBoundingBoxesFromServerToFrontend,
 } from "viewer/model/reducers/reducer_helpers";
 import {
+  addSegmentGroupReducer,
   addToContourListReducer,
   createCellReducer,
   expandSegmentParents,
@@ -296,6 +297,16 @@ function VolumeTracingReducer(
     case "SET_SEGMENT_GROUPS": {
       const { segmentGroups } = action;
       return setSegmentGroups(state, action.layerName, segmentGroups);
+    }
+
+    case "ADD_SEGMENT_GROUP": {
+      return addSegmentGroupReducer(
+        state,
+        action.volumeTracingId,
+        action.id,
+        action.name,
+        action.parentGroupId,
+      );
     }
 
     case "SET_HIDE_UNREGISTERED_SEGMENTS": {

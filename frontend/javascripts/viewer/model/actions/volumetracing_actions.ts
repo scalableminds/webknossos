@@ -56,6 +56,7 @@ export type MergeSegmentItemsAction = ReturnType<typeof mergeSegmentItemsAction>
 export type RemoveSegmentAction = ReturnType<typeof removeSegmentAction>;
 export type DeleteSegmentDataAction = ReturnType<typeof deleteSegmentDataAction>;
 export type SetSegmentGroupsAction = ReturnType<typeof setSegmentGroupsAction>;
+export type AddSegmentGroupAction = ReturnType<typeof addSegmentGroupAction>;
 export type SetExpandedSegmentGroupsAction = ReturnType<typeof setExpandedSegmentGroupsAction>;
 export type ToggleSegmentGroupAction = ReturnType<typeof toggleSegmentGroupAction>;
 export type ToggleAllSegmentsAction = ReturnType<typeof toggleAllSegmentsAction>;
@@ -112,6 +113,7 @@ export type VolumeTracingAction =
   | RemoveSegmentAction
   | DeleteSegmentDataAction
   | SetSegmentGroupsAction
+  | AddSegmentGroupAction
   | SetExpandedSegmentGroupsAction
   | ToggleSegmentGroupAction
   | ToggleAllSegmentsAction
@@ -137,6 +139,7 @@ export const VolumeTracingSaveRelevantActions: Action["type"][] = [
   "FINISH_ANNOTATION_STROKE",
   "UPDATE_SEGMENT",
   "SET_SEGMENT_GROUPS",
+  "ADD_SEGMENT_GROUP",
   "SET_EXPANDED_SEGMENT_GROUPS",
   "REMOVE_SEGMENT",
   "MERGE_SEGMENTS_ITEMS",
@@ -365,6 +368,20 @@ export const setSegmentGroupsAction = (
     segmentGroups,
     layerName,
     calledFromUndoSaga,
+  }) as const;
+
+export const addSegmentGroupAction = (
+  volumeTracingId: string,
+  id: number,
+  name: string | null = null,
+  parentGroupId: number | null = -1,
+) =>
+  ({
+    type: "ADD_SEGMENT_GROUP",
+    volumeTracingId,
+    id,
+    name,
+    parentGroupId,
   }) as const;
 
 export const setExpandedSegmentGroupsAction = (

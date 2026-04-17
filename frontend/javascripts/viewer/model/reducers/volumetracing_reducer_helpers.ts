@@ -32,7 +32,10 @@ import type {
   WebknossosState,
 } from "viewer/store";
 import {
+  createGroupHelper,
+  findGroup,
   findParentIdForGroupId,
+  MISSING_GROUP_ID,
   mapGroups,
 } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 import {
@@ -319,6 +322,36 @@ export function setSegmentGroups(
 
   // Don't update groups for non-tracings
   return state;
+}
+
+export function addSegmentGroupReducer(
+  state: WebknossosState,
+  layerName: string,
+  id: number,
+  name: string | null,
+  parentGroupId: number | null,
+) {
+  const updateInfo = getSegmentUpdateInfo(state, layerName);
+
+  if (updateInfo.type !== "UPDATE_VOLUME_TRACING") {
+    return state;
+  }
+
+  const { segmentGroups } = updateInfo.volumeTracing;
+  // Assert that the id is not already used by an existing group.
+  if (!findGroup(segmentGroups, id) == null) {
+    throw new Error(`Requested creation of group with id ${id} which is already in use.`);
+  }
+
+  const newSegmentGroups = createGroupHelper(
+    segmentGroups,
+    name,
+    id,
+    parentGroupId ?? MISSING_GROUP_ID,
+  );
+  return updateVolumeTracing(state, updateInfo.volumeTracing.tracingId, {
+    segmentGroups: newSegmentGroups,
+  });
 }
 
 export function updateSegments(

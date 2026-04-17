@@ -256,8 +256,8 @@ export default class WkDev {
   }
 
   waitForCompletedDataLoading(
-    debounceMs: number = 500,
     timeout: number | null = null,
+    debounceMs: number = 500,
   ): Promise<void> {
     /*
      * Returns a promise that resolves once all pull queues across all layers

@@ -10,7 +10,13 @@ import urljoin from "url-join";
 import type { PartialDatasetConfiguration } from "viewer/store";
 import { type TestContext, vi } from "vitest";
 import { createExplorational, updateDatasetConfiguration } from "../../admin/rest_api";
-import { HEADLESS, PAGE_HEIGHT, PAGE_WIDTH, USE_LOCAL_CHROME } from "./screenshot_test_config";
+import {
+  HEADLESS,
+  MAXIMUM_WAIT_TIME_FOR_DATASET_LOADING,
+  PAGE_HEIGHT,
+  PAGE_WIDTH,
+  USE_LOCAL_CHROME,
+} from "./screenshot_test_config";
 
 vi.mock("libs/request", async (importOriginal) => {
   // The request lib is globally mocked for the unit tests. In the screenshot tests, we actually want to run the proper fetch calls so we revert to the original implementation
@@ -250,7 +256,11 @@ async function waitForTracingViewLoad(page: Page) {
 
 async function waitForRenderingFinish(page: Page) {
   await sleep(1000);
-  await page.evaluate(() => (window as any).webknossos.DEV.waitForCompletedDataLoading());
+  await page.evaluate(() =>
+    (window as any).webknossos.DEV.waitForCompletedDataLoading(
+      MAXIMUM_WAIT_TIME_FOR_DATASET_LOADING,
+    ),
+  );
 }
 
 async function openTracingView(

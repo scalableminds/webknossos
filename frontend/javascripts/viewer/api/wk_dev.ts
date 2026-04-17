@@ -255,6 +255,32 @@ export default class WkDev {
     }
   }
 
+  waitForCompletedDataLoading(debounceMs: number = 500): Promise<void> {
+    /*
+     * Returns a promise that resolves once all pull queues across all layers
+     * are empty and stay empty for debounceMs milliseconds. Useful in
+     * screenshot tests to wait for data loading to truly finish.
+     */
+    return new Promise((resolve) => {
+      let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+      const checkAndSettle = () => {
+        const allEmpty = Model.getAllLayers().every((layer) => layer.pullQueue.isEmpty());
+        if (allEmpty) {
+          if (debounceTimer != null) clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => {
+            unsubscribe();
+            resolve();
+          }, debounceMs);
+        }
+      };
+
+      const unsubscribe = app.vent.on("pullqueue:empty", checkAndSettle);
+      // Check immediately in case all queues are already empty at call time.
+      checkAndSettle();
+    });
+  }
+
   async benchmarkSegmentListScroll(n: number = 100) {
     const then = performance.now();
     console.time("Segment Scroll Benchmark");

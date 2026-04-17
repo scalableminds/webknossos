@@ -255,14 +255,17 @@ export default class WkDev {
     }
   }
 
-  waitForCompletedDataLoading(debounceMs: number = 500): Promise<void> {
+  waitForCompletedDataLoading(
+    debounceMs: number = 500,
+    timeout: number | null = null,
+  ): Promise<void> {
     /*
      * Returns a promise that resolves once all pull queues across all layers
      * are empty and stay empty for debounceMs milliseconds. Useful in
      * screenshot tests to wait for data loading to truly finish.
      */
     const areQueuesEmpty = () => Model.getAllLayers().every((layer) => layer.pullQueue.isEmpty());
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
       const checkAndSettle = () => {
@@ -281,6 +284,13 @@ export default class WkDev {
           }
         }, debounceMs);
       };
+
+      if (timeout != null) {
+        setTimeout(() => {
+          unsubscribe();
+          reject(new Error("Waiting for completed data loading timed out."));
+        }, timeout);
+      }
 
       const unsubscribe = app.vent.on("pullqueue:empty", checkAndSettle);
       // Check immediately in case all queues are already empty at call time.

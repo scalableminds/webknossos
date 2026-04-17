@@ -1,4 +1,4 @@
-import { Keyboard } from "keyboardjs";
+import { createTestKeystrokes, setGlobalKeystrokes } from "@rwh/keystrokes";
 import { map3 } from "libs/utils";
 import testRotations from "test/fixtures/test_rotations";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
@@ -218,8 +218,10 @@ describe("API Skeleton", () => {
   it<WebknossosTestContext>("Utils Api: registerKeyHandler should register a key handler and return a handler to unregister it again", async ({
     api,
   }) => {
-    const bindSpy = vi.spyOn(Keyboard.prototype, "bind").mockReturnThis();
-    const unbindSpy = vi.spyOn(Keyboard.prototype, "unbind").mockReturnThis();
+    const keystrokes = createTestKeystrokes();
+    setGlobalKeystrokes(keystrokes);
+    const bindSpy = vi.spyOn(keystrokes, "bindKeyCombo").mockReturnThis();
+    const unbindSpy = vi.spyOn(keystrokes, "unbindKeyCombo").mockReturnThis();
 
     const binding = api.utils.registerKeyHandler("g", { onPressed: () => {} });
     expect(bindSpy).toHaveBeenCalled();

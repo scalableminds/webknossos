@@ -12,16 +12,14 @@ import {
   setupAfterEach,
   setupBeforeEach,
 } from "./dataset_rendering_helpers";
-import { compareScreenshot, isPixelEquivalent } from "./screenshot_helpers";
+import { compareScreenshot, isPixelEquivalent, SCREENSHOTS_BASE_PATH } from "./screenshot_helpers";
 
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");
 });
 
-const SCREENSHOTS_BASE_PATH = path.join(
-  __dirname,
-  "../../../../frontend/javascripts/test/screenshots_wkorg",
-);
+const SCREENSHOTS_PATH = path.join(SCREENSHOTS_BASE_PATH, "wkorg");
+
 const URL = "https://webknossos.org";
 
 console.log(`[Info] Executing tests on URL ${URL}.`);
@@ -132,7 +130,7 @@ describe("webknossos.org Dataset Rendering", () => {
         screenshot,
         width,
         height,
-        SCREENSHOTS_BASE_PATH,
+        SCREENSHOTS_PATH,
         demoDatasetName,
       );
       await page.close();

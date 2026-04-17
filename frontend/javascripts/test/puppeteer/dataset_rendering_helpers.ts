@@ -229,7 +229,6 @@ async function waitForTracingViewLoad(page: Page) {
   let inputCatchers;
   let iterationCount = 0;
 
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'length' does not exist on type 'ElementH... Remove this comment to see the full error message
   while (inputCatchers == null || inputCatchers.length < 4) {
     iterationCount++;
     if (iterationCount > 5) {
@@ -237,15 +236,19 @@ async function waitForTracingViewLoad(page: Page) {
     }
     await sleep(500);
     const inputCatcherPromise = page
-      .$(".inputcatcher")
+      .waitForSelector(".inputcatcher")
+      .then(() => page.$$(".inputcatcher"))
       .then((elements) => ({ type: "inputcatchers", elements }));
+
     const errorPromise = page
-      .$(".initialization-error-message")
-      .then((elements) => ({ type: "error", elements }));
+      .waitForSelector(".initialization-error-message")
+      .then((element) => ({ type: "error", elements: [element] }));
 
     const raceResult = await Promise.race([inputCatcherPromise, errorPromise]);
 
     if (raceResult.type === "error") {
+      // Sleep a bit so that we can visually inspect the error in (recorded) sessions.
+      await sleep(1000);
       throw new Error("Initialization error detected");
     }
 
@@ -257,18 +260,18 @@ async function waitForRenderingFinish(page: Page) {
   const width = PAGE_WIDTH;
   const height = PAGE_HEIGHT;
   let currentShot;
-  let lastShot = await page.screenshot({
-    fullPage: true,
-  });
+  const screenshotOptions = {
+    // Screenshotting the full page may cause resize events which can lead
+    // to react errors (also see comment about captureBeyondViewport=false).
+    fullPage: false,
+  };
+  let lastShot = (await page.screenshot(screenshotOptions)) as Buffer<ArrayBufferLike>;
   let changedPixels = Number.POSITIVE_INFINITY;
 
   // If the screenshot of the page didn't change in the last x seconds, rendering should be finished
   while (currentShot == null || !isPixelEquivalent(changedPixels, width, height)) {
     console.log(`Waiting for rendering to finish. Changed pixels: ${changedPixels}`);
-    await sleep(1000);
-    currentShot = await page.screenshot({
-      fullPage: true,
-    });
+    currentShot = (await page.screenshot(screenshotOptions)) as Buffer<ArrayBufferLike>;
 
     if (lastShot != null) {
       changedPixels = pixelmatch(
@@ -389,13 +392,16 @@ export async function screenshotTracingView(
     if (element == null)
       throw new Error(`Element ${planeId} not present, although page is loaded.`);
 
-    const screenshot = await element.screenshot();
+    // captureBeyondViewport=false prevents a react callstack error which was apparently
+    // triggered by a resize event when capturing beyond the viewport. Concretely, some
+    // antd observers got into an infinite loop. The symptom was an error toast in the UI.
+    const screenshot = await element.screenshot({ captureBeyondViewport: false });
     screenshots.push(screenshot);
   }
 
   await revertOpacityIfNecessary();
   // Concatenate all screenshots
-  const img = await mergeImg(screenshots);
+  const img = await mergeImg(screenshots as Array<Buffer>);
 
   return new Promise((resolve) => {
     img.getBuffer("image/png", (_, buffer) =>
@@ -432,17 +438,17 @@ export async function setupBeforeEach(context: ScreenshotTestContext) {
   if (USE_LOCAL_CHROME) {
     // Use this for connecting to local Chrome browser instance
     context.browser = await puppeteer.launch({
-      args: HEADLESS
+      args: (HEADLESS
         ? [
-            "--headless=false",
             "--hide-scrollbars",
             "--no-sandbox",
             "--disable-setuid-sandbox",
             "--disable-dev-shm-usage",
             "--use-angle=gl-egl",
           ]
-        : [],
-      headless: HEADLESS ? "new" : false, // use "new" to suppress warnings
+        : []
+      ).concat([`--window-size=${PAGE_WIDTH},${PAGE_HEIGHT}`]),
+      headless: HEADLESS,
       dumpio: true,
       executablePath: "/usr/bin/google-chrome", // Linux; this might need to be adapted to your local setup
       // executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", // Mac

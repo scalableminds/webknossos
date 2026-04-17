@@ -51,6 +51,7 @@ export const tracing: ServerVolumeTracing = {
   ],
   userStates: [],
   fallbackLayer: "segmentation",
+  hasSegmentIndex: true,
 };
 
 export const annotation: APIAnnotation = {

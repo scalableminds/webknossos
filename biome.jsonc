@@ -2,7 +2,9 @@
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "files": {
     "includes": [
-      "**",
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.css",
       "!**/libs/stl_exporter.ts",
       "!**/libs/DRACOLoader.ts",
       "!**/libs/DRACOWorker.worker.js",
@@ -16,7 +18,9 @@
       "!**/*.ts.snap",
       "!**/__snapshots__",
       "!**/frontend/stylesheets/fontawesome*",
-      "!**/frontend/javascripts/test/snapshots"
+      "!**/frontend/javascripts/test/snapshots",
+      "!webknossos-jni",
+      "!binaryData"
     ]
   },
   "assist": {
@@ -61,7 +65,7 @@
         }
       },
       "complexity": {
-        "useSimplifiedLogicExpression": "off", // TODO: consider removing
+        "useSimplifiedLogicExpression": "off", // TODO (#9243): consider removing
         "noForEach": "off",
         "noBannedTypes": "error",
         "noUselessFragments": "error",
@@ -90,7 +94,7 @@
         "noUnusedImports": "error",
         "noRenderReturnValue": "off",
         "useHookAtTopLevel": "error",
-        "useExhaustiveDependencies": "warn", // TODO: consider turning this into an error
+        "useExhaustiveDependencies": "warn", // TODO (#9243): consider turning this into an error
         "noReactPropAssignments": "error"
       },
       "suspicious": {
@@ -120,9 +124,7 @@
 
   "overrides": [
     {
-      "includes": [
-        "**/package.json"
-      ],
+      "includes": ["**/package.json"],
       "formatter": {
         "lineWidth": 1
       }

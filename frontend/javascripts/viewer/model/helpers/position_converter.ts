@@ -101,10 +101,9 @@ export function zoomedPositionToZoomedAddress(
 export function zoomedAddressToZoomedPosition([x, y, z, _]: BucketAddress): Vector3 {
   return [x * constants.BUCKET_WIDTH, y * constants.BUCKET_WIDTH, z * constants.BUCKET_WIDTH];
 }
-// TODO: zoomedAddressToAnotherZoomStep usages should be converted to zoomedAddressToAnotherZoomStepWithInfo
+// TODO (#4838): zoomedAddressToAnotherZoomStep usages should be converted to zoomedAddressToAnotherZoomStepWithInfo
 // Note that this is not trivial since zoomedAddressToAnotherZoomStepWithInfo will throw on not existing
 // mag indices (in contrast to zoomedAddressToAnotherZoomStep).
-// See: https://github.com/scalableminds/webknossos/issues/4838
 export function zoomedAddressToAnotherZoomStep(
   [x, y, z, magIndex]: Vector4,
   mags: Array<Vector3>,

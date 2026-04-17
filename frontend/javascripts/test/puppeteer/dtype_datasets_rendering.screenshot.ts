@@ -269,7 +269,7 @@ describe("DType Dataset Rendering", () => {
       );
       console.timeEnd("Comparing screenshot...");
 
-      let success = true;
+      let success = isPixelEquivalent(changedPixels, width, height);
       if (spec.alsoTestSelectiveSegmentId && selectiveSegmentIdByDtype[spec.dtype] != null) {
         const actions = [
           setHideUnregisteredSegmentsAction(true),
@@ -302,11 +302,11 @@ describe("DType Dataset Rendering", () => {
         );
         console.timeEnd("Comparing screenshot...");
 
-        success = isPixelEquivalent(changedPixels, width, height);
+        success &&= isPixelEquivalent(changedPixels, width, height);
       }
 
       expect(
-        success && isPixelEquivalent(changedPixels, width, height),
+        success,
         `Dataset spec with name: "${spec.name}" does not look the same, see ${spec.name}.diff.png for the difference and ${spec.name}.new.png for the new screenshot.`,
       ).toBe(true);
     }

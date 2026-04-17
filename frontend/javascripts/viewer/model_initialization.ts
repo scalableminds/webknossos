@@ -124,7 +124,10 @@ import type {
 } from "viewer/store";
 import Store from "viewer/store";
 import { getAllDefaultKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
-import { validateShortcutMapText } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_persistence";
+import {
+  sanitizeKeyboardShortcuts,
+  validateShortcutMapText,
+} from "viewer/view/keyboard_shortcuts/keyboard_shortcut_persistence";
 import type { KeyboardShortcutsMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import { getUserStateForTracing } from "./model/accessors/annotation_accessor";
 import { doAllLayersHaveTheSameRotation } from "./model/accessors/dataset_layer_transformation_accessor";
@@ -247,7 +250,11 @@ export async function initialize(
     initialDatasetSettings,
   );
 
-  // Load keyboard shortcuts from backend; fall back to defaults if the call fails or the user is not logged in.
+  // Load keyboard shortcuts from backend. Schema errors (malformed values) are
+  // warned about but don't discard the whole config — sanitizeKeyboardShortcuts
+  // keeps each valid entry and falls back to the default for malformed ones.
+  // Unknown keys (from newer clients) are dropped; missing keys (from older
+  // saved configs) are filled in with defaults.
   const { valid, parsed, errors } = validateShortcutMapText(
     JSON.stringify(keyboardShortcutsConfig),
   );
@@ -256,7 +263,7 @@ export async function initialize(
     console.warn("Found errors while parsing user's keyboard shortcut configurations:", errors);
   }
   const shortcuts: KeyboardShortcutsMap<string> =
-    valid && parsed ? (parsed as KeyboardShortcutsMap<string>) : getAllDefaultKeyboardShortcuts();
+    parsed != null ? sanitizeKeyboardShortcuts(parsed) : getAllDefaultKeyboardShortcuts();
   Store.dispatch(setKeyboardShortcutsConfigAction(shortcuts));
 
   let initializationInformation = null;

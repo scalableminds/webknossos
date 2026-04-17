@@ -1,9 +1,9 @@
-import { describe, expect, it } from "vitest";
 import {
   ALL_KEYBOARD_HANDLER_IDS,
   ALL_KEYBOARD_SHORTCUT_META_INFOS,
   getAllDefaultKeyboardShortcuts,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
+import { describe, expect, it } from "vitest";
 
 describe("Keyboard shortcut handler IDs", () => {
   it("ALL_KEYBOARD_HANDLER_IDS contains no duplicate handler IDs", () => {

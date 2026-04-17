@@ -92,7 +92,7 @@ const getShortcuts = (
   isInPlaneMode: boolean,
 ): ShortcutInfo[] => {
   const toUiElement = (keyboardShortcutHandlerId: AnyKeyboardHandlerId) =>
-    keyboardShortcutsConfig[keyboardShortcutHandlerId].map((keyCombo) => {
+    (keyboardShortcutsConfig[keyboardShortcutHandlerId] ?? []).map((keyCombo) => {
       const capitalizedKeyCombo = keyCombo.map((keys) => keys.map((key) => key.toUpperCase()));
       return keyComboChainToUiElements(capitalizedKeyCombo, true);
     });

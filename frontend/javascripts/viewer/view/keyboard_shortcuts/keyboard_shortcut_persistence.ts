@@ -26,9 +26,37 @@ export const KeyboardShortcutsSchema = {
       },
     ]),
   ),
-  required: [...ALL_KEYBOARD_HANDLER_IDS],
-  additionalProperties: false,
 };
+
+function isValidShortcutValue(value: unknown): value is string[][][] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (comboChain) =>
+        Array.isArray(comboChain) &&
+        comboChain.every(
+          (combo) => Array.isArray(combo) && combo.every((key) => typeof key === "string"),
+        ),
+    )
+  );
+}
+
+/**
+ * Normalizes a raw parsed object into a complete, valid KeyboardShortcutsMap:
+ *  - Drops keys not in ALL_KEYBOARD_HANDLER_IDS.
+ *  - Falls back to the default combo for any key whose value is missing or
+ *    has the wrong shape.
+ */
+export function sanitizeKeyboardShortcuts(
+  raw: Record<string, unknown>,
+): KeyboardShortcutsMap<string> {
+  const defaults = getAllDefaultKeyboardShortcuts();
+  const result: Record<string, string[][][]> = {};
+  for (const id of ALL_KEYBOARD_HANDLER_IDS) {
+    result[id] = isValidShortcutValue(raw[id]) ? raw[id] : defaults[id];
+  }
+  return result as KeyboardShortcutsMap<string>;
+}
 
 export function validateShortcutMapText(input: string): {
   valid: boolean;

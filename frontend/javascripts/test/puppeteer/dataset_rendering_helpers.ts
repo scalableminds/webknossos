@@ -12,6 +12,7 @@ import type { PartialDatasetConfiguration } from "viewer/store";
 import { type TestContext, vi } from "vitest";
 import { createExplorational, updateDatasetConfiguration } from "../../admin/rest_api";
 import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
+import { HEADLESS, PAGE_HEIGHT, PAGE_WIDTH, USE_LOCAL_CHROME } from "./screenshot_test_config";
 
 vi.mock("libs/request", async (importOriginal) => {
   // The request lib is globally mocked for the unit tests. In the screenshot tests, we actually want to run the proper fetch calls so we revert to the original implementation
@@ -19,13 +20,6 @@ vi.mock("libs/request", async (importOriginal) => {
 });
 
 export const { WK_AUTH_TOKEN } = process.env;
-
-const PAGE_WIDTH = 1920;
-const PAGE_HEIGHT = 1080;
-
-const USE_LOCAL_CHROME = false;
-// Only relevant when USE_LOCAL_CHROME. Set to false to actually see the browser open.
-const HEADLESS = true;
 
 type Screenshot = {
   screenshot: Buffer;

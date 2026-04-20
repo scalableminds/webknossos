@@ -19,6 +19,7 @@ export function DuplicateAnnotationModal({
 }) {
   const [isLoading, setIsLoading] = useState(true);
   const [newAnnotation, setNewAnnotation] = useState<null | string>(null);
+  const [isError, setIsError] = useState(false);
   const dispatch = useDispatch();
   const toOwnAccountText = copyToOwnAccount ? " to your account" : "";
   const handleClose = () => {
@@ -29,12 +30,15 @@ export function DuplicateAnnotationModal({
       return `Copying annotation${toOwnAccountText}...`;
     } else if (newAnnotation) {
       return `The annotation was copied successfully${toOwnAccountText}.`;
+    } else if (isError) {
+      return `Failed to copy annotation${toOwnAccountText}.`;
     }
-  }, [isLoading, newAnnotation, toOwnAccountText]);
+  }, [isLoading, newAnnotation, toOwnAccountText, isError]);
 
   const openAnnotationButton = (
     <Button
       loading={isLoading}
+      disabled={isError}
       type="primary"
       href={`/annotations/${newAnnotation}`}
       target="_blank"
@@ -50,10 +54,16 @@ export function DuplicateAnnotationModal({
       afterOpenChange={async (open) => {
         if (open) {
           setIsLoading(true);
-          const { id: newAnnotationId } = await duplicateAnnotation(annotationId, annotationType);
-          setNewAnnotation(newAnnotationId);
-          await sleep(10000);
-          setIsLoading(false);
+          try {
+            const { id: newAnnotationId } = await duplicateAnnotation(annotationId, annotationType);
+            setNewAnnotation(newAnnotationId);
+          } catch (error) {
+            console.error("Failed to duplicate annotation", error);
+            setIsError(true);
+          } finally {
+            await sleep(3000);
+            setIsLoading(false);
+          }
         }
       }}
       footer={openAnnotationButton}

@@ -163,7 +163,7 @@ class PullQueue {
         }
       }
 
-      if (!this.isDestroyed && this.isEmpty()) {
+      if (!this.isDestroyed && this.isEmpty() && !this.isRetryScheduled) {
         app.vent.emit("pullqueue:empty", this.layerName);
       }
     }

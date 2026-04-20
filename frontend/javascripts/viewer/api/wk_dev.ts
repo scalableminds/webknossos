@@ -261,8 +261,13 @@ export default class WkDev {
   ): Promise<void> {
     /*
      * Returns a promise that resolves once all pull queues across all layers
-     * are empty and stay empty for debounceMs milliseconds. Useful in
+     * are empty and stay empty for debounceMs milliseconds. For example, useful in
      * screenshot tests to wait for data loading to truly finish.
+     * If no data is being fetched when this method is called and when no data
+     * is starting to be fetched within debounceMs, the returned promise will
+     * resolve immediately after debounceMs has passed.
+     * Therefore, you may want to call an additional sleep prior to calling this method,
+     * if you want to minimize the risk that data loading hasn't started yet.
      */
     const areQueuesEmpty = () => Model.getAllLayers().every((layer) => layer.pullQueue.isEmpty());
     return new Promise((resolve, reject) => {

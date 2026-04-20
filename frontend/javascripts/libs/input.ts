@@ -49,7 +49,6 @@ export type KeyboardLoopHandler = {
   onPressedWithRepeat: KeyboardLoopFn;
   onReleased?: KeyboardLoopFn;
 };
-// TODO: Improve type naming.
 export type KeyBindingMap = Record<KeyboardKeyOrCombo, KeyboardNoLoopHandler>;
 export type KeyBindingLoopMap = Record<KeyboardKeyOrCombo, KeyboardLoopHandler>;
 type KeystrokesHandlerArgs = {
@@ -334,7 +333,6 @@ export class InputKeyboard {
       }
     };
 
-    // TODOM: find better name.
     const onReleaseGuarded = ({ keyEvents, finalKeyEvent }: KeystrokesHandlerArgs) => {
       if (!this.isStarted) {
         return;

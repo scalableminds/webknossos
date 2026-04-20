@@ -44,8 +44,8 @@ export const PlaneNavigationKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMet
       [PlaneControllerLoopedNavigationKeyboardShortcuts.YAW_RIGHT]: "Rotate right",
       [PlaneControllerLoopedNavigationKeyboardShortcuts.PITCH_UP]: "Rotate up",
       [PlaneControllerLoopedNavigationKeyboardShortcuts.PITCH_DOWN]: "Rotate down",
-      [PlaneControllerLoopedNavigationKeyboardShortcuts.ALT_ROLL_LEFT]: "Roll left", // TODOM check for correct naming
-      [PlaneControllerLoopedNavigationKeyboardShortcuts.ALT_ROLL_RIGHT]: "Roll right", // TODOM check for correct naming
+      [PlaneControllerLoopedNavigationKeyboardShortcuts.ALT_ROLL_LEFT]: "Roll left",
+      [PlaneControllerLoopedNavigationKeyboardShortcuts.ALT_ROLL_RIGHT]: "Roll right",
     };
     return Object.fromEntries(
       Object.entries(withDescription).map(

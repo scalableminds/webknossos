@@ -156,8 +156,6 @@ class PlaneController extends PureComponent<Props> {
 
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any> = [];
   isStarted: boolean = false;
-  // TODOM: improve typing
-  unsubscribeKeyboardListener: any = () => {};
 
   componentDidMount() {
     this.input = {
@@ -433,11 +431,13 @@ class PlaneController extends PureComponent<Props> {
       }
     });
 
-    // register refresh listener: reload whenever the store's keyboard shortcuts change
-    this.unsubscribeKeyboardListener = listenToStoreProperty(
-      (state) => state.keyboardShortcutsConfig,
-      (keyboardShortcutsConfig) => this.reloadKeyboardShortcuts(keyboardShortcutsConfig),
-      true,
+    // register refresh keyboard shortcuts listener
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (state) => state.keyboardShortcutsConfig,
+        (keyboardShortcutsConfig) => this.reloadKeyboardShortcuts(keyboardShortcutsConfig),
+        true,
+      ),
     );
 
     // keep existing listener for keyboardDelay change
@@ -505,13 +505,6 @@ class PlaneController extends PureComponent<Props> {
       this.destroyInput();
     }
 
-    // unregister keyboard refresh listener
-    try {
-      this.unsubscribeKeyboardListener();
-    } catch (_e) {
-      // ignore if already removed
-    }
-
     // SceneController will already be null, if the user left the dataset view
     // because componentWillUnmount will trigger earlier for outer components and
     // later for inner components. The outer component TracingLayoutView is responsible
@@ -542,11 +535,11 @@ class PlaneController extends PureComponent<Props> {
     // @ts-expect-error ts-migrate(2739) FIXME: Type '{}' is missing the following properties from... Remove this comment to see the full error message
     this.input.mouseControllers = {};
 
+    // First unsubscribe from store. Then deleted the keyboards.
+    this.unsubscribeStoreListeners();
     this.input.keyboard?.destroy();
     this.input.keyboardNoLoop?.destroy();
     this.input.keyboardLoopDelayed?.destroy();
-
-    this.unsubscribeStoreListeners();
   }
 
   createToolDependentKeyboardHandler(

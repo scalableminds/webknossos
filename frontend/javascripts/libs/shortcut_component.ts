@@ -3,7 +3,6 @@ import { useEffect } from "react";
 
 // This component provides a lightweight wrapper around the input library.
 // It leverages reacts lifecycle hooks to allow rendering-sensitive activation of shortcuts.
-// TODOM maybe replace with new keystrokes hooks
 type Props = {
   keys: string;
   onTrigger: () => any;

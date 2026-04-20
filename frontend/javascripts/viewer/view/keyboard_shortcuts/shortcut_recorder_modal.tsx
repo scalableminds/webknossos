@@ -195,7 +195,7 @@ export function ShortcutRecorderModal({
           if (prevPreviewKeyCombo.length > 0) {
             setKeyComboChain([...keyComboChain, prevPreviewKeyCombo]);
           }
-          return prevPreviewKeyCombo; // TODO maybe undo
+          return prevPreviewKeyCombo;
         });
         // clear order and last snapshot
         clearCurrentPreview();

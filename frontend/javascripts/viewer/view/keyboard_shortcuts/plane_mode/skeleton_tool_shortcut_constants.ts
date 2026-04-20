@@ -47,7 +47,7 @@ export const PlaneSkeletonToolNoLoopedKeyboardShortcutMetaInfo: KeyboardShortcut
       [PlaneSkeletonToolNoLoopedKeyboardShortcuts.TOGGLE_ALL_TREES_PLANE]:
         "Toggle visibility of all trees",
       [PlaneSkeletonToolNoLoopedKeyboardShortcuts.TOGGLE_INACTIVE_TREES_PLANE]:
-        "Toggle visibility of hidden trees", // TODOM check if this is correct.
+        "Toggle visibility of non-active trees (exclude active tree / group)",
       [PlaneSkeletonToolNoLoopedKeyboardShortcuts.DELETE_ACTIVE_NODE_PLANE]: "Delete Active Node",
       [PlaneSkeletonToolNoLoopedKeyboardShortcuts.CREATE_TREE_PLANE]: "Create new Tree",
       [PlaneSkeletonToolNoLoopedKeyboardShortcuts.MOVE_ALONG_DIRECTION]:

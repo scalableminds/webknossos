@@ -252,6 +252,7 @@ export class MoveToolController {
 
   static onToolDeselected() {}
 }
+
 export class SkeletonToolController {
   static getMouseControls(planeView: PlaneView) {
     const legacyRightClick = (
@@ -276,6 +277,21 @@ export class SkeletonToolController {
     let draggingNodeId: number | null | undefined = null;
     let lastContinouslyPlacedNodeTimestamp: number | null = null;
     let didDragNode: boolean = false;
+
+    const maybePlaceContinuousNode = (pos: Point2, plane: string | null | undefined) => {
+      if (
+        lastContinouslyPlacedNodeTimestamp &&
+        Date.now() - lastContinouslyPlacedNodeTimestamp < 200
+      ) {
+        return;
+      }
+      lastContinouslyPlacedNodeTimestamp = Date.now();
+      if (plane) {
+        const globalPosition = calculateGlobalPos(Store.getState(), pos);
+        api.tracing.createNode(globalPosition.rounded, { center: false });
+      }
+    };
+
     return {
       leftMouseDown: (pos: Point2, plane: OrthoView, _event: MouseEvent, isTouch: boolean) => {
         const { useLegacyBindings } = Store.getState().userConfiguration;
@@ -303,19 +319,8 @@ export class SkeletonToolController {
         const { annotation, userConfiguration } = Store.getState();
         const { useLegacyBindings, continuousNodeCreation } = userConfiguration;
 
-        if (continuousNodeCreation) {
-          if (
-            lastContinouslyPlacedNodeTimestamp &&
-            Date.now() - lastContinouslyPlacedNodeTimestamp < 200
-          ) {
-            return;
-          }
-          lastContinouslyPlacedNodeTimestamp = Date.now();
-
-          if (plane) {
-            const globalPosition = calculateGlobalPos(Store.getState(), pos);
-            api.tracing.createNode(globalPosition.rounded, { center: false });
-          }
+        if (continuousNodeCreation && !useLegacyBindings) {
+          maybePlaceContinuousNode(pos, plane);
         } else {
           if (
             annotation.skeleton != null &&
@@ -327,6 +332,21 @@ export class SkeletonToolController {
             handleMovePlane(delta);
           }
         }
+      },
+      rightDownMove: (
+        _delta: Point2,
+        pos: Point2,
+        plane: string | null | undefined,
+        _event: MouseEvent,
+      ) => {
+        const { userConfiguration } = Store.getState();
+        const { useLegacyBindings, continuousNodeCreation } = userConfiguration;
+
+        if (!useLegacyBindings || !continuousNodeCreation) {
+          return;
+        }
+
+        maybePlaceContinuousNode(pos, plane);
       },
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         this.onLeftClick(
@@ -340,9 +360,9 @@ export class SkeletonToolController {
         );
       },
       rightClick: (position: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
-        const { useLegacyBindings, continuousNodeCreation } = Store.getState().userConfiguration;
+        const { useLegacyBindings } = Store.getState().userConfiguration;
 
-        if (useLegacyBindings && !continuousNodeCreation) {
+        if (useLegacyBindings) {
           legacyRightClick(position, plane, event, isTouch);
           return;
         }
@@ -364,7 +384,7 @@ export class SkeletonToolController {
   ): void {
     const { useLegacyBindings, continuousNodeCreation } = Store.getState().userConfiguration;
 
-    if (continuousNodeCreation && allowNodeCreation) {
+    if (continuousNodeCreation && allowNodeCreation && !useLegacyBindings) {
       handleCreateNodeFromEvent(position, ctrlPressed);
       return;
     }
@@ -401,6 +421,13 @@ export class SkeletonToolController {
     const { continuousNodeCreation } = Store.getState().userConfiguration;
     const { useLegacyBindings } = userConfiguration;
     if (continuousNodeCreation) {
+      if (useLegacyBindings) {
+        return {
+          leftDrag: "Move",
+          rightClick: "Place node",
+          rightDrag: "Draw nodes",
+        };
+      }
       return {
         leftClick: "Place node",
         leftDrag: "Draw nodes",
@@ -603,6 +630,7 @@ export class EraseToolController {
 
   static onToolDeselected() {}
 }
+
 export class VoxelPipetteToolController {
   static getPlaneMouseControls(_planeId: OrthoView): any {
     return {
@@ -682,6 +710,7 @@ export class FillCellToolController {
 
   static onToolDeselected() {}
 }
+
 export class BoundingBoxToolController {
   static getPlaneMouseControls(planeId: OrthoView, planeView: PlaneView): any {
     let primarySelectedEdge: SelectedEdge | null | undefined = null;

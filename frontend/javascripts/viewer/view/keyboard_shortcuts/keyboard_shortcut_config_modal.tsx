@@ -24,6 +24,7 @@ import { setKeyboardShortcutsConfigAction } from "viewer/model/actions/settings_
 import {
   ALL_KEYBOARD_HANDLER_IDS,
   ALL_KEYBOARD_SHORTCUT_META_INFOS,
+  type AnyKeyboardHandlerId,
   getAllDefaultKeyboardShortcuts,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 import {
@@ -53,7 +54,7 @@ export type ShortcutConfigModalProps = {
 type KeyboardShortcutTableDataEntry = {
   key: string;
   combos: KeyboardComboChain[];
-  handlerId: string;
+  handlerId: AnyKeyboardHandlerId;
   domain: string;
   description: string;
 };
@@ -106,15 +107,13 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
   const handleRemoveComboChain = (handlerId: string, comboChain: string[][]) => {
     setLocalShortcutConfig((prevConfig) => {
       const updatedCombos = prevConfig[handlerId].filter((c) => c !== comboChain);
-
-      if (updatedCombos.length > 0) {
-        return { ...prevConfig, [handlerId]: updatedCombos };
-      }
-      // @ts-expect-error TODOM fix
-      const defaultCombo = getAllDefaultKeyboardShortcuts()[handlerId] as KeyboardComboChain[];
-      Toast.info("Restored the default shortcut to keep the shortcut reachable.");
-      return { ...prevConfig, [handlerId]: defaultCombo };
+      return { ...prevConfig, [handlerId]: updatedCombos };
     });
+  };
+
+  const handleRestoreDefaultForHandler = (handlerId: AnyKeyboardHandlerId) => {
+    const defaultCombos = getAllDefaultKeyboardShortcuts()[handlerId] as KeyboardComboChain[];
+    setLocalShortcutConfig((prevConfig) => ({ ...prevConfig, [handlerId]: defaultCombos }));
   };
 
   // Convert config into grouped table rows
@@ -163,29 +162,40 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       render: (combos: KeyboardComboChain[], record: KeyboardShortcutTableDataEntry) => (
         <>
           <div className="shortcuts-container">
-            {combos.map((comboChain, index) => (
-              <div key={index} className="single-shortcut-container">
-                <span style={{ padding: "0px 4px" }}>
-                  {keyComboChainToUiElements(comboChain, false)}
-                </span>
-                <Button
-                  type="text"
-                  icon={<EditOutlined />}
-                  disabled={!isEditable}
-                  onClick={() => {
-                    setRecorderTargetHandlerId(record.handlerId);
-                    setRecorderEditingKeyCombo(comboChain);
-                    setIsRecorderOpen(true);
-                  }}
-                />
-                <Button
-                  type="text"
-                  disabled={!isEditable}
-                  icon={<CloseOutlined />}
-                  onClick={() => handleRemoveComboChain(record.handlerId, comboChain)}
-                />
-              </div>
-            ))}
+            {combos.length === 0 ? (
+              <Button
+                type="text"
+                icon={<RollbackOutlined />}
+                disabled={!isEditable}
+                onClick={() => handleRestoreDefaultForHandler(record.handlerId)}
+              >
+                Restore default
+              </Button>
+            ) : (
+              combos.map((comboChain, index) => (
+                <div key={index} className="single-shortcut-container">
+                  <span style={{ padding: "0px 4px" }}>
+                    {keyComboChainToUiElements(comboChain, false)}
+                  </span>
+                  <Button
+                    type="text"
+                    icon={<EditOutlined />}
+                    disabled={!isEditable}
+                    onClick={() => {
+                      setRecorderTargetHandlerId(record.handlerId);
+                      setRecorderEditingKeyCombo(comboChain);
+                      setIsRecorderOpen(true);
+                    }}
+                  />
+                  <Button
+                    type="text"
+                    disabled={!isEditable}
+                    icon={<CloseOutlined />}
+                    onClick={() => handleRemoveComboChain(record.handlerId, comboChain)}
+                  />
+                </div>
+              ))
+            )}
           </div>
 
           <div className="add-button-container">

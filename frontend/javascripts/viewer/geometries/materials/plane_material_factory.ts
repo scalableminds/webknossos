@@ -594,12 +594,14 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         (storeState) => storeState.datasetConfiguration.blendMode,
         (blendMode) => {
-          if (blendMode === BLEND_MODES.Additive) {
+          if (blendMode === BLEND_MODES.Cover) {
+            this.uniforms.blendMode.value = 0.0;
+          } else if (blendMode === BLEND_MODES.Additive) {
             this.uniforms.blendMode.value = 1.0;
           } else if (blendMode === BLEND_MODES.CoverWithBlackAsTransparent) {
             this.uniforms.blendMode.value = 2.0;
           } else {
-            this.uniforms.blendMode.value = 0.0; // Cover
+            throw new Error(`Unsupported blend mode: ${blendMode}`);
           }
         },
         true,

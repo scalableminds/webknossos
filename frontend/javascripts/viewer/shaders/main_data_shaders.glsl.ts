@@ -10,7 +10,11 @@ import constants, { OrthoViewIndices, ViewModeValuesIndices } from "viewer/const
 import { PLANE_SUBDIVISION } from "viewer/geometries/plane";
 import { MAX_ZOOM_STEP_DIFF } from "viewer/model/bucket_data_handling/loading_strategy_logic";
 import { MAPPING_TEXTURE_WIDTH } from "viewer/model/bucket_data_handling/mappings";
-import { getBlendLayersAdditive, getBlendLayersCover } from "./blending.glsl";
+import {
+  getBlendLayersAdditive,
+  getBlendLayersCover,
+  getBlendLayersCoverBlackAsTransparent,
+} from "./blending.glsl";
 import {
   getAbsoluteCoords,
   getMagnification,
@@ -199,6 +203,7 @@ ${compileShader(
   getMaybeFilteredColorOrFallback,
   getBlendLayersAdditive,
   getBlendLayersCover,
+  getBlendLayersCoverBlackAsTransparent,
   hasSegmentation ? convertCellIdToRGB : null,
   hasSegmentation ? getBrushOverlay : null,
   hasSegmentation ? getSegmentId : null,
@@ -349,12 +354,13 @@ void main() {
         // Marking the color as invalid by setting alpha to 0.0 if the fallback color has been used
         // so the fallback color does not cover other colors.
         vec4 layer_color = vec4(color_value, used_fallback ? 0.0 : maybe_filtered_color.color.a * <%= name %>_alpha);
-        // Calculating the cover color for the current layer in case blendMode == 1.0.
+        // Calculating the color for the current layer depending on blendMode.
+        // blendMode == 1.0: Additive, blendMode == 0.0: Cover, blendMode == 2.0: CoverWithBlackAsTransparent
         vec4 additive_color = blendLayersAdditive(data_color, layer_color);
-        // Calculating the cover color for the current layer in case blendMode == 0.0.
         vec4 cover_color = blendLayersCover(data_color, layer_color, used_fallback);
-        // Choose color depending on blendMode.
+        vec4 cover_black_transparent_color = blendLayersCoverBlackAsTransparent(data_color, layer_color, used_fallback);
         data_color = mix(cover_color, additive_color, float(blendMode == 1.0));
+        data_color = mix(data_color, cover_black_transparent_color, float(blendMode == 2.0));
       }
     }
   <% }) %>

@@ -1,12 +1,8 @@
 import fs from "node:fs";
-import path from "node:path";
 import pixelmatch from "pixelmatch";
 import { PNG } from "pngjs";
 
-export const SCREENSHOTS_BASE_PATH = path.join(
-  __dirname,
-  "../../../../frontend/javascripts/test/screenshots",
-);
+export { SCREENSHOTS_BASE_PATH } from "./screenshot_test_config";
 
 export function getUrlForScreenshotTests() {
   let URL = "https://master.webknossos.xyz/";

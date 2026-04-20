@@ -594,7 +594,13 @@ class PlaneMaterialFactory {
       listenToStoreProperty(
         (storeState) => storeState.datasetConfiguration.blendMode,
         (blendMode) => {
-          this.uniforms.blendMode.value = blendMode === BLEND_MODES.Additive ? 1.0 : 0.0;
+          if (blendMode === BLEND_MODES.Additive) {
+            this.uniforms.blendMode.value = 1.0;
+          } else if (blendMode === BLEND_MODES.CoverWithBlackAsTransparent) {
+            this.uniforms.blendMode.value = 2.0;
+          } else {
+            this.uniforms.blendMode.value = 0.0; // Cover
+          }
         },
         true,
       ),

@@ -79,7 +79,7 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
   zoom: "Zoom in or out in the data viewports.",
   displayScalebars: "Show a scale in the lower-right corner of each viewport.",
   blendMode:
-    "Set the blend mode for the dataset. The additive mode (default) adds the data values of all color layers. In cover mode, color layers are rendered on top of each other so that the data values of lower color layers are hidden by values of higher layers. Cover mode enables reordering of color layers.",
+    "Set the blend mode for the dataset. The additive mode (default) adds the data values of all color layers. In cover mode, color layers are rendered on top of each other so that the data values of lower color layers are hidden by values of higher layers. Cover (black as transparent) works like cover mode, but black voxels are treated as transparent so they do not occlude lower layers. Cover modes enable reordering of color layers.",
   renderWatermark: "Show a WEBKNOSSOS logo in the lower-left corner of each screenshot.",
   antialiasRendering: "Antialias rendering (can impact performance)",
   colorLayerOrder:

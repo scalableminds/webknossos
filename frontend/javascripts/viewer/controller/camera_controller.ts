@@ -96,6 +96,12 @@ class CameraController extends PureComponent<Props> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'storePropertyUnsubscribers' has no initi... Remove this comment to see the full error message
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
   tdViewDiagonalDatasetExtent: number = 0;
+  // Track the last stored (non-pulled-back) TDView camera position/up so that the
+  // pullback in updateTDCamera doesn't cause the next frame to see a spurious
+  // "position changed" → lookAt loop.
+  lastTDCameraPosition = new ThreeVector3(Number.NaN, Number.NaN, Number.NaN);
+  lastTDCameraUp = new ThreeVector3(Number.NaN, Number.NaN, Number.NaN);
+  lastTDProjectionDistance = 1;
   // Properties are only created here to avoid creating new objects for each update call.
   flycamRotationEuler = new Euler();
   flycamRotationMatrix = new Matrix4();
@@ -253,30 +259,46 @@ class CameraController extends PureComponent<Props> {
     const target = getTDCameraTarget(cameraData);
     const threeTarget = new ThreeVector3(...target);
 
+    const newStoredPosition = new ThreeVector3(...cameraData.position);
+    const newStoredUp = new ThreeVector3(...cameraData.up);
+
+    // Compare against the *stored* position, not tdCamera.position. The Three.js
+    // camera object may have been shifted by the pullback below, so reading
+    // tdCamera.position would cause a spurious "changed" on the next frame and
+    // trigger a lookAt loop / numeric instability.
+    const positionChanged = !newStoredPosition.equals(this.lastTDCameraPosition);
+    const upChanged = !newStoredUp.equals(this.lastTDCameraUp);
+
+    if (positionChanged || upChanged) {
+      this.lastTDCameraPosition.copy(newStoredPosition);
+      this.lastTDCameraUp.copy(newStoredUp);
+      this.lastTDProjectionDistance =
+        Math.max(1, newStoredPosition.distanceTo(threeTarget));
+    }
+
+    // Always write the stored position/up to the camera; the pullback below may
+    // then override position, but we always start from the canonical stored state.
+    tdCamera.position.copy(newStoredPosition);
+    tdCamera.up.copy(newStoredUp);
+
     // Only re-orient the camera when position or up actually changed. When only the
-    // target or frustum (left/right/top/bottom) changes, the camera keeps its current
+    // target or frustum (left/right/top/bottom) changes the camera keeps its current
     // orientation — this prevents re-centering the view when e.g. a node is placed or
     // the rotation center is updated via setTargetAndFixPosition.
-    const prevPosition = tdCamera.position.clone();
-    const prevUp = tdCamera.up.clone();
-    tdCamera.position.set(...cameraData.position);
-    tdCamera.up = new ThreeVector3(...cameraData.up);
-    if (!prevPosition.equals(tdCamera.position) || !prevUp.equals(tdCamera.up)) {
+    if (positionChanged || upChanged) {
       tdCamera.lookAt(threeTarget);
     }
 
     if (tdCamera instanceof PerspectiveCamera) {
       // Interpret left/right/top/bottom as viewplane extents at the target depth and
       // use an off-axis perspective projection to preserve pan/zoom semantics.
-      const distance = V3.length(V3.sub(target, cameraData.position)) || 1;
 
       // When zoomed out far, plane vertices can go behind the camera, which causes
       // severe distortion because the perspective divide produces garbage clip-space
       // coordinates for w < 0 vertices (they don't just get cleanly clipped).
-      // From the geometry of the diagonal TDView, the nearest plane vertex goes behind
-      // the camera when distance < max_viewport_extent * ~0.9. We use a 1.5× safety
-      // margin and pull the camera back along its existing view direction so that the
-      // stored position (and TrackballControls state) is not affected.
+      // Pull the camera back along its existing view direction (position → target ray)
+      // so that TrackballControls state is unaffected. Do NOT call lookAt after the
+      // pullback — moving along the same ray preserves the existing orientation.
       const maxViewExtent = Math.max(
         Math.abs(cameraData.left),
         Math.abs(cameraData.right),
@@ -284,12 +306,12 @@ class CameraController extends PureComponent<Props> {
         Math.abs(cameraData.bottom),
       );
       const minSafeDistance = maxViewExtent * 1.5;
-      const effectiveDistance = Math.max(distance, minSafeDistance);
+      const effectiveDistance = Math.max(this.lastTDProjectionDistance, minSafeDistance);
 
-      if (effectiveDistance > distance) {
-        const viewDir = new ThreeVector3(...cameraData.position).sub(threeTarget).normalize();
+      if (effectiveDistance > this.lastTDProjectionDistance) {
+        const viewDir = newStoredPosition.clone().sub(threeTarget).normalize();
         tdCamera.position.copy(threeTarget.clone().addScaledVector(viewDir, effectiveDistance));
-        tdCamera.lookAt(threeTarget);
+        // No lookAt here — moving along the stored view ray doesn't change direction.
       }
 
       // Use near = effectiveDistance/1000 for good near/far ratio and depth precision.

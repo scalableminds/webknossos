@@ -313,16 +313,34 @@ class TDController extends PureComponent<Props> {
     const { controls } = this;
     position = position || getPosition(flycam);
     const nmPosition = voxelToUnit(this.props.voxelSize, position);
+    const desiredTarget = new ThreeVector3(...nmPosition);
 
-    // Update the rotation center without letting TrackballControls translate the camera.
-    const effectiveTarget = new ThreeVector3(...nmPosition);
+    // Project the desired rotation center onto the camera's current look ray.
+    // TrackballControls computes the eye vector as (object.position − target) in
+    // both getMouseProjectionOnBall and update(). If controls.target is updated to
+    // a point that is NOT on the camera's look ray, the eye vector is inconsistent
+    // with the camera's actual orientation and the first drag produces a jump.
+    // By projecting onto the look ray, the eye vector stays collinear with the
+    // camera's forward direction, so rotation is smooth from the first frame.
+    // The camera position and orientation are unchanged, so there is no visual shift.
+    let effectiveTarget = desiredTarget;
+    const camera = controls?.object;
+    if (camera != null) {
+      const forward = new ThreeVector3(0, 0, -1).applyQuaternion(camera.quaternion);
+      const depth = Math.max(0.1, desiredTarget.clone().sub(camera.position).dot(forward));
+      effectiveTarget = camera.position.clone().addScaledVector(forward, depth);
+    }
 
     if (controls != null) {
       controls.target.copy(effectiveTarget);
       controls.lastTarget = effectiveTarget.clone();
     }
 
-    Store.dispatch(setTDCameraWithoutTimeTrackingAction({ target: nmPosition }));
+    Store.dispatch(
+      setTDCameraWithoutTimeTrackingAction({
+        target: [effectiveTarget.x, effectiveTarget.y, effectiveTarget.z],
+      }),
+    );
   };
 
   zoomTDView(value: number, zoomToMouse: boolean = true): void {

@@ -217,21 +217,6 @@ class CameraController extends PureComponent<Props> {
       );
       this.props.cameras[viewport].updateProjectionMatrix();
     }
-
-    // Keep the TDView's rotation center in sync with the other viewports while
-    // the user interacts outside of the TDView. This avoids a small "catch up"
-    // jump when hovering the TDView afterwards.
-    if (state.viewModeData.plane.activeViewport !== OrthoViews.TDView) {
-      const prevTarget = state.viewModeData.plane.tdCamera.target;
-      if (
-        prevTarget == null ||
-        prevTarget[0] !== cameraPosition[0] ||
-        prevTarget[1] !== cameraPosition[1] ||
-        prevTarget[2] !== cameraPosition[2]
-      ) {
-        Store.dispatch(setTDCameraWithoutTimeTrackingAction({ target: cameraPosition }));
-      }
-    }
   }
 
   bindToEvents() {
@@ -266,10 +251,19 @@ class CameraController extends PureComponent<Props> {
   updateTDCamera(cameraData: CameraData): void {
     const tdCamera = this.props.cameras[OrthoViews.TDView];
     const target = getTDCameraTarget(cameraData);
+    const threeTarget = new ThreeVector3(...target);
 
+    // Only re-orient the camera when position or up actually changed. When only the
+    // target or frustum (left/right/top/bottom) changes, the camera keeps its current
+    // orientation — this prevents re-centering the view when e.g. a node is placed or
+    // the rotation center is updated via setTargetAndFixPosition.
+    const prevPosition = tdCamera.position.clone();
+    const prevUp = tdCamera.up.clone();
     tdCamera.position.set(...cameraData.position);
     tdCamera.up = new ThreeVector3(...cameraData.up);
-    tdCamera.lookAt(new ThreeVector3(...target));
+    if (!prevPosition.equals(tdCamera.position) || !prevUp.equals(tdCamera.up)) {
+      tdCamera.lookAt(threeTarget);
+    }
 
     if (tdCamera instanceof PerspectiveCamera) {
       // Interpret left/right/top/bottom as viewplane extents at the target depth and
@@ -293,16 +287,15 @@ class CameraController extends PureComponent<Props> {
       const effectiveDistance = Math.max(distance, minSafeDistance);
 
       if (effectiveDistance > distance) {
-        const viewDir = new ThreeVector3(...cameraData.position)
-          .sub(new ThreeVector3(...target))
-          .normalize();
-        tdCamera.position.copy(
-          new ThreeVector3(...target).addScaledVector(viewDir, effectiveDistance),
-        );
-        tdCamera.lookAt(new ThreeVector3(...target));
+        const viewDir = new ThreeVector3(...cameraData.position).sub(threeTarget).normalize();
+        tdCamera.position.copy(threeTarget.clone().addScaledVector(viewDir, effectiveDistance));
+        tdCamera.lookAt(threeTarget);
       }
 
-      const near = Math.max(0.001, effectiveDistance / 100000);
+      // Use near = effectiveDistance/1000 for good near/far ratio and depth precision.
+      // The camera pullback above ensures vertices are always at depth ≥ ~0.56 × effectiveDistance,
+      // so near = effectiveDistance/1000 is safe against clipping.
+      const near = Math.max(0.1, effectiveDistance / 1000);
       const farPadding = Math.max(1000, this.tdViewDiagonalDatasetExtent * 2, maxViewExtent * 2);
       const far = Math.max(near + 1, effectiveDistance + farPadding);
       const scale = near / effectiveDistance;

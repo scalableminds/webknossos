@@ -276,8 +276,7 @@ const DatasetSettingsViewConfigTabWithDataset = ({ dataset }: { dataset: APIData
     },
     {
       title: "Color Layer Order",
-      tooltip:
-        "Set the order in which color layers are rendered. This setting is only relevant if the cover blend mode is active.",
+      tooltip: settingsTooltips.colorLayerOrder,
       content: (
         <Form.Item
           name={["defaultConfiguration", "colorLayerOrder"]}

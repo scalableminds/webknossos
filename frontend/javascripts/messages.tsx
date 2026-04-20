@@ -83,7 +83,7 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
   renderWatermark: "Show a WEBKNOSSOS logo in the lower-left corner of each screenshot.",
   antialiasRendering: "Antialias rendering (can impact performance)",
   colorLayerOrder:
-    "Set the order in which color layers are rendered. This setting is only relevant if the cover blend mode is active.",
+    "Set the order in which color layers are rendered. This setting is only relevant if one of the cover blend modes is active.",
 };
 
 export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfiguration, string>> = {

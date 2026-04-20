@@ -8,7 +8,6 @@ export enum KeyboardShortcutDomain {
   ARBITRARY_NAVIGATION = "Navigation in Arbitrary Mode",
   ARBITRARY_EDITING = "Editing in Arbitrary Mode",
   PLANE_NAVIGATION = "Navigation",
-  PLANE_CONFIGURATIONS = "Change Configurations",
   PLANE_TOOL_SWITCHING = "Tool Switching",
   PLANE_SKELETON_TOOL = "Skeleton Tool",
   PLANE_VOLUME_TOOL = "Volume Tools",

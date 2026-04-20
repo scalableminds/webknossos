@@ -272,8 +272,7 @@ class CameraController extends PureComponent<Props> {
     if (positionChanged || upChanged) {
       this.lastTDCameraPosition.copy(newStoredPosition);
       this.lastTDCameraUp.copy(newStoredUp);
-      this.lastTDProjectionDistance =
-        Math.max(1, newStoredPosition.distanceTo(threeTarget));
+      this.lastTDProjectionDistance = Math.max(1, newStoredPosition.distanceTo(threeTarget));
     }
 
     // Always write the stored position/up to the camera; the pullback below may

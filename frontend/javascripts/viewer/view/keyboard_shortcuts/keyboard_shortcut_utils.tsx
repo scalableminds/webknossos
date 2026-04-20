@@ -112,29 +112,37 @@ export function comparableKeyComboChainToKeyCombo(comboChain: ComparableKeyCombo
 export function keyComboChainToUiElements(
   comboChain: KeyboardComboChain,
   useFancy: boolean,
+  keyPrefix: string = "",
 ): React.ReactNode[] {
   const uiElements: React.ReactNode[] = [];
   comboChain.forEach((combo, outerIndex) => {
     sortKeyCombo(combo).forEach((key, innerIndex) => {
       if (useFancy) {
         uiElements.push(
-          <KeyboardKeyIcon key={uiElements.length} className="keyboard-key-icon">
+          <KeyboardKeyIcon
+            key={`${keyPrefix}${outerIndex}-${innerIndex}`}
+            className="keyboard-key-icon"
+          >
             {keyToUiElement(key)}
           </KeyboardKeyIcon>,
         );
       } else {
         uiElements.push(
-          <Text key={uiElements.length} keyboard style={{ whiteSpace: "nowrap" }}>
+          <Text
+            key={`${keyPrefix}${outerIndex}-${innerIndex}`}
+            keyboard
+            style={{ whiteSpace: "nowrap" }}
+          >
             {keyToUiElement(key)}
           </Text>,
         );
       }
       if (innerIndex < combo.length - 1) {
-        uiElements.push(<Text key={uiElements.length}>+</Text>);
+        uiElements.push(<Text key={`${keyPrefix}${outerIndex}-sep${innerIndex}`}>+</Text>);
       }
     });
     if (outerIndex < comboChain.length - 1) {
-      uiElements.push(<Text key={uiElements.length}>&gt;</Text>);
+      uiElements.push(<Text key={`${keyPrefix}${outerIndex}-chain`}>&gt;</Text>);
     }
   });
   return uiElements;

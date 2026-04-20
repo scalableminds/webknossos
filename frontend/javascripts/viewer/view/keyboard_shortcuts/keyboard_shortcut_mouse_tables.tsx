@@ -63,6 +63,7 @@ function MouseShortcutDomainTable({
       </Title>
       <Table
         dataSource={data}
+        rowKey="action"
         columns={mouseShortcutColumns}
         pagination={false}
         size="small"

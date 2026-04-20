@@ -15,7 +15,8 @@ export const DEFAULT_PLANE_BOUNDING_BOX_TOOL_NO_LOOPED_KEYBOARD_SHORTCUTS: Keybo
   {
     [PlaneBoundingBoxToolNoLoopedKeyboardShortcuts.CREATE_BOUNDING_BOX]: [[["c"]]],
     [PlaneBoundingBoxToolNoLoopedKeyboardShortcuts.TOGGLE_CURSOR_STATE_FOR_MOVING]: [
-      [["Control"], ["Meta"]],
+      [["Control"]],
+      [["Meta"]],
     ],
   };
 

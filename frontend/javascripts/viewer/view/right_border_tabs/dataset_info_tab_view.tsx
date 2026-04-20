@@ -86,15 +86,18 @@ type ShortcutInfo = {
   action: string;
 };
 
-// TODOM: check whether the icons looks the same now
 const getShortcuts = (
   keyboardShortcutsConfig: KeyboardShortcutsMap<string>,
   isInPlaneMode: boolean,
 ): ShortcutInfo[] => {
   const toUiElement = (keyboardShortcutHandlerId: AnyKeyboardHandlerId) =>
-    (keyboardShortcutsConfig[keyboardShortcutHandlerId] ?? []).map((keyCombo) => {
+    (keyboardShortcutsConfig[keyboardShortcutHandlerId] ?? []).flatMap((keyCombo, comboIndex) => {
       const capitalizedKeyCombo = keyCombo.map((keys) => keys.map((key) => key.toUpperCase()));
-      return keyComboChainToUiElements(capitalizedKeyCombo, true);
+      return keyComboChainToUiElements(
+        capitalizedKeyCombo,
+        true,
+        `${keyboardShortcutHandlerId}-${comboIndex}-`,
+      );
     });
   return [
     {

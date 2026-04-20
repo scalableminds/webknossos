@@ -384,6 +384,7 @@ export enum LOG_LEVELS {
 export enum BLEND_MODES {
   Additive = "Additive",
   Cover = "Cover",
+  CoverWithBlackAsTransparent = "CoverWithBlackAsTransparent",
 }
 
 export const Identity4x4: Matrix4x4 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];

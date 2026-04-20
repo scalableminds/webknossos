@@ -6,6 +6,7 @@ import IconStatusbarMouseRight from "@images/icons/icon-statusbar-mouse-right.sv
 import IconStatusbarMouseRightDrag from "@images/icons/icon-statusbar-mouse-right-drag.svg?react";
 import IconStatusbarMouseWheel from "@images/icons/icon-statusbar-mouse-wheel.svg?react";
 import { Table, Typography } from "antd";
+import { useWkSelector } from "libs/react_hooks";
 import React from "react";
 import { KeyboardShortcutDomain } from "./keyboard_shortcut_types";
 import { keyComboChainToUiElements } from "./keyboard_shortcut_utils";
@@ -319,7 +320,10 @@ export function SkeletonToolMouseShortcutsTable() {
 }
 
 export function SkeletonToolClassicControlsMouseShortcutsTable() {
-  return (
+  const areClassicControlsUsed = useWkSelector(
+    (state) => state.userConfiguration.useLegacyBindings,
+  );
+  return areClassicControlsUsed ? (
     <MouseShortcutDomainTable
       domainName={KeyboardShortcutDomain.PLANE_SKELETON_TOOL}
       classicControlsSpecific
@@ -350,7 +354,7 @@ export function SkeletonToolClassicControlsMouseShortcutsTable() {
         },
       ]}
     />
-  );
+  ) : null;
 }
 
 export function VolumeToolMouseShortcutsTable() {
@@ -420,7 +424,10 @@ export function VolumeToolMouseShortcutsTable() {
 }
 
 export function VolumeToolClassicControlsMouseShortcutsTable() {
-  return (
+  const areClassicControlsUsed = useWkSelector(
+    (state) => state.userConfiguration.useLegacyBindings,
+  );
+  return areClassicControlsUsed ? (
     <MouseShortcutDomainTable
       domainName={KeyboardShortcutDomain.PLANE_VOLUME_TOOL}
       classicControlsSpecific
@@ -452,7 +459,7 @@ export function VolumeToolClassicControlsMouseShortcutsTable() {
         },
       ]}
     />
-  );
+  ) : null;
 }
 
 export function ProofreadingToolMouseShortcutsTable() {

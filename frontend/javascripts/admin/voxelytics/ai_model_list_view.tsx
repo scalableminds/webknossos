@@ -96,7 +96,7 @@ export default function AiModelListView() {
               render: (model: AiModel) => <FormattedDate timestamp={model.created} />,
             },
             {
-              title: "User",  
+              title: "User",
               dataIndex: "user",
               key: "user",
               render: (user: AiModel["user"]) => formatUserName(activeUser, user),

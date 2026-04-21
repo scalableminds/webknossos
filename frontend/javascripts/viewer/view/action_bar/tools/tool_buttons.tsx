@@ -14,7 +14,7 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";
 import type { WebknossosState } from "viewer/store";
-import { NARROW_BUTTON_STYLE, ToolRadioButton, ToolRadioButtonWithDropdown } from "./tool_helpers";
+import { ToolRadioButton, ToolRadioButtonWithDropdown } from "./tool_helpers";
 
 const getMaybeDisabledButtonStyle = (isDisabled: boolean): React.CSSProperties =>
   isDisabled ? { color: "rgb(255 255 255 / 25%)" } : {};
@@ -413,7 +413,6 @@ function ProofreadTool(_props: ToolButtonProps) {
       onMouseEnter={() => {
         dispatch(ensureLayerMappingsAreLoadedAction());
       }}
-      style={NARROW_BUTTON_STYLE}
     >
       <Icon
         component={AnnotationTool.PROOFREAD.icon}
@@ -442,7 +441,6 @@ function MeasurementToolMenu({ adaptedActiveTool: _adaptedActiveTool }: ToolButt
     <ToolRadioButtonWithDropdown
       disabled={isAreaMeasurementDisabled && isLineMeasurementDisabled}
       value={favoriteMeasurementTool.id}
-      style={NARROW_BUTTON_STYLE}
       dropdownItems={[
         {
           key: AnnotationTool.LINE_MEASUREMENT.id,

@@ -105,7 +105,7 @@ export function ToolRadioButtonWithDropdown({
   onMouseEnter?: () => void;
 }) {
   const dispatch = useDispatch();
-  // See explanation above: Add dropdown into the button and tweak padding so that
+  // See explanation for RadioButtonWithTooltip: Add dropdown into the button and tweak padding so that
   // the dropdown is triggered when hovering anywhere within the button, not just the icon.
   return (
     <Radio.Button

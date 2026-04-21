@@ -275,17 +275,17 @@ export class SkeletonToolController {
     };
 
     let draggingNodeId: number | null | undefined = null;
-    let lastContinouslyPlacedNodeTimestamp: number | null = null;
+    let lastContinuouslyPlacedNodeTimestamp: number | null = null;
     let didDragNode: boolean = false;
 
     const maybePlaceContinuousNode = (pos: Point2, plane: string | null | undefined) => {
       if (
-        lastContinouslyPlacedNodeTimestamp &&
-        Date.now() - lastContinouslyPlacedNodeTimestamp < 200
+        lastContinuouslyPlacedNodeTimestamp &&
+        Date.now() - lastContinuouslyPlacedNodeTimestamp < 200
       ) {
         return;
       }
-      lastContinouslyPlacedNodeTimestamp = Date.now();
+      lastContinuouslyPlacedNodeTimestamp = Date.now();
       if (plane) {
         const globalPosition = calculateGlobalPos(Store.getState(), pos);
         api.tracing.createNode(globalPosition.rounded, { center: false });

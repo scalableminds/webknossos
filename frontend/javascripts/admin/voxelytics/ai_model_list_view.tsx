@@ -82,7 +82,7 @@ export default function AiModelListView() {
               dataIndex: "name",
               key: "name",
               render: (name: string, model: AiModel) => (
-                <Space vertical>
+                <Space orientation="vertical">
                   {name}
                   <FormattedId id={model.id} />
                 </Space>
@@ -96,7 +96,7 @@ export default function AiModelListView() {
               render: (model: AiModel) => <FormattedDate timestamp={model.created} />,
             },
             {
-              title: "User",
+              title: "User",  
               dataIndex: "user",
               key: "user",
               render: (user: AiModel["user"]) => formatUserName(activeUser, user),

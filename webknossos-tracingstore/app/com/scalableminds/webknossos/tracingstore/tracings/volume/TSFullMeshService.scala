@@ -148,14 +148,19 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       fullMeshRequest: FullMeshRequest,
       topLeftOpt: Option[VoxelPosition],
       chunkSize: Vec3Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] = {
+    // visited does not need to be thread-safe: it is mutated only at the start of each
+    // processFrontier call (before any concurrent work begins); Fox.combined only reads it
+    // (via generateNextTopLeftsFromNeighbors.filterNot), and waves execute sequentially
+    // via Fox.serialCombined, so no two writes ever race.
     val visited = collection.mutable.Set[VoxelPosition]()
 
     def processFrontier(frontier: List[VoxelPosition], acc: List[Array[Float]]): Fox[List[Array[Float]]] =
       if (frontier.isEmpty) Fox.successful(acc)
       else {
         visited ++= frontier
-        Fox
-          .serialCombined(frontier.grouped(adHocMeshingBatchSize).toList) { batch =>
+        val batches = frontier.grouped(adHocMeshingBatchSize).toList
+        for {
+          batchResults <- Fox.serialCombined(batches) { batch =>
             Fox.combined(batch.map { position =>
               val adHocMeshRequest = WebknossosAdHocMeshRequest(
                 position = Vec3Int(position.mag1X, position.mag1Y, position.mag1Z),
@@ -169,22 +174,21 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
                 fullMeshRequest.annotationVersion,
               )
               loadMeshChunkFromAdHoc(annotationId, tracingId, tracing, adHocMeshRequest).map {
-                case (vertices, neighbors) =>
-                  (vertices, generateNextTopLeftsFromNeighbors(position, neighbors, chunkSize, visited))
+                case (vertices, neighborIds) =>
+                  (vertices, generateNextTopLeftsFromNeighbors(position, neighborIds, chunkSize, visited))
               }
             })
           }
-          .map(_.flatten)
-          .flatMap { results =>
-            val newVertices = results.map(_._1)
-            val nextFrontier = results.flatMap(_._2).distinct
-            processFrontier(nextFrontier, newVertices ::: acc)
-          }
+          results = batchResults.flatten
+          newVertices = results.map(_._1)
+          nextFrontier = results.flatMap(_._2).distinct
+          allVertices <- processFrontier(nextFrontier, newVertices ::: acc)
+        } yield allVertices
       }
 
     for {
       topLeft <- topLeftOpt.toFox ?~> "seedPosition.neededForAdHoc"
-      result <- processFrontier(List(topLeft), Nil)
+      result <- processFrontier(List(topLeft), List.empty)
     } yield result
   }
 

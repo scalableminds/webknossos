@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+
+	<groupId>cisd</groupId>
+	<artifactId>jhdf5</artifactId>
+	<version>19.04.1</version>
+
+	<name>JHDF5 (HDF5 for Java)</name>
+	<description>
+		HDF5 is an efficient, well-documented, non-proprietary binary data format
+		and library developed and maintained by the HDF Group. The library provided
+		by the HDF Group is written in C and available under a liberal BSD-style
+		Open Source software license. It has over 600 API calls and is very powerful
+		and configurable, but it is not trivial to use.
+
+		JHDF5 is a Java binding for HDF5 focusing on ease-of-use, which was
+		developed by CISD and is now maintained by ETH SIS. It is available under
+		the Apache License 2.0. The library contains HDF5 1.10 from the HDF Group
+		and files created with JHDF5 are fully compatible with HDF 1.10 (or HDF5 1.8
+		if you initialize the library appropriately).
+	</description>
+	<url>https://unlimited.ethz.ch/display/JHDF/</url>
+	<organization>
+		<name>ETH Zurich Scientific IT Services</name>
+		<url>https://sis.id.ethz.ch/</url>
+	</organization>
+	<licenses>
+		<license>
+			<name>Apache 2</name>
+			<url>https://apache.org/licenses/LICENSE-2.0.txt</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+
+	<scm>
+		<connection>scm:git:https://sissource.ethz.ch/sispub/jhdf5</connection>
+		<developerConnection>scm:git:https://sissource.ethz.ch/sispub/jhdf5</developerConnection>
+		<tag>19.04.1</tag>
+		<url>https://sissource.ethz.ch/sispub/jhdf5</url>
+	</scm>
+
+	<properties>
+		<base.version>18.09.0</base.version>
+		<commons-io.version>2.6</commons-io.version>
+		<commons-lang3.version>3.7</commons-lang3.version>
+	</properties>
+
+	<dependencies>
+		<dependency>
+			<groupId>cisd</groupId>
+			<artifactId>base</artifactId>
+			<version>${base.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+			<version>${commons-io.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+			<version>${commons-lang3.version}</version>
+		</dependency>
+	</dependencies>
+</project>

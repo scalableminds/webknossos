@@ -363,7 +363,7 @@ function TreeHierarchyView(props: Props) {
                   checkedKeys={checkedKeys}
                   expandedKeys={expandedNodeKeys}
                   selectedKeys={selectedKeys}
-                  style={{ marginLeft: -14 }}
+                  style={{ marginLeft: -24 }}
                   autoExpandParent
                   checkable
                   blockNode

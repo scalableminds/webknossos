@@ -1,9 +1,11 @@
 import update from "immutability-helper";
 import type { Point2, Rect, Viewport } from "viewer/constants";
 import { ArbitraryViewport } from "viewer/constants";
+import { getPosition } from "viewer/model/accessors/flycam_accessor";
 import { getTDViewportSize } from "viewer/model/accessors/view_mode_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import { zoomReducer } from "viewer/model/reducers/flycam_reducer";
+import { voxelToUnit } from "viewer/model/scaleinfo";
 import type { CameraData, WebknossosState } from "viewer/store";
 
 function ViewModeReducer(state: WebknossosState, action: Action): WebknossosState {
@@ -127,11 +129,16 @@ function setTDCameraReducer(
 
 function centerTDViewReducer(state: WebknossosState): WebknossosState {
   const camera = state.viewModeData.plane.tdCamera;
-  return moveTDViewByVectorReducer(
+  const centeredState = moveTDViewByVectorReducer(
     state,
     -(camera.left + camera.right) / 2,
     -(camera.top + camera.bottom) / 2,
   );
+  // Also reset the look-at target to the current flycam position. Without this,
+  // the camera may still point toward a stale target (e.g. a previously selected
+  // node's projected position) even after the frustum is re-centered.
+  const target = voxelToUnit(state.dataset.dataSource.scale, getPosition(state.flycam));
+  return setTDCameraReducer(centeredState, { target });
 }
 
 function zoomTDView(

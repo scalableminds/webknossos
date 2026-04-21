@@ -96,11 +96,13 @@ class CameraController extends PureComponent<Props> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'storePropertyUnsubscribers' has no initi... Remove this comment to see the full error message
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
   tdViewDiagonalDatasetExtent: number = 0;
-  // Track the last stored (non-pulled-back) TDView camera position/up so that the
-  // pullback in updateTDCamera doesn't cause the next frame to see a spurious
-  // "position changed" → lookAt loop.
+  // Track the last stored (non-pulled-back) TDView camera position/up/target so that
+  // the pullback in updateTDCamera doesn't cause the next frame to see a spurious
+  // "position changed" → lookAt loop, and so that lookAt is called whenever any of
+  // them actually changes.
   lastTDCameraPosition = new ThreeVector3(Number.NaN, Number.NaN, Number.NaN);
   lastTDCameraUp = new ThreeVector3(Number.NaN, Number.NaN, Number.NaN);
+  lastTDCameraTarget = new ThreeVector3(Number.NaN, Number.NaN, Number.NaN);
   lastTDProjectionDistance = 1;
   // Properties are only created here to avoid creating new objects for each update call.
   flycamRotationEuler = new Euler();
@@ -268,10 +270,12 @@ class CameraController extends PureComponent<Props> {
     // trigger a lookAt loop / numeric instability.
     const positionChanged = !newStoredPosition.equals(this.lastTDCameraPosition);
     const upChanged = !newStoredUp.equals(this.lastTDCameraUp);
+    const targetChanged = !threeTarget.equals(this.lastTDCameraTarget);
 
-    if (positionChanged || upChanged) {
+    if (positionChanged || upChanged || targetChanged) {
       this.lastTDCameraPosition.copy(newStoredPosition);
       this.lastTDCameraUp.copy(newStoredUp);
+      this.lastTDCameraTarget.copy(threeTarget);
       this.lastTDProjectionDistance = Math.max(1, newStoredPosition.distanceTo(threeTarget));
     }
 
@@ -280,11 +284,13 @@ class CameraController extends PureComponent<Props> {
     tdCamera.position.copy(newStoredPosition);
     tdCamera.up.copy(newStoredUp);
 
-    // Only re-orient the camera when position or up actually changed. When only the
-    // target or frustum (left/right/top/bottom) changes the camera keeps its current
-    // orientation — this prevents re-centering the view when e.g. a node is placed or
-    // the rotation center is updated via setTargetAndFixPosition.
-    if (positionChanged || upChanged) {
+    // Re-orient the camera whenever position, up, or target changes. It is safe to
+    // also call lookAt on target-only changes because setTargetAndFixPosition always
+    // projects the new target onto the camera's current look ray — so lookAt with a
+    // projected target is a no-op for normal navigation. The centerTDViewReducer sets
+    // target to the actual flycam position (off the look ray), so lookAt there
+    // correctly re-orients the camera to frame the data planes.
+    if (positionChanged || upChanged || targetChanged) {
       tdCamera.lookAt(threeTarget);
     }
 

@@ -61,7 +61,34 @@ export function RadioButtonWithTooltip({
   );
 }
 
-function RadioButtonWithDropdown({
+export function ToolRadioButton({
+  name,
+  description,
+  disabledExplanation,
+  onMouseEnter,
+  ...props
+}: {
+  name: string;
+  description?: string;
+  disabledExplanation?: string;
+  disabled?: boolean;
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+  value: unknown;
+  onClick?: (event: React.MouseEvent) => void;
+  onMouseEnter?: () => void;
+}) {
+  return (
+    <RadioButtonWithTooltip
+      title={description != null ? `${name} – ${description}` : null}
+      disabledTitle={`${name} – ${disabledExplanation}`}
+      onMouseEnter={onMouseEnter}
+      {...props}
+    />
+  );
+}
+
+export function ToolRadioButtonWithDropdown({
   disabled,
   onClick,
   children,
@@ -74,7 +101,7 @@ function RadioButtonWithDropdown({
   style?: React.CSSProperties;
   value: unknown;
   onClick?: (event: React.MouseEvent) => void;
-  dropdownItems?: MenuItemType[];
+  dropdownItems: MenuItemType[];
   onMouseEnter?: () => void;
 }) {
   const dispatch = useDispatch();
@@ -104,52 +131,5 @@ function RadioButtonWithDropdown({
         <div style={{ ...NARROW_BUTTON_STYLE, display: "block" }}>{children}</div>
       </Dropdown>
     </Radio.Button>
-  );
-}
-
-export function ToolRadioButton({
-  name,
-  description,
-  disabledExplanation,
-  onMouseEnter,
-  ...props
-}: {
-  name: string;
-  description?: string;
-  disabledExplanation?: string;
-  disabled?: boolean;
-  children: React.ReactNode;
-  style?: React.CSSProperties;
-  value: unknown;
-  onClick?: (event: React.MouseEvent) => void;
-  onMouseEnter?: () => void;
-}) {
-  return (
-    <RadioButtonWithTooltip
-      title={description != null ? `${name} – ${description}` : null}
-      disabledTitle={`${name} – ${disabledExplanation}`}
-      onMouseEnter={onMouseEnter}
-      {...props}
-    />
-  );
-}
-
-export function ToolRadioButtonWithDropdown({
-  name,
-  onMouseEnter,
-  dropdownItems,
-  ...props
-}: {
-  name: string;
-  disabled?: boolean;
-  children: React.ReactNode;
-  style?: React.CSSProperties;
-  value: unknown;
-  onClick?: (event: React.MouseEvent) => void;
-  onMouseEnter?: () => void;
-  dropdownItems?: MenuItemType[];
-}) {
-  return (
-    <RadioButtonWithDropdown onMouseEnter={onMouseEnter} dropdownItems={dropdownItems} {...props} />
   );
 }

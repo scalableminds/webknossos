@@ -212,14 +212,19 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
     // Iterative parallel BFS. Each wave dispatches all frontier positions concurrently
     // (in actorPoolSize batches) rather than serially one at a time.
     // visited is marked before dispatch so parallel wave members don't queue the same position.
+    // visited does not need to be thread-safe: it is mutated only at the start of each
+    // processFrontier call (before any concurrent work begins); Fox.combined only reads it
+    // (via generateNextTopLeftsFromNeighbors.filterNot), and waves execute sequentially
+    // via Fox.serialCombined, so no two writes ever race.
     val visited = collection.mutable.Set[VoxelPosition]()
 
     def processFrontier(frontier: List[VoxelPosition], acc: List[Array[Float]]): Fox[List[Array[Float]]] =
       if (frontier.isEmpty) Fox.successful(acc)
       else {
         visited ++= frontier
-        Fox
-          .serialCombined(frontier.grouped(config.Datastore.AdHocMesh.actorPoolSize).toList) { batch =>
+        val batches = frontier.grouped(config.Datastore.AdHocMesh.actorPoolSize).toList
+        for {
+          batchResults <- Fox.serialCombined(batches) { batch =>
             Fox.combined(batch.map { position =>
               val adHocMeshRequest = AdHocMeshRequest(
                 Some(datasetId),
@@ -235,21 +240,20 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
                 fullMeshRequest.annotationVersion
               )
               adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest).map {
-                case (vertices, neighbors) =>
-                  (vertices, generateNextTopLeftsFromNeighbors(position, neighbors, chunkSize, visited))
+                case (vertices, neighborIds) =>
+                  (vertices, generateNextTopLeftsFromNeighbors(position, neighborIds, chunkSize, visited))
               }
             })
           }
-          .map(_.flatten)
-          .flatMap { results =>
-            val newVertices = results.map(_._1)
-            // Two wave members may share a border and independently report the same neighbor position
-            val nextFrontier = results.flatMap(_._2).distinct
-            processFrontier(nextFrontier, newVertices ::: acc)
-          }
+          results = batchResults.flatten
+          newVertices = results.map(_._1)
+          // Two wave members may share a border and independently report the same neighbor position
+          nextFrontier = results.flatMap(_._2).distinct
+          allVertices <- processFrontier(nextFrontier, newVertices ::: acc)
+        } yield allVertices
       }
 
-    processFrontier(List(topLeft), Nil)
+    processFrontier(List(topLeft), List.empty)
   }
 
   // Returns individual raw STL chunks (50 bytes/face, no header) for a mesh-file request.

@@ -21,14 +21,13 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(160);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(161);
 COMMIT TRANSACTION;
 
 
 CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'TracingBase', 'Orphan');
 CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Active', 'Finished', 'Cancelled', 'Initializing');
 CREATE TYPE webknossos.ANNOTATION_VISIBILITY AS ENUM ('Private', 'Internal', 'Public');
--- TODO PR feedback for PRRC_kwDOAEIDNc65aI0i
 CREATE TYPE webknossos.ANNOTATION_COLLABORATION_MODE AS ENUM('OwnerOnly', 'Exclusive', 'Concurrent');
 CREATE TABLE webknossos.annotations(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,

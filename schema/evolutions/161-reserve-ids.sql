@@ -19,7 +19,6 @@ CREATE TABLE webknossos.annotation_reserved_ids(
   _annotation TEXT NOT NULL CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$'),
   tracingId TEXT NOT NULL,
   domain webknossos.ANNOTATION_ID_DOMAIN NOT NULL,
-  -- TODO PR feedback for PRRC_kwDOAEIDNc65aqf6
   _user TEXT NOT NULL CONSTRAINT _user_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$'),
   id BIGINT NOT NULL
 );

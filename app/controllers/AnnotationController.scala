@@ -503,7 +503,6 @@ class AnnotationController @Inject()(
                                                                       request.body.tracingId,
                                                                       request.body.domain,
                                                                       request.identity._id,
-                                                                      // TODO PR feedback for PRRC_kwDOAEIDNc65aDXz
                                                                       request.body.numberOfIdsToReserve,
                                                                       request.body.idsToRelease)
         } yield Ok(Json.toJson(ids))

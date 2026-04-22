@@ -12,9 +12,7 @@ import FolderSelection from "dashboard/folders/folder_selection";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { computeHash } from "libs/utils";
-import messages from "messages";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import type { APIDataStore } from "types/api_types";
 import type {
   DataLayer,
@@ -82,7 +80,6 @@ function DatasetAddRemoteView(props: Props) {
   const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
   const maybeDataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
   const datasourceConfig = Form.useWatch(["dataSource"], form);
-  const navigate = useNavigate();
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -96,16 +93,6 @@ function DatasetAddRemoteView(props: Props) {
     const defaultName = urlPathElements.filter((el) => el !== "").at(-1);
     const urlHash = computeHash(url);
     return defaultName + "-" + urlHash;
-  };
-
-  const maybeOpenExistingDataset = () => {
-    const maybeDSNameError = form
-      .getFieldError(["dataset", "name"])
-      .filter((error) => error === messages["dataset.name.already_taken"]);
-    if (maybeDSNameError == null) return;
-    navigate(
-      `/datasets/${activeUser?.organization}/${form.getFieldValue(["dataSource", "id", "name"])}`,
-    );
   };
 
   const setEmptyTransformations = (config: DatasourceConfiguration) => {
@@ -167,14 +154,7 @@ function DatasetAddRemoteView(props: Props) {
       await form.validateFields();
     } catch (_e) {
       console.warn(_e);
-      // TODO: Although there are warnings and thus the dataset has not been stored yet, the dataset is being tried to open. 
-      // This breaks the import on my side. The form wants me to add a proper name. Should be easy to auto fill this.
-      if (defaultDatasetUrl != null) {
-        maybeOpenExistingDataset();
-        return;
-      }
     }
-
     if (!hasFormAnyErrors(form)) {
       handleStoreDataset();
     } else {
@@ -188,10 +168,6 @@ function DatasetAddRemoteView(props: Props) {
       await form.validateFields();
     } catch (_e) {
       console.warn(_e);
-      if (defaultDatasetUrl != null) {
-        maybeOpenExistingDataset();
-        return;
-      }
     }
     if (hasFormAnyErrors(form)) {
       setShowLoadingOverlay(false);

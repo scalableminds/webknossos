@@ -1,2 +1,2 @@
-_user,_dataSet,configuration
-'570b9f4d2a7c0e4d008da6ef', '59e9cfbdba632ac2ab8b23b5', '{"fourBit":false,"blendMode":""Additive"",""interpolation"":false,""colorLayerOrder"":[""color"",""predictions""],""loadingStrategy"":""PROGRESSIVE_QUALITY"",""renderMissingDataBlack"":false,""nativelyRenderedLayerName"":null,""segmentationPatternOpacity"":40}'
+_user,_dataset,configuration
+'570b9f4d2a7c0e4d008da6ef','59e9cfbdba632ac2ab8b23b5','{"fourBit":false,"blendMode":"Additive","interpolation":false,"colorLayerOrder":["color","predictions"],"loadingStrategy":"PROGRESSIVE_QUALITY","renderMissingDataBlack":false,"nativelyRenderedLayerName":null,"segmentationPatternOpacity":40}'

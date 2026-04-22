@@ -17,6 +17,28 @@ export function DuplicateAnnotationModal({
   open: boolean;
   copyToOwnAccount: boolean;
 }) {
+  // Force remount of the inner component to reset its state when the modal is opened again
+  return open ? (
+    <DuplicateAnnotationModalInner
+      annotationId={annotationId}
+      annotationType={annotationType}
+      open={open}
+      copyToOwnAccount={copyToOwnAccount}
+    />
+  ) : null;
+}
+
+function DuplicateAnnotationModalInner({
+  annotationId,
+  annotationType,
+  open,
+  copyToOwnAccount,
+}: {
+  annotationId: string;
+  annotationType: APIAnnotationType;
+  open: boolean;
+  copyToOwnAccount: boolean;
+}) {
   const [isLoading, setIsLoading] = useState(true);
   const [newAnnotation, setNewAnnotation] = useState<null | string>(null);
   const [isError, setIsError] = useState(false);

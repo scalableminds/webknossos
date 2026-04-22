@@ -85,13 +85,10 @@ const AsyncWorkflowListView = loadable<EmptyObject>(
 
 function RootLayout() {
   const isAuthenticated = useWkSelector((state) => state.activeUser != null);
-  const isAdminView = useWkSelector((state) => !state.uiInformation.isInAnnotationView);
 
   return (
     <Layout>
-      {/* TODO (#9483): always show command palette; remove logic from router
-      within tracing view, the command palette is rendered in the status bar. */}
-      {isAuthenticated && isAdminView && <CommandPalette label={null} />}
+      <CommandPalette label={null} />
       <Navbar isAuthenticated={isAuthenticated} />
       <Content>
         <ErrorBoundary>

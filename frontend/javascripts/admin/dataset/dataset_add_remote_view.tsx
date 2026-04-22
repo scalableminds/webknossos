@@ -167,6 +167,8 @@ function DatasetAddRemoteView(props: Props) {
       await form.validateFields();
     } catch (_e) {
       console.warn(_e);
+      // TODO: Although there are warnings and thus the dataset has not been stored yet, the dataset is being tried to open. 
+      // This breaks the import on my side. The form wants me to add a proper name. Should be easy to auto fill this.
       if (defaultDatasetUrl != null) {
         maybeOpenExistingDataset();
         return;

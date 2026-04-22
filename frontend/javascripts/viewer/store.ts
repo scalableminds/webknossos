@@ -580,6 +580,7 @@ type UiInformation = {
   readonly showShareModal: boolean;
   readonly showMergeAnnotationModal: boolean;
   readonly showZarrPrivateLinksModal: boolean;
+  readonly showDuplicateAnnotationModal: boolean;
   readonly showAddScriptModal: boolean;
   readonly aIJobDrawerState: StartAiJobDrawerState;
   readonly showRenderAnimationModal: boolean;

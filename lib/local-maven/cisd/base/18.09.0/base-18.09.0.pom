@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>cisd</groupId>
+  <artifactId>base</artifactId>
+  <version>18.09.0</version>
+
+  <name>ETH SIS Base Library</name>
+  <description>Base library supporting JHDF5, among other projects.</description>
+  <organization>
+		<name>ETH Zurich Scientific IT Services</name>
+		<url>https://sis.id.ethz.ch/</url>
+	</organization>
+  <licenses>
+		<license>
+			<name>Apache 2</name>
+			<url>https://apache.org/licenses/LICENSE-2.0.txt</url>
+			<distribution>repo</distribution>
+		</license>
+	</licenses>
+
+  <scm>
+		<connection>scm:git:https://sissource.ethz.ch/sispub/base</connection>
+		<developerConnection>scm:git:https://sissource.ethz.ch/sispub/base</developerConnection>
+		<tag>18.09.0</tag>
+		<url>https://sissource.ethz.ch/sispub/base</url>
+	</scm>
+
+  <properties>
+    <commons-io.version>2.7</commons-io.version>
+    <commons-lang3.version>3.10</commons-lang3.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>commons-io</groupId>
+      <artifactId>commons-io</artifactId>
+      <version>${commons-io.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.commons</groupId>
+      <artifactId>commons-lang3</artifactId>
+      <version>${commons-lang3.version}</version>
+    </dependency>
+  </dependencies>
+</project>

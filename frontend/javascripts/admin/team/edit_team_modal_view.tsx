@@ -148,7 +148,7 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
   };
   return (
     <Modal open={isOpen} onCancel={onCancel} title="Add / Remove Users" footer={null} width={800}>
-      <Spin spinning={isPending}>{!isPending ? renderModalBody() : null}</Spin>
+      <Spin spinning={isPending}>{isPending ? null : renderModalBody()}</Spin>
     </Modal>
   );
 }

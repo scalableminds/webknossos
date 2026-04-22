@@ -98,11 +98,7 @@ import { diffBoundingBoxes } from "./diffing/bounding_box_diffing";
 import { diffGroups } from "./diffing/group_diffing";
 import { ensureWkInitialized } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
-import {
-  getCurrentMutexFetchingStrategy,
-  MutexFetchingStrategy,
-  subscribeToAnnotationMutex,
-} from "./saving/save_mutex_saga";
+import { subscribeToAnnotationMutex } from "./saving/save_mutex_saga";
 
 function getNodeRotationWithoutPlaneRotation(activeNode: Readonly<MutableNode>): Vector3 {
   // In orthogonal view mode, the active planes' default rotation is added to the flycam rotation upon node creation.
@@ -420,13 +416,9 @@ function* loadAgglomerateSkeletonWithAtPosition(
     successMessageDelay: 2000,
   });
 
-  const concurrentCollab = yield* select(
+  const shouldGuardWithAnnotationMutex = yield* select(
     (state) => state.annotation.collaborationMode === "Concurrent",
   );
-  // TODO PR feedback for PRRC_kwDOAEIDNc65xzRb
-  const shouldGuardWithAnnotationMutex =
-    concurrentCollab &&
-    (yield* call(getCurrentMutexFetchingStrategy)) === MutexFetchingStrategy.AdHoc;
   let unsubscribeFromAnnotationMutex = null;
   let hideFn: HideFn | undefined;
   if (shouldGuardWithAnnotationMutex) {

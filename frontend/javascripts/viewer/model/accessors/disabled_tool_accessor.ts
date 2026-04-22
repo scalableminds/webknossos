@@ -126,10 +126,9 @@ const noSegmentationForMagRule = new DisableRule(
       : "Volume annotation is disabled since no segmentation data can be shown at the current magnification. Please adjust the zoom level.",
 );
 
-// TODO PR feedback for PRRC_kwDOAEIDNc65eW-e
 const editableMappingActiveRule = new DisableRule(VolumeTools, ({ isEditableMappingActive }) =>
   isEditableMappingActive
-    ? "Volume annotation is disabled while an editable mapping is active."
+    ? "Volume annotation is disabled because an editable mapping is active."
     : null,
 );
 

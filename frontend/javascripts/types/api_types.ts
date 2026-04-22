@@ -504,6 +504,8 @@ export type AnnotationLayerDescriptor = {
 export type EditableLayerProperties = {
   name: string;
 };
+export type AnnotationCollaborationMode = "OwnerOnly" | "Exclusive" | "Concurrent";
+
 export type APIAnnotationInfo = {
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;
   readonly datasetId: string;
@@ -573,9 +575,6 @@ export type AnnotationViewConfiguration = {
     }
   >;
 };
-// TODO PR feedback for PRRC_kwDOAEIDNc65b16p
-export type AnnotationCollaborationMode = "OwnerOnly" | "Exclusive" | "Concurrent";
-
 type APIAnnotationBase = APIAnnotationInfo & {
   readonly visibility: APIAnnotationVisibility;
   readonly tracingTime: number | null | undefined;

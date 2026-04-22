@@ -16,8 +16,7 @@ CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHER
 
 CREATE TYPE webknossos.ANNOTATION_ID_DOMAIN AS ENUM ('Segment', 'SegmentGroup', 'Tree', 'Node', 'TreeGroup', 'BoundingBox');
 CREATE TABLE webknossos.annotation_reserved_ids(
-  -- TODO PR feedback for PRRC_kwDOAEIDNc65anBl
-  _annotation TEXT NOT NULL  CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$'),
+  _annotation TEXT NOT NULL CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$'),
   tracingId TEXT NOT NULL,
   domain webknossos.ANNOTATION_ID_DOMAIN NOT NULL,
   -- TODO PR feedback for PRRC_kwDOAEIDNc65aqf6
@@ -29,7 +28,6 @@ ALTER TABLE webknossos.annotation_reserved_ids
     ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE,
     ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE;
 
--- TODO PR feedback for PRRC_kwDOAEIDNc65aIIz
-UPDATE webknossos.releaseInformation SET schemaVersion = 160;
+UPDATE webknossos.releaseInformation SET schemaVersion = 161;
 
 COMMIT TRANSACTION;

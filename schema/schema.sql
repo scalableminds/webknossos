@@ -86,8 +86,7 @@ CREATE TABLE webknossos.annotation_mutexes(
 
 CREATE TYPE webknossos.ANNOTATION_ID_DOMAIN AS ENUM ('Segment', 'SegmentGroup', 'Tree', 'Node', 'TreeGroup', 'BoundingBox');
 CREATE TABLE webknossos.annotation_reserved_ids(
-  -- TODO PR feedback for PRRC_kwDOAEIDNc65anT2
-  _annotation TEXT NOT NULL  CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$'),
+  _annotation TEXT NOT NULL CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$'),
   tracingId TEXT NOT NULL,
   domain webknossos.ANNOTATION_ID_DOMAIN NOT NULL,
   _user TEXT NOT NULL CONSTRAINT _user_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$'),

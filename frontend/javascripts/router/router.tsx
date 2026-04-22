@@ -88,7 +88,7 @@ function RootLayout() {
 
   return (
     <Layout>
-      <CommandPalette label={null} />
+      <CommandPalette />
       <Navbar isAuthenticated={isAuthenticated} />
       <Content>
         <ErrorBoundary>

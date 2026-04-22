@@ -65,6 +65,7 @@ describe("Proofreading (Poll only)", () => {
       // OthersMayEdit = true is needed for polling to work properly as this test and the simulated
       // other user (via backendMock.injectVersion) are both editing the annotation in this test
       // (although the user of this test only sends empty updates). Else the polling logic would not work.
+      // TODO PR feedback for PRRC_kwDOAEIDNc65zaXw
       yield put(setCollaborationModeAction("Concurrent"));
 
       yield call(() => api.tracing.save());

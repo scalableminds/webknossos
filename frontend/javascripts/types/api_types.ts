@@ -573,6 +573,7 @@ export type AnnotationViewConfiguration = {
     }
   >;
 };
+// TODO PR feedback for PRRC_kwDOAEIDNc65b16p
 export type AnnotationCollaborationMode = "OwnerOnly" | "Exclusive" | "Concurrent";
 
 type APIAnnotationBase = APIAnnotationInfo & {

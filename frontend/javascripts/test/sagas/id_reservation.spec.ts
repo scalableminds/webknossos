@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, type TestContext, vi } fro
 
 describe("ID reservation saga", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
+    // TODO PR feedback for PRRC_kwDOAEIDNc650it_
     await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, false, "hybrid");
     vi.mocked(context.mocks.Request.sendJSONReceiveJSON).mockClear();
   });
@@ -159,6 +160,7 @@ describe("ID reservation saga", () => {
       );
       expect(id1).toBe(200);
 
+      // TODO PR feedback for PRRC_kwDOAEIDNc650rEr
       const id2 = yield call(() =>
         dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
       );
@@ -282,6 +284,7 @@ describe("ID reservation saga", () => {
       // id=100 was already used before the fetch started, so it must appear in idsToRelease.
       expect(allReleasedIds).toEqual([100]);
 
+      // TODO PR feedback for PRRC_kwDOAEIDNc650yr_
       // id=101 was marked used *during* the async fetch. It must not be silently dropped from the
       // store — it should be preserved as {used:true} so it can be included in idsToRelease in the
       // next replenishment fetch.
@@ -327,6 +330,7 @@ describe("ID reservation saga", () => {
     await task.toPromise();
   });
 
+  // TODO PR feedback for PRRC_kwDOAEIDNc6502AQ
   it("should return a different ID for each sequential request", async () => {
     const { tracingId } = Store.getState().annotation.volumes[0];
 

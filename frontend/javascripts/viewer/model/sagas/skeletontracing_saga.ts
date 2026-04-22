@@ -423,6 +423,7 @@ function* loadAgglomerateSkeletonWithAtPosition(
   const concurrentCollab = yield* select(
     (state) => state.annotation.collaborationMode === "Concurrent",
   );
+  // TODO PR feedback for PRRC_kwDOAEIDNc65xzRb
   const shouldGuardWithAnnotationMutex =
     concurrentCollab &&
     (yield* call(getCurrentMutexFetchingStrategy)) === MutexFetchingStrategy.AdHoc;

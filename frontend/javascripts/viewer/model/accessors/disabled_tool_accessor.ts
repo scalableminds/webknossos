@@ -101,6 +101,7 @@ const noVisibleSegmentationTracingRule = new DisableRule(
       : "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable one in the left settings sidebar or make a segmentation layer editable via the lock icon.",
 );
 
+// TODO PR feedback for PRRC_kwDOAEIDNc65eIFE
 const rotationVolumeRule = new DisableRule(VolumeToolsWithProofreading, ({ isFlycamRotated }) =>
   isFlycamRotated ? rotationActiveDisabledExplanation : null,
 );
@@ -125,6 +126,7 @@ const noSegmentationForMagRule = new DisableRule(
       : "Volume annotation is disabled since no segmentation data can be shown at the current magnification. Please adjust the zoom level.",
 );
 
+// TODO PR feedback for PRRC_kwDOAEIDNc65eW-e
 const editableMappingActiveRule = new DisableRule(VolumeTools, ({ isEditableMappingActive }) =>
   isEditableMappingActive
     ? "Volume annotation is disabled while an editable mapping is active."

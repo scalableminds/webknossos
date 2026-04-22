@@ -16,6 +16,7 @@ import { getMaximumGroupId } from "../reducers/skeletontracing_reducer_helpers";
 import { getGroupIdSet } from "../reducers/volumetracing_reducer_helpers";
 import { type Saga, select, take } from "./effect_generators";
 
+// TODO PR feedback for PRRC_kwDOAEIDNc65xCKn
 const IDEAL_ID_BUFFER_SIZE = 5;
 
 export default function* idReservationSaga(): Saga<void> {

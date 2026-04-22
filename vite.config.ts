@@ -97,6 +97,29 @@ export const viteConfig = {
       },
     },
     hmr: false, // disable Hot Module Replacement for now
+    watch: {
+      ignored: [
+        "**/node_modules/**",
+        "**/dist/**",
+        "**/app/**",
+        "**/webknossos-tracingstore/**",
+        "**/webknossos-datastore/**",
+        "**/util/**",
+        "**/webknossos-jni/**",
+        "**/conf/**",
+        "**/project/**",
+        "**/docs/**",
+        "**/fossildb/**",
+        "**/target/**",
+        "**/schema/**",
+        "**/tools/**",
+        "**/binaryData/**",
+        "**/coverage/**",
+        "**/public/**",
+        "**/public-test/**",
+        "**/unreleased_changes/**",
+      ],
+    },
   },
   define: {
     // Vite does not automatically provide a `process` polyfill in the

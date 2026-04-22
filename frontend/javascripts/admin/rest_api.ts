@@ -1362,6 +1362,12 @@ export async function exploreRemoteDataset(
   return { dataSource, report };
 }
 
+export async function findDatasetByImportUrl(importUrl: string): Promise<APIDataset | null> {
+  return await Request.receiveJSON(
+    `/api/datasets/findByImportURL?importURL=${encodeURIComponent(importUrl)}`,
+  );
+}
+
 type StoreRemoteDatasetArgs = {
   dataStoreName: string;
   dataSource: APIDataSource;

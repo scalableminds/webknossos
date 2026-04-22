@@ -1,7 +1,7 @@
 import app from "app";
 import BrainSpinner, { BrainSpinnerWithError, CoverWithLogin } from "components/brain_spinner";
 import { fetchGistContent } from "libs/gist";
-import { InputKeyboardNoLoop } from "libs/input";
+import { InputKeyboard } from "libs/input";
 import Toast from "libs/toast";
 import { getUrlParamValue, hasUrlParam, isNoElementFocused } from "libs/utils";
 import window, { document } from "libs/window";
@@ -36,10 +36,10 @@ import {
   GeneralKeyboardShortcuts,
 } from "./view/keyboard_shortcuts/keyboard_shortcut_constants";
 import type {
-  KeyboardShortcutNoLoopedHandlerMap,
+  KeyboardShortcutHandlerMap,
   KeyboardShortcutsMap,
 } from "./view/keyboard_shortcuts/keyboard_shortcut_types";
-import { buildKeyBindingsFromConfigAndMapping } from "./view/keyboard_shortcuts/keyboard_shortcut_utils";
+import { buildKeyBindingsFromConfig } from "./view/keyboard_shortcuts/keyboard_shortcut_utils";
 
 export type ControllerStatus = "loading" | "loaded" | "failedLoading";
 type OwnProps = {
@@ -61,17 +61,16 @@ type State = {
   organizationToSwitchTo: APIOrganization | null | undefined;
 };
 
-type ControllerEditAllowedKeyboardHandlerIdMap = KeyboardShortcutNoLoopedHandlerMap<
+type ControllerEditAllowedKeyboardHandlerIdMap = KeyboardShortcutHandlerMap<
   GeneralKeyboardShortcuts | GeneralEditingKeyboardShortcuts
 >;
-type ControllerViewOnlyKeyboardHandlerIdMap =
-  KeyboardShortcutNoLoopedHandlerMap<GeneralKeyboardShortcuts>;
+type ControllerViewOnlyKeyboardHandlerIdMap = KeyboardShortcutHandlerMap<GeneralKeyboardShortcuts>;
 type ControllerKeyboardHandlerIdMap =
   | ControllerEditAllowedKeyboardHandlerIdMap
   | ControllerViewOnlyKeyboardHandlerIdMap;
 
 class Controller extends PureComponent<PropsWithRouter, State> {
-  keyboardNoLoop?: InputKeyboardNoLoop;
+  keyboard?: InputKeyboard;
   _isMounted: boolean = false;
   state: State = {
     gotUnhandledError: false,
@@ -105,7 +104,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
 
   componentWillUnmount() {
     this._isMounted = false;
-    this.keyboardNoLoop?.destroy();
+    this.keyboard?.destroy();
     Store.dispatch(setIsInAnnotationViewAction(false));
     this.props.setBlocking({
       shouldBlock: false,
@@ -264,31 +263,30 @@ class Controller extends PureComponent<PropsWithRouter, State> {
     const isInViewMode =
       Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
-    const editRelatedHandlers: KeyboardShortcutNoLoopedHandlerMap<GeneralEditingKeyboardShortcuts> =
-      {
-        [GeneralEditingKeyboardShortcuts.SAVE]: {
-          onPressed: (event: KeyboardEvent) => {
-            event.preventDefault();
-            event.stopPropagation();
-            Model.forceSave();
-          },
+    const editRelatedHandlers: KeyboardShortcutHandlerMap<GeneralEditingKeyboardShortcuts> = {
+      [GeneralEditingKeyboardShortcuts.SAVE]: {
+        onPressed: (event: KeyboardEvent) => {
+          event.preventDefault();
+          event.stopPropagation();
+          Model.forceSave();
         },
-        // Undo
-        [GeneralEditingKeyboardShortcuts.UNDO]: {
-          onPressed: (event: KeyboardEvent) => {
-            event.preventDefault();
-            event.stopPropagation();
-            Store.dispatch(undoAction());
-          },
+      },
+      // Undo
+      [GeneralEditingKeyboardShortcuts.UNDO]: {
+        onPressed: (event: KeyboardEvent) => {
+          event.preventDefault();
+          event.stopPropagation();
+          Store.dispatch(undoAction());
         },
-        [GeneralEditingKeyboardShortcuts.REDO]: {
-          onPressed: (event: KeyboardEvent) => {
-            event.preventDefault();
-            event.stopPropagation();
-            Store.dispatch(redoAction());
-          },
+      },
+      [GeneralEditingKeyboardShortcuts.REDO]: {
+        onPressed: (event: KeyboardEvent) => {
+          event.preventDefault();
+          event.stopPropagation();
+          Store.dispatch(redoAction());
         },
-      };
+      },
+    };
 
     const keyboardShortcutsHandlerMapForController: ControllerKeyboardHandlerIdMap = {
       [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_PLANE]: {
@@ -347,15 +345,15 @@ class Controller extends PureComponent<PropsWithRouter, State> {
   }
 
   reloadKeyboardShortcuts(keyboardShortcutsConfig: KeyboardShortcutsMap<string>) {
-    if (this.keyboardNoLoop) {
-      this.keyboardNoLoop.destroy();
+    if (this.keyboard) {
+      this.keyboard.destroy();
     }
-    const keyboardControls = buildKeyBindingsFromConfigAndMapping(
+    const keyboardControls = buildKeyBindingsFromConfig(
       keyboardShortcutsConfig,
       this.getKeyboardShortcutsHandlerMap(),
     );
 
-    this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
+    this.keyboard = new InputKeyboard(keyboardControls);
   }
 
   render() {

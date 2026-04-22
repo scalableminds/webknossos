@@ -6,7 +6,7 @@ import {
   sendAnalyticsEvent,
 } from "admin/rest_api";
 import PriorityQueue from "js-priority-queue";
-import { InputKeyboardNoLoop, type KeyboardNoLoopHandler } from "libs/input";
+import { InputKeyboard, type KeyboardNoLoopHandler } from "libs/input";
 import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
 import Request from "libs/request";
 import type { ToastStyle } from "libs/toast";
@@ -3023,7 +3023,7 @@ class UtilsApi {
    * Sets a custom handler function for a keyboard shortcut.
    */
   registerKeyHandler(key: string, handler: KeyboardNoLoopHandler): UnregisterHandler {
-    const keyboard = new InputKeyboardNoLoop({
+    const keyboard = new InputKeyboard({
       [key]: handler,
     });
     return {

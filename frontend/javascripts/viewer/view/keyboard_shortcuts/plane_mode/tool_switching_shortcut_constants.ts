@@ -81,7 +81,6 @@ export const PlaneToolSwitchingKeyboardShortcutMetaInfo: KeyboardShortcutHandler
             {
               description,
               domain: KeyboardShortcutDomain.PLANE_TOOL_SWITCHING,
-              looped: true,
               collisionEntityName: KeyboardShortcutCollisionEntityName.PLANE_MODE,
             },
           ] as [PlaneControllerToolSwitchingKeyboardShortcuts, KeyboardShortcutMetaInfo],

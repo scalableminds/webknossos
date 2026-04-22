@@ -113,10 +113,7 @@ import { api, Model } from "viewer/singletons";
 import Store, { type UserConfiguration } from "viewer/store";
 import { getDefaultBrushSizes } from "viewer/view/action_bar/tools/brush_presets";
 import type ArbitraryView from "viewer/view/arbitrary_view";
-import type {
-  KeyboardShortcutLoopedHandlerMap,
-  KeyboardShortcutNoLoopedHandlerMap,
-} from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
+import type { KeyboardShortcutHandlerMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import { PlaneBoundingBoxToolNoLoopedKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/plane_mode/bounding_box_tool_shortcut_constants";
 import { PlaneProofreadingToolNoLoopedKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/plane_mode/proofreading_tool_shortcut_constants";
 import {
@@ -170,10 +167,7 @@ abstract class ToolController {
   ): ActionDescriptor {
     return { rightClick: "Context menu" };
   }
-  static getNoLoopedKeyboardControls(): KeyboardShortcutNoLoopedHandlerMap<never> {
-    return {};
-  }
-  static getLoopDelayedKeyboardControls(): KeyboardShortcutLoopedHandlerMap<never> {
+  static getKeyboardControls(): KeyboardShortcutHandlerMap<never> {
     return {};
   }
 
@@ -453,7 +447,9 @@ export class SkeletonToolController extends ToolController {
     }
   }
 
-  static getNoLoopedKeyboardControls(): KeyboardShortcutNoLoopedHandlerMap<PlaneSkeletonToolNoLoopedKeyboardShortcuts> {
+  static getKeyboardControls(): KeyboardShortcutHandlerMap<
+    PlaneSkeletonToolNoLoopedKeyboardShortcuts | PlaneSkeletonToolLoopedKeyboardShortcuts
+  > {
     return {
       [PlaneSkeletonToolNoLoopedKeyboardShortcuts.TOGGLE_ALL_TREES_PLANE]: {
         onPressed: () => {
@@ -506,22 +502,21 @@ export class SkeletonToolController extends ToolController {
       [PlaneSkeletonToolNoLoopedKeyboardShortcuts.NEXT_NODE_FORWARD_PLANE]: {
         onPressed: () => toSubsequentNode(),
       },
-    };
-  }
-
-  static getLoopDelayedKeyboardControls(): KeyboardShortcutLoopedHandlerMap<PlaneSkeletonToolLoopedKeyboardShortcuts> {
-    return {
       [PlaneSkeletonToolLoopedKeyboardShortcuts.MOVE_NODE_LEFT]: {
         onPressedWithRepeat: () => moveNode(-1, 0),
+        delayed: true,
       },
       [PlaneSkeletonToolLoopedKeyboardShortcuts.MOVE_NODE_RIGHT]: {
         onPressedWithRepeat: () => moveNode(1, 0),
+        delayed: true,
       },
       [PlaneSkeletonToolLoopedKeyboardShortcuts.MOVE_NODE_UP]: {
         onPressedWithRepeat: () => moveNode(0, -1),
+        delayed: true,
       },
       [PlaneSkeletonToolLoopedKeyboardShortcuts.MOVE_NODE_DOWN]: {
         onPressedWithRepeat: () => moveNode(0, 1),
+        delayed: true,
       },
     };
   }
@@ -580,7 +575,9 @@ export class SkeletonToolController extends ToolController {
 }
 
 class VolumeToolController extends ToolController {
-  static getNoLoopedKeyboardControls(): KeyboardShortcutNoLoopedHandlerMap<PlaneVolumeToolNoLoopedKeyboardShortcuts> {
+  static getKeyboardControls(): KeyboardShortcutHandlerMap<
+    PlaneVolumeToolNoLoopedKeyboardShortcuts | PlaneVolumeToolLoopDelayedConfigKeyboardShortcuts
+  > {
     return {
       [PlaneVolumeToolNoLoopedKeyboardShortcuts.CREATE_NEW_CELL]: {
         onPressed: () => {
@@ -670,16 +667,13 @@ class VolumeToolController extends ToolController {
           Store.dispatch(updateUserSettingAction("brushSize", brushPresets.large));
         },
       },
-    };
-  }
-
-  static getLoopDelayedKeyboardControls(): KeyboardShortcutLoopedHandlerMap<PlaneVolumeToolLoopDelayedConfigKeyboardShortcuts> {
-    return {
       [PlaneVolumeToolLoopDelayedConfigKeyboardShortcuts.DECREASE_BRUSH_SIZE]: {
         onPressedWithRepeat: () => changeBrushSizeIfBrushIsActiveBy(-1),
+        delayed: true,
       },
       [PlaneVolumeToolLoopDelayedConfigKeyboardShortcuts.INCREASE_BRUSH_SIZE]: {
         onPressedWithRepeat: () => changeBrushSizeIfBrushIsActiveBy(1),
+        delayed: true,
       },
     };
   }
@@ -994,7 +988,7 @@ export class BoundingBoxToolController extends ToolController {
     };
   }
 
-  static getNoLoopedKeyboardControls(): KeyboardShortcutNoLoopedHandlerMap<PlaneBoundingBoxToolNoLoopedKeyboardShortcuts> {
+  static getKeyboardControls(): KeyboardShortcutHandlerMap<PlaneBoundingBoxToolNoLoopedKeyboardShortcuts> {
     const handleBBoxMoveModifierPressed = (event: KeyboardEvent) => {
       const { viewModeData, temporaryConfiguration } = Store.getState();
       const { mousePosition } = temporaryConfiguration;
@@ -1382,7 +1376,7 @@ export class ProofreadToolController extends ToolController {
     };
   }
 
-  static getNoLoopedKeyboardControls(): KeyboardShortcutNoLoopedHandlerMap<PlaneProofreadingToolNoLoopedKeyboardShortcuts> {
+  static getKeyboardControls(): KeyboardShortcutHandlerMap<PlaneProofreadingToolNoLoopedKeyboardShortcuts> {
     return {
       [PlaneProofreadingToolNoLoopedKeyboardShortcuts.TOGGLE_MULTICUT_MODE]: {
         onPressed: () => {
@@ -1514,16 +1508,9 @@ export function getToolControllerForAnnotationTool(activeTool: AnnotationTool) {
   return toolToToolController[activeTool.id];
 }
 
-export const AllNoLoopedToolKeyboardControls = Object.fromEntries(
+export const AllToolKeyboardControls = Object.fromEntries(
   Object.entries(toolToToolController).map(([id, controller]) => [
     id,
-    controller.getNoLoopedKeyboardControls(),
+    controller.getKeyboardControls(),
   ]),
-) as Record<AnnotationToolId, KeyboardShortcutNoLoopedHandlerMap<string>>;
-
-export const AllLoopDelayedToolKeyboardControls = Object.fromEntries(
-  Object.entries(toolToToolController).map(([id, controller]) => [
-    id,
-    controller.getLoopDelayedKeyboardControls(),
-  ]),
-) as Record<AnnotationToolId, KeyboardShortcutLoopedHandlerMap<string>>;
+) as Record<AnnotationToolId, KeyboardShortcutHandlerMap<string>>;

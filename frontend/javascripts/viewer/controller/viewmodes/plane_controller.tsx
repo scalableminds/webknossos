@@ -1,8 +1,6 @@
 import {
-  InputKeyboardLoop,
-  InputKeyboardNoLoop,
+  InputKeyboard,
   InputMouse,
-  type KeyComboToLoopHandlerMap,
   type MouseBindingMap,
   type MouseEventHandler,
 } from "libs/input";
@@ -16,8 +14,7 @@ import type { OrthoView, OrthoViewMap } from "viewer/constants";
 import { OrthoViews, OrthoViewValuesWithoutTDView } from "viewer/constants";
 import { moveU, moveV, moveW, zoom } from "viewer/controller/combinations/move_handlers";
 import {
-  AllLoopDelayedToolKeyboardControls,
-  AllNoLoopedToolKeyboardControls,
+  AllToolKeyboardControls,
   AreaMeasurementToolController,
   BoundingBoxToolController,
   DrawToolController,
@@ -52,15 +49,12 @@ import type { BrushPresets, StoreAnnotation, WebknossosState } from "viewer/stor
 import Store from "viewer/store";
 import { getDefaultBrushSizes } from "viewer/view/action_bar/tools/brush_presets";
 import type {
-  KeyboardShortcutLoopedHandlerMap,
-  KeyboardShortcutNoLoopedHandlerMap,
+  KeyboardShortcutHandlerMap,
   KeyboardShortcutsMap,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import {
-  buildKeyBindingsFromConfigAndLoopedMapping,
-  buildKeyBindingsFromConfigAndLoopedMappingForTools,
-  buildKeyBindingsFromConfigAndMapping,
-  buildKeyBindingsFromConfigAndMappingForTools,
+  buildKeyBindingsFromConfig,
+  buildKeyBindingsFromConfigForTools,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_utils";
 import {
   PlaneControllerLoopDelayedNavigationKeyboardShortcuts,
@@ -149,9 +143,7 @@ class PlaneController extends PureComponent<Props> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'input' has no initializer and is not def... Remove this comment to see the full error message
   input: {
     mouseControllers: OrthoViewMap<InputMouse>;
-    keyboard?: InputKeyboardLoop;
-    keyboardNoLoop?: InputKeyboardNoLoop;
-    keyboardLoopDelayed?: InputKeyboardLoop;
+    keyboard?: InputKeyboard;
   };
 
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any> = [];
@@ -258,7 +250,11 @@ class PlaneController extends PureComponent<Props> {
     return controls;
   }
 
-  getLoopedHandlerMap(): KeyboardShortcutLoopedHandlerMap<PlaneControllerLoopedNavigationKeyboardShortcuts> {
+  getHandlerMap(): KeyboardShortcutHandlerMap<
+    | PlaneControllerLoopedNavigationKeyboardShortcuts
+    | PlaneControllerLoopDelayedNavigationKeyboardShortcuts
+    | PlaneControllerNoLoopGeneralKeyboardShortcuts
+  > {
     const axisIndexToRotation = {
       0: pitchFlycamAction,
       1: yawFlycamAction,
@@ -282,6 +278,7 @@ class PlaneController extends PureComponent<Props> {
       Store.dispatch(rotationAction(rotationAngle));
     };
     return {
+      // Looped navigation (no delay)
       [PlaneControllerLoopedNavigationKeyboardShortcuts.MOVE_LEFT]: {
         onPressedWithRepeat: (timeFactor: number) =>
           moveU(-getMoveOffset(Store.getState(), timeFactor)),
@@ -316,46 +313,48 @@ class PlaneController extends PureComponent<Props> {
       [PlaneControllerLoopedNavigationKeyboardShortcuts.ALT_ROLL_RIGHT]: {
         onPressedWithRepeat: (timeFactor: number) => rotateViewportAware(timeFactor, 2, true),
       },
-    } as KeyboardShortcutLoopedHandlerMap<PlaneControllerLoopedNavigationKeyboardShortcuts>;
-  }
-
-  getLoopDelayedHandlerMap(): KeyboardShortcutLoopedHandlerMap<PlaneControllerLoopDelayedNavigationKeyboardShortcuts> {
-    return {
+      // Looped navigation with delay
       [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_MULTIPLE_FORWARD]: {
         onPressedWithRepeat: createDelayAwareMoveHandler(5, true),
+        delayed: true,
       },
       [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_MULTIPLE_BACKWARD]: {
         onPressedWithRepeat: createDelayAwareMoveHandler(-5, true),
+        delayed: true,
       },
       [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_BACKWARD]: {
         onPressedWithRepeat: createDelayAwareMoveHandler(-1),
+        delayed: true,
       },
       [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_FORWARD]: {
         onPressedWithRepeat: createDelayAwareMoveHandler(1),
+        delayed: true,
       },
       [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_FORWARD_DIRECTION_AWARE]: {
         onPressedWithRepeat: createDelayAwareMoveHandler(1, true),
+        delayed: true,
       },
       [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_BACKWARD_DIRECTION_AWARE]: {
         onPressedWithRepeat: createDelayAwareMoveHandler(-1, true),
+        delayed: true,
       },
       [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.ZOOM_IN_PLANE]: {
         onPressedWithRepeat: () => zoom(1, false),
+        delayed: true,
       },
       [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.ZOOM_OUT_PLANE]: {
         onPressedWithRepeat: () => zoom(-1, false),
+        delayed: true,
       },
       [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.INCREASE_MOVE_VALUE_PLANE]: {
         onPressedWithRepeat: () => this.changeMoveValue(25),
+        delayed: true,
       },
       [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.DECREASE_MOVE_VALUE_PLANE]: {
         onPressedWithRepeat: () => this.changeMoveValue(-25),
+        delayed: true,
       },
-    } as KeyboardShortcutLoopedHandlerMap<PlaneControllerLoopDelayedNavigationKeyboardShortcuts>;
-  }
-
-  getNoLoopHandlerMap(): KeyboardShortcutNoLoopedHandlerMap<PlaneControllerNoLoopGeneralKeyboardShortcuts> {
-    return {
+      // No-loop shortcuts
       [PlaneControllerNoLoopGeneralKeyboardShortcuts.DOWNLOAD_SCREENSHOT_PLANE]: {
         onPressed: () => downloadScreenshot(),
       },
@@ -365,59 +364,30 @@ class PlaneController extends PureComponent<Props> {
       [PlaneControllerNoLoopGeneralKeyboardShortcuts.CYCLE_TOOLS_BACKWARDS]: {
         onPressed: () => cycleToolsBackwards(),
       },
-    } as KeyboardShortcutNoLoopedHandlerMap<PlaneControllerNoLoopGeneralKeyboardShortcuts>;
+    };
   }
 
   reloadKeyboardShortcuts(keyboardShortcutsConfig: KeyboardShortcutsMap<string>) {
-    // destroy existing keyboards
     this.input.keyboard?.destroy();
-    this.input.keyboardLoopDelayed?.destroy();
-    this.input.keyboardNoLoop?.destroy();
 
-    // looped keyboard
-    const loopedControllerBindings = buildKeyBindingsFromConfigAndLoopedMapping(
+    const controllerBindings = buildKeyBindingsFromConfig(
       keyboardShortcutsConfig,
-      this.getLoopedHandlerMap(),
+      this.getHandlerMap(),
     );
-    this.input.keyboard = new InputKeyboardLoop(loopedControllerBindings);
-
-    const toolDependentLoopedBindings = buildKeyBindingsFromConfigAndLoopedMappingForTools(
+    const toolBindings = buildKeyBindingsFromConfigForTools(
       keyboardShortcutsConfig,
-      AllLoopDelayedToolKeyboardControls,
+      AllToolKeyboardControls,
     );
 
-    // delayed looped keyboard
-    const delayedControllerBindings = buildKeyBindingsFromConfigAndLoopedMapping(
-      keyboardShortcutsConfig,
-      this.getLoopDelayedHandlerMap(),
-    );
-    const withAdditionalActions: KeyComboToLoopHandlerMap = {
-      ...delayedControllerBindings,
-      ...toolDependentLoopedBindings,
-      // Enter & Escape need to be separate due to being constant and not configurable.
+    this.input.keyboard = new InputKeyboard({
+      ...controllerBindings,
+      ...toolBindings,
+      // Enter & Escape are constant and not configurable.
       enter: {
         onPressedWithRepeat: (_, _isOriginalEvent, event) => Store.dispatch(enterAction(event)),
       },
       esc: { onPressedWithRepeat: () => Store.dispatch(escapeAction()) },
-    };
-    this.input.keyboardLoopDelayed = new InputKeyboardLoop(withAdditionalActions, {
-      delay: Store.getState().userConfiguration.keyboardDelay,
     });
-
-    // no-loop keyboard
-    const noLoopControllerBindings = buildKeyBindingsFromConfigAndMapping(
-      keyboardShortcutsConfig,
-      this.getNoLoopHandlerMap(),
-    );
-    const toolDependentNoLoopedBindings = buildKeyBindingsFromConfigAndMappingForTools(
-      keyboardShortcutsConfig,
-      AllNoLoopedToolKeyboardControls,
-    );
-
-    this.input.keyboardNoLoop = new InputKeyboardNoLoop(
-      { ...noLoopControllerBindings, ...toolDependentNoLoopedBindings },
-      {},
-    );
   }
 
   initKeyboard(): void {
@@ -437,20 +407,6 @@ class PlaneController extends PureComponent<Props> {
         (state) => state.keyboardShortcutsConfig,
         (keyboardShortcutsConfig) => this.reloadKeyboardShortcuts(keyboardShortcutsConfig),
         true,
-      ),
-    );
-
-    // keep existing listener for keyboardDelay change
-    this.storePropertyUnsubscribers.push(
-      listenToStoreProperty(
-        (state) => state.userConfiguration.keyboardDelay,
-        (keyboardDelay) => {
-          const { keyboardLoopDelayed } = this.input;
-
-          if (keyboardLoopDelayed != null) {
-            keyboardLoopDelayed.delay = keyboardDelay;
-          }
-        },
       ),
     );
   }
@@ -535,11 +491,9 @@ class PlaneController extends PureComponent<Props> {
     // @ts-expect-error ts-migrate(2739) FIXME: Type '{}' is missing the following properties from... Remove this comment to see the full error message
     this.input.mouseControllers = {};
 
-    // First unsubscribe from store. Then deleted the keyboards.
+    // First unsubscribe from store. Then destroy the keyboard.
     this.unsubscribeStoreListeners();
     this.input.keyboard?.destroy();
-    this.input.keyboardNoLoop?.destroy();
-    this.input.keyboardLoopDelayed?.destroy();
   }
 
   createToolDependentMouseHandler<T extends MouseEventHandler = MouseEventHandler>(

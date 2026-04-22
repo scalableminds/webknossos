@@ -14,6 +14,7 @@ import { createNanoEvents, type Emitter } from "nanoevents";
 import type { ValueOf } from "types/type_utils";
 import type { OrthoView, Point2 } from "viewer/constants";
 import constants from "viewer/constants";
+import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { addEventListenerWithDelegation, isNoElementFocused } from "./utils";
 
 // This is the main Input implementation.
@@ -38,7 +39,6 @@ export type ModifierKeys = "alt" | "shift" | "ctrlOrMeta";
 // The format used by keystrokes to define upon which key pressed to trigger an action / handler:
 // e.g.: "a" or "control > y, r".
 export type KeystrokesKeyCombo = string;
-// InputKeyboardNoLoop types
 export type KeyboardNoLoopHandlerFn = (event: KeyboardEvent) => void | Promise<void>;
 export type KeyboardNoLoopHandler = {
   onPressed: KeyboardNoLoopHandlerFn;
@@ -57,6 +57,8 @@ export type KeyboardLoopFn = {
 export type KeyboardLoopHandler = {
   onPressedWithRepeat: KeyboardLoopFn;
   onReleased?: KeyboardLoopFn;
+  // When true the handler uses the user-configured keyboard delay from the store.
+  delayed?: boolean;
 };
 export type KeyComboToLoopHandlerMap = Record<KeystrokesKeyCombo, KeyboardLoopHandler>;
 
@@ -124,9 +126,10 @@ function shouldIgnore(event: KeyboardEvent, key: KeystrokesKeyCombo) {
   );
 }
 
-// This keyboard hook directly passes a keycombo and callback
-// to the underlying KeyboadJS library to do its dirty work.
-// Pressing a button will only fire an event once.
+// Keyboard class capable of handling both one-call (no-looped) and continuous (looped) shortcuts.
+// Dispatch is implicit: handlers with `onPressed` fire once per key press; handlers with
+// `onPressedWithRepeat` fire continuously at ~60 fps while the key is held.
+// Loop handlers with `delayed: true` apply the user-configured keyboard delay from the store.
 
 const keyboard = new Keyboard(
   window,
@@ -147,7 +150,7 @@ function findEventInKeystrokeComboEvent(
   return keyEvents.find((event) => event.originalEvent)?.originalEvent;
 }
 
-// Types used by InputKeyboardNoLoop internally to interface with the keystrokes library.
+// Internal types for interfacing with the keystrokes library.
 type KeystrokesHandlerArgs = {
   keyCombo: string;
   keyEvents: KeyEvent<KeyboardEvent, BrowserKeyComboEventProps>[];
@@ -160,15 +163,24 @@ type KeyComboWithNoLoopKeystrokesHandler = {
   onReleased?: KeystrokesHandler;
   preventRepeatByDefault: boolean;
 };
-export class InputKeyboardNoLoop {
-  bindings: KeyComboWithNoLoopKeystrokesHandler[] = [];
+type KeyComboWithLoopKeystrokesHandler = {
+  keyCombo: KeystrokesKeyCombo;
+  onPressedWithRepeat: KeystrokesHandler;
+  onReleased?: KeystrokesHandler;
+};
+
+export class InputKeyboard {
+  keyCallbackMap: KeyComboToLoopHandlerMap = {};
+  keyPressedCount: number = 0;
+  bindings: (KeyComboWithNoLoopKeystrokesHandler | KeyComboWithLoopKeystrokesHandler)[] = [];
   isStarted: boolean = true;
+  delay: number = 0;
+  unsubscribeDelay: (() => void) | null = null;
   supportInputElements: boolean = false;
-  cancelExtendedModeTimeoutId: ReturnType<typeof setTimeout> | null = null;
   isPreventBrowserSearchbarShortcutActive: boolean = false;
 
   constructor(
-    initialBindings: KeyComboToNoLoopHandlerMap,
+    initialBindings: Record<KeystrokesKeyCombo, KeyboardNoLoopHandler | KeyboardLoopHandler>,
     options?: {
       supportInputElements?: boolean;
     },
@@ -177,13 +189,26 @@ export class InputKeyboardNoLoop {
       this.supportInputElements = options.supportInputElements || this.supportInputElements;
     }
 
+    const hasDelayedHandler = Object.values(initialBindings).some(
+      (h) => "delayed" in h && h.delayed,
+    );
+    if (hasDelayedHandler) {
+      this.unsubscribeDelay = listenToStoreProperty(
+        (state) => state.userConfiguration.keyboardDelay,
+        (delay) => {
+          this.delay = delay;
+        },
+        true,
+      );
+    }
+
+    // Auto focuses the browsers search bar in some browser & os setups.
+    // control + k is used by the default tool switching commands and
+    // thus focusing the search bar in the browser is explicitly prevented here.
     const usesShortcutToFastFocusBrowserSearchbar = Object.keys(initialBindings).some(
       (keyCombo) => {
         const normalizedKeyCombo = keyCombo.toLowerCase();
         return (
-          // Auto focuses the browsers search bar in some browser & os setups.
-          // control + k is used by the default tool switching commands and
-          // thus focusing the search bar in the browser is explicitly prevented here.
           normalizedKeyCombo.includes("control + k") || normalizedKeyCombo.includes("meta + k")
         );
       },
@@ -193,8 +218,8 @@ export class InputKeyboardNoLoop {
       this.isPreventBrowserSearchbarShortcutActive = true;
     }
 
-    for (const [keyCombo, handlers] of Object.entries(initialBindings)) {
-      this.attach(keyCombo, handlers);
+    for (const [keyCombo, handler] of Object.entries(initialBindings)) {
+      this.attach(keyCombo, handler);
     }
   }
 
@@ -205,23 +230,24 @@ export class InputKeyboardNoLoop {
     }
   };
 
-  attach(combo: KeystrokesKeyCombo, { onPressed, onReleased: onRelease }: KeyboardNoLoopHandler) {
+  attach(keyCombo: KeystrokesKeyCombo, handler: KeyboardNoLoopHandler | KeyboardLoopHandler) {
+    if ("onPressed" in handler) {
+      this._attachNoLoop(keyCombo, handler);
+    } else {
+      this._attachLoop(keyCombo, handler);
+    }
+  }
+
+  _attachNoLoop(
+    combo: KeystrokesKeyCombo,
+    { onPressed, onReleased: onRelease }: KeyboardNoLoopHandler,
+  ) {
     const onPressedGuarded = ({ keyEvents, finalKeyEvent }: KeystrokesHandlerArgs) => {
-      if (!this.isStarted) {
-        return;
-      }
-
-      if (!this.supportInputElements && !isNoElementFocused()) {
-        return;
-      }
+      if (!this.isStarted) return;
+      if (!this.supportInputElements && !isNoElementFocused()) return;
       const event = findEventInKeystrokeComboEvent(keyEvents, finalKeyEvent);
-      if (!event) {
-        return;
-      }
-
-      if (shouldIgnore(event, combo)) {
-        return;
-      }
+      if (!event) return;
+      if (shouldIgnore(event, combo)) return;
 
       if (!event.repeat) {
         onPressed(event);
@@ -233,9 +259,7 @@ export class InputKeyboardNoLoop {
     const onReleasedInterfaceAdjusted = onRelease
       ? ({ keyEvents, finalKeyEvent }: KeystrokesHandlerArgs) => {
           const event = findEventInKeystrokeComboEvent(keyEvents, finalKeyEvent);
-          if (!event) {
-            return;
-          }
+          if (!event) return;
           onRelease(event);
         }
       : () => {};
@@ -246,90 +270,27 @@ export class InputKeyboardNoLoop {
       onReleased: onReleasedInterfaceAdjusted,
       preventRepeatByDefault: false,
     };
-
     bindKeyCombo(combo, binding);
     this.bindings.push(binding);
   }
 
-  destroy() {
-    this.isStarted = false;
-    for (const binding of this.bindings) {
-      unbindKeyCombo(binding.keyCombo, binding);
-    }
-    if (this.isPreventBrowserSearchbarShortcutActive) {
-      document.removeEventListener("keydown", this.preventBrowserSearchbarShortcut);
-    }
-  }
-}
-
-// Types used by InputKeyboardNoLoop internally interface with the keystrokes library.
-type KeyComboWithLoopKeystrokesHandler = {
-  keyCombo: KeystrokesKeyCombo;
-  onPressedWithRepeat: KeystrokesHandler;
-  onReleased?: KeystrokesHandler;
-};
-
-// This module is "main" keyboard handler.
-// It is able to handle key-presses and will continuously
-// fire the attached callback.
-export class InputKeyboardLoop {
-  keyCallbackMap: KeyComboToLoopHandlerMap = {};
-  keyPressedCount: number = 0;
-  bindings: KeyComboWithLoopKeystrokesHandler[] = [];
-  isStarted: boolean = true;
-  delay: number = 0;
-  supportInputElements: boolean = false;
-
-  constructor(
-    initialBindings: KeyComboToLoopHandlerMap,
-    options?: {
-      delay?: number;
-      supportInputElements?: boolean;
-    },
-  ) {
-    if (options) {
-      this.delay = options.delay != null ? options.delay : this.delay;
-      this.supportInputElements = options.supportInputElements || this.supportInputElements;
-    }
-
-    for (const [keyCombo, handlers] of Object.entries(initialBindings)) {
-      this.attach(keyCombo, handlers);
-    }
-  }
-
-  attach(keyCombo: KeystrokesKeyCombo, handler: KeyboardLoopHandler) {
+  _attachLoop(keyCombo: KeystrokesKeyCombo, handler: KeyboardLoopHandler) {
     let delayTimeoutId: ReturnType<typeof setTimeout> | null = null;
-    const { onPressedWithRepeat, onReleased } = handler;
+    const { onPressedWithRepeat, onReleased, delayed } = handler;
+
     const onPressedWithRepeatGuarded = ({ keyEvents, finalKeyEvent }: KeystrokesHandlerArgs) => {
       const event = findEventInKeystrokeComboEvent(keyEvents, finalKeyEvent);
-      if (!event) {
-        return;
-      }
-      // When first pressed, insert the callback into
-      // keyCallbackMap and start the buttonLoop.
-      // Then, ignore any other events fired from the operating
-      // system, because we're using our own loop.
-      // When control key is pressed, everything is ignored, because
-      // if there is any browser action attached to this (as with Ctrl + S)
-      // KeyboardJS does not receive the up event.
-      if (!this.isStarted) {
-        return;
-      }
-
-      if (this.keyCallbackMap[keyCombo] != null) {
-        return;
-      }
-
-      if (!this.supportInputElements && !isNoElementFocused()) {
-        return;
-      }
-
-      if (shouldIgnore(event, keyCombo)) {
-        return;
-      }
+      if (!event) return;
+      // When first pressed, insert the callback into keyCallbackMap and start the
+      // buttonLoop. Ignore any subsequent OS-level repeat events since we drive our own loop.
+      // When control key is pressed, everything is ignored, because if there is any browser
+      // action attached to this (as with Ctrl + S) KeyboardJS does not receive the up event.
+      if (!this.isStarted) return;
+      if (this.keyCallbackMap[keyCombo] != null) return;
+      if (!this.supportInputElements && !isNoElementFocused()) return;
+      if (shouldIgnore(event, keyCombo)) return;
 
       onPressedWithRepeat(1, true, event);
-      // reset lastTime
       onPressedWithRepeat.lastTime = null;
       onPressedWithRepeat.delayed = true;
       this.keyCallbackMap[keyCombo] = handler;
@@ -339,8 +300,9 @@ export class InputKeyboardLoop {
         this.buttonLoop(event);
       }
 
+      const baseDelay = delayed ? this.delay : 0;
       const totalDelay =
-        this.delay +
+        baseDelay +
         (onPressedWithRepeat.customAdditionalDelayFn != null
           ? onPressedWithRepeat.customAdditionalDelayFn()
           : 0);
@@ -354,9 +316,7 @@ export class InputKeyboardLoop {
     };
 
     const onReleaseGuarded = ({ keyEvents, finalKeyEvent }: KeystrokesHandlerArgs) => {
-      if (!this.isStarted) {
-        return;
-      }
+      if (!this.isStarted) return;
 
       if (this.keyCallbackMap[keyCombo] != null) {
         this.keyPressedCount--;
@@ -373,7 +333,7 @@ export class InputKeyboardLoop {
       }
     };
 
-    const binding = {
+    const binding: KeyComboWithLoopKeystrokesHandler = {
       keyCombo,
       onPressedWithRepeat: onPressedWithRepeatGuarded,
       onReleased: onReleaseGuarded,
@@ -382,12 +342,9 @@ export class InputKeyboardLoop {
     this.bindings.push(binding);
   }
 
-  // In order to continuously fire callbacks we have to loop
-  // through all the buttons that a marked as "pressed".
+  // Continuously fires callbacks for all currently held loop keys.
   buttonLoop(originalEvent: KeyboardEvent) {
-    if (!this.isStarted) {
-      return;
-    }
+    if (!this.isStarted) return;
 
     if (this.keyPressedCount > 0) {
       for (const key of Object.keys(this.keyCallbackMap)) {
@@ -411,8 +368,11 @@ export class InputKeyboardLoop {
     this.isStarted = false;
 
     for (const binding of this.bindings) {
-      const { keyCombo } = binding;
-      unbindKeyCombo(keyCombo, binding);
+      unbindKeyCombo(binding.keyCombo, binding);
+    }
+    this.unsubscribeDelay?.();
+    if (this.isPreventBrowserSearchbarShortcutActive) {
+      document.removeEventListener("keydown", this.preventBrowserSearchbarShortcut);
     }
   }
 }

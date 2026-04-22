@@ -23,7 +23,7 @@ import {
 } from "antd";
 import type { EventDataNode } from "antd/es/tree";
 import useLifecycle from "beautiful-react-hooks/useLifecycle";
-import { InputKeyboardLoop } from "libs/input";
+import { InputKeyboard } from "libs/input";
 import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import { compareBy, localeCompareBy } from "libs/utils";
 import isEmpty from "lodash-es/isEmpty";
@@ -51,8 +51,7 @@ import InputComponent from "viewer/view/components/input_component";
 import { MarkdownModal } from "viewer/view/components/markdown_modal";
 import { CommentsTabKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 import { loadKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_persistence";
-import type { KeyboardShortcutLoopedHandlerMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
-import { buildKeyBindingsFromConfigAndLoopedMapping } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_utils";
+import { buildKeyBindingsFromConfig } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_utils";
 import Comment, { commentListId } from "viewer/view/right_border_tabs/comment_tab/comment";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import { ColoredDotIcon } from "../segments_tab/segment_list_item";
@@ -127,15 +126,13 @@ function CommentTabView(props: Props) {
   const [isMarkdownModalOpen, setIsMarkdownModalOpen] = useState(false);
   const [isVisibleInDom, setIsVisibleInDom] = useState(true);
 
-  const [keyboard, setKeyboard] = useState<InputKeyboardLoop | null>(null);
+  const [keyboard, setKeyboard] = useState<InputKeyboard | null>(null);
   const nextCommentRef = useRef<(arg0?: boolean) => void>(null);
   const previousCommentRef = useRef<() => void>(null);
 
   const dispatch = useDispatch();
 
   const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
-  const keyboardDelay = useWkSelector((state) => state.userConfiguration.keyboardDelay);
-
   const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);
   const isOwner = useWkSelector((state) => isAnnotationOwner(state));
 
@@ -153,30 +150,25 @@ function CommentTabView(props: Props) {
       // Instead of directly attaching callback function, we need to rely on React.refs instead
       // to prevent the callbacks from becoming stale and outdated as the component changes
       // its state or props.
-      const keyboardHandlers: KeyboardShortcutLoopedHandlerMap<CommentsTabKeyboardShortcuts> = {
+      const keyboardHandlers = {
         [CommentsTabKeyboardShortcuts.NEXT_COMMENT]: {
           onPressedWithRepeat: () => nextCommentRef?.current?.(),
+          delayed: true,
         },
         [CommentsTabKeyboardShortcuts.PREVIOUS_COMMENT]: {
           onPressedWithRepeat: () => previousCommentRef?.current?.(),
+          delayed: true,
         },
       };
       const keybindingConfig = loadKeyboardShortcuts();
-      const keyboardControls = buildKeyBindingsFromConfigAndLoopedMapping(
-        keybindingConfig,
-        keyboardHandlers,
-      );
-      const newKeyboard = new InputKeyboardLoop(keyboardControls);
+      const keyboardControls = buildKeyBindingsFromConfig(keybindingConfig, keyboardHandlers);
+      const newKeyboard = new InputKeyboard(keyboardControls);
       if (keyboard === null) setKeyboard(newKeyboard);
     },
     () => {
       keyboard?.destroy();
     },
   );
-
-  useEffect(() => {
-    if (keyboard) keyboard.delay = keyboardDelay;
-  }, [keyboard, keyboardDelay]);
 
   useEffect(() => {
     // If the activeNode has a comment, scroll to it,

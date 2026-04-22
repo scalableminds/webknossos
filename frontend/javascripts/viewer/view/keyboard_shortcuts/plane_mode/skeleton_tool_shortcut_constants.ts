@@ -72,7 +72,6 @@ export const PlaneSkeletonToolNoLoopedKeyboardShortcutMetaInfo: KeyboardShortcut
             {
               description,
               domain: KeyboardShortcutDomain.PLANE_SKELETON_TOOL,
-              looped: false,
               collisionEntityName: KeyboardShortcutCollisionEntityName.PLANE_SKELETON_TOOL,
             },
           ] as [PlaneSkeletonToolNoLoopedKeyboardShortcuts, KeyboardShortcutMetaInfo],
@@ -111,7 +110,6 @@ export const PlaneSkeletonToolLoopedKeyboardShortcutMetaInfo: KeyboardShortcutHa
             {
               description,
               domain: KeyboardShortcutDomain.PLANE_SKELETON_TOOL,
-              looped: true,
               collisionEntityName: KeyboardShortcutCollisionEntityName.PLANE_SKELETON_TOOL,
             },
           ] as [PlaneSkeletonToolNoLoopedKeyboardShortcuts, KeyboardShortcutMetaInfo],

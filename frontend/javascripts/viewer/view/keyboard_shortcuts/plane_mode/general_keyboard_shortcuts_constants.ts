@@ -55,7 +55,6 @@ export const PlaneNavigationKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMet
             {
               description,
               domain: KeyboardShortcutDomain.PLANE_NAVIGATION,
-              looped: true,
               collisionEntityName: KeyboardShortcutCollisionEntityName.PLANE_MODE,
             },
           ] as [PlaneControllerLoopedNavigationKeyboardShortcuts, KeyboardShortcutMetaInfo],
@@ -130,7 +129,6 @@ export const PlaneLoopDelayedNavigationKeyboardShortcutMetaInfo: KeyboardShortcu
             {
               description,
               domain: KeyboardShortcutDomain.PLANE_NAVIGATION,
-              looped: true,
               collisionEntityName: KeyboardShortcutCollisionEntityName.PLANE_MODE,
             },
           ] as [PlaneControllerLoopDelayedNavigationKeyboardShortcuts, KeyboardShortcutMetaInfo],
@@ -169,7 +167,6 @@ export const PlaneGeneralKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaIn
             {
               description,
               domain: KeyboardShortcutDomain.PLANE_NAVIGATION,
-              looped: false,
               collisionEntityName: KeyboardShortcutCollisionEntityName.PLANE_MODE,
             },
           ] as [PlaneControllerNoLoopGeneralKeyboardShortcuts, KeyboardShortcutMetaInfo],

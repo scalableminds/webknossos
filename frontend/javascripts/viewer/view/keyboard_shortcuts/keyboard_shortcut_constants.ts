@@ -96,7 +96,6 @@ const GeneralKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap<Genera
             {
               description,
               domain: KeyboardShortcutDomain.GENERAL,
-              looped: false,
               collisionEntityName: KeyboardShortcutCollisionEntityName.GENERAL,
             },
           ] as [GeneralKeyboardShortcuts, KeyboardShortcutMetaInfo],
@@ -132,7 +131,6 @@ const GeneralEditingKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInfoMap
             {
               description,
               domain: KeyboardShortcutDomain.GENERAL_EDITING,
-              looped: false,
               collisionEntityName: KeyboardShortcutCollisionEntityName.GENERAL,
             },
           ] as [GeneralEditingKeyboardShortcuts, KeyboardShortcutMetaInfo],
@@ -168,7 +166,6 @@ export const GeneralLayoutKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaI
             {
               description,
               domain: KeyboardShortcutDomain.GENERAL_LAYOUT,
-              looped: false,
               collisionEntityName: KeyboardShortcutCollisionEntityName.GENERAL,
             },
           ] as [GeneralLayoutKeyboardShortcuts, KeyboardShortcutMetaInfo],
@@ -201,7 +198,6 @@ export const CommentsTabKeyboardShortcutMetaInfo: KeyboardShortcutHandlerMetaInf
             {
               description,
               domain: KeyboardShortcutDomain.GENERAL_COMMENT_TAB,
-              looped: false,
               collisionEntityName: KeyboardShortcutCollisionEntityName.GENERAL,
             },
           ] as [CommentsTabKeyboardShortcuts, KeyboardShortcutMetaInfo],

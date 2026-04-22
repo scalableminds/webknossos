@@ -35,8 +35,6 @@ export type KeyboardShortcutsMap<KeyboardShortcutHandlerId extends string> = Rec
 
 export type KeyboardShortcutMetaInfo = {
   description: string;
-  // looped is per default false.
-  looped?: boolean;
   domain: KeyboardShortcutDomain;
   // No collision domain means colliding with all shortcuts.
   collisionEntityName: KeyboardShortcutCollisionEntityName;
@@ -47,13 +45,7 @@ export type KeyboardShortcutHandlerMetaInfoMap<KeyboardShortcutHandlerId extends
   KeyboardShortcutMetaInfo
 >;
 
-export type KeyboardShortcutNoLoopedHandlerMap<KeyboardShortcutHandlerId extends string> = Record<
+export type KeyboardShortcutHandlerMap<KeyboardShortcutHandlerId extends string> = Record<
   KeyboardShortcutHandlerId,
-  // looped is per default false.
-  KeyboardNoLoopHandler
->;
-export type KeyboardShortcutLoopedHandlerMap<KeyboardShortcutHandlerId extends string> = Record<
-  KeyboardShortcutHandlerId,
-  // looped is per default false.
-  KeyboardLoopHandler
+  KeyboardNoLoopHandler | KeyboardLoopHandler
 >;

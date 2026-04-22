@@ -19,7 +19,6 @@ export const PlaneProofreadingToolNoLoopedKeyboardShortcutMetaInfo: KeyboardShor
     [PlaneProofreadingToolNoLoopedKeyboardShortcuts.TOGGLE_MULTICUT_MODE]: {
       description: "Toggle multi cut mode",
       domain: KeyboardShortcutDomain.PLANE_PROOFREADING_TOOL,
-      looped: false,
       collisionEntityName: KeyboardShortcutCollisionEntityName.PLANE_PROOFREADING_TOOL,
     },
   };

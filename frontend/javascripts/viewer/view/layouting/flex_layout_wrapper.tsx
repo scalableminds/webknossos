@@ -3,7 +3,7 @@ import { ConfigProvider, Layout } from "antd";
 import features from "features";
 import type { Action, BorderNode, TabNode, TabSetNode } from "flexlayout-react";
 import { Actions, DockLocation, Layout as FlexLayoutComponent, Model } from "flexlayout-react";
-import { InputKeyboardNoLoop } from "libs/input";
+import { InputKeyboard } from "libs/input";
 import Toast from "libs/toast";
 import cloneDeep from "lodash-es/cloneDeep";
 import messages from "messages";
@@ -40,8 +40,8 @@ import TDViewControls from "viewer/view/td_view_controls";
 import BorderToggleButton from "../components/border_toggle_button";
 import { GeneralLayoutKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcut_constants";
 import { loadKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcut_persistence";
-import type { KeyboardShortcutNoLoopedHandlerMap } from "../keyboard_shortcuts/keyboard_shortcut_types";
-import { buildKeyBindingsFromConfigAndMapping } from "../keyboard_shortcuts/keyboard_shortcut_utils";
+import type { KeyboardShortcutHandlerMap } from "../keyboard_shortcuts/keyboard_shortcut_types";
+import { buildKeyBindingsFromConfig } from "../keyboard_shortcuts/keyboard_shortcut_utils";
 import {
   adjustModelToBorderOpenStatus,
   getBorderOpenStatus,
@@ -260,7 +260,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
     this.onAction(toggleMaximiseAction);
   };
 
-  getLayoutKeyboardShortcuts(): KeyboardShortcutNoLoopedHandlerMap<GeneralLayoutKeyboardShortcuts> {
+  getLayoutKeyboardShortcuts(): KeyboardShortcutHandlerMap<GeneralLayoutKeyboardShortcuts> {
     return {
       [GeneralLayoutKeyboardShortcuts.MAXIMIZE]: { onPressed: this.toggleMaximize },
       [GeneralLayoutKeyboardShortcuts.TOGGLE_LEFT_BORDER]: {
@@ -274,12 +274,12 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
 
   attachKeyboardShortcuts() {
     const keybindingConfig = loadKeyboardShortcuts();
-    const keyboardControls = buildKeyBindingsFromConfigAndMapping(
+    const keyboardControls = buildKeyBindingsFromConfig(
       keybindingConfig,
       this.getLayoutKeyboardShortcuts(),
     );
-    const keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
-    return () => keyboardNoLoop.destroy();
+    const keyboard = new InputKeyboard(keyboardControls);
+    return () => keyboard.destroy();
   }
 
   // Taken from the FlexLayout examples.

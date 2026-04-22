@@ -35,7 +35,6 @@ export const PlaneBoundingBoxToolNoLoopedKeyboardShortcutMetaInfo: KeyboardShort
             {
               description,
               domain: KeyboardShortcutDomain.PLANE_BOUNDING_BOX_TOOL,
-              looped: false,
               collisionEntityName: KeyboardShortcutCollisionEntityName.PLANE_BOUNDING_BOX_TOOL,
             },
           ] as [PlaneBoundingBoxToolNoLoopedKeyboardShortcuts, KeyboardShortcutMetaInfo],

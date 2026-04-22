@@ -45,7 +45,6 @@ export const PlaneVolumeToolNoLoopedKeyboardShortcutMetaInfo: KeyboardShortcutHa
             {
               description,
               domain: KeyboardShortcutDomain.PLANE_VOLUME_TOOL,
-              looped: false,
               collisionEntityName: KeyboardShortcutCollisionEntityName.PLANE_VOLUME_TOOL,
             },
           ] as [PlaneVolumeToolNoLoopedKeyboardShortcuts, KeyboardShortcutMetaInfo],
@@ -68,13 +67,11 @@ export const PlaneVolumeToolLoopDelayedConfigKeyboardShortcutMetaInfo: KeyboardS
     [PlaneVolumeToolLoopDelayedConfigKeyboardShortcuts.DECREASE_BRUSH_SIZE]: {
       description: "Decrease brush size",
       domain: KeyboardShortcutDomain.PLANE_VOLUME_TOOL,
-      looped: true,
       collisionEntityName: KeyboardShortcutCollisionEntityName.PLANE_VOLUME_TOOL,
     },
     [PlaneVolumeToolLoopDelayedConfigKeyboardShortcuts.INCREASE_BRUSH_SIZE]: {
       description: "Increase brush size",
       domain: KeyboardShortcutDomain.PLANE_VOLUME_TOOL,
-      looped: true,
       collisionEntityName: KeyboardShortcutCollisionEntityName.PLANE_VOLUME_TOOL,
     },
   };

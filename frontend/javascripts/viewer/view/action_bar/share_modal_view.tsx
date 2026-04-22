@@ -223,6 +223,7 @@ function _ShareModalView(props: Props) {
     useState(allowConcurrentEditing);
 
   const hasUpdatePermissions = useWkSelector(mayEditAnnotationProperties);
+  const annotationHasEditableMapping = useWkSelector(hasEditableMapping);
   useEffect(() => setVisibility(annotationVisibility), [annotationVisibility]);
 
   const fetchAndSetSharedTeams = async () => {
@@ -567,10 +568,15 @@ function _ShareModalView(props: Props) {
             <Checkbox
               checked={newAllowConcurrentEditing}
               onChange={handleConcurrentEditingCheckboxChange}
-              disabled={!newOthersMayEdit || !hasUpdatePermissions || isChangingInProgress}
+              disabled={
+                !newOthersMayEdit ||
+                !hasUpdatePermissions ||
+                isChangingInProgress ||
+                (!annotationHasEditableMapping && !newAllowConcurrentEditing)
+              }
             >
               Yes, allow simultaneous editing
-              <FastTooltip title="Currently not recommended for production use.">
+              <FastTooltip title="Currently not recommended for production use. Requires at least one saved proofreading action.">
                 <Tag
                   style={{ marginLeft: 4 }}
                   color="warning"
@@ -580,7 +586,6 @@ function _ShareModalView(props: Props) {
                   Experimental
                 </Tag>
               </FastTooltip>
-            {/* TODO PR feedback for PRRC_kwDOAEIDNc65yBbn */}
             </Checkbox>
             <Hint
               style={{

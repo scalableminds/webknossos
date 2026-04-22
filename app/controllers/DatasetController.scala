@@ -450,6 +450,14 @@ class DatasetController @Inject()(userService: UserService,
       }
     }
 
+  def findByImportURL(importURL: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        dataset <- datasetService.findOneByImportURL(importURL, request.identity._organization) ?~> "dataset.notFound" ~> NOT_FOUND
+        js <- datasetService.publicWrites(dataset, Some(request.identity))
+      } yield Ok(js)
+    }
+
   def health(datasetId: ObjectId, sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)

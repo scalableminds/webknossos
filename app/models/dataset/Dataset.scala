@@ -437,6 +437,19 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       parsed <- parseFirst(r, s"$organizationId/$directoryName")
     } yield parsed
 
+  def findOneByImportURL(importURL: String, organizationId: String)(
+      implicit ctx: DBAccessContext): Fox[Dataset] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(q"""SELECT $columns
+                   FROM $existingCollectionName
+                   WHERE _organization = $organizationId
+                   AND metadata @> jsonb_build_array(jsonb_build_object('type', 'string', 'key', 'importURL', 'value', $importURL))
+                   AND $accessQuery
+                   LIMIT 1""".as[DatasetsRow])
+      parsed <- parseFirst(r, importURL)
+    } yield parsed
+
   def findOneByDataSourceId(dataSourceId: DataSourceId)(implicit ctx: DBAccessContext): Fox[Dataset] =
     findOneByDirectoryNameAndOrganization(dataSourceId.directoryName, dataSourceId.organizationId)
 

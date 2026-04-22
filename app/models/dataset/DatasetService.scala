@@ -98,6 +98,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.fromBool(!isDatasetNameAlreadyTaken) ?~> "dataset.name.alreadyTaken"
     } yield ()
 
+  def findOneByImportURL(importURL: String, organizationId: String)(
+      implicit ctx: DBAccessContext): Fox[Dataset] =
+    datasetDAO.findOneByImportURL(importURL, organizationId)
+
   def getAllUnfinishedDatasetUploadsOfUser(userId: ObjectId, organizationId: String)(
       implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
     datasetDAO.findAllCompactWithSearch(

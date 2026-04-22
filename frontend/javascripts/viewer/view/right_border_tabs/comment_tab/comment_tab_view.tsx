@@ -23,7 +23,7 @@ import {
 } from "antd";
 import type { EventDataNode } from "antd/es/tree";
 import useLifecycle from "beautiful-react-hooks/useLifecycle";
-import { InputKeyboard } from "libs/input";
+import { InputKeyboardLoop } from "libs/input";
 import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import { compareBy, localeCompareBy } from "libs/utils";
 import isEmpty from "lodash-es/isEmpty";
@@ -127,7 +127,7 @@ function CommentTabView(props: Props) {
   const [isMarkdownModalOpen, setIsMarkdownModalOpen] = useState(false);
   const [isVisibleInDom, setIsVisibleInDom] = useState(true);
 
-  const [keyboard, setKeyboard] = useState<InputKeyboard | null>(null);
+  const [keyboard, setKeyboard] = useState<InputKeyboardLoop | null>(null);
   const nextCommentRef = useRef<(arg0?: boolean) => void>(null);
   const previousCommentRef = useRef<() => void>(null);
 
@@ -166,7 +166,7 @@ function CommentTabView(props: Props) {
         keybindingConfig,
         keyboardHandlers,
       );
-      const newKeyboard = new InputKeyboard(keyboardControls);
+      const newKeyboard = new InputKeyboardLoop(keyboardControls);
       if (keyboard === null) setKeyboard(newKeyboard);
     },
     () => {

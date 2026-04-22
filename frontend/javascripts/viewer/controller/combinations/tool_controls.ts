@@ -61,7 +61,11 @@ import {
 } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
-import { AnnotationTool, isBrushTool } from "viewer/model/accessors/tool_accessor";
+import {
+  AnnotationTool,
+  type AnnotationToolId,
+  isBrushTool,
+} from "viewer/model/accessors/tool_accessor";
 import { calculateGlobalPos } from "viewer/model/accessors/view_mode_accessor";
 import {
   enforceActiveVolumeTracing,
@@ -991,7 +995,7 @@ export class BoundingBoxToolController extends ToolController {
   }
 
   static getNoLoopedKeyboardControls(): KeyboardShortcutNoLoopedHandlerMap<PlaneBoundingBoxToolNoLoopedKeyboardShortcuts> {
-    const handleReactToModifier = (event: KeyboardEvent) => {
+    const handleBBoxMoveModifierPressed = (event: KeyboardEvent) => {
       const { viewModeData, temporaryConfiguration } = Store.getState();
       const { mousePosition } = temporaryConfiguration;
       if (mousePosition == null) return;
@@ -1008,8 +1012,8 @@ export class BoundingBoxToolController extends ToolController {
         },
       },
       [PlaneBoundingBoxToolNoLoopedKeyboardShortcuts.TOGGLE_CURSOR_STATE_FOR_MOVING]: {
-        onPressed: handleReactToModifier,
-        onReleased: handleReactToModifier,
+        onPressed: handleBBoxMoveModifierPressed,
+        onReleased: handleBBoxMoveModifierPressed,
       },
     };
   }
@@ -1383,6 +1387,8 @@ export class ProofreadToolController extends ToolController {
       [PlaneProofreadingToolNoLoopedKeyboardShortcuts.TOGGLE_MULTICUT_MODE]: {
         onPressed: () => {
           const state = Store.getState();
+          // Do not trigger in case proofreading is active as this is colliding with the default shortcut for multi split mode activation.
+          // This is currently the only allowed shortcut collision manually resolved here. c.f.:  acceptedCollisions in keyboard_shortcut_utils.tsx.
           const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
           if (isProofreadingActive) {
             const isMultiSplitActive = state.userConfiguration.isMultiSplitActive;
@@ -1488,6 +1494,7 @@ export class ProofreadToolController extends ToolController {
 
   static onToolDeselected() {}
 }
+
 const toolToToolController = {
   [AnnotationTool.MOVE.id]: MoveToolController,
   [AnnotationTool.SKELETON.id]: SkeletonToolController,
@@ -1507,36 +1514,16 @@ export function getToolControllerForAnnotationTool(activeTool: AnnotationTool) {
   return toolToToolController[activeTool.id];
 }
 
-export const AllNoLoopedToolKeyboardControls = {
-  [AnnotationTool.MOVE.id]: MoveToolController.getNoLoopedKeyboardControls(),
-  [AnnotationTool.SKELETON.id]: SkeletonToolController.getNoLoopedKeyboardControls(),
-  [AnnotationTool.BOUNDING_BOX.id]: BoundingBoxToolController.getNoLoopedKeyboardControls(),
-  [AnnotationTool.QUICK_SELECT.id]: QuickSelectToolController.getNoLoopedKeyboardControls(),
-  [AnnotationTool.PROOFREAD.id]: ProofreadToolController.getNoLoopedKeyboardControls(),
-  [AnnotationTool.BRUSH.id]: DrawToolController.getNoLoopedKeyboardControls(),
-  [AnnotationTool.TRACE.id]: DrawToolController.getNoLoopedKeyboardControls(),
-  [AnnotationTool.ERASE_TRACE.id]: EraseToolController.getNoLoopedKeyboardControls(),
-  [AnnotationTool.ERASE_BRUSH.id]: EraseToolController.getNoLoopedKeyboardControls(),
-  [AnnotationTool.FILL_CELL.id]: FillCellToolController.getNoLoopedKeyboardControls(),
-  [AnnotationTool.VOXEL_PIPETTE.id]: VoxelPipetteToolController.getNoLoopedKeyboardControls(),
-  [AnnotationTool.LINE_MEASUREMENT.id]: LineMeasurementToolController.getNoLoopedKeyboardControls(),
-  [AnnotationTool.AREA_MEASUREMENT.id]: AreaMeasurementToolController.getNoLoopedKeyboardControls(),
-};
+export const AllNoLoopedToolKeyboardControls = Object.fromEntries(
+  Object.entries(toolToToolController).map(([id, controller]) => [
+    id,
+    controller.getNoLoopedKeyboardControls(),
+  ]),
+) as Record<AnnotationToolId, KeyboardShortcutNoLoopedHandlerMap<string>>;
 
-export const AllLoopDelayedToolKeyboardControls = {
-  [AnnotationTool.MOVE.id]: MoveToolController.getLoopDelayedKeyboardControls(),
-  [AnnotationTool.SKELETON.id]: SkeletonToolController.getLoopDelayedKeyboardControls(),
-  [AnnotationTool.BOUNDING_BOX.id]: BoundingBoxToolController.getLoopDelayedKeyboardControls(),
-  [AnnotationTool.QUICK_SELECT.id]: QuickSelectToolController.getLoopDelayedKeyboardControls(),
-  [AnnotationTool.PROOFREAD.id]: ProofreadToolController.getLoopDelayedKeyboardControls(),
-  [AnnotationTool.BRUSH.id]: DrawToolController.getLoopDelayedKeyboardControls(),
-  [AnnotationTool.TRACE.id]: DrawToolController.getLoopDelayedKeyboardControls(),
-  [AnnotationTool.ERASE_TRACE.id]: EraseToolController.getLoopDelayedKeyboardControls(),
-  [AnnotationTool.ERASE_BRUSH.id]: EraseToolController.getLoopDelayedKeyboardControls(),
-  [AnnotationTool.FILL_CELL.id]: FillCellToolController.getLoopDelayedKeyboardControls(),
-  [AnnotationTool.VOXEL_PIPETTE.id]: VoxelPipetteToolController.getLoopDelayedKeyboardControls(),
-  [AnnotationTool.LINE_MEASUREMENT.id]:
-    LineMeasurementToolController.getLoopDelayedKeyboardControls(),
-  [AnnotationTool.AREA_MEASUREMENT.id]:
-    AreaMeasurementToolController.getLoopDelayedKeyboardControls(),
-};
+export const AllLoopDelayedToolKeyboardControls = Object.fromEntries(
+  Object.entries(toolToToolController).map(([id, controller]) => [
+    id,
+    controller.getLoopDelayedKeyboardControls(),
+  ]),
+) as Record<AnnotationToolId, KeyboardShortcutLoopedHandlerMap<string>>;

@@ -1,8 +1,8 @@
 import {
-  InputKeyboard,
+  InputKeyboardLoop,
   InputKeyboardNoLoop,
   InputMouse,
-  type KeyBindingLoopMap,
+  type KeyComboToLoopHandlerMap,
   type MouseBindingMap,
   type MouseEventHandler,
 } from "libs/input";
@@ -149,9 +149,9 @@ class PlaneController extends PureComponent<Props> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'input' has no initializer and is not def... Remove this comment to see the full error message
   input: {
     mouseControllers: OrthoViewMap<InputMouse>;
-    keyboard?: InputKeyboard;
+    keyboard?: InputKeyboardLoop;
     keyboardNoLoop?: InputKeyboardNoLoop;
-    keyboardLoopDelayed?: InputKeyboard;
+    keyboardLoopDelayed?: InputKeyboardLoop;
   };
 
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any> = [];
@@ -379,7 +379,7 @@ class PlaneController extends PureComponent<Props> {
       keyboardShortcutsConfig,
       this.getLoopedHandlerMap(),
     );
-    this.input.keyboard = new InputKeyboard(loopedControllerBindings);
+    this.input.keyboard = new InputKeyboardLoop(loopedControllerBindings);
 
     const toolDependentLoopedBindings = buildKeyBindingsFromConfigAndLoopedMappingForTools(
       keyboardShortcutsConfig,
@@ -391,7 +391,7 @@ class PlaneController extends PureComponent<Props> {
       keyboardShortcutsConfig,
       this.getLoopDelayedHandlerMap(),
     );
-    const withAdditionalActions: KeyBindingLoopMap = {
+    const withAdditionalActions: KeyComboToLoopHandlerMap = {
       ...delayedControllerBindings,
       ...toolDependentLoopedBindings,
       // Enter & Escape need to be separate due to being constant and not configurable.
@@ -400,7 +400,7 @@ class PlaneController extends PureComponent<Props> {
       },
       esc: { onPressedWithRepeat: () => Store.dispatch(escapeAction()) },
     };
-    this.input.keyboardLoopDelayed = new InputKeyboard(withAdditionalActions, {
+    this.input.keyboardLoopDelayed = new InputKeyboardLoop(withAdditionalActions, {
       delay: Store.getState().userConfiguration.keyboardDelay,
     });
 
@@ -540,57 +540,6 @@ class PlaneController extends PureComponent<Props> {
     this.input.keyboard?.destroy();
     this.input.keyboardNoLoop?.destroy();
     this.input.keyboardLoopDelayed?.destroy();
-  }
-
-  createToolDependentKeyboardHandler(
-    skeletonHandler: ((...args: Array<any>) => any) | null | undefined,
-    volumeHandler: ((...args: Array<any>) => any) | null | undefined,
-    boundingBoxHandler: ((...args: Array<any>) => any) | null | undefined,
-    viewHandler?: ((...args: Array<any>) => any) | null | undefined,
-  ): (...args: Array<any>) => any {
-    return (...args) => {
-      const tool = this.props.activeTool;
-
-      switch (tool) {
-        case AnnotationTool.MOVE: {
-          if (viewHandler != null) {
-            viewHandler(...args);
-          } else if (skeletonHandler != null) {
-            skeletonHandler(...args);
-          }
-
-          return;
-        }
-
-        case AnnotationTool.SKELETON: {
-          if (skeletonHandler != null) {
-            skeletonHandler(...args);
-          } else if (viewHandler != null) {
-            viewHandler(...args);
-          }
-
-          return;
-        }
-
-        case AnnotationTool.BOUNDING_BOX: {
-          if (boundingBoxHandler != null) {
-            boundingBoxHandler(...args);
-          } else if (viewHandler != null) {
-            viewHandler(...args);
-          }
-
-          return;
-        }
-
-        default: {
-          if (volumeHandler != null) {
-            volumeHandler(...args);
-          } else if (viewHandler != null) {
-            viewHandler(...args);
-          }
-        }
-      }
-    };
   }
 
   createToolDependentMouseHandler<T extends MouseEventHandler = MouseEventHandler>(

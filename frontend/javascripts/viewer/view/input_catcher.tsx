@@ -148,7 +148,6 @@ function InputCatcher({
 
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
 
-  // TODOM: how to handle this? This is not part of the "keyboard shortcut structure".
   const isShiftPressed = useKeyPress("Shift");
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
   const isAltPressed = useKeyPress("Alt");

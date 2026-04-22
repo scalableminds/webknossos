@@ -1,5 +1,5 @@
 import type { ModifierKeys } from "libs/input";
-import { InputKeyboard, InputKeyboardNoLoop, InputMouse } from "libs/input";
+import { InputKeyboardLoop, InputKeyboardNoLoop, InputMouse } from "libs/input";
 import type { Matrix4x4 } from "libs/mjs";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
@@ -88,8 +88,8 @@ class ArbitraryController extends React.PureComponent<Props> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'input' has no initializer and is not def... Remove this comment to see the full error message
   input: {
     mouseController: InputMouse | null | undefined;
-    keyboard?: InputKeyboard;
-    keyboardLoopDelayed?: InputKeyboard;
+    keyboard?: InputKeyboardLoop;
+    keyboardLoopDelayed?: InputKeyboardLoop;
     keyboardNoLoop?: InputKeyboardNoLoop;
   };
 
@@ -342,14 +342,14 @@ class ArbitraryController extends React.PureComponent<Props> {
       keyboardShortcutsConfig,
       this.getKeyboardNavigationShortcutsHandlerMap(),
     );
-    this.input.keyboard = new InputKeyboard(navigationKeyboardBindings);
+    this.input.keyboard = new InputKeyboardLoop(navigationKeyboardBindings);
 
     const navigationConfigKeyboardBindings = buildKeyBindingsFromConfigAndLoopedMapping(
       keyboardShortcutsConfig,
       this.getKeyboardNavigationConfigShortcutsHandlerMap(),
     );
     // Own InputKeyboard with delay for changing the Move Value, because otherwise the values changes to drastically
-    this.input.keyboardLoopDelayed = new InputKeyboard(navigationConfigKeyboardBindings, {
+    this.input.keyboardLoopDelayed = new InputKeyboardLoop(navigationConfigKeyboardBindings, {
       delay: Store.getState().userConfiguration.keyboardDelay,
     });
 

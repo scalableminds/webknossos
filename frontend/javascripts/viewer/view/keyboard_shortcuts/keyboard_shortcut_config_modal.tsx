@@ -104,16 +104,28 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
   const [jsonString, setJsonString] = useState(() => JSON.stringify(localShortcutConfig, null, 2));
   const [jsonError, setJsonError] = useState<string | null>(null);
 
+  const updateLocalShortcutConfig = (nextConfig: typeof localShortcutConfig) => {
+    setLocalShortcutConfig(nextConfig);
+    setJsonString(JSON.stringify(nextConfig, null, 2));
+    setJsonError(null);
+  };
+
   const handleRemoveComboChain = (handlerId: string, comboChain: string[][]) => {
     setLocalShortcutConfig((prevConfig) => {
       const updatedCombos = prevConfig[handlerId].filter((c) => c !== comboChain);
-      return { ...prevConfig, [handlerId]: updatedCombos };
+      const updatedConfig = { ...prevConfig, [handlerId]: updatedCombos };
+      updateLocalShortcutConfig(updatedConfig);
+      return updatedConfig;
     });
   };
 
   const handleRestoreDefaultForHandler = (handlerId: AnyKeyboardHandlerId) => {
     const defaultCombos = getAllDefaultKeyboardShortcuts()[handlerId] as KeyboardComboChain[];
-    setLocalShortcutConfig((prevConfig) => ({ ...prevConfig, [handlerId]: defaultCombos }));
+    setLocalShortcutConfig((prevConfig) => {
+      const updatedConfig = { ...prevConfig, [handlerId]: defaultCombos };
+      updateLocalShortcutConfig(updatedConfig);
+      return updatedConfig;
+    });
   };
 
   // Convert config into grouped table rows
@@ -232,7 +244,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
     setJsonString(value);
     const { valid, errors, parsed } = validateShortcutMapText(value);
     if (valid && parsed) {
-      setLocalShortcutConfig(parsed);
+      updateLocalShortcutConfig(parsed);
     }
     if (valid) {
       setJsonError(null);
@@ -255,6 +267,13 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       return;
     }
   };
+  const handleCancel = () => {
+    setLocalShortcutConfig(keyboardShortcutsConfigFromStore);
+    setJsonString(JSON.stringify(keyboardShortcutsConfigFromStore, null, 2));
+    setJsonError(null);
+    onClose();
+  };
+
   const onReset = () => {
     setLocalShortcutConfig(getAllDefaultKeyboardShortcuts());
   };
@@ -381,8 +400,8 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
   return (
     <Modal
       open={isOpen}
-      onCancel={onClose}
-      okButtonProps={{ disabled: activeUser == null }}
+      onCancel={handleCancel}
+      okButtonProps={{ disabled: activeUser == null || (isJsonView && jsonError != null) }}
       onOk={handleSave}
       width={1000}
       style={{ padding: 20 }}

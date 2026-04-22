@@ -77,7 +77,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
     gotUnhandledError: false,
     organizationToSwitchTo: null,
   };
-  unsubscribeKeyboardListener: any = () => {};
+  unsubscribeKeyboardListener: ReturnType<typeof listenToStoreProperty> = () => {};
 
   // Main controller, responsible for setting modes and everything
   // that has to be controlled in any mode.
@@ -229,6 +229,9 @@ class Controller extends PureComponent<PropsWithRouter, State> {
   }
 
   getKeyboardShortcutsHandlerMap(): ControllerKeyboardHandlerIdMap {
+    // getKeyboardShortcutsHandlerMap is a function and not a const to ensure each time the map is used,
+    // a new instance of toggleSegmentationOpacity is created and thus "leastRecentlyUsedSegmentationLayer"
+    // not being shared between key binding maps.
     let leastRecentlyUsedSegmentationLayer: DataLayer | null = null;
     function toggleSegmentationOpacity() {
       let segmentationLayer = Model.getVisibleSegmentationLayer();
@@ -287,8 +290,6 @@ class Controller extends PureComponent<PropsWithRouter, State> {
         },
       };
 
-    // Wrapped in a function to ensure each time the map is used, a new instance of getHandleToggleSegmentation
-    // is created and thus "leastRecentlyUsedSegmentationLayer" not being shared between key binding maps.
     const keyboardShortcutsHandlerMapForController: ControllerKeyboardHandlerIdMap = {
       [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_PLANE]: {
         onPressed: () => {

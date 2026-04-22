@@ -57,6 +57,7 @@ export const viteConfig = {
     sourcemap: true,
     rolldownOptions: {
       output: {
+        strictExecutionOrder: true,
         codeSplitting: {
           minSize: 250000, // 250KB global minimum chunk size to avoid small artifacts
           groups: [

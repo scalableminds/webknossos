@@ -363,7 +363,7 @@ function TreeHierarchyView(props: Props) {
                   checkedKeys={checkedKeys}
                   expandedKeys={expandedNodeKeys}
                   selectedKeys={selectedKeys}
-                  style={{ marginLeft: -24 }}
+                  style={{ marginLeft: -24 }} // hide switcherIcon for root group
                   autoExpandParent
                   checkable
                   blockNode

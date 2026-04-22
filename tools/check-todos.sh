@@ -14,7 +14,7 @@ BLACKLIST=(
   webknossos-tracingstore/deployment/config/tracingstore-docker.conf
 )
 
-TODOS=$(git grep -niI -E 'todo[a-z]?([ :]|$)' | grep -viE '#[0-9]+' || true)
+TODOS=$(git grep -niI -E 'todo_?[a-z]?([ :]|$)' | grep -viE '#[0-9]+' || true)
 
 if [ ${#BLACKLIST[@]} -gt 0 ]; then
   BLACKLIST_PATTERN=$(printf '%s\n' "${BLACKLIST[@]}" | sed 's|[.[\*^$]|\\&|g' | paste -sd'|')

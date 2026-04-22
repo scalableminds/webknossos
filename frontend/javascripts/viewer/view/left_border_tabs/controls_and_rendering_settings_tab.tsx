@@ -361,6 +361,10 @@ class ControlsAndRenderingSettingsTab extends PureComponent<ControlsAndRendering
                   value: BLEND_MODES.Cover,
                   label: "Cover",
                 },
+                {
+                  value: BLEND_MODES.CoverWithBlackAsTransparent,
+                  label: "Cover (black as transparent)",
+                },
               ]}
             />
             <SwitchSetting

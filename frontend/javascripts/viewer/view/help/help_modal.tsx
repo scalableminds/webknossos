@@ -1,8 +1,13 @@
-import { sendHelpEmail } from "admin/rest_api";
-import { Button, Input, Modal, message, Segmented, Space } from "antd";
-import type React from "react";
+import {
+  CloseOutlined,
+  ExpandAltOutlined,
+  ReloadOutlined,
+  ShrinkOutlined,
+} from "@ant-design/icons";
+import { Button, Flex, Modal, Segmented, Tooltip } from "antd";
 import { type CSSProperties, useState } from "react";
-import { HelpChat } from "./help_chat";
+import { clearHelpChatSession, HelpChat } from "./help_chat";
+import { HelpEmail } from "./help_email";
 
 type HelpMode = "ai" | "email";
 
@@ -13,47 +18,47 @@ type HelpModalProps = {
 };
 
 export function HelpModal(props: HelpModalProps) {
-  const [helpText, setHelpText] = useState("");
-  const [isSending, setIsSending] = useState(false);
   const [mode, setMode] = useState<HelpMode>("ai");
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [chatResetKey, setChatResetKey] = useState(0);
   const positionStyle: CSSProperties = { right: 10, bottom: 40, top: "auto", position: "fixed" };
 
-  const sendHelp = async () => {
-    if (helpText.length > 0) {
-      try {
-        setIsSending(true);
-        await sendHelpEmail(helpText);
-        setHelpText("");
-        message.success("Message has been sent. We'll reply via email shortly.");
-      } catch (err) {
-        message.error("Sorry, we could not send the help message. Please try again later.");
-        throw err;
-      } finally {
-        setIsSending(false);
-      }
-    }
-    props.onCancel();
-  };
+  const modalTitle = (
+    <Flex align="center" gap={4} style={{ paddingRight: 8 }}>
+      <span style={{ flex: 1 }}>Do you have any questions?</span>
+      <Tooltip title="Clear conversation">
+        <Button
+          icon={<ReloadOutlined />}
+          size="small"
+          type="text"
+          onClick={() => {
+            clearHelpChatSession();
+            setChatResetKey((k) => k + 1);
+          }}
+        />
+      </Tooltip>
+      <Tooltip title={isExpanded ? "Smaller" : "Larger"}>
+        <Button
+          icon={isExpanded ? <ShrinkOutlined /> : <ExpandAltOutlined />}
+          size="small"
+          type="text"
+          onClick={() => setIsExpanded((v) => !v)}
+        />
+      </Tooltip>
+      <Button icon={<CloseOutlined />} size="small" type="text" onClick={props.onCancel} />
+    </Flex>
+  );
 
   return (
     <Modal
-      title="Do you have any questions?"
+      title={modalTitle}
       style={!props.centeredLayout ? positionStyle : undefined}
       open={props.isModalOpen}
-      confirmLoading={isSending}
       mask={props.centeredLayout}
       onCancel={props.onCancel}
-      width={320}
-      footer={
-        mode === "email" ? (
-          <Space size="small">
-            <Button onClick={props.onCancel}>Close</Button>
-            <Button type="primary" onClick={sendHelp}>
-              Send
-            </Button>
-          </Space>
-        ) : null
-      }
+      width={isExpanded ? 640 : 420}
+      footer={null}
+      closable={false}
     >
       <Segmented
         options={[
@@ -67,16 +72,9 @@ export function HelpModal(props: HelpModalProps) {
       />
 
       {mode === "ai" ? (
-        <HelpChat />
+        <HelpChat key={chatResetKey} isExpanded={isExpanded} />
       ) : (
-        <>
-          <p>We are happy to help as soon as possible and will get back to you.</p>
-          <Input.TextArea
-            rows={6}
-            value={helpText}
-            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setHelpText(e.target.value)}
-          />
-        </>
+        <HelpEmail key={chatResetKey} onCancel={props.onCancel} />
       )}
     </Modal>
   );

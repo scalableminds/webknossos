@@ -13,7 +13,8 @@ import java.nio.{ByteBuffer, ByteOrder}
 trait FullMeshHelper extends LazyLogging {
   protected lazy val dracoToStlConverter = new NativeDracoToStlConverter()
 
-  protected lazy val adHocChunkSize: Vec3Int = Vec3Int(100, 100, 100)
+  // 128 = 4 × 32 (storage bucket length), so each axis maps to exactly 4 buckets (as typcially produced by WK upload/worker)
+  protected lazy val adHocChunkSize: Vec3Int = Vec3Int(128, 128, 128)
 
   protected def generateNextTopLeftsFromNeighbors(
       oldTopLeft: VoxelPosition,

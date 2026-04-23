@@ -1,7 +1,7 @@
 import { Alert, Button, Flex, Modal, Space, Typography } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ALL_KEYBOARD_SHORTCUT_META_INFOS } from "./keyboard_shortcut_constants";
-import type { KeyboardComboChain, KeyboardShortcutsMap } from "./keyboard_shortcut_types";
+import type { KeyboardShortcutsMap, KeySequence } from "./keyboard_shortcut_types";
 import {
   type Collision,
   checkCollisionForShortcut,
@@ -53,7 +53,7 @@ export const CollisionWarningAlert: React.FC<CollisionWarningAlertProps> = ({
   );
 };
 
-const SampleKeyCombo: KeyboardComboChain = [["Control", "a"], ["o"]];
+const SampleKeyCombo: KeySequence = [["Control", "a"], ["o"]];
 
 // Derive a layout-independent key identifier from a keyboard event.
 // - Modifier keys (Shift, Control, Alt, Meta) are returned as-is.
@@ -102,9 +102,9 @@ type ShortcutRecorderModalProps = {
   keyboardShortcutConfig: KeyboardShortcutsMap<string>;
   handlerId: string | null; // The handlerId for which the shortcut should be added.
   isOpen: boolean;
-  initialKeyComboChain?: KeyboardComboChain; // optional preview of current binding
+  initialKeyComboChain?: KeySequence; // optional preview of current binding
   onCancel: () => void; // do not overwrite
-  onSave: (newKeyComboChain: KeyboardComboChain) => void; // returns final combo like [["Control", "a"], ["o"]]
+  onSave: (newKeyComboChain: KeySequence) => void; // returns final combo like [["Control", "a"], ["o"]]
 };
 
 export function ShortcutRecorderModal({
@@ -115,9 +115,7 @@ export function ShortcutRecorderModal({
   onCancel,
   onSave,
 }: ShortcutRecorderModalProps) {
-  const [keyComboChain, setKeyComboChain] = useState<KeyboardComboChain>(
-    initialKeyComboChain ?? [],
-  );
+  const [keyComboChain, setKeyComboChain] = useState<KeySequence>(initialKeyComboChain ?? []);
   const [previewKeyCombo, setPreviewKeyCombo] = useState<string[]>([]);
   const shortcutCollisions = useMemo(
     () =>

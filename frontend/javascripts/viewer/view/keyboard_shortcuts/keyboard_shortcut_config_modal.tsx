@@ -41,7 +41,7 @@ import {
   VolumeToolMouseShortcutsTable,
 } from "./keyboard_shortcut_mouse_tables";
 import { validateShortcutMapText } from "./keyboard_shortcut_persistence";
-import { type KeyboardComboChain, KeyboardShortcutDomain } from "./keyboard_shortcut_types";
+import { KeyboardShortcutDomain, type KeySequence } from "./keyboard_shortcut_types";
 import { checkCollisionsInShortcutMap, keyComboChainToUiElements } from "./keyboard_shortcut_utils";
 import { CollisionWarningAlert, ShortcutRecorderModal } from "./shortcut_recorder_modal";
 
@@ -53,7 +53,7 @@ export type ShortcutConfigModalProps = {
 };
 type KeyboardShortcutTableDataEntry = {
   key: string;
-  combos: KeyboardComboChain[];
+  combos: KeySequence[];
   handlerId: AnyKeyboardHandlerId;
   domain: string;
   description: string;
@@ -92,9 +92,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
   const [isJsonView, setIsJsonView] = useState(false);
   const [isRecorderOpen, setIsRecorderOpen] = useState(false);
   const [recorderTargetHandlerId, setRecorderTargetHandlerId] = useState<string | null>(null);
-  const [recorderEditingKeyCombo, setRecorderEditingKeyCombo] = useState<KeyboardComboChain | null>(
-    null,
-  );
+  const [recorderEditingKeyCombo, setRecorderEditingKeyCombo] = useState<KeySequence | null>(null);
   const [localShortcutConfig, setLocalShortcutConfig] = useState(keyboardShortcutsConfigFromStore);
   const shortcutCollisions = useMemo(
     () => checkCollisionsInShortcutMap(localShortcutConfig),
@@ -120,7 +118,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
   };
 
   const handleRestoreDefaultForHandler = (handlerId: AnyKeyboardHandlerId) => {
-    const defaultCombos = getAllDefaultKeyboardShortcuts()[handlerId] as KeyboardComboChain[];
+    const defaultCombos = getAllDefaultKeyboardShortcuts()[handlerId] as KeySequence[];
     setLocalShortcutConfig((prevConfig) => {
       const updatedConfig = { ...prevConfig, [handlerId]: defaultCombos };
       updateLocalShortcutConfig(updatedConfig);
@@ -171,7 +169,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       title: "Shortcuts",
       dataIndex: "combos",
       key: "combos",
-      render: (combos: KeyboardComboChain[], record: KeyboardShortcutTableDataEntry) => (
+      render: (combos: KeySequence[], record: KeyboardShortcutTableDataEntry) => (
         <>
           <div className="shortcuts-container">
             {combos.length === 0 ? (

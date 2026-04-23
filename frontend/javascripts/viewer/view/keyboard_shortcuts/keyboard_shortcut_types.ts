@@ -26,11 +26,12 @@ export enum KeyboardShortcutCollisionEntityName {
   PLANE_PROOFREADING_TOOL = "proofreading_tool_plane",
 }
 
-export type ComparableKeyboardCombo = string[];
-export type KeyboardComboChain = ComparableKeyboardCombo[];
+export type KeyCombination = string[];
+export type KeySequence = KeyCombination[];
+export type KeySequenceAlternatives = KeySequence[];
 export type KeyboardShortcutsMap<KeyboardShortcutHandlerId extends string> = Record<
   KeyboardShortcutHandlerId,
-  KeyboardComboChain[]
+  KeySequenceAlternatives
 >;
 
 export type KeyboardShortcutMetaInfo = {

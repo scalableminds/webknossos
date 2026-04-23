@@ -1,8 +1,8 @@
 import { MacCommandOutlined, WindowsOutlined } from "@ant-design/icons";
 import { Typography } from "antd";
 import type {
-  KeyboardLoopFn,
   KeyboardLoopHandler,
+  KeyboardLoopHandlerFn,
   KeyboardNoLoopHandler,
   KeyboardNoLoopHandlerFn,
 } from "libs/input";
@@ -16,10 +16,10 @@ import {
   KeyboardShortcutCollisionHierarchy,
 } from "./keyboard_shortcut_constants";
 import type {
-  KeyboardComboChain,
   KeyboardShortcutCollisionEntityName,
   KeyboardShortcutHandlerMap,
   KeyboardShortcutsMap,
+  KeySequence,
 } from "./keyboard_shortcut_types";
 
 const { Text } = Typography;
@@ -80,7 +80,7 @@ export function formatKeyCombo(combo: string[]): string {
     .join(" + ");
 }
 
-export function keyComboChainToKeystrokesConfig(comboChain: KeyboardComboChain): string {
+export function keyComboChainToKeystrokesConfig(comboChain: KeySequence): string {
   return comboChain.map((combo) => formatKeyCombo(combo)).join(", ");
 }
 
@@ -89,7 +89,7 @@ export function comparableKeyComboChainToKeyCombo(comboChain: ComparableKeyCombo
 }
 
 export function keyComboChainToUiElements(
-  comboChain: KeyboardComboChain,
+  comboChain: KeySequence,
   // Renders a "fancier" version of the combo chain. Currently only used in the info tab.
   useHighlightedIcon: boolean,
   keyPrefix: string = "",
@@ -148,9 +148,7 @@ export const buildKeyBindingsFromConfig = (
   return Object.fromEntries(mappedShortcuts);
 };
 
-function keyComboChainToComparableKeyComboChain(
-  comboChain: KeyboardComboChain,
-): ComparableKeyComboChain {
+function keyComboChainToComparableKeyComboChain(comboChain: KeySequence): ComparableKeyComboChain {
   return comboChain.map((keyCombo: string[]) => new Set<string>(keyCombo));
 }
 
@@ -203,13 +201,13 @@ function buildToolDependentHandler(
 
   if (isLooped) {
     const combined: KeyboardLoopHandler = {
-      onPressedWithRepeat: (...args: Parameters<KeyboardLoopFn>) => {
+      onPressedWithRepeat: (...args: Parameters<KeyboardLoopHandlerFn>) => {
         const activeToolId = Store.getState().uiInformation.activeTool.id;
         (toolToHandlerMap[activeToolId] as KeyboardLoopHandler | undefined)?.onPressedWithRepeat(
           ...args,
         );
       },
-      onReleased: (...args: Parameters<KeyboardLoopFn>) => {
+      onReleased: (...args: Parameters<KeyboardLoopHandlerFn>) => {
         const activeToolId = Store.getState().uiInformation.activeTool.id;
         (toolToHandlerMap[activeToolId] as KeyboardLoopHandler | undefined)?.onReleased?.(...args);
       },
@@ -404,7 +402,7 @@ export function checkCollisionsInShortcutMap(
 
 export function checkCollisionForShortcut(
   handlerIdOfShortcut: string,
-  newKeyCombos: KeyboardComboChain[],
+  newKeyCombos: KeySequence[],
   existingShortcutMap: KeyboardShortcutsMap<string>,
 ): Collision[] {
   const metaInfoOfShortcut = ALL_KEYBOARD_SHORTCUT_META_INFOS[handlerIdOfShortcut];

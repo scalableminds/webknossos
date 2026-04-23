@@ -64,6 +64,7 @@ object PathValidationResult {
 
 class DataSourceController @Inject()(
     dataSourceService: DataSourceService,
+    dataSourceMirrorService: DataSourceMirrorService,
     datasetCache: DatasetCache,
     accessTokenService: DataStoreAccessTokenService,
     val binaryDataServiceHolder: BinaryDataServiceHolder,
@@ -715,6 +716,18 @@ class DataSourceController @Inject()(
       for {
         dataSourceBox <- datasetCache.getById(datasetId).shiftBox
         _ = dataSourceBox.foreach(clearCachesOfDataSource(datasetId, _, layerName = None))
+      } yield Ok
+    }
+  }
+
+  def writeMirror(datasetId: ObjectId): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
+      datasetCache.invalidateCache(datasetId)
+      for {
+        dataSourceBox <- datasetCache.getById(datasetId).shiftBox
+        _ <- Fox.runOptional(dataSourceBox.toOption) { dataSource =>
+          dataSourceMirrorService.writeMirror(dataSource)
+        }
       } yield Ok
     }
   }

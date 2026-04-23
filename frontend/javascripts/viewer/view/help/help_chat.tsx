@@ -70,7 +70,7 @@ function ChatMessageBubble({
     fontSize: 13,
     lineHeight: 1.4,
     background: message.role === "user" ? ColorWKBlue : "var(--ant-color-bg-layout)",
-    color: message.role === "user" ? "#fff" : "rgba(0,0,0,0.88)",
+    color: message.role === "user" ? "#fff" : "var(--ant-color-text)",
     whiteSpace: "pre-line",
     borderBottomRightRadius: message.role === "user" ? 2 : 12,
     borderBottomLeftRadius: message.role === "assistant" ? 2 : 12,

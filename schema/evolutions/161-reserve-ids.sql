@@ -20,7 +20,8 @@ CREATE TABLE webknossos.annotation_reserved_ids(
   tracingId TEXT NOT NULL,
   domain webknossos.ANNOTATION_ID_DOMAIN NOT NULL,
   _user TEXT NOT NULL CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$'),
-  id BIGINT NOT NULL
+  id BIGINT NOT NULL,
+  PRIMARY KEY (_annotation, tracingId, domain, id)
 );
 
 ALTER TABLE webknossos.annotation_reserved_ids

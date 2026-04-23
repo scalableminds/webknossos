@@ -1,5 +1,4 @@
 import { ConfigProvider, Layout } from "antd";
-import app from "app";
 import ErrorHandling from "libs/error_handling";
 import Request from "libs/request";
 import Toast from "libs/toast";
@@ -31,7 +30,6 @@ import ActionBarView from "viewer/view/action_bar_view";
 import { AiJobsDrawer } from "viewer/view/ai_jobs/ai_jobs_drawer";
 import WkContextMenu from "viewer/view/context_menu/wk_context_menu";
 import DistanceMeasurementTooltip from "viewer/view/distance_measurement_tooltip";
-import { recalculateInputCatcherSizes } from "viewer/view/input_catcher";
 import {
   getLastActiveLayout,
   getLayoutConfig,

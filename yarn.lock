@@ -1914,18 +1914,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rc-component/image@npm:~1.8.0":
-  version: 1.8.0
-  resolution: "@rc-component/image@npm:1.8.0"
+"@rc-component/image@npm:~1.9.0":
+  version: 1.9.0
+  resolution: "@rc-component/image@npm:1.9.0"
   dependencies:
     "@rc-component/motion": "npm:^1.0.0"
     "@rc-component/portal": "npm:^2.1.2"
-    "@rc-component/util": "npm:^1.10.0"
+    "@rc-component/util": "npm:^1.10.1"
     clsx: "npm:^2.1.1"
   peerDependencies:
     react: ">=16.9.0"
     react-dom: ">=16.9.0"
-  checksum: 10c0/9159722199da13b7c05a8eef04312d608403aee3a54e2176ebf8fd75a8ad61f9d419d357e0156a705a75e265c299809dc25b338044a5562ba564349d65339a6b
+  checksum: 10c0/92ccc2050ba94f8121b686a63af59ede944fce9e0c2d3e7ab51fcc6b9027f68e981067e6039efc6c673b93b6af4be0f5df87c99e068939ee37efda4ecd77134a
   languageName: node
   linkType: hard
 
@@ -2363,7 +2363,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@rc-component/util@npm:^1.1.0, @rc-component/util@npm:^1.10.0, @rc-component/util@npm:^1.2.0, @rc-component/util@npm:^1.2.1, @rc-component/util@npm:^1.3.0, @rc-component/util@npm:^1.4.0, @rc-component/util@npm:^1.8.1, @rc-component/util@npm:^1.9.0":
+"@rc-component/util@npm:^1.1.0, @rc-component/util@npm:^1.10.1, @rc-component/util@npm:^1.2.0, @rc-component/util@npm:^1.2.1, @rc-component/util@npm:^1.3.0, @rc-component/util@npm:^1.4.0, @rc-component/util@npm:^1.8.1, @rc-component/util@npm:^1.9.0":
   version: 1.10.1
   resolution: "@rc-component/util@npm:1.10.1"
   dependencies:
@@ -4087,9 +4087,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"antd@npm:^6.3.5":
-  version: 6.3.5
-  resolution: "antd@npm:6.3.5"
+"antd@npm:^6.3.6":
+  version: 6.3.6
+  resolution: "antd@npm:6.3.6"
   dependencies:
     "@ant-design/colors": "npm:^8.0.1"
     "@ant-design/cssinjs": "npm:^2.1.2"
@@ -4106,7 +4106,7 @@ __metadata:
     "@rc-component/drawer": "npm:~1.4.2"
     "@rc-component/dropdown": "npm:~1.0.2"
     "@rc-component/form": "npm:~1.8.0"
-    "@rc-component/image": "npm:~1.8.0"
+    "@rc-component/image": "npm:~1.9.0"
     "@rc-component/input": "npm:~1.1.2"
     "@rc-component/input-number": "npm:~1.6.2"
     "@rc-component/mentions": "npm:~1.6.0"
@@ -4134,7 +4134,7 @@ __metadata:
     "@rc-component/tree-select": "npm:~1.8.0"
     "@rc-component/trigger": "npm:^3.9.0"
     "@rc-component/upload": "npm:~1.1.0"
-    "@rc-component/util": "npm:^1.10.0"
+    "@rc-component/util": "npm:^1.10.1"
     clsx: "npm:^2.1.1"
     dayjs: "npm:^1.11.11"
     scroll-into-view-if-needed: "npm:^3.1.0"
@@ -4142,7 +4142,7 @@ __metadata:
   peerDependencies:
     react: ">=18.0.0"
     react-dom: ">=18.0.0"
-  checksum: 10c0/26e9f9bd0459ad013c0b096635cc754f2d2ecfc8ca18d5ce4ccea3cfdf7fa75184c3f653d96225fdbb51f8bb6e313ba4661672ef47c0112a270db8d7e5179151
+  checksum: 10c0/ca8bce6059fc4a6a023cc8fe930d0d1f0da3417e28cef29d589aa26aa158c1d0da16d64f3fd03a0bd522e871b768a9746f9ed8d38342239a633ca621599e2cfa
   languageName: node
   linkType: hard
 
@@ -13198,7 +13198,7 @@ __metadata:
     "@zip.js/zip.js": "npm:^2.7.32"
     abort-controller: "npm:^3.0.0"
     ansi-to-react: "npm:^6.1.6"
-    antd: "npm:^6.3.5"
+    antd: "npm:^6.3.6"
     babel-plugin-react-compiler: "npm:^1.0.0"
     ball-morphology: "npm:^0.1.0"
     base64-js: "npm:^1.2.1"

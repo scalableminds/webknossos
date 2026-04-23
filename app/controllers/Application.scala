@@ -6,7 +6,7 @@ import mail.{DefaultMails, Send}
 import models.organization.OrganizationDAO
 import models.user.MultiUserDAO
 import org.apache.pekko.actor.ActorSystem
-import play.api.libs.json.{JsValue, Json, OFormat}
+import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
 import play.silhouette.api.Silhouette
 import security.{CertificateValidationService, WkEnv}

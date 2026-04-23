@@ -439,10 +439,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
 
   onLayoutChange = () => {
     const currentLayoutModel = cloneDeep(this.state.model.toJson());
-
-    // Workaround so that onLayoutChange is called after the update of flexlayout.
-    // Calling the method without a timeout results in incorrect calculation of the viewport positions for the rendering.
-    setTimeout(() => this.props.onLayoutChange(currentLayoutModel, this.props.layoutName), 50);
+    this.props.onLayoutChange(currentLayoutModel, this.props.layoutName);
   };
 
   onMaximizeToggle = () => {

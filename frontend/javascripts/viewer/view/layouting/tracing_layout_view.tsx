@@ -31,10 +31,7 @@ import ActionBarView from "viewer/view/action_bar_view";
 import { AiJobsDrawer } from "viewer/view/ai_jobs/ai_jobs_drawer";
 import WkContextMenu from "viewer/view/context_menu/wk_context_menu";
 import DistanceMeasurementTooltip from "viewer/view/distance_measurement_tooltip";
-import {
-  initializeInputCatcherSizes,
-  recalculateInputCatcherSizes,
-} from "viewer/view/input_catcher";
+import { recalculateInputCatcherSizes } from "viewer/view/input_catcher";
 import {
   getLastActiveLayout,
   getLayoutConfig,
@@ -179,7 +176,6 @@ class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
       activeLayoutName: lastActiveLayoutName,
       model: layout,
     });
-    initializeInputCatcherSizes();
     window.addEventListener("resize", this.debouncedOnLayoutChange);
     window.addEventListener("touchstart", this.handleTouch);
     window.addEventListener("mouseover", this.handleMouseOver, false);
@@ -217,9 +213,6 @@ class TracingLayoutView extends PureComponent<PropsWithRouter, State> {
   };
 
   onLayoutChange = (model?: Record<string, any>, layoutName?: string) => {
-    recalculateInputCatcherSizes();
-    app.vent.emit("rerender");
-
     if (model != null) {
       this.setState({ model }, () => {
         if (this.props.autoSaveLayouts) {

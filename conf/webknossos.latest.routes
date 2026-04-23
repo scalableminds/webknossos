@@ -6,7 +6,7 @@ GET           /health                                                           
 GET           /checkCertificate                                                                 controllers.Application.checkCertificate()
 POST          /analytics/ingest                                                                 controllers.AnalyticsController.ingestAnalyticsEvents
 POST          /analytics/:eventType                                                             controllers.AnalyticsController.trackAnalyticsEvent(eventType)
-POST          /helpEmail                                                                        controllers.Application.helpEmail(message: String, currentUrl: String)
+POST          /helpEmail                                                                        controllers.Application.helpEmail()
 POST          /triggers/initialData                                                             controllers.InitialDataController.triggerInsert()
 
 # Maintenance

@@ -5,6 +5,7 @@ import {
   ShrinkOutlined,
 } from "@ant-design/icons";
 import { Button, Flex, Modal, Segmented, Tooltip } from "antd";
+import features from "features";
 import { type CSSProperties, useState } from "react";
 import { clearHelpChatSession, HelpChat } from "./help_chat";
 import { HelpEmail } from "./help_email";
@@ -18,7 +19,8 @@ type HelpModalProps = {
 };
 
 export function HelpModal(props: HelpModalProps) {
-  const [mode, setMode] = useState<HelpMode>("ai");
+  const aiAgentEnabled = Boolean(features().supportAiAgentUrl);
+  const [mode, setMode] = useState<HelpMode>(aiAgentEnabled ? "ai" : "email");
   const [isExpanded, setIsExpanded] = useState(false);
   const [chatResetKey, setChatResetKey] = useState(0);
   const positionStyle: CSSProperties = { right: 10, bottom: 40, top: "auto", position: "fixed" };
@@ -26,17 +28,19 @@ export function HelpModal(props: HelpModalProps) {
   const modalTitle = (
     <Flex align="center" gap={4} style={{ paddingRight: 8 }}>
       <span style={{ flex: 1 }}>Do you have any questions?</span>
-      <Tooltip title="Clear conversation">
-        <Button
-          icon={<ReloadOutlined />}
-          size="small"
-          type="text"
-          onClick={() => {
-            clearHelpChatSession();
-            setChatResetKey((k) => k + 1);
-          }}
-        />
-      </Tooltip>
+      {aiAgentEnabled && mode === "ai" && (
+        <Tooltip title="Clear conversation">
+          <Button
+            icon={<ReloadOutlined />}
+            size="small"
+            type="text"
+            onClick={() => {
+              clearHelpChatSession();
+              setChatResetKey((k) => k + 1);
+            }}
+          />
+        </Tooltip>
+      )}
       <Tooltip title={isExpanded ? "Smaller" : "Larger"}>
         <Button
           icon={isExpanded ? <ShrinkOutlined /> : <ExpandAltOutlined />}
@@ -60,16 +64,18 @@ export function HelpModal(props: HelpModalProps) {
       footer={null}
       closable={false}
     >
-      <Segmented
-        options={[
-          { label: "AI Assistant", value: "ai" },
-          { label: "Email", value: "email" },
-        ]}
-        value={mode}
-        onChange={(value) => setMode(value as HelpMode)}
-        block
-        style={{ marginBottom: 12 }}
-      />
+      {aiAgentEnabled && (
+        <Segmented
+          options={[
+            { label: "AI Assistant", value: "ai" },
+            { label: "Email", value: "email" },
+          ]}
+          value={mode}
+          onChange={(value) => setMode(value as HelpMode)}
+          block
+          style={{ marginBottom: 12 }}
+        />
+      )}
 
       {mode === "ai" ? (
         <HelpChat key={chatResetKey} isExpanded={isExpanded} />

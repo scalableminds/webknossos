@@ -1,8 +1,7 @@
 import { Flex, Input, message, Spin, Typography } from "antd";
+import features from "features";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { ColorWKBlue } from "theme";
-
-const N8N_WEBHOOK_URL = "https://docs.webknossos.org/webhooks/webknossos/ask";
 
 const STORAGE_MESSAGES_KEY = "wk_help_chat_messages";
 const STORAGE_SESSION_KEY = "wk_help_chat_session_id";
@@ -37,7 +36,10 @@ function loadSessionId(): string {
 }
 
 async function askChatbot(chatInput: string, sessionId: string): Promise<string> {
-  const response = await fetch(N8N_WEBHOOK_URL, {
+  const chatUrl = features().supportAiAgentUrl;
+  if (!chatUrl) throw new Error("AI agent URL is not configured");
+
+  const response = await fetch(chatUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

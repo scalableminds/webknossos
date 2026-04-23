@@ -1,9 +1,4 @@
-import {
-  CloseOutlined,
-  ExpandAltOutlined,
-  ReloadOutlined,
-  ShrinkOutlined,
-} from "@ant-design/icons";
+import { CloseOutlined, ExpandAltOutlined, PlusOutlined, ShrinkOutlined } from "@ant-design/icons";
 import { Button, Flex, Modal, Segmented, Tooltip } from "antd";
 import features from "features";
 import { type CSSProperties, useState } from "react";
@@ -29,9 +24,9 @@ export function HelpModal(props: HelpModalProps) {
     <Flex align="center" gap={4} style={{ paddingRight: 8 }}>
       <span style={{ flex: 1 }}>Do you have any questions?</span>
       {aiAgentEnabled && mode === "ai" && (
-        <Tooltip title="Clear conversation">
+        <Tooltip title="New conversation">
           <Button
-            icon={<ReloadOutlined />}
+            icon={<PlusOutlined />}
             size="small"
             type="text"
             onClick={() => {

@@ -24,7 +24,7 @@ export function HelpEmail({ onCancel }: { onCancel: () => void }) {
   };
 
   return (
-    <Space orientation="vertical">
+    <Space orientation="vertical" style={{ width: "100%" }}>
       <Typography.Text>
         We are happy to help as soon as possible and will get back to you via email.
       </Typography.Text>

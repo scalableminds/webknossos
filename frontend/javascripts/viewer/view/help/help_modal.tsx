@@ -80,7 +80,7 @@ export function HelpModal(props: HelpModalProps) {
       {mode === "ai" ? (
         <HelpChat key={chatResetKey} isExpanded={isExpanded} />
       ) : (
-        <HelpEmail key={chatResetKey} onCancel={props.onCancel} />
+        <HelpEmail onCancel={props.onCancel} />
       )}
     </Modal>
   );

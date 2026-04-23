@@ -14,14 +14,13 @@ export function HelpEmail({ onCancel }: { onCancel: () => void }) {
         await sendHelpEmail(helpText);
         setHelpText("");
         message.success("Message has been sent. We'll reply via email shortly.");
-      } catch (err) {
+        onCancel();
+      } catch {
         message.error("Sorry, we could not send the help message. Please try again later.");
-        throw err;
       } finally {
         setIsSending(false);
       }
     }
-    onCancel();
   };
 
   return (

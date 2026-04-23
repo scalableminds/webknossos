@@ -87,7 +87,7 @@ export async function initializeInputCatcherSizes() {
       const { tdCamera } = Store.getState().viewModeData.plane;
       return !Number.isNaN(tdCamera.left);
     }
-    
+
     return true;
   }, pollInterval);
   // Without this sleep, maximized viewports are not rendered correctly on page load.

@@ -8,6 +8,7 @@ import {
   ScheduleOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import { useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
 import {
   deleteTaskType as deleteTaskTypeAPI,
@@ -21,11 +22,12 @@ import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
 import Markdown from "libs/markdown_adapter";
 import Persistence from "libs/persistence";
+import { useQueryWithErrorHandling } from "libs/react_hooks";
 import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import partial from "lodash-es/partial";
 import messages from "messages";
 import type React from "react";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import type { APITaskType } from "types/api_types";
 
@@ -43,32 +45,26 @@ function TaskTypeListView() {
   const location = useLocation();
   const initialSearchValue = location.hash.slice(1);
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [taskTypes, setTaskTypes] = useState<APITaskType[]>([]);
+  const queryClient = useQueryClient();
   const { modal } = App.useApp();
 
-  useEffect(() => {
-    const { searchQuery } = persistence.load();
-    setSearchQuery(searchQuery || "");
+  const { data: taskTypes = [], isFetching: isLoadingTaskTypes } = useQueryWithErrorHandling({
+    queryKey: ["taskTypes"],
+    queryFn: getTaskTypes,
+    refetchOnWindowFocus: false,
+  });
 
-    if (initialSearchValue && initialSearchValue !== "") {
-      setSearchQuery(initialSearchValue);
-    }
-    fetchData();
-  }, [initialSearchValue]);
+  const [searchQuery, setSearchQuery] = useState(() =>
+    initialSearchValue !== "" ? initialSearchValue : persistence.load().searchQuery || "",
+  );
+  const [isLoadingMutation, setIsLoadingMutation] = useState(false);
 
-  useEffect(() => {
-    persistence.persist({ searchQuery });
-  }, [searchQuery]);
-
-  async function fetchData() {
-    setTaskTypes(await getTaskTypes());
-    setIsLoading(false);
-  }
+  const isLoading = isLoadingTaskTypes || isLoadingMutation;
 
   function handleSearch(event: React.ChangeEvent<HTMLInputElement>): void {
-    setSearchQuery(event.target.value);
+    const newSearchQuery = event.target.value;
+    setSearchQuery(newSearchQuery);
+    persistence.persist({ searchQuery: newSearchQuery });
   }
 
   function deleteTaskType(taskType: APITaskType) {
@@ -76,13 +72,15 @@ function TaskTypeListView() {
       title: messages["taskType.delete"],
       onOk: async () => {
         try {
-          setIsLoading(true);
+          setIsLoadingMutation(true);
           await deleteTaskTypeAPI(taskType.id);
-          setTaskTypes(taskTypes.filter((p) => p.id !== taskType.id));
+          queryClient.setQueryData(["taskTypes"], (currentTaskTypes: APITaskType[]) =>
+            currentTaskTypes.filter((p) => p.id !== taskType.id),
+          );
         } catch (error) {
           handleGenericError(error as Error);
         } finally {
-          setIsLoading(false);
+          setIsLoadingMutation(false);
         }
       },
     });

@@ -1,6 +1,5 @@
 import { duplicateAnnotation } from "admin/rest_api";
 import { Button, Modal } from "antd";
-import { sleep } from "libs/utils";
 import { useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { APIAnnotationType } from "types/api_types";
@@ -83,7 +82,6 @@ function DuplicateAnnotationModalInner({
             console.error("Failed to duplicate annotation", error);
             setIsError(true);
           } finally {
-            await sleep(3000);
             setIsLoading(false);
           }
         }

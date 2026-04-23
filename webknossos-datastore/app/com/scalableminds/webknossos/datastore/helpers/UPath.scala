@@ -203,7 +203,10 @@ private case class RemoteUPath(scheme: String, segments: Seq[String]) extends UP
     case otherRemote: RemoteUPath => {
       val thisNormalized = this.normalize
       val otherNormalized = otherRemote.normalize
-      thisNormalized.scheme == otherNormalized.scheme && thisNormalized.segments.startsWith(otherNormalized.segments)
+      val otherSegments =
+        if (otherNormalized.segments.lastOption.contains("")) otherNormalized.segments.dropRight(1)
+        else otherNormalized.segments
+      thisNormalized.scheme == otherNormalized.scheme && thisNormalized.segments.startsWith(otherSegments)
     }
     case _ => false
   }

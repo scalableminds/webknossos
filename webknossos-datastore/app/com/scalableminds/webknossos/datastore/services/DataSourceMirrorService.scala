@@ -59,7 +59,7 @@ class DataSourceMirrorService @Inject()(
         val defaultMagPath = layerDir.resolve(mag.mag.toMagLiteral(allowScalar = true))
         for {
           _ <- tryo(Files.createSymbolicLink(defaultMagPath, explicitPath.toLocalPathUnsafe)).toFox
-        } yield mag.copy(path = None)
+        } yield mag.copy(path = Some(UPath.fromLocalPath(defaultMagPath)))
     }
 
   private def writeMirrorAttachments(attachmentsOpt: Option[DataLayerAttachments], layerDir: Path)(

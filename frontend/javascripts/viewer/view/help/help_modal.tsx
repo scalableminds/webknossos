@@ -1,7 +1,7 @@
 import { sendHelpEmail } from "admin/rest_api";
-import { Button, Input, Modal, Segmented, Space, message } from "antd";
+import { Button, Input, Modal, message, Segmented, Space } from "antd";
 import type React from "react";
-import { CSSProperties, useState } from "react";
+import { type CSSProperties, useState } from "react";
 import { HelpChat } from "./help_chat";
 
 type HelpMode = "ai" | "email";
@@ -42,6 +42,7 @@ export function HelpModal(props: HelpModalProps) {
       open={props.isModalOpen}
       confirmLoading={isSending}
       mask={props.centeredLayout}
+      onCancel={props.onCancel}
       width={320}
       footer={
         mode === "email" ? (

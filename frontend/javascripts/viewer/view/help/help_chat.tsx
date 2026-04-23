@@ -1,5 +1,5 @@
-import { Flex, Input, message, Space, Spin, Typography } from "antd";
-import { CSSProperties, useEffect, useRef, useState } from "react";
+import { Flex, Input, message, Spin, Typography } from "antd";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { ColorWKBlue } from "theme";
 
 const N8N_WEBHOOK_URL = "https://docs.webknossos.org/webhooks/webknossos/ask";

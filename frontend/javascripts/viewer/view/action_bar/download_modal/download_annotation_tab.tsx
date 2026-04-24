@@ -35,7 +35,7 @@ export function DownloadAnnotationTab({ onClose }: { onClose: () => void }) {
       </Row>
     ) : null;
 
-    return [volumeFallbackWarning];
+    return volumeFallbackWarning;
   };
 
   const initialFileFormatToDownload = hasVolumes ? "zarr3" : "nml";

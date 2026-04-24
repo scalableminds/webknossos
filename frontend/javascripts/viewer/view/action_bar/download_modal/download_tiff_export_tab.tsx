@@ -401,7 +401,12 @@ export function DownloadTiffTab({
         >
           Keep window open
         </Checkbox>
-        <Button type="primary" onClick={handleExport} disabled={isDownloadButtonDisabled}>
+        <Button
+          type="primary"
+          onClick={handleExport}
+          disabled={isDownloadButtonDisabled}
+          loading={isCurrentlyRunningExportJob}
+        >
           Export
         </Button>
       </Flex>

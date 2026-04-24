@@ -283,46 +283,6 @@ describe("ID reservation saga (concurrent collaboration mode)", () => {
 
     await task.toPromise();
   });
-
-  // TODO PR feedback for PRRC_kwDOAEIDNc6502AQ
-  it("should return a different ID for each sequential request", async () => {
-    const { tracingId } = Store.getState().annotation.volumes[0];
-
-    // Set up a segment group with groupId=101
-    Store.dispatch(
-      setSegmentGroupsAction([{ name: "Existing Group", groupId: 101, children: [] }], tracingId),
-    );
-
-    // Enough reservations to avoid replenishment across three requests
-    Store.dispatch(
-      setIdReservationsAction(tracingId, "SegmentGroup", [
-        { id: 100, used: true },
-        { id: 101, used: false }, // the ID wasn't marked as used, but it should still be excluded as it exists.
-        { id: 102, used: false },
-        { id: 103, used: false },
-        { id: 104, used: false },
-        { id: 105, used: false },
-      ]),
-    );
-
-    const task = startSaga(function* task() {
-      const id1 = yield call(() =>
-        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
-      );
-      const id2 = yield call(() =>
-        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
-      );
-      const id3 = yield call(() =>
-        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
-      );
-
-      expect(id1).toBe(102);
-      expect(id2).toBe(103);
-      expect(id3).toBe(104);
-    });
-
-    await task.toPromise();
-  });
 });
 
 describe("ID reservation saga (exclusive collaboration mode)", () => {

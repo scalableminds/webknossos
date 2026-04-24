@@ -112,7 +112,7 @@ function* handleReservationRequest(action: GetNewIdAction): Saga<void> {
     // ...and pass it to the callback.
     action.callback(usableReservations[0].id);
 
-    if (usableReservations.length < IDEAL_ID_BUFFER_SIZE / 2) {
+    if (usableReservations.length - 1 < IDEAL_ID_BUFFER_SIZE / 2) {
       // Trigger pre-fetching without blocking — the replenishment loop handles it.
       yield* put(requestIdReplenishmentAction(tracingId, domain));
     }
@@ -147,13 +147,13 @@ function* fetchNewReservations(tracingId: string, domain: "SegmentGroup"): Saga<
   const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
   let newIds: number[];
   let releasedIds: number[] = [];
+  releasedIds = without(
+    unfilteredReservations.map(({ id }) => id),
+    ...usableReservations.map(({ id }) => id),
+  );
 
   if (collaborationMode === "Concurrent") {
     const annotationId = yield* select((state) => state.annotation.annotationId);
-    releasedIds = without(
-      unfilteredReservations.map(({ id }) => id),
-      ...usableReservations.map(({ id }) => id),
-    );
     newIds = yield* call(
       reserveIdsForAnnotation,
       annotationId,

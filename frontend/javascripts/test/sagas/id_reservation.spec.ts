@@ -11,9 +11,8 @@ import { Store } from "viewer/singletons";
 import { startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, type TestContext, vi } from "vitest";
 
-describe("ID reservation saga", () => {
+describe("ID reservation saga (concurrent collaboration mode)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
-    // TODO PR feedback for PRRC_kwDOAEIDNc650it_
     await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, false, "hybrid");
     vi.mocked(context.mocks.Request.sendJSONReceiveJSON).mockClear();
   });
@@ -67,12 +66,14 @@ describe("ID reservation saga", () => {
     const { mocks } = context;
     const { tracingId } = Store.getState().annotation.volumes[0];
 
-    // 3 usable reservations: 3 >= IDEAL_ID_BUFFER_SIZE / 2 (2.5), so no replenishment is triggered
+    // 4 usable reservations. After getting a new id, 3 remain which is still greater than
+    // IDEAL_ID_BUFFER_SIZE / 2 (2.5), so no replenishment is triggered.
     Store.dispatch(
       setIdReservationsAction(tracingId, "SegmentGroup", [
         { id: 100, used: false },
         { id: 101, used: false },
         { id: 102, used: false },
+        { id: 103, used: false },
       ]),
     );
 
@@ -365,6 +366,77 @@ describe("ID reservation saga", () => {
       expect(id1).toBe(102);
       expect(id2).toBe(103);
       expect(id3).toBe(104);
+    });
+
+    await task.toPromise();
+  });
+});
+
+describe("ID reservation saga (exclusive collaboration mode)", () => {
+  beforeEach<WebknossosTestContext>(async (context) => {
+    await setupWebknossosForTestingWithRestrictions(context, "Exclusive", true, false, "hybrid");
+    vi.mocked(context.mocks.Request.sendJSONReceiveJSON).mockClear();
+  });
+
+  afterEach<WebknossosTestContext>(async (context) => {
+    context.tearDownPullQueues();
+    expect(hasRootSagaCrashed()).toBe(false);
+  });
+
+  it("should assign new IDs", async () => {
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    const task = startSaga(function* task() {
+      // Set up a segment group with groupId 5 and 10
+      Store.dispatch(
+        setSegmentGroupsAction(
+          [
+            { name: "Existing Group", groupId: 5, children: [] },
+            { name: "Existing Group", groupId: 10, children: [] },
+          ],
+          tracingId,
+        ),
+      );
+
+      const id11 = yield call(() =>
+        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
+      );
+      expect(id11).toBe(11);
+
+      const id12 = yield call(() =>
+        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
+      );
+      expect(id12).toBe(12);
+
+      let reservations = Store.getState().annotation.volumes[0].idReservations.SegmentGroup;
+      expect(reservations).toEqual([
+        // 5 ids were put into the reservations. Two of them are already now.
+        { id: 11, used: true },
+        { id: 12, used: true },
+        { id: 13, used: false },
+        { id: 14, used: false },
+        { id: 15, used: false },
+      ]);
+
+      const id13 = yield call(() =>
+        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
+      );
+      expect(id13).toBe(13);
+
+      reservations = Store.getState().annotation.volumes[0].idReservations.SegmentGroup;
+      expect(reservations).toEqual([
+        // 11 to 13 were cleaned up now and in total 5 unused ids are available again
+        { id: 14, used: false },
+        { id: 15, used: false },
+        { id: 16, used: false },
+        { id: 17, used: false },
+        { id: 18, used: false },
+      ]);
+
+      const id14 = yield call(() =>
+        dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
+      );
+      expect(id14).toBe(14);
     });
 
     await task.toPromise();

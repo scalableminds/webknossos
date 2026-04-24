@@ -389,7 +389,6 @@ class TDController extends PureComponent<Props> {
         cameras={this.props.cameras}
         onCameraPositionChanged={this.updateControls}
         setTargetAndFixPosition={this.setTargetAndFixPosition}
-        onTDCameraChanged={this.onTDCameraChanged}
       />
     );
   }

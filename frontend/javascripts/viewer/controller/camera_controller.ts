@@ -32,7 +32,6 @@ import Store from "viewer/store";
 type Props = {
   cameras: OrthoViewMap<OrthographicCamera | PerspectiveCamera>;
   onCameraPositionChanged: () => void;
-  onTDCameraChanged: (userTriggered?: boolean) => void;
   setTargetAndFixPosition: () => void;
 };
 
@@ -312,7 +311,7 @@ class CameraController extends PureComponent<Props> {
       );
       const minSafeDistance = maxViewExtent * 1.5;
       const effectiveDistance = Math.max(this.lastTDProjectionDistance, minSafeDistance);
-      
+
       if (effectiveDistance > this.lastTDProjectionDistance) {
         // The camera pullback ensures vertices are always at depth ≥ effectiveDistance,
         // Otherwise, the geometry too close to the camera would distort with perspective projection

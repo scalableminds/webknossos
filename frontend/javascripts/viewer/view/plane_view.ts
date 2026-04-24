@@ -57,6 +57,12 @@ const createDirLight = (position: Vector3, target: Vector3, intensity: number, c
   return dirLight;
 };
 
+function createCamera(usePerspective: boolean): OrthographicCamera | PerspectiveCamera {
+  return usePerspective
+    ? new PerspectiveCamera(45, 1, 0.1, 1000)
+    : new OrthographicCamera(0, 0, 0, 0);
+}
+
 const raycaster = new VisibilityAwareRaycaster();
 raycaster.firstHitOnly = true;
 const MESH_HOVER_THROTTLING_DELAY = 50;
@@ -78,10 +84,7 @@ class PlaneView {
     for (const plane of OrthoViewValues) {
       // Let's set up cameras
       // No need to set any properties, because the cameras controller will deal with that
-      cameras[plane] =
-        plane === OrthoViews.TDView && usePerspectiveCamera
-          ? new PerspectiveCamera(45, 1, 0.1, 1000)
-          : new OrthographicCamera(0, 0, 0, 0);
+      cameras[plane] = createCamera(plane === OrthoViews.TDView && usePerspectiveCamera);
       // This name can be used to retrieve the camera from the scene
       cameras[plane].name = plane;
       scene.add(cameras[plane]);
@@ -307,9 +310,7 @@ class PlaneView {
     const { scene } = getSceneController();
     const oldCamera = this.cameras[OrthoViews.TDView];
 
-    const newCamera = usePerspective
-      ? new PerspectiveCamera(45, 1, 0.1, 1000)
-      : new OrthographicCamera(0, 0, 0, 0);
+    const newCamera = createCamera(usePerspective);
     newCamera.name = OrthoViews.TDView;
     newCamera.position.copy(oldCamera.position);
     newCamera.up.copy(oldCamera.up);

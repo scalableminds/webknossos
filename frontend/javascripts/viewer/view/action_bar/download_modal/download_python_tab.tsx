@@ -56,7 +56,7 @@ export function DownloadPythonTab({ isAnnotation }: { isAnnotation: boolean }) {
       }
       return null;
     },
-    "loading...",
+    "<insert token here>",
     [activeUser],
   );
 

@@ -1033,7 +1033,6 @@ export async function reserveIdsForAnnotation(
   /*
    * Will reserve new ids for the specified domain.
    */
-  // TODO PR feedback for PRRC_kwDOAEIDNc65bpUY
   if (numberOfIdsToReserve <= 0) {
     // Otherwise, the backend cannot reliably use the largest id
     // in a domain as a starting point to generate new ids.

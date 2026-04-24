@@ -79,10 +79,8 @@ class PlaneView {
       // Let's set up cameras
       // No need to set any properties, because the cameras controller will deal with that
       cameras[plane] =
-        plane === OrthoViews.TDView
-          ? usePerspectiveCamera
-            ? new PerspectiveCamera(45, 1, 0.1, 1000)
-            : new OrthographicCamera(0, 0, 0, 0)
+        plane === OrthoViews.TDView && usePerspectiveCamera
+          ? new PerspectiveCamera(45, 1, 0.1, 1000)
           : new OrthographicCamera(0, 0, 0, 0);
       // This name can be used to retrieve the camera from the scene
       cameras[plane].name = plane;

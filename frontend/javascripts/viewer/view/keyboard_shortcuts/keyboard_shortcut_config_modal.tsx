@@ -22,10 +22,10 @@ import { useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import { setKeyboardShortcutsConfigAction } from "viewer/model/actions/settings_actions";
 import {
-  ALL_KEYBOARD_HANDLER_IDS,
+  ALL_KEYBOARD_SHORTCUT_IDS,
   ALL_KEYBOARD_SHORTCUT_META_INFOS,
-  type AnyKeyboardHandlerId,
   getAllDefaultKeyboardShortcuts,
+  type KeyboardShortcutId,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 import {
   ArbitraryNavigationMouseShortcutsTable,
@@ -41,8 +41,8 @@ import {
   VolumeToolMouseShortcutsTable,
 } from "./keyboard_shortcut_mouse_tables";
 import { validateShortcutMapText } from "./keyboard_shortcut_persistence";
-import { KeyboardShortcutDomain, type KeySequence } from "./keyboard_shortcut_types";
-import { checkCollisionsInShortcutMap, keyComboChainToUiElements } from "./keyboard_shortcut_utils";
+import type { KeyboardShortcutDomain, KeySequence } from "./keyboard_shortcut_types";
+import { checkCollisionsInShortcutMap, keySequenceToUiElements } from "./keyboard_shortcut_utils";
 import { CollisionWarningAlert, ShortcutRecorderModal } from "./shortcut_recorder_modal";
 
 const { Text, Title } = Typography;
@@ -54,7 +54,7 @@ export type ShortcutConfigModalProps = {
 type KeyboardShortcutTableDataEntry = {
   key: string;
   combos: KeySequence[];
-  handlerId: AnyKeyboardHandlerId;
+  shortcutId: KeyboardShortcutId;
   domain: string;
   description: string;
 };
@@ -91,8 +91,11 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
   const keyboardShortcutsConfigFromStore = useWkSelector((state) => state.keyboardShortcutsConfig);
   const [isJsonView, setIsJsonView] = useState(false);
   const [isRecorderOpen, setIsRecorderOpen] = useState(false);
-  const [recorderTargetHandlerId, setRecorderTargetHandlerId] = useState<string | null>(null);
-  const [recorderEditingKeyCombo, setRecorderEditingKeyCombo] = useState<KeySequence | null>(null);
+  const [recorderTargetShortcutId, setRecorderTargetShortcutId] =
+    useState<KeyboardShortcutId | null>(null);
+  const [recorderEditingKeySequence, setRecorderEditingKeySequence] = useState<KeySequence | null>(
+    null,
+  );
   const [localShortcutConfig, setLocalShortcutConfig] = useState(keyboardShortcutsConfigFromStore);
   const shortcutCollisions = useMemo(
     () => checkCollisionsInShortcutMap(localShortcutConfig),
@@ -108,19 +111,19 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
     setJsonError(null);
   };
 
-  const handleRemoveComboChain = (handlerId: string, comboChain: string[][]) => {
+  const handleRemoveComboChain = (shortcutId: KeyboardShortcutId, comboChain: string[][]) => {
     setLocalShortcutConfig((prevConfig) => {
-      const updatedCombos = prevConfig[handlerId].filter((c) => c !== comboChain);
-      const updatedConfig = { ...prevConfig, [handlerId]: updatedCombos };
+      const updatedCombos = prevConfig[shortcutId].filter((c) => c !== comboChain);
+      const updatedConfig = { ...prevConfig, [shortcutId]: updatedCombos };
       updateLocalShortcutConfig(updatedConfig);
       return updatedConfig;
     });
   };
 
-  const handleRestoreDefaultForHandler = (handlerId: AnyKeyboardHandlerId) => {
-    const defaultCombos = getAllDefaultKeyboardShortcuts()[handlerId] as KeySequence[];
+  const handleRestoreDefaultForShortcut = (shortcutId: KeyboardShortcutId) => {
+    const defaultCombos = getAllDefaultKeyboardShortcuts()[shortcutId];
     setLocalShortcutConfig((prevConfig) => {
-      const updatedConfig = { ...prevConfig, [handlerId]: defaultCombos };
+      const updatedConfig = { ...prevConfig, [shortcutId]: defaultCombos };
       updateLocalShortcutConfig(updatedConfig);
       return updatedConfig;
     });
@@ -129,34 +132,31 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
   // Convert config into grouped table rows
   const keyboardShortcutsTableDataMap = useMemo(() => {
     const domainToEntries: Record<KeyboardShortcutDomain, KeyboardShortcutTableDataEntry[]> = {
-      [KeyboardShortcutDomain.GENERAL]: [],
-      [KeyboardShortcutDomain.GENERAL_EDITING]: [],
-      [KeyboardShortcutDomain.GENERAL_LAYOUT]: [],
-      [KeyboardShortcutDomain.GENERAL_COMMENT_TAB]: [],
-      [KeyboardShortcutDomain.ARBITRARY_NAVIGATION]: [],
-      [KeyboardShortcutDomain.ARBITRARY_EDITING]: [],
-      [KeyboardShortcutDomain.PLANE_NAVIGATION]: [],
-      [KeyboardShortcutDomain.PLANE_TOOL_SWITCHING]: [],
-      [KeyboardShortcutDomain.PLANE_SKELETON_TOOL]: [],
-      [KeyboardShortcutDomain.PLANE_VOLUME_TOOL]: [],
-      [KeyboardShortcutDomain.PLANE_BOUNDING_BOX_TOOL]: [],
-      [KeyboardShortcutDomain.PLANE_PROOFREADING_TOOL]: [],
+      GENERAL: [],
+      GENERAL_EDITING: [],
+      GENERAL_LAYOUT: [],
+      GENERAL_COMMENT_TAB: [],
+      ARBITRARY_NAVIGATION: [],
+      ARBITRARY_EDITING: [],
+      PLANE_NAVIGATION: [],
+      PLANE_TOOL_SWITCHING: [],
+      PLANE_SKELETON_TOOL: [],
+      PLANE_VOLUME_TOOL: [],
+      PLANE_BOUNDING_BOX_TOOL: [],
+      PLANE_PROOFREADING_TOOL: [],
     };
     // Iterate over ALL_KEYBOARD_HANDLER_IDS (stable array) rather than
     // Object.entries(localShortcutConfig) so the table order is always
     // deterministic and never changes when a shortcut is edited.
-    ALL_KEYBOARD_HANDLER_IDS.forEach((handlerId) => {
-      const keyCombos = localShortcutConfig[handlerId];
+    ALL_KEYBOARD_SHORTCUT_IDS.forEach((shortcutId) => {
+      const keyCombos = localShortcutConfig[shortcutId];
       if (keyCombos == null) return;
-      const metaInfo =
-        ALL_KEYBOARD_SHORTCUT_META_INFOS[
-          handlerId as keyof typeof ALL_KEYBOARD_SHORTCUT_META_INFOS
-        ];
+      const metaInfo = ALL_KEYBOARD_SHORTCUT_META_INFOS[shortcutId];
       if (metaInfo == null) return;
       domainToEntries[metaInfo.domain].push({
-        key: handlerId,
+        key: shortcutId,
         combos: keyCombos,
-        handlerId,
+        shortcutId,
         domain: metaInfo.domain,
         description: metaInfo.description,
       });
@@ -177,7 +177,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
                 type="text"
                 icon={<RollbackOutlined />}
                 disabled={!isEditable}
-                onClick={() => handleRestoreDefaultForHandler(record.handlerId)}
+                onClick={() => handleRestoreDefaultForShortcut(record.shortcutId)}
               >
                 Restore default
               </Button>
@@ -185,15 +185,15 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
               combos.map((comboChain, index) => (
                 <div key={index} className="single-shortcut-container">
                   <span style={{ padding: "0px 4px" }}>
-                    {keyComboChainToUiElements(comboChain, false)}
+                    {keySequenceToUiElements(comboChain, false)}
                   </span>
                   <Button
                     type="text"
                     icon={<EditOutlined />}
                     disabled={!isEditable}
                     onClick={() => {
-                      setRecorderTargetHandlerId(record.handlerId);
-                      setRecorderEditingKeyCombo(comboChain);
+                      setRecorderTargetShortcutId(record.shortcutId);
+                      setRecorderEditingKeySequence(comboChain);
                       setIsRecorderOpen(true);
                     }}
                   />
@@ -201,7 +201,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
                     type="text"
                     disabled={!isEditable}
                     icon={<CloseOutlined />}
-                    onClick={() => handleRemoveComboChain(record.handlerId, comboChain)}
+                    onClick={() => handleRemoveComboChain(record.shortcutId, comboChain)}
                   />
                 </div>
               ))
@@ -213,8 +213,8 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
               disabled={!isEditable}
               icon={<PlusOutlined />}
               onClick={() => {
-                setRecorderTargetHandlerId(record.handlerId);
-                setRecorderEditingKeyCombo(null);
+                setRecorderTargetShortcutId(record.shortcutId);
+                setRecorderEditingKeySequence(null);
                 setIsRecorderOpen(true);
               }}
             />
@@ -283,23 +283,23 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       children: (
         <>
           <KeyboardShortcutDomainTable
-            domainName={KeyboardShortcutDomain.GENERAL}
-            tableData={keyboardShortcutsTableDataMap[KeyboardShortcutDomain.GENERAL]}
+            domainName="GENERAL"
+            tableData={keyboardShortcutsTableDataMap["GENERAL"]}
             columns={keyboardShortcutsColumns}
           />
           <KeyboardShortcutDomainTable
-            domainName={KeyboardShortcutDomain.GENERAL_EDITING}
-            tableData={keyboardShortcutsTableDataMap[KeyboardShortcutDomain.GENERAL_EDITING]}
+            domainName="GENERAL_EDITING"
+            tableData={keyboardShortcutsTableDataMap["GENERAL_EDITING"]}
             columns={keyboardShortcutsColumns}
           />
           <KeyboardShortcutDomainTable
-            domainName={KeyboardShortcutDomain.GENERAL_LAYOUT}
-            tableData={keyboardShortcutsTableDataMap[KeyboardShortcutDomain.GENERAL_LAYOUT]}
+            domainName={"GENERAL_LAYOUT"}
+            tableData={keyboardShortcutsTableDataMap["GENERAL_LAYOUT"]}
             columns={keyboardShortcutsColumns}
           />
           <KeyboardShortcutDomainTable
-            domainName={KeyboardShortcutDomain.GENERAL_COMMENT_TAB}
-            tableData={keyboardShortcutsTableDataMap[KeyboardShortcutDomain.GENERAL_COMMENT_TAB]}
+            domainName={"GENERAL_COMMENT_TAB"}
+            tableData={keyboardShortcutsTableDataMap["GENERAL_COMMENT_TAB"]}
             columns={keyboardShortcutsColumns}
           />
         </>
@@ -311,14 +311,14 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       children: (
         <>
           <KeyboardShortcutDomainTable
-            domainName={KeyboardShortcutDomain.ARBITRARY_NAVIGATION}
-            tableData={keyboardShortcutsTableDataMap[KeyboardShortcutDomain.ARBITRARY_NAVIGATION]}
+            domainName={"ARBITRARY_NAVIGATION"}
+            tableData={keyboardShortcutsTableDataMap["ARBITRARY_NAVIGATION"]}
             columns={keyboardShortcutsColumns}
           />
           <ArbitraryNavigationMouseShortcutsTable />
           <KeyboardShortcutDomainTable
-            domainName={KeyboardShortcutDomain.ARBITRARY_EDITING}
-            tableData={keyboardShortcutsTableDataMap[KeyboardShortcutDomain.ARBITRARY_EDITING]}
+            domainName={"ARBITRARY_EDITING"}
+            tableData={keyboardShortcutsTableDataMap["ARBITRARY_EDITING"]}
             columns={keyboardShortcutsColumns}
           />
         </>
@@ -330,8 +330,8 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       children: (
         <>
           <KeyboardShortcutDomainTable
-            domainName={KeyboardShortcutDomain.PLANE_NAVIGATION}
-            tableData={keyboardShortcutsTableDataMap[KeyboardShortcutDomain.PLANE_NAVIGATION]}
+            domainName={"PLANE_NAVIGATION"}
+            tableData={keyboardShortcutsTableDataMap["PLANE_NAVIGATION"]}
             columns={keyboardShortcutsColumns}
           />
           <PlaneNavigationMouseShortcutsTable />
@@ -346,8 +346,8 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       children: (
         <>
           <KeyboardShortcutDomainTable
-            domainName={KeyboardShortcutDomain.PLANE_TOOL_SWITCHING}
-            tableData={keyboardShortcutsTableDataMap[KeyboardShortcutDomain.PLANE_TOOL_SWITCHING]}
+            domainName={"PLANE_TOOL_SWITCHING"}
+            tableData={keyboardShortcutsTableDataMap["PLANE_TOOL_SWITCHING"]}
             columns={keyboardShortcutsColumns}
           />
         </>
@@ -359,32 +359,28 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       children: (
         <>
           <KeyboardShortcutDomainTable
-            domainName={KeyboardShortcutDomain.PLANE_SKELETON_TOOL}
-            tableData={keyboardShortcutsTableDataMap[KeyboardShortcutDomain.PLANE_SKELETON_TOOL]}
+            domainName={"PLANE_SKELETON_TOOL"}
+            tableData={keyboardShortcutsTableDataMap["PLANE_SKELETON_TOOL"]}
             columns={keyboardShortcutsColumns}
           />
           <SkeletonToolMouseShortcutsTable />
           <SkeletonToolClassicControlsMouseShortcutsTable />
           <KeyboardShortcutDomainTable
-            domainName={KeyboardShortcutDomain.PLANE_VOLUME_TOOL}
-            tableData={keyboardShortcutsTableDataMap[KeyboardShortcutDomain.PLANE_VOLUME_TOOL]}
+            domainName={"PLANE_VOLUME_TOOL"}
+            tableData={keyboardShortcutsTableDataMap["PLANE_VOLUME_TOOL"]}
             columns={keyboardShortcutsColumns}
           />
           <VolumeToolMouseShortcutsTable />
           <VolumeToolClassicControlsMouseShortcutsTable />
 
           <KeyboardShortcutDomainTable
-            domainName={KeyboardShortcutDomain.PLANE_BOUNDING_BOX_TOOL}
-            tableData={
-              keyboardShortcutsTableDataMap[KeyboardShortcutDomain.PLANE_BOUNDING_BOX_TOOL]
-            }
+            domainName={"PLANE_BOUNDING_BOX_TOOL"}
+            tableData={keyboardShortcutsTableDataMap["PLANE_BOUNDING_BOX_TOOL"]}
             columns={keyboardShortcutsColumns}
           />
           <KeyboardShortcutDomainTable
-            domainName={KeyboardShortcutDomain.PLANE_PROOFREADING_TOOL}
-            tableData={
-              keyboardShortcutsTableDataMap[KeyboardShortcutDomain.PLANE_PROOFREADING_TOOL]
-            }
+            domainName={"PLANE_PROOFREADING_TOOL"}
+            tableData={keyboardShortcutsTableDataMap["PLANE_PROOFREADING_TOOL"]}
             columns={keyboardShortcutsColumns}
           />
           <ProofreadingToolMouseShortcutsTable />
@@ -460,33 +456,33 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       {/*Keyboard Shortcut Recorder*/}
       <ShortcutRecorderModal
         keyboardShortcutConfig={localShortcutConfig}
-        handlerId={recorderTargetHandlerId}
+        keyboardShortcutId={recorderTargetShortcutId}
         isOpen={isRecorderOpen}
-        initialKeyComboChain={recorderEditingKeyCombo ?? undefined}
+        initialKeySequence={recorderEditingKeySequence ?? undefined}
         onCancel={() => {
           setIsRecorderOpen(false);
-          setRecorderTargetHandlerId(null);
+          setRecorderTargetShortcutId(null);
         }}
-        onSave={(newComboChain) => {
-          if (!recorderTargetHandlerId) return;
+        onSave={(newKeySeq) => {
+          if (!recorderTargetShortcutId) return;
 
-          const updatedKeyComboChains = recorderEditingKeyCombo
-            ? localShortcutConfig[recorderTargetHandlerId].map((keyComboChain) =>
-                isEqual(keyComboChain, recorderEditingKeyCombo) ? newComboChain : keyComboChain,
+          const updatedKeySeqAlternatives = recorderEditingKeySequence
+            ? localShortcutConfig[recorderTargetShortcutId].map((keySeq) =>
+                isEqual(keySeq, recorderEditingKeySequence) ? newKeySeq : keySeq,
               )
-            : [...localShortcutConfig[recorderTargetHandlerId], newComboChain];
+            : [...localShortcutConfig[recorderTargetShortcutId], newKeySeq];
           // Use spread to preserve the existing key insertion order — building a
           // fresh object with a loop would move the edited key to the end.
           const updated = {
             ...localShortcutConfig,
-            [recorderTargetHandlerId]: updatedKeyComboChains,
+            [recorderTargetShortcutId]: updatedKeySeqAlternatives,
           };
 
           setLocalShortcutConfig(updated);
           setJsonString(JSON.stringify(updated, null, 2));
 
           setIsRecorderOpen(false);
-          setRecorderTargetHandlerId(null);
+          setRecorderTargetShortcutId(null);
         }}
       />
     </Modal>

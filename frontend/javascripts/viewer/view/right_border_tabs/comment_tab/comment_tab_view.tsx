@@ -49,8 +49,8 @@ import ButtonComponent from "viewer/view/components/button_component";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
 import InputComponent from "viewer/view/components/input_component";
 import { MarkdownModal } from "viewer/view/components/markdown_modal";
-import { CommentsTabKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 import { loadKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_persistence";
+import type { KeyboardShortcutHandlerMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import { buildKeyBindingsFromConfig } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_utils";
 import Comment, { commentListId } from "viewer/view/right_border_tabs/comment_tab/comment";
 import AdvancedSearchPopover from "../advanced_search_popover";
@@ -150,12 +150,12 @@ function CommentTabView(props: Props) {
       // Instead of directly attaching callback function, we need to rely on React.refs instead
       // to prevent the callbacks from becoming stale and outdated as the component changes
       // its state or props.
-      const keyboardHandlers = {
-        [CommentsTabKeyboardShortcuts.NEXT_COMMENT]: {
+      const keyboardHandlers: Partial<KeyboardShortcutHandlerMap> = {
+        NEXT_COMMENT: {
           onPressedWithRepeat: () => nextCommentRef?.current?.(),
           delayed: true,
         },
-        [CommentsTabKeyboardShortcuts.PREVIOUS_COMMENT]: {
+        PREVIOUS_COMMENT: {
           onPressedWithRepeat: () => previousCommentRef?.current?.(),
           delayed: true,
         },

@@ -53,11 +53,9 @@ import { ensureHasNewestVersionAction } from "viewer/model/actions/save_actions"
 import type { StoreAnnotation, Task, WebknossosState } from "viewer/store";
 import { KeyboardKeyIcon } from "../components/keyboard_key_icon";
 import { MarkdownModal } from "../components/markdown_modal";
-import { ArbitraryControllerNavigationKeyboardShortcuts } from "../keyboard_shortcuts/arbitrary_mode_keyboard_shortcut_constants";
-import type { AnyKeyboardHandlerId } from "../keyboard_shortcuts/keyboard_shortcut_constants";
+import type { KeyboardShortcutId } from "../keyboard_shortcuts/keyboard_shortcut_constants";
 import type { KeyboardShortcutsMap } from "../keyboard_shortcuts/keyboard_shortcut_types";
-import { keyComboChainToUiElements } from "../keyboard_shortcuts/keyboard_shortcut_utils";
-import { PlaneControllerLoopDelayedNavigationKeyboardShortcuts } from "../keyboard_shortcuts/plane_mode/general_keyboard_shortcuts_constants";
+import { keySequenceToUiElements } from "../keyboard_shortcuts/keyboard_shortcut_utils";
 
 type StateProps = {
   annotation: StoreAnnotation;
@@ -68,7 +66,7 @@ type StateProps = {
   isDatasetViewMode: boolean;
   isPlaneMode: boolean;
   mayEditAnnotation: boolean;
-  keyboardShortcutsConfig: KeyboardShortcutsMap<string>;
+  keyboardShortcutsConfig: KeyboardShortcutsMap;
 };
 type DispatchProps = {
   setAnnotationName: (arg0: string) => void;
@@ -87,29 +85,25 @@ type ShortcutInfo = {
 };
 
 const getShortcuts = (
-  keyboardShortcutsConfig: KeyboardShortcutsMap<string>,
+  keyboardShortcutsConfig: KeyboardShortcutsMap,
   isInPlaneMode: boolean,
 ): ShortcutInfo[] => {
-  const toUiElement = (keyboardShortcutHandlerId: AnyKeyboardHandlerId) =>
-    (keyboardShortcutsConfig[keyboardShortcutHandlerId] ?? []).flatMap((keyCombo, comboIndex) => {
-      const capitalizedKeyCombo = keyCombo.map((keys) => keys.map((key) => key.toUpperCase()));
-      return keyComboChainToUiElements(
-        capitalizedKeyCombo,
+  const toUiElement = (keyboardShortcutId: KeyboardShortcutId) =>
+    (keyboardShortcutsConfig[keyboardShortcutId] ?? []).flatMap((keySeq, comboIndex) => {
+      const capitalizedKeySeq = keySeq.map((keys) => keys.map((key) => key.toUpperCase()));
+      return keySequenceToUiElements(
+        capitalizedKeySeq,
         true,
-        `${keyboardShortcutHandlerId}-${comboIndex}-`,
+        `${keyboardShortcutId}-${comboIndex}-`,
       );
     });
   return [
     {
       key: "1",
       keybinding: [
-        isInPlaneMode
-          ? toUiElement(PlaneControllerLoopDelayedNavigationKeyboardShortcuts.ZOOM_IN_PLANE)
-          : toUiElement(ArbitraryControllerNavigationKeyboardShortcuts.ZOOM_IN_ARBITRARY),
+        isInPlaneMode ? toUiElement("ZOOM_IN_PLANE") : toUiElement("ZOOM_IN_ARBITRARY"),
         "/",
-        isInPlaneMode
-          ? toUiElement(PlaneControllerLoopDelayedNavigationKeyboardShortcuts.ZOOM_OUT_PLANE)
-          : toUiElement(ArbitraryControllerNavigationKeyboardShortcuts.ZOOM_OUT_ARBITRARY),
+        isInPlaneMode ? toUiElement("ZOOM_OUT_PLANE") : toUiElement("ZOOM_OUT_ARBITRARY"),
 
         "or",
         <KeyboardKeyIcon label="ALT" key="zoom-3" className="keyboard-key-icon" />,
@@ -139,20 +133,12 @@ const getShortcuts = (
         />,
         "or",
         isInPlaneMode
-          ? toUiElement(
-              PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_BACKWARD_DIRECTION_AWARE,
-            )
-          : toUiElement(
-              ArbitraryControllerNavigationKeyboardShortcuts.MOVE_BACKWARD_WITHOUT_RECORDING,
-            ),
+          ? toUiElement("MOVE_ONE_BACKWARD_DIRECTION_AWARE")
+          : toUiElement("MOVE_BACKWARD_WITHOUT_RECORDING"),
         "/",
         isInPlaneMode
-          ? toUiElement(
-              PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_FORWARD_DIRECTION_AWARE,
-            )
-          : toUiElement(
-              ArbitraryControllerNavigationKeyboardShortcuts.MOVE_FORWARD_WITHOUT_RECORDING,
-            ),
+          ? toUiElement("MOVE_ONE_FORWARD_DIRECTION_AWARE")
+          : toUiElement("MOVE_FORWARD_WITHOUT_RECORDING"),
       ],
       action: "Move Along 3rd Axis",
     },

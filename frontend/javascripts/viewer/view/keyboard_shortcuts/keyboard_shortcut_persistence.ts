@@ -1,7 +1,7 @@
 import { Validator } from "jsonschema";
 import Store from "viewer/store";
 import {
-  ALL_KEYBOARD_HANDLER_IDS,
+  ALL_KEYBOARD_SHORTCUT_IDS,
   getAllDefaultKeyboardShortcuts,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 import type { KeyboardShortcutsMap } from "./keyboard_shortcut_types";
@@ -12,7 +12,7 @@ export const KeyboardShortcutsSchema = {
   type: "object",
   description: "A mapping from handler IDs to arrays of key combos (string[][]).",
   properties: Object.fromEntries(
-    ALL_KEYBOARD_HANDLER_IDS.map((id) => [
+    ALL_KEYBOARD_SHORTCUT_IDS.map((id) => [
       id,
       {
         type: "array",
@@ -47,21 +47,19 @@ function isValidShortcutValue(value: unknown): value is string[][][] {
  *  - Falls back to the default combo for any key whose value is missing or
  *    has the wrong shape.
  */
-export function sanitizeKeyboardShortcuts(
-  raw: Record<string, unknown>,
-): KeyboardShortcutsMap<string> {
+export function sanitizeKeyboardShortcuts(raw: Record<string, unknown>): KeyboardShortcutsMap {
   const defaults = getAllDefaultKeyboardShortcuts();
   const result: Record<string, string[][][]> = {};
-  for (const id of ALL_KEYBOARD_HANDLER_IDS) {
+  for (const id of ALL_KEYBOARD_SHORTCUT_IDS) {
     result[id] = isValidShortcutValue(raw[id]) ? raw[id] : defaults[id];
   }
-  return result as KeyboardShortcutsMap<string>;
+  return result as KeyboardShortcutsMap;
 }
 
 export function validateShortcutMapText(input: string): {
   valid: boolean;
   errors: string[];
-  parsed: Record<string, string[][][]> | null;
+  parsed: KeyboardShortcutsMap | null;
 } {
   const errors: string[] = [];
   let parsed: any = null;
@@ -91,7 +89,7 @@ export function validateShortcutMapText(input: string): {
 /**
  * Load keyboard shortcuts from the store.
  */
-export function loadKeyboardShortcuts(): KeyboardShortcutsMap<string> {
+export function loadKeyboardShortcuts(): KeyboardShortcutsMap {
   const state = Store.getState();
   if (state.keyboardShortcutsConfig != null) {
     return state.keyboardShortcutsConfig;

@@ -1655,13 +1655,11 @@ export function updateUserConfiguration(
   });
 }
 
-export function getKeyboardShortcutsConfig(): Promise<KeyboardShortcutsMap<string>> {
+export function getKeyboardShortcutsConfig(): Promise<KeyboardShortcutsMap> {
   return Request.receiveJSON("/api/user/keyboardShortcutsConfig");
 }
 
-export function updateKeyboardShortcutsConfig(
-  shortcuts: KeyboardShortcutsMap<string>,
-): Promise<void> {
+export function updateKeyboardShortcutsConfig(shortcuts: KeyboardShortcutsMap): Promise<void> {
   return Request.sendJSONReceiveJSON("/api/user/keyboardShortcutsConfig", {
     method: "PUT",
     data: shortcuts,

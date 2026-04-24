@@ -114,16 +114,6 @@ import Store, { type UserConfiguration } from "viewer/store";
 import { getDefaultBrushSizes } from "viewer/view/action_bar/tools/brush_presets";
 import type ArbitraryView from "viewer/view/arbitrary_view";
 import type { KeyboardShortcutHandlerMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
-import { PlaneBoundingBoxToolNoLoopedKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/plane_mode/bounding_box_tool_shortcut_constants";
-import { PlaneProofreadingToolNoLoopedKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/plane_mode/proofreading_tool_shortcut_constants";
-import {
-  PlaneSkeletonToolLoopedKeyboardShortcuts,
-  PlaneSkeletonToolNoLoopedKeyboardShortcuts,
-} from "viewer/view/keyboard_shortcuts/plane_mode/skeleton_tool_shortcut_constants";
-import {
-  PlaneVolumeToolLoopDelayedConfigKeyboardShortcuts,
-  PlaneVolumeToolNoLoopedKeyboardShortcuts,
-} from "viewer/view/keyboard_shortcuts/plane_mode/volume_tools_shortcut_constants";
 import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_segment_id_modal";
 import type PlaneView from "viewer/view/plane_view";
 
@@ -167,7 +157,7 @@ abstract class ToolController {
   ): ActionDescriptor {
     return { rightClick: "Context menu" };
   }
-  static getKeyboardControls(): KeyboardShortcutHandlerMap<never> {
+  static getKeyboardControls(): Partial<KeyboardShortcutHandlerMap> {
     return {};
   }
 
@@ -447,74 +437,72 @@ export class SkeletonToolController extends ToolController {
     }
   }
 
-  static getKeyboardControls(): KeyboardShortcutHandlerMap<
-    PlaneSkeletonToolNoLoopedKeyboardShortcuts | PlaneSkeletonToolLoopedKeyboardShortcuts
-  > {
+  static getKeyboardControls(): Partial<KeyboardShortcutHandlerMap> {
     return {
-      [PlaneSkeletonToolNoLoopedKeyboardShortcuts.TOGGLE_ALL_TREES_PLANE]: {
+      TOGGLE_ALL_TREES_PLANE: {
         onPressed: () => {
           Store.dispatch(toggleAllTreesAction());
         },
       },
-      [PlaneSkeletonToolNoLoopedKeyboardShortcuts.TOGGLE_INACTIVE_TREES_PLANE]: {
+      TOGGLE_INACTIVE_TREES_PLANE: {
         onPressed: () => {
           Store.dispatch(toggleInactiveTreesAction());
         },
       },
       // Delete active node
-      [PlaneSkeletonToolNoLoopedKeyboardShortcuts.DELETE_ACTIVE_NODE_PLANE]: {
+      DELETE_ACTIVE_NODE_PLANE: {
         onPressed: () => {
           Store.dispatch(deleteNodeAsUserAction(Store.getState()));
         },
       },
-      [PlaneSkeletonToolNoLoopedKeyboardShortcuts.CREATE_TREE_PLANE]: {
+      CREATE_TREE_PLANE: {
         onPressed: () => {
           Store.dispatch(createTreeAction());
         },
       },
-      [PlaneSkeletonToolNoLoopedKeyboardShortcuts.MOVE_ALONG_DIRECTION]: {
+      MOVE_ALONG_DIRECTION: {
         onPressed: () => moveAlongDirection(),
       },
-      [PlaneSkeletonToolNoLoopedKeyboardShortcuts.MOVE_ALONG_DIRECTION_REVERSED]: {
+      MOVE_ALONG_DIRECTION_REVERSED: {
         onPressed: () => moveAlongDirection(true),
       },
       // Branches
-      [PlaneSkeletonToolNoLoopedKeyboardShortcuts.CREATE_BRANCH_POINT_PLANE]: {
+      CREATE_BRANCH_POINT_PLANE: {
         onPressed: () => {
           Store.dispatch(createBranchPointAction());
         },
       },
-      [PlaneSkeletonToolNoLoopedKeyboardShortcuts.DELETE_BRANCH_POINT_PLANE]: {
+      DELETE_BRANCH_POINT_PLANE: {
         onPressed: () => {
           Store.dispatch(requestDeleteBranchPointAction());
         },
       },
-      [PlaneSkeletonToolNoLoopedKeyboardShortcuts.RECENTER_ACTIVE_NODE_PLANE]: {
+      RECENTER_ACTIVE_NODE_PLANE: {
         onPressed: () => {
           api.tracing.centerNode();
           api.tracing.centerTDView();
         },
       },
       // navigate nodes
-      [PlaneSkeletonToolNoLoopedKeyboardShortcuts.NEXT_NODE_BACKWARD_PLANE]: {
+      NEXT_NODE_BACKWARD_PLANE: {
         onPressed: () => toPrecedingNode(),
       },
-      [PlaneSkeletonToolNoLoopedKeyboardShortcuts.NEXT_NODE_FORWARD_PLANE]: {
+      NEXT_NODE_FORWARD_PLANE: {
         onPressed: () => toSubsequentNode(),
       },
-      [PlaneSkeletonToolLoopedKeyboardShortcuts.MOVE_NODE_LEFT]: {
+      MOVE_NODE_LEFT: {
         onPressedWithRepeat: () => moveNode(-1, 0),
         delayed: true,
       },
-      [PlaneSkeletonToolLoopedKeyboardShortcuts.MOVE_NODE_RIGHT]: {
+      MOVE_NODE_RIGHT: {
         onPressedWithRepeat: () => moveNode(1, 0),
         delayed: true,
       },
-      [PlaneSkeletonToolLoopedKeyboardShortcuts.MOVE_NODE_UP]: {
+      MOVE_NODE_UP: {
         onPressedWithRepeat: () => moveNode(0, -1),
         delayed: true,
       },
-      [PlaneSkeletonToolLoopedKeyboardShortcuts.MOVE_NODE_DOWN]: {
+      MOVE_NODE_DOWN: {
         onPressedWithRepeat: () => moveNode(0, 1),
         delayed: true,
       },
@@ -575,11 +563,9 @@ export class SkeletonToolController extends ToolController {
 }
 
 class VolumeToolController extends ToolController {
-  static getKeyboardControls(): KeyboardShortcutHandlerMap<
-    PlaneVolumeToolNoLoopedKeyboardShortcuts | PlaneVolumeToolLoopDelayedConfigKeyboardShortcuts
-  > {
+  static getKeyboardControls(): Partial<KeyboardShortcutHandlerMap> {
     return {
-      [PlaneVolumeToolNoLoopedKeyboardShortcuts.CREATE_NEW_CELL]: {
+      CREATE_NEW_CELL: {
         onPressed: () => {
           const volumeTracing = getActiveSegmentationTracing(Store.getState());
 
@@ -596,12 +582,12 @@ class VolumeToolController extends ToolController {
           }
         },
       },
-      [PlaneVolumeToolNoLoopedKeyboardShortcuts.INTERPOLATE_SEGMENTATION]: {
+      INTERPOLATE_SEGMENTATION: {
         onPressed: () => {
           Store.dispatch(interpolateSegmentationLayerAction());
         },
       },
-      [PlaneVolumeToolNoLoopedKeyboardShortcuts.COPY_SEGMENT_ID]: {
+      COPY_SEGMENT_ID: {
         onPressed: (event: KeyboardEvent) => {
           const segmentationLayer = Model.getVisibleSegmentationLayer();
           const { additionalCoordinates } = Store.getState().flycam;
@@ -634,7 +620,7 @@ class VolumeToolController extends ToolController {
           }
         },
       },
-      [PlaneVolumeToolNoLoopedKeyboardShortcuts.BRUSH_PRESET_SMALL]: {
+      BRUSH_PRESET_SMALL: {
         onPressed: () => {
           let brushPresets = Store.getState().userConfiguration.presetBrushSizes;
           if (brushPresets == null) {
@@ -645,7 +631,7 @@ class VolumeToolController extends ToolController {
           Store.dispatch(updateUserSettingAction("brushSize", brushPresets.small));
         },
       },
-      [PlaneVolumeToolNoLoopedKeyboardShortcuts.BRUSH_PRESET_MEDIUM]: {
+      BRUSH_PRESET_MEDIUM: {
         onPressed: () => {
           let brushPresets = Store.getState().userConfiguration.presetBrushSizes;
           if (brushPresets == null) {
@@ -656,7 +642,7 @@ class VolumeToolController extends ToolController {
           Store.dispatch(updateUserSettingAction("brushSize", brushPresets.medium));
         },
       },
-      [PlaneVolumeToolNoLoopedKeyboardShortcuts.BRUSH_PRESET_LARGE]: {
+      BRUSH_PRESET_LARGE: {
         onPressed: () => {
           let brushPresets = Store.getState().userConfiguration.presetBrushSizes;
           if (brushPresets == null) {
@@ -667,11 +653,11 @@ class VolumeToolController extends ToolController {
           Store.dispatch(updateUserSettingAction("brushSize", brushPresets.large));
         },
       },
-      [PlaneVolumeToolLoopDelayedConfigKeyboardShortcuts.DECREASE_BRUSH_SIZE]: {
+      DECREASE_BRUSH_SIZE: {
         onPressedWithRepeat: () => changeBrushSizeIfBrushIsActiveBy(-1),
         delayed: true,
       },
-      [PlaneVolumeToolLoopDelayedConfigKeyboardShortcuts.INCREASE_BRUSH_SIZE]: {
+      INCREASE_BRUSH_SIZE: {
         onPressedWithRepeat: () => changeBrushSizeIfBrushIsActiveBy(1),
         delayed: true,
       },
@@ -988,7 +974,7 @@ export class BoundingBoxToolController extends ToolController {
     };
   }
 
-  static getKeyboardControls(): KeyboardShortcutHandlerMap<PlaneBoundingBoxToolNoLoopedKeyboardShortcuts> {
+  static getKeyboardControls(): Partial<KeyboardShortcutHandlerMap> {
     const handleBBoxMoveModifierPressed = (event: KeyboardEvent) => {
       const { viewModeData, temporaryConfiguration } = Store.getState();
       const { mousePosition } = temporaryConfiguration;
@@ -1000,12 +986,12 @@ export class BoundingBoxToolController extends ToolController {
       );
     };
     return {
-      [PlaneBoundingBoxToolNoLoopedKeyboardShortcuts.CREATE_BOUNDING_BOX]: {
+      CREATE_BOUNDING_BOX: {
         onPressed: () => {
           Store.dispatch(addUserBoundingBoxAction());
         },
       },
-      [PlaneBoundingBoxToolNoLoopedKeyboardShortcuts.TOGGLE_CURSOR_STATE_FOR_MOVING]: {
+      TOGGLE_CURSOR_STATE_FOR_MOVING: {
         onPressed: handleBBoxMoveModifierPressed,
         onReleased: handleBBoxMoveModifierPressed,
       },
@@ -1376,9 +1362,9 @@ export class ProofreadToolController extends ToolController {
     };
   }
 
-  static getKeyboardControls(): KeyboardShortcutHandlerMap<PlaneProofreadingToolNoLoopedKeyboardShortcuts> {
+  static getKeyboardControls(): Partial<KeyboardShortcutHandlerMap> {
     return {
-      [PlaneProofreadingToolNoLoopedKeyboardShortcuts.TOGGLE_MULTICUT_MODE]: {
+      TOGGLE_MULTICUT_MODE: {
         onPressed: () => {
           const state = Store.getState();
           // Do not trigger in case proofreading is active as this is colliding with the default shortcut for multi split mode activation.
@@ -1513,4 +1499,4 @@ export const AllToolKeyboardControls = Object.fromEntries(
     id,
     controller.getKeyboardControls(),
   ]),
-) as Record<AnnotationToolId, KeyboardShortcutHandlerMap<string>>;
+) as Record<AnnotationToolId, Partial<KeyboardShortcutHandlerMap>>;

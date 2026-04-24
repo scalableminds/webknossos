@@ -1,11 +1,14 @@
 import { Alert, Button, Flex, Modal, Space, Typography } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ALL_KEYBOARD_SHORTCUT_META_INFOS } from "./keyboard_shortcut_constants";
-import type { KeyboardShortcutsMap, KeySequence } from "./keyboard_shortcut_types";
+import {
+  ALL_KEYBOARD_SHORTCUT_META_INFOS,
+  type KeyboardShortcutId,
+} from "./keyboard_shortcut_constants";
+import type { KeyboardShortcutsMap, KeyCombination, KeySequence } from "./keyboard_shortcut_types";
 import {
   type Collision,
   checkCollisionForShortcut,
-  keyComboChainToUiElements,
+  keySequenceToUiElements,
 } from "./keyboard_shortcut_utils";
 
 const { Text } = Typography;
@@ -26,15 +29,15 @@ export const CollisionWarningAlert: React.FC<CollisionWarningAlertProps> = ({
         description={
           <ul style={{ margin: 0, paddingLeft: 16 }}>
             {shortcutCollisions.map((collision, index) => {
-              const comboChain = collision.keyCombo.map((s) => [...s]);
+              const keySequence = collision.keySequence.map((s) => [...s]);
               return (
                 <li key={index}>
                   <Space wrap>
-                    <span>{keyComboChainToUiElements(comboChain, false)}</span>
+                    <span>{keySequenceToUiElements(keySequence, false)}</span>
                     <Text>is used by:</Text>
                   </Space>
                   <ul style={{ margin: "2px 0 0", paddingLeft: 20 }}>
-                    {collision.conflictingHandlerIds.map((id) => {
+                    {collision.conflictingShortcutIds.map((id) => {
                       const meta = ALL_KEYBOARD_SHORTCUT_META_INFOS[id];
                       return (
                         <li key={id}>
@@ -53,7 +56,7 @@ export const CollisionWarningAlert: React.FC<CollisionWarningAlertProps> = ({
   );
 };
 
-const SampleKeyCombo: KeySequence = [["Control", "a"], ["o"]];
+const SampleKeySequence: KeySequence = [["Control", "a"], ["o"]];
 
 // Derive a layout-independent key identifier from a keyboard event.
 // - Modifier keys (Shift, Control, Alt, Meta) are returned as-is.
@@ -99,34 +102,34 @@ function getKeyIdentifier(e: KeyboardEvent): string {
 }
 
 type ShortcutRecorderModalProps = {
-  keyboardShortcutConfig: KeyboardShortcutsMap<string>;
-  handlerId: string | null; // The handlerId for which the shortcut should be added.
+  keyboardShortcutConfig: KeyboardShortcutsMap;
+  keyboardShortcutId: KeyboardShortcutId | null; // The handlerId for which the shortcut should be added.
   isOpen: boolean;
-  initialKeyComboChain?: KeySequence; // optional preview of current binding
+  initialKeySequence?: KeySequence; // optional preview of current binding
   onCancel: () => void; // do not overwrite
-  onSave: (newKeyComboChain: KeySequence) => void; // returns final combo like [["Control", "a"], ["o"]]
+  onSave: (newKeySequence: KeySequence) => void; // returns final sequence like [["Control", "a"], ["o"]]
 };
 
 export function ShortcutRecorderModal({
   isOpen,
-  handlerId,
+  keyboardShortcutId,
   keyboardShortcutConfig,
-  initialKeyComboChain,
+  initialKeySequence,
   onCancel,
   onSave,
 }: ShortcutRecorderModalProps) {
-  const [keyComboChain, setKeyComboChain] = useState<KeySequence>(initialKeyComboChain ?? []);
-  const [previewKeyCombo, setPreviewKeyCombo] = useState<string[]>([]);
+  const [keySequence, setKeySequence] = useState<KeySequence>(initialKeySequence ?? []);
+  const [previewKeyCombination, setPreviewKeyCombination] = useState<KeyCombination>([]);
   const shortcutCollisions = useMemo(
     () =>
-      handlerId
+      keyboardShortcutId
         ? checkCollisionForShortcut(
-            handlerId,
-            [...keyboardShortcutConfig[handlerId], keyComboChain],
+            keyboardShortcutId,
+            [...keyboardShortcutConfig[keyboardShortcutId], keySequence],
             keyboardShortcutConfig,
           )
         : [],
-    [keyComboChain, handlerId, keyboardShortcutConfig],
+    [keySequence, keyboardShortcutId, keyboardShortcutConfig],
   );
 
   const currentDownSetRef = useRef<Set<string>>(new Set());
@@ -135,11 +138,11 @@ export function ShortcutRecorderModal({
   const clearCurrentPreview = useCallback(() => {
     currentDownSetRef.current.clear();
     currentSeenSetRef.current.clear();
-    setPreviewKeyCombo([]);
+    setPreviewKeyCombination([]);
   }, []);
 
   const handleReset = useCallback(() => {
-    setKeyComboChain([]);
+    setKeySequence([]);
     clearCurrentPreview();
   }, [clearCurrentPreview]);
 
@@ -173,7 +176,7 @@ export function ShortcutRecorderModal({
       currentSeenSetRef.current.add(pressedKeyId);
 
       // Update the preview state
-      setPreviewKeyCombo((prevPreviewStroke) => [...prevPreviewStroke, pressedKeyId]);
+      setPreviewKeyCombination((prevPreviewStroke) => [...prevPreviewStroke, pressedKeyId]);
     }
 
     function handleKeyUp(e: KeyboardEvent) {
@@ -189,11 +192,11 @@ export function ShortcutRecorderModal({
 
       if (currentDownSetRef.current.size === 0) {
         // Finalize this stroke using lastStrokeOrderRef
-        setPreviewKeyCombo((prevPreviewKeyCombo) => {
-          if (prevPreviewKeyCombo.length > 0) {
-            setKeyComboChain([...keyComboChain, prevPreviewKeyCombo]);
+        setPreviewKeyCombination((prevPreviewKeyCombination) => {
+          if (prevPreviewKeyCombination.length > 0) {
+            setKeySequence([...keySequence, prevPreviewKeyCombination]);
           }
-          return prevPreviewKeyCombo;
+          return prevPreviewKeyCombination;
         });
         // clear order and last snapshot
         clearCurrentPreview();
@@ -222,7 +225,7 @@ export function ShortcutRecorderModal({
       // cleanup
       clearCurrentPreview();
     };
-  }, [clearCurrentPreview, isOpen, handleReset, keyComboChain]);
+  }, [clearCurrentPreview, isOpen, handleReset, keySequence]);
 
   function handleCancel() {
     // do not overwrite; simply call onCancel
@@ -232,8 +235,8 @@ export function ShortcutRecorderModal({
 
   function handleOk() {
     // final string
-    if (keyComboChain.length > 0) {
-      onSave(keyComboChain);
+    if (keySequence.length > 0) {
+      onSave(keySequence);
     } else {
       // nothing recorded -> treat as cancel (or you can choose to save empty)
       onCancel();
@@ -243,7 +246,7 @@ export function ShortcutRecorderModal({
 
   // remove last stroke
   function handleRemoveLastStroke() {
-    setKeyComboChain((prev) => prev.slice(0, -1));
+    setKeySequence((prev) => prev.slice(0, -1));
   }
 
   return (
@@ -251,7 +254,7 @@ export function ShortcutRecorderModal({
       open={isOpen}
       onCancel={handleCancel}
       onOk={handleOk}
-      okButtonProps={{ disabled: keyComboChain.length <= 0 || currentDownSetRef.current.size > 0 }}
+      okButtonProps={{ disabled: keySequence.length <= 0 || currentDownSetRef.current.size > 0 }}
       title="Record Shortcut"
       destroyOnHidden={true}
     >
@@ -259,7 +262,7 @@ export function ShortcutRecorderModal({
         <CollisionWarningAlert shortcutCollisions={shortcutCollisions} />
         <Text type="secondary">
           Press keys now. Release all keys to finish the current stroke. Press keys again to add a
-          subsequent stroke. Example: {keyComboChainToUiElements(SampleKeyCombo, false)}. Reset
+          subsequent stroke. Example: {keySequenceToUiElements(SampleKeySequence, false)}. Reset
           everything with Esc + Ctrl.
         </Text>
 
@@ -288,12 +291,12 @@ export function ShortcutRecorderModal({
               <div style={{ width: "100%", overflow: "auto" }}>
                 <Text strong>Recorded:</Text>{" "}
                 <span style={{ marginLeft: 8 }}>
-                  {keyComboChainToUiElements(keyComboChain, false) || "— waiting —"}
+                  {keySequenceToUiElements(keySequence, false) || "— waiting —"}
                 </span>
               </div>
             </div>
             <Flex style={{ marginTop: 8 }} justify={"flex-end"} align={"flex-start"} gap="middle">
-              <Button onClick={handleRemoveLastStroke} disabled={keyComboChain.length === 0}>
+              <Button onClick={handleRemoveLastStroke} disabled={keySequence.length === 0}>
                 Remove last stroke
               </Button>
               <Button onClick={handleReset}>Reset</Button>
@@ -313,8 +316,8 @@ export function ShortcutRecorderModal({
             }}
           >
             <Text italic>
-              {previewKeyCombo.length > 0
-                ? keyComboChainToUiElements([previewKeyCombo], false)
+              {previewKeyCombination.length > 0
+                ? keySequenceToUiElements([previewKeyCombination], false)
                 : "— no keys down —"}
             </Text>
           </div>

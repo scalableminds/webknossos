@@ -1,10 +1,12 @@
 import { MacCommandOutlined, WindowsOutlined } from "@ant-design/icons";
 import { Typography } from "antd";
 import type {
+  KeyboardHandler,
   KeyboardLoopHandler,
   KeyboardLoopHandlerFn,
   KeyboardNoLoopHandler,
   KeyboardNoLoopHandlerFn,
+  KeystrokesKeyComboStr,
 } from "libs/input";
 import { flatten, uniq } from "lodash-es";
 import { isMac } from "viewer/constants";
@@ -13,13 +15,16 @@ import { Store } from "viewer/singletons";
 import { KeyboardKeyIcon } from "../components/keyboard_key_icon";
 import {
   ALL_KEYBOARD_SHORTCUT_META_INFOS,
-  KeyboardShortcutCollisionHierarchy,
+  type KeyboardShortcutId,
 } from "./keyboard_shortcut_constants";
-import type {
-  KeyboardShortcutCollisionEntityName,
-  KeyboardShortcutHandlerMap,
-  KeyboardShortcutsMap,
-  KeySequence,
+import {
+  getAllCollidingDomainsOf,
+  type KeyboardShortcutCollisionDomain,
+  type KeyboardShortcutHandlerMap,
+  type KeyboardShortcutsMap,
+  type KeyCombination,
+  type KeySequence,
+  LeafCollisionDomains,
 } from "./keyboard_shortcut_types";
 
 const { Text } = Typography;
@@ -58,11 +63,11 @@ function escapeReservedKeystrokeCharacters(key: string): string {
 }
 
 // Moves modifier keys to the front of the combo.
-function sortKeyCombo(combo: string[]): string[] {
+function sortKeyCombination(keyCombination: KeyCombination): KeyCombination {
   // Ensure modifiers appear first in canonical order,
   // then non-modifier keys in the order they were pressed (preserved in `order`)
   const modifiersOrder = ["Control", "Meta", "Alt", "Shift"];
-  const deduplicatedCombo = uniq(combo);
+  const deduplicatedCombo = uniq(keyCombination);
   const presentModifierSet = new Set(deduplicatedCombo).intersection(MODIFIER_KEYS);
   const nonModifiers = deduplicatedCombo.filter((key) => !MODIFIER_KEYS.has(key));
   const presentModifiers = modifiersOrder.filter((m) => presentModifierSet.has(m));
@@ -72,31 +77,33 @@ function sortKeyCombo(combo: string[]): string[] {
   return [...presentModifiers, ...nonModifiers];
 }
 
-export function formatKeyCombo(combo: string[]): string {
+export function formatKeyCombination(keyCombination: KeyCombination): KeystrokesKeyComboStr {
   // Ensure modifiers appear first in canonical order,
   // then non-modifier keys in the order they were pressed (preserved in `order`)
-  return sortKeyCombo(combo)
+  return sortKeyCombination(keyCombination)
     .map((key) => escapeReservedKeystrokeCharacters(key))
     .join(" + ");
 }
 
-export function keyComboChainToKeystrokesConfig(comboChain: KeySequence): string {
-  return comboChain.map((combo) => formatKeyCombo(combo)).join(", ");
+export function keySequenceToKeystrokesComboStr(keySeq: KeySequence): KeystrokesKeyComboStr {
+  return keySeq.map((keyCombination) => formatKeyCombination(keyCombination)).join(", ");
 }
 
-export function comparableKeyComboChainToKeyCombo(comboChain: ComparableKeyComboChain): string {
-  return comboChain.map((combo) => formatKeyCombo([...combo])).join(", ");
+export function comparableKeySequenceToKeystrokesComboStr(
+  keySeq: ComparableKeySequence,
+): KeystrokesKeyComboStr {
+  return keySeq.map((keyCombination) => formatKeyCombination([...keyCombination])).join(", ");
 }
 
-export function keyComboChainToUiElements(
-  comboChain: KeySequence,
+export function keySequenceToUiElements(
+  keySequence: KeySequence,
   // Renders a "fancier" version of the combo chain. Currently only used in the info tab.
   useHighlightedIcon: boolean,
   keyPrefix: string = "",
 ): React.ReactNode[] {
   const uiElements: React.ReactNode[] = [];
-  comboChain.forEach((combo, outerIndex) => {
-    sortKeyCombo(combo).forEach((key, innerIndex) => {
+  keySequence.forEach((keyCombination, outerIndex) => {
+    sortKeyCombination(keyCombination).forEach((key, innerIndex) => {
       if (useHighlightedIcon) {
         uiElements.push(
           <KeyboardKeyIcon
@@ -117,11 +124,11 @@ export function keyComboChainToUiElements(
           </Text>,
         );
       }
-      if (innerIndex < combo.length - 1) {
+      if (innerIndex < keyCombination.length - 1) {
         uiElements.push(<Text key={`${keyPrefix}${outerIndex}-sep${innerIndex}`}>+</Text>);
       }
     });
-    if (outerIndex < comboChain.length - 1) {
+    if (outerIndex < keySequence.length - 1) {
       uiElements.push(<Text key={`${keyPrefix}${outerIndex}-chain`}>&gt;</Text>);
     }
   });
@@ -129,16 +136,16 @@ export function keyComboChainToUiElements(
 }
 
 export const buildKeyBindingsFromConfig = (
-  config: KeyboardShortcutsMap<string>,
-  handlerIdMapping: KeyboardShortcutHandlerMap<string>,
-): Record<string, KeyboardNoLoopHandler | KeyboardLoopHandler> => {
+  config: KeyboardShortcutsMap,
+  keyboardHandlerMap: Partial<KeyboardShortcutHandlerMap>,
+): Record<string, KeyboardHandler> => {
   const mappedShortcuts = flatten(
-    Object.entries(config).map(([handlerId, keyChainCombos]) => {
-      const isInHandlerMapping = handlerId in handlerIdMapping;
+    Object.entries(config).map(([shortcutId, keySeqAlternatives]) => {
+      const isInHandlerMapping = shortcutId in keyboardHandlerMap;
       if (isInHandlerMapping) {
-        return keyChainCombos.map((chainCombo) => {
-          const keyComboStr = keyComboChainToKeystrokesConfig(chainCombo);
-          return [keyComboStr, handlerIdMapping[handlerId]];
+        return keySeqAlternatives.map((chainCombo) => {
+          const keystrokesComboStr = keySequenceToKeystrokesComboStr(chainCombo);
+          return [keystrokesComboStr, keyboardHandlerMap[shortcutId as KeyboardShortcutId]];
         });
       } else {
         return undefined;
@@ -148,41 +155,42 @@ export const buildKeyBindingsFromConfig = (
   return Object.fromEntries(mappedShortcuts);
 };
 
-function keyComboChainToComparableKeyComboChain(comboChain: KeySequence): ComparableKeyComboChain {
-  return comboChain.map((keyCombo: string[]) => new Set<string>(keyCombo));
+function keySequenceToComparableKeySequence(keySeq: KeySequence): ComparableKeySequence {
+  return keySeq.map((keyCombination: string[]) => new Set<string>(keyCombination));
 }
 
-function areComboChainsEqual(
-  comparableComboChain1: ComparableKeyComboChain,
-  comparableComboChain2: ComparableKeyComboChain,
+function areComparableSequencesEqual(
+  comparableKeySeq1: ComparableKeySequence,
+  comparableKeySeq2: ComparableKeySequence,
 ): boolean {
-  if (comparableComboChain1.length !== comparableComboChain2.length) {
+  if (comparableKeySeq1.length !== comparableKeySeq2.length) {
     return false;
   }
-  for (let index = 0; index < comparableComboChain1.length; ++index) {
-    if (comparableComboChain1[index].symmetricDifference(comparableComboChain2[index]).size !== 0) {
+  for (let index = 0; index < comparableKeySeq1.length; ++index) {
+    if (comparableKeySeq1[index].symmetricDifference(comparableKeySeq2[index]).size !== 0) {
       return false;
     }
   }
   return true;
 }
 
-export function keyboardShortcutMapToCollidingTuples<T extends string>(
-  config: KeyboardShortcutsMap<T>,
-): [ComparableKeyComboChain, T[]][] {
-  const result: [ComparableKeyComboChain, T[]][] = [];
+export function keyboardShortcutMapToCollidingTuples(
+  config: Partial<KeyboardShortcutsMap>,
+): [ComparableKeySequence, KeyboardShortcutId[]][] {
+  const result: [ComparableKeySequence, KeyboardShortcutId[]][] = [];
 
-  for (const handlerId in config) {
-    for (const chain of config[handlerId]) {
-      const comparableComboChain = keyComboChainToComparableKeyComboChain(chain);
+  for (const shortcutIdStr in config) {
+    const shortcutId = shortcutIdStr as KeyboardShortcutId;
+    for (const keySeq of config[shortcutId]!) {
+      const comparableKeySeq = keySequenceToComparableKeySequence(keySeq);
       const existingEntry = result.find(([otherChain, _]) =>
-        areComboChainsEqual(comparableComboChain, otherChain),
+        areComparableSequencesEqual(comparableKeySeq, otherChain),
       );
 
       if (existingEntry) {
-        existingEntry[1].push(handlerId);
+        existingEntry[1].push(shortcutId);
       } else {
-        result.push([comparableComboChain, [handlerId]]);
+        result.push([comparableKeySeq, [shortcutId]]);
       }
     }
   }
@@ -190,29 +198,40 @@ export function keyboardShortcutMapToCollidingTuples<T extends string>(
 }
 
 function buildToolDependentHandler(
-  toolToHandlerMap: Partial<Record<AnnotationToolId, KeyboardNoLoopHandler | KeyboardLoopHandler>>,
-): KeyboardNoLoopHandler | KeyboardLoopHandler {
-  const handlers = Object.values(toolToHandlerMap).filter(Boolean) as (
-    | KeyboardNoLoopHandler
-    | KeyboardLoopHandler
-  )[];
+  toolToHandlerMap: Partial<Record<AnnotationToolId, KeyboardHandler>>,
+): KeyboardHandler {
+  const handlers = Object.values(toolToHandlerMap).filter(Boolean) as KeyboardHandler[];
   const isLooped = handlers.some((h) => "onPressedWithRepeat" in h);
   const isDelayed = isLooped && (handlers as KeyboardLoopHandler[]).some((h) => h.delayed);
 
   if (isLooped) {
+    const areAllHandlersLooped = handlers.every((h) => "onPressedWithRepeat" in h);
+    if (!areAllHandlersLooped) {
+      console.warn("Found overloaded tools shortcut where on handler is looped and the other not");
+    }
     const combined: KeyboardLoopHandler = {
       onPressedWithRepeat: (...args: Parameters<KeyboardLoopHandlerFn>) => {
         const activeToolId = Store.getState().uiInformation.activeTool.id;
-        (toolToHandlerMap[activeToolId] as KeyboardLoopHandler | undefined)?.onPressedWithRepeat(
-          ...args,
-        );
+        const isOriginalEvent = args[1];
+        const handler = toolToHandlerMap[activeToolId] as KeyboardHandler | undefined;
+        if (!handler) {
+          return;
+        }
+        // Guard against user overloading tool shortcuts where one might be looped and the other not.
+        if ("onPressedWithRepeat" in handler) {
+          handler.onPressedWithRepeat(...args);
+        } else if ("onPressed" in handler && isOriginalEvent) {
+          handler.onPressed(args[2]);
+        }
       },
       onReleased: (...args: Parameters<KeyboardLoopHandlerFn>) => {
         const activeToolId = Store.getState().uiInformation.activeTool.id;
         (toolToHandlerMap[activeToolId] as KeyboardLoopHandler | undefined)?.onReleased?.(...args);
       },
     };
-    if (isDelayed) combined.delayed = true;
+    if (isDelayed) {
+      combined.delayed = true;
+    }
     return combined;
   } else {
     return {
@@ -231,111 +250,62 @@ function buildToolDependentHandler(
 }
 
 export const buildKeyBindingsFromConfigForTools = (
-  config: KeyboardShortcutsMap<string>,
-  handlerIdMappingPerAnnotationTool: Record<AnnotationToolId, KeyboardShortcutHandlerMap<string>>,
-): Record<string, KeyboardNoLoopHandler | KeyboardLoopHandler> => {
-  const toolOnlyShortcuts: KeyboardShortcutsMap<string> = {};
+  config: KeyboardShortcutsMap,
+  handlerIdMappingPerAnnotationTool: Record<AnnotationToolId, Partial<KeyboardShortcutHandlerMap>>,
+): Record<string, KeyboardHandler> => {
+  const toolOnlyShortcuts: Partial<KeyboardShortcutsMap> = {};
   for (const annotationToolIdStr of Object.keys(handlerIdMappingPerAnnotationTool)) {
     const annotationToolId = annotationToolIdStr as AnnotationToolId;
-    for (const handlerId of Object.keys(handlerIdMappingPerAnnotationTool[annotationToolId])) {
-      const handlerAlreadyAdded = handlerId in toolOnlyShortcuts;
-      if (!handlerAlreadyAdded && handlerId in config) {
-        toolOnlyShortcuts[handlerId] = config[handlerId];
+    for (const shortcutIdStr of Object.keys(handlerIdMappingPerAnnotationTool[annotationToolId])) {
+      const shortcutId = shortcutIdStr as KeyboardShortcutId;
+      const handlerAlreadyAdded = shortcutId in toolOnlyShortcuts;
+      if (!handlerAlreadyAdded && shortcutId in config) {
+        toolOnlyShortcuts[shortcutId] = config[shortcutId];
       }
     }
   }
 
-  const keyComboChainAndHandlerIds = keyboardShortcutMapToCollidingTuples(toolOnlyShortcuts);
-  const bindings: Record<string, KeyboardNoLoopHandler | KeyboardLoopHandler> = {};
-  keyComboChainAndHandlerIds.forEach(([comparableComboChain, handlers]) => {
-    const stringifiedComboChain = comparableKeyComboChainToKeyCombo(comparableComboChain);
-    const toolToHandlerMap: Partial<
-      Record<AnnotationToolId, KeyboardNoLoopHandler | KeyboardLoopHandler>
-    > = {};
-    for (const handler of handlers) {
+  const keySequenceAndShortcutIdsTuples = keyboardShortcutMapToCollidingTuples(toolOnlyShortcuts);
+  const bindings: Record<KeystrokesKeyComboStr, KeyboardHandler> = {};
+  keySequenceAndShortcutIdsTuples.forEach(([comparableKeySeq, shortcutIds]) => {
+    const keystrokesComboStr = comparableKeySequenceToKeystrokesComboStr(comparableKeySeq);
+    const toolToHandlerMap: Partial<Record<AnnotationToolId, KeyboardHandler>> = {};
+    for (const shortcutId of shortcutIds) {
       for (const annotationToolIdStr of Object.keys(handlerIdMappingPerAnnotationTool)) {
         const annotationToolId = annotationToolIdStr as AnnotationToolId;
-        if (handler in handlerIdMappingPerAnnotationTool[annotationToolId]) {
+        if (shortcutId in handlerIdMappingPerAnnotationTool[annotationToolId]) {
           toolToHandlerMap[annotationToolId] =
-            handlerIdMappingPerAnnotationTool[annotationToolId][handler];
+            handlerIdMappingPerAnnotationTool[annotationToolId][shortcutId];
         }
       }
     }
     const hasAtLeastOneToolWithCurrentShortcut = Object.keys(toolToHandlerMap).length > 0;
     if (hasAtLeastOneToolWithCurrentShortcut) {
-      bindings[stringifiedComboChain] = buildToolDependentHandler(toolToHandlerMap);
+      bindings[keystrokesComboStr] = buildToolDependentHandler(toolToHandlerMap);
     }
   });
   return bindings;
 };
 
-type ComparableKeyComboChain = Set<string>[];
+type ComparableKeySequence = Set<string>[];
 
 export type Collision = {
-  keyCombo: ComparableKeyComboChain;
-  conflictingHandlerIds: string[];
+  keySequence: ComparableKeySequence;
+  conflictingShortcutIds: KeyboardShortcutId[];
 };
 
-function buildParentMap(hierarchy: Record<string, string[]>): Record<string, string | null> {
-  const parentMap: Record<string, string | null> = {};
-  for (const [parent, children] of Object.entries(hierarchy)) {
-    for (const child of children) {
-      parentMap[child] = parent;
-    }
-    if (!(parent in parentMap)) parentMap[parent] = null;
-  }
-  return parentMap;
-}
-
-function getCollidableEntities(
-  entity: string,
-  hierarchy: Record<string, string[]>,
-  parentMap: Record<string, string | null>,
-): Set<string> {
-  const collidable = new Set<string>();
-  // Add itself
-  collidable.add(entity);
-  // Add all ancestors (parents, grandparents, etc.)
-  let currentParent = parentMap[entity];
-  while (currentParent) {
-    collidable.add(currentParent);
-    currentParent = parentMap[currentParent];
-  }
-  // Add all descendants
-  function addDescendants(ent: string) {
-    const children = hierarchy[ent] || [];
-    for (const child of children) {
-      collidable.add(child);
-      addDescendants(child);
-    }
-  }
-  addDescendants(entity);
-  return collidable;
-}
-
-// Returns all collision tuples (comboChain, handlerIds[]) for a given entity. Only handlers whose
-// collision entity is an ancestor, descendant, or equal to `entity` are compared — i.e. shortcuts
-// that can genuinely be active at the same time.
-function getCollisionsForEntityInMap(
-  entity: KeyboardShortcutCollisionEntityName,
-  shortcutMap: KeyboardShortcutsMap<string>,
-  parentMap: Record<string, string | null>,
-): [ComparableKeyComboChain, string[]][] {
-  const collidableEntities = getCollidableEntities(
-    entity,
-    KeyboardShortcutCollisionHierarchy,
-    parentMap,
-  );
-  const relevantHandlerIds: string[] = [];
-  for (const [handlerId, meta] of Object.entries(ALL_KEYBOARD_SHORTCUT_META_INFOS)) {
-    if (collidableEntities.has(meta.collisionEntityName)) {
-      relevantHandlerIds.push(handlerId);
-    }
-  }
-  const relevantShortcuts: KeyboardShortcutsMap<string> = {};
-  for (const id of relevantHandlerIds) {
-    if (id in shortcutMap) {
-      relevantShortcuts[id] = shortcutMap[id];
+// Returns all collision tuples (ComparableKeySequence, KeyboardShortcutId[]) for a given collision domain.
+// Only relevant collision domains are compared — i.e. shortcuts that can genuinely be active at the same time.
+function createKeySequenceToShortcutIdsTuplesForCollisionDomain(
+  collisionDomain: KeyboardShortcutCollisionDomain,
+  shortcutMap: KeyboardShortcutsMap,
+): [ComparableKeySequence, KeyboardShortcutId[]][] {
+  const collisionDomains = new Set(getAllCollidingDomainsOf(collisionDomain));
+  const relevantShortcuts: Partial<KeyboardShortcutsMap> = {};
+  for (const [shortcutIdStr, meta] of Object.entries(ALL_KEYBOARD_SHORTCUT_META_INFOS)) {
+    const shortcutId = shortcutIdStr as KeyboardShortcutId;
+    if (collisionDomains.has(meta.getCollisionDomain()) && shortcutId in shortcutMap) {
+      relevantShortcuts[shortcutId] = shortcutMap[shortcutId];
     }
   }
   return keyboardShortcutMapToCollidingTuples(relevantShortcuts);
@@ -345,87 +315,92 @@ const acceptedCollisions: Collision[] = [
   // This collision is accepted as the CYCLE_VIEWMODE handler disables itself in case the proofreading tool is active.
   // The shortcut collision was decided to be ok.
   {
-    keyCombo: [new Set(["m"])],
-    conflictingHandlerIds: ["CYCLE_VIEWMODE", "TOGGLE_MULTICUT_MODE"],
+    keySequence: [new Set(["m"])],
+    conflictingShortcutIds: ["CYCLE_VIEWMODE", "TOGGLE_MULTICUT_MODE"],
   },
 ];
 
 function isAcceptedCollision(collision: Collision): boolean {
   return acceptedCollisions.some((accepted) => {
-    if (!areComboChainsEqual(collision.keyCombo, accepted.keyCombo)) {
+    if (!areComparableSequencesEqual(collision.keySequence, accepted.keySequence)) {
       return false;
     }
-    const ids = new Set(collision.conflictingHandlerIds);
-    const acceptedIds = new Set(accepted.conflictingHandlerIds);
+    const ids = new Set(collision.conflictingShortcutIds);
+    const acceptedIds = new Set(accepted.conflictingShortcutIds);
     return ids.symmetricDifference(acceptedIds).size === 0;
   });
 }
 
-export function checkCollisionsInShortcutMap(
-  shortcutMap: KeyboardShortcutsMap<string>,
-): Collision[] {
-  const parentMap = buildParentMap(KeyboardShortcutCollisionHierarchy);
-  // Keyed by the canonical combo string so that handler IDs from different leaf
+export function checkCollisionsInShortcutMap(shortcutMap: KeyboardShortcutsMap): Collision[] {
+  // Keyed by the key sequence as a string so that shortcutIds from different leaf
   // traversals that share the same shortcut are merged into one Collision entry.
-  const collisionsByCombo = new Map<string, Collision>();
+  const collisionsByKeySeq = new Map<string, Collision>();
 
-  // Only iterate leaf entities. Two sibling leaf nodes (e.g. ARBITRARY_MODE and PLANE_MODE) are
-  // never simultaneously active, so they never appear together via a leaf traversal. This avoids
-  // false-positive cross-domain collisions.
-  const leafEntities = Object.entries(KeyboardShortcutCollisionHierarchy)
-    .filter(([, children]) => children.length === 0)
-    .map(([entity]) => entity as KeyboardShortcutCollisionEntityName);
-
-  for (const entity of leafEntities) {
-    const keyCombosToHandlerIds = getCollisionsForEntityInMap(entity, shortcutMap, parentMap);
-    for (const [comboChain, handlerIds] of keyCombosToHandlerIds) {
-      if (handlerIds.length > 1) {
-        const comboKey = JSON.stringify(comboChain.map((set) => Array.from(set).sort()));
-        const existing = collisionsByCombo.get(comboKey);
+  // Only iterate leaf entities. They will automatically compare themselves with the parent non leaf nodes.
+  // Doing the comparison only bottom up in the hierarchy avoid double detecting a collision
+  // when when also doing a top down traversal.
+  for (const collisionDomain of LeafCollisionDomains) {
+    const keySeqAndShortcutIdsTuples = createKeySequenceToShortcutIdsTuplesForCollisionDomain(
+      collisionDomain,
+      shortcutMap,
+    );
+    for (const [comparableKeySeq, shortcutIds] of keySeqAndShortcutIdsTuples) {
+      // Checking for a collision:
+      const doMultipleShortcutsMapToTheSameKeySeq = shortcutIds.length > 1;
+      if (doMultipleShortcutsMapToTheSameKeySeq) {
+        // Found a collision
+        const keySeqStringified = JSON.stringify(
+          comparableKeySeq.map((set) => Array.from(set).sort()),
+        );
+        const existing = collisionsByKeySeq.get(keySeqStringified);
         if (existing) {
-          for (const id of handlerIds) {
-            if (!existing.conflictingHandlerIds.includes(id)) {
-              existing.conflictingHandlerIds.push(id);
+          for (const id of shortcutIds) {
+            if (!existing.conflictingShortcutIds.includes(id)) {
+              existing.conflictingShortcutIds.push(id);
             }
           }
         } else {
-          collisionsByCombo.set(comboKey, {
-            keyCombo: comboChain,
-            conflictingHandlerIds: [...handlerIds],
+          collisionsByKeySeq.set(keySeqStringified, {
+            keySequence: comparableKeySeq,
+            conflictingShortcutIds: [...shortcutIds],
           });
         }
       }
     }
   }
-  return [...collisionsByCombo.values()].filter((collision) => !isAcceptedCollision(collision));
+  // Filtering out the accepted collision.
+  return [...collisionsByKeySeq.values()].filter((collision) => !isAcceptedCollision(collision));
 }
 
 export function checkCollisionForShortcut(
-  handlerIdOfShortcut: string,
+  keyboardShortcutId: KeyboardShortcutId,
   newKeyCombos: KeySequence[],
-  existingShortcutMap: KeyboardShortcutsMap<string>,
+  existingShortcutMap: KeyboardShortcutsMap,
 ): Collision[] {
-  const metaInfoOfShortcut = ALL_KEYBOARD_SHORTCUT_META_INFOS[handlerIdOfShortcut];
-  if (!metaInfoOfShortcut) return [];
-  const parentMap = buildParentMap(KeyboardShortcutCollisionHierarchy);
+  const metaInfoOfShortcut = ALL_KEYBOARD_SHORTCUT_META_INFOS[keyboardShortcutId];
+  if (!metaInfoOfShortcut) {
+    return [];
+  }
 
-  // Replace the handler's existing shortcuts with the new combos being validated.
-  const tempMap: KeyboardShortcutsMap<string> = { ...existingShortcutMap };
-  tempMap[handlerIdOfShortcut] = newKeyCombos;
+  // Replace the shortcut's existing key sequences alternatives with the key sequences alternatives being validated.
+  const tempMap: KeyboardShortcutsMap = { ...existingShortcutMap };
+  tempMap[keyboardShortcutId] = newKeyCombos;
 
-  const keyCombosToHandlerIds = getCollisionsForEntityInMap(
-    metaInfoOfShortcut.collisionEntityName,
+  const keySeqAndShortcutIdsTuples = createKeySequenceToShortcutIdsTuplesForCollisionDomain(
+    metaInfoOfShortcut.getCollisionDomain(),
     tempMap,
-    parentMap,
   );
   const collisions: Collision[] = [];
-  for (const [comboChain, handlerIds] of keyCombosToHandlerIds) {
-    if (handlerIds.includes(handlerIdOfShortcut) && handlerIds.length > 1) {
-      const fullCollision: Collision = { keyCombo: comboChain, conflictingHandlerIds: handlerIds };
+  for (const [comparableKeySeq, shortcutIds] of keySeqAndShortcutIdsTuples) {
+    if (shortcutIds.includes(keyboardShortcutId) && shortcutIds.length > 1) {
+      const fullCollision: Collision = {
+        keySequence: comparableKeySeq,
+        conflictingShortcutIds: shortcutIds,
+      };
       if (!isAcceptedCollision(fullCollision)) {
         collisions.push({
-          keyCombo: comboChain,
-          conflictingHandlerIds: handlerIds.filter((id) => id !== handlerIdOfShortcut),
+          keySequence: comparableKeySeq,
+          conflictingShortcutIds: shortcutIds.filter((id) => id !== keyboardShortcutId),
         });
       }
     }

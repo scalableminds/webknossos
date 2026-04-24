@@ -667,7 +667,7 @@ export type StoreDataset = APIDataset & {
 export type WebknossosState = {
   readonly datasetConfiguration: DatasetConfiguration;
   readonly userConfiguration: UserConfiguration;
-  readonly keyboardShortcutsConfig: KeyboardShortcutsMap<string>;
+  readonly keyboardShortcutsConfig: KeyboardShortcutsMap;
   readonly temporaryConfiguration: TemporaryConfiguration;
   readonly dataset: StoreDataset;
   readonly annotation: StoreAnnotation;

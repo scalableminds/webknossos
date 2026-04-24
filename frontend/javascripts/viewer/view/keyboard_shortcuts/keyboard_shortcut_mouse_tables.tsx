@@ -8,8 +8,8 @@ import IconStatusbarMouseWheel from "@images/icons/icon-statusbar-mouse-wheel.sv
 import { Table, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import React from "react";
-import { KeyboardShortcutDomain } from "./keyboard_shortcut_types";
-import { keyComboChainToUiElements } from "./keyboard_shortcut_utils";
+import type { KeyboardShortcutDomain } from "./keyboard_shortcut_types";
+import { keySequenceToUiElements } from "./keyboard_shortcut_utils";
 
 const { Title } = Typography;
 
@@ -78,8 +78,7 @@ function MouseShortcutDomainTable({
 const mergeActiveNodeEntry: MouseShortcutEntry = {
   shortcuts: [
     <React.Fragment key="1">
-      {keyComboChainToUiElements([["Shift"]], false)} +{" "}
-      {keyComboChainToUiElements([["Alt"]], false)} +{" "}
+      {keySequenceToUiElements([["Shift"]], false)} + {keySequenceToUiElements([["Alt"]], false)} +{" "}
       <Icon
         component={IconStatusbarMouseLeft}
         aria-label="Left Mouse Click"
@@ -93,9 +92,8 @@ const mergeActiveNodeEntry: MouseShortcutEntry = {
 const deleteEdgeEntry: MouseShortcutEntry = {
   shortcuts: [
     <React.Fragment key="1">
-      {keyComboChainToUiElements([["Shift"]], false)} +{" "}
-      {keyComboChainToUiElements([["Ctrl"]], false)}/{keyComboChainToUiElements([["Meta"]], false)}{" "}
-      +{" "}
+      {keySequenceToUiElements([["Shift"]], false)} + {keySequenceToUiElements([["Ctrl"]], false)}/
+      {keySequenceToUiElements([["Meta"]], false)} +{" "}
       <Icon
         component={IconStatusbarMouseLeft}
         aria-label="Left Mouse Click"
@@ -109,7 +107,7 @@ const deleteEdgeEntry: MouseShortcutEntry = {
 export function ArbitraryNavigationMouseShortcutsTable() {
   return (
     <MouseShortcutDomainTable
-      domainName={KeyboardShortcutDomain.ARBITRARY_NAVIGATION}
+      domainName="ARBITRARY_NAVIGATION"
       data={[
         {
           shortcuts: [
@@ -143,7 +141,7 @@ export function ArbitraryNavigationMouseShortcutsTable() {
 export function PlaneGeneralEditingMouseShortcutsTable() {
   return (
     <MouseShortcutDomainTable
-      domainName={KeyboardShortcutDomain.GENERAL_EDITING}
+      domainName="GENERAL_EDITING"
       data={[
         {
           shortcuts: [
@@ -164,7 +162,7 @@ export function PlaneGeneralEditingMouseShortcutsTable() {
 export function PlaneNavigationMouseShortcutsTable() {
   return (
     <MouseShortcutDomainTable
-      domainName={KeyboardShortcutDomain.PLANE_NAVIGATION}
+      domainName="PLANE_NAVIGATION"
       data={[
         {
           shortcuts: [
@@ -175,7 +173,7 @@ export function PlaneNavigationMouseShortcutsTable() {
               className="mouse-icon-large"
             />,
             <React.Fragment key="2">
-              {keyComboChainToUiElements([["Alt"]], false)} +{" "}
+              {keySequenceToUiElements([["Alt"]], false)} +{" "}
               <Icon
                 component={IconStatusbarMouseMove}
                 aria-label="Mouse Move"
@@ -232,7 +230,7 @@ export function PlaneTdViewportMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keyComboChainToUiElements([["Shift"]], false)} +{" "}
+              {keySequenceToUiElements([["Shift"]], false)} +{" "}
               <Icon
                 component={IconStatusbarMouseLeft}
                 aria-label="Left Mouse Click"
@@ -245,8 +243,8 @@ export function PlaneTdViewportMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keyComboChainToUiElements([["Ctrl"]], false)}/
-              {keyComboChainToUiElements([["Meta"]], false)} +{" "}
+              {keySequenceToUiElements([["Ctrl"]], false)}/
+              {keySequenceToUiElements([["Meta"]], false)} +{" "}
               <Icon
                 component={IconStatusbarMouseLeft}
                 aria-label="Left Mouse Click"
@@ -264,12 +262,12 @@ export function PlaneTdViewportMouseShortcutsTable() {
 export function SkeletonToolMouseShortcutsTable() {
   return (
     <MouseShortcutDomainTable
-      domainName={KeyboardShortcutDomain.PLANE_SKELETON_TOOL}
+      domainName="PLANE_SKELETON_TOOL"
       data={[
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keyComboChainToUiElements([["Shift"]], false)} +{" "}
+              {keySequenceToUiElements([["Shift"]], false)} +{" "}
               <Icon
                 component={IconStatusbarMouseWheel}
                 aria-label="Mouse Wheel"
@@ -325,7 +323,7 @@ export function SkeletonToolClassicControlsMouseShortcutsTable() {
   );
   return areClassicControlsUsed ? (
     <MouseShortcutDomainTable
-      domainName={KeyboardShortcutDomain.PLANE_SKELETON_TOOL}
+      domainName="PLANE_SKELETON_TOOL"
       classicControlsSpecific
       data={[
         {
@@ -342,7 +340,7 @@ export function SkeletonToolClassicControlsMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keyComboChainToUiElements([["Shift"]], false)} +{" "}
+              {keySequenceToUiElements([["Shift"]], false)} +{" "}
               <Icon
                 component={IconStatusbarMouseLeft}
                 aria-label="Left Mouse Click"
@@ -360,7 +358,7 @@ export function SkeletonToolClassicControlsMouseShortcutsTable() {
 export function VolumeToolMouseShortcutsTable() {
   return (
     <MouseShortcutDomainTable
-      domainName={KeyboardShortcutDomain.PLANE_VOLUME_TOOL}
+      domainName="PLANE_VOLUME_TOOL"
       data={[
         {
           shortcuts: [
@@ -376,8 +374,8 @@ export function VolumeToolMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keyComboChainToUiElements([["Ctrl"]], false)}/
-              {keyComboChainToUiElements([["Meta"]], false)} +{" "}
+              {keySequenceToUiElements([["Ctrl"]], false)}/
+              {keySequenceToUiElements([["Meta"]], false)} +{" "}
               <Icon
                 component={IconStatusbarMouseLeftDrag}
                 aria-label="Left Mouse Drag"
@@ -389,18 +387,16 @@ export function VolumeToolMouseShortcutsTable() {
         },
         {
           shortcuts: [
-            <React.Fragment key="1">
-              {keyComboChainToUiElements([["Shift"]], false)}
-            </React.Fragment>,
+            <React.Fragment key="1">{keySequenceToUiElements([["Shift"]], false)}</React.Fragment>,
           ],
           action: "Quick Switch to Segment Picker Tool",
         },
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keyComboChainToUiElements([["Ctrl"]], false)}/
-              {keyComboChainToUiElements([["Meta"]], false)} +{" "}
-              {keyComboChainToUiElements([["Shift"]], false)}
+              {keySequenceToUiElements([["Ctrl"]], false)}/
+              {keySequenceToUiElements([["Meta"]], false)} +{" "}
+              {keySequenceToUiElements([["Shift"]], false)}
             </React.Fragment>,
           ],
           action: "Quick Switch to Eraser Tool",
@@ -408,7 +404,7 @@ export function VolumeToolMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keyComboChainToUiElements([["Shift"]], false)} +{" "}
+              {keySequenceToUiElements([["Shift"]], false)} +{" "}
               <Icon
                 component={IconStatusbarMouseWheel}
                 aria-label="Mouse Wheel"
@@ -429,7 +425,7 @@ export function VolumeToolClassicControlsMouseShortcutsTable() {
   );
   return areClassicControlsUsed ? (
     <MouseShortcutDomainTable
-      domainName={KeyboardShortcutDomain.PLANE_VOLUME_TOOL}
+      domainName="PLANE_VOLUME_TOOL"
       classicControlsSpecific
       data={[
         {
@@ -446,8 +442,8 @@ export function VolumeToolClassicControlsMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keyComboChainToUiElements([["Ctrl"]], false)}/
-              {keyComboChainToUiElements([["Meta"]], false)} +{" "}
+              {keySequenceToUiElements([["Ctrl"]], false)}/
+              {keySequenceToUiElements([["Meta"]], false)} +{" "}
               <Icon
                 component={IconStatusbarMouseRightDrag}
                 aria-label="Right Mouse Drag"
@@ -465,13 +461,13 @@ export function VolumeToolClassicControlsMouseShortcutsTable() {
 export function ProofreadingToolMouseShortcutsTable() {
   return (
     <MouseShortcutDomainTable
-      domainName={KeyboardShortcutDomain.PLANE_PROOFREADING_TOOL}
+      domainName="PLANE_PROOFREADING_TOOL"
       data={[
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keyComboChainToUiElements([["Ctrl"]], false)}/
-              {keyComboChainToUiElements([["Meta"]], false)} +{" "}
+              {keySequenceToUiElements([["Ctrl"]], false)}/
+              {keySequenceToUiElements([["Meta"]], false)} +{" "}
               <Icon
                 component={IconStatusbarMouseLeft}
                 aria-label="Left Mouse Click"
@@ -484,9 +480,9 @@ export function ProofreadingToolMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keyComboChainToUiElements([["Ctrl"]], false)}/
-              {keyComboChainToUiElements([["Meta"]], false)} +{" "}
-              {keyComboChainToUiElements([["Shift"]], false)} +{" "}
+              {keySequenceToUiElements([["Ctrl"]], false)}/
+              {keySequenceToUiElements([["Meta"]], false)} +{" "}
+              {keySequenceToUiElements([["Shift"]], false)} +{" "}
               <Icon
                 component={IconStatusbarMouseLeft}
                 aria-label="Left Mouse Click"
@@ -504,7 +500,7 @@ export function ProofreadingToolMouseShortcutsTable() {
 export function ProofreadingToolOrthoMouseShortcutsTable() {
   return (
     <MouseShortcutDomainTable
-      domainName={KeyboardShortcutDomain.PLANE_PROOFREADING_TOOL}
+      domainName="PLANE_PROOFREADING_TOOL"
       orthoViewportOnly
       data={[
         {
@@ -521,7 +517,7 @@ export function ProofreadingToolOrthoMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keyComboChainToUiElements([["Shift"]], false)} +{" "}
+              {keySequenceToUiElements([["Shift"]], false)} +{" "}
               <Icon
                 component={IconStatusbarMouseWheel}
                 aria-label="Mouse Wheel Click"
@@ -534,7 +530,7 @@ export function ProofreadingToolOrthoMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keyComboChainToUiElements([["Shift"]], false)} +{" "}
+              {keySequenceToUiElements([["Shift"]], false)} +{" "}
               <Icon
                 component={IconStatusbarMouseLeft}
                 aria-label="Left Mouse Click"
@@ -547,8 +543,8 @@ export function ProofreadingToolOrthoMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keyComboChainToUiElements([["Ctrl"]], false)}/
-              {keyComboChainToUiElements([["Meta"]], false)} +{" "}
+              {keySequenceToUiElements([["Ctrl"]], false)}/
+              {keySequenceToUiElements([["Meta"]], false)} +{" "}
               <Icon
                 component={IconStatusbarMouseLeft}
                 aria-label="Left Mouse Click"
@@ -566,14 +562,14 @@ export function ProofreadingToolOrthoMouseShortcutsTable() {
 export function ProofreadingToolTDMouseShortcutsTable() {
   return (
     <MouseShortcutDomainTable
-      domainName={KeyboardShortcutDomain.PLANE_PROOFREADING_TOOL}
+      domainName="PLANE_PROOFREADING_TOOL"
       tdViewportOnly
       data={[
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keyComboChainToUiElements([["Ctrl"]], false)}/
-              {keyComboChainToUiElements([["Meta"]], false)} +{" "}
+              {keySequenceToUiElements([["Ctrl"]], false)}/
+              {keySequenceToUiElements([["Meta"]], false)} +{" "}
               <Icon
                 component={IconStatusbarMouseWheel}
                 aria-label="Mouse Wheel Click"

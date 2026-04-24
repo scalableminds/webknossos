@@ -262,7 +262,7 @@ export async function initialize(
     Toast.warning(messages["users.failed_parsing_keyboard_shortcuts_config"]);
     console.warn("Found errors while parsing user's keyboard shortcut configurations:", errors);
   }
-  const shortcuts: KeyboardShortcutsMap<string> =
+  const shortcuts: KeyboardShortcutsMap =
     parsed != null ? sanitizeKeyboardShortcuts(parsed) : getAllDefaultKeyboardShortcuts();
   Store.dispatch(setKeyboardShortcutsConfigAction(shortcuts));
 
@@ -338,7 +338,7 @@ async function fetchParallel(
   annotation: APIAnnotation | null | undefined,
   datasetId: string,
   version: number | undefined | null,
-): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>, KeyboardShortcutsMap<string>]> {
+): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>, KeyboardShortcutsMap]> {
   return Promise.all([
     getDataset(datasetId, getSharingTokenFromUrlParameters()),
     getUserConfiguration(), // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation

@@ -61,6 +61,7 @@ export type KeyboardLoopHandler = {
   delayed?: boolean;
 };
 export type KeyComboToLoopHandlerMap = Record<KeystrokesKeyComboStr, KeyboardLoopHandler>;
+export type KeyboardHandler = KeyboardLoopHandler | KeyboardNoLoopHandler;
 
 // Mouse related types
 type MouseClickEvents =
@@ -178,7 +179,7 @@ export class InputKeyboard {
   isPreventBrowserSearchbarShortcutActive: boolean = false;
 
   constructor(
-    initialBindings: Record<KeystrokesKeyComboStr, KeyboardNoLoopHandler | KeyboardLoopHandler>,
+    initialBindings: Record<KeystrokesKeyComboStr, KeyboardHandler>,
     options?: {
       supportInputElements?: boolean;
     },

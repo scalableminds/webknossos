@@ -56,11 +56,6 @@ import {
   buildKeyBindingsFromConfig,
   buildKeyBindingsFromConfigForTools,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_utils";
-import {
-  PlaneControllerLoopDelayedNavigationKeyboardShortcuts,
-  PlaneControllerLoopedNavigationKeyboardShortcuts,
-  PlaneControllerNoLoopGeneralKeyboardShortcuts,
-} from "viewer/view/keyboard_shortcuts/plane_mode/general_keyboard_shortcuts_constants";
 import PlaneView from "viewer/view/plane_view";
 import { downloadScreenshot } from "viewer/view/rendering_utils";
 
@@ -250,11 +245,7 @@ class PlaneController extends PureComponent<Props> {
     return controls;
   }
 
-  getHandlerMap(): KeyboardShortcutHandlerMap<
-    | PlaneControllerLoopedNavigationKeyboardShortcuts
-    | PlaneControllerLoopDelayedNavigationKeyboardShortcuts
-    | PlaneControllerNoLoopGeneralKeyboardShortcuts
-  > {
+  getHandlerMap(): Partial<KeyboardShortcutHandlerMap> {
     const axisIndexToRotation = {
       0: pitchFlycamAction,
       1: yawFlycamAction,
@@ -279,95 +270,95 @@ class PlaneController extends PureComponent<Props> {
     };
     return {
       // Looped navigation (no delay)
-      [PlaneControllerLoopedNavigationKeyboardShortcuts.MOVE_LEFT]: {
+      MOVE_LEFT: {
         onPressedWithRepeat: (timeFactor: number) =>
           moveU(-getMoveOffset(Store.getState(), timeFactor)),
       },
-      [PlaneControllerLoopedNavigationKeyboardShortcuts.MOVE_RIGHT]: {
+      MOVE_RIGHT: {
         onPressedWithRepeat: (timeFactor: number) =>
           moveU(getMoveOffset(Store.getState(), timeFactor)),
       },
-      [PlaneControllerLoopedNavigationKeyboardShortcuts.MOVE_UP]: {
+      MOVE_UP: {
         onPressedWithRepeat: (timeFactor: number) =>
           moveV(-getMoveOffset(Store.getState(), timeFactor)),
       },
-      [PlaneControllerLoopedNavigationKeyboardShortcuts.MOVE_DOWN]: {
+      MOVE_DOWN: {
         onPressedWithRepeat: (timeFactor: number) =>
           moveV(getMoveOffset(Store.getState(), timeFactor)),
       },
-      [PlaneControllerLoopedNavigationKeyboardShortcuts.YAW_LEFT]: {
+      YAW_LEFT: {
         onPressedWithRepeat: (timeFactor: number) => rotateViewportAware(timeFactor, 1, false),
       },
-      [PlaneControllerLoopedNavigationKeyboardShortcuts.YAW_RIGHT]: {
+      YAW_RIGHT: {
         onPressedWithRepeat: (timeFactor: number) => rotateViewportAware(timeFactor, 1, true),
       },
-      [PlaneControllerLoopedNavigationKeyboardShortcuts.PITCH_UP]: {
+      PITCH_UP: {
         onPressedWithRepeat: (timeFactor: number) => rotateViewportAware(timeFactor, 0, false),
       },
-      [PlaneControllerLoopedNavigationKeyboardShortcuts.PITCH_DOWN]: {
+      PITCH_DOWN: {
         onPressedWithRepeat: (timeFactor: number) => rotateViewportAware(timeFactor, 0, true),
       },
-      [PlaneControllerLoopedNavigationKeyboardShortcuts.ALT_ROLL_LEFT]: {
+      ALT_ROLL_LEFT: {
         onPressedWithRepeat: (timeFactor: number) => rotateViewportAware(timeFactor, 2, false),
       },
-      [PlaneControllerLoopedNavigationKeyboardShortcuts.ALT_ROLL_RIGHT]: {
+      ALT_ROLL_RIGHT: {
         onPressedWithRepeat: (timeFactor: number) => rotateViewportAware(timeFactor, 2, true),
       },
       // Looped navigation with delay
-      [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_MULTIPLE_FORWARD]: {
+      MOVE_MULTIPLE_FORWARD: {
         onPressedWithRepeat: createDelayAwareMoveHandler(5, true),
         delayed: true,
       },
-      [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_MULTIPLE_BACKWARD]: {
+      MOVE_MULTIPLE_BACKWARD: {
         onPressedWithRepeat: createDelayAwareMoveHandler(-5, true),
         delayed: true,
       },
-      [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_BACKWARD]: {
+      SHIFT_SPACE: {
         onPressedWithRepeat: createDelayAwareMoveHandler(-1),
         delayed: true,
       },
-      [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_FORWARD]: {
+      MOVE_ONE_FORWARD: {
         onPressedWithRepeat: createDelayAwareMoveHandler(1),
         delayed: true,
       },
-      [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_FORWARD_DIRECTION_AWARE]: {
+      MOVE_ONE_FORWARD_DIRECTION_AWARE: {
         onPressedWithRepeat: createDelayAwareMoveHandler(1, true),
         delayed: true,
       },
-      [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.MOVE_ONE_BACKWARD_DIRECTION_AWARE]: {
+      MOVE_ONE_BACKWARD_DIRECTION_AWARE: {
         onPressedWithRepeat: createDelayAwareMoveHandler(-1, true),
         delayed: true,
       },
-      [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.ZOOM_IN_PLANE]: {
+      ZOOM_IN_PLANE: {
         onPressedWithRepeat: () => zoom(1, false),
         delayed: true,
       },
-      [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.ZOOM_OUT_PLANE]: {
+      ZOOM_OUT_PLANE: {
         onPressedWithRepeat: () => zoom(-1, false),
         delayed: true,
       },
-      [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.INCREASE_MOVE_VALUE_PLANE]: {
+      INCREASE_MOVE_VALUE_PLANE: {
         onPressedWithRepeat: () => this.changeMoveValue(25),
         delayed: true,
       },
-      [PlaneControllerLoopDelayedNavigationKeyboardShortcuts.DECREASE_MOVE_VALUE_PLANE]: {
+      DECREASE_MOVE_VALUE_PLANE: {
         onPressedWithRepeat: () => this.changeMoveValue(-25),
         delayed: true,
       },
       // No-loop shortcuts
-      [PlaneControllerNoLoopGeneralKeyboardShortcuts.DOWNLOAD_SCREENSHOT_PLANE]: {
+      DOWNLOAD_SCREENSHOT_PLANE: {
         onPressed: () => downloadScreenshot(),
       },
-      [PlaneControllerNoLoopGeneralKeyboardShortcuts.CYCLE_TOOLS]: {
+      CYCLE_TOOLS: {
         onPressed: () => cycleTools(),
       },
-      [PlaneControllerNoLoopGeneralKeyboardShortcuts.CYCLE_TOOLS_BACKWARDS]: {
+      CYCLE_TOOLS_BACKWARDS: {
         onPressed: () => cycleToolsBackwards(),
       },
     };
   }
 
-  reloadKeyboardShortcuts(keyboardShortcutsConfig: KeyboardShortcutsMap<string>) {
+  reloadKeyboardShortcuts(keyboardShortcutsConfig: KeyboardShortcutsMap) {
     this.input.keyboard?.destroy();
 
     const controllerBindings = buildKeyBindingsFromConfig(

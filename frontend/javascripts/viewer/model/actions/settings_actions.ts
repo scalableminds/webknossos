@@ -264,7 +264,7 @@ export const initializeGpuSetupAction = (
     maximumLayerCountToRender,
   }) as const;
 
-export const setKeyboardShortcutsConfigAction = (shortcuts: KeyboardShortcutsMap<string>) =>
+export const setKeyboardShortcutsConfigAction = (shortcuts: KeyboardShortcutsMap) =>
   ({
     type: "SET_KEYBOARD_SHORTCUTS_CONFIG",
     shortcuts,

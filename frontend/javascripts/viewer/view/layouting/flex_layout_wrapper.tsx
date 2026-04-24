@@ -38,7 +38,6 @@ import SkeletonTabView from "viewer/view/right_border_tabs/trees_tab/skeleton_ta
 import Statusbar from "viewer/view/statusbar";
 import TDViewControls from "viewer/view/td_view_controls";
 import BorderToggleButton from "../components/border_toggle_button";
-import { GeneralLayoutKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcut_constants";
 import { loadKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcut_persistence";
 import type { KeyboardShortcutHandlerMap } from "../keyboard_shortcuts/keyboard_shortcut_types";
 import { buildKeyBindingsFromConfig } from "../keyboard_shortcuts/keyboard_shortcut_utils";
@@ -260,13 +259,13 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
     this.onAction(toggleMaximiseAction);
   };
 
-  getLayoutKeyboardShortcuts(): KeyboardShortcutHandlerMap<GeneralLayoutKeyboardShortcuts> {
+  getLayoutKeyboardShortcuts(): Partial<KeyboardShortcutHandlerMap> {
     return {
-      [GeneralLayoutKeyboardShortcuts.MAXIMIZE]: { onPressed: this.toggleMaximize },
-      [GeneralLayoutKeyboardShortcuts.TOGGLE_LEFT_BORDER]: {
+      MAXIMIZE: { onPressed: this.toggleMaximize },
+      TOGGLE_LEFT_BORDER: {
         onPressed: () => this.toggleBorder("left"),
       },
-      [GeneralLayoutKeyboardShortcuts.TOGGLE_RIGHT_BORDER]: {
+      TOGGLE_RIGHT_BORDER: {
         onPressed: () => this.toggleBorder("right"),
       },
     };

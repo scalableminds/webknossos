@@ -31,10 +31,6 @@ import Store from "viewer/store";
 import { AnnotationTool } from "./model/accessors/tool_accessor";
 import { setViewModeAction, updateLayerSettingAction } from "./model/actions/settings_actions";
 import type DataLayer from "./model/data_layer";
-import {
-  GeneralEditingKeyboardShortcuts,
-  GeneralKeyboardShortcuts,
-} from "./view/keyboard_shortcuts/keyboard_shortcut_constants";
 import type {
   KeyboardShortcutHandlerMap,
   KeyboardShortcutsMap,
@@ -61,13 +57,7 @@ type State = {
   organizationToSwitchTo: APIOrganization | null | undefined;
 };
 
-type ControllerEditAllowedKeyboardHandlerIdMap = KeyboardShortcutHandlerMap<
-  GeneralKeyboardShortcuts | GeneralEditingKeyboardShortcuts
->;
-type ControllerViewOnlyKeyboardHandlerIdMap = KeyboardShortcutHandlerMap<GeneralKeyboardShortcuts>;
-type ControllerKeyboardHandlerIdMap =
-  | ControllerEditAllowedKeyboardHandlerIdMap
-  | ControllerViewOnlyKeyboardHandlerIdMap;
+type ControllerKeyboardHandlerIdMap = Partial<KeyboardShortcutHandlerMap>;
 
 class Controller extends PureComponent<PropsWithRouter, State> {
   keyboard?: InputKeyboard;
@@ -263,8 +253,8 @@ class Controller extends PureComponent<PropsWithRouter, State> {
     const isInViewMode =
       Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
 
-    const editRelatedHandlers: KeyboardShortcutHandlerMap<GeneralEditingKeyboardShortcuts> = {
-      [GeneralEditingKeyboardShortcuts.SAVE]: {
+    const editRelatedHandlers: Partial<KeyboardShortcutHandlerMap> = {
+      SAVE: {
         onPressed: (event: KeyboardEvent) => {
           event.preventDefault();
           event.stopPropagation();
@@ -272,14 +262,14 @@ class Controller extends PureComponent<PropsWithRouter, State> {
         },
       },
       // Undo
-      [GeneralEditingKeyboardShortcuts.UNDO]: {
+      UNDO: {
         onPressed: (event: KeyboardEvent) => {
           event.preventDefault();
           event.stopPropagation();
           Store.dispatch(undoAction());
         },
       },
-      [GeneralEditingKeyboardShortcuts.REDO]: {
+      REDO: {
         onPressed: (event: KeyboardEvent) => {
           event.preventDefault();
           event.stopPropagation();
@@ -289,22 +279,22 @@ class Controller extends PureComponent<PropsWithRouter, State> {
     };
 
     const keyboardShortcutsHandlerMapForController: ControllerKeyboardHandlerIdMap = {
-      [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_PLANE]: {
+      SWITCH_VIEWMODE_PLANE: {
         onPressed: () => {
           Store.dispatch(setViewModeAction(constants.MODE_PLANE_TRACING));
         },
       },
-      [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_ARBITRARY]: {
+      SWITCH_VIEWMODE_ARBITRARY: {
         onPressed: () => {
           Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY));
         },
       },
-      [GeneralKeyboardShortcuts.SWITCH_VIEWMODE_ARBITRARY_PLANE]: {
+      SWITCH_VIEWMODE_ARBITRARY_PLANE: {
         onPressed: () => {
           Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY_PLANE));
         },
       },
-      [GeneralKeyboardShortcuts.CYCLE_VIEWMODE]: {
+      CYCLE_VIEWMODE: {
         onPressed: () => {
           // rotate allowed modes
           const state = Store.getState();
@@ -319,7 +309,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
           Store.dispatch(setViewModeAction(allowedModes[index]));
         },
       },
-      [GeneralKeyboardShortcuts.TOGGLE_SEGMENTATION]: {
+      TOGGLE_SEGMENTATION: {
         onPressed: toggleSegmentationOpacity,
         ...(isInViewMode ? {} : editRelatedHandlers),
       },
@@ -344,7 +334,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
     );
   }
 
-  reloadKeyboardShortcuts(keyboardShortcutsConfig: KeyboardShortcutsMap<string>) {
+  reloadKeyboardShortcuts(keyboardShortcutsConfig: KeyboardShortcutsMap) {
     if (this.keyboard) {
       this.keyboard.destroy();
     }

@@ -222,6 +222,12 @@ function _ShareModalView(props: Props) {
   const [newAllowConcurrentEditing, setNewAllowConcurrentEditing] =
     useState(allowConcurrentEditing);
 
+  useEffect(() => {
+    // Sync properties in case they changed from the outside.
+    setNewOthersMayEdit(othersMayEdit);
+    setNewAllowConcurrentEditing(allowConcurrentEditing);
+  }, [othersMayEdit, allowConcurrentEditing]);
+
   const hasUpdatePermissions = useWkSelector(mayEditAnnotationProperties);
   const annotationHasEditableMapping = useWkSelector(hasEditableMapping);
   useEffect(() => setVisibility(annotationVisibility), [annotationVisibility]);
@@ -314,25 +320,27 @@ function _ShareModalView(props: Props) {
       throw new Error("Form element should return boolean value.");
     }
 
+    if (value === newOthersMayEdit || !hasUpdatePermissions) {
+      return;
+    }
+
     setIsChangingInProgress(true);
     setNewOthersMayEdit(value);
-    if (value !== othersMayEdit) {
-      const collaborationMode = !value
-        ? "OwnerOnly"
-        : newAllowConcurrentEditing
-          ? "Concurrent"
-          : "Exclusive";
-      try {
-        await setCollaborationModeForAnnotation(annotationId, annotationType, collaborationMode);
-        dispatch(setCollaborationModeAction(collaborationMode));
-        reportSuccessfulChange(visibility);
-      } catch (e) {
-        console.error("Failed to update the edit option for others.", e);
-        setNewOthersMayEdit(othersMayEdit);
-        reportFailedChange();
-      } finally {
-        setIsChangingInProgress(false);
-      }
+    const collaborationMode = !value
+      ? "OwnerOnly"
+      : newAllowConcurrentEditing
+        ? "Concurrent"
+        : "Exclusive";
+    try {
+      await setCollaborationModeForAnnotation(annotationId, annotationType, collaborationMode);
+      dispatch(setCollaborationModeAction(collaborationMode));
+      reportSuccessfulChange(visibility);
+    } catch (e) {
+      console.error("Failed to update the edit option for others.", e);
+      setNewOthersMayEdit(othersMayEdit);
+      reportFailedChange();
+    } finally {
+      setIsChangingInProgress(false);
     }
   };
 
@@ -344,8 +352,13 @@ function _ShareModalView(props: Props) {
       );
       return;
     }
+    if (!hasUpdatePermissions) {
+      return;
+    }
+
     setIsChangingInProgress(true);
     setNewAllowConcurrentEditing(value);
+
     if (value !== allowConcurrentEditing) {
       const collaborationMode = !newOthersMayEdit
         ? "OwnerOnly"

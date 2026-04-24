@@ -46,6 +46,9 @@ type SetKeyboardShortcutConfigModalVisibilityAction = ReturnType<
   typeof setKeyboardShortcutConfigModalVisibilityAction
 >;
 type SetMergeModalVisibilityAction = ReturnType<typeof setMergeModalVisibilityAction>;
+type SetDuplicateAnnotationModalVisibilityAction = ReturnType<
+  typeof setDuplicateAnnotationModalVisibilityAction
+>;
 
 export type UiAction =
   | SetDropzoneModalVisibilityAction
@@ -67,6 +70,7 @@ export type UiAction =
   | SetUserScriptsModalVisibilityAction
   | SetZarrLinksModalVisibilityAction
   | SetKeyboardShortcutConfigModalVisibilityAction
+  | SetDuplicateAnnotationModalVisibilityAction
   | SetBusyBlockingInfoAction
   | AllowSagaWhileBusyAction
   | DisallowSagaWhileBusyAction
@@ -173,6 +177,11 @@ export const setZarrLinksModalVisibilityAction = (visible: boolean) =>
 export const setKeyboardShortcutConfigModalVisibilityAction = (visible: boolean) =>
   ({
     type: "SET_KEYBOARD_SHORTCUT_CONFIG_MODAL_VISIBILITY",
+    visible,
+  }) as const;
+export const setDuplicateAnnotationModalVisibilityAction = (visible: boolean) =>
+  ({
+    type: "SET_DUPLICATE_ANNOTATION_MODAL_VISIBILITY",
     visible,
   }) as const;
 export const setBusyBlockingInfoAction = (isBusy: boolean, reason?: string) =>

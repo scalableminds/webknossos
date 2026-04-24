@@ -12,7 +12,7 @@ import {
   StopOutlined,
   UnlockOutlined,
 } from "@ant-design/icons";
-import { duplicateAnnotation, editLockedState, finishAnnotation } from "admin/rest_api";
+import { editLockedState, finishAnnotation } from "admin/rest_api";
 import { App } from "antd";
 import type { useAppProps } from "antd/es/app/context";
 import type { ItemType, SubMenuType } from "antd/es/menu/interface";
@@ -27,6 +27,7 @@ import Constants, { ControlModeEnum } from "viewer/constants";
 import { disableSavingAction } from "viewer/model/actions/save_actions";
 import {
   setDownloadModalVisibilityAction,
+  setDuplicateAnnotationModalVisibilityAction,
   setKeyboardShortcutConfigModalVisibilityAction,
   setMergeModalVisibilityAction,
   setShareModalVisibilityAction,
@@ -82,6 +83,10 @@ const handleShowKeyboardShortcutConfigModal = () => {
   Store.dispatch(setKeyboardShortcutConfigModalVisibilityAction(true));
 };
 
+const handleDuplicateOpen = () => {
+  Store.dispatch(setDuplicateAnnotationModalVisibilityAction(true));
+};
+
 const handleChangeLockedStateOfAnnotation = async (
   isLocked: boolean,
   annotationId: string,
@@ -117,12 +122,6 @@ const handleFinish = async (
   });
 };
 
-const handleDuplicate = async (annotationId: string, annotationType: APIAnnotationType) => {
-  await Model.ensureSavedState();
-  const newAnnotation = await duplicateAnnotation(annotationId, annotationType);
-  window.open(`/annotations/${newAnnotation.id}`, "_blank", "noopener,noreferrer");
-};
-
 export type TracingViewMenuProps = {
   restrictions: RestrictionsAndSettings;
   task: Task | null | undefined;
@@ -140,7 +139,6 @@ export const useTracingViewMenuItems = (
   // Explicitly use very "precise" selectors to avoid unnecessary re-renders
   const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
-
   const { modal } = App.useApp();
 
   const {
@@ -193,7 +191,7 @@ export const useTracingViewMenuItems = (
     if (activeUser != null) {
       menuItems.push({
         key: "duplicate-button",
-        onClick: () => handleDuplicate(annotationId, annotationType),
+        onClick: handleDuplicateOpen,
         icon: <CopyOutlined />,
         label: "Duplicate",
       });

@@ -274,6 +274,7 @@ const defaultState: WebknossosState = {
     showZarrPrivateLinksModal: false,
     showKeyboardShortcutConfigModal: false,
     showPythonClientModal: false,
+    showDuplicateAnnotationModal: false,
     aIJobDrawerState: "invisible",
     showRenderAnimationModal: false,
     showShareModal: false,

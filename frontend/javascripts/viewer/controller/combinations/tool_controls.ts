@@ -299,6 +299,7 @@ export class MoveToolController extends ToolController {
     return { ...leftClickInfo, leftDrag: "Move", rightClick: "Context Menu" };
   }
 }
+
 export class SkeletonToolController extends ToolController {
   static getMouseControls(_planeId: OrthoView, planeView: PlaneView): MouseBindingMap {
     const legacyRightClick = (
@@ -321,8 +322,23 @@ export class SkeletonToolController extends ToolController {
     };
 
     let draggingNodeId: number | null | undefined = null;
-    let lastContinouslyPlacedNodeTimestamp: number | null = null;
+    let lastContinuouslyPlacedNodeTimestamp: number | null = null;
     let didDragNode: boolean = false;
+
+    const maybePlaceContinuousNode = (pos: Point2, plane: string | null | undefined) => {
+      if (
+        lastContinuouslyPlacedNodeTimestamp &&
+        Date.now() - lastContinuouslyPlacedNodeTimestamp < 200
+      ) {
+        return;
+      }
+      lastContinuouslyPlacedNodeTimestamp = Date.now();
+      if (plane) {
+        const globalPosition = calculateGlobalPos(Store.getState(), pos);
+        api.tracing.createNode(globalPosition.rounded, { center: false });
+      }
+    };
+
     return {
       leftMouseDown: (pos: Point2, plane: OrthoView, _event: MouseEvent, isTouch: boolean) => {
         const { useLegacyBindings } = Store.getState().userConfiguration;
@@ -350,19 +366,8 @@ export class SkeletonToolController extends ToolController {
         const { annotation, userConfiguration } = Store.getState();
         const { useLegacyBindings, continuousNodeCreation } = userConfiguration;
 
-        if (continuousNodeCreation) {
-          if (
-            lastContinouslyPlacedNodeTimestamp &&
-            Date.now() - lastContinouslyPlacedNodeTimestamp < 200
-          ) {
-            return;
-          }
-          lastContinouslyPlacedNodeTimestamp = Date.now();
-
-          if (plane) {
-            const globalPosition = calculateGlobalPos(Store.getState(), pos);
-            api.tracing.createNode(globalPosition.rounded, { center: false });
-          }
+        if (continuousNodeCreation && !useLegacyBindings) {
+          maybePlaceContinuousNode(pos, plane);
         } else {
           if (
             annotation.skeleton != null &&
@@ -374,6 +379,21 @@ export class SkeletonToolController extends ToolController {
             handleMovePlane(delta);
           }
         }
+      },
+      rightDownMove: (
+        _delta: Point2,
+        pos: Point2,
+        plane: string | null | undefined,
+        _event: MouseEvent,
+      ) => {
+        const { userConfiguration } = Store.getState();
+        const { useLegacyBindings, continuousNodeCreation } = userConfiguration;
+
+        if (!useLegacyBindings || !continuousNodeCreation) {
+          return;
+        }
+
+        maybePlaceContinuousNode(pos, plane);
       },
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         this.onLeftClick(
@@ -387,9 +407,9 @@ export class SkeletonToolController extends ToolController {
         );
       },
       rightClick: (position: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
-        const { useLegacyBindings, continuousNodeCreation } = Store.getState().userConfiguration;
+        const { useLegacyBindings } = Store.getState().userConfiguration;
 
-        if (useLegacyBindings && !continuousNodeCreation) {
+        if (useLegacyBindings) {
           legacyRightClick(position, plane, event, isTouch);
           return;
         }
@@ -411,7 +431,7 @@ export class SkeletonToolController extends ToolController {
   ): void {
     const { useLegacyBindings, continuousNodeCreation } = Store.getState().userConfiguration;
 
-    if (continuousNodeCreation && allowNodeCreation) {
+    if (continuousNodeCreation && allowNodeCreation && !useLegacyBindings) {
       handleCreateNodeFromEvent(position, ctrlPressed);
       return;
     }
@@ -520,6 +540,13 @@ export class SkeletonToolController extends ToolController {
     const { continuousNodeCreation } = Store.getState().userConfiguration;
     const { useLegacyBindings } = userConfiguration;
     if (continuousNodeCreation) {
+      if (useLegacyBindings) {
+        return {
+          leftDrag: "Move",
+          rightClick: "Place node",
+          rightDrag: "Draw nodes",
+        };
+      }
       return {
         leftClick: "Place node",
         leftDrag: "Draw nodes",
@@ -825,6 +852,7 @@ export class EraseToolController extends VolumeToolController {
 
   static onToolDeselected() {}
 }
+
 export class VoxelPipetteToolController extends ToolController {
   static getPlaneMouseControls(_planeId: OrthoView): MouseBindingMap {
     return {
@@ -904,6 +932,7 @@ export class FillCellToolController extends ToolController {
 
   static onToolDeselected() {}
 }
+
 export class BoundingBoxToolController extends ToolController {
   static getPlaneMouseControls(planeId: OrthoView, planeView: PlaneView): MouseBindingMap {
     let primarySelectedEdge: SelectedEdge | null | undefined = null;

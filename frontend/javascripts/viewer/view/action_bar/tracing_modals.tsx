@@ -20,12 +20,13 @@ import UserScriptsModalView from "viewer/view/action_bar/user_scripts_modal_view
 import KeyboardShortcutConfigModal from "../keyboard_shortcuts/keyboard_shortcut_config_modal";
 import CreateAnimationModal from "./create_animation_modal";
 import { PrivateLinksModal } from "./private_links_view";
+import { DuplicateAnnotationModal } from "./tools/duplicate_annotation_modal";
 
 function TracingModals() {
   const dispatch = useDispatch();
 
   const annotationType = useWkSelector((state) => state.annotation.annotationType);
-  const annotationId = useWkSelector((state) => state.annotation.annotationId);
+  const { annotationId, owner: annotationOwner } = useWkSelector((state) => state.annotation);
   const restrictions = useWkSelector((state) => state.annotation.restrictions);
   const activeUser = useWkSelector((state) => state.activeUser);
   const showDownloadModal = useWkSelector((state) => state.uiInformation.showDownloadModal);
@@ -42,6 +43,9 @@ function TracingModals() {
   );
   const showKeyboardShortcutConfigModal = useWkSelector(
     (state) => state.uiInformation.showKeyboardShortcutConfigModal,
+  );
+  const showDuplicateAnnotationModal = useWkSelector(
+    (state) => state.uiInformation.showDuplicateAnnotationModal,
   );
   const viewMode = useWkSelector((state) => state.temporaryConfiguration.viewMode);
 
@@ -92,6 +96,16 @@ function TracingModals() {
         isOpen={showZarrPrivateLinksModal}
         onOk={handleZarrLinksClose}
         annotationId={annotationId}
+      />,
+    );
+
+    modalList.push(
+      <DuplicateAnnotationModal
+        key="duplicate-annotation-modal"
+        annotationId={annotationId}
+        annotationType={annotationType}
+        open={showDuplicateAnnotationModal}
+        copyToOwnAccount={annotationOwner?.id !== activeUser?.id}
       />,
     );
 
@@ -150,6 +164,7 @@ function TracingModals() {
     showAddScriptModal,
     showRenderAnimationModal,
     showKeyboardShortcutConfigModal,
+    showDuplicateAnnotationModal,
     viewMode,
     annotationId,
     annotationType,
@@ -160,6 +175,8 @@ function TracingModals() {
     handleUserScriptsClose,
     handleZarrLinksClose,
     handleRenderAnimationClose,
+    handleKeyboardShortcutConfigClose,
+    annotationOwner?.id,
   ]);
 
   const userTheme = getThemeFromUser(activeUser);

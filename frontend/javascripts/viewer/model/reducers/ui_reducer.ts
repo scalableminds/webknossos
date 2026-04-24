@@ -135,6 +135,12 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
+    case "SET_DUPLICATE_ANNOTATION_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showDuplicateAnnotationModal: action.visible,
+      });
+    }
+
     case "SET_CREATE_ANIMATION_MODAL_VISIBILITY": {
       return updateKey(state, "uiInformation", {
         showRenderAnimationModal: action.visible,

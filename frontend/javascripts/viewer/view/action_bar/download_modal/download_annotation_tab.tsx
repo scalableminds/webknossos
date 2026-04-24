@@ -20,24 +20,6 @@ export function DownloadAnnotationTab({ onClose }: { onClose: () => void }) {
   const isVolumeNDimensional = annotation.volumes.some(
     (tracing) => tracing.additionalAxes.length > 0,
   );
-
-  const maybeShowWarning = () => {
-    const volumeFallbackWarning = hasVolumeFallback ? (
-      <Row key="no-fallback">
-        <Typography.Text
-          style={{
-            margin: "0 6px 12px",
-          }}
-          type="warning"
-        >
-          {messages["annotation.no_fallback_data_included"]}
-        </Typography.Text>
-      </Row>
-    ) : null;
-
-    return volumeFallbackWarning;
-  };
-
   const initialFileFormatToDownload = hasVolumes ? "zarr3" : "nml";
   const [fileFormatToDownload, setFileFormatToDownload] = useState<"zarr3" | "wkw" | "nml">(
     initialFileFormatToDownload,
@@ -55,6 +37,23 @@ export function DownloadAnnotationTab({ onClose }: { onClose: () => void }) {
       includeVolumeData,
     );
     onClose();
+  };
+
+  const maybeShowWarning = () => {
+    const volumeFallbackWarning = hasVolumeFallback ? (
+      <Row key="no-fallback">
+        <Typography.Text
+          style={{
+            margin: "0 6px 12px",
+          }}
+          type="warning"
+        >
+          {messages["annotation.no_fallback_data_included"]}
+        </Typography.Text>
+      </Row>
+    ) : null;
+
+    return volumeFallbackWarning;
   };
 
   return (

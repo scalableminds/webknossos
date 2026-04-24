@@ -164,20 +164,35 @@ export function DownloadTiffTab({
 }) {
   const annotation = useWkSelector((state) => state.annotation);
   const dataset = useWkSelector((state) => state.dataset);
+  const rawUserBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state));
+  const isMergerModeEnabled = useWkSelector(
+    (state) => state.temporaryConfiguration.isMergerModeEnabled,
+  );
+  const currentAdditionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
 
   const [keepWindowOpen, setKeepWindowOpen] = useState(true);
   const [selectedLayerName, setSelectedLayerName] = useState<string>(
     dataset.dataSource.dataLayers[0].name,
   );
+  const [exportFormat, setExportFormat] = useState<ExportFormat>(ExportFormat.OME_TIFF);
+
+  const { runningJobs: runningExportJobs, startJob } = useStartAndPollJob({
+    async onSuccess(job) {
+      if (job.resultLink != null) {
+        const token = await doWithToken(async (t) => t);
+        downloadWithFilename(`${job.resultLink}?token=${token}`);
+      }
+    },
+    onFailure() {
+      Toast.error("Error when exporting data. Please contact us for support.");
+    },
+  });
 
   const typeName = isAnnotation ? "annotation" : "dataset";
   const layers = getDataLayers(dataset);
-
   const selectedLayer = getLayerByName(dataset, selectedLayerName);
   const selectedLayerInfos = getExportLayerInfos(selectedLayer, annotation);
   const selectedLayerMagInfo = getMagInfo(selectedLayer.mags);
-
-  const rawUserBoundingBoxes = useWkSelector((state) => getUserBoundingBoxesFromState(state));
 
   const userBoundingBoxes = [
     ...rawUserBoundingBoxes,
@@ -194,9 +209,8 @@ export function DownloadTiffTab({
     initialBoundingBoxId ?? userBoundingBoxes[0].id,
   );
   const [rawMag, setMag] = useState<Vector3>(selectedLayerMagInfo.getFinestMag());
-  const mag = selectedLayerMagInfo.getClosestExistingMag(rawMag);
-  const [exportFormat, setExportFormat] = useState<ExportFormat>(ExportFormat.OME_TIFF);
 
+  const mag = selectedLayerMagInfo.getClosestExistingMag(rawMag);
   const selectedBoundingBox = userBoundingBoxes.find(
     (bbox) => bbox.id === selectedBoundingBoxId,
   ) as UserBoundingBox;
@@ -205,33 +219,15 @@ export function DownloadTiffTab({
     mag,
   );
   const onlyOneMagAvailable = selectedLayerMagInfo.getMagList().length === 1;
-  const isMergerModeEnabled = useWkSelector(
-    (state) => state.temporaryConfiguration.isMergerModeEnabled,
+  const isCurrentlyRunningExportJob = runningExportJobs.some(
+    ([key]) => key === exportKey(selectedLayerInfos, mag),
   );
-  const currentAdditionalCoordinates = useWkSelector((state) => state.flycam.additionalCoordinates);
-
-  const { runningJobs: runningExportJobs, startJob } = useStartAndPollJob({
-    async onSuccess(job) {
-      if (job.resultLink != null) {
-        const token = await doWithToken(async (t) => t);
-        downloadWithFilename(`${job.resultLink}?token=${token}`);
-      }
-    },
-    onFailure() {
-      Toast.error("Error when exporting data. Please contact us for support.");
-    },
-  });
+  const isDownloadButtonDisabled =
+    !isExportable || isCurrentlyRunningExportJob || isMergerModeEnabled;
 
   const handleKeepWindowOpenChecked = (e: any) => {
     setKeepWindowOpen(e.target.checked);
   };
-
-  const isCurrentlyRunningExportJob = runningExportJobs.some(
-    ([key]) => key === exportKey(selectedLayerInfos, mag),
-  );
-
-  const isDownloadButtonDisabled =
-    !isExportable || isCurrentlyRunningExportJob || isMergerModeEnabled;
 
   const handleExport = async () => {
     if (startJob == null) {

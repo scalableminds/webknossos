@@ -2436,15 +2436,10 @@ export function deleteWorkflow(workflowHash: string): Promise<void> {
 
 // ### Help / Feedback userEmail
 export function sendHelpEmail(message: string) {
-  return Request.receiveJSON(
-    `/api/helpEmail?${new URLSearchParams({
-      message,
-      currentUrl: window.location.href,
-    })}`,
-    {
-      method: "POST",
-    },
-  );
+  return Request.sendJSONReceiveJSON(`/api/helpEmail`, {
+    method: "POST",
+    data: { message, currentUrl: window.location.href },
+  });
 }
 
 export function requestSingleSignOnLogin() {

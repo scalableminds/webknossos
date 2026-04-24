@@ -32,20 +32,38 @@ export type DisabledInfo = {
   explanation: string;
 };
 
-const ZOOM_IN_TO_USE_TOOL_MESSAGE =
-  "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted magnifications from the extended annotation menu in the dashboard.";
-
-const NO_SKELETONS_EXPLANATION =
-  "This annotation does not have a skeleton. Please convert it to a hybrid annotation.";
-
-const DISABLED_SKELETON_EXPLANATION =
-  "Currently all trees are invisible. To use this tool, make the skeleton layer visible by toggling the button in the left sidebar.";
-
-const ROTATION_ACTIVE_DISABLED_EXPLANATION =
-  "The tool is disabled because you are currently viewing the dataset rotated. Please reset the rotation to 0,0,0 to be able to use this tool.";
-
-const TOOL_DISABLED_BECAUSE_OF_LIVE_COLLAB_MODE =
-  "is disabled because simultaneous editing is enabled in the sharing settings. Currently, only proofreading is allowed in that mode.";
+const DISABLED_EXPLANATION = {
+  ZOOM_IN_TO_USE_TOOL:
+    "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted magnifications from the extended annotation menu in the dashboard.",
+  ZOOM_INVALID_FOR_TRACING:
+    "Volume annotation is disabled since the current zoom value is not in the required range. Please adjust the zoom level.",
+  NO_SKELETONS:
+    "This annotation does not have a skeleton. Please convert it to a hybrid annotation.",
+  DISABLED_SKELETON:
+    "Currently all trees are invisible. To use this tool, make the skeleton layer visible by toggling the button in the left sidebar.",
+  ROTATION_ACTIVE:
+    "The tool is disabled because you are currently viewing the dataset rotated. Please reset the rotation to 0,0,0 to be able to use this tool.",
+  LIVE_COLLAB_MODE:
+    "is disabled because simultaneous editing is enabled in the sharing settings. Currently, only proofreading is allowed in that mode.",
+  NO_VISIBLE_SEGMENTATION_TRACING:
+    "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable one in the left settings sidebar or make a segmentation layer editable via the lock icon.",
+  MERGER_MODE_ACTIVE: "Volume annotation is disabled while the merger mode is active.",
+  NO_SEGMENTATION_FOR_MAG:
+    "Volume annotation is disabled since no segmentation data can be shown at the current magnification. Please adjust the zoom level.",
+  EDITABLE_MAPPING_ACTIVE: "Volume annotation is disabled because an editable mapping is active.",
+  SEGMENTATION_LAYER_TRANSFORMED:
+    "Volume annotation is disabled because the visible segmentation layer is transformed. Use the left sidebar to render the segmentation layer without any transformations.",
+  JSON_MAPPING_ACTIVE:
+    "Volume annotation is disabled because a JSON mapping is currently active for the the visible segmentation layer. Disable the JSON mapping to enable volume annotation.",
+  UNEDITABLE_MAPPING_LOCKED:
+    "A mapping that does not support proofreading actions is locked to this annotation. Most likely, the annotation layer was modified earlier (e.g. by brushing).",
+  SKELETON_LAYER_TRANSFORMED:
+    "Skeleton annotation is disabled because the skeleton layer is transformed. Use the left sidebar to render the skeleton layer without any transformations.",
+  BOUNDING_BOX_TRANSFORMED_WITH_SKELETON:
+    "The bounding box tool is disabled because the bounding boxes are currently transformed according to the skeleton layer. To use the tool, ensure that the skeleton layer is rendered natively in the left sidebar.",
+  BOUNDING_BOX_TRANSFORMED:
+    "The bounding box tool is disabled because the bounding boxes are rendered with transforms.",
+};
 
 type Params = {
   isSegmentationTracingVisible: boolean;
@@ -96,55 +114,43 @@ class DisableRule {
 const noVisibleSegmentationTracingRule = new DisableRule(
   VolumeToolsWithProofreading,
   ({ isSegmentationTracingVisible }) =>
-    isSegmentationTracingVisible
-      ? null
-      : "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable one in the left settings sidebar or make a segmentation layer editable via the lock icon.",
+    isSegmentationTracingVisible ? null : DISABLED_EXPLANATION.NO_VISIBLE_SEGMENTATION_TRACING,
 );
 
 const rotationVolumeRule = new DisableRule(VolumeToolsWithProofreading, ({ isFlycamRotated }) =>
-  isFlycamRotated ? ROTATION_ACTIVE_DISABLED_EXPLANATION : null,
+  isFlycamRotated ? DISABLED_EXPLANATION.ROTATION_ACTIVE : null,
 );
 
 const zoomInvalidForTracingVolumeRule = new DisableRule(
   VolumeToolsWithProofreading,
   ({ isZoomInvalidForTracing }) =>
-    isZoomInvalidForTracing
-      ? "Volume annotation is disabled since the current zoom value is not in the required range. Please adjust the zoom level."
-      : null,
+    isZoomInvalidForTracing ? DISABLED_EXPLANATION.ZOOM_INVALID_FOR_TRACING : null,
 );
 
 const mergerModeVolumeRule = new DisableRule(VolumeToolsWithProofreading, ({ isInMergerMode }) =>
-  isInMergerMode ? "Volume annotation is disabled while the merger mode is active." : null,
+  isInMergerMode ? DISABLED_EXPLANATION.MERGER_MODE_ACTIVE : null,
 );
 
 const noSegmentationForMagRule = new DisableRule(
   VolumeToolsWithProofreading,
   ({ isSegmentationTracingVisibleForMag }) =>
-    isSegmentationTracingVisibleForMag
-      ? null
-      : "Volume annotation is disabled since no segmentation data can be shown at the current magnification. Please adjust the zoom level.",
+    isSegmentationTracingVisibleForMag ? null : DISABLED_EXPLANATION.NO_SEGMENTATION_FOR_MAG,
 );
 
 const editableMappingActiveRule = new DisableRule(VolumeTools, ({ isEditableMappingActive }) =>
-  isEditableMappingActive
-    ? "Volume annotation is disabled because an editable mapping is active."
-    : null,
+  isEditableMappingActive ? DISABLED_EXPLANATION.EDITABLE_MAPPING_ACTIVE : null,
 );
 
 const segmentationTransformedRule = new DisableRule(
   VolumeToolsWithProofreading,
   ({ isSegmentationTracingTransformed }) =>
-    isSegmentationTracingTransformed
-      ? "Volume annotation is disabled because the visible segmentation layer is transformed. Use the left sidebar to render the segmentation layer without any transformations."
-      : null,
+    isSegmentationTracingTransformed ? DISABLED_EXPLANATION.SEGMENTATION_LAYER_TRANSFORMED : null,
 );
 
 const jsonMappingActiveRule = new DisableRule(
   VolumeToolsWithProofreading,
   ({ isJSONMappingActive }) =>
-    isJSONMappingActive
-      ? "Volume annotation is disabled because a JSON mapping is currently active for the the visible segmentation layer. Disable the JSON mapping to enable volume annotation."
-      : null,
+    isJSONMappingActive ? DISABLED_EXPLANATION.JSON_MAPPING_ACTIVE : null,
 );
 
 // Zoom-based rules that only apply per individual tool type when volume is not globally disabled.
@@ -152,19 +158,19 @@ const jsonMappingActiveRule = new DisableRule(
 const brushZoomRule = new DisableRule(
   [AnnotationTool.BRUSH, AnnotationTool.ERASE_BRUSH],
   ({ isZoomStepTooHighForBrushing }) =>
-    isZoomStepTooHighForBrushing ? ZOOM_IN_TO_USE_TOOL_MESSAGE : null,
+    isZoomStepTooHighForBrushing ? DISABLED_EXPLANATION.ZOOM_IN_TO_USE_TOOL : null,
 );
 
 const traceZoomRule = new DisableRule(
   [AnnotationTool.TRACE, AnnotationTool.ERASE_TRACE],
   ({ isZoomStepTooHighForTracing }) =>
-    isZoomStepTooHighForTracing ? ZOOM_IN_TO_USE_TOOL_MESSAGE : null,
+    isZoomStepTooHighForTracing ? DISABLED_EXPLANATION.ZOOM_IN_TO_USE_TOOL : null,
 );
 
 const fillZoomRule = new DisableRule(
   [AnnotationTool.FILL_CELL, AnnotationTool.QUICK_SELECT],
   ({ isZoomStepTooHighForFilling }) =>
-    isZoomStepTooHighForFilling ? ZOOM_IN_TO_USE_TOOL_MESSAGE : null,
+    isZoomStepTooHighForFilling ? DISABLED_EXPLANATION.ZOOM_IN_TO_USE_TOOL : null,
 );
 
 const proofreadRule = new DisableRule([AnnotationTool.PROOFREAD], (params) => {
@@ -176,7 +182,7 @@ const proofreadRule = new DisableRule([AnnotationTool.PROOFREAD], (params) => {
   );
 
   if (isUneditableMappingLocked) {
-    return "A mapping that does not support proofreading actions is locked to this annotation. Most likely, the annotation layer was modified earlier (e.g. by brushing).";
+    return DISABLED_EXPLANATION.UNEDITABLE_MAPPING_LOCKED;
   }
   if (!agglomerateState.value) return agglomerateState.reason;
   if (!isAllowedByPricingPlan) {
@@ -191,33 +197,32 @@ const proofreadRule = new DisableRule([AnnotationTool.PROOFREAD], (params) => {
 
 const noSkeletonRule = new DisableRule(
   [AnnotationTool.SKELETON, AnnotationTool.PROOFREAD],
-  ({ hasSkeleton }) => (hasSkeleton ? null : NO_SKELETONS_EXPLANATION),
+  ({ hasSkeleton }) => (hasSkeleton ? null : DISABLED_EXPLANATION.NO_SKELETONS),
 );
 
 const skeletonNotVisibleRule = new DisableRule(
   [AnnotationTool.SKELETON],
-  ({ areSkeletonsVisible }) => (areSkeletonsVisible ? null : DISABLED_SKELETON_EXPLANATION),
+  ({ areSkeletonsVisible }) =>
+    areSkeletonsVisible ? null : DISABLED_EXPLANATION.DISABLED_SKELETON,
 );
 
 const skeletonTransformedRule = new DisableRule(
   [AnnotationTool.SKELETON],
   ({ areGeometriesTransformed }) =>
-    areGeometriesTransformed
-      ? "Skeleton annotation is disabled because the skeleton layer is transformed. Use the left sidebar to render the skeleton layer without any transformations."
-      : null,
+    areGeometriesTransformed ? DISABLED_EXPLANATION.SKELETON_LAYER_TRANSFORMED : null,
 );
 
 const concurrentCollabModeRule = new DisableRule(
   [AnnotationTool.SKELETON, ...VolumeTools, AnnotationTool.BOUNDING_BOX],
   ({ isConcurrentCollabMode }, tool) =>
     isConcurrentCollabMode
-      ? `The ${tool.readableName} ${TOOL_DISABLED_BECAUSE_OF_LIVE_COLLAB_MODE}`
+      ? `The ${tool.readableName} ${DISABLED_EXPLANATION.LIVE_COLLAB_MODE}`
       : null,
 );
 
 const boundingBoxRotationRule = new DisableRule(
   [AnnotationTool.BOUNDING_BOX],
-  ({ isFlycamRotated }) => (isFlycamRotated ? ROTATION_ACTIVE_DISABLED_EXPLANATION : null),
+  ({ isFlycamRotated }) => (isFlycamRotated ? DISABLED_EXPLANATION.ROTATION_ACTIVE : null),
 );
 
 const boundingBoxTransformedRule = new DisableRule(
@@ -225,14 +230,14 @@ const boundingBoxTransformedRule = new DisableRule(
   ({ areGeometriesTransformed, hasSkeleton }) =>
     areGeometriesTransformed
       ? hasSkeleton
-        ? "The bounding box tool is disabled because the bounding boxes are currently transformed according to the skeleton layer. To use the tool, ensure that the skeleton layer is rendered natively in the left sidebar."
-        : "The bounding box tool is disabled because the bounding boxes are rendered with transforms."
+        ? DISABLED_EXPLANATION.BOUNDING_BOX_TRANSFORMED_WITH_SKELETON
+        : DISABLED_EXPLANATION.BOUNDING_BOX_TRANSFORMED
       : null,
 );
 
 const areaMeasurementRotationRule = new DisableRule(
   [AnnotationTool.AREA_MEASUREMENT],
-  ({ isFlycamRotated }) => (isFlycamRotated ? ROTATION_ACTIVE_DISABLED_EXPLANATION : null),
+  ({ isFlycamRotated }) => (isFlycamRotated ? DISABLED_EXPLANATION.ROTATION_ACTIVE : null),
 );
 
 const rules = [

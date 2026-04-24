@@ -32,16 +32,16 @@ export type DisabledInfo = {
   explanation: string;
 };
 
-const zoomInToUseToolMessage =
+const ZOOM_IN_TO_USE_TOOL_MESSAGE =
   "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted magnifications from the extended annotation menu in the dashboard.";
 
-const noSkeletonsExplanation =
+const NO_SKELETONS_EXPLANATION =
   "This annotation does not have a skeleton. Please convert it to a hybrid annotation.";
 
-const disabledSkeletonExplanation =
+const DISABLED_SKELETON_EXPLANATION =
   "Currently all trees are invisible. To use this tool, make the skeleton layer visible by toggling the button in the left sidebar.";
 
-const rotationActiveDisabledExplanation =
+const ROTATION_ACTIVE_DISABLED_EXPLANATION =
   "The tool is disabled because you are currently viewing the dataset rotated. Please reset the rotation to 0,0,0 to be able to use this tool.";
 
 const TOOL_DISABLED_BECAUSE_OF_LIVE_COLLAB_MODE =
@@ -101,9 +101,8 @@ const noVisibleSegmentationTracingRule = new DisableRule(
       : "Volume annotation is disabled since no segmentation tracing layer is enabled. Enable one in the left settings sidebar or make a segmentation layer editable via the lock icon.",
 );
 
-// TODO PR feedback for PRRC_kwDOAEIDNc65eIFE
 const rotationVolumeRule = new DisableRule(VolumeToolsWithProofreading, ({ isFlycamRotated }) =>
-  isFlycamRotated ? rotationActiveDisabledExplanation : null,
+  isFlycamRotated ? ROTATION_ACTIVE_DISABLED_EXPLANATION : null,
 );
 
 const zoomInvalidForTracingVolumeRule = new DisableRule(
@@ -153,19 +152,19 @@ const jsonMappingActiveRule = new DisableRule(
 const brushZoomRule = new DisableRule(
   [AnnotationTool.BRUSH, AnnotationTool.ERASE_BRUSH],
   ({ isZoomStepTooHighForBrushing }) =>
-    isZoomStepTooHighForBrushing ? zoomInToUseToolMessage : null,
+    isZoomStepTooHighForBrushing ? ZOOM_IN_TO_USE_TOOL_MESSAGE : null,
 );
 
 const traceZoomRule = new DisableRule(
   [AnnotationTool.TRACE, AnnotationTool.ERASE_TRACE],
   ({ isZoomStepTooHighForTracing }) =>
-    isZoomStepTooHighForTracing ? zoomInToUseToolMessage : null,
+    isZoomStepTooHighForTracing ? ZOOM_IN_TO_USE_TOOL_MESSAGE : null,
 );
 
 const fillZoomRule = new DisableRule(
   [AnnotationTool.FILL_CELL, AnnotationTool.QUICK_SELECT],
   ({ isZoomStepTooHighForFilling }) =>
-    isZoomStepTooHighForFilling ? zoomInToUseToolMessage : null,
+    isZoomStepTooHighForFilling ? ZOOM_IN_TO_USE_TOOL_MESSAGE : null,
 );
 
 const proofreadRule = new DisableRule([AnnotationTool.PROOFREAD], (params) => {
@@ -192,12 +191,12 @@ const proofreadRule = new DisableRule([AnnotationTool.PROOFREAD], (params) => {
 
 const noSkeletonRule = new DisableRule(
   [AnnotationTool.SKELETON, AnnotationTool.PROOFREAD],
-  ({ hasSkeleton }) => (hasSkeleton ? null : noSkeletonsExplanation),
+  ({ hasSkeleton }) => (hasSkeleton ? null : NO_SKELETONS_EXPLANATION),
 );
 
 const skeletonNotVisibleRule = new DisableRule(
   [AnnotationTool.SKELETON],
-  ({ areSkeletonsVisible }) => (areSkeletonsVisible ? null : disabledSkeletonExplanation),
+  ({ areSkeletonsVisible }) => (areSkeletonsVisible ? null : DISABLED_SKELETON_EXPLANATION),
 );
 
 const skeletonTransformedRule = new DisableRule(
@@ -218,7 +217,7 @@ const concurrentCollabModeRule = new DisableRule(
 
 const boundingBoxRotationRule = new DisableRule(
   [AnnotationTool.BOUNDING_BOX],
-  ({ isFlycamRotated }) => (isFlycamRotated ? rotationActiveDisabledExplanation : null),
+  ({ isFlycamRotated }) => (isFlycamRotated ? ROTATION_ACTIVE_DISABLED_EXPLANATION : null),
 );
 
 const boundingBoxTransformedRule = new DisableRule(
@@ -233,7 +232,7 @@ const boundingBoxTransformedRule = new DisableRule(
 
 const areaMeasurementRotationRule = new DisableRule(
   [AnnotationTool.AREA_MEASUREMENT],
-  ({ isFlycamRotated }) => (isFlycamRotated ? rotationActiveDisabledExplanation : null),
+  ({ isFlycamRotated }) => (isFlycamRotated ? ROTATION_ACTIVE_DISABLED_EXPLANATION : null),
 );
 
 const rules = [

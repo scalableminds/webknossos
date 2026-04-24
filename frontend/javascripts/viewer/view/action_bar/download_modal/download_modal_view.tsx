@@ -26,7 +26,9 @@ function _DownloadModalView({
 }: Props): ReactElement {
   const typeName = isAnnotation ? "annotation" : "dataset";
 
-  const [activeTabKey, setActiveTabKey] = useState<TabKeys>(initialTab ?? "download");
+  const [activeTabKey, setActiveTabKey] = useState<TabKeys>(
+    initialTab ?? (isAnnotation ? "download" : "export"),
+  );
 
   const handleTabChange = (key: string) => {
     setActiveTabKey(key as TabKeys);

@@ -1620,7 +1620,7 @@ class SegmentsView extends React.Component<Props, State> {
                                 switcherIcon={<DownOutlined />}
                                 titleRender={this.titleRender}
                                 style={{
-                                  marginLeft: -14, // hide switcherIcon for root group
+                                  marginLeft: -24, // hide switcherIcon for root group
                                   flex: "1 1 auto",
                                   overflow: "auto", // use hidden when not using virtualization
                                 }}

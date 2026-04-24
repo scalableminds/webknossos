@@ -499,6 +499,8 @@ class AnnotationController @Inject()(
           annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND
           restrictions <- provider.restrictionsFor(AnnotationIdentifier(annotation.typ, id)) ?~> "restrictions.notFound" ~> NOT_FOUND
           _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+          // Note: this limit should match what the frontend requests, see IDEAL_ID_BUFFER_SIZE in id_reservation_saga.
+          _ <- Fox.fromBool(request.body.numberOfIdsToReserve <= 10) ?~> "Cannot reserve more than 10 ids in one request." ~> FORBIDDEN
           ids: Seq[Long] <- annotationIdReservationService.reserveIds(id,
                                                                       request.body.tracingId,
                                                                       request.body.domain,

@@ -1,13 +1,12 @@
-import Icon, { DownOutlined, InfoCircleOutlined } from "@ant-design/icons";
+import Icon, { InfoCircleOutlined } from "@ant-design/icons";
 import NewBoundingBoxIcon from "@images/icons/icon-bounding-box-new.svg?react";
-import { Dropdown, Radio, type RadioChangeEvent, Space, Tag } from "antd";
+import { Radio, type RadioChangeEvent, Space, Tag } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
 import { useKeyPress, useWindowWidth, useWkSelector } from "libs/react_hooks";
 import { useCallback, useMemo } from "react";
 import { useDispatch } from "react-redux";
 import Constants, { ControlModeEnum } from "viewer/constants";
-import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import {
   AnnotationTool,
   type AnnotationToolId,
@@ -19,10 +18,11 @@ import {
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import ButtonComponent from "viewer/view/components/button_component";
+import { ToolDropdown } from "../tool_dropdown";
 import { ChangeBrushSizePopover } from "./brush_presets";
 import { SkeletonSpecificButtons } from "./skeleton_specific_ui";
 import { ToolIdToComponent } from "./tool_buttons";
-import { ACTIONBAR_MARGIN_LEFT, NARROW_BUTTON_STYLE, ToolRadioButton } from "./tool_helpers";
+import { ACTIONBAR_MARGIN_LEFT, NARROW_BUTTON_STYLE } from "./tool_helpers";
 import {
   CreateSegmentButton,
   FloodFillSettings,
@@ -57,12 +57,12 @@ export default function ToolbarView() {
   const activeTool = useWkSelector((state) => state.uiInformation.activeTool);
   const isSplitToolkit = toolkit === Toolkit.SPLIT_SEGMENTS;
   const windowWidth = useWindowWidth();
-  const disabledInfoForTools = useWkSelector(getDisabledInfoForTools);
   const isWiderScreen = useMemo(() => windowWidth >= Constants.NARROW_SCREEN_WIDTH, [windowWidth]);
   const toolTimestamps = useWkSelector((state) => state.userConfiguration.timestampsForTools);
   const isViewMode = useWkSelector(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
+  const showAllTools = isWiderScreen || toolkit === Toolkit.READ_ONLY_TOOLS || isViewMode;
 
   const isShiftPressed = useKeyPress("Shift");
   const isControlOrMetaPressed = useKeyPress("ControlOrMeta");
@@ -81,9 +81,6 @@ export default function ToolbarView() {
     },
     [dispatch],
   );
-
-  const showAllTools = isWiderScreen || toolkit === Toolkit.READ_ONLY_TOOLS || isViewMode;
-  //const showAllTools = true; // TODO_c testing only
 
   const toolsForButtons = useMemo(() => {
     if (showAllTools) return Toolkits[toolkit];
@@ -107,43 +104,6 @@ export default function ToolbarView() {
       .slice(0, Constants.NUMBER_OF_TOOLS_IN_TOOLBAR);
     return allToolsInToolkit.filter((tool) => lastUsedTools.includes(tool.id));
   }, [showAllTools, toolkit, toolTimestamps]);
-
-  const ToolDropdown = () => {
-    if (showAllTools) return null;
-    return (
-      <ToolRadioButton name="More tools" value={null} style={NARROW_BUTTON_STYLE}>
-        <Dropdown
-          menu={{
-            items: Toolkits[toolkit].map((tool) => {
-              const isDisabled = disabledInfoForTools[tool.id].isDisabled;
-              return {
-                key: tool.id,
-                disabled: isDisabled,
-                onClick: () => dispatch(setToolAction(tool)),
-                label: (
-                  <FastTooltip
-                    title={
-                      isDisabled
-                        ? disabledInfoForTools[tool.id].explanation
-                        : AnnotationTool[tool.id].description
-                    }
-                    placement="left"
-                  >
-                    <Space size="small">
-                      {tool.icon ? <Icon component={tool.icon} /> : null}
-                      {tool.readableName}
-                    </Space>
-                  </FastTooltip>
-                ),
-              };
-            }),
-          }}
-        >
-          <DownOutlined />
-        </Dropdown>
-      </ToolRadioButton>
-    );
-  };
 
   return (
     <>

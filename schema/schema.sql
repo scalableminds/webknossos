@@ -88,8 +88,9 @@ CREATE TABLE webknossos.annotation_reserved_ids(
   _annotation TEXT NOT NULL CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$'),
   tracingId TEXT NOT NULL,
   domain webknossos.ANNOTATION_ID_DOMAIN NOT NULL,
-  _user TEXT NOT NULL CONSTRAINT _user_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$'),
-  id BIGINT NOT NULL
+  _user TEXT NOT NULL CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$'),
+  id BIGINT NOT NULL,
+  PRIMARY KEY (_annotation, tracingId, domain, id)
 );
 
 CREATE TABLE webknossos.publications(

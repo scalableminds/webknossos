@@ -16,6 +16,7 @@ import { getMaximumGroupId } from "../reducers/skeletontracing_reducer_helpers";
 import { getGroupIdSet } from "../reducers/volumetracing_reducer_helpers";
 import { type Saga, select, take } from "./effect_generators";
 
+// Note: this value 10 should match the limit in the backend see AnnotationController.reserveIds
 const IDEAL_ID_BUFFER_SIZE = import.meta.env.MODE === "test" ? 5 : 10;
 
 export default function* idReservationSaga(): Saga<void> {

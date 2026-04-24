@@ -8,6 +8,8 @@ import type { GetNewIdAction } from "../actions/actions";
 import {
   type IdsReplenishedAction,
   idsReplenishedAction,
+  type IdsReplenishmentFailedAction,
+  idsReplenishmentFailedAction,
   type RequestIdReplenishmentAction,
   requestIdReplenishmentAction,
   setIdReservationsAction,
@@ -15,9 +17,12 @@ import {
 import { getMaximumGroupId } from "../reducers/skeletontracing_reducer_helpers";
 import { getGroupIdSet } from "../reducers/volumetracing_reducer_helpers";
 import { type Saga, select, take } from "./effect_generators";
+import { sleep } from "libs/utils";
 
 // Note: this value 10 should match the limit in the backend see AnnotationController.reserveIds
 export const IDEAL_ID_BUFFER_SIZE = import.meta.env.MODE === "test" ? 5 : 10;
+const RESERVE_IDS_MAX_RETRIES = 3;
+const RETRY_DELAY_MULTIPLIER = import.meta.env.MODE === "test" ? 0.1 : 2;
 
 export default function* idReservationSaga(): Saga<void> {
   yield* call(ensureWkInitialized);
@@ -72,7 +77,11 @@ function* replenishmentLoop(domain: "SegmentGroup"): Saga<void> {
     const usableReservations = getUsableReservations(tracing, domain);
     if (usableReservations.length < IDEAL_ID_BUFFER_SIZE / 2) {
       // This will block until new reservations were fetched.
-      yield* call(fetchNewReservations, action.tracingId, domain);
+      try {
+        yield* call(fetchNewReservations, action.tracingId, domain);
+      } catch (error) {
+        yield* put(idsReplenishmentFailedAction(action.tracingId, domain, error));
+      }
     } else {
       // Buffer is already sufficient (e.g., a previous replenishment already ran);
       // no fetch needed but still signal completion so any waiter can proceed.
@@ -121,16 +130,27 @@ function* handleReservationRequest(action: GetNewIdAction): Saga<void> {
   }
 
   // No usable IDs: request replenishment and wait for it to complete before recursing.
-  const replenishedChannel = yield* actionChannel<IdsReplenishedAction>("IDS_REPLENISHED");
+  const replenishResultChannel = yield* actionChannel<
+    IdsReplenishedAction | IdsReplenishmentFailedAction
+  >(
+    (a: { type: string }) =>
+      (a.type === "IDS_REPLENISHED" || a.type === "IDS_REPLENISHMENT_FAILED") &&
+      (a as IdsReplenishedAction).tracingId === tracingId &&
+      (a as IdsReplenishedAction).domain === domain,
+  );
   yield* put(requestIdReplenishmentAction(tracingId, domain));
-  while (true) {
-    const replenished = (yield* take(replenishedChannel)) as IdsReplenishedAction;
-    if (replenished.tracingId === tracingId && replenished.domain === domain) break;
+  const result = (yield* take(replenishResultChannel)) as
+    | IdsReplenishedAction
+    | IdsReplenishmentFailedAction;
+  replenishResultChannel.close();
+
+  if (result.type === "IDS_REPLENISHMENT_FAILED") {
+    action.errorCallback(result.error);
+    return;
   }
-  replenishedChannel.close();
 
   // Recurse to re-evaluate the now-replenished reservations, filtering against
-  // known ID again in case time has passed since the fetch.
+  // known IDs again in case time has passed since the fetch.
   yield* call(handleReservationRequest, action);
 }
 
@@ -146,7 +166,7 @@ function* fetchNewReservations(tracingId: string, domain: "SegmentGroup"): Saga<
   const numberOfIdsToReserve = Math.max(1, IDEAL_ID_BUFFER_SIZE - usableReservations.length);
 
   const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
-  let newIds: number[];
+  let newIds: number[] = [];
   let releasedIds: number[] = [];
   releasedIds = without(
     unfilteredReservations.map(({ id }) => id),
@@ -155,14 +175,22 @@ function* fetchNewReservations(tracingId: string, domain: "SegmentGroup"): Saga<
 
   if (collaborationMode === "Concurrent") {
     const annotationId = yield* select((state) => state.annotation.annotationId);
-    newIds = yield* call(
-      reserveIdsForAnnotation,
-      annotationId,
-      tracingId,
-      domain,
-      numberOfIdsToReserve,
-      releasedIds,
-    );
+    for (let attempt = 0; attempt < RESERVE_IDS_MAX_RETRIES; attempt++) {
+      try {
+        newIds = yield* call(
+          reserveIdsForAnnotation,
+          annotationId,
+          tracingId,
+          domain,
+          numberOfIdsToReserve,
+          releasedIds,
+        );
+        break;
+      } catch (error) {
+        if (attempt === RESERVE_IDS_MAX_RETRIES - 1) throw error;
+        yield* call(sleep, RETRY_DELAY_MULTIPLIER * 2 ** attempt);
+      }
+    }
   } else {
     const maxGroupId = getMaximumGroupId(tracing.segmentGroups);
     const maxReservationId =

@@ -23,6 +23,7 @@ export type GetNewIdAction = ReturnType<typeof getNewIdAction>;
 export type SetIdReservationsAction = ReturnType<typeof setIdReservationsAction>;
 export type RequestIdReplenishmentAction = ReturnType<typeof requestIdReplenishmentAction>;
 export type IdsReplenishedAction = ReturnType<typeof idsReplenishedAction>;
+export type IdsReplenishmentFailedAction = ReturnType<typeof idsReplenishmentFailedAction>;
 
 export type Action =
   | SkeletonTracingAction
@@ -51,7 +52,8 @@ export type Action =
   | GetNewIdAction
   | SetIdReservationsAction
   | RequestIdReplenishmentAction
-  | IdsReplenishedAction;
+  | IdsReplenishedAction
+  | IdsReplenishmentFailedAction;
 
 // This action indicates that webknossos was initialized successfully, meaning all relevant data
 // was fetched and the controllers, sagas and keyboard handlers were initialized.
@@ -96,12 +98,14 @@ export const escalateErrorAction = (error: unknown) =>
 
 export const getNewIdAction = (
   callback: (newId: number) => void,
+  errorCallback: (error: unknown) => void,
   tracingId: string,
   domain: AnnotationIdDomain,
 ) =>
   ({
     type: "GET_NEW_ID",
     callback,
+    errorCallback,
     tracingId,
     domain,
   }) as const;
@@ -112,7 +116,12 @@ export const dispatchGetNewIdAsync = async (
   domain: "SegmentGroup",
 ): Promise<number> => {
   const readyDeferred = new Deferred<number, unknown>();
-  const action = getNewIdAction((newId) => readyDeferred.resolve(newId), tracingId, domain);
+  const action = getNewIdAction(
+    (newId) => readyDeferred.resolve(newId),
+    (error) => readyDeferred.reject(error),
+    tracingId,
+    domain,
+  );
   dispatch(action);
   return await readyDeferred.promise();
 };
@@ -144,4 +153,16 @@ export const idsReplenishedAction = (tracingId: string, domain: "SegmentGroup" |
     type: "IDS_REPLENISHED",
     tracingId,
     domain,
+  }) as const;
+
+export const idsReplenishmentFailedAction = (
+  tracingId: string,
+  domain: "SegmentGroup" | "Segment",
+  error: unknown,
+) =>
+  ({
+    type: "IDS_REPLENISHMENT_FAILED",
+    tracingId,
+    domain,
+    error,
   }) as const;

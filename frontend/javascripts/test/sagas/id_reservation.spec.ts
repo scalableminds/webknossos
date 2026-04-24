@@ -249,6 +249,84 @@ describe("ID reservation saga (concurrent collaboration mode)", () => {
     await task.toPromise();
   });
 
+  it("should retry the reserveIds endpoint on transient failures and eventually resolve", async (context: WebknossosTestContext) => {
+    const { mocks } = context;
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    let callCount = 0;
+    vi.mocked(mocks.Request.sendJSONReceiveJSON).mockImplementation(async (url: string) => {
+      if (url.includes("/reserveIds")) {
+        callCount++;
+        if (callCount < 3) {
+          throw new Error("Simulated network failure");
+        }
+        return [100, 101, 102, 103, 104];
+      }
+      return {};
+    });
+
+    const task = startSaga(function* task() {
+      const id = yield call(() => dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"));
+
+      expect(id).toBe(100);
+      expect(callCount).toBe(3);
+
+      const reservations = Store.getState().annotation.volumes[0].idReservations.SegmentGroup;
+      expect(reservations).toEqual([
+        { id: 100, used: true },
+        { id: 101, used: false },
+        { id: 102, used: false },
+        { id: 103, used: false },
+        { id: 104, used: false },
+      ]);
+    });
+
+    await task.toPromise();
+  });
+
+  it("should reject the promise and keep the saga alive when all retries are exhausted", async (context: WebknossosTestContext) => {
+    const { mocks } = context;
+    const { tracingId } = Store.getState().annotation.volumes[0];
+
+    const networkError = new Error("Persistent network failure");
+    vi.mocked(mocks.Request.sendJSONReceiveJSON).mockImplementation(async (url: string) => {
+      if (url.includes("/reserveIds")) {
+        throw networkError;
+      }
+      return {};
+    });
+
+    const task = startSaga(function* task() {
+      yield call(() =>
+        expect(
+          dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
+        ).rejects.toThrow("Persistent network failure"),
+      );
+
+      // The saga is still alive — a subsequent request succeeds once the endpoint recovers.
+      vi.mocked(mocks.Request.sendJSONReceiveJSON).mockImplementation(async (url: string) => {
+        if (url.includes("/reserveIds")) {
+          return [200, 201, 202, 203, 204];
+        }
+        return {};
+      });
+
+      const id = yield call(() => dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"));
+      expect(id).toBe(200);
+
+      const reservations = Store.getState().annotation.volumes[0].idReservations.SegmentGroup;
+      expect(reservations).toEqual([
+        { id: 200, used: true },
+        { id: 201, used: false },
+        { id: 202, used: false },
+        { id: 203, used: false },
+        { id: 204, used: false },
+      ]);
+    });
+
+    await task.toPromise();
+  });
+
   it("should release stale (already-used) IDs when fetching new reservations", async (context: WebknossosTestContext) => {
     const { mocks } = context;
     const { tracingId } = Store.getState().annotation.volumes[0];

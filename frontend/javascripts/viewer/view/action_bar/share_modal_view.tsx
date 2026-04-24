@@ -45,7 +45,7 @@ import { location } from "libs/window";
 import isEqual from "lodash-es/isEqual";
 import messages from "messages";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import type {
   APIAnnotationType,
@@ -416,6 +416,22 @@ function _ShareModalView(props: Props) {
   const includeToken = !dataset.isPublic && visibility === "Public";
   const longUrl = getUrl(sharingToken, includeToken);
 
+  const concurrentDisabledReason = useMemo(() => {
+    if (!hasUpdatePermissions) {
+      return "You don't have the permissions to change this setting. Ask the owner to change it instead.";
+    }
+    if (!newOthersMayEdit) {
+      return "Can only be enabled when “Everybody who can view” is enabled.";
+    }
+    if (isChangingInProgress) {
+      return "A change of the settings is currently being saved.";
+    }
+    if (!annotationHasEditableMapping) {
+      return "The annotation needs to have at least one saved proofreading action. Enable a mapping and use the proofreading tool for that.";
+    }
+    return null;
+  }, [hasUpdatePermissions, newOthersMayEdit, isChangingInProgress, annotationHasEditableMapping]);
+
   return (
     <Modal
       title="Share this annotation"
@@ -578,28 +594,25 @@ function _ShareModalView(props: Props) {
             Can users edit simultaneously?
           </Col>
           <Col span={18}>
-            <Checkbox
-              checked={newAllowConcurrentEditing}
-              onChange={handleConcurrentEditingCheckboxChange}
-              disabled={
-                !newOthersMayEdit ||
-                !hasUpdatePermissions ||
-                isChangingInProgress ||
-                (!annotationHasEditableMapping && !newAllowConcurrentEditing)
-              }
-            >
-              Yes, allow simultaneous editing
-              <FastTooltip title="Currently not recommended for production use. Requires at least one saved proofreading action.">
-                <Tag
-                  style={{ marginLeft: 4 }}
-                  color="warning"
-                  icon={<ExclamationCircleOutlined />}
-                  variant="outlined"
-                >
-                  Experimental
-                </Tag>
-              </FastTooltip>
-            </Checkbox>
+            <FastTooltip title={concurrentDisabledReason ?? null}>
+              <Checkbox
+                checked={newAllowConcurrentEditing}
+                onChange={handleConcurrentEditingCheckboxChange}
+                disabled={concurrentDisabledReason != null}
+              >
+                Yes, allow simultaneous editing
+                <FastTooltip title="Currently not recommended for production use. Requires at least one saved proofreading action.">
+                  <Tag
+                    style={{ marginLeft: 4 }}
+                    color="warning"
+                    icon={<ExclamationCircleOutlined />}
+                    variant="outlined"
+                  >
+                    Experimental
+                  </Tag>
+                </FastTooltip>
+              </Checkbox>
+            </FastTooltip>
             <Hint
               style={{
                 marginLeft: 24,

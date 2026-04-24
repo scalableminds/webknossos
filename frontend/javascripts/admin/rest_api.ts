@@ -19,6 +19,7 @@ import messages from "messages";
 import {
   type AdditionalCoordinate,
   type AnnotationCollaborationMode,
+  type AnnotationIdDomain,
   type AnnotationLayerDescriptor,
   AnnotationLayerEnum,
   type AnnotationViewConfiguration,
@@ -1007,15 +1008,6 @@ export async function downloadAnnotation(
   const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${params}`;
   await downloadWithFilename(downloadUrl);
 }
-
-export type AnnotationIdDomain =
-  | "Segment"
-  | "SegmentGroup"
-  | "Tree"
-  | "Node"
-  | "TreeGroup"
-  // TODO PR feedback for PRRC_kwDOAEIDNc65beuO
-  | "BoundingBox";
 
 export async function getIdReservationsForAnnotation(
   annotationId: string,

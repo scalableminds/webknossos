@@ -1,6 +1,6 @@
-import type { AnnotationIdDomain } from "admin/rest_api";
 import Deferred from "libs/async/deferred";
 import type { Dispatch } from "redux";
+import type { AnnotationIdDomain } from "types/api_types";
 import type { AnnotationActionTypes } from "viewer/model/actions/annotation_actions";
 import type { ConnectomeAction } from "viewer/model/actions/connectome_actions";
 import type { DatasetAction } from "viewer/model/actions/dataset_actions";

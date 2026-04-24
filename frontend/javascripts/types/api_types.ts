@@ -1051,6 +1051,14 @@ export type ServerEditableMapping = {
   tracingId: string;
 };
 
+export type AnnotationIdDomain =
+  | "Segment"
+  | "SegmentGroup"
+  | "Tree"
+  | "Node"
+  | "TreeGroup"
+  | "BoundingBox";
+
 export type APIMeshFileInfo = {
   name: string;
   mappingName?: string | null | undefined;

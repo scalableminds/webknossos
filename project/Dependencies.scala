@@ -7,7 +7,8 @@ object Dependencies {
     Seq(
       Resolver.typesafeRepo("releases"),
       "Unidata UCAR" at "https://artifacts.unidata.ucar.edu/content/repositories/unidata-releases/",
-      "SciJava Public" at "https://maven.scijava.org/content/repositories/public/",
+      // "SciJava Public" at "https://maven.scijava.org/content/repositories/public/",
+      "OSGeo" at "https://repo.osgeo.org/repository/release/",
       "Atlassian Releases" at "https://packages.atlassian.com/maven-public/",
       "Senbox (for Zarr)" at "https://nexus.senbox.net/nexus/content/groups/public/"
     )
@@ -62,7 +63,7 @@ object Dependencies {
     // Read hdf5 files. import ch.systemsx.cisd.hdf5
     "cisd" % "jhdf5" % "19.04.1",
     // MultiArray (ndarray) handles. import ucar
-    "edu.ucar" % "cdm-core" % "5.4.2",
+    "edu.ucar" % "cdm-core" % "5.5.3",
     // Amazon S3 cloud storage client. import software.amazon.awssdk
     "software.amazon.awssdk" % "s3" % awsVersion,
     // AWS Transfer Manager for multipart uploads. import software.amazon.awssdk.transfer.s3

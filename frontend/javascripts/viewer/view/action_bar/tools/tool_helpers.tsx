@@ -1,8 +1,12 @@
-import { Radio } from "antd";
+import { Dropdown, Radio } from "antd";
+import type { MenuItemType } from "antd/es/menu/interface";
 import FastTooltip from "components/fast_tooltip";
 
 import { document } from "libs/window";
 import type React from "react";
+import { useDispatch } from "react-redux";
+import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
+import { setToolAction } from "viewer/model/actions/ui_actions";
 
 export const ACTIONBAR_MARGIN_LEFT = "var(--ant-margin-xs)"; // keep in sync with stylesheets/trace_view/_action_bar.less
 export const NARROW_BUTTON_STYLE = {
@@ -81,5 +85,51 @@ export function ToolRadioButton({
       onMouseEnter={onMouseEnter}
       {...props}
     />
+  );
+}
+
+export function ToolRadioButtonWithDropdown({
+  disabled,
+  onClick,
+  children,
+  onMouseEnter,
+  dropdownItems,
+  ...props
+}: {
+  disabled?: boolean;
+  children: React.ReactNode;
+  style?: React.CSSProperties;
+  value: unknown;
+  onClick?: (event: React.MouseEvent) => void;
+  dropdownItems: MenuItemType[];
+  onMouseEnter?: () => void;
+}) {
+  const dispatch = useDispatch();
+  // See explanation for RadioButtonWithTooltip: Add dropdown into the button and tweak padding so that
+  // the dropdown is triggered when hovering anywhere within the button, not just the icon.
+  return (
+    <Radio.Button
+      disabled={disabled}
+      className="no-padding"
+      onClick={(event: React.MouseEvent) => {
+        if (document.activeElement) {
+          (document.activeElement as HTMLElement).blur();
+        }
+        if (onClick) {
+          onClick(event);
+        }
+      }}
+      {...props}
+    >
+      <Dropdown
+        menu={{
+          items: dropdownItems,
+          onClick: (key) => dispatch(setToolAction(AnnotationTool[key.key as AnnotationToolId])),
+        }}
+        trigger={["hover"]}
+      >
+        <div style={{ ...NARROW_BUTTON_STYLE, display: "block" }}>{children}</div>
+      </Dropdown>
+    </Radio.Button>
   );
 }

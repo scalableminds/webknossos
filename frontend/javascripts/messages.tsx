@@ -79,11 +79,11 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
   zoom: "Zoom in or out in the data viewports.",
   displayScalebars: "Show a scale in the lower-right corner of each viewport.",
   blendMode:
-    "Set the blend mode for the dataset. The additive mode (default) adds the data values of all color layers. In cover mode, color layers are rendered on top of each other so that the data values of lower color layers are hidden by values of higher layers. Cover mode enables reordering of color layers.",
+    "Set the blend mode for the dataset. The additive mode (default) adds the data values of all color layers. In cover mode, color layers are rendered on top of each other so that the data values of lower color layers are hidden by values of higher layers. Cover (black as transparent) works like cover mode, but black voxels are treated as transparent so they do not occlude lower layers. Cover modes enable reordering of color layers.",
   renderWatermark: "Show a WEBKNOSSOS logo in the lower-left corner of each screenshot.",
   antialiasRendering: "Antialias rendering (can impact performance)",
   colorLayerOrder:
-    "Set the order in which color layers are rendered. This setting is only relevant if the cover blend mode is active.",
+    "Set the order in which color layers are rendered. This setting is only relevant if one of the cover blend modes is active.",
 };
 
 export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfiguration, string>> = {
@@ -317,6 +317,9 @@ instead. Only enable this option if you understand its effect. All layers will n
   "proofreading.multi_cut.no_valid_agglomerate":
     "No agglomerate for the selected segments could be found. Please retry with a new selection.",
   "proofreading.multi_cut.split_failed": "Could not determine a valid split. Operation failed.",
+  "proofreading.post_processing_info_not_found":
+    "Could not retrieve updated post processing information necessary for processing this proofreading operation. Please try again.",
+
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",

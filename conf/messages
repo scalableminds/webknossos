@@ -274,6 +274,7 @@ annotation.deleteLayer.onlyLayer=Could not delete layer because it is the only l
 annotation.layer.notFound=Layer could not be found.
 annotation.getNewestVersion.failed=Could not get the newest version information for this annotation layer
 annotation.idForTracing.failed=Could not find the annotation id for this tracing id.
+annotation.editableMapping.getAgglomerateSkeleton.empty=The requested agglomerate was empty. It was likely merged into another agglomerate already.
 annotation.editableMapping.getAgglomerateGraph.failed=Could not look up an agglomerate graph for requested agglomerate.
 annotation.editableMapping.getAgglomerateIdsForSegments.failed=Could not look up agglomerate ids for requested segments.
 annotation.duplicate.failed=Failed to duplicate annotation.

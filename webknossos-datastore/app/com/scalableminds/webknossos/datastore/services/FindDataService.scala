@@ -199,7 +199,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
             case ((currMin, currMax), e) => (math.min(currMin, e), math.max(currMax, e))
           }
           val binSize = (max - min) / 255
-          val finalBinSize = if (binSize == 0f) 1f else binSize
+          val finalBinSize = if (math.abs(binSize) < 1e-7f) 1f else binSize
           floatData.foreach(el => counts(histogramBinForFloat(el, min, finalBinSize)) += 1)
           extrema = (min, max)
       }

@@ -875,7 +875,8 @@ export function parseNml(nmlString: string): Promise<{
   treeGroups: TreeGroup[];
   containedVolumes: boolean;
   userBoundingBoxes: UserBoundingBox[];
-  datasetName: string | null | undefined;
+  datasetName: string | null | undefined; // Prefer datasetId instead.
+  datasetId: string | null | undefined; // Legacy datasets won't have that property.
 }> {
   return new Promise((resolve, reject) => {
     const parser = new SAXParser(true, {});
@@ -894,6 +895,7 @@ export function parseNml(nmlString: string): Promise<{
     const nodeIdToTreeId: Record<number, number> = {};
     const userBoundingBoxes: UserBoundingBox[] = [];
     let datasetName: string | null = null;
+    let datasetId: string | null = null;
 
     parser.onopentag = (node: any) => {
       const attr = node.attributes as Record<string, string>;
@@ -901,6 +903,7 @@ export function parseNml(nmlString: string): Promise<{
       switch (node.name) {
         case "experiment": {
           datasetName = attr.name;
+          datasetId = attr.datasetId;
           break;
         }
 
@@ -1212,6 +1215,7 @@ export function parseNml(nmlString: string): Promise<{
         trees,
         treeGroups,
         datasetName,
+        datasetId,
         userBoundingBoxes,
         containedVolumes,
       });

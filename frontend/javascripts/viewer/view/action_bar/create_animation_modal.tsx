@@ -5,7 +5,19 @@ import {
 } from "admin/organization/pricing_plan_utils";
 
 import { startRenderAnimationJob } from "admin/rest_api";
-import { Alert, Button, Checkbox, Col, Divider, Modal, Radio, Row, Space, Tooltip } from "antd";
+import {
+  Alert,
+  Button,
+  Checkbox,
+  Col,
+  Divider,
+  Modal,
+  type ModalProps,
+  Radio,
+  Row,
+  Space,
+  Tooltip,
+} from "antd";
 import { LayerSelection } from "components/layer_selection";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import { useWkSelector } from "libs/react_hooks";
@@ -43,7 +55,7 @@ import { BoundingBoxSelection } from "viewer/view/ai_jobs/components/bounding_bo
 
 type Props = {
   isOpen: boolean;
-  onClose: React.MouseEventHandler;
+  onClose: ModalProps["onCancel"];
 };
 
 // When creating the texture for the dataset animation, we aim for for texture with the largest side of roughly this size
@@ -246,7 +258,7 @@ function CreateAnimationModal(props: Props) {
     return validationStatus;
   };
 
-  const submitJob = (evt: React.MouseEvent) => {
+  const submitJob = (evt: React.MouseEvent<HTMLButtonElement>) => {
     const state = Store.getState();
     const boundingBox = userBoundingBoxes.find(
       (bb) => bb.id === selectedBoundingBoxId,
@@ -336,7 +348,7 @@ function CreateAnimationModal(props: Props) {
       </>,
     );
 
-    onClose(evt);
+    onClose?.(evt);
   };
 
   const isFeatureDisabled = !(
@@ -352,7 +364,7 @@ function CreateAnimationModal(props: Props) {
       onCancel={onClose}
       okText={isFeatureDisabled ? "This feature is not available" : "Start Animation"}
       footer={[
-        <Button key="cancel" onClick={onClose}>
+        <Button key="cancel" onClick={(evt: React.MouseEvent<HTMLButtonElement>) => onClose?.(evt)}>
           Cancel
         </Button>,
         isFeatureDisabled ? (

@@ -1,17 +1,5 @@
-import Icon from "@ant-design/icons";
-import BoundingBoxIcon from "@images/icons/icon-bounding-box.svg?react";
-import BrushIcon from "@images/icons/icon-brush.svg?react";
-import EraserIcon from "@images/icons/icon-eraser.svg?react";
-import FillIcon from "@images/icons/icon-fill.svg?react";
-import LassoIcon from "@images/icons/icon-lasso.svg?react";
+import Icon, { CaretDownOutlined } from "@ant-design/icons";
 import LayerGroupIcon from "@images/icons/icon-layer-group.svg?react";
-import MoveIcon from "@images/icons/icon-move.svg?react";
-import PipetteIcon from "@images/icons/icon-pipette.svg?react";
-import ProofreadingIcon from "@images/icons/icon-proofreading.svg?react";
-import QuickSelectToolIcon from "@images/icons/icon-quick-select.svg?react";
-import RulerIcon from "@images/icons/icon-ruler.svg?react";
-import SkeletonIcon from "@images/icons/icon-skeleton.svg?react";
-
 import FastTooltip from "components/fast_tooltip";
 import features from "features";
 import { useWkSelector } from "libs/react_hooks";
@@ -26,12 +14,12 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import { ensureLayerMappingsAreLoadedAction } from "viewer/model/actions/dataset_actions";
 import type { WebknossosState } from "viewer/store";
-import { NARROW_BUTTON_STYLE, ToolRadioButton } from "./tool_helpers";
+import { ToolRadioButton, ToolRadioButtonWithDropdown } from "./tool_helpers";
+
+const getMaybeDisabledButtonStyle = (isDisabled: boolean): React.CSSProperties =>
+  isDisabled ? { color: "rgb(255 255 255 / 25%)" } : {};
 
 type ToolButtonProps = { adaptedActiveTool: AnnotationTool };
-
-// Negative offset to hide eraser button when it is not visible.
-const ERASER_OFFSET_LEFT = -35.2; // button width 34.2px + 1px border
 
 export const ToolIdToComponent: Record<
   AnnotationToolId,
@@ -39,16 +27,16 @@ export const ToolIdToComponent: Record<
 > = {
   [AnnotationTool.MOVE.id]: MoveTool,
   [AnnotationTool.SKELETON.id]: SkeletonTool,
-  [AnnotationTool.BRUSH.id]: BrushTool,
-  [AnnotationTool.ERASE_BRUSH.id]: EraseBrushTool,
-  [AnnotationTool.TRACE.id]: TraceTool,
-  [AnnotationTool.ERASE_TRACE.id]: EraseTraceTool,
+  [AnnotationTool.BRUSH.id]: BrushToolMenu,
+  [AnnotationTool.ERASE_BRUSH.id]: EraseToolMenu,
+  [AnnotationTool.TRACE.id]: () => null,
+  [AnnotationTool.ERASE_TRACE.id]: () => null,
   [AnnotationTool.FILL_CELL.id]: FillCellTool,
   [AnnotationTool.VOXEL_PIPETTE.id]: VoxelPipetteTool,
   [AnnotationTool.QUICK_SELECT.id]: QuickSelectTool,
   [AnnotationTool.BOUNDING_BOX.id]: BoundingBoxTool,
   [AnnotationTool.PROOFREAD.id]: ProofreadTool,
-  [AnnotationTool.LINE_MEASUREMENT.id]: LineMeasurementTool,
+  [AnnotationTool.LINE_MEASUREMENT.id]: MeasurementToolMenu,
   [AnnotationTool.AREA_MEASUREMENT.id]: () => null,
 };
 
@@ -73,12 +61,12 @@ function MoveTool(_props: ToolButtonProps) {
   return (
     <ToolRadioButton
       name={AnnotationTool.MOVE.readableName}
-      description="Use left-click to move around and right-click to open a context menu."
+      description={AnnotationTool.MOVE.description}
       disabledExplanation=""
       disabled={false}
       value={AnnotationTool.MOVE.id}
     >
-      <Icon component={MoveIcon} />
+      <Icon component={AnnotationTool.MOVE.icon} />
     </ToolRadioButton>
   );
 }
@@ -87,7 +75,7 @@ function SkeletonTool(_props: ToolButtonProps) {
   const useLegacyBindings = useWkSelector((state) => state.userConfiguration.useLegacyBindings);
   const skeletonToolDescription = useLegacyBindings
     ? "Use left-click to move around and right-click to create new skeleton nodes"
-    : "Use left-click to move around or to create/select/move nodes. Right-click opens a context menu with further options.";
+    : AnnotationTool.SKELETON.description;
   const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
   const hasSkeleton = useWkSelector((state) => state.annotation?.skeleton != null);
   const isReadOnly = useWkSelector((state) => !state.annotation.restrictions.allowUpdate);
@@ -105,7 +93,7 @@ function SkeletonTool(_props: ToolButtonProps) {
       value={AnnotationTool.SKELETON.id}
     >
       <Icon
-        component={SkeletonIcon}
+        component={AnnotationTool.SKELETON.icon}
         style={{
           opacity: disabledInfosForTools[AnnotationTool.SKELETON.id].isDisabled ? 0.5 : 1,
         }}
@@ -120,128 +108,176 @@ function getIsVolumeModificationAllowed(state: WebknossosState) {
   return hasVolume && !isReadOnly && !hasEditableMapping(state);
 }
 
-function BrushTool({ adaptedActiveTool }: ToolButtonProps) {
+function BrushToolMenu({ adaptedActiveTool }: ToolButtonProps) {
   const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
+  const brushPreference = useWkSelector((state) => state.userConfiguration.writePreference);
+  const currentTool = brushPreference === "BRUSH" ? AnnotationTool.BRUSH : AnnotationTool.TRACE;
+
   const isVolumeModificationAllowed = useWkSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
     return null;
   }
+
+  const isBrushDisabled = disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled;
+  const isTraceDisabled = disabledInfosForTools[AnnotationTool.TRACE.id].isDisabled;
+
   return (
-    <ToolRadioButton
-      name={AnnotationTool.BRUSH.readableName}
-      description={
-        "Draw over the voxels you would like to label. Adjust the brush size with Shift + Mousewheel."
-      }
-      disabledExplanation={disabledInfosForTools[AnnotationTool.BRUSH.id].explanation}
-      disabled={disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled}
-      value={AnnotationTool.BRUSH.id}
+    <ToolRadioButtonWithDropdown
+      disabled={isBrushDisabled && isTraceDisabled}
+      value={currentTool.id}
+      dropdownItems={[
+        {
+          key: AnnotationTool.BRUSH.id,
+          label: (
+            <FastTooltip
+              title={
+                isBrushDisabled
+                  ? disabledInfosForTools[AnnotationTool.BRUSH.id].explanation
+                  : "Draw over the voxels you would like to label. Adjust the brush size with Shift + Mousewheel."
+              }
+            >
+              Brush
+            </FastTooltip>
+          ),
+          icon: (
+            <Icon
+              component={AnnotationTool.BRUSH.icon}
+              style={getMaybeDisabledButtonStyle(isBrushDisabled)}
+            />
+          ),
+          disabled: isBrushDisabled,
+        },
+        {
+          key: AnnotationTool.TRACE.id,
+          label: (
+            <FastTooltip
+              title={
+                isTraceDisabled
+                  ? disabledInfosForTools[AnnotationTool.TRACE.id].explanation
+                  : "Draw outlines around the voxels you would like to label."
+              }
+            >
+              Trace
+            </FastTooltip>
+          ),
+          icon: (
+            <Icon
+              component={AnnotationTool.TRACE.icon}
+              style={getMaybeDisabledButtonStyle(isTraceDisabled)}
+            />
+          ),
+          disabled: isTraceDisabled,
+        },
+      ]}
     >
-      <Icon
-        component={BrushIcon}
-        style={{
-          opacity: disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled ? 0.5 : 1,
-        }}
-      />
-      {adaptedActiveTool === AnnotationTool.BRUSH ? <MaybeMultiSliceAnnotationInfoIcon /> : null}
-    </ToolRadioButton>
+      <div>
+        {brushPreference === "BRUSH" ? (
+          <Icon
+            component={AnnotationTool.BRUSH.icon}
+            style={getMaybeDisabledButtonStyle(isBrushDisabled)}
+          />
+        ) : (
+          <Icon
+            component={AnnotationTool.TRACE.icon}
+            style={getMaybeDisabledButtonStyle(isTraceDisabled)}
+          />
+        )}
+        <CaretDownOutlined
+          className="triangle-icon"
+          style={getMaybeDisabledButtonStyle(isBrushDisabled && isTraceDisabled)}
+        />
+        {adaptedActiveTool === AnnotationTool.BRUSH ||
+        adaptedActiveTool === AnnotationTool.TRACE ? (
+          <MaybeMultiSliceAnnotationInfoIcon />
+        ) : null}
+      </div>
+    </ToolRadioButtonWithDropdown>
   );
 }
 
-function EraseBrushTool({ adaptedActiveTool }: ToolButtonProps) {
+function EraseToolMenu({ adaptedActiveTool }: ToolButtonProps) {
   const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
-  const showEraseTraceTool =
-    adaptedActiveTool === AnnotationTool.TRACE || adaptedActiveTool === AnnotationTool.ERASE_TRACE;
-  const showEraseBrushTool = !showEraseTraceTool;
+  const erasePreference = useWkSelector((state) => state.userConfiguration.erasePreference);
+  const currentTool =
+    erasePreference === "ERASE_BRUSH" ? AnnotationTool.ERASE_BRUSH : AnnotationTool.ERASE_TRACE;
 
   const isVolumeModificationAllowed = useWkSelector(getIsVolumeModificationAllowed);
   if (!isVolumeModificationAllowed) {
     return null;
   }
-
+  const isEraseBrushDisabled = disabledInfosForTools[AnnotationTool.ERASE_BRUSH.id].isDisabled;
+  const isEraseTraceDisabled = disabledInfosForTools[AnnotationTool.ERASE_TRACE.id].isDisabled;
   return (
-    <ToolRadioButton
-      name={AnnotationTool.ERASE_BRUSH.readableName}
-      description="Erase the voxels by brushing over them. Adjust the brush size with Shift + Mousewheel."
-      disabledExplanation={disabledInfosForTools[AnnotationTool.ERASE_BRUSH.id].explanation}
-      disabled={disabledInfosForTools[AnnotationTool.ERASE_BRUSH.id].isDisabled}
-      style={{
-        marginLeft: showEraseBrushTool ? 0 : ERASER_OFFSET_LEFT,
-        zIndex: showEraseBrushTool ? "initial" : -10,
-        transition: "margin 0.3s",
-      }}
-      value={AnnotationTool.ERASE_BRUSH.id}
+    <ToolRadioButtonWithDropdown
+      disabled={isEraseBrushDisabled && isEraseTraceDisabled}
+      value={currentTool.id}
+      dropdownItems={[
+        {
+          key: AnnotationTool.ERASE_BRUSH.id,
+          label: (
+            <FastTooltip
+              title={
+                isEraseBrushDisabled
+                  ? disabledInfosForTools[AnnotationTool.ERASE_BRUSH.id].explanation
+                  : "Erase the voxels by brushing over them. Adjust the brush size with Shift + Mousewheel."
+              }
+            >
+              Erase Brush
+            </FastTooltip>
+          ),
+          icon: (
+            <Icon
+              component={AnnotationTool.ERASE_BRUSH.icon}
+              style={getMaybeDisabledButtonStyle(isEraseBrushDisabled)}
+            />
+          ),
+          disabled: isEraseBrushDisabled,
+        },
+        {
+          key: AnnotationTool.ERASE_TRACE.id,
+          label: (
+            <FastTooltip
+              title={
+                isEraseTraceDisabled
+                  ? disabledInfosForTools[AnnotationTool.ERASE_TRACE.id].explanation
+                  : "Draw outlines around the voxel you would like to erase."
+              }
+            >
+              Erase Trace
+            </FastTooltip>
+          ),
+          icon: (
+            <Icon
+              component={AnnotationTool.ERASE_TRACE.icon}
+              style={getMaybeDisabledButtonStyle(isEraseTraceDisabled)}
+            />
+          ),
+          disabled: isEraseTraceDisabled,
+        },
+      ]}
     >
-      <Icon
-        component={EraserIcon}
-        style={{
-          opacity: disabledInfosForTools[AnnotationTool.ERASE_BRUSH.id].isDisabled ? 0.5 : 1,
-        }}
-      />
-      {adaptedActiveTool === AnnotationTool.ERASE_BRUSH ? (
-        <MaybeMultiSliceAnnotationInfoIcon />
-      ) : null}
-    </ToolRadioButton>
-  );
-}
-
-function TraceTool({ adaptedActiveTool }: ToolButtonProps) {
-  const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
-  const isVolumeModificationAllowed = useWkSelector(getIsVolumeModificationAllowed);
-  if (!isVolumeModificationAllowed) {
-    return null;
-  }
-  return (
-    <ToolRadioButton
-      name={AnnotationTool.TRACE.readableName}
-      description="Draw outlines around the voxels you would like to label."
-      disabledExplanation={disabledInfosForTools[AnnotationTool.TRACE.id].explanation}
-      disabled={disabledInfosForTools[AnnotationTool.TRACE.id].isDisabled}
-      value={AnnotationTool.TRACE.id}
-    >
-      <Icon
-        component={LassoIcon}
-        aria-label="Trace Tool Icon"
-        style={{
-          opacity: disabledInfosForTools[AnnotationTool.TRACE.id].isDisabled ? 0.5 : 1,
-        }}
-      />
-      {adaptedActiveTool === AnnotationTool.TRACE ? <MaybeMultiSliceAnnotationInfoIcon /> : null}
-    </ToolRadioButton>
-  );
-}
-
-function EraseTraceTool({ adaptedActiveTool }: ToolButtonProps) {
-  const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
-  const showEraseTraceTool =
-    adaptedActiveTool === AnnotationTool.TRACE || adaptedActiveTool === AnnotationTool.ERASE_TRACE;
-  const isVolumeModificationAllowed = useWkSelector(getIsVolumeModificationAllowed);
-  if (!isVolumeModificationAllowed) {
-    return null;
-  }
-
-  return (
-    <ToolRadioButton
-      name={AnnotationTool.ERASE_TRACE.readableName}
-      description="Draw outlines around the voxel you would like to erase."
-      disabledExplanation={disabledInfosForTools[AnnotationTool.ERASE_TRACE.id].explanation}
-      disabled={disabledInfosForTools[AnnotationTool.ERASE_TRACE.id].isDisabled}
-      style={{
-        marginLeft: showEraseTraceTool ? 0 : ERASER_OFFSET_LEFT,
-        zIndex: showEraseTraceTool ? "initial" : -10,
-        transition: "margin 0.3s",
-      }}
-      value={AnnotationTool.ERASE_TRACE.id}
-    >
-      <Icon
-        component={EraserIcon}
-        style={{
-          opacity: disabledInfosForTools[AnnotationTool.ERASE_TRACE.id].isDisabled ? 0.5 : 1,
-        }}
-      />
-      {adaptedActiveTool === AnnotationTool.ERASE_TRACE ? (
-        <MaybeMultiSliceAnnotationInfoIcon />
-      ) : null}
-    </ToolRadioButton>
+      <div>
+        {erasePreference === "ERASE_BRUSH" ? (
+          <Icon
+            component={AnnotationTool.ERASE_BRUSH.icon}
+            style={getMaybeDisabledButtonStyle(isEraseBrushDisabled)}
+          />
+        ) : (
+          <Icon
+            component={AnnotationTool.ERASE_TRACE.icon}
+            style={getMaybeDisabledButtonStyle(isEraseTraceDisabled)}
+          />
+        )}
+        <CaretDownOutlined
+          className="triangle-icon"
+          style={getMaybeDisabledButtonStyle(isEraseBrushDisabled && isEraseTraceDisabled)}
+        />
+        {adaptedActiveTool === AnnotationTool.ERASE_BRUSH ||
+        adaptedActiveTool === AnnotationTool.ERASE_TRACE ? (
+          <MaybeMultiSliceAnnotationInfoIcon />
+        ) : null}
+      </div>
+    </ToolRadioButtonWithDropdown>
   );
 }
 
@@ -255,13 +291,13 @@ function FillCellTool({ adaptedActiveTool }: ToolButtonProps) {
   return (
     <ToolRadioButton
       name={AnnotationTool.FILL_CELL.readableName}
-      description="Flood-fill the clicked region."
+      description={AnnotationTool.FILL_CELL.description}
       disabledExplanation={disabledInfosForTools[AnnotationTool.FILL_CELL.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.FILL_CELL.id].isDisabled}
       value={AnnotationTool.FILL_CELL.id}
     >
       <Icon
-        component={FillIcon}
+        component={AnnotationTool.FILL_CELL.icon}
         style={{
           opacity: disabledInfosForTools[AnnotationTool.FILL_CELL.id].isDisabled ? 0.5 : 1,
           transform: "scaleX(-1)",
@@ -279,13 +315,13 @@ function VoxelPipetteTool(_props: ToolButtonProps) {
   return (
     <ToolRadioButton
       name={AnnotationTool.VOXEL_PIPETTE.readableName}
-      description="Inspect a voxel by showing the data values per layer in a tooltip. Clicking on a voxel will pin the tooltip to make the values selectable with the mouse cursor."
+      description={AnnotationTool.VOXEL_PIPETTE.description}
       disabledExplanation={disabledInfosForTools[AnnotationTool.VOXEL_PIPETTE.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.VOXEL_PIPETTE.id].isDisabled}
       value={AnnotationTool.VOXEL_PIPETTE.id}
     >
       <Icon
-        component={PipetteIcon}
+        component={AnnotationTool.VOXEL_PIPETTE.icon}
         style={{
           opacity: disabledInfosForTools[AnnotationTool.VOXEL_PIPETTE.id].isDisabled ? 0.5 : 1,
         }}
@@ -303,13 +339,13 @@ function QuickSelectTool(_props: ToolButtonProps) {
   return (
     <ToolRadioButton
       name={AnnotationTool.QUICK_SELECT.readableName}
-      description="Click on a segment or draw a rectangle around it to automatically detect it"
+      description={AnnotationTool.QUICK_SELECT.description}
       disabledExplanation={disabledInfosForTools[AnnotationTool.QUICK_SELECT.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.QUICK_SELECT.id].isDisabled}
       value={AnnotationTool.QUICK_SELECT.id}
     >
       <Icon
-        component={QuickSelectToolIcon}
+        component={AnnotationTool.QUICK_SELECT.icon}
         aria-label="Quick Select Icon"
         style={{
           opacity: disabledInfosForTools[AnnotationTool.QUICK_SELECT.id].isDisabled ? 0.5 : 1,
@@ -328,13 +364,13 @@ function BoundingBoxTool(_props: ToolButtonProps) {
   return (
     <ToolRadioButton
       name={AnnotationTool.BOUNDING_BOX.readableName}
-      description="Create, resize and modify bounding boxes."
+      description={AnnotationTool.BOUNDING_BOX.description}
       disabledExplanation={disabledInfosForTools[AnnotationTool.BOUNDING_BOX.id].explanation}
       disabled={disabledInfosForTools[AnnotationTool.BOUNDING_BOX.id].isDisabled}
       value={AnnotationTool.BOUNDING_BOX.id}
     >
       <Icon
-        component={BoundingBoxIcon}
+        component={AnnotationTool.BOUNDING_BOX.icon}
         aria-label="Bounding Box Icon"
         style={{
           opacity: disabledInfosForTools[AnnotationTool.BOUNDING_BOX.id].isDisabled ? 0.5 : 1,
@@ -361,9 +397,7 @@ function ProofreadTool(_props: ToolButtonProps) {
   return (
     <ToolRadioButton
       name={AnnotationTool.PROOFREAD.readableName}
-      description={
-        "Modify an agglomerated segmentation. Other segmentation modifications, like brushing, are not allowed if this tool is used."
-      }
+      description={AnnotationTool.PROOFREAD.description}
       disabledExplanation={
         areEditableMappingsEnabled
           ? isAgglomerateMappingEnabled.reason ||
@@ -379,10 +413,9 @@ function ProofreadTool(_props: ToolButtonProps) {
       onMouseEnter={() => {
         dispatch(ensureLayerMappingsAreLoadedAction());
       }}
-      style={NARROW_BUTTON_STYLE}
     >
       <Icon
-        component={ProofreadingIcon}
+        component={AnnotationTool.PROOFREAD.icon}
         style={{
           opacity: disabledInfosForTools[AnnotationTool.PROOFREAD.id].isDisabled ? 0.5 : 1,
         }}
@@ -391,17 +424,83 @@ function ProofreadTool(_props: ToolButtonProps) {
   );
 }
 
-function LineMeasurementTool(_props: ToolButtonProps) {
+function MeasurementToolMenu({ adaptedActiveTool: _adaptedActiveTool }: ToolButtonProps) {
+  const measurementPreference = useWkSelector(
+    (state) => state.userConfiguration.measurementPreference,
+  );
+  const favoriteMeasurementTool =
+    measurementPreference === "LINE_MEASUREMENT"
+      ? AnnotationTool.LINE_MEASUREMENT
+      : AnnotationTool.AREA_MEASUREMENT;
+  const disabledInfosForTools = useWkSelector(getDisabledInfoForTools);
+  const isLineMeasurementDisabled =
+    disabledInfosForTools[AnnotationTool.LINE_MEASUREMENT.id].isDisabled;
+  const isAreaMeasurementDisabled =
+    disabledInfosForTools[AnnotationTool.AREA_MEASUREMENT.id].isDisabled;
   return (
-    <ToolRadioButton
-      name={AnnotationTool.LINE_MEASUREMENT.readableName}
-      description="Use to measure distances or areas."
-      disabledExplanation=""
-      disabled={false}
-      value={AnnotationTool.LINE_MEASUREMENT.id}
-      style={NARROW_BUTTON_STYLE}
+    <ToolRadioButtonWithDropdown
+      disabled={isAreaMeasurementDisabled && isLineMeasurementDisabled}
+      value={favoriteMeasurementTool.id}
+      dropdownItems={[
+        {
+          key: AnnotationTool.LINE_MEASUREMENT.id,
+          label: (
+            <FastTooltip
+              title={
+                isLineMeasurementDisabled
+                  ? disabledInfosForTools[AnnotationTool.LINE_MEASUREMENT.id].explanation
+                  : "Measure distances with connected lines by using Left Click."
+              }
+            >
+              Line Measurement
+            </FastTooltip>
+          ),
+          icon: (
+            <Icon
+              component={AnnotationTool.LINE_MEASUREMENT.icon}
+              style={getMaybeDisabledButtonStyle(isLineMeasurementDisabled)}
+            />
+          ),
+          disabled: isLineMeasurementDisabled,
+        },
+        {
+          key: AnnotationTool.AREA_MEASUREMENT.id,
+          label: (
+            <FastTooltip
+              title={
+                isAreaMeasurementDisabled
+                  ? disabledInfosForTools[AnnotationTool.AREA_MEASUREMENT.id].explanation
+                  : "Measure areas by using Left Drag. Avoid self-crossing polygon structure for accurate results."
+              }
+            >
+              Area Measurement
+            </FastTooltip>
+          ),
+          icon: (
+            <Icon
+              component={AnnotationTool.AREA_MEASUREMENT.icon}
+              style={getMaybeDisabledButtonStyle(isAreaMeasurementDisabled)}
+            />
+          ),
+          disabled: isAreaMeasurementDisabled,
+        },
+      ]}
     >
-      <Icon component={RulerIcon} />
-    </ToolRadioButton>
+      {measurementPreference === "LINE_MEASUREMENT" ? (
+        <Icon
+          component={AnnotationTool.LINE_MEASUREMENT.icon}
+          style={getMaybeDisabledButtonStyle(isLineMeasurementDisabled)}
+        />
+      ) : (
+        <Icon
+          component={AnnotationTool.AREA_MEASUREMENT.icon}
+          style={getMaybeDisabledButtonStyle(isAreaMeasurementDisabled)}
+        />
+      )}
+      <CaretDownOutlined
+        className="triangle-icon"
+        style={getMaybeDisabledButtonStyle(isLineMeasurementDisabled && isAreaMeasurementDisabled)}
+      />
+    </ToolRadioButtonWithDropdown>
   );
 }

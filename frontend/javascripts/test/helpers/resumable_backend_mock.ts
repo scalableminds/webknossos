@@ -197,6 +197,10 @@ export class ResumableBackendMock {
     await this.waitForCondition(() => this.uploadRequestCount >= count, timeoutMs);
   }
 
+  async waitForTestRequestCount(count: number, timeoutMs = 1000): Promise<void> {
+    await this.waitForCondition(() => this.testRequestCount >= count, timeoutMs);
+  }
+
   async waitForSuccessfulUploads(count: number, timeoutMs = 1000): Promise<void> {
     await this.waitForCondition(() => this.successfulUploadCount >= count, timeoutMs);
   }

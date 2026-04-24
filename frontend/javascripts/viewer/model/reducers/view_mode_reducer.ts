@@ -41,7 +41,6 @@ function ViewModeReducer(state: WebknossosState, action: Action): WebknossosStat
       );
     }
 
-    case "MOVE_TD_VIEW_BY_VECTOR_WITHOUT_TIME_TRACKING":
     case "MOVE_TD_VIEW_BY_VECTOR": {
       return moveTDViewByVectorReducer(state, action.x, action.y);
     }

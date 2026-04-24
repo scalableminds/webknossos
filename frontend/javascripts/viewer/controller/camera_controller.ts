@@ -312,15 +312,16 @@ class CameraController extends PureComponent<Props> {
       );
       const minSafeDistance = maxViewExtent * 1.5;
       const effectiveDistance = Math.max(this.lastTDProjectionDistance, minSafeDistance);
-
+      
       if (effectiveDistance > this.lastTDProjectionDistance) {
+        // The camera pullback ensures vertices are always at depth ≥ effectiveDistance,
+        // Otherwise, the geometry too close to the camera would distort with perspective projection
         const viewDir = newStoredPosition.clone().sub(threeTarget).normalize();
         tdCamera.position.copy(threeTarget.clone().addScaledVector(viewDir, effectiveDistance));
         // No lookAt here — moving along the stored view ray doesn't change direction.
       }
 
       // Use near = effectiveDistance/1000 for good near/far ratio and depth precision.
-      // The camera pullback above ensures vertices are always at depth ≥ ~0.56 × effectiveDistance,
       // so near = effectiveDistance/1000 is safe against clipping.
       const near = Math.max(0.1, effectiveDistance / 1000);
       const farPadding = Math.max(1000, this.tdViewDiagonalDatasetExtent * 2, maxViewExtent * 2);

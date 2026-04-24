@@ -16,9 +16,6 @@ type MoveTDViewByVectorAction = ReturnType<typeof moveTDViewByVectorAction>;
 // The actions are used by initialization code and by the `setTargetAndFixPosition`
 // workaround in the td_controller.js.
 type SetTDCameraWithoutTimeTrackingAction = ReturnType<typeof setTDCameraWithoutTimeTrackingAction>;
-type MoveTDViewByVectorWithoutTimeTrackingAction = ReturnType<
-  typeof moveTDViewByVectorWithoutTimeTrackingAction
->;
 type SetInputCatcherRect = ReturnType<typeof setInputCatcherRect>;
 type SetInputCatcherRects = ReturnType<typeof setInputCatcherRects>;
 
@@ -67,14 +64,6 @@ const moveTDViewByVectorAction = (x: number, y: number) =>
     y,
   }) as const;
 
-// See the explanation further up for when to use this action instead of the moveTDViewByVectorAction
-export const moveTDViewByVectorWithoutTimeTrackingAction = (x: number, y: number) =>
-  ({
-    type: "MOVE_TD_VIEW_BY_VECTOR_WITHOUT_TIME_TRACKING",
-    x,
-    y,
-  }) as const;
-
 export const moveTDViewXAction = (x: number): MoveTDViewByVectorAction => {
   const state = Store.getState();
   return moveTDViewByVectorAction((x * getTDViewportSize(state)[0]) / constants.VIEWPORT_WIDTH, 0);
@@ -103,7 +92,6 @@ export type ViewModeAction =
   | CenterTDViewAction
   | ZoomTDViewAction
   | MoveTDViewByVectorAction
-  | MoveTDViewByVectorWithoutTimeTrackingAction
   | SetInputCatcherRect
   | SetInputCatcherRects;
 

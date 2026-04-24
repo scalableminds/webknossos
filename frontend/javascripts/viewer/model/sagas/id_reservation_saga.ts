@@ -127,6 +127,7 @@ function* handleReservationRequest(action: GetNewIdAction): Saga<void> {
     const replenished = (yield* take(replenishedChannel)) as IdsReplenishedAction;
     if (replenished.tracingId === tracingId && replenished.domain === domain) break;
   }
+  replenishedChannel.close();
 
   // Recurse to re-evaluate the now-replenished reservations, filtering against
   // known ID again in case time has passed since the fetch.

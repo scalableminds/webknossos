@@ -128,23 +128,33 @@ class UPathTestSuite extends AsyncWordSpec {
     }
 
     "correctly answer startsWith" in {
-      assert(UPath.fromStringUnsafe("relative/somewhere").startsWith(UPath.fromStringUnsafe("relative")))
-      assert(!UPath.fromStringUnsafe("relative/somewhere").startsWith(UPath.fromStringUnsafe("elsewhere")))
+      checkStartsWith("relative/somewhere", "relative")
+      checkStartsNotWith("relative/somewhere", "elsewhere")
       // startsWith compares actual parents, not string prefix!
-      assert(!UPath.fromStringUnsafe("relativeElsewhere").startsWith(UPath.fromStringUnsafe("relative")))
-      assert(UPath.fromStringUnsafe("/absolute/somewhere").startsWith(UPath.fromStringUnsafe("/absolute")))
-      assert(!UPath.fromStringUnsafe("/absolute/somewhere").startsWith(UPath.fromStringUnsafe("/elsewhere")))
-      assert(!UPath.fromStringUnsafe("/absolute/somewhere").startsWith(UPath.fromStringUnsafe("https://example.com")))
-      assert(
-        UPath
-          .fromStringUnsafe("https://example.com/path/somewhere")
-          .startsWith(UPath.fromStringUnsafe("https://example.com/path")))
+      checkStartsNotWith("relativeElsewhere", "relative")
+      checkStartsWith("/absolute/somewhere", "/absolute")
+      checkStartsWith("/absolute/somewhere", "/absolute/")
+      // trailing slash is allowed both ways
+      checkStartsWith("/absolute/trailingSlash", "/absolute/trailingSlash/")
+      checkStartsWith("/absolute/trailingSlash/", "/absolute/trailingSlash")
+      checkStartsNotWith("/absolute/somewhere", "/elsewhere")
+      checkStartsNotWith("/absolute/somewhere", "https://example.com")
+      // trailing slash is allowed both ways
+      checkStartsWith("https://example.com/path/somewhere", "https://example.com/path/")
+      checkStartsWith("https://example.com/path/somewhere", "https://example.com/path")
+      checkStartsWith("https://example.com/path/", "https://example.com/path/")
+      checkStartsWith("https://example.com/path", "https://example.com/path/")
+      checkStartsWith("https://example.com/path", "https://example.com/path")
+      checkStartsWith("https://example.com/path/", "https://example.com/path")
       // startsWith compares actual parents, not string prefix!
-      assert(
-        !UPath
-          .fromStringUnsafe("https://example.com/pathSomewhereElse")
-          .startsWith(UPath.fromStringUnsafe("https://example.com/path")))
+      checkStartsNotWith("https://example.com/pathSomewhereElse", "https://example.com/path")
     }
   }
+
+  private def checkStartsWith(pathLiteral1: String, pathLiteral2: String) =
+    assert(UPath.fromStringUnsafe(pathLiteral1).startsWith(UPath.fromStringUnsafe(pathLiteral2)))
+
+  private def checkStartsNotWith(pathLiteral1: String, pathLiteral2: String) =
+    assert(!UPath.fromStringUnsafe(pathLiteral1).startsWith(UPath.fromStringUnsafe(pathLiteral2)))
 
 }

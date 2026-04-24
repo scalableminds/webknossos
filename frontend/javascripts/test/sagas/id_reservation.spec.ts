@@ -161,7 +161,11 @@ describe("ID reservation saga (concurrent collaboration mode)", () => {
       );
       expect(id1).toBe(200);
 
-      // TODO PR feedback for PRRC_kwDOAEIDNc650rEr
+      const reserveIdsCalls = vi
+        .mocked(mocks.Request.sendJSONReceiveJSON)
+        .mock.calls.filter(([url]) => url.includes("/reserveIds"));
+      expect(reserveIdsCalls).toHaveLength(1);
+
       const id2 = yield call(() =>
         dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
       );

@@ -109,7 +109,7 @@ export const getNewIdAction = (
 export const dispatchGetNewIdAsync = async (
   dispatch: Dispatch<any>,
   tracingId: string,
-  domain: AnnotationIdDomain,
+  domain: "SegmentGroup",
 ): Promise<number> => {
   const readyDeferred = new Deferred<number, unknown>();
   const action = getNewIdAction((newId) => readyDeferred.resolve(newId), tracingId, domain);

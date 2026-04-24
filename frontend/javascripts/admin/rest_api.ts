@@ -112,6 +112,7 @@ import { assertResponseLimit } from "./api/api_utils";
 import { getDatasetIdFromNameAndOrganization } from "./api/disambiguate_legacy_routes";
 import { getOrganization } from "./api/organization";
 import { doWithToken, refreshToken } from "./api/token";
+import { IDEAL_ID_BUFFER_SIZE } from "viewer/model/sagas/id_reservation_saga";
 
 export * from "./api/jobs";
 export * as meshApi from "./api/mesh";
@@ -1042,6 +1043,11 @@ export async function reserveIdsForAnnotation(
     // these (without reserving new ones).
     // Then, the known maximum is 2 (instead of 4).
     throw new Error("Must reserve at least 1 id");
+  }
+  if (numberOfIdsToReserve > IDEAL_ID_BUFFER_SIZE) {
+    throw new Error(
+      `Tried to request too many ids. numberOfIdsToReserve (${numberOfIdsToReserve} > ${IDEAL_ID_BUFFER_SIZE})`,
+    );
   }
   const ids: number[] = await Request.sendJSONReceiveJSON(
     `/api/annotations/${annotationId}/reserveIds`,

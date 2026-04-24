@@ -1448,8 +1448,8 @@ class SegmentsView extends React.Component<Props, State> {
             {
               key: "create",
               onClick: async () => {
-                await this.createGroup(id);
                 this.hideContextMenu();
+                await this.createGroup(id);
               },
               disabled: isEditingDisabled,
               icon: <PlusOutlined />,

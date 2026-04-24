@@ -44,15 +44,9 @@ with wk.webknossos_context(token="${authToken || "<insert token here>"}"${contex
 `;
 }
 
-export function DownloadPythonTab({
-  annotation,
-  dataset,
-  isAnnotation,
-}: {
-  annotation: StoreAnnotation;
-  dataset: APIDataset;
-  isAnnotation: boolean;
-}) {
+export function DownloadPythonTab({ isAnnotation }: { isAnnotation: boolean }) {
+  const annotation = useWkSelector((state) => state.annotation);
+  const dataset = useWkSelector((state) => state.dataset);
   const activeUser = useWkSelector((state) => state.activeUser);
 
   const authToken = useFetch(
@@ -130,7 +124,7 @@ export function DownloadPythonTab({
           margin: "18px 0",
         }}
       />
-      <MoreInfoHint typeDependentFileName={typeName} />
+      <MoreInfoHint />
     </>
   );
 }

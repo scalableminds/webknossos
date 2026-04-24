@@ -1,22 +1,19 @@
-import { Col, Divider, Radio, Row, Tooltip, Typography } from "antd";
+import { downloadAnnotation } from "admin/rest_api";
+import { Button, Col, Divider, Flex, Radio, Row, Tooltip, Typography } from "antd";
+import { useWkSelector } from "libs/react_hooks";
 import messages from "messages";
 import { useState } from "react";
 import { hasVolumeTracings } from "viewer/model/accessors/volumetracing_accessor";
-import type { StoreAnnotation } from "viewer/store";
+import { Model } from "viewer/singletons";
 import { Hint, MoreInfoHint } from "./download_info_shared";
 
 const radioButtonStyle = {
   marginBottom: 24,
 };
 
-export function DownloadAnnotationTab({
-  annotation,
-  isAnnotation,
-}: {
-  annotation: StoreAnnotation;
-  isAnnotation: boolean;
-}) {
-  const typeName = isAnnotation ? "annotation" : "dataset";
+export function DownloadAnnotationTab({ onClose }: { onClose: () => void }) {
+  const annotation = useWkSelector((state) => state.annotation);
+
   const hasSkeleton = annotation.skeleton != null;
   const hasVolumes = hasVolumeTracings(annotation);
   const hasVolumeFallback = annotation.volumes.some((volume) => volume.fallbackLayer != null);
@@ -45,6 +42,20 @@ export function DownloadAnnotationTab({
   const [fileFormatToDownload, setFileFormatToDownload] = useState<"zarr3" | "wkw" | "nml">(
     initialFileFormatToDownload,
   );
+
+  const handleDownload = async function () {
+    await Model.ensureSavedState();
+    const includeVolumeData = fileFormatToDownload === "wkw" || fileFormatToDownload === "zarr3";
+    downloadAnnotation(
+      annotation.annotationId,
+      annotation.annotationType,
+      hasVolumeFallback,
+      undefined,
+      fileFormatToDownload,
+      includeVolumeData,
+    );
+    onClose();
+  };
 
   return (
     <>
@@ -117,7 +128,12 @@ export function DownloadAnnotationTab({
           margin: "18px 0",
         }}
       />
-      <MoreInfoHint typeDependentFileName={typeName} />
+      <MoreInfoHint />
+      <Flex justify="end">
+        <Button type="primary" onClick={handleDownload}>
+          Download
+        </Button>
+      </Flex>
     </>
   );
 }

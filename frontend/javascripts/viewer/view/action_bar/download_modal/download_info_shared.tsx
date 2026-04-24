@@ -17,14 +17,14 @@ export function Hint({
   );
 }
 
-export function MoreInfoHint({ typeDependentFileName }: { typeDependentFileName: string }) {
+export function MoreInfoHint() {
   return (
     <Hint
       style={{
         margin: "0px 12px 0px 12px",
       }}
     >
-      For more information on how to work with {typeDependentFileName} visit the{" "}
+      For more information on how to work with annotations and datasets visit the{" "}
       <a
         href="https://docs.webknossos.org/webknossos/data/export_ui.html"
         target="_blank"

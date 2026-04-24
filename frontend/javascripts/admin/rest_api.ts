@@ -97,6 +97,7 @@ import {
   parseProtoTracing,
   serializeProtoListOfLong,
 } from "viewer/model/helpers/proto_helpers";
+import { IDEAL_ID_BUFFER_SIZE } from "viewer/model/sagas/id_reservation_saga";
 import type {
   DatasetConfiguration,
   Mapping,
@@ -112,7 +113,6 @@ import { assertResponseLimit } from "./api/api_utils";
 import { getDatasetIdFromNameAndOrganization } from "./api/disambiguate_legacy_routes";
 import { getOrganization } from "./api/organization";
 import { doWithToken, refreshToken } from "./api/token";
-import { IDEAL_ID_BUFFER_SIZE } from "viewer/model/sagas/id_reservation_saga";
 
 export * from "./api/jobs";
 export * as meshApi from "./api/mesh";

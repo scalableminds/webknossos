@@ -298,9 +298,9 @@ describe("ID reservation saga (concurrent collaboration mode)", () => {
 
     const task = startSaga(function* task() {
       yield call(() =>
-        expect(
-          dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"),
-        ).rejects.toThrow("Persistent network failure"),
+        expect(dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup")).rejects.toThrow(
+          "Persistent network failure",
+        ),
       );
 
       // The saga is still alive — a subsequent request succeeds once the endpoint recovers.

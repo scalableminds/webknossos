@@ -1,4 +1,5 @@
 import { reserveIdsForAnnotation } from "admin/rest_api";
+import { sleep } from "libs/utils";
 import without from "lodash-es/without";
 import { actionChannel, call, fork, put } from "typed-redux-saga";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
@@ -7,8 +8,8 @@ import { getTracingById } from "../accessors/tracing_accessor";
 import type { GetNewIdAction } from "../actions/actions";
 import {
   type IdsReplenishedAction,
-  idsReplenishedAction,
   type IdsReplenishmentFailedAction,
+  idsReplenishedAction,
   idsReplenishmentFailedAction,
   type RequestIdReplenishmentAction,
   requestIdReplenishmentAction,
@@ -17,7 +18,6 @@ import {
 import { getMaximumGroupId } from "../reducers/skeletontracing_reducer_helpers";
 import { getGroupIdSet } from "../reducers/volumetracing_reducer_helpers";
 import { type Saga, select, take } from "./effect_generators";
-import { sleep } from "libs/utils";
 
 // Note: this value 10 should match the limit in the backend see AnnotationController.reserveIds
 export const IDEAL_ID_BUFFER_SIZE = import.meta.env.MODE === "test" ? 5 : 10;

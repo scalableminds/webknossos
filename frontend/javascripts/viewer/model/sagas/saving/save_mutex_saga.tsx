@@ -427,9 +427,23 @@ function* watchForCollaborationModeChange(mutexLogicState: MutexLogicState): Sag
     if (collaborationMode !== "OwnerOnly") {
       yield* call(restartMutexAcquiringSaga, mutexLogicState);
     } else {
-      // todop: cancel saga?
-      // collaboration was turned off by the activeUser. Since this is only
-      // allowed by the owner, they should be able to edit the annotation, too.
+      // Collaboration was turned off by the activeUser. Cancel any running mutex
+      // acquisition saga and release the mutex if currently held.
+      if (mutexLogicState.runningContinuousMutexAcquiringSaga != null) {
+        yield* cancel(mutexLogicState.runningContinuousMutexAcquiringSaga);
+        mutexLogicState.runningContinuousMutexAcquiringSaga = null;
+      }
+      if (mutexLogicState.runningAdHocMutexAcquiringSaga != null) {
+        yield* cancel(mutexLogicState.runningAdHocMutexAcquiringSaga);
+        mutexLogicState.runningAdHocMutexAcquiringSaga = null;
+      }
+      const stillHasAnnotationMutex = yield* select(
+        (state) => state.save.mutexState.hasAnnotationMutex,
+      );
+      if (stillHasAnnotationMutex) {
+        yield* call(releaseMutex);
+      }
+      // Since only the owner can turn off collaboration, they should be able to edit, too.
       // Still, let's check that owner === activeUser to be extra safe.
       const owner = yield* select((storeState) => storeState.annotation.owner);
       const activeUser = yield* select((state) => state.activeUser);

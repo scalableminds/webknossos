@@ -102,7 +102,7 @@ export class ResumableChunk {
 
     try {
       const response = await fetch(targetUrl, {
-        method: this.getOpt("testMethod") as string,
+        method: "GET",
         headers: customHeaders,
         signal: this.abortController.signal,
         credentials: this.getOpt("withCredentials") ? "include" : "same-origin",
@@ -192,30 +192,25 @@ export class ResumableChunk {
     }
     const headers: Record<string, string> = Object.assign({}, customHeaders);
 
-    if (this.getOpt("method") === "octet") {
-      data = bytes;
-      headers["Content-Type"] = "application/octet-stream";
-    } else {
-      const formData = new FormData();
-      // Add data from the query options
-      Object.entries(queryParameters).forEach(([k, v]) => {
-        formData.append(k, v);
-      });
+    const formData = new FormData();
+    // Add data from the query options
+    Object.entries(queryParameters).forEach(([k, v]) => {
+      formData.append(k, v);
+    });
 
-      if (this.getOpt("chunkFormat") === "blob") {
-        formData.append(this.getOpt("fileParameterName"), bytes, this.fileObj.fileName);
-        data = formData;
-      } else {
-        // chunkFormat == base64
-        const readPromise = new Promise<string>((resolve) => {
-          const fr = new FileReader();
-          fr.onload = () => resolve(fr.result as string);
-          fr.readAsDataURL(bytes);
-        });
-        const base64Data = await readPromise;
-        formData.append(this.getOpt("fileParameterName"), base64Data);
-        data = formData;
-      }
+    if (this.getOpt("chunkFormat") === "blob") {
+      formData.append(this.getOpt("fileParameterName"), bytes, this.fileObj.fileName);
+      data = formData;
+    } else {
+      // chunkFormat == base64
+      const readPromise = new Promise<string>((resolve) => {
+        const fr = new FileReader();
+        fr.onload = () => resolve(fr.result as string);
+        fr.readAsDataURL(bytes);
+      });
+      const base64Data = await readPromise;
+      formData.append(this.getOpt("fileParameterName"), base64Data);
+      data = formData;
     }
 
     const targetUrl = getTargetURI(this.resumableObj, "upload", queryParameters);
@@ -231,7 +226,7 @@ export class ResumableChunk {
 
     try {
       const response = await fetch(targetUrl, {
-        method: this.getOpt("uploadMethod") as string,
+        method: "POST",
         headers,
         body: data,
         signal: this.abortController.signal,

@@ -82,18 +82,6 @@ export interface ConfigurationHash {
    */
   preprocessFile?: ((file: ResumableFile) => Promise<void> | void) | null;
   /**
-   * Method to use when sending chunks to the server (`multipart` or `octet`) (Default: `multipart`)
-   */
-  method?: "multipart" | "octet";
-  /**
-   * HTTP method to use when sending chunks to the server (`POST`, `PUT`, `PATCH`) (Default: `POST`)
-   */
-  uploadMethod?: string;
-  /**
-   * Method for chunk test request. (Default: `'GET'`)
-   */
-  testMethod?: string;
-  /**
    * Prioritize first and last chunks of all files. This can be handy if you can determine if a file is valid for your service from only the first or last chunk. For example, photo or video meta data is usually located in the first part of a file, making it easy to test support from only the first chunk. (Default: `false`)
    */
   prioritizeFirstAndLastChunk?: boolean;
@@ -246,13 +234,9 @@ export class ResumableUpload implements EventTarget {
       headers: {},
       preprocess: null,
       preprocessFile: null,
-      method: "multipart",
-      uploadMethod: "POST",
-      testMethod: "GET",
       prioritizeFirstAndLastChunk: false,
       target: "/",
       testTarget: null,
-
       testChunks: true,
       generateUniqueIdentifier: null,
       getTarget: null,

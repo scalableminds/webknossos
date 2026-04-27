@@ -37,6 +37,31 @@ import {
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
 
+function* initializePollOnlyAnnotation(context: WebknossosTestContext, tracingId: string) {
+  yield call(initializeMappingAndTool, context, tracingId);
+
+  const mapping0 = yield* select(
+    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+  );
+  expect(mapping0).toEqual(initialMapping);
+
+  yield makeAnnotationPollOnly(context);
+}
+
+function* makeAnnotationPollOnly(context: WebknossosTestContext) {
+  // todo: description
+  const { api } = context;
+  // OthersMayEdit = true is needed for polling to work properly as this test and the simulated
+  // other user (via backendMock.injectVersion) are both editing the annotation in this test
+  // (although the user of this test only sends empty updates). Else the polling logic would not work.
+  yield put(setCollaborationModeAction("Concurrent"));
+  yield call(() => api.tracing.save());
+  context.receivedDataPerSaveRequest.length = 0;
+  yield put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
+  yield put(disableSavingAction());
+  yield put(setCollaborationModeAction("OwnerOnly"));
+}
+
 describe("Proofreading (Poll only)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
     await setupWebknossosForTestingWithRestrictions(context, "Exclusive", true, false, "hybrid");
@@ -55,20 +80,7 @@ describe("Proofreading (Poll only)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* () {
-      yield call(initializeMappingAndTool, context, tracingId);
-
-      const mapping0 = yield* select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-      expect(mapping0).toEqual(initialMapping);
-      // OthersMayEdit = true is needed for polling to work properly as this test and the simulated
-      // other user (via backendMock.injectVersion) are both editing the annotation in this test
-      // (although the user of this test only sends empty updates). Else the polling logic would not work.
-      yield put(setCollaborationModeAction("Concurrent"));
-
-      yield call(() => api.tracing.save());
-      context.receivedDataPerSaveRequest.length = 0;
+      yield* initializePollOnlyAnnotation(context, tracingId);
 
       const foreignMergeAction = {
         name: "mergeAgglomerate" as const,
@@ -145,13 +157,8 @@ describe("Proofreading (Poll only)", () => {
         ]),
       );
 
-      // OthersMayEdit = true is needed for polling to work properly as this test and the simulated
-      // other user (via backendMock.injectVersion) are both editing the annotation in this test
-      // (although the user of this test only sends empty updates). Else the polling logic would not work.
-      yield put(setCollaborationModeAction("Concurrent"));
+      yield* makeAnnotationPollOnly(context);
 
-      yield call(() => api.tracing.save());
-      context.receivedDataPerSaveRequest.length = 0;
       const foreignSplitAction = {
         name: "splitAgglomerate" as const,
         value: {
@@ -250,21 +257,7 @@ describe("Proofreading (Poll only)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* () {
-      yield call(initializeMappingAndTool, context, tracingId);
-
-      const mapping0 = yield* select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-      expect(mapping0).toEqual(initialMapping);
-
-      // OthersMayEdit = true is needed for polling to work properly as this test and the simulated
-      // other user (via backendMock.injectVersion) are both editing the annotation in this test
-      // (although the user of this test only sends empty updates). Else the polling logic would not work.
-      yield put(setCollaborationModeAction("Concurrent"));
-
-      yield call(() => api.tracing.save());
-      context.receivedDataPerSaveRequest.length = 0;
+      yield initializePollOnlyAnnotation(context, tracingId);
 
       const foreignSplitAction = {
         name: "splitAgglomerate" as const,
@@ -309,21 +302,7 @@ describe("Proofreading (Poll only)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* () {
-      yield call(initializeMappingAndTool, context, tracingId);
-
-      const mapping0 = yield* select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-      expect(mapping0).toEqual(initialMapping);
-
-      // OthersMayEdit = true is needed for polling to work properly as this test and the simulated
-      // other user (via backendMock.injectVersion) are both editing the annotation in this test
-      // (although the user of this test only sends empty updates). Else the polling logic would not work.
-      yield put(setCollaborationModeAction("Concurrent"));
-
-      yield call(() => api.tracing.save());
-      context.receivedDataPerSaveRequest.length = 0;
+      yield initializePollOnlyAnnotation(context, tracingId);
 
       const foreignSplitAction1 = {
         name: "splitAgglomerate" as const,
@@ -394,21 +373,7 @@ describe("Proofreading (Poll only)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* () {
-      yield call(initializeMappingAndTool, context, tracingId);
-
-      const mapping0 = yield* select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-      expect(mapping0).toEqual(initialMapping);
-
-      // OthersMayEdit = true is needed for polling to work properly as this test and the simulated
-      // other user (via backendMock.injectVersion) are both editing the annotation in this test
-      // (although the user of this test only sends empty updates). Else the polling logic would not work.
-      yield put(setCollaborationModeAction("Concurrent"));
-
-      yield call(() => api.tracing.save());
-      context.receivedDataPerSaveRequest.length = 0;
+      yield initializePollOnlyAnnotation(context, tracingId);
 
       const foreignMergeAction = {
         name: "mergeAgglomerate" as const,
@@ -479,20 +444,7 @@ describe("Proofreading (Poll only)", () => {
 
     const task = startSaga(function* () {
       const rebaseActionChannel = yield actionChannel(["PREPARE_REBASING", "FINISHED_REBASING"]);
-      yield call(initializeMappingAndTool, context, tracingId);
-
-      const mapping0 = yield* select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-      expect(mapping0).toEqual(initialMapping);
-      // OthersMayEdit = true is needed for polling to work properly as this test and the simulated
-      // other user (via backendMock.injectVersion) are both editing the annotation in this test
-      // (although the user of this test only sends empty updates). Else the polling logic would not work.
-      yield put(setCollaborationModeAction("Concurrent"));
-
-      yield call(() => api.tracing.save());
-      context.receivedDataPerSaveRequest.length = 0;
+      yield initializePollOnlyAnnotation(context, tracingId);
 
       const foreignMergeAction = {
         name: "mergeAgglomerate" as const,
@@ -547,23 +499,10 @@ describe("Proofreading (Poll only)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* () {
-      yield call(initializeMappingAndTool, context, tracingId);
-
-      const mapping0 = yield* select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
-      expect(mapping0).toEqual(initialMapping);
-
+      yield initializePollOnlyAnnotation(context, tracingId);
       if (othersMayEdit) {
         yield put(setCollaborationModeAction("Concurrent"));
       }
-
-      yield call(() => api.tracing.save());
-      // Disable annotation saving: Simulating that this user does not edit the annotation but should be able to pull updates.
-      yield put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
-      yield put(disableSavingAction());
-      context.receivedDataPerSaveRequest.length = 0;
 
       const foreignMergeAction = {
         name: "mergeAgglomerate" as const,
@@ -628,10 +567,8 @@ describe("Proofreading (Poll only)", () => {
       yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
       yield makeMappingEditableForTest();
-      yield put(setCollaborationModeAction("Concurrent"));
 
-      // Ensure all changes till here are saved in the backend.
-      yield call(() => context.api.tracing.save());
+      yield* makeAnnotationPollOnly(context);
 
       // Store current annotation version, calculate expected version after injecting updates and inject the agglomerate tree loading.
       const receivedAmountOfUpdateRequests = context.receivedDataPerSaveRequest.length;

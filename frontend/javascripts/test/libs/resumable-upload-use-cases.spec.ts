@@ -3,9 +3,9 @@ import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { ResumableUpload, type ResumableUploadEvent } from "../../libs/resumable-upload";
-import { ResumableBackendMock } from "../helpers/resumable_backend_mock";
+import { makeSlowChunk1Handler, ResumableBackendMock } from "../helpers/resumable_backend_mock";
 
-describe("Resumable Use Cases (WebKnossos Patterns)", () => {
+describe("Resumable Use Cases (WEBKNOSSOS Patterns)", () => {
   let resumable: ResumableUpload;
   let backendMock: ResumableBackendMock;
 
@@ -612,40 +612,6 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
   });
 
   describe("Race Condition: chunk test body-read gap", () => {
-    // Helper: returns a custom GET handler where chunk 1's response body is only
-    // delivered when the returned trigger is called.  All other chunks return 204.
-    // Also returns `getArrived`, a Promise that resolves the moment chunk 1's GET
-    // handler is invoked — used for synchronisation without relying on backendMock
-    // counters (since this handler bypasses backendMock.handle()).
-    const makeSlowChunk1Handler = () => {
-      let resolveBody: (() => void) | null = null;
-      let resolveGetArrived!: () => void;
-      const getArrived = new Promise<void>((resolve) => {
-        resolveGetArrived = resolve;
-      });
-      const trigger = () => resolveBody?.();
-      const handler = http.get("http://localhost/upload", ({ request }) => {
-        const url = new URL(request.url);
-        const chunkNumber = Number(url.searchParams.get("resumableChunkNumber"));
-        if (chunkNumber === 1) {
-          resolveGetArrived(); // signal: GET headers received, response about to be sent
-          const encoder = new TextEncoder();
-          const stream = new ReadableStream<Uint8Array>({
-            start(controller) {
-              resolveBody = () => {
-                controller.enqueue(encoder.encode("Found"));
-                controller.close();
-              };
-            },
-          });
-          // Status 200: chunk already exists on server.
-          return new Response(stream, { status: 200 });
-        }
-        return new Response("", { status: 204 });
-      });
-      return { handler, trigger, getArrived };
-    };
-
     it("should not send a duplicate POST when uploadNextChunk is re-entered during test body read", async () => {
       // Race condition in ResumableChunk.test():
       //   1. GET returns 200 (chunk exists) → `tested = true` is set synchronously.
@@ -660,8 +626,11 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       // simultaneousUploads:1 avoids the double-test-request-for-chunk-1 problem
       // that would occur with simultaneousUploads:2.
 
-      const { handler, trigger: releaseChunk1Body, getArrived: chunk1GetArrived } =
-        makeSlowChunk1Handler();
+      const {
+        handler,
+        trigger: releaseChunk1Body,
+        getArrived: chunk1GetArrived,
+      } = makeSlowChunk1Handler();
       server.use(handler);
 
       resumable = new ResumableUpload({
@@ -705,11 +674,14 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
 
     it("should not leave a duplicate POST in-flight when complete fires", async () => {
       // Variant: validates that no spurious POST is still in progress at the moment
-      // complete fires.  With a delayed backend response the duplicate POST would
+      // "complete" fires. With a delayed backend response the duplicate POST would
       // still be counted as inflight when complete is dispatched.
 
-      const { handler, trigger: releaseChunk1Body, getArrived: chunk1GetArrived } =
-        makeSlowChunk1Handler();
+      const {
+        handler,
+        trigger: releaseChunk1Body,
+        getArrived: chunk1GetArrived,
+      } = makeSlowChunk1Handler();
       server.use(handler);
 
       // Slow down POST responses so any duplicate is still in-flight when complete fires.

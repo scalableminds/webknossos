@@ -1,9 +1,11 @@
 import { call, put } from "redux-saga/effects";
+import dummyUser from "test/fixtures/dummy_user";
 import {
   setupWebknossosForTestingWithRestrictions,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
 import { actionChannel, flush } from "typed-redux-saga";
+import { WkDevFlags } from "viewer/api/wk_dev";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
@@ -14,6 +16,7 @@ import {
   disableSavingAction,
   dispatchEnsureHasNewestVersionAsync,
 } from "viewer/model/actions/save_actions";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import {
   setActiveCellAction,
   updateSegmentAction,
@@ -49,8 +52,9 @@ function* initializePollOnlyAnnotation(context: WebknossosTestContext, tracingId
 }
 
 function* makeAnnotationPollOnly(context: WebknossosTestContext) {
-  // todo: description
   const { api } = context;
+  // todo: description
+  // Set collab mode to concurrent to be able to save the updates about initializing the mapping.
   // OthersMayEdit = true is needed for polling to work properly as this test and the simulated
   // other user (via backendMock.injectVersion) are both editing the annotation in this test
   // (although the user of this test only sends empty updates). Else the polling logic would not work.
@@ -80,7 +84,28 @@ describe("Proofreading (Poll only)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* () {
-      yield* initializePollOnlyAnnotation(context, tracingId);
+      // Now switch to a poll only mode: Simulate a different user in a different client session than the owner.
+      // 1. switch to different user.
+      // 2. turn on owner only collab mode -> we cannot edit
+      // 3. As the save_mutex_saga does not consider the case that during a session the collab mode is changed by a non owner,
+      //    the isUpdatingCurrentlyAllowed property on the annotation is never turned to false.
+      //    This is the case as this cannot happen in a real scenario; only here in this simulated test case.
+      //    Thus, we need to set isUpdatingCurrentlyAllowed manually to false here.
+      // Note: For full correctness the annotation restrictions should be updates to allowSave = false,
+      // but there is currently no action for this and this is not needed for the code to go the correct path as
+      // isUpdatingCurrentlyAllowed = false.
+      const differentUser = {
+        ...dummyUser,
+        id: "dummy-user2-id",
+        email: "dummy2@email.com",
+        firstName: "First Name2",
+        lastName: "Last Name2",
+      };
+      yield put(setActiveUserAction(differentUser));
+      yield put(setCollaborationModeAction("OwnerOnly"));
+      yield put(disableSavingAction());
+      yield put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
+      WkDevFlags.logActions = true;
 
       const foreignMergeAction = {
         name: "mergeAgglomerate" as const,
@@ -102,8 +127,9 @@ describe("Proofreading (Poll only)", () => {
 
       expect(mapping1).toEqual(expectedMappingAfterMerge);
 
-      yield call(() => api.tracing.save());
-
+      // Expect empty save queue as the user is not allowed to do updates.
+      const saveQueue = yield select((state) => state.save.queue);
+      expect(saveQueue.length).toBe(0);
       // Checking that only the injected update action was received.
       expect(context.receivedDataPerSaveRequest.length).toBe(1);
       expect(context.receivedDataPerSaveRequest[0].length).toBe(1);

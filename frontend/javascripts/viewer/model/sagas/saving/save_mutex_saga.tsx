@@ -433,9 +433,8 @@ function* watchForCollaborationModeChange(mutexLogicState: MutexLogicState): Sag
       // Still, let's check that owner === activeUser to be extra safe.
       const owner = yield* select((storeState) => storeState.annotation.owner);
       const activeUser = yield* select((state) => state.activeUser);
-      if (activeUser && owner?.id === activeUser?.id) {
-        yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(true));
-      }
+      const isAnnotationOwner = (activeUser && owner?.id === activeUser?.id) || false;
+      yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(isAnnotationOwner));
     }
   }
   yield* takeEvery("SET_COLLABORATION_MODE", onChange);

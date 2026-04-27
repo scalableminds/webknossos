@@ -4,12 +4,14 @@ import {
   type APITracingStoreAnnotation,
 } from "types/api_types";
 import { ViewModeValues } from "viewer/constants";
+import dummyUser from "./dummy_user";
 import { tracing as skeletonTracing } from "./skeletontracing_server_objects";
 import { tracing as volumeTracing } from "./volumetracing_server_objects";
 
 export const tracings = [skeletonTracing, volumeTracing];
 
 export const annotation: APIAnnotation = {
+  owner: dummyUser,
   description: "",
   datasetId: "66f3c82966010034942e9740",
   state: "Active",

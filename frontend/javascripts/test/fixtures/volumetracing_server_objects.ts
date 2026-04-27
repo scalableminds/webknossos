@@ -4,6 +4,7 @@ import {
   type APITracingStoreAnnotation,
   type ServerVolumeTracing,
 } from "types/api_types";
+import dummyUser from "./dummy_user";
 
 export const VOLUME_TRACING_ID = "volumeTracingId";
 
@@ -55,6 +56,7 @@ export const tracing: ServerVolumeTracing = {
 };
 
 export const annotation: APIAnnotation = {
+  owner: dummyUser,
   datasetId: "66f3c82966010034942e9740",
   description: "",
   state: "Active",

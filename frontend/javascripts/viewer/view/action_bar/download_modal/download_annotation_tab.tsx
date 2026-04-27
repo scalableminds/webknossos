@@ -1,5 +1,5 @@
 import { downloadAnnotation } from "admin/rest_api";
-import { Button, Col, Divider, Flex, Radio, Row, Tooltip, Typography } from "antd";
+import { Alert, Button, Col, Divider, Flex, Radio, Row, Tooltip, Typography } from "antd";
 import Space from "antd/lib/space";
 import { useWkSelector } from "libs/react_hooks";
 import messages from "messages";
@@ -34,23 +34,6 @@ export function DownloadAnnotationTab({ onClose }: { onClose: () => void }) {
       includeVolumeData,
     );
     onClose();
-  };
-
-  const maybeShowWarning = () => {
-    const volumeFallbackWarning = hasVolumeFallback ? (
-      <Row key="no-fallback">
-        <Typography.Text
-          style={{
-            margin: "0 6px 12px",
-          }}
-          type="warning"
-        >
-          {messages["annotation.no_fallback_data_included"]}
-        </Typography.Text>
-      </Row>
-    ) : null;
-
-    return volumeFallbackWarning;
   };
 
   const options = [
@@ -90,22 +73,19 @@ export function DownloadAnnotationTab({ onClose }: { onClose: () => void }) {
   ];
 
   return (
-    <>
-      <Row>
-        {maybeShowWarning()}
-        <Typography.Paragraph>
-          {!hasVolumes ? "This is a Skeleton-only annotation. " : ""}
-          {!hasSkeleton ? "This is a Volume-only annotation. " : ""}
-          {messages["annotation.download"]}
-        </Typography.Paragraph>
-      </Row>
+    <Flex vertical>
+      <Typography.Paragraph>
+        {!hasVolumes ? "This is a Skeleton-only annotation. " : ""}
+        {!hasSkeleton ? "This is a Volume-only annotation. " : ""}
+        {messages["annotation.download"]}
+      </Typography.Paragraph>
       <Divider>Options</Divider>
       <Row>
         <Col span={9}>
-          <Space orientation="vertical">
+          <Flex vertical>
             Select the data you would like to download.
             <Hint>An NML file will always be included with any download.</Hint>
-          </Space>
+          </Flex>
         </Col>
         <Col span={15}>
           <Radio.Group
@@ -118,6 +98,9 @@ export function DownloadAnnotationTab({ onClose }: { onClose: () => void }) {
           />
         </Col>
       </Row>
+      {hasVolumeFallback && (
+        <Alert type="warning" title={messages["annotation.no_fallback_data_included"]} />
+      )}
       <Divider />
       <Flex justify="end" gap="small">
         <Button
@@ -131,6 +114,6 @@ export function DownloadAnnotationTab({ onClose }: { onClose: () => void }) {
           Download
         </Button>
       </Flex>
-    </>
+    </Flex>
   );
 }

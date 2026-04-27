@@ -55,7 +55,7 @@ export function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: (
         }}
         icon={<CopyOutlined />}
       />
-      {code}
+      <code>{code}</code>
     </pre>
   );
 }

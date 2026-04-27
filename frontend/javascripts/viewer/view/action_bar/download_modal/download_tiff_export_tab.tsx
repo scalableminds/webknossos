@@ -2,7 +2,6 @@ import { useStartAndPollJob } from "admin/job/job_hooks";
 import { doWithToken, downloadWithFilename, startExportTiffJob } from "admin/rest_api";
 import { Alert, Button, Checkbox, Col, Divider, Flex, Row, Segmented, Typography } from "antd";
 import type { SegmentedOptions } from "antd/es/segmented";
-import Space from "antd/lib/space";
 import { LayerSelection } from "components/layer_selection";
 import features from "features";
 import { formatCountToDataAmountUnit, formatScale } from "libs/format_utils";
@@ -114,7 +113,7 @@ export function isBoundingBoxExportable(boundingBox: BoundingBoxMinMaxType, mag:
   );
 
   const alerts = (
-    <Space orientation="vertical">
+    <Flex vertical gap="small">
       {volumeExceeded && (
         <Alert
           type="error"
@@ -133,7 +132,7 @@ export function isBoundingBoxExportable(boundingBox: BoundingBoxMinMaxType, mag:
           } vx.`}
         />
       )}
-    </Space>
+    </Flex>
   );
 
   return {
@@ -268,13 +267,13 @@ export function DownloadTiffTab({
   };
 
   return (
-    <Space orientation="vertical" size="small">
+    <Flex vertical>
       <Typography.Paragraph>
-        {messages["download.export_as_tiff"]({ typeName })} Go to the{" "}
+        {messages["download.export_as_tiff"]({ typeName })} Visit the{" "}
         <a href="/jobs" target="_blank" rel="noreferrer">
           Jobs Overview Page
         </a>{" "}
-        to see running exports and to download the results.
+        to track progress and download results.
       </Typography.Paragraph>
       {!dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.EXPORT_TIFF) ? (
         <WorkerInfo />
@@ -284,8 +283,9 @@ export function DownloadTiffTab({
           <Flex justify="center">
             <Segmented
               value={exportFormat}
-              onChange={(value) => setExportFormat(value)}
+              onChange={(value) => setExportFormat(value as ExportFormat)}
               options={ExportFormatOptions}
+              size="large"
             />
           </Flex>
 
@@ -301,7 +301,7 @@ export function DownloadTiffTab({
           />
 
           <Divider>Bounding Box</Divider>
-          <Flex orientation="vertical">
+          <Flex vertical gap="small">
             <BoundingBoxSelection
               value={selectedBoundingBoxId}
               userBoundingBoxes={userBoundingBoxes}
@@ -332,11 +332,10 @@ export function DownloadTiffTab({
               <Col span={19}>
                 <MagSlider magnificationInfo={selectedLayerMagInfo} value={mag} onChange={setMag} />
               </Col>
-              <Col
-                span={5}
-                style={{ display: "flex", justifyContent: "flex-end", alignItems: "center" }}
-              >
-                {mag.join("-")}
+              <Col span={5}>
+                <Flex justify="flex-end" align="center">
+                  {mag.join("-")}
+                </Flex>
               </Col>
             </Row>
           )}
@@ -349,6 +348,7 @@ export function DownloadTiffTab({
           </Typography.Paragraph>
         </div>
       )}
+      <Divider />
       <Flex justify="space-between" align="center">
         <Checkbox
           checked={keepWindowOpen}
@@ -357,7 +357,7 @@ export function DownloadTiffTab({
         >
           Keep window open
         </Checkbox>
-        <Space>
+        <Flex gap="small">
           <Button
             href="https://docs.webknossos.org/webknossos/data/export_ui.html"
             target="_blank"
@@ -373,8 +373,8 @@ export function DownloadTiffTab({
           >
             Export
           </Button>
-        </Space>
+        </Flex>
       </Flex>
-    </Space>
+    </Flex>
   );
 }

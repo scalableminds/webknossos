@@ -526,7 +526,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   // Reserve the mutex early to be able to synchronize the agglomerate trees with the newest backend state,
   // in case of live collab being active.
   // The reason is that in the meantime another user might have already manipulated the same agglomerate tree
-  // as done by the current action. Thus, to avoid inconsistent states between the mappping and the agglomerate trees,
+  // as done by the current action. Thus, to avoid inconsistent states between the mapping and the agglomerate trees,
   // we first sync with the backend to have the newest agglomerate trees.
   // Additionally, the skeletontracing reducer ignores direct proofreading agglomerate tree updates, in case live collab is active.
   // We therefore explicitly replay the received actions after syncing with the backend, but setting this saga as the initiator.
@@ -1386,7 +1386,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
 
     annotationVersion = yield* select((state) => state.annotation.version);
     if (action.type === "MIN_CUT_AGGLOMERATE") {
-      // Get latest agglomerate id of the agglomerate that was splitted by the current operation in case it changed due to rebasing or so.
+      // Get latest agglomerate id of the agglomerate that was split by the current operation in case it changed due to rebasing or so.
       const newInfo = yield* call(
         reloadMappingAndAggloIds,
         volumeTracing.tracingId,

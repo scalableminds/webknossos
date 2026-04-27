@@ -38,6 +38,43 @@ class VaultPath(upath: UPath, dataVault: DataVault) extends LazyLogging with Fox
       decoded <- decode(bytes, encoding) ?~> s"Failed to decode $encoding-encoded response."
     } yield decoded
 
+  def readMultipleByteRanges(ranges: Seq[StartEndExclusiveByteRange], maxGapBytes: Long = 32768)(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[Seq[Array[Byte]]] =
+    if (ranges.isEmpty) Fox.successful(Seq.empty)
+    else {
+      val indexedSorted = ranges.zipWithIndex.sortBy(_._1.start)
+      val groups = indexedSorted
+        .foldLeft(List.empty[(StartEndExclusiveByteRange, List[(StartEndExclusiveByteRange, Int)])]) {
+          case (Nil, (range, origIdx)) =>
+            List((range, List((range, origIdx))))
+          case ((lastMerged, lastMembers) :: rest, (range, origIdx)) =>
+            if (range.start - lastMerged.end <= maxGapBytes)
+              (StartEndExclusiveByteRange(lastMerged.start, lastMerged.end max range.end),
+               lastMembers :+ (range, origIdx)) :: rest
+            else
+              (range, List((range, origIdx))) :: (lastMerged, lastMembers) :: rest
+        }
+        .reverse
+      logger.info(s"Requesting ${ranges.length} ranges in ${groups.length} groups for ${this.toString}.")
+      for {
+        mergedBytesSeq <- Fox.combined(groups.map { case (mergedRange, _) => readBytes(mergedRange) })
+      } yield
+        groups
+          .zip(mergedBytesSeq)
+          .flatMap {
+            case ((mergedRange, members), mergedBytes) =>
+              members.map {
+                case (origRange, origIdx) =>
+                  val sliceStart = (origRange.start - mergedRange.start).toInt
+                  val sliceEnd = (origRange.end - mergedRange.start).toInt
+                  (origIdx, mergedBytes.slice(sliceStart, sliceEnd))
+              }
+          }
+          .sortBy(_._1)
+          .map(_._2)
+    }
+
   private def decode(bytes: Array[Byte], encoding: Encoding.Value)(implicit ec: ExecutionContext): Fox[Array[Byte]] =
     encoding match {
       case Encoding.gzip       => tryo(ZipIO.gunzip(bytes)).toFox

@@ -111,11 +111,11 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
       }
       before = Instant.now
       resultBox <- performGetObjectRequest(request).shiftBox
-      _ = Instant.logSince(
+      /*_ = Instant.logSince(
         before,
         s"S3 getObject request for s3://${uri.getAuthority}/$bucketName/$objectKey with range $range",
         logger,
-        includeRawMillis = true)
+        includeRawMillis = true)*/
       _ = resultBox match {
         case f: BoxFailure =>
           logger.warn(s"Got failure $f for S3 getObject request s3://${uri.getAuthority}/$bucketName/$objectKey")

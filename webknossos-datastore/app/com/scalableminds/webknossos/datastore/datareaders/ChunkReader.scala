@@ -39,6 +39,18 @@ class ChunkReader(header: DatasetHeader) extends FoxImplicits {
     else
       chunkTyper.createFromFillValueCached(chunkShape) ?~> "chunk.createFromFillValue.failed"
 
+  def readFromBytes(chunkBytes: Array[Byte], chunkShape: Array[Int], useSkipTypingShortcut: Boolean = false)(
+      implicit ec: ExecutionContext): Fox[MultiArray] =
+    for {
+      decompressed <- tryo(decompressBytes(chunkBytes)).toFox ?~> "chunk.decompress.failed"
+      typed <- if (useSkipTypingShortcut)
+        shortcutChunkTyper.wrapAndType(decompressed, chunkShape).toFox ?~> "chunk.shortcutWrapAndType.failed"
+      else
+        chunkTyper.wrapAndType(decompressed, chunkShape).toFox ?~> "chunk.wrapAndType.failed"
+    } yield typed
+
+  protected def decompressBytes(bytes: Array[Byte]): Array[Byte] = header.compressorImpl.decompress(bytes)
+
   // Returns bytes (optional, Fox.empty may later be replaced with fill value)
   // and chunk shape (optional, only for data formats where each chunk reports its own shape, e.g. N5)
   protected def readChunkBytesAndShape(path: VaultPath, range: ByteRange)(
@@ -46,6 +58,6 @@ class ChunkReader(header: DatasetHeader) extends FoxImplicits {
       tc: TokenContext): Fox[(Array[Byte], Option[Array[Int]])] =
     for {
       bytes <- path.readBytes(range)
-      decompressed <- tryo(header.compressorImpl.decompress(bytes)).toFox ?~> "chunk.decompress.failed"
+      decompressed <- tryo(decompressBytes(bytes)).toFox ?~> "chunk.decompress.failed"
     } yield (decompressed, None)
 }

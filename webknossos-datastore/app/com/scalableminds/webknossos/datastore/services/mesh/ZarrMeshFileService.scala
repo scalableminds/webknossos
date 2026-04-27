@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.services.mesh
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Float
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.datareaders.DatasetArray
@@ -193,14 +194,70 @@ class ZarrMeshFileService @Inject()(chunkCacheService: DSChunkCacheService, data
                                               segmentIds: Seq[Long],
                                               meshFileAttributes: MeshFileAttributes)(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[List[List[MeshLodInfo]]] = {
-    def lookupOne(segmentId: Long): Fox[Option[List[MeshLodInfo]]] =
-      listMeshChunksForSegment(meshFileKey, segmentId, meshFileAttributes).map(Some(_)).orElse(Fox.successful(None))
-    if (meshFileKey.attachment.path.isRemote)
-      Fox.batchCombined(segmentIds.toSeq, parallelity = 32)(lookupOne).map(_.flatten)
+      tc: TokenContext): Fox[List[List[MeshLodInfo]]] =
+    if (segmentIds.isEmpty) Fox.successful(List.empty)
     else
-      Fox.serialCombined(segmentIds)(lookupOne).map(_.flatten)
-  }
+      for {
+        _ <- preloadBucketAndBucketOffsetArrayCaches(meshFileKey)
+        // Step 1: batch-read bucket offsets (2 longs per segment) to find each segment's bucket range
+        bucketOffsetsArray <- openZarrArray(meshFileKey, keyBucketOffsets)
+        bucketIndices = segmentIds.map(id => meshFileAttributes.applyHashFunction(id) % meshFileAttributes.nBuckets)
+        bucketRanges <- bucketOffsetsArray.readMultipleAsMultiArrays(bucketIndices.map(idx => (Array(idx), Array(2))))
+        validBucketData = segmentIds.zip(bucketRanges).flatMap {
+          case (segId, bucketRange) =>
+            val bucketStart = bucketRange.getLong(0)
+            val bucketEnd = bucketRange.getLong(1)
+            val bucketSize = (bucketEnd - bucketStart).toInt
+            if (bucketSize > 0) Some((segId, bucketStart, bucketSize)) else None
+        }
+        // Step 2: batch-read bucket rows to find each segment's neuroglancer manifest offset
+        bucketsArray <- openZarrArray(meshFileKey, keyBuckets)
+        buckets <- bucketsArray.readMultipleAsMultiArrays(validBucketData.map {
+          case (_, start, size) => (Array(start, 0L), Array(size + 1, 3))
+        })
+        validNeuroglancerData = validBucketData.zip(buckets).flatMap {
+          case ((segId, _, _), bucket) =>
+            findLocalOffsetInBucket(bucket, segId).map { localOffset =>
+              val neuroglancerStart = bucket.getLong(bucket.getIndex.set(Array(localOffset, 1)))
+              val neuroglancerEnd = bucket.getLong(bucket.getIndex.set(Array(localOffset, 2)))
+              (segId, neuroglancerStart, neuroglancerEnd)
+            }
+        }
+        // Step 3: batch-read neuroglancer manifests
+        neuroglancerArray <- openZarrArray(meshFileKey, keyNeuroglancer)
+        manifestArrays <- neuroglancerArray.readMultipleAsMultiArrays(validNeuroglancerData.map {
+          case (_, start, end) => (Array(start), Array((end - start).toInt))
+        })
+        results <- Fox.combined(validNeuroglancerData.zip(manifestArrays).map {
+          case ((segId, neuroglancerStart, _), manifestArray) =>
+            tryo(NeuroglancerSegmentManifest.fromBytes(manifestArray.getStorage.asInstanceOf[Array[Byte]])).toFox.map {
+              segmentManifest =>
+                enrichSegmentInfo(segmentManifest,
+                                  meshFileAttributes.lodScaleMultiplier,
+                                  meshFileAttributes.transform,
+                                  neuroglancerStart,
+                                  segId)
+            }
+        })
+      } yield results.toList
+
+  private def preloadBucketAndBucketOffsetArrayCaches(
+      meshFileKey: MeshFileKey
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
+    for {
+      bucketOffsetsArray <- openZarrArray(meshFileKey, keyBucketOffsets)
+      bucketOffsetsShape <- bucketOffsetsArray.datasetShape.toFox ?~> "Could not get bucket offsets array shape"
+      t0 <- Instant.nowFox
+      _ <- bucketOffsetsArray.readAsMultiArray(offset = Array.fill(bucketOffsetsShape.length)(0L),
+                                               shape = bucketOffsetsShape.map(_.toInt))
+      _ = Instant.logSince(t0, "preload bucketOffsets")
+      t1 = Instant.now
+      bucketsArray <- openZarrArray(meshFileKey, keyBuckets)
+      bucketsShape <- bucketsArray.datasetShape.toFox ?~> "Could not get buckets array shape"
+      _ <- bucketsArray.readAsMultiArray(offset = Array.fill(bucketsShape.length)(0L),
+                                         shape = bucketsShape.map(_.toInt))
+      _ = Instant.logSince(t1, "preload buckets")
+    } yield ()
 
   def readMeshChunk(meshFileKey: MeshFileKey, meshChunkDataRequests: Seq[MeshChunkDataRequest])(
       implicit ec: ExecutionContext,

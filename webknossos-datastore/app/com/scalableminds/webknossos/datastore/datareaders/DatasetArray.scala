@@ -167,20 +167,21 @@ class DatasetArray(vaultPath: VaultPath,
     } else {
       val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
       val targetMultiArray = MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape.reverse)
-      val copiedFox = Fox.combined(chunkIndices.map { chunkIndex: Array[Int] =>
-        for {
-          sourceChunk: MultiArray <- getSourceChunkDataWithCache(fullAxisOrder.permuteIndicesWkToArray(chunkIndex))
-          sourceChunkInWkFOrder: MultiArray = MultiArrayUtils
-            .axisOrderXYZViewF(sourceChunk, fullAxisOrder, sourceIsF = header.order == ArrayOrder.F)
-          offsetInChunkFOrder = computeOffsetInChunk(chunkIndex, totalOffset).reverse
-          _ <- tryo(MultiArrayUtils.copyRange(offsetInChunkFOrder, sourceChunkInWkFOrder, targetMultiArray)).toFox ?~> formatCopyRangeError(
-            offsetInChunkFOrder,
-            sourceChunkInWkFOrder,
-            targetMultiArray)
-        } yield ()
-      })
       for {
-        _ <- copiedFox
+        _ <- if (header.isSharded) prefetchShardedChunks(chunkIndices.map(fullAxisOrder.permuteIndicesWkToArray))
+             else Fox.successful(())
+        _ <- Fox.combined(chunkIndices.map { chunkIndex: Array[Int] =>
+          for {
+            sourceChunk: MultiArray <- getSourceChunkDataWithCache(fullAxisOrder.permuteIndicesWkToArray(chunkIndex))
+            sourceChunkInWkFOrder: MultiArray = MultiArrayUtils
+              .axisOrderXYZViewF(sourceChunk, fullAxisOrder, sourceIsF = header.order == ArrayOrder.F)
+            offsetInChunkFOrder = computeOffsetInChunk(chunkIndex, totalOffset).reverse
+            _ <- tryo(MultiArrayUtils.copyRange(offsetInChunkFOrder, sourceChunkInWkFOrder, targetMultiArray)).toFox ?~> formatCopyRangeError(
+              offsetInChunkFOrder,
+              sourceChunkInWkFOrder,
+              targetMultiArray)
+          } yield ()
+        })
       } yield targetMultiArray
     }
   }
@@ -205,21 +206,39 @@ class DatasetArray(vaultPath: VaultPath,
       } else {
         val targetBuffer = MultiArrayUtils.createDataBuffer(header.resolvedDataType, shape)
         val targetMultiArray = MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape)
-        val copiedFuture = Fox.combined(chunkIndices.map { chunkIndex: Array[Int] =>
-          for {
-            sourceChunk: MultiArray <- getSourceChunkDataWithCache(chunkIndex)
-            offsetInChunk = computeOffsetInChunkIgnoringAxisOrder(chunkIndex, totalOffset)
-            _ <- tryo(MultiArrayUtils.copyRange(offsetInChunk, sourceChunk, targetMultiArray)).toFox ?~> formatCopyRangeErrorWithoutAxisOrder(
-              offsetInChunk,
-              sourceChunk,
-              targetMultiArray)
-          } yield ()
-        })
         for {
-          _ <- copiedFuture
+          _ <- if (header.isSharded) prefetchShardedChunks(chunkIndices)
+               else Fox.successful(())
+          _ <- Fox.combined(chunkIndices.map { chunkIndex: Array[Int] =>
+            for {
+              sourceChunk: MultiArray <- getSourceChunkDataWithCache(chunkIndex)
+              offsetInChunk = computeOffsetInChunkIgnoringAxisOrder(chunkIndex, totalOffset)
+              _ <- tryo(MultiArrayUtils.copyRange(offsetInChunk, sourceChunk, targetMultiArray)).toFox ?~> formatCopyRangeErrorWithoutAxisOrder(
+                offsetInChunk,
+                sourceChunk,
+                targetMultiArray)
+            } yield ()
+          })
         } yield targetMultiArray
       }
     }
+
+  // Batch version of readAsMultiArray: prefetches all required shard chunks in a single pass before
+  // reading each request, so that sharded arrays are read with minimal I/O operations.
+  def readMultipleAsMultiArrays(requests: Seq[(Array[Long], Array[Int])])(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[List[MultiArray]] = {
+    val allChunkIndices: Seq[Array[Int]] = requests.flatMap {
+      case (offset, shape) if !shape.contains(0) && !shape.exists(_ < 0) =>
+        val totalOffset: Array[Long] = offset.zip(header.voxelOffset).map { case (o, v) => o - v }.padTo(offset.length, 0)
+        ChunkUtils.computeChunkIndices(datasetShape, chunkShape, shape, totalOffset)
+      case _ => Seq.empty
+    }
+    for {
+      _ <- if (header.isSharded) prefetchShardedChunks(allChunkIndices) else Fox.successful(())
+      results <- Fox.combined(requests.map { case (offset, shape) => readAsMultiArray(offset, shape) })
+    } yield results
+  }
 
   private def formatCopyRangeError(offsetInChunk: Array[Int], sourceChunk: MultiArray, target: MultiArray): String =
     s"Copying data from dataset chunk failed. Chunk shape (F): ${printAsOuterF(sourceChunk.getShape)}, target shape (F): ${printAsOuterF(
@@ -235,6 +254,36 @@ class DatasetArray(vaultPath: VaultPath,
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[(VaultPath, StartEndExclusiveByteRange)] =
     ??? // Defined in subclass
+
+  private def prefetchShardedChunks(chunkIndices: Seq[Array[Int]])(implicit ec: ExecutionContext,
+                                                                    tc: TokenContext): Fox[Unit] = {
+    val uncachedIndices =
+      chunkIndices.filterNot(idx => sharedChunkContentsCache.keys.contains(chunkContentsCacheKey(idx)))
+    if (uncachedIndices.isEmpty) Fox.successful(())
+    else
+      for {
+        resolved <- Fox.combined(uncachedIndices.map { idx =>
+          getShardedChunkPathAndRange(idx).shiftBox.map(box => (idx, box))
+        })
+        grouped = resolved
+          .collect { case (idx, Full((path, range))) => (idx, path, range) }
+          .groupBy { case (_, path, _) => path }
+        _ <- Fox.combined(grouped.values.toSeq.map { group =>
+          val sortedGroup = group.sortBy { case (_, _, range) => range.start }
+          val shardPath = sortedGroup.head._2
+          val ranges = sortedGroup.map(_._3)
+          val indices = sortedGroup.map(_._1)
+          for {
+            bytesPerChunk <- shardPath.readMultipleByteRanges(ranges)
+            _ <- Fox.combined(indices.zip(bytesPerChunk).map {
+              case (chunkIdx, bytes) =>
+                sharedChunkContentsCache.getOrLoad(chunkContentsCacheKey(chunkIdx),
+                                                   _ => chunkReader.readFromBytes(bytes, chunkShapeAtIndex(chunkIdx)))
+            })
+          } yield ()
+        })
+      } yield ()
+  }
 
   private def chunkContentsCacheKey(chunkIndex: Array[Int]): String =
     s"${dataSourceId}__${layerName}__${vaultPath}__chunk_${chunkIndex.mkString(",")}"

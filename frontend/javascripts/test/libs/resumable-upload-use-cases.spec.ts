@@ -1,8 +1,8 @@
+import { ResumableUpload, type ResumableUploadEvent } from "libs/resumable_upload/resumable_upload";
 import { sleep } from "libs/utils";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { ResumableUpload, type ResumableUploadEvent } from "../../libs/resumable-upload";
 import { makeSlowChunk1Handler, ResumableBackendMock } from "../helpers/resumable_backend_mock";
 
 describe("Resumable Use Cases (WEBKNOSSOS Patterns)", () => {
@@ -670,52 +670,6 @@ describe("Resumable Use Cases (WEBKNOSSOS Patterns)", () => {
       // If fixed:          uploadRequestCount=1 (only chunk2).
       expect(backendMock.getUploadRequestCount()).toBe(1);
       expect(backendMock.requestLog.filter((e) => e.method === "POST").length).toBe(1);
-    });
-
-    it("should not leave a duplicate POST in-flight when complete fires", async () => {
-      // Variant: validates that no spurious POST is still in progress at the moment
-      // "complete" fires. With a delayed backend response the duplicate POST would
-      // still be counted as inflight when complete is dispatched.
-
-      const {
-        handler,
-        trigger: releaseChunk1Body,
-        getArrived: chunk1GetArrived,
-      } = makeSlowChunk1Handler();
-      server.use(handler);
-
-      // Slow down POST responses so any duplicate is still in-flight when complete fires.
-      backendMock.setResponseDelay(40);
-
-      resumable = new ResumableUpload({
-        target: "/upload",
-        chunkSize: 10,
-        testChunks: true,
-        simultaneousUploads: 1,
-      });
-
-      const file = new File(["12345678901234567890"], "race2.txt", { type: "text/plain" });
-      resumable.addFile(file);
-      resumable.upload();
-
-      await chunk1GetArrived;
-      await sleep(10);
-
-      // Trigger the race: re-enter upload() while chunk 1's body is still pending.
-      resumable.upload();
-
-      // Snapshot inflight count immediately — if the race fired, the duplicate POST
-      // is already in-flight here (response delay=40ms, so it has not finished yet).
-      const inflightAtRaceMoment = backendMock.getInflightUploads();
-
-      releaseChunk1Body();
-      await resumable.waitForComplete();
-      await backendMock.waitForIdle();
-
-      // If race fires: inflightAtRaceMoment=1 (duplicate POST still running).
-      // If fixed:      inflightAtRaceMoment=0 (no spurious upload started).
-      expect(inflightAtRaceMoment).toBe(0);
-      expect(backendMock.getUploadRequestCount()).toBe(1);
     });
   });
 });

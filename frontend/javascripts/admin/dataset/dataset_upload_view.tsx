@@ -50,7 +50,7 @@ import FolderSelection from "dashboard/folders/folder_selection";
 import dayjs from "dayjs";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
-import type { ResumableUploadEvent } from "libs/resumable-upload";
+import type { ResumableUploadEvent } from "libs/resumable_upload/resumable_upload";
 import Toast from "libs/toast";
 import { getFileExtension, isFileExtensionEqualTo, isUserAdminOrDatasetManager } from "libs/utils";
 import { Vector3Input } from "libs/vector_input";

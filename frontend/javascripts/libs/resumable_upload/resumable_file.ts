@@ -35,7 +35,6 @@ export class ResumableFile {
    */
   chunks: ResumableChunk[] = [];
   container: EventTarget | null = null;
-  preprocessState: 0 | 1 | 2 = 0; // 0 = unprocessed, 1 = processing, 2 = finished
   private _prevProgress = 0;
   private _pause = false;
   private _error: boolean;
@@ -197,8 +196,6 @@ export class ResumableFile {
    * Returns a boolean indicating whether the file has completed uploading and received a server response.
    */
   isComplete(): boolean {
-    if (this.preprocessState === 1) return false;
-
     return !this.chunks.some(
       (chunk) => chunk.status() === "uploading" || chunk.status() === "pending",
     );
@@ -212,29 +209,8 @@ export class ResumableFile {
     return this._pause;
   }
 
-  preprocessFinished(): void {
-    this.preprocessState = 2;
-    this.upload();
-  }
-
   upload(): boolean {
     if (this.isPaused() === false) {
-      const preprocess = this.getOpt("preprocessFile");
-      if (typeof preprocess === "function") {
-        switch (this.preprocessState) {
-          case 0: {
-            this.preprocessState = 1;
-            const result = preprocess(this);
-            if (result instanceof Promise) result.catch(() => {});
-            return true;
-          }
-          case 1:
-            return true;
-          case 2:
-            break;
-        }
-      }
-
       for (const chunk of this.chunks) {
         if (chunk.status() === "pending") {
           chunk.send();

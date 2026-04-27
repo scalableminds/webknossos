@@ -6,7 +6,7 @@ import Toast from "libs/toast";
 import messages from "messages";
 import type { APIDataset } from "types/api_types";
 import type { StoreAnnotation } from "viewer/store";
-import { CopyableCodeSnippet, MoreInfoHint } from "./download_info_shared";
+import { CopyableCodeSnippet, MoreInfoHint } from "./download_shared";
 
 function getPythonAnnotationDownloadSnippet(authToken: string | null, annotation: StoreAnnotation) {
   return `import webknossos as wk

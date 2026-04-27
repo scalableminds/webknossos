@@ -1,6 +1,8 @@
 import { useStartAndPollJob } from "admin/job/job_hooks";
 import { doWithToken, downloadWithFilename, startExportTiffJob } from "admin/rest_api";
-import { Alert, Button, Checkbox, Col, Divider, Flex, Radio, Row, Typography } from "antd";
+import { Alert, Button, Checkbox, Col, Divider, Flex, Row, Segmented, Typography } from "antd";
+import type { SegmentedOptions } from "antd/es/segmented";
+import Space from "antd/lib/space";
 import { LayerSelection } from "components/layer_selection";
 import features from "features";
 import { formatCountToDataAmountUnit, formatScale } from "libs/format_utils";
@@ -38,7 +40,7 @@ import { Model } from "viewer/singletons";
 import type { StoreAnnotation, UserBoundingBox } from "viewer/store";
 import { BoundingBoxSelection } from "viewer/view/ai_jobs/components/bounding_box_selection";
 import { MagSlider } from "../mag_slider";
-import { MoreInfoHint, WorkerInfo } from "./download_info_shared";
+import { WorkerInfo } from "./download_shared";
 
 type ExportLayerInfos = {
   displayName: string;
@@ -52,6 +54,16 @@ enum ExportFormat {
   OME_TIFF = "OME_TIFF",
   TIFF_STACK = "TIFF_STACK",
 }
+const ExportFormatOptions: SegmentedOptions = [
+  {
+    label: "OME TIFF",
+    value: ExportFormat.OME_TIFF,
+  },
+  {
+    label: "TIFF Stack (as .zip)",
+    value: ExportFormat.TIFF_STACK,
+  },
+];
 
 const EXPECTED_DOWNSAMPLING_FILE_SIZE_FACTOR = 1.33;
 
@@ -102,7 +114,7 @@ export function isBoundingBoxExportable(boundingBox: BoundingBoxMinMaxType, mag:
   );
 
   const alerts = (
-    <>
+    <Space orientation="vertical">
       {volumeExceeded && (
         <Alert
           type="error"
@@ -121,7 +133,7 @@ export function isBoundingBoxExportable(boundingBox: BoundingBoxMinMaxType, mag:
           } vx.`}
         />
       )}
-    </>
+    </Space>
   );
 
   return {
@@ -256,41 +268,28 @@ export function DownloadTiffTab({
   };
 
   return (
-    <>
-      <Row>
-        <Typography.Text
-          style={{
-            margin: "0 6px 12px",
-          }}
-        >
-          {messages["download.export_as_tiff"]({ typeName })}
-        </Typography.Text>
-      </Row>
+    <Space orientation="vertical" size="small">
+      <Typography.Paragraph>
+        {messages["download.export_as_tiff"]({ typeName })} Go to the{" "}
+        <a href="/jobs" target="_blank" rel="noreferrer">
+          Jobs Overview Page
+        </a>{" "}
+        to see running exports and to download the results.
+      </Typography.Paragraph>
       {!dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.EXPORT_TIFF) ? (
         <WorkerInfo />
       ) : (
         <div>
-          <Divider
-            style={{
-              margin: "18px 0",
-            }}
-          >
-            Export format
-          </Divider>
-          <div style={{ display: "flex", justifyContent: "center" }}>
-            <Radio.Group value={exportFormat} onChange={(ev) => setExportFormat(ev.target.value)}>
-              <Radio.Button value={ExportFormat.OME_TIFF}>OME-TIFF</Radio.Button>
-              <Radio.Button value={ExportFormat.TIFF_STACK}>TIFF stack (as .zip)</Radio.Button>
-            </Radio.Group>
-          </div>
+          <Divider>Export format</Divider>
+          <Flex justify="center">
+            <Segmented
+              value={exportFormat}
+              onChange={(value) => setExportFormat(value)}
+              options={ExportFormatOptions}
+            />
+          </Flex>
 
-          <Divider
-            style={{
-              margin: "18px 0",
-            }}
-          >
-            Layer
-          </Divider>
+          <Divider>Layer</Divider>
           <LayerSelection
             layers={layers}
             value={selectedLayerName}
@@ -301,52 +300,33 @@ export function DownloadTiffTab({
             style={{ width: "100%" }}
           />
 
-          <Divider
-            style={{
-              margin: "18px 0",
-            }}
-          >
-            Bounding Box
-          </Divider>
-          <BoundingBoxSelection
-            value={selectedBoundingBoxId}
-            userBoundingBoxes={userBoundingBoxes}
-            setSelectedBoundingBoxId={(boxId: number | null) => {
-              if (boxId != null) {
-                setSelectedBoundingBoxId(boxId);
-              }
-            }}
-            style={{ width: "100%" }}
-          />
-          {boundingBoxCompatibilityAlerts}
+          <Divider>Bounding Box</Divider>
+          <Flex orientation="vertical">
+            <BoundingBoxSelection
+              value={selectedBoundingBoxId}
+              userBoundingBoxes={userBoundingBoxes}
+              setSelectedBoundingBoxId={(boxId: number | null) => {
+                if (boxId != null) {
+                  setSelectedBoundingBoxId(boxId);
+                }
+              }}
+              style={{ width: "100%" }}
+            />
+            {boundingBoxCompatibilityAlerts}
+          </Flex>
+
           {(selectedLayerInfos.additionalAxes?.length || 0) > 0 && (
-            <Row>
-              <Divider
-                style={{
-                  margin: "18px 0",
-                }}
-              >
-                Additional Coordinates
-              </Divider>
-              <Typography.Text
-                style={{
-                  margin: "0 6px 12px",
-                }}
-              >
+            <>
+              <Divider>Additional Coordinates</Divider>
+              <Typography.Paragraph>
                 Your dataset has more than three dimensions. The export will only include the
                 selected bounding box at the current additional dimensions:{" "}
                 {getAdditionalCoordinatesAsString(currentAdditionalCoordinates)}
-              </Typography.Text>
-            </Row>
+              </Typography.Paragraph>
+            </>
           )}
 
-          <Divider
-            style={{
-              margin: "18px 0",
-            }}
-          >
-            Mag
-          </Divider>
+          <Divider>Mag</Divider>
           {!onlyOneMagAvailable && (
             <Row>
               <Col span={19}>
@@ -360,35 +340,15 @@ export function DownloadTiffTab({
               </Col>
             </Row>
           )}
-          <Typography.Text
-            style={{
-              margin: "0 6px 12px",
-              display: "block",
-            }}
-          >
+          <Typography.Paragraph>
             {onlyOneMagAvailable && <div>{mag.join("-")}</div>}
             Estimated file size:{" "}
             {estimateFileSize(selectedLayer, mag, selectedBoundingBox.boundingBox, exportFormat)}
             <br />
             Magnification: {formatSelectedScale(dataset, mag)}
-          </Typography.Text>
-
-          <Divider />
-          <p>
-            Go to the{" "}
-            <a href="/jobs" target="_blank" rel="noreferrer">
-              Jobs Overview Page
-            </a>{" "}
-            to see running exports and to download the results.
-          </p>
+          </Typography.Paragraph>
         </div>
       )}
-      <Divider
-        style={{
-          margin: "18px 0",
-        }}
-      />
-      <MoreInfoHint />
       <Flex justify="space-between" align="center">
         <Checkbox
           checked={keepWindowOpen}
@@ -397,15 +357,24 @@ export function DownloadTiffTab({
         >
           Keep window open
         </Checkbox>
-        <Button
-          type="primary"
-          onClick={handleExport}
-          disabled={isDownloadButtonDisabled}
-          loading={isCurrentlyRunningExportJob}
-        >
-          Export
-        </Button>
+        <Space>
+          <Button
+            href="https://docs.webknossos.org/webknossos/data/export_ui.html"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Learn More
+          </Button>
+          <Button
+            type="primary"
+            onClick={handleExport}
+            disabled={isDownloadButtonDisabled}
+            loading={isCurrentlyRunningExportJob}
+          >
+            Export
+          </Button>
+        </Space>
       </Flex>
-    </>
+    </Space>
   );
 }

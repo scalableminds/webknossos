@@ -152,11 +152,13 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
             GetEffectiveVoxelSizeParameters(modelPath))
     )
 
-  def scanRealPathsForVirtual(dataSources: Seq[DataSource]): Fox[Unit] =
+  def scanRealPathsForVirtual(dataSources: Seq[DataSource]): Fox[Unit] = {
+    val dataSourcesThatCanHaveRealpaths = dataSources.flatMap(_.toUsable).filter(_.allExplicitPaths.exists(_.isLocal))
     for {
       _ <- rpc(s"${dataStore.url}/data/triggers/scanRealPathsForVirtual")
         .addQueryParam("token", RpcTokenHolder.webknossosToken)
-        .postJson[Seq[DataSource]](dataSources)
+        .postJson[Seq[DataSource]](dataSourcesThatCanHaveRealpaths)
     } yield ()
+  }
 
 }

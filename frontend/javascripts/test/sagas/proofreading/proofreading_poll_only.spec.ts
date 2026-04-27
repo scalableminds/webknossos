@@ -38,41 +38,46 @@ import {
   makeMappingEditableForTest,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
+import { type AnnotationCollaborationMode, AnnotationCollaborationModes } from "types/api_types";
 
-function* initializePollOnlyAnnotation(context: WebknossosTestContext, tracingId: string) {
-  yield call(initializeMappingAndTool, context, tracingId);
+// todop: test poll-only behavior in other collab modes, too.
+describe.each(
+  AnnotationCollaborationModes,
+)("Proofreading (Poll only) with collaborationMode=%s", (collabMode: AnnotationCollaborationMode) => {
+  function* initializePollOnlyAnnotation(context: WebknossosTestContext, tracingId: string) {
+    yield call(initializeMappingAndTool, context, tracingId);
 
-  const mapping0 = yield* select(
-    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-  );
-  expect(mapping0).toEqual(initialMapping);
+    const mapping0 = yield* select(
+      (state) =>
+        getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+    );
+    expect(mapping0).toEqual(initialMapping);
 
-  yield makeAnnotationPollOnly(context);
-}
+    yield makeAnnotationPollOnly(context);
+  }
 
-function* makeAnnotationPollOnly(context: WebknossosTestContext) {
-  const { api } = context;
-  // Set collab mode to concurrent to be able to save the updates about initializing the mapping.
-  yield put(setCollaborationModeAction("Concurrent"));
-  yield call(() => api.tracing.save());
-  context.receivedDataPerSaveRequest.length = 0;
+  function* makeAnnotationPollOnly(context: WebknossosTestContext) {
+    const { api } = context;
+    // Set collab mode to concurrent to be able to save the updates about initializing the mapping.
+    yield put(setCollaborationModeAction("Concurrent"));
+    yield call(() => api.tracing.save());
+    context.receivedDataPerSaveRequest.length = 0;
 
-  // Now switch to a poll only mode: Simulate a different user in a different client session than the owner
-  // and enable OwnerOnly collaborationMode.
-  const differentUser = {
-    ...dummyUser,
-    id: "dummy-user2-id",
-    email: "dummy2@email.com",
-    firstName: "First Name2",
-    lastName: "Last Name2",
-  };
-  yield put(setActiveUserAction(differentUser));
-  yield put(setCollaborationModeAction("OwnerOnly"));
-  yield put(disableSavingAction());
-  yield put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
-}
+    // Now switch to a poll only mode: Simulate a different user in a different client session than the owner
+    // and enable OwnerOnly collaborationMode.
+    const differentUser = {
+      ...dummyUser,
+      id: "dummy-user2-id",
+      email: "dummy2@email.com",
+      firstName: "First Name2",
+      lastName: "Last Name2",
+    };
+    yield put(setActiveUserAction(differentUser));
+    yield put(setCollaborationModeAction(collabMode));
+    yield put(disableSavingAction());
+    yield put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
+  }
 
-describe("Proofreading (Poll only)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
     await setupWebknossosForTestingWithRestrictions(context, "Exclusive", true, false, "hybrid");
   });

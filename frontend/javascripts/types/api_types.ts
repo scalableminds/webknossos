@@ -505,6 +505,7 @@ export type EditableLayerProperties = {
   name: string;
 };
 export type AnnotationCollaborationMode = "OwnerOnly" | "Exclusive" | "Concurrent";
+export const AnnotationCollaborationModes = ["OwnerOnly", "Exclusive", "Concurrent"] as const;
 
 export type APIAnnotationInfo = {
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;

@@ -67,15 +67,15 @@ export class ResumableChunk {
     const queryParams = Object.assign({}, customQueryParameters || {});
 
     const extraParams: Partial<Record<string, any>> = {
-      [this.getOpt("chunkNumberParameterName")]: this.offset + 1,
-      [this.getOpt("chunkSizeParameterName")]: this.getOpt("chunkSize"),
-      [this.getOpt("currentChunkSizeParameterName")]: this.endByte - this.startByte,
-      [this.getOpt("totalSizeParameterName")]: this.fileObjSize,
-      [this.getOpt("typeParameterName")]: this.fileObjType,
-      [this.getOpt("identifierParameterName")]: this.fileObj.uniqueIdentifier,
-      [this.getOpt("fileNameParameterName")]: this.fileObj.fileName,
-      [this.getOpt("relativePathParameterName")]: this.fileObj.relativePath,
-      [this.getOpt("totalChunksParameterName")]: this.fileObj.chunks.length,
+      resumableChunkNumber: this.offset + 1,
+      resumableChunkSize: this.getOpt("chunkSize"),
+      resumableCurrentChunkSize: this.endByte - this.startByte,
+      resumableTotalSize: this.fileObjSize,
+      resumableType: this.fileObjType,
+      resumableIdentifier: this.fileObj.uniqueIdentifier,
+      resumableFilename: this.fileObj.fileName,
+      resumableRelativePath: this.fileObj.relativePath,
+      resumableTotalChunks: this.fileObj.chunks.length,
     };
 
     const targetUrl = getTargetURI(this.resumableObj, {
@@ -140,15 +140,15 @@ export class ResumableChunk {
     this.callback("progress");
 
     const standardQueryParameters: Partial<Record<string, any>> = {
-      [this.getOpt("chunkNumberParameterName")]: this.offset + 1,
-      [this.getOpt("chunkSizeParameterName")]: this.getOpt("chunkSize"),
-      [this.getOpt("currentChunkSizeParameterName")]: this.endByte - this.startByte,
-      [this.getOpt("totalSizeParameterName")]: this.fileObjSize,
-      [this.getOpt("typeParameterName")]: this.fileObjType,
-      [this.getOpt("identifierParameterName")]: this.fileObj.uniqueIdentifier,
-      [this.getOpt("fileNameParameterName")]: this.fileObj.fileName,
-      [this.getOpt("relativePathParameterName")]: this.fileObj.relativePath,
-      [this.getOpt("totalChunksParameterName")]: this.fileObj.chunks.length,
+      resumableChunkNumber: this.offset + 1,
+      resumableChunkSize: this.getOpt("chunkSize"),
+      resumableCurrentChunkSize: this.endByte - this.startByte,
+      resumableTotalSize: this.fileObjSize,
+      resumableType: this.fileObjType,
+      resumableIdentifier: this.fileObj.uniqueIdentifier,
+      resumableFilename: this.fileObj.fileName,
+      resumableRelativePath: this.fileObj.relativePath,
+      resumableTotalChunks: this.fileObj.chunks.length,
     };
 
     let customQueryParameters = this.getOpt("query");
@@ -178,7 +178,7 @@ export class ResumableChunk {
     });
 
     if (this.getOpt("chunkFormat") === "blob") {
-      formData.append(this.getOpt("fileParameterName"), bytes, this.fileObj.fileName);
+      formData.append("file", bytes, this.fileObj.fileName);
       data = formData;
     } else {
       // chunkFormat == base64
@@ -187,8 +187,9 @@ export class ResumableChunk {
         fr.onload = () => resolve(fr.result as string);
         fr.readAsDataURL(bytes);
       });
+
       const base64Data = await readPromise;
-      formData.append(this.getOpt("fileParameterName"), base64Data);
+      formData.append("file", base64Data);
       data = formData;
     }
 

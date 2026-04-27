@@ -20,46 +20,6 @@ export interface ConfigurationHash {
    * Number of simultaneous uploads (Default: `3`)
    */
   simultaneousUploads?: number;
-  /**
-   * The name of the multipart request parameter to use for the file chunk (Default: `file`)
-   */
-  fileParameterName?: string;
-  /**
-   * The name of the chunk index (base-1) in the current upload POST parameter to use for the file chunk (Default: `resumableChunkNumber`)
-   */
-  chunkNumberParameterName?: string;
-  /**
-   * The name of the general chunk size POST parameter to use for the file chunk (Default: `resumableChunkSize`)
-   */
-  chunkSizeParameterName?: string;
-  /**
-   * The name of the current chunk size POST parameter to use for the file chunk (Default: `resumableCurrentChunkSize`)
-   */
-  currentChunkSizeParameterName?: string;
-  /**
-   * The name of the total file size number POST parameter to use for the file chunk (Default: `resumableTotalSize`)
-   */
-  totalSizeParameterName?: string;
-  /**
-   * The name of the file type POST parameter to use for the file chunk (Default: `resumableType`)
-   */
-  typeParameterName?: string;
-  /**
-   * The name of the unique identifier POST parameter to use for the file chunk (Default: `resumableIdentifier`)
-   */
-  identifierParameterName?: string;
-  /**
-   * The name of the original file name POST parameter to use for the file chunk (Default: `resumableFilename`)
-   */
-  fileNameParameterName?: string;
-  /**
-   * The name of the file's relative path POST parameter to use for the file chunk (Default: `resumableRelativePath`)
-   */
-  relativePathParameterName?: string;
-  /**
-   * The name of the total number of chunks POST parameter to use for the file chunk (Default: `resumableTotalChunks`)
-   */
-  totalChunksParameterName?: string;
   throttleProgressCallbacks?: number;
   /**
    * Extra parameters to include in the multipart request with data. This can be an object or a function. If a function, it will be passed a ResumableFile and a ResumableChunk object (Default: `{}`)
@@ -206,16 +166,6 @@ export class ResumableUpload implements EventTarget {
       chunkSize: 1 * 1024 * 1024,
       forceChunkSize: false,
       simultaneousUploads: 3,
-      fileParameterName: "file",
-      chunkNumberParameterName: "resumableChunkNumber",
-      chunkSizeParameterName: "resumableChunkSize",
-      currentChunkSizeParameterName: "resumableCurrentChunkSize",
-      totalSizeParameterName: "resumableTotalSize",
-      typeParameterName: "resumableType",
-      identifierParameterName: "resumableIdentifier",
-      fileNameParameterName: "resumableFilename",
-      relativePathParameterName: "resumableRelativePath",
-      totalChunksParameterName: "resumableTotalChunks",
       throttleProgressCallbacks: 0.5,
       query: {},
       headers: {},

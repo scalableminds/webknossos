@@ -20,6 +20,7 @@ import play.api.libs.json.Json
 
 import java.io.File
 import java.nio.file.{Files, Path}
+import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
@@ -98,7 +99,26 @@ class DataSourceService @Inject()(
     } yield ()
   }
 
-  private def scanRealPaths(dataSources: List[DataSource]): (Seq[DataSourcePathInfo], Seq[Failure]) = {
+  def scanRealPathsForVirtual(dataSources: Seq[DataSource]): Fox[Unit] =
+    for {
+      before <- Instant.nowFox
+      (realPathInfos, realPathScanFailures) = scanRealPaths(dataSources)
+      _ <- remoteWebknossosClient.reportRealPaths(realPathInfos)
+      realPathFailuresSummary = if (realPathScanFailures.isEmpty) ""
+      else s" ${realPathScanFailures.length} realPath scan failures"
+      _ = Instant.logSince(
+        before,
+        s"Scanned ${realPathInfos.length} realpaths for ${dataSources.length} virtual datasets.$realPathFailuresSummary")
+      _ = logRealPathScanFailures(verbose = true, realPathScanFailures)
+    } yield ()
+
+  private def logRealPathScanFailures(verbose: Boolean, realPathScanFailures: Seq[Failure]): Unit =
+    if (verbose && realPathScanFailures.nonEmpty) {
+      val realPathScanFailuresFormatted = realPathScanFailures.flatMap(_.exception).map(_.toString).mkString(", ")
+      logger.warn(s"RealPath scan failures: $realPathScanFailuresFormatted")
+    }
+
+  private def scanRealPaths(dataSources: Seq[DataSource]): (Seq[DataSourcePathInfo], Seq[Failure]) = {
     val withFailures = dataSources.map(scanRealPathsForDataSource)
     val pathInfos = withFailures.map(_._1).filter(_.nonEmpty)
     val failures = withFailures.flatMap(_._2)
@@ -188,10 +208,7 @@ class DataSourceService @Inject()(
       shortForm
     }
     logger.info(msg)
-    if (verbose && realPathScanFailures.nonEmpty) {
-      val realPathScanFailuresFormatted = realPathScanFailures.flatMap(_.exception).map(_.toString).mkString(", ")
-      logger.warn(s"RealPath scan failures: $realPathScanFailuresFormatted")
-    }
+    logRealPathScanFailures(verbose, realPathScanFailures)
   }
 
   private def logEmptyDirs(paths: List[Path]): Unit = {

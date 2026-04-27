@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.explore.{
   ExploreRemoteLayerParameters
 }
 import com.scalableminds.webknossos.datastore.helpers.UPath
-import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource
+import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, RawCuboidRequest, VoxelSize}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{PathStorageUsageRequest, PathStorageUsageResponse}
@@ -151,5 +151,12 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
           .postJsonWithJsonResponse[GetEffectiveVoxelSizeParameters, VoxelSize](
             GetEffectiveVoxelSizeParameters(modelPath))
     )
+
+  def scanRealPathsForVirtual(dataSources: Seq[DataSource]): Fox[Unit] =
+    for {
+      _ <- rpc(s"${dataStore.url}/data/triggers/scanRealPathsForVirtual")
+        .addQueryParam("token", RpcTokenHolder.webknossosToken)
+        .postJson[Seq[DataSource]](dataSources)
+    } yield ()
 
 }

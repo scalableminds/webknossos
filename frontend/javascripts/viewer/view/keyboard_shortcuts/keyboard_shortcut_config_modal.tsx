@@ -43,7 +43,11 @@ import {
 import { validateShortcutMapText } from "./keyboard_shortcut_persistence";
 import type { KeyboardShortcutDomain, KeySequence } from "./keyboard_shortcut_types";
 import { checkCollisionsInShortcutMap, keySequenceToUiElements } from "./keyboard_shortcut_utils";
-import { CollisionWarningAlert, ShortcutRecorderModal } from "./shortcut_recorder_modal";
+import {
+  CollisionWarningAlert,
+  DomainNameToUiName,
+  ShortcutRecorderModal,
+} from "./shortcut_recorder_modal";
 
 const { Text, Title } = Typography;
 
@@ -65,21 +69,6 @@ type KeyboardShortcutDomainTableProps = {
   columns: ColumnsType<KeyboardShortcutTableDataEntry>;
 };
 
-const domainNameToUiName: Record<KeyboardShortcutDomain, string> = {
-  GENERAL: "General",
-  GENERAL_EDITING: "General Editing",
-  GENERAL_LAYOUT: "General Layout",
-  GENERAL_COMMENT_TAB: "Comments Tab",
-  ARBITRARY_NAVIGATION: "Arbitrary Mode Navigation",
-  ARBITRARY_EDITING: "Arbitrary Mode Editing",
-  PLANE_NAVIGATION: "Plane Mode Navigation",
-  PLANE_TOOL_SWITCHING: "Plane Mode Tool Switching",
-  PLANE_SKELETON_TOOL: "Plane Mode Skeleton Tool",
-  PLANE_VOLUME_TOOL: "Plane Mode Volume Tool",
-  PLANE_BOUNDING_BOX_TOOL: "Plane Mode Bounding Box Tool",
-  PLANE_PROOFREADING_TOOL: "Plane Mode Proofreading Tool",
-};
-
 const KeyboardShortcutDomainTable: React.FC<KeyboardShortcutDomainTableProps> = ({
   domainName,
   tableData,
@@ -87,7 +76,7 @@ const KeyboardShortcutDomainTable: React.FC<KeyboardShortcutDomainTableProps> = 
 }) => {
   return (
     <div key={domainName}>
-      <Title level={5}>{domainNameToUiName[domainName]} Shortcuts</Title>
+      <Title level={5}>{DomainNameToUiName[domainName]} Shortcuts</Title>
       <Table
         dataSource={tableData}
         columns={columns}
@@ -239,15 +228,15 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
     },
     {
       title: "Action",
-      dataIndex: "handlerId",
+      dataIndex: "shortcutId",
       width: 400,
-      key: "handlerId",
-      render: (handlerId: string) => {
+      key: "shortcutId",
+      render: (shortcutId: string) => {
         const metaInfo =
           ALL_KEYBOARD_SHORTCUT_META_INFOS[
-            handlerId as keyof typeof ALL_KEYBOARD_SHORTCUT_META_INFOS
+            shortcutId as keyof typeof ALL_KEYBOARD_SHORTCUT_META_INFOS
           ];
-        return metaInfo?.description ?? handlerId;
+        return metaInfo?.description ?? shortcutId;
       },
     },
   ];

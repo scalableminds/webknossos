@@ -27,6 +27,17 @@ export type KeyboardShortcutCollisionDomain =
   | "GENERAL.PLANE.BOUNDING_BOX"
   | "GENERAL.PLANE.PROOFREADING";
 
+const allCollisionDomains = [
+  "GENERAL",
+  "GENERAL.ARBITRARY",
+
+  "GENERAL.PLANE",
+
+  "GENERAL.PLANE.SKELETON",
+  "GENERAL.PLANE.VOLUME",
+  "GENERAL.PLANE.BOUNDING_BOX",
+  "GENERAL.PLANE.PROOFREADING",
+];
 export const LeafCollisionDomains: KeyboardShortcutCollisionDomain[] = [
   "GENERAL.ARBITRARY",
   "GENERAL.PLANE.SKELETON",
@@ -42,7 +53,11 @@ export type KeyboardShortcutsMap = Record<KeyboardShortcutId, KeySequenceAlterna
 
 export function getAllCollidingDomainsOf(domain: KeyboardShortcutCollisionDomain) {
   const parts = domain.split(".");
-  return parts.map((_, i) => parts.slice(0, i + 1).join(".")) as KeyboardShortcutCollisionDomain[];
+  const collisionDomainParents = parts.map((_, i) =>
+    parts.slice(0, i + 1).join("."),
+  ) as KeyboardShortcutCollisionDomain[];
+  const childCollisionDomains = allCollisionDomains.filter((d) => d.includes(domain));
+  return [...new Set([...collisionDomainParents, ...childCollisionDomains])];
 }
 export class KeyboardShortcutMetaInfo {
   constructor(

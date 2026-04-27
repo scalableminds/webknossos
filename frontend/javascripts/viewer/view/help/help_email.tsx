@@ -1,5 +1,6 @@
 import { sendHelpEmail } from "admin/rest_api";
-import { Button, Flex, Input, message, Space, Typography } from "antd";
+import { Button, Flex, Input, Space, Typography } from "antd";
+import Toast from "libs/toast";
 import type React from "react";
 import { useState } from "react";
 
@@ -13,10 +14,10 @@ export function HelpEmail({ onCancel }: { onCancel: () => void }) {
         setIsSending(true);
         await sendHelpEmail(helpText);
         setHelpText("");
-        message.success("Message has been sent. We'll reply via email shortly.");
+        Toast.success("Message has been sent. We'll reply via email shortly.");
         onCancel();
       } catch {
-        message.error("Sorry, we could not send the help message. Please try again later.");
+        Toast.error("Sorry, we could not send the help message. Please try again later.");
       } finally {
         setIsSending(false);
       }

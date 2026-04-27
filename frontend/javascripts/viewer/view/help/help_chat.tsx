@@ -1,5 +1,6 @@
-import { Flex, Input, message, Spin, Typography } from "antd";
+import { Flex, Input, Spin, Typography } from "antd";
 import features from "features";
+import Toast from "libs/toast";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { ColorWKBlue } from "theme";
 
@@ -110,7 +111,7 @@ export function HelpChat({ isExpanded = false }: { isExpanded?: boolean }) {
       const reply = await askChatbot(text, sessionId.current);
       setChatMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch {
-      message.error("Could not reach the assistant. Please try again.");
+      Toast.error("Could not reach the assistant. Please try again.");
     } finally {
       setIsLoadingChat(false);
     }
@@ -119,7 +120,7 @@ export function HelpChat({ isExpanded = false }: { isExpanded?: boolean }) {
   return (
     <>
       <Flex
-        orientation="vertical"
+        vertical
         gap={6}
         style={{
           height: isExpanded ? 440 : 220,

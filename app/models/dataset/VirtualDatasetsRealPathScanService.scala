@@ -11,7 +11,6 @@ import play.api.inject.ApplicationLifecycle
 
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.FiniteDuration
 
 class VirtualDatasetsRealPathScanService @Inject()(
     datasetService: DatasetService,
@@ -44,6 +43,7 @@ class VirtualDatasetsRealPathScanService @Inject()(
     else {
       for {
         firstDataset <- datasets.headOption.toFox
+        // we skip unusable datasets
         dataSourceBoxes <- Fox.fromFuture(Fox.serialSequence(datasets)(datasetService.usableDataSourceFor))
         dataSources = dataSourceBoxes.flatten
         client <- datasetService.clientFor(firstDataset)

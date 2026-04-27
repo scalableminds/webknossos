@@ -702,9 +702,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                         s"For organization: ${organization.name}. <$resultLink|Result>")
     } yield ()
 
-  def scanRealpathsIfVirtual(
-      dataset: Dataset)(implicit ec: ExecutionContext, mp: MessagesProvider, ctx: DBAccessContext): Fox[Unit] =
-    if (dataset.isVirtual) {
+  def scanRealpathsIfVirtual(dataset: Dataset)(implicit mp: MessagesProvider, ctx: DBAccessContext): Fox[Unit] =
+    if (dataset.isVirtual && dataset.isUsable) {
       for {
         dataSource <- usableDataSourceFor(dataset)
         client <- clientFor(dataset)

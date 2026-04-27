@@ -20,7 +20,6 @@ import play.api.libs.json.Json
 
 import java.io.File
 import java.nio.file.{Files, Path}
-import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
@@ -108,7 +107,7 @@ class DataSourceService @Inject()(
       else s". ${realPathScanFailures.length} realPath scan failures"
       _ = Instant.logSince(
         before,
-        s"Scanned ${realPathInfos.length} realpaths for ${dataSources.length} virtual datasets$realPathFailuresSummary.")
+        s"Scanned ${countScannedRealPaths(realPathInfos)} realpaths for ${dataSources.length} virtual datasets$realPathFailuresSummary.")
       _ = logRealPathScanFailures(verbose = true, realPathScanFailures)
     } yield ()
 
@@ -184,12 +183,10 @@ class DataSourceService @Inject()(
                                   foundDataSources: Seq[DataSource],
                                   realPathInfosByDataSource: Seq[DataSourcePathInfo],
                                   realPathScanFailures: Seq[Failure]): Unit = {
-    val numScannedRealPaths = realPathInfosByDataSource
-      .map(pathInfos => pathInfos.attachmentPathInfos.length + pathInfos.magPathInfos.length)
-      .sum
     val realPathFailuresSummary =
       if (realPathScanFailures.isEmpty) "" else s" ${realPathScanFailures.length} realPath scan failures"
-    val realPathScanSummary = s"$numScannedRealPaths scanned realpaths.$realPathFailuresSummary"
+    val realPathScanSummary =
+      s"${countScannedRealPaths(realPathInfosByDataSource)} scanned realpaths.$realPathFailuresSummary"
     val shortForm =
       s"Finished scanning inbox ($dataBaseDir$selectedOrgaLabel), took ${formatDuration(Instant.since(before))}: ${foundDataSources
         .count(_.isUsable)} active, ${foundDataSources.count(!_.isUsable)} inactive. $realPathScanSummary"
@@ -210,6 +207,9 @@ class DataSourceService @Inject()(
     logger.info(msg)
     logRealPathScanFailures(verbose, realPathScanFailures)
   }
+
+  private def countScannedRealPaths(realPathInfosByDataSource: Seq[DataSourcePathInfo]): Int =
+    realPathInfosByDataSource.map(pathInfos => pathInfos.attachmentPathInfos.length + pathInfos.magPathInfos.length).sum
 
   private def logEmptyDirs(paths: List[Path]): Unit = {
 

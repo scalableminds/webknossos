@@ -74,10 +74,6 @@ export interface ConfigurationHash {
     | Record<string, string>
     | ((file: ResumableFile, chunk?: ResumableChunk) => Record<string, string>);
   /**
-   * Optional function to process each chunk before testing & sending. Function is passed the chunk as parameter, and should call the `preprocessFinished` method on the chunk when finished. (Default: `null`)
-   */
-  preprocess?: ((chunk: ResumableChunk) => Promise<void> | void) | null;
-  /**
    * Optional function to process each file before testing & sending the corresponding chunks. Function is passed the file as parameter, and should call the `preprocessFinished` method on the file when finished. (Default: `null`)
    */
   preprocessFile?: ((file: ResumableFile) => Promise<void> | void) | null;
@@ -227,7 +223,6 @@ export class ResumableUpload implements EventTarget {
       throttleProgressCallbacks: 0.5,
       query: {},
       headers: {},
-      preprocess: null,
       preprocessFile: null,
       prioritizeFirstAndLastChunk: false,
       target: "/",
@@ -585,19 +580,11 @@ export class ResumableUpload implements EventTarget {
     // metadata and determine if there's even a point in continuing.
     if (this.getOpt("prioritizeFirstAndLastChunk")) {
       for (const file of this.files) {
-        if (
-          file.chunks.length &&
-          file.chunks[0].status() === "pending" &&
-          file.chunks[0].preprocessState === 0
-        ) {
+        if (file.chunks.length && file.chunks[0].status() === "pending") {
           file.chunks[0].send();
           return true;
         }
-        if (
-          file.chunks.length > 1 &&
-          file.chunks[file.chunks.length - 1].status() === "pending" &&
-          file.chunks[file.chunks.length - 1].preprocessState === 0
-        ) {
+        if (file.chunks.length > 1 && file.chunks[file.chunks.length - 1].status() === "pending") {
           file.chunks[file.chunks.length - 1].send();
           return true;
         }

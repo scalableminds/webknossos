@@ -2,6 +2,19 @@ import type { ResumableFile } from "./resumable_file";
 import { getTargetURI } from "./resumable_shared";
 import type { ConfigurationHash, ResumableUpload } from "./resumable_upload";
 
+type ResumableChunkState = "pending" | "uploading" | "success" | "error";
+type ResumableChunkRequestParams = {
+  resumableChunkNumber: number;
+  resumableChunkSize: number;
+  resumableCurrentChunkSize: number;
+  resumableTotalSize: number;
+  resumableType: string;
+  resumableIdentifier: string;
+  resumableFilename: string;
+  resumableRelativePath: string;
+  resumableTotalChunks: number;
+};
+
 /**
  * Represents a single chunk of a file to be uploaded.
  */
@@ -22,7 +35,7 @@ export class ResumableChunk {
   endByte: number;
 
   private abortController: AbortController | null = null;
-  private _status: "pending" | "uploading" | "success" | "error" = "pending";
+  private _status: ResumableChunkState = "pending";
   private _message: string = "";
 
   constructor(
@@ -64,9 +77,7 @@ export class ResumableChunk {
       customQueryParameters = customQueryParameters(this.fileObj, this);
     }
 
-    const queryParams = Object.assign({}, customQueryParameters || {});
-
-    const extraParams: Partial<Record<string, any>> = {
+    const queryParams: ResumableChunkRequestParams = {
       resumableChunkNumber: this.offset + 1,
       resumableChunkSize: this.getOpt("chunkSize"),
       resumableCurrentChunkSize: this.endByte - this.startByte,
@@ -80,7 +91,7 @@ export class ResumableChunk {
 
     const targetUrl = getTargetURI(this.resumableObj, {
       ...queryParams,
-      ...extraParams,
+      ...(customQueryParameters || {}),
     });
 
     let customHeaders = this.getOpt("headers");
@@ -139,7 +150,7 @@ export class ResumableChunk {
     this.pendingRetry = false;
     this.callback("progress");
 
-    const standardQueryParameters: Partial<Record<string, any>> = {
+    const standardQueryParameters: ResumableChunkRequestParams = {
       resumableChunkNumber: this.offset + 1,
       resumableChunkSize: this.getOpt("chunkSize"),
       resumableCurrentChunkSize: this.endByte - this.startByte,
@@ -258,7 +269,7 @@ export class ResumableChunk {
     this._status = "pending";
   }
 
-  status(): "pending" | "uploading" | "success" | "error" {
+  status(): ResumableChunkState {
     // if pending retry then that's effectively the same as actively uploading,
     // there might just be a slight delay before the retry starts
     if (this.pendingRetry) return "uploading";

@@ -65,6 +65,21 @@ type KeyboardShortcutDomainTableProps = {
   columns: ColumnsType<KeyboardShortcutTableDataEntry>;
 };
 
+const domainNameToUiName: Record<KeyboardShortcutDomain, string> = {
+  GENERAL: "General",
+  GENERAL_EDITING: "General Editing",
+  GENERAL_LAYOUT: "General Layout",
+  GENERAL_COMMENT_TAB: "Comments Tab",
+  ARBITRARY_NAVIGATION: "Arbitrary Mode Navigation",
+  ARBITRARY_EDITING: "Arbitrary Mode Editing",
+  PLANE_NAVIGATION: "Plane Mode Navigation",
+  PLANE_TOOL_SWITCHING: "Plane Mode Tool Switching",
+  PLANE_SKELETON_TOOL: "Plane Mode Skeleton Tool",
+  PLANE_VOLUME_TOOL: "Plane Mode Volume Tool",
+  PLANE_BOUNDING_BOX_TOOL: "Plane Mode Bounding Box Tool",
+  PLANE_PROOFREADING_TOOL: "Plane Mode Proofreading Tool",
+};
+
 const KeyboardShortcutDomainTable: React.FC<KeyboardShortcutDomainTableProps> = ({
   domainName,
   tableData,
@@ -72,7 +87,7 @@ const KeyboardShortcutDomainTable: React.FC<KeyboardShortcutDomainTableProps> = 
 }) => {
   return (
     <div key={domainName}>
-      <Title level={5}>{domainName} Shortcuts</Title>
+      <Title level={5}>{domainNameToUiName[domainName]} Shortcuts</Title>
       <Table
         dataSource={tableData}
         columns={columns}

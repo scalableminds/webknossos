@@ -96,8 +96,10 @@ function getKeyIdentifier(e: KeyboardEvent): string {
     };
     return deadKeyCharMap[e.code] ?? e.code;
   }
+  // Normalize the Space key: e.key is " " but the codebase uses "Space".
+  if (e.key === " ") return "Space";
   // All other keys: single printable sign characters (+, #, -, ., ,, …),
-  // F-keys, Enter, Space, arrows, etc. — use e.key directly.
+  // F-keys, Enter, arrows, etc. — use e.key directly.
   return e.key;
 }
 

@@ -25,9 +25,9 @@ const mouseShortcutColumns = [
     key: "shortcuts",
     width: "50%",
     render: (shortcuts: React.ReactNode[]) => (
-      <div className="shortcuts-container">
+      <div className="keyboard-shortcuts-container">
         {shortcuts.map((shortcut, index) => (
-          <div key={index} className="single-shortcut-container">
+          <div key={index} className="single-keyboard-shortcut-container">
             {shortcut}
           </div>
         ))}
@@ -68,7 +68,7 @@ function MouseShortcutDomainTable({
         columns={mouseShortcutColumns}
         pagination={false}
         size="small"
-        className="shortcut-table-modal"
+        className="keyboard-shortcut-table-modal"
       />
     </div>
   );

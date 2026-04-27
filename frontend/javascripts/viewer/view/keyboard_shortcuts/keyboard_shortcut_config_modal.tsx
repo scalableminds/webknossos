@@ -82,7 +82,7 @@ const KeyboardShortcutDomainTable: React.FC<KeyboardShortcutDomainTableProps> = 
         columns={columns}
         pagination={false}
         size="small"
-        className="shortcut-table-modal"
+        className="keyboard-shortcut-table-modal"
       />
     </div>
   );
@@ -175,7 +175,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       key: "combos",
       render: (combos: KeySequence[], record: KeyboardShortcutTableDataEntry) => (
         <>
-          <div className="shortcuts-container">
+          <div className="keyboard-shortcuts-container">
             {combos.length === 0 ? (
               <Button
                 type="text"
@@ -187,7 +187,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
               </Button>
             ) : (
               combos.map((comboChain, index) => (
-                <div key={index} className="single-shortcut-container">
+                <div key={index} className="single-keyboard-shortcut-container">
                   <span style={{ padding: "0px 4px" }}>
                     {keySequenceToUiElements(comboChain, false)}
                   </span>
@@ -459,6 +459,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
 
       {/*Keyboard Shortcut Recorder*/}
       <ShortcutRecorderModal
+        // TODOM: localShortcutConfig should have filtered recorderEditingKeySequence out
         keyboardShortcutConfig={localShortcutConfig}
         keyboardShortcutId={recorderTargetShortcutId}
         isOpen={isRecorderOpen}

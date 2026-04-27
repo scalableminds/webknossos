@@ -13,7 +13,7 @@ import {
   setUserScriptsModalVisibilityAction,
   setZarrLinksModalVisibilityAction,
 } from "viewer/model/actions/ui_actions";
-import DownloadModalView from "viewer/view/action_bar/download_modal_view";
+import DownloadModalView from "viewer/view/action_bar/download_modal/download_modal_view";
 import MergeModalView from "viewer/view/action_bar/merge_modal_view";
 import ShareModalView from "viewer/view/action_bar/share_modal_view";
 import UserScriptsModalView from "viewer/view/action_bar/user_scripts_modal_view";

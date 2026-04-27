@@ -571,6 +571,51 @@ describe("Save Mutex Saga should crash", () => {
 // OwnerOnly -> Exclusive
 // OwnerOnly -> Concurrent
 // Exclusive -> OwnerOnly
-// Exclusive -> Concurrent
+// Exclusive -> Concurrent // Done
 // Concurrent -> OwnerOnly
 // Concurrent -> Exclusive
+
+describe("Save Mutex Saga collaboration mode switching", () => {
+  afterEach<WebknossosTestContext>(async (context) => {
+    context.tearDownPullQueues();
+    const task = startSaga(function* task() {
+      yield call(clearAllSubscriptions);
+    });
+    await task.toPromise();
+    expect(hasRootSagaCrashed()).toBe(false);
+    Store.dispatch(restartSagaAction());
+    vi.clearAllMocks();
+  });
+
+  it<WebknossosTestContext>("Switching from Exclusive to Concurrent should cancel the continuous mutex saga and start the ad-hoc saga.", async (context: WebknossosTestContext) => {
+    await setupWebknossosForTestingWithRestrictions(context, "Exclusive", true);
+    // Give the continuous saga time to acquire the mutex
+    await sleep(100);
+    expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
+
+    const task = startSaga(function* task() {
+      // Before the change: continuous saga is running, ad-hoc saga is not
+      const stateBeforeChange = yield call(getMutexLogicState);
+      expect(stateBeforeChange.runningContinuousMutexAcquiringSaga).not.toBeNull();
+      expect(stateBeforeChange.runningAdHocMutexAcquiringSaga).toBeNull();
+
+      // Inject a subscriber directly so the ad-hoc saga will start after switching to Concurrent.
+      // Using direct mutation avoids subscribeToAnnotationMutex's blocking wait, which is
+      // unnecessary here since we only need the subscriber count > 0 for restartMutexAcquiringSaga.
+      stateBeforeChange.subscribersToMutex[999] = "TestSubscriber";
+
+      // Switch to Concurrent mode
+      yield put(setCollaborationModeAction("Concurrent"));
+
+      // Wait for the ad-hoc saga's first acquisition: onChange cancels the continuous saga,
+      // sees our subscriber, starts the ad-hoc saga, which immediately acquires the mutex.
+      yield take("SET_IS_MUTEX_ACQUIRED");
+
+      // After the change: continuous saga was cancelled, ad-hoc saga is running
+      const stateAfterChange = yield call(getMutexLogicState);
+      expect(stateAfterChange.runningContinuousMutexAcquiringSaga).toBeNull();
+      expect(stateAfterChange.runningAdHocMutexAcquiringSaga).not.toBeNull();
+    });
+    await task.toPromise();
+  });
+});

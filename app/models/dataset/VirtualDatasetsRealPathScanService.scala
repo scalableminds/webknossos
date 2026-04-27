@@ -26,7 +26,7 @@ class VirtualDatasetsRealPathScanService @Inject()(
   implicit private val ctx: DBAccessContext = GlobalAccessContext
   implicit private val mp: MessagesProvider = messagesApi.preferred(Seq(Lang.defaultLang))
 
-  override protected def tickerInterval: FiniteDuration = 1 minute
+  override protected def tickerInterval: FiniteDuration = 1 hour
 
   override protected def tick(): Fox[_] = {
     logger.info("Scanning realpaths for all virtual datasets...")
@@ -36,7 +36,6 @@ class VirtualDatasetsRealPathScanService @Inject()(
       _ <- Fox.serialCombined(datasetsByDataStore.keys) { dataStoreName =>
         scanRealPathsForDatasetsOfDataStore(datasetsByDataStore(dataStoreName))
       }
-      _ = logger.info("Done scanning realpaths for all virtual datasets.")
     } yield ()
   }
 

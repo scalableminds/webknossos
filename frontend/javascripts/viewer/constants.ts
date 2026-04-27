@@ -345,6 +345,11 @@ const Constants = {
   VERY_NARROW_SCREEN_WIDTH: 1200,
   NUMBER_OF_TOOLS_IN_TOOLBAR: 5,
   SETTING_SAVE_DEBOUNCE_MS: 2500, // delay before user, layer and dataset settings are saved
+
+  // How many IDs should be held in a buffer for new instances of segment groups, trees etc
+  // (see id reservation saga).
+  // Note: this value 10 should match the limit in the backend see AnnotationController.reserveIds
+  IDEAL_ID_BUFFER_SIZE: import.meta.env.MODE === "test" ? 5 : 10,
 } as const;
 
 /* Note that this must stay in sync with the back-end constant MaxMagForAgglomerateMapping

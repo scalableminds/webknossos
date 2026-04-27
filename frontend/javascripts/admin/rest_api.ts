@@ -85,7 +85,7 @@ import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_
 import type { DatasourceConfiguration } from "types/schemas/datasource.types";
 import type { ArbitraryObject } from "types/type_utils";
 import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "viewer/constants";
-import { AnnotationStateFilterEnum } from "viewer/constants";
+import Constants, { AnnotationStateFilterEnum } from "viewer/constants";
 import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import {
   getDataOrTracingStoreUrl,
@@ -97,7 +97,6 @@ import {
   parseProtoTracing,
   serializeProtoListOfLong,
 } from "viewer/model/helpers/proto_helpers";
-import { IDEAL_ID_BUFFER_SIZE } from "viewer/model/sagas/id_reservation_saga";
 import type {
   DatasetConfiguration,
   Mapping,
@@ -1043,9 +1042,9 @@ export async function reserveIdsForAnnotation(
     // Then, the known maximum is 2 (instead of 4).
     throw new Error("Must reserve at least 1 id");
   }
-  if (numberOfIdsToReserve > IDEAL_ID_BUFFER_SIZE) {
+  if (numberOfIdsToReserve > Constants.IDEAL_ID_BUFFER_SIZE) {
     throw new Error(
-      `Tried to request too many ids. numberOfIdsToReserve (${numberOfIdsToReserve} > ${IDEAL_ID_BUFFER_SIZE})`,
+      `Tried to request too many ids. numberOfIdsToReserve (${numberOfIdsToReserve} > ${Constants.IDEAL_ID_BUFFER_SIZE})`,
     );
   }
   const ids: number[] = await Request.sendJSONReceiveJSON(

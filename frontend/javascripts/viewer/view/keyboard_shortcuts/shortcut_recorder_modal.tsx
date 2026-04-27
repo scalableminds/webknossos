@@ -171,10 +171,13 @@ export function ShortcutRecorderModal({
   }, [clearCurrentPreview]);
 
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
+      setKeySequence(initialKeySequence ?? []);
+      clearCurrentPreview();
+    } else {
       handleReset();
     }
-  }, [isOpen, handleReset]);
+  }, [isOpen, handleReset, clearCurrentPreview, initialKeySequence]);
 
   useEffect(() => {
     if (!isOpen) return;

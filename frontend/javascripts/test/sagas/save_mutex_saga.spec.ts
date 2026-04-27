@@ -566,3 +566,11 @@ describe("Save Mutex Saga should crash", () => {
     await task.toPromise();
   });
 });
+
+// todop: write new tests that test the switching of collaborationModes
+// OwnerOnly -> Exclusive
+// OwnerOnly -> Concurrent
+// Exclusive -> OwnerOnly
+// Exclusive -> Concurrent
+// Concurrent -> OwnerOnly
+// Concurrent -> Exclusive

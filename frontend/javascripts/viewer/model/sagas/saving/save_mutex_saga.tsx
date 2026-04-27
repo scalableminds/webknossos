@@ -427,6 +427,7 @@ function* watchForCollaborationModeChange(mutexLogicState: MutexLogicState): Sag
     if (collaborationMode !== "OwnerOnly") {
       yield* call(restartMutexAcquiringSaga, mutexLogicState);
     } else {
+      // todop: cancel saga?
       // collaboration was turned off by the activeUser. Since this is only
       // allowed by the owner, they should be able to edit the annotation, too.
       // Still, let's check that owner === activeUser to be extra safe.

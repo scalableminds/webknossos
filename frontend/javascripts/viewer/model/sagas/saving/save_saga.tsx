@@ -137,7 +137,6 @@ function* getPollInterval(): Saga<number> {
     // Other users may edit the annotation.
     return VERSION_POLL_INTERVAL_COLLAB;
   }
-
   // The current user is the only one who can edit the annotation.
   return VERSION_POLL_INTERVAL_SINGLE_EDITOR;
 }
@@ -149,11 +148,11 @@ function* shouldCheckForNewerAnnotationVersions(): Saga<boolean> {
   );
   const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
 
-  const userCanSaveAndNoCollab = allowSave && collaborationMode === "OwnerOnly";
   const userCanSaveAndNoLiveCollab = allowSave && collaborationMode !== "Concurrent";
-  if (userCanSaveAndNoCollab || userCanSaveAndNoLiveCollab) {
+  if (userCanSaveAndNoLiveCollab) {
     // The active user is currently the only one that is allowed to mutate the annotation.
-    // Since we only acquire the mutex upon page load, there shouldn't be any unseen updates
+    // Since we only acquire the mutex upon page load (because adhoc mutex strategy is only used
+    // for concurrent collab mode), there shouldn't be any unseen updates
     // between the page load and this check here.
     // A race condition where
     //   1) another user saves version X

@@ -4,7 +4,6 @@ import type { ConfigurationHash, ResumableUpload } from "./resumable_upload";
 
 /**
  * Represents a single chunk of a file to be uploaded.
- * @param preprocessState 0 = unprocessed, 1 = processing, 2 = finished
  */
 export class ResumableChunk {
   opts: Partial<ConfigurationHash> = {};
@@ -18,7 +17,6 @@ export class ResumableChunk {
   tested = false;
   retries = 0;
   pendingRetry = false;
-  preprocessState: 0 | 1 | 2 = 0; // 0 = unprocessed, 1 = processing, 2 = finished
   markComplete = false;
   startByte: number;
   endByte: number;
@@ -129,27 +127,8 @@ export class ResumableChunk {
     }
   }
 
-  preprocessFinished(): void {
-    this.preprocessState = 2;
-    this.send();
-  }
-
   // send() uploads the actual data in a POST call
   async send(): Promise<void> {
-    const preprocess = this.getOpt("preprocess");
-    if (typeof preprocess === "function") {
-      switch (this.preprocessState) {
-        case 0:
-          this.preprocessState = 1;
-          await Promise.resolve(preprocess(this));
-          return;
-        case 1:
-          return;
-        case 2:
-          break;
-      }
-    }
-
     if (this.getOpt("testChunks") && !this.tested) {
       this.test();
       return;

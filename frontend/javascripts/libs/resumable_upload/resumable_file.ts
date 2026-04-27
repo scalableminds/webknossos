@@ -200,10 +200,7 @@ export class ResumableFile {
     if (this.preprocessState === 1) return false;
 
     return !this.chunks.some(
-      (chunk) =>
-        chunk.status() === "uploading" ||
-        chunk.status() === "pending" ||
-        chunk.preprocessState === 1,
+      (chunk) => chunk.status() === "uploading" || chunk.status() === "pending",
     );
   }
 
@@ -239,7 +236,7 @@ export class ResumableFile {
       }
 
       for (const chunk of this.chunks) {
-        if (chunk.status() === "pending" && chunk.preprocessState !== 1) {
+        if (chunk.status() === "pending") {
           chunk.send();
           return true;
         }

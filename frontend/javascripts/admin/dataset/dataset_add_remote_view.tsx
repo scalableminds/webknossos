@@ -94,7 +94,12 @@ function DatasetAddRemoteView(props: Props) {
   const maybeExistingDS = useFetch(
     async () => {
       if (defaultDatasetUrl == null) return;
-      return await findDatasetByImportUrl(defaultDatasetUrl);
+      try {
+        return await findDatasetByImportUrl(defaultDatasetUrl);
+      } catch (_e) {
+        console.error(_e); //TODO remove, dev only
+        return null;
+      }
     },
     null,
     [defaultDatasetUrl],
@@ -161,7 +166,7 @@ function DatasetAddRemoteView(props: Props) {
     if (!showLoadingOverlay) setShowLoadingOverlay(true); // show overlay again, e.g. after credentials were passed
 
     const defaultDatasetName = getDefaultDatasetName(url);
-    form.setFieldValue(["dataSource", "id"], { name: defaultDatasetName, team: "" });
+    form.setFieldValue(["dataset", "name"], defaultDatasetName);
 
     try {
       await form.validateFields();
@@ -210,6 +215,7 @@ function DatasetAddRemoteView(props: Props) {
           datastoreToUse.name,
           datasetName,
           dataSource,
+          defaultDatasetUrl,
           targetFolderId,
         );
         onAdded(newDatasetId, datasetName);
@@ -225,6 +231,7 @@ function DatasetAddRemoteView(props: Props) {
   if (maybeExistingDS?.dataSource) {
     const url = getViewDatasetURL(maybeExistingDS);
     navigate(url);
+    return;
   }
   return (
     // Using Forms here only to validate fields and for easy layout

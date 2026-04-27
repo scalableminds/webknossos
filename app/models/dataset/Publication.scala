@@ -9,7 +9,7 @@ import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json.{JsObject, Json}
 import com.scalableminds.util.objectid.ObjectId
-import utils.sql.{SQLDAO, SqlClient}
+import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -54,6 +54,8 @@ class PublicationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
     extends SQLDAO[Publication, PublicationsRow, Publications](sqlClient) {
   protected val collection = Publications
   protected def resultConverter = GetResultPublicationsRow
+
+  override protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken = q"FALSE"
 
   protected def parse(r: PublicationsRow): Fox[Publication] =
     Fox.successful(

@@ -22,7 +22,6 @@ import {
   type TreeProps,
 } from "antd";
 import type { EventDataNode } from "antd/es/tree";
-import useLifecycle from "beautiful-react-hooks/useLifecycle";
 import { InputKeyboard } from "libs/input";
 import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import { compareBy, localeCompareBy } from "libs/utils";
@@ -49,7 +48,6 @@ import ButtonComponent from "viewer/view/components/button_component";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
 import InputComponent from "viewer/view/components/input_component";
 import { MarkdownModal } from "viewer/view/components/markdown_modal";
-import { loadKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_persistence";
 import type { KeyboardShortcutHandlerMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import { buildKeyBindingsFromConfig } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_utils";
 import Comment, { commentListId } from "viewer/view/right_border_tabs/comment_tab/comment";
@@ -126,12 +124,12 @@ function CommentTabView(props: Props) {
   const [isMarkdownModalOpen, setIsMarkdownModalOpen] = useState(false);
   const [isVisibleInDom, setIsVisibleInDom] = useState(true);
 
-  const [keyboard, setKeyboard] = useState<InputKeyboard | null>(null);
   const nextCommentRef = useRef<(arg0?: boolean) => void>(null);
   const previousCommentRef = useRef<() => void>(null);
 
   const dispatch = useDispatch();
 
+  const keyboardShortcutsConfig = useWkSelector((state) => state.keyboardShortcutsConfig);
   const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
   const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);
   const isOwner = useWkSelector((state) => isAnnotationOwner(state));
@@ -144,31 +142,25 @@ function CommentTabView(props: Props) {
     setExpandedTreeIds(defaultCollapsedTreeIds);
   });
 
-  useLifecycle(
-    () => {
-      // This keyboard handler is created only once on the very first render.
-      // Instead of directly attaching callback function, we need to rely on React.refs instead
-      // to prevent the callbacks from becoming stale and outdated as the component changes
-      // its state or props.
-      const keyboardHandlers: Partial<KeyboardShortcutHandlerMap> = {
-        NEXT_COMMENT: {
-          onPressedWithRepeat: () => nextCommentRef?.current?.(),
-          delayed: true,
-        },
-        PREVIOUS_COMMENT: {
-          onPressedWithRepeat: () => previousCommentRef?.current?.(),
-          delayed: true,
-        },
-      };
-      const keybindingConfig = loadKeyboardShortcuts();
-      const keyboardControls = buildKeyBindingsFromConfig(keybindingConfig, keyboardHandlers);
-      const newKeyboard = new InputKeyboard(keyboardControls);
-      if (keyboard === null) setKeyboard(newKeyboard);
-    },
-    () => {
-      keyboard?.destroy();
-    },
-  );
+  useEffect(() => {
+    // Refs to next and previous comment keep callbacks non-stale across
+    // re-renders without recreating the keyboard.
+    const keyboardHandlers: Partial<KeyboardShortcutHandlerMap> = {
+      NEXT_COMMENT: {
+        onPressedWithRepeat: () => nextCommentRef?.current?.(),
+        delayed: true,
+      },
+      PREVIOUS_COMMENT: {
+        onPressedWithRepeat: () => previousCommentRef?.current?.(),
+        delayed: true,
+      },
+    };
+    const keyboardControls = buildKeyBindingsFromConfig(keyboardShortcutsConfig, keyboardHandlers);
+    const keyboard = new InputKeyboard(keyboardControls);
+    return () => {
+      keyboard.destroy();
+    };
+  }, [keyboardShortcutsConfig]);
 
   useEffect(() => {
     // If the activeNode has a comment, scroll to it,

@@ -21,25 +21,15 @@ with wk.webknossos_context(
 
 function getPythonDatasetDownloadSnippet(authToken: string | null, dataset: APIDataset) {
   const nonDefaultHost = !document.location.host.endsWith("webknossos.org");
-  const indentation = "\n        ";
   const contextUrlAddendum = nonDefaultHost ? `, url="${window.location.origin}"` : "";
-  const maybeUrlParameter = nonDefaultHost
-    ? `${indentation}webknossos_url="${window.location.origin}"`
-    : "";
 
   return `import webknossos as wk
 
 with wk.webknossos_context(token="${authToken || "<insert token here>"}"${contextUrlAddendum}):
-    # Download the dataset.
-    dataset = wk.Dataset.download(
-        dataset_name_or_url="${dataset.name}",
-        organization_id="${dataset.owningOrganization}",${maybeUrlParameter}
-    )
-    # Alternatively, directly open the dataset. Image data will be
-    # streamed when being accessed.
+    # Get a reference to the dataset without downloading it. 
+    # Image data will be streamed when being accessed.
     remote_dataset = wk.Dataset.open_remote(
-        dataset_name_or_url="${dataset.name}",
-        organization_id="${dataset.owningOrganization}",${maybeUrlParameter}
+        dataset_id="${dataset.id}",
     )
 `;
 }
@@ -93,37 +83,21 @@ export function DownloadPythonTab({ isAnnotation }: { isAnnotation: boolean }) {
 
   return (
     <>
-      <Row>
-        <Typography.Text
-          style={{
-            margin: "0 6px 12px",
-          }}
-        >
-          The following code snippets are suggestions to get you started quickly with the{" "}
-          <a href="https://docs.webknossos.org/webknossos-py/" target="_blank" rel="noreferrer">
-            WEBKNOSSOS Python API
-          </a>
-          . To download and use this {typeName} in your Python project, simply copy and paste the
-          code snippets to your script.
-        </Typography.Text>
-      </Row>
-      <Divider
-        style={{
-          margin: "18px 0",
-        }}
-      >
-        Code Snippets
-      </Divider>
+      <Typography.Paragraph>
+        The following code snippets are suggestions to get you started quickly with the{" "}
+        <a href="https://docs.webknossos.org/webknossos-py/" target="_blank" rel="noreferrer">
+          WEBKNOSSOS Python API
+        </a>
+        . To download and use this {typeName} in your Python project, simply copy and paste the code
+        snippets to your script.
+      </Typography.Paragraph>
+      <Divider>Code Snippets</Divider>
       {maybeShowWarning()}
       <Typography.Paragraph>
         <CopyableCodeSnippet code="pip install webknossos" />
         <CopyableCodeSnippet code={wkInitSnippet} onCopy={alertTokenIsPrivate} />
       </Typography.Paragraph>
-      <Divider
-        style={{
-          margin: "18px 0",
-        }}
-      />
+      <Divider />
       <MoreInfoHint />
     </>
   );

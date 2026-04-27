@@ -55,7 +55,7 @@ class PublicationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   protected val collection = Publications
   protected def resultConverter = GetResultPublicationsRow
 
-  override protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken = q"FALSE"
+  override protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken = q"TRUE"
 
   protected def parse(r: PublicationsRow): Fox[Publication] =
     Fox.successful(

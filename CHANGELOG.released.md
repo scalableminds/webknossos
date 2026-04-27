@@ -7,6 +7,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [26.04.1](https://github.com/scalableminds/webknossos/releases/tag/26.04.1) - 2026-04-23
+[Commits](https://github.com/scalableminds/webknossos/compare/26.04.0...26.04.1)
+
+### Fixed
+- Fixed incorrectly rendered viewports after changing the viewer layout. [#9480](https://github.com/scalableminds/webknossos/pull/9480)
+- Fixed a layout issue when an annotation or dataset was opened with a maximized viewport. [#9505](https://github.com/scalableminds/webknossos/pull/9505)
+
 ## [26.04.0](https://github.com/scalableminds/webknossos/releases/tag/26.04.0) - 2026-04-07
 [Commits](https://github.com/scalableminds/webknossos/compare/26.03.0...26.04.0)
 

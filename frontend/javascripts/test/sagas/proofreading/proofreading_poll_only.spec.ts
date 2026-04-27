@@ -5,6 +5,7 @@ import {
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
 import { actionChannel, flush } from "typed-redux-saga";
+import { type AnnotationCollaborationMode, AnnotationCollaborationModes } from "types/api_types";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
@@ -38,9 +39,7 @@ import {
   makeMappingEditableForTest,
   mockInitialBucketAndAgglomerateData,
 } from "./proofreading_test_utils";
-import { type AnnotationCollaborationMode, AnnotationCollaborationModes } from "types/api_types";
 
-// todop: test poll-only behavior in other collab modes, too.
 describe.each(
   AnnotationCollaborationModes,
 )("Proofreading (Poll only) with collaborationMode=%s", (collabMode: AnnotationCollaborationMode) => {
@@ -64,7 +63,7 @@ describe.each(
     context.receivedDataPerSaveRequest.length = 0;
 
     // Now switch to a poll only mode: Simulate a different user in a different client session than the owner
-    // and enable OwnerOnly collaborationMode.
+    // and enable the actual collaborationMode that should be tested.
     const differentUser = {
       ...dummyUser,
       id: "dummy-user2-id",
@@ -503,10 +502,7 @@ describe.each(
     await task.toPromise();
   });
 
-  async function testPollWithUserNotAllowedToSave(
-    context: WebknossosTestContext,
-    othersMayEdit: boolean,
-  ) {
+  it("should poll updates for a simple merge", async (context: WebknossosTestContext) => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
@@ -515,9 +511,6 @@ describe.each(
 
     const task = startSaga(function* () {
       yield initializePollOnlyAnnotation(context, tracingId);
-      if (othersMayEdit) {
-        yield put(setCollaborationModeAction("Concurrent"));
-      }
 
       const foreignMergeAction = {
         name: "mergeAgglomerate" as const,
@@ -556,16 +549,6 @@ describe.each(
     });
 
     await task.toPromise();
-  }
-
-  it("should poll updates even when othersMayEdit it turned off and updating is not allowed by current user", async (context: WebknossosTestContext) => {
-    const othersMayEdit = false;
-    await testPollWithUserNotAllowedToSave(context, othersMayEdit);
-  });
-
-  it("should poll updates with othersMayEdit turned on but updating is not allowed by current user", async (context: WebknossosTestContext) => {
-    const othersMayEdit = true;
-    await testPollWithUserNotAllowedToSave(context, othersMayEdit);
   });
 
   it("should simply forward received update actions like agglomerate tree update actions without putting these changes to its own save queue or sending them to the backend", async (context: WebknossosTestContext) => {

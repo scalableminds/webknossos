@@ -86,13 +86,9 @@ export interface ConfigurationHash {
    */
   prioritizeFirstAndLastChunk?: boolean;
   /**
-   * The target URL for the multipart POST request. This can be a `string` or a `function` that allows you you to construct and return a value, based on supplied `params`. (Default: `/`)
+   * The target URL for the multipart POST request. This can be a `string`. (Default: `/`)
    */
-  target?: string | ((params?: any) => string);
-  /**
-   * The target URL for the GET request to the server for each chunk to see if it already exists. This can be a `string` or a `function` that allows you you to construct and return a value, based on supplied `params`. (Default: `null`)
-   */
-  testTarget?: string | null;
+  target?: string;
   /**
    * Make a GET request to the server for each chunks to see if it already exists. If implemented on the server-side, this will allow for upload resumes even after a browser crash or even a computer restart. (Default: `true`)
    */
@@ -101,7 +97,6 @@ export interface ConfigurationHash {
    * Override the function that generates unique identifiers for each file.
    */
   generateUniqueIdentifier?: ((file: File, event?: Event) => string | Promise<string>) | null;
-  getTarget?: ((request: string, params: any) => string) | null;
   /**
    * The maximum number of retries for a chunk before the upload is failed. Valid values are any positive integer and `undefined` for no limit. (Default: `undefined`)
    */
@@ -236,10 +231,8 @@ export class ResumableUpload implements EventTarget {
       preprocessFile: null,
       prioritizeFirstAndLastChunk: false,
       target: "/",
-      testTarget: null,
       testChunks: true,
       generateUniqueIdentifier: null,
-      getTarget: null,
       maxChunkRetries: 100,
       chunkRetryInterval: null,
       permanentErrors: [400, 401, 403, 404, 409, 415, 500, 501],

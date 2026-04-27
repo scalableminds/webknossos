@@ -80,7 +80,7 @@ export class ResumableChunk {
       [this.getOpt("totalChunksParameterName")]: this.fileObj.chunks.length,
     };
 
-    const targetUrl = getTargetURI(this.resumableObj, "test", {
+    const targetUrl = getTargetURI(this.resumableObj, {
       ...queryParams,
       ...extraParams,
     });
@@ -213,7 +213,7 @@ export class ResumableChunk {
       data = formData;
     }
 
-    const targetUrl = getTargetURI(this.resumableObj, "upload", queryParameters);
+    const targetUrl = getTargetURI(this.resumableObj, queryParameters);
     const fetchTimeout = this.getOpt("fetchTimeout");
     let hasTimedOut = false;
     const timeoutId =

@@ -5,7 +5,6 @@ import {
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
 import { actionChannel, flush } from "typed-redux-saga";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
@@ -53,17 +52,24 @@ function* initializePollOnlyAnnotation(context: WebknossosTestContext, tracingId
 
 function* makeAnnotationPollOnly(context: WebknossosTestContext) {
   const { api } = context;
-  // todo: description
   // Set collab mode to concurrent to be able to save the updates about initializing the mapping.
-  // OthersMayEdit = true is needed for polling to work properly as this test and the simulated
-  // other user (via backendMock.injectVersion) are both editing the annotation in this test
-  // (although the user of this test only sends empty updates). Else the polling logic would not work.
   yield put(setCollaborationModeAction("Concurrent"));
   yield call(() => api.tracing.save());
   context.receivedDataPerSaveRequest.length = 0;
-  yield put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
-  yield put(disableSavingAction());
+
+  // Now switch to a poll only mode: Simulate a different user in a different client session than the owner
+  // and enable OwnerOnly collaborationMode.
+  const differentUser = {
+    ...dummyUser,
+    id: "dummy-user2-id",
+    email: "dummy2@email.com",
+    firstName: "First Name2",
+    lastName: "Last Name2",
+  };
+  yield put(setActiveUserAction(differentUser));
   yield put(setCollaborationModeAction("OwnerOnly"));
+  yield put(disableSavingAction());
+  yield put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
 }
 
 describe("Proofreading (Poll only)", () => {
@@ -77,35 +83,13 @@ describe("Proofreading (Poll only)", () => {
   });
 
   it("should update the mapping when the server has a new update action with a merge operation", async (context: WebknossosTestContext) => {
-    const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* () {
-      // Now switch to a poll only mode: Simulate a different user in a different client session than the owner.
-      // 1. switch to different user.
-      // 2. turn on owner only collab mode -> we cannot edit
-      // 3. As the save_mutex_saga does not consider the case that during a session the collab mode is changed by a non owner,
-      //    the isUpdatingCurrentlyAllowed property on the annotation is never turned to false.
-      //    This is the case as this cannot happen in a real scenario; only here in this simulated test case.
-      //    Thus, we need to set isUpdatingCurrentlyAllowed manually to false here.
-      // Note: For full correctness the annotation restrictions should be updates to allowSave = false,
-      // but there is currently no action for this and this is not needed for the code to go the correct path as
-      // isUpdatingCurrentlyAllowed = false.
-      const differentUser = {
-        ...dummyUser,
-        id: "dummy-user2-id",
-        email: "dummy2@email.com",
-        firstName: "First Name2",
-        lastName: "Last Name2",
-      };
-      yield put(setActiveUserAction(differentUser));
-      yield put(setCollaborationModeAction("OwnerOnly"));
-      yield put(disableSavingAction());
-      yield put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
-      WkDevFlags.logActions = true;
+      yield initializePollOnlyAnnotation(context, tracingId);
 
       const foreignMergeAction = {
         name: "mergeAgglomerate" as const,

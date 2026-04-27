@@ -105,10 +105,10 @@ class DataSourceService @Inject()(
       (realPathInfos, realPathScanFailures) = scanRealPaths(dataSources)
       _ <- remoteWebknossosClient.reportRealPaths(realPathInfos)
       realPathFailuresSummary = if (realPathScanFailures.isEmpty) ""
-      else s" ${realPathScanFailures.length} realPath scan failures"
+      else s". ${realPathScanFailures.length} realPath scan failures"
       _ = Instant.logSince(
         before,
-        s"Scanned ${realPathInfos.length} realpaths for ${dataSources.length} virtual datasets.$realPathFailuresSummary")
+        s"Scanned ${realPathInfos.length} realpaths for ${dataSources.length} virtual datasets$realPathFailuresSummary.")
       _ = logRealPathScanFailures(verbose = true, realPathScanFailures)
     } yield ()
 

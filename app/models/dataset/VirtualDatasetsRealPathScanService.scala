@@ -6,23 +6,25 @@ import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.typesafe.scalalogging.LazyLogging
 import jakarta.inject.Inject
 import org.apache.pekko.actor.ActorSystem
-import play.api.i18n.MessagesProvider
+import play.api.i18n.{Lang, MessagesApi, MessagesProvider}
 import play.api.inject.ApplicationLifecycle
 
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
-class RealPathScanService @Inject()(
+class VirtualDatasetsRealPathScanService @Inject()(
     datasetService: DatasetService,
     datasetDAO: DatasetDAO,
+    messagesApi: MessagesApi,
     val actorSystem: ActorSystem,
-    val lifecycle: ApplicationLifecycle)(implicit val ec: ExecutionContext, mp: MessagesProvider)
+    val lifecycle: ApplicationLifecycle)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
     with LazyLogging
     with FoxImplicits {
 
   implicit private val ctx: DBAccessContext = GlobalAccessContext
+  implicit private val mp: MessagesProvider = messagesApi.preferred(Seq(Lang.defaultLang))
 
   override protected def tickerInterval: FiniteDuration = 1 minute
 
@@ -30,7 +32,7 @@ class RealPathScanService @Inject()(
     logger.info("Scanning realpaths for all virtual datasets...")
     for {
       datasets <- datasetDAO.findAll
-      datasetsByDataStore: Map[String, List[Dataset]] = datasets.groupBy(_._dataStore)
+      datasetsByDataStore: Map[String, List[Dataset]] = datasets.filter(_.isVirtual).groupBy(_._dataStore)
       _ <- Fox.serialCombined(datasetsByDataStore.keys) { dataStoreName =>
         scanRealPathsForDatasetsOfDataStore(datasetsByDataStore(dataStoreName))
       }

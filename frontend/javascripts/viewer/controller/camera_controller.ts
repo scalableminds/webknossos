@@ -271,11 +271,12 @@ class CameraController extends PureComponent<Props> {
     const upChanged = !newStoredUp.equals(this.lastTDCameraUp);
     const targetChanged = !threeTarget.equals(this.lastTDCameraTarget);
 
-    if (positionChanged || upChanged || targetChanged) {
+    if (positionChanged || upChanged) {
       this.lastTDCameraPosition.copy(newStoredPosition);
       this.lastTDCameraUp.copy(newStoredUp);
+    }
+    if (targetChanged) {
       this.lastTDCameraTarget.copy(threeTarget);
-      this.lastTDProjectionDistance = Math.max(1, newStoredPosition.distanceTo(threeTarget));
     }
 
     // Always write the stored position/up to the camera; the pullback below may
@@ -283,14 +284,44 @@ class CameraController extends PureComponent<Props> {
     tdCamera.position.copy(newStoredPosition);
     tdCamera.up.copy(newStoredUp);
 
-    // Re-orient the camera whenever position, up, or target changes. It is safe to
-    // also call lookAt on target-only changes because setTargetAndFixPosition always
-    // projects the new target onto the camera's current look ray — so lookAt with a
-    // projected target is a no-op for normal navigation. The centerTDViewReducer sets
-    // target to the actual flycam position (off the look ray), so lookAt there
-    // correctly re-orients the camera to frame the data planes.
-    if (positionChanged || upChanged || targetChanged) {
+    // lookAtRequired tracks whether we need to re-orient the camera AND refresh the
+    // projection distance. It is true when the camera actually moved/rotated (user
+    // orbit), or when centerTDViewReducer deliberately set the target off the look
+    // ray so the camera must face the new scene position.
+    let lookAtRequired = positionChanged || upChanged;
+
+    if (!lookAtRequired && targetChanged) {
+      // Target-only changes come from two sources:
+      //
+      // 1. setTargetAndFixPosition — projects the desired target onto the camera's
+      //    current look ray. lookAt(projected_target) is a geometric no-op and, more
+      //    importantly, must NOT trigger a projection-distance refresh: the pullback
+      //    formula is P_pb = storedPos + backward × max(0, minSafe − projDist).
+      //    If projDist were updated here the pullback would shift on every hover entry.
+      //
+      // 2. centerTDViewReducer — sets the target to the actual flycam position, which
+      //    may be off the look ray, so the camera must re-orient and projDist must
+      //    reflect the new scene depth.
+      //
+      // Distinguish the two by measuring the perpendicular distance from the new
+      // target to the current forward ray. Projected targets land on the ray
+      // (perpDistance ≈ 0); actual flycam positions can be significantly off-axis.
+      const forward = new ThreeVector3(0, 0, -1).applyQuaternion(tdCamera.quaternion);
+      const toTarget = threeTarget.clone().sub(newStoredPosition);
+      const perpDistance = toTarget
+        .clone()
+        .addScaledVector(forward, -toTarget.dot(forward))
+        .length();
+      if (perpDistance > 1.0) {
+        lookAtRequired = true;
+      }
+    }
+
+    if (lookAtRequired) {
       tdCamera.lookAt(threeTarget);
+      // Refresh the projection distance so the pullback and near/far scale stay
+      // correct for the new camera orientation or scene position.
+      this.lastTDProjectionDistance = Math.max(1, newStoredPosition.distanceTo(threeTarget));
     }
 
     if (tdCamera instanceof PerspectiveCamera) {
@@ -300,9 +331,7 @@ class CameraController extends PureComponent<Props> {
       // When zoomed out far, plane vertices can go behind the camera, which causes
       // severe distortion because the perspective divide produces garbage clip-space
       // coordinates for w < 0 vertices (they don't just get cleanly clipped).
-      // Pull the camera back along its existing view direction (position → target ray)
-      // so that TrackballControls state is unaffected. Do NOT call lookAt after the
-      // pullback — moving along the same ray preserves the existing orientation.
+      // Pull the camera back along its view direction when necessary.
       const maxViewExtent = Math.max(
         Math.abs(cameraData.left),
         Math.abs(cameraData.right),
@@ -313,11 +342,13 @@ class CameraController extends PureComponent<Props> {
       const effectiveDistance = Math.max(this.lastTDProjectionDistance, minSafeDistance);
 
       if (effectiveDistance > this.lastTDProjectionDistance) {
-        // The camera pullback ensures vertices are always at depth ≥ effectiveDistance,
-        // Otherwise, the geometry too close to the camera would distort with perspective projection
-        const viewDir = newStoredPosition.clone().sub(threeTarget).normalize();
-        tdCamera.position.copy(threeTarget.clone().addScaledVector(viewDir, effectiveDistance));
-        // No lookAt here — moving along the stored view ray doesn't change direction.
+        // Compute the pulled-back position from storedPos along the camera's backward
+        // direction, NOT from threeTarget. Using threeTarget as the base would shift
+        // P_pb whenever setTargetAndFixPosition moves the target along the look ray,
+        // even though the camera and scene haven't moved — causing jitter on hover.
+        const forward = new ThreeVector3(0, 0, -1).applyQuaternion(tdCamera.quaternion);
+        const pullback = effectiveDistance - this.lastTDProjectionDistance;
+        tdCamera.position.copy(newStoredPosition).addScaledVector(forward, -pullback);
       }
 
       // Use near = effectiveDistance/1000 for good near/far ratio and depth precision.

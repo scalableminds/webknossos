@@ -315,20 +315,26 @@ class TDController extends PureComponent<Props> {
     const nmPosition = voxelToUnit(this.props.voxelSize, position);
     const desiredTarget = new ThreeVector3(...nmPosition);
 
-    // Project the desired rotation center onto the camera's current look ray.
-    // TrackballControls computes the eye vector as (object.position − target) in
-    // both getMouseProjectionOnBall and update(). If controls.target is updated to
-    // a point that is NOT on the camera's look ray, the eye vector is inconsistent
-    // with the camera's actual orientation and the first drag produces a jump.
-    // By projecting onto the look ray, the eye vector stays collinear with the
-    // camera's forward direction, so rotation is smooth from the first frame.
-    // The camera position and orientation are unchanged, so there is no visual shift.
+    // Project the desired rotation center onto the camera's current look ray so
+    // that TrackballControls' eye vector (object.position − target) stays collinear
+    // with the camera's forward direction. If target is off the look ray the first
+    // drag produces a jump.
+    //
+    // Critically: project from the *stored* camera position, not from camera.position
+    // (the Three.js object). The Three.js position may have been pulled back along the
+    // look ray by updateTDCamera. Using the pulled-back position makes effectiveTarget
+    // depend on the pullback distance, which itself depends on effectiveTarget —
+    // a circular dependency that causes the camera to jitter on every viewport entry.
+    // The stored position is stable between frames and breaks the cycle.
     let effectiveTarget = desiredTarget;
     const camera = controls?.object;
     if (camera != null) {
       const forward = new ThreeVector3(0, 0, -1).applyQuaternion(camera.quaternion);
-      const depth = Math.max(0.1, desiredTarget.clone().sub(camera.position).dot(forward));
-      effectiveTarget = camera.position.clone().addScaledVector(forward, depth);
+      const storedCameraPosition = new ThreeVector3(
+        ...Store.getState().viewModeData.plane.tdCamera.position,
+      );
+      const depth = Math.max(0.1, desiredTarget.clone().sub(storedCameraPosition).dot(forward));
+      effectiveTarget = storedCameraPosition.clone().addScaledVector(forward, depth);
     }
 
     if (controls != null) {

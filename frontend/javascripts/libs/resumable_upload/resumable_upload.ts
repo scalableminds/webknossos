@@ -74,10 +74,6 @@ export interface ConfigurationHash {
     | Record<string, string>
     | ((file: ResumableFile, chunk?: ResumableChunk) => Record<string, string>);
   /**
-   * Optional function to process each file before testing & sending the corresponding chunks. Function is passed the file as parameter, and should call the `preprocessFinished` method on the file when finished. (Default: `null`)
-   */
-  preprocessFile?: ((file: ResumableFile) => Promise<void> | void) | null;
-  /**
    * Prioritize first and last chunks of all files. This can be handy if you can determine if a file is valid for your service from only the first or last chunk. For example, photo or video meta data is usually located in the first part of a file, making it easy to test support from only the first chunk. (Default: `false`)
    */
   prioritizeFirstAndLastChunk?: boolean;
@@ -223,7 +219,6 @@ export class ResumableUpload implements EventTarget {
       throttleProgressCallbacks: 0.5,
       query: {},
       headers: {},
-      preprocessFile: null,
       prioritizeFirstAndLastChunk: false,
       target: "/",
       testChunks: true,

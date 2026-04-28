@@ -459,7 +459,6 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
 
       {/*Keyboard Shortcut Recorder*/}
       <ShortcutRecorderModal
-        // TODOM: localShortcutConfig should have filtered recorderEditingKeySequence out
         keyboardShortcutConfig={localShortcutConfig}
         keyboardShortcutId={recorderTargetShortcutId}
         isOpen={isRecorderOpen}
@@ -471,11 +470,16 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
         onSave={(newKeySeq) => {
           if (!recorderTargetShortcutId) return;
 
+          // First remove all equal sequences to deduplicate them.
+          const shortcutKeqSeqsWithoutNewSeq = localShortcutConfig[recorderTargetShortcutId].filter(
+            (keySeq) => !isEqual(keySeq, newKeySeq),
+          );
+
           const updatedKeySeqAlternatives = recorderEditingKeySequence
-            ? localShortcutConfig[recorderTargetShortcutId].map((keySeq) =>
+            ? shortcutKeqSeqsWithoutNewSeq.map((keySeq) =>
                 isEqual(keySeq, recorderEditingKeySequence) ? newKeySeq : keySeq,
               )
-            : [...localShortcutConfig[recorderTargetShortcutId], newKeySeq];
+            : [...shortcutKeqSeqsWithoutNewSeq, newKeySeq];
           // Use spread to preserve the existing key insertion order — building a
           // fresh object with a loop would move the edited key to the end.
           const updated = {

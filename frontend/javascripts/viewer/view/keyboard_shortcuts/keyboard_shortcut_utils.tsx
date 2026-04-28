@@ -157,11 +157,11 @@ export const buildKeyBindingsFromConfig = (
   return Object.fromEntries(mappedShortcuts);
 };
 
-function keySequenceToComparableKeySequence(keySeq: KeySequence): ComparableKeySequence {
+export function keySequenceToComparableKeySequence(keySeq: KeySequence): ComparableKeySequence {
   return keySeq.map((keyCombination: string[]) => new Set<string>(keyCombination));
 }
 
-function areComparableSequencesEqual(
+export function areComparableSequencesEqual(
   comparableKeySeq1: ComparableKeySequence,
   comparableKeySeq2: ComparableKeySequence,
 ): boolean {

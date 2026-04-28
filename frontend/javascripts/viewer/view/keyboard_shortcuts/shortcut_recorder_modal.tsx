@@ -11,8 +11,10 @@ import type {
   KeySequence,
 } from "./keyboard_shortcut_types";
 import {
+  areComparableSequencesEqual,
   type Collision,
   checkCollisionForShortcut,
+  keySequenceToComparableKeySequence,
   keySequenceToUiElements,
 } from "./keyboard_shortcut_utils";
 
@@ -144,16 +146,32 @@ export function ShortcutRecorderModal({
 }: ShortcutRecorderModalProps) {
   const [keySequence, setKeySequence] = useState<KeySequence>(initialKeySequence ?? []);
   const [previewKeyCombination, setPreviewKeyCombination] = useState<KeyCombination>([]);
+  const keyboardShortcutConfigWithoutInitialKeySequence = useMemo<KeyboardShortcutsMap>(() => {
+    if (!keyboardShortcutId) {
+      return keyboardShortcutConfig;
+    }
+    const shortcutWithoutInitialKeySequence = initialKeySequence
+      ? keyboardShortcutConfig[keyboardShortcutId].filter(
+          (seq) =>
+            !areComparableSequencesEqual(
+              keySequenceToComparableKeySequence(seq),
+              keySequenceToComparableKeySequence(initialKeySequence),
+            ),
+        )
+      : keyboardShortcutConfig[keyboardShortcutId];
+    return { ...keyboardShortcutConfig, [keyboardShortcutId]: shortcutWithoutInitialKeySequence };
+  }, [keyboardShortcutConfig, initialKeySequence, keyboardShortcutId]);
+
   const shortcutCollisions = useMemo(
     () =>
       keyboardShortcutId
         ? checkCollisionForShortcut(
             keyboardShortcutId,
-            [...keyboardShortcutConfig[keyboardShortcutId], keySequence],
-            keyboardShortcutConfig,
+            [...keyboardShortcutConfigWithoutInitialKeySequence[keyboardShortcutId], keySequence],
+            keyboardShortcutConfigWithoutInitialKeySequence,
           )
         : [],
-    [keySequence, keyboardShortcutId, keyboardShortcutConfig],
+    [keySequence, keyboardShortcutId, keyboardShortcutConfigWithoutInitialKeySequence],
   );
 
   const currentDownSetRef = useRef<Set<string>>(new Set());

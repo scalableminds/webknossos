@@ -197,22 +197,24 @@ class Zarr3Array(vaultPath: VaultPath,
       }
     }
     Fox.combined(
-      withShardInfo.groupBy(_._3).toSeq.map { case (shardFilename, entries) =>
-        val shardPath = vaultPath / shardFilename
-        for {
-          parsedShardIndex <- parsedShardIndexCache.getOrLoad(shardPath, readAndParseShardIndex)
-        } yield {
-          val validSorted = entries.flatMap { case (chunkIndex, shardCoordinates, _) =>
-            val pos = getChunkIndexInShardIndex(chunkIndex, shardCoordinates)
-            val (chunkOffset, chunkLength) = parsedShardIndex(pos)
-            if (chunkOffset == -1 && chunkLength == -1) None
-            else
-              Some(
-                (chunkIndex,
-                 ByteRange.startEndExclusive(chunkOffset, chunkOffset + chunkLength): StartEndExclusiveByteRange))
-          }.sortBy { case (_, range) => range.start }
-          (shardPath, validSorted.map(_._1), validSorted.map(_._2))
-        }
+      withShardInfo.groupBy(_._3).toSeq.map {
+        case (shardFilename, entries) =>
+          val shardPath = vaultPath / shardFilename
+          for {
+            parsedShardIndex <- parsedShardIndexCache.getOrLoad(shardPath, readAndParseShardIndex)
+          } yield {
+            val validSorted = entries.flatMap {
+              case (chunkIndex, shardCoordinates, _) =>
+                val pos = getChunkIndexInShardIndex(chunkIndex, shardCoordinates)
+                val (chunkOffset, chunkLength) = parsedShardIndex(pos)
+                if (chunkOffset == -1 && chunkLength == -1) None
+                else
+                  Some(
+                    (chunkIndex,
+                     ByteRange.startEndExclusive(chunkOffset, chunkOffset + chunkLength): StartEndExclusiveByteRange))
+            }.sortBy { case (_, range) => range.start }
+            (shardPath, validSorted.map(_._1), validSorted.map(_._2))
+          }
       }
     )
   }

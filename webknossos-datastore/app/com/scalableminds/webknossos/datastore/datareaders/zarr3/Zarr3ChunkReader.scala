@@ -14,7 +14,7 @@ class Zarr3ChunkReader(header: DatasetHeader, array: Zarr3Array) extends ChunkRe
       c match {
         case codec: BytesToBytesCodec => codec.decode(b)
         case _                        => b
-      })
+    })
 
   override protected def readChunkBytesAndShape(path: VaultPath, range: ByteRange)(
       implicit ec: ExecutionContext,

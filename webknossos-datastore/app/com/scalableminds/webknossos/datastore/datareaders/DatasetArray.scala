@@ -169,7 +169,7 @@ class DatasetArray(vaultPath: VaultPath,
       val targetMultiArray = MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape.reverse)
       for {
         _ <- if (header.isSharded) prefetchShardedChunks(chunkIndices.map(fullAxisOrder.permuteIndicesWkToArray))
-             else Fox.successful(())
+        else Fox.successful(())
         _ <- Fox.combined(chunkIndices.map { chunkIndex: Array[Int] =>
           for {
             sourceChunk: MultiArray <- getSourceChunkDataWithCache(fullAxisOrder.permuteIndicesWkToArray(chunkIndex))
@@ -208,7 +208,7 @@ class DatasetArray(vaultPath: VaultPath,
         val targetMultiArray = MultiArrayUtils.createArrayWithGivenStorage(targetBuffer, shape)
         for {
           _ <- if (header.isSharded) prefetchShardedChunks(chunkIndices)
-               else Fox.successful(())
+          else Fox.successful(())
           _ <- Fox.combined(chunkIndices.map { chunkIndex: Array[Int] =>
             for {
               sourceChunk: MultiArray <- getSourceChunkDataWithCache(chunkIndex)
@@ -225,12 +225,12 @@ class DatasetArray(vaultPath: VaultPath,
 
   // Batch version of readAsMultiArray: prefetches all required shard chunks in a single pass before
   // reading each request, so that sharded arrays are read with minimal I/O operations.
-  def readMultipleAsMultiArrays(requests: Seq[(Array[Long], Array[Int])])(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[List[MultiArray]] = {
+  def readMultipleAsMultiArrays(requests: Seq[(Array[Long], Array[Int])])(implicit ec: ExecutionContext,
+                                                                          tc: TokenContext): Fox[List[MultiArray]] = {
     val allChunkIndices: Seq[Array[Int]] = requests.flatMap {
       case (offset, shape) if !shape.contains(0) && !shape.exists(_ < 0) =>
-        val totalOffset: Array[Long] = offset.zip(header.voxelOffset).map { case (o, v) => o - v }.padTo(offset.length, 0)
+        val totalOffset: Array[Long] =
+          offset.zip(header.voxelOffset).map { case (o, v) => o - v }.padTo(offset.length, 0)
         ChunkUtils.computeChunkIndices(datasetShape, chunkShape, shape, totalOffset)
       case _ => Seq.empty
     }
@@ -256,7 +256,7 @@ class DatasetArray(vaultPath: VaultPath,
     ??? // Defined in subclass
 
   private def prefetchShardedChunks(chunkIndices: Seq[Array[Int]])(implicit ec: ExecutionContext,
-                                                                    tc: TokenContext): Fox[Unit] = {
+                                                                   tc: TokenContext): Fox[Unit] = {
     val cachedKeys = sharedChunkContentsCache.keys
     val uncachedIndices =
       chunkIndices.filterNot(idx => cachedKeys.contains(chunkContentsCacheKey(idx)))
@@ -264,15 +264,16 @@ class DatasetArray(vaultPath: VaultPath,
     else
       for {
         groups <- groupUncachedChunksByShardForPrefetch(uncachedIndices)
-        _ <- Fox.combined(groups.map { case (shardPath, indices, ranges) =>
-          for {
-            bytesPerChunk <- shardPath.readMultipleByteRanges(ranges)
-            _ <- Fox.combined(indices.zip(bytesPerChunk).map {
-              case (chunkIdx, bytes) =>
-                sharedChunkContentsCache.getOrLoad(chunkContentsCacheKey(chunkIdx),
-                                                   _ => chunkReader.readFromBytes(bytes, chunkShapeAtIndex(chunkIdx)))
-            })
-          } yield ()
+        _ <- Fox.combined(groups.map {
+          case (shardPath, indices, ranges) =>
+            for {
+              bytesPerChunk <- shardPath.readMultipleByteRanges(ranges)
+              _ <- Fox.combined(indices.zip(bytesPerChunk).map {
+                case (chunkIdx, bytes) =>
+                  sharedChunkContentsCache.getOrLoad(chunkContentsCacheKey(chunkIdx),
+                                                     _ => chunkReader.readFromBytes(bytes, chunkShapeAtIndex(chunkIdx)))
+              })
+            } yield ()
         })
       } yield ()
   }
@@ -287,14 +288,11 @@ class DatasetArray(vaultPath: VaultPath,
       resolved <- Fox.combined(uncachedIndices.map { idx =>
         getShardedChunkPathAndRange(idx).shiftBox.map(box => (idx, box))
       })
-    } yield resolved
-      .collect { case (idx, Full((path, range))) => (idx, path, range) }
-      .groupBy { case (_, path, _) => path }
-      .values
-      .toSeq
-      .map { group =>
-        val sorted = group.sortBy { case (_, _, range) => range.start }
-        (sorted.head._2, sorted.map(_._1), sorted.map(_._3))
+    } yield
+      resolved.collect { case (idx, Full((path, range))) => (idx, path, range) }.groupBy { case (_, path, _) => path }.values.toSeq.map {
+        group =>
+          val sorted = group.sortBy { case (_, _, range) => range.start }
+          (sorted.head._2, sorted.map(_._1), sorted.map(_._3))
       }
 
   private def chunkContentsCacheKey(chunkIndex: Array[Int]): String =

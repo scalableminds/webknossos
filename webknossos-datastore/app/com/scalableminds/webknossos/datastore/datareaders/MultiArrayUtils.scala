@@ -123,8 +123,7 @@ object MultiArrayUtils extends LazyLogging {
     if (source.getElementType == target.getElementType &&
         isCOrderContiguous(source) &&
         isCOrderContiguous(target)) {
-      copyRangeBulk(sourceFirsts, targetFirsts, counts, sourceShape, targetShape,
-                    source.getStorage, target.getStorage)
+      copyRangeBulk(sourceFirsts, targetFirsts, counts, sourceShape, targetShape, source.getStorage, target.getStorage)
     } else {
       val sourceRanges = new util.ArrayList[Range](rank)
       val targetRanges = new util.ArrayList[Range](rank)
@@ -161,12 +160,12 @@ object MultiArrayUtils extends LazyLogging {
   // Copies a rectangular sub-region using System.arraycopy along the innermost dimension.
   // Requires both arrays to be C-order contiguous with the same element type.
   private def copyRangeBulk(sourceFirsts: Array[Int],
-                             targetFirsts: Array[Int],
-                             counts: Array[Int],
-                             sourceShape: Array[Int],
-                             targetShape: Array[Int],
-                             srcStorage: Object,
-                             tgtStorage: Object): Unit = {
+                            targetFirsts: Array[Int],
+                            counts: Array[Int],
+                            sourceShape: Array[Int],
+                            targetShape: Array[Int],
+                            srcStorage: Object,
+                            tgtStorage: Object): Unit = {
     val rank = counts.length
     val lineLength = counts(rank - 1)
 

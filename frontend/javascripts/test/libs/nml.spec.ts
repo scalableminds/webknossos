@@ -765,9 +765,11 @@ describe("NML", () => {
     <experiment name="Test Dataset" />
   </parameters>
   <groups>
-    <group id="1" name="1">
-      <group id="2" name="2">
-        <group id="0" name="0" />
+    <group id="1" name="matches">
+      <group id="2" name="z_2600">
+        <group id="0" name="matches_in_plane_31200" />
+        <group id="3" name="matches_in_plane_31201" />
+        <group id="4" name="matches_in_plane_31201" />
       </group>
     </group>
   </groups>
@@ -786,7 +788,7 @@ describe("NML", () => {
     // Group 2 should have one child
     const group2 = group1!.children.find((g) => g.groupId === 2);
     expect(group2).toBeDefined();
-    expect(group2!.children).toEqual([0]);
+    expect(group2!.children.map((c) => c.groupId)).toEqual([0, 3, 4]);
   });
 
   it("addTreesAndGroups reducer should assign new node and tree ids", () => {

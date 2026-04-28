@@ -1,3 +1,4 @@
+import app from "app";
 import PriorityQueue from "js-priority-queue";
 import { asAbortable, sleep } from "libs/utils";
 import type { BucketAddress } from "viewer/constants";
@@ -161,6 +162,10 @@ class PullQueue {
           });
         }
       }
+
+      if (!this.isDestroyed && this.isEmpty() && !this.isRetryScheduled) {
+        app.vent.emit("pullqueue:empty", this.layerName);
+      }
     }
   }
 
@@ -182,6 +187,10 @@ class PullQueue {
     } else {
       bucket.receiveData(bucketData);
     }
+  }
+
+  isEmpty(): boolean {
+    return this.priorityQueue.length === 0 && this.fetchingBatchCount === 0;
   }
 
   add(item: PullQueueItem): void {

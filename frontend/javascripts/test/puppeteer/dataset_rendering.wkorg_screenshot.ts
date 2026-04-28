@@ -11,18 +11,15 @@ import {
   screenshotDatasetView,
   setupAfterEach,
   setupBeforeEach,
-  withRetry,
 } from "./dataset_rendering_helpers";
-import { compareScreenshot, isPixelEquivalent } from "./screenshot_helpers";
+import { compareScreenshot, isPixelEquivalent, SCREENSHOTS_BASE_PATH } from "./screenshot_helpers";
 
 process.on("unhandledRejection", (err, promise) => {
   console.error("Unhandled rejection (promise: ", promise, ", reason: ", err, ").");
 });
 
-const SCREENSHOTS_BASE_PATH = path.join(
-  __dirname,
-  "../../../../frontend/javascripts/test/screenshots_wkorg",
-);
+const SCREENSHOTS_PATH = path.join(SCREENSHOTS_BASE_PATH, "wkorg");
+
 const URL = "https://webknossos.org";
 
 console.log(`[Info] Executing tests on URL ${URL}.`);
@@ -107,47 +104,41 @@ describe("webknossos.org Dataset Rendering", () => {
     await setupAfterEach(context);
   });
 
-  it<ScreenshotTestContext>(`should render dataset ${demoDatasetName} correctly`, async ({
-    browser,
-  }) => {
-    await withRetry(
-      3,
-      async () => {
-        const response = await fetch(
-          `${URL}/api/datasets/disambiguate/${owningOrganization}/${demoDatasetName}/toId`,
-        );
-        const { id: datasetId } = await response.json();
+  it<ScreenshotTestContext>(
+    `should render dataset ${demoDatasetName} correctly`,
+    { retry: 3 },
+    async ({ browser }) => {
+      const response = await fetch(
+        `${URL}/api/datasets/disambiguate/${owningOrganization}/${demoDatasetName}/toId`,
+      );
+      const { id: datasetId } = await response.json();
 
-        await updateDatasetDefaultConfiguration(
-          datasetId,
-          datasetConfiguration,
-          getDefaultRequestOptions(URL),
-        );
+      await updateDatasetDefaultConfiguration(
+        datasetId,
+        datasetConfiguration,
+        getDefaultRequestOptions(URL),
+      );
 
-        const page = await getNewPage(browser);
-        const { screenshot, width, height } = await screenshotDatasetView(
-          page,
-          URL,
-          datasetId,
-          viewOverrides[demoDatasetName],
-        );
-        const changedPixels = await compareScreenshot(
-          screenshot,
-          width,
-          height,
-          SCREENSHOTS_BASE_PATH,
-          demoDatasetName,
-        );
-        await page.close();
+      const page = await getNewPage(browser);
+      const { screenshot, width, height } = await screenshotDatasetView(
+        page,
+        URL,
+        datasetId,
+        viewOverrides[demoDatasetName],
+      );
+      const changedPixels = await compareScreenshot(
+        screenshot,
+        width,
+        height,
+        SCREENSHOTS_PATH,
+        demoDatasetName,
+      );
+      await page.close();
 
-        return isPixelEquivalent(changedPixels, width, height);
-      },
-      (condition) => {
-        expect(
-          condition,
-          `Dataset with name: "${demoDatasetName}" does not look the same, see ${demoDatasetName}.diff.png for the difference and ${demoDatasetName}.new.png for the new screenshot.`,
-        ).toBe(true);
-      },
-    );
-  });
+      expect(
+        isPixelEquivalent(changedPixels, width, height),
+        `Dataset with name: "${demoDatasetName}" does not look the same, see ${demoDatasetName}.diff.png for the difference and ${demoDatasetName}.new.png for the new screenshot.`,
+      ).toBe(true);
+    },
+  );
 });

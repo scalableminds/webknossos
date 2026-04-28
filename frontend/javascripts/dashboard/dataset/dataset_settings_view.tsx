@@ -7,7 +7,7 @@ import {
   SettingOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
-import { Alert, Breadcrumb, Button, Form, Layout, Menu, Tooltip } from "antd";
+import { Alert, Breadcrumb, Button, Form, Layout, Menu, Space, Tooltip } from "antd";
 import type { ItemType } from "antd/es/menu/interface";
 import { useDatasetSettingsContext } from "dashboard/dataset/dataset_settings_context";
 import features from "features";
@@ -15,7 +15,6 @@ import messages from "messages";
 import type React from "react";
 import { useCallback } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { Unicode } from "viewer/constants";
 import { getReadableURLPart } from "viewer/model/accessors/dataset_accessor";
 
 const { Sider, Content } = Layout;
@@ -228,11 +227,12 @@ const DatasetSettingsView: React.FC = () => {
               marginTop: 8,
             }}
           >
-            <Button type="primary" htmlType="submit">
-              {confirmString}
-            </Button>
-            {Unicode.NonBreakingSpace}
-            <Button onClick={handleCancel}>Cancel</Button>
+            <Space>
+              <Button type="primary" htmlType="submit">
+                {confirmString}
+              </Button>
+              <Button onClick={handleCancel}>Cancel</Button>
+            </Space>
           </FormItem>
         </Form>
       </Content>

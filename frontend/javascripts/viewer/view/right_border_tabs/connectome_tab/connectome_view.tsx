@@ -381,8 +381,8 @@ class ConnectomeView extends React.Component<Props, State> {
         getSynapsePositions(...fetchProperties, allSynapseIds),
         getSynapseTypes(...fetchProperties, allSynapseIds),
       ]);
-    // TODO: Remove once the backend sends the typeToString mapping from the hdf5 file.
-    // Currently, the used jhdf5 library seems to have a bug which makes it impossible to read
+    // Ideally, the backend would send the typeToString mapping from the hdf5 file.
+    // However, the used jhdf5 library seems to have a bug which makes it impossible to read
     // hdf5 array attributes which is why this information is read from a json file, instead.
     // Since it's easy to forget to create the json file, this code exists to act as a fail-safe.
     const { synapseTypes, typeToString } = ensureTypeToString(synapseTypesAndNames);

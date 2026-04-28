@@ -371,6 +371,7 @@ class AiModelController @Inject()(
           "bbox" -> mag1BoundingBox.toLiteral,
           "model_id" -> request.body.aiModelId,
           "model_organization_id" -> aiModelOpt.map(_._organization),
+          "annotation_id" -> request.body.annotationId,
           "dataset_directory_name" -> dataset.directoryName,
           "new_dataset_name" -> request.body.newDatasetName,
           "invert_color_layer" -> request.body.invertColorLayer,

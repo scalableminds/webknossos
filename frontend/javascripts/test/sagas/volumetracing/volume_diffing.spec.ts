@@ -295,7 +295,7 @@ describe("uncachedDiffSegmentLists should diff segment lists", () => {
       {
         name: "updateMetadataOfSegment",
         value: {
-          actionTracingId: "volumeTracingId",
+          actionTracingId: VOLUME_TRACING_ID,
           id: 1,
           removeEntriesByKey: ["someKey2"],
           upsertEntriesByKey: [

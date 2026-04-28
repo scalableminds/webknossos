@@ -223,6 +223,7 @@ class VolumeTracingService @Inject()(
               mag,
               mappingName,
               editableMappingTracingId(volumeTracing, tracingId),
+              volumeTracing.version,
               additionalCoordinates
             )
             bucketPositions = bucketPositionsRaw.toSeq
@@ -708,7 +709,8 @@ class VolumeTracingService @Inject()(
         None,
         None,
         request.additionalCoordinates,
-        request.findNeighbors
+        request.annotationVersion,
+        request.findNeighbors,
       )
       result <- adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
     } yield result

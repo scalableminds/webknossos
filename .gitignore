@@ -122,3 +122,5 @@ tools/**/.yarn/*
 public/index.html
 
 tsconfig.tsbuildinfo
+
+.claude

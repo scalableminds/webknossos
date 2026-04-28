@@ -154,9 +154,10 @@ export function* setupSavingForTracingType(
     }
 
     // The allowUpdate setting could have changed in the meantime.
-    const allowUpdate = yield* select((state) => {
-      return state.annotation.isUpdatingCurrentlyAllowed && state.annotation.restrictions.allowSave;
-    });
+    const allowUpdate = yield* select(
+      (state) =>
+        state.annotation.isUpdatingCurrentlyAllowed && state.annotation.restrictions.allowSave,
+    );
     // Ignore changes while rebasing or forwarding new backend actions as during this time actions
     // are simply replayed on top of the server's state.
     // Therefore, these actions were already added to the save queue or originate from the server itself

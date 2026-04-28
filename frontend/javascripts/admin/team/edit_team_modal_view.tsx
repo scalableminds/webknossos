@@ -1,8 +1,9 @@
 import { MinusCircleOutlined, PlusCircleOutlined } from "@ant-design/icons";
+import { useQueryClient } from "@tanstack/react-query";
 import { getEditableUsers, updateUser } from "admin/rest_api";
 import { AutoComplete, Flex, Input, Modal, Spin, Tooltip } from "antd";
 import type { DefaultOptionType } from "antd/lib/select";
-import { useEffectOnlyOnce } from "libs/react_hooks";
+import { useQueryWithErrorHandling } from "libs/react_hooks";
 import { useState } from "react";
 import type { APITeam, APITeamMembership, APIUser } from "types/api_types";
 import { filterTeamMembersOf, renderUsersForTeam } from "./team_list_view";
@@ -14,26 +15,27 @@ type Props = {
 };
 
 function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
+  const queryClient = useQueryClient();
+  const { data: users = [], isPending } = useQueryWithErrorHandling({
+    queryKey: ["editableUsers"],
+    queryFn: getEditableUsers,
+    refetchOnWindowFocus: false,
+  });
+
   const [autoCompleteValue, setAutoCompleteValue] = useState("");
   const [dropDownVisible, setDropDownVisible] = useState(false);
   const onChange = (newValue: string) => setAutoCompleteValue(newValue);
-  const [users, setUsers] = useState<APIUser[] | null>(null);
   const [isWaitingForRequest, setIsWaitingForRequest] = useState(false);
-  const fetchUsers = async () => setUsers(await getEditableUsers());
-  useEffectOnlyOnce(() => {
-    fetchUsers();
-  });
 
   if (team === null) return null;
   const updateTeamMembership = async (user: APIUser, newTeams: APITeamMembership[]) => {
     setIsWaitingForRequest(true);
     setDropDownVisible(false);
-    if (users === null) return;
     const newUser = Object.assign({}, user, {
       teams: newTeams,
     });
-    const serverUser = await updateUser(newUser);
-    setUsers(users.map((oldUser) => (oldUser.id === serverUser.id ? serverUser : oldUser)));
+    await updateUser(newUser);
+    queryClient.invalidateQueries({ queryKey: ["editableUsers"] });
     setIsWaitingForRequest(false);
   };
 
@@ -87,17 +89,18 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
     ),
   });
 
+  const activeUsers = users.filter((user) => user.isActive);
   const options: DefaultOptionType[] = [
     {
       label: "In team",
-      options: users
-        ?.filter((user) => filterTeamMembersOf(team, user))
+      options: activeUsers
+        .filter((user) => filterTeamMembersOf(team, user))
         .map((user) => renderTeamMember(user)),
     },
     {
       label: "Not in team",
-      options: users
-        ?.filter((user) => !filterTeamMembersOf(team, user))
+      options: activeUsers
+        .filter((user) => !filterTeamMembersOf(team, user))
         .map((user) => renderUserNotInTeam(user)),
     },
   ];
@@ -117,13 +120,6 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
         <AutoComplete
           style={{ width: "100%", marginBottom: "16px" }}
           options={options}
-          filterOption={(inputValue, option) => {
-            return (
-              inputValue === "" ||
-              (typeof option?.value === "string" &&
-                option?.value?.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1)
-            );
-          }}
           onSelect={() => {
             setAutoCompleteValue("");
           }}
@@ -132,8 +128,17 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
           open={dropDownVisible}
           onFocus={() => setDropDownVisible(true)}
           onBlur={() => setDropDownVisible(false)}
-          onSearch={() => setDropDownVisible(true)}
-          onDropdownVisibleChange={() => setAutoCompleteValue("")}
+          showSearch={{
+            onSearch: () => setDropDownVisible(true),
+            filterOption: (inputValue, option) => {
+              return (
+                inputValue === "" ||
+                (typeof option?.value === "string" &&
+                  option?.value?.toUpperCase().indexOf(inputValue.toUpperCase()) !== -1)
+              );
+            },
+          }}
+          onOpenChange={() => setAutoCompleteValue("")}
         >
           <Input.Search size="large" placeholder="Search users" />
         </AutoComplete>
@@ -141,11 +146,9 @@ function EditTeamModalForm({ onCancel, isOpen, team }: Props) {
       </Spin>
     );
   };
-  const usersHaveLoaded = users !== null;
-
   return (
     <Modal open={isOpen} onCancel={onCancel} title="Add / Remove Users" footer={null} width={800}>
-      <Spin spinning={!usersHaveLoaded}>{usersHaveLoaded ? renderModalBody() : null}</Spin>
+      <Spin spinning={isPending}>{isPending ? null : renderModalBody()}</Spin>
     </Modal>
   );
 }

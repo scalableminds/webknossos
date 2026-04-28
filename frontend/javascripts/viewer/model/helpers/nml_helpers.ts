@@ -892,6 +892,7 @@ export function parseNml(nmlString: string): Promise<{
     let isParsingVolumeTag = false;
 
     const treeGroupIdToParent: Record<number, TreeGroup | null | undefined> = {};
+    const openGroupSelfClosingStack: Array<boolean> = [];
     const nodeIdToTreeId: Record<number, number> = {};
     const userBoundingBoxes: UserBoundingBox[] = [];
     let datasetName: string | null = null;
@@ -1074,9 +1075,9 @@ export function parseNml(nmlString: string): Promise<{
           }
 
           existingTreeGroupIds.add(newGroup.groupId);
+          openGroupSelfClosingStack.push(node.isSelfClosing);
 
           if (!node.isSelfClosing) {
-            // If the xml tag is self-closing, there won't be a separate tagclose event!
             treeGroupIdToParent[newGroup.groupId] = currentTreeGroup;
             currentTreeGroup = newGroup;
           }
@@ -1154,7 +1155,8 @@ export function parseNml(nmlString: string): Promise<{
 
         case "group": {
           if (!isParsingVolumeTag) {
-            if (currentTreeGroup != null) {
+            const wasSelfClosing = openGroupSelfClosingStack.pop();
+            if (!wasSelfClosing && currentTreeGroup != null) {
               currentTreeGroup = treeGroupIdToParent[currentTreeGroup.groupId];
             }
           }

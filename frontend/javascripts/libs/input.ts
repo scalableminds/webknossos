@@ -2,6 +2,7 @@ import {
   type BrowserKeyComboEventProps,
   bindKeyCombo,
   type KeyEvent,
+  setGlobalKeystrokesOptions,
   unbindKeyCombo,
 } from "@rwh/keystrokes";
 import Hammer from "hammerjs";
@@ -16,6 +17,11 @@ import type { OrthoView, Point2 } from "viewer/constants";
 import constants from "viewer/constants";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { addEventListenerWithDelegation, isNoElementFocused } from "./utils";
+
+// Must be called in order for keystrokes to detect the spacebar as via "space" and not as " ".
+setGlobalKeystrokesOptions({
+  keyRemap: { " ": "space" },
+});
 
 // This is the main Input implementation.
 // Although all keys, buttons and sensor are mapped in

@@ -1,9 +1,7 @@
-import datetime
 import re
-import sys
-import os
-import tempfile
 import subprocess
+import sys
+import tempfile
 
 VERSION_REGEX = r"[\d]{1,2}\.[\d]{1,2}.[\d]{0,2}"
 
@@ -63,8 +61,41 @@ def extract_newest_changelog():
 
 
 if __name__ == "__main__":
-
     newest_version, release_body = extract_newest_changelog()
+
+    current_sha = subprocess.check_output(
+        ["git", "rev-parse", "HEAD"], text=True
+    ).strip()
+
+    # Check whether the tag already exists locally
+    existing_tag_sha = subprocess.run(
+        ["git", "rev-parse", f"refs/tags/{newest_version}"],
+        capture_output=True,
+        text=True,
+    )
+    if existing_tag_sha.returncode == 0:
+        tag_sha = existing_tag_sha.stdout.strip()
+        # Dereference in case it's an annotated tag object
+        deref = subprocess.run(
+            ["git", "rev-parse", f"refs/tags/{newest_version}^{{}}"],
+            capture_output=True,
+            text=True,
+        )
+        if deref.returncode == 0:
+            tag_sha = deref.stdout.strip()
+        if tag_sha != current_sha:
+            print(
+                f"ERROR: Tag {newest_version} already exists but points to {tag_sha}, "
+                f"not the current HEAD {current_sha}. Aborting."
+            )
+            sys.exit(1)
+        print(f"Tag {newest_version} already exists and matches HEAD.")
+    else:
+        print(f"Creating tag {newest_version} at {current_sha}...")
+        subprocess.run(["git", "tag", newest_version], check=True)
+
+    print(f"Pushing tag {newest_version} to remote...")
+    subprocess.run(["git", "push", "origin", newest_version], check=True)
 
     with tempfile.NamedTemporaryFile("w") as tmp_file:
         tmp_file.write(release_body)
@@ -83,6 +114,7 @@ if __name__ == "__main__":
                 "--title",
                 newest_version,
             ],
+            check=True,
         )
 
         print("Done!")

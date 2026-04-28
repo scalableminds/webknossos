@@ -1,7 +1,7 @@
 # Development Workflows
 
 ## Frontend
-- the frontend uses TypeScript, React, Ant Design (antd), Redux and Three.js
+- the frontend uses TypeScript, React, Ant Design (antd), Redux, Redux-Saga and Three.js
 - we use yarn for managing dependencies and running commands
 
 Code Verification:

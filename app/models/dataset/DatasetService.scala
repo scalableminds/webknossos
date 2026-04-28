@@ -485,18 +485,19 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
-  def usableDataSourceFor(dataset: Dataset)(implicit mp: MessagesProvider): Fox[UsableDataSource] =
+  def usableDataSourceFor(dataset: Dataset, useRealPaths: Boolean = true)(
+      implicit mp: MessagesProvider): Fox[UsableDataSource] =
     for {
-      dataSource <- dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
+      dataSource <- dataSourceFor(dataset, useRealPaths) ?~> "dataSource.notFound" ~> NOT_FOUND
       usableDataSource <- dataSource.toUsable.toFox ?~> Messages("dataset.notImported", dataSource.id.directoryName)
     } yield usableDataSource
 
-  def dataSourceFor(dataset: Dataset): Fox[DataSource] = {
+  def dataSourceFor(dataset: Dataset, useRealPaths: Boolean = true): Fox[DataSource] = {
     val dataSourceId = DataSourceId(dataset.directoryName, dataset._organization)
     if (dataset.isUsable)
       for {
         voxelSize <- dataset.voxelSize.toFox ?~> "dataset.source.usableButNoVoxelSize"
-        dataLayers <- datasetDataLayerDAO.findAllForDataset(dataset._id)
+        dataLayers <- datasetDataLayerDAO.findAllForDataset(dataset._id, useRealPaths)
       } yield UsableDataSource(dataSourceId, dataLayers, voxelSize)
     else
       Fox.successful(UnusableDataSource(dataSourceId, None, dataset.status, dataset.voxelSize))
@@ -705,7 +706,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   def scanRealpathsIfVirtual(dataset: Dataset)(implicit mp: MessagesProvider, ctx: DBAccessContext): Fox[Unit] =
     if (dataset.isVirtual && dataset.isUsable) {
       for {
-        dataSource <- usableDataSourceFor(dataset)
+        dataSource <- usableDataSourceFor(dataset, useRealPaths = false)
         client <- clientFor(dataset)
         _ <- client.scanRealPathsForVirtual(Seq(dataSource))
       } yield ()

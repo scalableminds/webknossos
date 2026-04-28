@@ -54,7 +54,10 @@ export enum MutexFetchingStrategy {
 type MutexLogicState = {
   isInitialRequest: boolean;
   fetchingStrategy: MutexFetchingStrategy;
+  // runningContinuousMutexAcquiringSaga is only non-null in collaborationMode=Exclusive.
   runningContinuousMutexAcquiringSaga: FixedTask<void> | null;
+  // runningAdHocMutexAcquiringSaga is only non-null in collaborationMode=Concurrent when
+  // a mutex is currently needed.
   runningAdHocMutexAcquiringSaga: FixedTask<void> | null;
   subscribersToMutex: Record<number, string>; // Mapping from self maintained id to caller id.
 };
@@ -292,15 +295,10 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
         yield* put(setIsMutexAcquiredAction(canEdit));
       }
     } catch (error) {
-      if (import.meta.env.MODE === "test") {
-        // In unit tests, that explicitly control this generator function,
-        // the console.error after the next yield won't be printed, because
-        // test assertions on the yield will already throw.
-        // Therefore, we also print the error in the test context.
-        console.error("Error while trying to acquire mutex:", error);
-      }
       // No need to check whether the saga was cancelled.
       // A cancelled saga does not reach the catch block but the finally block.
+      // The error is printed before the first yield here, since it would be
+      // swallowed in the test contexts otherwise (making debugging harder).
       console.error("Error while trying to acquire mutex.", error);
       yield* put(setUserHoldingMutexAction(undefined));
       yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));

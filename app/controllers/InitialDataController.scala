@@ -175,6 +175,72 @@ Samplecountry
     Some("Works if model files are manually placed at binaryData/sample_organization/66544a56d20000af0e42ba0f/"),
     Some(AiModelCategory.em_neurons)
   )
+  private val pretrainedNeuronModel = AiModel(
+    ObjectId("576500000000000000000001"),
+    defaultOrganization._id,
+    List(),
+    defaultDataStore.name,
+    defaultUser._id,
+    None,
+    List.empty,
+    None,
+    uploadToPathIsPending = false,
+    "Neuron Segmentation",
+    Some(
+      "Advanced neuron segmentation and reconstruction pipeline. Optimized for dense neuronal tissue from SEM, FIB-SEM, SBEM, Multi-SEM microscopes."),
+    Some(AiModelCategory.em_neurons),
+    isSuperUserOnly = false,
+    isPretrainedModel = true
+  )
+  private val pretrainedMitochondriaModel = AiModel(
+    ObjectId("576500000000000000000002"),
+    defaultOrganization._id,
+    List(),
+    defaultDataStore.name,
+    defaultUser._id,
+    None,
+    List.empty,
+    None,
+    uploadToPathIsPending = false,
+    "Mitochondria Detection",
+    Some(
+      "Instance segmentation model for mitochondria detection. Optimized for EM data. Powered by [MitoNet (Conrad & Narayan 2022)](https://volume-em.github.io/empanada)."),
+    Some(AiModelCategory.em_mitochondria),
+    isSuperUserOnly = false,
+    isPretrainedModel = true
+  )
+  private val pretrainedNucleiModel = AiModel(
+    ObjectId("576500000000000000000003"),
+    defaultOrganization._id,
+    List(),
+    defaultDataStore.name,
+    defaultUser._id,
+    None,
+    List.empty,
+    None,
+    uploadToPathIsPending = false,
+    "Nuclei Detection",
+    Some("Instance segmentation model for nuclei detection. Optimized for EM data."),
+    Some(AiModelCategory.em_nuclei),
+    isSuperUserOnly = true,
+    isPretrainedModel = true
+  )
+  private val pretrainedSomaModel = AiModel(
+    ObjectId("576500000000000000000004"),
+    defaultOrganization._id,
+    List(),
+    defaultDataStore.name,
+    defaultUser._id,
+    None,
+    List.empty,
+    None,
+    uploadToPathIsPending = false,
+    "Soma Detection",
+    Some("Instance segmentation model for soma detection. Optimized for EM data."),
+    Some(AiModelCategory.em_somata),
+    isSuperUserOnly = true,
+    isPretrainedModel = true
+  )
   private val defaultDataSource = UsableDataSource(
     id = DataSourceId("l4_sample_remote", defaultOrganization._id),
     dataLayers = List(
@@ -342,6 +408,7 @@ Samplecountry
       _ <- organizationService.assertNoOrganizationsPresent
       _ <- insertRootFolder()
       _ <- insertOrganization()
+      _ <- insertPretrainedAiModels()
       _ <- createOrganizationDirectory()
       _ <- insertTeams()
       _ <- insertDefaultUser(defaultUserEmail, defaultMultiUser, defaultUser, isTeamManager = true)
@@ -353,6 +420,7 @@ Samplecountry
       _ <- insertDataset()
       _ <- insertRemoteNDDataset()
       _ <- insertAiModel()
+
     } yield ()
 
   private def assertInitialDataEnabled: Fox[Unit] =
@@ -472,11 +540,21 @@ Samplecountry
       } else Fox.successful(())
   }
 
-  private def insertAiModel(): Fox[Unit] = aiModelDAO.findAll.flatMap { aiModels =>
-    if (aiModels.isEmpty) {
-      aiModelDAO.insertOne(defaultAiModel)
-    } else Fox.successful(())
-  }
+  private def insertModelIfAbsent(model: AiModel): Fox[Unit] =
+    aiModelDAO.findOne(model._id).shiftBox.flatMap {
+      case Full(_) => Fox.successful(())
+      case _       => aiModelDAO.insertOne(model)
+    }
+
+  private def insertAiModel(): Fox[Unit] = insertModelIfAbsent(defaultAiModel)
+
+  private def insertPretrainedAiModels(): Fox[Unit] =
+    for {
+      _ <- insertModelIfAbsent(pretrainedNeuronModel)
+      _ <- insertModelIfAbsent(pretrainedMitochondriaModel)
+      _ <- insertModelIfAbsent(pretrainedNucleiModel)
+      _ <- insertModelIfAbsent(pretrainedSomaModel)
+    } yield ()
 
   def insertLocalDataStoreIfEnabled(): Fox[Unit] =
     if (storeModules.localDataStoreEnabled) {

@@ -6,8 +6,7 @@ import somaInferralExample from "@images/soma-inferral-example.png";
 import { APIAiModelCategory, getAiModels } from "admin/rest_api";
 import { Avatar, Card, Input, List, Space, Spin, Tag, Typography } from "antd";
 import Markdown from "libs/markdown_adapter";
-import { useGuardedFetch } from "libs/react_helpers";
-import { useWkSelector } from "libs/react_hooks";
+import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import type React from "react";
 import { useMemo, useState } from "react";
 import { ColorWKBlue } from "theme";
@@ -17,64 +16,24 @@ import { useRunAiModelJobContext } from "./ai_image_segmentation_job_context";
 
 const { Title, Text } = Typography;
 
-export type PretrainedModel = {
-  name: string;
-  comment: string;
-  id: string;
-  jobType:
-    | APIJobCommand.INFER_NEURONS
-    | APIJobCommand.INFER_MITOCHONDRIA
-    | APIJobCommand.INFER_INSTANCES;
-  category?: APIAiModelCategory;
-  image: string;
-  disabled?: boolean;
-  superUserOnly?: boolean;
+const categoryToImage: Partial<Record<APIAiModelCategory, string>> = {
+  [APIAiModelCategory.EM_NEURONS]: neuronInferralExample,
+  [APIAiModelCategory.EM_NUCLEI]: nucleiInferralExample,
+  [APIAiModelCategory.EM_SOMATA]: somaInferralExample,
+  [APIAiModelCategory.EM_MITOCHONDRIA]: mitoInferralExample,
 };
-
-const preTrainedModels: PretrainedModel[] = [
-  {
-    name: "Neuron Segmentation",
-    comment:
-      "Advanced neuron segmentation and reconstruction pipeline. Optimized for dense neuronal tissue from SEM, FIB-SEM, SBEM, Multi-SEM microscopes.",
-    id: "neuron_inferral_model",
-    jobType: APIJobCommand.INFER_NEURONS,
-    category: APIAiModelCategory.EM_NEURONS,
-    image: neuronInferralExample,
-  },
-  {
-    name: "Mitochondria Detection",
-    comment:
-      "Instance segmentation model for mitochondria detection. Optimized for EM data. Powered by [MitoNet (Conrad & Narayan 2022)](https://volume-em.github.io/empanada).",
-    id: "mitochondria-detection",
-    jobType: APIJobCommand.INFER_MITOCHONDRIA,
-    image: mitoInferralExample,
-  },
-  {
-    name: "Nuclei Detection",
-    comment: "Instance segmentation model for nuclei detection. Optimized for EM data",
-    id: "nuclei_inferral_model",
-    superUserOnly: true,
-    jobType: APIJobCommand.INFER_INSTANCES,
-    category: APIAiModelCategory.EM_NUCLEI,
-    image: nucleiInferralExample,
-  },
-  {
-    name: "Soma Detection",
-    comment: "Instance segmentation model for soma detection. Optimized for EM data",
-    id: "soma_inferral_model",
-    superUserOnly: true,
-    jobType: APIJobCommand.INFER_INSTANCES,
-    category: APIAiModelCategory.EM_SOMATA,
-    image: somaInferralExample,
-  },
-];
 
 const mapCategoryToJobType = (
   category: APIAiModelCategory,
-): APIJobCommand.INFER_NEURONS | APIJobCommand.INFER_INSTANCES => {
+):
+  | APIJobCommand.INFER_NEURONS
+  | APIJobCommand.INFER_MITOCHONDRIA
+  | APIJobCommand.INFER_INSTANCES => {
   switch (category) {
     case APIAiModelCategory.EM_NEURONS:
       return APIJobCommand.INFER_NEURONS;
+    case APIAiModelCategory.EM_MITOCHONDRIA:
+      return APIJobCommand.INFER_MITOCHONDRIA;
     case APIAiModelCategory.EM_NUCLEI:
     case APIAiModelCategory.EM_GENERIC:
     case APIAiModelCategory.EM_SOMATA:
@@ -89,38 +48,29 @@ export const AiModelSelector: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const isSuperUser = useWkSelector((state) => enforceActiveUser(state.activeUser).isSuperUser);
 
-  const [customModels, isLoading] = useGuardedFetch(
-    async function () {
-      const models = await getAiModels();
-      return models.filter(
-        (aiModel) => aiModel.trainingJob == null || aiModel.trainingJob.state === "SUCCESS",
-      );
+  const { data: allModels = [], isLoading } = useQueryWithErrorHandling(
+    {
+      queryKey: ["aiModels"],
+      queryFn: async () => {
+        const models = await getAiModels();
+        return models.filter((aiModel) => (isSuperUser ? true : !aiModel.isSuperUserOnly));
+      },
     },
-    [] as AiModel[],
-    [],
     "Could not load model list.",
   );
 
-  const onSelectModel = (model: AiModel | PretrainedModel) => {
-    let jobType:
-      | APIJobCommand.INFER_NEURONS
-      | APIJobCommand.INFER_MITOCHONDRIA
-      | APIJobCommand.INFER_INSTANCES;
-    if ("category" in model) {
-      jobType = mapCategoryToJobType(model.category as APIAiModelCategory);
-    } else {
-      // Hard-coded, pre-trained models
-      jobType = model.jobType;
-    }
+  const pretrainedModels = useMemo(() => allModels.filter((m) => m.isPretrainedModel), [allModels]);
+  const customModels = useMemo(() => allModels.filter((m) => !m.isPretrainedModel), [allModels]);
 
+  const onSelectModel = (model: AiModel) => {
+    if (!model.category) return;
+    const jobType = mapCategoryToJobType(model.category);
     setSelectedModel(model);
     setSelectedJobType(jobType);
   };
 
-  const filterModels = <T extends AiModel | PretrainedModel>(models: T[]) => {
-    if (!searchTerm) {
-      return models;
-    }
+  const filterModels = (models: AiModel[]) => {
+    if (!searchTerm) return models;
     const lowerCaseSearchTerm = searchTerm.toLowerCase();
     return models.filter(
       (model) =>
@@ -130,7 +80,10 @@ export const AiModelSelector: React.FC = () => {
   };
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: filtered models need an update after searchTerm changes
-  const filteredPreTrainedModels = useMemo(() => filterModels(preTrainedModels), [searchTerm]);
+  const filteredPretrainedModels = useMemo(
+    () => filterModels(pretrainedModels),
+    [searchTerm, pretrainedModels],
+  );
   // biome-ignore lint/correctness/useExhaustiveDependencies: filtered models need an update after searchTerm changes
   const filteredCustomModels = useMemo(
     () => filterModels(customModels),
@@ -165,42 +118,37 @@ export const AiModelSelector: React.FC = () => {
       }
     >
       <Title level={5}>Pre-trained Models</Title>
-      <List
-        itemLayout="horizontal"
-        dataSource={filteredPreTrainedModels}
-        locale={{ emptyText: "No pre-trained models match your search." }}
-        renderItem={(item) => {
-          const isDisabled = !!item.disabled || (!!item.superUserOnly && !isSuperUser);
-          return (
-            <List.Item
-              style={{
-                opacity: isDisabled ? 0.5 : 1,
-                cursor: isDisabled ? "not-allowed" : "pointer",
-              }}
-              className={"hoverable-list-item " + (selectedModel?.id === item.id ? "selected" : "")}
-              onClick={() => !isDisabled && onSelectModel(item)}
-            >
-              <List.Item.Meta
-                avatar={
-                  <Avatar
-                    shape="square"
-                    size={64}
-                    src={(item as PretrainedModel).image}
-                    alt={item.name}
-                  />
+      {isLoading ? (
+        <Spin />
+      ) : (
+        <List
+          itemLayout="horizontal"
+          dataSource={filteredPretrainedModels}
+          locale={{ emptyText: "No pre-trained models match your search." }}
+          renderItem={(item) => {
+            const isDisabled = item.isSuperUserOnly && !isSuperUser;
+            const previewImage = item.category ? categoryToImage[item.category] : undefined;
+            return (
+              <List.Item
+                style={{
+                  opacity: isDisabled ? 0.5 : 1,
+                  cursor: isDisabled ? "not-allowed" : "pointer",
+                }}
+                className={
+                  "hoverable-list-item " + (selectedModel?.id === item.id ? "selected" : "")
                 }
-                title={
-                  <Space>
-                    <Text strong>{item.name}</Text>
-                    {item.disabled && <Tag>Coming Soon</Tag>}
-                  </Space>
-                }
-                description={<Markdown>{item.comment}</Markdown>}
-              />
-            </List.Item>
-          );
-        }}
-      />
+                onClick={() => !isDisabled && onSelectModel(item)}
+              >
+                <List.Item.Meta
+                  avatar={<Avatar shape="square" size={64} src={previewImage} alt={item.name} />}
+                  title={<Text strong>{item.name}</Text>}
+                  description={<Markdown>{item.comment}</Markdown>}
+                />
+              </List.Item>
+            );
+          }}
+        />
+      )}
 
       <Title level={5} style={{ marginTop: "24px" }}>
         Your Custom Models
@@ -239,9 +187,7 @@ export const AiModelSelector: React.FC = () => {
                   <Space>
                     <Text strong>{item.name}</Text>
                     <Tag>
-                      {(item as AiModel).category === APIAiModelCategory.EM_NEURONS
-                        ? "NEURONS"
-                        : "INSTANCES"}
+                      {item.category === APIAiModelCategory.EM_NEURONS ? "NEURONS" : "INSTANCES"}
                     </Tag>
                   </Space>
                 }

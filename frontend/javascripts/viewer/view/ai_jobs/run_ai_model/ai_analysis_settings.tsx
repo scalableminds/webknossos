@@ -84,9 +84,7 @@ export const AiAnalysisSettings: React.FC = () => {
 
   const isInstanceModel = selectedJobType === APIJobCommand.INFER_INSTANCES;
   const isNeuronModel =
-    selectedModel != null &&
-    "category" in selectedModel &&
-    selectedModel.category === APIAiModelCategory.EM_NEURONS;
+    selectedModel != null && selectedModel.category === APIAiModelCategory.EM_NEURONS;
 
   const formFields = [
     { name: ["newDatasetName"], value: newDatasetName },

@@ -311,7 +311,7 @@ GET           /aiModels                                                         
 POST          /aiModels/reserveUploadToPath                                                     controllers.AiModelController.reserveUploadToPath
 POST          /aiModels/:id/finishUploadToPath                                                  controllers.AiModelController.finishUploadToPath(id: ObjectId)
 GET           /aiModels/:id                                                                     controllers.AiModelController.readAiModelInfo(id: ObjectId)
-GET           /aiModels/:id/voxelSize                                                           controllers.AiModelController.aiModelVoxelSize(id: String)
+GET           /aiModels/:id/voxelSize                                                           controllers.AiModelController.aiModelVoxelSize(id: ObjectId)
 PUT           /aiModels/:id                                                                     controllers.AiModelController.updateAiModelInfo(id: ObjectId)
 DELETE        /aiModels/:id                                                                     controllers.AiModelController.deleteAiModel(id: ObjectId)
 

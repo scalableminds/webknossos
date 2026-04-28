@@ -342,6 +342,7 @@ export enum APIAiModelCategory {
   EM_CELL_ORGANELLES = "em_cell_organelles",
   EM_GENERIC = "em_generic",
   EM_SOMATA = "em_somata",
+  EM_MITOCHONDRIA = "em_mitochondria",
 }
 
 export type AiModelTrainingAnnotationSpecification = {

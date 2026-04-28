@@ -25,10 +25,9 @@ import { setAIJobDrawerStateAction } from "viewer/model/actions/ui_actions";
 import { Model } from "viewer/singletons";
 import type { UserBoundingBox } from "viewer/store";
 import type { SplitMergerEvaluationSettings } from "viewer/view/ai_jobs/components/collapsible_split_merger_evaluation_settings";
-import type { PretrainedModel } from "./ai_model_selector";
 
 interface RunAiModelJobContextType {
-  selectedModel: AiModel | PretrainedModel | null;
+  selectedModel: AiModel | null;
   selectedJobType:
     | APIJobCommand.INFER_NEURONS
     | APIJobCommand.INFER_MITOCHONDRIA
@@ -47,7 +46,7 @@ interface RunAiModelJobContextType {
       | APIJobCommand.INFER_MITOCHONDRIA
       | APIJobCommand.INFER_INSTANCES,
   ) => void;
-  setSelectedModel: (model: AiModel | PretrainedModel) => void;
+  setSelectedModel: (model: AiModel) => void;
   setSelectedBoundingBox: (bbox: UserBoundingBox | null) => void;
   setNewDatasetName: (name: string) => void;
   setSelectedLayer: (layer: APIDataLayer) => void;
@@ -71,7 +70,7 @@ const RunAiModelJobContext = createContext<RunAiModelJobContextType | undefined>
 export const RunAiModelJobContextProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [selectedModel, setSelectedModel] = useState<AiModel | PretrainedModel | null>(null);
+  const [selectedModel, setSelectedModel] = useState<AiModel | null>(null);
   const [selectedJobType, setSelectedJobType] = useState<
     | APIJobCommand.INFER_NEURONS
     | APIJobCommand.INFER_MITOCHONDRIA

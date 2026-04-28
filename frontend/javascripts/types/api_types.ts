@@ -876,6 +876,8 @@ export type AiModel = {
   readonly created: number;
   readonly trainingJob: APIJob | null;
   readonly category: APIAiModelCategory;
+  readonly isSuperUserOnly: boolean;
+  readonly isPretrainedModel: boolean;
 };
 
 // Tracing related datatypes

@@ -121,19 +121,12 @@ class AiModelController @Inject()(
     } yield Ok(jsResult)
   }
 
-  def aiModelVoxelSize(aiModelId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def aiModelVoxelSize(aiModelId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(request.identity)
-      voxelSize <- aiModelService.findPretrainedModelVoxelSize(aiModelId) match {
-        case Some(pretrainedVoxelSize) => Fox.successful(pretrainedVoxelSize)
-        case None =>
-          for {
-            objectId <- ObjectId.fromString(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
-            aiModel <- aiModelDAO.findOne(objectId) ?~> "aiModel.notFound" ~> NOT_FOUND
-            dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)
-            voxelSize <- aiModelService.findModelVoxelSize(Some(aiModel), usePretrainedNeuronModel = false, dataStore)
-          } yield voxelSize
-      }
+      aiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
+      dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)
+      voxelSize <- aiModelService.findModelVoxelSize(Some(aiModel), dataStore)
     } yield Ok(Json.toJson(voxelSize))
   }
 
@@ -289,7 +282,8 @@ class AiModelController @Inject()(
         dataset <- datasetDAO.findOne(request.body.datasetId)
         _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
         (aiModelOpt, pretrainedModelIdOpt) <- resolveAiModel(request.body.aiModelId)
-        effectivePretrainedModelId = pretrainedModelIdOpt.orElse(if (aiModelOpt.isEmpty) Some("nuclei_inferral_model") else None)
+        effectivePretrainedModelId = pretrainedModelIdOpt.orElse(
+          if (aiModelOpt.isEmpty) Some("nuclei_inferral_model") else None)
         _ <- Fox.runOptional(aiModelOpt) { aiModel =>
           Fox.fromBool(aiModel._dataStore == dataset._dataStore) ?~> "aiModel.dataStoreMismatch"
         }
@@ -298,14 +292,17 @@ class AiModelController @Inject()(
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
         jobCommand = JobCommand.infer_instances
         mag1BoundingBox <- BoundingBox.fromLiteral(request.body.boundingBox).toFox
+        workerModelId = aiModelOpt
+          .map(m => if (m.isPretrainedModel) m.name else m._id.toString)
+          .orElse(effectivePretrainedModelId)
         commandArgs = Json.obj(
           "dataset_id" -> dataset._id,
           "organization_id" -> dataset._organization,
           "dataset_name" -> dataset.name,
           "layer_name" -> request.body.colorLayerName,
           "bbox" -> mag1BoundingBox.toLiteral,
-          "model_id" -> request.body.aiModelId,
-          "model_organization_id" -> aiModelOpt.map(_._organization),
+          "model_id" -> workerModelId,
+          "model_organization_id" -> aiModelOpt.filterNot(_.isPretrainedModel).map(_._organization),
           "dataset_directory_name" -> dataset.directoryName,
           "new_dataset_name" -> request.body.newDatasetName,
           "invert_color_layer" -> request.body.invertColorLayer,
@@ -347,7 +344,8 @@ class AiModelController @Inject()(
         dataset <- datasetDAO.findOne(request.body.datasetId)
         _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
         (aiModelOpt, pretrainedModelIdOpt) <- resolveAiModel(request.body.aiModelId)
-        effectivePretrainedModelId = pretrainedModelIdOpt.orElse(if (aiModelOpt.isEmpty) Some("neuron_inferral_model") else None)
+        effectivePretrainedModelId = pretrainedModelIdOpt.orElse(
+          if (aiModelOpt.isEmpty) Some("neuron_inferral_model") else None)
         _ <- Fox.runOptional(aiModelOpt) { aiModel =>
           Fox.fromBool(aiModel._dataStore == dataset._dataStore) ?~> "aiModel.dataStoreMismatch"
         }
@@ -363,14 +361,17 @@ class AiModelController @Inject()(
                                                                         effectivePretrainedModelId,
                                                                         dataStore)
         doSplitMergerEvaluation: Boolean = request.body.doSplitMergerEvaluation.getOrElse(false)
+        workerModelId = aiModelOpt
+          .map(m => if (m.isPretrainedModel) m.name else m._id.toString)
+          .orElse(effectivePretrainedModelId)
         commandArgs = Json.obj(
           "dataset_id" -> dataset._id,
           "organization_id" -> dataset._organization,
           "dataset_name" -> dataset.name,
           "layer_name" -> request.body.colorLayerName,
           "bbox" -> mag1BoundingBox.toLiteral,
-          "model_id" -> request.body.aiModelId,
-          "model_organization_id" -> aiModelOpt.map(_._organization),
+          "model_id" -> workerModelId,
+          "model_organization_id" -> aiModelOpt.filterNot(_.isPretrainedModel).map(_._organization),
           "annotation_id" -> request.body.annotationId,
           "dataset_directory_name" -> dataset.directoryName,
           "new_dataset_name" -> request.body.newDatasetName,

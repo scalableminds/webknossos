@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(160);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(161);
 COMMIT TRANSACTION;
 
 
@@ -662,7 +662,7 @@ CREATE TABLE webknossos.emailVerificationKeys(
   isUsed BOOLEAN NOT NULL DEFAULT FALSE
 );
 
-CREATE TYPE webknossos.AI_MODEL_CATEGORY AS ENUM ('em_neurons', 'em_nuclei', 'em_synapses', 'em_neuron_types', 'em_cell_organelles');
+CREATE TYPE webknossos.AI_MODEL_CATEGORY AS ENUM ('em_neurons', 'em_nuclei', 'em_synapses', 'em_neuron_types', 'em_cell_organelles', 'em_generic', 'em_somata', 'em_mitochondria');
 
 CREATE TABLE webknossos.aiModels(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
@@ -678,6 +678,8 @@ CREATE TABLE webknossos.aiModels(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
+  isSuperUserOnly BOOLEAN NOT NULL DEFAULT FALSE,
+  isPretrainedModel BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE (_organization, name)
 );
 

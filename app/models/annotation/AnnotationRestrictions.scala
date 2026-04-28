@@ -72,7 +72,7 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService, annotati
           annotationOwnerBox <- userService
             .findOneCached(annotation._user)(GlobalAccessContext)
             .shiftBox // sandbox annotations have no owner
-          hasMutex <- user match {
+          userHasMutex <- user match {
             case Some(_) if annotation.collaborationMode == CollaborationMode.OwnerOnly => Fox.successful(false)
             case Some(u)                                                                => annotationMutexDAO.hasMutex(u._id, annotation._id)
             case None                                                                   => Fox.successful(false)
@@ -83,7 +83,7 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService, annotati
             !(annotation.state == Finished) &&
             !annotation.isLockedByOwner &&
             annotationOwnerBox.exists(_._organization == user._organization) &&
-            (hasMutex || annotation.collaborationMode == CollaborationMode.OwnerOnly)
+            (userHasMutex || !annotation.othersMayEdit)
           }
 
       override def allowFinish(userOption: Option[User]): Fox[Boolean] =

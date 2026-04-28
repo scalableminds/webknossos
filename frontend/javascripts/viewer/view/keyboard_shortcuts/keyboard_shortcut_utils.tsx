@@ -135,12 +135,14 @@ export function keySequenceToUiElements(
   return uiElements;
 }
 
+// Builds a InputKeyboard compatible config object for shortcuts given
+// my the keyboardHandlerMap with the configured shortcut in shortcutConfig.
 export const buildKeyBindingsFromConfig = (
-  config: KeyboardShortcutsMap,
+  shortcutConfig: KeyboardShortcutsMap,
   keyboardHandlerMap: Partial<KeyboardShortcutHandlerMap>,
 ): Record<string, KeyboardHandler> => {
   const mappedShortcuts = flatten(
-    Object.entries(config).map(([shortcutId, keySeqAlternatives]) => {
+    Object.entries(shortcutConfig).map(([shortcutId, keySeqAlternatives]) => {
       const isInHandlerMapping = shortcutId in keyboardHandlerMap;
       if (isInHandlerMapping) {
         return keySeqAlternatives.map((chainCombo) => {
@@ -174,29 +176,37 @@ function areComparableSequencesEqual(
   return true;
 }
 
+// Folds a KeyboardShortcutsMap into a Map from comparable key sequence to all shortcut IDs
+// configured to activate on that sequence. An entry with more than one ID is a collision,
+// though collision domains are not considered here — that is left to the caller.
 export function keyboardShortcutMapToCollidingTuples(
   config: Partial<KeyboardShortcutsMap>,
-): [ComparableKeySequence, KeyboardShortcutId[]][] {
-  const result: [ComparableKeySequence, KeyboardShortcutId[]][] = [];
+): Map<ComparableKeySequence, KeyboardShortcutId[]> {
+  // Build as a tuple list first: Map uses reference equality for object keys, so we can't
+  // use map.get/has to merge entries — we need structural equality via areComparableSequencesEqual.
+  // A simple find of a list of tuples makes suits this perfectly.
+  const tuples: [ComparableKeySequence, KeyboardShortcutId[]][] = [];
 
   for (const shortcutIdStr in config) {
     const shortcutId = shortcutIdStr as KeyboardShortcutId;
     for (const keySeq of config[shortcutId]!) {
       const comparableKeySeq = keySequenceToComparableKeySequence(keySeq);
-      const existingEntry = result.find(([otherChain, _]) =>
+      const existingEntry = tuples.find(([otherChain]) =>
         areComparableSequencesEqual(comparableKeySeq, otherChain),
       );
 
       if (existingEntry) {
         existingEntry[1].push(shortcutId);
       } else {
-        result.push([comparableKeySeq, [shortcutId]]);
+        tuples.push([comparableKeySeq, [shortcutId]]);
       }
     }
   }
-  return result;
+  return new Map(tuples);
 }
 
+// Builds a special keyboard handler activating the shortcut of the currently active tool,
+// even when the shortcut is used by multiple tools and thus overloaded.
 function buildToolDependentHandler(
   toolToHandlerMap: Partial<Record<AnnotationToolId, KeyboardHandler>>,
 ): KeyboardHandler {
@@ -249,10 +259,13 @@ function buildToolDependentHandler(
   }
 }
 
+// Returns a config compatible with InputKeyboard containing all tool specific shortcuts.
+// The shortcut of a tool is only activated if it is active.
 export const buildKeyBindingsFromConfigForTools = (
   config: KeyboardShortcutsMap,
   handlerIdMappingPerAnnotationTool: Record<AnnotationToolId, Partial<KeyboardShortcutHandlerMap>>,
 ): Record<string, KeyboardHandler> => {
+  // Narrow the config to only the shortcuts referenced by at least one tool.
   const toolOnlyShortcuts: Partial<KeyboardShortcutsMap> = {};
   for (const annotationToolIdStr of Object.keys(handlerIdMappingPerAnnotationTool)) {
     const annotationToolId = annotationToolIdStr as AnnotationToolId;
@@ -265,9 +278,12 @@ export const buildKeyBindingsFromConfigForTools = (
     }
   }
 
+  // Group shortcut IDs by their configured key sequence, then build one tool-dependent
+  // handler per sequence that dispatches to whichever tool is currently active.
+  // Attach this handler to the binding returned at the end.
   const keySequenceAndShortcutIdsTuples = keyboardShortcutMapToCollidingTuples(toolOnlyShortcuts);
   const bindings: Record<KeystrokesKeyComboStr, KeyboardHandler> = {};
-  keySequenceAndShortcutIdsTuples.forEach(([comparableKeySeq, shortcutIds]) => {
+  for (const [comparableKeySeq, shortcutIds] of keySequenceAndShortcutIdsTuples) {
     const keystrokesComboStr = comparableKeySequenceToKeystrokesComboStr(comparableKeySeq);
     const toolToHandlerMap: Partial<Record<AnnotationToolId, KeyboardHandler>> = {};
     for (const shortcutId of shortcutIds) {
@@ -283,7 +299,7 @@ export const buildKeyBindingsFromConfigForTools = (
     if (hasAtLeastOneToolWithCurrentShortcut) {
       bindings[keystrokesComboStr] = buildToolDependentHandler(toolToHandlerMap);
     }
-  });
+  }
   return bindings;
 };
 
@@ -296,11 +312,13 @@ export type Collision = {
 
 // Returns all collision tuples (ComparableKeySequence, KeyboardShortcutId[]) for a given collision domain.
 // Only relevant collision domains are compared — i.e. shortcuts that can genuinely be active at the same time.
+// This perspective is taken from the given collisionDomain.
+// Collision is represented by on entry in the returned array having multiple shortcutIds.
 function createKeySequenceToShortcutIdsTuplesForCollisionDomain(
   collisionDomain: KeyboardShortcutCollisionDomain,
   shortcutMap: KeyboardShortcutsMap,
-): [ComparableKeySequence, KeyboardShortcutId[]][] {
-  const collisionDomains = new Set(getAllCollidingDomainsOf(collisionDomain));
+): Map<ComparableKeySequence, KeyboardShortcutId[]> {
+  const collisionDomains = getAllCollidingDomainsOf(collisionDomain);
   const relevantShortcuts: Partial<KeyboardShortcutsMap> = {};
   for (const [shortcutIdStr, meta] of Object.entries(ALL_KEYBOARD_SHORTCUT_META_INFOS)) {
     const shortcutId = shortcutIdStr as KeyboardShortcutId;
@@ -331,6 +349,7 @@ function isAcceptedCollision(collision: Collision): boolean {
   });
 }
 
+// Takes a full KeyboardShortcutsMap and checks for shortcut collisions across all collision domains.
 export function checkCollisionsInShortcutMap(shortcutMap: KeyboardShortcutsMap): Collision[] {
   // Keyed by the key sequence as a string so that shortcutIds from different leaf
   // traversals that share the same shortcut are merged into one Collision entry.
@@ -372,9 +391,11 @@ export function checkCollisionsInShortcutMap(shortcutMap: KeyboardShortcutsMap):
   return [...collisionsByKeySeq.values()].filter((collision) => !isAcceptedCollision(collision));
 }
 
+// Checks where a single shortcut given via Id and its newly configured key sequences
+// collides with an existing shortcut taking collision domains into account.
 export function checkCollisionForShortcut(
   keyboardShortcutId: KeyboardShortcutId,
-  newKeyCombos: KeySequence[],
+  newKeySequences: KeySequence[],
   existingShortcutMap: KeyboardShortcutsMap,
 ): Collision[] {
   const metaInfoOfShortcut = ALL_KEYBOARD_SHORTCUT_META_INFOS[keyboardShortcutId];
@@ -384,7 +405,7 @@ export function checkCollisionForShortcut(
 
   // Replace the shortcut's existing key sequences alternatives with the key sequences alternatives being validated.
   const tempMap: KeyboardShortcutsMap = { ...existingShortcutMap };
-  tempMap[keyboardShortcutId] = newKeyCombos;
+  tempMap[keyboardShortcutId] = newKeySequences;
 
   const keySeqAndShortcutIdsTuples = createKeySequenceToShortcutIdsTuplesForCollisionDomain(
     metaInfoOfShortcut.getCollisionDomain(),

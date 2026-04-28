@@ -78,7 +78,7 @@ export const CollisionWarningAlert: React.FC<CollisionWarningAlertProps> = ({
   );
 };
 
-const SampleKeySequence: KeySequence = [["Control", "a"], ["o"]];
+const SAMPLE_KEY_SEQUENCE: KeySequence = [["Control", "a"], ["o"]];
 
 // Derive a layout-independent key identifier from a keyboard event.
 // - Modifier keys (Shift, Control, Alt, Meta) are returned as-is.
@@ -265,7 +265,7 @@ export function ShortcutRecorderModal({
     if (keySequence.length > 0) {
       onSave(keySequence);
     } else {
-      // nothing recorded -> treat as cancel (or you can choose to save empty)
+      // Nothing was recorded so treat as cancelled.
       onCancel();
     }
     handleReset();
@@ -288,11 +288,11 @@ export function ShortcutRecorderModal({
       <div style={{ padding: 8 }}>
         <CollisionWarningAlert shortcutCollisions={shortcutCollisions} />
         <Text type="secondary">
-          Press keys now. Release all keys to finish the current stroke. Press keys again to add a
-          subsequent stroke. Example: {keySequenceToUiElements(SampleKeySequence, false)}. Reset
-          everything with Esc + Ctrl.
+          Press a keyboard combination now to record it. You can also record a sequence of keys.
+          Example: {keySequenceToUiElements(SAMPLE_KEY_SEQUENCE, false)}. Reset everything with{" "}
+          <Text code>Ctrl</Text> + <Text code>Esc</Text>
         </Text>
-
+        .
         <div
           style={{
             marginTop: 16,
@@ -318,7 +318,7 @@ export function ShortcutRecorderModal({
               <div style={{ width: "100%", overflow: "auto" }}>
                 <Text strong>Recorded:</Text>{" "}
                 <span style={{ marginLeft: 8 }}>
-                  {keySequenceToUiElements(keySequence, false) || "— waiting —"}
+                  {keySequenceToUiElements(keySequence, false) || "— waiting for user input —"}
                 </span>
               </div>
             </div>
@@ -330,7 +330,6 @@ export function ShortcutRecorderModal({
             </Flex>
           </div>
         </div>
-
         <div style={{ marginTop: 12 }}>
           <Text type="secondary">Current stroke preview (updates while keys are pressed):</Text>
           <div

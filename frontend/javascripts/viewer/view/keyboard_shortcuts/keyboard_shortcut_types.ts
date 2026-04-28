@@ -27,12 +27,10 @@ export type KeyboardShortcutCollisionDomain =
   | "GENERAL.PLANE.BOUNDING_BOX"
   | "GENERAL.PLANE.PROOFREADING";
 
-const allCollisionDomains = [
+const allCollisionDomains: KeyboardShortcutCollisionDomain[] = [
   "GENERAL",
   "GENERAL.ARBITRARY",
-
   "GENERAL.PLANE",
-
   "GENERAL.PLANE.SKELETON",
   "GENERAL.PLANE.VOLUME",
   "GENERAL.PLANE.BOUNDING_BOX",
@@ -51,13 +49,15 @@ export type KeySequence = KeyCombination[];
 export type KeySequenceAlternatives = KeySequence[];
 export type KeyboardShortcutsMap = Record<KeyboardShortcutId, KeySequenceAlternatives>;
 
-export function getAllCollidingDomainsOf(domain: KeyboardShortcutCollisionDomain) {
+export function getAllCollidingDomainsOf(
+  domain: KeyboardShortcutCollisionDomain,
+): Set<KeyboardShortcutCollisionDomain> {
   const parts = domain.split(".");
   const collisionDomainParents = parts.map((_, i) =>
     parts.slice(0, i + 1).join("."),
   ) as KeyboardShortcutCollisionDomain[];
   const childCollisionDomains = allCollisionDomains.filter((d) => d.includes(domain));
-  return [...new Set([...collisionDomainParents, ...childCollisionDomains])];
+  return new Set([...collisionDomainParents, ...childCollisionDomains]);
 }
 export class KeyboardShortcutMetaInfo {
   constructor(
@@ -93,7 +93,7 @@ export class KeyboardShortcutMetaInfo {
   // Returns all possible colliding domains:
   // e.g. GENERAL.PLANE.SKELETON -> [GENERAL, GENERAL.PLANE, GENERAL.PLANE.SKELETON]
   getCollisionDomains(): KeyboardShortcutCollisionDomain[] {
-    return getAllCollidingDomainsOf(this.getCollisionDomain());
+    return [...getAllCollidingDomainsOf(this.getCollisionDomain())];
   }
 }
 

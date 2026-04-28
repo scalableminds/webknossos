@@ -4,7 +4,7 @@ import ArrayDataType.ArrayDataType
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.{Box, Failure, Full}
 import com.scalableminds.util.tools.Box.tryo
-import ucar.ma2.{IndexIterator, InvalidRangeException, Range, Array => MultiArray, DataType => MADataType}
+import ucar.ma2.{Index, IndexIterator, InvalidRangeException, Range, Array => MultiArray, DataType => MADataType}
 
 import java.util
 
@@ -103,32 +103,115 @@ object MultiArrayUtils extends LazyLogging {
   def copyRange(offset: Array[Int], source: MultiArray, target: MultiArray): Unit = {
     val sourceShape: Array[Int] = source.getShape
     val targetShape: Array[Int] = target.getShape
-    val sourceRanges = new util.ArrayList[Range]
-    val targetRanges = new util.ArrayList[Range]
-    for (dimension <- offset.indices) {
-      val dimOffset = offset(dimension)
-      var sourceFirst = 0
-      var targetFirst = 0
-      if (dimOffset >= 0) {
-        sourceFirst = dimOffset
-        targetFirst = 0
-      } else {
-        sourceFirst = 0
-        targetFirst = dimOffset * -1
-      }
-      val maxSSteps = sourceShape(dimension) - sourceFirst
-      val maxTSteps = targetShape(dimension) - targetFirst
-      val maxSteps = Math.min(maxSSteps, maxTSteps)
-      val sourceLast = sourceFirst + maxSteps
-      val targetLast = targetFirst + maxSteps
-      sourceRanges.add(new Range(sourceFirst, sourceLast - 1))
-      targetRanges.add(new Range(targetFirst, targetLast - 1))
+    val rank = offset.length
+    val sourceFirsts = new Array[Int](rank)
+    val targetFirsts = new Array[Int](rank)
+    val counts = new Array[Int](rank)
+    for (d <- 0 until rank) {
+      val dimOffset = offset(d)
+      val sourceFirst = if (dimOffset >= 0) dimOffset else 0
+      val targetFirst = if (dimOffset >= 0) 0 else -dimOffset
+      val maxSteps = Math.min(sourceShape(d) - sourceFirst, targetShape(d) - targetFirst)
+      if (maxSteps <= 0) return
+      sourceFirsts(d) = sourceFirst
+      targetFirsts(d) = targetFirst
+      counts(d) = maxSteps
     }
-    val sourceRangeIterator = source.getRangeIterator(sourceRanges)
-    val targetRangeIterator = target.getRangeIterator(targetRanges)
-    val elementType = source.getElementType
-    val setter = createValueSetter(elementType)
-    while ({ sourceRangeIterator.hasNext }) setter.set(sourceRangeIterator, targetRangeIterator)
+    // Fast path: both arrays are C-order contiguous with the same element type.
+    // Uses System.arraycopy per inner-dimension line instead of element-by-element iteration.
+    // The slow path handles permuted views (e.g. the F-order path in readAsFortranOrder).
+    if (source.getElementType == target.getElementType &&
+        isCOrderContiguous(source) &&
+        isCOrderContiguous(target)) {
+      copyRangeBulk(sourceFirsts, targetFirsts, counts, sourceShape, targetShape,
+                    source.getStorage, target.getStorage)
+    } else {
+      val sourceRanges = new util.ArrayList[Range](rank)
+      val targetRanges = new util.ArrayList[Range](rank)
+      for (d <- 0 until rank) {
+        sourceRanges.add(new Range(sourceFirsts(d), sourceFirsts(d) + counts(d) - 1))
+        targetRanges.add(new Range(targetFirsts(d), targetFirsts(d) + counts(d) - 1))
+      }
+      val sourceRangeIterator = source.getRangeIterator(sourceRanges)
+      val targetRangeIterator = target.getRangeIterator(targetRanges)
+      val setter = createValueSetter(source.getElementType)
+      while (sourceRangeIterator.hasNext) setter.set(sourceRangeIterator, targetRangeIterator)
+    }
+  }
+
+  // Checks C-order contiguous layout by probing the stride of one non-trivial dimension.
+  // Sets a multi-dim counter with 1 at the rightmost dim with size > 1, then verifies that
+  // the resulting flat index equals what C-order would predict: product(shape[checkDim+1:]).
+  // Uses a cloned index to avoid mutating the array's internal index state.
+  private def isCOrderContiguous(array: MultiArray): Boolean = {
+    val shape = array.getShape
+    val rank = shape.length
+    if (rank <= 1) return true
+    var checkDim = rank - 1
+    while (checkDim >= 0 && shape(checkDim) <= 1) checkDim -= 1
+    if (checkDim < 0) return true // all dims are size 1 — trivially any order
+    var expectedStride = 1
+    for (d <- checkDim + 1 until rank) expectedStride *= shape(d)
+    val testCounter = new Array[Int](rank)
+    testCounter(checkDim) = 1
+    val probeIndex = array.getIndex.clone().asInstanceOf[Index]
+    probeIndex.set(testCounter).currentElement() == expectedStride
+  }
+
+  // Copies a rectangular sub-region using System.arraycopy along the innermost dimension.
+  // Requires both arrays to be C-order contiguous with the same element type.
+  private def copyRangeBulk(sourceFirsts: Array[Int],
+                             targetFirsts: Array[Int],
+                             counts: Array[Int],
+                             sourceShape: Array[Int],
+                             targetShape: Array[Int],
+                             srcStorage: Object,
+                             tgtStorage: Object): Unit = {
+    val rank = counts.length
+    val lineLength = counts(rank - 1)
+
+    val srcStrides = new Array[Int](rank)
+    val tgtStrides = new Array[Int](rank)
+    srcStrides(rank - 1) = 1
+    tgtStrides(rank - 1) = 1
+    for (d <- rank - 2 to 0 by -1) {
+      srcStrides(d) = srcStrides(d + 1) * sourceShape(d + 1)
+      tgtStrides(d) = tgtStrides(d + 1) * targetShape(d + 1)
+    }
+
+    var srcBase = 0
+    var tgtBase = 0
+    for (d <- 0 until rank) {
+      srcBase += sourceFirsts(d) * srcStrides(d)
+      tgtBase += targetFirsts(d) * tgtStrides(d)
+    }
+
+    var outerTotal = 1
+    for (d <- 0 until rank - 1) outerTotal *= counts(d)
+
+    val outerIdx = new Array[Int](rank - 1)
+    var srcCurrent = srcBase
+    var tgtCurrent = tgtBase
+    var line = 0
+    while (line < outerTotal) {
+      System.arraycopy(srcStorage, srcCurrent, tgtStorage, tgtCurrent, lineLength)
+      var d = rank - 2
+      var carrying = true
+      while (d >= 0 && carrying) {
+        outerIdx(d) += 1
+        srcCurrent += srcStrides(d)
+        tgtCurrent += tgtStrides(d)
+        if (outerIdx(d) < counts(d)) {
+          carrying = false
+        } else {
+          srcCurrent -= counts(d) * srcStrides(d)
+          tgtCurrent -= counts(d) * tgtStrides(d)
+          outerIdx(d) = 0
+          d -= 1
+        }
+      }
+      line += 1
+    }
   }
 
   private def createValueSetter(elementType: Class[_]): MultiArrayUtils.ValueSetter =

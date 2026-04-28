@@ -69,7 +69,8 @@ class TSAnnotationController @Inject()(
     Action.async(validateJson[List[UpdateActionGroup]]) { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
-          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeAnnotation(annotationId)) {
+          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeAnnotation(annotationId),
+                                                            useCaching = false) {
             for {
               _ <- annotationTransactionService.handleUpdateGroups(annotationId, request.body)
             } yield Ok

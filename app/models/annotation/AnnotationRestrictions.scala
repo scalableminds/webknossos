@@ -46,7 +46,8 @@ object AnnotationRestrictions extends FoxImplicits {
     }
 }
 
-class AnnotationRestrictionDefaults @Inject()(userService: UserService)(implicit ec: ExecutionContext)
+class AnnotationRestrictionDefaults @Inject()(userService: UserService, annotationMutexDAO: AnnotationMutexDAO)(
+    implicit ec: ExecutionContext)
     extends FoxImplicits {
 
   def defaultsFor(annotation: Annotation): AnnotationRestrictions =
@@ -71,12 +72,18 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService)(implicit
           annotationOwnerBox <- userService
             .findOneCached(annotation._user)(GlobalAccessContext)
             .shiftBox // sandbox annotations have no owner
+          hasMutex <- user match {
+            case Some(_) if annotation.collaborationMode == CollaborationMode.OwnerOnly => Fox.successful(false)
+            case Some(u)                                                                => annotationMutexDAO.hasMutex(u._id, annotation._id)
+            case None                                                                   => Fox.successful(false)
+          }
         } yield
           user.exists { user =>
             (annotation._user == user._id || (accessAllowed && annotation.othersMayEdit)) &&
             !(annotation.state == Finished) &&
             !annotation.isLockedByOwner &&
-            annotationOwnerBox.exists(_._organization == user._organization)
+            annotationOwnerBox.exists(_._organization == user._organization) &&
+            (hasMutex || annotation.collaborationMode == CollaborationMode.OwnerOnly)
           }
 
       override def allowFinish(userOption: Option[User]): Fox[Boolean] =

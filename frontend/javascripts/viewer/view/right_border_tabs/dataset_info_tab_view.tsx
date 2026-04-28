@@ -563,7 +563,11 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
               />
             </FastTooltip>
           </p>
-          <p>{contributorTags}</p>
+          <p>
+            <Space size={4} wrap>
+              {contributorTags}
+            </Space>
+          </p>
         </div>
       </>
     );

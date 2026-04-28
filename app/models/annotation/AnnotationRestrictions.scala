@@ -66,24 +66,24 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService, annotati
           } yield annotation._user == user._id || isTeamManagerOrAdminOfTeam).orElse(Fox.successful(false))
         }
 
-      override def allowUpdate(user: Option[User]): Fox[Boolean] =
+      override def allowUpdate(userOpt: Option[User]): Fox[Boolean] =
         for {
-          accessAllowed <- allowAccess(user)
+          readAccessAllowed <- allowAccess(userOpt)
           annotationOwnerBox <- userService
             .findOneCached(annotation._user)(GlobalAccessContext)
             .shiftBox // sandbox annotations have no owner
-          userHasMutex <- user match {
-            case Some(_) if annotation.collaborationMode == CollaborationMode.OwnerOnly => Fox.successful(false)
-            case Some(u)                                                                => annotationMutexDAO.hasMutex(u._id, annotation._id)
-            case None                                                                   => Fox.successful(false)
+          userHasMutex <- userOpt match {
+            case Some(_) if !annotation.othersMayEdit => Fox.successful(false)
+            case Some(u)                              => annotationMutexDAO.hasMutex(u._id, annotation._id)
+            case None                                 => Fox.successful(false)
           }
+          annotationIsMutable = !(annotation.state == Finished) && !annotation.isLockedByOwner
         } yield
-          user.exists { user =>
-            (annotation._user == user._id || (accessAllowed && annotation.othersMayEdit)) &&
-            !(annotation.state == Finished) &&
-            !annotation.isLockedByOwner &&
-            annotationOwnerBox.exists(_._organization == user._organization) &&
-            (userHasMutex || !annotation.othersMayEdit)
+          userOpt.exists { user =>
+            if (annotation.othersMayEdit) {
+              val isInSameOrga = annotationOwnerBox.exists(_._organization == user._organization)
+              annotationIsMutable && isInSameOrga && readAccessAllowed && userHasMutex
+            } else annotationIsMutable && annotation._user == user._id
           }
 
       override def allowFinish(userOption: Option[User]): Fox[Boolean] =

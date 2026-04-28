@@ -6,6 +6,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Box, Empty, Failure, Fox, FoxImplicits, Full}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.explore.{
   ExploreRemoteDatasetRequest,
@@ -66,6 +67,7 @@ class DataSourceController @Inject()(
     dataSourceService: DataSourceService,
     dataSourceMirrorService: DataSourceMirrorService,
     datasetCache: DatasetCache,
+    dataStoreConfig: DataStoreConfig,
     accessTokenService: DataStoreAccessTokenService,
     val binaryDataServiceHolder: BinaryDataServiceHolder,
     connectomeFileService: ConnectomeFileService,
@@ -721,15 +723,17 @@ class DataSourceController @Inject()(
   }
 
   def writeMirror(datasetId: ObjectId): Action[AnyContent] = Action.async { implicit request =>
-    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
-      datasetCache.invalidateCache(datasetId)
-      for {
-        dataSourceBox <- datasetCache.getById(datasetId).shiftBox
-        _ <- Fox.runOptional(dataSourceBox.toOption) { dataSource =>
-          dataSourceMirrorService.writeMirror(dataSource)
-        }
-      } yield Ok
-    }
+    if (dataStoreConfig.Datastore.writeVirtualDatasetsMirror) {
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
+        datasetCache.invalidateCache(datasetId)
+        for {
+          dataSourceBox <- datasetCache.getById(datasetId).shiftBox
+          _ <- Fox.runOptional(dataSourceBox.toOption) { dataSource =>
+            dataSourceMirrorService.writeMirror(dataSource)
+          }
+        } yield Ok
+      }
+    } else Fox.successful(Ok)
   }
 
   private def refreshDataSource(datasetId: ObjectId)(implicit tc: TokenContext): Fox[DataSource] =

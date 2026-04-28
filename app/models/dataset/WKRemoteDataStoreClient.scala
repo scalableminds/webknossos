@@ -152,4 +152,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
             GetEffectiveVoxelSizeParameters(modelPath))
     )
 
+  // TODO
+  def writeMirror() = ???
+
 }

@@ -145,6 +145,8 @@ class WKRemoteDataStoreController @Inject()(
                                         isUsable = true)(GlobalAccessContext)
           }
           _ <- Fox.runIf(!request.body.needsConversion)(usedStorageService.refreshStorageReportForDataset(dataset))
+          _ <- Fox.runIf(!request.body.needsConversion)(
+            datasetService.writeMirrorForVirtual(dataset.copy(isUsable = true))(GlobalAccessContext))
         } yield Ok
       }
     }

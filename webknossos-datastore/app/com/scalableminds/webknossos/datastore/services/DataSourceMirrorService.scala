@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -15,6 +16,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 }
 import play.api.libs.json.Json
 
+import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Path}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -27,7 +29,7 @@ class DataSourceMirrorService @Inject()(
   private def getMirrorDir(dataSource: UsableDataSource) =
     dataBaseDir.resolve(dataSource.id.organizationId).resolve(".mirror").resolve(dataSource.id.directoryName)
 
-  def writeMirror(dataSource: UsableDataSource)(implicit ec: ExecutionContext): Fox[Unit] =
+  def writeMirror(dataSource: UsableDataSource, datasetId: ObjectId)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- Fox.fromBool(dataSource.allExplicitPaths.forall(_.isLocal)) ?~> "dataset.writeMirror.nonLocalPaths"
       mirrorDir = getMirrorDir(dataSource)
@@ -39,6 +41,7 @@ class DataSourceMirrorService @Inject()(
       updatedLayers <- Fox.serialCombined(dataSource.dataLayers)(writeMirrorLayer(_, mirrorDir))
       mirrorDataSource = dataSource.copy(dataLayers = updatedLayers)
       _ <- writeMirrorProperties(mirrorDataSource, mirrorDir)
+      _ <- writeReadme(mirrorDir, datasetId)
     } yield ()
 
   private def writeMirrorLayer(layer: StaticLayer, mirrorDir: Path)(implicit ec: ExecutionContext): Fox[StaticLayer] = {
@@ -96,6 +99,24 @@ class DataSourceMirrorService @Inject()(
       _ <- tryo(Files.createDirectories(attachmentTypeDir)).toFox
       _ <- tryo(Files.createSymbolicLink(defaultAttachmentPath, attachment.path.toLocalPathUnsafe)).toFox
     } yield attachment.copy(path = UPath.fromLocalPath(defaultAttachmentPath))
+  }
+
+  private def writeReadme(mirrorDir: Path, datasetId: ObjectId)(implicit ec: ExecutionContext): Fox[Unit] = {
+    val readmeFile = mirrorDir.resolve("readme.txt")
+    val content =
+      s"""This directory is a read-only mirror of a database-based (virtual) dataset in WEBKNOSSOS.
+        |
+        |It was auto-generated and reflects the dataset’s layer structure. The mag and attachment paths
+        |contain symbolic links pointing to the actual data files.
+        |
+        |Manual changes made here will NOT propagate back to WEBKNOSSOS. To update the dataset, use
+        |the WEBKNOSSOS UI or python interface instead.
+        |
+        |Dataset ID: $datasetId
+        |""".stripMargin
+    for {
+      _ <- tryo(Files.write(readmeFile, content.getBytes(StandardCharsets.UTF_8))).toFox ?~> "dataset.writeMirror.readmeWriteFailed"
+    } yield ()
   }
 
   private def writeMirrorProperties(dataSource: UsableDataSource, mirrorDir: Path)(

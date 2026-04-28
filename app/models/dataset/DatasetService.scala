@@ -700,6 +700,14 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                         s"For organization: ${organization.name}. <$resultLink|Result>")
     } yield ()
 
+  def writeMirrorForVirtual(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[Unit] =
+    if (dataset.isVirtual && dataset.isUsable) {
+      for {
+        client <- clientFor(dataset)
+        _ <- client.writeMirror(dataset._id)
+      } yield ()
+    } else Fox.successful(())
+
   def publicWrites(dataset: Dataset,
                    requestingUserOpt: Option[User],
                    organization: Option[Organization] = None,

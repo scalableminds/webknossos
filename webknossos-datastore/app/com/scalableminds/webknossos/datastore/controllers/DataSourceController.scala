@@ -729,7 +729,7 @@ class DataSourceController @Inject()(
         for {
           dataSourceBox <- datasetCache.getById(datasetId).shiftBox
           _ <- Fox.runOptional(dataSourceBox.toOption) { dataSource =>
-            dataSourceMirrorService.writeMirror(dataSource)
+            dataSourceMirrorService.writeMirror(dataSource, datasetId)
           }
         } yield Ok
       }

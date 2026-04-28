@@ -4,6 +4,7 @@ import com.aayushatharva.brotli4j.Brotli4jLoader
 import com.aayushatharva.brotli4j.decoder.BrotliInputStream
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.io.ZipIO
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
@@ -58,7 +59,11 @@ class VaultPath(upath: UPath, dataVault: DataVault) extends LazyLogging with Fox
         .reverse
       logger.info(s"Requesting ${ranges.length} ranges in ${groups.length} groups for ${this.toString}.")
       for {
+        before <- Instant.nowFox
         mergedBytesSeq <- Fox.combined(groups.map { case (mergedRange, _) => readBytes(mergedRange) })
+        _ = Instant.logSince(before,
+                             s"Requesting ${ranges.length} ranges in ${groups.length} groups for ${this.toString}.",
+                             logger)
       } yield
         groups
           .zip(mergedBytesSeq)

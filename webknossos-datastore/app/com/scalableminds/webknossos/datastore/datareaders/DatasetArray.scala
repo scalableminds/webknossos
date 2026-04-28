@@ -257,22 +257,14 @@ class DatasetArray(vaultPath: VaultPath,
 
   private def prefetchShardedChunks(chunkIndices: Seq[Array[Int]])(implicit ec: ExecutionContext,
                                                                     tc: TokenContext): Fox[Unit] = {
+    val cachedKeys = sharedChunkContentsCache.keys
     val uncachedIndices =
-      chunkIndices.filterNot(idx => sharedChunkContentsCache.keys.contains(chunkContentsCacheKey(idx)))
+      chunkIndices.filterNot(idx => cachedKeys.contains(chunkContentsCacheKey(idx)))
     if (uncachedIndices.isEmpty) Fox.successful(())
     else
       for {
-        resolved <- Fox.combined(uncachedIndices.map { idx =>
-          getShardedChunkPathAndRange(idx).shiftBox.map(box => (idx, box))
-        })
-        grouped = resolved
-          .collect { case (idx, Full((path, range))) => (idx, path, range) }
-          .groupBy { case (_, path, _) => path }
-        _ <- Fox.combined(grouped.values.toSeq.map { group =>
-          val sortedGroup = group.sortBy { case (_, _, range) => range.start }
-          val shardPath = sortedGroup.head._2
-          val ranges = sortedGroup.map(_._3)
-          val indices = sortedGroup.map(_._1)
+        groups <- groupUncachedChunksByShardForPrefetch(uncachedIndices)
+        _ <- Fox.combined(groups.map { case (shardPath, indices, ranges) =>
           for {
             bytesPerChunk <- shardPath.readMultipleByteRanges(ranges)
             _ <- Fox.combined(indices.zip(bytesPerChunk).map {
@@ -284,6 +276,26 @@ class DatasetArray(vaultPath: VaultPath,
         })
       } yield ()
   }
+
+  // Default implementation resolves one future per chunk. Subclasses can override
+  // to batch by shard (one future per shard), which is far cheaper when many chunks
+  // belong to the same shard.
+  protected def groupUncachedChunksByShardForPrefetch(uncachedIndices: Seq[Array[Int]])(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[Seq[(VaultPath, Seq[Array[Int]], Seq[StartEndExclusiveByteRange])]] =
+    for {
+      resolved <- Fox.combined(uncachedIndices.map { idx =>
+        getShardedChunkPathAndRange(idx).shiftBox.map(box => (idx, box))
+      })
+    } yield resolved
+      .collect { case (idx, Full((path, range))) => (idx, path, range) }
+      .groupBy { case (_, path, _) => path }
+      .values
+      .toSeq
+      .map { group =>
+        val sorted = group.sortBy { case (_, _, range) => range.start }
+        (sorted.head._2, sorted.map(_._1), sorted.map(_._3))
+      }
 
   private def chunkContentsCacheKey(chunkIndex: Array[Int]): String =
     s"${dataSourceId}__${layerName}__${vaultPath}__chunk_${chunkIndex.mkString(",")}"

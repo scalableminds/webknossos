@@ -107,12 +107,16 @@ class Zarr3Array(vaultPath: VaultPath,
   private def shardIndexEntryLength = 16
 
   private def getChunkIndexInShardIndex(chunkIndex: Array[Int], shardCoordinates: Array[Int]): Int = {
-    val shardOffset = shardCoordinates.zip(indexShape).map { case (sc, is) => sc * is }
-    indexShape.tails.toList
-      .dropRight(1)
-      .zipWithIndex
-      .map { case (shape, i) => shape.tail.product * (chunkIndex(i) - shardOffset(i)) }
-      .sum
+    // C-order (row-major) linear index within the shard. Avoids intermediate collection allocations.
+    var result = 0
+    var stride = 1
+    var i = chunkIndex.length - 1
+    while (i >= 0) {
+      result += stride * (chunkIndex(i) - shardCoordinates(i) * indexShape(i))
+      stride *= indexShape(i)
+      i -= 1
+    }
+    result
   }
 
   private def readAndParseShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext,
@@ -181,4 +185,35 @@ class Zarr3Array(vaultPath: VaultPath,
       } else Fox.successful(())
       range = ByteRange.startEndExclusive(chunkOffset, chunkOffset + chunkLength)
     } yield (shardPath, range)
+
+  // Overrides the default one-future-per-chunk implementation with one-future-per-shard,
+  // reducing Future overhead from O(N*rank) to O(S*rank) where S is the number of distinct shards.
+  override protected def groupUncachedChunksByShardForPrefetch(uncachedIndices: Seq[Array[Int]])(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[Seq[(VaultPath, Seq[Array[Int]], Seq[StartEndExclusiveByteRange])]] = {
+    val withShardInfo: Seq[(Array[Int], Array[Int], String)] = uncachedIndices.flatMap { chunkIndex =>
+      chunkIndexToShardIndex(chunkIndex).headOption.map { shardCoordinates =>
+        (chunkIndex, shardCoordinates, getChunkFilename(shardCoordinates))
+      }
+    }
+    Fox.combined(
+      withShardInfo.groupBy(_._3).toSeq.map { case (shardFilename, entries) =>
+        val shardPath = vaultPath / shardFilename
+        for {
+          parsedShardIndex <- parsedShardIndexCache.getOrLoad(shardPath, readAndParseShardIndex)
+        } yield {
+          val validSorted = entries.flatMap { case (chunkIndex, shardCoordinates, _) =>
+            val pos = getChunkIndexInShardIndex(chunkIndex, shardCoordinates)
+            val (chunkOffset, chunkLength) = parsedShardIndex(pos)
+            if (chunkOffset == -1 && chunkLength == -1) None
+            else
+              Some(
+                (chunkIndex,
+                 ByteRange.startEndExclusive(chunkOffset, chunkOffset + chunkLength): StartEndExclusiveByteRange))
+          }.sortBy { case (_, range) => range.start }
+          (shardPath, validSorted.map(_._1), validSorted.map(_._2))
+        }
+      }
+    )
+  }
 }

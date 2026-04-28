@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import update from "immutability-helper";
 import type { RequestOptions, RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";
-import ResumableUpload from "libs/resumable-upload";
+import ResumableUpload from "libs/resumable_upload/resumable_upload";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
 import {

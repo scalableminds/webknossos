@@ -24,7 +24,7 @@ import ButtonComponent from "viewer/view/components/button_component";
 import { downloadScreenshot } from "viewer/view/rendering_utils";
 import KeyboardShortcutConfigModal from "../keyboard_shortcuts/keyboard_shortcut_config_modal";
 import CreateAnimationModal from "./create_animation_modal";
-import DownloadModalView from "./download_modal_view";
+import DownloadModalView from "./download_modal/download_modal_view";
 
 type Props = {
   layoutMenu: SubMenuType;

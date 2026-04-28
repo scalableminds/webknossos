@@ -35,7 +35,7 @@ import { RouterProvider } from "react-router-dom";
 import router from "router/router";
 import { getThemeFromUser } from "theme";
 import GlobalThemeProvider from "theme_provider";
-import HelpButton from "viewer/view/help_modal";
+import HelpButton from "viewer/view/help/help_button";
 
 // Suppress warning emitted by Olvy because it tries to eagerly initialize
 window.OlvyConfig = null;

@@ -179,13 +179,15 @@ class WKRemoteTracingStoreClient(
                             newAnnotationId: ObjectId,
                             toTemporaryStore: Boolean,
                             requestingUserId: ObjectId,
-                            additionalBoundingBoxes: Seq[NamedBoundingBox]): Fox[AnnotationProto] = {
+                            additionalBoundingBoxes: Seq[NamedBoundingBox],
+                            remapSegmentIds: Boolean): Fox[AnnotationProto] = {
     logger.debug(s"Called to merge ${annotationIds.length} annotations by ids." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/annotation/mergedFromIds").withLongTimeout
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
       .addQueryParam("toTemporaryStore", toTemporaryStore)
       .addQueryParam("newAnnotationId", newAnnotationId)
       .addQueryParam("requestingUserId", requestingUserId)
+      .addQueryParam("remapSegmentIds", remapSegmentIds)
       .postJsonWithProtoResponse[MergedFromIdsRequest, AnnotationProto](
         MergedFromIdsRequest(annotationIds, ownerIds, additionalBoundingBoxes))(AnnotationProto)
   }

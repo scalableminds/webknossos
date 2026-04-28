@@ -137,7 +137,7 @@ class _MergeModalView extends PureComponent<Props, MergeModalViewState> {
     if (selectedExplorativeAnnotation != null) {
       const url =
         `/api/annotations/Explorational/${selectedExplorativeAnnotation}/merge/` +
-        `${this.props.annotationType}/${this.props.annotationId}`;
+        `${this.props.annotationType}/${this.props.annotationId}?remapSegmentIds=true`;
       this.createMergedAnnotation(url);
     }
   };

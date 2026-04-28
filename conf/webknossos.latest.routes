@@ -180,14 +180,14 @@ PATCH         /annotations/:typ/:id/editLockedState                             
 
 GET           /annotations/:id/info                                                             controllers.AnnotationController.infoWithoutType(id: ObjectId, timestamp: Option[Long])
 DELETE        /annotations/:id                                                                  controllers.AnnotationController.cancelWithoutType(id: ObjectId)
-POST          /annotations/:id/merge/:mergedTyp/:mergedId                                       controllers.AnnotationController.mergeWithoutType(id: ObjectId, mergedTyp: String, mergedId: ObjectId)
+POST          /annotations/:id/merge/:mergedTyp/:mergedId                                       controllers.AnnotationController.mergeWithoutType(id: ObjectId, mergedTyp: String, mergedId: ObjectId, remapSegmentIds: Option[Boolean])
 GET           /annotations/:id/download                                                         controllers.AnnotationIOController.downloadWithoutType(id: ObjectId, version: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
 POST          /annotations/:id/acquireMutex                                                     controllers.AnnotationController.tryAcquiringAnnotationMutex(id: ObjectId)
 DELETE        /annotations/:id/mutex                                                            controllers.AnnotationController.releaseMutex(id: ObjectId)
 
 GET           /annotations/:typ/:id/info                                                        controllers.AnnotationController.info(typ: String, id: ObjectId, timestamp: Option[Long])
 DELETE        /annotations/:typ/:id                                                             controllers.AnnotationController.cancel(typ: String, id: ObjectId)
-POST          /annotations/:typ/:id/merge/:mergedTyp/:mergedId                                  controllers.AnnotationController.merge(typ: String, id: ObjectId, mergedTyp: String, mergedId: ObjectId)
+POST          /annotations/:typ/:id/merge/:mergedTyp/:mergedId                                  controllers.AnnotationController.merge(typ: String, id: ObjectId, mergedTyp: String, mergedId: ObjectId, remapSegmentIds: Option[Boolean])
 GET           /annotations/:typ/:id/download                                                    controllers.AnnotationIOController.download(typ: String, id: ObjectId, version: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
 
 GET           /annotations/source/:accessTokenOrId                                              controllers.AnnotationPrivateLinkController.annotationSource(accessTokenOrId: String, userToken: Option[String])

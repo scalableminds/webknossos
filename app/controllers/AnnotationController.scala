@@ -112,12 +112,19 @@ class AnnotationController @Inject()(
     }
   }
 
-  def merge(typ: String, id: ObjectId, mergedTyp: String, mergedId: ObjectId): Action[AnyContent] =
+  def merge(typ: String,
+            id: ObjectId,
+            mergedTyp: String,
+            mergedId: ObjectId,
+            remapSegmentIds: Option[Boolean]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         annotationA <- provider.provideAnnotation(typ, id, request.identity) ?~> "annotation.notFound" ~> NOT_FOUND
         annotationB <- provider.provideAnnotation(mergedTyp, mergedId, request.identity) ?~> "annotation.notFound" ~> NOT_FOUND
-        mergedAnnotation <- annotationMerger.mergeTwo(annotationA, annotationB, request.identity) ?~> "annotation.merge.failed"
+        mergedAnnotation <- annotationMerger.mergeTwo(annotationA,
+                                                      annotationB,
+                                                      request.identity,
+                                                      remapSegmentIds.getOrElse(true)) ?~> "annotation.merge.failed"
         restrictions = annotationRestrictionDefaults.defaultsFor(mergedAnnotation)
         _ <- restrictions.allowAccess(request.identity) ?~> Messages("notAllowed") ~> FORBIDDEN
         _ <- annotationDAO.insertOne(mergedAnnotation)
@@ -125,11 +132,14 @@ class AnnotationController @Inject()(
       } yield JsonOk(js, Messages("annotation.merge.success"))
     }
 
-  def mergeWithoutType(id: ObjectId, mergedTyp: String, mergedId: ObjectId): Action[AnyContent] =
+  def mergeWithoutType(id: ObjectId,
+                       mergedTyp: String,
+                       mergedId: ObjectId,
+                       remapSegmentIds: Option[Boolean]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
         annotation <- provider.provideAnnotation(id, request.identity) ?~> "annotation.notFound" ~> NOT_FOUND
-        result <- Fox.fromFuture(merge(annotation.typ.toString, id, mergedTyp, mergedId)(request))
+        result <- Fox.fromFuture(merge(annotation.typ.toString, id, mergedTyp, mergedId, remapSegmentIds)(request))
       } yield result
     }
 

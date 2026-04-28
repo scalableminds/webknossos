@@ -364,7 +364,7 @@ class VolumeTracingService @Inject()(
           if (!magsDoMatch)
             Fox.failure("annotation.volume.magsDoNotMatch")
           else {
-            val mergedVolume = new MergedVolume(tracing.elementClass)
+            val mergedVolume = new MergedVolume(tracing.elementClass, remapSegmentIds = true)
             for {
               _ <- withZipsFromMultiZipAsync(initialData)((_, dataZip) => mergedVolume.addIdSetFromDataZip(dataZip))
               _ <- withZipsFromMultiZipAsync(initialData)((index, dataZip) =>
@@ -825,7 +825,8 @@ class VolumeTracingService @Inject()(
       volumeTracings: Seq[VolumeTracing],
       newVolumeTracingId: String,
       newVersion: Long,
-      toTemporaryStore: Boolean)(implicit mp: MessagesProvider, tc: TokenContext): Fox[MergedVolumeStats] = {
+      toTemporaryStore: Boolean,
+      remapSegmentIds: Boolean)(implicit mp: MessagesProvider, tc: TokenContext): Fox[MergedVolumeStats] = {
     val before = Instant.now
     val volumeLayers = volumeTracingIds.zip(volumeTracings).map {
       case (tracingId, tracing) => volumeTracingLayer(ObjectId("annotationIdUnusedInThisContext"), tracingId, tracing)
@@ -858,7 +859,7 @@ class VolumeTracingService @Inject()(
         }
       }.getOrElse(Set.empty)
 
-      val mergedVolume = new MergedVolume(elementClassProto)
+      val mergedVolume = new MergedVolume(elementClassProto, remapSegmentIds)
 
       volumeLayers.foreach { volumeLayer =>
         mergedVolume.addIdSetFromBucketStream(volumeLayer.bucketStream, magsIntersection)
@@ -939,7 +940,7 @@ class VolumeTracingService @Inject()(
         val volumeLayer = volumeTracingLayer(annotationId, tracingId, tracing)
         for {
           largestSegmentId <- tracing.largestSegmentId.toFox ?~> "annotation.volume.merge.largestSegmentId.unset"
-          mergedVolume = new MergedVolume(tracing.elementClass, largestSegmentId)
+          mergedVolume = new MergedVolume(tracing.elementClass, remapSegmentIds = true, largestSegmentId)
           _ <- mergedVolume.addIdSetFromDataZip(zipFile)
           _ = mergedVolume.addFromBucketStream(sourceVolumeIndex = 0, volumeLayer.bucketProvider.bucketStream())
           _ <- mergedVolume.addFromDataZip(sourceVolumeIndex = 1, zipFile)

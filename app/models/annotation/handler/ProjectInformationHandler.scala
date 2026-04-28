@@ -45,7 +45,8 @@ class ProjectInformationHandler @Inject()(
                                                   project._team,
                                                   AnnotationType.CompoundProject,
                                                   annotations,
-                                                  taskBoundingBoxes) ?~> "annotation.merge.failed.compound"
+                                                  taskBoundingBoxes,
+                                                  remapSegmentIds = true) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
 
   override def restrictionsFor(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =

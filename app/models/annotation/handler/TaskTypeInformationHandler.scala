@@ -41,14 +41,17 @@ class TaskTypeInformationHandler @Inject()(
       datasetId <- finishedAnnotations.headOption.map(_._dataset).toFox
       _ <- registerDataSourceInTemporaryStore(taskTypeId, datasetId)
       taskBoundingBoxes <- taskDAO.findTaskBoundingBoxesByAnnotationIds(annotations.map(_._id))
-      mergedAnnotation <- annotationMerger.mergeN(taskTypeId,
-                                                  toTemporaryStore = true,
-                                                  user._id,
-                                                  datasetId,
-                                                  taskType._team,
-                                                  AnnotationType.CompoundTaskType,
-                                                  finishedAnnotations,
-                                                  taskBoundingBoxes) ?~> "annotation.merge.failed.compound"
+      mergedAnnotation <- annotationMerger.mergeN(
+        taskTypeId,
+        toTemporaryStore = true,
+        user._id,
+        datasetId,
+        taskType._team,
+        AnnotationType.CompoundTaskType,
+        finishedAnnotations,
+        taskBoundingBoxes,
+        remapSegmentIds = true
+      ) ?~> "annotation.merge.failed.compound"
     } yield mergedAnnotation
 
   override def restrictionsFor(taskTypeId: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =

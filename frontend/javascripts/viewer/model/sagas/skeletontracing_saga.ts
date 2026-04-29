@@ -227,7 +227,7 @@ function* watchFailedNodeCreations(): Saga<void> {
   }
 }
 
-function* watchTracingConsistency(): Saga<void> {
+export function* watchTracingConsistency(): Saga<void> {
   const state = yield* select((_state) => _state);
   const invalidTreeDetails: Array<Record<string, any>> = [];
 

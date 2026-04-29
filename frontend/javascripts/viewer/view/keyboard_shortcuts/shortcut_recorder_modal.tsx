@@ -239,7 +239,7 @@ export function ShortcutRecorderModal({
         // Finalize this stroke using lastStrokeOrderRef
         setPreviewKeyCombination((prevPreviewKeyCombination) => {
           if (prevPreviewKeyCombination.length > 0) {
-            setKeySequence([...keySequence, prevPreviewKeyCombination]);
+            setKeySequence((prevKeySequence) => [...prevKeySequence, prevPreviewKeyCombination]);
           }
           return prevPreviewKeyCombination;
         });

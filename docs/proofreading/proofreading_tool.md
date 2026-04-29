@@ -9,7 +9,7 @@ To use the proofreading tool, enable an [ID mapping for your segmentation](./seg
 
 1. Select an ID mapping for a segmentation layer from the left-hand side panel
 2. From the toolbar, switch to the proofreading tool (clipboard icon)
-3. [Optional] Press ++shift++ + middle-click on any segment to load and display its supervoxel graph
+3. [Optional] Press ++shift++ + middle-click on any segment to load and display its supervoxel graph by an agglomerate tree
 4. Proceed to fix split and merge errors:
 
 ## Fixing Split Errors
@@ -21,9 +21,9 @@ To use the proofreading tool, enable an [ID mapping for your segmentation](./seg
 ## Fixing Merge Errors
 
 1. Left-click on any part of the source segment. It will be marked with a white crosshair
-2. Right-click on the part of the source segment that you would like to split off to bring up the context menu. Select `Split from active segment (Min-Cut)`
+2. Right-click on the part of the segment that you would like to split off to bring up the context menu. Select `Split from active segment (Min-Cut)`
 3. WEBKNOSSOS will perform a min-cut operation to delete all supervoxel graph edges between the source and target segments, effectively splitting the two into individual segments
-4. WEBKNOSSOS will split both segments and reload the updated segmentation and 3D meshes
+4. WEBKNOSSOS will reload the splitted agglomerate and reload the updated segmentation and 3D meshes
 
 Proofreading operations rely on the quality of the initial over-segmentation. If cells are already connected incorrectly in that base graph, WEBKNOSSOS cannot separate them with proofreading alone.
 
@@ -47,7 +47,7 @@ Use multi-split mode when:
 3. Assign segments to **Partition 2** by ++ctrl+shift+left-click++ (++cmd+shift+left-click++ on Mac). Partition 2 segments are highlighted in **light gray**, but only in the 3D Viewport.
 4. Continue clicking to build up representative samples on both sides. Doing the selection close to the desired split boundary should be sufficient to get an accurate cut.
 5. Once both partitions contain at least one segment, trigger the split by pressing ++enter++ or by right-clicking any segment and choosing **Split partitions** from the context menu.
-6. WEBKNOSSOS computes a min-cut that separates the two supervoxel into two parts and reloads the updated segmentation and 3D meshes.
+6. WEBKNOSSOS computes a min-cut that separates the agglomerate into two parts and reloads the updated segmentation and 3D meshes.
 
 You can also add or remove individual segments to/from either partition via the right-click context menu (**Add/Remove to Partition 1** / **Add/Remove to Partition 2**), which shows the same keyboard shortcuts as a reminder.
 
@@ -55,16 +55,36 @@ You can also add or remove individual segments to/from either partition via the 
 
 Press ++esc++ at any time to clear all partition selections without performing a split. Toggling multi-split mode off (scissor icon or ++m++) also clears the current selections.
 
+## Splitting a Segment from All Its Neighbors
+
+When a segment is incorrectly merged with multiple neighbors simultaneously, you can cut it free from all of them in a single operation instead of performing individual min-cuts. Right-click the segment and select **Split from all neighboring segments**. WEBKNOSSOS identifies all adjacent segments in the agglomerate graph and severs all connecting edges at once, isolating the segment into its own agglomerate.
+
+This option is available from any viewport as well as from agglomerate skeleton node context menus.
+
+## Working with Agglomerate Trees
+
+Agglomerate trees visualize the supervoxel graph of an agglomerate as a tree of nodes and edges. Load one by pressing ++shift++ + middle-click on a segment, or via right-click → **Import Agglomerate Skeleton**. Trees are automatically updated after proofreading operations.
+
+In addition to context-menu interactions, agglomerate skeletons offer fine-grained control:
+
+- **Min-cut via nodes**: Right-click a skeleton node while another node is selected and choose **Perform Min-Cut between these Nodes** to split the agglomerate along the minimum-cut path between those two positions.
+- **Split from neighbors via nodes**: Right-click a skeleton node and choose **Split from all neighboring segments** to isolate that segment from all its agglomerate neighbors.
+- **Merge via edge creation**: Creating an edge between nodes of two different agglomerate skeletons while the proofreading tool is active merges the two agglomerates.
+- **Split via edge deletion**: Deleting an edge between two nodes of an agglomerate skeleton triggers a split of the agglomerate at that edge.
+
+Agglomerate skeletons can be converted to normal trees via right-click in the Skeleton tab, which removes their link to the agglomerate mapping.
+
+!!! info
+    Undo and redo are not supported for proofreading operations. To revert a mistake, use **Restore Older Version** in the dropdown next to the **Save** button.
+
 ## Proofreading Toolbar Controls
 
 When the proofreading tool is active (and editable mappings are enabled), additional controls are available in the toolbar:
 
-- **Clear proofreading by-products**: Removes auxiliary meshes loaded during proofreading.
-- **Automatic mesh loading**: Toggles automatic loading of meshes during proofreading.
-- **Selective segment visibility**: Shows only hovered or active segments to reduce visual clutter.
+- **Clear proofreading by-products**: Removes auxiliary meshes loaded during proofreading. Useful once you are done correcting a segment pair.
+- **Automatic mesh loading**: When enabled, WEBKNOSSOS automatically loads a 3D mesh for each segment involved in a merge or split operation.
+- **Selective segment visibility**: When enabled, only the hovered or active segment is shown, reducing visual clutter when working on densely packed regions.
 - **Multi split mode**: Enables partition-based splitting (can also be toggled with ++m++).
-
-In addition to context-menu actions, you can also modify agglomerate skeletons directly (add/remove nodes and edges) for fine-grained control.
 
 !!! info  
     The proofreading tool requires a supervoxel-graph-compatible mapping. These mappings are commonly generated by automated segmentation pipelines (for example, [Voxelytics](https://voxelytics.com)). If you need help preparing compatible files, contact [hello@webknossos.org](mailto:hello@webknossos.org).

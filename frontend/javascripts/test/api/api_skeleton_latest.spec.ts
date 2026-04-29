@@ -21,7 +21,7 @@ import {
 } from "viewer/model/helpers/rotation_helpers";
 import Store from "viewer/store";
 import { makeBasicGroupObject } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const toRadian = (arr: Vector3): Vector3 => [
   MathUtils.degToRad(arr[0]),
@@ -48,6 +48,11 @@ describe("API Skeleton", () => {
     await setupWebknossosForTesting(context, "skeleton", undefined, {
       dontDispatchWkInitialized: true,
     });
+  });
+
+  afterEach(() => {
+    setGlobalKeystrokes(undefined);
+    vi.restoreAllMocks();
   });
 
   it<WebknossosTestContext>("getActiveNodeId should get the active node id", ({ api }) => {

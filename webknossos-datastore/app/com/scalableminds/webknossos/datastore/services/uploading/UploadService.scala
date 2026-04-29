@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.services.uploading
 
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
@@ -17,6 +18,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader.FILENA
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader.FILENAME_ZARR_JSON
 import com.scalableminds.webknossos.datastore.explore.ExploreLocalLayerService
 import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, DirectoryConstants, UPath}
+import com.scalableminds.webknossos.datastore.models.LengthUnit.LengthUnit
 import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
@@ -62,8 +64,8 @@ case class ReportDatasetUploadParameters(
     datasetSizeBytes: Long,
     dataSourceOpt: Option[UsableDataSource], // must be set if needsConversion is false
     layersToLink: Seq[LinkedLayerIdentifier],
-    voxelSizeFactor: Option[String],
-    voxelSizeUnit: Option[String]
+    voxelSizeFactor: Option[Vec3Double],
+    voxelSizeUnit: Option[LengthUnit]
 )
 object ReportDatasetUploadParameters {
   implicit val jsonFormat: OFormat[ReportDatasetUploadParameters] =
@@ -83,8 +85,8 @@ object LinkedLayerIdentifiers {
 
 case class UploadInformation(uploadId: String,
                              needsConversion: Option[Boolean],
-                             voxelSizeFactor: Option[String],
-                             voxelSizeUnit: Option[String])
+                             voxelSizeFactor: Option[Vec3Double],
+                             voxelSizeUnit: Option[LengthUnit])
 
 object UploadInformation {
   implicit val jsonFormat: OFormat[UploadInformation] = Json.format[UploadInformation]

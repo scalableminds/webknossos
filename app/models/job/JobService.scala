@@ -15,6 +15,7 @@ import models.job.JobCommand.JobCommand
 import models.organization.{CreditTransactionService, OrganizationDAO}
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import com.scalableminds.util.tools.Full
+import com.scalableminds.webknossos.datastore.models.LengthUnit.LengthUnit
 import org.apache.pekko.actor.ActorSystem
 import play.api.libs.json.{JsObject, JsValue, Json}
 import security.WkSilhouetteEnvironment
@@ -231,13 +232,11 @@ class JobService @Inject()(wkConf: WkConf,
 
   def submitConvertToWkwJob(dataset: Dataset,
                             user: User,
-                            voxelSizeFactor: String,
-                            voxelSizeUnit: Option[String]): Fox[Unit] =
+                            voxelSizeFactor: Vec3Double,
+                            voxelSizeUnit: Option[LengthUnit]): Fox[Unit] =
     for {
-      voxelSizeFactorParsed <- Vec3Double.fromUriLiteral(voxelSizeFactor).toFox ?~> "job.convertToWkw.invalidVoxelSize"
-      voxelSizeUnitParsed <- Fox.runOptional(voxelSizeUnit)(u => LengthUnit.fromString(u).toFox)
-      voxelSize = VoxelSize.fromFactorAndUnitWithDefault(voxelSizeFactorParsed, voxelSizeUnitParsed)
       organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> "organization.notFound"
+      voxelSize = VoxelSize.fromFactorAndUnitWithDefault(voxelSizeFactor, voxelSizeUnit)
       commandArgs = Json.obj(
         "organization_id" -> organization._id,
         "organization_display_name" -> organization.name,

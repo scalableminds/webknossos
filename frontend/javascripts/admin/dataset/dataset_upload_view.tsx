@@ -386,7 +386,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         uploadId,
         needsConversion: this.state.needsConversion,
         voxelSizeFactor: this.state.needsConversion
-          ? formValues.voxelSizeFactor.toString()
+          ? formValues.voxelSizeFactor
           : undefined,
         voxelSizeUnit: this.state.needsConversion ? formValues.voxelSizeUnit : undefined,
       };

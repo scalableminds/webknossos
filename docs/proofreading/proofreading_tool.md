@@ -21,9 +21,9 @@ To use the proofreading tool, enable an [ID mapping for your segmentation](./seg
 ## Fixing Merge Errors
 
 1. Left-click on any part of the source segment. It will be marked with a white crosshair
-2. Right-click on the part of the segment that you would like to split off to bring up the context menu. Select `Split from active segment (Min-Cut)`
+2. Right-click the part of the segment you want to split off to open the context menu. Select `Split from active segment (Min-Cut)`
 3. WEBKNOSSOS will perform a min-cut operation to delete all supervoxel graph edges between the source and target segments, effectively splitting the two into individual segments
-4. WEBKNOSSOS will reload the splitted agglomerate and reload the updated segmentation and 3D meshes
+4. WEBKNOSSOS will reload the split agglomerate, updated segmentation, and 3D meshes
 
 Proofreading operations rely on the quality of the initial over-segmentation. If cells are already connected incorrectly in that base graph, WEBKNOSSOS cannot separate them with proofreading alone.
 

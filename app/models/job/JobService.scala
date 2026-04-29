@@ -2,7 +2,7 @@ package models.job
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double}
-import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import models.dataset.Dataset
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId

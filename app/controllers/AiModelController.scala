@@ -283,7 +283,7 @@ class AiModelController @Inject()(
         aiModelOpt <- Fox.runOptional(request.body.aiModelId)(id =>
           ObjectId.fromString(id).flatMap(oid => aiModelDAO.findOne(oid))) ?~> "aiModel.notFound"
         _ <- Fox.runOptional(aiModelOpt) { aiModel =>
-          Fox.fromBool(aiModel._dataStore == dataset._dataStore) ?~> "aiModel.dataStoreMismatch"
+          Fox.fromBool(aiModel.isPretrainedModel || aiModel._dataStore == dataset._dataStore) ?~> "aiModel.dataStoreMismatch"
         }
         (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.colorLayerName)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
@@ -340,7 +340,7 @@ class AiModelController @Inject()(
         aiModelOpt <- Fox.runOptional(request.body.aiModelId)(id =>
           ObjectId.fromString(id).flatMap(oid => aiModelDAO.findOne(oid))) ?~> "aiModel.notFound"
         _ <- Fox.runOptional(aiModelOpt) { aiModel =>
-          Fox.fromBool(aiModel._dataStore == dataset._dataStore) ?~> "aiModel.dataStoreMismatch"
+          Fox.fromBool(aiModel.isPretrainedModel || aiModel._dataStore == dataset._dataStore) ?~> "aiModel.dataStoreMismatch"
         }
         (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.colorLayerName)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"

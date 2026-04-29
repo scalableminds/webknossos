@@ -126,18 +126,14 @@ export const AiModelSelector: React.FC = () => {
           dataSource={filteredPretrainedModels}
           locale={{ emptyText: "No pre-trained models match your search." }}
           renderItem={(item) => {
-            const isDisabled = item.isSuperUserOnly && !isSuperUser;
             const previewImage = item.category ? categoryToImage[item.category] : undefined;
             return (
               <List.Item
-                style={{
-                  opacity: isDisabled ? 0.5 : 1,
-                  cursor: isDisabled ? "not-allowed" : "pointer",
-                }}
+                style={{ cursor: "pointer" }}
                 className={
                   "hoverable-list-item " + (selectedModel?.id === item.id ? "selected" : "")
                 }
-                onClick={() => !isDisabled && onSelectModel(item)}
+                onClick={() => onSelectModel(item)}
               >
                 <List.Item.Meta
                   avatar={<Avatar shape="square" size={64} src={previewImage} alt={item.name} />}

@@ -166,7 +166,7 @@ Samplecountry
     defaultOrganization._id,
     List(),
     defaultDataStore.name,
-    None,
+    Some(defaultUser._id),
     None,
     List.empty,
     None,

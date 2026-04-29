@@ -77,7 +77,8 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
         sharedOrgasIdsUserCanAccess = aiModel._sharedOrganizations.filter(orgaIdsUserCanAccess.contains)
       } yield Some(sharedOrgasIdsUserCanAccess)
       else Fox.successful(None)
-      path <- pathWithFallback(aiModel)
+      path <- if (aiModel.isPretrainedModel) Fox.successful(Option.empty[UPath])
+      else pathWithFallback(aiModel).map(Some(_))
       isUsable = !aiModel.uploadToPathIsPending && trainingJobOpt.flatten.forall(_.effectiveState == JobState.SUCCESS)
     } yield
       Json.obj(

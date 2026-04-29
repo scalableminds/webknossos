@@ -1,8 +1,10 @@
+import { ResumableChunk } from "libs/resumable_upload/resumable_chunk";
+import type { ResumableFile } from "libs/resumable_upload/resumable_file";
+import { ResumableUpload } from "libs/resumable_upload/resumable_upload";
 import { sleep } from "libs/utils";
 import { http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { ResumableChunk, type ResumableFile, ResumableUpload } from "../../libs/resumable-upload";
 import { ResumableBackendMock } from "../helpers/resumable_backend_mock";
 
 let backendMock: ResumableBackendMock;

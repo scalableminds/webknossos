@@ -231,12 +231,23 @@ function buildToolDependentHandler(
         if ("onPressedWithRepeat" in handler) {
           handler.onPressedWithRepeat(...args);
         } else if ("onPressed" in handler && isOriginalEvent) {
-          handler.onPressed(args[2]);
+          const pressEvent = args[2];
+          handler.onPressed(pressEvent);
         }
       },
       onReleased: (...args: Parameters<KeyboardLoopHandlerFn>) => {
         const activeToolId = Store.getState().uiInformation.activeTool.id;
-        (toolToHandlerMap[activeToolId] as KeyboardLoopHandler | undefined)?.onReleased?.(...args);
+        const handler = toolToHandlerMap[activeToolId] as KeyboardHandler | undefined;
+        if (!handler) {
+          return;
+        }
+        if ("onPressedWithRepeat" in handler) {
+          handler.onReleased?.(...args);
+        } else if ("onReleased" in handler) {
+          // One-shot handler expects only the event parameter
+          const releaseEvent = args[2];
+          handler.onReleased?.(releaseEvent);
+        }
       },
     };
     if (isDelayed) {

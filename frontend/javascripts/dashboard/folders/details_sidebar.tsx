@@ -11,6 +11,7 @@ import { getOrganization } from "admin/api/organization";
 import { deleteDatasetOnDisk } from "admin/rest_api";
 import { Button, Modal, Progress, Result, Space, Spin, Tag, Tooltip, Typography } from "antd";
 import FormattedId from "components/formatted_id";
+import features from "features";
 import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
@@ -332,7 +333,7 @@ function DatasetsDetails({
           Selected {selectedDatasets.length} of {datasetCount} datasets. Move them to another folder
           with drag and drop.
         </div>
-        {deletableDatasets.length > 0 && (
+        {deletableDatasets.length > 0 && features().allowDeleteDatasets && (
           <Button onClick={() => setShowConfirmDeleteModal(true)} icon={<DeleteOutlined />}>
             Delete {deletableDatasetString}
           </Button>

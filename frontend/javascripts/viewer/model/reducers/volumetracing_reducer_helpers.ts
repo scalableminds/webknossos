@@ -496,7 +496,7 @@ export function getUpdatedSourcePropsAfterMerge(
     return {};
   }
   const props: Writeable<Partial<Segment>> = {};
-  // Handle `name` by concatening names
+  // Handle `name` by concatenating names
   if (targetSegment.name != null && targetSegment.name !== "") {
     // The new segments name should always start with the original
     // source segment's name. Therefore, we use getSegmentName

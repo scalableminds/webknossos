@@ -590,8 +590,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
           _ <- datasetMagsDAO.updateMagRealPathsForDataset(dataset._id, pathInfo.magPathInfos)
           _ <- datasetLayerAttachmentsDAO.updateAttachmentRealPathsForDataset(dataset._id, pathInfo.attachmentPathInfos)
         } yield ()
-      case Full(_) => // Dataset is virtual, no updates from datastore are accepted.
-        Fox.successful(())
       case Empty => // Dataset reported but ignored (non-existing/forbidden org)
         Fox.successful(())
       case e: EmptyBox =>

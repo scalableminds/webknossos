@@ -393,18 +393,22 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       });
       finishDatasetUpload(datastoreUrl, uploadInfo).then(
         async ({ newDatasetId }) => {
+          const { needsConversion } = this.state;
           this.setState({
             isUploading: false,
             isFinishing: false,
+            isRetrying: false,
+            uploadProgress: 0,
             unfinishedUploadToContinue: null,
             uploadId: undefined,
+            needsConversion: false,
           });
 
           newestForm.setFieldsValue({
             name: "",
             zipFile: [],
           });
-          this.props.onUploaded(newDatasetId, newDatasetName, this.state.needsConversion);
+          this.props.onUploaded(newDatasetId, newDatasetName, needsConversion);
         },
         (error) => {
           sendFailedRequestAnalyticsEvent("finish_dataset_upload", error, {

@@ -803,6 +803,7 @@ export type APIFeatureToggles = {
   readonly segmentAnythingEnabled?: boolean;
   readonly passkeysEnabled: boolean;
   readonly registerToDefaultOrgaEnabled?: boolean;
+  readonly supportAiAgentUrl?: string;
 };
 
 export type APIJobState = "PENDING" | "STARTED" | "SUCCESS" | "FAILURE" | "CANCELLED";

@@ -29,6 +29,32 @@ Proofreading operations rely on the quality of the initial over-segmentation. If
 
 If you want to reload, hide, or remove a 3D mesh during proofreading, use the mesh context menu in the 3D viewport.
 
+## Fixing Merge Errors with Multi-Split Mode
+
+The standard min-cut split picks a cut based solely on two clicked positions, which can sometimes produce an inaccurate boundary. **Multi-split mode** lets you guide the split by explicitly marking segments as belonging to one of two resulting agglomerates of a performed split before the cut is computed. The additional information makes the resulting split more accurate. This typically saves time compared to iterating with simple min-cuts when dealing with complex merger errors.
+
+### When to use multi-split mode
+
+Use multi-split mode when:
+
+- A standard min-cut keeps producing incorrect results.
+- You already have a good visual understanding of which segment belongs into what part of the split operation and want to encode that knowledge directly.
+
+### Step-by-step
+
+1. Activate multi-split mode by clicking the **scissor icon** in the proofreading toolbar, or press ++m++.
+2. Assign segments to **Partition 1** by ++ctrl+left-click++ (++cmd+left-click++ on Mac) on a segment in any orthogonal viewport or the 3D viewport. Partition 1 segments are highlighted in **dark gray**, but only in the 3D Viewport.
+3. Assign segments to **Partition 2** by ++ctrl+shift+left-click++ (++cmd+shift+left-click++ on Mac). Partition 2 segments are highlighted in **light gray**, but only in the 3D Viewport.
+4. Continue clicking to build up representative samples on both sides. Doing the selection close to the desired split boundary should be sufficient to get an accurate cut.
+5. Once both partitions contain at least one segment, trigger the split by pressing ++enter++ or by right-clicking any segment and choosing **Split partitions** from the context menu.
+6. WEBKNOSSOS computes a min-cut that separates the two supervoxel into two parts and reloads the updated segmentation and 3D meshes.
+
+You can also add or remove individual segments to/from either partition via the right-click context menu (**Add/Remove to Partition 1** / **Add/Remove to Partition 2**), which shows the same keyboard shortcuts as a reminder.
+
+### Clearing the selection
+
+Press ++esc++ at any time to clear all partition selections without performing a split. Toggling multi-split mode off (scissor icon or ++m++) also clears the current selections.
+
 ## Proofreading Toolbar Controls
 
 When the proofreading tool is active (and editable mappings are enabled), additional controls are available in the toolbar:

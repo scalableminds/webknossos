@@ -313,8 +313,8 @@ class Controller extends PureComponent<PropsWithRouter, State> {
       },
       TOGGLE_SEGMENTATION: {
         onPressed: toggleSegmentationOpacity,
-        ...(isInViewMode ? {} : editRelatedHandlers),
       },
+      ...(isInViewMode ? {} : editRelatedHandlers),
     };
     return keyboardShortcutsHandlerMapForController;
   }

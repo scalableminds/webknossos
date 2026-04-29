@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(161);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(162);
 COMMIT TRANSACTION;
 
 
@@ -668,7 +668,7 @@ CREATE TABLE webknossos.aiModels(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   _organization TEXT NOT NULL,
   _dataStore TEXT NOT NULL, -- redundant to job, but must be available for jobless models
-  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
+  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$'),
   _trainingJob TEXT CONSTRAINT _trainingJob_objectId CHECK (_trainingJob ~ '^[0-9a-f]{24}$'),
   path TEXT,
   uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,

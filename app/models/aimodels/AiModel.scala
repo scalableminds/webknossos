@@ -29,7 +29,7 @@ case class AiModel(_id: ObjectId,
                    _organization: String,
                    _sharedOrganizations: List[String],
                    _dataStore: String,
-                   _user: ObjectId,
+                   _user: Option[ObjectId],
                    _trainingJob: Option[ObjectId],
                    _trainingAnnotations: List[ObjectId],
                    path: Option[UPath],
@@ -58,8 +58,12 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
                                                            ctx: DBAccessContext): Fox[JsObject] =
     for {
       dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)
-      userBox <- userDAO.findOne(aiModel._user).shiftBox
-      userJs <- Fox.runOptional(userBox.toOption)(userService.compactWrites)
+      userBox <- Fox.runOptional(aiModel._user)(userId =>
+        userDAO.findOne(userId).shiftBox.flatMap {
+          case Full(user) => Fox.successful(Some(user))
+          case _          => Fox.successful(None)
+      })
+      userJs <- Fox.runOptional(userBox.flatten)(userService.compactWrites)
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
       trainingJobOpt <- Fox.runOptional(aiModel._trainingJob)(trainingJobId =>
         jobDAO.findOne(trainingJobId).shiftBox.flatMap {
@@ -97,21 +101,19 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
                                layer: StaticLayer,
                                datasetVoxelSize: VoxelSize,
                                aiModelOpt: Option[AiModel],
-                               pretrainedModelIdOpt: Option[String],
                                dataStore: DataStore)(implicit ec: ExecutionContext): Fox[BoundingBox] =
     for {
-      modelVoxelSize <- (aiModelOpt, pretrainedModelIdOpt.flatMap(findPretrainedModelVoxelSize)) match {
-        case (Some(aiModel), _) if aiModel.isPretrainedModel =>
-          findPretrainedModelVoxelSize(aiModel.name).toFox ?~> s"No voxel size known for pretrained model '${aiModel.name}'"
-        case (Some(aiModel), _) =>
+      modelVoxelSize <- aiModelOpt match {
+        case Some(aiModel) if aiModel.isPretrainedModel =>
+          findPretrainedModelVoxelSize(aiModel._id).toFox ?~> s"No voxel size known for pretrained model '${aiModel.name}'"
+        case Some(aiModel) =>
           for {
             modelPath <- pathWithFallback(aiModel)
             dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
             voxelSize <- dataStoreClient.getEffectiveAiModelVoxelSize(modelPath)
           } yield voxelSize
-        case (None, Some(pretrainedVoxelSize)) => Fox.successful(pretrainedVoxelSize)
-        case (None, None) =>
-          Fox.failure("Expected either a custom AI model or a known pretrained model ID")
+        case None =>
+          Fox.failure("Expected an AI model")
       }
       targetMag <- findBestMatchingMag(modelVoxelSize, datasetVoxelSize, layer)
       targetMagBoundingBox = mag1BoundingBox / targetMag
@@ -143,22 +145,24 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
     }
 
   private lazy val PretrainedNeuronModelVoxelSize = VoxelSize(Vec3Double(7.96, 7.96, 31.2), LengthUnit.nanometer)
+  private lazy val PretrainedMitchondriaVoxelSize = VoxelSize(Vec3Double(7.96, 7.96, 31.2), LengthUnit.nanometer)
   private lazy val PretrainedNucleiModelVoxelSize = VoxelSize(Vec3Double(179.84, 179.84, 224.0), LengthUnit.nanometer)
   private lazy val PretrainedSomataModelVoxelSize = VoxelSize(Vec3Double(179.84, 179.84, 224.0), LengthUnit.nanometer)
 
-  def findPretrainedModelVoxelSize(pretrainedModelId: String): Option[VoxelSize] =
-    pretrainedModelId match {
-      case "neuron_inferral_model" | "Neuron Segmentation" => Some(PretrainedNeuronModelVoxelSize)
-      case "nuclei_inferral_model" | "Nuclei Detection"    => Some(PretrainedNucleiModelVoxelSize)
-      case "soma_inferral_model" | "Soma Detection"        => Some(PretrainedSomataModelVoxelSize)
-      case _                                               => None
+  def findPretrainedModelVoxelSize(pretrainedModelId: ObjectId): Option[VoxelSize] =
+    pretrainedModelId.id match {
+      case "576500000000000000000001" => Some(PretrainedNeuronModelVoxelSize)
+      case "576500000000000000000002" => Some(PretrainedMitchondriaVoxelSize)
+      case "576500000000000000000003" => Some(PretrainedNucleiModelVoxelSize)
+      case "576500000000000000000004" => Some(PretrainedSomataModelVoxelSize)
+      case _                          => None
     }
 
   def findModelVoxelSize(aiModelOpt: Option[AiModel], dataStore: DataStore)(
       implicit ec: ExecutionContext): Fox[VoxelSize] =
     aiModelOpt match {
       case Some(aiModel) if aiModel.isPretrainedModel =>
-        findPretrainedModelVoxelSize(aiModel.name).toFox ?~> s"No voxel size known for pretrained model '${aiModel.name}'"
+        findPretrainedModelVoxelSize(aiModel._id).toFox ?~> s"No voxel size known for pretrained model '${aiModel.name}'"
       case Some(aiModel) =>
         for {
           modelPath <- pathWithFallback(aiModel)
@@ -185,7 +189,7 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r._Organization,
         List(),
         r._Datastore.trim,
-        ObjectId(r._User),
+        r._User.map(ObjectId(_)),
         r._Trainingjob.map(ObjectId(_)),
         trainingAnnotationIds,
         path,

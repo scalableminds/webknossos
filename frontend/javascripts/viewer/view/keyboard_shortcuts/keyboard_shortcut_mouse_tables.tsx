@@ -192,7 +192,7 @@ export function PlaneNavigationMouseShortcutsTable() {
               className="mouse-icon-large"
             />,
           ],
-          action: "Move One Slice Forward or Backward ",
+          action: "Move One Slice Forward or Backward",
         },
         {
           shortcuts: [
@@ -203,7 +203,7 @@ export function PlaneNavigationMouseShortcutsTable() {
               className="mouse-icon-large"
             />,
           ],
-          action: "Move 3D viewport ",
+          action: "Move 3D viewport",
         },
         {
           shortcuts: [
@@ -214,7 +214,7 @@ export function PlaneNavigationMouseShortcutsTable() {
               className="mouse-icon-large"
             />,
           ],
-          action: "Rotate 3D viewport ",
+          action: "Rotate 3D viewport",
         },
       ]}
     />

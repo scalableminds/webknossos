@@ -559,7 +559,7 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
 
   // ===================== GENERAL.PLANE.BOUNDING_BOX =====================
   CREATE_BOUNDING_BOX: new KeyboardShortcutMetaInfo(
-    "Create new cell",
+    "Create new bounding box",
     [[["c"]]],
     "PLANE_BOUNDING_BOX_TOOL",
   ),

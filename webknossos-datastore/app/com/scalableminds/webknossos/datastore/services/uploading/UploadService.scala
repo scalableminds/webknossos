@@ -61,7 +61,9 @@ case class ReportDatasetUploadParameters(
     needsConversion: Boolean,
     datasetSizeBytes: Long,
     dataSourceOpt: Option[UsableDataSource], // must be set if needsConversion is false
-    layersToLink: Seq[LinkedLayerIdentifier]
+    layersToLink: Seq[LinkedLayerIdentifier],
+    voxelSizeFactor: Option[String],
+    voxelSizeUnit: Option[String]
 )
 object ReportDatasetUploadParameters {
   implicit val jsonFormat: OFormat[ReportDatasetUploadParameters] =
@@ -79,7 +81,10 @@ object LinkedLayerIdentifiers {
   implicit val jsonFormat: OFormat[LinkedLayerIdentifiers] = Json.format[LinkedLayerIdentifiers]
 }
 
-case class UploadInformation(uploadId: String, needsConversion: Option[Boolean])
+case class UploadInformation(uploadId: String,
+                             needsConversion: Option[Boolean],
+                             voxelSizeFactor: Option[String],
+                             voxelSizeUnit: Option[String])
 
 object UploadInformation {
   implicit val jsonFormat: OFormat[UploadInformation] = Json.format[UploadInformation]
@@ -337,7 +342,9 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
           uploadInformation.needsConversion.getOrElse(false),
           datasetSizeBytes,
           dataSourceWithAbsolutePathsOpt,
-          linkedLayerIdentifiers.layersToLink.getOrElse(List.empty)
+          linkedLayerIdentifiers.layersToLink.getOrElse(List.empty),
+          uploadInformation.voxelSizeFactor,
+          uploadInformation.voxelSizeUnit
         )
       ) ?~> "dataset.upload.reportUpload.failed"
     } yield ()

@@ -145,8 +145,9 @@ class WKRemoteDataStoreController @Inject()(
                                         dataSource,
                                         isUsable = true)
           }
-          _ <- Fox.runIf(!request.body.needsConversion)(usedStorageService.refreshStorageReportForDataset(dataset))
-          _ <- Fox.runIf(!request.body.needsConversion)(datasetService.scanRealpathsIfVirtual(dataset))
+          updated <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          _ <- Fox.runIf(!request.body.needsConversion)(usedStorageService.refreshStorageReportForDataset(updated))
+          _ <- Fox.runIf(!request.body.needsConversion)(datasetService.scanRealpathsIfVirtual(updated))
         } yield Ok
       }
     }

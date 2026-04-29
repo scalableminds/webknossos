@@ -4,6 +4,7 @@ import features from "features";
 import type { Action, BorderNode, TabNode, TabSetNode } from "flexlayout-react";
 import { Actions, DockLocation, Layout as FlexLayoutComponent, Model } from "flexlayout-react";
 import { InputKeyboard } from "libs/input";
+import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import Toast from "libs/toast";
 import cloneDeep from "lodash-es/cloneDeep";
 import messages from "messages";
@@ -38,8 +39,7 @@ import SkeletonTabView from "viewer/view/right_border_tabs/trees_tab/skeleton_ta
 import Statusbar from "viewer/view/statusbar";
 import TDViewControls from "viewer/view/td_view_controls";
 import BorderToggleButton from "../components/border_toggle_button";
-import { loadKeyboardShortcuts } from "../keyboard_shortcuts/keyboard_shortcut_persistence";
-import type { KeyboardShortcutHandlerMap } from "../keyboard_shortcuts/keyboard_shortcut_types";
+import type { KeyboardShortcutHandlerMap, KeyboardShortcutsMap } from "../keyboard_shortcuts/keyboard_shortcut_types";
 import { buildKeyBindingsFromConfig } from "../keyboard_shortcuts/keyboard_shortcut_utils";
 import {
   adjustModelToBorderOpenStatus,
@@ -77,6 +77,7 @@ type BorderOpenStatusKeys = keyof BorderOpenStatus;
 
 class FlexLayoutWrapper extends PureComponent<Props, State> {
   unbindListeners: Array<() => void>;
+  keyboard?: InputKeyboard;
   // This variable stores the border open status that should be active, when no main tab is maximized.
   // It is used to compare with the actual border open status that is stored in the store.
   borderOpenStatusWhenNotMaximized: BorderOpenStatus = {
@@ -119,6 +120,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
 
   componentWillUnmount() {
     this.unbindAllListeners();
+    this.keyboard?.destroy();
   }
 
   addListeners() {
@@ -271,14 +273,23 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
     };
   }
 
-  attachKeyboardShortcuts() {
-    const keybindingConfig = loadKeyboardShortcuts();
+  reloadLayoutKeyboardShortcuts(keyboardShortcutsConfig: KeyboardShortcutsMap) {
+    if (this.keyboard) {
+      this.keyboard.destroy();
+    }
     const keyboardControls = buildKeyBindingsFromConfig(
-      keybindingConfig,
+      keyboardShortcutsConfig,
       this.getLayoutKeyboardShortcuts(),
     );
-    const keyboard = new InputKeyboard(keyboardControls);
-    return () => keyboard.destroy();
+    this.keyboard = new InputKeyboard(keyboardControls);
+  }
+
+  attachKeyboardShortcuts() {
+    return listenToStoreProperty(
+      (state) => state.keyboardShortcutsConfig,
+      (keyboardShortcutsConfig) => this.reloadLayoutKeyboardShortcuts(keyboardShortcutsConfig),
+      true,
+    );
   }
 
   // Taken from the FlexLayout examples.

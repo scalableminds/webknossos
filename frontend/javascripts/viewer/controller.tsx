@@ -62,6 +62,7 @@ type ControllerKeyboardHandlerIdMap = Partial<KeyboardShortcutHandlerMap>;
 class Controller extends PureComponent<PropsWithRouter, State> {
   keyboard?: InputKeyboard;
   _isMounted: boolean = false;
+  unsubscribeFromPreventScrollingViaSpaceBar: () => void = () => {};
   state: State = {
     gotUnhandledError: false,
     organizationToSwitchTo: null,
@@ -94,12 +95,13 @@ class Controller extends PureComponent<PropsWithRouter, State> {
 
   componentWillUnmount() {
     this._isMounted = false;
+    this.unsubscribeKeyboardListener();
     this.keyboard?.destroy();
+    this.unsubscribeFromPreventScrollingViaSpaceBar();
     Store.dispatch(setIsInAnnotationViewAction(false));
     this.props.setBlocking({
       shouldBlock: false,
     });
-    this.unsubscribeKeyboardListener();
   }
 
   tryFetchingModel() {
@@ -319,14 +321,17 @@ class Controller extends PureComponent<PropsWithRouter, State> {
 
   initKeyboard() {
     // avoid scrolling while pressing space
-    document.addEventListener("keydown", (event: KeyboardEvent) => {
+    const globalKeydownHandler = (event: KeyboardEvent) => {
       if (
         (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
         isNoElementFocused()
       ) {
         event.preventDefault();
       }
-    });
+    };
+    document.addEventListener("keydown", globalKeydownHandler);
+    this.unsubscribeFromPreventScrollingViaSpaceBar = () =>
+      document.removeEventListener("keydown", globalKeydownHandler);
     this.unsubscribeKeyboardListener = listenToStoreProperty(
       (state) => state.keyboardShortcutsConfig,
       (keyboardShortcutsConfig) => this.reloadKeyboardShortcuts(keyboardShortcutsConfig),

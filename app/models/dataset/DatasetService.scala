@@ -585,7 +585,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   private def updateRealPathsForDataSource(pathInfo: DataSourcePathInfo)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val datasetBox = datasetDAO.findOneByDataSourceId(pathInfo.dataSourceId).shiftBox
     datasetBox.flatMap {
-      case Full(dataset) if !dataset.isVirtual =>
+      case Full(dataset) =>
         for {
           _ <- datasetMagsDAO.updateMagRealPathsForDataset(dataset._id, pathInfo.magPathInfos)
           _ <- datasetLayerAttachmentsDAO.updateAttachmentRealPathsForDataset(dataset._id, pathInfo.attachmentPathInfos)

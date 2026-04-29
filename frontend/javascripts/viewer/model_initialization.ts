@@ -338,7 +338,7 @@ async function fetchParallel(
   annotation: APIAnnotation | null | undefined,
   datasetId: string,
   version: number | undefined | null,
-): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>, KeyboardShortcutsMap]> {
+): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>, Partial<KeyboardShortcutsMap>]> {
   return Promise.all([
     getDataset(datasetId, getSharingTokenFromUrlParameters()),
     getUserConfiguration(), // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation

@@ -74,14 +74,6 @@ export interface ConfigurationHash {
     | Record<string, string>
     | ((file: ResumableFile, chunk?: ResumableChunk) => Record<string, string>);
   /**
-   * Optional function to process each chunk before testing & sending. Function is passed the chunk as parameter, and should call the `preprocessFinished` method on the chunk when finished. (Default: `null`)
-   */
-  preprocess?: ((chunk: ResumableChunk) => Promise<void> | void) | null;
-  /**
-   * Optional function to process each file before testing & sending the corresponding chunks. Function is passed the file as parameter, and should call the `preprocessFinished` method on the file when finished. (Default: `null`)
-   */
-  preprocessFile?: ((file: ResumableFile) => Promise<void> | void) | null;
-  /**
    * Prioritize first and last chunks of all files. This can be handy if you can determine if a file is valid for your service from only the first or last chunk. For example, photo or video meta data is usually located in the first part of a file, making it easy to test support from only the first chunk. (Default: `false`)
    */
   prioritizeFirstAndLastChunk?: boolean;
@@ -227,8 +219,6 @@ export class ResumableUpload implements EventTarget {
       throttleProgressCallbacks: 0.5,
       query: {},
       headers: {},
-      preprocess: null,
-      preprocessFile: null,
       prioritizeFirstAndLastChunk: false,
       target: "/",
       testChunks: true,
@@ -585,19 +575,11 @@ export class ResumableUpload implements EventTarget {
     // metadata and determine if there's even a point in continuing.
     if (this.getOpt("prioritizeFirstAndLastChunk")) {
       for (const file of this.files) {
-        if (
-          file.chunks.length &&
-          file.chunks[0].status() === "pending" &&
-          file.chunks[0].preprocessState === 0
-        ) {
+        if (file.chunks.length && file.chunks[0].status() === "pending") {
           file.chunks[0].send();
           return true;
         }
-        if (
-          file.chunks.length > 1 &&
-          file.chunks[file.chunks.length - 1].status() === "pending" &&
-          file.chunks[file.chunks.length - 1].preprocessState === 0
-        ) {
+        if (file.chunks.length > 1 && file.chunks[file.chunks.length - 1].status() === "pending") {
           file.chunks[file.chunks.length - 1].send();
           return true;
         }

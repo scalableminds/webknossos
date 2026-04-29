@@ -503,7 +503,7 @@ export class ResumableUpload implements EventTarget {
       if (options.fileType.length > 0) {
         let fileTypeFound = false;
         for (const index in options.fileType) {
-          // For good behaviour we do some inital sanitizing. Remove spaces and lowercase all
+          // For good behaviour we do some initial sanitizing. Remove spaces and lowercase all
           const typeDef = options.fileType[index].replace(/\s/g, "").toLowerCase();
           // Allowing for both [extension, .extension, mime/type, mime/*]
           let extension = typeDef.match(/^[^.][^/]+$/) ? "." + typeDef : typeDef;

@@ -45,28 +45,30 @@ export function getMeshFileChunksForSegment(
   editableMappingTracingId: string | null | undefined,
   annotationVersion: number | undefined | null,
 ): Promise<MeshSegmentInfo> {
-  return doWithToken((token) => {
-    const params = new URLSearchParams();
-    params.append("token", token);
-    if (targetMappingName != null) {
-      params.append("targetMappingName", targetMappingName);
-    }
-    if (editableMappingTracingId != null) {
-      params.append("editableMappingTracingId", editableMappingTracingId);
-    }
-    const payload: ListMeshChunksRequest = {
-      meshFileName: meshFile.name,
-      segmentId,
-      annotationVersion,
-    };
-    return Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId}/layers/${layerName}/meshes/chunks?${params}`,
-      {
-        data: payload,
-        showErrorToast: false,
-      },
-    );
-  });
+  return retryAsyncFunction(() =>
+    doWithToken((token) => {
+      const params = new URLSearchParams();
+      params.append("token", token);
+      if (targetMappingName != null) {
+        params.append("targetMappingName", targetMappingName);
+      }
+      if (editableMappingTracingId != null) {
+        params.append("editableMappingTracingId", editableMappingTracingId);
+      }
+      const payload: ListMeshChunksRequest = {
+        meshFileName: meshFile.name,
+        segmentId,
+        annotationVersion,
+      };
+      return Request.sendJSONReceiveJSON(
+        `${dataStoreUrl}/data/datasets/${datasetId}/layers/${layerName}/meshes/chunks?${params}`,
+        {
+          data: payload,
+          showErrorToast: false,
+        },
+      );
+    }),
+  );
 }
 
 type MeshChunkDataRequest = {

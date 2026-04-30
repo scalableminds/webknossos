@@ -825,10 +825,12 @@ export function getNewestVersionForAnnotation(
   tracingStoreUrl: string,
   annotationId: string,
 ): Promise<number> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/annotation/${annotationId}/newestVersion?token=${token}`,
-    ).then((obj) => obj.version),
+  return retryAsyncFunction(() =>
+    doWithToken((token) =>
+      Request.receiveJSON(
+        `${tracingStoreUrl}/tracings/annotation/${annotationId}/newestVersion?token=${token}`,
+      ).then((obj) => obj.version),
+    ),
   );
 }
 

@@ -2,6 +2,7 @@ import Request from "libs/request";
 import type { APIMeshFileInfo } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
 import { doWithToken } from "./token";
+import { retryAsyncFunction } from "libs/utils";
 
 export type MeshChunk = {
   position: Vector3;
@@ -85,34 +86,36 @@ export function getMeshFileChunkData(
   layerName: string,
   batchDescription: MeshChunkDataRequestList,
 ): Promise<ArrayBuffer[]> {
-  return doWithToken(async (token) => {
-    const dracoDataChunks = await Request.sendJSONReceiveArraybuffer(
-      `${dataStoreUrl}/data/datasets/${datasetId}/layers/${layerName}/meshes/chunks/data?token=${token}`,
-      {
-        data: batchDescription,
-        useWebworkerForArrayBuffer: true,
-      },
-    );
-    const chunkCount = batchDescription.requests.length;
-    const jumpPositionsForChunks = [];
-    let cumsum = 0;
-    for (const req of batchDescription.requests) {
-      jumpPositionsForChunks.push(cumsum);
-      cumsum += req.byteSize;
-    }
-    jumpPositionsForChunks.push(cumsum);
-
-    const dataEntries = [];
-    for (let chunkIdx = 0; chunkIdx < chunkCount; chunkIdx++) {
-      // slice() creates a copy of the data, but working with TypedArray Views would cause
-      // issues when transferring the data to a webworker.
-      const dracoData = dracoDataChunks.slice(
-        jumpPositionsForChunks[chunkIdx],
-        jumpPositionsForChunks[chunkIdx + 1],
+  return retryAsyncFunction(() =>
+    doWithToken(async (token) => {
+      const dracoDataChunks = await Request.sendJSONReceiveArraybuffer(
+        `${dataStoreUrl}/data/datasets/${datasetId}/layers/${layerName}/meshes/chunks/data?token=${token}`,
+        {
+          data: batchDescription,
+          useWebworkerForArrayBuffer: true,
+        },
       );
-      dataEntries.push(dracoData);
-    }
+      const chunkCount = batchDescription.requests.length;
+      const jumpPositionsForChunks = [];
+      let cumsum = 0;
+      for (const req of batchDescription.requests) {
+        jumpPositionsForChunks.push(cumsum);
+        cumsum += req.byteSize;
+      }
+      jumpPositionsForChunks.push(cumsum);
 
-    return dataEntries;
-  });
+      const dataEntries = [];
+      for (let chunkIdx = 0; chunkIdx < chunkCount; chunkIdx++) {
+        // slice() creates a copy of the data, but working with TypedArray Views would cause
+        // issues when transferring the data to a webworker.
+        const dracoData = dracoDataChunks.slice(
+          jumpPositionsForChunks[chunkIdx],
+          jumpPositionsForChunks[chunkIdx + 1],
+        );
+        dataEntries.push(dracoData);
+      }
+
+      return dataEntries;
+    }),
+  );
 }

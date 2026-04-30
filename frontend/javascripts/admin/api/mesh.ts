@@ -1,8 +1,8 @@
 import Request from "libs/request";
+import { retryAsyncFunction } from "libs/utils";
 import type { APIMeshFileInfo } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
 import { doWithToken } from "./token";
-import { retryAsyncFunction } from "libs/utils";
 
 export type MeshChunk = {
   position: Vector3;

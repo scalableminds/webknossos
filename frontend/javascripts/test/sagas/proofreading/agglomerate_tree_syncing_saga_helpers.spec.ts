@@ -5,7 +5,7 @@ import {
   createPositionToIdMap,
   deepDiffTreesInSkeletonTracings,
   remapNodeIdsWithPositionMap,
-} from "viewer/model/sagas/volume/proofreading/agglomerate_skeleton_syncing_saga_helpers";
+} from "viewer/model/sagas/volume/proofreading/agglomerate_tree_syncing_saga_helpers";
 import type { Node, Tree } from "viewer/model/types/tree_types";
 import type { SkeletonTracing } from "viewer/store";
 import { describe, expect, it } from "vitest";
@@ -44,11 +44,11 @@ function createTree(id: number, nodes: DiffableMap<number, Node>, edges: EdgeCol
   };
 }
 
-// Note: The full integration whether the functions in agglomerate_skeleton_syncing_saga_helpers.ts are correctly detecting agglomerate skeleton updates
-// and transforming them to applicable update actions is tested in proofreading_agglomerate_skeleton_syncing.spec.ts.
+// Note: The full integration whether the functions in agglomerate_tree_syncing_saga_helpers.ts are correctly detecting agglomerate tree updates
+// and transforming them to applicable update actions is tested in proofreading_agglomerate_tree_syncing.spec.ts.
 // So no need to redo this here.
-describe("Agglomerate Skeleton Syncing Helpers", () => {
-  it("createPositionToIdMap should create a correct position to nodeId map for accurate remapping of newly loaded agglomerate skeletons.", () => {
+describe("Agglomerate Tree Syncing Helpers", () => {
+  it("createPositionToIdMap should create a correct position to nodeId map for accurate remapping of newly loaded agglomerate trees.", () => {
     const nodes1 = new DiffableMap<number, Node>([
       [1, createNode(1)],
       [2, createNode(2)],

@@ -9,7 +9,7 @@ To use the proofreading tool, enable an [ID mapping for your segmentation](./seg
 
 1. Select an ID mapping for a segmentation layer from the left-hand side panel
 2. From the toolbar, switch to the proofreading tool (clipboard icon)
-3. [Optional] Press ++shift++ + middle-click on any segment to load and display its supervoxel graph by an agglomerate tree
+3. [Optional] Press ++shift++ + middle-click on any segment to load and display its supervoxel graph as an agglomerate tree
 4. Proceed to fix split and merge errors:
 
 ## Fixing Split Errors
@@ -31,25 +31,25 @@ If you want to reload, hide, or remove a 3D mesh during proofreading, use the me
 
 ## Fixing Merge Errors with Multi-Split Mode
 
-The standard min-cut split picks a cut based solely on two clicked positions, which can sometimes produce an inaccurate boundary. **Multi-split mode** lets you guide the split by explicitly marking segments as belonging to one of two resulting agglomerates of a performed split before the cut is computed. The additional information makes the resulting split more accurate. This typically saves time compared to iterating with simple min-cuts when dealing with complex merger errors.
+The standard min-cut determines the cut location based solely on two clicked positions, which can sometimes produce an inaccurate result. **Multi-split mode** lets you guide the cut by labeling representative segments on each side of the intended boundary before it is computed. This additional context improves accuracy and saves time when dealing with complex merge errors.
 
 ### When to use multi-split mode
 
 Use multi-split mode when:
 
 - A standard min-cut keeps producing incorrect results.
-- You already have a good visual understanding of which segment belongs into what part of the split operation and want to encode that knowledge directly.
+- You already have a clear idea of which segments belong on each side of the cut and want to encode that knowledge directly.
 
 ### Step-by-step
 
 1. Activate multi-split mode by clicking the **scissor icon** in the proofreading toolbar, or press ++m++.
-2. Assign segments to **Partition 1** by ++ctrl+left-click++ (++cmd+left-click++ on Mac) on a segment in any orthogonal viewport or the 3D viewport. Partition 1 segments are highlighted in **dark gray**, but only in the 3D Viewport.
-3. Assign segments to **Partition 2** by ++ctrl+shift+left-click++ (++cmd+shift+left-click++ on Mac). Partition 2 segments are highlighted in **light gray**, but only in the 3D Viewport.
-4. Continue clicking to build up representative samples on both sides. Doing the selection close to the desired split boundary should be sufficient to get an accurate cut.
+2. Assign segments to **Partition 1** by ++ctrl++ / ++cmd++ + Left Click on a segment in any orthogonal viewport or the 3D viewport. Partition 1 segments are highlighted in **dark gray**, but only in the 3D Viewport.
+3. Assign segments to **Partition 2** by ++ctrl++ / ++cmd++ + ++shift++ + Left Click. Partition 2 segments are highlighted in **light gray**, but only in the 3D Viewport.
+4. Continue clicking to build up representative samples on both sides. Sampling close to the intended boundary is usually sufficient for an accurate result.
 5. Once both partitions contain at least one segment, trigger the split by pressing ++enter++ or by right-clicking any segment and choosing **Split partitions** from the context menu.
 6. WEBKNOSSOS computes a min-cut that separates the agglomerate into two parts and reloads the updated segmentation and 3D meshes.
 
-You can also add or remove individual segments to/from either partition via the right-click context menu (**Add/Remove to Partition 1** / **Add/Remove to Partition 2**), which shows the same keyboard shortcuts as a reminder.
+The right-click context menu (**Add/Remove to Partition 1** / **Add/Remove to Partition 2**) also lets you add or remove individual segments and serves as a shortcut reminder.
 
 ### Clearing the selection
 
@@ -57,22 +57,22 @@ Press ++esc++ at any time to clear all partition selections without performing a
 
 ## Splitting a Segment from All Its Neighbors
 
-When a segment is incorrectly merged with multiple neighbors simultaneously, you can cut it free from all of them in a single operation instead of performing individual min-cuts. Right-click the segment and select **Split from all neighboring segments**. WEBKNOSSOS identifies all adjacent segments in the agglomerate graph and severs all connecting edges at once, isolating the segment into its own agglomerate.
+When a segment is incorrectly merged with multiple neighbors simultaneously, you can cut it free from all of them in a single operation instead of performing individual min-cuts. Right-click the segment and select **Split from all neighboring segments**. WEBKNOSSOS identifies all adjacent segments in the agglomerate graph and severs all connecting edges at once, leaving the segment as its own agglomerate.
 
-This option is available from any viewport as well as from agglomerate skeleton node context menus.
+This option is available from any viewport and from agglomerate tree node context menus.
 
 ## Working with Agglomerate Trees
 
-Agglomerate trees visualize the supervoxel graph of an agglomerate as a tree of nodes and edges. Load one by pressing ++shift++ + middle-click on a segment, or via right-click → **Import Agglomerate Skeleton**. Trees are automatically updated after proofreading operations.
+Agglomerate trees represent the supervoxel graph of an agglomerate as a tree of connected nodes. Load one by pressing ++shift++ + middle-click on a segment, or via right-click → **Import Agglomerate Tree**. Trees are automatically updated after proofreading operations.
 
-In addition to context-menu interactions, agglomerate skeletons offer fine-grained control:
+In addition to the context-menu interactions described above, agglomerate trees support fine-grained control:
 
-- **Min-cut via nodes**: Right-click a skeleton node while another node is selected and choose **Perform Min-Cut between these Nodes** to split the agglomerate along the minimum-cut path between those two positions.
-- **Split from neighbors via nodes**: Right-click a skeleton node and choose **Split from all neighboring segments** to isolate that segment from all its agglomerate neighbors.
-- **Merge via edge creation**: Creating an edge between nodes of two different agglomerate skeletons while the proofreading tool is active merges the two agglomerates.
-- **Split via edge deletion**: Deleting an edge between two nodes of an agglomerate skeleton triggers a split of the agglomerate at that edge.
+- **Min-cut via nodes**: Right-click a node while a second node is selected and choose **Perform Min-Cut between these Nodes** to split the agglomerate along the minimum-cut path between them.
+- **Split from neighbors via nodes**: Right-click a node and choose **Split from all neighboring segments** to isolate it from all neighboring segments in the agglomerate.
+- **Merge via edge creation**: Drawing an edge between a node in one agglomerate tree and a node in another (while the proofreading tool is active) merges the two agglomerates.
+- **Split via edge deletion**: Deleting an edge between two nodes splits the agglomerate at that point.
 
-Agglomerate skeletons can be converted to normal trees via right-click in the Skeleton tab, which removes their link to the agglomerate mapping.
+Agglomerate trees can be converted to normal skeleton trees via right-click in the Skeleton tab, which removes their link to the agglomerate mapping.
 
 !!! info
     Undo and redo are not supported for proofreading operations. To revert a mistake, use **Restore Older Version** in the dropdown next to the **Save** button.
@@ -81,7 +81,7 @@ Agglomerate skeletons can be converted to normal trees via right-click in the Sk
 
 When the proofreading tool is active (and editable mappings are enabled), additional controls are available in the toolbar:
 
-- **Clear proofreading by-products**: Removes auxiliary meshes loaded during proofreading. Useful once you are done correcting a segment pair.
+- **Clear proofreading by-products**: Removes auxiliary meshes that were loaded during proofreading. Use this once you have finished correcting a segment pair.
 - **Automatic mesh loading**: When enabled, WEBKNOSSOS automatically loads a 3D mesh for each segment involved in a merge or split operation.
 - **Selective segment visibility**: When enabled, only the hovered or active segment is shown, reducing visual clutter when working on densely packed regions.
 - **Multi split mode**: Enables partition-based splitting (can also be toggled with ++m++).

@@ -74,6 +74,21 @@ export function* pushSaveQueueAsync(): Saga<never> {
       timeout: delay(PUSH_THROTTLE_TIME),
       forcePush: take("SAVE_NOW"),
     });
+
+    // Don't drain while saving is disabled or the version restore view is open.
+    // This is checked after the throttle/force-push race so it also catches the case
+    // where the restriction was applied while the race was running (e.g. the user opened
+    // version restore during the 30s window before the auto-save fires).
+    // Once allowSave=false (via DISABLE_SAVING), draining stays paused for the session.
+    while (true) {
+      const savingAllowed = yield* select(
+        (state) =>
+          state.annotation.restrictions.allowSave && !state.uiInformation.showVersionRestore,
+      );
+      if (savingAllowed) break;
+      yield* take("SET_VERSION_RESTORE_VISIBILITY");
+    }
+
     yield* put(setSaveBusyAction(true));
     const enforceEmptySaveQueue = forcePush != null;
     let shouldRetryOnConflict = true;
@@ -113,6 +128,11 @@ export function* synchronizeAnnotationWithBackend(
     // race condition where the frontend thinks that it knows about the newest
     // version when in fact somebody else saved a newer version in the meantime.
     yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
+    // Re-check: version restore may have opened while we were waiting for the newest version.
+    const shouldAbort = yield* select(
+      (state) => !state.annotation.restrictions.allowSave || state.uiInformation.showVersionRestore,
+    );
+    if (shouldAbort) return { hadConflict: false };
   }
   // Send (parts of) the save queue to the server.
   // There are three main cases:

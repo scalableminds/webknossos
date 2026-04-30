@@ -522,6 +522,24 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
     const shouldCheckForUpdatesOnServer = yield* call(shouldCheckForNewerAnnotationVersions);
     const isVersionRestoreActive = yield* select((state) => state.uiInformation.showVersionRestore);
     if (!shouldCheckForUpdatesOnServer || isVersionRestoreActive) {
+      if (ensureHasNewestVersion != null) {
+        if (isVersionRestoreActive) {
+          // Version restore is open: the action was already dequeued from the channel.
+          // Wait for a relevant state change, then re-enqueue so the callback is called
+          // once we can safely poll (after version restore closes). The take prevents
+          // a tight loop where we'd immediately dequeue and re-enqueue in every iteration.
+          yield* take([
+            "SET_VERSION_RESTORE_VISIBILITY",
+            "SET_ANNOTATION_ALLOW_UPDATE",
+            "DISABLE_SAVING",
+          ]);
+          yield* put(ensureHasNewestVersion);
+        } else {
+          // !shouldCheckForUpdatesOnServer: we already know we have the newest version
+          // (e.g. we're the sole editor). Callers can proceed immediately.
+          yield* call(fulfillAllEnsureHasNewestVersionActions, ensureHasNewestVersion, channel);
+        }
+      }
       continue;
     }
     // In live collab mode, the user could update the annotation concurrently with rebasing.

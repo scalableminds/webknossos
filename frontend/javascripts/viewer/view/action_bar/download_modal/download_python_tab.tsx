@@ -62,7 +62,11 @@ export function DownloadPythonTab({ isAnnotation }: { isAnnotation: boolean }) {
     <Flex vertical>
       <Typography.Paragraph>
         Use the{" "}
-        <a href="https://docs.webknossos.org/webknossos-py/" target="_blank" rel="noreferrer">
+        <a
+          href="https://docs.webknossos.org/webknossos-py/"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           WEBKNOSSOS Python API
         </a>{" "}
         to access this {typeName} in Python. Copy the snippets below into your project to get

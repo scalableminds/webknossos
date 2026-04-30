@@ -3,9 +3,9 @@ import { sleep } from "libs/utils";
 import { HttpResponse, http } from "msw";
 import { setupServer } from "msw/node";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { ResumableBackendMock } from "../helpers/resumable_backend_mock";
+import { makeSlowChunk1Handler, ResumableBackendMock } from "../helpers/resumable_backend_mock";
 
-describe("Resumable Use Cases (WebKnossos Patterns)", () => {
+describe("Resumable Use Cases (WEBKNOSSOS Patterns)", () => {
   let resumable: ResumableUpload;
   let backendMock: ResumableBackendMock;
 
@@ -608,6 +608,68 @@ describe("Resumable Use Cases (WebKnossos Patterns)", () => {
       expect(uploadedBytes1).toEqual(originalBytes1);
       expect(uploadedBytes2).toEqual(originalBytes2);
       expect(backendMock.getInvariantViolations()).toEqual([]);
+    });
+  });
+
+  describe("Race Condition: chunk test body-read gap", () => {
+    it("should not send a duplicate POST when uploadNextChunk is re-entered during test body read", async () => {
+      // Race condition in ResumableChunk.test():
+      //   1. GET returns 200 (chunk exists) → `tested = true` is set synchronously.
+      //   2. `await response.text()` yields — async gap before `markComplete = true`.
+      //   3. Something calls uploadNextChunk() → file.upload() finds chunk 1 "pending".
+      //   4. send() sees tested=true, skips the test check, fires a duplicate POST.
+      //   5. test() resumes → markComplete=true → complete event fires.
+      //   6. Duplicate POST still in-flight after complete.
+      //
+      // We reproduce step 3 by calling resumable.upload() a second time after we
+      // have verified that tested=true has been set (but before releasing the body).
+      // simultaneousUploads:1 avoids the double-test-request-for-chunk-1 problem
+      // that would occur with simultaneousUploads:2.
+
+      const {
+        handler,
+        trigger: releaseChunk1Body,
+        getArrived: chunk1GetArrived,
+      } = makeSlowChunk1Handler();
+      server.use(handler);
+
+      resumable = new ResumableUpload({
+        target: "/upload",
+        chunkSize: 10,
+        testChunks: true,
+        simultaneousUploads: 1,
+      });
+
+      const file = new File(["12345678901234567890"], "race.txt", { type: "text/plain" });
+      resumable.addFile(file);
+      resumable.upload();
+
+      // Wait until chunk 1's GET handler has fired (response headers are being sent).
+      await chunk1GetArrived;
+      // Give the event loop a moment for fetch() to resolve in test() and set
+      // `this.tested = true` before we proceed.
+      await sleep(10);
+
+      // Re-enter upload() to simulate what happens when another chunk finishes and
+      // calls uploadNextChunk() while chunk 1's body is still pending.
+      // isUploading() is false (chunk 1 is "pending", not "uploading"), so upload()
+      // proceeds and calls uploadNextChunk() → file.upload() → chunk1.send().
+      // send() sees tested=true → skips test → fires a duplicate POST. (RACE!)
+      resumable.upload();
+
+      // Release chunk 1's body so test() can finish: markComplete=true is set, then
+      // uploadNextChunk() is called to continue with chunk 2.
+      releaseChunk1Body();
+
+      await resumable.waitForComplete();
+      // Allow any in-flight duplicate POST to land on the backend before asserting.
+      await backendMock.waitForIdle();
+
+      // Chunk 1 existed on the server, so no POST should have been sent for it.
+      // If the race fires: uploadRequestCount=2 (chunk1 duplicate + chunk2).
+      // If fixed:          uploadRequestCount=1 (only chunk2).
+      expect(backendMock.getUploadRequestCount()).toBe(1);
+      expect(backendMock.requestLog.filter((e) => e.method === "POST").length).toBe(1);
     });
   });
 });

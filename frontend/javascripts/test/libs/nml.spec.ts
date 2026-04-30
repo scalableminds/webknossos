@@ -753,6 +753,42 @@ describe("NML", () => {
     await testThatParserThrowsWithState(duplicateGroupIdState, "duplicateGroupId");
   });
 
+  it("NML parser should correctly parse groups written as self-closing tags", async () => {
+    // Groups can appear as self-closing XML tags (e.g. <group id="1" name="Axon 1" />)
+    // instead of paired open/close tags (e.g. <group id="1" name="Axon 1"></group>).
+    // Before the fix, the tagclose event fired for self-closing tags would incorrectly
+    // pop the parent group from the stack, corrupting the group hierarchy.
+    const nmlWithSelfClosingGroups = `\
+<?xml version="1.0" encoding="UTF-8"?>
+<things>
+  <parameters>
+    <experiment name="Test Dataset" />
+  </parameters>
+  <groups>
+    <group id="1" name="1">
+      <group id="2" name="2">
+        <group id="0" name="0" />
+      </group>
+    </group>
+  </groups>
+</things>`;
+
+    const { treeGroups } = await parseNml(nmlWithSelfClosingGroups);
+
+    // Top-level groups should be group 1
+    expect(treeGroups.map((g) => g.groupId)).toEqual([1]);
+
+    // Group 1 should have group 2 as a child (not be flattened to the top level)
+    const group1 = treeGroups.find((g) => g.groupId === 1);
+    expect(group1).toBeDefined();
+    expect(group1!.children.map((c) => c.groupId)).toEqual([2]);
+
+    // Group 2 should have one child
+    const group2 = group1!.children.find((g) => g.groupId === 2);
+    expect(group2).toBeDefined();
+    expect(group2!.children).toEqual([0]);
+  });
+
   it("addTreesAndGroups reducer should assign new node and tree ids", () => {
     const action = addTreesAndGroupsAction(cloneDeep(initialSkeletonTracing.trees), []);
     const newState = SkeletonTracingReducer(initialState, action);

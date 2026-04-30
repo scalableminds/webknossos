@@ -150,11 +150,12 @@ const renderActionsForModel = (
   model: AiModel,
   onChangeSharedOrganizations: () => void,
 ) => {
-  const organizationSharingButton = model.isOwnedByUsersOrganization ? (
-    <LinkButton onClick={onChangeSharedOrganizations} icon={<TeamOutlined />}>
-      Manage Access
-    </LinkButton>
-  ) : null;
+  const organizationSharingButton =
+    model.isOwnedByUsersOrganization && !model.isPretrainedModel ? (
+      <LinkButton onClick={onChangeSharedOrganizations} icon={<TeamOutlined />}>
+        Manage Access
+      </LinkButton>
+    ) : null;
   if (model.trainingJob == null) {
     return organizationSharingButton;
   }

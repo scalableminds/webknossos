@@ -99,7 +99,11 @@ export function DownloadAnnotationTab({ onClose }: { onClose: () => void }) {
         </Col>
       </Row>
       {hasVolumeFallback && (
-        <Alert type="warning" title={messages["annotation.no_fallback_data_included"]} />
+        <Alert
+          type="warning"
+          title={messages["annotation.no_fallback_data_included"]}
+          style={{ marginTop: "var(--ant-margin-sm)" }}
+        />
       )}
       <Divider />
       <Flex justify="end" gap="small">

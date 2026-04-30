@@ -63,7 +63,7 @@ function _DownloadModalView({
     <Modal
       title={`Download this ${typeName}`}
       open={isOpen}
-      width={600}
+      width={700}
       footer={null}
       onCancel={onClose}
       style={{ overflow: "visible" }}

@@ -95,7 +95,7 @@ object ZipIO extends LazyLogging with FoxImplicits {
         zip.withFile(s.normalizedName)(s.writeTo).flatMap(_ => zipIterator(sources, zip))
       } catch {
         case e: Exception =>
-          logger.debug("Error packing zip: " + TextUtils.stackTraceAsString(e))
+          logger.warn("Error packing zip: " + TextUtils.stackTraceAsString(e))
           throw new Exception(e.getMessage)
       }
     }

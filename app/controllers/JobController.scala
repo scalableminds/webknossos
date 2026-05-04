@@ -1,7 +1,7 @@
 package controllers
 
 import play.silhouette.api.Silhouette
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
+import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, JsonHelper}
 import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, DatasetService}
@@ -20,7 +20,6 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.webknossos.datastore.models.{LengthUnit, VoxelSize}
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, FullAxisOrder, NDBoundingBox}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
@@ -142,35 +141,6 @@ class JobController @Inject()(jobDAO: JobDAO,
       js <- jobService.publicWrites(job)
     } yield Ok(js)
   }
-
-  // Note that the dataset has to be registered by reserveUpload via the datastore first.
-  def runConvertToWkwJob(datasetId: ObjectId, scale: String, unit: Option[String]): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
-      log(Some(slackNotificationService.noticeFailedJobRequest)) {
-        for {
-          dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
-          voxelSizeFactor <- Vec3Double.fromUriLiteral(scale).toFox
-          voxelSizeUnit <- Fox.runOptional(unit)(u => LengthUnit.fromString(u).toFox)
-          voxelSize = VoxelSize.fromFactorAndUnitWithDefault(voxelSizeFactor, voxelSizeUnit)
-          organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Messages(
-            "organization.notFound",
-            dataset._organization)
-          _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.convertToWkw.notAllowed.organization" ~> FORBIDDEN
-          command = JobCommand.convert_to_wkw
-          commandArgs = Json.obj(
-            "organization_id" -> organization._id,
-            "organization_display_name" -> organization.name,
-            "dataset_name" -> dataset.name,
-            "dataset_id" -> dataset._id,
-            "dataset_directory_name" -> dataset.directoryName,
-            "voxel_size_factor" -> voxelSize.factor.toUriLiteral,
-            "voxel_size_unit" -> voxelSize.unit
-          )
-          job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunCubing"
-          js <- jobService.publicWrites(job)
-        } yield Ok(js)
-      }
-    }
 
   def runComputeMeshFileJob(datasetId: ObjectId,
                             layerName: String,

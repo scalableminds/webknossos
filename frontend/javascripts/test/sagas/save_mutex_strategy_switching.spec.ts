@@ -26,7 +26,6 @@ describe("Save Mutex Saga collaboration mode switching", () => {
     });
     await task.toPromise();
     expect(hasRootSagaCrashed()).toBe(false);
-    console.log("Dispatching restartSagaAction");
     vi.clearAllMocks();
   });
 

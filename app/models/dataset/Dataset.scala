@@ -395,7 +395,10 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
           val queriedId: String = queryTokens.headOption.getOrElse("")
           q"_id = $queriedId"
         } else {
-          SqlToken.joinBySeparator(queryTokens.map(queryToken => q"POSITION($queryToken IN LOWER(name)) > 0"), " AND ")
+          SqlToken.joinBySeparator(
+            queryTokens.map(queryToken =>
+              q"(POSITION($queryToken IN LOWER(name)) > 0 OR POSITION($queryToken IN LOWER(directoryName)) > 0)"),
+            " AND ")
         }
     }
 

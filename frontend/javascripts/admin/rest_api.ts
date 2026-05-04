@@ -808,8 +808,10 @@ export function getUpdateActionLog(
     if (newestVersion != null) {
       params.set("newestVersion", newestVersion.toString());
     }
-    const log: APIUpdateActionBatch[] = await Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
+    const log: APIUpdateActionBatch[] = await retryAsyncFunction(() =>
+      Request.receiveJSON(
+        `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
+      ),
     );
 
     if (sortAscending) {
@@ -823,10 +825,12 @@ export function getNewestVersionForAnnotation(
   tracingStoreUrl: string,
   annotationId: string,
 ): Promise<number> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/annotation/${annotationId}/newestVersion?token=${token}`,
-    ).then((obj) => obj.version),
+  return retryAsyncFunction(() =>
+    doWithToken((token) =>
+      Request.receiveJSON(
+        `${tracingStoreUrl}/tracings/annotation/${annotationId}/newestVersion?token=${token}`,
+      ).then((obj) => obj.version),
+    ),
   );
 }
 

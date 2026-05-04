@@ -70,9 +70,7 @@ type UpdateNavigationListAction = ReturnType<typeof updateNavigationListAction>;
 type ApplySkeletonUpdateActionsFromServerAction = ReturnType<
   typeof applySkeletonUpdateActionsFromServerAction
 >;
-export type LoadAgglomerateTreeFromIdAction = ReturnType<
-  typeof loadAgglomerateTreeFromIdAction
->;
+export type LoadAgglomerateTreeFromIdAction = ReturnType<typeof loadAgglomerateTreeFromIdAction>;
 export type LoadAgglomerateTreeAtPositionAction = ReturnType<
   typeof loadAgglomerateTreeAtPositionAction
 >;

@@ -181,10 +181,10 @@ class EditableMappingController @Inject()(
           editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId, version)
           remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerForVolumeTracing(tracing, annotationId)
           agglomerateTreeBytes <- editableMappingService.getAgglomerateTreeWithFallback(tracingId,
-                                                                                                tracing.version,
-                                                                                                editableMappingInfo,
-                                                                                                remoteFallbackLayer,
-                                                                                                agglomerateId)
+                                                                                        tracing.version,
+                                                                                        editableMappingInfo,
+                                                                                        remoteFallbackLayer,
+                                                                                        agglomerateId)
         } yield Ok(agglomerateTreeBytes)
       }
     }

@@ -298,10 +298,10 @@ class EditableMappingService @Inject()(
     } yield editableMappingForSegmentIds ++ baseMappingSubset
 
   def getAgglomerateTreeWithFallback(tracingId: String,
-                                         version: Long,
-                                         editableMappingInfo: EditableMappingInfo,
-                                         remoteFallbackLayer: RemoteFallbackLayer,
-                                         agglomerateId: Long)(implicit tc: TokenContext): Fox[Array[Byte]] =
+                                     version: Long,
+                                     editableMappingInfo: EditableMappingInfo,
+                                     remoteFallbackLayer: RemoteFallbackLayer,
+                                     agglomerateId: Long)(implicit tc: TokenContext): Fox[Array[Byte]] =
     for {
       agglomerateGraphBox <- getAgglomerateGraphForId(tracingId, version, agglomerateId).shiftBox
       _ <- Fox.fromBool(agglomerateGraphBox.map(_.segments.nonEmpty).getOrElse(true)) ?~> "annotation.editableMapping.getAgglomerateTree.empty"
@@ -310,15 +310,13 @@ class EditableMappingService @Inject()(
           Fox.successful(agglomerateGraphToTree(tracingId, agglomerateGraph, agglomerateId))
         case Empty =>
           remoteDatastoreClient.getAgglomerateTree(remoteFallbackLayer,
-                                                       editableMappingInfo.baseMappingName,
-                                                       agglomerateId)
+                                                   editableMappingInfo.baseMappingName,
+                                                   agglomerateId)
         case f: Failure => f.toFox
       }
     } yield skeletonBytes
 
-  private def agglomerateGraphToTree(tracingId: String,
-                                         graph: AgglomerateGraph,
-                                         agglomerateId: Long): Array[Byte] = {
+  private def agglomerateGraphToTree(tracingId: String, graph: AgglomerateGraph, agglomerateId: Long): Array[Byte] = {
     val nodeIdStartAtOneOffset = 1
     val nodes = graph.positions.zipWithIndex.map {
       case (pos, idx) =>

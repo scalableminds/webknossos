@@ -1,5 +1,5 @@
 import { CopyOutlined } from "@ant-design/icons";
-import { Button, Divider, Row, Typography } from "antd";
+import { Button, Divider, Flex, Row, Typography } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
 
@@ -8,32 +8,26 @@ export function Hint({
   style,
 }: {
   children: React.ReactNode;
-  style: React.CSSProperties;
+  style?: React.CSSProperties;
 }) {
-  return (
-    <div style={{ ...style, fontSize: 12, color: "var(--ant-color-text-secondary)" }}>
-      {children}
-    </div>
-  );
+  return <Typography.Text style={{ ...style, fontSize: 12 }}>{children}</Typography.Text>;
 }
 
 export function MoreInfoHint() {
   return (
-    <Hint
-      style={{
-        margin: "0px 12px 0px 12px",
-      }}
-    >
-      For more information on how to work with annotations and datasets visit the{" "}
-      <a
-        href="https://docs.webknossos.org/webknossos/data/export_ui.html"
-        target="_blank"
-        rel="noreferrer"
-      >
-        user documentation
-      </a>
-      .
-    </Hint>
+    <Flex justify="center">
+      <Hint>
+        For more information on how to work with annotations and datasets visit the{" "}
+        <a
+          href="https://docs.webknossos.org/webknossos/data/export_ui.html"
+          target="_blank"
+          rel="noreferrer"
+        >
+          user documentation
+        </a>
+        .
+      </Hint>
+    </Flex>
   );
 }
 
@@ -61,7 +55,7 @@ export function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: (
         }}
         icon={<CopyOutlined />}
       />
-      {code}
+      <code>{code}</code>
     </pre>
   );
 }
@@ -69,20 +63,11 @@ export function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: (
 export function WorkerInfo() {
   return (
     <Row>
-      <Divider
-        style={{
-          margin: "18px 0",
-        }}
-      />
-      <Typography.Text
-        style={{
-          margin: "0 6px 12px",
-        }}
-        type="warning"
-      >
+      <Divider />
+      <Typography.Paragraph type="warning">
         {messages["annotation.export_no_worker"]}
         <a href="mailto:hello@webknossos.org">hello@webknossos.org.</a>
-      </Typography.Text>
+      </Typography.Paragraph>
     </Row>
   );
 }

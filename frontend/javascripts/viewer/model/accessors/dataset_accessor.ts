@@ -727,9 +727,7 @@ export function getEffectiveIntensityRange(
   return layerConfiguration.intensityRange || defaultIntensityRange;
 }
 
-// Note that `hasSegmentIndex` needs to be loaded first (otherwise, the returned
-// value will be undefined). Dispatch an ensureSegmentIndexIsLoadedAction to make
-// sure this info is fetched.
+/** Returns whether the segment index is available for the given layer. Requires `hasSegmentIndex` to be loaded first — dispatch `ensureSegmentIndexIsLoadedAction` before calling this. */
 export function getMaybeSegmentIndexAvailability(
   dataset: APIDataset,
   layerName: string | null | undefined,
@@ -737,7 +735,15 @@ export function getMaybeSegmentIndexAvailability(
   if (layerName == null) {
     return false;
   }
-  return dataset.dataSource.dataLayers.find((layer) => layer.name === layerName)?.hasSegmentIndex;
+  const availability = dataset.dataSource.dataLayers.find(
+    (layer) => layer.name === layerName,
+  )?.hasSegmentIndex;
+  if (availability == null) {
+    console.warn(
+      "getMaybeSegmentIndexAvailability: hasSegmentIndex is not loaded yet. Dispatch ensureSegmentIndexIsLoadedAction first.",
+    );
+  }
+  return availability;
 }
 
 function getURLSanitizedName(dataset: APIDataset | APIDatasetCompact | { name: string }) {

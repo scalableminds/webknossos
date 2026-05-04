@@ -30,6 +30,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Use HTTP/2 for object storage requests when loading from Hetzner servers. [#9475](https://github.com/scalableminds/webknossos/pull/9475)
 - Adjusted adhoc mesh generation to use parallel requests for loading neighboring chunks. [#9475](https://github.com/scalableminds/webknossos/pull/9475)
 - Improved robustness when network connectivity is unstable. [#9551](https://github.com/scalableminds/webknossos/pull/9551)
+- Updated revoking credit transaction comments to include the month and year of the grant matching the format used by new revoking transactions. [#9435](https://github.com/scalableminds/webknossos/pull/9435)
 
 ### Fixed
 - Fixed that jumping to a mesh's position was off. [#9461](https://github.com/scalableminds/webknossos/pull/9461)
@@ -43,6 +44,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed the import of skeleton trees which could lead to an incorrect hierarchy if nested groups were present. [#9535](https://github.com/scalableminds/webknossos/pull/9535)
 - Fixed that dataset deletion was offered in the dashboard even when disabled in the config. The backend still correctly rejected it. [#9536](https://github.com/scalableminds/webknossos/pull/9536)
 - Fixed inconsistent display of segment statistics in right-click context menu [#9545](https://github.com/scalableminds/webknossos/pull/9545)
+- Fixed incorrect ASSERT statement in the enforce_non_negative_balance function. [#9435](https://github.com/scalableminds/webknossos/pull/9435)
 
 ## [26.04.1](https://github.com/scalableminds/webknossos/releases/tag/26.04.1) - 2026-04-23
 [Commits](https://github.com/scalableminds/webknossos/compare/26.04.0...26.04.1)

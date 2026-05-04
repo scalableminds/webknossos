@@ -9,9 +9,6 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 ## [26.05.0](https://github.com/scalableminds/webknossos/releases/tag/26.05.0) - 2026-05-04
 [Commits](https://github.com/scalableminds/webknossos/compare/26.04.1...26.05.0)
 
-- Fixed incorrect ASSERT statement in the enforce_non_negative_balance function.
-- Updated revoking credit transaction comments to include the month and year of the grant matching the format used by new revoking transactions.
-
 ### Postgres Evolutions
 - [160-fix-revoking-credit-transactions.sql](schema/evolutions/160-fix-revoking-credit-transactions.sql)
 

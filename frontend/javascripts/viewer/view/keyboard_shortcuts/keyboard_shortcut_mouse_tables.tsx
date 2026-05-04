@@ -20,6 +20,11 @@ type MouseShortcutEntry = {
 
 const mouseShortcutColumns = [
   {
+    title: "Action",
+    dataIndex: "action",
+    key: "action",
+  },
+  {
     title: "Shortcuts",
     dataIndex: "shortcuts",
     key: "shortcuts",
@@ -33,11 +38,6 @@ const mouseShortcutColumns = [
         ))}
       </div>
     ),
-  },
-  {
-    title: "Action",
-    dataIndex: "action",
-    key: "action",
   },
 ];
 

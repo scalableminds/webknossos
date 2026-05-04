@@ -170,6 +170,19 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
 
   const keyboardShortcutsColumns = [
     {
+      title: "Action",
+      dataIndex: "shortcutId",
+      width: 400,
+      key: "shortcutId",
+      render: (shortcutId: string) => {
+        const metaInfo =
+          ALL_KEYBOARD_SHORTCUT_META_INFOS[
+            shortcutId as keyof typeof ALL_KEYBOARD_SHORTCUT_META_INFOS
+          ];
+        return metaInfo?.description ?? shortcutId;
+      },
+    },
+    {
       title: "Shortcuts",
       dataIndex: "combos",
       key: "combos",
@@ -225,19 +238,6 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
           </div>
         </>
       ),
-    },
-    {
-      title: "Action",
-      dataIndex: "shortcutId",
-      width: 400,
-      key: "shortcutId",
-      render: (shortcutId: string) => {
-        const metaInfo =
-          ALL_KEYBOARD_SHORTCUT_META_INFOS[
-            shortcutId as keyof typeof ALL_KEYBOARD_SHORTCUT_META_INFOS
-          ];
-        return metaInfo?.description ?? shortcutId;
-      },
     },
   ];
 

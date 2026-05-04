@@ -73,6 +73,14 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       ) ++ adminOnlyInfo
   }
 
+  def assertUsedStorageNotExceeded(organization: Organization,
+                                   additionalRequestedStorage: Option[Long] = None): Fox[Unit] =
+    for {
+      usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
+      _ <- Fox.runOptional(organization.includedStorageBytes)(includedStorage =>
+        Fox.fromBool(usedStorageBytes + additionalRequestedStorage.getOrElse(0L) <= includedStorage)) ?~> "organization.storageExceeded"
+    } yield ()
+
   def findOneByInviteOrDefault(inviteOpt: Option[Invite])(implicit ctx: DBAccessContext): Fox[Organization] =
     inviteOpt match {
       case Some(invite) => organizationDAO.findOne(invite._organization) ?~> "organization.notFound.byInvite"

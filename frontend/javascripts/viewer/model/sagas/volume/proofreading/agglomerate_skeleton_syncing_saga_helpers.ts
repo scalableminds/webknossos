@@ -232,7 +232,7 @@ function* updateAffectedAgglomerateTrees(
 }
 
 // This function is needed to synchronize the agglomerate trees which need to be updated
-// in case they are present in the skelton tracing.
+// in case they are present in the skeleton tracing.
 export function* syncAgglomerateSkeletonsAfterMergeAction(
   sourceAgglomerateIdBeforeMerge: number,
   targetAgglomerateIdBeforeMerge: number,

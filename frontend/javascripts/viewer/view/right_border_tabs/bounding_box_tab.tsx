@@ -35,7 +35,7 @@ import {
 import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox } from "viewer/store";
-import DownloadModalView from "../action_bar/download_modal_view";
+import DownloadModalView from "../action_bar/download_modal/download_modal_view";
 import ButtonComponent from "../components/button_component";
 import { getContextMenuPositionFromEvent } from "../context_menu/helpers";
 import UserBoundingBoxInput from "../left_border_tabs/components/user_boundingbox_input";

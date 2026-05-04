@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import update from "immutability-helper";
 import type { RequestOptions, RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";
-import ResumableUpload from "libs/resumable-upload";
+import ResumableUpload from "libs/resumable_upload/resumable_upload";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
 import {
@@ -808,8 +808,10 @@ export function getUpdateActionLog(
     if (newestVersion != null) {
       params.set("newestVersion", newestVersion.toString());
     }
-    const log: APIUpdateActionBatch[] = await Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
+    const log: APIUpdateActionBatch[] = await retryAsyncFunction(() =>
+      Request.receiveJSON(
+        `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
+      ),
     );
 
     if (sortAscending) {
@@ -823,10 +825,12 @@ export function getNewestVersionForAnnotation(
   tracingStoreUrl: string,
   annotationId: string,
 ): Promise<number> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/annotation/${annotationId}/newestVersion?token=${token}`,
-    ).then((obj) => obj.version),
+  return retryAsyncFunction(() =>
+    doWithToken((token) =>
+      Request.receiveJSON(
+        `${tracingStoreUrl}/tracings/annotation/${annotationId}/newestVersion?token=${token}`,
+      ).then((obj) => obj.version),
+    ),
   );
 }
 

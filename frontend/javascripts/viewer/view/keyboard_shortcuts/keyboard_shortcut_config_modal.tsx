@@ -403,7 +403,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       onOk={handleSave}
       width={1000}
       style={{ padding: 20 }}
-      title="Keyboard Shortcut Configuration"
+      title="Shortcut Configuration"
       styles={{
         body: {
           maxHeight: "70vh",

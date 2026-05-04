@@ -21,8 +21,8 @@ import com.scalableminds.webknossos.datastore.services.uploading.{
 import com.typesafe.scalalogging.LazyLogging
 import models.dataset._
 import models.dataset.credential.CredentialDAO
-import models.job.JobDAO
-import models.organization.OrganizationDAO
+import models.job.{JobDAO, JobService}
+import models.organization.{OrganizationDAO, OrganizationService}
 import models.storage.UsedStorageService
 import models.team.TeamDAO
 import models.user.UserDAO
@@ -41,11 +41,13 @@ class WKRemoteDataStoreController @Inject()(
     dataStoreDAO: DataStoreDAO,
     organizationDAO: OrganizationDAO,
     usedStorageService: UsedStorageService,
+    organizationService: OrganizationService,
     layerToLinkService: LayerToLinkService,
     datasetDAO: DatasetDAO,
     userDAO: UserDAO,
     teamDAO: TeamDAO,
     jobDAO: JobDAO,
+    jobService: JobService,
     credentialDAO: CredentialDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
@@ -63,9 +65,7 @@ class WKRemoteDataStoreController @Inject()(
           organization <- organizationDAO.findOne(uploadInfo.organization)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             uploadInfo.organization) ~> NOT_FOUND
-          usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
-          _ <- Fox.runOptional(organization.includedStorageBytes)(includedStorage =>
-            Fox.fromBool(usedStorageBytes + uploadInfo.totalFileSizeInBytes.getOrElse(0L) <= includedStorage)) ?~> "dataset.upload.storageExceeded" ~> FORBIDDEN
+          _ <- organizationService.assertUsedStorageNotExceeded(organization, uploadInfo.totalFileSizeInBytes) ?~> "dataset.upload.storageExceeded" ~> FORBIDDEN
           _ <- Fox.fromBool(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(uploadInfo.name)
           _ <- Fox.fromBool(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataset.upload.Datastore.restricted"
@@ -123,10 +123,11 @@ class WKRemoteDataStoreController @Inject()(
                           token: String,
                           datasetId: ObjectId): Action[ReportDatasetUploadParameters] =
     Action.async(validateJson[ReportDatasetUploadParameters]) { implicit request =>
+      implicit val ctx: DBAccessContext = GlobalAccessContext
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           user <- bearerTokenService.userForToken(token) ~> FORBIDDEN
-          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           _ = datasetService.trackNewDataset(dataset,
                                              user,
                                              request.body.needsConversion,
@@ -142,9 +143,17 @@ class WKRemoteDataStoreController @Inject()(
                                         dataset._dataStore,
                                         dataSource.hashCode(),
                                         dataSource,
-                                        isUsable = true)(GlobalAccessContext)
+                                        isUsable = true)
           }
-          _ <- Fox.runIf(!request.body.needsConversion)(usedStorageService.refreshStorageReportForDataset(dataset))
+          updated <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          _ <- Fox.runIf(!request.body.needsConversion)(usedStorageService.refreshStorageReportForDataset(updated))
+          _ <- Fox.runIf(!request.body.needsConversion)(datasetService.scanRealpathsIfVirtual(updated))
+          _ <- Fox.runIf(request.body.needsConversion) {
+            for {
+              voxelSizeFactor <- request.body.voxelSizeFactor.toFox ?~> "dataset.upload.needsConversion.missingVoxelSize"
+              _ <- jobService.submitConvertToWkwJob(dataset, user, voxelSizeFactor, request.body.voxelSizeUnit)
+            } yield ()
+          }
         } yield Ok
       }
     }
@@ -163,6 +172,7 @@ class WKRemoteDataStoreController @Inject()(
   def updateAll(name: String, key: String, organizationId: Option[String]): Action[List[DataSource]] =
     Action.async(validateJson[List[DataSource]]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
+        implicit val ctx: DBAccessContext = GlobalAccessContext
         val dataSources = request.body
         for {
           before <- Instant.nowFox
@@ -170,7 +180,7 @@ class WKRemoteDataStoreController @Inject()(
           _ = logger.info(
             s"Received dataset list from datastore ${dataStore.name} $selectedOrgaLabel: " +
               s"${dataSources.count(_.isUsable)} active, ${dataSources.count(!_.isUsable)} inactive")
-          existingIds <- datasetService.updateDataSources(dataStore, dataSources)(GlobalAccessContext)
+          existingIds <- datasetService.updateDataSources(dataStore, dataSources)
           _ <- datasetService.deactivateUnreportedDataSources(existingIds, dataStore, organizationId)
           _ = if (Instant.since(before) > (30 seconds))
             Instant.logSince(before,
@@ -183,8 +193,9 @@ class WKRemoteDataStoreController @Inject()(
   def updateOne(name: String, key: String): Action[DataSource] =
     Action.async(validateJson[DataSource]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
+        implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
-          _ <- datasetService.updateDataSources(dataStore, List(request.body))(GlobalAccessContext)
+          _ <- datasetService.updateDataSources(dataStore, List(request.body))
         } yield Ok
       }
     }

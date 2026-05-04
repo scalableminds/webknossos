@@ -395,7 +395,10 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
           val queriedId: String = queryTokens.headOption.getOrElse("")
           q"_id = $queriedId"
         } else {
-          SqlToken.joinBySeparator(queryTokens.map(queryToken => q"POSITION($queryToken IN LOWER(name)) > 0"), " AND ")
+          SqlToken.joinBySeparator(
+            queryTokens.map(queryToken =>
+              q"(POSITION($queryToken IN LOWER(name)) > 0 OR POSITION($queryToken IN LOWER(directoryName)) > 0)"),
+            " AND ")
         }
     }
 
@@ -798,13 +801,15 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       mag <- Vec3Int.fromList(parseArrayLiteral(magArrayLiteral).map(_.toInt)).toFox ?~> "Could not parse mag."
     } yield mag
 
-  def findMagLocatorsForLayer(datasetId: ObjectId, dataLayerName: String): Fox[List[MagLocator]] =
+  def findMagLocatorsForLayer(datasetId: ObjectId,
+                              dataLayerName: String,
+                              useRealPaths: Boolean): Fox[List[MagLocator]] =
     for {
       rows <- run(
         q"""SELECT _dataset, dataLayerName, mag, path, realPath, hasLocalData, axisOrder, channelIndex, credentialId, uploadToPathIsPending
        FROM webknossos.dataset_mags WHERE _dataset = $datasetId AND dataLayerName = $dataLayerName AND NOT uploadToPathIsPending"""
           .as[DatasetMagsRow])
-      magLocators <- Fox.combined(rows.map(parseMagLocator))
+      magLocators <- Fox.combined(rows.map(parseMagLocator(_, useRealPaths)))
     } yield magLocators
 
   // Note equivalent in DatasetLayerAttachmentsDAO
@@ -934,14 +939,14 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
        """.as[ObjectId])
   }
 
-  private def parseMagLocator(row: DatasetMagsRow): Fox[MagLocator] =
+  private def parseMagLocator(row: DatasetMagsRow, useRealPaths: Boolean): Fox[MagLocator] =
     for {
       mag <- parseMag(row.mag)
       axisOrderParsed = row.axisorder match {
         case Some(axisOrder) => JsonHelper.parseAs[AxisOrder](axisOrder).toOption
         case None            => None
       }
-      realPathWithFallback = row.realpath.orElse(row.path)
+      realPathWithFallback = if (useRealPaths) row.realpath.orElse(row.path) else row.path
       path <- Fox.runOptional(realPathWithFallback)(UPath.fromString(_).toFox)
     } yield
       MagLocator(
@@ -1010,14 +1015,16 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
                                 datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
-  private def parseRow(row: DatasetLayersRow, datasetId: ObjectId): Fox[StaticLayer] = {
+  private def parseAndFillLayerRow(row: DatasetLayersRow,
+                                   datasetId: ObjectId,
+                                   useRealPaths: Boolean): Fox[StaticLayer] = {
     val result: Fox[Fox[StaticLayer]] = for {
       category <- LayerCategory.fromString(row.category).toFox ?~> "Could not parse Layer Category"
       boundingBox <- BoundingBox
         .fromSQL(parseArrayLiteral(row.boundingbox).map(_.toInt))
         .toFox ?~> "Could not parse bounding box"
       elementClass <- ElementClass.fromString(row.elementclass).toFox ?~> "Could not parse Layer ElementClass"
-      magLocators <- datasetMagsDAO.findMagLocatorsForLayer(datasetId, row.name) ?~> "Could not find magLocators for layer"
+      magLocators <- datasetMagsDAO.findMagLocatorsForLayer(datasetId, row.name, useRealPaths) ?~> "Could not find magLocators for layer"
       defaultViewConfigurationOpt <- Fox.runOptional(row.defaultviewconfiguration)(
         JsonHelper.parseAs[LayerViewConfiguration](_).toFox)
       adminViewConfigurationOpt <- Fox.runOptional(row.adminviewconfiguration)(
@@ -1027,7 +1034,7 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
       coordinateTransformationsOpt = if (coordinateTransformations.isEmpty) None else Some(coordinateTransformations)
       additionalAxes <- datasetLayerAdditionalAxesDAO.findAllForDatasetAndDataLayerName(datasetId, row.name)
       additionalAxesOpt = if (additionalAxes.isEmpty) None else Some(additionalAxes)
-      attachments <- datasetLayerAttachmentsDAO.findAllForDatasetAndDataLayerName(datasetId, row.name)
+      attachments <- datasetLayerAttachmentsDAO.findAllForDatasetAndDataLayerName(datasetId, row.name, useRealPaths)
       attachmentsOpt = if (attachments.isEmpty) None else Some(attachments)
       dataFormat <- row.dataformat.flatMap(df => DataFormat.fromString(df)).toFox
     } yield {
@@ -1069,14 +1076,14 @@ class DatasetLayerDAO @Inject()(sqlClient: SqlClient,
     result.flatten
   }
 
-  def findAllForDataset(datasetId: ObjectId): Fox[List[StaticLayer]] =
+  def findAllForDataset(datasetId: ObjectId, useRealPaths: Boolean = true): Fox[List[StaticLayer]] =
     for {
       rows <- run(q"""SELECT _dataset, name, category, elementClass, boundingBox, largestSegmentId, mappings,
                           defaultViewConfiguration, adminViewConfiguration, numChannels, dataFormat
                       FROM webknossos.dataset_layers
                       WHERE _dataset = $datasetId
                       ORDER BY name""".as[DatasetLayersRow])
-      rowsParsed <- Fox.combined(rows.toList.map(parseRow(_, datasetId)))
+      rowsParsed <- Fox.combined(rows.toList.map(parseAndFillLayerRow(_, datasetId, useRealPaths)))
     } yield rowsParsed
 
   private def insertLayerQuery(datasetId: ObjectId, layer: StaticLayer): SqlAction[Int, NoStream, Effect] =
@@ -1191,22 +1198,25 @@ case class StorageRelevantDataLayerAttachment(
 class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
-  private def parseRow(row: DatasetLayerAttachmentsRow): Fox[LayerAttachment] =
+  private def parseAttachmentRow(row: DatasetLayerAttachmentsRow, useRealPaths: Boolean): Fox[LayerAttachment] =
     for {
       dataFormat <- LayerAttachmentDataformat.fromString(row.dataformat).toFox ?~> "Could not parse data format"
-      realPathWithFallback = row.realpath.getOrElse(row.path)
+      realPathWithFallback = if (useRealPaths) row.realpath.getOrElse(row.path) else (row.path)
       path <- UPath.fromString(realPathWithFallback).toFox
     } yield LayerAttachment(row.name, path, dataFormat)
 
-  private def parseAttachments(rows: List[DatasetLayerAttachmentsRow]): Fox[AttachmentWrapper] =
+  private def parseAttachments(rows: List[DatasetLayerAttachmentsRow], useRealPaths: Boolean): Fox[AttachmentWrapper] =
     for {
-      meshFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.mesh.toString))(parseRow)
+      meshFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.mesh.toString))(
+        parseAttachmentRow(_, useRealPaths))
       agglomerateFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.agglomerate.toString))(
-        parseRow)
-      connectomeFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.connectome.toString))(parseRow)
+        parseAttachmentRow(_, useRealPaths))
+      connectomeFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.connectome.toString))(
+        parseAttachmentRow(_, useRealPaths))
       segmentIndexFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.segmentIndex.toString))(
-        parseRow)
-      cumsumFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.cumsum.toString))(parseRow)
+        parseAttachmentRow(_, useRealPaths))
+      cumsumFiles <- Fox.serialCombined(rows.filter(_.`type` == LayerAttachmentType.cumsum.toString))(
+        parseAttachmentRow(_, useRealPaths))
     } yield
       AttachmentWrapper(
         agglomerates = agglomerateFiles,
@@ -1216,7 +1226,9 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
         cumsum = cumsumFiles.headOption
       )
 
-  def findAllForDatasetAndDataLayerName(datasetId: ObjectId, layerName: String): Fox[AttachmentWrapper] =
+  def findAllForDatasetAndDataLayerName(datasetId: ObjectId,
+                                        layerName: String,
+                                        useRealPaths: Boolean): Fox[AttachmentWrapper] =
     for {
       rows <- run(
         q"""SELECT _dataset, layerName, name, path, realpath, hasLocalData, type, dataFormat, uploadToPathIsPending
@@ -1224,7 +1236,7 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
                 WHERE _dataset = $datasetId
                 AND layerName = $layerName
                 AND NOT uploadToPathIsPending""".as[DatasetLayerAttachmentsRow])
-      attachments <- parseAttachments(rows.toList) ?~> "Could not parse attachments"
+      attachments <- parseAttachments(rows.toList, useRealPaths) ?~> "Could not parse attachments"
     } yield attachments
 
   def updateAttachments(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {

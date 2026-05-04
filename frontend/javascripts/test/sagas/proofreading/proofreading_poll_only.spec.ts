@@ -60,7 +60,7 @@ describe.each(
     // Set collab mode to concurrent to be able to save the updates about initializing the mapping.
     yield put(setCollaborationModeAction("Concurrent"));
     yield call(() => api.tracing.save());
-    context.receivedDataPerSaveRequest.length = 0;
+    context.receivedDataPerSaveRequest.length = 0; // Clear array in-place.
 
     // Now switch to a poll only mode: Simulate a different user in a different client session than the owner
     // and enable the actual collaborationMode that should be tested.

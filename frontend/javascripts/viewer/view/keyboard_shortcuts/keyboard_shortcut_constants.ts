@@ -6,7 +6,6 @@ export type KeyboardShortcutId =
   // General
   | "SWITCH_VIEWMODE_PLANE"
   | "SWITCH_VIEWMODE_ARBITRARY"
-  | "SWITCH_VIEWMODE_ARBITRARY_PLANE"
   | "CYCLE_VIEWMODE"
   | "TOGGLE_SEGMENTATION"
   | "SAVE"
@@ -122,13 +121,8 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
     "GENERAL",
   ),
   SWITCH_VIEWMODE_ARBITRARY: new KeyboardShortcutMetaInfo(
-    "View in plane arbitrary mode",
+    "View in arbitrary mode",
     [[["Shift", "2"]]],
-    "GENERAL",
-  ),
-  SWITCH_VIEWMODE_ARBITRARY_PLANE: new KeyboardShortcutMetaInfo(
-    "View in plane arbitrary plane mode",
-    [[["Shift", "3"]]],
     "GENERAL",
   ),
   CYCLE_VIEWMODE: new KeyboardShortcutMetaInfo("Cycle through viewing modes", [[["m"]]], "GENERAL"),

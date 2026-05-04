@@ -291,11 +291,6 @@ class Controller extends PureComponent<PropsWithRouter, State> {
           Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY));
         },
       },
-      SWITCH_VIEWMODE_ARBITRARY_PLANE: {
-        onPressed: () => {
-          Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY_PLANE));
-        },
-      },
       CYCLE_VIEWMODE: {
         onPressed: () => {
           // rotate allowed modes

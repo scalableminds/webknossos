@@ -63,7 +63,7 @@ This option is available from any viewport and from agglomerate tree node contex
 
 ## Working with Agglomerate Trees
 
-Agglomerate trees represent the supervoxel graph of an agglomerate as a tree of connected nodes. Load one by pressing ++shift++ + middle-click on a segment, or via right-click → **Import Agglomerate Tree**. Trees are automatically updated after proofreading operations.
+Agglomerate trees represent the supervoxel graph of an agglomerate as a tree of connected nodes in the skeleton layer. Load one by pressing ++shift++ + middle-click on a segment, or via right-click → **Import Agglomerate Tree**. Trees are automatically updated after proofreading operations.
 
 In addition to the context-menu interactions described above, agglomerate trees support fine-grained control:
 

@@ -4,7 +4,6 @@ import features from "features";
 import type { Action, BorderNode, TabNode, TabSetNode } from "flexlayout-react";
 import { Actions, DockLocation, Layout as FlexLayoutComponent, Model } from "flexlayout-react";
 import { InputKeyboard } from "libs/input";
-import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import Toast from "libs/toast";
 import cloneDeep from "lodash-es/cloneDeep";
 import messages from "messages";
@@ -17,6 +16,7 @@ import type { BorderTabType, OrthoView } from "viewer/constants";
 import { ArbitraryViews, BorderTabs, OrthoViews } from "viewer/constants";
 import { setBorderOpenStatusAction } from "viewer/model/actions/ui_actions";
 import { setViewportAction } from "viewer/model/actions/view_mode_actions";
+import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { BorderOpenStatus, BusyBlockingInfo, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import InputCatcher from "viewer/view/input_catcher";
@@ -39,7 +39,10 @@ import SkeletonTabView from "viewer/view/right_border_tabs/trees_tab/skeleton_ta
 import Statusbar from "viewer/view/statusbar";
 import TDViewControls from "viewer/view/td_view_controls";
 import BorderToggleButton from "../components/border_toggle_button";
-import type { KeyboardShortcutHandlerMap, KeyboardShortcutsMap } from "../keyboard_shortcuts/keyboard_shortcut_types";
+import type {
+  KeyboardShortcutHandlerMap,
+  KeyboardShortcutsMap,
+} from "../keyboard_shortcuts/keyboard_shortcut_types";
 import { buildKeyBindingsFromConfig } from "../keyboard_shortcuts/keyboard_shortcut_utils";
 import {
   adjustModelToBorderOpenStatus,

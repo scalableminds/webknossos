@@ -113,9 +113,9 @@ export class ResumableChunk {
       // Status 200: chunk already exists on server
       // Status 204: chunk does not exist on server, please upload
       if (response.ok && response.status !== 204) {
+        this.markComplete = true;
         this._message = await response.text();
         this.callback("success", this._message);
-        this.markComplete = true;
         this.resumableObj.uploadNextChunk();
       } else {
         this.send();

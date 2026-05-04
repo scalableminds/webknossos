@@ -123,10 +123,11 @@ class WKRemoteDataStoreController @Inject()(
                           token: String,
                           datasetId: ObjectId): Action[ReportDatasetUploadParameters] =
     Action.async(validateJson[ReportDatasetUploadParameters]) { implicit request =>
+      implicit val ctx: DBAccessContext = GlobalAccessContext
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           user <- bearerTokenService.userForToken(token) ~> FORBIDDEN
-          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
           _ = datasetService.trackNewDataset(dataset,
                                              user,
                                              request.body.needsConversion,
@@ -142,9 +143,11 @@ class WKRemoteDataStoreController @Inject()(
                                         dataset._dataStore,
                                         dataSource.hashCode(),
                                         dataSource,
-                                        isUsable = true)(GlobalAccessContext)
+                                        isUsable = true)
           }
-          _ <- Fox.runIf(!request.body.needsConversion)(usedStorageService.refreshStorageReportForDataset(dataset))
+          updated <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          _ <- Fox.runIf(!request.body.needsConversion)(usedStorageService.refreshStorageReportForDataset(updated))
+          _ <- Fox.runIf(!request.body.needsConversion)(datasetService.scanRealpathsIfVirtual(updated))
           _ <- Fox.runIf(request.body.needsConversion) {
             for {
               voxelSizeFactor <- request.body.voxelSizeFactor.toFox ?~> "dataset.upload.needsConversion.missingVoxelSize"
@@ -169,6 +172,7 @@ class WKRemoteDataStoreController @Inject()(
   def updateAll(name: String, key: String, organizationId: Option[String]): Action[List[DataSource]] =
     Action.async(validateJson[List[DataSource]]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
+        implicit val ctx: DBAccessContext = GlobalAccessContext
         val dataSources = request.body
         for {
           before <- Instant.nowFox
@@ -176,7 +180,7 @@ class WKRemoteDataStoreController @Inject()(
           _ = logger.info(
             s"Received dataset list from datastore ${dataStore.name} $selectedOrgaLabel: " +
               s"${dataSources.count(_.isUsable)} active, ${dataSources.count(!_.isUsable)} inactive")
-          existingIds <- datasetService.updateDataSources(dataStore, dataSources)(GlobalAccessContext)
+          existingIds <- datasetService.updateDataSources(dataStore, dataSources)
           _ <- datasetService.deactivateUnreportedDataSources(existingIds, dataStore, organizationId)
           _ = if (Instant.since(before) > (30 seconds))
             Instant.logSince(before,
@@ -189,8 +193,9 @@ class WKRemoteDataStoreController @Inject()(
   def updateOne(name: String, key: String): Action[DataSource] =
     Action.async(validateJson[DataSource]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
+        implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
-          _ <- datasetService.updateDataSources(dataStore, List(request.body))(GlobalAccessContext)
+          _ <- datasetService.updateDataSources(dataStore, List(request.body))
         } yield Ok
       }
     }

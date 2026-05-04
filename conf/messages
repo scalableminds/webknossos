@@ -49,6 +49,7 @@ organization.creditOrder.notAuthorized=You are not authorized to order WEBKNOSSO
 organization.creditOrder.notPositive=You cannot order a negative number of WEBKNOSSOS credits.
 organization.listCreditTransactions.onlyAdmin=Only organization admins can list credit transactions.
 organization.listPlanUpdates.onlyAdmin=Only organization admins can list plan updates.
+organization.storageExceeded=The storage quota of the organization is exceeded.
 
 termsOfService.versionMismatch=Terms of service version mismatch. Current version is {0}, received acceptance for {1}
 

@@ -105,6 +105,15 @@ class DataSourceController @Inject()(
     }
   }
 
+  def scanRealPathsForVirtual(): Action[Seq[DataSource]] = Action.async(validateJson[Seq[DataSource]]) {
+    implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+        for {
+          _ <- dataSourceService.scanRealPathsForVirtual(request.body)
+        } yield Ok
+      }
+  }
+
   def reserveUpload(): Action[ReserveUploadInformation] =
     Action.async(validateJson[ReserveUploadInformation]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(

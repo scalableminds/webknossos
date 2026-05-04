@@ -77,6 +77,8 @@ class AnnotationController @Inject()(
   implicit val timeout: Timeout = Timeout(5 seconds)
   private val taskReopenAllowed = conf.Features.taskReopenAllowed + (10 seconds)
 
+  private val numberOfIdsToReservePerRequest = 10
+
   def info( // Type of the annotation, one of Task, Explorational, CompoundTask, CompoundProject, CompoundTaskType
            typ: String,
            // For Task and Explorational annotations, id is an annotation id. For CompoundTask, id is a task id. For CompoundProject, id is a project id. For CompoundTaskType, id is a task type id
@@ -500,7 +502,7 @@ class AnnotationController @Inject()(
           restrictions <- provider.restrictionsFor(AnnotationIdentifier(annotation.typ, id)) ?~> "restrictions.notFound" ~> NOT_FOUND
           _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
           // Note: this limit should match what the frontend requests, see IDEAL_ID_BUFFER_SIZE in id_reservation_saga.
-          _ <- Fox.fromBool(request.body.numberOfIdsToReserve <= 10) ?~> "Cannot reserve more than 10 ids in one request." ~> FORBIDDEN
+          _ <- Fox.fromBool(request.body.numberOfIdsToReserve <= numberOfIdsToReservePerRequest) ?~> s"Cannot reserve more than $numberOfIdsToReservePerRequest ids in one request." ~> FORBIDDEN
           ids: Seq[Long] <- annotationIdReservationService.reserveIds(id,
                                                                       request.body.tracingId,
                                                                       request.body.domain,

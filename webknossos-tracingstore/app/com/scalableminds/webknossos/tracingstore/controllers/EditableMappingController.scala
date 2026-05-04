@@ -171,7 +171,7 @@ class EditableMappingController @Inject()(
       }
     }
 
-  def agglomerateSkeleton(tracingId: String, agglomerateId: Long, version: Option[Long]): Action[AnyContent] =
+  def agglomerateTree(tracingId: String, agglomerateId: Long, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
@@ -180,12 +180,12 @@ class EditableMappingController @Inject()(
           _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
           editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId, version)
           remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerForVolumeTracing(tracing, annotationId)
-          agglomerateSkeletonBytes <- editableMappingService.getAgglomerateSkeletonWithFallback(tracingId,
+          agglomerateTreeBytes <- editableMappingService.getAgglomerateTreeWithFallback(tracingId,
                                                                                                 tracing.version,
                                                                                                 editableMappingInfo,
                                                                                                 remoteFallbackLayer,
                                                                                                 agglomerateId)
-        } yield Ok(agglomerateSkeletonBytes)
+        } yield Ok(agglomerateTreeBytes)
       }
     }
 

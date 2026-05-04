@@ -21,7 +21,7 @@ import com.scalableminds.webknossos.datastore.services.uploading.{
 import com.typesafe.scalalogging.LazyLogging
 import models.dataset._
 import models.dataset.credential.CredentialDAO
-import models.job.JobDAO
+import models.job.{JobDAO, JobService}
 import models.organization.{OrganizationDAO, OrganizationService}
 import models.storage.UsedStorageService
 import models.team.TeamDAO
@@ -47,6 +47,7 @@ class WKRemoteDataStoreController @Inject()(
     userDAO: UserDAO,
     teamDAO: TeamDAO,
     jobDAO: JobDAO,
+    jobService: JobService,
     credentialDAO: CredentialDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
@@ -144,6 +145,12 @@ class WKRemoteDataStoreController @Inject()(
                                         isUsable = true)(GlobalAccessContext)
           }
           _ <- Fox.runIf(!request.body.needsConversion)(usedStorageService.refreshStorageReportForDataset(dataset))
+          _ <- Fox.runIf(request.body.needsConversion) {
+            for {
+              voxelSizeFactor <- request.body.voxelSizeFactor.toFox ?~> "dataset.upload.needsConversion.missingVoxelSize"
+              _ <- jobService.submitConvertToWkwJob(dataset, user, voxelSizeFactor, request.body.voxelSizeUnit)
+            } yield ()
+          }
         } yield Ok
       }
     }

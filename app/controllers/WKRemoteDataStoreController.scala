@@ -22,7 +22,7 @@ import com.typesafe.scalalogging.LazyLogging
 import models.dataset._
 import models.dataset.credential.CredentialDAO
 import models.job.{JobDAO, JobService}
-import models.organization.OrganizationDAO
+import models.organization.{OrganizationDAO, OrganizationService}
 import models.storage.UsedStorageService
 import models.team.TeamDAO
 import models.user.UserDAO
@@ -41,6 +41,7 @@ class WKRemoteDataStoreController @Inject()(
     dataStoreDAO: DataStoreDAO,
     organizationDAO: OrganizationDAO,
     usedStorageService: UsedStorageService,
+    organizationService: OrganizationService,
     layerToLinkService: LayerToLinkService,
     datasetDAO: DatasetDAO,
     userDAO: UserDAO,
@@ -64,9 +65,7 @@ class WKRemoteDataStoreController @Inject()(
           organization <- organizationDAO.findOne(uploadInfo.organization)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             uploadInfo.organization) ~> NOT_FOUND
-          usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
-          _ <- Fox.runOptional(organization.includedStorageBytes)(includedStorage =>
-            Fox.fromBool(usedStorageBytes + uploadInfo.totalFileSizeInBytes.getOrElse(0L) <= includedStorage)) ?~> "dataset.upload.storageExceeded" ~> FORBIDDEN
+          _ <- organizationService.assertUsedStorageNotExceeded(organization, uploadInfo.totalFileSizeInBytes) ?~> "dataset.upload.storageExceeded" ~> FORBIDDEN
           _ <- Fox.fromBool(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(uploadInfo.name)
           _ <- Fox.fromBool(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataset.upload.Datastore.restricted"

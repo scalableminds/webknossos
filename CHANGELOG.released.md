@@ -19,7 +19,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Enabled anti-aliasing for screenshots. [#9363](https://github.com/scalableminds/webknossos/pull/9363)
 - Added a recovery option after WebGL crash to reduce hardware utilization and reload. [#9437](https://github.com/scalableminds/webknossos/pull/9437)
 - Show progress modal when duplicating or copying annotations. [#9478](https://github.com/scalableminds/webknossos/pull/9478)
-- Added AI agent integration for support questions. [#9511](https://github.com/scalableminds/webknossos/pull/9511) [#9511](https://github.com/scalableminds/webknossos/pull/9511)
+- Added AI agent integration for support questions. [#9511](https://github.com/scalableminds/webknossos/pull/9511)
 - Virtual Datasets with disk-local paths now also get their realpaths scanned. [#9518](https://github.com/scalableminds/webknossos/pull/9518)
 - Parallelized meshfile chunk info loading in case the underlying data is on object storage, reducing wait times before mesh loading starts. [#9520](https://github.com/scalableminds/webknossos/pull/9520)
 - Dataset uploads that trigger a conversion job now do so in one request, avoiding some dropped requests due to timeouts. [#9538](https://github.com/scalableminds/webknossos/pull/9538)
@@ -27,7 +27,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Changed
 - Compacted and filtered monthly credit transactions to reduce the size of the credit activity in the frontend UI. [#9435](https://github.com/scalableminds/webknossos/pull/9435)
-- Use HTTP2 for object storage requests when loading from Hetzner servers. [#9475](https://github.com/scalableminds/webknossos/pull/9475)
+- Use HTTP/2 for object storage requests when loading from Hetzner servers. [#9475](https://github.com/scalableminds/webknossos/pull/9475)
 - Adjusted adhoc mesh generation to use parallel requests for loading neighboring chunks. [#9475](https://github.com/scalableminds/webknossos/pull/9475)
 - Improved robustness when network connectivity is unstable. [#9551](https://github.com/scalableminds/webknossos/pull/9551)
 

@@ -48,6 +48,7 @@ import {
 } from "./keyboard_shortcut_types";
 import { checkCollisionsInShortcutMap, keySequenceToUiElements } from "./keyboard_shortcut_utils";
 import { CollisionWarningAlert, ShortcutRecorderModal } from "./shortcut_recorder_modal";
+import FastTooltip from "components/fast_tooltip";
 
 const { Text, Title } = Typography;
 
@@ -204,37 +205,43 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
                   <span style={{ padding: "0px 4px" }}>
                     {keySequenceToUiElements(comboChain, false)}
                   </span>
-                  <Button
-                    type="text"
-                    icon={<EditOutlined />}
-                    disabled={!isEditable}
-                    onClick={() => {
-                      setRecorderTargetShortcutId(record.shortcutId);
-                      setRecorderEditingKeySequence(comboChain);
-                      setIsRecorderOpen(true);
-                    }}
-                  />
-                  <Button
-                    type="text"
-                    disabled={!isEditable}
-                    icon={<CloseOutlined />}
-                    onClick={() => handleRemoveComboChain(record.shortcutId, comboChain)}
-                  />
+                  <FastTooltip title="Edit keyboard shortcut">
+                    <Button
+                      type="text"
+                      icon={<EditOutlined />}
+                      disabled={!isEditable}
+                      onClick={() => {
+                        setRecorderTargetShortcutId(record.shortcutId);
+                        setRecorderEditingKeySequence(comboChain);
+                        setIsRecorderOpen(true);
+                      }}
+                    />
+                  </FastTooltip>
+                  <FastTooltip title="Remove keyboard shortcut">
+                    <Button
+                      type="text"
+                      disabled={!isEditable}
+                      icon={<CloseOutlined />}
+                      onClick={() => handleRemoveComboChain(record.shortcutId, comboChain)}
+                    />
+                  </FastTooltip>
                 </div>
               ))
             )}
           </div>
 
           <div className="add-button-container">
-            <Button
-              disabled={!isEditable}
-              icon={<PlusOutlined />}
-              onClick={() => {
-                setRecorderTargetShortcutId(record.shortcutId);
-                setRecorderEditingKeySequence(null);
-                setIsRecorderOpen(true);
-              }}
-            />
+            <FastTooltip title="Add additional keyboard shortcut">
+              <Button
+                disabled={!isEditable}
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  setRecorderTargetShortcutId(record.shortcutId);
+                  setRecorderEditingKeySequence(null);
+                  setIsRecorderOpen(true);
+                }}
+              />
+            </FastTooltip>
           </div>
         </>
       ),

@@ -7,10 +7,15 @@ import models.annotation.{
   AnnotationDataSourceTemporaryStore,
   AnnotationMutexService,
   AnnotationReservedIdsService,
-  AnnotationStore,
+  AnnotationStore
+}
+import models.dataset.{
+  DatasetDAO,
+  DatasetDAOLike,
+  DatasetService,
+  ThumbnailCachingService,
   VirtualDatasetsRealPathScanService
 }
-import models.dataset.{DatasetDAO, DatasetDAOLike, DatasetService, ThumbnailCachingService}
 import models.job.{JobService, WorkerLivenessService}
 import models.organization.FreeCreditTransactionService
 import models.storage.UsedStorageService

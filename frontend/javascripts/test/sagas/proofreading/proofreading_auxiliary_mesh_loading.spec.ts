@@ -759,7 +759,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
     await task.toPromise();
   });
 
-  it("should reload agglomerate meshes correctly when merging two agglomerate skeletons and incorporating a new merge action from backend", async (context: WebknossosTestContext) => {
+  it("should reload agglomerate meshes correctly when merging two agglomerate trees and incorporating a new merge action from backend", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     // Merging agglomerates 4 & 6 based on the segments 5 & 6.
     // As agglomerate trees 1 & 4 are loaded their updates are included as well
@@ -806,7 +806,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
     await task.toPromise();
   });
 
-  it("should reload auxiliary proofreading meshes when splitting agglomerate skeleton and incorporating a new split action from backend", async (context: WebknossosTestContext) => {
+  it("should reload auxiliary proofreading meshes when splitting agglomerate tree and incorporating a new split action from backend", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     backendMock.planMultipleVersionInjections(10, splitSegment1And2WithAgglomerateTree1);

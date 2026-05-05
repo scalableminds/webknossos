@@ -8,7 +8,7 @@ import React from "react";
 import { useDispatch } from "react-redux";
 import { CtrlOrCmdKey } from "viewer/constants";
 import {
-  loadAgglomerateSkeletonAtPosition,
+  loadAgglomerateTreeAtPosition,
   loadSynapsesOfAgglomerateAtPosition,
 } from "viewer/controller/combinations/segmentation_handlers";
 import { handleCreateNodeFromGlobalPosition } from "viewer/controller/combinations/skeleton_handlers";
@@ -325,11 +325,11 @@ export function useNoNodeContextMenuOptions(
             disabled: areSkeletonGeometriesTransformed,
           },
           {
-            key: "load-agglomerate-skeleton",
+            key: "load-agglomerate-tree",
             // Do not disable menu entry, but show modal advertising automated segmentation services if no agglomerate file is activated
             onClick: () =>
               isAgglomerateMappingEnabled.value
-                ? loadAgglomerateSkeletonAtPosition(globalPosition)
+                ? loadAgglomerateTreeAtPosition(globalPosition)
                 : showAutomatedSegmentationServicesModal(
                     isAgglomerateMappingEnabled.reason,
                     "Agglomerate files",
@@ -344,7 +344,7 @@ export function useNoNodeContextMenuOptions(
                 }}
               >
                 <span>
-                  Import Agglomerate Skeleton{" "}
+                  Import Agglomerate Tree{" "}
                   {!isAgglomerateMappingEnabled.value ? (
                     <WarningOutlined style={{ color: "var(--ant-color-text-disabled)" }} />
                   ) : null}{" "}
@@ -362,7 +362,7 @@ export function useNoNodeContextMenuOptions(
             : []),
           isAgglomerateMappingEnabled.value
             ? {
-                key: "merge-agglomerate-skeleton",
+                key: "merge-agglomerate-tree",
                 disabled: !isProofreadingActive,
                 onClick: () => dispatch(proofreadMergeAction(globalPosition)),
                 label: (
@@ -456,7 +456,7 @@ export function useNoNodeContextMenuOptions(
         </FastTooltip>
       ),
     };
-    // This action doesn't need a skeleton tracing but is conceptually related to the "Import Agglomerate Skeleton" action
+    // This action doesn't need a skeleton tracing but is conceptually related to the "Import Agglomerate Tree" action
     skeletonActions.push(loadSynapsesItem);
   }
 

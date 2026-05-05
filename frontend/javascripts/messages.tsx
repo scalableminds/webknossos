@@ -249,18 +249,17 @@ instead. Only enable this option if you understand its effect. All layers will n
     `A precomputed mesh could not be loaded for segment ${segmentId}. You may want to use ad-hoc meshing instead. More information was printed to the browser's console.`,
   "tracing.area_to_fill_is_too_big":
     "The area you want to fill is too big. Please annotate the area in multiple strokes.",
-  "tracing.agglomerate_skeleton.no_cell":
-    "Clicked on the background. Please click on a segment to load a skeleton.",
-  "tracing.agglomerate_skeleton.no_mapping":
-    "Activate an agglomerate file mapping to load a skeleton for a segment.",
-  "tracing.agglomerate_skeleton.no_agglomerate_file_active":
-    "Loading a skeleton for a segment only works with agglomerate file mappings.",
-  "tracing.agglomerate_skeleton.no_agglomerate_files_loaded_yet":
-    "Checking for agglomerate files...",
-  "tracing.agglomerate_skeleton.no_agglomerate_file_available":
+  "tracing.agglomerate_tree.no_cell":
+    "Clicked on the background. Please click on a segment to load an agglomerate tree.",
+  "tracing.agglomerate_tree.no_mapping":
+    "Activate an agglomerate file mapping to load an agglomerate tree for a segment.",
+  "tracing.agglomerate_tree.no_agglomerate_file_active":
+    "Loading an agglomerate tree for a segment only works with agglomerate file mappings.",
+  "tracing.agglomerate_tree.no_agglomerate_files_loaded_yet": "Checking for agglomerate files...",
+  "tracing.agglomerate_tree.no_agglomerate_file_available":
     "No agglomerate file mapping is available for this segmentation layer. Please reach out to hello@webknossos.org to get help with generating one.",
-  "tracing.agglomerate_skeleton.no_skeleton_tracing":
-    "Loading a skeleton for a segment only works in skeleton or hybrid tracings.",
+  "tracing.agglomerate_tree.no_skeleton_tracing":
+    "Loading an agglomerate tree for a segment only works in skeleton or hybrid tracings.",
   "tracing.skeletons_are_hidden_warning":
     'All trees are currently hidden. You can disable this by toggling the "Skeleton" layer in the layer settings in the left sidebar.',
   "tracing.invalid_json_url_hash":

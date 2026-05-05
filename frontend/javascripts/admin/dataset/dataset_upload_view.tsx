@@ -401,7 +401,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
             needsConversion: false,
           });
 
-
           newestForm.setFieldsValue({
             name: "",
             zipFile: [],

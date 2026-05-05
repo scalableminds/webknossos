@@ -2,6 +2,7 @@ package models.annotation
 
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+
 import javax.inject.Inject
 import models.user.{User, UserService}
 import play.api.libs.json._
@@ -12,7 +13,10 @@ import scala.concurrent._
 class AnnotationRestrictions(implicit ec: ExecutionContext) {
   def allowAccess(user: Option[User]): Fox[Boolean] = Fox.successful(false)
 
+  // Ignores state of annotation mutex. use allowUpdateWithMutex for updates that should only be allowed with the mutex
   def allowUpdate(user: Option[User]): Fox[Boolean] = Fox.successful(false)
+
+  def allowUpdateWithMutex(user: Option[User]): Fox[Boolean] = Fox.successful(false)
 
   def allowFinish(user: Option[User]): Fox[Boolean] = Fox.successful(false)
 
@@ -66,23 +70,28 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService, annotati
           } yield annotation._user == user._id || isTeamManagerOrAdminOfTeam).orElse(Fox.successful(false))
         }
 
+      override def allowUpdateWithMutex(userOpt: Option[User]): Fox[Boolean] =
+        for {
+          updateAccessAllowed <- allowUpdate(userOpt)
+          userHasMutex <- userOpt match {
+            case Some(_) if !annotation.othersMayEdit => Fox.successful(false)
+            case Some(u)                              => annotationMutexDAO.hasMutex(u._id, annotation._id)
+            case None                                 => Fox.successful(false)
+          }
+        } yield if (annotation.othersMayEdit) updateAccessAllowed && userHasMutex else updateAccessAllowed
+
       override def allowUpdate(userOpt: Option[User]): Fox[Boolean] =
         for {
           readAccessAllowed <- allowAccess(userOpt)
           annotationOwnerBox <- userService
             .findOneCached(annotation._user)(GlobalAccessContext)
             .shiftBox // sandbox annotations have no owner
-          userHasMutex <- userOpt match {
-            case Some(_) if !annotation.othersMayEdit => Fox.successful(false)
-            case Some(u)                              => annotationMutexDAO.hasMutex(u._id, annotation._id)
-            case None                                 => Fox.successful(false)
-          }
           annotationIsMutable = !(annotation.state == Finished) && !annotation.isLockedByOwner
         } yield
           userOpt.exists { user =>
             if (annotation.othersMayEdit) {
               val isInSameOrga = annotationOwnerBox.exists(_._organization == user._organization)
-              annotationIsMutable && isInSameOrga && readAccessAllowed && userHasMutex
+              annotationIsMutable && isInSameOrga && readAccessAllowed
             } else annotationIsMutable && annotation._user == user._id
           }
 

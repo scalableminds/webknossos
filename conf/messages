@@ -268,14 +268,14 @@ annotation.isLockedByOwner.success=The locking state of the annotation was succe
 annotation.sandbox.skeletonOnly=Sandbox annotations are currently available as skeleton only.
 annotation.multiLayers.skeleton.notImplemented=This feature is not implemented for annotations with more than one skeleton layer
 annotation.multiLayers.volume.notImplemented=This feature is not implemented for annotations with more than one volume layer
-annotation.noMappingSet=No mapping is pinned for this annotation, cannot generate agglomerate skeleton.
+annotation.noMappingSet=No mapping is pinned for this annotation, cannot generate agglomerate tree.
 annotation.volumeBucketsNotEmpty=Cannot make mapping editable in an annotation with mutated volume data
 annotation.deleteLayer.explorationalsOnly=Could not delete a layer because it is only allowed for explorational annotations.
 annotation.deleteLayer.onlyLayer=Could not delete layer because it is the only layer in this annotation.
 annotation.layer.notFound=Layer could not be found.
 annotation.getNewestVersion.failed=Could not get the newest version information for this annotation layer
 annotation.idForTracing.failed=Could not find the annotation id for this tracing id.
-annotation.editableMapping.getAgglomerateSkeleton.empty=The requested agglomerate was empty. It was likely merged into another agglomerate already.
+annotation.editableMapping.getAgglomerateTree.empty=The requested agglomerate was empty. It was likely merged into another agglomerate already.
 annotation.editableMapping.getAgglomerateGraph.failed=Could not look up an agglomerate graph for requested agglomerate.
 annotation.editableMapping.getAgglomerateIdsForSegments.failed=Could not look up agglomerate ids for requested segments.
 annotation.duplicate.failed=Failed to duplicate annotation.
@@ -393,7 +393,7 @@ voxelytics.zeroRunWorkflow = No run for this workflow found
 
 publication.notFound = Publication could not be found.
 
-agglomerateSkeleton.failed=Could not generate agglomerate skeleton.
+agglomerateTree.failed=Could not generate agglomerate tree.
 
 folder.delete.notEmpty.children=Cannot delete folders that still contain other folders
 folder.delete.notEmpty.datasets=Cannot delete folders that still contain datasets

@@ -96,7 +96,7 @@ import {
 } from "viewer/model/actions/settings_actions";
 import {
   initializeSkeletonTracingAction,
-  loadAgglomerateSkeletonFromIdAction,
+  loadAgglomerateTreeFromIdAction,
   setActiveNodeAction,
   setShowSkeletonsAction,
 } from "viewer/model/actions/skeletontracing_actions";
@@ -904,18 +904,18 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
         const { annotation } = Store.getState();
 
         if (annotation.skeleton == null) {
-          Toast.error(messages["tracing.agglomerate_skeleton.no_skeleton_tracing"]);
+          Toast.error(messages["tracing.agglomerate_tree.no_skeleton_tracing"]);
           continue;
         }
 
         if (mappingType !== "HDF5") {
-          Toast.error(messages["tracing.agglomerate_skeleton.no_agglomerate_file_active"]);
+          Toast.error(messages["tracing.agglomerate_tree.no_agglomerate_file_active"]);
           continue;
         }
 
         for (const agglomerateId of agglomerateIdsToImport) {
           Store.dispatch(
-            loadAgglomerateSkeletonFromIdAction(effectiveLayerName, mappingName, agglomerateId),
+            loadAgglomerateTreeFromIdAction(effectiveLayerName, mappingName, agglomerateId),
           );
         }
       }

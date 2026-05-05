@@ -271,7 +271,7 @@ class DataSourceController @Inject()(
     }
   }
 
-  def generateAgglomerateSkeleton(
+  def generateAgglomerateTree(
       datasetId: ObjectId,
       dataLayerName: String,
       mappingName: String,
@@ -282,7 +282,7 @@ class DataSourceController @Inject()(
         (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
         skeleton <- agglomerateService
-          .generateSkeleton(agglomerateFileKey, agglomerateId) ?~> "agglomerateSkeleton.failed"
+          .generateTreeAsSkeleton(agglomerateFileKey, agglomerateId) ?~> "agglomerateTree.failed"
       } yield Ok(skeleton.toByteArray).as(protobufMimeType)
     }
   }

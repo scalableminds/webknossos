@@ -45,7 +45,7 @@ import {
   splitSegment7And1337AndMerge1337And5,
 } from "./proofreading_interaction_update_action_fixtures";
 import {
-  loadAgglomerateSkeletons,
+  loadAgglomerateTrees,
   mockEdgesForAgglomerateMinCut,
   performMergeTreesProofreading,
   performMinCutWithNodesProofreading,
@@ -94,7 +94,7 @@ describe("Proofreading should generate correct update actions", () => {
 
   async function makeProofreadMerge(
     context: WebknossosTestContext,
-    skeletonsToLoad: number[],
+    treesToLoad: number[],
     sourceSegmentId: number,
     targetSegmentId: number,
     sourceAgglomerateId: number,
@@ -115,12 +115,9 @@ describe("Proofreading should generate correct update actions", () => {
       yield put(setActiveCellAction(sourceAgglomerateId));
       yield makeMappingEditableForTest();
 
-      if (skeletonsToLoad.length > 0) {
-        yield call(loadAgglomerateSkeletons, context, skeletonsToLoad, false, false);
+      if (treesToLoad.length > 0) {
+        yield call(loadAgglomerateTrees, context, treesToLoad, false, false);
       }
-
-      const skeletonTrees = Store.getState().annotation.skeleton?.trees;
-      console.log(skeletonTrees);
 
       for (const voxelPos of voxelPositionsToLoad) {
         yield call(() => api.data.getDataValue(tracingId, voxelPos, 0));
@@ -131,7 +128,7 @@ describe("Proofreading should generate correct update actions", () => {
 
       // Execute the actual merge and wait for the finished mapping.
       yield put(proofreadMergeAction(targetPosition, targetSegmentId));
-      // Wait till proofreading action is finished; including refreshing agglomerate skeletons.
+      // Wait till proofreading action is finished; including refreshing agglomerate trees.
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
     });
@@ -140,7 +137,7 @@ describe("Proofreading should generate correct update actions", () => {
 
   async function makeProofreadSplit(
     context: WebknossosTestContext,
-    skeletonsToLoad: number[],
+    treesToLoad: number[],
     sourceSegmentId: number,
     targetSegmentId: number,
     sourceAgglomerateId: number,
@@ -161,8 +158,8 @@ describe("Proofreading should generate correct update actions", () => {
       yield put(setActiveCellAction(sourceAgglomerateId));
       yield makeMappingEditableForTest();
 
-      if (skeletonsToLoad.length > 0) {
-        yield call(loadAgglomerateSkeletons, context, skeletonsToLoad, false, false);
+      if (treesToLoad.length > 0) {
+        yield call(loadAgglomerateTrees, context, treesToLoad, false, false);
       }
 
       // Prepare the server's reply for the upcoming split.
@@ -193,14 +190,14 @@ describe("Proofreading should generate correct update actions", () => {
       yield put(
         minCutAgglomerateWithPositionAction(targetPosition, targetSegmentId, sourceAgglomerateId),
       );
-      // Wait till proofreading action is finished; including refreshing agglomerate skeletons.
+      // Wait till proofreading action is finished; including refreshing agglomerate trees.
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
       yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
     });
     await task.toPromise();
   }
 
-  it("when loading agglomerate skeleton 1", async (context: WebknossosTestContext) => {
+  it("when loading agglomerate tree 1", async (context: WebknossosTestContext) => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -221,7 +218,7 @@ describe("Proofreading should generate correct update actions", () => {
       yield put(setActiveCellAction(agglomerateId));
       yield makeMappingEditableForTest();
 
-      yield call(loadAgglomerateSkeletons, context, [agglomerateId], true, false);
+      yield call(loadAgglomerateTrees, context, [agglomerateId], true, false);
 
       const activateSegmentAndLoadTreeUpdates = removeBlacklistedActions(
         getNestedUpdateActions(context),
@@ -349,7 +346,6 @@ describe("Proofreading should generate correct update actions", () => {
         [getPositionForSegmentId(1337)],
       );
       const mergeAndTreeUpdates = removeBlacklistedActions(getNestedUpdateActions(context));
-      console.log("mergeAndTreeUpdates", mergeAndTreeUpdates);
       expect(mergeAndTreeUpdates).toStrictEqual(mergeSegment1337And5);
     });
 

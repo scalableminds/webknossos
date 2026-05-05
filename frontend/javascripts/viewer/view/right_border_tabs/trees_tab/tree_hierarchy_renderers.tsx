@@ -100,7 +100,7 @@ export function renderTreeNode(
 
   const maybeProofreadingIcon =
     tree.type === TreeTypeEnum.AGGLOMERATE ? (
-      <FastTooltip title="Agglomerate Skeleton">
+      <FastTooltip title="Agglomerate Tree">
         <Icon component={ProofreadingIcon} />
       </FastTooltip>
     ) : null;
@@ -137,7 +137,7 @@ export function renderTreeNode(
 
 const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void): MenuProps => {
   const isEditingDisabled = !props.allowUpdate;
-  const isAgglomerateSkeleton = tree.type === TreeTypeEnum.AGGLOMERATE;
+  const isAgglomerateTree = tree.type === TreeTypeEnum.AGGLOMERATE;
 
   return {
     items: [
@@ -191,9 +191,9 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
         label: "Delete Tree",
       },
       {
-        key: "measureSkeleton",
+        key: "measureTree",
         onClick: () => {
-          handleMeasureSkeletonLength(tree.treeId, tree.name);
+          handleMeasureTreeLength(tree.treeId, tree.name);
           hideContextMenu();
         },
         title: "Measure Tree Length",
@@ -222,9 +222,9 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
         icon: <Icon component={HideSkeletonEdgesIcon} aria-label="Hide Tree Edges Icon" />,
         label: "Hide/Show Edges of This Tree",
       },
-      isAgglomerateSkeleton
+      isAgglomerateTree
         ? {
-            key: "convertToNormalSkeleton",
+            key: "convertToNormalTree",
             onClick: () => {
               setTreeType(tree.treeId, TreeTypeEnum.DEFAULT);
               hideContextMenu();
@@ -542,7 +542,7 @@ export function setExpandedGroups(expandedTreeGroups: Set<string>) {
   Store.dispatch(setExpandedTreeGroupsByKeysAction(expandedTreeGroups));
 }
 
-function handleMeasureSkeletonLength(treeId: number, treeName: string) {
+function handleMeasureTreeLength(treeId: number, treeName: string) {
   const dataSourceUnit = Store.getState().dataset.dataSource.scale.unit;
   const [lengthInUnit, lengthInVx] = api.tracing.measureTreeLength(treeId);
 

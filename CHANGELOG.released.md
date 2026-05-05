@@ -7,6 +7,45 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [26.05.0](https://github.com/scalableminds/webknossos/releases/tag/26.05.0) - 2026-05-04
+[Commits](https://github.com/scalableminds/webknossos/compare/26.04.1...26.05.0)
+
+### Highlights
+- Added a new blend mode (Settings Sidebar > Data Rendering) called "Cover (black as transparent)". The new mode behaves like "Cover", but treats black data as transparent. This behavior is especially helpful for multi-modality datasets. [#9492](https://github.com/scalableminds/webknossos/pull/9492)
+
+### Added
+- Auto-reloading of meshes upon applying mapping changes from other users. Part of the Live Collaboration feature [#9102](https://github.com/scalableminds/webknossos/pull/9102)
+- Auto-reloading of agglomerate skeletons upon own mapping changes. Part of the Live Collaboration feature [#9102](https://github.com/scalableminds/webknossos/pull/9102)
+- Enabled anti-aliasing for screenshots. [#9363](https://github.com/scalableminds/webknossos/pull/9363)
+- Added a recovery option after WebGL crash to reduce hardware utilization and reload. [#9437](https://github.com/scalableminds/webknossos/pull/9437)
+- Show progress modal when duplicating or copying annotations. [#9478](https://github.com/scalableminds/webknossos/pull/9478)
+- Added AI agent integration for support questions. [#9511](https://github.com/scalableminds/webknossos/pull/9511)
+- Virtual Datasets with disk-local paths now also get their realpaths scanned. [#9518](https://github.com/scalableminds/webknossos/pull/9518)
+- Parallelized meshfile chunk info loading in case the underlying data is on object storage, reducing wait times before mesh loading starts. [#9520](https://github.com/scalableminds/webknossos/pull/9520)
+- Dataset uploads that trigger a conversion job now do so in one request, avoiding some dropped requests due to timeouts. [#9538](https://github.com/scalableminds/webknossos/pull/9538)
+- Dataset search in the dashboard now also finds datasets if only the directoryName matches. [#9548](https://github.com/scalableminds/webknossos/pull/9548)
+
+### Changed
+- Compacted and filtered monthly credit transactions to reduce the size of the credit activity in the frontend UI. [#9435](https://github.com/scalableminds/webknossos/pull/9435)
+- Use HTTP/2 for object storage requests when loading from Hetzner servers. [#9475](https://github.com/scalableminds/webknossos/pull/9475)
+- Adjusted adhoc mesh generation to use parallel requests for loading neighboring chunks. [#9475](https://github.com/scalableminds/webknossos/pull/9475)
+- Improved robustness when network connectivity is unstable. [#9551](https://github.com/scalableminds/webknossos/pull/9551)
+- Updated revoking credit transaction comments to include the month and year of the grant matching the format used by new revoking transactions. [#9435](https://github.com/scalableminds/webknossos/pull/9435)
+
+### Fixed
+- Fixed that jumping to a mesh's position was off. [#9461](https://github.com/scalableminds/webknossos/pull/9461)
+- Fixed automatic dataset extraction from NML files when composing datasets with landmarks. [#9466](https://github.com/scalableminds/webknossos/pull/9466)
+- Fixed prefetching problems for transformed layers by disabling prefetching in that case (for now, at least). [#9470](https://github.com/scalableminds/webknossos/pull/9470)
+- Fixed rendering of datasets with heavy transforms. [#9473](https://github.com/scalableminds/webknossos/pull/9473)
+- Adapted adhoc mesh chunk sizes to match data loading chunk sizes. [#9475](https://github.com/scalableminds/webknossos/pull/9475)
+- The sibling-tool dropdown (for example, Brush and Trace) now opens when hovering anywhere over the tool button. [#9486](https://github.com/scalableminds/webknossos/pull/9486)
+- Fixed a bug where the publication list route for logged-out users would be empty [#9515](https://github.com/scalableminds/webknossos/pull/9515)
+- Fixed a race condition for dataset uploads in the ResumableUpload lib. [#9517](https://github.com/scalableminds/webknossos/pull/9517)
+- Fixed the import of skeleton trees which could lead to an incorrect hierarchy if nested groups were present. [#9535](https://github.com/scalableminds/webknossos/pull/9535)
+- Fixed that dataset deletion was offered in the dashboard even when disabled in the config. The backend still correctly rejected it. [#9536](https://github.com/scalableminds/webknossos/pull/9536)
+- Fixed inconsistent display of segment statistics in right-click context menu [#9545](https://github.com/scalableminds/webknossos/pull/9545)
+- Fixed incorrect ASSERT statement in the enforce_non_negative_balance function. [#9435](https://github.com/scalableminds/webknossos/pull/9435)
+
 ## [26.04.1](https://github.com/scalableminds/webknossos/releases/tag/26.04.1) - 2026-04-23
 [Commits](https://github.com/scalableminds/webknossos/compare/26.04.0...26.04.1)
 

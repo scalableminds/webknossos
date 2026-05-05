@@ -40,7 +40,7 @@ import {
   enforceSkeletonTracing,
   findTreeByNodeId,
   getTreeAndNode,
-  getTreeNameForAgglomerateSkeleton,
+  getTreeNameForAgglomerateTree,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
@@ -129,9 +129,9 @@ import { ensureWkInitialized } from "../../ready_sagas";
 import { takeEveryUnlessBusy, takeWithBatchActionSupport } from "../../saga_helpers";
 import { subscribeToAnnotationMutex } from "../../saving/save_mutex_saga";
 import {
-  syncAgglomerateSkeletonsAfterMergeAction,
-  syncAgglomerateSkeletonsAfterSplitAction,
-} from "./agglomerate_skeleton_syncing_saga_helpers";
+  syncAgglomerateTreesAfterMergeAction,
+  syncAgglomerateTreesAfterSplitAction,
+} from "./agglomerate_tree_syncing_saga_helpers";
 
 function runSagaAndCatchSoftError<T>(saga: (...args: any[]) => Saga<T>) {
   return function* (...args: any[]) {
@@ -155,7 +155,7 @@ export default function* proofreadRootSaga(): Saga<void> {
 
   yield* takeEveryUnlessBusy(
     ["DELETE_EDGE", "MERGE_TREES", "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS"],
-    runSagaAndCatchSoftError(handleSkeletonProofreadingAction),
+    runSagaAndCatchSoftError(handleTreeProofreadingAction),
     PROOFREADING_BUSY_REASON,
   );
   yield* takeEvery(["PROOFREAD_AT_POSITION"], runSagaAndCatchSoftError(proofreadAtPosition));
@@ -181,7 +181,7 @@ export default function* proofreadRootSaga(): Saga<void> {
 
   yield* takeEvery(
     ["CREATE_NODE", "DELETE_NODE", "SET_NODE_POSITION"],
-    runSagaAndCatchSoftError(checkForAgglomerateSkeletonModification),
+    runSagaAndCatchSoftError(checkForAgglomerateTreeModification),
   );
   yield* takeEvery(["UPDATE_USER_SETTING", "ESCAPE"], clearMinCutPartitionsOnMultiCutDeselect);
   yield* takeEvery(["ESCAPE"], clearActiveSegmentIfTdViewportIsActive);
@@ -363,7 +363,7 @@ function* loadCoarseMesh(
   }
 }
 
-function* checkForAgglomerateSkeletonModification(
+function* checkForAgglomerateTreeModification(
   action: CreateNodeAction | DeleteNodeAction | SetNodePositionAction,
 ): Saga<void> {
   let nodeId, treeId;
@@ -378,7 +378,7 @@ function* checkForAgglomerateSkeletonModification(
 
   if (getTreeAndNode(skeletonTracing, nodeId, treeId, TreeTypeEnum.AGGLOMERATE)) {
     Toast.warning(
-      "Agglomerate skeletons can only be modified when using the proofreading tool to add or delete edges. Consider switching to the proofreading tool or converting the skeleton to a normal tree via right-click in the Skeleton tab.",
+      "Agglomerate trees can only be modified when using the proofreading tool to add or delete edges. Consider switching to the proofreading tool or converting the agglomerate tree to a normal tree via right-click in the Skeleton tab.",
       { timeout: 10000 },
     );
   }
@@ -506,11 +506,11 @@ function* ensureHdf5MappingIsEnabled(layerName: string): Saga<boolean> {
   return true;
 }
 
-function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
+function* handleTreeProofreadingAction(action: Action): Saga<void> {
   // Actually, action is MergeTreesAction | DeleteEdgeAction | MinCutAgglomerateAction,
   // but the takeEveryUnlessBusy wrapper does not understand this.
   // This saga handles split, merge and min-cut actions on agglomerates.
-  // Note that the skeletontracing reducer already mutated the skeletons according to the
+  // Note that the skeletontracing reducer already mutated the trees according to the
   // received action.
   if (
     action.type !== "MERGE_TREES" &&
@@ -533,14 +533,14 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
   // Reserve the mutex early to be able to synchronize the agglomerate trees with the newest backend state,
   // in case of live collab being active.
   // The reason is that in the meantime another user might have already manipulated the same agglomerate tree
-  // as done by the current action. Thus, to avoid inconsistent states between the mappping and the agglomerate trees,
+  // as done by the current action. Thus, to avoid inconsistent states between the mapping and the agglomerate trees,
   // we first sync with the backend to have the newest agglomerate trees.
   // Additionally, the skeletontracing reducer ignores direct proofreading agglomerate tree updates, in case live collab is active.
   // We therefore explicitly replay the received actions after syncing with the backend, but setting this saga as the initiator.
   // This should ensure, that the agglomerate tree updates done by the user are always in sync with the backend state.
   const unsubscribeFromAnnotationMutex = yield* call(
     subscribeToAnnotationMutexInLiveCollab,
-    "Proofreading via Skeleton",
+    "Proofreading via Trees",
   );
   try {
     const isLiveCollabActive = yield* select(
@@ -570,23 +570,23 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       return;
     }
 
-    const isModifyingOnlyAgglomerateSkeletons =
+    const isModifyingOnlyAgglomerateTrees =
       sourceTree.type === TreeTypeEnum.AGGLOMERATE && targetTree.type === TreeTypeEnum.AGGLOMERATE;
-    const isModifyingAnyAgglomerateSkeletons =
+    const isModifyingAnyAgglomerateTrees =
       sourceTree.type === TreeTypeEnum.AGGLOMERATE || targetTree.type === TreeTypeEnum.AGGLOMERATE;
     const isProofreadingToolActive = yield* select(
       (state) => state.uiInformation.activeTool === AnnotationTool.PROOFREAD,
     );
 
-    if (isProofreadingToolActive && !isModifyingOnlyAgglomerateSkeletons) {
+    if (isProofreadingToolActive && !isModifyingOnlyAgglomerateTrees) {
       Toast.warning(
-        "Only agglomerate skeletons can be modified using the proofreading tool to edit the active mapping.",
+        "Only agglomerate trees can be modified using the proofreading tool to edit the active mapping.",
         { timeout: 12000 },
       );
       return;
-    } else if (!isProofreadingToolActive && isModifyingAnyAgglomerateSkeletons) {
+    } else if (!isProofreadingToolActive && isModifyingAnyAgglomerateTrees) {
       Toast.warning(
-        "In order to edit the active mapping by deleting or adding edges of agglomerate skeletons, the proofreading tool needs to be active." +
+        "In order to edit the active mapping by deleting or adding edges of agglomerate trees, the proofreading tool needs to be active." +
           " If you want to edit the active mapping, activate the proofreading tool and then redo the action.",
         { timeout: 12000 },
       );
@@ -743,7 +743,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
         false,
       );
       if (splitMappingInfo == null) {
-        console.error("Failed to split mapping in skeleton based proofreading action. Aborting...");
+        console.error("Failed to split mapping in tree based proofreading action. Aborting...");
         return;
       }
       const { splitMapping } = splitMappingInfo;
@@ -801,10 +801,10 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       return;
     }
 
-    /* Rename agglomerate skeleton(s) according to their new id and mapping name */
+    /* Rename agglomerate tree(s) according to their new id and mapping name */
     yield* put(
       setTreeNameAction(
-        getTreeNameForAgglomerateSkeleton(newSourceAgglomerateId, volumeTracing.mappingName),
+        getTreeNameForAgglomerateTree(newSourceAgglomerateId, volumeTracing.mappingName),
         updatedSourceTree.treeId,
       ),
     );
@@ -814,7 +814,7 @@ function* handleSkeletonProofreadingAction(action: Action): Saga<void> {
       // A split between the trees was done. Create a segment for the new tree and update its name.
       yield* put(
         setTreeNameAction(
-          getTreeNameForAgglomerateSkeleton(newTargetAgglomerateId, volumeTracing.mappingName),
+          getTreeNameForAgglomerateTree(newTargetAgglomerateId, volumeTracing.mappingName),
           updatedTargetTree.treeId,
         ),
       );
@@ -1044,13 +1044,13 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
     // communication with the backend).
     const currentVersion = Store.getState().annotation.version;
 
-    const autoUpdateAgglomerateSkeletons = true;
+    const autoUpdateAgglomerateTrees = true;
     const splitMappingInfo = yield* splitAgglomerateInMapping(
       activeMapping,
       agglomerateId,
       volumeTracingId,
       currentVersion,
-      autoUpdateAgglomerateSkeletons,
+      autoUpdateAgglomerateTrees,
       additionalUnmappedSegmentsToReRequest,
     );
     if (splitMappingInfo == null) {
@@ -1313,7 +1313,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
   } else if (action.type === "MIN_CUT_AGGLOMERATE") {
     if (sourceInfo.unmappedId === targetInfo.unmappedId) {
       Toast.error(
-        "The selected positions are both part of the same base segment and cannot be split. Please select another position or use the nodes of the agglomerate skeleton to perform the split.",
+        "The selected positions are both part of the same base segment and cannot be split. Please select another position or use the nodes of the agglomerate tree to perform the split.",
       );
       return;
     }
@@ -1396,7 +1396,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
 
     annotationVersion = yield* select((state) => state.annotation.version);
     if (action.type === "MIN_CUT_AGGLOMERATE") {
-      // Get latest agglomerate id of the agglomerate that was splitted by the current operation in case it changed due to rebasing or so.
+      // Get latest agglomerate id of the agglomerate that was split by the current operation in case it changed due to rebasing or so.
       const newInfo = yield* call(
         reloadMappingAndAggloIds,
         volumeTracing.tracingId,
@@ -1415,13 +1415,13 @@ function* handleProofreadMergeOrMinCut(action: Action) {
       console.log("start updating the mapping after a min-cut");
       // Now that the changes are saved, we can split the local mapping (because it requires
       // communication with the back-end).
-      const autoUpdateAgglomerateSkeletons = true;
+      const autoUpdateAgglomerateTrees = true;
       const splitMappingInfo = yield* splitAgglomerateInMapping(
         activeMapping,
         latestSourceAgglomerateId,
         volumeTracingId,
         annotationVersion,
-        autoUpdateAgglomerateSkeletons,
+        autoUpdateAgglomerateTrees,
       );
 
       if (splitMappingInfo == null) {
@@ -1465,9 +1465,9 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     targetAgglomerateId = newInfo.targetAgglomerateId;
 
     if (action.type === "PROOFREAD_MERGE") {
-      // Reload the agglomerate skeletons affected by the merge if they are loaded.
+      // Reload the agglomerate trees affected by the merge if they are loaded.
       yield* call(
-        syncAgglomerateSkeletonsAfterMergeAction,
+        syncAgglomerateTreesAfterMergeAction,
         sourceInfo.agglomerateId,
         targetInfo.agglomerateId,
         sourceAgglomerateId,
@@ -1602,13 +1602,13 @@ function* handleProofreadCutFromNeighbors(action: Action) {
     const newAnnotationVersion = yield* select((state) => state.annotation.version);
     // Now that the changes are saved, we can split the mapping locally (because it requires
     // communication with the back-end).
-    const autoUpdateAgglomerateSkeletons = true;
+    const autoUpdateAgglomerateTrees = true;
     const splitMappingInfo = yield* splitAgglomerateInMapping(
       activeMapping,
       targetAgglomerateId,
       volumeTracingId,
       newAnnotationVersion,
-      autoUpdateAgglomerateSkeletons,
+      autoUpdateAgglomerateTrees,
     );
 
     if (splitMappingInfo == null) {
@@ -1678,7 +1678,7 @@ type Preparation = {
   annotationVersion: number;
 };
 
-export function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Preparation | null> {
+export function* prepareSplitOrMerge(isTreeProofreading: boolean): Saga<Preparation | null> {
   const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));
   if (volumeTracingLayer == null || volumeTracing == null) {
@@ -1706,10 +1706,10 @@ export function* prepareSplitOrMerge(isSkeletonProofreading: boolean): Saga<Prep
   const magInfo = getMagInfo(volumeTracingLayer.mags);
   const currentMag = yield* select((state) => getCurrentMag(state, volumeTracingLayer.name));
 
-  const agglomerateFileMag = isSkeletonProofreading
-    ? // In case of skeleton proofreading, the finest mag should be used.
+  const agglomerateFileMag = isTreeProofreading
+    ? // In case of tree proofreading, the finest mag should be used.
       magInfo.getFinestMag()
-    : // For non-skeleton proofreading, the active mag suffices
+    : // For non-tree proofreading, the active mag suffices
       currentMag;
   if (agglomerateFileMag == null) {
     return null;
@@ -2041,7 +2041,7 @@ export function* splitAgglomerateInMapping(
   sourceAgglomerateId: number,
   volumeTracingId: string,
   version: number,
-  syncAgglomerateSkeletons: boolean,
+  syncAgglomerateTrees: boolean,
   additionalSegmentsToRequest: number[] = [],
 ): Saga<
   | { splitMapping: Mapping; oldAgglomerateIds: Set<number>; newAgglomerateIds: Set<number> }
@@ -2106,9 +2106,9 @@ export function* splitAgglomerateInMapping(
       splitMapping.set(unmappedId, mappedId);
     }
   }
-  if (syncAgglomerateSkeletons && activeMapping.mappingName) {
+  if (syncAgglomerateTrees && activeMapping.mappingName) {
     yield* call(
-      syncAgglomerateSkeletonsAfterSplitAction,
+      syncAgglomerateTreesAfterSplitAction,
       Array.from(newAgglomerateIds),
       Array.from(oldAgglomerateIds),
       volumeTracingId,

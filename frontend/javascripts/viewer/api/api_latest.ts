@@ -42,7 +42,10 @@ import Constants, {
   TDViewDisplayModeEnum,
 } from "viewer/constants";
 import { rotate3DViewTo } from "viewer/controller/camera_controller";
-import { loadAgglomerateSkeletonForSegmentId } from "viewer/controller/combinations/segmentation_handlers";
+import {
+  loadAgglomerateTreeAtPosition,
+  loadAgglomerateTreeFromId,
+} from "viewer/controller/combinations/segmentation_handlers";
 import {
   createSkeletonNode,
   getOptionsForCreateSkeletonNode,
@@ -1025,14 +1028,36 @@ class TracingApi {
   }
 
   /**
-   * Loads the agglomerate skeleton for the given segment id. Only possible if
+   * Loads the agglomerate tree for the agglomerate at the given position. Only possible if
    * a segmentation layer is visible for which an agglomerate mapping is enabled.
+   * Should be preferred over using api.tracing.loadAgglomerateSkeletonForSegmentId as this version
+   * yields more reliable results in live collaborative context. A conflicting merge can result in the
+   * agglomerate id at the give position to change. That's why passing the position is safer than
+   * passing the agglomerate id via api.tracing.loadAgglomerateSkeletonForSegmentId as the
+   * agglomerate id lookup is done after applying such an interfering merge.
+   *
+   * @example
+   * api.tracing.loadAgglomerateTreeAtPosition([3, 3, 3]);
+   */
+  loadAgglomerateTreeAtPosition(position: Vector3) {
+    loadAgglomerateTreeAtPosition(position);
+  }
+
+  /**
+   * Loads the agglomerate tree for the given segment id. Only possible if
+   * a segmentation layer is visible for which an agglomerate mapping is enabled.
+   * Please consider using api.tracing.loadAgglomerateTreeAtPosition as it yields
+   * more reliable results in a live collaborative context. A conflicting merge of another
+   * user can make the passed agglomerate id invalid just before loading the agglomerate
+   * tree from the backend. By passing any position of the agglomerate instead its id via using
+   * api.tracing.loadAgglomerateTreeAtPosition WEBKNOSSOS can ensure to use the up-to-date agglomerate
+   * id to request the correct agglomerate tree.
    *
    * @example
    * api.tracing.loadAgglomerateSkeletonForSegmentId(3);
    */
   loadAgglomerateSkeletonForSegmentId(segmentId: number) {
-    loadAgglomerateSkeletonForSegmentId(segmentId);
+    loadAgglomerateTreeFromId(segmentId);
   }
 
   /**
@@ -1216,26 +1241,6 @@ class TracingApi {
   rotate3DViewToDiagonal = (animate: boolean = true): void => {
     rotate3DViewTo(OrthoViews.TDView, animate);
   };
-
-  getShortestRotation(curRotation: Vector3, newRotation: Vector3): Vector3 {
-    // TODO
-    // interpolating Euler angles does not lead to the shortest rotation
-    // interpolate the Quaternion representation instead
-    // https://theory.org/software/qfa/writeup/node12.html
-    const result = [newRotation[0], newRotation[1], newRotation[2]];
-
-    for (let i = 0; i <= 2; i++) {
-      // a rotation about more than 180° is shorter when rotating the other direction
-      if (newRotation[i] - curRotation[i] > 180) {
-        result[i] = newRotation[i] - 360;
-      } else if (newRotation[i] - curRotation[i] < -180) {
-        result[i] = newRotation[i] + 360;
-      }
-    }
-
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
-    return result;
-  }
 
   /**
    * Measures the length of the given tree and returns the length in dataset unit and in voxels.

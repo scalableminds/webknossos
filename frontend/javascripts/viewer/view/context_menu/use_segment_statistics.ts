@@ -2,6 +2,7 @@ import { getSegmentBoundingBoxes, getSegmentSurfaceArea, getSegmentVolumes } fro
 import { formatNumberToArea, formatNumberToVolume } from "libs/format_utils";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
+import { useEffect } from "react";
 import { LongUnitToShortUnitMap } from "viewer/constants";
 import {
   getMagInfo,
@@ -12,6 +13,7 @@ import {
   getActiveSegmentationTracing,
   getCurrentMappingName,
 } from "viewer/model/accessors/volumetracing_accessor";
+import { ensureSegmentIndexIsLoadedAction } from "viewer/model/actions/dataset_actions";
 import { getBoundingBoxInMag1 } from "viewer/model/sagas/volume/helpers";
 import { voxelToVolumeInUnit } from "viewer/model/scaleinfo";
 import Store from "viewer/store";
@@ -34,6 +36,13 @@ export function useSegmentStatistics(
     dataset,
     visibleSegmentationLayer?.name,
   );
+
+  useEffect(() => {
+    if (wasSegmentOrMeshClicked) {
+      Store.dispatch(ensureSegmentIndexIsLoadedAction(visibleSegmentationLayer?.name));
+    }
+  }, [wasSegmentOrMeshClicked, visibleSegmentationLayer?.name]);
+
   const mappingName = useWkSelector(getCurrentMappingName);
 
   const isLoadingMessage = "loading";
@@ -69,6 +78,7 @@ export function useSegmentStatistics(
           [clickedSegmentOrMeshId],
           additionalCoordinates,
           mappingName,
+          annotation.version,
         );
         const [boundingBoxInRequestedMag] = await getSegmentBoundingBoxes(
           layerSourceInfo,
@@ -76,6 +86,7 @@ export function useSegmentStatistics(
           [clickedSegmentOrMeshId],
           additionalCoordinates,
           mappingName,
+          annotation.version,
         );
         const [surfaceArea] = await getSegmentSurfaceArea(
           layerSourceInfo,
@@ -84,6 +95,7 @@ export function useSegmentStatistics(
           [clickedSegmentOrMeshId],
           additionalCoordinates,
           mappingName,
+          annotation.version,
         );
         const boundingBoxInMag1 = getBoundingBoxInMag1(boundingBoxInRequestedMag, layersFinestMag);
         const boundingBoxTopLeftString = `(${boundingBoxInMag1.topLeft[0]}, ${boundingBoxInMag1.topLeft[1]}, ${boundingBoxInMag1.topLeft[2]})`;

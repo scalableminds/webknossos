@@ -57,13 +57,13 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
                               updateGroup: UpdateActionGroup,
                               expiry: FiniteDuration)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      _ <- Fox.runIf(transactionGroupIndex > 0)(
-        Fox.assertTrue(
-          uncommittedUpdatesStore.contains(transactionGroupKey(
-            annotationId,
-            transactionId,
-            transactionGroupIndex - 1,
-            version))) ?~> s"Incorrect transaction index. Got: $transactionGroupIndex but ${transactionGroupIndex - 1} does not exist" ~> CONFLICT)
+      _ <- Fox.runIf(transactionGroupIndex > 0) {
+        for {
+          transactionIsPresentUncommitted <- uncommittedUpdatesStore.contains(
+            transactionGroupKey(annotationId, transactionId, transactionGroupIndex - 1, version))
+          _ <- Fox.fromBool(transactionIsPresentUncommitted) ?~> s"Incorrect transaction index. Got: $transactionGroupIndex but ${transactionGroupIndex - 1} does not exist" ~> CONFLICT
+        } yield ()
+      }
       _ <- uncommittedUpdatesStore.insert(
         transactionGroupKey(annotationId, transactionId, transactionGroupIndex, version),
         Json.toJson(updateGroup).toString(),
@@ -269,11 +269,11 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
       implicit ec: ExecutionContext): Fox[Long] = {
     val errorMessage = s"Incorrect version. Expected: ${previousVersion + 1}; Got: ${updateGroup.version}"
     for {
-      _ <- Fox.assertTrue(
-        handledGroupIdStoreContains(annotationId,
-                                    updateGroup.transactionId,
-                                    updateGroup.version,
-                                    updateGroup.transactionGroupIndex)) ?~> errorMessage ~> CONFLICT
+      groupWasHandled <- handledGroupIdStoreContains(annotationId,
+                                                     updateGroup.transactionId,
+                                                     updateGroup.version,
+                                                     updateGroup.transactionGroupIndex)
+      _ <- Fox.fromBool(groupWasHandled) ?~> errorMessage ~> CONFLICT
     } yield updateGroup.version
   }
 

@@ -1,9 +1,12 @@
-import { getAgglomerateSkeleton, getEditableAgglomerateSkeleton } from "admin/rest_api";
+import {
+  getAgglomerateTreeAsSkeletonTracing as getAgglomerateTreeAsSkeletonTracingFromDatastore,
+  getEditableAgglomerateTreeAsSkeletonTracing,
+} from "admin/rest_api";
 import { Modal } from "antd";
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import ErrorHandling from "libs/error_handling";
 import { V3 } from "libs/mjs";
-import createProgressCallback from "libs/progress_callback";
+import createProgressCallback, { type HideFn } from "libs/progress_callback";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
 import { map3 } from "libs/utils";
@@ -29,14 +32,16 @@ import {
   TreeTypeEnum,
   type Vector3,
 } from "viewer/constants";
+import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import { getLayerByName } from "viewer/model/accessors/dataset_accessor";
 import {
   enforceSkeletonTracing,
+  findTreeByAgglomerateId,
   findTreeByName,
   getActiveNode,
   getBranchPoints,
   getNodePosition,
-  getTreeNameForAgglomerateSkeleton,
+  getTreeNameForAgglomerateTree,
   getTreesWithType,
 } from "viewer/model/accessors/skeletontracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
@@ -49,7 +54,10 @@ import {
   setPositionAction,
   setRotationAction,
 } from "viewer/model/actions/flycam_actions";
-import type { LoadAgglomerateSkeletonAction } from "viewer/model/actions/skeletontracing_actions";
+import type {
+  LoadAgglomerateTreeAtPositionAction,
+  LoadAgglomerateTreeFromIdAction,
+} from "viewer/model/actions/skeletontracing_actions";
 import {
   addTreesAndGroupsAction,
   deleteBranchPointAction,
@@ -80,9 +88,10 @@ import {
   updateTreeGroupsExpandedState,
   updateTreeVisibility,
 } from "viewer/model/sagas/volume/update_actions";
-import { api } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import type { SkeletonTracing, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
+import { dispatchEnsureHasNewestVersionAsync } from "../actions/save_actions";
 import {
   eulerAngleToReducerInternalMatrix,
   reducerInternalMatrixToEulerAngle,
@@ -92,6 +101,11 @@ import { diffBoundingBoxes } from "./diffing/bounding_box_diffing";
 import { diffGroups } from "./diffing/group_diffing";
 import { ensureWkInitialized } from "./ready_sagas";
 import { takeWithBatchActionSupport } from "./saga_helpers";
+import {
+  getCurrentMutexFetchingStrategy,
+  MutexFetchingStrategy,
+  subscribeToAnnotationMutex,
+} from "./saving/save_mutex_saga";
 
 function getNodeRotationWithoutPlaneRotation(activeNode: Readonly<MutableNode>): Vector3 {
   // In orthogonal view mode, the active planes' default rotation is added to the flycam rotation upon node creation.
@@ -261,24 +275,24 @@ function* watchTreeNames(): Saga<void> {
 
 function* watchAgglomerateLoading(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_INITIALIZED
-  const channel = yield* actionChannel("LOAD_AGGLOMERATE_SKELETON");
+  const channel = yield* actionChannel([
+    "LOAD_AGGLOMERATE_TREE_FROM_ID",
+    "LOAD_AGGLOMERATE_TREE_AT_POSITION",
+  ]);
   yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
   yield* call(ensureWkInitialized);
-  yield* takeEvery(channel, loadAgglomerateSkeletonWithId);
+  yield* takeEvery(channel, loadAgglomerateTreeWithAtPosition);
 }
 function* watchConnectomeAgglomerateLoading(): Saga<void> {
   // Buffer actions since they might be dispatched before WK_INITIALIZED
-  const channel = yield* actionChannel("LOAD_CONNECTOME_AGGLOMERATE_SKELETON");
+  const channel = yield* actionChannel("LOAD_CONNECTOME_AGGLOMERATE_TREE");
   // The order of these two actions is not guaranteed, but they both need to be dispatched
   yield* all([take("INITIALIZE_CONNECTOME_TRACING"), take("WK_INITIALIZED")]);
-  yield* takeEvery(channel, loadConnectomeAgglomerateSkeletonWithId);
-  yield* takeEvery(
-    "REMOVE_CONNECTOME_AGGLOMERATE_SKELETON",
-    removeConnectomeAgglomerateSkeletonWithId,
-  );
+  yield* takeEvery(channel, loadConnectomeAgglomerateTreeWithId);
+  yield* takeEvery("REMOVE_CONNECTOME_AGGLOMERATE_TREE", removeConnectomeAgglomerateTreeWithId);
 }
 
-function* getAgglomerateSkeletonTracing(
+export function* getAgglomerateTreeAsSkeletonTracing(
   layerName: string,
   mappingName: string,
   agglomerateId: number,
@@ -297,7 +311,7 @@ function* getAgglomerateSkeletonTracing(
         // @ts-expect-error ts-migrate(2339) FIXME: Property 'fallbackLayer' does not exist on type 'A... Remove this comment to see the full error message
         layerInfo.fallbackLayer != null ? layerInfo.fallbackLayer : layerName;
       nmlProtoBuffer = yield* call(
-        getAgglomerateSkeleton,
+        getAgglomerateTreeAsSkeletonTracingFromDatastore,
         dataset.dataStore.url,
         dataset,
         effectiveLayerName,
@@ -306,7 +320,7 @@ function* getAgglomerateSkeletonTracing(
       );
     } else {
       nmlProtoBuffer = yield* call(
-        getEditableAgglomerateSkeleton,
+        getEditableAgglomerateTreeAsSkeletonTracing,
         annotation.tracingStore.url,
         editableMapping.tracingId,
         agglomerateId,
@@ -323,12 +337,22 @@ function* getAgglomerateSkeletonTracing(
 
     if (parsedTracing.trees.length !== 1) {
       throw new Error(
-        `Agglomerate skeleton response does not contain exactly one tree, but ${parsedTracing.trees.length} instead.`,
+        `Agglomerate tree response does not contain exactly one tree, but ${parsedTracing.trees.length} instead.`,
       );
     }
 
     // Make sure the tree is named as expected
-    parsedTracing.trees[0].name = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
+    parsedTracing.trees[0].name = getTreeNameForAgglomerateTree(agglomerateId, mappingName);
+    if (editableMapping && parsedTracing.trees[0].agglomerateInfo?.mappingName != null) {
+      // Ensure loaded agglomerate tree has the tracing id set in their agglomerateInfo.
+      // In case the matching agglomerate was never modified, the tracingstore asks the datastore which then
+      // sets the mappingName in the agglomerate info, but we prefer to have the tracingId set in case
+      // an editable mapping tracing exists.
+      parsedTracing.trees[0].agglomerateInfo = {
+        agglomerateId,
+        tracingId: editableMapping.tracingId,
+      };
+    }
 
     return parsedTracing;
   } catch (e) {
@@ -380,89 +404,137 @@ function handleAgglomerateLoadingError(
   ErrorHandling.notify(e);
 }
 
-function* loadAgglomerateSkeletonWithId(
-  action: LoadAgglomerateSkeletonAction,
-): Saga<[string, number] | null> {
+function* loadAgglomerateTreeWithAtPosition(
+  action: LoadAgglomerateTreeFromIdAction | LoadAgglomerateTreeAtPositionAction,
+): Saga<void> {
   const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
-  if (!allowUpdate) return null;
-  const { layerName, mappingName, agglomerateId } = action;
+  if (!allowUpdate) return;
+  const { layerName, mappingName } = action;
 
-  if (agglomerateId === 0) {
-    Toast.error(messages["tracing.agglomerate_skeleton.no_cell"]);
-    return null;
+  if (action.type === "LOAD_AGGLOMERATE_TREE_FROM_ID" && action.agglomerateId === 0) {
+    Toast.error(messages["tracing.agglomerate_tree.no_cell"]);
+    return;
   }
-
-  const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
-  const trees = yield* select((state) =>
-    getTreesWithType(enforceSkeletonTracing(state.annotation), TreeTypeEnum.AGGLOMERATE),
-  );
-  const maybeTree = findTreeByName(trees, treeName);
-
-  if (maybeTree != null) {
-    console.warn(
-      `Skeleton for agglomerate ${agglomerateId} with mapping ${mappingName} is already loaded. Its tree name is "${treeName}".`,
-    );
-    return [treeName, maybeTree.treeId];
-  }
-
   const progressCallback = createProgressCallback({
     pauseDelay: 100,
     successMessageDelay: 2000,
   });
-  const { hideFn } = yield* call(
-    progressCallback,
-    false,
-    `Loading skeleton for agglomerate ${agglomerateId} with mapping ${mappingName}`,
-  );
 
-  let usedTreeIds: number[] | null = null;
+  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+  const shouldGuardWithAnnotationMutex =
+    othersMayEdit && (yield* call(getCurrentMutexFetchingStrategy)) === MutexFetchingStrategy.AdHoc;
+  let unsubscribeFromAnnotationMutex = null;
+  let hideFn: HideFn | undefined;
+  if (shouldGuardWithAnnotationMutex) {
+    ({ hideFn } = yield* call(progressCallback, false, `Updating annotation to latest version...`));
+    unsubscribeFromAnnotationMutex = yield* call(
+      subscribeToAnnotationMutex,
+      "Agglomerate Tree Loading",
+    );
+
+    // We already sync here to ensure to have the newest annotation version to get an up-to-date agglomerate tree.
+    yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
+  }
+
+  const agglomerateId =
+    action.type === "LOAD_AGGLOMERATE_TREE_FROM_ID"
+      ? action.agglomerateId
+      : // Ad-hoc lookup of agglomerate id after syncing in live-collab. Should be preferred over using the LoadAgglomerateTreeFromIdAction action.
+        yield call(getSegmentIdForPositionAsync, action.agglomeratePosition);
+
+  const trees = yield* select((state) =>
+    getTreesWithType(enforceSkeletonTracing(state.annotation), TreeTypeEnum.AGGLOMERATE),
+  );
+  const maybeTree = findTreeByAgglomerateId(trees, agglomerateId, layerName, mappingName);
+
   try {
-    const parsedTracing = yield* call(
-      getAgglomerateSkeletonTracing,
+    if (maybeTree != null) {
+      console.warn(
+        `Tree for agglomerate ${agglomerateId} with mapping ${mappingName} is already loaded. Its tree name is "${maybeTree.name}".`,
+      );
+      yield* call(
+        progressCallback,
+        true,
+        `Tree for agglomerate ${agglomerateId} is already present. If it is not in sync with the mapping, please delete and reload it.`,
+      );
+      return;
+    }
+
+    ({ hideFn } = yield* call(
+      progressCallback,
+      true,
+      `Loading tree for agglomerate ${agglomerateId} with mapping ${mappingName}`,
+    ));
+
+    let usedTreeIds: number[] | null = null;
+    let agglomerateTree: ServerSkeletonTracing;
+    let newTree: Tree | undefined;
+    agglomerateTree = yield* call(
+      getAgglomerateTreeAsSkeletonTracing,
       layerName,
       mappingName,
       agglomerateId,
     );
+
     yield* put(
       addTreesAndGroupsAction(
-        createMutableTreeMapFromTreeArray(parsedTracing.trees),
-        parsedTracing.treeGroups,
+        createMutableTreeMapFromTreeArray(agglomerateTree.trees),
+        agglomerateTree.treeGroups,
         (newTreeIds) => {
           usedTreeIds = newTreeIds;
         },
       ),
     );
+
     // @ts-expect-error TS infers usedTreeIds to be never, but it should be number[] if its not null
     if (usedTreeIds == null || usedTreeIds.length !== 1) {
       throw new Error(
-        "Assumption violated while adding agglomerate skeleton. Exactly one tree should have been added.",
+        "Assumption violated while adding agglomerate tree. Exactly one tree should have been added.",
       );
+    }
+    newTree = yield* select((state) =>
+      // @ts-expect-error TS infers usedTreeIds to be be potentially null, but this cannot be the case.
+      state.annotation.skeleton?.trees.getNullable(usedTreeIds[0]),
+    );
+    if (!newTree) {
+      throw new Error("Could not find the newly loaded agglomerate tree in the annotation.");
     }
   } catch (e) {
     // Hide the progress notification and handle the error
-    hideFn();
+    hideFn?.();
     // @ts-expect-error
     handleAgglomerateLoadingError(e);
-    return null;
+    return;
+  } finally {
+    if (shouldGuardWithAnnotationMutex) {
+      // Enforces to directly store the loaded agglomerate tree to the annotation on the server
+      // to enforce that all users also have the agglomerate tree present upon the next sync.
+      yield* call([Model, Model.ensureSavedState]);
+      // Then release the mutex if it was acquired.
+      if (unsubscribeFromAnnotationMutex) {
+        yield* call(unsubscribeFromAnnotationMutex);
+      } else {
+        console.warn(
+          "Loaded agglomerate tree in live collab mode, but there was no mutex subscription to be released, although this is to be expected.",
+        );
+      }
+    }
   }
 
-  yield* call(progressCallback, true, "Skeleton generation done.");
-  return [treeName, usedTreeIds[0]];
+  yield* call(progressCallback, true, "Tree generation done.");
 }
 
-function* loadConnectomeAgglomerateSkeletonWithId(
-  action: LoadAgglomerateSkeletonAction,
-): Saga<void> {
+function* loadConnectomeAgglomerateTreeWithId(action: LoadAgglomerateTreeFromIdAction): Saga<void> {
   const { layerName, mappingName, agglomerateId } = action;
 
   if (agglomerateId === 0) {
-    Toast.error(messages["tracing.agglomerate_skeleton.no_cell"]);
+    Toast.error(messages["tracing.agglomerate_tree.no_cell"]);
     return;
   }
 
   try {
     const parsedTracing = yield* call(
-      getAgglomerateSkeletonTracing,
+      getAgglomerateTreeAsSkeletonTracing,
       layerName,
       mappingName,
       agglomerateId,
@@ -476,11 +548,11 @@ function* loadConnectomeAgglomerateSkeletonWithId(
   }
 }
 
-function* removeConnectomeAgglomerateSkeletonWithId(
-  action: LoadAgglomerateSkeletonAction,
+function* removeConnectomeAgglomerateTreeWithId(
+  action: LoadAgglomerateTreeFromIdAction,
 ): Saga<void> {
   const { layerName, mappingName, agglomerateId } = action;
-  const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
+  const treeName = getTreeNameForAgglomerateTree(agglomerateId, mappingName);
   const skeleton = yield* select(
     (state) => state.localSegmentationData[layerName].connectomeData.skeleton,
   );
@@ -520,13 +592,14 @@ function* diffNodes(
   prevNodes: NodeMap,
   nodes: NodeMap,
   treeId: number,
+  useDeepEqualityCheck: boolean,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevNodes === nodes) return;
   const {
     onlyA: deletedNodeIds,
     onlyB: addedNodeIds,
     changed: changedNodeIds,
-  } = diffDiffableMaps(prevNodes, nodes);
+  } = diffDiffableMaps(prevNodes, nodes, useDeepEqualityCheck);
 
   for (const nodeId of deletedNodeIds) {
     yield deleteNode(treeId, nodeId, tracingId);
@@ -547,7 +620,7 @@ function* diffNodes(
   }
 }
 
-function updateNodePredicate(prevNode: Node, node: Node): boolean {
+export function updateNodePredicate(prevNode: Node, node: Node): boolean {
   return !isEqual(prevNode, node);
 }
 
@@ -556,9 +629,14 @@ function* diffEdges(
   prevEdges: EdgeCollection,
   edges: EdgeCollection,
   treeId: number,
+  useDeepEqualityCheck: boolean,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevEdges === edges) return;
-  const { onlyA: deletedEdges, onlyB: addedEdges } = diffEdgeCollections(prevEdges, edges);
+  const { onlyA: deletedEdges, onlyB: addedEdges } = diffEdgeCollections(
+    prevEdges,
+    edges,
+    useDeepEqualityCheck,
+  );
 
   for (const edge of deletedEdges) {
     yield deleteEdge(treeId, edge.source, edge.target, tracingId);
@@ -569,47 +647,61 @@ function* diffEdges(
   }
 }
 
-function updateTreePredicate(prevTree: Tree, tree: Tree): boolean {
-  return (
-    // branchPoints and comments are arrays and therefore checked for
-    // equality. This avoids unnecessary updates in certain cases (e.g.,
-    // when two trees are merged, the comments are concatenated, even
-    // if one of them is empty; thus, resulting in new instances).
-    !isEqual(prevTree.branchPoints, tree.branchPoints) ||
-    !isEqual(prevTree.comments, tree.comments) ||
-    prevTree.color !== tree.color ||
+function updateTreePredicate(prevTree: Tree, tree: Tree, useDeepEqualityCheck: boolean): boolean {
+  const doPrimitivesDiffer =
     prevTree.name !== tree.name ||
     prevTree.timestamp !== tree.timestamp ||
     prevTree.groupId !== tree.groupId ||
     prevTree.type !== tree.type ||
-    prevTree.metadata !== tree.metadata
-  );
+    prevTree.agglomerateInfo?.agglomerateId !== tree.agglomerateInfo?.agglomerateId ||
+    prevTree.agglomerateInfo?.tracingId !== tree.agglomerateInfo?.tracingId ||
+    prevTree.agglomerateInfo?.mappingName !== tree.agglomerateInfo?.mappingName;
+
+  if (doPrimitivesDiffer) {
+    return true;
+  }
+  // In case of a deep diff, also diff the color and metadata deeply, which is not needed for shallow diffing.
+  const doesMetadataOrColorDiffer = useDeepEqualityCheck
+    ? !isEqual(prevTree.color, tree.color) || !isEqual(prevTree.metadata, tree.metadata)
+    : prevTree.color !== tree.color || prevTree.metadata !== tree.metadata;
+  if (doesMetadataOrColorDiffer) {
+    return true;
+  }
+  // branchPoints and comments are arrays and therefore checked for
+  // equality. This avoids unnecessary updates in certain cases (e.g.,
+  // when two trees are merged, the comments are concatenated, even
+  // if one of them is empty; thus, resulting in new instances).
+  const doArraysDiffer =
+    !isEqual(prevTree.branchPoints, tree.branchPoints) ||
+    !isEqual(prevTree.comments, tree.comments);
+  return doArraysDiffer;
 }
 
 export function* diffTrees(
   tracingId: string,
   prevTrees: TreeMap,
   trees: TreeMap,
+  useDeepEqualityCheck: boolean,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevTrees === trees) return;
   const {
     changed: bothTreeIds,
     onlyA: deletedTreeIds,
     onlyB: addedTreeIds,
-  } = diffDiffableMaps(prevTrees, trees);
+  } = diffDiffableMaps(prevTrees, trees, useDeepEqualityCheck);
 
   for (const treeId of deletedTreeIds) {
     const prevTree = prevTrees.getOrThrow(treeId);
-    yield* diffNodes(tracingId, prevTree.nodes, new DiffableMap(), treeId);
-    yield* diffEdges(tracingId, prevTree.edges, new EdgeCollection(), treeId);
+    yield* diffNodes(tracingId, prevTree.nodes, new DiffableMap(), treeId, useDeepEqualityCheck);
+    yield* diffEdges(tracingId, prevTree.edges, new EdgeCollection(), treeId, useDeepEqualityCheck);
     yield deleteTree(treeId, tracingId);
   }
 
   for (const treeId of addedTreeIds) {
     const tree = trees.getOrThrow(treeId);
     yield createTree(tree, tracingId);
-    yield* diffNodes(tracingId, new DiffableMap(), tree.nodes, treeId);
-    yield* diffEdges(tracingId, new EdgeCollection(), tree.edges, treeId);
+    yield* diffNodes(tracingId, new DiffableMap(), tree.nodes, treeId, useDeepEqualityCheck);
+    yield* diffEdges(tracingId, new EdgeCollection(), tree.edges, treeId, useDeepEqualityCheck);
   }
 
   for (const treeId of bothTreeIds) {
@@ -617,10 +709,10 @@ export function* diffTrees(
     const prevTree: Tree = prevTrees.getOrThrow(treeId);
 
     if (tree !== prevTree) {
-      yield* diffNodes(tracingId, prevTree.nodes, tree.nodes, treeId);
-      yield* diffEdges(tracingId, prevTree.edges, tree.edges, treeId);
+      yield* diffNodes(tracingId, prevTree.nodes, tree.nodes, treeId, useDeepEqualityCheck);
+      yield* diffEdges(tracingId, prevTree.edges, tree.edges, treeId, useDeepEqualityCheck);
 
-      if (updateTreePredicate(prevTree, tree)) {
+      if (updateTreePredicate(prevTree, tree, useDeepEqualityCheck)) {
         yield updateTree(tree, tracingId);
       }
 
@@ -634,13 +726,15 @@ export function* diffTrees(
   }
 }
 
-export const cachedDiffTrees = memoizeOne((tracingId: string, prevTrees: TreeMap, trees: TreeMap) =>
-  Array.from(diffTrees(tracingId, prevTrees, trees)),
+export const cachedDiffTrees = memoizeOne(
+  (tracingId: string, prevTrees: TreeMap, trees: TreeMap, useDeepEqualityCheck: boolean) =>
+    Array.from(diffTrees(tracingId, prevTrees, trees, useDeepEqualityCheck)),
 );
 
 export function* diffSkeletonTracing(
   prevSkeletonTracing: SkeletonTracing,
   skeletonTracing: SkeletonTracing,
+  useDeepEqualityCheck: boolean = false,
 ): Generator<UpdateActionWithoutIsolationRequirement, void, void> {
   if (prevSkeletonTracing === skeletonTracing) {
     return;
@@ -649,6 +743,7 @@ export function* diffSkeletonTracing(
     skeletonTracing.tracingId,
     prevSkeletonTracing.trees,
     skeletonTracing.trees,
+    useDeepEqualityCheck,
   );
 
   const groupDiff = diffGroups(prevSkeletonTracing.treeGroups, skeletonTracing.treeGroups);

@@ -10,14 +10,14 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.SegmentToAgglomerateChunkProto
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Tree, TreeTypeProto}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Tree, TreeTypeProto, TreeAgglomerateInfoProto}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.helpers.{
   NativeBucketScanner,
   NodeDefaults,
   ProtoGeometryImplicits,
-  SkeletonTracingDefaults
+  SkeletonTracingDefaults,
 }
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models._
@@ -297,27 +297,26 @@ class EditableMappingService @Inject()(
                                                        remoteFallbackLayer)
     } yield editableMappingForSegmentIds ++ baseMappingSubset
 
-  def getAgglomerateSkeletonWithFallback(tracingId: String,
-                                         version: Long,
-                                         editableMappingInfo: EditableMappingInfo,
-                                         remoteFallbackLayer: RemoteFallbackLayer,
-                                         agglomerateId: Long)(implicit tc: TokenContext): Fox[Array[Byte]] =
+  def getAgglomerateTreeWithFallback(tracingId: String,
+                                     version: Long,
+                                     editableMappingInfo: EditableMappingInfo,
+                                     remoteFallbackLayer: RemoteFallbackLayer,
+                                     agglomerateId: Long)(implicit tc: TokenContext): Fox[Array[Byte]] =
     for {
       agglomerateGraphBox <- getAgglomerateGraphForId(tracingId, version, agglomerateId).shiftBox
+      _ <- Fox.fromBool(agglomerateGraphBox.map(_.segments.nonEmpty).getOrElse(true)) ?~> "annotation.editableMapping.getAgglomerateTree.empty"
       skeletonBytes <- agglomerateGraphBox match {
         case Full(agglomerateGraph) =>
-          Fox.successful(agglomerateGraphToSkeleton(tracingId, agglomerateGraph, agglomerateId))
+          Fox.successful(agglomerateGraphToTree(tracingId, agglomerateGraph, agglomerateId))
         case Empty =>
-          remoteDatastoreClient.getAgglomerateSkeleton(remoteFallbackLayer,
-                                                       editableMappingInfo.baseMappingName,
-                                                       agglomerateId)
+          remoteDatastoreClient.getAgglomerateTree(remoteFallbackLayer,
+                                                   editableMappingInfo.baseMappingName,
+                                                   agglomerateId)
         case f: Failure => f.toFox
       }
     } yield skeletonBytes
 
-  private def agglomerateGraphToSkeleton(tracingId: String,
-                                         graph: AgglomerateGraph,
-                                         agglomerateId: Long): Array[Byte] = {
+  private def agglomerateGraphToTree(tracingId: String, graph: AgglomerateGraph, agglomerateId: Long): Array[Byte] = {
     val nodeIdStartAtOneOffset = 1
     val nodes = graph.positions.zipWithIndex.map {
       case (pos, idx) =>
@@ -327,7 +326,7 @@ class EditableMappingService @Inject()(
         )
     }
     val segmentIdToNodeIdMinusOne: Map[Long, Int] = graph.segments.zipWithIndex.toMap
-    val skeletonEdges = graph.edges.map { e =>
+    val treeEdges = graph.edges.map { e =>
       Edge(source = segmentIdToNodeIdMinusOne(e.source) + nodeIdStartAtOneOffset,
            target = segmentIdToNodeIdMinusOne(e.target) + nodeIdStartAtOneOffset)
     }
@@ -337,9 +336,10 @@ class EditableMappingService @Inject()(
         treeId = math.abs(agglomerateId.toInt), // used only to deterministically select tree color
         createdTimestamp = System.currentTimeMillis(),
         nodes = nodes,
-        edges = skeletonEdges,
+        edges = treeEdges,
         name = s"agglomerate $agglomerateId ($tracingId)",
-        `type` = Some(TreeTypeProto.AGGLOMERATE)
+        `type` = Some(TreeTypeProto.AGGLOMERATE),
+        agglomerateInfo = Some(TreeAgglomerateInfoProto(agglomerateId, Some(tracingId), None)),
       ))
 
     val skeleton = SkeletonTracingDefaults.createInstance.copy(
@@ -409,7 +409,8 @@ class EditableMappingService @Inject()(
       tokenContext = tc,
       mapping = None,
       mappingType = None,
-      findNeighbors = request.findNeighbors
+      findNeighbors = request.findNeighbors,
+      annotationVersion = request.annotationVersion,
     )
     adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
   }

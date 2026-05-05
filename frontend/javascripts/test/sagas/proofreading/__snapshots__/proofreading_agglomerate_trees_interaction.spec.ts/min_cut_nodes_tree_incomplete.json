@@ -1,0 +1,24 @@
+[
+  [
+    {
+      "name": "deleteEdge",
+      "value": {
+        "actionTracingId": "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13",
+        "source": 5,
+        "target": 6,
+        "treeId": 3,
+      },
+    },
+  ],
+  [
+    {
+      "name": "splitAgglomerate",
+      "value": {
+        "actionTracingId": "volumeTracingId",
+        "agglomerateId": 1,
+        "segmentId1": 3,
+        "segmentId2": 2,
+      },
+    },
+  ],
+]

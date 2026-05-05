@@ -79,11 +79,11 @@ export const settingsTooltips: Partial<Record<keyof RecommendedConfiguration, st
   zoom: "Zoom in or out in the data viewports.",
   displayScalebars: "Show a scale in the lower-right corner of each viewport.",
   blendMode:
-    "Set the blend mode for the dataset. The additive mode (default) adds the data values of all color layers. In cover mode, color layers are rendered on top of each other so that the data values of lower color layers are hidden by values of higher layers. Cover mode enables reordering of color layers.",
+    "Set the blend mode for the dataset. The additive mode (default) adds the data values of all color layers. In cover mode, color layers are rendered on top of each other so that the data values of lower color layers are hidden by values of higher layers. Cover (black as transparent) works like cover mode, but black voxels are treated as transparent so they do not occlude lower layers. Cover modes enable reordering of color layers.",
   renderWatermark: "Show a WEBKNOSSOS logo in the lower-left corner of each screenshot.",
   antialiasRendering: "Antialias rendering (can impact performance)",
   colorLayerOrder:
-    "Set the order in which color layers are rendered. This setting is only relevant if the cover blend mode is active.",
+    "Set the order in which color layers are rendered. This setting is only relevant if one of the cover blend modes is active.",
 };
 
 export const layerViewConfigurations: Partial<Record<keyof DatasetLayerConfiguration, string>> = {
@@ -145,7 +145,7 @@ A reload is necessary to return to a valid state.`,
     "These snippets are pre-configured and contain your personal access token and <%- typeName %> meta data. Do not share this information with anyone you do not trust!",
   ),
   "download.export_as_tiff": template(
-    "Export this <%- typeName %> as TIFF image(s). This may take a few moments depending on the size of your configured export.",
+    "Export your <%- typeName %> as TIFF images. Large exports may take a few minutes.",
   ),
   "add_script.confirm_change": "This will replace the code you have written. Continue?",
   "data.enabled_render_missing_data_black":
@@ -249,18 +249,17 @@ instead. Only enable this option if you understand its effect. All layers will n
     `A precomputed mesh could not be loaded for segment ${segmentId}. You may want to use ad-hoc meshing instead. More information was printed to the browser's console.`,
   "tracing.area_to_fill_is_too_big":
     "The area you want to fill is too big. Please annotate the area in multiple strokes.",
-  "tracing.agglomerate_skeleton.no_cell":
-    "Clicked on the background. Please click on a segment to load a skeleton.",
-  "tracing.agglomerate_skeleton.no_mapping":
-    "Activate an agglomerate file mapping to load a skeleton for a segment.",
-  "tracing.agglomerate_skeleton.no_agglomerate_file_active":
-    "Loading a skeleton for a segment only works with agglomerate file mappings.",
-  "tracing.agglomerate_skeleton.no_agglomerate_files_loaded_yet":
-    "Checking for agglomerate files...",
-  "tracing.agglomerate_skeleton.no_agglomerate_file_available":
+  "tracing.agglomerate_tree.no_cell":
+    "Clicked on the background. Please click on a segment to load an agglomerate tree.",
+  "tracing.agglomerate_tree.no_mapping":
+    "Activate an agglomerate file mapping to load an agglomerate tree for a segment.",
+  "tracing.agglomerate_tree.no_agglomerate_file_active":
+    "Loading an agglomerate tree for a segment only works with agglomerate file mappings.",
+  "tracing.agglomerate_tree.no_agglomerate_files_loaded_yet": "Checking for agglomerate files...",
+  "tracing.agglomerate_tree.no_agglomerate_file_available":
     "No agglomerate file mapping is available for this segmentation layer. Please reach out to hello@webknossos.org to get help with generating one.",
-  "tracing.agglomerate_skeleton.no_skeleton_tracing":
-    "Loading a skeleton for a segment only works in skeleton or hybrid tracings.",
+  "tracing.agglomerate_tree.no_skeleton_tracing":
+    "Loading an agglomerate tree for a segment only works in skeleton or hybrid tracings.",
   "tracing.skeletons_are_hidden_warning":
     'All trees are currently hidden. You can disable this by toggling the "Skeleton" layer in the layer settings in the left sidebar.',
   "tracing.invalid_json_url_hash":
@@ -317,6 +316,9 @@ instead. Only enable this option if you understand its effect. All layers will n
   "proofreading.multi_cut.no_valid_agglomerate":
     "No agglomerate for the selected segments could be found. Please retry with a new selection.",
   "proofreading.multi_cut.split_failed": "Could not determine a valid split. Operation failed.",
+  "proofreading.post_processing_info_not_found":
+    "Could not retrieve updated post processing information necessary for processing this proofreading operation. Please try again.",
+
   "task.bulk_create_invalid":
     "Can not parse task specification. It includes at least one invalid task.",
   "task.recommended_configuration": "The author of this task suggests to use these settings:",
@@ -390,7 +392,8 @@ instead. Only enable this option if you understand its effect. All layers will n
   "annotation.shared_teams_edited": "Successfully updated the sharing options for the annotation",
   "annotation.shared_teams_edited_failed":
     "Updating the sharing options for the annotation failed. Please retry or see the error message in the console.",
-  "annotation.download": "The following annotation data is available for download immediately.",
+  "annotation.download":
+    "Volume data can be exported alongside the skeleton in Zarr or WKW format, or you can grab just the skeleton as an NML file. Select a format below — larger annotations may take a moment to prepare.",
   "annotation.export_no_worker":
     "This WEBKNOSSOS instance is not configured to run export jobs. To learn more about this feature please contact us at ",
   "annotation.register_for_token": "Please log in to get an access token for the script below.",

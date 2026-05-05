@@ -36,6 +36,8 @@ Compile / console / scalacOptions -= "-Xlint:unused"
 
 lazy val commonSettings = Seq(
   resolvers ++= Dependencies.dependencyResolvers,
+  // Fallback for cisd artifacts (jhdf5 + base) in case maven.scijava.org is unavailable
+  resolvers += "local-maven-cisd" at ((ThisBuild / baseDirectory).value / "lib" / "local-maven").toURI.toString,
   Compile / doc / sources := Seq.empty,
   Compile / packageDoc / publishArtifact := false,
   scapegoatIgnoredFiles := Seq(".*/Tables.scala",

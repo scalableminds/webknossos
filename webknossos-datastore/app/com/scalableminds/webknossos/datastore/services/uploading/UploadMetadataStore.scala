@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.services.uploading
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
+import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, LayerAttachment}
 import com.scalableminds.webknossos.datastore.services.uploading.UploadDomain.UploadDomain
@@ -10,7 +11,6 @@ import com.scalableminds.webknossos.datastore.storage.DataStoreRedisStore
 import play.api.libs.json.Json
 
 import javax.inject.Inject
-import scala.collection.immutable.Seq
 import scala.concurrent.ExecutionContext
 
 trait UploadMetadataStore extends FoxImplicits {
@@ -145,6 +145,9 @@ class DatasetUploadMetadataStore @Inject()(protected val store: DataStoreRedisSt
   private def redisKeyForNeedsConversion(uploadId: String): String =
     s"$keyPrefix${uploadId}___needsConversion"
 
+  private def redisKeyForVoxelSize(uploadId: String): String =
+    s"$keyPrefix${uploadId}___voxelSize"
+
   def findUploadIdByDataSourceId(dataSourceId: DataSourceId): Fox[String] =
     store.find(redisKeyForUploadIdByDataSourceId(dataSourceId))
 
@@ -153,6 +156,9 @@ class DatasetUploadMetadataStore @Inject()(protected val store: DataStoreRedisSt
 
   def findNeedsConversion(uploadId: String)(implicit ec: ExecutionContext): Fox[Boolean] =
     store.findParsed[Boolean](redisKeyForNeedsConversion(uploadId))
+
+  def findVoxelSize(uploadId: String)(implicit ec: ExecutionContext): Fox[VoxelSize] =
+    store.findParsed[VoxelSize](redisKeyForVoxelSize(uploadId))
 
   // Only here the uploadId is not key but value. This is used to re-connect to unfinished uploads.
   def insertUploadIdByDataSourceId(dataSourceId: DataSourceId, uploadId: String): Fox[Unit] =
@@ -164,6 +170,9 @@ class DatasetUploadMetadataStore @Inject()(protected val store: DataStoreRedisSt
 
   def insertNeedsConversion(uploadId: String, needsConversion: Boolean): Fox[_] =
     store.insertSerialized(redisKeyForNeedsConversion(uploadId), needsConversion)
+
+  def insertVoxelSize(uploadId: String, voxelSize: VoxelSize): Fox[_] =
+    store.insertSerialized(redisKeyForVoxelSize(uploadId), voxelSize)
 
   override def cleanUp(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =
     for {

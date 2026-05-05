@@ -6,7 +6,7 @@ GET           /health                                                           
 GET           /checkCertificate                                                                 controllers.Application.checkCertificate()
 POST          /analytics/ingest                                                                 controllers.AnalyticsController.ingestAnalyticsEvents
 POST          /analytics/:eventType                                                             controllers.AnalyticsController.trackAnalyticsEvent(eventType)
-POST          /helpEmail                                                                        controllers.Application.helpEmail(message: String, currentUrl: String)
+POST          /helpEmail                                                                        controllers.Application.helpEmail()
 POST          /triggers/initialData                                                             controllers.InitialDataController.triggerInsert()
 
 # Maintenance
@@ -287,7 +287,6 @@ GET           /jobs/request                                                     
 GET           /jobs                                                                             controllers.JobController.list(command: Option[String], skipForDeletedDatasets: Option[Boolean])
 GET           /jobs/status                                                                      controllers.JobController.status()
 GET           /jobs/getCreditCost                                                               controllers.JobController.getJobCreditCost(command: String, boundingBoxInMag: String)
-POST          /jobs/run/convertToWkw/:datasetId                                                 controllers.JobController.runConvertToWkwJob(datasetId: ObjectId, scale: String, unit: Option[String])
 POST          /jobs/run/computeMeshFile/:datasetId                                              controllers.JobController.runComputeMeshFileJob(datasetId: ObjectId, layerName: String, mag: String, agglomerateView: Option[String])
 POST          /jobs/run/computeSegmentIndexFile/:datasetId                                      controllers.JobController.runComputeSegmentIndexFileJob(datasetId: ObjectId, layerName: String)
 POST          /jobs/run/exportTiff/:datasetId                                                   controllers.JobController.runExportTiffJob(datasetId: ObjectId, bbox: String, additionalCoordinates: Option[String], layerName: Option[String], mag: Option[String], annotationLayerName: Option[String], annotationId: Option[ObjectId], asOmeTiff: Boolean)

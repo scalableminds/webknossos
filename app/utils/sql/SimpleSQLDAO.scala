@@ -39,7 +39,7 @@ class SimpleSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
         case Failure(e: Throwable) =>
           val msg = e.getMessage
           if (retryIfErrorContains.exists(msg.contains(_)) && retryCount > 0) {
-            logger.debug(s"Retrying SQL Query ($retryCount remaining) due to $msg")
+            logger.info(s"Retrying SQL Query ($retryCount remaining) due to $msg")
             Thread.sleep(20)
             run(query, retryCount - 1, retryIfErrorContains)
           } else {
@@ -54,8 +54,8 @@ class SimpleSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
 
   private def logError[R](ex: Throwable, stackMarker: Throwable, query: DBIOAction[R, NoStream, Nothing]): Unit = {
     logger.error("SQL Error: " + ex)
-    logger.debug("SQL Error causing query:\n" + querySummary(query).take(8000))
-    logger.debug("SQL Error stack trace: " + TextUtils.stackTraceAsString(stackMarker))
+    logger.info("SQL Error causing query:\n" + querySummary(query).take(8000))
+    logger.info("SQL Error stack trace: " + TextUtils.stackTraceAsString(stackMarker))
   }
 
   private def reportErrorToSlack[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]): Unit =

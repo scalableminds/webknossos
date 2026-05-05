@@ -3,7 +3,6 @@
 import type { RequestOptions } from "libs/request";
 import { sleep } from "libs/utils";
 import mergeImg from "merge-img";
-import pixelmatch from "pixelmatch";
 import type { Browser, Page } from "puppeteer-core";
 import puppeteer from "puppeteer-core";
 import type { APIAnnotation } from "types/api_types";
@@ -11,7 +10,13 @@ import urljoin from "url-join";
 import type { PartialDatasetConfiguration } from "viewer/store";
 import { type TestContext, vi } from "vitest";
 import { createExplorational, updateDatasetConfiguration } from "../../admin/rest_api";
-import { bufferToPng, isPixelEquivalent } from "./screenshot_helpers";
+import {
+  HEADLESS,
+  MAXIMUM_WAIT_TIME_FOR_DATASET_LOADING,
+  PAGE_HEIGHT,
+  PAGE_WIDTH,
+  USE_LOCAL_CHROME,
+} from "./screenshot_test_config";
 
 vi.mock("libs/request", async (importOriginal) => {
   // The request lib is globally mocked for the unit tests. In the screenshot tests, we actually want to run the proper fetch calls so we revert to the original implementation
@@ -19,13 +24,6 @@ vi.mock("libs/request", async (importOriginal) => {
 });
 
 export const { WK_AUTH_TOKEN } = process.env;
-
-const PAGE_WIDTH = 1920;
-const PAGE_HEIGHT = 1080;
-
-const USE_LOCAL_CHROME = false;
-// Only relevant when USE_LOCAL_CHROME. Set to false to actually see the browser open.
-const HEADLESS = true;
 
 type Screenshot = {
   screenshot: Buffer;
@@ -53,19 +51,12 @@ export async function writeDatasetNameToIdMapping(
   datasetNameToId: Record<string, string>,
 ) {
   for (const datasetName of datasetNames) {
-    await withRetry(
-      3,
-      async () => {
-        const options = getDefaultRequestOptions(baseUrl);
-        const path = `/api/datasets/disambiguate/sample_organization/${datasetName}/toId`;
-        const url = urljoin(baseUrl, path);
-        const response = await fetch(url, options);
-        const { id } = await response.json();
-        datasetNameToId[datasetName] = id;
-        return true;
-      },
-      () => {},
-    );
+    const options = getDefaultRequestOptions(baseUrl);
+    const path = `/api/datasets/disambiguate/sample_organization/${datasetName}/toId`;
+    const url = urljoin(baseUrl, path);
+    const response = await fetch(url, options);
+    const { id } = await response.json();
+    datasetNameToId[datasetName] = id;
   }
 }
 
@@ -236,7 +227,6 @@ async function waitForTracingViewLoad(page: Page) {
   let inputCatchers;
   let iterationCount = 0;
 
-  // @ts-expect-error ts-migrate(2339) FIXME: Property 'length' does not exist on type 'ElementH... Remove this comment to see the full error message
   while (inputCatchers == null || inputCatchers.length < 4) {
     iterationCount++;
     if (iterationCount > 5) {
@@ -244,15 +234,19 @@ async function waitForTracingViewLoad(page: Page) {
     }
     await sleep(500);
     const inputCatcherPromise = page
-      .$(".inputcatcher")
+      .waitForSelector(".inputcatcher")
+      .then(() => page.$$(".inputcatcher"))
       .then((elements) => ({ type: "inputcatchers", elements }));
+
     const errorPromise = page
-      .$(".initialization-error-message")
-      .then((elements) => ({ type: "error", elements }));
+      .waitForSelector(".initialization-error-message")
+      .then((element) => ({ type: "error", elements: [element] }));
 
     const raceResult = await Promise.race([inputCatcherPromise, errorPromise]);
 
     if (raceResult.type === "error") {
+      // Sleep a bit so that we can visually inspect the error in (recorded) sessions.
+      await sleep(1000);
       throw new Error("Initialization error detected");
     }
 
@@ -261,39 +255,11 @@ async function waitForTracingViewLoad(page: Page) {
 }
 
 async function waitForRenderingFinish(page: Page) {
-  const width = PAGE_WIDTH;
-  const height = PAGE_HEIGHT;
-  let currentShot;
-  let lastShot = await page.screenshot({
-    fullPage: true,
-  });
-  let changedPixels = Number.POSITIVE_INFINITY;
-
-  // If the screenshot of the page didn't change in the last x seconds, rendering should be finished
-  while (currentShot == null || !isPixelEquivalent(changedPixels, width, height)) {
-    console.log(`Waiting for rendering to finish. Changed pixels: ${changedPixels}`);
-    await sleep(1000);
-    currentShot = await page.screenshot({
-      fullPage: true,
-    });
-
-    if (lastShot != null) {
-      changedPixels = pixelmatch(
-        // The buffers need to be converted to png before comparing them
-        // as they might have different lengths, otherwise (probably due to different png encodings)
-        (await bufferToPng(lastShot, width, height)).data,
-        (await bufferToPng(currentShot, width, height)).data,
-        null,
-        width,
-        height,
-        {
-          threshold: 0.0,
-        },
-      );
-    }
-
-    lastShot = currentShot;
-  }
+  await sleep(1000);
+  await page.evaluate(
+    (maxWaitTime) => window.webknossos.DEV.waitForCompletedDataLoading(maxWaitTime),
+    MAXIMUM_WAIT_TIME_FOR_DATASET_LOADING,
+  );
 }
 
 async function openTracingView(
@@ -396,13 +362,16 @@ export async function screenshotTracingView(
     if (element == null)
       throw new Error(`Element ${planeId} not present, although page is loaded.`);
 
-    const screenshot = await element.screenshot();
+    // captureBeyondViewport=false prevents a react callstack error which was apparently
+    // triggered by a resize event when capturing beyond the viewport. Concretely, some
+    // antd observers got into an infinite loop. The symptom was an error toast in the UI.
+    const screenshot = await element.screenshot({ captureBeyondViewport: false });
     screenshots.push(screenshot);
   }
 
   await revertOpacityIfNecessary();
   // Concatenate all screenshots
-  const img = await mergeImg(screenshots);
+  const img = await mergeImg(screenshots as Array<Buffer>);
 
   return new Promise((resolve) => {
     img.getBuffer("image/png", (_, buffer) =>
@@ -430,24 +399,6 @@ export async function getNewPage(browser: Browser) {
   return page;
 }
 
-export async function withRetry(
-  retryCount: number,
-  testFn: () => Promise<boolean>,
-  resolveFn: (arg0: boolean) => void,
-) {
-  for (let i = 0; i < retryCount; i++) {
-    const condition = await testFn();
-
-    if (condition || i === retryCount - 1) {
-      // Either the test passed or we executed the last attempt
-      resolveFn(condition);
-      return;
-    }
-
-    console.error(`Test failed, retrying. This will be attempt ${i + 2}/${retryCount}.`);
-  }
-}
-
 // Define the test context type to be compatible with the test files
 export interface ScreenshotTestContext extends TestContext {
   browser: Browser;
@@ -457,17 +408,17 @@ export async function setupBeforeEach(context: ScreenshotTestContext) {
   if (USE_LOCAL_CHROME) {
     // Use this for connecting to local Chrome browser instance
     context.browser = await puppeteer.launch({
-      args: HEADLESS
+      args: (HEADLESS
         ? [
-            "--headless=false",
             "--hide-scrollbars",
             "--no-sandbox",
             "--disable-setuid-sandbox",
             "--disable-dev-shm-usage",
             "--use-angle=gl-egl",
           ]
-        : [],
-      headless: HEADLESS ? "new" : false, // use "new" to suppress warnings
+        : []
+      ).concat([`--window-size=${PAGE_WIDTH},${PAGE_HEIGHT}`]),
+      headless: HEADLESS,
       dumpio: true,
       executablePath: "/usr/bin/google-chrome", // Linux; this might need to be adapted to your local setup
       // executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", // Mac

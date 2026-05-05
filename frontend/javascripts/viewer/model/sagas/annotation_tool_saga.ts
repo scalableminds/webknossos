@@ -128,6 +128,35 @@ function* watchToolReset(): Saga<never> {
   }
 }
 
+function* updateToolTimestamp(setToolAction: SetToolAction): Saga<void> {
+  const newTool = setToolAction.tool;
+  const toolTimestamps = yield* select((state) => state.userConfiguration.timestampsForTools);
+  const updatedTimestamps = {
+    ...toolTimestamps,
+    [newTool.id]: Date.now(),
+  };
+  yield* put(updateUserSettingAction("timestampsForTools", updatedTimestamps));
+}
+
+function* rememberToolPreferences({ tool }: SetToolAction): Saga<void> {
+  switch (tool.id) {
+    case AnnotationTool.BRUSH.id:
+    case AnnotationTool.TRACE.id:
+      yield* put(updateUserSettingAction("writePreference", tool.id));
+      return;
+    case AnnotationTool.ERASE_BRUSH.id:
+    case AnnotationTool.ERASE_TRACE.id:
+      yield* put(updateUserSettingAction("erasePreference", tool.id));
+      return;
+    case AnnotationTool.LINE_MEASUREMENT.id:
+    case AnnotationTool.AREA_MEASUREMENT.id:
+      yield* put(updateUserSettingAction("measurementPreference", tool.id));
+      return;
+    default:
+      return;
+  }
+}
+
 export default function* toolSaga() {
   yield* call(ensureWkInitialized);
 
@@ -146,4 +175,6 @@ export default function* toolSaga() {
     ] as ActionPattern,
     ensureActiveToolIsInToolkit,
   );
+  yield* takeEvery("SET_TOOL", updateToolTimestamp);
+  yield* takeEvery("SET_TOOL", rememberToolPreferences);
 }

@@ -55,7 +55,7 @@ class BinaryDataController @Inject()(
   def requestViaWebknossos(datasetId: ObjectId, dataLayerName: String): Action[List[WebknossosDataRequest]] =
     Action.async(validateJson[List[WebknossosDataRequest]]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
-        logTime(slackNotificationService.noticeSlowRequest) {
+        logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 10 minutes) {
           val t = Instant.now
           for {
             (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Messages(
@@ -232,6 +232,7 @@ class BinaryDataController @Inject()(
             request.body.mapping,
             request.body.mappingType,
             request.body.additionalCoordinates,
+            request.body.annotationVersion,
             request.body.findNeighbors,
           )
           // The client expects the ad-hoc mesh as a flat float-array. Three consecutive floats form a 3D point, three

@@ -53,7 +53,7 @@ class EditableMappingController @Inject()(
       }
     }
 
-  def segmentIdsForAgglomerate(tracingId: String, agglomerateId: Long): Action[AnyContent] =
+  def segmentIdsForAgglomerate(tracingId: String, agglomerateId: Long, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
@@ -62,7 +62,7 @@ class EditableMappingController @Inject()(
             tracing <- annotationService.findVolume(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             agglomerateGraphBox: Box[AgglomerateGraph] <- editableMappingService
-              .getAgglomerateGraphForId(tracingId, tracing.version, agglomerateId)
+              .getAgglomerateGraphForId(tracingId, version.getOrElse(tracing.version), agglomerateId)
               .shiftBox
             segmentIds <- agglomerateGraphBox match {
               case Full(agglomerateGraph) => Fox.successful(agglomerateGraph.segments)
@@ -171,7 +171,7 @@ class EditableMappingController @Inject()(
       }
     }
 
-  def agglomerateSkeleton(tracingId: String, agglomerateId: Long, version: Option[Long]): Action[AnyContent] =
+  def agglomerateTree(tracingId: String, agglomerateId: Long, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
@@ -180,12 +180,12 @@ class EditableMappingController @Inject()(
           _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
           editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId, version)
           remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerForVolumeTracing(tracing, annotationId)
-          agglomerateSkeletonBytes <- editableMappingService.getAgglomerateSkeletonWithFallback(tracingId,
-                                                                                                tracing.version,
-                                                                                                editableMappingInfo,
-                                                                                                remoteFallbackLayer,
-                                                                                                agglomerateId)
-        } yield Ok(agglomerateSkeletonBytes)
+          agglomerateTreeBytes <- editableMappingService.getAgglomerateTreeWithFallback(tracingId,
+                                                                                        tracing.version,
+                                                                                        editableMappingInfo,
+                                                                                        remoteFallbackLayer,
+                                                                                        agglomerateId)
+        } yield Ok(agglomerateTreeBytes)
       }
     }
 

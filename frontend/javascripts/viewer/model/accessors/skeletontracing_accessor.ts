@@ -123,6 +123,23 @@ export function findTreeByName(trees: TreeMap, treeName: string): Tree | undefin
   return trees.values().find((tree: Tree) => tree.name === treeName);
 }
 
+export function findTreeByAgglomerateId(
+  trees: TreeMap,
+  agglomerateId: number,
+  editableMappingId: string,
+  mappingName: string,
+): Tree | undefined {
+  return trees
+    .values()
+    .find(
+      (tree: Tree) =>
+        tree.agglomerateInfo &&
+        tree.agglomerateInfo.agglomerateId === agglomerateId &&
+        (tree.agglomerateInfo.tracingId === editableMappingId ||
+          tree.agglomerateInfo.mappingName === mappingName),
+    );
+}
+
 export function getTreesWithType(
   skeletonTracing: SkeletonTracing,
   type?: TreeType | null | undefined,
@@ -316,8 +333,8 @@ export function getTreeGroupsMap(
   return Object.fromEntries(flatGroups.map((group) => [group.groupId, group]));
 }
 
-// This is the pattern for the automatically assigned names for agglomerate skeletons
-export const getTreeNameForAgglomerateSkeleton = (
+// This is the pattern for the automatically assigned names for agglomerate trees
+export const getTreeNameForAgglomerateTree = (
   agglomerateId: NumberLike,
   mappingName: string,
 ): string => `agglomerate ${agglomerateId} (${mappingName})`;

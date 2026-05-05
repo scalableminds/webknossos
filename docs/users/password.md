@@ -31,6 +31,7 @@ For more information about roles, see [Access rights and roles](access_rights.md
 
 Users can customize the appearance of WEBKNOSSOS from the `Profile` tab.
 The theme can be set to:
+
 - **System Default**: Automatically matches your operating system's theme preference.
 - **Light**: Forces a light-mode user interface.
 - **Dark**: Forces a dark-mode user interface.

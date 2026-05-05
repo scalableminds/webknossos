@@ -39,7 +39,7 @@ class TSRemoteDatastoreClient @Inject()(
   private lazy val largestAgglomerateIdCache: AlfuCache[(RemoteFallbackLayer, String, Option[String]), Long] =
     AlfuCache(timeToLive = 10 minutes)
 
-  def getAgglomerateSkeleton(remoteFallbackLayer: RemoteFallbackLayer, mappingName: String, agglomerateId: Long)(
+  def getAgglomerateTree(remoteFallbackLayer: RemoteFallbackLayer, mappingName: String, agglomerateId: Long)(
       implicit tc: TokenContext): Fox[Array[Byte]] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
@@ -117,16 +117,20 @@ class TSRemoteDatastoreClient @Inject()(
       segmentIds: Seq[Long],
       mag: Vec3Int,
       mappingName: Option[String], // should be the baseMappingName in case of editable mappings
-      editableMappingTracingId: Option[String])(implicit tc: TokenContext): Fox[Seq[(Long, Set[Vec3IntProto])]] =
+      editableMappingTracingId: Option[String],
+      annotationVersion: Option[Long])(implicit tc: TokenContext): Fox[Seq[(Long, Set[Vec3IntProto])]] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       result <- rpc(s"$remoteLayerUri/segmentIndex").withTokenFromContext.silent
         .postJsonWithJsonResponse[GetMultipleSegmentIndexParameters, Seq[SegmentIndexData]](
-          GetMultipleSegmentIndexParameters(segmentIds.toList,
-                                            mag,
-                                            additionalCoordinates = None,
-                                            mappingName = mappingName,
-                                            editableMappingTracingId = editableMappingTracingId))
+          GetMultipleSegmentIndexParameters(
+            segmentIds.toList,
+            mag,
+            additionalCoordinates = None,
+            mappingName = mappingName,
+            editableMappingTracingId = editableMappingTracingId,
+            annotationVersion = annotationVersion
+          ))
 
     } yield result.map(data => (data.segmentId, data.positions.toSet.map(vec3IntToProto)))
 

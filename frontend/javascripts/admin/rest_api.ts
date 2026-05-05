@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 import update from "immutability-helper";
 import type { RequestOptions, RequestOptionsWithData } from "libs/request";
 import Request from "libs/request";
-import ResumableUpload from "libs/resumable-upload";
+import ResumableUpload from "libs/resumable_upload/resumable_upload";
 import type { Message } from "libs/toast";
 import Toast from "libs/toast";
 import {
@@ -808,8 +808,10 @@ export function getUpdateActionLog(
     if (newestVersion != null) {
       params.set("newestVersion", newestVersion.toString());
     }
-    const log: APIUpdateActionBatch[] = await Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
+    const log: APIUpdateActionBatch[] = await retryAsyncFunction(() =>
+      Request.receiveJSON(
+        `${tracingStoreUrl}/tracings/annotation/${annotationId}/updateActionLog?${params}`,
+      ),
     );
 
     if (sortAscending) {
@@ -823,10 +825,12 @@ export function getNewestVersionForAnnotation(
   tracingStoreUrl: string,
   annotationId: string,
 ): Promise<number> {
-  return doWithToken((token) =>
-    Request.receiveJSON(
-      `${tracingStoreUrl}/tracings/annotation/${annotationId}/newestVersion?token=${token}`,
-    ).then((obj) => obj.version),
+  return retryAsyncFunction(() =>
+    doWithToken((token) =>
+      Request.receiveJSON(
+        `${tracingStoreUrl}/tracings/annotation/${annotationId}/newestVersion?token=${token}`,
+      ).then((obj) => obj.version),
+    ),
   );
 }
 
@@ -880,11 +884,12 @@ export function getSegmentVolumes(
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
+  annotationVersion: number | undefined,
 ): Promise<number[]> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/volume?token=${token}`, {
-      data: { additionalCoordinates, mag, segmentIds, mappingName },
+      data: { additionalCoordinates, mag, segmentIds, mappingName, annotationVersion },
       method: "POST",
     }),
   );
@@ -896,6 +901,7 @@ type SegmentStatisticsParametersMeshBased = {
   mappingName?: string | null;
   additionalCoordinates?: AdditionalCoordinate[] | null;
   meshFileName?: string | null;
+  annotationVersion: number | undefined;
 };
 
 export function getSegmentSurfaceArea(
@@ -905,6 +911,7 @@ export function getSegmentSurfaceArea(
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
+  annotationVersion: number | undefined,
 ): Promise<number[]> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) => {
@@ -914,6 +921,7 @@ export function getSegmentSurfaceArea(
       mappingName,
       additionalCoordinates,
       meshFileName,
+      annotationVersion,
     };
     return Request.sendJSONReceiveJSON(
       `${requestUrl}/segmentStatistics/surfaceArea?token=${token}`,
@@ -931,11 +939,12 @@ export function getSegmentBoundingBoxes(
   segmentIds: Array<number>,
   additionalCoordinates: AdditionalCoordinate[] | undefined | null,
   mappingName: string | null | undefined,
+  annotationVersion: number | undefined,
 ): Promise<Array<{ topLeft: Vector3; width: number; height: number; depth: number }>> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken((token) =>
     Request.sendJSONReceiveJSON(`${requestUrl}/segmentStatistics/boundingBox?token=${token}`, {
-      data: { additionalCoordinates, mag, segmentIds, mappingName },
+      data: { additionalCoordinates, mag, segmentIds, mappingName, annotationVersion },
       method: "POST",
     }),
   );
@@ -1258,6 +1267,8 @@ type DatasetUploadInfo = {
   initialTeamIds: Array<string>;
   folderId: string | null;
   needsConversion: boolean;
+  voxelSizeFactor: Vector3 | null | undefined,
+  voxelSizeUnit: string | null | undefined,
 };
 
 export function reserveDatasetUpload(
@@ -1833,6 +1844,7 @@ type MeshRequest = {
   mappingName: string | null | undefined;
   mappingType: MappingType | null | undefined;
   findNeighbors: boolean;
+  annotationVersion: number;
 };
 
 export function computeAdHocMesh(
@@ -1890,6 +1902,7 @@ export function getBucketPositionsForAdHocMesh(
   mag: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | null | undefined,
   mappingName: string | null | undefined,
+  annotationVersion: number,
 ): Promise<Vector3[]> {
   const requestUrl = getDataOrTracingStoreUrl(layerSourceInfo);
   return doWithToken(async (token) => {
@@ -1903,6 +1916,7 @@ export function getBucketPositionsForAdHocMesh(
           mag,
           additionalCoordinates,
           mappingName,
+          annotationVersion,
         },
         method: "POST",
       },
@@ -1911,7 +1925,7 @@ export function getBucketPositionsForAdHocMesh(
   });
 }
 
-export function getAgglomerateSkeleton(
+export function getAgglomerateTreeAsSkeletonTracing(
   dataStoreUrl: string,
   dataset: APIDataset,
   layerName: string,
@@ -1920,7 +1934,7 @@ export function getAgglomerateSkeleton(
 ): Promise<ArrayBuffer> {
   return doWithToken((token) =>
     Request.receiveArraybuffer(
-      `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates/${mappingId}/skeleton/${agglomerateId}?token=${token}`, // The webworker code cannot do proper error handling and always expects an array buffer from the server.
+      `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates/${mappingId}/tree/${agglomerateId}?token=${token}`, // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
       {
@@ -2007,7 +2021,7 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   return new Map(keyValues);
 }
 
-export function getEditableAgglomerateSkeleton(
+export function getEditableAgglomerateTreeAsSkeletonTracing(
   tracingStoreUrl: string,
   tracingId: string,
   agglomerateId: number,
@@ -2016,7 +2030,7 @@ export function getEditableAgglomerateSkeleton(
   return doWithToken((token) => {
     const params = new URLSearchParams({ token, version: version.toString() });
     return Request.receiveArraybuffer(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateSkeleton/${agglomerateId}?${params}`,
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateTree/${agglomerateId}?${params}`,
       // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
       {
@@ -2379,15 +2393,10 @@ export function deleteWorkflow(workflowHash: string): Promise<void> {
 
 // ### Help / Feedback userEmail
 export function sendHelpEmail(message: string) {
-  return Request.receiveJSON(
-    `/api/helpEmail?${new URLSearchParams({
-      message,
-      currentUrl: window.location.href,
-    })}`,
-    {
-      method: "POST",
-    },
-  );
+  return Request.sendJSONReceiveJSON(`/api/helpEmail`, {
+    method: "POST",
+    data: { message, currentUrl: window.location.href },
+  });
 }
 
 export function requestSingleSignOnLogin() {

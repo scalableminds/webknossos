@@ -2,6 +2,8 @@ package models.job
 
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.BoundingBox
+import com.scalableminds.webknossos.datastore.models.VoxelSize
+import models.dataset.Dataset
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -226,6 +228,21 @@ class JobService @Inject()(wkConf: WkConf,
       _ <- jobDAO.insertOne(job)
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
+
+  def submitConvertToWkwJob(dataset: Dataset, user: User, voxelSize: VoxelSize): Fox[Unit] =
+    for {
+      organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> "organization.notFound"
+      commandArgs = Json.obj(
+        "organization_id" -> organization._id,
+        "organization_display_name" -> organization.name,
+        "dataset_name" -> dataset.name,
+        "dataset_id" -> dataset._id,
+        "dataset_directory_name" -> dataset.directoryName,
+        "voxel_size_factor" -> voxelSize.factor.toUriLiteral,
+        "voxel_size_unit" -> voxelSize.unit
+      )
+      _ <- submitJob(JobCommand.convert_to_wkw, commandArgs, user, dataset._dataStore) ?~> "job.couldNotRunCubing"
+    } yield ()
 
   def submitPaidJob(command: JobCommand,
                     commandArgs: JsObject,

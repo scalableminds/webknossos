@@ -98,6 +98,15 @@ class DataSourceController @Inject()(
     }
   }
 
+  def scanRealPathsForVirtual(): Action[Seq[DataSource]] = Action.async(validateJson[Seq[DataSource]]) {
+    implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+        for {
+          _ <- dataSourceService.scanRealPathsForVirtual(request.body)
+        } yield Ok
+      }
+  }
+
   def listMappings(
       datasetId: ObjectId,
       dataLayerName: String
@@ -125,7 +134,7 @@ class DataSourceController @Inject()(
     }
   }
 
-  def generateAgglomerateSkeleton(
+  def generateAgglomerateTree(
       datasetId: ObjectId,
       dataLayerName: String,
       mappingName: String,
@@ -136,7 +145,7 @@ class DataSourceController @Inject()(
         (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
         skeleton <- agglomerateService
-          .generateSkeleton(agglomerateFileKey, agglomerateId) ?~> "agglomerateSkeleton.failed"
+          .generateTreeAsSkeleton(agglomerateFileKey, agglomerateId) ?~> "agglomerateTree.failed"
       } yield Ok(skeleton.toByteArray).as(protobufMimeType)
     }
   }
@@ -396,7 +405,8 @@ class DataSourceController @Inject()(
             dataSource.id,
             dataLayer,
             request.body.mappingName,
-            request.body.editableMappingTracingId,
+            None,
+            request.body.annotationVersion,
             segmentId.toLong,
             mappingNameForMeshFile = None,
             omitMissing = false
@@ -433,6 +443,7 @@ class DataSourceController @Inject()(
                 dataLayer,
                 request.body.mappingName,
                 request.body.editableMappingTracingId,
+                request.body.annotationVersion,
                 segmentOrAgglomerateId,
                 mappingNameForMeshFile = None,
                 omitMissing = true // assume agglomerate ids not present in the mapping belong to user-brushed segments
@@ -509,6 +520,7 @@ class DataSourceController @Inject()(
               mappingName = request.body.mappingName,
               mappingType = request.body.mappingName.map(_ => "HDF5"),
               editableMappingTracingId = None,
+              annotationVersion = None,
               mag = Some(request.body.mag),
               seedPosition = None,
               additionalCoordinates = request.body.additionalCoordinates,
@@ -516,11 +528,8 @@ class DataSourceController @Inject()(
             fullMeshService.segmentSurfaceAreaCache.getOrLoad(
               (datasetId, dataLayer.name, fullMeshRequest),
               _ =>
-                for {
-                  data: Array[Byte] <- fullMeshService
-                    .loadFor(datasetId, dataSource, dataLayer, fullMeshRequest) ?~> "mesh.loadFull.failed"
-                  surfaceArea <- fullMeshService.surfaceAreaFromStlBytes(data).toFox
-                } yield surfaceArea
+                fullMeshService
+                  .computeSurfaceArea(datasetId, dataSource, dataLayer, fullMeshRequest) ?~> "mesh.loadFull.failed"
             )
           }
         } yield Ok(Json.toJson(surfaceAreas))

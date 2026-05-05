@@ -6,7 +6,13 @@ import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree, TreeTypeProto}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{
+  Edge,
+  SkeletonTracing,
+  Tree,
+  TreeAgglomerateInfoProto,
+  TreeTypeProto
+}
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
@@ -99,7 +105,7 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
       agglomerateIds
     }
 
-  def generateSkeleton(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Box[SkeletonTracing] =
+  def generateTree(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Box[SkeletonTracing] =
     try {
       val reader = openHdf5(agglomerateFileKey)
       val positionsRange: Array[Long] =
@@ -109,7 +115,7 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
 
       val nodeCount = positionsRange(1) - positionsRange(0)
       val edgeCount = edgesRange(1) - edgesRange(0)
-      val edgeLimit = config.Datastore.AgglomerateSkeleton.maxEdges
+      val edgeLimit = config.Datastore.AgglomerateTree.maxEdges
       if (nodeCount > edgeLimit) {
         throw new Exception(s"Agglomerate has too many nodes ($nodeCount > $edgeLimit)")
       }
@@ -140,7 +146,7 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
           )
       }
 
-      val skeletonEdges = edges.map { e =>
+      val treeEdges = edges.map { e =>
         Edge(source = e(0).toInt + nodeIdStartAtOneOffset, target = e(1).toInt + nodeIdStartAtOneOffset)
       }
 
@@ -150,9 +156,11 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
           createdTimestamp = System.currentTimeMillis(),
           // unsafeWrapArray is fine, because the underlying arrays are never mutated
           nodes = ArraySeq.unsafeWrapArray(nodes),
-          edges = ArraySeq.unsafeWrapArray(skeletonEdges),
+          edges = ArraySeq.unsafeWrapArray(treeEdges),
           name = s"agglomerate $agglomerateId (${agglomerateFileKey.attachment.name})",
-          `type` = Some(TreeTypeProto.AGGLOMERATE)
+          `type` = Some(TreeTypeProto.AGGLOMERATE),
+          agglomerateInfo =
+            Some(TreeAgglomerateInfoProto(agglomerateId, None, Some(agglomerateFileKey.attachment.name))),
         ))
 
       val skeleton = SkeletonTracingDefaults.createInstance.copy(trees = trees)

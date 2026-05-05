@@ -158,7 +158,9 @@ class DSLegacyApiController @Inject()(
           folderId = request.body.folderId,
           requireUniqueName = request.body.requireUniqueName,
           isVirtual = request.body.isVirtual,
-          needsConversion = request.body.needsConversion
+          needsConversion = None,
+          voxelSizeFactor = None,
+          voxelSizeUnit = None
         )))
     }
 
@@ -193,7 +195,9 @@ class DSLegacyApiController @Inject()(
             folderId = request.body.folderId,
             requireUniqueName = request.body.requireUniqueName,
             isVirtual = request.body.isVirtual,
-            needsConversion = request.body.needsConversion
+            needsConversion = None,
+            voxelSizeFactor = None,
+            voxelSizeUnit = None
           )
           result <- Fox.fromFuture(uploadController.reserveDatasetUpload()(request.withBody(adaptedRequestBody)))
         } yield result
@@ -236,7 +240,9 @@ class DSLegacyApiController @Inject()(
               folderId = request.body.folderId,
               requireUniqueName = Some(request.body.requireUniqueName),
               isVirtual = Some(false),
-              needsConversion = None
+              needsConversion = None,
+              voxelSizeFactor = None,
+              voxelSizeUnit = None
             )
           ) ?~> "dataset.upload.validation.failed"
         } yield

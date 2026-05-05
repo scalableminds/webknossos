@@ -2,6 +2,7 @@ package com.scalableminds.webknossos.datastore.services.uploading
 
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
@@ -18,7 +19,8 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader.FILENA
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader.FILENAME_ZARR_JSON
 import com.scalableminds.webknossos.datastore.explore.ExploreLocalLayerService
 import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, DirectoryConstants, UPath}
-import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
+import com.scalableminds.webknossos.datastore.models.LengthUnit.LengthUnit
+import com.scalableminds.webknossos.datastore.models.{UnfinishedUpload, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
 import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
@@ -55,7 +57,9 @@ case class DatasetUploadInfo(
     folderId: Option[ObjectId],
     requireUniqueName: Option[Boolean],
     isVirtual: Option[Boolean], // Only set (to false) for legacy manual uploads
-    needsConversion: Option[Boolean] // None means false
+    needsConversion: Option[Boolean], // None means false
+    voxelSizeFactor: Option[Vec3Double],
+    voxelSizeUnit: Option[LengthUnit]
 )
 object DatasetUploadInfo {
   implicit val jsonFormat: OFormat[DatasetUploadInfo] = Json.format[DatasetUploadInfo]
@@ -106,7 +110,8 @@ case class ReportDatasetUploadParameters(
     needsConversion: Boolean,
     datasetSizeBytes: Long,
     dataSourceOpt: Option[UsableDataSource], // must be set if needsConversion is false
-    layersToLink: Seq[LinkedLayerIdentifier]
+    layersToLink: Seq[LinkedLayerIdentifier],
+    voxelSize: Option[VoxelSize]
 )
 object ReportDatasetUploadParameters {
   implicit val jsonFormat: OFormat[ReportDatasetUploadParameters] =
@@ -189,9 +194,12 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       _ <- Fox.fromBool(!needsConversion || !datasetUploadInfo.layersToLink.exists(_.nonEmpty)) ?~> "Cannot use linked layers if the dataset needs conversion"
       _ <- reserveResumableUpload(datasetUploadInfo.resumableUploadInfo, datasetId, dataSourceId, UploadDomain.dataset)
       uploadId = datasetUploadInfo.resumableUploadInfo.uploadId
+      voxelSizeOpt = datasetUploadInfo.voxelSizeFactor.map(
+        VoxelSize.fromFactorAndUnitWithDefault(_, datasetUploadInfo.voxelSizeUnit))
       _ <- datasetUploadMetadataStore.insertUploadIdByDataSourceId(dataSourceId, uploadId)
       _ <- datasetUploadMetadataStore.insertLinkedLayerIdentifiers(uploadId, datasetUploadInfo.layersToLink)
       _ <- datasetUploadMetadataStore.insertNeedsConversion(uploadId, needsConversion)
+      _ <- Fox.runOptional(voxelSizeOpt)(datasetUploadMetadataStore.insertVoxelSize(uploadId, _))
     } yield ()
   }
 
@@ -355,6 +363,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     for {
       dataSourceId <- datasetUploadMetadataStore.findDataSourceId(uploadId)
       needsConversion <- datasetUploadMetadataStore.findNeedsConversion(uploadId)
+      voxelSizeBox <- datasetUploadMetadataStore.findVoxelSize(uploadId).shiftBox
       _ = logger.info(s"Finishing ${uploadFullName(UploadDomain.dataset, uploadId, datasetId, dataSourceId)}...")
       linkedLayerIdentifiers <- datasetUploadMetadataStore.findLinkedLayerIdentifiers(uploadId)
       uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId, UploadDomain.dataset)
@@ -387,7 +396,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
           needsConversion,
           datasetSizeBytes,
           dataSourceWithAbsolutePathsOpt,
-          linkedLayerIdentifiers
+          linkedLayerIdentifiers,
+          voxelSizeBox.toOption
         )
       ) ?~> "dataset.upload.reportUpload.failed"
     } yield ()

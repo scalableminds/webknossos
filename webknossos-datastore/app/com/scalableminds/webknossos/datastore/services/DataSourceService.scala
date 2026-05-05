@@ -98,7 +98,26 @@ class DataSourceService @Inject()(
     } yield ()
   }
 
-  private def scanRealPaths(dataSources: List[DataSource]): (Seq[DataSourcePathInfo], Seq[Failure]) = {
+  def scanRealPathsForVirtual(dataSources: Seq[DataSource]): Fox[Unit] =
+    for {
+      before <- Instant.nowFox
+      (realPathInfos, realPathScanFailures) = scanRealPaths(dataSources)
+      _ <- remoteWebknossosClient.reportRealPaths(realPathInfos)
+      realPathFailuresSummary = if (realPathScanFailures.isEmpty) ""
+      else s". ${realPathScanFailures.length} realPath scan failures"
+      _ = Instant.logSince(
+        before,
+        s"Scanned ${countScannedRealPaths(realPathInfos)} realpaths for ${dataSources.length} virtual datasets$realPathFailuresSummary.")
+      _ = logRealPathScanFailures(verbose = true, realPathScanFailures)
+    } yield ()
+
+  private def logRealPathScanFailures(verbose: Boolean, realPathScanFailures: Seq[Failure]): Unit =
+    if (verbose && realPathScanFailures.nonEmpty) {
+      val realPathScanFailuresFormatted = realPathScanFailures.flatMap(_.exception).map(_.toString).mkString(", ")
+      logger.warn(s"RealPath scan failures: $realPathScanFailuresFormatted")
+    }
+
+  private def scanRealPaths(dataSources: Seq[DataSource]): (Seq[DataSourcePathInfo], Seq[Failure]) = {
     val withFailures = dataSources.map(scanRealPathsForDataSource)
     val pathInfos = withFailures.map(_._1).filter(_.nonEmpty)
     val failures = withFailures.flatMap(_._2)
@@ -164,12 +183,10 @@ class DataSourceService @Inject()(
                                   foundDataSources: Seq[DataSource],
                                   realPathInfosByDataSource: Seq[DataSourcePathInfo],
                                   realPathScanFailures: Seq[Failure]): Unit = {
-    val numScannedRealPaths = realPathInfosByDataSource
-      .map(pathInfos => pathInfos.attachmentPathInfos.length + pathInfos.magPathInfos.length)
-      .sum
     val realPathFailuresSummary =
       if (realPathScanFailures.isEmpty) "" else s" ${realPathScanFailures.length} realPath scan failures"
-    val realPathScanSummary = s"$numScannedRealPaths scanned realpaths.$realPathFailuresSummary"
+    val realPathScanSummary =
+      s"${countScannedRealPaths(realPathInfosByDataSource)} scanned realpaths.$realPathFailuresSummary"
     val shortForm =
       s"Finished scanning inbox ($dataBaseDir$selectedOrgaLabel), took ${formatDuration(Instant.since(before))}: ${foundDataSources
         .count(_.isUsable)} active, ${foundDataSources.count(!_.isUsable)} inactive. $realPathScanSummary"
@@ -188,11 +205,11 @@ class DataSourceService @Inject()(
       shortForm
     }
     logger.info(msg)
-    if (verbose && realPathScanFailures.nonEmpty) {
-      val realPathScanFailuresFormatted = realPathScanFailures.flatMap(_.exception).map(_.toString).mkString(", ")
-      logger.warn(s"RealPath scan failures: $realPathScanFailuresFormatted")
-    }
+    logRealPathScanFailures(verbose, realPathScanFailures)
   }
+
+  private def countScannedRealPaths(realPathInfosByDataSource: Seq[DataSourcePathInfo]): Int =
+    realPathInfosByDataSource.map(pathInfos => pathInfos.attachmentPathInfos.length + pathInfos.magPathInfos.length).sum
 
   private def logEmptyDirs(paths: List[Path]): Unit = {
 

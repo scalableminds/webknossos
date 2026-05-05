@@ -7,7 +7,7 @@ Synapse locations, types, and partners must be precomputed outside of WEBKNOSSOS
 ## Features
 
 - Visualization of all synapse locations for a given segment
-- Visualization of the agglomerate skeleton for a given segment
+- Visualization of the agglomerate tree for a given segment
 - Display of metadata information such as synapse types (e.g., "dendritic shaft", "spine head", "soma"-synapse, etc.)
 - Filtering by synapse type or direction 
 
@@ -24,7 +24,7 @@ Use the input field at the top of the Connectome Viewer to enter one or several 
 
 Several segments/cells can be loaded at the same time to highlight their matching synaptic partners.
 
-In addition to loading the synapse locations and visualizing them as nodes, WEBKNOSSOS will also load the agglomerate skeleton representation of the selected segment(s) for context.
+In addition to loading the synapse locations and visualizing them as nodes, WEBKNOSSOS will also load the agglomerate tree representation of the selected segment(s) for context.
 
 ## Configuration
 For WEBKNOSSOS to detect and load your Connectome file, you need to place it into a `connectome` subdirectory for a respective segmentation layer, e.g.:

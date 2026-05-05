@@ -104,6 +104,7 @@
     "lint-backend": "sbt \";scapegoat\"",
     "licenses-backend": "sbt dumpLicenseReport",
     "docs": "node_modules/.bin/documentation build --shallow frontend/javascripts/viewer/api/api_loader.ts frontend/javascripts/viewer/api/api_latest.ts --github --project-name \"WEBKNOSSOS Frontend API\" --format html --output public/assets/docs/frontend-api",
+    "@comment docs": "To preview the documentation under docs/, go to your local webknossos-libs repository, cd into its docs directory, ensure the webknossos repo is symlinked there (e.g. `wk-repo -> /<some path>/webknossos`), then run ./generate.sh to start a local documentation server.",
     "refresh-schema": "./tools/postgres/dbtool.js refresh-schema && rm -f target/scala-2.13/src_managed/schema/com/scalableminds/webknossos/schema/Tables.scala",
     "enable-storage-scan": "./tools/postgres/dbtool.js enable-storage-scan",
     "enable-jobs": "sed -i -e 's/jobsEnabled = false/jobsEnabled = true/g' ./conf/application.conf; sed -i -e 's/voxelyticsEnabled = false/voxelyticsEnabled = true/g' ./conf/application.conf; ./tools/postgres/dbtool.js enable-jobs",

@@ -1925,7 +1925,7 @@ export function getBucketPositionsForAdHocMesh(
   });
 }
 
-export function getAgglomerateSkeleton(
+export function getAgglomerateTreeAsSkeletonTracing(
   dataStoreUrl: string,
   dataset: APIDataset,
   layerName: string,
@@ -1934,7 +1934,7 @@ export function getAgglomerateSkeleton(
 ): Promise<ArrayBuffer> {
   return doWithToken((token) =>
     Request.receiveArraybuffer(
-      `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates/${mappingId}/skeleton/${agglomerateId}?token=${token}`, // The webworker code cannot do proper error handling and always expects an array buffer from the server.
+      `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates/${mappingId}/tree/${agglomerateId}?token=${token}`, // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
       {
@@ -2021,7 +2021,7 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   return new Map(keyValues);
 }
 
-export function getEditableAgglomerateSkeleton(
+export function getEditableAgglomerateTreeAsSkeletonTracing(
   tracingStoreUrl: string,
   tracingId: string,
   agglomerateId: number,
@@ -2030,7 +2030,7 @@ export function getEditableAgglomerateSkeleton(
   return doWithToken((token) => {
     const params = new URLSearchParams({ token, version: version.toString() });
     return Request.receiveArraybuffer(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateSkeleton/${agglomerateId}?${params}`,
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateTree/${agglomerateId}?${params}`,
       // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
       {

@@ -32,7 +32,7 @@ import {
   zoomPlanes,
 } from "viewer/controller/combinations/move_handlers";
 import {
-  handleAgglomerateSkeletonAtClick,
+  handleAgglomerateTreeAtClick,
   handleClickSegment,
 } from "viewer/controller/combinations/segmentation_handlers";
 import {
@@ -235,7 +235,7 @@ export class MoveToolController extends ToolController {
       },
       middleClick: (pos: Point2, _plane: OrthoView, event: MouseEvent) => {
         if (event.shiftKey) {
-          handleAgglomerateSkeletonAtClick(pos);
+          handleAgglomerateTreeAtClick(pos);
         }
       },
       pinch: (delta: number, center: Point2) => {

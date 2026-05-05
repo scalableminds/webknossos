@@ -7,6 +7,16 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [26.05.1](https://github.com/scalableminds/webknossos/releases/tag/26.05.1) - 2026-05-05
+[Commits](https://github.com/scalableminds/webknossos/compare/26.05.0...26.05.1)
+
+### Added
+- Added documentation about proofreading tools: multi-split tool, split from all neighbors, and proofreading via agglomerate trees. Moreover, agglomerate skeletons were renamed to agglomerate trees. [#9542](https://github.com/scalableminds/webknossos/pull/9542)
+
+### Fixed
+- Fixed that the owner was unable to edit the annotation's properties when another user is active annotating the shared annotation. [#9554](https://github.com/scalableminds/webknossos/pull/9554)
+- Fixed reading zarr3 meshfiles with more than 2^32 hash buckets. [#9555](https://github.com/scalableminds/webknossos/pull/9555)
+
 ## [26.05.0](https://github.com/scalableminds/webknossos/releases/tag/26.05.0) - 2026-05-04
 [Commits](https://github.com/scalableminds/webknossos/compare/26.04.1...26.05.0)
 

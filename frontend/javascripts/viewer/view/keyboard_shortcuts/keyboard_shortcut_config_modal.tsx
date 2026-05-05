@@ -14,6 +14,7 @@ import {
   Typography,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { isEqual } from "lodash-es";
@@ -48,7 +49,6 @@ import {
 } from "./keyboard_shortcut_types";
 import { checkCollisionsInShortcutMap, keySequenceToUiElements } from "./keyboard_shortcut_utils";
 import { CollisionWarningAlert, ShortcutRecorderModal } from "./shortcut_recorder_modal";
-import FastTooltip from "components/fast_tooltip";
 
 const { Text, Title } = Typography;
 

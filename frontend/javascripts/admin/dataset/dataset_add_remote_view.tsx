@@ -161,7 +161,7 @@ function DatasetAddRemoteView(props: Props) {
     if (!showLoadingOverlay) setShowLoadingOverlay(true); // show overlay again, e.g. after credentials were passed
 
     const defaultDatasetName = getDefaultDatasetName(url);
-    form.setFieldValue(["dataSource", "id"], { name: defaultDatasetName, team: "" });
+    form.setFieldValue(["dataset", "name"], defaultDatasetName);
 
     try {
       await form.validateFields();

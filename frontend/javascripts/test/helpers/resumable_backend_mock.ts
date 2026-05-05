@@ -1,5 +1,5 @@
 import { sleep } from "libs/utils";
-import { HttpResponse } from "msw";
+import { HttpResponse, http } from "msw";
 
 const PARAMS = {
   chunkNumber: "resumableChunkNumber",
@@ -442,3 +442,39 @@ export class ResumableBackendMock {
     return HttpResponse.text("OK", { status: 200 });
   }
 }
+
+// Helper: returns a custom GET handler where chunk 1's response body is only
+// delivered when the returned trigger is called. All other chunks return 204.
+// Also returns `getArrived`, a Promise that resolves the moment chunk 1's GET
+// handler is invoked — used for synchronisation without relying on backendMock
+// counters (since this handler bypasses backendMock.handle()).
+export const makeSlowChunk1Handler = () => {
+  let resolveBody: (() => void) | null = null;
+  let resolveGetArrived!: () => void;
+  const getArrived = new Promise<void>((resolve) => {
+    resolveGetArrived = resolve;
+  });
+  const trigger = () => resolveBody?.();
+  const handler = http.get("http://localhost/upload", ({ request }) => {
+    const url = new URL(request.url);
+    const chunkNumber = Number(url.searchParams.get("resumableChunkNumber"));
+
+    if (chunkNumber === 1) {
+      resolveGetArrived(); // signal: GET headers received, response about to be sent
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          resolveBody = () => {
+            controller.enqueue(encoder.encode("Found"));
+            controller.close();
+          };
+        },
+      });
+
+      // Status 200: chunk already exists on server.
+      return new Response(stream, { status: 200 });
+    }
+    return new Response("", { status: 204 });
+  });
+  return { handler, trigger, getArrived };
+};

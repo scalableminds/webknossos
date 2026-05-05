@@ -184,10 +184,10 @@ class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
       }
     } catch {
       case e: org.xml.sax.SAXParseException if e.getMessage.startsWith("Premature end of file") =>
-        logger.debug(s"Tried  to parse empty NML file $name.")
+        logger.info(s"Tried  to parse empty NML file $name.")
         Empty
       case e: org.xml.sax.SAXParseException =>
-        logger.debug(s"Failed to parse NML $name due to " + e)
+        logger.info(s"Failed to parse NML $name due to " + e)
         Failure(
           s"Failed to parse NML '$name'. Error in Line ${e.getLineNumber} " +
             s"(column ${e.getColumnNumber}): ${e.getMessage}")

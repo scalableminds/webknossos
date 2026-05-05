@@ -7,7 +7,8 @@ import models.annotation.{
   AnnotationDataSourceTemporaryStore,
   AnnotationMutexService,
   AnnotationReservedIdsService,
-  AnnotationStore
+  AnnotationStore,
+  VirtualDatasetsRealPathScanService
 }
 import models.dataset.{DatasetDAO, DatasetDAOLike, DatasetService, ThumbnailCachingService}
 import models.job.{JobService, WorkerLivenessService}
@@ -42,6 +43,7 @@ class WebknossosModule extends AbstractModule {
     bind(classOf[WorkerLivenessService]).asEagerSingleton()
     bind(classOf[LokiClient]).asEagerSingleton()
     bind(classOf[UsedStorageService]).asEagerSingleton()
+    bind(classOf[VirtualDatasetsRealPathScanService]).asEagerSingleton()
     bind(classOf[ThumbnailCachingService]).asEagerSingleton()
     bind(classOf[AnnotationDataSourceTemporaryStore]).asEagerSingleton()
     bind(classOf[CertificateValidationService]).asEagerSingleton()

@@ -623,13 +623,13 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
         render: (owner: APIUser | null, annotation: APIAnnotationInfo) => {
           const ownerName = owner != null ? renderOwner(owner) : null;
           const teamTags = annotation.teams.map((t) => (
-            <Tag key={t.id} color={stringToColor(t.name)}>
+            <Tag key={t.id} color={stringToColor(t.name)} variant="outlined">
               {t.name}
             </Tag>
           ));
 
           return (
-            <>
+            <Space orientation="vertical" size="small">
               <Space align="start">
                 <UserOutlined />
                 {ownerName}
@@ -640,7 +640,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
                   {teamTags}
                 </Space>
               </Space>
-            </>
+            </Space>
           );
         },
       },

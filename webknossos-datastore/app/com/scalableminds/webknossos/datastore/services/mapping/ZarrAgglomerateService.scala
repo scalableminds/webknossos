@@ -90,8 +90,8 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
     } yield mappedBytes
   }
 
-  def generateSkeleton(agglomerateFileKey: AgglomerateFileKey,
-                       agglomerateId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[SkeletonTracing] =
+  def generateTree(agglomerateFileKey: AgglomerateFileKey,
+                   agglomerateId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[SkeletonTracing] =
     for {
       agglomerateToSegmentsOffsets <- openZarrArrayCached(agglomerateFileKey, keyAgglomerateToSegmentsOffsets)
       agglomerateToEdgesOffsets <- openZarrArrayCached(agglomerateFileKey, keyAgglomerateToEdgesOffsets)
@@ -101,7 +101,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
       edgesRange: MultiArray <- agglomerateToEdgesOffsets.readAsMultiArray(offset = agglomerateId, shape = 2)
       edgesOffset <- tryo(edgesRange.getLong(0)).toFox
       edgeCount <- tryo(edgesRange.getLong(1) - edgesOffset).toFox
-      edgeLimit = config.Datastore.AgglomerateSkeleton.maxEdges
+      edgeLimit = config.Datastore.AgglomerateTree.maxEdges
       _ <- Fox.fromBool(nodeCount <= edgeLimit) ?~> s"Agglomerate has too many nodes ($nodeCount > $edgeLimit)"
       _ <- Fox.fromBool(edgeCount <= edgeLimit) ?~> s"Agglomerate has too many edges ($edgeCount > $edgeLimit)"
       agglomerateToPositions <- openZarrArrayCached(agglomerateFileKey, keyAgglomerateToPositions)
@@ -125,7 +125,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
         }
       }.toFox
 
-      skeletonEdges <- tryo {
+      treeEdges <- tryo {
         (0 until edges.getShape()(0)).map { edgeIdx =>
           Edge(
             source = edges.getInt(edges.getIndex.set(Array(edgeIdx, 0))) + nodeIdStartAtOneOffset,
@@ -140,7 +140,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
           createdTimestamp = System.currentTimeMillis(),
           // unsafeWrapArray is fine, because the underlying arrays are never mutated
           nodes = nodes,
-          edges = skeletonEdges,
+          edges = treeEdges,
           name = s"agglomerate $agglomerateId (${agglomerateFileKey.attachment.name})",
           `type` = Some(TreeTypeProto.AGGLOMERATE),
           agglomerateInfo =

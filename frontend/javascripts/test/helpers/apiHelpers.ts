@@ -4,7 +4,7 @@ import {
   acquireAnnotationMutex,
   getDataset,
   getEdgesForAgglomerateMinCut,
-  getEditableAgglomerateSkeleton,
+  getEditableAgglomerateTreeAsSkeletonTracing,
   getNeighborsForAgglomerateNode,
   getPositionForSegmentInAgglomerate,
   getUpdateActionLog,
@@ -110,7 +110,9 @@ export interface WebknossosTestContext extends BaseTestContext {
     getUpdateActionLog: Mock<typeof getUpdateActionLog>;
     sendSaveRequestWithToken: Mock<typeof sendSaveRequestWithToken>;
     getPositionForSegmentInAgglomerate: Mock<typeof getPositionForSegmentInAgglomerate>;
-    getEditableAgglomerateSkeleton: Mock<typeof getEditableAgglomerateSkeleton>;
+    getEditableAgglomerateTreeAsSkeletonTracing: Mock<
+      typeof getEditableAgglomerateTreeAsSkeletonTracing
+    >;
     parseProtoTracing: Mock<typeof parseProtoTracing>;
   };
   setSlowCompression: (enabled: boolean) => void;
@@ -265,7 +267,7 @@ vi.mock("admin/rest_api.ts", async () => {
         throw new Error("No test has mocked the return value yet here.");
       },
     ),
-    getEditableAgglomerateSkeleton: vi.fn(
+    getEditableAgglomerateTreeAsSkeletonTracing: vi.fn(
       (
         _tracingStoreUrl: string,
         _tracingId: string,
@@ -573,7 +575,9 @@ export async function setupWebknossosForTesting(
     getUpdateActionLog: vi.mocked(getUpdateActionLog),
     sendSaveRequestWithToken: vi.mocked(sendSaveRequestWithToken),
     getPositionForSegmentInAgglomerate: vi.mocked(getPositionForSegmentInAgglomerate),
-    getEditableAgglomerateSkeleton: vi.mocked(getEditableAgglomerateSkeleton),
+    getEditableAgglomerateTreeAsSkeletonTracing: vi.mocked(
+      getEditableAgglomerateTreeAsSkeletonTracing,
+    ),
     parseProtoTracing: vi.mocked(parseProtoTracing),
   };
   testContext.setSlowCompression = setSlowCompression;

@@ -812,23 +812,23 @@ export function getSegmentColorAsHSLA(
 const AGGLOMERATE_STATES = {
   NO_SEGMENTATION: {
     value: false,
-    reason: "A segmentation layer needs to be visible to load an agglomerate skeleton.",
+    reason: "A segmentation layer needs to be visible to load an agglomerate tree.",
   },
   NO_MAPPING: {
     value: false,
-    reason: messages["tracing.agglomerate_skeleton.no_mapping"],
+    reason: messages["tracing.agglomerate_tree.no_mapping"],
   },
   NO_AGGLOMERATE_FILE_ACTIVE: {
     value: false,
-    reason: messages["tracing.agglomerate_skeleton.no_agglomerate_file_active"],
+    reason: messages["tracing.agglomerate_tree.no_agglomerate_file_active"],
   },
   NO_AGGLOMERATE_FILE_AVAILABLE: {
     value: false,
-    reason: messages["tracing.agglomerate_skeleton.no_agglomerate_file_available"],
+    reason: messages["tracing.agglomerate_tree.no_agglomerate_file_available"],
   },
   NO_AGGLOMERATE_FILES_LOADED_YET: {
     value: false,
-    reason: messages["tracing.agglomerate_skeleton.no_agglomerate_files_loaded_yet"],
+    reason: messages["tracing.agglomerate_tree.no_agglomerate_files_loaded_yet"],
   },
   YES: {
     value: true,

@@ -376,7 +376,8 @@ export function checkCollisionsInShortcutMap(shortcutMap: KeyboardShortcutsMap):
     );
     for (const [comparableKeySeq, shortcutIds] of keySeqAndShortcutIdsTuples) {
       // Checking for a collision:
-      const doMultipleShortcutsMapToTheSameKeySeq = shortcutIds.length > 1;
+      const uniqueShortcutIds = uniq(shortcutIds);
+      const doMultipleShortcutsMapToTheSameKeySeq = uniqueShortcutIds.length > 1;
       if (doMultipleShortcutsMapToTheSameKeySeq) {
         // Found a collision
         const keySeqStringified = JSON.stringify(
@@ -384,7 +385,7 @@ export function checkCollisionsInShortcutMap(shortcutMap: KeyboardShortcutsMap):
         );
         const existing = collisionsByKeySeq.get(keySeqStringified);
         if (existing) {
-          for (const id of shortcutIds) {
+          for (const id of uniqueShortcutIds) {
             if (!existing.conflictingShortcutIds.includes(id)) {
               existing.conflictingShortcutIds.push(id);
             }
@@ -392,7 +393,7 @@ export function checkCollisionsInShortcutMap(shortcutMap: KeyboardShortcutsMap):
         } else {
           collisionsByKeySeq.set(keySeqStringified, {
             keySequence: comparableKeySeq,
-            conflictingShortcutIds: [...shortcutIds],
+            conflictingShortcutIds: [...uniqueShortcutIds],
           });
         }
       }
@@ -424,10 +425,11 @@ export function checkCollisionForShortcut(
   );
   const collisions: Collision[] = [];
   for (const [comparableKeySeq, shortcutIds] of keySeqAndShortcutIdsTuples) {
-    if (shortcutIds.includes(keyboardShortcutId) && shortcutIds.length > 1) {
+    const uniqueShortcutIds = uniq(shortcutIds);
+    if (shortcutIds.includes(keyboardShortcutId) && uniqueShortcutIds.length > 1) {
       const fullCollision: Collision = {
         keySequence: comparableKeySeq,
-        conflictingShortcutIds: shortcutIds,
+        conflictingShortcutIds: uniqueShortcutIds,
       };
       if (!isAcceptedCollision(fullCollision)) {
         collisions.push({

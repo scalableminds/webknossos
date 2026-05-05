@@ -101,9 +101,9 @@ const getShortcuts = (
     {
       key: "1",
       keybinding: [
-        isInPlaneMode ? toUiElement("ZOOM_IN_PLANE") : toUiElement("ZOOM_IN_ARBITRARY"),
+        isInPlaneMode ? toUiElement("ZOOM_IN_PLANE") : toUiElement("ZOOM_IN_FLIGHT"),
         "/",
-        isInPlaneMode ? toUiElement("ZOOM_OUT_PLANE") : toUiElement("ZOOM_OUT_ARBITRARY"),
+        isInPlaneMode ? toUiElement("ZOOM_OUT_PLANE") : toUiElement("ZOOM_OUT_FLIGHT"),
 
         "or",
         <KeyboardKeyIcon label="ALT" key="zoom-3" className="keyboard-key-icon" />,

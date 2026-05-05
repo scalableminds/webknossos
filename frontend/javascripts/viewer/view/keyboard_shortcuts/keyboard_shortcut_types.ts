@@ -6,8 +6,8 @@ export type KeyboardShortcutDomain =
   | "GENERAL_EDITING"
   | "GENERAL_LAYOUT"
   | "GENERAL_COMMENT_TAB"
-  | "ARBITRARY_NAVIGATION"
-  | "ARBITRARY_EDITING"
+  | "FLIGHT_NAVIGATION"
+  | "FLIGHT_EDITING"
   | "PLANE_NAVIGATION"
   | "PLANE_TOOL_SWITCHING"
   | "PLANE_SKELETON_TOOL"
@@ -20,7 +20,7 @@ export type KeyboardShortcutDomain =
 // All parent collision domains of a domain can be generated with getAllCollidingDomainsOf.
 export type KeyboardShortcutCollisionDomain =
   | "GENERAL"
-  | "GENERAL.ARBITRARY"
+  | "GENERAL.FLIGHT"
   | "GENERAL.PLANE"
   | "GENERAL.PLANE.SKELETON"
   | "GENERAL.PLANE.VOLUME"
@@ -29,7 +29,7 @@ export type KeyboardShortcutCollisionDomain =
 
 const allCollisionDomains: KeyboardShortcutCollisionDomain[] = [
   "GENERAL",
-  "GENERAL.ARBITRARY",
+  "GENERAL.FLIGHT",
   "GENERAL.PLANE",
   "GENERAL.PLANE.SKELETON",
   "GENERAL.PLANE.VOLUME",
@@ -37,7 +37,7 @@ const allCollisionDomains: KeyboardShortcutCollisionDomain[] = [
   "GENERAL.PLANE.PROOFREADING",
 ];
 export const LeafCollisionDomains: KeyboardShortcutCollisionDomain[] = [
-  "GENERAL.ARBITRARY",
+  "GENERAL.FLIGHT",
   "GENERAL.PLANE.SKELETON",
   "GENERAL.PLANE.VOLUME",
   "GENERAL.PLANE.BOUNDING_BOX",
@@ -73,9 +73,9 @@ export class KeyboardShortcutMetaInfo {
       case "GENERAL_LAYOUT":
       case "GENERAL_COMMENT_TAB":
         return "GENERAL";
-      case "ARBITRARY_NAVIGATION":
-      case "ARBITRARY_EDITING":
-        return "GENERAL.ARBITRARY";
+      case "FLIGHT_NAVIGATION":
+      case "FLIGHT_EDITING":
+        return "GENERAL.FLIGHT";
       case "PLANE_NAVIGATION":
       case "PLANE_TOOL_SWITCHING":
         return "GENERAL.PLANE";
@@ -103,13 +103,13 @@ export const DOMAIN_DISPLAY_NAMES: Record<KeyboardShortcutDomain, string> = {
   GENERAL: "General",
   GENERAL_EDITING: "General Editing",
   GENERAL_LAYOUT: "General Layout",
-  GENERAL_COMMENT_TAB: "General Comment Tab",
-  ARBITRARY_NAVIGATION: "Arbitrary Navigation",
-  ARBITRARY_EDITING: "Arbitrary Editing",
-  PLANE_NAVIGATION: "Plane Navigation",
-  PLANE_TOOL_SWITCHING: "Plane Tool Switching",
-  PLANE_SKELETON_TOOL: "Plane Skeleton Tool",
-  PLANE_VOLUME_TOOL: "Plane Volume Tool",
-  PLANE_BOUNDING_BOX_TOOL: "Plane Bounding Box Tool",
-  PLANE_PROOFREADING_TOOL: "Plane Proofreading Tool",
+  GENERAL_COMMENT_TAB: "Comments Tab",
+  FLIGHT_NAVIGATION: "Flight Mode Navigation",
+  FLIGHT_EDITING: "Flight Mode Editing",
+  PLANE_NAVIGATION: "Plane Mode Navigation",
+  PLANE_TOOL_SWITCHING: "Plane Mode Tool Switching",
+  PLANE_SKELETON_TOOL: "Plane Mode Skeleton Tool",
+  PLANE_VOLUME_TOOL: "Plane Mode Volume Tool",
+  PLANE_BOUNDING_BOX_TOOL: "Plane Mode Bounding Box Tool",
+  PLANE_PROOFREADING_TOOL: "Plane Mode Proofreading Tool",
 };

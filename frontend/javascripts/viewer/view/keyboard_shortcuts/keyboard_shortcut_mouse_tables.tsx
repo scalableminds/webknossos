@@ -8,7 +8,7 @@ import IconStatusbarMouseWheel from "@images/icons/icon-statusbar-mouse-wheel.sv
 import { Table, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import React from "react";
-import type { KeyboardShortcutDomain } from "./keyboard_shortcut_types";
+import { DOMAIN_DISPLAY_NAMES, type KeyboardShortcutDomain } from "./keyboard_shortcut_types";
 import { keySequenceToUiElements } from "./keyboard_shortcut_utils";
 
 const { Title } = Typography;
@@ -57,7 +57,7 @@ function MouseShortcutDomainTable({
   return (
     <div>
       <Title level={5}>
-        {domainName} Mouse Shortcuts
+        {DOMAIN_DISPLAY_NAMES[domainName as KeyboardShortcutDomain] ?? domainName} Mouse Shortcuts
         {classicControlsSpecific ? " (with Classic Controls active)" : ""}
         {orthoViewportOnly ? " (Ortho Viewports only)" : ""}
         {tdViewportOnly ? " (3D Viewport only)" : ""}
@@ -74,7 +74,7 @@ function MouseShortcutDomainTable({
   );
 }
 
-// Shared entries used in both ArbitraryNavigation and SkeletonTool tables
+// Shared entries used in both FlightNavigation and SkeletonTool tables
 const mergeActiveNodeEntry: MouseShortcutEntry = {
   shortcuts: [
     <React.Fragment key="1">
@@ -104,10 +104,10 @@ const deleteEdgeEntry: MouseShortcutEntry = {
   action: "Delete Edge to this Node and Split Trees",
 };
 
-export function ArbitraryNavigationMouseShortcutsTable() {
+export function FlightNavigationMouseShortcutsTable() {
   return (
     <MouseShortcutDomainTable
-      domainName="ARBITRARY_NAVIGATION"
+      domainName="FLIGHT_NAVIGATION"
       data={[
         {
           shortcuts: [
@@ -525,7 +525,7 @@ export function ProofreadingToolOrthoMouseShortcutsTable() {
               />
             </React.Fragment>,
           ],
-          action: "Import Agglomerate Skeleton of Hovered Agglomerate",
+          action: "Import Agglomerate Tree of Hovered Agglomerate",
         },
         {
           shortcuts: [

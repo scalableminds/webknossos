@@ -4,11 +4,11 @@ import {
   ALL_KEYBOARD_SHORTCUT_META_INFOS,
   type KeyboardShortcutId,
 } from "./keyboard_shortcut_constants";
-import type {
-  KeyboardShortcutDomain,
-  KeyboardShortcutsMap,
-  KeyCombination,
-  KeySequence,
+import {
+  DOMAIN_DISPLAY_NAMES,
+  type KeyboardShortcutsMap,
+  type KeyCombination,
+  type KeySequence,
 } from "./keyboard_shortcut_types";
 import {
   areComparableSequencesEqual,
@@ -19,21 +19,6 @@ import {
 } from "./keyboard_shortcut_utils";
 
 const { Text } = Typography;
-
-export const DomainNameToUiName: Record<KeyboardShortcutDomain, string> = {
-  GENERAL: "General",
-  GENERAL_EDITING: "General Editing",
-  GENERAL_LAYOUT: "General Layout",
-  GENERAL_COMMENT_TAB: "Comments Tab",
-  ARBITRARY_NAVIGATION: "Arbitrary Mode Navigation",
-  ARBITRARY_EDITING: "Arbitrary Mode Editing",
-  PLANE_NAVIGATION: "Plane Mode Navigation",
-  PLANE_TOOL_SWITCHING: "Plane Mode Tool Switching",
-  PLANE_SKELETON_TOOL: "Plane Mode Skeleton Tool",
-  PLANE_VOLUME_TOOL: "Plane Mode Volume Tool",
-  PLANE_BOUNDING_BOX_TOOL: "Plane Mode Bounding Box Tool",
-  PLANE_PROOFREADING_TOOL: "Plane Mode Proofreading Tool",
-};
 
 type CollisionWarningAlertProps = {
   shortcutCollisions: Collision[];
@@ -64,7 +49,9 @@ export const CollisionWarningAlert: React.FC<CollisionWarningAlertProps> = ({
                       return (
                         <li key={id}>
                           <Text>
-                            {meta ? `${meta.description} (${DomainNameToUiName[meta.domain]})` : id}
+                            {meta
+                              ? `${meta.description} (${DOMAIN_DISPLAY_NAMES[meta.domain]})`
+                              : id}
                           </Text>
                         </li>
                       );
@@ -270,7 +257,7 @@ export function ShortcutRecorderModal({
       // cleanup
       clearCurrentPreview();
     };
-  }, [clearCurrentPreview, isOpen, handleReset, keySequence]);
+  }, [clearCurrentPreview, isOpen, handleReset]);
 
   function handleCancel() {
     // do not overwrite; simply call onCancel

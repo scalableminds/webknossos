@@ -5,7 +5,7 @@ import { KeyboardShortcutMetaInfo, type KeyboardShortcutsMap } from "./keyboard_
 export type KeyboardShortcutId =
   // General
   | "SWITCH_VIEWMODE_PLANE"
-  | "SWITCH_VIEWMODE_ARBITRARY"
+  | "SWITCH_VIEWMODE_FLIGHT"
   | "CYCLE_VIEWMODE"
   | "TOGGLE_SEGMENTATION"
   | "SAVE"
@@ -16,7 +16,7 @@ export type KeyboardShortcutId =
   | "TOGGLE_RIGHT_BORDER"
   | "NEXT_COMMENT"
   | "PREVIOUS_COMMENT"
-  // Arbitrary mode
+  // Flight mode
   | "MOVE_FORWARD_WITH_RECORDING"
   | "MOVE_BACKWARD_WITH_RECORDING"
   | "MOVE_FORWARD_WITHOUT_RECORDING"
@@ -29,21 +29,21 @@ export type KeyboardShortcutId =
   | "YAW_FLYCAM_INVERTED_IN_DISTANCE"
   | "PITCH_FLYCAM_POSITIVE_IN_DISTANCE"
   | "PITCH_FLYCAM_INVERTED_IN_DISTANCE"
-  | "ZOOM_IN_ARBITRARY"
-  | "ZOOM_OUT_ARBITRARY"
-  | "INCREASE_MOVE_VALUE_ARBITRARY"
-  | "DECREASE_MOVE_VALUE_ARBITRARY"
-  | "TOGGLE_ALL_TREES_ARBITRARY"
-  | "TOGGLE_INACTIVE_TREES_ARBITRARY"
+  | "ZOOM_IN_FLIGHT"
+  | "ZOOM_OUT_FLIGHT"
+  | "INCREASE_MOVE_VALUE_FLIGHT"
+  | "DECREASE_MOVE_VALUE_FLIGHT"
+  | "TOGGLE_ALL_TREES_FLIGHT"
+  | "TOGGLE_INACTIVE_TREES_FLIGHT"
   | "DELETE_ACTIVE_NODE"
-  | "CREATE_TREE_ARBITRARY"
-  | "CREATE_BRANCH_POINT_ARBITRARY"
-  | "DELETE_BRANCH_POINT_ARBITRARY"
-  | "RECENTER_ACTIVE_NODE_ARBITRARY"
-  | "NEXT_NODE_FORWARD_ARBITRARY"
-  | "NEXT_NODE_BACKWARD_ARBITRARY"
+  | "CREATE_TREE_FLIGHT"
+  | "CREATE_BRANCH_POINT_FLIGHT"
+  | "DELETE_BRANCH_POINT_FLIGHT"
+  | "RECENTER_ACTIVE_NODE_FLIGHT"
+  | "NEXT_NODE_FORWARD_FLIGHT"
+  | "NEXT_NODE_BACKWARD_FLIGHT"
   | "ROTATE_VIEW_180"
-  | "DOWNLOAD_SCREENSHOT_ARBITRARY"
+  | "DOWNLOAD_SCREENSHOT_FLIGHT"
   // Plane mode — navigation & general
   | "MOVE_LEFT"
   | "MOVE_RIGHT"
@@ -120,8 +120,8 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
     [[["Shift", "1"]]],
     "GENERAL",
   ),
-  SWITCH_VIEWMODE_ARBITRARY: new KeyboardShortcutMetaInfo(
-    "View in arbitrary mode",
+  SWITCH_VIEWMODE_FLIGHT: new KeyboardShortcutMetaInfo(
+    "View in flight mode",
     [[["Shift", "2"]]],
     "GENERAL",
   ),
@@ -172,133 +172,129 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
     "GENERAL_COMMENT_TAB",
   ),
 
-  // ===================== GENERAL.ARBITRARY =====================
+  // ===================== GENERAL.FLIGHT =====================
   MOVE_FORWARD_WITH_RECORDING: new KeyboardShortcutMetaInfo(
     "Move forward (while creating nodes)",
     [[["Space"]]],
-    "ARBITRARY_NAVIGATION",
+    "FLIGHT_NAVIGATION",
   ),
   MOVE_BACKWARD_WITH_RECORDING: new KeyboardShortcutMetaInfo(
     "Move backward (while creating nodes)",
     [[["Control", "Space"]]],
-    "ARBITRARY_NAVIGATION",
+    "FLIGHT_NAVIGATION",
   ),
   MOVE_FORWARD_WITHOUT_RECORDING: new KeyboardShortcutMetaInfo(
     "Move forward (without creating nodes)",
     [[["f"]]],
-    "ARBITRARY_NAVIGATION",
+    "FLIGHT_NAVIGATION",
   ),
   MOVE_BACKWARD_WITHOUT_RECORDING: new KeyboardShortcutMetaInfo(
     "Move backward (without creating nodes)",
     [[["d"]]],
-    "ARBITRARY_NAVIGATION",
+    "FLIGHT_NAVIGATION",
   ),
   YAW_FLYCAM_POSITIVE_AT_CENTER: new KeyboardShortcutMetaInfo(
     "Rotate left around center",
     [[["Shift", "ArrowLeft"]]],
-    "ARBITRARY_NAVIGATION",
+    "FLIGHT_NAVIGATION",
   ),
   YAW_FLYCAM_INVERTED_AT_CENTER: new KeyboardShortcutMetaInfo(
     "Rotate right around center",
     [[["Shift", "ArrowRight"]]],
-    "ARBITRARY_NAVIGATION",
+    "FLIGHT_NAVIGATION",
   ),
   PITCH_FLYCAM_POSITIVE_AT_CENTER: new KeyboardShortcutMetaInfo(
     "Rotate upwards around center",
     [[["Shift", "ArrowUp"]]],
-    "ARBITRARY_NAVIGATION",
+    "FLIGHT_NAVIGATION",
   ),
   PITCH_FLYCAM_INVERTED_AT_CENTER: new KeyboardShortcutMetaInfo(
     "Rotate downwards around center",
     [[["Shift", "ArrowDown"]]],
-    "ARBITRARY_NAVIGATION",
+    "FLIGHT_NAVIGATION",
   ),
   YAW_FLYCAM_POSITIVE_IN_DISTANCE: new KeyboardShortcutMetaInfo(
     "Rotate left in distance",
     [[["ArrowLeft"]]],
-    "ARBITRARY_NAVIGATION",
+    "FLIGHT_NAVIGATION",
   ),
   YAW_FLYCAM_INVERTED_IN_DISTANCE: new KeyboardShortcutMetaInfo(
     "Rotate right in distance",
     [[["ArrowRight"]]],
-    "ARBITRARY_NAVIGATION",
+    "FLIGHT_NAVIGATION",
   ),
   PITCH_FLYCAM_POSITIVE_IN_DISTANCE: new KeyboardShortcutMetaInfo(
     "Rotate up in distance",
     [[["ArrowDown"]]],
-    "ARBITRARY_NAVIGATION",
+    "FLIGHT_NAVIGATION",
   ),
   PITCH_FLYCAM_INVERTED_IN_DISTANCE: new KeyboardShortcutMetaInfo(
     "Rotate down in distance",
     [[["ArrowUp"]]],
-    "ARBITRARY_NAVIGATION",
+    "FLIGHT_NAVIGATION",
   ),
-  ZOOM_IN_ARBITRARY: new KeyboardShortcutMetaInfo("Zoom in", [[["i"]]], "ARBITRARY_NAVIGATION"),
-  ZOOM_OUT_ARBITRARY: new KeyboardShortcutMetaInfo("Zoom out", [[["o"]]], "ARBITRARY_NAVIGATION"),
-  INCREASE_MOVE_VALUE_ARBITRARY: new KeyboardShortcutMetaInfo(
+  ZOOM_IN_FLIGHT: new KeyboardShortcutMetaInfo("Zoom in", [[["i"]]], "FLIGHT_NAVIGATION"),
+  ZOOM_OUT_FLIGHT: new KeyboardShortcutMetaInfo("Zoom out", [[["o"]]], "FLIGHT_NAVIGATION"),
+  INCREASE_MOVE_VALUE_FLIGHT: new KeyboardShortcutMetaInfo(
     "Increase move value",
     [[["h"]]],
-    "ARBITRARY_NAVIGATION",
+    "FLIGHT_NAVIGATION",
   ),
-  DECREASE_MOVE_VALUE_ARBITRARY: new KeyboardShortcutMetaInfo(
+  DECREASE_MOVE_VALUE_FLIGHT: new KeyboardShortcutMetaInfo(
     "Decrease move value",
     [[["g"]]],
-    "ARBITRARY_NAVIGATION",
+    "FLIGHT_NAVIGATION",
   ),
-  TOGGLE_ALL_TREES_ARBITRARY: new KeyboardShortcutMetaInfo(
+  TOGGLE_ALL_TREES_FLIGHT: new KeyboardShortcutMetaInfo(
     "Toggle all trees",
     [[["1"]]],
-    "ARBITRARY_EDITING",
+    "FLIGHT_EDITING",
   ),
-  TOGGLE_INACTIVE_TREES_ARBITRARY: new KeyboardShortcutMetaInfo(
+  TOGGLE_INACTIVE_TREES_FLIGHT: new KeyboardShortcutMetaInfo(
     "Toggle inactive trees",
     [[["2"]]],
-    "ARBITRARY_EDITING",
+    "FLIGHT_EDITING",
   ),
   DELETE_ACTIVE_NODE: new KeyboardShortcutMetaInfo(
     "Delete active node",
     [[["Delete"]], [["Backspace"]], [["Shift", "Space"]]],
-    "ARBITRARY_EDITING",
+    "FLIGHT_EDITING",
   ),
-  CREATE_TREE_ARBITRARY: new KeyboardShortcutMetaInfo(
-    "Create new tree",
-    [[["c"]]],
-    "ARBITRARY_EDITING",
-  ),
-  CREATE_BRANCH_POINT_ARBITRARY: new KeyboardShortcutMetaInfo(
+  CREATE_TREE_FLIGHT: new KeyboardShortcutMetaInfo("Create new tree", [[["c"]]], "FLIGHT_EDITING"),
+  CREATE_BRANCH_POINT_FLIGHT: new KeyboardShortcutMetaInfo(
     "Create branch point",
     [[["b"]]],
-    "ARBITRARY_EDITING",
+    "FLIGHT_EDITING",
   ),
-  DELETE_BRANCH_POINT_ARBITRARY: new KeyboardShortcutMetaInfo(
+  DELETE_BRANCH_POINT_FLIGHT: new KeyboardShortcutMetaInfo(
     "Delete branch point",
     [[["j"]]],
-    "ARBITRARY_EDITING",
+    "FLIGHT_EDITING",
   ),
-  RECENTER_ACTIVE_NODE_ARBITRARY: new KeyboardShortcutMetaInfo(
+  RECENTER_ACTIVE_NODE_FLIGHT: new KeyboardShortcutMetaInfo(
     "Recenter active node",
     [[["s"]]],
-    "ARBITRARY_EDITING",
+    "FLIGHT_EDITING",
   ),
-  NEXT_NODE_FORWARD_ARBITRARY: new KeyboardShortcutMetaInfo(
+  NEXT_NODE_FORWARD_FLIGHT: new KeyboardShortcutMetaInfo(
     "Jump to next node",
     [[["Control", "."]]],
-    "ARBITRARY_EDITING",
+    "FLIGHT_EDITING",
   ),
-  NEXT_NODE_BACKWARD_ARBITRARY: new KeyboardShortcutMetaInfo(
+  NEXT_NODE_BACKWARD_FLIGHT: new KeyboardShortcutMetaInfo(
     "Jump to previous node",
     [[["Control", ","]]],
-    "ARBITRARY_EDITING",
+    "FLIGHT_EDITING",
   ),
   ROTATE_VIEW_180: new KeyboardShortcutMetaInfo(
     "Rotate view 180 degrees",
     [[["r"]]],
-    "ARBITRARY_EDITING",
+    "FLIGHT_EDITING",
   ),
-  DOWNLOAD_SCREENSHOT_ARBITRARY: new KeyboardShortcutMetaInfo(
+  DOWNLOAD_SCREENSHOT_FLIGHT: new KeyboardShortcutMetaInfo(
     "Download screenshot",
     [[["q"]]],
-    "ARBITRARY_EDITING",
+    "FLIGHT_EDITING",
   ),
 
   // ===================== GENERAL.PLANE =====================

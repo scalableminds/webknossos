@@ -218,32 +218,32 @@ class ArbitraryController extends React.PureComponent<Props> {
           Store.dispatch(pitchFlycamAction(getRotateValue() * timeFactor, isArbitrary()));
         },
       },
-      ZOOM_IN_ARBITRARY: {
+      ZOOM_IN_FLIGHT: {
         onPressedWithRepeat: () => {
           Store.dispatch(zoomInAction());
         },
       },
-      ZOOM_OUT_ARBITRARY: {
+      ZOOM_OUT_FLIGHT: {
         onPressedWithRepeat: () => {
           Store.dispatch(zoomOutAction());
         },
       },
       // Looped navigation with delay
-      INCREASE_MOVE_VALUE_ARBITRARY: {
+      INCREASE_MOVE_VALUE_FLIGHT: {
         onPressedWithRepeat: () => this.changeMoveValue(25),
         delayed: true,
       },
-      DECREASE_MOVE_VALUE_ARBITRARY: {
+      DECREASE_MOVE_VALUE_FLIGHT: {
         onPressedWithRepeat: () => this.changeMoveValue(-25),
         delayed: true,
       },
       // No-loop shortcuts
-      TOGGLE_ALL_TREES_ARBITRARY: {
+      TOGGLE_ALL_TREES_FLIGHT: {
         onPressed: () => {
           Store.dispatch(toggleAllTreesAction());
         },
       },
-      TOGGLE_INACTIVE_TREES_ARBITRARY: {
+      TOGGLE_INACTIVE_TREES_FLIGHT: {
         onPressed: () => {
           Store.dispatch(toggleInactiveTreesAction());
         },
@@ -253,22 +253,22 @@ class ArbitraryController extends React.PureComponent<Props> {
           Store.dispatch(deleteNodeAsUserAction(Store.getState()));
         },
       },
-      CREATE_TREE_ARBITRARY: {
+      CREATE_TREE_FLIGHT: {
         onPressed: () => {
           Store.dispatch(createTreeAction());
         },
       },
-      CREATE_BRANCH_POINT_ARBITRARY: {
+      CREATE_BRANCH_POINT_FLIGHT: {
         onPressed: () => {
           this.pushBranch();
         },
       },
-      DELETE_BRANCH_POINT_ARBITRARY: {
+      DELETE_BRANCH_POINT_FLIGHT: {
         onPressed: () => {
           Store.dispatch(requestDeleteBranchPointAction());
         },
       },
-      RECENTER_ACTIVE_NODE_ARBITRARY: {
+      RECENTER_ACTIVE_NODE_FLIGHT: {
         onPressed: () => {
           const state = Store.getState();
           const skeletonTracing = state.annotation.skeleton;
@@ -288,12 +288,12 @@ class ArbitraryController extends React.PureComponent<Props> {
           }
         },
       },
-      NEXT_NODE_FORWARD_ARBITRARY: {
+      NEXT_NODE_FORWARD_FLIGHT: {
         onPressed: () => {
           this.nextNode(true);
         },
       },
-      NEXT_NODE_BACKWARD_ARBITRARY: {
+      NEXT_NODE_BACKWARD_FLIGHT: {
         onPressed: () => {
           this.nextNode(false);
         },
@@ -303,7 +303,7 @@ class ArbitraryController extends React.PureComponent<Props> {
           Store.dispatch(yawFlycamAction(Math.PI));
         },
       },
-      DOWNLOAD_SCREENSHOT_ARBITRARY: {
+      DOWNLOAD_SCREENSHOT_FLIGHT: {
         onPressed: downloadScreenshot,
       },
     };

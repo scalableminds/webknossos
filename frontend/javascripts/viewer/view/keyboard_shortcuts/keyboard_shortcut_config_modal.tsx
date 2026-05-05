@@ -18,7 +18,7 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { isEqual } from "lodash-es";
 import type React from "react";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import { setKeyboardShortcutsConfigAction } from "viewer/model/actions/settings_actions";
 import {
@@ -28,7 +28,7 @@ import {
   type KeyboardShortcutId,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 import {
-  ArbitraryNavigationMouseShortcutsTable,
+  FlightNavigationMouseShortcutsTable,
   PlaneGeneralEditingMouseShortcutsTable,
   PlaneNavigationMouseShortcutsTable,
   PlaneTdViewportMouseShortcutsTable,
@@ -41,13 +41,13 @@ import {
   VolumeToolMouseShortcutsTable,
 } from "./keyboard_shortcut_mouse_tables";
 import { validateShortcutMapText } from "./keyboard_shortcut_persistence";
-import type { KeyboardShortcutDomain, KeySequence } from "./keyboard_shortcut_types";
-import { checkCollisionsInShortcutMap, keySequenceToUiElements } from "./keyboard_shortcut_utils";
 import {
-  CollisionWarningAlert,
-  DomainNameToUiName,
-  ShortcutRecorderModal,
-} from "./shortcut_recorder_modal";
+  DOMAIN_DISPLAY_NAMES,
+  type KeyboardShortcutDomain,
+  type KeySequence,
+} from "./keyboard_shortcut_types";
+import { checkCollisionsInShortcutMap, keySequenceToUiElements } from "./keyboard_shortcut_utils";
+import { CollisionWarningAlert, ShortcutRecorderModal } from "./shortcut_recorder_modal";
 
 const { Text, Title } = Typography;
 
@@ -76,7 +76,7 @@ const KeyboardShortcutDomainTable: React.FC<KeyboardShortcutDomainTableProps> = 
 }) => {
   return (
     <div key={domainName}>
-      <Title level={5}>{DomainNameToUiName[domainName]} Shortcuts</Title>
+      <Title level={5}>{DOMAIN_DISPLAY_NAMES[domainName]} Shortcuts</Title>
       <Table
         dataSource={tableData}
         columns={columns}
@@ -140,8 +140,8 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       GENERAL_EDITING: [],
       GENERAL_LAYOUT: [],
       GENERAL_COMMENT_TAB: [],
-      ARBITRARY_NAVIGATION: [],
-      ARBITRARY_EDITING: [],
+      FLIGHT_NAVIGATION: [],
+      FLIGHT_EDITING: [],
       PLANE_NAVIGATION: [],
       PLANE_TOOL_SWITCHING: [],
       PLANE_SKELETON_TOOL: [],
@@ -255,6 +255,50 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
     }
   };
 
+  const handleCloseRecorderModal = useCallback(() => {
+    setIsRecorderOpen(false);
+    setRecorderTargetShortcutId(null);
+  }, []);
+
+  const handleSaveKeySequence = useCallback(
+    (newKeySeq: KeySequence) => {
+      if (!recorderTargetShortcutId) return;
+      if (isEqual(recorderEditingKeySequence, newKeySeq)) {
+        // No changes were made to the currently editing sequence.
+        handleCloseRecorderModal();
+        return;
+      }
+
+      // First remove all equal sequences to deduplicate them.
+      const shortcutKeqSeqsWithoutNewSeq = localShortcutConfig[recorderTargetShortcutId].filter(
+        (keySeq) => !isEqual(keySeq, newKeySeq),
+      );
+
+      const updatedKeySeqAlternatives = recorderEditingKeySequence
+        ? shortcutKeqSeqsWithoutNewSeq.map((keySeq) =>
+            isEqual(keySeq, recorderEditingKeySequence) ? newKeySeq : keySeq,
+          )
+        : [...shortcutKeqSeqsWithoutNewSeq, newKeySeq];
+      // Use spread to preserve the existing key insertion order — building a
+      // fresh object with a loop would move the edited key to the end.
+      const updated = {
+        ...localShortcutConfig,
+        [recorderTargetShortcutId]: updatedKeySeqAlternatives,
+      };
+
+      setLocalShortcutConfig(updated);
+      setJsonString(JSON.stringify(updated, null, 2));
+
+      handleCloseRecorderModal();
+    },
+    [
+      recorderTargetShortcutId,
+      localShortcutConfig,
+      recorderEditingKeySequence,
+      handleCloseRecorderModal,
+    ],
+  );
+
   const handleSave = async () => {
     if (isJsonView && jsonError) {
       return;
@@ -310,19 +354,19 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       ),
     },
     {
-      key: "arbitrary",
-      label: "Arbitrary Mode",
+      key: "flight",
+      label: "Flight Mode",
       children: (
         <>
           <KeyboardShortcutDomainTable
-            domainName={"ARBITRARY_NAVIGATION"}
-            tableData={keyboardShortcutsTableDataMap["ARBITRARY_NAVIGATION"]}
+            domainName={"FLIGHT_NAVIGATION"}
+            tableData={keyboardShortcutsTableDataMap["FLIGHT_NAVIGATION"]}
             columns={keyboardShortcutsColumns}
           />
-          <ArbitraryNavigationMouseShortcutsTable />
+          <FlightNavigationMouseShortcutsTable />
           <KeyboardShortcutDomainTable
-            domainName={"ARBITRARY_EDITING"}
-            tableData={keyboardShortcutsTableDataMap["ARBITRARY_EDITING"]}
+            domainName={"FLIGHT_EDITING"}
+            tableData={keyboardShortcutsTableDataMap["FLIGHT_EDITING"]}
             columns={keyboardShortcutsColumns}
           />
         </>
@@ -463,36 +507,8 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
         keyboardShortcutId={recorderTargetShortcutId}
         isOpen={isRecorderOpen}
         initialKeySequence={recorderEditingKeySequence ?? undefined}
-        onCancel={() => {
-          setIsRecorderOpen(false);
-          setRecorderTargetShortcutId(null);
-        }}
-        onSave={(newKeySeq) => {
-          if (!recorderTargetShortcutId) return;
-
-          // First remove all equal sequences to deduplicate them.
-          const shortcutKeqSeqsWithoutNewSeq = localShortcutConfig[recorderTargetShortcutId].filter(
-            (keySeq) => !isEqual(keySeq, newKeySeq),
-          );
-
-          const updatedKeySeqAlternatives = recorderEditingKeySequence
-            ? shortcutKeqSeqsWithoutNewSeq.map((keySeq) =>
-                isEqual(keySeq, recorderEditingKeySequence) ? newKeySeq : keySeq,
-              )
-            : [...shortcutKeqSeqsWithoutNewSeq, newKeySeq];
-          // Use spread to preserve the existing key insertion order — building a
-          // fresh object with a loop would move the edited key to the end.
-          const updated = {
-            ...localShortcutConfig,
-            [recorderTargetShortcutId]: updatedKeySeqAlternatives,
-          };
-
-          setLocalShortcutConfig(updated);
-          setJsonString(JSON.stringify(updated, null, 2));
-
-          setIsRecorderOpen(false);
-          setRecorderTargetShortcutId(null);
-        }}
+        onCancel={handleCloseRecorderModal}
+        onSave={handleSaveKeySequence}
       />
     </Modal>
   );

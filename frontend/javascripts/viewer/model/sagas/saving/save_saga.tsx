@@ -143,6 +143,7 @@ function* getPollInterval(): Saga<number> {
 }
 
 function* shouldCheckForNewerAnnotationVersions(): Saga<boolean> {
+  // todop: adapt this function
   const allowSave = yield* select(
     (state) =>
       state.annotation.restrictions.allowSave && state.annotation.isUpdatingCurrentlyAllowed,

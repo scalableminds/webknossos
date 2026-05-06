@@ -2,14 +2,14 @@ import type { ActionPattern } from "@redux-saga/types";
 import { Modal } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
-import { call, fork, put, take, takeEvery } from "typed-redux-saga";
+import { call, delay, fork, put, take, takeEvery } from "typed-redux-saga";
 import { MappingStatusEnum, type SagaIdentifier } from "viewer/constants";
 import type { Action } from "viewer/model/actions/actions";
 import { setBusyBlockingInfoAction } from "viewer/model/actions/ui_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { Store } from "viewer/singletons";
-import type { ActiveMappingInfo, VolumeTracing } from "viewer/store";
+import type { ActiveMappingInfo, VolumeTracing, WebknossosState } from "viewer/store";
 import {
   setMappingIsLockedAction,
   setVolumeBucketDataHasChangedAction,
@@ -201,4 +201,24 @@ export function* takeEveryWithBatchActionSupport(
       }
     }
   });
+}
+
+export function* waitFor(
+  selector: (state: WebknossosState) => boolean,
+  throttleMs: number,
+): Saga<void> {
+  // Waits for the specified selector to return true.
+  // The selector is changed after each dispatched action (because
+  // each action may have changed the store).
+  // Actions are dispatched so often that it shouldn't be
+  // necessary to do a race(take("*"), delay(X)).
+  // Too avoid performance problems, we wait for throttleMs after each
+  // negative check.
+  if (yield select(selector)) return;
+
+  while (true) {
+    yield take("*");
+    if (yield select(selector)) return;
+    yield delay(throttleMs);
+  }
 }

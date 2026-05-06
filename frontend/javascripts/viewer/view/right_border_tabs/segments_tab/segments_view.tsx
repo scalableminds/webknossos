@@ -315,7 +315,6 @@ const mapDispatchToProps = (dispatch: Dispatch<any>) => ({
 type DispatchProps = ReturnType<typeof mapDispatchToProps>;
 type Props = DispatchProps & StateProps;
 type State = {
-  renamingCounter: number;
   groupTree: SegmentHierarchyNode[];
   searchableTreeItemList: SegmentHierarchyNode[];
   prevProps: Props | null | undefined;
@@ -356,8 +355,8 @@ const rootGroup = {
 class SegmentsView extends React.Component<Props, State> {
   intervalID: ReturnType<typeof setTimeout> | null | undefined;
   unmountBenchmarkListener: (() => void) | undefined;
+  renamingCounter: number = 0;
   state: State = {
-    renamingCounter: 0,
     groupTree: [],
     searchableTreeItemList: [],
     prevProps: null,
@@ -1267,11 +1266,11 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   onRenameStart = () => {
-    this.setState(({ renamingCounter }) => ({ renamingCounter: renamingCounter + 1 }));
+    this.renamingCounter += 1;
   };
 
   onRenameEnd = () => {
-    this.setState(({ renamingCounter }) => ({ renamingCounter: renamingCounter - 1 }));
+    this.renamingCounter -= 1;
   };
 
   maybeExpandParentGroup = (selectedElement: SegmentHierarchyNode) => {
@@ -1609,7 +1608,7 @@ class SegmentsView extends React.Component<Props, State> {
                                     // Forbid dragging when segments or groups are being renamed,
                                     // since selecting text within the editable input box would not work
                                     // otherwise (instead, the item would be dragged).
-                                    this.state.renamingCounter === 0 && this.props.allowUpdate,
+                                    this.renamingCounter === 0 && this.props.allowUpdate,
                                 }}
                                 multiple
                                 showLine

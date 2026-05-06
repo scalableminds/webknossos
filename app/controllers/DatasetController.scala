@@ -833,7 +833,7 @@ class DatasetController @Inject()(userService: UserService,
         _ = logger.info(s"Writing mirrors for all datasets as requested by superuser ${request.identity._id}...")
         beforeAll = Instant.now
         datasets <- datasetDAO.findAll(GlobalAccessContext)
-        _ = logger.info(s"Writing mirrors for all datasets: fetch datasets from DB")
+        _ = Instant.logSince(beforeAll, s"Writing mirrors for all datasets: fetch datasets from DB", logger)
         eligibleDatasets = datasets.filter(d => d.isVirtual && d.isUsable)
         byDataStore = eligibleDatasets.groupBy(_._dataStore)
         _ <- Fox.serialCombined(byDataStore.keys) { dataStoreName =>
@@ -845,11 +845,13 @@ class DatasetController @Inject()(userService: UserService,
             _ <- client.writeMirror(datasetsForDatastore.map(_._id), failOnError = false)
             _ = Instant.logSince(
               before,
-              s"Writing mirrors for ${datasetsForDatastore.length} datasets on datastore $dataStoreName (for details see datastore logging)")
+              s"Writing mirrors for ${datasetsForDatastore.length} datasets on datastore $dataStoreName (for details see datastore logging)",
+              logger)
           } yield ()
         }
         _ = Instant.logSince(beforeAll,
-                             s"Writing mirrors for all ${datasets.length} datasets (for details see datastore logging)")
+                             s"Writing mirrors for all ${datasets.length} datasets (for details see datastore logging)",
+                             logger)
       } yield Ok
     }
 }

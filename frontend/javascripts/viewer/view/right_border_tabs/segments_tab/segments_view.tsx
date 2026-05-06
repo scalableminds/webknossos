@@ -1270,7 +1270,7 @@ class SegmentsView extends React.Component<Props, State> {
   };
 
   onRenameEnd = () => {
-    this.renamingCounter -= 1;
+    this.renamingCounter = Math.max(0, this.renamingCounter - 1);
   };
 
   maybeExpandParentGroup = (selectedElement: SegmentHierarchyNode) => {

@@ -154,7 +154,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
   def writeMirror(datasetIds: Seq[ObjectId], failOnError: Boolean): Fox[Unit] =
     for {
       _ <- rpc(s"${dataStore.url}/data/datasets/writeMirror")
-        .addQueryParam("failOnError", value = true)
+        .addQueryParam("failOnError", failOnError)
         .addQueryParam("token", RpcTokenHolder.webknossosToken)
         .postEmpty()
     } yield ()

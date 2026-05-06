@@ -16,6 +16,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   UsableDataSource
 }
 import com.typesafe.scalalogging.LazyLogging
+import org.apache.commons.io.FileUtils
 import play.api.libs.json.Json
 
 import java.nio.charset.StandardCharsets
@@ -27,7 +28,7 @@ class DataSourceMirrorService @Inject()(
     config: DataStoreConfig,
 ) extends FoxImplicits
     with LazyLogging {
-  val dataBaseDir: Path = config.Datastore.baseDirectory
+  private val dataBaseDir: Path = config.Datastore.baseDirectory
 
   private def getMirrorDir(dataSource: UsableDataSource) =
     dataBaseDir.resolve(dataSource.id.organizationId).resolve(".mirror").resolve(dataSource.id.directoryName)
@@ -40,7 +41,7 @@ class DataSourceMirrorService @Inject()(
         _ = logger.info(s"Writing dataset mirror for $datasetId at $mirrorDir...")
         _ <- ensureMirrorParent(mirrorDir)
         _ <- Fox.runIf(Files.exists(mirrorDir)) {
-          tryo(Files.delete(mirrorDir)).toFox
+          tryo(FileUtils.deleteDirectory(mirrorDir.toFile)).toFox
         } ?~> "dataset.writeMirror.deleteExistingMirrorFailed"
         _ <- tryo(Files.createDirectory(mirrorDir)).toFox ?~> "dataset.writeMirror.createMirrorDirFailed"
         updatedLayers <- Fox.serialCombined(dataSource.dataLayers)(writeMirrorLayer(_, mirrorDir)) ?~> "dataset.writeMirror.writeMirrorLayersFailed"

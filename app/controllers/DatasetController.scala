@@ -820,9 +820,9 @@ class DatasetController @Inject()(userService: UserService,
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- Fox.fromBool(dataset.isVirtual) ?~> "dataset.mirror.onlyForVirtual"
-        _ <- Fox.fromBool(dataset.isUsable) ?~> "dataset.mirror.onlyForUsable"
-        _ <- datasetService.writeMirrorForVirtual(dataset) ?~> "dataset.compose.addLayer.failed"
+        _ <- Fox.fromBool(dataset.isVirtual) ?~> "dataset.writeMirror.onlyForVirtual"
+        _ <- Fox.fromBool(dataset.isUsable) ?~> "dataset.writeMirror.onlyForUsable"
+        _ <- datasetService.writeMirrorForVirtual(dataset) ?~> "dataset.writeMirror.failed"
       } yield Ok
     }
 

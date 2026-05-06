@@ -130,7 +130,8 @@ function MouseShortcutDomainTable({
   return (
     <div>
       <Title level={5}>
-        {DOMAIN_DISPLAY_NAMES[domainName as KeyboardShortcutDomain] ?? domainName} Mouse Shortcuts
+        {DOMAIN_DISPLAY_NAMES[domainName as KeyboardShortcutDomain] ?? domainName}{" "}
+        {"(mouse-specific)"}
         {classicControlsSpecific ? " (with Classic Controls active)" : ""}
         {orthoViewportOnly ? " (Ortho Viewports only)" : ""}
         {tdViewportOnly ? " (3D Viewport only)" : ""}{" "}

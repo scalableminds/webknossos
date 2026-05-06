@@ -77,7 +77,7 @@ const KeyboardShortcutDomainTable: React.FC<KeyboardShortcutDomainTableProps> = 
 }) => {
   return (
     <div key={domainName}>
-      <Title level={5}>{DOMAIN_DISPLAY_NAMES[domainName]} Shortcuts</Title>
+      <Title level={5}>{DOMAIN_DISPLAY_NAMES[domainName]}</Title>
       <Table
         dataSource={tableData}
         columns={columns}
@@ -382,23 +382,17 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       ),
     },
     {
-      key: "plane_tools",
-      label: "Plane Mode - Tool Activation",
+      key: "tools",
+      label: "Plane Mode - Tools",
       children: (
         <>
+          <Typography.Title level={4}>Plane Mode - Tool Activation</Typography.Title>
           <KeyboardShortcutDomainTable
             domainName={"PLANE_TOOL_SWITCHING"}
             tableData={keyboardShortcutsTableDataMap["PLANE_TOOL_SWITCHING"]}
             columns={keyboardShortcutsColumns}
           />
-        </>
-      ),
-    },
-    {
-      key: "tools",
-      label: "Plane Mode Tools",
-      children: (
-        <>
+          <Typography.Title level={4}>Plane Mode - Tool Specific Functionality</Typography.Title>
           <KeyboardShortcutDomainTable
             domainName={"PLANE_SKELETON_TOOL"}
             tableData={keyboardShortcutsTableDataMap["PLANE_SKELETON_TOOL"]}

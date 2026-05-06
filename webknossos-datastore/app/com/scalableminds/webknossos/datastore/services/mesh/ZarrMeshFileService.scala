@@ -27,7 +27,7 @@ case class MeshFileAttributes(
     lodScaleMultiplier: Double,
     transform: Array[Array[Double]],
     hashFunction: String,
-    nBuckets: Int,
+    nBuckets: Long,
     mappingName: Option[String]
 ) extends ArrayArtifactHashing {
   lazy val applyHashFunction: Long => Long = getHashFunction(hashFunction)
@@ -43,7 +43,7 @@ object MeshFileAttributes extends MeshFileUtils with VoxelyticsZarrArtifactUtils
         lodScaleMultiplier <- (meshFileAttrs \ attrKeyLodScaleMultiplier).validate[Double]
         transform <- (meshFileAttrs \ attrKeyTransform).validate[Array[Array[Double]]]
         hashFunction <- (meshFileAttrs \ attrKeyHashFunction).validate[String]
-        nBuckets <- (meshFileAttrs \ attrKeyNBuckets).validate[Int]
+        nBuckets <- (meshFileAttrs \ attrKeyNBuckets).validate[Long]
         mappingName <- (meshFileAttrs \ attrKeyMappingName).validateOpt[String]
       } yield
         MeshFileAttributes(

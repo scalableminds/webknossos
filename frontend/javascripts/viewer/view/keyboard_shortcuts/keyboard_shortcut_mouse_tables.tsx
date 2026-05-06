@@ -14,6 +14,78 @@ import FastTooltip from "components/fast_tooltip";
 
 const { Title } = Typography;
 
+function MouseLeftClick() {
+  return (
+    <FastTooltip title="Press left mouse button">
+      <Icon
+        component={IconStatusbarMouseLeft}
+        aria-label="Left Mouse Click"
+        className="mouse-icon-large"
+      />
+    </FastTooltip>
+  );
+}
+
+function MouseLeftDrag() {
+  return (
+    <FastTooltip title="Keep left mouse button pressed & drag">
+      <Icon
+        component={IconStatusbarMouseLeftDrag}
+        aria-label="Left Mouse Drag"
+        className="mouse-icon-large"
+      />
+    </FastTooltip>
+  );
+}
+
+function MouseMove() {
+  return (
+    <FastTooltip title="Move mouse (no button pressed)">
+      <Icon
+        component={IconStatusbarMouseMove}
+        aria-label="Mouse Move"
+        className="mouse-icon-large"
+      />
+    </FastTooltip>
+  );
+}
+
+function MouseRightClick() {
+  return (
+    <FastTooltip title="Press right mouse button">
+      <Icon
+        component={IconStatusbarMouseRight}
+        aria-label="Right Mouse Click"
+        className="mouse-icon-large"
+      />
+    </FastTooltip>
+  );
+}
+
+function MouseRightDrag() {
+  return (
+    <FastTooltip title="Keep right mouse button pressed & drag">
+      <Icon
+        component={IconStatusbarMouseRightDrag}
+        aria-label="Right Mouse Drag"
+        className="mouse-icon-large"
+      />
+    </FastTooltip>
+  );
+}
+
+function MouseWheel() {
+  return (
+    <FastTooltip title="Scroll with the mouse wheel">
+      <Icon
+        component={IconStatusbarMouseWheel}
+        aria-label="Mouse Wheel"
+        className="mouse-icon-large"
+      />
+    </FastTooltip>
+  );
+}
+
 type MouseShortcutEntry = {
   shortcuts: React.ReactNode[];
   action: string;
@@ -83,11 +155,7 @@ const mergeActiveNodeEntry: MouseShortcutEntry = {
   shortcuts: [
     <React.Fragment key="1">
       {keySequenceToUiElements([["Shift"]], false)} + {keySequenceToUiElements([["Alt"]], false)} +{" "}
-      <Icon
-        component={IconStatusbarMouseLeft}
-        aria-label="Left Mouse Click"
-        className="mouse-icon-large"
-      />
+      <MouseLeftClick />
     </React.Fragment>,
   ],
   action: "Merge with Active Node and Combine Trees",
@@ -97,12 +165,7 @@ const deleteEdgeEntry: MouseShortcutEntry = {
   shortcuts: [
     <React.Fragment key="1">
       {keySequenceToUiElements([["Shift"]], false)} + {keySequenceToUiElements([["Ctrl"]], false)}/
-      {keySequenceToUiElements([["Meta"]], false)} +{" "}
-      <Icon
-        component={IconStatusbarMouseLeft}
-        aria-label="Left Mouse Click"
-        className="mouse-icon-large"
-      />
+      {keySequenceToUiElements([["Meta"]], false)} + <MouseLeftClick />
     </React.Fragment>,
   ],
   action: "Delete Edge to this Node and Split Trees",
@@ -114,25 +177,11 @@ export function FlightNavigationMouseShortcutsTable() {
       domainName="FLIGHT_NAVIGATION"
       data={[
         {
-          shortcuts: [
-            <Icon
-              key="1"
-              component={IconStatusbarMouseLeft}
-              aria-label="Left Mouse Click"
-              className="mouse-icon-large"
-            />,
-          ],
+          shortcuts: [<MouseLeftClick key="1" />],
           action: "Select And Move To Node",
         },
         {
-          shortcuts: [
-            <Icon
-              key="1"
-              component={IconStatusbarMouseLeftDrag}
-              aria-label="Left Mouse Drag"
-              className="mouse-icon-large"
-            />,
-          ],
+          shortcuts: [<MouseLeftDrag key="1" />],
           action: "Rotate around current position",
         },
         mergeActiveNodeEntry,
@@ -148,14 +197,7 @@ export function PlaneGeneralEditingMouseShortcutsTable() {
       domainName="GENERAL_EDITING"
       data={[
         {
-          shortcuts: [
-            <Icon
-              key="1"
-              component={IconStatusbarMouseRight}
-              aria-label="Right Mouse Click"
-              className="mouse-icon-large"
-            />,
-          ],
+          shortcuts: [<MouseRightClick key="1" />],
           action: "Open Context Menu",
         },
       ]}
@@ -170,54 +212,23 @@ export function PlaneNavigationMouseShortcutsTable() {
       data={[
         {
           shortcuts: [
-            <Icon
-              key="1"
-              component={IconStatusbarMouseLeftDrag}
-              aria-label="Left Mouse Drag"
-              className="mouse-icon-large"
-            />,
+            <MouseLeftDrag key="1" />,
             <React.Fragment key="2">
-              {keySequenceToUiElements([["Alt"]], false)} +{" "}
-              <Icon
-                component={IconStatusbarMouseMove}
-                aria-label="Mouse Move"
-                className="mouse-icon-large"
-              />
+              {keySequenceToUiElements([["Alt"]], false)} + <MouseMove />
             </React.Fragment>,
           ],
           action: "Move In-Plane",
         },
         {
-          shortcuts: [
-            <Icon
-              key="1"
-              component={IconStatusbarMouseWheel}
-              aria-label="Mouse Wheel"
-              className="mouse-icon-large"
-            />,
-          ],
+          shortcuts: [<MouseWheel key="1" />],
           action: "Move One Slice Forward or Backward",
         },
         {
-          shortcuts: [
-            <Icon
-              key="1"
-              component={IconStatusbarMouseLeftDrag}
-              aria-label="Left Mouse Drag"
-              className="mouse-icon-large"
-            />,
-          ],
+          shortcuts: [<MouseLeftDrag key="1" />],
           action: "Move 3D viewport",
         },
         {
-          shortcuts: [
-            <Icon
-              key="1"
-              component={IconStatusbarMouseRightDrag}
-              aria-label="Right Mouse Drag"
-              className="mouse-icon-large"
-            />,
-          ],
+          shortcuts: [<MouseRightDrag key="1" />],
           action: "Rotate 3D viewport",
         },
       ]}
@@ -228,18 +239,13 @@ export function PlaneNavigationMouseShortcutsTable() {
 export function PlaneTdViewportMouseShortcutsTable() {
   return (
     <MouseShortcutDomainTable
-      domainName="Mesh Click Related Shortcuts"
+      domainName="Mesh Related"
       tdViewportOnly
       data={[
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keySequenceToUiElements([["Shift"]], false)} +{" "}
-              <Icon
-                component={IconStatusbarMouseLeft}
-                aria-label="Left Mouse Click"
-                className="mouse-icon-large"
-              />
+              {keySequenceToUiElements([["Shift"]], false)} + <MouseLeftClick />
             </React.Fragment>,
           ],
           action: "Move the camera to the clicked position",
@@ -248,12 +254,7 @@ export function PlaneTdViewportMouseShortcutsTable() {
           shortcuts: [
             <React.Fragment key="1">
               {keySequenceToUiElements([["Ctrl"]], false)}/
-              {keySequenceToUiElements([["Meta"]], false)} +{" "}
-              <Icon
-                component={IconStatusbarMouseLeft}
-                aria-label="Left Mouse Click"
-                className="mouse-icon-large"
-              />
+              {keySequenceToUiElements([["Meta"]], false)} + <MouseLeftClick />
             </React.Fragment>,
           ],
           action: "Select the mesh and its segment ID",
@@ -271,47 +272,21 @@ export function SkeletonToolMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keySequenceToUiElements([["Shift"]], false)} +{" "}
-              <Icon
-                component={IconStatusbarMouseWheel}
-                aria-label="Mouse Wheel"
-                className="mouse-icon-large"
-              />
+              {keySequenceToUiElements([["Shift"]], false)} + <MouseWheel />
             </React.Fragment>,
           ],
           action: "Change Node Radius",
         },
         {
-          shortcuts: [
-            <Icon
-              key="1"
-              component={IconStatusbarMouseLeft}
-              aria-label="Left Mouse Click"
-              className="mouse-icon-large"
-            />,
-          ],
+          shortcuts: [<MouseLeftClick key="1" />],
           action: "Create New Node / Select Hovered Node",
         },
         {
-          shortcuts: [
-            <Icon
-              key="1"
-              component={IconStatusbarMouseLeftDrag}
-              aria-label="Left Mouse Drag"
-              className="mouse-icon-large"
-            />,
-          ],
+          shortcuts: [<MouseLeftDrag key="1" />],
           action: "Move Node Under Cursor",
         },
         {
-          shortcuts: [
-            <Icon
-              key="1"
-              component={IconStatusbarMouseRight}
-              aria-label="Right Mouse Click"
-              className="mouse-icon-large"
-            />,
-          ],
+          shortcuts: [<MouseRightClick key="1" />],
           action: "Open Context Menu with Hovered Node Related Options",
         },
         mergeActiveNodeEntry,
@@ -331,25 +306,13 @@ export function SkeletonToolClassicControlsMouseShortcutsTable() {
       classicControlsSpecific
       data={[
         {
-          shortcuts: [
-            <Icon
-              key="1"
-              component={IconStatusbarMouseRight}
-              aria-label="Right Mouse Click"
-              className="mouse-icon-large"
-            />,
-          ],
+          shortcuts: [<MouseRightClick key="1" />],
           action: "Create New Node",
         },
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keySequenceToUiElements([["Shift"]], false)} +{" "}
-              <Icon
-                component={IconStatusbarMouseLeft}
-                aria-label="Left Mouse Click"
-                className="mouse-icon-large"
-              />
+              {keySequenceToUiElements([["Shift"]], false)} + <MouseLeftClick />
             </React.Fragment>,
           ],
           action: "Select Hovered Node",
@@ -365,26 +328,14 @@ export function VolumeToolMouseShortcutsTable() {
       domainName="PLANE_VOLUME_TOOL"
       data={[
         {
-          shortcuts: [
-            <Icon
-              key="1"
-              component={IconStatusbarMouseLeftDrag}
-              aria-label="Left Mouse Drag"
-              className="mouse-icon-large"
-            />,
-          ],
+          shortcuts: [<MouseLeftDrag key="1" />],
           action: "Add to Current Segment (Draw)",
         },
         {
           shortcuts: [
             <React.Fragment key="1">
               {keySequenceToUiElements([["Ctrl"]], false)}/
-              {keySequenceToUiElements([["Meta"]], false)} +{" "}
-              <Icon
-                component={IconStatusbarMouseLeftDrag}
-                aria-label="Left Mouse Drag"
-                className="mouse-icon-large"
-              />
+              {keySequenceToUiElements([["Meta"]], false)} + <MouseLeftDrag />
             </React.Fragment>,
           ],
           action: "Add to Current Segment (Draw) with Inverted Overwrite Mode",
@@ -408,12 +359,7 @@ export function VolumeToolMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keySequenceToUiElements([["Shift"]], false)} +{" "}
-              <Icon
-                component={IconStatusbarMouseWheel}
-                aria-label="Mouse Wheel"
-                className="mouse-icon-large"
-              />
+              {keySequenceToUiElements([["Shift"]], false)} + <MouseWheel />
             </React.Fragment>,
           ],
           action: "Change Brush Size",
@@ -433,26 +379,14 @@ export function VolumeToolClassicControlsMouseShortcutsTable() {
       classicControlsSpecific
       data={[
         {
-          shortcuts: [
-            <Icon
-              key="1"
-              component={IconStatusbarMouseRightDrag}
-              aria-label="Right Mouse Drag"
-              className="mouse-icon-large"
-            />,
-          ],
+          shortcuts: [<MouseRightDrag key="1" />],
           action: "Remove Voxels (Erase)",
         },
         {
           shortcuts: [
             <React.Fragment key="1">
               {keySequenceToUiElements([["Ctrl"]], false)}/
-              {keySequenceToUiElements([["Meta"]], false)} +{" "}
-              <Icon
-                component={IconStatusbarMouseRightDrag}
-                aria-label="Right Mouse Drag"
-                className="mouse-icon-large"
-              />
+              {keySequenceToUiElements([["Meta"]], false)} + <MouseRightDrag />
             </React.Fragment>,
           ],
           action: "Remove Voxels (Erase) with Inverted Overwrite Mode",
@@ -471,12 +405,7 @@ export function ProofreadingToolMouseShortcutsTable() {
           shortcuts: [
             <React.Fragment key="1">
               {keySequenceToUiElements([["Ctrl"]], false)}/
-              {keySequenceToUiElements([["Meta"]], false)} +{" "}
-              <Icon
-                component={IconStatusbarMouseLeft}
-                aria-label="Left Mouse Click"
-                className="mouse-icon-large"
-              />
+              {keySequenceToUiElements([["Meta"]], false)} + <MouseLeftClick />
             </React.Fragment>,
           ],
           action: "Add Segment to Partition One for Multi Cut",
@@ -486,12 +415,7 @@ export function ProofreadingToolMouseShortcutsTable() {
             <React.Fragment key="1">
               {keySequenceToUiElements([["Ctrl"]], false)}/
               {keySequenceToUiElements([["Meta"]], false)} +{" "}
-              {keySequenceToUiElements([["Shift"]], false)} +{" "}
-              <Icon
-                component={IconStatusbarMouseLeft}
-                aria-label="Left Mouse Click"
-                className="mouse-icon-large"
-              />
+              {keySequenceToUiElements([["Shift"]], false)} + <MouseLeftClick />
             </React.Fragment>,
           ],
           action: "Add Segment to Partition Two for Multi Cut",
@@ -508,25 +432,13 @@ export function ProofreadingToolOrthoMouseShortcutsTable() {
       orthoViewportOnly
       data={[
         {
-          shortcuts: [
-            <Icon
-              key="1"
-              component={IconStatusbarMouseLeft}
-              aria-label="Left Mouse Click"
-              className="mouse-icon-large"
-            />,
-          ],
+          shortcuts: [<MouseLeftClick key="1" />],
           action: "Activate Segment of Agglomerate for Proofreading Actions",
         },
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keySequenceToUiElements([["Shift"]], false)} +{" "}
-              <Icon
-                component={IconStatusbarMouseWheel}
-                aria-label="Mouse Wheel Click"
-                className="mouse-icon-large"
-              />
+              {keySequenceToUiElements([["Shift"]], false)} + <MouseWheel />
             </React.Fragment>,
           ],
           action: "Import Agglomerate Tree of Hovered Agglomerate",
@@ -534,12 +446,7 @@ export function ProofreadingToolOrthoMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keySequenceToUiElements([["Shift"]], false)} +{" "}
-              <Icon
-                component={IconStatusbarMouseLeft}
-                aria-label="Left Mouse Click"
-                className="mouse-icon-large"
-              />
+              {keySequenceToUiElements([["Shift"]], false)} + <MouseLeftClick />
             </React.Fragment>,
           ],
           action: "Merge with Active Segment",
@@ -548,12 +455,7 @@ export function ProofreadingToolOrthoMouseShortcutsTable() {
           shortcuts: [
             <React.Fragment key="1">
               {keySequenceToUiElements([["Ctrl"]], false)}/
-              {keySequenceToUiElements([["Meta"]], false)} +{" "}
-              <Icon
-                component={IconStatusbarMouseLeft}
-                aria-label="Left Mouse Click"
-                className="mouse-icon-large"
-              />
+              {keySequenceToUiElements([["Meta"]], false)} + <MouseLeftClick />
             </React.Fragment>,
           ],
           action: "Split from Active Segment",
@@ -573,12 +475,7 @@ export function ProofreadingToolTDMouseShortcutsTable() {
           shortcuts: [
             <React.Fragment key="1">
               {keySequenceToUiElements([["Ctrl"]], false)}/
-              {keySequenceToUiElements([["Meta"]], false)} +{" "}
-              <Icon
-                component={IconStatusbarMouseWheel}
-                aria-label="Mouse Wheel Click"
-                className="mouse-icon-large"
-              />
+              {keySequenceToUiElements([["Meta"]], false)} + <MouseWheel />
             </React.Fragment>,
           ],
           action: "Activate Segment of Agglomerate",

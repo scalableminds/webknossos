@@ -585,7 +585,9 @@ function _ShareModalView(props: Props) {
                   marginLeft: 24,
                 }}
               >
-                All users in your organization who may view this annotation can also edit it.
+                All users in your organization who may view this annotation can also edit it. Note
+                that you should coordinate the collaboration, because parallel changes to this
+                annotation will result in a conflict.
               </Hint>
             </RadioGroup>
           </Col>

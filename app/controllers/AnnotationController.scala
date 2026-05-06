@@ -445,7 +445,9 @@ class AnnotationController @Inject()(
               s"User ${request.identity._id} with session id $sessionId acquired mutex for annotation ${annotation._id}.")
           else
             logger.info(
-              s"User ${request.identity._id} with session id $sessionId tried to acquire mutex for annotation ${annotation._id} but was rejected. ${mutexResult.blockedByUser.map(_.toString).getOrElse("")} is currently having the mutex.")
+              s"User ${request.identity._id} with session id $sessionId tried to acquire mutex for annotation ${annotation._id} but was rejected. ${mutexResult.blockedByUser
+                .map(_.toString)
+                .getOrElse("")} is currently having the mutex.")
           resultJson <- annotationMutexService.publicWrites(mutexResult)
         } yield Ok(resultJson)
       }

@@ -18,6 +18,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 - Fixed reading zarr3 meshfiles with more than 2^32 hash buckets. [#9555](https://github.com/scalableminds/webknossos/pull/9555)
 - Fix fast importing / viewing remote datasets via /import?url=<url>. [#9557](https://github.com/scalableminds/webknossos/pull/9557)
 - Fixed a regression that showed an error message when renaming a tree/segment item/group via double-click. [#9558](https://github.com/scalableminds/webknossos/pull/9558)
+- Fixed the proofreading crosshair not rendering correctly in the YZ and XZ viewports (only XY was correct). [#9560](https://github.com/scalableminds/webknossos/pull/9560)
 
 ## [26.05.0](https://github.com/scalableminds/webknossos/releases/tag/26.05.0) - 2026-05-04
 [Commits](https://github.com/scalableminds/webknossos/compare/26.04.1...26.05.0)

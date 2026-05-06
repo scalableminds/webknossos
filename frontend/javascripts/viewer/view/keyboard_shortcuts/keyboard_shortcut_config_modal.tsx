@@ -191,14 +191,19 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
         <>
           <div className="keyboard-shortcuts-container">
             {combos.length === 0 ? (
-              <Button
-                type="text"
-                icon={<RollbackOutlined />}
-                disabled={!isEditable}
-                onClick={() => handleRestoreDefaultForShortcut(record.shortcutId)}
-              >
-                Restore default
-              </Button>
+              <>
+                <Text italic style={{ color: "var(--ant-color-text-secondary)" }}>
+                  No shortcut configured
+                </Text>
+                <FastTooltip title="Restore default shortcut">
+                  <Button
+                    type="text"
+                    icon={<RollbackOutlined />}
+                    disabled={!isEditable}
+                    onClick={() => handleRestoreDefaultForShortcut(record.shortcutId)}
+                  />
+                </FastTooltip>
+              </>
             ) : (
               combos.map((comboChain, index) => (
                 <div key={index} className="single-keyboard-shortcut-container">

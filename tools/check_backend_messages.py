@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Check conf/messages for duplicates and unused keys in Scala code."""
 
-import os
 import re
 import sys
+import time
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent
@@ -18,6 +18,7 @@ SCALA_DIRS = [
 
 def main() -> None:
     print(f"Hello from check_backend_messages! Checking {MESSAGES_FILE} against Scala sources...")
+    t0 = time.monotonic()
 
     keys, duplicates = parse_messages(MESSAGES_FILE)
 
@@ -28,17 +29,27 @@ def main() -> None:
         errors.extend(duplicates)
 
     scala_text = collect_scala_text()
+    scala_lines = scala_text.count("\n")
     unused = find_unused_keys(keys, scala_text)
 
     if unused:
         errors.append(f"\nKeys defined in {MESSAGES_FILE.relative_to(REPO_ROOT)} but not used in Scala code:")
         errors.extend(unused)
 
+    undefined = find_undefined_references(keys, scala_text)
+
+    if undefined:
+        errors.append(f"\nKeys referenced in Scala code but not defined in {MESSAGES_FILE.relative_to(REPO_ROOT)}:")
+        errors.extend(sorted(undefined))
+
+    elapsed = time.monotonic() - t0
+
     if errors:
         print("\n".join(errors))
+        print(f"\nAll done with {len(errors)} errors. Checking {len(keys)} message keys against {scala_lines} Scala lines took {elapsed:.2f}s.")
         sys.exit(1)
 
-    print(f"All done! Checked {len(keys)} message keys.")
+    print(f"\nAll done with no errors! Checking {len(keys)} message keys against {scala_lines} Scala lines took {elapsed:.2f}s.")
 
 
 def parse_messages(path: Path) -> tuple[dict[str, int], list[str]]:
@@ -77,8 +88,23 @@ def find_unused_keys(keys: dict[str, int], scala_text: str) -> list[str]:
     for key in keys:
         # The key must appear as a quoted string literal somewhere in Scala code
         if f'"{key}"' not in scala_text:
-            unused.append(f"L{keys[key]}: ‘{key}’ unused in Scala code.")
+            unused.append(f"  ‘{key}’ (L{keys[key]})")
     return unused
+
+
+# Matches strings used as message keys: first arg of Messages(...) or right-hand side of ?~> / ?~!
+_SCALA_KEY_RE = re.compile(r'(?:Messages\(\s*|[?]\~[>!]\s*)"([a-z][a-zA-Z0-9_.]*)"')
+
+
+def find_undefined_references(keys: dict[str, int], scala_text: str) -> list[str]:
+    undefined: list[str] = []
+    seen: set[str] = set()
+    for match in _SCALA_KEY_RE.finditer(scala_text):
+        key = match.group(1)
+        if key not in keys and key not in seen:
+            undefined.append(f"  ‘{key}’")
+            seen.add(key)
+    return undefined
 
 
 if __name__ == "__main__":

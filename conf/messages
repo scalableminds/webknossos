@@ -403,6 +403,7 @@ folder.move.root=Cannot move the organization’s root folder
 folder.move.self=Cannot move a folder into itself
 folder.update.notAllowed=No write access on this folder
 folder.noWriteAccess=No write access in this folder
+folder.noWriteAccess=This is a duplicate!
 folder.update.name.failed=Failed to update the folder’s name
 folder.update.teams.failed=Failed to update the folder’s allowed teams
 folder.create.failed.teams.failed=Failed to create folder in this location

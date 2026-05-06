@@ -35,10 +35,9 @@ class DataSourceMirrorService @Inject()(
 
   def writeMirror(dataSource: UsableDataSource, datasetId: ObjectId)(implicit ec: ExecutionContext): Fox[Unit] =
     if (dataSource.allExplicitPaths.forall(_.isLocal)) {
+      val mirrorDir = getMirrorDir(dataSource)
+      logger.info(s"Writing dataset mirror for $datasetId at $mirrorDir...")
       for {
-        _ <- Fox.fromBool(dataSource.allExplicitPaths.forall(_.isLocal)) ?~> "dataset.writeMirror.nonLocalPaths"
-        mirrorDir = getMirrorDir(dataSource)
-        _ = logger.info(s"Writing dataset mirror for $datasetId at $mirrorDir...")
         _ <- ensureMirrorParent(mirrorDir)
         _ <- Fox.runIf(Files.exists(mirrorDir)) {
           tryo(FileUtils.deleteDirectory(mirrorDir.toFile)).toFox

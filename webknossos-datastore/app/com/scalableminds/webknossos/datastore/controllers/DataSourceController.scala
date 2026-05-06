@@ -746,7 +746,7 @@ class DataSourceController @Inject()(
               failures = resultBoxes.filter(_.isEmpty)
               failuresFormatted = failures.map(_.toString).mkString(", ")
               _ = logger.info(
-                s"Wrote dataset mirrors where needed for ${request.body.length} datasets (${failures.length} failures: $failuresFormatted")
+                s"Wrote dataset mirrors where needed for ${request.body.length} datasets (${failures.length} failures: $failuresFormatted)")
             } yield Ok
           }
         }

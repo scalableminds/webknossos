@@ -156,7 +156,7 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       _ <- rpc(s"${dataStore.url}/data/datasets/writeMirror")
         .addQueryParam("failOnError", failOnError)
         .addQueryParam("token", RpcTokenHolder.webknossosToken)
-        .postEmpty()
+        .postJson[Seq[ObjectId]](datasetIds)
     } yield ()
 
   def scanRealPathsForVirtual(dataSources: Seq[DataSource])(implicit ec: ExecutionContext): Fox[Unit] = {

@@ -429,7 +429,7 @@ class AnnotationController @Inject()(
       _ <- annotationDAO.insertOne(clonedAnnotation)
     } yield clonedAnnotation
 
-  def tryAcquiringAnnotationMutex(id: ObjectId): Action[AnyContent] =
+  def tryAcquiringAnnotationMutex(id: ObjectId, sessionId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
         for {
@@ -437,12 +437,15 @@ class AnnotationController @Inject()(
           _ <- Fox.fromBool(annotation.othersMayEdit) ?~> "notAllowed" ~> FORBIDDEN
           restrictions <- provider.restrictionsFor(AnnotationIdentifier(annotation.typ, id)) ?~> "restrictions.notFound" ~> NOT_FOUND
           _ <- restrictions.allowUpdate(request.identity) ?~> "notAllowed" ~> FORBIDDEN
-          mutexResult <- annotationMutexService.tryAcquiringAnnotationMutex(annotation._id, request.identity._id) ?~> "annotation.mutex.failed"
+          mutexResult <- annotationMutexService.tryAcquiringAnnotationMutex(annotation._id,
+                                                                            request.identity._id,
+                                                                            sessionId) ?~> "annotation.mutex.failed"
           _ = if (mutexResult.canEdit)
-            logger.info(s"User ${request.identity._id} acquired mutex for annotation ${annotation._id}.")
+            logger.info(
+              s"User ${request.identity._id} with session id $sessionId acquired mutex for annotation ${annotation._id}.")
           else
             logger.info(
-              s"User ${request.identity._id} tried to acquire mutex for annotation ${annotation._id} but was rejected. ${mutexResult.blockedByUser.map(_.toString).getOrElse("")} is currently having the mutex.")
+              s"User ${request.identity._id} with session id $sessionId tried to acquire mutex for annotation ${annotation._id} but was rejected. ${mutexResult.blockedByUser.map(_.toString).getOrElse("")} is currently having the mutex.")
           resultJson <- annotationMutexService.publicWrites(mutexResult)
         } yield Ok(resultJson)
       }

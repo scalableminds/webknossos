@@ -732,14 +732,19 @@ export async function getTracingsForAnnotation(
 
 export async function acquireAnnotationMutex(
   annotationId: string,
-): Promise<{ canEdit: boolean; blockedByUser: APIUserCompact | undefined | null }> {
+  sessionId: string,
+): Promise<{
+  canEdit: boolean;
+  blockedByUser: APIUserCompact | undefined | null;
+  blockedBySesssionId: string | undefined | null;
+}> {
   const { canEdit, blockedByUser } = await Request.receiveJSON(
-    `/api/annotations/${annotationId}/acquireMutex`,
+    `/api/annotations/${annotationId}/acquireMutex?sessionId=${sessionId}`,
     {
       method: "POST",
     },
   );
-  return { canEdit, blockedByUser };
+  return { canEdit, blockedByUser, blockedBySesssionId };
 }
 
 export async function releaseAnnotationMutex(annotationId: string): Promise<void> {

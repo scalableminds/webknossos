@@ -1,4 +1,4 @@
-import Icon from "@ant-design/icons";
+import Icon, { InfoCircleOutlined } from "@ant-design/icons";
 import IconStatusbarMouseLeft from "@images/icons/icon-statusbar-mouse-left.svg?react";
 import IconStatusbarMouseLeftDrag from "@images/icons/icon-statusbar-mouse-left-drag.svg?react";
 import IconStatusbarMouseMove from "@images/icons/icon-statusbar-mouse-move.svg?react";
@@ -10,6 +10,7 @@ import { useWkSelector } from "libs/react_hooks";
 import React from "react";
 import { DOMAIN_DISPLAY_NAMES, type KeyboardShortcutDomain } from "./keyboard_shortcut_types";
 import { keySequenceToUiElements } from "./keyboard_shortcut_utils";
+import FastTooltip from "components/fast_tooltip";
 
 const { Title } = Typography;
 
@@ -60,7 +61,10 @@ function MouseShortcutDomainTable({
         {DOMAIN_DISPLAY_NAMES[domainName as KeyboardShortcutDomain] ?? domainName} Mouse Shortcuts
         {classicControlsSpecific ? " (with Classic Controls active)" : ""}
         {orthoViewportOnly ? " (Ortho Viewports only)" : ""}
-        {tdViewportOnly ? " (3D Viewport only)" : ""}
+        {tdViewportOnly ? " (3D Viewport only)" : ""}{" "}
+        <FastTooltip title="Mouse shortcuts are not editable.">
+          <InfoCircleOutlined />
+        </FastTooltip>
       </Title>
       <Table
         dataSource={data}

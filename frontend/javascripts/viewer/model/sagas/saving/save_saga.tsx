@@ -244,7 +244,7 @@ const SuccessEmptyIncorporateActionsReturnValue: ApplyingUpdateResults = {
 // agglomerate id information from the state where the latest backend updates were applied but the own
 // mapping changes are not yet applied. This is needed to have correct information about what agglomerate ids
 // were actually affected by a proofreading action done by the local user. The info correctness is essential
-// to properly reload and synchronize loaded agglomerate skeletons and meshes.
+// to properly reload and synchronize loaded agglomerate trees and meshes.
 function* updatePendingProofreadingOperationInfoAction() {
   const proofreadingPostProcessingInfo = yield* select(
     (state) => state.save.proofreadingPostProcessingInfo,

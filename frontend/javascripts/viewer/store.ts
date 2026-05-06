@@ -481,7 +481,7 @@ export type RebaseRelevantAnnotationState = {
 };
 
 // Additionally, the proofreading sagas need knowledge of the mapping info last stored in the backend,
-// before applying their own mapping changes. This info is e.g. needed to properly auto update the agglomerate skeletons
+// before applying their own mapping changes. This info is e.g. needed to properly auto update the agglomerate trees
 // as part of the post processing of a proofreading interaction.
 // This info is also stored in ProofreadingPostProcessingInfo.
 

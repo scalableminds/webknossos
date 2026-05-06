@@ -54,8 +54,8 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val port: Int = get[Int]("datastore.redis.port")
     }
 
-    object AgglomerateSkeleton {
-      val maxEdges: Int = get[Int]("datastore.agglomerateSkeleton.maxEdges")
+    object AgglomerateTree {
+      val maxEdges: Int = get[Int]("datastore.agglomerateTree.maxEdges")
     }
     object AgglomerateGraph {
       val maxEdges: Int = get[Int]("datastore.agglomerateGraph.maxEdges")
@@ -73,7 +73,7 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
                         Cache,
                         AdHocMesh,
                         Redis,
-                        AgglomerateSkeleton,
+                        AgglomerateTree,
                         AgglomerateGraph,
                         DataVaults,
                         S3Upload)

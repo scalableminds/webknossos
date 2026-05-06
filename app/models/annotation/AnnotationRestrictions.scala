@@ -13,7 +13,7 @@ import scala.concurrent._
 class AnnotationRestrictions(implicit ec: ExecutionContext) {
   def allowAccess(user: Option[User]): Fox[Boolean] = Fox.successful(false)
 
-  // Ignores state of annotation mutex. use allowUpdateWithMutex for updates that should only be allowed with the mutex
+  // Ignores state of annotation mutex. Use allowUpdateWithMutex for updates that should only be allowed with the mutex.
   def allowUpdate(user: Option[User]): Fox[Boolean] = Fox.successful(false)
 
   def allowUpdateWithMutex(user: Option[User]): Fox[Boolean] = Fox.successful(false)

@@ -36,17 +36,22 @@ class DataSourceMirrorService @Inject()(
   def writeMirror(dataSource: UsableDataSource, datasetId: ObjectId)(implicit ec: ExecutionContext): Fox[Unit] =
     if (dataSource.allExplicitPaths.forall(_.isLocal)) {
       val mirrorDir = getMirrorDir(dataSource)
+      val tempMirrorDir = mirrorDir.resolveSibling(mirrorDir.getFileName.toString + ".new")
       logger.info(s"Writing dataset mirror for $datasetId at $mirrorDir...")
       for {
         _ <- ensureMirrorParent(mirrorDir)
+        _ <- Fox.runIf(Files.exists(tempMirrorDir)) {
+          tryo(FileUtils.deleteDirectory(tempMirrorDir.toFile)).toFox
+        } ?~> "dataset.writeMirror.deleteStaleTempMirrorFailed"
+        _ <- tryo(Files.createDirectory(tempMirrorDir)).toFox ?~> "dataset.writeMirror.createTempMirrorDirFailed"
+        updatedLayers <- Fox.serialCombined(dataSource.dataLayers)(writeMirrorLayer(_, tempMirrorDir)) ?~> "dataset.writeMirror.writeMirrorLayersFailed"
+        mirrorDataSource = dataSource.copy(dataLayers = updatedLayers)
+        _ <- writeMirrorProperties(mirrorDataSource, tempMirrorDir) ?~> "dataset.writeMirror.writeMirrorPropertiesFailed"
+        _ <- writeReadme(tempMirrorDir, datasetId) ?~> "dataset.writeMirror.writeReadmeFailed"
         _ <- Fox.runIf(Files.exists(mirrorDir)) {
           tryo(FileUtils.deleteDirectory(mirrorDir.toFile)).toFox
         } ?~> "dataset.writeMirror.deleteExistingMirrorFailed"
-        _ <- tryo(Files.createDirectory(mirrorDir)).toFox ?~> "dataset.writeMirror.createMirrorDirFailed"
-        updatedLayers <- Fox.serialCombined(dataSource.dataLayers)(writeMirrorLayer(_, mirrorDir)) ?~> "dataset.writeMirror.writeMirrorLayersFailed"
-        mirrorDataSource = dataSource.copy(dataLayers = updatedLayers)
-        _ <- writeMirrorProperties(mirrorDataSource, mirrorDir) ?~> "dataset.writeMirror.writeMirrorPropertiesFailed"
-        _ <- writeReadme(mirrorDir, datasetId) ?~> "dataset.writeMirror.writeReadmeFailed"
+        _ <- tryo(Files.move(tempMirrorDir, mirrorDir)).toFox ?~> "dataset.writeMirror.moveTempMirrorFailed"
       } yield ()
     } else Fox.successful(())
 

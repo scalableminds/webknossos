@@ -366,25 +366,6 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       ),
     },
     {
-      key: "flight",
-      label: "Flight Mode",
-      children: (
-        <>
-          <KeyboardShortcutDomainTable
-            domainName={"FLIGHT_NAVIGATION"}
-            tableData={keyboardShortcutsTableDataMap["FLIGHT_NAVIGATION"]}
-            columns={keyboardShortcutsColumns}
-          />
-          <FlightNavigationMouseShortcutsTable />
-          <KeyboardShortcutDomainTable
-            domainName={"FLIGHT_EDITING"}
-            tableData={keyboardShortcutsTableDataMap["FLIGHT_EDITING"]}
-            columns={keyboardShortcutsColumns}
-          />
-        </>
-      ),
-    },
-    {
       key: "plane",
       label: "Plane Mode",
       children: (
@@ -446,6 +427,25 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
           <ProofreadingToolMouseShortcutsTable />
           <ProofreadingToolOrthoMouseShortcutsTable />
           <ProofreadingToolTDMouseShortcutsTable />
+        </>
+      ),
+    },
+    {
+      key: "flight",
+      label: "Flight Mode",
+      children: (
+        <>
+          <KeyboardShortcutDomainTable
+            domainName={"FLIGHT_NAVIGATION"}
+            tableData={keyboardShortcutsTableDataMap["FLIGHT_NAVIGATION"]}
+            columns={keyboardShortcutsColumns}
+          />
+          <FlightNavigationMouseShortcutsTable />
+          <KeyboardShortcutDomainTable
+            domainName={"FLIGHT_EDITING"}
+            tableData={keyboardShortcutsTableDataMap["FLIGHT_EDITING"]}
+            columns={keyboardShortcutsColumns}
+          />
         </>
       ),
     },

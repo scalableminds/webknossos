@@ -197,7 +197,7 @@ class ZarrMeshFileService @Inject()(chunkCacheService: DSChunkCacheService, data
     def lookupOne(segmentId: Long): Fox[Option[List[MeshLodInfo]]] =
       listMeshChunksForSegment(meshFileKey, segmentId, meshFileAttributes).map(Some(_)).orElse(Fox.successful(None))
     if (meshFileKey.attachment.path.isRemote)
-      Fox.batchCombined(segmentIds.toSeq, parallelity = 32)(lookupOne).map(_.flatten)
+      Fox.batchCombined(segmentIds, parallelity = 32)(lookupOne).map(_.flatten)
     else
       Fox.serialCombined(segmentIds)(lookupOne).map(_.flatten)
   }

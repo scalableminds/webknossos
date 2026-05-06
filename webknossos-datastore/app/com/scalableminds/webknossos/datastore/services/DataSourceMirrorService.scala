@@ -41,21 +41,21 @@ class DataSourceMirrorService @Inject()(
         _ <- ensureMirrorParent(mirrorDir)
         _ <- Fox.runIf(Files.exists(mirrorDir)) {
           tryo(Files.delete(mirrorDir)).toFox
-        }
-        _ <- tryo(Files.createDirectory(mirrorDir)).toFox
-        updatedLayers <- Fox.serialCombined(dataSource.dataLayers)(writeMirrorLayer(_, mirrorDir))
+        } ?~> "dataset.writeMirror.deleteExistingMirrorFailed"
+        _ <- tryo(Files.createDirectory(mirrorDir)).toFox ?~> "dataset.writeMirror.createMirrorDirFailed"
+        updatedLayers <- Fox.serialCombined(dataSource.dataLayers)(writeMirrorLayer(_, mirrorDir)) ?~> "dataset.writeMirror.writeMirrorLayersFailed"
         mirrorDataSource = dataSource.copy(dataLayers = updatedLayers)
-        _ <- writeMirrorProperties(mirrorDataSource, mirrorDir)
-        _ <- writeReadme(mirrorDir, datasetId)
+        _ <- writeMirrorProperties(mirrorDataSource, mirrorDir) ?~> "dataset.writeMirror.writeMirrorPropertiesFailed"
+        _ <- writeReadme(mirrorDir, datasetId) ?~> "dataset.writeMirror.writeReadmeFailed"
       } yield ()
     } else Fox.successful(())
 
   private def writeMirrorLayer(layer: StaticLayer, mirrorDir: Path)(implicit ec: ExecutionContext): Fox[StaticLayer] = {
     val layerDir = mirrorDir.resolve(layer.name)
     for {
-      _ <- tryo(Files.createDirectory(layerDir)).toFox
-      updatedMags <- Fox.serialCombined(layer.mags.toList)(writeMirrorMag(_, layerDir))
-      updatedAttachmentsOpt <- writeMirrorAttachments(layer.attachments, layerDir)
+      _ <- tryo(Files.createDirectory(layerDir)).toFox ?~> "dataset.writeMirror.createLayerDirFailed"
+      updatedMags <- Fox.serialCombined(layer.mags.toList)(writeMirrorMag(_, layerDir)) ?~> "dataset.writeMirror.writeMirrorMagsFailed"
+      updatedAttachmentsOpt <- writeMirrorAttachments(layer.attachments, layerDir) ?~> "dataset.writeMirror.writeMirrorAttachmentsFailed"
       layerWithUpdatedMags = layer.mapped(newMags = Some(updatedMags))
       updatedLayer = updatedAttachmentsOpt.fold(layerWithUpdatedMags)(layerWithUpdatedMags.withAttachments)
     } yield updatedLayer

@@ -99,7 +99,7 @@ jobs:
       - name: Assert no 'SELECT *'  are present in scala files
         run: tools/assert-no-select-asterisk-present.sh
       - name: Check backend messages for duplicates and unused keys
-        run: uv run tools/check_backend_messages.py
+        run: python3 tools/check_backend_messages.py
 
       - name: Lint backend code and check formatting
         run: sbt ";scapegoat; util/scapegoat; webknossosTracingstore/scapegoat; webknossosDatastore/scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"

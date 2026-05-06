@@ -102,7 +102,7 @@ function DatasetAddRemoteView(props: Props) {
     const maybeDSNameError = form
       .getFieldError(["dataset", "name"])
       .filter((error) => error === messages["dataset.name.already_taken"]);
-    const isNameAlreadyTaken = maybeDSNameError.length === 0;
+    const isNameAlreadyTaken = maybeDSNameError.length > 0;
     if (isNameAlreadyTaken) {
       navigate(`/datasets/${activeUser?.organization}/${form.getFieldValue(["dataset", "name"])}`);
     }

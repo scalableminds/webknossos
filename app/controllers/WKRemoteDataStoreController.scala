@@ -149,11 +149,11 @@ class WKRemoteDataStoreController @Inject()(
           _ <- Fox.runIf(!request.body.needsConversion)(usedStorageService.refreshStorageReportForDataset(updated))
           _ <- Fox.runIf(!request.body.needsConversion)(datasetService.scanRealpathsIfVirtual(updated))
           _ <- Fox.runIf(!request.body.needsConversion)(
-            datasetService.writeMirrorForVirtual(dataset.copy(isUsable = true))(GlobalAccessContext))
+            datasetService.writeMirrorForVirtual(updated)(GlobalAccessContext))
           _ <- Fox.runIf(request.body.needsConversion) {
             for {
               voxelSizeFactor <- request.body.voxelSizeFactor.toFox ?~> "dataset.upload.needsConversion.missingVoxelSize"
-              _ <- jobService.submitConvertToWkwJob(dataset, user, voxelSizeFactor, request.body.voxelSizeUnit)
+              _ <- jobService.submitConvertToWkwJob(updated, user, voxelSizeFactor, request.body.voxelSizeUnit)
             } yield ()
           }
         } yield Ok

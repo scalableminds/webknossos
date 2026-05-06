@@ -151,9 +151,10 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
             GetEffectiveVoxelSizeParameters(modelPath))
     )
 
-  def writeMirror(datasetId: ObjectId): Fox[Unit] =
+  def writeMirror(datasetIds: Seq[ObjectId], failOnError: Boolean): Fox[Unit] =
     for {
-      _ <- rpc(s"${dataStore.url}/data/datasets/$datasetId/writeMirror")
+      _ <- rpc(s"${dataStore.url}/data/datasets/writeMirror")
+        .addQueryParam("failOnError", value = true)
         .addQueryParam("token", RpcTokenHolder.webknossosToken)
         .postEmpty()
     } yield ()

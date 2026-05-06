@@ -731,18 +731,36 @@ class DataSourceController @Inject()(
     }
   }
 
-  def writeMirror(datasetId: ObjectId): Action[AnyContent] = Action.async { implicit request =>
-    if (dataStoreConfig.Datastore.writeVirtualDatasetsMirror) {
-      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
-        datasetCache.invalidateCache(datasetId)
-        for {
-          dataSourceBox <- datasetCache.getById(datasetId).shiftBox
-          _ <- Fox.runOptional(dataSourceBox.toOption) { dataSource =>
-            dataSourceMirrorService.writeMirror(dataSource, datasetId)
+  def writeMirror(failOnError: Boolean): Action[Seq[ObjectId]] = Action.async(validateJson[Seq[ObjectId]]) {
+    implicit request =>
+      if (dataStoreConfig.Datastore.writeVirtualDatasetsMirror) {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+          if (failOnError) {
+            for {
+              _ <- Fox.serialCombined(request.body)(writeMirrorForDataset)
+              _ = logger.info(s"Successfully wrote dataset mirrors where needed for ${request.body.length} datasets.")
+            } yield Ok
+          } else {
+            for {
+              resultBoxes <- Fox.serialSequence(request.body)(writeMirrorForDataset)
+              failures = resultBoxes.filter(_.isEmpty)
+              failuresFormatted = failures.map(_.toString).mkString(", ")
+              _ = logger.info(
+                s"Wrote dataset mirrors where needed for ${request.body.length} datasets (${failures.length} failures: $failuresFormatted")
+            } yield Ok
           }
-        } yield Ok
+        }
+      } else Fox.successful(Ok)
+  }
+
+  private def writeMirrorForDataset(datasetId: ObjectId): Fox[Unit] = {
+    datasetCache.invalidateCache(datasetId)
+    for {
+      dataSourceBox <- datasetCache.getById(datasetId).shiftBox
+      _ <- Fox.runOptional(dataSourceBox.toOption) { dataSource =>
+        dataSourceMirrorService.writeMirror(dataSource, datasetId) ?~> s"Error writing datasource mirror for $datasetId"
       }
-    } else Fox.successful(Ok)
+    } yield ()
   }
 
   private def refreshDataSource(datasetId: ObjectId)(implicit tc: TokenContext): Fox[DataSource] =

@@ -181,6 +181,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- datasetDataLayerDAO.updateLayers(datasetId, dataSource)
       _ <- teamDAO.updateAllowedTeamsForDataset(datasetId, List())
       _ <- scanRealpathsIfVirtual(dataset)
+      _ <- writeMirrorForVirtual(dataset)
     } yield dataset
   }
 
@@ -705,7 +706,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     if (dataset.isVirtual && dataset.isUsable) {
       for {
         client <- clientFor(dataset)
-        _ <- client.writeMirror(dataset._id)
+        _ <- client.writeMirror(Seq(dataset._id), failOnError = true)
       } yield ()
     } else Fox.successful(())
 

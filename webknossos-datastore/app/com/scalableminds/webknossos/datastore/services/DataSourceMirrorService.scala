@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.services
 
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -14,6 +15,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   StaticLayer,
   UsableDataSource
 }
+import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.Json
 
 import java.nio.charset.StandardCharsets
@@ -23,26 +25,30 @@ import scala.concurrent.ExecutionContext
 
 class DataSourceMirrorService @Inject()(
     config: DataStoreConfig,
-) extends FoxImplicits {
+) extends FoxImplicits
+    with LazyLogging {
   val dataBaseDir: Path = config.Datastore.baseDirectory
 
   private def getMirrorDir(dataSource: UsableDataSource) =
     dataBaseDir.resolve(dataSource.id.organizationId).resolve(".mirror").resolve(dataSource.id.directoryName)
 
   def writeMirror(dataSource: UsableDataSource, datasetId: ObjectId)(implicit ec: ExecutionContext): Fox[Unit] =
-    for {
-      _ <- Fox.fromBool(dataSource.allExplicitPaths.forall(_.isLocal)) ?~> "dataset.writeMirror.nonLocalPaths"
-      mirrorDir = getMirrorDir(dataSource)
-      _ <- ensureMirrorParent(mirrorDir)
-      _ <- Fox.runIf(Files.exists(mirrorDir)) {
-        tryo(Files.delete(mirrorDir)).toFox
-      }
-      _ <- tryo(Files.createDirectory(mirrorDir)).toFox
-      updatedLayers <- Fox.serialCombined(dataSource.dataLayers)(writeMirrorLayer(_, mirrorDir))
-      mirrorDataSource = dataSource.copy(dataLayers = updatedLayers)
-      _ <- writeMirrorProperties(mirrorDataSource, mirrorDir)
-      _ <- writeReadme(mirrorDir, datasetId)
-    } yield ()
+    if (dataSource.allExplicitPaths.forall(_.isLocal)) {
+      for {
+        _ <- Fox.fromBool(dataSource.allExplicitPaths.forall(_.isLocal)) ?~> "dataset.writeMirror.nonLocalPaths"
+        mirrorDir = getMirrorDir(dataSource)
+        _ = logger.info(s"Writing dataset mirror for $datasetId at $mirrorDir...")
+        _ <- ensureMirrorParent(mirrorDir)
+        _ <- Fox.runIf(Files.exists(mirrorDir)) {
+          tryo(Files.delete(mirrorDir)).toFox
+        }
+        _ <- tryo(Files.createDirectory(mirrorDir)).toFox
+        updatedLayers <- Fox.serialCombined(dataSource.dataLayers)(writeMirrorLayer(_, mirrorDir))
+        mirrorDataSource = dataSource.copy(dataLayers = updatedLayers)
+        _ <- writeMirrorProperties(mirrorDataSource, mirrorDir)
+        _ <- writeReadme(mirrorDir, datasetId)
+      } yield ()
+    } else Fox.successful(())
 
   private def writeMirrorLayer(layer: StaticLayer, mirrorDir: Path)(implicit ec: ExecutionContext): Fox[StaticLayer] = {
     val layerDir = mirrorDir.resolve(layer.name)
@@ -113,6 +119,7 @@ class DataSourceMirrorService @Inject()(
         |the WEBKNOSSOS UI or python interface instead.
         |
         |Dataset ID: $datasetId
+        |Last mirror update: ${Instant.now}
         |""".stripMargin
     for {
       _ <- tryo(Files.write(readmeFile, content.getBytes(StandardCharsets.UTF_8))).toFox ?~> "dataset.writeMirror.readmeWriteFailed"

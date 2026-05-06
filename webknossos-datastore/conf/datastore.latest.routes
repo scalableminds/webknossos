@@ -121,8 +121,8 @@ DELETE        /datasets/:datasetId/deleteOnDisk                                 
 DELETE        /datasets/deletePaths                                                                                                                   @com.scalableminds.webknossos.datastore.controllers.DataSourceController.deletePaths()
 POST          /datasets/exploreRemote                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DataSourceController.exploreRemoteDataset()
 POST          /datasets/validatePaths                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DataSourceController.validatePaths()
+POST          /datasets/writeMirror                                                                                                                   @com.scalableminds.webknossos.datastore.controllers.DataSourceController.writeMirror(failOnError: Boolean)
 DELETE        /datasets/:datasetId                                                                                                                    @com.scalableminds.webknossos.datastore.controllers.DataSourceController.invalidateCache(datasetId: ObjectId)
-POST          /datasets/:datasetId/writeMirror                                                                                                        @com.scalableminds.webknossos.datastore.controllers.DataSourceController.writeMirror(datasetId: ObjectId)
 
 # Actions
 POST          /triggers/checkInboxBlocking                                                                                                            @com.scalableminds.webknossos.datastore.controllers.DataSourceController.triggerInboxCheckBlocking(organizationId: Option[String])

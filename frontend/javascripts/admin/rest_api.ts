@@ -738,7 +738,7 @@ export async function acquireAnnotationMutex(
   blockedByUser: APIUserCompact | undefined | null;
   blockedBySesssionId: string | undefined | null;
 }> {
-  const { canEdit, blockedByUser } = await Request.receiveJSON(
+  const { canEdit, blockedByUser, blockedBySesssionId } = await Request.receiveJSON(
     `/api/annotations/${annotationId}/acquireMutex?sessionId=${sessionId}`,
     {
       method: "POST",

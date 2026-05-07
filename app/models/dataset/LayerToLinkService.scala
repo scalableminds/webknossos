@@ -1,5 +1,6 @@
 package models.dataset
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.datasource.{
@@ -11,7 +12,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 import com.scalableminds.webknossos.datastore.services.uploading.LinkedLayerIdentifier
 import models.user.{User, UserService}
 import play.api.http.Status.NOT_FOUND
-import play.api.i18n.{Messages, MessagesProvider}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -19,19 +19,17 @@ import scala.concurrent.ExecutionContext
 class LayerToLinkService @Inject()(datasetDAO: DatasetDAO, userService: UserService, datasetService: DatasetService)
     extends FoxImplicits {
 
-  def validateLayerToLink(layerIdentifier: LinkedLayerIdentifier,
-                          requestingUser: User)(implicit ec: ExecutionContext, m: MessagesProvider): Fox[Unit] =
+  def validateLayerToLink(layerIdentifier: LinkedLayerIdentifier, requestingUser: User)(
+      implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      dataset <- datasetDAO.findOne(layerIdentifier.datasetId)(AuthorizedAccessContext(requestingUser)) ?~> Messages(
-        "dataset.notFound",
-        layerIdentifier.datasetId) ~> NOT_FOUND
+      dataset <- datasetDAO.findOne(layerIdentifier.datasetId)(AuthorizedAccessContext(requestingUser)) ?~> Msg.Dataset
+        .notFound(layerIdentifier.datasetId) ~> NOT_FOUND
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(requestingUser, dataset._organization)
       _ <- Fox.fromBool(isTeamManagerOrAdmin || requestingUser.isDatasetManager || dataset.isPublic) ?~> "dataset.upload.linkRestricted"
     } yield ()
 
   def addLayersToLinkToDataSource(dataSource: UsableDataSource, layersToLink: Seq[LinkedLayerIdentifier])(
       implicit ctx: DBAccessContext,
-      mp: MessagesProvider,
       ec: ExecutionContext): Fox[UsableDataSource] =
     for {
       linkedLayers <- Fox.serialCombined(layersToLink)(resolveLayerToLink) ?~> "dataset.layerToLink.failed"
@@ -40,8 +38,7 @@ class LayerToLinkService @Inject()(datasetDAO: DatasetDAO, userService: UserServ
     } yield dataSource.copy(dataLayers = allLayers)
 
   private def resolveLayerToLink(layerToLink: LinkedLayerIdentifier)(implicit ctx: DBAccessContext,
-                                                                     ec: ExecutionContext,
-                                                                     mp: MessagesProvider): Fox[StaticLayer] =
+                                                                     ec: ExecutionContext): Fox[StaticLayer] =
     for {
       dataset <- datasetDAO.findOne(layerToLink.datasetId) ?~> "dataset.notFound"
       usableDataSource <- datasetService.usableDataSourceFor(dataset)

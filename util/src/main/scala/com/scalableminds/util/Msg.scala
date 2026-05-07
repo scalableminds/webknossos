@@ -89,6 +89,9 @@ object Msg {
       def notAllowed = "You are not allowed to download this annotation."
       def writeToFileFailed = "Could not write annotation to temporary file for download."
     }
+    object Volume {
+      def largestSegmentIdExceedsRange(id: Long, ec: String) = s""
+    }
     val notFound: String = "Annotation could not be found or accessed."
     val notFoundConsiderLoggingIn = "Annotation could not be found or accessed. You may need to log in to see it."
     val cancelled: String = "This annotation is marked as cancelled and cannot be viewed."
@@ -149,6 +152,10 @@ object Msg {
     def findAnnotationsFailed: String = "Failed to retrieve annotations for this task."
     def cancelled = "Task is finished."
     def unavailable = "There is currently no task available."
+    object Create {
+      def batchLimitExceeded(limit: Int): String = s"Cannot create more than $limit tasks in one request."
+      def needsEitherSkeletonOrVolume: String = "Each task needs to either be skeleton or volume."
+    }
   }
   object Project {
     def notFound: String = s"Project could not be found or accessed."

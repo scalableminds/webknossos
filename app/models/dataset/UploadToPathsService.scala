@@ -33,7 +33,6 @@ import models.folder.FolderDAO
 import models.organization.{OrganizationDAO, OrganizationService}
 import models.user.User
 import play.api.http.Status.FORBIDDEN
-import play.api.i18n.MessagesProvider
 import utils.WkConf
 import security.RandomIDGenerator
 
@@ -54,11 +53,10 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
     extends FoxImplicits
     with DataSourceValidation {
 
-  def reserveDatasetUploadToPaths(parameters: ReserveDatasetUploadToPathsRequest,
-                                  requestingUser: User,
-                                  newDatasetId: ObjectId)(implicit ec: ExecutionContext,
-                                                          ctx: DBAccessContext,
-                                                          mp: MessagesProvider): Fox[UsableDataSource] =
+  def reserveDatasetUploadToPaths(
+      parameters: ReserveDatasetUploadToPathsRequest,
+      requestingUser: User,
+      newDatasetId: ObjectId)(implicit ec: ExecutionContext, ctx: DBAccessContext): Fox[UsableDataSource] =
     for {
       organization <- organizationDAO.findOne(requestingUser._organization)
       _ <- organizationService.assertUsedStorageNotExceeded(organization) ?~> "dataset.upload.storageExceeded" ~> FORBIDDEN
@@ -249,8 +247,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
     layerPath / f"${mag.toMagLiteral(allowScalar = true)}__${RandomIDGenerator.generateBlocking(12)}"
 
   def reserveAttachmentUploadToPath(dataset: Dataset, parameters: ReserveAttachmentUploadToPathRequest)(
-      implicit ec: ExecutionContext,
-      mp: MessagesProvider): Fox[UPath] =
+      implicit ec: ExecutionContext): Fox[UPath] =
     for {
       _ <- datasetService.usableDataSourceFor(dataset)
       isSingletonAttachment = LayerAttachmentType.isSingletonAttachment(parameters.attachmentType)
@@ -276,8 +273,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
     } yield attachmentPath
 
   def reserveMagUploadToPath(dataset: Dataset, parameters: ReserveMagUploadToPathRequest)(
-      implicit ec: ExecutionContext,
-      mp: MessagesProvider): Fox[UPath] =
+      implicit ec: ExecutionContext): Fox[UPath] =
     for {
       _ <- datasetService.usableDataSourceFor(dataset)
       _ <- handleExistingPendingMagIfExists(dataset, parameters.layerName, parameters.mag, parameters.overwritePending)

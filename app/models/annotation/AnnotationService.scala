@@ -1,5 +1,6 @@
 package models.annotation
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
@@ -43,7 +44,6 @@ import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import com.scalableminds.util.tools.{Box, Full}
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
-import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
 import utils.WkConf
 
@@ -169,13 +169,12 @@ class AnnotationService @Inject()(
       )
   }
 
-  def createTracingForExplorational(dataset: Dataset,
-                                    params: AnnotationLayerParameters,
-                                    existingAnnotationId: Option[ObjectId],
-                                    existingAnnotationLayers: List[AnnotationLayer],
-                                    previousVersion: Option[Long])(
-      implicit ctx: DBAccessContext,
-      mp: MessagesProvider): Fox[Either[SkeletonTracing, VolumeTracing]] = {
+  def createTracingForExplorational(
+      dataset: Dataset,
+      params: AnnotationLayerParameters,
+      existingAnnotationId: Option[ObjectId],
+      existingAnnotationLayers: List[AnnotationLayer],
+      previousVersion: Option[Long])(implicit ctx: DBAccessContext): Fox[Either[SkeletonTracing, VolumeTracing]] = {
 
     def getAutoFallbackLayerName(dataSource: UsableDataSource): Option[String] =
       dataSource.dataLayers.find {
@@ -193,12 +192,10 @@ class AnnotationService @Inject()(
           }
           .headOption
           .toFox
-        _ <- Fox.fromBool(
-          ElementClass
-            .largestSegmentIdIsInRange(fallbackLayer.largestSegmentId, fallbackLayer.elementClass)) ?~> Messages(
-          "annotation.volume.largestSegmentIdExceedsRange",
-          fallbackLayer.largestSegmentId,
-          fallbackLayer.elementClass)
+        _ <- Fox.fromBool(ElementClass.largestSegmentIdIsInRange(fallbackLayer.largestSegmentId,
+                                                                 fallbackLayer.elementClass)) ?~> Msg.Annotation.Volume
+          .largestSegmentIdExceedsRange(fallbackLayer.largestSegmentId.getOrElse(-1),
+                                        fallbackLayer.elementClass.toString)
       } yield fallbackLayer
 
     for {
@@ -254,8 +251,7 @@ class AnnotationService @Inject()(
   private def createLayersForExplorational(dataset: Dataset,
                                            annotationId: ObjectId,
                                            allAnnotationLayerParameters: List[AnnotationLayerParameters])(
-      implicit ctx: DBAccessContext,
-      mp: MessagesProvider): Fox[List[AnnotationLayer]] =
+      implicit ctx: DBAccessContext): Fox[List[AnnotationLayer]] =
     for {
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
       dataSource <- datasetService.usableDataSourceFor(dataset)
@@ -301,8 +297,7 @@ class AnnotationService @Inject()(
     } yield newAnnotationLayers
 
   def createExplorationalFor(user: User, dataset: Dataset, annotationLayerParameters: List[AnnotationLayerParameters])(
-      implicit ctx: DBAccessContext,
-      m: MessagesProvider): Fox[Annotation] = {
+      implicit ctx: DBAccessContext): Fox[Annotation] = {
     val newAnnotationId = ObjectId.generate
     val datasetId = dataset._id
     for {
@@ -357,14 +352,13 @@ class AnnotationService @Inject()(
     annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.Task)
 
   def createAnnotationFor(user: User, taskId: ObjectId, initializingAnnotationId: ObjectId)(
-      implicit m: MessagesProvider,
-      ctx: DBAccessContext): Fox[Annotation] =
+      implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
       annotationBaseId <- annotationDAO.findBaseIdForTask(taskId) ?~> "Failed to retrieve annotation base id."
       annotationBase <- annotationDAO.findOne(annotationBaseId) ?~> "Failed to retrieve annotation base."
       datasetName <- datasetDAO.getNameById(annotationBase._dataset)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation"
-      dataset <- datasetDAO.findOne(annotationBase._dataset) ?~> Messages("dataset.noAccess", datasetName)
-      _ <- Fox.fromBool(dataset.isUsable) ?~> Messages("dataset.notImported", dataset.name)
+      dataset <- datasetDAO.findOne(annotationBase._dataset) ?~> Msg.Dataset.notFound(annotationBase._dataset)
+      _ <- Fox.fromBool(dataset.isUsable) ?~> Msg.Dataset.notUsable(dataset._id)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
       _ = logger.info(
         f"task assignment. creating annotation $initializingAnnotationId from base $annotationBaseId for task $taskId")
@@ -415,15 +409,14 @@ class AnnotationService @Inject()(
     )
   }
 
-  def createVolumeTracingBase(
-      datasetId: ObjectId,
-      boundingBox: Option[BoundingBox],
-      startPosition: Vec3Int,
-      startRotation: Vec3Double,
-      volumeShowFallbackLayer: Boolean,
-      magRestrictions: MagRestrictions)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[VolumeTracing] =
+  def createVolumeTracingBase(datasetId: ObjectId,
+                              boundingBox: Option[BoundingBox],
+                              startPosition: Vec3Int,
+                              startRotation: Vec3Double,
+                              volumeShowFallbackLayer: Boolean,
+                              magRestrictions: MagRestrictions)(implicit ctx: DBAccessContext): Fox[VolumeTracing] =
     for {
-      dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId)
+      dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId)
       dataSource <- datasetService.usableDataSourceFor(dataset)
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)
       fallbackLayer = if (volumeShowFallbackLayer) {
@@ -705,8 +698,7 @@ class AnnotationService @Inject()(
   }
 
   def transferAnnotationToUser(typ: String, id: ObjectId, userId: ObjectId, issuingUser: User)(
-      implicit ctx: DBAccessContext,
-      mp: MessagesProvider): Fox[Annotation] =
+      implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
       annotation <- annotationInformationProvider.provideAnnotation(typ, id, issuingUser) ?~> "annotation.notFound"
       newUser <- userDAO.findOne(userId) ?~> "user.notFound"

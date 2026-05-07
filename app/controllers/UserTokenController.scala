@@ -16,7 +16,6 @@ import models.dataset.{DataStoreService, DatasetDAO, DatasetService}
 import models.job.JobDAO
 import models.user.{User, UserService}
 import com.scalableminds.util.tools.{Box, Full}
-import play.api.i18n.MessagesProvider
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
 import play.silhouette.api.Silhouette
@@ -84,8 +83,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
        - a dataset sharing token (allow seeing dataset / annotations that token belongs to)
    */
   private def validateUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
-      implicit ec: ExecutionContext,
-      mp: MessagesProvider): Fox[Result] =
+      implicit ec: ExecutionContext): Fox[Result] =
     if (token.contains(RpcTokenHolder.webknossosToken)) {
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(granted = true))))
     } else {
@@ -167,7 +165,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
   private def handleTracingAccess(tracingIdOpt: Option[String],
                                   mode: AccessMode,
                                   userBox: Box[User],
-                                  token: Option[String])(implicit mp: MessagesProvider): Fox[UserAccessAnswer] =
+                                  token: Option[String]): Fox[UserAccessAnswer] =
     if (tracingIdOpt.contains(TracingId.dummy))
       Fox.successful(UserAccessAnswer(granted = true))
     else

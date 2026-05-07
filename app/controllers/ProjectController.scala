@@ -79,8 +79,7 @@ class ProjectController @Inject()(projectService: ProjectService,
         _ <- projectDAO
           .findOneByNameAndOrganization(project.name, request.identity._organization)(GlobalAccessContext)
           .reverse ?~> Messages("project.name.alreadyTaken", project.name)
-        _ <- Fox
-          .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- projectDAO.insertOne(project, request.identity._organization) ?~> "project.creation.failed"
         js <- projectService.publicWrites(project)
       } yield Ok(js)
@@ -91,8 +90,7 @@ class ProjectController @Inject()(projectService: ProjectService,
     withJsonBodyUsing(Project.projectPublicReads) { updateRequest =>
       for {
         project <- projectDAO.findOne(id)(GlobalAccessContext) ?~> Msg.Project.notFound(id) ~> NOT_FOUND
-        _ <- Fox
-          .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- projectDAO
           .updateOne(updateRequest.copy(name = project.name, _id = project._id, paused = project.paused)) ?~> "project.update.failed"
         updated <- projectDAO.findOne(id)

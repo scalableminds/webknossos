@@ -21,7 +21,8 @@ class AnnotationInformationProvider @Inject()(
   def provideAnnotation(typ: String, id: ObjectId, user: User)(implicit ctx: DBAccessContext): Fox[Annotation] =
     provideAnnotation(typ, id, Some(user))
 
-  def provideAnnotation(typ: String, id: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
+  def provideAnnotation(typ: String, id: ObjectId, userOpt: Option[User])(
+      implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
       annotationIdentifier <- AnnotationIdentifier.parse(typ, id)
       annotation <- provideAnnotation(annotationIdentifier, userOpt) ?~> "annotation.notFound"
@@ -39,8 +40,8 @@ class AnnotationInformationProvider @Inject()(
   def provideAnnotation(id: ObjectId, user: User)(implicit ctx: DBAccessContext): Fox[Annotation] =
     provideAnnotation(id, Some(user))
 
-  def provideAnnotation(annotationIdentifier: AnnotationIdentifier,
-                        userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
+  def provideAnnotation(annotationIdentifier: AnnotationIdentifier, userOpt: Option[User])(
+      implicit ctx: DBAccessContext): Fox[Annotation] =
     annotationStore.requestAnnotation(annotationIdentifier, userOpt)
 
   def nameFor(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[String] =

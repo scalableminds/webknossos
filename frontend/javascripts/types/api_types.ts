@@ -374,7 +374,7 @@ export type APIRestrictions = {
   // allowSave might be false even though allowUpdate and isUpdatingCurrentlyAllowed are true (e.g., see sandbox annotations)
   readonly allowSave?: boolean;
 };
-export type APIAllowedMode = "orthogonal" | "oblique" | "flight";
+export type APIAllowedMode = "orthogonal" | "flight";
 export type APIMagRestrictions = {
   min?: number;
   max?: number;

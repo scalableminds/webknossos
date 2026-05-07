@@ -28,7 +28,7 @@ A complete listing of all available keyboard & mouse shortcuts for WEBKNOSSOS ca
 
 | Key Binding                            | Operation                                                              |
 |----------------------------------------|------------------------------------------------------------------------|
-| ++m++                                  | Toggle Mode (Orthogonal, Flight, Oblique; disabled while proofreading) |
+| ++m++                                  | Toggle Mode (Orthogonal, Flight; disabled while proofreading) |
 | ++1++                                  | Toggle Visibility of all Trees                                         |
 | ++2++                                  | Toggle Visibility of Inactive Trees                                    |
 | ++shift++ + Mousewheel                 | Change Node Radius                                                     |
@@ -72,7 +72,7 @@ Note that you can enable *Classic Controls* which will behave slightly different
 | ++shift++ + Left Click | Select Node (Mark as Active Node) |
 
 
-### Flight / Oblique Mode
+### Flight Mode
 
 | Key Binding                                 | Operation                                      |
 |---------------------------------------------|------------------------------------------------|

@@ -390,7 +390,7 @@ class SceneController {
         this.rootNode.add(mesh);
       });
 
-      if (constants.MODES_ARBITRARY.includes(viewMode)) {
+      if (viewMode === constants.MODE_FLIGHT) {
         taskCube?.setVisibility(false);
       }
 

@@ -14,7 +14,7 @@ export class PrefetchStrategyArbitrary extends AbstractPrefetchStrategy {
   velocityRangeEnd = Number.POSITIVE_INFINITY;
   roundTripTimeRangeStart = 0;
   roundTripTimeRangeEnd = Number.POSITIVE_INFINITY;
-  name = "ARBITRARY";
+  name = "FLIGHT";
   // @ts-expect-error ts-migrate(2702) FIXME: 'PolyhedronRasterizer' only refers to a type, but ... Remove this comment to see the full error message
   prefetchPolyhedron: PolyhedronRasterizer.Master = PolyhedronRasterizer.Master.squareFrustum(
     7,

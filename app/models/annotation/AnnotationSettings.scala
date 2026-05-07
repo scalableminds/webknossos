@@ -8,7 +8,7 @@ import play.api.libs.json._
 
 object TracingMode extends ExtendedEnumeration {
   type TracingMode = Value
-  val orthogonal, oblique, flight = Value
+  val orthogonal, flight = Value
 }
 
 case class AnnotationSettings(
@@ -26,7 +26,7 @@ object AnnotationSettings {
     case TracingType.volume =>
       AnnotationSettings(allowedModes = List(TracingMode.orthogonal))
     case TracingType.skeleton | TracingType.hybrid =>
-      AnnotationSettings(allowedModes = List(TracingMode.orthogonal, TracingMode.oblique, TracingMode.flight))
+      AnnotationSettings(allowedModes = List(TracingMode.orthogonal, TracingMode.flight))
   }
 
   implicit val jsonFormat: OFormat[AnnotationSettings] = Json.format[AnnotationSettings]

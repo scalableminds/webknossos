@@ -429,7 +429,7 @@ function initializeAnnotation(
     Store.dispatch(setVersionNumberAction(version));
   }
 
-  // Initialize 'flight', 'oblique' or 'orthogonal' mode
+  // Initialize 'flight' or 'orthogonal' mode
   if (allowedModes.length === 0) {
     Toast.error(messages["tracing.no_allowed_mode"]);
   } else {

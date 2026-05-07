@@ -225,8 +225,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
       extend(keyboardControls, {
         // Set Mode, outcomment for release
         "shift + 1": () => Store.dispatch(setViewModeAction(constants.MODE_PLANE_TRACING)),
-        "shift + 2": () => Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY)),
-        "shift + 3": () => Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY_PLANE)),
+        "shift + 2": () => Store.dispatch(setViewModeAction(constants.MODE_FLIGHT)),
         m: () => {
           // rotate allowed modes
           const state = Store.getState();
@@ -350,10 +349,10 @@ class Controller extends PureComponent<PropsWithRouter, State> {
       return null;
     }
 
-    const isArbitrary = constants.MODES_ARBITRARY.includes(viewMode);
+    const isFlight = viewMode === constants.MODE_FLIGHT;
     const isPlane = constants.MODES_PLANE.includes(viewMode);
 
-    if (isArbitrary) {
+    if (isFlight) {
       return (
         <>
           {cover != null ? cover : null}
@@ -368,9 +367,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
         </>
       );
     } else {
-      // At the moment, all possible view modes consist of the union of MODES_ARBITRARY and MODES_PLANE
-      // In case we add new viewmodes, the following error will be thrown.
-      throw new Error("The current mode is none of the four known mode types");
+      throw new Error("The current view mode is unknown");
     }
   }
 }

@@ -79,19 +79,7 @@ function calculateTotalBucketCountForZoomLevel(
   const sphericalCapRadius = constants.DEFAULT_SPHERICAL_CAP_RADIUS;
   const matrix = M4x4.scale1(zoomFactor, unzoomedMatrix);
 
-  if (viewMode === constants.MODE_ARBITRARY_PLANE) {
-    determineBucketsForOblique(
-      viewMode,
-      loadingStrategy,
-      denseMags,
-      position,
-      enqueueFunction,
-      matrix,
-      logZoomStep,
-      viewportRects,
-      abortLimit,
-    );
-  } else if (viewMode === constants.MODE_ARBITRARY) {
+  if (viewMode === constants.MODE_FLIGHT) {
     determineBucketsForFlight(
       denseMags,
       position,
@@ -103,7 +91,6 @@ function calculateTotalBucketCountForZoomLevel(
     );
   } else {
     determineBucketsForOblique(
-      viewMode,
       loadingStrategy,
       denseMags,
       position,

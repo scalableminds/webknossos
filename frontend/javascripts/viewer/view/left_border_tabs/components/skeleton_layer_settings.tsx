@@ -37,8 +37,8 @@ export default function SkeletonLayerSettings() {
   const userConfiguration = useWkSelector((state) => state.userConfiguration);
   const dataset = useWkSelector((state) => state.dataset);
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
-  const isArbitraryMode = useWkSelector((state) =>
-    Constants.MODES_ARBITRARY.includes(state.temporaryConfiguration.viewMode),
+  const isFlightMode = useWkSelector(
+    (state) => state.temporaryConfiguration.viewMode === Constants.MODE_FLIGHT,
   );
 
   const isPublicViewMode = controlMode === ControlModeEnum.VIEW;
@@ -101,7 +101,7 @@ export default function SkeletonLayerSettings() {
   );
 
   const onChangeClippingDistanceArbitrary = useCallback(
-    (value: number) => onChangeUser("clippingDistanceArbitrary", value),
+    (value: number) => onChangeUser("clippingDistanceFlight", value),
     [onChangeUser],
   );
 
@@ -238,14 +238,14 @@ export default function SkeletonLayerSettings() {
             onChange={onChangeParticleSize}
             defaultValue={defaultState.userConfiguration.particleSize}
           />
-          {isArbitraryMode ? (
+          {isFlightMode ? (
             <NumberSliderSetting
-              label={settings.clippingDistanceArbitrary}
-              min={userSettings.clippingDistanceArbitrary.minimum}
-              max={userSettings.clippingDistanceArbitrary.maximum}
-              value={userConfiguration.clippingDistanceArbitrary}
+              label={settings.clippingDistanceFlight}
+              min={userSettings.clippingDistanceFlight.minimum}
+              max={userSettings.clippingDistanceFlight.maximum}
+              value={userConfiguration.clippingDistanceFlight}
               onChange={onChangeClippingDistanceArbitrary}
-              defaultValue={defaultState.userConfiguration.clippingDistanceArbitrary}
+              defaultValue={defaultState.userConfiguration.clippingDistanceFlight}
             />
           ) : (
             <LogSliderSetting

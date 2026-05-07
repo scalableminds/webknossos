@@ -34,7 +34,7 @@ export const settings: Partial<Record<keyof RecommendedConfiguration, string>> =
   segmentationOpacity: "Segmentation Opacity",
   zoom: "Zoom",
   renderMissingDataBlack: "Render Missing Data Black",
-  clippingDistanceArbitrary: "Clipping Distance",
+  clippingDistanceFlight: "Clipping Distance",
   mouseRotateValue: "Mouse Rotation",
   rotateValue: "Keyboard Rotation",
   sphericalCapRadius: "Sphere Radius",

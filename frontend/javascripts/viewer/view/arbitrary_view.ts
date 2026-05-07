@@ -12,7 +12,7 @@ import {
 } from "three";
 import TWEEN from "tween.js";
 import type { OrthoViewMap, Vector3, Viewport } from "viewer/constants";
-import Constants, { ARBITRARY_CAM_DISTANCE, ArbitraryViewport, OrthoViews } from "viewer/constants";
+import Constants, { FLIGHT_CAM_DISTANCE, FlightViewport, OrthoViews } from "viewer/constants";
 import getSceneController, {
   getSceneControllerOrNull,
 } from "viewer/controller/scene_controller_provider";
@@ -60,7 +60,7 @@ class ArbitraryView {
     // Initialize main js components
     this.camera = new PerspectiveCamera(45, 1, 50, 1000);
     // This name can be used to retrieve the camera from the scene
-    this.camera.name = ArbitraryViewport;
+    this.camera.name = FlightViewport;
     this.camera.matrixAutoUpdate = false;
     scene.add(this.camera);
     const tdCamera = new OrthographicCamera(0, 0, 0, 0);
@@ -75,7 +75,7 @@ class ArbitraryView {
       PLANE_YZ: dummyCamera,
       PLANE_XZ: dummyCamera,
     };
-    this.cameraPosition = [0, 0, ARBITRARY_CAM_DISTANCE];
+    this.cameraPosition = [0, 0, FLIGHT_CAM_DISTANCE];
     this.needsRerender = true;
   }
 
@@ -88,8 +88,8 @@ class ArbitraryView {
       this.isRunning = true;
 
       // We only measure the time to first render in orthogonal
-      // mode. If the flight or oblique modes are active during page
-      // load, the navigation timings are no longer accurate and should not be used.
+      // mode. If flight mode is active during page load, the navigation
+      // timings are no longer accurate and should not be used.
       window.measuredTimeToFirstRender = true;
 
       this.unsubscribeFunctions.push(
@@ -216,7 +216,7 @@ class ArbitraryView {
         this.plane.meshes.debuggerPlane.visible = false;
       }
 
-      renderViewport(ArbitraryViewport, camera);
+      renderViewport(FlightViewport, camera);
 
       if (show3DViewportInArbitrary) {
         if (this.plane.meshes.debuggerPlane != null) {
@@ -263,7 +263,7 @@ class ArbitraryView {
     // }
     // diff(traversedBuckets, getRenderedBucketsDebug());
     this.plane.materialFactory.uniforms.renderBucketIndices.value = true;
-    const buffer = renderToTexture(ArbitraryViewport);
+    const buffer = renderToTexture(FlightViewport);
     this.plane.materialFactory.uniforms.renderBucketIndices.value = false;
     let index = 0;
     const usedBucketSet = new Set();
@@ -311,7 +311,7 @@ class ArbitraryView {
   resizeThrottled = throttle(this.resizeImpl, Constants.RESIZE_THROTTLE_TIME);
 
   setClippingDistanceImpl(value: number): void {
-    this.camera.near = ARBITRARY_CAM_DISTANCE - value;
+    this.camera.near = FLIGHT_CAM_DISTANCE - value;
     this.camera.updateProjectionMatrix();
   }
 

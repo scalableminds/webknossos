@@ -11,7 +11,7 @@ import isEqual from "lodash-es/isEqual";
 import type * as React from "react";
 import { useRef } from "react";
 import type { Rect, Viewport, ViewportRects } from "viewer/constants";
-import { ArbitraryViewport, ArbitraryViews, OrthoViews } from "viewer/constants";
+import { FlightViewport, FlightViews, OrthoViews } from "viewer/constants";
 import {
   AnnotationTool,
   type AnnotationToolId,
@@ -104,7 +104,7 @@ export function recalculateInputCatcherSizes() {
   };
 
   for (const [viewportID, inputCatcher] of renderedInputCatchers.entries()) {
-    const makeQuadratic = viewportID === ArbitraryViewport;
+    const makeQuadratic = viewportID === FlightViewport;
     const rect = adaptInputCatcher(inputCatcher, makeQuadratic);
     viewportRects[viewportID] = rect;
   }
@@ -164,7 +164,7 @@ function InputCatcher({
   const isAltPressed = useKeyPress("Alt");
 
   const adaptedTool =
-    viewportID === ArbitraryViews.arbitraryViewport
+    viewportID === FlightViews.flightViewport
       ? AnnotationTool.SKELETON
       : viewportID === OrthoViews.TDView
         ? AnnotationTool.MOVE
@@ -203,7 +203,7 @@ function InputCatcher({
           }}
         >
           <ViewportStatusIndicator />
-          {displayScalebars && viewportID !== "arbitraryViewport" ? (
+          {displayScalebars && viewportID !== FlightViewport ? (
             <Scalebar viewportID={viewportID} />
           ) : null}
           {children}

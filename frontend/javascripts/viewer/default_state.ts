@@ -56,7 +56,7 @@ const defaultState: WebknossosState = {
     isMultiSplitActive: false,
     brushSize: 50,
     clippingDistance: 50,
-    clippingDistanceArbitrary: 64,
+    clippingDistanceFlight: 64,
     crosshairSize: 0.1,
     displayCrosshair: true,
     displayScalebars: true,
@@ -254,7 +254,7 @@ const defaultState: WebknossosState = {
         TDView: defaultViewportRect,
       },
     },
-    arbitrary: {
+    flight: {
       inputCatcherRect: defaultViewportRect,
     },
   },

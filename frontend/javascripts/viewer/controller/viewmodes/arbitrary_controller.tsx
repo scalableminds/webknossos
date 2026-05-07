@@ -7,7 +7,7 @@ import { clamp, waitForElementWithId } from "libs/utils";
 import messages from "messages";
 import React from "react";
 import type { Point2, Vector3, ViewMode, Viewport } from "viewer/constants";
-import constants, { ArbitraryViewport } from "viewer/constants";
+import constants, { FlightViewport } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import TDController from "viewer/controller/td_controller";
 import ArbitraryPlane from "viewer/geometries/arbitrary_plane";
@@ -23,7 +23,6 @@ import {
   getNodePosition,
   untransformNodePosition,
 } from "viewer/model/accessors/skeletontracing_accessor";
-import { getViewportScale } from "viewer/model/accessors/view_mode_accessor";
 import {
   moveFlycamAction,
   pitchFlycamAction,
@@ -52,15 +51,12 @@ import ArbitraryView from "viewer/view/arbitrary_view";
 import { downloadScreenshot } from "viewer/view/rendering_utils";
 import { SkeletonToolController } from "../combinations/tool_controls";
 
-const arbitraryViewportId = "inputcatcher_arbitraryViewport";
+const flightViewportId = "inputcatcher_flightViewport";
 type Props = {
   viewMode: ViewMode;
 };
 
 class ArbitraryController extends React.PureComponent<Props> {
-  // See comment in Controller class on general controller architecture.
-  //
-  // Arbitrary Controller: Responsible for Arbitrary Modes
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'arbitraryView' has no initializer and is... Remove this comment to see the full error message
   arbitraryView: ArbitraryView;
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'isStarted' has no initializer and is not... Remove this comment to see the full error message
@@ -95,9 +91,9 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   initMouse(): void {
-    waitForElementWithId(arbitraryViewportId).then(() => {
+    waitForElementWithId(flightViewportId).then(() => {
       this.input.mouseController = new InputMouse(
-        arbitraryViewportId,
+        flightViewportId,
         {
           leftClick: (pos: Point2, viewport: string, event: MouseEvent, isTouch: boolean) => {
             SkeletonToolController.onLeftClick(
@@ -112,25 +108,15 @@ class ArbitraryController extends React.PureComponent<Props> {
             );
           },
           leftDownMove: (delta: Point2) => {
-            if (this.props.viewMode === constants.MODE_ARBITRARY) {
-              Store.dispatch(
-                yawFlycamAction(
-                  delta.x * Store.getState().userConfiguration.mouseRotateValue,
-                  true,
-                ),
-              );
-              Store.dispatch(
-                pitchFlycamAction(
-                  delta.y * -1 * Store.getState().userConfiguration.mouseRotateValue,
-                  true,
-                ),
-              );
-            } else if (this.props.viewMode === constants.MODE_ARBITRARY_PLANE) {
-              const [scaleX, scaleY] = getViewportScale(Store.getState(), ArbitraryViewport);
-              const fx = Store.getState().flycam.zoomStep / scaleX;
-              const fy = Store.getState().flycam.zoomStep / scaleY;
-              Store.dispatch(moveFlycamAction([delta.x * fx, delta.y * fy, 0]));
-            }
+            Store.dispatch(
+              yawFlycamAction(delta.x * Store.getState().userConfiguration.mouseRotateValue, true),
+            );
+            Store.dispatch(
+              pitchFlycamAction(
+                delta.y * -1 * Store.getState().userConfiguration.mouseRotateValue,
+                true,
+              ),
+            );
           },
           scroll: this.scroll,
           pinch: (delta: number) => {
@@ -141,15 +127,13 @@ class ArbitraryController extends React.PureComponent<Props> {
             }
           },
         },
-        ArbitraryViewport,
+        FlightViewport,
       );
     });
   }
 
   initKeyboard(): void {
     const getRotateValue = () => Store.getState().userConfiguration.rotateValue;
-
-    const isArbitrary = () => this.props.viewMode === constants.MODE_ARBITRARY;
 
     this.input.keyboard = new InputKeyboard({
       // KeyboardJS is sensitive to ordering (complex combos first)
@@ -185,16 +169,16 @@ class ArbitraryController extends React.PureComponent<Props> {
       },
       // Rotate in distance
       left: (timeFactor: number) => {
-        Store.dispatch(yawFlycamAction(getRotateValue() * timeFactor, isArbitrary()));
+        Store.dispatch(yawFlycamAction(getRotateValue() * timeFactor, true));
       },
       right: (timeFactor: number) => {
-        Store.dispatch(yawFlycamAction(-getRotateValue() * timeFactor, isArbitrary()));
+        Store.dispatch(yawFlycamAction(-getRotateValue() * timeFactor, true));
       },
       up: (timeFactor: number) => {
-        Store.dispatch(pitchFlycamAction(-getRotateValue() * timeFactor, isArbitrary()));
+        Store.dispatch(pitchFlycamAction(-getRotateValue() * timeFactor, true));
       },
       down: (timeFactor: number) => {
-        Store.dispatch(pitchFlycamAction(getRotateValue() * timeFactor, isArbitrary()));
+        Store.dispatch(pitchFlycamAction(getRotateValue() * timeFactor, true));
       },
       // Zoom in/out
       i: () => {
@@ -312,8 +296,8 @@ class ArbitraryController extends React.PureComponent<Props> {
   }
 
   init(): void {
-    const { clippingDistanceArbitrary } = Store.getState().userConfiguration;
-    this.setClippingDistance(clippingDistanceArbitrary);
+    const { clippingDistanceFlight } = Store.getState().userConfiguration;
+    this.setClippingDistance(clippingDistanceFlight);
   }
 
   bindToEvents(): void {
@@ -321,8 +305,8 @@ class ArbitraryController extends React.PureComponent<Props> {
       listenToStoreProperty(
         (state) => state.userConfiguration,
         (userConfiguration) => {
-          const { clippingDistanceArbitrary, displayCrosshair, crosshairSize } = userConfiguration;
-          this.setClippingDistance(clippingDistanceArbitrary);
+          const { clippingDistanceFlight, displayCrosshair, crosshairSize } = userConfiguration;
+          this.setClippingDistance(clippingDistanceFlight);
           this.crosshair.setScale(crosshairSize);
           this.crosshair.setVisibility(displayCrosshair);
           this.arbitraryView.resizeThrottled();
@@ -422,7 +406,7 @@ class ArbitraryController extends React.PureComponent<Props> {
         untransformNodePosition(position, state),
         additionalCoordinates,
         rotation,
-        constants.ARBITRARY_VIEW,
+        constants.FLIGHT_VIEW,
         0,
       ),
     );

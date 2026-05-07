@@ -60,18 +60,7 @@ function pick(
     });
   };
 
-  if (viewMode === constants.MODE_ARBITRARY_PLANE) {
-    determineBucketsForOblique(
-      viewMode,
-      loadingStrategy,
-      denseMags,
-      position,
-      enqueueFunction,
-      matrix,
-      logZoomStep,
-      rects,
-    );
-  } else if (viewMode === constants.MODE_ARBITRARY) {
+  if (viewMode === constants.MODE_FLIGHT) {
     determineBucketsForFlight(
       denseMags,
       position,
@@ -82,7 +71,6 @@ function pick(
     );
   } else {
     determineBucketsForOblique(
-      viewMode,
       loadingStrategy,
       denseMags,
       position,

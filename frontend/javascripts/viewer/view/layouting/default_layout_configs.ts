@@ -8,10 +8,10 @@ import { entries, getIsInIframe, keys } from "libs/utils";
 import memoize from "lodash-es/memoize";
 import type { BorderTabType, ControlMode, ViewMode } from "viewer/constants";
 import Constants, {
-  ArbitraryViews,
-  ArbitraryViewsToName,
   BorderTabs,
   ControlModeEnum,
+  FlightViews,
+  FlightViewsToName,
   OrthoViews,
   OrthoViewsToName,
 } from "viewer/constants";
@@ -118,10 +118,10 @@ keys(OrthoViews).forEach((viewportId) => {
   const name = OrthoViewsToName[viewportId];
   OrthoViewports[viewportId] = Tab(name, viewportId, "viewport");
 });
-const ArbitraryViewports = {} as Record<keyof typeof ArbitraryViews, TabNode>;
-keys(ArbitraryViews).forEach((viewportId) => {
-  const name = ArbitraryViewsToName[viewportId];
-  ArbitraryViewports[viewportId] = Tab(name, viewportId, "viewport");
+const FlightViewports = {} as Record<keyof typeof FlightViews, TabNode>;
+keys(FlightViews).forEach((viewportId) => {
+  const name = FlightViewsToName[viewportId];
+  FlightViewports[viewportId] = Tab(name, viewportId, "viewport");
 });
 const globalLayoutSettings: GlobalConfig = {
   splitterSize: defaultSplitterSize,
@@ -275,7 +275,7 @@ const _getDefaultLayouts = () => {
     ? [[[OrthoViewports.TDView]]]
     : [];
   const ArbitraryMainLayout = buildMainLayout([
-    [[ArbitraryViewports.arbitraryViewport]],
+    [[FlightViewports.flightViewport]],
     ...eventual3DViewportForArbitrary,
   ]);
 
@@ -352,10 +352,10 @@ export function determineLayout(
   viewMode: ViewMode,
   is2d: boolean,
 ): Layout {
-  const isArbitraryMode = Constants.MODES_ARBITRARY.includes(viewMode);
+  const isFlightMode = viewMode === Constants.MODE_FLIGHT;
 
   if (controlMode === ControlModeEnum.VIEW) {
-    if (isArbitraryMode) {
+    if (isFlightMode) {
       return "ArbitraryLayoutView";
     } else {
       return is2d ? "OrthoLayoutView2d" : "OrthoLayoutView";
@@ -366,7 +366,7 @@ export function determineLayout(
     return is2d ? "VolumeTracingView2d" : "VolumeTracingView";
   }
 
-  if (isArbitraryMode) {
+  if (isFlightMode) {
     return "ArbitraryLayout";
   } else {
     return is2d ? "OrthoLayout2d" : "OrthoLayout";
@@ -374,9 +374,9 @@ export function determineLayout(
 }
 export const mapLayoutKeysToLanguage = {
   OrthoLayoutView: "Orthogonal Mode - View Only",
-  ArbitraryLayoutView: "Arbitrary Mode - View Only",
+  ArbitraryLayoutView: "Flight Mode - View Only",
   VolumeTracingView: "Volume Mode",
-  ArbitraryLayout: "Arbitrary Mode",
+  ArbitraryLayout: "Flight Mode",
   OrthoLayout: "Orthogonal Mode",
   OrthoLayoutView2d: "Orthogonal Mode 2D - View Only",
   VolumeTracingView2d: "Volume Mode 2D",

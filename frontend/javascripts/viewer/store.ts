@@ -339,7 +339,7 @@ export type UserConfiguration = {
   readonly isMultiSplitActive: boolean;
   readonly brushSize: number;
   readonly clippingDistance: number;
-  readonly clippingDistanceArbitrary: number;
+  readonly clippingDistanceFlight: number;
   readonly crosshairSize: number;
   readonly displayCrosshair: boolean;
   readonly displayScalebars: boolean;
@@ -544,12 +544,12 @@ type PlaneModeData = {
   readonly tdCamera: CameraData;
   readonly inputCatcherRects: PlaneRects;
 };
-type ArbitraryModeData = {
+type FlightModeData = {
   readonly inputCatcherRect: Rect;
 };
 export type ViewModeData = {
   readonly plane: PlaneModeData;
-  readonly arbitrary: ArbitraryModeData;
+  readonly flight: FlightModeData;
 };
 export type BorderOpenStatus = {
   left: boolean;

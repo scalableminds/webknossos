@@ -29,7 +29,7 @@ import Store from "viewer/store";
 // attached to bend surface.
 // The result is then projected on a flat surface.
 const renderDebuggerPlane = false;
-type ArbitraryMeshes = {
+type FlightMeshes = {
   mainPlane: Mesh;
   debuggerPlane: Mesh | null | undefined;
 };
@@ -37,7 +37,7 @@ type ArbitraryMeshes = {
 const flipYRotationMatrix = new Matrix4().makeRotationY(Math.PI);
 
 class ArbitraryPlane {
-  meshes: ArbitraryMeshes;
+  meshes: FlightMeshes;
   plane!: Mesh<PlaneGeometry, PlaneShaderMaterial, Object3DEventMap>;
   isDirty: boolean;
   stopStoreListening: () => void;
@@ -110,7 +110,7 @@ class ArbitraryPlane {
     this.plane.material.updateUseInterpolation();
   };
 
-  createMeshes(): ArbitraryMeshes {
+  createMeshes(): FlightMeshes {
     const adaptPlane = <M extends ShaderMaterial>(_plane: Mesh<PlaneGeometry, M>) => {
       _plane.rotation.x = Math.PI;
       _plane.matrixAutoUpdate = false;

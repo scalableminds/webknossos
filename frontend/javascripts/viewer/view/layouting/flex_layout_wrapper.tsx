@@ -13,7 +13,7 @@ import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import { getAntdTheme } from "theme";
 import type { BorderTabType, OrthoView } from "viewer/constants";
-import { ArbitraryViews, BorderTabs, OrthoViews } from "viewer/constants";
+import { BorderTabs, FlightViews, OrthoViews } from "viewer/constants";
 import { setBorderOpenStatusAction } from "viewer/model/actions/ui_actions";
 import { setViewportAction } from "viewer/model/actions/view_mode_actions";
 import type { BorderOpenStatus, BusyBlockingInfo, WebknossosState } from "viewer/store";
@@ -369,12 +369,9 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
         );
       }
 
-      case ArbitraryViews.arbitraryViewport: {
+      case FlightViews.flightViewport: {
         return (
-          <InputCatcher
-            busyBlockingInfo={busyBlockingInfo}
-            viewportID={ArbitraryViews.arbitraryViewport}
-          >
+          <InputCatcher busyBlockingInfo={busyBlockingInfo} viewportID={FlightViews.flightViewport}>
             {isUpdateTracingAllowed ? <RecordingSwitch /> : null}
           </InputCatcher>
         );

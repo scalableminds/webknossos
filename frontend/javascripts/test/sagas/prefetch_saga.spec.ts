@@ -30,7 +30,7 @@ describe("Prefetch Saga", () => {
     const saga = triggerDataPrefetching(previousProperties);
     saga.next(); // select viewMode
 
-    saga.next(constants.MODE_ARBITRARY); // Model.getAllLayers
+    saga.next(constants.MODE_FLIGHT); // Model.getAllLayers
 
     saga.next(allLayers); // shouldPrefetchForDataLayer
 

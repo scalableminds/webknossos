@@ -734,10 +734,23 @@ export function millisecondsToHours(ms: number) {
   return ms / oneHourInMilliseconds;
 }
 
-export function isNoElementFocused(): boolean {
-  // checks whether an <input> or <button> element has the focus
-  // when no element is focused <body> gets the focus
-  return document.activeElement === document.body;
+export function isNoEditableElementFocused(): boolean {
+  // Returns true if no "meaningful" element has focus — i.e. either document.body
+  // is active or the active element is not an interactive input element.
+  // This allows keyboard shortcuts to fire even when non-input elements (e.g. the
+  // tree hierarchy panel) have focus, while still suppressing them when the user
+  // is typing in an <input>, <textarea>, <button>, or contentEditable element.
+  const activeElement = document.activeElement;
+  if (activeElement == null || activeElement === document.body) {
+    return true;
+  }
+  const tag = (activeElement as HTMLElement).tagName?.toUpperCase();
+  return (
+    tag !== "INPUT" &&
+    tag !== "TEXTAREA" &&
+    tag !== "BUTTON" &&
+    !(activeElement as HTMLElement).isContentEditable
+  );
 }
 
 export function isEditableEventTarget(target: EventTarget | null): boolean {

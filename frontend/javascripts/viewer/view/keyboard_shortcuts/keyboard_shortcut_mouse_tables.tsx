@@ -6,11 +6,11 @@ import IconStatusbarMouseRight from "@images/icons/icon-statusbar-mouse-right.sv
 import IconStatusbarMouseRightDrag from "@images/icons/icon-statusbar-mouse-right-drag.svg?react";
 import IconStatusbarMouseWheel from "@images/icons/icon-statusbar-mouse-wheel.svg?react";
 import { Table, Typography } from "antd";
+import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import React from "react";
 import { DOMAIN_DISPLAY_NAMES, type KeyboardShortcutDomain } from "./keyboard_shortcut_types";
 import { keySequenceToUiElements } from "./keyboard_shortcut_utils";
-import FastTooltip from "components/fast_tooltip";
 
 const { Title } = Typography;
 

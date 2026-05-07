@@ -28,6 +28,7 @@ import {
   getAllDefaultKeyboardShortcuts,
   type KeyboardShortcutId,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
+import { useLayoutMapVersionMaybe } from "./keyboard_layout_utils";
 import {
   FlightNavigationMouseShortcutsTable,
   PlaneGeneralEditingMouseShortcutsTable,
@@ -47,7 +48,11 @@ import {
   type KeyboardShortcutDomain,
   type KeySequence,
 } from "./keyboard_shortcut_types";
-import { checkCollisionsInShortcutMap, keySequenceToUiElements } from "./keyboard_shortcut_utils";
+import {
+  checkCollisionsInShortcutMap,
+  KeyboardLayoutApiNotice,
+  keySequenceToUiElements,
+} from "./keyboard_shortcut_utils";
 import { CollisionWarningAlert, ShortcutRecorderModal } from "./shortcut_recorder_modal";
 
 const { Text, Title } = Typography;
@@ -90,6 +95,7 @@ const KeyboardShortcutDomainTable: React.FC<KeyboardShortcutDomainTableProps> = 
 };
 
 export default function KeyboardShortcutConfigModal({ isOpen, onClose }: ShortcutConfigModalProps) {
+  const layoutMapVersion = useLayoutMapVersionMaybe(); // re-render when sign-key labels become available
   const dispatch = useDispatch();
   const activeUser = useWkSelector((state) => state.activeUser);
   const isEditable = activeUser != null;
@@ -167,7 +173,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       });
     });
     return domainToEntries;
-  }, [localShortcutConfig]);
+  }, [localShortcutConfig, layoutMapVersion]);
 
   const keyboardShortcutsColumns = [
     {
@@ -207,7 +213,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
             ) : (
               combos.map((comboChain, index) => (
                 <div key={index} className="single-keyboard-shortcut-container">
-                  <span style={{ padding: "0px 4px" }}>
+                  <span style={{ padding: "0px 4px" }} key={layoutMapVersion}>
                     {keySequenceToUiElements(comboChain, false)}
                   </span>
                   <FastTooltip title="Edit keyboard shortcut">
@@ -463,6 +469,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       }}
     >
       <CollisionWarningAlert shortcutCollisions={shortcutCollisions} />
+      <KeyboardLayoutApiNotice />
       {activeUser == null ? (
         <Alert
           type="info"

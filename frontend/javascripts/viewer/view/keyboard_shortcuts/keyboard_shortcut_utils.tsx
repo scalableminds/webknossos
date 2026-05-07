@@ -13,6 +13,7 @@ import { isMac } from "viewer/constants";
 import type { AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { Store } from "viewer/singletons";
 import { KeyboardKeyIcon } from "../components/keyboard_key_icon";
+import { displayKeyName, isKeyboardLayoutApiAvailable } from "./keyboard_layout_utils";
 import {
   ALL_KEYBOARD_SHORTCUT_META_INFOS,
   type KeyboardShortcutId,
@@ -30,8 +31,24 @@ import {
 const { Text } = Typography;
 export const MODIFIER_KEYS = new Set(["Control", "Meta", "Alt", "Shift"]);
 
+// Shown in the shortcut configuration UI when the Keyboard Layout API is unavailable.
+// In that case sign-key labels are derived from runtime observation and may temporarily
+// display as "@code" for keys the user has not yet pressed unmodified.
+export function KeyboardLayoutApiNotice(): React.ReactNode {
+  if (isKeyboardLayoutApiAvailable()) return null;
+  return (
+    <Text type="warning" style={{ fontSize: 12 }}>
+      Your browser does not support the Keyboard Layout API (Chrome and Edge do). Labels for
+      punctuation and symbol keys fall back to US layout until you press those keys without a
+      modifier — after that, the correct label for your layout will be shown.
+    </Text>
+  );
+}
+
 export function keyToUiElement(key: string): React.ReactNode {
-  switch (key) {
+  // Translate @code keys (e.g. "@BracketRight") to the layout-specific character (e.g. "+").
+  const displayName = displayKeyName(key);
+  switch (displayName) {
     case " ":
       return "Space";
     case "esc":
@@ -51,7 +68,7 @@ export function keyToUiElement(key: string): React.ReactNode {
       return "Ctrl";
 
     default:
-      return key;
+      return displayName;
   }
 }
 

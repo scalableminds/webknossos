@@ -1,5 +1,6 @@
 import { Alert, Button, Flex, Modal, Space, Typography } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { registerKeyForLayoutMap } from "./keyboard_layout_utils";
 import {
   ALL_KEYBOARD_SHORTCUT_META_INFOS,
   type KeyboardShortcutId,
@@ -82,10 +83,13 @@ function getKeyIdentifier(e: KeyboardEvent): string {
   if (["Shift", "Control", "Alt", "Meta"].includes(e.key)) {
     return e.key;
   }
-  // ASCII letters: always lowercase regardless of Shift
+  // ASCII letters: e.code identifies the physical key position; e.keyCode gives the
+  // layout-dependent letter (e.g. the Z-position key produces "y" on a German keyboard).
+  // keyCode is deprecated but is the only cross-browser way to get this without the
+  // Keyboard Layout API, which is not available in Firefox/Safari.
   const letterMatch = e.code.match(/^Key([A-Z])$/);
   if (letterMatch) {
-    return letterMatch[1].toLowerCase();
+    return String.fromCharCode(e.keyCode).toLowerCase();
   }
   // Digits: always the digit character regardless of Shift
   const digitMatch = e.code.match(/^Digit([0-9])$/);
@@ -109,8 +113,15 @@ function getKeyIdentifier(e: KeyboardEvent): string {
   }
   // Normalize the Space key: e.key is " " but the codebase uses "Space".
   if (e.key === " ") return "Space";
-  // All other keys: single printable sign characters (+, #, -, ., ,, …),
-  // F-keys, Enter, arrows, etc. — use e.key directly.
+  // Single printable-character keys (sign/punctuation): store as "@code" so the
+  // binding is layout-independent. Keystrokes natively matches @code via its alias
+  // system regardless of what character the key produces with any modifier held.
+  // e.g. pressing "+" on a German keyboard (BracketRight) → "@BracketRight"
+  //      pressing Shift+same key (* on German)            → "@BracketRight" too
+  if (e.key.length === 1) {
+    return `@${e.code}`;
+  }
+  // Named keys (F-keys, arrows, Enter, Escape, Tab, …) are the same on all layouts.
   return e.key;
 }
 
@@ -191,6 +202,9 @@ export function ShortcutRecorderModal({
       // prevent the rest of the app reacting while recording
       e.preventDefault();
       e.stopPropagation();
+      // Register the pressed key to the layout map if it is unmodified.
+      // The layout map is used to display the proper base key for shortcuts with modifiers.
+      registerKeyForLayoutMap(e);
 
       const pressedKeyId = getKeyIdentifier(e);
 

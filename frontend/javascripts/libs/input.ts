@@ -1,6 +1,9 @@
 import {
   type BrowserKeyComboEventProps,
+  type BrowserKeyEvent,
   bindKeyCombo,
+  browserOnKeyPressedBinder,
+  browserOnKeyReleasedBinder,
   type KeyEvent,
   setGlobalKeystrokesOptions,
   unbindKeyCombo,
@@ -18,9 +21,26 @@ import constants from "viewer/constants";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { addEventListenerWithDelegation, isNoElementFocused } from "./utils";
 
+// Normalizes digit key events so that modifiers don't change the reported key name.
+// e.g. Shift+2 on a US keyboard fires event.key="@", but we always want key="2".
+function normalizeDigitKeyEvent(event: BrowserKeyEvent): BrowserKeyEvent {
+  const code = event.originalEvent?.code ?? "";
+  const match = code.match(/^Digit([0-9])$/);
+  if (match) {
+    return { ...event, key: match[1] };
+  }
+  return event;
+}
+
 // Must be called in order for keystrokes to detect the spacebar as via "space" and not as " ".
+// The custom onKeyPressed/onKeyReleased adapters normalize digit keys so that modifier combinations
+// like "shift + 2" work regardless of keyboard layout.
 setGlobalKeystrokesOptions({
   keyRemap: { " ": "space" },
+  onKeyPressed: (handler) =>
+    browserOnKeyPressedBinder((event) => handler(normalizeDigitKeyEvent(event))),
+  onKeyReleased: (handler) =>
+    browserOnKeyReleasedBinder((event) => handler(normalizeDigitKeyEvent(event))),
 });
 
 // This is the main Input implementation.

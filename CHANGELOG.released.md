@@ -7,6 +7,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [26.05.2](https://github.com/scalableminds/webknossos/releases/tag/26.05.2) - 2026-05-07
+[Commits](https://github.com/scalableminds/webknossos/compare/26.05.1...26.05.2)
+
+### Fixed
+- Fixed that shortcuts weren't working when the tree/segment list is focussed. [#9567](https://github.com/scalableminds/webknossos/pull/9567)
+
 ## [26.05.1](https://github.com/scalableminds/webknossos/releases/tag/26.05.1) - 2026-05-05
 [Commits](https://github.com/scalableminds/webknossos/compare/26.05.0...26.05.1)
 

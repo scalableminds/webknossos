@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper, TextUtils}
@@ -967,8 +968,8 @@ class AuthenticationController @Inject()(
   def createUserInOrganization(organizationId: String): Action[CreateUserInOrganizationParameters] =
     sil.SecuredAction.async(validateJson[CreateUserInOrganizationParameters]) { implicit request =>
       for {
-        _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "notAllowed" ~> FORBIDDEN
-        organization <- organizationDAO.findOne(organizationId) ?~> "organization.notFound"
+        _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> Msg.notAllowed ~> FORBIDDEN
+        organization <- organizationDAO.findOne(organizationId) ?~> Msg.Organization.notFound(organizationId)
         (firstName, lastName, email, errors) <- validateNameAndEmail(request.body.firstName,
                                                                      request.body.lastName,
                                                                      request.body.email)

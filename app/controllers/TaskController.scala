@@ -1,5 +1,7 @@
 package controllers
 
+import com.scalableminds.util.Msg
+
 import java.io.File
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
@@ -135,7 +137,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
       for {
         task <- taskDAO.findOne(taskId) ?~> "task.notFound" ~> NOT_FOUND
         project <- projectDAO.findOne(task._project)
-        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- taskDAO.updateTotalInstances(task._id,
                                           task.totalInstances + params.pendingInstances - task.pendingInstances)
         updatedTask <- taskDAO.findOne(taskId)
@@ -147,7 +149,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     for {
       task <- taskDAO.findOne(taskId) ?~> "task.notFound" ~> NOT_FOUND
       project <- projectDAO.findOne(task._project)
-      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed"
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed
       _ <- taskDAO.removeOneAndItsAnnotations(task._id) ?~> "task.remove.failed"
     } yield JsonOk(Messages("task.removed"))
   }
@@ -183,7 +185,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         teams <- taskService.getAllowedTeamsForNextTask(user)
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
         (taskId, initializingAnnotationId) <- taskDAO
-          .assignNext(user._id, teams, isTeamManagerOrAdmin) ?~> "task.unavailable"
+          .assignNext(user._id, teams, isTeamManagerOrAdmin) ?~> Msg.Task.unavailable
         insertedAnnotationBox <- annotationService.createAnnotationFor(user, taskId, initializingAnnotationId).shiftBox
         _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
         annotation <- insertedAnnotationBox.toFox
@@ -199,9 +201,9 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         teams <- userService.teamIdsFor(userId)
         task <- taskDAO.findOne(id)
         project <- projectDAO.findOne(task._project)
-        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed"
-        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, assignee)) ?~> "notAllowed"
-        (_, initializingAnnotationId) <- taskDAO.assignOneTo(id, userId, teams) ?~> "task.unavailable"
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, assignee)) ?~> Msg.notAllowed
+        (_, initializingAnnotationId) <- taskDAO.assignOneTo(id, userId, teams) ?~> Msg.Task.unavailable
         insertedAnnotationBox <- annotationService.createAnnotationFor(assignee, id, initializingAnnotationId).shiftBox
         _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
         _ <- insertedAnnotationBox.toFox
@@ -216,7 +218,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     for {
       teamIds <- userService.teamIdsFor(user._id)
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
-      task <- taskDAO.peekNextAssignment(user._id, teamIds, isTeamManagerOrAdmin) ?~> "task.unavailable"
+      task <- taskDAO.peekNextAssignment(user._id, teamIds, isTeamManagerOrAdmin) ?~> Msg.Task.unavailable
       taskJson <- taskService.publicWrites(task)(GlobalAccessContext)
     } yield Ok(taskJson)
   }

@@ -1,5 +1,7 @@
 package controllers
 
+import com.scalableminds.util.Msg
+
 import javax.inject.Inject
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.task._
@@ -31,8 +33,8 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
     withJsonBodyUsing(scriptPublicReads) { script =>
       for {
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(request.identity, request.identity._organization)
-        _ <- Fox.fromBool(isTeamManagerOrAdmin) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- Fox.fromBool(script._owner == request.identity._id) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.fromBool(isTeamManagerOrAdmin) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- Fox.fromBool(script._owner == request.identity._id) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- scriptService.assertValidScriptName(script.name)
         _ <- scriptDAO.insertOne(script)
         js <- scriptService.publicWrites(script) ?~> "script.write.failed"

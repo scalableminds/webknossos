@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
@@ -72,7 +73,7 @@ class ConfigurationController @Inject()(
     sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext)
-        _ <- datasetService.isEditableBy(dataset, Some(request.identity)) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- datasetService.isEditableBy(dataset, Some(request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
         jsObject <- request.body.asOpt[JsObject].toFox ?~> "user.configuration.dataset.invalid"
         _ <- datasetConfigurationService.updateAdminViewConfigurationFor(dataset, jsObject.fields.toMap)
       } yield JsonOk(Messages("user.configuration.dataset.updated"))

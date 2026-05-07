@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.time.Instant
@@ -35,7 +36,7 @@ class MaintenanceController @Inject()(
 
   def readOne(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+      _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
       maintenance <- maintenanceDAO.findOne(id)
     } yield Ok(maintenanceService.publicWrites(maintenance))
   }
@@ -43,7 +44,7 @@ class MaintenanceController @Inject()(
   def update(id: ObjectId): Action[MaintenanceParameters] =
     sil.SecuredAction.async(validateJson[MaintenanceParameters]) { implicit request =>
       for {
-        _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- maintenanceDAO.findOne(id) ?~> "maintenance.notFound"
         _ <- maintenanceDAO.updateOne(id, request.body)
         updated <- maintenanceDAO.findOne(id)
@@ -52,14 +53,14 @@ class MaintenanceController @Inject()(
 
   def delete(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+      _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
       _ <- maintenanceDAO.deleteOne(id)
     } yield Ok
   }
 
   def listAll: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+      _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
       maintenances <- maintenanceDAO.findAll(GlobalAccessContext)
       js = maintenances.map(maintenanceService.publicWrites)
     } yield Ok(Json.toJson(js))
@@ -68,7 +69,7 @@ class MaintenanceController @Inject()(
   def create: Action[MaintenanceParameters] = sil.SecuredAction.async(validateJson[MaintenanceParameters]) {
     implicit request =>
       for {
-        _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
         newMaintenance = Maintenance(ObjectId.generate,
                                      request.identity._id,
                                      request.body.startTime,
@@ -80,7 +81,7 @@ class MaintenanceController @Inject()(
 
   def createAdHocMaintenance: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+      _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
       newMaintenance = Maintenance(ObjectId.generate,
                                    request.identity._id,
                                    Instant.now,

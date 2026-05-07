@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
@@ -66,7 +67,7 @@ class WKRemoteDataStoreController @Inject()(
             "organization.notFound",
             uploadInfo.organization) ~> NOT_FOUND
           _ <- organizationService.assertUsedStorageNotExceeded(organization, uploadInfo.totalFileSizeInBytes) ?~> "dataset.upload.storageExceeded" ~> FORBIDDEN
-          _ <- Fox.fromBool(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- Fox.fromBool(organization._id == user._organization) ?~> Msg.notAllowed ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(uploadInfo.name)
           _ <- Fox.fromBool(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataset.upload.Datastore.restricted"
           _ <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l =>
@@ -100,7 +101,7 @@ class WKRemoteDataStoreController @Inject()(
           organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages(
             "organization.notFound",
             user._organization) ~> NOT_FOUND
-          _ <- Fox.fromBool(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- Fox.fromBool(organization._id == user._organization) ?~> Msg.notAllowed ~> FORBIDDEN
           datasets <- datasetService.getAllUnfinishedDatasetUploadsOfUser(user._id, user._organization)(
             GlobalAccessContext) ?~> "dataset.upload.couldNotLoadUnfinishedUploads"
           teamIdsPerDataset <- Fox.combined(datasets.map(dataset => teamDAO.findAllowedTeamIdsForDataset(dataset.id)))

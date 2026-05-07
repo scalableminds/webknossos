@@ -10,7 +10,6 @@ import models.annotation._
 import models.dataset.{DatasetDAO, DatasetService}
 import models.user.{MultiUserDAO, User, UserService}
 import com.scalableminds.util.objectid.ObjectId
-import play.api.i18n.MessagesProvider
 
 import scala.concurrent.ExecutionContext
 
@@ -44,8 +43,7 @@ class SavedTracingInformationHandler @Inject()(
       normalize(s"${datasetName}__${task}__${userName}__$id")
     }
 
-  def provideAnnotation(annotationId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext,
-                                                                       mp: MessagesProvider): Fox[Annotation] =
+  def provideAnnotation(annotationId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
     annotationDAO.findOne(annotationId) ?~> "annotation.notFound"
 
   def restrictionsFor(identifier: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =

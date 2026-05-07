@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import play.silhouette.api.Silhouette
 import play.silhouette.api.actions.SecuredRequest
@@ -61,7 +62,7 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
     sil.SecuredAction.async(validateJson[DatasetUpdateParameters]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
-        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- Fox.runOptional(request.body.metadata)(assertNoDuplicateMetadataKeys)
         _ <- datasetDAO.updatePartial(dataset._id, request.body)
         _ <- Fox.runOptional(request.body.dataSource) { dataSourceUpdates =>

@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
@@ -134,7 +135,7 @@ class JobController @Inject()(jobDAO: JobDAO,
   def retry(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> "job.disabled"
-      _ <- userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+      _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
       job <- jobDAO.findOne(id)
       _ <- creditTransactionService.reserveCreditsForRetry(job._id)
       _ <- jobDAO.retryOne(id)
@@ -410,7 +411,7 @@ class JobController @Inject()(jobDAO: JobDAO,
             Fox.fromBool(animationJobOptions.movieResolution == MovieResolutionSetting.SD) ?~> "job.renderAnimation.resolutionMustBeSD"
           }
           _ <- Fox.runIf(animationJobOptions.saveBlenderFile) {
-            userService.assertIsSuperUser(request.identity) ?~> "notAllowed" ~> FORBIDDEN
+            userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
           }
           layerName = animationJobOptions.layerName
           _ <- datasetService.assertValidLayerNameLax(layerName)

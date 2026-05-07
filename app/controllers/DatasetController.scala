@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
@@ -468,7 +469,7 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async(validateJson[DatasetUpdateParameters]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- Fox.runOptional(request.body.metadata)(assertNoDuplicateMetadataKeys)
         _ <- datasetDAO.updatePartial(dataset._id, request.body)
         _ <- Fox.runOptional(request.body.dataSource)(
@@ -494,7 +495,7 @@ class DatasetController @Inject()(userService: UserService,
             dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
             maybeUpdatedMetadata = metadata.getOrElse(dataset.metadata)
             _ <- assertNoDuplicateMetadataKeys(maybeUpdatedMetadata)
-            _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+            _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
             _ <- datasetDAO.updateFields(
               dataset._id,
               description,
@@ -516,7 +517,7 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async(validateJson[List[ObjectId]]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
         includeMemberOnlyTeams = request.identity.isDatasetManager
         userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
         oldAllowedTeams <- teamService.allowedTeamIdsForDataset(dataset, cumulative = false) ?~> "allowedTeams.notFound"
@@ -541,7 +542,7 @@ class DatasetController @Inject()(userService: UserService,
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- Fox.fromBool(dataset._organization == request.identity._organization) ~> FORBIDDEN
-        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- datasetDAO.updateSharingTokenById(datasetId, None)
       } yield Ok
     }
@@ -673,7 +674,7 @@ class DatasetController @Inject()(userService: UserService,
           for {
             dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
             _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
-            _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+            _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
             before = Instant.now
             _ = logger.info(
               s"Deleting dataset $datasetId as requested by user ${request.identity._id}. Details: orga=${dataset._organization}, isVirtual=${dataset.isVirtual}, name=${dataset.name}, directoryName=${dataset.directoryName} ...")
@@ -717,7 +718,7 @@ class DatasetController @Inject()(userService: UserService,
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- Fox.fromBool(dataset.isVirtual) ?~> "dataset.reserveMagUploadToPath.notVirtual"
-        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
         magPath <- datasetUploadToPathsService.reserveMagUploadToPath(dataset, request.body)
       } yield Ok(Json.toJson(magPath))
     }
@@ -726,7 +727,7 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async(validateJson[ReserveMagUploadToPathRequest]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- datasetMagsDAO.finishUploadToPath(datasetId, request.body.layerName, request.body.mag)
         dataStoreClient <- datasetService.clientFor(dataset)
         _ <- Fox.runIf(!dataset.isVirtual) {
@@ -744,7 +745,7 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async(validateJson[ReserveAttachmentUploadToPathRequest]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
         attachmentPath <- datasetUploadToPathsService.reserveAttachmentUploadToPath(dataset, request.body)
 
       } yield Ok(Json.toJson(attachmentPath))
@@ -754,7 +755,7 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async(validateJson[ReserveAttachmentUploadToPathRequest]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- datasetLayerAttachmentsDAO.finishUploadToPath(datasetId,
                                                            request.body.layerName,
                                                            request.body.attachmentName,
@@ -796,7 +797,7 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- Fox.fromBool(
           dataset.status == DataSourceStatus.notYetUploadedToPaths || dataset.status == DataSourceStatus.notYetUploaded) ?~> s"Dataset is not in uploading-to-paths status, got ${dataset.status}."
         _ <- Fox.fromBool(!dataset.isUsable) ?~> s"Dataset is already marked as usable."

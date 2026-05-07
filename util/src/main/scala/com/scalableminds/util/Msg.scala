@@ -3,7 +3,6 @@ package com.scalableminds.util
 import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.duration.FiniteDuration
-import scala.reflect.internal.annotations
 
 object Msg {
   object AgglomerateGraph {
@@ -56,6 +55,8 @@ object Msg {
       val notAllowed: String = "You are not allowed to reopen this annotation."
       def tooLate(duration: FiniteDuration): String =
         s"The annotation cannot be reopened anymore, since it has been finished for too long (configured as $duration)."
+      val failed: String = "Failed to reopen the annotation."
+      val success: String = "Annotation was reopened."
     }
     object Lock {
       val explorationalsOnly: String = "Only explorational annotations can be locked."
@@ -63,6 +64,30 @@ object Msg {
       val notAllowed: String =
         "Only the owner of this annotation is allowed to change the locked state of an annotation."
       val success: String = "The locking state of the annotation was successfully updated."
+    }
+    object Mutex {
+      val acquireFailed = "Failed to acquire annotation editing mutex."
+      val releaseFailed = "Failed to release annotation editing mutex."
+    }
+    object CollaborationMode {
+      val onlyExplorationalOrTask =
+        "Changing the collaboration mode is only allowed for explorational and task annotations."
+    }
+    object Edit {
+      val failed: String = "Could not update the annotation."
+      val success: String = "Successfully updated the annotation."
+      val accessingTeamFailed: String = "Could not access a team during annotation shared team update."
+    }
+    object Download {
+      def failed = "Could not download annotation."
+      def fetchVolumeLayerFailed = "Could not fetch volume annotation layer."
+      def fetchSkeletonLayerFailed = "Could not fetch skeleton annotation layer."
+      def findUserFailed = "Could not find or access annotation user."
+      def zipNmlFailed = "Could not add NML file to zip archive."
+      def skeletonToFileFailed = "Could not write skeleton-only annotation to file."
+      def hybridToFileFailed = "Could not write annotation with volume layer to file."
+      def notAllowed = "You are not allowed to download this annotation."
+      def writeToFileFailed = "Could not write annotation to temporary file for download."
     }
     val notFound: String = "Annotation could not be found or accessed."
     val notFoundConsiderLoggingIn = "Annotation could not be found or accessed. You may need to log in to see it."
@@ -72,13 +97,23 @@ object Msg {
     val sandboxSkeletonOnly: String = "Sandbox annotations are currently available as skeleton only."
     val createFailed: String = "Could not create annotation."
     val finishFailed: String = "Could not finish/archive the annotation."
+    val finished: String = "Annotation is archived."
     val allFinished: String = "All selected annotations were finished/archived."
+    val updateNotAllowed: String = "You are not allowed to update this annotation."
+    def reserveTooManyIds(limit: Int) = s"Cannot reserve more than $limit ids in one request."
+    val countListableFailed: String = "Could not count listable annotations."
+    val duplicateFailed: String = "Could not duplicate annotation."
+    val updateStateFailed: String = "Could not update state of annotation."
+    def nameNotAvailable: String = "Could not determine name for annotation."
   }
   object Organization {
-    def notFound(id: String) = s"Organization $id could not be found."
+    def notFound(id: String) = s"Organization “$id” could not be found or accessed."
+    def notFoundWrongHost(orgaId: String, gotHost: String, thisHost: String) =
+      s"Organization “$orgaId” could not be found or accessed. Please check whether you are on the correct WEBKNOSSOS instance. The uploaded file indicates “$gotHost” while this instance is “$thisHost”."
   }
   object DataStore {
-    def notFound = "DataStore could not be found."
+    def notFound = "Data store could not be found or accessed."
+    def notFoundForDataset = "Data store for dataset could not be found or accessed."
   }
   object ObjectId {
     def invalid(literal: String) = s"The supplied resource id “$literal” is not a valid ObjectId."
@@ -96,5 +131,45 @@ object Msg {
   object Dataset {
     def noBoundingBox: String = "This dataset has no bounding box. Please make sure this dataset is imported correctly."
     def notFound(id: ObjectId) = s"Dataset “$id” could not be found or accessed."
+    def notFoundforAnnotation(datasetId: ObjectId, annotationId: ObjectId) =
+      s"Dataset “$datasetId” for annotation “$annotationId” does not exist or could not be accessed."
+    def notFoundWrongHost(datasetId: ObjectId, gotHost: String, thisHost: String) =
+      s"Dataset “$datasetId” could not be found or accessed. Please check whether you are on the correct WEBKNOSSOS instance. The uploaded file indicates “$gotHost” while this instance is “$thisHost”."
+    def notUsable(id: ObjectId) = s"Dataset “$id” is not imported or incomplete."
+    object DataSource {
+      def notFound: String = "Datasource not found on datastore server. Might still be initializing."
+    }
+    object Layer {
+      def notFound(layerName: String): String = "Could not find layer “{0}” in dataset."
+    }
   }
+  object Task {
+    def notFound: String = s"Task could not be found or accessed."
+    def notFound(id: ObjectId): String = s"Task “$id” could not be found or accessed."
+    def findAnnotationsFailed: String = "Failed to retrieve annotations for this task."
+    def cancelled = "Task is finished."
+    def unavailable = "There is currently no task available."
+  }
+  object Project {
+    def notFound: String = s"Project could not be found or accessed."
+    def notFound(id: ObjectId): String = s"Project “$id” could not be found or accessed."
+  }
+  object Nml {
+    def uploadSuccess: String = "Successfully uploaded file."
+    def differentDatasets: String = "Cannot upload annotations that belong to different datasets at once."
+    def parseFailure(fileName: String, error: String): String = s"Could not parse file “$fileName”: $error"
+  }
+  object TaskType {
+    def notFound(id: ObjectId) = s"Task type “$id” could not be found or accessed."
+  }
+  object User {
+    def notFound = s"User could not be found or accessed."
+    def notFound(id: ObjectId) = s"User “$id” could not be found or accessed."
+    val noSelfDeactivate = "You cannot deactivate yourself. Please contact an admin to do it for you."
+    def notAuthenticated = "You are not authorized to view this resource. Please log in."
+  }
+  object Team {
+    def notFound(id: ObjectId) = s"Team “$id” could not be found or accessed."
+  }
+  val notAllowed: String = "You are not authorized to view or edit this resource."
 }

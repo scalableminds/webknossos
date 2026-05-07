@@ -1,5 +1,6 @@
 package models.dataset
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
@@ -34,7 +35,6 @@ import models.dataset.DatasetCreationType.DatasetCreationType
 import models.job.JobDAO
 import models.storage.UsedStorageService
 import play.api.http.Status.NOT_FOUND
-import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsArray, JsObject, Json}
 import security.RandomIDGenerator
 import telemetry.SlackNotificationService
@@ -117,7 +117,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                             folderId: Option[ObjectId],
                             user: User,
                             isVirtual: Boolean,
-                            creationType: DatasetCreationType)(implicit mp: MessagesProvider): Fox[Dataset] =
+                            creationType: DatasetCreationType): Fox[Dataset] =
     for {
       _ <- assertValidDatasetName(datasetName)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> "organization.notFound"
@@ -147,7 +147,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       metadata: JsArray = JsArray.empty,
       description: Option[String] = None,
       creationType: DatasetCreationType.Value
-  )(implicit mp: MessagesProvider): Fox[Dataset] = {
+  ): Fox[Dataset] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
 
     val dataSourceHash = if (dataSource.isUsable) Some(dataSource.hashCode()) else None
@@ -185,8 +185,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   }
 
   def updateDataSources(dataStore: DataStore, dataSources: List[DataSource])(
-      implicit ctx: DBAccessContext,
-      mp: MessagesProvider): Fox[List[ObjectId]] = {
+      implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
 
     val groupedByOrga = dataSources.groupBy(_.id.organizationId).toList
     Fox
@@ -217,7 +216,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       dataStore: DataStore,
       dataSource: DataSource,
       foundDatasetsByDirectoryName: Map[String, List[Dataset]]
-  )(implicit ctx: DBAccessContext, mp: MessagesProvider): Fox[Option[ObjectId]] = {
+  )(implicit ctx: DBAccessContext): Fox[Option[ObjectId]] = {
     val foundDatasetOpt = foundDatasetsByDirectoryName.get(dataSource.id.directoryName).flatMap(_.headOption)
     val isVirtual = foundDatasetOpt.exists(_.isVirtual)
     if (isVirtual) { // Virtual datasets should not be updated from the datastore, as we do not expect them to exist as data source properties on the datastore.
@@ -283,7 +282,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       dataset: Dataset,
       dataSourceUpdates: UsableDataSource,
       layerRenamings: Seq[LayerRenaming],
-      attachmentRenamings: Seq[AttachmentRenaming])(implicit ctx: DBAccessContext, mp: MessagesProvider): Fox[Unit] =
+      attachmentRenamings: Seq[AttachmentRenaming])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       existingDataSource <- usableDataSourceFor(dataset)
       datasetId = dataset._id
@@ -485,11 +484,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
-  def usableDataSourceFor(dataset: Dataset, useRealPaths: Boolean = true)(
-      implicit mp: MessagesProvider): Fox[UsableDataSource] =
+  def usableDataSourceFor(dataset: Dataset, useRealPaths: Boolean = true): Fox[UsableDataSource] =
     for {
-      dataSource <- dataSourceFor(dataset, useRealPaths) ?~> "dataSource.notFound" ~> NOT_FOUND
-      usableDataSource <- dataSource.toUsable.toFox ?~> Messages("dataset.notImported", dataSource.id.directoryName)
+      dataSource <- dataSourceFor(dataset, useRealPaths) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
+      usableDataSource <- dataSource.toUsable.toFox ?~> Msg.Dataset.notUsable(dataset._id)
     } yield usableDataSource
 
   def dataSourceFor(dataset: Dataset, useRealPaths: Boolean = true): Fox[DataSource] = {
@@ -503,11 +501,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       Fox.successful(UnusableDataSource(dataSourceId, None, dataset.status, dataset.voxelSize))
   }
 
-  def getDataSourceAndLayerFor(dataset: Dataset, layerName: String)(
-      implicit mp: MessagesProvider): Fox[(UsableDataSource, StaticLayer)] =
+  def getDataSourceAndLayerFor(dataset: Dataset, layerName: String): Fox[(UsableDataSource, StaticLayer)] =
     for {
       usableDataSource <- usableDataSourceFor(dataset)
-      dataLayer <- usableDataSource.getDataLayer(layerName).toFox ?~> Messages("dataLayer.notFound", layerName)
+      dataLayer <- usableDataSource.getDataLayer(layerName).toFox ?~> Msg.Dataset.Layer.notFound(layerName)
     } yield (usableDataSource, dataLayer)
 
   private def notifyDatastoreOnUpdate(datasetId: ObjectId)(implicit ctx: DBAccessContext) =
@@ -701,7 +698,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                         s"For organization: ${organization.name}. <$resultLink|Result>")
     } yield ()
 
-  def scanRealpathsIfVirtual(dataset: Dataset)(implicit mp: MessagesProvider, ctx: DBAccessContext): Fox[Unit] =
+  def scanRealpathsIfVirtual(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[Unit] =
     if (dataset.isVirtual && dataset.isUsable) {
       for {
         dataSource <- usableDataSourceFor(dataset, useRealPaths = false)

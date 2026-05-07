@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -49,8 +50,8 @@ class UserController @Inject()(userService: UserService,
   def user(userId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     log() {
       for {
-        user <- userDAO.findOne(userId) ?~> "user.notFound" ~> NOT_FOUND
-        _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
+        user <- userDAO.findOne(userId) ?~> Msg.User.notFound(userId) ~> NOT_FOUND
+        _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
         js <- userService.publicWrites(user, request.identity)
       } yield Ok(js)
     }
@@ -113,8 +114,8 @@ class UserController @Inject()(userService: UserService,
                       includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        user <- userDAO.findOne(userId) ?~> "user.notFound" ~> NOT_FOUND
-        _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
+        user <- userDAO.findOne(userId) ?~> Msg.User.notFound(userId) ~> NOT_FOUND
+        _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
         annotations <- annotationDAO.findAllListableExplorationals(
           isFinished,
           Some(userId),
@@ -141,8 +142,8 @@ class UserController @Inject()(userService: UserService,
                 includeTotalCount: Option[Boolean] = None): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        user <- userDAO.findOne(userId) ?~> "user.notFound" ~> NOT_FOUND
-        _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> "notAllowed" ~> FORBIDDEN
+        user <- userDAO.findOne(userId) ?~> Msg.User.notFound(userId) ~> NOT_FOUND
+        _ <- Fox.assertTrue(userService.isEditableBy(user, request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
         annotations <- annotationDAO.findAllFor(userId,
                                                 isFinished,
                                                 AnnotationType.Task,
@@ -303,7 +304,7 @@ class UserController @Inject()(userService: UserService,
             experiencesOpt,
             lastTaskTypeIdOpt) =>
         for {
-          user <- userDAO.findOne(userId) ?~> "user.notFound" ~> NOT_FOUND
+          user <- userDAO.findOne(userId) ?~> Msg.User.notFound(userId) ~> NOT_FOUND
           multiUser <- multiUserDAO.findOne(user._multiUser)
           // properties that can be changed by team managers and admins only: experiences, team memberships
           oldExperience <- userService.experiencesFor(user._id)
@@ -319,17 +320,18 @@ class UserController @Inject()(userService: UserService,
           experiences = experiencesOpt.getOrElse(oldExperience)
           lastTaskTypeId = if (lastTaskTypeIdOpt.isEmpty) user.lastTaskTypeId.map(_.id) else lastTaskTypeIdOpt
           _ <- Fox
-            .runIf(user._id != issuingUser._id)(Fox.assertTrue(userService.isEditableBy(user, request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+            .runIf(user._id != issuingUser._id)(Fox.assertTrue(userService.isEditableBy(user, request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
           _ <- checkTeamManagerOnlyUpdates(user,
                                            experiences,
                                            oldExperience,
                                            assignedMemberships,
-                                           oldAssignedMemberships)(issuingUser) ?~> "notAllowed" ~> FORBIDDEN
+                                           oldAssignedMemberships)(issuingUser) ?~> Msg.notAllowed ~> FORBIDDEN
           _ <- Fox
-            .fromBool(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager)(issuingUser)) ?~> "notAllowed" ~> FORBIDDEN
+            .fromBool(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager)(issuingUser)) ?~> Msg.notAllowed ~> FORBIDDEN
           _ <- checkPasswordIfEmailChanged(user, passwordOpt, oldEmail, email)(issuingUser)
           _ <- checkEmailDoesNotExistIfChanged(email, oldEmail)
-          _ <- Fox.fromBool(checkNoSelfDeactivate(user, isActive)(issuingUser)) ?~> "user.noSelfDeactivate" ~> FORBIDDEN
+          _ <- Fox
+            .fromBool(checkNoSelfDeactivate(user, isActive)(issuingUser)) ?~> Msg.User.noSelfDeactivate ~> FORBIDDEN
           _ <- checkNoDeactivateWithRemainingTask(user, isActive)
           _ <- checkNoActivateBeyondLimit(user, isActive)
           _ <- preventZeroAdmins(user, isAdmin)
@@ -341,7 +343,7 @@ class UserController @Inject()(userService: UserService,
                                           firstName,
                                           lastName)
           teams <- Fox.combined(assignedMemberships.map(t =>
-            teamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> "team.notFound" ~> NOT_FOUND))
+            teamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> Msg.Team.notFound(t.teamId) ~> NOT_FOUND))
           oldTeamMemberships <- userService.teamMembershipsFor(user._id)
           teamsWithoutUpdate <- Fox.filterNot(oldTeamMemberships)(t =>
             userService.isTeamManagerOrAdminOf(issuingUser, t.teamId))
@@ -394,8 +396,8 @@ class UserController @Inject()(userService: UserService,
       val issuingUser = request.identity
       withJsonBodyUsing((__ \ "lastTaskTypeId").readNullable[String]) { lastTaskTypeId =>
         for {
-          user <- userDAO.findOne(userId) ?~> "user.notFound" ~> NOT_FOUND
-          isEditable <- userService.isEditableBy(user, request.identity) ?~> "notAllowed" ~> FORBIDDEN
+          user <- userDAO.findOne(userId) ?~> Msg.User.notFound(userId) ~> NOT_FOUND
+          isEditable <- userService.isEditableBy(user, request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
           _ <- Fox.fromBool(isEditable | user._id == issuingUser._id)
           _ <- userService.updateLastTaskTypeId(user, lastTaskTypeId)
           updatedUser <- userDAO.findOne(userId)
@@ -407,7 +409,7 @@ class UserController @Inject()(userService: UserService,
   def updateNovelUserExperienceInfos(userId: ObjectId): Action[JsObject] =
     sil.SecuredAction.async(validateJson[JsObject]) { implicit request =>
       for {
-        _ <- Fox.fromBool(request.identity._id == userId) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.fromBool(request.identity._id == userId) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- multiUserDAO.updateNovelUserExperienceInfos(request.identity._multiUser, request.body)
         updatedUser <- userDAO.findOne(userId)
         updatedJs <- userService.publicWrites(updatedUser, request.identity)
@@ -417,7 +419,7 @@ class UserController @Inject()(userService: UserService,
   def updateSelectedTheme(userId: ObjectId): Action[Theme] =
     sil.SecuredAction.async(validateJson[Theme]) { implicit request =>
       for {
-        _ <- Fox.fromBool(request.identity._id == userId) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.fromBool(request.identity._id == userId) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- multiUserDAO.updateSelectedTheme(request.identity._multiUser, request.body)
         updatedUser <- userDAO.findOne(userId)
         updatedJs <- userService.publicWrites(updatedUser, request.identity)

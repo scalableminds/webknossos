@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -12,6 +13,7 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
 import com.scalableminds.util.objectid.ObjectId
+
 import javax.inject.Inject
 import play.api.mvc.{Action, AnyContent}
 import security.WkEnv
@@ -37,7 +39,7 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
   def create: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskTypePublicReads) { taskType =>
       for {
-        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team)) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team)) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- taskTypeDAO
           .findOneBySummaryAndOrganization(taskType.summary, request.identity._organization)(GlobalAccessContext)
           .reverse ?~> Messages("taskType.summary.alreadyTaken", taskType.summary)
@@ -70,9 +72,9 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
         _ <- Fox
           .fromBool(taskTypeFromForm.settings.magRestrictions == taskType.settings.magRestrictions) ?~> "taskType.magRestrictionsImmutable"
         updatedTaskType = taskTypeFromForm.copy(_id = taskType._id)
-        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team)) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team)) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- Fox
-          .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, updatedTaskType._team)) ?~> "notAllowed" ~> FORBIDDEN
+          .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, updatedTaskType._team)) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- Fox.runIf(taskTypeFromForm.summary != taskType.summary) {
           taskTypeDAO
             .findOneBySummaryAndOrganization(taskTypeFromForm.summary, request.identity._organization)(
@@ -89,7 +91,7 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
     for {
       taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound" ~> NOT_FOUND
       _ <- Fox
-        .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team)) ?~> "notAllowed" ~> FORBIDDEN
+        .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team)) ?~> Msg.notAllowed ~> FORBIDDEN
       _ <- taskTypeDAO.deleteOne(taskTypeId) ?~> "taskType.deleteFailure"
       _ <- taskDAO.removeAllWithTaskTypeAndItsAnnotations(taskTypeId) ?~> "taskType.deleteFailure"
       _ = logger.info(s"TaskType $taskTypeId was deleted.")

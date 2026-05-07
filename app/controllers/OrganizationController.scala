@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import org.apache.pekko.actor.ActorSystem
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
@@ -80,8 +81,8 @@ class OrganizationController @Inject()(
   def create: Action[OrganizationCreationParameters] =
     sil.SecuredAction.async(validateJson[OrganizationCreationParameters]) { implicit request =>
       for {
-        _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "notAllowed" ~> FORBIDDEN
-        owner <- multiUserDAO.findOneByEmail(request.body.ownerEmail) ?~> "user.notFound"
+        _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> Msg.notAllowed ~> FORBIDDEN
+        owner <- multiUserDAO.findOneByEmail(request.body.ownerEmail) ?~> Msg.User.notFound
         org <- organizationService.createOrganization(request.body.organization, request.body.organizationName)
         user <- userDAO.findFirstByMultiUser(owner._id)
         teamMemberships <- userService.initialTeamMemberships(org._id, inviteIdOpt = None)
@@ -161,7 +162,7 @@ class OrganizationController @Inject()(
         for {
           organization <- organizationDAO
             .findOne(organizationId) ?~> Messages("organization.notFound", organizationId) ~> NOT_FOUND
-          _ <- Fox.fromBool(request.identity.isAdminOf(organization._id)) ?~> "notAllowed" ~> FORBIDDEN
+          _ <- Fox.fromBool(request.identity.isAdminOf(organization._id)) ?~> Msg.notAllowed ~> FORBIDDEN
           _ <- organizationDAO.updateFields(organization._id, name, newUserMailingList)
           updated <- organizationDAO.findOne(organization._id)
           organizationJson <- organizationService.publicWrites(updated, Some(request.identity))
@@ -173,7 +174,7 @@ class OrganizationController @Inject()(
     for {
       organization <- organizationDAO
         .findOne(organizationId) ?~> Messages("organization.notFound", organizationId) ~> NOT_FOUND
-      _ <- Fox.fromBool(request.identity.isAdminOf(organization._id)) ?~> "notAllowed" ~> FORBIDDEN
+      _ <- Fox.fromBool(request.identity.isAdminOf(organization._id)) ?~> Msg.notAllowed ~> FORBIDDEN
       _ = logger.info(s"Deleting organization ${organization._id}")
       _ <- organizationDAO.deleteOne(organization._id)
       _ <- userDAO.deleteAllWithOrganization(organization._id)
@@ -185,7 +186,7 @@ class OrganizationController @Inject()(
   def addUser(organizationId: String): Action[String] =
     sil.SecuredAction.async(validateJson[String]) { implicit request =>
       for {
-        _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> Msg.notAllowed ~> FORBIDDEN
         multiUser <- multiUserDAO.findOneByEmail(request.body)
         organization <- organizationDAO.findOne(organizationId) ?~> Messages("organization.notFound", organizationId) ~> NOT_FOUND
         user <- userDAO.findFirstByMultiUser(multiUser._id)

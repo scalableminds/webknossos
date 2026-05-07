@@ -1,11 +1,11 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.util.tools.FoxImplicits
-
 import play.api.libs.json._
 
 import javax.inject.Inject
@@ -47,7 +47,7 @@ class AnnotationPrivateLinkController @Inject()(
       annotationIdValidated <- ObjectId.fromString(annotationId)
       userBox <- bearerTokenService.userForTokenOpt(userToken).shiftBox
       ctx = DBAccessContext(userBox.toOption)
-      annotation <- annotationDAO.findOne(annotationIdValidated)(ctx) ?~> "annotation.notFound"
+      annotation <- annotationDAO.findOne(annotationIdValidated)(ctx) ?~> Msg.Annotation.notFound
     } yield annotation
 
   private def findAnnotationByPrivateLinkIfNotExpired(accessToken: String): Fox[Annotation] =
@@ -77,7 +77,7 @@ class AnnotationPrivateLinkController @Inject()(
       annotationPrivateLink <- annotationPrivateLinkDAO.findOne(id)
       _ <- Fox
         .fromBool(annotationPrivateLink.expirationDateTime.forall(_ > Instant.now)) ?~> "Token expired" ~> NOT_FOUND
-      _ <- annotationDAO.findOne(annotationPrivateLink._annotation) ?~> "annotation.notFound" ~> NOT_FOUND
+      _ <- annotationDAO.findOne(annotationPrivateLink._annotation) ?~> Msg.Annotation.notFound ~> NOT_FOUND
 
       annotationPrivateLinkJs <- annotationPrivateLinkService.publicWrites(annotationPrivateLink)
     } yield Ok(annotationPrivateLinkJs)
@@ -90,7 +90,7 @@ class AnnotationPrivateLinkController @Inject()(
       val accessToken = annotationPrivateLinkService.generateToken
       for {
         annotationId <- ObjectId.fromString(params.annotation)
-        _ <- annotationDAO.assertUpdateAccess(annotationId) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- annotationDAO.assertUpdateAccess(annotationId) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- annotationPrivateLinkDAO.insertOne(
           AnnotationPrivateLink(_id, annotationId, accessToken, params.expirationDateTime)) ?~> "create.failed"
         inserted <- annotationPrivateLinkDAO.findOne(_id)
@@ -104,8 +104,8 @@ class AnnotationPrivateLinkController @Inject()(
       for {
         annotationId <- ObjectId.fromString(params.annotation)
         aPLInfo <- annotationPrivateLinkDAO.findOne(id) ?~> "annotation private link not found" ~> NOT_FOUND
-        _ <- annotationDAO.assertUpdateAccess(aPLInfo._annotation) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- annotationDAO.assertUpdateAccess(annotationId) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- annotationDAO.assertUpdateAccess(aPLInfo._annotation) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- annotationDAO.assertUpdateAccess(annotationId) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- annotationPrivateLinkDAO.updateOne(id, annotationId, params.expirationDateTime) ?~> "update.failed"
         updated <- annotationPrivateLinkDAO.findOne(id) ?~> "not Found"
         js <- annotationPrivateLinkService.publicWrites(updated) ?~> "write failed"
@@ -115,7 +115,7 @@ class AnnotationPrivateLinkController @Inject()(
   def delete(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       aPLInfo <- annotationPrivateLinkDAO.findOne(id) ?~> "notFound" ~> NOT_FOUND
-      _ <- annotationDAO.assertUpdateAccess(aPLInfo._annotation) ?~> "notAllowed" ~> FORBIDDEN
+      _ <- annotationDAO.assertUpdateAccess(aPLInfo._annotation) ?~> Msg.notAllowed ~> FORBIDDEN
       _ <- annotationPrivateLinkDAO.deleteOne(id) ?~> "delete failed"
     } yield JsonOk("privateLink deleted")
   }

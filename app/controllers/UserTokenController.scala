@@ -180,7 +180,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
   private def handleAnnotationAccess(annotationIdOpt: Option[String],
                                      mode: AccessMode,
                                      userBox: Box[User],
-                                     token: Option[String])(implicit mp: MessagesProvider): Fox[UserAccessAnswer] = {
+                                     token: Option[String]): Fox[UserAccessAnswer] = {
     // Access is explicitly checked by userBox, not by DBAccessContext, as there is no token sharing for annotations
     // Optionally, an accessToken can be provided which explicitly looks up the read right the private link table
 
@@ -198,7 +198,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
         annotationIdStr <- annotationIdOpt.toFox
         annotationId <- ObjectId.fromString(annotationIdStr)
         annotationBox <- annotationInformationProvider
-          .provideAnnotation(annotationId, userBox.toOption)(GlobalAccessContext, mp)
+          .provideAnnotation(annotationId, userBox.toOption)(GlobalAccessContext)
           .shiftBox
         annotation <- annotationBox match {
           case Full(_) => annotationBox.toFox

@@ -9,7 +9,6 @@ import models.annotation._
 import models.user.User
 import com.scalableminds.util.objectid.ObjectId
 import models.dataset.{DatasetDAO, DatasetService}
-import play.api.i18n.MessagesProvider
 
 import scala.annotation.{nowarn, tailrec}
 import scala.concurrent.ExecutionContext
@@ -35,8 +34,7 @@ trait AnnotationInformationHandler extends FoxImplicits {
 
   def useCache: Boolean = true
 
-  def provideAnnotation(identifier: ObjectId, user: Option[User])(implicit ctx: DBAccessContext,
-                                                                  mp: MessagesProvider): Fox[Annotation]
+  def provideAnnotation(identifier: ObjectId, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation]
 
   @nowarn // suppress warning about unused implicit ctx, as it is used in subclasses
   def nameForAnnotation(t: Annotation)(implicit ctx: DBAccessContext): Fox[String] =
@@ -66,8 +64,7 @@ trait AnnotationInformationHandler extends FoxImplicits {
     if (seq.isEmpty) Fox.failure("no annotations")
     else Fox.successful(())
 
-  protected def registerDataSourceInTemporaryStore(temporaryAnnotationId: ObjectId, datasetId: ObjectId)(
-      implicit mp: MessagesProvider): Fox[Unit] =
+  protected def registerDataSourceInTemporaryStore(temporaryAnnotationId: ObjectId, datasetId: ObjectId): Fox[Unit] =
     for {
       dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation"
       dataSource <- datasetService.usableDataSourceFor(dataset)

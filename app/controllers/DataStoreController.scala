@@ -1,11 +1,12 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 
 import javax.inject.Inject
 import models.dataset.{DataStore, DataStoreDAO, DataStoreService}
-import models.user.MultiUserDAO
+import models.user.{MultiUserDAO, UserService}
 import com.scalableminds.util.tools.Empty
 import play.api.i18n.Messages
 import play.api.libs.functional.syntax._
@@ -17,6 +18,7 @@ import scala.concurrent.ExecutionContext
 
 class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
                                     dataStoreService: DataStoreService,
+                                    userService: UserService,
                                     sil: Silhouette[WkEnv],
                                     multiUserDAO: MultiUserDAO)(implicit ec: ExecutionContext)
     extends Controller
@@ -45,8 +47,7 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
       dataStoreDAO.findOneByName(dataStore.name).shiftBox.flatMap {
         case Empty =>
           for {
-            multiUser <- multiUserDAO.findOne(request.identity._multiUser)
-            _ <- Fox.fromBool(multiUser.isSuperUser) ?~> "notAllowed" ~> FORBIDDEN
+            _ <- userService.assertIsSuperUser(request.identity) ~> FORBIDDEN
             _ <- dataStoreDAO.insertOne(dataStore) ?~> "dataStore.create.failed"
             js <- dataStoreService.publicWrites(dataStore)
           } yield { Ok(Json.toJson(js)) }
@@ -58,7 +59,7 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
   def delete(name: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       multiUser <- multiUserDAO.findOne(request.identity._multiUser)
-      _ <- Fox.fromBool(multiUser.isSuperUser) ?~> "notAllowed" ~> FORBIDDEN
+      _ <- Fox.fromBool(multiUser.isSuperUser) ?~> Msg.notAllowed ~> FORBIDDEN
       _ <- dataStoreDAO.deleteOneByName(name) ?~> "dataStore.remove.failure"
     } yield Ok
   }

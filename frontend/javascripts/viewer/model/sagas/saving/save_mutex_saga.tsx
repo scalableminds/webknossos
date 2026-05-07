@@ -1,7 +1,7 @@
 import { acquireAnnotationMutex, releaseAnnotationMutex } from "admin/rest_api";
 import { Button } from "antd";
+import { TAB_SESSION_ID } from "libs/tab_session_id";
 import Toast from "libs/toast";
-import { getUid } from "libs/uid_generator";
 import messages from "messages";
 import {
   call,
@@ -34,9 +34,6 @@ import { ensureWkInitialized } from "../ready_sagas";
 
 // Also refer to application.conf where annotation.mutex.expiryTime is defined
 // (typically, 2 minutes).
-
-// Unique per browser tab, used to detect if this tab is the one blocking the mutex.
-export const SESSION_ID = getUid();
 
 const MUTEX_NOT_ACQUIRED_KEY = "MutexCouldNotBeAcquired";
 const MUTEX_ACQUIRED_KEY = "AnnotationMutexAcquired";
@@ -292,7 +289,7 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
         ACQUIRE_MUTEX_INTERVAL / RETRY_COUNT,
         acquireAnnotationMutex,
         annotationId,
-        SESSION_ID,
+        TAB_SESSION_ID,
       );
       yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(canEdit));
       yield* put(setUserHoldingMutexAction(blockedByUser, blockedBySessionId));
@@ -331,7 +328,7 @@ function* acquireMutexInitiallyForAdHocStrategy(annotationId: string): Saga<void
   // reactToOthersMayEditChanges when collaborationMode changes.
   while (true) {
     try {
-      const mutexResult = yield* call(acquireAnnotationMutex, annotationId, SESSION_ID);
+      const mutexResult = yield* call(acquireAnnotationMutex, annotationId, TAB_SESSION_ID);
       canEdit = mutexResult.canEdit;
       blockedByUser = mutexResult.blockedByUser;
 
@@ -383,7 +380,7 @@ function* keepAnnotationMutexForAdHocStrategy(annotationId: string): Saga<void> 
   yield* call(delay, ACQUIRE_MUTEX_INTERVAL);
   while (true) {
     try {
-      const mutexInfo = yield* call(acquireAnnotationMutex, annotationId, SESSION_ID);
+      const mutexInfo = yield* call(acquireAnnotationMutex, annotationId, TAB_SESSION_ID);
       canEdit = mutexInfo.canEdit;
       blockedByUser = mutexInfo.blockedByUser;
       yield* put(setUserHoldingMutexAction(blockedByUser, mutexInfo.blockedBySessionId));
@@ -537,7 +534,7 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
         if (
           blockedByUser != null &&
           blockedByUser.id === activeUser?.id &&
-          blockedBySessionId !== SESSION_ID
+          blockedBySessionId !== TAB_SESSION_ID
         ) {
           message = messages["annotation.acquiringMutexFailed.sameSession"];
         } else if (blockedByUser != null) {

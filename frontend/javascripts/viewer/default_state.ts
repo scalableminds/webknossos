@@ -209,7 +209,7 @@ const defaultState: WebknossosState = {
       processedActionCount: 0,
       totalActionCount: 0,
     },
-    mutexState: { hasAnnotationMutex: false, blockedByUser: null },
+    mutexState: { hasAnnotationMutex: false, blockedByUser: null, blockedBySessionId: null },
     rebaseRelevantServerAnnotationState: {
       annotationDescription: "",
       annotationVersion: 1,

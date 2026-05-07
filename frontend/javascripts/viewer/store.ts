@@ -448,6 +448,7 @@ export type ProgressInfo = {
 export type AnnotationMutexInformation = {
   readonly hasAnnotationMutex: boolean;
   readonly blockedByUser: APIUserCompact | null | undefined;
+  readonly blockedBySessionId: string | null | undefined;
 };
 
 // RebaseRelevantAnnotationState holds the data required to rebase the

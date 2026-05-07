@@ -735,16 +735,20 @@ export async function acquireAnnotationMutex(
   sessionId: string,
 ): Promise<{
   canEdit: boolean;
+  // If the mutex could not be rejected, the following two properties contain
+  // which user (and which session id) is responsible. The current user might
+  // be blocking the mutex in another session (then, the session id will be
+  // different from the current one).
   blockedByUser: APIUserCompact | undefined | null;
-  blockedBySesssionId: string | undefined | null;
+  blockedBySessionId: string | undefined | null;
 }> {
-  const { canEdit, blockedByUser, blockedBySesssionId } = await Request.receiveJSON(
+  const { canEdit, blockedByUser, blockedBySessionId } = await Request.receiveJSON(
     `/api/annotations/${annotationId}/acquireMutex?sessionId=${sessionId}`,
     {
       method: "POST",
     },
   );
-  return { canEdit, blockedByUser, blockedBySesssionId };
+  return { canEdit, blockedByUser, blockedBySessionId };
 }
 
 export async function releaseAnnotationMutex(annotationId: string): Promise<void> {

@@ -1,6 +1,7 @@
 import { acquireAnnotationMutex, releaseAnnotationMutex } from "admin/rest_api";
 import { Button } from "antd";
 import Toast from "libs/toast";
+import { getUid } from "libs/uid_generator";
 import messages from "messages";
 import {
   call,
@@ -37,6 +38,9 @@ import { ensureWkInitialized } from "../ready_sagas";
 
 // Also refer to application.conf where annotation.mutex.expiryTime is defined
 // (typically, 2 minutes).
+
+// Unique per browser tab, used to detect if this tab is the one blocking the mutex.
+const SESSION_ID = getUid();
 
 const MUTEX_NOT_ACQUIRED_KEY = "MutexCouldNotBeAcquired";
 const MUTEX_ACQUIRED_KEY = "AnnotationMutexAcquired";
@@ -294,14 +298,19 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
       yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
     }
     try {
-      const { canEdit, blockedByUser: blockedByUser } = yield* retry(
+      const {
+        canEdit,
+        blockedByUser: blockedByUser,
+        blockedBySessionId,
+      } = yield* retry(
         RETRY_COUNT,
         ACQUIRE_MUTEX_INTERVAL / RETRY_COUNT,
         acquireAnnotationMutex,
         annotationId,
+        SESSION_ID,
       );
       yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(canEdit));
-      yield* put(setUserHoldingMutexAction(blockedByUser));
+      yield* put(setUserHoldingMutexAction(blockedByUser, blockedBySessionId));
       yield* put(setIsMutexAcquiredAction(canEdit));
 
       if (canEdit !== (yield* call(getDoesHaveMutex))) {
@@ -342,11 +351,11 @@ function* acquireMutexInitiallyForAdHocStrategy(annotationId: string): Saga<void
   // reactToOthersMayEditChanges when othersMayEdit is set to false.
   while (true) {
     try {
-      const mutexResult = yield* call(acquireAnnotationMutex, annotationId);
+      const mutexResult = yield* call(acquireAnnotationMutex, annotationId, SESSION_ID);
       canEdit = mutexResult.canEdit;
       blockedByUser = mutexResult.blockedByUser;
 
-      yield* put(setUserHoldingMutexAction(blockedByUser));
+      yield* put(setUserHoldingMutexAction(blockedByUser, mutexResult.blockedBySessionId));
       yield* put(setIsMutexAcquiredAction(canEdit));
       if (canEdit) {
         return;
@@ -394,10 +403,10 @@ function* keepAnnotationMutexForAdHocStrategy(annotationId: string): Saga<void> 
   yield* call(delay, ACQUIRE_MUTEX_INTERVAL);
   while (true) {
     try {
-      const mutexInfo = yield* call(acquireAnnotationMutex, annotationId);
+      const mutexInfo = yield* call(acquireAnnotationMutex, annotationId, SESSION_ID);
       canEdit = mutexInfo.canEdit;
       blockedByUser = mutexInfo.blockedByUser;
-      yield* put(setUserHoldingMutexAction(blockedByUser));
+      yield* put(setUserHoldingMutexAction(blockedByUser, mutexInfo.blockedBySessionId));
       yield* put(setIsMutexAcquiredAction(canEdit));
       if (canEdit) {
         // Only wait for next refetching of the mutex in case the user can edit.
@@ -557,13 +566,25 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
         }
       } else {
         Toast.close(MUTEX_ACQUIRED_KEY);
+        const activeUser = yield* select((state) => state.activeUser);
         const blockedByUser = yield* select((state) => state.save.mutexState.blockedByUser);
-        const message =
-          blockedByUser != null
-            ? messages["annotation.acquiringMutexFailed"]({
-                userName: `${blockedByUser.firstName} ${blockedByUser.lastName}`,
-              })
-            : messages["annotation.acquiringMutexFailed.noUser"];
+        const blockedBySessionId = yield* select(
+          (state) => state.save.mutexState.blockedBySessionId,
+        );
+        let message: string;
+        if (
+          blockedByUser != null &&
+          blockedByUser.id === activeUser?.id &&
+          blockedBySessionId !== SESSION_ID
+        ) {
+          message = messages["annotation.acquiringMutexFailed.sameSession"];
+        } else if (blockedByUser != null) {
+          message = messages["annotation.acquiringMutexFailed"]({
+            userName: `${blockedByUser.firstName} ${blockedByUser.lastName}`,
+          });
+        } else {
+          message = messages["annotation.acquiringMutexFailed.noUser"];
+        }
         Toast.warning(message, { sticky: true, key: MUTEX_NOT_ACQUIRED_KEY });
       }
       wasMutexAlreadyAcquiredBefore = yield* select(

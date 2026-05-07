@@ -234,10 +234,14 @@ export const setIsMutexAcquiredAction = (isMutexAcquired: boolean) =>
     isMutexAcquired,
   }) as const;
 
-export const setUserHoldingMutexAction = (blockedByUser: APIUserCompact | null | undefined) =>
+export const setUserHoldingMutexAction = (
+  blockedByUser: APIUserCompact | null | undefined,
+  blockedBySessionId?: string | null,
+) =>
   ({
     type: "SET_USER_HOLDING_MUTEX",
     blockedByUser,
+    blockedBySessionId,
   }) as const;
 
 export const subscribeToAnnotationMutexAction = (subscriptionId: number, callerId: string) =>

@@ -62,6 +62,7 @@ import {
 } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
+import { SESSION_ID } from "viewer/model/sagas/saving/save_mutex_saga";
 import { Store } from "viewer/singletons";
 import { HelpModal } from "viewer/view/help/help_modal";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
@@ -708,9 +709,11 @@ async function getVersion() {
 
 function AnnotationLockedByUserTag({
   blockedByUser,
+  blockedBySessionId,
   activeUser,
 }: {
   blockedByUser: APIUserCompact | null | undefined;
+  blockedBySessionId: string | null | undefined;
   activeUser: APIUser;
 }) {
   let content;
@@ -722,11 +725,19 @@ function AnnotationLockedByUserTag({
         </Tag>
       </Tooltip>
     );
-  } else if (blockedByUser.id === activeUser.id) {
+  } else if (blockedByUser.id === activeUser.id && blockedBySessionId === SESSION_ID) {
     content = (
       <Tooltip title={messages["annotation.acquiringMutexSucceeded"]}>
         <Tag color="success" variant="outlined">
           Locked by you. Reload to edit.
+        </Tag>
+      </Tooltip>
+    );
+  } else if (blockedByUser.id === activeUser.id) {
+    content = (
+      <Tooltip title={messages["annotation.acquiringMutexFailed.sameSession"]}>
+        <Tag color="warning" variant="outlined">
+          Locked by you in another tab. Close one of the tabs.
         </Tag>
       </Tooltip>
     );
@@ -770,6 +781,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
   const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
   const othersMayEdit = useWkSelector((state) => isAnnotationEditableByNonOwners(state.annotation));
   const blockedByUser = useWkSelector((state) => state.save.mutexState.blockedByUser);
+  const blockedBySessionId = useWkSelector((state) => state.save.mutexState.blockedBySessionId);
 
   const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
   const isLockedByOwner = useWkSelector((state) => state.annotation.isLockedByOwner);
@@ -857,6 +869,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
         <AnnotationLockedByUserTag
           key="locked-by-user-tag"
           blockedByUser={blockedByUser}
+          blockedBySessionId={blockedBySessionId}
           activeUser={activeUser}
         />,
       );

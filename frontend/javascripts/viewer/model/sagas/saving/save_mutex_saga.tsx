@@ -36,7 +36,7 @@ import { ensureWkInitialized } from "../ready_sagas";
 // (typically, 2 minutes).
 
 // Unique per browser tab, used to detect if this tab is the one blocking the mutex.
-const SESSION_ID = getUid();
+export const SESSION_ID = getUid();
 
 const MUTEX_NOT_ACQUIRED_KEY = "MutexCouldNotBeAcquired";
 const MUTEX_ACQUIRED_KEY = "AnnotationMutexAcquired";

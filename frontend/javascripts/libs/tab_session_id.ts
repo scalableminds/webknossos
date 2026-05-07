@@ -7,6 +7,7 @@
  */
 
 import { getUid } from "libs/uid_generator";
+import window from "libs/window";
 
 const SESSION_ID_STORAGE_KEY = "wk_tab_session_id";
 

@@ -115,6 +115,7 @@ class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionC
                    ON CONFLICT (_annotation)
                      DO UPDATE SET
                        _user = ${annotationMutex.userId},
+                       sessionId = ${annotationMutex.sessionId},
                        expiry = ${annotationMutex.expiry}
                    """.asUpdate)
     } yield ()

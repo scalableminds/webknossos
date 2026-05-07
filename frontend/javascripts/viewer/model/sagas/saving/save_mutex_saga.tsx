@@ -293,6 +293,7 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
       );
       yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(canEdit));
       yield* put(setUserHoldingMutexAction(blockedByUser, blockedBySessionId));
+      // todop: clarify?
       yield* put(setIsMutexAcquiredAction(canEdit));
 
       if (canEdit !== (yield* call(getDoesHaveMutex))) {

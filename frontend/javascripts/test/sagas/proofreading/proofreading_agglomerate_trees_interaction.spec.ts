@@ -1,14 +1,13 @@
 // biome-ignore assist/source/organizeImports: VOLUME_TRACING_ID after apiHelpers.
 import type { MinCutTargetEdge } from "admin/rest_api";
 import { call, put } from "redux-saga/effects";
-import { SKELETON_TRACING_ID } from "test/fixtures/skeletontracing_server_objects";
 import {
-  getNestedUpdateActions,
-  setupWebknossosForTesting,
+  setupWebknossosForTestingWithRestrictions,
   type WebknossosTestContext,
+  getNestedUpdateActions,
 } from "test/helpers/apiHelpers";
+import { SKELETON_TRACING_ID } from "test/fixtures/skeletontracing_server_objects";
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import {
@@ -67,14 +66,11 @@ function assertUpdatesMatchInjectedUpdates(
 }
 
 describe("Proofreading (With Agglomerate Tree interactions)", () => {
-  const initialLiveCollab = WkDevFlags.liveCollab;
   beforeEach<WebknossosTestContext>(async (context) => {
-    WkDevFlags.liveCollab = true;
-    await setupWebknossosForTesting(context, "hybrid");
+    await setupWebknossosForTestingWithRestrictions(context, "Exclusive", true, false, "hybrid");
   });
 
   afterEach<WebknossosTestContext>(async (context) => {
-    WkDevFlags.liveCollab = initialLiveCollab;
     context.tearDownPullQueues();
     // Saving after each test and checking that the root saga didn't crash,
     expect(hasRootSagaCrashed()).toBe(false);

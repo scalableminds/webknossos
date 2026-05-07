@@ -196,6 +196,7 @@ export const VolumeTools = without(
   AnnotationTool.MOVE,
   AnnotationTool.VOXEL_PIPETTE,
 );
+export const VolumeToolsWithProofreading = VolumeTools.concat([AnnotationTool.PROOFREAD]);
 
 // MeasurementTools is not part of Toolkits as it should not
 // be shown in the UI. Also, it's important that the MOVE tool is not in

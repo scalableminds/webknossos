@@ -1,17 +1,16 @@
 // biome-ignore assist/source/organizeImports: apiHelpers need to be imported first for proper mocking of modules
 import {
-  getFlattenedUpdateActions,
-  setupWebknossosForTesting,
   type WebknossosTestContext,
+  getFlattenedUpdateActions,
+  setupWebknossosForTestingWithRestrictions,
 } from "test/helpers/apiHelpers";
-import { type ActionPattern, actionChannel, call, flush, put, take } from "redux-saga/effects";
+import { actionChannel, type ActionPattern, call, flush, put, take } from "redux-saga/effects";
+import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
 import { waitUntilNotBusy } from "test/helpers/saga_test_helpers";
 import { delay } from "typed-redux-saga";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
 import type { Action } from "viewer/model/actions/actions";
-import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import {
   minCutAgglomerateWithPositionAction,
   proofreadMergeAction,
@@ -64,7 +63,7 @@ function* prepareEditableMapping(
   initialExpectedMapping = initialExpectedMapping ?? initialMapping;
   yield call(initializeMappingAndTool, context, tracingId);
   yield* expectMapping(tracingId, initialExpectedMapping);
-  yield put(setOthersMayEditForAnnotationAction(true));
+  yield put(setCollaborationModeAction("Concurrent"));
 
   // Set up the merge-related segment partners. Normally, this would happen
   // due to the user's interactions.
@@ -84,14 +83,11 @@ function* prepareEditableMapping(
 }
 
 describe("Proofreading (Multi User)", () => {
-  const initialLiveCollab = WkDevFlags.liveCollab;
   beforeEach<WebknossosTestContext>(async (context) => {
-    WkDevFlags.liveCollab = true;
-    await setupWebknossosForTesting(context, "hybrid");
+    await setupWebknossosForTestingWithRestrictions(context, "OwnerOnly", true, false, "hybrid");
   });
 
   afterEach<WebknossosTestContext>(async (context) => {
-    WkDevFlags.liveCollab = initialLiveCollab;
     context.tearDownPullQueues();
     // Saving after each test and checking that the root saga didn't crash,
     expect(hasRootSagaCrashed()).toBe(false);
@@ -115,7 +111,7 @@ describe("Proofreading (Multi User)", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    backendMock.planMultipleVersionInjections(5, mergeSegment5And6);
+    backendMock.planMultipleVersionInjections(7, mergeSegment5And6);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -199,7 +195,7 @@ describe("Proofreading (Multi User)", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    backendMock.planMultipleVersionInjections(5, [
+    backendMock.planMultipleVersionInjections(7, [
       ...mergeSegment1And4.slice(0, 1), // creates segment 1
       [
         {
@@ -328,7 +324,7 @@ describe("Proofreading (Multi User)", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    backendMock.planMultipleVersionInjections(5, splitSegment2And3);
+    backendMock.planMultipleVersionInjections(7, splitSegment2And3);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -591,7 +587,7 @@ describe("Proofreading (Multi User)", () => {
      */
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    backendMock.planMultipleVersionInjections(5, splitSegment1And2);
+    backendMock.planMultipleVersionInjections(7, splitSegment1And2);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -679,7 +675,8 @@ describe("Proofreading (Multi User)", () => {
      *  [ 1337, 1337 ]
      *  [ 1338, 1337 ]]
      */
-    backendMock.planMultipleVersionInjections(5, mergeSegment1337And5);
+
+    backendMock.planMultipleVersionInjections(7, mergeSegment1337And5);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -781,7 +778,7 @@ describe("Proofreading (Multi User)", () => {
 
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
 
-    backendMock.planMultipleVersionInjections(5, [
+    backendMock.planMultipleVersionInjections(7, [
       ...splitSegment7And1337AndMerge1337And5,
       [
         {
@@ -1075,7 +1072,7 @@ describe("Proofreading (Multi User)", () => {
     const { api, mocks } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
 
-    backendMock.planMultipleVersionInjections(5, mergeSegment1337And5);
+    backendMock.planMultipleVersionInjections(7, mergeSegment1337And5);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -1189,7 +1186,7 @@ describe("Proofreading (Multi User)", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
 
-    backendMock.planMultipleVersionInjections(5, mergeSegment1337And5);
+    backendMock.planMultipleVersionInjections(7, mergeSegment1337And5);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -1282,7 +1279,7 @@ describe("Proofreading (Multi User)", () => {
     const { api } = context;
     const backendMock = mockInitialBucketAndAgglomerateData(context, [[1337, 7]], Store.getState());
 
-    backendMock.planMultipleVersionInjections(5, mergeSegment1337And5);
+    backendMock.planMultipleVersionInjections(7, mergeSegment1337And5);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];

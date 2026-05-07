@@ -14,6 +14,13 @@ abstract class TracingItemGroup() {
 }
 
 object GroupUtils {
+  def getMaximumTreeGroupId(treeGroups: Seq[TreeGroup]): Int =
+    if (treeGroups.isEmpty) 0
+    else Math.max(treeGroups.map(_.groupId).max, getMaximumTreeGroupId(treeGroups.flatMap(_.children)))
+
+  def getMaximumSegmentGroupId(segmentGroups: Seq[SegmentGroup]): Int =
+    if (segmentGroups.isEmpty) 0
+    else Math.max(segmentGroups.map(_.groupId).max, getMaximumSegmentGroupId(segmentGroups.flatMap(_.children)))
 
   type FunctionalGroupMapping = Function[Int, Int]
 

@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.image.{Color, JPEGWriter}
@@ -23,7 +24,6 @@ import com.scalableminds.webknossos.datastore.services.mesh.{AdHocMeshRequest, A
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.services.mapping.MappingService
-import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{AnyContent, _}
 
@@ -58,8 +58,7 @@ class BinaryDataController @Inject()(
         logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 10 minutes) {
           val t = Instant.now
           for {
-            (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Messages(
-              "dataSource.notFound") ~> NOT_FOUND
+            (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
             (data, indices) <- requestData(datasetId, dataSource.id, dataLayer, request.body)
             duration = Instant.since(t)
             _ = if (duration > (10 seconds))
@@ -131,8 +130,8 @@ class BinaryDataController @Inject()(
                         cubeSize: Int): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
-        (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Messages(
-          "dataSource.notFound") ~> NOT_FOUND
+        (dataSource, dataLayer) <- datasetCache
+          .getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
         dataRequest = DataRequest(
           VoxelPosition(x * cubeSize * mag, y * cubeSize * mag, z * cubeSize * mag, Vec3Int(mag, mag, mag)),
           cubeSize,
@@ -159,8 +158,8 @@ class BinaryDataController @Inject()(
                     invertColor: Option[Boolean]): Action[RawBuffer] = Action.async(parse.raw) { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
-        (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Messages(
-          "dataSource.notFound") ~> NOT_FOUND
+        (dataSource, dataLayer) <- datasetCache
+          .getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
         magParsed <- Vec3Int.fromMagLiteral(mag).toFox ?~> "malformedMag"
         dataRequest = DataRequest(
           VoxelPosition(x, y, z, magParsed),
@@ -202,9 +201,10 @@ class BinaryDataController @Inject()(
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
-        (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Messages(
-          "dataSource.notFound") ~> NOT_FOUND
-        segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Messages("dataLayer.notFound")
+        (dataSource, dataLayer) <- datasetCache
+          .getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
+        segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Msg.Dataset.Layer
+          .notFound(dataLayerName)
         mappingRequest = DataServiceMappingRequest(Some(dataSource.id), segmentationLayer, mappingName)
         result <- mappingService.handleMappingRequest(mappingRequest)
       } yield Ok(result)
@@ -218,8 +218,7 @@ class BinaryDataController @Inject()(
     Action.async(validateJson[WebknossosAdHocMeshRequest]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
-          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Messages(
-            "dataSource.notFound") ~> NOT_FOUND
+          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
           segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> "dataLayer.mustBeSegmentation"
           adHocMeshRequest = AdHocMeshRequest(
             Some(datasetId),
@@ -258,8 +257,7 @@ class BinaryDataController @Inject()(
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
-          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Messages(
-            "dataSource.notFound") ~> NOT_FOUND
+          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
           positionAndMagOpt <- findDataService.findPositionWithData(datasetId, dataSource.id, dataLayer)
         } yield Ok(Json.obj("position" -> positionAndMagOpt.map(_._1), "mag" -> positionAndMagOpt.map(_._2)))
       }
@@ -269,11 +267,10 @@ class BinaryDataController @Inject()(
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
-          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Messages(
-            "dataSource.notFound") ~> NOT_FOUND ?~> Messages("histogram.layerMissing", dataLayerName)
-          histograms <- findDataService.createHistogram(datasetId, dataSource.id, dataLayer) ?~> Messages(
-            "histogram.failed",
-            dataLayerName)
+          (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.Histogram
+            .layerMissing(dataLayerName) ~> NOT_FOUND
+          histograms <- findDataService.createHistogram(datasetId, dataSource.id, dataLayer) ?~> Msg.Dataset.Histogram
+            .failed(dataLayerName)
         } yield Ok(Json.toJson(histograms))
       }
     }

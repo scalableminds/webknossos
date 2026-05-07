@@ -115,10 +115,18 @@ object Msg {
     def notFound(id: String): String = s"Organization “$id” could not be found or accessed."
     def notFoundWrongHost(orgaId: String, gotHost: String, thisHost: String): String =
       s"Organization “$orgaId” could not be found or accessed. Please check whether you are on the correct WEBKNOSSOS instance. The uploaded file indicates “$gotHost” while this instance is “$thisHost”."
+    object TermsOfService {
+      def versionMismatch(requiredVersion: Int, version: Int): String =
+        s"Terms of service version mismatch. Current version is $requiredVersion, received acceptance for $version."
+      val notEnabled: String = "Cannot accept terms of service, as it is not configured for this WEBKNOSSOS instance."
+    }
   }
   object DataStore {
-    val notFound: String = "Data store could not be found or accessed."
-    val notFoundForDataset: String = "Data store for dataset could not be found or accessed."
+    val notFound: String = "DataStore could not be found or accessed."
+    val notFoundForDataset: String = "DataStore for dataset could not be found or accessed."
+  }
+  object TracingStore {
+    val notFound: String = "TracingStore could not be found or accessed."
   }
   object ObjectId {
     def invalid(literal: String): String = s"The supplied resource id “$literal” is not a valid ObjectId."
@@ -146,6 +154,15 @@ object Msg {
     }
     object Layer {
       def notFound(layerName: String): String = s"Could not find layer “$layerName” in dataset."
+      def invalidMag(mag: String): String = s"Supplied “$mag” is not a valid mag format. Please use “x-y-z”."
+      def wrongMag(layer: String, mag: String): String = s"Data layer “$layer” does not have mag “$mag”."
+    }
+    object Metadata {
+      val duplicateKeys: String = "Metadata keys must be unique."
+    }
+    object Histogram {
+      def failed(layerName: String): String = s"Could not generate histogram data for layer “$layerName”."
+      def layerMissing(layerName: String): String = s"Could not generate histogram data: missing layer “$layerName”."
     }
   }
   object Task {
@@ -154,6 +171,7 @@ object Msg {
     val findAnnotationsFailed: String = "Failed to retrieve annotations for this task."
     val cancelled: String = "Task is finished."
     val unavailable: String = "There is currently no task available."
+    val tooManyOpenOnes: String = "You already have too many open tasks."
     object Create {
       def batchLimitExceeded(limit: Int): String = s"Cannot create more than $limit tasks in one request."
       val needsEitherSkeletonOrVolume: String = "Each task needs to either be skeleton or volume."
@@ -179,6 +197,21 @@ object Msg {
   }
   object Team {
     def notFound(id: ObjectId): String = s"Team “$id” could not be found or accessed."
+    def inUseByProjects(count: Int): String = s"Team is referenced by $count projects."
+    def inUseByTaskTypes(count: Int): String = s"Team is referenced by $count task types."
+    def inUseByAnnotations(count: Int): String = s"Team is referenced by $count annotations."
+  }
+  object Mesh {
+    object File {
+      def readVersionFailed(name: String): String = s"Failed to read format version from file “$name”."
+      def readMappingNameFailed(name: String): String = s"Failed to read mapping name from mesh file “$name”."
+      def lookUpFailed(name: String): String = s"Failed to look up mesh file “$name”."
+      def listChunksFailed(segmentIds: String, name: String) =
+        s"Failed to load chunk list for segment $segmentIds from mesh file “$name”."
+      def zeroChunks(segmentIds: String, name: String) =
+        s"Zero mesh chunks for segment $segmentIds in mesh file “$name”."
+    }
   }
   val notAllowed: String = "You are not authorized to view or edit this resource."
+  val notFound: String = "Couldn’t find or access the requested resource."
 }

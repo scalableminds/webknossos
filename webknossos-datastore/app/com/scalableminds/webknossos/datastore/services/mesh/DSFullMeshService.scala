@@ -16,7 +16,6 @@ import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.services.mapping.MappingService
 import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndexFileService
-import play.api.i18n.MessagesProvider
 import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext
@@ -67,12 +66,11 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
 
   // Computes surface area for a segment by summing per-chunk areas, never building the
   // combined STL buffer (which overflows Int for large segments).
-  def computeSurfaceArea(datasetId: ObjectId,
-                         dataSource: UsableDataSource,
-                         dataLayer: DataLayer,
-                         fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext,
-                                                           m: MessagesProvider,
-                                                           tc: TokenContext): Fox[Float] =
+  def computeSurfaceArea(
+      datasetId: ObjectId,
+      dataSource: UsableDataSource,
+      dataLayer: DataLayer,
+      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Float] =
     if (fullMeshRequest.meshFileName.isDefined)
       for {
         stlChunks <- loadMeshChunksFromMeshFile(dataSource, dataLayer, fullMeshRequest)
@@ -108,9 +106,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
   def loadFor(datasetId: ObjectId,
               dataSource: UsableDataSource,
               dataLayer: DataLayer,
-              fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext,
-                                                m: MessagesProvider,
-                                                tc: TokenContext): Fox[Array[Byte]] =
+              fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     if (fullMeshRequest.meshFileName.isDefined)
       loadFullMeshFromMeshFile(dataSource, dataLayer, fullMeshRequest)
     else
@@ -258,11 +254,10 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
 
   // Returns individual raw STL chunks (50 bytes/face, no header) for a mesh-file request.
   // Used both for serving the full mesh and for per-chunk surface-area computation.
-  private def loadMeshChunksFromMeshFile(dataSource: UsableDataSource,
-                                         dataLayer: DataLayer,
-                                         fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext,
-                                                                           m: MessagesProvider,
-                                                                           tc: TokenContext): Fox[Seq[Array[Byte]]] =
+  private def loadMeshChunksFromMeshFile(
+      dataSource: UsableDataSource,
+      dataLayer: DataLayer,
+      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Seq[Array[Byte]]] =
     for {
       meshFileName <- fullMeshRequest.meshFileName.toFox ?~> "mesh.meshFileName.required"
       meshFileKey <- meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, meshFileName)
@@ -293,11 +288,10 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       }
     } yield stlEncodedChunks
 
-  private def loadFullMeshFromMeshFile(dataSource: UsableDataSource,
-                                       dataLayer: DataLayer,
-                                       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext,
-                                                                         m: MessagesProvider,
-                                                                         tc: TokenContext): Fox[Array[Byte]] =
+  private def loadFullMeshFromMeshFile(
+      dataSource: UsableDataSource,
+      dataLayer: DataLayer,
+      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       before <- Instant.nowFox
       stlEncodedChunks <- loadMeshChunksFromMeshFile(dataSource, dataLayer, fullMeshRequest)

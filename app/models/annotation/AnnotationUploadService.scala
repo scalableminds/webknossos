@@ -67,7 +67,7 @@ class AnnotationUploadService @Inject()(tempFileService: WkTempFileService, nmlP
     parserOutput.futureBox.map {
       case Full(NmlParseSuccessWithoutFile(skeletonTracing, uploadedVolumeLayers, datasetId, description, wkUrl)) =>
         NmlParseSuccess(name, skeletonTracing, uploadedVolumeLayers, datasetId, description, wkUrl)
-      case f: Failure => NmlParseFailure(name, formatFailureChain(f, messagesProviderOpt = Some(m)))
+      case f: Failure => NmlParseFailure(name, formatFailureChain(f))
       case Empty      => NmlParseEmpty(name)
     }
   }

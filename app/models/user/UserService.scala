@@ -1,5 +1,6 @@
 package models.user
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
@@ -16,7 +17,6 @@ import models.team._
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Full}
 import org.apache.pekko.actor.ActorSystem
-import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import play.silhouette.api.LoginInfo
 import play.silhouette.api.services.IdentityService
@@ -257,13 +257,12 @@ class UserService @Inject()(conf: WkConf,
       result
     }
 
-  def updateDatasetViewConfiguration(
-      user: User,
-      datasetId: ObjectId,
-      datasetConfiguration: DatasetViewConfiguration,
-      layerConfiguration: Option[JsValue])(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
+  def updateDatasetViewConfiguration(user: User,
+                                     datasetId: ObjectId,
+                                     datasetConfiguration: DatasetViewConfiguration,
+                                     layerConfiguration: Option[JsValue])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId)
+      dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId)
       layerMap = layerConfiguration.flatMap(_.asOpt[Map[String, JsValue]]).getOrElse(Map.empty)
       _ <- Fox.serialCombined(layerMap.toList) {
         case (name, config) =>

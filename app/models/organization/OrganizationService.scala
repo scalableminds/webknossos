@@ -1,5 +1,6 @@
 package models.organization
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
@@ -13,7 +14,6 @@ import models.dataset.{DataStore, DataStoreDAO}
 import models.folder.{Folder, FolderDAO, FolderService}
 import models.team.{Team, TeamDAO}
 import models.user.{Invite, MultiUserDAO, User, UserDAO, UserService}
-import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsArray, JsObject, Json}
 import utils.WkConf
 
@@ -180,14 +180,12 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
   def newUserMailRecipient(organization: Organization): Fox[String] =
     fallbackOnOwnerEmail(organization.newUserMailingList, organization)
 
-  def acceptTermsOfService(organizationId: String, version: Int)(implicit ctx: DBAccessContext,
-                                                                 m: MessagesProvider): Fox[Unit] =
+  def acceptTermsOfService(organizationId: String, version: Int)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- Fox.fromBool(conf.WebKnossos.TermsOfService.enabled) ?~> "termsOfService.notEnabled"
+      _ <- Fox.fromBool(conf.WebKnossos.TermsOfService.enabled) ?~> Msg.Organization.TermsOfService.notEnabled
       requiredVersion = conf.WebKnossos.TermsOfService.version
-      _ <- Fox.fromBool(version == requiredVersion) ?~> Messages("termsOfService.versionMismatch",
-                                                                 requiredVersion,
-                                                                 version)
+      _ <- Fox.fromBool(version == requiredVersion) ?~> Msg.Organization.TermsOfService
+        .versionMismatch(requiredVersion, version)
       _ <- organizationDAO.acceptTermsOfService(organizationId, version, Instant.now)
     } yield ()
 

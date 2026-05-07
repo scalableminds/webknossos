@@ -786,7 +786,7 @@ class AnnotationService @Inject()(
         "user" -> userJson,
         "owner" -> userJson,
         "contributors" -> contributorsJs,
-        "othersMayEdit" -> annotation.othersMayEdit
+        "collaborationMode" -> annotation.collaborationMode
       )
     }
   }
@@ -880,7 +880,7 @@ class AnnotationService @Inject()(
         "firstName" -> annotationInfo.ownerFirstName,
         "lastName" -> annotationInfo.ownerLastName
       ),
-      "othersMayEdit" -> annotationInfo.othersMayEdit,
+      "collaborationMode" -> annotationInfo.collaborationMode,
     )
   }
 

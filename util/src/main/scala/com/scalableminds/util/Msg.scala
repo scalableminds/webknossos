@@ -33,12 +33,29 @@ object Msg {
     val updatingSharedFailed: String = "Could not update the organizations that may access the AI model."
     val notOwned: String = "Only the owner of the AI model can perform this change."
   }
-  object Annotation {}
+  object Annotation {
+    def notFound: String = "Annotation could not be found."
+  }
   object Organization {
     def notFound(id: String) = s"Organization $id could not be found."
   }
   object DataStore {
     def notFound = "DataStore not found."
   }
-
+  object ObjectId {
+    def invalid(literal: String) = s"The passed resource id “$literal” is not a valid ObjectId."
+  }
+  object Job {
+    object TrainModel {
+      def wrongOrga: String = "Training AI models is only allowed for datasets of your own organization."
+      def submitFailed: String = "Submitting the AI Model Training job failed."
+    }
+    object Inference {
+      def wrongOrga: String = "Running AI models is only allowed for datasets of your own organization."
+      def submitFailed: String = "Submitting the AI Inference job failed."
+    }
+  }
+  object Dataset {
+    def noBoundingBox: String = "This dataset has no bounding box. Please make sure this dataset is imported correctly."
+  }
 }

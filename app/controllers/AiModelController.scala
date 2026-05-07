@@ -21,7 +21,6 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import models.aimodels.AiModelCategory.AiModelCategory
 import models.organization.{OrganizationDAO, OrganizationService}
-import play.api.i18n.Messages
 
 case class TrainingAnnotationSpecification(annotationId: ObjectId,
                                            colorLayerName: String,
@@ -162,26 +161,25 @@ class AiModelController @Inject()(
   def runNeuronTraining: Action[RunNeuronModelTrainingParameters] =
     sil.SecuredAction.async(validateJson[RunNeuronModelTrainingParameters]) { implicit request =>
       for {
-        organization <- organizationDAO.findOne(request.identity._organization)(GlobalAccessContext) ?~> Messages(
-          "organization.notFound",
-          request.identity._organization)
+        organization <- organizationDAO.findOne(request.identity._organization)(GlobalAccessContext) ?~> Msg.Organization
+          .notFound(request.identity._organization)
         _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(organization, request.identity)
         trainingAnnotations = request.body.trainingAnnotations
         _ <- Fox.fromBool(trainingAnnotations.nonEmpty || request.body.workflowYaml.isDefined) ?~> Msg.AiModel.Training.zeroAnnotations
         firstAnnotationId <- trainingAnnotations.headOption.map(_.annotationId).toFox
         annotation <- annotationDAO.findOne(firstAnnotationId)
         dataset <- datasetDAO.findOne(annotation._dataset)
-        _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> "job.trainModel.notAllowed.organization" ~> FORBIDDEN
+        _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> Msg.Job.TrainModel.wrongOrga ~> FORBIDDEN
         datasetBoundingBox <- datasetService
           .usableDataSourceFor(dataset)
-          .map(_.boundingBox) ?~> "dataset.boundingBox.unset"
-        dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
-        _ <- Fox.serialCombined(request.body.trainingAnnotations.map(_.annotationId))(annotationDAO.findOne) ?~> "annotation.notFound"
+          .map(_.boundingBox) ?~> Msg.Dataset.noBoundingBox
+        dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> Msg.DataStore.notFound
+        _ <- Fox.serialCombined(request.body.trainingAnnotations.map(_.annotationId))(annotationDAO.findOne) ?~> Msg.Annotation.notFound
         modelId = ObjectId.generate
         organization <- organizationDAO.findOne(request.identity._organization)
         existingAiModelsCount <- aiModelDAO.countByNameAndOrganization(request.body.name,
                                                                        request.identity._organization)
-        _ <- Fox.fromBool(existingAiModelsCount == 0) ?~> Msg.AiModel.nameInUse
+        _ <- Fox.fromBool(existingAiModelsCount == 0) ?~> Msg.AiModel.nameInUse(request.body.name)
         jobCommand = JobCommand.train_neuron_model
         commandArgs = Json.obj(
           "training_annotations" -> Json.toJson(trainingAnnotations),
@@ -227,12 +225,12 @@ class AiModelController @Inject()(
         firstAnnotationId <- trainingAnnotations.headOption.map(_.annotationId).toFox
         annotation <- annotationDAO.findOne(firstAnnotationId)
         dataset <- datasetDAO.findOne(annotation._dataset)
-        _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> "job.trainModel.notAllowed.organization" ~> FORBIDDEN
+        _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> Msg.Job.TrainModel.wrongOrga ~> FORBIDDEN
         datasetBoundingBox <- datasetService
           .usableDataSourceFor(dataset)
-          .map(_.boundingBox) ?~> "dataset.boundingBox.unset"
-        dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
-        _ <- Fox.serialCombined(request.body.trainingAnnotations.map(_.annotationId))(annotationDAO.findOne) ?~> "annotation.notFound"
+          .map(_.boundingBox) ?~> Msg.Dataset.noBoundingBox
+        dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> Msg.DataStore.notFound
+        _ <- Fox.serialCombined(request.body.trainingAnnotations.map(_.annotationId))(annotationDAO.findOne) ?~> Msg.Annotation.notFound
         modelId = ObjectId.generate
         organization <- organizationDAO.findOne(request.identity._organization)
         existingAiModelsCount <- aiModelDAO.countByNameAndOrganization(request.body.name,
@@ -253,7 +251,7 @@ class AiModelController @Inject()(
                                                    datasetBoundingBox,
                                                    creditTransactionComment,
                                                    request.identity,
-                                                   dataStore.name) ?~> "job.couldNotRunTrainModel"
+                                                   dataStore.name) ?~> Msg.Job.TrainModel.submitFailed
         newAiModel = AiModel(
           _id = modelId,
           _organization = request.identity._organization,
@@ -278,7 +276,7 @@ class AiModelController @Inject()(
     sil.SecuredAction.async(validateJson[RunInferenceParameters]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(request.body.datasetId)
-        _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
+        _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> Msg.Job.Inference.wrongOrga ~> FORBIDDEN
         aiModelOpt <- Fox.runOptional(request.body.aiModelId)(aiModelDAO.findOne) ?~> Msg.AiModel.notFound
         _ <- Fox.runOptional(aiModelOpt) { aiModel =>
           Fox.fromBool(aiModel._dataStore == dataset._dataStore) ?~> Msg.AiModel.dataStoreMismatch
@@ -314,7 +312,7 @@ class AiModelController @Inject()(
                                                     targetMagBoundingBox,
                                                     creditTransactionComment,
                                                     request.identity,
-                                                    dataStore.name) ?~> "job.couldNotRunInferWithModel"
+                                                    dataStore.name) ?~> Msg.Job.Inference.submitFailed
         newAiInference = AiInference(
           _id = ObjectId.generate,
           _organization = request.identity._organization,
@@ -335,7 +333,7 @@ class AiModelController @Inject()(
     sil.SecuredAction.async(validateJson[RunInferenceParameters]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(request.body.datasetId)
-        _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
+        _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> Msg.Job.Inference.wrongOrga ~> FORBIDDEN
         aiModelOpt <- Fox.runOptional(request.body.aiModelId)(aiModelDAO.findOne) ?~> Msg.AiModel.notFound
         _ <- Fox.runOptional(aiModelOpt) { aiModel =>
           Fox.fromBool(aiModel._dataStore == dataset._dataStore) ?~> Msg.AiModel.dataStoreMismatch
@@ -377,7 +375,7 @@ class AiModelController @Inject()(
                                                     targetMagBoundingBox,
                                                     creditTransactionComment,
                                                     request.identity,
-                                                    dataStore.name) ?~> "job.couldNotRunInferWithModel"
+                                                    dataStore.name) ?~> Msg.Job.Inference.submitFailed
         newAiInference = AiInference(
           _id = ObjectId.generate,
           _organization = request.identity._organization,

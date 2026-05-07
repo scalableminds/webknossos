@@ -110,6 +110,7 @@
     "disable-jobs": "sed -i -e 's/jobsEnabled = true/jobsEnabled = false/g' ./conf/application.conf; sed -i -e 's/voxelyticsEnabled = true/voxelyticsEnabled = false/g' ./conf/application.conf; ./tools/postgres/dbtool.js disable-jobs",
     "insert-local-datastore": "./tools/postgres/dbtool.js insert-local-datastore",
     "apply-evolutions": "tools/postgres/dbtool.js apply-evolutions",
+    "apply-evolutions-and-clean-compilation": "./tools/postgres/dbtool.js apply-evolutions && rm -f target/scala-2.13/src_managed/schema/com/scalableminds/webknossos/schema/Tables.scala",
     "postinstall": "cd tools/postgres && yarn install",
     "typecheck": "yarn tsc && echo '✅ Frontend typing is correct'",
     "ts": "yarn tsc && echo '✅ Frontend typing is correct'",

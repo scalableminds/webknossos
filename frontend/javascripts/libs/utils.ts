@@ -744,7 +744,7 @@ export function isNoEditableElementFocused(): boolean {
   if (activeElement == null || activeElement === document.body) {
     return true;
   }
-  const tag = (activeElement as HTMLElement).tagName?.toUpperCase();
+  const tag = activeElement.tagName?.toUpperCase();
   return (
     tag !== "INPUT" &&
     tag !== "TEXTAREA" &&

@@ -4,12 +4,11 @@ import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Empty, Failure, Fox, FoxImplicits, Full}
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.schema.Tables.AnnotationMutexesRow
 import com.typesafe.scalalogging.LazyLogging
 import models.user.{UserDAO, UserService}
-import com.scalableminds.util.tools.Full
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
 import utils.WkConf
@@ -55,8 +54,10 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
                 MutexResult(canEdit = false,
                             blockedByUser = Some(mutex.userId),
                             blockedBySessionId = Some(mutex.sessionId)))
-          case _ =>
+          case Empty =>
             acquire(annotationId, userId, sessionId)
+          case f: Failure =>
+            f.toFox
         }
       } yield result
     }

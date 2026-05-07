@@ -1,5 +1,6 @@
 import size from "lodash-es/size";
 import type {
+  APIAnnotationInfo,
   APIAnnotationUserState,
   APIUserBase,
   SkeletonUserState,
@@ -10,11 +11,10 @@ import type { StoreAnnotation, WebknossosState } from "viewer/store";
 import { sum } from "../helpers/iterator_utils";
 
 export function mayEditAnnotationProperties(state: WebknossosState) {
-  const { owner, restrictions, isUpdatingCurrentlyAllowed } = state.annotation;
+  const { owner, restrictions } = state.annotation;
   const activeUser = state.activeUser;
 
   return !!(
-    isUpdatingCurrentlyAllowed &&
     restrictions.allowUpdate &&
     restrictions.allowSave &&
     activeUser &&
@@ -99,6 +99,10 @@ export function isAnnotationFromDifferentOrganization(state: WebknossosState) {
   const activeUser = state.activeUser;
 
   return !!(activeUser && activeUser?.organization !== state.annotation.organization);
+}
+
+export function isAnnotationEditableByNonOwners(annotation: StoreAnnotation | APIAnnotationInfo) {
+  return annotation.collaborationMode !== "OwnerOnly";
 }
 
 export type SkeletonTracingStats = {

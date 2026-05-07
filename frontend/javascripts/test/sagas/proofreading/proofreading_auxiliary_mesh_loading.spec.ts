@@ -3,15 +3,17 @@ import type { MinCutTargetEdge } from "admin/rest_api";
 import sortBy from "lodash-es/sortBy";
 import { call, put, take } from "redux-saga/effects";
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_server_objects";
-import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
+import {
+  setupWebknossosForTestingWithRestrictions,
+  type WebknossosTestContext,
+} from "test/helpers/apiHelpers";
 import { cancel, delay, takeEvery } from "typed-redux-saga";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import {
   type FinishedLoadingMeshAction,
   type RemoveMeshAction,
-  setOthersMayEditForAnnotationAction,
+  setCollaborationModeAction,
 } from "viewer/model/actions/annotation_actions";
 import {
   minCutAgglomerateWithPositionAction,
@@ -57,14 +59,11 @@ import {
 } from "./proofreading_test_utils";
 
 describe("Proofreading (with auxiliary mesh loading enabled)", () => {
-  const initialLiveCollab = WkDevFlags.liveCollab;
   beforeEach<WebknossosTestContext>(async (context) => {
-    WkDevFlags.liveCollab = true;
-    await setupWebknossosForTesting(context, "hybrid");
+    await setupWebknossosForTestingWithRestrictions(context, "Exclusive", true, false, "hybrid");
   });
 
   afterEach<WebknossosTestContext>(async (context) => {
-    WkDevFlags.liveCollab = initialLiveCollab;
     context.tearDownPullQueues();
     // Saving after each test and checking that the root saga didn't crash,
     expect(hasRootSagaCrashed()).toBe(false);
@@ -102,7 +101,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         );
         yield call(initializeMappingAndTool, context, tracingId);
         if (othersMayEdit) {
-          yield put(setOthersMayEditForAnnotationAction(true));
+          yield put(setCollaborationModeAction(othersMayEdit ? "Concurrent" : "OwnerOnly"));
         }
 
         // Set up the merge-related segment partners. Normally, this would happen
@@ -123,7 +122,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         );
         yield call(initializeMappingAndTool, context, tracingId);
         if (othersMayEdit) {
-          yield put(setOthersMayEditForAnnotationAction(true));
+          yield put(setCollaborationModeAction(othersMayEdit ? "Concurrent" : "OwnerOnly"));
         }
 
         // Set up the merge-related segment partners. Normally, this would happen
@@ -189,7 +188,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         );
         yield call(initializeMappingAndTool, context, tracingId);
         if (othersMayEdit) {
-          yield put(setOthersMayEditForAnnotationAction(true));
+          yield put(setCollaborationModeAction(othersMayEdit ? "Concurrent" : "OwnerOnly"));
         }
         // Set up the merge-related segment partners. Normally, this would happen
         // due to the user's interactions.
@@ -264,8 +263,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
     const task = startSaga(function* task(): Saga<void> {
       const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
       yield call(initializeMappingAndTool, context, tracingId);
-      yield put(setOthersMayEditForAnnotationAction(true));
-
+      yield put(setCollaborationModeAction("Concurrent"));
       yield loadAgglomerateMeshes([1, 4, 6]);
       const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect([...loadedMeshIds]).toEqual([1, 4, 6]);
@@ -310,8 +308,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
     const task = startSaga(function* task(): Saga<void> {
       const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
       yield call(initializeMappingAndTool, context, tracingId);
-      yield put(setOthersMayEditForAnnotationAction(true));
-
+      yield put(setCollaborationModeAction("Concurrent"));
       yield loadAgglomerateMeshes([1, 4, 6]);
       const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
       expect([...loadedMeshIds]).toEqual([1, 4, 6]);
@@ -372,8 +369,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
     const task = startSaga(function* task() {
       yield call(initializeMappingAndTool, context, tracingId);
-      yield put(setOthersMayEditForAnnotationAction(true));
-
+      yield put(setCollaborationModeAction("Concurrent"));
       // Load all meshes for all affected agglomerate meshes and one more.
       yield loadAgglomerateMeshes([4, 6, 1]);
 
@@ -429,8 +425,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
     const task = startSaga(function* task() {
       yield call(initializeMappingAndTool, context, tracingId);
-      yield put(setOthersMayEditForAnnotationAction(true));
-
+      yield put(setCollaborationModeAction("Concurrent"));
       // Load all meshes for all affected agglomerate meshes and one more.
       yield loadAgglomerateMeshes([4, 6, 1]);
 
@@ -493,8 +488,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
     const task = startSaga(function* task() {
       yield call(initializeMappingAndTool, context, tracingId);
-      yield put(setOthersMayEditForAnnotationAction(true));
-
+      yield put(setCollaborationModeAction("Concurrent"));
       // Load all meshes for all affected agglomerate meshes and one more.
       yield loadAgglomerateMeshes([4, 6, 1]);
 
@@ -564,8 +558,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
 
     const task = startSaga(function* task() {
       yield call(initializeMappingAndTool, context, tracingId);
-      yield put(setOthersMayEditForAnnotationAction(true));
-
+      yield put(setCollaborationModeAction("Concurrent"));
       // Load all meshes for all affected agglomerate meshes and one more.
       yield loadAgglomerateMeshes([4, 6, 1]);
 
@@ -759,7 +752,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
     await task.toPromise();
   });
 
-  it("should reload agglomerate meshes correctly when merging two agglomerate skeletons and incorporating a new merge action from backend", async (context: WebknossosTestContext) => {
+  it("should reload agglomerate meshes correctly when merging two agglomerate trees and incorporating a new merge action from backend", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
     // Merging agglomerates 4 & 6 based on the segments 5 & 6.
     // As agglomerate trees 1 & 4 are loaded their updates are included as well
@@ -806,7 +799,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
     await task.toPromise();
   });
 
-  it("should reload auxiliary proofreading meshes when splitting agglomerate skeleton and incorporating a new split action from backend", async (context: WebknossosTestContext) => {
+  it("should reload auxiliary proofreading meshes when splitting agglomerate tree and incorporating a new split action from backend", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     backendMock.planMultipleVersionInjections(10, splitSegment1And2WithAgglomerateTree1);

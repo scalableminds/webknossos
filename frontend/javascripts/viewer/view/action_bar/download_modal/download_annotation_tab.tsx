@@ -1,15 +1,12 @@
 import { downloadAnnotation } from "admin/rest_api";
-import { Button, Col, Divider, Flex, Radio, Row, Tooltip, Typography } from "antd";
+import { Alert, Button, Col, Divider, Flex, Radio, Row, Tooltip, Typography } from "antd";
+import Space from "antd/lib/space";
 import { useWkSelector } from "libs/react_hooks";
 import messages from "messages";
 import { useState } from "react";
 import { hasVolumeTracings } from "viewer/model/accessors/volumetracing_accessor";
 import { Model } from "viewer/singletons";
-import { Hint, MoreInfoHint } from "./download_info_shared";
-
-const radioButtonStyle = {
-  marginBottom: 24,
-};
+import { Hint } from "./download_shared";
 
 export function DownloadAnnotationTab({ onClose }: { onClose: () => void }) {
   const annotation = useWkSelector((state) => state.annotation);
@@ -39,56 +36,56 @@ export function DownloadAnnotationTab({ onClose }: { onClose: () => void }) {
     onClose();
   };
 
-  const maybeShowWarning = () => {
-    const volumeFallbackWarning = hasVolumeFallback ? (
-      <Row key="no-fallback">
-        <Typography.Text
-          style={{
-            margin: "0 6px 12px",
-          }}
-          type="warning"
-        >
-          {messages["annotation.no_fallback_data_included"]}
-        </Typography.Text>
-      </Row>
-    ) : null;
-
-    return volumeFallbackWarning;
-  };
+  const options = [
+    ...(hasVolumes
+      ? [
+          {
+            value: "zarr3" as const,
+            label: (
+              <Space orientation="vertical" size={2}>
+                <Typography.Text>Include volume annotations as Zarr</Typography.Text>
+                <Hint>Download a zip folder containing Zarr files.</Hint>
+              </Space>
+            ),
+          },
+          {
+            value: "wkw" as const,
+            disabled: isVolumeNDimensional,
+            label: (
+              <Tooltip
+                title={
+                  isVolumeNDimensional ? "WKW is not supported for n-dimensional volumes." : null
+                }
+              >
+                <Space orientation="vertical" size={2}>
+                  Include volume annotations as WKW
+                  <Hint>Download a zip folder containing WKW files.</Hint>
+                </Space>
+              </Tooltip>
+            ),
+          },
+        ]
+      : []),
+    {
+      value: "nml" as const,
+      label: `${hasSkeleton ? "Skeleton annotations" : "Meta data"}${hasVolumes ? " only" : ""} as NML`,
+    },
+  ];
 
   return (
-    <>
+    <Flex vertical>
+      <Typography.Paragraph>
+        {!hasVolumes ? "This is a Skeleton-only annotation. " : ""}
+        {!hasSkeleton ? "This is a Volume-only annotation. " : ""}
+        {messages["annotation.download"]}
+      </Typography.Paragraph>
+      <Divider>Options</Divider>
       <Row>
-        {maybeShowWarning()}
-        <Typography.Text
-          style={{
-            margin: "0 6px 12px",
-          }}
-        >
-          {!hasVolumes ? "This is a Skeleton-only annotation. " : ""}
-          {!hasSkeleton ? "This is a Volume-only annotation. " : ""}
-          {messages["annotation.download"]}
-        </Typography.Text>
-      </Row>
-      <Divider
-        style={{
-          margin: "18px 0",
-        }}
-      >
-        Options
-      </Divider>
-      <Row>
-        <Col
-          span={9}
-          style={{
-            lineHeight: "20px",
-            padding: "5px 12px",
-          }}
-        >
-          Select the data you would like to download.
-          <Hint style={{ marginTop: 12 }}>
-            An NML file will always be included with any download.
-          </Hint>
+        <Col span={9}>
+          <Flex vertical>
+            Select the data you would like to download.
+            <Hint>An NML file will always be included with any download.</Hint>
+          </Flex>
         </Col>
         <Col span={15}>
           <Radio.Group
@@ -96,43 +93,31 @@ export function DownloadAnnotationTab({ onClose }: { onClose: () => void }) {
             value={fileFormatToDownload}
             onChange={(e) => setFileFormatToDownload(e.target.value)}
             style={{ marginLeft: 16 }}
-          >
-            {hasVolumes ? (
-              <>
-                <Radio value="zarr3" style={radioButtonStyle}>
-                  Include volume annotations as Zarr
-                  <Hint style={{}}>Download a zip folder containing Zarr files.</Hint>
-                </Radio>
-                <Tooltip
-                  title={
-                    isVolumeNDimensional ? "WKW is not supported for n-dimensional volumes." : null
-                  }
-                >
-                  <Radio value="wkw" disabled={isVolumeNDimensional} style={radioButtonStyle}>
-                    Include volume annotations as WKW
-                    <Hint style={{}}>Download a zip folder containing WKW files.</Hint>
-                  </Radio>
-                </Tooltip>
-              </>
-            ) : null}
-            <Radio value="nml" style={radioButtonStyle}>
-              {hasSkeleton ? "Skeleton annotations" : "Meta data"} {hasVolumes ? "only " : ""}
-              as NML
-            </Radio>
-          </Radio.Group>
+            vertical
+            options={options}
+          />
         </Col>
       </Row>
-      <Divider
-        style={{
-          margin: "18px 0",
-        }}
-      />
-      <MoreInfoHint />
-      <Flex justify="end">
+      {hasVolumeFallback && (
+        <Alert
+          type="warning"
+          title={messages["annotation.no_fallback_data_included"]}
+          style={{ marginTop: "var(--ant-margin-sm)" }}
+        />
+      )}
+      <Divider />
+      <Flex justify="end" gap="small">
+        <Button
+          href="https://docs.webknossos.org/webknossos/data/export_ui.html"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Learn More
+        </Button>
         <Button type="primary" onClick={handleDownload}>
           Download
         </Button>
       </Flex>
-    </>
+    </Flex>
   );
 }

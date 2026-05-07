@@ -43,8 +43,8 @@ import Constants, {
 } from "viewer/constants";
 import { rotate3DViewTo } from "viewer/controller/camera_controller";
 import {
-  loadAgglomerateSkeletonAtPosition,
-  loadAgglomerateSkeletonFromId,
+  loadAgglomerateTreeAtPosition,
+  loadAgglomerateTreeFromId,
 } from "viewer/controller/combinations/segmentation_handlers";
 import {
   createSkeletonNode,
@@ -83,7 +83,6 @@ import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/to
 import {
   enforceActiveVolumeTracing,
   getActiveCellId,
-  getActiveSegmentationTracing,
   getNameOfRequestedOrVisibleSegmentationLayer,
   getRequestedOrDefaultSegmentationTracingLayer,
   getRequestedOrVisibleSegmentationLayer,
@@ -92,11 +91,15 @@ import {
   getSegmentsForLayer,
   getVolumeDescriptors,
   getVolumeTracingById,
-  getVolumeTracingByLayerName,
+  getVolumeTracingByNameOrActive,
   getVolumeTracings,
   hasVolumeTracings,
 } from "viewer/model/accessors/volumetracing_accessor";
-import { restartSagaAction, wkInitializedAction } from "viewer/model/actions/actions";
+import {
+  dispatchGetNewIdAsync,
+  restartSagaAction,
+  wkInitializedAction,
+} from "viewer/model/actions/actions";
 import {
   dispatchMaybeFetchMeshFilesAsync,
   refreshMeshesAction,
@@ -142,6 +145,7 @@ import {
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import { centerTDViewAction } from "viewer/model/actions/view_mode_actions";
 import {
+  addSegmentGroupAction,
   type BatchableUpdateSegmentAction,
   batchUpdateGroupsAndSegmentsAction,
   clickSegmentAction,
@@ -167,7 +171,6 @@ import {
   zoomedPositionToZoomedAddress,
 } from "viewer/model/helpers/position_converter";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
-import { getMaximumGroupId } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { getHalfViewportExtentsInUnitFromState } from "viewer/model/sagas/saga_selectors";
 import { applyLabeledVoxelMapToAllMissingMags } from "viewer/model/sagas/volume/helpers";
 import type { MutableNode, Node, Tree, TreeGroupTypeFlat } from "viewer/model/types/tree_types";
@@ -188,7 +191,6 @@ import type {
 import Store from "viewer/store";
 import {
   callDeep,
-  createGroupHelper,
   createGroupToSegmentsMap,
   MISSING_GROUP_ID,
   mapGroups,
@@ -757,7 +759,11 @@ class TracingApi {
 
     let groupId = MISSING_GROUP_ID;
     try {
-      groupId = api.tracing.createSegmentGroup(`Segments for ${bbName}`, -1, segmentationLayerName);
+      groupId = await api.tracing.createSegmentGroup(
+        `Segments for ${bbName}`,
+        -1,
+        segmentationLayerName,
+      );
     } catch (_e) {
       console.info(
         `Volume tracing could not be found for the currently visible segmentation layer, registering segments for ${bbName} within root group.`,
@@ -848,32 +854,28 @@ class TracingApi {
    * Creates a new segment group and returns its id.
    *
    * @example
-   * api.tracing.createSegmentGroup(
+   * await api.tracing.createSegmentGroup(
    *   "Group name",    // optional
    *   parentGroupId,   // optional. use -1 for the root group
    *   volumeLayerName, // see getSegmentationLayerNames
    * );
    */
-  createSegmentGroup(
+  async createSegmentGroup(
     name: string | null = null,
     parentGroupId: number | null = MISSING_GROUP_ID,
     volumeLayerName?: string,
-  ): number {
-    const volumeTracing = volumeLayerName
-      ? getVolumeTracingByLayerName(Store.getState().annotation, volumeLayerName)
-      : getActiveSegmentationTracing(Store.getState());
+  ): Promise<number> {
+    const volumeTracing = getVolumeTracingByNameOrActive(volumeLayerName);
     if (volumeTracing == null) {
       throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
     }
-    const { segmentGroups } = volumeTracing;
-    const { newSegmentGroups, newGroupId } = createGroupHelper(
-      segmentGroups,
-      name,
-      getMaximumGroupId(segmentGroups) + 1,
-      parentGroupId,
+    const newGroupId = await dispatchGetNewIdAsync(
+      Store.dispatch,
+      volumeTracing.tracingId,
+      "SegmentGroup",
     );
 
-    Store.dispatch(setSegmentGroupsAction(newSegmentGroups, volumeTracing.tracingId));
+    Store.dispatch(addSegmentGroupAction(volumeTracing.tracingId, newGroupId, name, parentGroupId));
 
     return newGroupId;
   }
@@ -889,9 +891,7 @@ class TracingApi {
    * );
    */
   renameSegmentGroup(groupId: number, newName: string, volumeLayerName?: string) {
-    const volumeTracing = volumeLayerName
-      ? getVolumeTracingByLayerName(Store.getState().annotation, volumeLayerName)
-      : getActiveSegmentationTracing(Store.getState());
+    const volumeTracing = getVolumeTracingByNameOrActive(volumeLayerName);
     if (volumeTracing == null) {
       throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
     }
@@ -923,9 +923,7 @@ class TracingApi {
    * );
    */
   deleteSegmentGroup(groupId: number, deleteChildren: boolean = false, volumeLayerName?: string) {
-    const volumeTracing = volumeLayerName
-      ? getVolumeTracingByLayerName(Store.getState().annotation, volumeLayerName)
-      : getActiveSegmentationTracing(Store.getState());
+    const volumeTracing = getVolumeTracingByNameOrActive(volumeLayerName);
     if (volumeTracing == null) {
       throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
     }
@@ -1028,7 +1026,7 @@ class TracingApi {
   }
 
   /**
-   * Loads the agglomerate skeleton for the agglomerate at the given position. Only possible if
+   * Loads the agglomerate tree for the agglomerate at the given position. Only possible if
    * a segmentation layer is visible for which an agglomerate mapping is enabled.
    * Should be preferred over using api.tracing.loadAgglomerateSkeletonForSegmentId as this version
    * yields more reliable results in live collaborative context. A conflicting merge can result in the
@@ -1037,27 +1035,27 @@ class TracingApi {
    * agglomerate id lookup is done after applying such an interfering merge.
    *
    * @example
-   * api.tracing.loadAgglomerateSkeletonAtPosition([3, 3, 3]);
+   * api.tracing.loadAgglomerateTreeAtPosition([3, 3, 3]);
    */
-  loadAgglomerateSkeletonAtPosition(position: Vector3) {
-    loadAgglomerateSkeletonAtPosition(position);
+  loadAgglomerateTreeAtPosition(position: Vector3) {
+    loadAgglomerateTreeAtPosition(position);
   }
 
   /**
-   * Loads the agglomerate skeleton for the given segment id. Only possible if
+   * Loads the agglomerate tree for the given segment id. Only possible if
    * a segmentation layer is visible for which an agglomerate mapping is enabled.
-   * Please consider using api.tracing.loadAgglomerateSkeletonAtPosition as it yields
+   * Please consider using api.tracing.loadAgglomerateTreeAtPosition as it yields
    * more reliable results in a live collaborative context. A conflicting merge of another
    * user can make the passed agglomerate id invalid just before loading the agglomerate
-   * skeleton from the backend. By passing any position of the agglomerate instead its id via using
-   * api.tracing.loadAgglomerateSkeletonAtPosition WEBKNOSSOS can ensure to use the up-to-date agglomerate
-   * id to request the correct agglomerate skeleton.
+   * tree from the backend. By passing any position of the agglomerate instead its id via using
+   * api.tracing.loadAgglomerateTreeAtPosition WEBKNOSSOS can ensure to use the up-to-date agglomerate
+   * id to request the correct agglomerate tree.
    *
    * @example
    * api.tracing.loadAgglomerateSkeletonForSegmentId(3);
    */
   loadAgglomerateSkeletonForSegmentId(segmentId: number) {
-    loadAgglomerateSkeletonFromId(segmentId);
+    loadAgglomerateTreeFromId(segmentId);
   }
 
   /**

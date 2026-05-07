@@ -21,8 +21,8 @@ import {
   takeEvery,
 } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import { SagaIdentifier, type Vector3 } from "viewer/constants";
+import { isAnnotationEditableByNonOwners } from "viewer/model/accessors/annotation_accessor";
 import {
   getSegmentationLayerByName,
   getVisibleSegmentationLayer,
@@ -132,12 +132,11 @@ function* getPollInterval(): Saga<number> {
     return VERSION_POLL_INTERVAL_READ_ONLY;
   }
 
-  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+  const othersMayEdit = yield* select((state) => isAnnotationEditableByNonOwners(state.annotation));
   if (othersMayEdit) {
     // Other users may edit the annotation.
     return VERSION_POLL_INTERVAL_COLLAB;
   }
-
   // The current user is the only one who can edit the annotation.
   return VERSION_POLL_INTERVAL_SINGLE_EDITOR;
 }
@@ -148,13 +147,13 @@ function* shouldCheckForNewerAnnotationVersions(): Saga<boolean> {
     (state) =>
       state.annotation.restrictions.allowSave && state.annotation.isUpdatingCurrentlyAllowed,
   );
-  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+  const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
 
-  const userCanSaveAndNoCollab = allowSave && !othersMayEdit;
-  const userCanSaveAndNoLiveCollab = allowSave && !WkDevFlags.liveCollab;
-  if (userCanSaveAndNoCollab || userCanSaveAndNoLiveCollab) {
+  const userCanSaveAndNoLiveCollab = allowSave && collaborationMode !== "Concurrent";
+  if (userCanSaveAndNoLiveCollab) {
     // The active user is currently the only one that is allowed to mutate the annotation.
-    // Since we only acquire the mutex upon page load, there shouldn't be any unseen updates
+    // Since we only acquire the mutex upon page load (because adhoc mutex strategy is only used
+    // for concurrent collab mode), there shouldn't be any unseen updates
     // between the page load and this check here.
     // A race condition where
     //   1) another user saves version X
@@ -245,7 +244,7 @@ const SuccessEmptyIncorporateActionsReturnValue: ApplyingUpdateResults = {
 // agglomerate id information from the state where the latest backend updates were applied but the own
 // mapping changes are not yet applied. This is needed to have correct information about what agglomerate ids
 // were actually affected by a proofreading action done by the local user. The info correctness is essential
-// to properly reload and synchronize loaded agglomerate skeletons and meshes.
+// to properly reload and synchronize loaded agglomerate trees and meshes.
 function* updatePendingProofreadingOperationInfoAction() {
   const proofreadingPostProcessingInfo = yield* select(
     (state) => state.save.proofreadingPostProcessingInfo,
@@ -439,10 +438,10 @@ function* reapplyUpdateActionsFromSaveQueue(
 
 type RebasingSuccessInfo = { successful: boolean; shouldTerminate: boolean };
 function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
-  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+  const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
   const missingUpdateActions = yield* call(fetchNewestMissingUpdateActions);
-  // saveQueueEntries should not change during performRebasing saga. When liveCollab is enabled, this is enforced via busy blocking.
-  // When liveCollab is disabled, this code typically runs in read-only mode where the save queue is empty.
+  // saveQueueEntries should not change during performRebasing saga. When collaborationMode==Concurrent, this is enforced via busy blocking.
+  // When concurrent editing is disabled, this code typically runs in read-only mode where the save queue is empty.
   const saveQueueEntries = yield* select((state) => state.save.queue);
   const hasNewActionsFromBackend = missingUpdateActions.length > 0;
 
@@ -450,10 +449,7 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   // this code will notice that there are missingUpdateActions and apply them. This should not trigger a full "rewinding" rebase
   // and should be ensured because "not allowed to edit" means the save queue would be empty. Thus no needsRewindingRebase = true.
   const needsRewindingRebase =
-    WkDevFlags.liveCollab &&
-    othersMayEdit &&
-    hasNewActionsFromBackend &&
-    saveQueueEntries.length > 0;
+    collaborationMode === "Concurrent" && hasNewActionsFromBackend && saveQueueEntries.length > 0;
   const annotationBeforeRebase = yield* select((state) => state.annotation);
   if (needsRewindingRebase) {
     // As a side-effect of this call,
@@ -549,7 +545,8 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
     const isUpdatingCurrentlyAllowed = yield* select(
       (state) => state.annotation.isUpdatingCurrentlyAllowed,
     );
-    const guardAsBlocking = WkDevFlags.liveCollab && isUpdatingCurrentlyAllowed;
+    const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
+    const guardAsBlocking = collaborationMode === "Concurrent" && isUpdatingCurrentlyAllowed;
     const { successful, shouldTerminate } = guardAsBlocking
       ? yield* call(
           // Ensuring wk is in busy state while rebasing so no user update actions can interfere potential syncing with the backend.

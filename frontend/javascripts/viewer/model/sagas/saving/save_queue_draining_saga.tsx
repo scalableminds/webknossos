@@ -11,7 +11,6 @@ import window, { alert, document, location } from "libs/window";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import { call, delay, put, race, take } from "typed-redux-saga";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import { ControlModeEnum } from "viewer/constants";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
@@ -105,9 +104,9 @@ export function* pushSaveQueueAsync(): Saga<never> {
 export function* synchronizeAnnotationWithBackend(
   enforceEmptySaveQueue: boolean,
 ): Saga<{ hadConflict: boolean }> {
-  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
   let unsubscribeFromAnnotationMutexSaga = null;
-  if (othersMayEdit && WkDevFlags.liveCollab) {
+  const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
+  if (collaborationMode === "Concurrent") {
     // Wait until we may save (due to mutex acquisition).
     unsubscribeFromAnnotationMutexSaga = yield* call(
       subscribeToAnnotationMutex,

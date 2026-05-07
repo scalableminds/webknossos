@@ -19,7 +19,7 @@ import type { ValueOf } from "types/type_utils";
 import type { OrthoView, Point2 } from "viewer/constants";
 import constants from "viewer/constants";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
-import { addEventListenerWithDelegation, isNoElementFocused } from "./utils";
+import { addEventListenerWithDelegation, isNoEditableElementFocused } from "./utils";
 
 // Normalizes digit key events so that modifiers don't change the reported key name.
 // e.g. Shift+2 on a US keyboard fires event.key="@", but we always want key="2".
@@ -271,7 +271,7 @@ export class InputKeyboard {
     { onPressed, onReleased: onRelease }: KeyboardNoLoopHandler,
   ) {
     const onPressedGuarded = ({ keyEvents, finalKeyEvent }: KeystrokesHandlerArgs) => {
-      if (!this.isStarted || (!this.supportInputElements && !isNoElementFocused())) {
+      if (!this.isStarted || (!this.supportInputElements && !isNoEditableElementFocused())) {
         return;
       }
       const event = findEventInKeystrokeComboEvent(keyEvents, finalKeyEvent);
@@ -321,7 +321,7 @@ export class InputKeyboard {
       if (
         !this.isStarted ||
         this.keyCallbackMap[keyCombo] != null ||
-        (!this.supportInputElements && !isNoElementFocused()) ||
+        (!this.supportInputElements && !isNoEditableElementFocused()) ||
         shouldIgnore(event, keyCombo)
       ) {
         return;

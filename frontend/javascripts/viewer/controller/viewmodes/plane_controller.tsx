@@ -4,7 +4,7 @@ import {
   type MouseBindingMap,
   type MouseEventHandler,
 } from "libs/input";
-import { isNoElementFocused, waitForElementWithId } from "libs/utils";
+import { isNoEditableElementFocused, waitForElementWithId } from "libs/utils";
 import { document } from "libs/window";
 import union from "lodash-es/union";
 import { PureComponent } from "react";
@@ -385,8 +385,9 @@ class PlaneController extends PureComponent<Props> {
     // avoid scrolling while pressing space
     document.addEventListener("keydown", (event: KeyboardEvent) => {
       if (
+        // 32 → Spacebar, 18 → Alt key, 37–40 → Arrow keys
         (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
-        isNoElementFocused()
+        isNoEditableElementFocused()
       ) {
         event.preventDefault();
       }

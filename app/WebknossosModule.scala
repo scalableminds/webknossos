@@ -3,13 +3,18 @@ import controllers.{Application, InitialDataService}
 import files.WkTempFileService
 import mail.MailchimpTicker
 import models.analytics.{AnalyticsService, AnalyticsSessionService}
-import models.annotation.{AnnotationDataSourceTemporaryStore, AnnotationMutexService, AnnotationStore}
+import models.annotation.{
+  AnnotationDataSourceTemporaryStore,
+  AnnotationMutexService,
+  AnnotationReservedIdsService,
+  AnnotationStore
+}
 import models.dataset.{
   DatasetDAO,
   DatasetDAOLike,
   DatasetService,
-  VirtualDatasetsRealPathScanService,
-  ThumbnailCachingService
+  ThumbnailCachingService,
+  VirtualDatasetsRealPathScanService
 }
 import models.job.{JobService, WorkerLivenessService}
 import models.organization.FreeCreditTransactionService
@@ -49,7 +54,7 @@ class WebknossosModule extends AbstractModule {
     bind(classOf[CertificateValidationService]).asEagerSingleton()
     bind(classOf[FreeCreditTransactionService]).asEagerSingleton()
     bind(classOf[AnalyticsService]).asEagerSingleton()
-
+    bind(classOf[AnnotationReservedIdsService]).asEagerSingleton()
     bind(classOf[DatasetDAOLike]).to(classOf[DatasetDAO])
   }
 }

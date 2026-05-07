@@ -5,6 +5,7 @@ import { enableBatching } from "redux-batched-actions";
 import createSagaMiddleware, { type Saga } from "redux-saga";
 import type {
   AdditionalAxis,
+  AnnotationCollaborationMode,
   AnnotationLayerDescriptor,
   APIAnnotationType,
   APIAnnotationVisibility,
@@ -134,7 +135,7 @@ export type Annotation = {
   readonly annotationType: APIAnnotationType;
   readonly owner: APIUserBase | null | undefined;
   readonly contributors: APIUserBase[];
-  readonly othersMayEdit: boolean;
+  readonly collaborationMode: AnnotationCollaborationMode;
   readonly isLockedByOwner: boolean;
   readonly isUpdatingCurrentlyAllowed: boolean;
 };
@@ -240,6 +241,7 @@ export type VolumeTracing = TracingBase & {
   //    per session (which is also quite far fetched), we are in the
   //    realm of 1.5 MB of RAM.
   readonly segmentJournal: Array<SegmentJournalEntry>;
+  readonly idReservations: Record<"SegmentGroup" | "Segment", { id: number; used: boolean }[]>;
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";
@@ -460,7 +462,7 @@ export type AnnotationMutexInformation = {
 // it must be updated to match that version.
 // Moreover, after successfully saving, it should also be updated.
 //
-// Mini example of a shared annotation with liveCollab enabled:
+// Mini example of a shared annotation with collaborationMode==Concurrent:
 // - user A adds a new node to tree 1 and saves.
 //   Meanwhile user B already added a node to another tree and already stored this on the server.
 // - user A rebases by resetting the store state to the info stored in RebaseRelevantAnnotationState.

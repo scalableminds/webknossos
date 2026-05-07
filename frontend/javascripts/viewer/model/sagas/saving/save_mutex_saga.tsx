@@ -14,11 +14,9 @@ import {
   take,
   takeEvery,
 } from "typed-redux-saga";
-import { WkDevFlags } from "viewer/api/wk_dev";
-import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
-import { getActiveSegmentationTracing } from "viewer/model/accessors/volumetracing_accessor";
+import { isAnnotationEditableByNonOwners } from "viewer/model/accessors/annotation_accessor";
 import {
-  type SetOthersMayEditForAnnotationAction,
+  type SetCollaborationModeAction,
   setIsUpdatingAnnotationCurrentlyAllowedAction,
 } from "viewer/model/actions/annotation_actions";
 import {
@@ -30,8 +28,6 @@ import {
   type UnsubscribeFromAnnotationMutexAction,
   unsubscribeFromAnnotationMutexAction,
 } from "viewer/model/actions/save_actions";
-import type { UpdateLayerSettingAction } from "viewer/model/actions/settings_actions";
-import type { CycleToolAction, SetToolAction } from "viewer/model/actions/ui_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { ensureWkInitialized } from "../ready_sagas";
@@ -62,7 +58,10 @@ export enum MutexFetchingStrategy {
 type MutexLogicState = {
   isInitialRequest: boolean;
   fetchingStrategy: MutexFetchingStrategy;
+  // runningContinuousMutexAcquiringSaga is only non-null in collaborationMode=Exclusive.
   runningContinuousMutexAcquiringSaga: FixedTask<void> | null;
+  // runningAdHocMutexAcquiringSaga is only non-null in collaborationMode=Concurrent when
+  // a mutex is currently needed.
   runningAdHocMutexAcquiringSaga: FixedTask<void> | null;
   subscribersToMutex: Record<number, string>; // Mapping from self maintained id to caller id.
 };
@@ -71,23 +70,10 @@ function* getDoesHaveMutex(): Saga<boolean> {
   return yield* select((state) => state.save.mutexState.hasAnnotationMutex);
 }
 
-const TOOLS_WITH_AD_HOC_MUTEX_SUPPORT = [
-  AnnotationTool.MOVE.id,
-  AnnotationTool.PROOFREAD.id,
-  AnnotationTool.LINE_MEASUREMENT.id,
-  AnnotationTool.AREA_MEASUREMENT.id,
-] as AnnotationToolId[];
-
 export function* getCurrentMutexFetchingStrategy(): Saga<MutexFetchingStrategy> {
   let fetchingStrategy = MutexFetchingStrategy.Continuously;
-  const activeVolumeTracing = yield* select(getActiveSegmentationTracing);
-  const activeTool = yield* select((state) => state.uiInformation.activeTool);
-  if (
-    WkDevFlags.liveCollab &&
-    activeVolumeTracing?.hasEditableMapping &&
-    activeVolumeTracing?.mappingIsLocked &&
-    TOOLS_WITH_AD_HOC_MUTEX_SUPPORT.includes(activeTool.id)
-  ) {
+  const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
+  if (collaborationMode === "Concurrent") {
     // The active annotation is currently in proofreading state. Thus, having the mutex only on save demand works in regards to the current milestone.
     fetchingStrategy = MutexFetchingStrategy.AdHoc;
   }
@@ -139,16 +125,13 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   setMutexLogicSate(mutexLogicState);
 
   yield* fork(watchMutexStateChangesForNotification, mutexLogicState);
-  yield* fork(watchForOthersMayEditChange, mutexLogicState);
-  yield* fork(watchForActiveVolumeTracingChange, mutexLogicState);
-  yield* fork(watchForActiveToolChange, mutexLogicState);
-  yield* fork(watchForHasEditableMappingChange, mutexLogicState);
+  yield* fork(watchForCollaborationModeChange, mutexLogicState);
   yield* fork(watchForMutexSubscriptionActions, mutexLogicState);
   yield* takeEvery(["SUBSCRIBE_TO_ANNOTATION_MUTEX"], autoTimeoutSubscription);
 
-  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+  const othersMayEdit = yield* select((state) => isAnnotationEditableByNonOwners(state.annotation));
   if (othersMayEdit) {
-    // Only start initial acquiring of mutex if othersMayEdit is already turned on.
+    // Only start initial acquiring of mutex if othersMayEdit is true.
     yield* call(restartMutexAcquiringSaga, mutexLogicState);
   }
 }
@@ -213,7 +196,9 @@ export function* subscribeToAnnotationMutex(callerId: string): Saga<() => Saga<v
 
   while (true) {
     const doesHaveMutex = yield* call(getDoesHaveMutex);
-    const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+    const othersMayEdit = yield* select((state) =>
+      isAnnotationEditableByNonOwners(state.annotation),
+    );
     if (doesHaveMutex || !othersMayEdit) {
       return getUnsubscribeFromAnnotationMutexSaga(newId);
     }
@@ -241,7 +226,7 @@ function* restartMutexAcquiringSaga(mutexLogicState: MutexLogicState): Saga<void
     yield* cancel(mutexLogicState.runningAdHocMutexAcquiringSaga);
     mutexLogicState.runningAdHocMutexAcquiringSaga = null;
   }
-  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+  const othersMayEdit = yield* select((state) => isAnnotationEditableByNonOwners(state.annotation));
   if (!othersMayEdit) {
     return;
   }
@@ -289,7 +274,7 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
   mutexLogicState.isInitialRequest = true;
 
   // We can simply use an infinite loop here, because the saga will be cancelled by
-  // reactToOthersMayEditChanges when othersMayEdit is set to false.
+  // reactToOthersMayEditChanges when collaborationMode changes.
   while (true) {
     const blockedByUser = yield* select((state) => state.save.mutexState.blockedByUser);
     if (blockedByUser == null || blockedByUser.id !== activeUser?.id) {
@@ -319,15 +304,10 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
         yield* put(setIsMutexAcquiredAction(canEdit));
       }
     } catch (error) {
-      if (import.meta.env.MODE === "test") {
-        // In unit tests, that explicitly control this generator function,
-        // the console.error after the next yield won't be printed, because
-        // test assertions on the yield will already throw.
-        // Therefore, we also print the error in the test context.
-        console.error("Error while trying to acquire mutex:", error);
-      }
       // No need to check whether the saga was cancelled.
       // A cancelled saga does not reach the catch block but the finally block.
+      // The error is printed before the first yield here, since it would be
+      // swallowed in the test contexts otherwise (making debugging harder).
       console.error("Error while trying to acquire mutex.", error);
       yield* put(setUserHoldingMutexAction(undefined));
       yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
@@ -348,7 +328,7 @@ function* acquireMutexInitiallyForAdHocStrategy(annotationId: string): Saga<void
   let showingToast = false;
 
   // We can simply use an infinite loop here, because the saga will be cancelled by
-  // reactToOthersMayEditChanges when othersMayEdit is set to false.
+  // reactToOthersMayEditChanges when collaborationMode changes.
   while (true) {
     try {
       const mutexResult = yield* call(acquireAnnotationMutex, annotationId, SESSION_ID);
@@ -449,58 +429,36 @@ function* tryAcquireMutexForSaving(mutexLogicState: MutexLogicState): Saga<void>
   yield* call(keepAnnotationMutexForAdHocStrategy, annotationId);
 }
 
-function* watchForOthersMayEditChange(mutexLogicState: MutexLogicState): Saga<void> {
-  function* reactToOthersMayEditChanges({
-    othersMayEdit,
-  }: SetOthersMayEditForAnnotationAction): Saga<void> {
-    if (othersMayEdit) {
+function* watchForCollaborationModeChange(mutexLogicState: MutexLogicState): Saga<void> {
+  function* onChange({ collaborationMode }: SetCollaborationModeAction): Saga<void> {
+    if (collaborationMode !== "OwnerOnly") {
       yield* call(restartMutexAcquiringSaga, mutexLogicState);
     } else {
-      // othersMayEdit was turned off by the activeUser. Since this is only
-      // allowed by the owner, they should be able to edit the annotation, too.
+      // Collaboration was turned off by the activeUser. Cancel any running mutex
+      // acquisition saga and release the mutex if currently held.
+      if (mutexLogicState.runningContinuousMutexAcquiringSaga != null) {
+        yield* cancel(mutexLogicState.runningContinuousMutexAcquiringSaga);
+        mutexLogicState.runningContinuousMutexAcquiringSaga = null;
+      }
+      if (mutexLogicState.runningAdHocMutexAcquiringSaga != null) {
+        yield* cancel(mutexLogicState.runningAdHocMutexAcquiringSaga);
+        mutexLogicState.runningAdHocMutexAcquiringSaga = null;
+      }
+      const stillHasAnnotationMutex = yield* select(
+        (state) => state.save.mutexState.hasAnnotationMutex,
+      );
+      if (stillHasAnnotationMutex) {
+        yield* call(releaseMutex);
+      }
+      // Since only the owner can turn off collaboration, they should be able to edit, too.
       // Still, let's check that owner === activeUser to be extra safe.
       const owner = yield* select((storeState) => storeState.annotation.owner);
       const activeUser = yield* select((state) => state.activeUser);
-      if (activeUser && owner?.id === activeUser?.id) {
-        yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(true));
-      }
+      const isAnnotationOwner = (activeUser && owner?.id === activeUser?.id) || false;
+      yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(isAnnotationOwner));
     }
   }
-  yield* takeEvery("SET_OTHERS_MAY_EDIT_FOR_ANNOTATION", reactToOthersMayEditChanges);
-}
-
-function* watchForActiveVolumeTracingChange(mutexLogicState: MutexLogicState): Saga<void> {
-  function* reactToActiveVolumeAnnotationChange({
-    propertyName,
-  }: UpdateLayerSettingAction): Saga<void> {
-    if (propertyName !== "isDisabled") {
-      return;
-    }
-    const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
-    if (!othersMayEdit) {
-      return;
-    }
-    yield* call(restartMutexAcquiringSaga, mutexLogicState);
-  }
-  yield* takeEvery("UPDATE_LAYER_SETTING", reactToActiveVolumeAnnotationChange);
-}
-
-function* watchForActiveToolChange(mutexLogicState: MutexLogicState): Saga<void> {
-  function* reactToActiveToolChange(_action: SetToolAction | CycleToolAction): Saga<void> {
-    const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
-    if (!othersMayEdit) {
-      return;
-    }
-    yield* call(restartMutexAcquiringSaga, mutexLogicState);
-  }
-  yield* takeEvery(["SET_TOOL", "CYCLE_TOOL"], reactToActiveToolChange);
-}
-
-function* watchForHasEditableMappingChange(mutexLogicState: MutexLogicState): Saga<void> {
-  function* reactToHasEditableMappingChange(): Saga<void> {
-    yield* call(restartMutexAcquiringSaga, mutexLogicState);
-  }
-  yield* takeEvery("SET_HAS_EDITABLE_MAPPING", reactToHasEditableMappingChange);
+  yield* takeEvery("SET_COLLABORATION_MODE", onChange);
 }
 
 function* watchForMutexSubscriptionActions(mutexLogicState: MutexLogicState): Saga<void> {
@@ -508,7 +466,9 @@ function* watchForMutexSubscriptionActions(mutexLogicState: MutexLogicState): Sa
   function* reactToSubscriptionChange(
     action: SubscribeToAnnotationMutexAction | UnsubscribeFromAnnotationMutexAction,
   ): Saga<void> {
-    const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+    const othersMayEdit = yield* select((state) =>
+      isAnnotationEditableByNonOwners(state.annotation),
+    );
     if (!othersMayEdit) {
       return;
     }
@@ -546,7 +506,9 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
   yield* takeEvery(
     "SET_IS_MUTEX_ACQUIRED",
     function* ({ isMutexAcquired }: SetIsMutexAcquiredAction) {
-      const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
+      const othersMayEdit = yield* select((state) =>
+        isAnnotationEditableByNonOwners(state.annotation),
+      );
       if (!othersMayEdit) {
         return;
       }

@@ -14,6 +14,7 @@ import {
 } from "admin/rest_api";
 import app from "app";
 import { __setFeatures } from "features";
+import update from "immutability-helper";
 import { V3 } from "libs/mjs";
 import Request, { type RequestOptions } from "libs/request";
 import { sleep } from "libs/utils";
@@ -32,7 +33,9 @@ import {
   annotationProto as MULTI_VOLUME_ANNOTATION_PROTO,
   tracings as MULTI_VOLUME_TRACINGS,
 } from "test/fixtures/multivolume_server_objects";
+import { tracing as volumeTracing } from "test/fixtures/volumetracing_server_objects";
 import type {
+  AnnotationCollaborationMode,
   APIAnnotation,
   APIDataset,
   APIMeshFileInfo,
@@ -671,4 +674,44 @@ export async function setupWebknossosForTesting(
       throw new Error(error.message);
     }
   }
+}
+
+export async function setupWebknossosForTestingWithRestrictions(
+  context: WebknossosTestContext,
+  collaborationMode: AnnotationCollaborationMode | null,
+  allowUpdate: boolean,
+  makeProofread: boolean = false,
+  tracingTestMode: "hybrid" | "multiVolume" = "hybrid",
+) {
+  await setupWebknossosForTesting(
+    context,
+    tracingTestMode,
+    ({ tracings, annotationProto, dataset, annotation }) => {
+      const annotationWithUpdatingAllowedTrue = update(annotation, {
+        restrictions: { allowUpdate: { $set: allowUpdate }, allowSave: { $set: allowUpdate } },
+        collaborationMode: { $set: collaborationMode ?? "OwnerOnly" },
+      });
+      return {
+        tracings: makeProofread ? makeProofreadAnnotation(tracings) : tracings,
+        annotationProto,
+        dataset,
+        annotation: annotationWithUpdatingAllowedTrue,
+      };
+    },
+  );
+}
+
+function makeProofreadAnnotation(
+  tracings: (ServerSkeletonTracing | ServerVolumeTracing)[],
+): (ServerSkeletonTracing | ServerVolumeTracing)[] {
+  return tracings.map((tracing) => {
+    if (tracing.typ === "Volume" && tracing.id === volumeTracing.id) {
+      return update(tracing, {
+        hasEditableMapping: { $set: true },
+        mappingName: { $set: "volumeTracingId" },
+        mappingIsLocked: { $set: true },
+      });
+    }
+    return tracing;
+  });
 }

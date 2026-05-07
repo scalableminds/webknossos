@@ -128,4 +128,14 @@ class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionC
         q"DELETE FROM webknossos.annotation_mutexes WHERE _annotation = $annotationId AND _user = $userId".asUpdate)
     } yield ()
 
+  def hasMutex(userId: ObjectId, annotationId: ObjectId): Fox[Boolean] =
+    for {
+      countRows <- run(q"""SELECT COUNT(*)
+                      FROM webknossos.annotation_mutexes
+                      WHERE _annotation = $annotationId
+                      AND _user = $userId
+                      AND expiry > NOW()""".as[Int])
+      count <- countRows.headOption.toFox
+    } yield count > 0
+
 }

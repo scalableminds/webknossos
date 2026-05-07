@@ -193,7 +193,7 @@ const defaultState: WebknossosState = {
     owner: null,
     isLockedByOwner: false,
     contributors: [],
-    othersMayEdit: false,
+    collaborationMode: "OwnerOnly",
     annotationLayers: [],
     version: 0,
     earliestAccessibleVersion: 0,

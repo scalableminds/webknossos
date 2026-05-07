@@ -17,7 +17,6 @@ import type {
   VolumeUserState,
 } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
 import type { AnnotationTool, AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { Toolkits } from "viewer/model/accessors/tool_accessor";
@@ -137,7 +136,7 @@ export function convertServerAnnotationToFrontendAnnotation(
     owner,
     contributors,
     organization,
-    othersMayEdit,
+    collaborationMode,
     isLockedByOwner,
     annotationLayers,
   } = annotation;
@@ -145,11 +144,12 @@ export function convertServerAnnotationToFrontendAnnotation(
     ...annotation.restrictions,
     ...annotation.settings,
   };
-  // If othersMayEdit is true and liveCollab is disabled, updating is only allowed in case the user has the mutex.
-  // The mutex fetching is done by the respective saga.
-  const isUpdatingCurrentlyAllowed = annotation.othersMayEdit
-    ? WkDevFlags.liveCollab
-    : annotation.restrictions.allowUpdate;
+
+  const isUpdatingCurrentlyAllowed =
+    // If the collab mode is exclusive, the user may only edit once a mutex was acquired.
+    // the mutex saga will update isUpdatingCurrentlyAllowed then.
+    annotation.restrictions.allowUpdate && annotation.collaborationMode !== "Exclusive";
+
   return {
     annotationId,
     restrictions,
@@ -166,7 +166,7 @@ export function convertServerAnnotationToFrontendAnnotation(
     tracingStore,
     owner,
     contributors,
-    othersMayEdit,
+    collaborationMode,
     annotationLayers,
     isUpdatingCurrentlyAllowed,
   };

@@ -39,6 +39,7 @@ import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import features from "features";
 import { useFetch, useInterval } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
+import { TAB_SESSION_ID as SESSION_ID } from "libs/tab_session_id";
 import Toast from "libs/toast";
 import {
   filterWithSearchQueryAND,
@@ -62,7 +63,6 @@ import {
 } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
-import { TAB_SESSION_ID as SESSION_ID } from "libs/tab_session_id";
 import { Store } from "viewer/singletons";
 import { HelpModal } from "viewer/view/help/help_modal";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";

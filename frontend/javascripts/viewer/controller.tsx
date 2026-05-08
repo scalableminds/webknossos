@@ -23,7 +23,12 @@ import ArbitraryController from "viewer/controller/viewmodes/arbitrary_controlle
 import PlaneController from "viewer/controller/viewmodes/plane_controller";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { wkInitializedAction } from "viewer/model/actions/actions";
-import { redoAction, saveNowAction, undoAction } from "viewer/model/actions/save_actions";
+import {
+  exitingAnnotationAction,
+  redoAction,
+  saveNowAction,
+  undoAction,
+} from "viewer/model/actions/save_actions";
 import { setViewModeAction, updateLayerSettingAction } from "viewer/model/actions/settings_actions";
 import { setIsInAnnotationViewAction } from "viewer/model/actions/ui_actions";
 import { HANDLED_ERROR } from "viewer/model_initialization";
@@ -141,6 +146,8 @@ class Controller extends PureComponent<PropsWithRouter, State> {
       // Navigation blocking can be triggered by two sources:
       // 1. The browser's native beforeunload event
       // 2. The React-Router block function (useBlocker or withBlocker HOC)
+
+      Store.dispatch(exitingAnnotationAction());
 
       if (!Model.stateSaved() && Store.getState().annotation.restrictions.allowUpdate) {
         window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event

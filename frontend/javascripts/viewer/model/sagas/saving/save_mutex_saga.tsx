@@ -124,6 +124,7 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   yield* fork(watchMutexStateChangesForNotification, mutexLogicState);
   yield* fork(watchForCollaborationModeChange, mutexLogicState);
   yield* fork(watchForMutexSubscriptionActions, mutexLogicState);
+  yield* fork(watchForAnnotationExit);
   yield* takeEvery(["SUBSCRIBE_TO_ANNOTATION_MUTEX"], autoTimeoutSubscription);
 
   const othersMayEdit = yield* select((state) => isAnnotationEditableByNonOwners(state.annotation));
@@ -553,6 +554,24 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
       mutexLogicState.isInitialRequest = false;
     },
   );
+}
+
+function* watchForAnnotationExit(): Saga<void> {
+  yield* takeEvery("EXITING_ANNOTATION", function* () {
+    const hasMutex = yield* select((state) => state.save.mutexState.hasAnnotationMutex);
+    if (!hasMutex) return;
+
+    const annotationId = yield* select((state) => state.annotation.annotationId);
+    const url = `/api/annotations/${annotationId}/releaseMutex`;
+    const sent = navigator.sendBeacon(url);
+    console.log(
+      `[Mutex] Releasing mutex for annotation ${annotationId} on exit via sendBeacon (queued: ${sent}).`,
+    );
+
+    // Best-effort store update — page may already be unloading
+    yield* put(setIsMutexAcquiredAction(false));
+    yield* put(setUserHoldingMutexAction(null));
+  });
 }
 
 function* releaseMutex() {

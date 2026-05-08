@@ -60,6 +60,7 @@ export type SetPendingProofreadingOperationInfoAction = ReturnType<
   typeof setPendingProofreadingOperationInfoAction
 >;
 export type ReplaceSaveQueueAction = ReturnType<typeof replaceSaveQueueAction>;
+export type ExitingAnnotationAction = ReturnType<typeof exitingAnnotationAction>;
 
 export type SaveAction =
   | PushSaveQueueTransaction
@@ -87,7 +88,8 @@ export type SaveAction =
   | UpdateMappingRebaseInformationAction
   | FinishedApplyingMissingUpdatesAction
   | SetPendingProofreadingOperationInfoAction
-  | ReplaceSaveQueueAction;
+  | ReplaceSaveQueueAction
+  | ExitingAnnotationAction;
 
 // The following actions can be used to "push" update actions into the local save queue
 // of the Store.
@@ -118,6 +120,11 @@ export const notifyAboutUpdatedBucketsAction = (count: number) =>
 export const saveNowAction = () =>
   ({
     type: "SAVE_NOW",
+  }) as const;
+
+export const exitingAnnotationAction = () =>
+  ({
+    type: "EXITING_ANNOTATION",
   }) as const;
 
 export const shiftSaveQueueAction = (count: number) =>

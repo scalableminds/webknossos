@@ -297,10 +297,15 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
         annotationId,
         TAB_SESSION_ID,
       );
-      yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(canEdit));
+      if (mutexLogicState.isInitialRequest || !canEdit) {
+        // Only change isUpdatingAnnotationCurrentlyAllowed directly after
+        // the initial request OR when we disable editing.
+        // This forces users to refresh the page once the waiting for the mutex
+        // has succeeded. We do this to be extra safe for now. Will be removed
+        // with further advancements of the live collab feature.
+        yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(canEdit));
+      }
       yield* put(setUserHoldingMutexAction(blockedByUser, blockedBySessionId));
-      // todop: clarify?
-      yield* put(setIsMutexAcquiredAction(canEdit));
 
       if (canEdit !== (yield* call(getDoesHaveMutex))) {
         // Only dispatch the action if it changes the store to avoid

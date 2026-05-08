@@ -15,6 +15,7 @@ import {
   type FixedTask,
   fork,
   put,
+  race,
   retry,
   take,
   takeEvery,
@@ -325,7 +326,10 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
       }
     }
     mutexLogicState.isInitialRequest = false;
-    yield* call(delay, ACQUIRE_MUTEX_INTERVAL);
+    yield* race({
+      timeout: call(delay, ACQUIRE_MUTEX_INTERVAL),
+      retry: take("RETRY_MUTEX_ACQUISITION_NOW"),
+    });
   }
 }
 

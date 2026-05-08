@@ -61,6 +61,7 @@ export type SetPendingProofreadingOperationInfoAction = ReturnType<
 >;
 export type ReplaceSaveQueueAction = ReturnType<typeof replaceSaveQueueAction>;
 export type ExitingAnnotationAction = ReturnType<typeof exitingAnnotationAction>;
+export type RetryMutexAcquisitionNowAction = ReturnType<typeof retryMutexAcquisitionNowAction>;
 
 export type SaveAction =
   | PushSaveQueueTransaction
@@ -89,7 +90,8 @@ export type SaveAction =
   | FinishedApplyingMissingUpdatesAction
   | SetPendingProofreadingOperationInfoAction
   | ReplaceSaveQueueAction
-  | ExitingAnnotationAction;
+  | ExitingAnnotationAction
+  | RetryMutexAcquisitionNowAction;
 
 // The following actions can be used to "push" update actions into the local save queue
 // of the Store.
@@ -314,3 +316,6 @@ export const setPendingProofreadingOperationInfoAction = (
 
 export const replaceSaveQueueAction = (newSaveQueue: SaveQueueEntry[]) =>
   ({ type: "REPLACE_SAVE_QUEUE", newSaveQueue }) as const;
+
+export const retryMutexAcquisitionNowAction = () =>
+  ({ type: "RETRY_MUTEX_ACQUISITION_NOW" }) as const;

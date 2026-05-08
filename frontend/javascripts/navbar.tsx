@@ -2,6 +2,7 @@ import Icon, {
   BarChartOutlined,
   ExperimentOutlined,
   HomeOutlined,
+  LoadingOutlined,
   QuestionCircleOutlined,
   SwapOutlined,
   TeamOutlined,
@@ -28,6 +29,7 @@ import {
   Layout,
   Menu,
   Popover,
+  Spin,
   type SubMenuProps,
   Tag,
   Tooltip,
@@ -62,6 +64,7 @@ import {
   isAnnotationOwner as isAnnotationOwnerAccessor,
 } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
+import { retryMutexAcquisitionNowAction } from "viewer/model/actions/save_actions";
 import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
 import { Store } from "viewer/singletons";
 import { HelpModal } from "viewer/view/help/help_modal";
@@ -716,46 +719,60 @@ function AnnotationLockedByUserTag({
   blockedBySessionId: string | null | undefined;
   activeUser: APIUser;
 }) {
-  let content;
+  const dispatch = useDispatch();
+  const [isRetrying, setIsRetrying] = useState(false);
+
+  const handleOnClick = () => {
+    if (blockedByUser == null) {
+      location.reload();
+    } else {
+      dispatch(retryMutexAcquisitionNowAction());
+      setIsRetrying(true);
+      setTimeout(() => setIsRetrying(false), 1000);
+    }
+  };
+
+  const retryTooltipSuffix = " Click to retry acquiring the lock immediately.";
+  let tooltipTitle: string;
+  let tagLabel: React.ReactNode;
+
   if (blockedByUser == null) {
-    content = (
-      <Tooltip title={messages["annotation.acquiringMutexFailed.noUser"]}>
-        <Tag color="warning" variant="outlined">
-          Locked by unknown user.
-        </Tag>
-      </Tooltip>
-    );
+    tooltipTitle = messages["annotation.reloadToEditWithMutex"];
+    tagLabel = "Please reload the page.";
   } else if (blockedByUser.id === activeUser.id && blockedBySessionId === SESSION_ID) {
-    content = (
-      <Tooltip title={messages["annotation.acquiringMutexSucceeded"]}>
+    tooltipTitle = messages["annotation.acquiringMutexSucceeded"];
+    tagLabel = "Locked by you. Reload to edit.";
+    return (
+      <Tooltip title={tooltipTitle}>
         <Tag color="success" variant="outlined">
-          Locked by you. Reload to edit.
+          {tagLabel}
         </Tag>
       </Tooltip>
     );
   } else if (blockedByUser.id === activeUser.id) {
-    content = (
-      <Tooltip title={messages["annotation.acquiringMutexFailed.sameSession"]}>
-        <Tag color="warning" variant="outlined">
-          Locked by you in another tab.
-        </Tag>
-      </Tooltip>
-    );
+    tooltipTitle = messages["annotation.acquiringMutexFailed.sameSession"] + retryTooltipSuffix;
+    tagLabel = "Locked by you in another tab.";
   } else {
     const blockingUserName = `${blockedByUser.firstName} ${blockedByUser.lastName}`;
-    content = (
-      <Tooltip
-        title={messages["annotation.acquiringMutexFailed"]({
-          userName: blockingUserName,
-        })}
-      >
-        <Tag color="warning" variant="outlined">
-          Locked by {blockingUserName}
-        </Tag>
-      </Tooltip>
-    );
+    tooltipTitle =
+      messages["annotation.acquiringMutexFailed"]({ userName: blockingUserName }) +
+      retryTooltipSuffix;
+    tagLabel = `Locked by ${blockingUserName}`;
   }
-  return content;
+
+  return (
+    <Tooltip title={tooltipTitle}>
+      <Tag color="warning" variant="outlined" style={{ cursor: "pointer" }} onClick={handleOnClick}>
+        {isRetrying ? (
+          <Spin
+            indicator={<LoadingOutlined spin style={{ color: "#faad14", marginRight: 4 }} />}
+            size="small"
+          />
+        ) : null}
+        {tagLabel}
+      </Tag>
+    </Tooltip>
+  );
 }
 
 function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwner: boolean }) {

@@ -765,7 +765,9 @@ function AnnotationLockedByUserTag({
       <Tag color="warning" variant="outlined" style={{ cursor: "pointer" }} onClick={handleOnClick}>
         {isRetrying ? (
           <Spin
-            indicator={<LoadingOutlined spin style={{ color: "#faad14", marginRight: 4 }} />}
+            indicator={
+              <LoadingOutlined spin style={{ color: "var(--ant-color-warning)", marginRight: 4 }} />
+            }
             size="small"
           />
         ) : null}

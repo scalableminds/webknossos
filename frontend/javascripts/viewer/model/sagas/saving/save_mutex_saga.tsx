@@ -552,7 +552,16 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
           } else {
             message = messages["annotation.acquiringMutexFailed.noUser"];
           }
-          Toast.warning(message, { sticky: true, key: MUTEX_NOT_ACQUIRED_KEY });
+          // Wait a bit before showing the toast to the user. Otherwise,
+          // a toast would flash briefly while the user is navigating away (because
+          // the mutex is released when navigating away) which is rather confusing.
+          // Also, it's a workaround for the finally-block below that is not hit
+          // correctly after the root saga was cancelled (bug in redux-saga?).
+          // By waiting a bit, we delegate back to the saga middleware which can now
+          // pause/cancel the saga before the toast is emitted.
+          console.log("about to show warning");
+          yield* delay(500);
+          Toast.warning(message, { key: MUTEX_NOT_ACQUIRED_KEY });
         }
         wasMutexAlreadyAcquiredBefore = yield* select(
           (state) => state.save.mutexState.hasAnnotationMutex,
@@ -561,7 +570,9 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
       },
     );
   } finally {
+    console.log("executing finally");
     if (yield* cancelled()) {
+      console.log("  was cancelled");
       Toast.close(MUTEX_NOT_ACQUIRED_KEY);
       Toast.close(MUTEX_ACQUIRED_KEY);
     }

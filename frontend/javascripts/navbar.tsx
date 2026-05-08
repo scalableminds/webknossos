@@ -737,7 +737,7 @@ function AnnotationLockedByUserTag({
     content = (
       <Tooltip title={messages["annotation.acquiringMutexFailed.sameSession"]}>
         <Tag color="warning" variant="outlined">
-          Locked by you in another tab. Close one of the tabs.
+          Locked by you in another tab.
         </Tag>
       </Tooltip>
     );

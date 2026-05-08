@@ -139,8 +139,6 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
   override def dataBaseDir: Path = dataSourceService.dataBaseDir
 
-  def isKnownUploadByFileId(uploadFileId: String): Fox[Boolean] = isKnownUpload(extractDatasetUploadId(uploadFileId))
-
   def isKnownUpload(uploadId: String): Fox[Boolean] =
     runningUploadMetadataStore.contains(redisKeyForFileCount(uploadId))
 

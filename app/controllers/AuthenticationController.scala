@@ -30,7 +30,6 @@ import org.apache.pekko.actor.ActorSystem
 import play.api.data.Form
 import play.api.data.Forms._
 import play.api.data.validation.Constraints._
-import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import play.api.mvc._
 import play.silhouette.api.actions.SecuredRequest
@@ -346,8 +345,8 @@ class AuthenticationController @Inject()(
             _ = logger.info(f"User ${user._id} authenticated.")
           } yield result
         case None =>
-          Future.successful(BadRequest(Messages("error.noUser")))
-        case Some(_) => Future.successful(BadRequest(Messages("user.deactivated")))
+          Future.successful(BadRequest(Msg.User.invalidCredentials))
+        case Some(_) => Future.successful(BadRequest(Msg.User.isDeactivated))
       }
     } yield result
 
@@ -368,7 +367,7 @@ class AuthenticationController @Inject()(
               authenticateInner(loginInfo)
             }
             .recover {
-              case _: ProviderException => BadRequest(Messages("error.invalidCredentials"))
+              case _: ProviderException => BadRequest(Msg.User.invalidCredentials)
             }
         }
       )
@@ -386,8 +385,7 @@ class AuthenticationController @Inject()(
 
   def switchOrganization(organizationId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      organization <- organizationDAO
-        .findOne(organizationId) ?~> Messages("organization.notFound", organizationId) ~> NOT_FOUND
+      organization <- organizationDAO.findOne(organizationId) ?~> Msg.Organization.notFound(organizationId) ~> NOT_FOUND
       _ <- userService.fillSuperUserIdentity(request.identity, organization._id)
       targetUser <- userDAO.findOneByOrgaAndMultiUser(organization._id, request.identity._multiUser)(
         GlobalAccessContext) ?~> "user.notFound" ~> NOT_FOUND
@@ -489,7 +487,7 @@ class AuthenticationController @Inject()(
             userService.userFromMultiUserEmail(email.toLowerCase)(GlobalAccessContext).futureBox.map(_.toOption)
           val idF = userFopt.map(userOpt => userOpt.map(_._id.id).getOrElse("")) // do not fail here if there is no user for email. Fail below to unify error handling.
           idF.flatMap(id => userService.retrieve(LoginInfo(CredentialsProvider.ID, id))).flatMap {
-            case None => Future.successful(NotFound(Messages("error.noUser")))
+            case None => Future.successful(Ok) // No email sent, but same reply, in order not to leak list of accounts.
             case Some(user) =>
               for {
                 multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
@@ -520,7 +518,7 @@ class AuthenticationController @Inject()(
                 _ <- bearerTokenAuthenticatorService.remove(passwords.token.trim)
               } yield Ok
             case _ =>
-              Future.successful(BadRequest(Messages("auth.invalidToken")))
+              Future.successful(BadRequest(Msg.User.Token.invalid))
           }
         }
       )
@@ -540,7 +538,7 @@ class AuthenticationController @Inject()(
               loginInfo =>
                 userService.retrieve(loginInfo).flatMap {
                   case None =>
-                    Future.successful(NotFound(Messages("error.noUser")))
+                    Future.successful(NotFound(Msg.User.invalidCredentials))
                   case Some(user) =>
                     for {
                       multiUser <- multiUserDAO.findOne(user._multiUser)
@@ -554,7 +552,7 @@ class AuthenticationController @Inject()(
                 }
             }
             .recover {
-              case _: ProviderException => BadRequest(Messages("error.invalidCredentials"))
+              case _: ProviderException => BadRequest(Msg.User.invalidCredentials)
             }
         }
       )
@@ -569,7 +567,7 @@ class AuthenticationController @Inject()(
   def deleteToken(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     combinedAuthenticatorService.findTokenByLoginInfo(request.identity.loginInfo).flatMap {
       case Some(token) =>
-        combinedAuthenticatorService.discard(token, Ok(Json.obj("messages" -> Messages("auth.tokenDeleted"))))
+        combinedAuthenticatorService.discard(token, Ok(Json.obj("messages" -> Msg.User.Token.deleted)))
       case _ => Future.successful(Ok)
     }
   }
@@ -816,8 +814,8 @@ class AuthenticationController @Inject()(
           _ = userDAO.updateLastActivity(user._id)(GlobalAccessContext)
         } yield result
       case None =>
-        Future.successful(BadRequest(Messages("error.noUser")))
-      case Some(_) => Future.successful(BadRequest(Messages("user.deactivated")))
+        Future.successful(BadRequest(Msg.User.invalidCredentials))
+      case Some(_) => Future.successful(BadRequest(Msg.User.isDeactivated))
     }
 
   // Is called after user was successfully authenticated
@@ -930,7 +928,7 @@ class AuthenticationController @Inject()(
                     _ = analyticsService.track(SignupEvent(user, hadInvite = false))
                     multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
                     _ <- organizationService
-                      .createOrganizationDirectory(organization._id) ?~> "organization.folderCreation.failed"
+                      .createOrganizationDirectory(organization._id) ?~> Msg.Organization.Create.directoryCreationFailed
                     _ <- Fox.runIf(conf.WebKnossos.TermsOfService.enabled)(
                       acceptTermsOfServiceForUser(user, signUpData.acceptedTermsOfService))
                     _ = Mailer ! Send(defaultMails
@@ -941,17 +939,16 @@ class AuthenticationController @Inject()(
                   } yield Ok
                 }
               } yield result
-            case _ => Fox.failure(Messages("organization.create.forbidden"))
+            case _ => Fox.failure(Msg.Organization.Create.forbidden)
           }
         }
       )
   }
 
-  private def acceptTermsOfServiceForUser(user: User, termsOfServiceVersion: Option[Int])(
-      implicit m: MessagesProvider): Fox[Unit] =
+  private def acceptTermsOfServiceForUser(user: User, termsOfServiceVersion: Option[Int]): Fox[Unit] =
     for {
       acceptedVersion <- termsOfServiceVersion.toFox ?~> "Terms of service must be accepted."
-      _ <- organizationService.acceptTermsOfService(user._organization, acceptedVersion)(DBAccessContext(Some(user)), m)
+      _ <- organizationService.acceptTermsOfService(user._organization, acceptedVersion)(DBAccessContext(Some(user)))
     } yield ()
 
   case class CreateUserInOrganizationParameters(firstName: String,
@@ -989,14 +986,15 @@ class AuthenticationController @Inject()(
       }
     }
 
-  private def validateNameAndEmail(firstName: String, lastName: String, email: String)(
-      implicit messages: Messages): Fox[(String, String, String, List[String])] = {
+  private def validateNameAndEmail(firstName: String,
+                                   lastName: String,
+                                   email: String): Fox[(String, String, String, List[String])] = {
     var (errors, fN, lN) = normalizeName(firstName, lastName)
     for {
       nameEmailError: (String, String, String,
       List[String]) <- multiUserDAO.findOneByEmail(email.toLowerCase)(GlobalAccessContext).shiftBox.flatMap {
         case Full(_) =>
-          errors ::= Messages("user.email.alreadyInUse")
+          errors ::= Msg.User.emailAalreadyInUse
           Fox.successful(("", "", "", errors))
         case Empty =>
           if (errors.nonEmpty) {
@@ -1058,7 +1056,7 @@ trait AuthForms {
                         inviteToken: Option[String],
                         acceptedTermsOfService: Option[Int])
 
-  def signUpForm(implicit messages: Messages): Form[SignUpData] =
+  def signUpForm: Form[SignUpData] =
     Form(
       mapping(
         "organization" -> text,
@@ -1067,7 +1065,7 @@ trait AuthForms {
         "password" -> tuple(
           "password1" -> nonEmptyText.verifying(minLength(passwordMinLength)),
           "password2" -> nonEmptyText
-        ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2),
+        ).verifying(Msg.User.passwordsDontMatch, password => password._1 == password._2),
         "firstName" -> nonEmptyText,
         "lastName" -> nonEmptyText,
         "inviteToken" -> optional(nonEmptyText),
@@ -1100,27 +1098,27 @@ trait AuthForms {
   // Password recovery
   case class ResetPasswordData(token: String, password1: String, password2: String)
 
-  def resetPasswordForm(implicit messages: Messages): Form[ResetPasswordData] =
+  def resetPasswordForm: Form[ResetPasswordData] =
     Form(
       mapping(
         "token" -> text,
         "password" -> tuple(
           "password1" -> nonEmptyText.verifying(minLength(passwordMinLength)),
           "password2" -> nonEmptyText
-        ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2)
+        ).verifying(Msg.User.passwordsDontMatch, password => password._1 == password._2)
       )((token, password) => ResetPasswordData(token, password._1, password._2))(resetPasswordData =>
         Some(resetPasswordData.token, (resetPasswordData.password1, resetPasswordData.password1))))
 
   case class ChangePasswordData(oldPassword: String, password1: String, password2: String)
 
-  def changePasswordForm(implicit messages: Messages): Form[ChangePasswordData] =
+  def changePasswordForm: Form[ChangePasswordData] =
     Form(
       mapping(
         "oldPassword" -> nonEmptyText,
         "password" -> tuple(
           "password1" -> nonEmptyText.verifying(minLength(passwordMinLength)),
           "password2" -> nonEmptyText
-        ).verifying(Messages("error.passwordsDontMatch"), password => password._1 == password._2)
+        ).verifying(Msg.User.passwordsDontMatch, password => password._1 == password._2)
       )((oldPassword, password) => ChangePasswordData(oldPassword, password._1, password._2))(changePasswordData =>
         Some(changePasswordData.oldPassword, (changePasswordData.password1, changePasswordData.password2))))
 

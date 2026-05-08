@@ -91,7 +91,12 @@ object Msg {
     }
     object Volume {
       def largestSegmentIdExceedsRange(id: Long, ec: String): String =
-        s"The largest segment id $id specified for the annotation layer exceeds the range of its data type $ec"
+        s"The largest segment id $id specified for the annotation layer exceeds the range of its data type “$ec”"
+      def wrongMag(tracingId: String, mag: String): String =
+        s"Annotation layer “$tracingId” does not have mag “$mag”."
+    }
+    object Upload {
+      def zipFileNotFound: String = "Could not extract zipped data from upload request."
     }
     val notFound: String = "Annotation could not be found or accessed."
     val notFoundConsiderLoggingIn: String =
@@ -119,6 +124,10 @@ object Msg {
       def versionMismatch(requiredVersion: Int, version: Int): String =
         s"Terms of service version mismatch. Current version is $requiredVersion, received acceptance for $version."
       val notEnabled: String = "Cannot accept terms of service, as it is not configured for this WEBKNOSSOS instance."
+    }
+    object Create {
+      val forbidden = "You are not allowed to create a new organization."
+      val directoryCreationFailed = "Could not create organization directory on disk."
     }
   }
   object DataStore {
@@ -156,6 +165,8 @@ object Msg {
       def notFound(layerName: String): String = s"Could not find layer “$layerName” in dataset."
       def invalidMag(mag: String): String = s"Supplied “$mag” is not a valid mag format. Please use “x-y-z”."
       def wrongMag(layer: String, mag: String): String = s"Data layer “$layer” does not have mag “$mag”."
+      def wrongAttachment(layer: String, attachment: String): String =
+        s"Data layer “$layer” does not have attachment “$attachment”."
     }
     object Metadata {
       val duplicateKeys: String = "Metadata keys must be unique."
@@ -163,6 +174,10 @@ object Msg {
     object Histogram {
       def failed(layerName: String): String = s"Could not generate histogram data for layer “$layerName”."
       def layerMissing(layerName: String): String = s"Could not generate histogram data: missing layer “$layerName”."
+    }
+    object Upload {
+      def finishFailed(datasetId: ObjectId): String = s"Could not finalize upload for dataset “$datasetId”."
+      def noSuchUpload(uploadId: String): String = s"Could not find running upload with upload id “$uploadId”."
     }
   }
   object Task {
@@ -172,6 +187,10 @@ object Msg {
     val cancelled: String = "Task is finished."
     val unavailable: String = "There is currently no task available."
     val tooManyOpenOnes: String = "You already have too many open tasks."
+    val deleteSuccess = "Task was deleted."
+    val deleteFailure = "Could not delete task."
+    def editSuccess = "Task was successfully updated."
+    def assigned = "You got a new task."
     object Create {
       def batchLimitExceeded(limit: Int): String = s"Cannot create more than $limit tasks in one request."
       val needsEitherSkeletonOrVolume: String = "Each task needs to either be skeleton or volume."
@@ -188,12 +207,26 @@ object Msg {
   }
   object TaskType {
     def notFound(id: ObjectId): String = s"Task type “$id” could not be found or accessed."
+    def summaryTaken(summary: String): String =
+      s"A task type with summary “$summary” already exists. The summary needs to be unique."
+    def editSuccess = "Task type was successfully updated."
+    def deleteSuccess(summary: String) = s"Task type “$summary” was successfully deleted."
+    def deleteFailed(summary: String) = s"Could not delete task type “$summary”."
   }
   object User {
     def notFound: String = s"User could not be found or accessed."
     def notFound(id: ObjectId): String = s"User “$id” could not be found or accessed."
     val noSelfDeactivate: String = "You cannot deactivate yourself. Please contact an admin to do it for you."
     val notAuthenticated: String = "You are not authorized to view this resource. Please log in."
+    val emailAalreadyInUse: String = "This email address is already in use."
+    val passwordsDontMatch: String = "The two passwords do not match."
+    val isDeactivated: String =
+      s"Your account has not been activated by an admin yet. Please contact your organization’s admin for help."
+    val invalidCredentials: String = "Incorrect email or password. Please try again."
+    object Token {
+      val deleted: String = "Token was deleted."
+      def invalid: String = "The supplied token is invalid."
+    }
   }
   object Team {
     def notFound(id: ObjectId): String = s"Team “$id” could not be found or accessed."
@@ -211,6 +244,14 @@ object Msg {
       def zeroChunks(segmentIds: String, name: String) =
         s"Zero mesh chunks for segment $segmentIds in mesh file “$name”."
     }
+  }
+  object ConnectomeFile {
+    def lookUpFailed(name: String): String = s"Failed to look up connectome file “$name”."
+    def readMappingNameFailed(name: String): String = s"Failed to read mapping name from connectome file “$name”."
+  }
+  object Zarr {
+    def invalidChunkCoordinates(coordinates: String): String =
+      s"Invalid chunk coordinates $coordinates. Expected dot separated coordinates like c.<additional_axes.>x.y.z"
   }
   val notAllowed: String = "You are not authorized to view or edit this resource."
   val notFound: String = "Couldn’t find or access the requested resource."

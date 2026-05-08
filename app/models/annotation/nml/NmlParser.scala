@@ -51,8 +51,7 @@ class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
   def parse(name: String,
             nmlInputStream: InputStream,
             sharedParsingParameters: SharedParsingParameters,
-            basePath: Option[String] = None)(implicit m: MessagesProvider,
-                                             ec: ExecutionContext,
+            basePath: Option[String] = None)(implicit ec: ExecutionContext,
                                              ctx: DBAccessContext): Fox[NmlParseSuccessWithoutFile] =
     for {
       nmlParsedParameters <- getParametersFromNML(nmlInputStream, name, sharedParsingParameters).toFox
@@ -120,10 +119,9 @@ class NmlParser @Inject()(datasetDAO: DatasetDAOLike)
     } yield
       NmlParseSuccessWithoutFile(skeletonTracing, volumeLayers, dataset._id, nmlParams.description, nmlParams.wkUrl)
 
-  private def getParametersFromNML(
-      nmlInputStream: InputStream,
-      name: String,
-      sharedParsingParameters: SharedParsingParameters)(implicit m: MessagesProvider): Box[NmlParsedParameters] =
+  private def getParametersFromNML(nmlInputStream: InputStream,
+                                   name: String,
+                                   sharedParsingParameters: SharedParsingParameters): Box[NmlParsedParameters] =
     try {
       val nmlData = XML.load(nmlInputStream)
       for {

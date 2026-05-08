@@ -18,7 +18,6 @@ import models.annotation.nml.{NmlParseSuccessWithoutFile, NmlParser, NmlResults}
 import com.scalableminds.util.tools.{Empty, Failure, Full}
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.tracingstore.tracings.GroupUtils
-import play.api.i18n.MessagesProvider
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -46,17 +45,15 @@ class AnnotationUploadService @Inject()(tempFileService: WkTempFileService, nmlP
     with Formatter {
 
   private def extractFromNmlFile(file: File, name: String, sharedParsingParameters: SharedParsingParameters)(
-      implicit m: MessagesProvider,
-      ec: ExecutionContext,
+      implicit ec: ExecutionContext,
       ctx: DBAccessContext): Future[NmlParseResult] =
     extractFromNml(new FileInputStream(file), name, sharedParsingParameters)
 
-  private def extractFromNml(inputStream: InputStream,
-                             name: String,
-                             sharedParsingParameters: SharedParsingParameters,
-                             basePath: Option[String] = None)(implicit m: MessagesProvider,
-                                                              ec: ExecutionContext,
-                                                              ctx: DBAccessContext): Future[NmlParseResult] = {
+  private def extractFromNml(
+      inputStream: InputStream,
+      name: String,
+      sharedParsingParameters: SharedParsingParameters,
+      basePath: Option[String] = None)(implicit ec: ExecutionContext, ctx: DBAccessContext): Future[NmlParseResult] = {
     val parserOutput =
       nmlParser.parse(
         name,
@@ -73,7 +70,7 @@ class AnnotationUploadService @Inject()(tempFileService: WkTempFileService, nmlP
   }
 
   private def extractFromZip(file: File, zipFileName: Option[String], sharedParsingParameters: SharedParsingParameters,
-  )(implicit m: MessagesProvider, ec: ExecutionContext, ctx: DBAccessContext): Fox[MultiNmlParseResult] = {
+  )(implicit ec: ExecutionContext, ctx: DBAccessContext): Fox[MultiNmlParseResult] = {
     val name = zipFileName getOrElse file.getName
     var otherFiles = Map.empty[String, File]
     var pendingResults = List.empty[Fox[NmlParseResult]]
@@ -155,8 +152,7 @@ class AnnotationUploadService @Inject()(tempFileService: WkTempFileService, nmlP
   }
 
   def extractFromFiles(files: Seq[(File, String)], sharedParams: SharedParsingParameters)(
-      implicit m: MessagesProvider,
-      ec: ExecutionContext,
+      implicit ec: ExecutionContext,
       ctx: DBAccessContext): Fox[MultiNmlParseResult] =
     Fox.foldLeft(files.iterator, NmlResults.MultiNmlParseResult()) {
       case (collectedResults, (file, name)) =>
@@ -185,8 +181,7 @@ class AnnotationUploadService @Inject()(tempFileService: WkTempFileService, nmlP
     }
 
   private def extractFromFile(file: File, fileName: String, sharedParsingParameters: SharedParsingParameters)(
-      implicit m: MessagesProvider,
-      ec: ExecutionContext,
+      implicit ec: ExecutionContext,
       ctx: DBAccessContext): Fox[MultiNmlParseResult] =
     if (fileName.endsWith(".zip")) {
       logger.trace("Extracting from Zip file")

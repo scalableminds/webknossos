@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.google.inject.Inject
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
@@ -28,7 +29,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeDataZipFo
 import com.scalableminds.webknossos.tracingstore.{TSRemoteDatastoreClient, TSRemoteWebknossosClient}
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
-import play.api.i18n.{Messages, MessagesProvider}
 
 import java.io._
 import java.nio.file.Path
@@ -332,8 +332,7 @@ class VolumeTracingService @Inject()(
   }
 
   def initializeWithDataMultiple(annotationId: ObjectId, tracingId: String, tracing: VolumeTracing, initialData: File)(
-      implicit mp: MessagesProvider,
-      tc: TokenContext): Fox[MergedVolumeStats] =
+      implicit tc: TokenContext): Fox[MergedVolumeStats] =
     if (tracing.version != 0L)
       Fox.failure("Tracing has already been edited.")
     else {
@@ -369,12 +368,9 @@ class VolumeTracingService @Inject()(
               _ <- withZipsFromMultiZipAsync(initialData)((_, dataZip) => mergedVolume.addIdSetFromDataZip(dataZip))
               _ <- withZipsFromMultiZipAsync(initialData)((index, dataZip) =>
                 mergedVolume.addFromDataZip(index, dataZip))
-              _ <- Fox.fromBool(
-                ElementClass
-                  .largestSegmentIdIsInRange(mergedVolume.largestSegmentId, tracing.elementClass)) ?~> Messages(
-                "annotation.volume.largestSegmentIdExceedsRange",
-                mergedVolume.largestSegmentId,
-                tracing.elementClass)
+              _ <- Fox.fromBool(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId,
+                                                                       tracing.elementClass)) ?~> Msg.Annotation.Volume
+                .largestSegmentIdExceedsRange(mergedVolume.largestSegmentId, tracing.elementClass.toString)
               destinationVolumeLayer = volumeTracingLayer(annotationId, tracingId, tracing)
               fallbackLayer <- getFallbackLayer(annotationId, tracing)
               segmentIndexBuffer = new VolumeSegmentIndexBuffer(
@@ -819,13 +815,12 @@ class VolumeTracingService @Inject()(
       case (None, None)       => None
     }
 
-  def mergeVolumeData(
-      firstVolumeAnnotationIdOpt: Option[ObjectId],
-      volumeTracingIds: Seq[String],
-      volumeTracings: Seq[VolumeTracing],
-      newVolumeTracingId: String,
-      newVersion: Long,
-      toTemporaryStore: Boolean)(implicit mp: MessagesProvider, tc: TokenContext): Fox[MergedVolumeStats] = {
+  def mergeVolumeData(firstVolumeAnnotationIdOpt: Option[ObjectId],
+                      volumeTracingIds: Seq[String],
+                      volumeTracings: Seq[VolumeTracing],
+                      newVolumeTracingId: String,
+                      newVersion: Long,
+                      toTemporaryStore: Boolean)(implicit tc: TokenContext): Fox[MergedVolumeStats] = {
     val before = Instant.now
     val volumeLayers = volumeTracingIds.zip(volumeTracings).map {
       case (tracingId, tracing) => volumeTracingLayer(ObjectId("annotationIdUnusedInThisContext"), tracingId, tracing)
@@ -869,10 +864,8 @@ class VolumeTracingService @Inject()(
           mergedVolume.addFromBucketStream(sourceVolumeIndex, volumeLayer.bucketStream, Some(magsIntersection))
       }
       for {
-        _ <- Fox.fromBool(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId, elementClassProto)) ?~> Messages(
-          "annotation.volume.largestSegmentIdExceedsRange",
-          mergedVolume.largestSegmentId,
-          elementClassProto)
+        _ <- Fox.fromBool(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId, elementClassProto)) ?~> Msg.Annotation.Volume
+          .largestSegmentIdExceedsRange(mergedVolume.largestSegmentId, elementClassProto.toString)
         mergedAdditionalAxes <- AdditionalAxis
           .mergeAndAssertSameAdditionalAxes(
             volumeLayers.map(l => AdditionalAxis.fromProtosAsOpt(l.tracing.additionalAxes)))
@@ -925,7 +918,7 @@ class VolumeTracingService @Inject()(
                        tracingId: String,
                        tracing: VolumeTracing,
                        zipFile: File,
-                       currentVersion: Int)(implicit mp: MessagesProvider, tc: TokenContext): Fox[Long] =
+                       currentVersion: Int)(implicit tc: TokenContext): Fox[Long] =
     if (currentVersion != tracing.version)
       Fox.failure("version.mismatch")
     else {
@@ -943,10 +936,8 @@ class VolumeTracingService @Inject()(
           _ <- mergedVolume.addIdSetFromDataZip(zipFile)
           _ = mergedVolume.addFromBucketStream(sourceVolumeIndex = 0, volumeLayer.bucketProvider.bucketStream())
           _ <- mergedVolume.addFromDataZip(sourceVolumeIndex = 1, zipFile)
-          _ <- Fox.fromBool(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId, tracing.elementClass)) ?~> Messages(
-            "annotation.volume.largestSegmentIdExceedsRange",
-            mergedVolume.largestSegmentId,
-            tracing.elementClass)
+          _ <- Fox.fromBool(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId, tracing.elementClass)) ?~> Msg.Annotation.Volume
+            .largestSegmentIdExceedsRange(mergedVolume.largestSegmentId, tracing.elementClass.toString)
           fallbackLayer <- getFallbackLayer(annotationId, tracing)
           mappingName <- getMappingNameUnlessEditable(tracing)
           segmentIndexBuffer <- Fox.successful(

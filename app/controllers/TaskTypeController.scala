@@ -8,7 +8,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import models.annotation.AnnotationSettings
 import models.task._
 import models.user.UserService
-import play.api.i18n.Messages
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
@@ -42,7 +41,7 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team)) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- taskTypeDAO
           .findOneBySummaryAndOrganization(taskType.summary, request.identity._organization)(GlobalAccessContext)
-          .reverse ?~> Messages("taskType.summary.alreadyTaken", taskType.summary)
+          .reverse ?~> Msg.TaskType.summaryTaken(taskType.summary)
         _ <- taskTypeDAO.insertOne(taskType, request.identity._organization)
         js <- taskTypeService.publicWrites(taskType)
       } yield Ok(js)
@@ -79,22 +78,22 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
           taskTypeDAO
             .findOneBySummaryAndOrganization(taskTypeFromForm.summary, request.identity._organization)(
               GlobalAccessContext)
-            .reverse ?~> Messages("taskType.summary.alreadyTaken", taskTypeFromForm.summary)
+            .reverse ?~> Msg.TaskType.summaryTaken(taskTypeFromForm.summary)
         }
         _ <- taskTypeDAO.updateOne(updatedTaskType)
         js <- taskTypeService.publicWrites(updatedTaskType)
-      } yield JsonOk(js, Messages("taskType.editSuccess"))
+      } yield JsonOk(js, Msg.TaskType.editSuccess)
     }
   }
 
   def delete(taskTypeId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound" ~> NOT_FOUND
+      taskType <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound(taskTypeId) ~> NOT_FOUND
       _ <- Fox
         .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team)) ?~> Msg.notAllowed ~> FORBIDDEN
-      _ <- taskTypeDAO.deleteOne(taskTypeId) ?~> "taskType.deleteFailure"
-      _ <- taskDAO.removeAllWithTaskTypeAndItsAnnotations(taskTypeId) ?~> "taskType.deleteFailure"
+      _ <- taskTypeDAO.deleteOne(taskTypeId) ?~> Msg.TaskType.deleteFailed(taskType.summary)
+      _ <- taskDAO.removeAllWithTaskTypeAndItsAnnotations(taskTypeId) ?~> Msg.TaskType.deleteFailed(taskType.summary)
       _ = logger.info(s"TaskType $taskTypeId was deleted.")
-    } yield JsonOk(Messages("taskType.deleteSuccess", taskType.summary))
+    } yield JsonOk(Msg.TaskType.deleteSuccess(taskType.summary))
   }
 }

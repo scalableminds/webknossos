@@ -18,7 +18,6 @@ import models.project.ProjectDAO
 import models.task._
 import models.user._
 import com.scalableminds.util.tools.{Box, Full}
-import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
@@ -60,7 +59,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         datasetId <- SequenceUtils
           .findUniqueElement(request.body.map(_.datasetId))
           .toFox ?~> "task.create.notOnSameDataset"
-        dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId)
+        dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId)
         usableDataSource <- datasetService.usableDataSourceFor(dataset)
         _ <- Fox.fromBool(dataset._organization == request.identity._organization) ?~> "task.create.datasetOfOtherOrga"
         _ <- taskCreationService.assertBatchLimit(request.body.length, taskType)
@@ -135,23 +134,23 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     sil.SecuredAction.async(validateJson[TaskParameters]) { implicit request =>
       val params = request.body
       for {
-        task <- taskDAO.findOne(taskId) ?~> "task.notFound" ~> NOT_FOUND
+        task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound(taskId) ~> NOT_FOUND
         project <- projectDAO.findOne(task._project)
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- taskDAO.updateTotalInstances(task._id,
                                           task.totalInstances + params.pendingInstances - task.pendingInstances)
         updatedTask <- taskDAO.findOne(taskId)
         json <- taskService.publicWrites(updatedTask)
-      } yield JsonOk(json, Messages("task.editSuccess"))
+      } yield JsonOk(json, Msg.Task.editSuccess)
     }
 
   def delete(taskId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      task <- taskDAO.findOne(taskId) ?~> "task.notFound" ~> NOT_FOUND
+      task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound(taskId) ~> NOT_FOUND
       project <- projectDAO.findOne(task._project)
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed
-      _ <- taskDAO.removeOneAndItsAnnotations(task._id) ?~> "task.remove.failed"
-    } yield JsonOk(Messages("task.removed"))
+      _ <- taskDAO.removeOneAndItsAnnotations(task._id) ?~> Msg.Task.deleteFailure
+    } yield JsonOk(Msg.Task.deleteSuccess)
   }
 
   def listTasksForType(taskTypeId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
@@ -190,7 +189,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
         annotation <- insertedAnnotationBox.toFox
         annotationJSON <- annotationService.publicWrites(annotation, Some(user))
-      } yield JsonOk(annotationJSON, Messages("task.assigned"))
+      } yield JsonOk(annotationJSON, Msg.Task.assigned)
     }
   }
 

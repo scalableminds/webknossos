@@ -43,7 +43,6 @@ import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
-import play.api.i18n.Messages
 import play.api.libs.Files
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
@@ -175,14 +174,15 @@ class DataSourceController @Inject()(
             hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
             success = {
               case (chunkNumber, chunkSize, currentChunkSize, totalChunkCount, uploadFileId) =>
+                val uploadId = uploadService.extractDatasetUploadId(uploadFileId)
                 for {
-                  datasetId <- uploadService
-                    .getDatasetIdByUploadId(uploadService.extractDatasetUploadId(uploadFileId)) ?~> "dataset.upload.validation.failed"
+                  datasetId <- uploadService.getDatasetIdByUploadId(uploadId) ?~> Msg.Dataset.Upload
+                    .noSuchUpload(uploadId)
                   result <- accessTokenService
                     .validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
                       for {
-                        isKnownUpload <- uploadService.isKnownUploadByFileId(uploadFileId)
-                        _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
+                        isKnownUpload <- uploadService.isKnownUpload(uploadId)
+                        _ <- Fox.fromBool(isKnownUpload) ?~> Msg.Dataset.Upload.noSuchUpload(uploadId)
                         chunkFile <- request.body.file("file").toFox ?~> "zip.file.notFound"
                         _ <- uploadService.handleUploadChunk(uploadFileId,
                                                              chunkSize,
@@ -200,12 +200,13 @@ class DataSourceController @Inject()(
 
   def testChunk(resumableChunkNumber: Int, resumableIdentifier: String): Action[AnyContent] =
     Action.async { implicit request =>
+      val uploadId = uploadService.extractDatasetUploadId(resumableIdentifier)
       for {
-        datasetId <- uploadService.getDatasetIdByUploadId(uploadService.extractDatasetUploadId(resumableIdentifier)) ?~> "dataset.upload.validation.failed"
+        datasetId <- uploadService.getDatasetIdByUploadId(uploadId) ?~> Msg.Dataset.Upload.noSuchUpload(uploadId)
         result <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
           for {
-            isKnownUpload <- uploadService.isKnownUploadByFileId(resumableIdentifier)
-            _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
+            isKnownUpload <- uploadService.isKnownUpload(uploadId)
+            _ <- Fox.fromBool(isKnownUpload) ?~> Msg.Dataset.Upload.noSuchUpload(uploadId)
             isPresent <- uploadService.isChunkPresent(resumableIdentifier, resumableChunkNumber)
           } yield if (isPresent) Ok else NoContent
         }
@@ -216,12 +217,11 @@ class DataSourceController @Inject()(
     log(Some(slackNotificationService.noticeFailedUploadRequest)) {
       logTime(slackNotificationService.noticeSlowRequest) {
         for {
-          datasetId <- uploadService
-            .getDatasetIdByUploadId(request.body.uploadId) ?~> s"Cannot find running upload with upload id ${request.body.uploadId}"
+          datasetId <- uploadService.getDatasetIdByUploadId(request.body.uploadId) ?~> Msg.Dataset.Upload
+            .noSuchUpload(request.body.uploadId)
           response <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
             for {
-              _ <- uploadService.finishUpload(request.body, datasetId) ?~> Messages("dataset.upload.finishFailed",
-                                                                                    datasetId)
+              _ <- uploadService.finishUpload(request.body, datasetId) ?~> Msg.Dataset.Upload.finishFailed(datasetId)
             } yield Ok(Json.obj("newDatasetId" -> datasetId))
           }
         } yield response
@@ -696,7 +696,7 @@ class DataSourceController @Inject()(
               reportMutable += "Error when exploring as layer set: Resulted in zero layers."
               None
             case f: Failure =>
-              reportMutable += s"Error when exploring as layer set: ${formatFailureChain(f, includeStackTraces = true, messagesProviderOpt = Some(request.messages))}"
+              reportMutable += s"Error when exploring as layer set: ${formatFailureChain(f, includeStackTraces = true)}"
               None
             case Empty =>
               reportMutable += "Error when exploring as layer set: Empty"

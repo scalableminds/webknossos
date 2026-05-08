@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.mvc.ExtendedController
@@ -29,7 +30,6 @@ import com.scalableminds.webknossos.tracingstore.{
   TSRemoteWebknossosClient,
   TracingStoreAccessTokenService
 }
-import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 
@@ -55,7 +55,7 @@ class VolumeTracingZarrStreamingController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-          tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+          tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound ~> NOT_FOUND
           existingMags = tracing.mags.map(vec3IntFromProto)
           additionalFiles = if (zarrVersion == 2)
             List(NgffMetadata.FILENAME_DOT_ZATTRS, NgffGroupHeader.FILENAME_DOT_ZGROUP)
@@ -75,7 +75,7 @@ class VolumeTracingZarrStreamingController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-          tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+          tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound ~> NOT_FOUND
           existingMags = tracing.mags.map(vec3IntFromProto(_).toMagLiteral(allowScalar = true))
           additionalFiles = if (zarrVersion == 2)
             List(NgffMetadata.FILENAME_DOT_ZATTRS, NgffGroupHeader.FILENAME_DOT_ZGROUP)
@@ -89,12 +89,12 @@ class VolumeTracingZarrStreamingController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-          tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+          tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound ~> NOT_FOUND
           existingMags = tracing.mags.map(vec3IntFromProto)
-          magParsed <- Vec3Int
-            .fromMagLiteral(mag, allowScalar = true)
-            .toFox ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
-          _ <- Fox.fromBool(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Layer
+            .invalidMag(mag) ~> NOT_FOUND
+          _ <- Fox.fromBool(existingMags.contains(magParsed)) ?~> Msg.Annotation.Volume
+            .wrongMag(tracingId, mag) ~> NOT_FOUND
           files = if (zarrVersion == 2) List(".zarray") else List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
         } yield
           Ok(
@@ -111,12 +111,12 @@ class VolumeTracingZarrStreamingController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-          tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+          tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound ~> NOT_FOUND
           existingMags = tracing.mags.map(vec3IntFromProto)
-          magParsed <- Vec3Int
-            .fromMagLiteral(mag, allowScalar = true)
-            .toFox ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
-          _ <- Fox.fromBool(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Layer
+            .invalidMag(mag) ~> NOT_FOUND
+          _ <- Fox.fromBool(existingMags.contains(magParsed)) ?~> Msg.Annotation.Volume
+            .wrongMag(tracingId, mag) ~> NOT_FOUND
           files = if (zarrVersion == 2) List(".zarray") else List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
         } yield Ok(Json.toJson(files))
       }
@@ -127,12 +127,12 @@ class VolumeTracingZarrStreamingController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-          tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+          tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound ~> NOT_FOUND
           existingMags = tracing.mags.map(vec3IntFromProto)
-          magParsed <- Vec3Int
-            .fromMagLiteral(mag, allowScalar = true)
-            .toFox ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
-          _ <- Fox.fromBool(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Layer
+            .invalidMag(mag) ~> NOT_FOUND
+          _ <- Fox.fromBool(existingMags.contains(magParsed)) ?~> Msg.Annotation.Volume
+            .wrongMag(tracingId, mag) ~> NOT_FOUND
 
           cubeLength = DataLayer.bucketLength
           (channels, dtype) = ElementClass.toChannelAndZarrString(tracing.elementClass)
@@ -164,13 +164,13 @@ class VolumeTracingZarrStreamingController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-          tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+          tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound ~> NOT_FOUND
 
           existingMags = tracing.mags.map(vec3IntFromProto)
-          magParsed <- Vec3Int
-            .fromMagLiteral(mag, allowScalar = true)
-            .toFox ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
-          _ <- Fox.fromBool(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Layer
+            .invalidMag(mag) ~> NOT_FOUND
+          _ <- Fox.fromBool(existingMags.contains(magParsed)) ?~> Msg.Annotation.Volume
+            .wrongMag(tracingId, mag) ~> NOT_FOUND
 
           additionalAxes = AdditionalAxis.fromProtos(tracing.additionalAxes)
           dimNames = Some(Array("c") ++ additionalAxes.map(_.name).toArray ++ Seq("x", "y", "z"))
@@ -225,7 +225,7 @@ class VolumeTracingZarrStreamingController @Inject()(
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
       for {
         annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-        tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+        tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound ~> NOT_FOUND
         existingMags = tracing.mags.map(vec3IntFromProto)
         dataSource <- remoteWebknossosClient.getDataSourceForAnnotation(annotationId) ~> NOT_FOUND
         omeNgffHeader = NgffMetadata.fromNameVoxelSizeAndMags(tracingId,
@@ -241,7 +241,7 @@ class VolumeTracingZarrStreamingController @Inject()(
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
       for {
         annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-        tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+        tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound ~> NOT_FOUND
         sortedExistingMags = tracing.mags.map(vec3IntFromProto).toList.sortBy(_.maxDim)
         dataSource <- remoteWebknossosClient.getDataSourceForAnnotation(annotationId) ~> NOT_FOUND
         omeNgffHeader = NgffMetadataV0_5.fromNameVoxelSizeAndMags(tracingId,
@@ -258,7 +258,7 @@ class VolumeTracingZarrStreamingController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-          tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> NOT_FOUND
+          tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound ~> NOT_FOUND
           layerName = tracingName.getOrElse(tracingId)
           zarrLayer = StaticSegmentationLayer(
             name = layerName,
@@ -286,17 +286,17 @@ class VolumeTracingZarrStreamingController @Inject()(
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
           for {
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-            tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound") ~> BAD_REQUEST
+            tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound ~> BAD_REQUEST
             existingMags = tracing.mags.map(vec3IntFromProto)
             // Failures in parsing coordinates or mag need to still be NOT_FOUND, not BAD_REQUEST because neuroglancer tries to access :layer_name/:mag/.zattrs
-            magParsed <- Vec3Int
-              .fromMagLiteral(mag, allowScalar = true)
-              .toFox ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
-            _ <- Fox.fromBool(existingMags.contains(magParsed)) ?~> Messages("tracing.wrongMag", tracingId, mag) ~> NOT_FOUND
+            magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Layer
+              .invalidMag(mag) ~> NOT_FOUND
+            _ <- Fox.fromBool(existingMags.contains(magParsed)) ?~> Msg.Annotation.Volume
+              .wrongMag(tracingId, mag) ~> NOT_FOUND
             reorderedAdditionalAxes = reorderAdditionalAxes(AdditionalAxis.fromProtos(tracing.additionalAxes))
             (x, y, z, additionalCoordinates) <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates(
               coordinates,
-              Some(reorderedAdditionalAxes)) ?~> Messages("zarr.invalidChunkCoordinates") ~> NOT_FOUND
+              Some(reorderedAdditionalAxes)) ?~> Msg.Zarr.invalidChunkCoordinates(coordinates) ~> NOT_FOUND
             cubeSize = DataLayer.bucketLength
             wkRequest = WebknossosDataRequest(
               position = Vec3Int(x, y, z) * cubeSize * magParsed,

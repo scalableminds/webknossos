@@ -745,7 +745,7 @@ export async function acquireAnnotationMutex(
   blockedBySessionId: string | undefined | null;
 }> {
   const { canEdit, blockedByUser, blockedBySessionId } = await Request.receiveJSON(
-    `/api/annotations/${annotationId}/acquireMutex?sessionId=${sessionId}`,
+    `/api/annotations/${annotationId}/acquireMutex?${new URLSearchParams({ sessionId })}`,
     {
       method: "POST",
     },
@@ -754,8 +754,8 @@ export async function acquireAnnotationMutex(
 }
 
 export async function releaseAnnotationMutex(annotationId: string): Promise<void> {
-  await Request.receiveJSON(`/api/annotations/${annotationId}/mutex`, {
-    method: "DELETE",
+  await Request.receiveJSON(`/api/annotations/${annotationId}/releaseMutex`, {
+    method: "POST",
   });
 }
 

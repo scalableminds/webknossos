@@ -595,9 +595,10 @@ function* watchForAnnotationExit(): Saga<void> {
       `[Mutex] Releasing mutex for annotation ${annotationId} on exit via sendBeacon (queued: ${sent}).`,
     );
 
-    // Best-effort store update — page may already be unloading
-    yield* put(setIsMutexAcquiredAction(false));
-    yield* put(setUserHoldingMutexAction(null));
+    if (sent) {
+      yield* put(setIsMutexAcquiredAction(false));
+      yield* put(setUserHoldingMutexAction(null));
+    }
   });
 }
 

@@ -6,7 +6,7 @@
             <rect x="0" y="0" width="1024" height="1024" style="fill:none;"/>
             <g transform="matrix(1.00947,0,0,1.00947,-4.85084,-4.85084)">
                 <g transform="matrix(0.70841,-0.70841,0.633969,0.633969,-3610.41,792.943)">
-                    <rect x="2659.91" y="2847.78" width="896" height="363.84" style="fill:white;stroke:black;stroke-width:75.03px;"/>
+                    <rect x="2659.91" y="2847.78" width="896" height="363.84" style="fill:none;stroke:black;stroke-width:75.03px;"/>
                 </g>
                 <g transform="matrix(0.707107,-0.707107,0.707107,0.707107,-3771.63,537.601)">
                     <path d="M2787.91,2847.78L2787.91,3039.78" style="fill:none;stroke:black;stroke-width:71.32px;"/>

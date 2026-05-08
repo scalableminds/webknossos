@@ -28,7 +28,7 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
                                          wkConf: WkConf)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
-  def requestJobs(key: String, workerVersion: Option[String]): Action[AnyContent] = Action.async { implicit request =>
+  def requestJobs(key: String, workerVersion: Option[String]): Action[AnyContent] = Action.async {
     for {
       worker <- workerDAO.findOneByKey(key) ?~> "job.worker.notFound"
       _ = workerDAO.updateHeartBeat(worker._id)

@@ -8,7 +8,6 @@ import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.organization.OrganizationService
 import models.team._
 import models.user._
-import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc._
@@ -189,14 +188,12 @@ class UserController @Inject()(userService: UserService,
       (__ \ "experiences").readNullable[Map[String, Int]] and
       (__ \ "lastTaskTypeId").readNullable[String]).tupled
 
-  private def ensureProperTeamAdministration(user: User, userFullName: String, teams: List[(TeamMembership, Team)])(
-      implicit m: MessagesProvider) =
+  private def ensureProperTeamAdministration(user: User, userFullName: String, teams: List[(TeamMembership, Team)]) =
     Fox.combined(teams.map {
       case (TeamMembership(_, true), team) =>
         for {
-          _ <- Fox.fromBool(user._organization == team._organization) ?~> Messages("team.admin.notPossibleBy",
-                                                                                   team.name,
-                                                                                   userFullName) ~> FORBIDDEN
+          _ <- Fox.fromBool(user._organization == team._organization) ?~> Msg.Team
+            .adminNotPossibleBy(team.name, userFullName) ~> FORBIDDEN
         } yield ()
       case (_, _) =>
         Fox.successful(())

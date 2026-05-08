@@ -87,7 +87,7 @@ class AnnotationController @Inject()(
            timestamp: Option[Long]): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     log() {
       val notFoundMessage =
-        if (request.identity.isEmpty) Msg.Annotation.notFoundConsiderLoggingIn else Msg.Annotation.notFound
+        if (request.identity.isEmpty) Msg.Annotation.notFoundConsiderLogin else Msg.Annotation.notFound
       for {
         annotation <- provider.provideAnnotation(typ, id, request.identity) ?~> notFoundMessage ~> NOT_FOUND
         _ <- Fox.fromBool(annotation.state != Cancelled) ?~> Msg.Annotation.cancelled

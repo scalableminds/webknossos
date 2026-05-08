@@ -27,7 +27,6 @@ import models.organization.{OrganizationDAO, OrganizationService}
 import models.storage.UsedStorageService
 import models.team.TeamDAO
 import models.user.UserDAO
-import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
@@ -63,9 +62,8 @@ class WKRemoteDataStoreController @Inject()(
         val uploadInfo = request.body
         for {
           user <- bearerTokenService.userForToken(token) ~> FORBIDDEN
-          organization <- organizationDAO.findOne(uploadInfo.organization)(GlobalAccessContext) ?~> Messages(
-            "organization.notFound",
-            uploadInfo.organization) ~> NOT_FOUND
+          organization <- organizationDAO.findOne(uploadInfo.organization)(GlobalAccessContext) ?~> Msg.Organization
+            .notFound(uploadInfo.organization) ~> NOT_FOUND
           _ <- organizationService.assertUsedStorageNotExceeded(organization, uploadInfo.totalFileSizeInBytes) ?~> "dataset.upload.storageExceeded" ~> FORBIDDEN
           _ <- Fox.fromBool(organization._id == user._organization) ?~> Msg.notAllowed ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(uploadInfo.name)
@@ -98,9 +96,8 @@ class WKRemoteDataStoreController @Inject()(
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           user <- bearerTokenService.userForToken(token) ~> FORBIDDEN
-          organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages(
-            "organization.notFound",
-            user._organization) ~> NOT_FOUND
+          organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Msg.Organization.notFound(
+            organizationId) ~> NOT_FOUND
           _ <- Fox.fromBool(organization._id == user._organization) ?~> Msg.notAllowed ~> FORBIDDEN
           datasets <- datasetService.getAllUnfinishedDatasetUploadsOfUser(user._id, user._organization)(
             GlobalAccessContext) ?~> "dataset.upload.couldNotLoadUnfinishedUploads"
@@ -128,7 +125,7 @@ class WKRemoteDataStoreController @Inject()(
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           user <- bearerTokenService.userForToken(token) ~> FORBIDDEN
-          dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
           _ = datasetService.trackNewDataset(dataset,
                                              user,
                                              request.body.needsConversion,
@@ -146,7 +143,7 @@ class WKRemoteDataStoreController @Inject()(
                                         dataSource,
                                         isUsable = true)
           }
-          updated <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          updated <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
           _ <- Fox.runIf(!request.body.needsConversion)(usedStorageService.refreshStorageReportForDataset(updated))
           _ <- Fox.runIf(!request.body.needsConversion)(datasetService.scanRealpathsIfVirtual(updated))
           _ <- Fox.runIf(request.body.needsConversion) {
@@ -229,11 +226,10 @@ class WKRemoteDataStoreController @Inject()(
     Action.async { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages(
-            "organization.notFound",
+          organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Msg.Organization.notFound(
             organizationId) ~> NOT_FOUND
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetDirectoryName, organization._id)(
-            GlobalAccessContext) ?~> Messages("dataset.notFound", datasetDirectoryName)
+            GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetDirectoryName)
         } yield Ok(Json.toJson(dataset._id))
       }
     }
@@ -242,7 +238,7 @@ class WKRemoteDataStoreController @Inject()(
     Action.async { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
           dataSource <- datasetService.dataSourceFor(dataset)
         } yield Ok(Json.toJson(dataSource))
       }
@@ -252,7 +248,7 @@ class WKRemoteDataStoreController @Inject()(
     Action.async(validateJson[DataSource]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
           _ <- Fox.runIf(!dataset.isVirtual)(
             datasetDAO.updateDataSource(datasetId,
                                         name,

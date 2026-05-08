@@ -8,7 +8,6 @@ import javax.inject.Inject
 import models.dataset.{DataStore, DataStoreDAO, DataStoreService}
 import models.user.{MultiUserDAO, UserService}
 import com.scalableminds.util.tools.Empty
-import play.api.i18n.Messages
 import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
@@ -51,7 +50,7 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
             _ <- dataStoreDAO.insertOne(dataStore) ?~> "dataStore.create.failed"
             js <- dataStoreService.publicWrites(dataStore)
           } yield { Ok(Json.toJson(js)) }
-        case _ => Fox.successful(JsonBadRequest(Messages("dataStore.name.alreadyTaken")))
+        case _ => Fox.successful(JsonBadRequest(Msg.DataStore.nameTaken(dataStore.name)))
       }
     }
   }

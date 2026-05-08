@@ -10,7 +10,6 @@ import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.project._
 import models.task._
 import models.user.UserService
-import play.api.i18n.Messages
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{Action, AnyContent}
 import security.WkEnv
@@ -70,7 +69,7 @@ class ProjectController @Inject()(projectService: ProjectService,
       project <- projectDAO.findOne(id) ?~> Msg.Project.notFound(id) ~> NOT_FOUND
       _ <- Fox.fromBool(project.isDeletableBy(request.identity)) ?~> "project.remove.notAllowed" ~> FORBIDDEN
       _ <- projectService.deleteOne(project._id) ?~> "project.remove.failure"
-    } yield JsonOk(Messages("project.remove.success"))
+    } yield JsonOk(Msg.Project.deleteSuccess(id))
   }
 
   def create: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
@@ -78,7 +77,7 @@ class ProjectController @Inject()(projectService: ProjectService,
       for {
         _ <- projectDAO
           .findOneByNameAndOrganization(project.name, request.identity._organization)(GlobalAccessContext)
-          .reverse ?~> Messages("project.name.alreadyTaken", project.name)
+          .reverse ?~> Msg.Project.nameTaken(project.name)
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- projectDAO.insertOne(project, request.identity._organization) ?~> "project.creation.failed"
         js <- projectService.publicWrites(project)

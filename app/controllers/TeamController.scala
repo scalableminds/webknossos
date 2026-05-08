@@ -1,11 +1,10 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.Fox
-
 import models.team._
 import models.user.UserDAO
-import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
 import security.WkEnv
@@ -38,7 +37,7 @@ class TeamController @Inject()(teamDAO: TeamDAO, userDAO: UserDAO, teamService: 
       _ <- teamDAO.deleteOne(id)
       _ <- userDAO.removeTeamFromAllUsers(id)
       _ <- teamDAO.removeTeamFromAllDatasetsAndFolders(id)
-    } yield JsonOk(Messages("team.deleted"))
+    } yield JsonOk(Msg.Team.deleteSuccess)
   }
 
   def create: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
@@ -50,7 +49,7 @@ class TeamController @Inject()(teamDAO: TeamDAO, userDAO: UserDAO, teamService: 
         team = Team(ObjectId.generate, request.identity._organization, teamName)
         _ <- teamDAO.insertOne(team)
         js <- teamService.publicWrites(team)
-      } yield JsonOk(js, Messages("team.created"))
+      } yield JsonOk(js, Msg.Team.createSuccess)
     }
   }
 }

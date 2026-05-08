@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
@@ -16,7 +17,6 @@ import models.organization.{
 }
 import models.user.UserService
 import com.scalableminds.util.tools.Box.tryo
-import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent}
 import play.silhouette.api.Silhouette
@@ -43,8 +43,7 @@ class CreditTransactionController @Inject()(organizationDAO: OrganizationDAO,
                  expiresAt: Option[String]): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can add credits to an organization"
-      _ <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages("organization.notFound",
-                                                                                     organizationId)
+      _ <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Msg.Organization.notFound(organizationId)
       moneySpentInDecimal <- tryo(BigDecimal(moneySpent)).toFox ?~> s"moneySpent $moneySpent is not a valid decimal"
       _ <- Fox.fromBool(moneySpentInDecimal >= 0) ?~> "moneySpent must be a positive number"
       _ <- Fox.fromBool(creditAmount > 0) ?~> "creditAmount must be a positive number"

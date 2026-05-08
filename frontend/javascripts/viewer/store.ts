@@ -719,7 +719,6 @@ const store = createStore<WebknossosState, Action>(
 );
 
 export function startSaga(saga: Saga<any[]>) {
-  console.log("run sagas", saga);
   return sagaMiddleware.run(saga);
 }
 export type StoreType = typeof store;

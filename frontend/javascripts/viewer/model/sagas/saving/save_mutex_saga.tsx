@@ -507,10 +507,11 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
   let wasMutexAlreadyAcquiredBefore = yield* select(
     (state) => state.save.mutexState.hasAnnotationMutex,
   );
-  try {
-    yield* takeEvery(
-      "SET_IS_MUTEX_ACQUIRED",
-      function* ({ isMutexAcquired }: SetIsMutexAcquiredAction) {
+
+  yield* takeEvery(
+    "SET_IS_MUTEX_ACQUIRED",
+    function* ({ isMutexAcquired }: SetIsMutexAcquiredAction) {
+      try {
         const othersMayEdit = yield* select((state) =>
           isAnnotationEditableByNonOwners(state.annotation),
         );
@@ -553,13 +554,10 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
             message = messages["annotation.acquiringMutexFailed.noUser"];
           }
           // Wait a bit before showing the toast to the user. Otherwise,
-          // a toast would flash briefly while the user is navigating away (because
+          // a toast can flash briefly while the user is navigating away (because
           // the mutex is released when navigating away) which is rather confusing.
-          // Also, it's a workaround for the finally-block below that is not hit
-          // correctly after the root saga was cancelled (bug in redux-saga?).
-          // By waiting a bit, we delegate back to the saga middleware which can now
-          // pause/cancel the saga before the toast is emitted.
-          console.log("about to show warning");
+          // Also, we need to delegate back to the saga middleware so that
+          // this saga can be properly cancelled.
           yield* delay(500);
           Toast.warning(message, { key: MUTEX_NOT_ACQUIRED_KEY });
         }
@@ -567,16 +565,14 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
           (state) => state.save.mutexState.hasAnnotationMutex,
         );
         mutexLogicState.isInitialRequest = false;
-      },
-    );
-  } finally {
-    console.log("executing finally");
-    if (yield* cancelled()) {
-      console.log("  was cancelled");
-      Toast.close(MUTEX_NOT_ACQUIRED_KEY);
-      Toast.close(MUTEX_ACQUIRED_KEY);
-    }
-  }
+      } finally {
+        if (yield* cancelled()) {
+          Toast.close(MUTEX_NOT_ACQUIRED_KEY);
+          Toast.close(MUTEX_ACQUIRED_KEY);
+        }
+      }
+    },
+  );
 }
 
 function* watchForAnnotationExit(): Saga<void> {

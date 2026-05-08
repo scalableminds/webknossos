@@ -210,7 +210,7 @@ class VolumeTracingController @Inject()(
           for {
             mergedVolumeStats <- temporaryMergedVolumeStatsStore
               .pop(newTracingId)
-              .toFox ?~> "mergedVolumeStats.notFound"
+              .toFox ?~> Msg.Annotation.Volume.mergedVolumeStatsNotFound
             mergedTracing <- volumeTracingService
               .merge(tracingsFlat, mergedVolumeStats, None, newVersion = 0L, additionalBoundingBoxes = Seq.empty)
               .toFox
@@ -321,7 +321,7 @@ class VolumeTracingController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-          data: Array[Byte] <- fullMeshService.loadFor(annotationId, tracingId, request.body, version = None) ?~> "mesh.loadFull.failed"
+          data: Array[Byte] <- fullMeshService.loadFor(annotationId, tracingId, request.body, version = None) ?~> Msg.Mesh.LoadFull.failed
         } yield Ok(data)
       }
     }
@@ -408,7 +408,7 @@ class VolumeTracingController @Inject()(
               data: Array[Byte] <- fullMeshService.loadFor(annotationId,
                                                            tracingId,
                                                            fullMeshRequest,
-                                                           request.body.annotationVersion) ?~> "mesh.loadFull.failed"
+                                                           request.body.annotationVersion) ?~> Msg.Mesh.LoadFull.failed
               surfaceArea <- fullMeshService.surfaceAreaFromStlBytes(data).toFox
             } yield surfaceArea
           }

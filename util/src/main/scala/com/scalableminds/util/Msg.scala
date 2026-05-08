@@ -102,6 +102,8 @@ object Msg {
         "Could not split flat fallback layer bucket data from datastore into buckets."
       val fallbackDataLengthMismatch: String =
         "Length mismatch when unpacking bucket data from datastore for fallback layer."
+      val mergedVolumeStatsNotFound: String =
+        "Could not find mergedVolumeStats from previous merge steps."
     }
     object EditableMapping {
       val numEdgesExceedsInt: String = "Edge count for editable mapping exceeds int32 range."
@@ -169,6 +171,7 @@ object Msg {
       val submitFailed: String = "Could not submit the AI inference job."
     }
     val exportFileNotFound: String = "Exported file not found. The link may be expired."
+    val notEnoughCredits: String = "Your organization does not have enough WEBKNOSSOS credits to run this job."
   }
   object Dataset {
     val noBoundingBox: String = "This dataset has no bounding box. Please make sure this dataset is imported correctly."
@@ -239,6 +242,8 @@ object Msg {
   }
   object Script {
     def notFound(id: ObjectId): String = s"Script “$id” could not be found or accessed."
+    def nameInvalidChars(name: String): String =
+      s"Script name “$name” is invalid. Please use only letters, digits, dots, space, underscores, hyphens."
   }
   object Nml {
     val uploadSuccess: String = "Successfully uploaded file."
@@ -306,11 +311,17 @@ object Msg {
         s"Could not load chunk list for segment $segmentIds from mesh file “$name”."
       def zeroChunks(segmentIds: String, name: String) =
         s"Zero mesh chunks for segment $segmentIds in mesh file “$name”."
+      def loadChunkFailed: String = "Failed to load mesh chunk for segment."
+    }
+    object LoadFull {
+      def failed: String = "Failed to load full segment mesh."
     }
   }
   object ConnectomeFile {
     def lookUpFailed(name: String): String = s"Could not look up connectome file “$name”."
     def readMappingNameFailed(name: String): String = s"Could not read mapping name from connectome file “$name”."
+    def openFailed: String = "Could not open connectome file for reading."
+    def readEncodingFailed(name: String): String = "Could not read encoding from connectome file “$name”."
   }
   object Zarr {
     def invalidChunkCoordinates(coordinates: String): String =

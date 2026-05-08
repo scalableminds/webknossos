@@ -1,5 +1,6 @@
 package models.job
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double}
 import com.scalableminds.webknossos.datastore.models.VoxelSize
@@ -259,7 +260,7 @@ class JobService @Inject()(wkConf: WkConf,
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
       _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ?~> "job.paid.noAdminOrManager"
       costInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBoxInTargetMag, command)
-      _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costInMilliCredits)) ?~> "job.notEnoughCredits"
+      _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costInMilliCredits)) ?~> Msg.Job.notEnoughCredits
       creditTransaction <- creditTransactionService.reserveCredits(user._organization,
                                                                    costInMilliCredits,
                                                                    creditTransactionComment)

@@ -759,6 +759,10 @@ export async function releaseAnnotationMutex(annotationId: string): Promise<void
   });
 }
 
+export function releaseAnnotationMutexWithBeacon(annotationId: string): boolean {
+  return navigator.sendBeacon(`/api/annotations/${annotationId}/releaseMutex`);
+}
+
 export async function getTracingForAnnotationType(
   annotation: APIAnnotation,
   annotationLayerDescriptor: AnnotationLayerDescriptor,

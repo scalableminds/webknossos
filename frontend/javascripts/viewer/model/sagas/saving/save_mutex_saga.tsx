@@ -1,4 +1,8 @@
-import { acquireAnnotationMutex, releaseAnnotationMutex } from "admin/rest_api";
+import {
+  acquireAnnotationMutex,
+  releaseAnnotationMutex,
+  releaseAnnotationMutexWithBeacon,
+} from "admin/rest_api";
 import { Button } from "antd";
 import { TAB_SESSION_ID } from "libs/tab_session_id";
 import Toast from "libs/toast";
@@ -562,8 +566,7 @@ function* watchForAnnotationExit(): Saga<void> {
     if (!hasMutex) return;
 
     const annotationId = yield* select((state) => state.annotation.annotationId);
-    const url = `/api/annotations/${annotationId}/releaseMutex`;
-    const sent = navigator.sendBeacon(url);
+    const sent = releaseAnnotationMutexWithBeacon(annotationId);
     console.log(
       `[Mutex] Releasing mutex for annotation ${annotationId} on exit via sendBeacon (queued: ${sent}).`,
     );

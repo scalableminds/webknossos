@@ -700,7 +700,7 @@ class AnnotationService @Inject()(
   def transferAnnotationToUser(typ: String, id: ObjectId, userId: ObjectId, issuingUser: User)(
       implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
-      annotation <- annotationInformationProvider.provideAnnotation(typ, id, issuingUser) ?~> "annotation.notFound"
+      annotation <- annotationInformationProvider.provideAnnotation(typ, id, issuingUser) ?~> Msg.Annotation.notFound
       newUser <- userDAO.findOne(userId) ?~> "user.notFound"
       _ <- datasetDAO.findOne(annotation._dataset)(AuthorizedAccessContext(newUser)) ?~> "annotation.transferee.noDatasetAccess"
       _ <- annotationDAO.updateUser(annotation._id, newUser._id)

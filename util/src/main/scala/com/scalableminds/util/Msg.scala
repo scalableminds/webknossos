@@ -55,19 +55,19 @@ object Msg {
       val notAllowed: String = "You are not allowed to reopen this annotation."
       def tooLate(duration: FiniteDuration): String =
         s"The annotation cannot be reopened anymore, since it has been finished for too long (configured as $duration)."
-      val failed: String = "Failed to reopen the annotation."
+      val failed: String = "Could not reopen the annotation."
       val success: String = "Annotation was reopened."
     }
     object Lock {
       val explorationalsOnly: String = "Only explorational annotations can be locked."
-      val failed: String = "Changing the isLockedByOwner state of the annotation failed."
+      val failed: String = "Could not change the isLockedByOwner state of the annotation."
       val notAllowed: String =
         "Only the owner of this annotation is allowed to change the locked state of an annotation."
       val success: String = "The locking state of the annotation was successfully updated."
     }
     object Mutex {
-      val acquireFailed: String = "Failed to acquire annotation editing mutex."
-      val releaseFailed: String = "Failed to release annotation editing mutex."
+      val acquireFailed: String = "Could not acquire annotation editing mutex."
+      val releaseFailed: String = "Could not release annotation editing mutex."
     }
     object CollaborationMode {
       val onlyExplorationalOrTask: String =
@@ -158,11 +158,11 @@ object Msg {
   object Job {
     object TrainModel {
       val wrongOrga: String = "Training AI models is only allowed for datasets of your own organization."
-      val submitFailed: String = "Submitting the AI Model Training job failed."
+      val submitFailed: String = "Could not submit the AI model training job."
     }
     object Inference {
       val wrongOrga: String = "Running AI models is only allowed for datasets of your own organization."
-      val submitFailed: String = "Submitting the AI Inference job failed."
+      val submitFailed: String = "Could not submit the AI inference job."
     }
     val exportFileNotFound: String = "Exported file not found. The link may be expired."
   }
@@ -212,7 +212,7 @@ object Msg {
   object Task {
     def notFound: String = s"Task could not be found or accessed."
     def notFound(id: ObjectId): String = s"Task “$id” could not be found or accessed."
-    val findAnnotationsFailed: String = "Failed to retrieve annotations for this task."
+    val findAnnotationsFailed: String = "Could not retrieve annotations for this task."
     val cancelled: String = "Task is finished."
     val unavailable: String = "There is currently no task available."
     val tooManyOpenOnes: String = "You already have too many open tasks."
@@ -228,9 +228,13 @@ object Msg {
   object Project {
     def notFound: String = s"Project could not be found or accessed."
     def notFound(id: ObjectId): String = s"Project “$id” could not be found or accessed."
-    def deleteSuccess(id: ObjectId) = s"Project “id” was successfully deleted."
+    def notFound(name: String): String = s"Project with name “$name” could not be found or accessed."
+    def deleteSuccess(id: ObjectId) = s"Project “$id” was successfully deleted."
     def nameTaken(name: String) =
       s"A project named “$name” already exists. The name needs to be unique."
+  }
+  object Script {
+    def notFound(id: ObjectId): String = s"Script “$id” could not be found or accessed."
   }
   object Nml {
     val uploadSuccess: String = "Successfully uploaded file."
@@ -286,23 +290,23 @@ object Msg {
     def inUseByAnnotations(count: Int): String = s"Team is referenced by $count annotations."
     def adminNotPossibleBy(teamName: String, userName: String) =
       s"User “$userName” cannot be assigned administrative rights in team “$teamName” because they are not in the same organization."
-    def deleteSuccess = "Team was deleted."
+    val deleteSuccess = "Team was deleted."
     def createSuccess = "Team was successfully created."
   }
   object Mesh {
     object File {
-      def readVersionFailed(name: String): String = s"Failed to read format version from file “$name”."
-      def readMappingNameFailed(name: String): String = s"Failed to read mapping name from mesh file “$name”."
-      def lookUpFailed(name: String): String = s"Failed to look up mesh file “$name”."
+      def readVersionFailed(name: String): String = s"Could not read format version from file “$name”."
+      def readMappingNameFailed(name: String): String = s"Could not read mapping name from mesh file “$name”."
+      def lookUpFailed(name: String): String = s"Could not look up mesh file “$name”."
       def listChunksFailed(segmentIds: String, name: String) =
-        s"Failed to load chunk list for segment $segmentIds from mesh file “$name”."
+        s"Could not load chunk list for segment $segmentIds from mesh file “$name”."
       def zeroChunks(segmentIds: String, name: String) =
         s"Zero mesh chunks for segment $segmentIds in mesh file “$name”."
     }
   }
   object ConnectomeFile {
-    def lookUpFailed(name: String): String = s"Failed to look up connectome file “$name”."
-    def readMappingNameFailed(name: String): String = s"Failed to read mapping name from connectome file “$name”."
+    def lookUpFailed(name: String): String = s"Could not look up connectome file “$name”."
+    def readMappingNameFailed(name: String): String = s"Could not read mapping name from connectome file “$name”."
   }
   object Zarr {
     def invalidChunkCoordinates(coordinates: String): String =

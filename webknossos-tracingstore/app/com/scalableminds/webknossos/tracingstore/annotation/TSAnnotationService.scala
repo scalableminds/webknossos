@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.collections.SequenceUtils
@@ -70,7 +71,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       annotation <- if (isTemporaryAnnotation) temporaryTracingService.getAnnotation(annotationId)
       else
         for {
-          withTracings <- getWithTracings(annotationId, version) ?~> "annotation.notFound"
+          withTracings <- getWithTracings(annotationId, version) ?~> Msg.Annotation.notFound
         } yield withTracings.annotation
     } yield annotation
 

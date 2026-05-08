@@ -1,5 +1,6 @@
 package models.annotation
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.AnnotationType.AnnotationType
@@ -25,16 +26,16 @@ class AnnotationInformationProvider @Inject()(
       implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
       annotationIdentifier <- AnnotationIdentifier.parse(typ, id)
-      annotation <- provideAnnotation(annotationIdentifier, userOpt) ?~> "annotation.notFound"
+      annotation <- provideAnnotation(annotationIdentifier, userOpt) ?~> Msg.Annotation.notFound
     } yield annotation
 
   def provideAnnotation(id: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
     // this function only supports task/explorational look ups, not compound annotations
     for {
-      _annotation <- annotationDAO.findOne(id) ?~> "annotation.notFound"
+      _annotation <- annotationDAO.findOne(id) ?~> Msg.Annotation.notFound
       typ = if (_annotation._task.isEmpty) AnnotationType.Explorational else AnnotationType.Task
       annotationIdentifier = AnnotationIdentifier(typ, id)
-      annotation <- provideAnnotation(annotationIdentifier, userOpt) ?~> "annotation.notFound"
+      annotation <- provideAnnotation(annotationIdentifier, userOpt) ?~> Msg.Annotation.notFound
     } yield annotation
 
   def provideAnnotation(id: ObjectId, user: User)(implicit ctx: DBAccessContext): Fox[Annotation] =

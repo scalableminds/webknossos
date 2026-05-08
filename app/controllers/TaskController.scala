@@ -105,7 +105,8 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
       taskType <- taskTypeDAO.findOne(params.taskTypeId) ?~> "taskType.notFound" ~> NOT_FOUND
       _ <- taskCreationService.assertBatchLimit(inputFiles.length, taskType)
       project <- projectDAO
-        .findOneByNameAndOrganization(params.projectName, request.identity._organization) ?~> "project.notFound" ~> NOT_FOUND
+        .findOneByNameAndOrganization(params.projectName, request.identity._organization) ?~> Msg.Project.notFound(
+        params.projectName) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
       extractedFiles <- nmlService.extractFromFiles(
         inputFiles.map(f => (f.ref.path.toFile, f.filename)),

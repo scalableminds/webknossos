@@ -497,7 +497,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
     val projectNames = requestedTasks.map(_.projectName).distinct
     for {
       projects: List[Project] <- Fox.serialCombined(projectNames)(
-        projectDAO.findOneByNameAndOrganization(_, requestingUser._organization)) ?~> "project.notFound"
+        projectDAO.findOneByNameAndOrganization(_, requestingUser._organization)) ?~> Msg.Project.notFound
       datasetTeamIds <- teamService.allowedTeamIdsForDataset(dataset, cumulative = true)
       noAccessTeamIds = projects.map(_._team).diff(datasetTeamIds)
       noAccessTeamIdsTransitive <- Fox.serialCombined(noAccessTeamIds)(id =>
@@ -528,8 +528,9 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
         skeletonSaveResult.toFox) ?~> "task.create.saveSkeleton.failed"
       _ <- Fox.runIf(params.newVolumeTracingId.isDefined && !params.baseAnnotation.exists(_.volumeId.isDefined))(
         volumeSaveResult.toFox) ?~> "task.create.saveVolume.failed"
-      project <- projectDAO.findOneByNameAndOrganization(params.projectName, requestingUser._organization) ?~> "project.notFound"
-      _ <- Fox.runOptional(params.scriptId)(scriptDAO.findOne) ?~> "script.notFound"
+      project <- projectDAO.findOneByNameAndOrganization(params.projectName, requestingUser._organization) ?~> Msg.Project
+        .notFound(params.projectName)
+      _ <- Fox.runOptional(params.scriptId)(id => scriptDAO.findOne(id) ?~> Msg.Script.notFound(id))
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(requestingUser, project._team))
       task = Task(
         ObjectId.generate,

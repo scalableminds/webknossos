@@ -1,5 +1,6 @@
 package models.annotation.handler
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.TextUtils._
@@ -44,11 +45,11 @@ class SavedTracingInformationHandler @Inject()(
     }
 
   def provideAnnotation(annotationId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
-    annotationDAO.findOne(annotationId) ?~> "annotation.notFound"
+    annotationDAO.findOne(annotationId) ?~> Msg.Annotation.notFound
 
   def restrictionsFor(identifier: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =
     for {
-      annotation <- annotationDAO.findOne(identifier) ?~> "annotation.notFound"
+      annotation <- annotationDAO.findOne(identifier) ?~> Msg.Annotation.notFound
     } yield annotationRestrictionDefults.defaultsFor(annotation)
 
 }

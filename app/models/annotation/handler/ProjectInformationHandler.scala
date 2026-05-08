@@ -1,5 +1,6 @@
 package models.annotation.handler
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 
@@ -28,7 +29,7 @@ class ProjectInformationHandler @Inject()(
   override def provideAnnotation(projectId: ObjectId, userOpt: Option[User])(
       implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
-      project <- projectDAO.findOne(projectId) ?~> "project.notFound"
+      project <- projectDAO.findOne(projectId) ?~> Msg.Project.notFound(projectId)
       user <- userOpt.toFox ?~> "user.notAuthorised"
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team))
       annotations <- annotationDAO.findAllFinishedForProject(project._id)

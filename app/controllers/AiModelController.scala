@@ -194,7 +194,7 @@ class AiModelController @Inject()(
                                                    datasetBoundingBox,
                                                    creditTransactionComment,
                                                    request.identity,
-                                                   dataStore.name) ?~> "job.couldNotRunTrainModel"
+                                                   dataStore.name) ?~> Msg.Job.TrainModel.submitFailed
         newAiModel = AiModel(
           _id = modelId,
           _organization = request.identity._organization,

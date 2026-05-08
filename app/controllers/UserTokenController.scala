@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
@@ -171,7 +172,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     else
       for {
         tracingId <- tracingIdOpt.toFox
-        annotation <- annotationInformationProvider.annotationForTracing(tracingId)(GlobalAccessContext) ?~> "annotation.notFound"
+        annotation <- annotationInformationProvider.annotationForTracing(tracingId)(GlobalAccessContext) ?~> Msg.Annotation.notFound
         result <- handleAnnotationAccess(Some(annotation._id.toString), mode, userBox, token)
       } yield result
 

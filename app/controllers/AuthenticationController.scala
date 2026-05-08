@@ -622,7 +622,7 @@ class AuthenticationController @Inject()(
     }
   }
 
-  def webauthnAuthStart(): Action[AnyContent] = Action.async { implicit request =>
+  def webauthnAuthStart(): Action[AnyContent] = Action.async { _ =>
     for {
       _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "auth.passkeys.disabled"
       _ <- Fox.fromBool(usesHttps) ?~> "auth.passkeys.requiresHttps"
@@ -792,7 +792,7 @@ class AuthenticationController @Inject()(
 
   private lazy val absoluteOpenIdConnectCallbackURL = s"${conf.Http.uri}/api/auth/oidc/callback"
 
-  def loginViaOpenIdConnect(): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  def loginViaOpenIdConnect(): Action[AnyContent] = sil.UserAwareAction.async { _ =>
     if (!isOIDCEnabled) {
       Fox.successful(BadRequest("SSO is not enabled"))
     } else {

@@ -82,7 +82,7 @@ class JobController @Inject()(jobDAO: JobDAO,
     extends Controller
     with Zarr3OutputHelper {
 
-  def status: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def status: Action[AnyContent] = sil.SecuredAction.async { _ =>
     for {
       _ <- Fox.successful(())
       jobCountsByState <- jobDAO.countByState

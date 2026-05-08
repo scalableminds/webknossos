@@ -44,7 +44,7 @@ class InitialDataController @Inject()(initialDataService: InitialDataService, si
     extends Controller
     with FoxImplicits {
 
-  def triggerInsert: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  def triggerInsert: Action[AnyContent] = sil.UserAwareAction.async { _ =>
     for {
       _ <- initialDataService.insert
     } yield Ok

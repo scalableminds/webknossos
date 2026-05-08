@@ -92,7 +92,7 @@ class WKRemoteDataStoreController @Inject()(
                                   key: String,
                                   token: String,
                                   organizationId: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async { _ =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           user <- bearerTokenService.userForToken(token) ~> FORBIDDEN
@@ -223,7 +223,7 @@ class WKRemoteDataStoreController @Inject()(
                     key: String,
                     datasetDirectoryName: String,
                     organizationId: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async { _ =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Msg.Organization.notFound(
@@ -235,7 +235,7 @@ class WKRemoteDataStoreController @Inject()(
     }
 
   def getDataSource(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async { _ =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
@@ -259,9 +259,8 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  def jobExportProperties(name: String, key: String, jobId: ObjectId): Action[AnyContent] = Action.async {
-    implicit request =>
-      dataStoreService.validateAccess(name, key) { _ =>
+  def jobExportProperties(name: String, key: String, jobId: ObjectId): Action[AnyContent] = Action.async { _ =>
+    dataStoreService.validateAccess(name, key) { _ =>
         for {
           job <- jobDAO.findOne(jobId)(GlobalAccessContext)
           jobOwner <- userDAO.findOne(job._owner)(GlobalAccessContext)
@@ -273,9 +272,8 @@ class WKRemoteDataStoreController @Inject()(
       }
   }
 
-  def findCredential(name: String, key: String, credentialId: ObjectId): Action[AnyContent] = Action.async {
-    implicit request =>
-      dataStoreService.validateAccess(name, key) { _ =>
+  def findCredential(name: String, key: String, credentialId: ObjectId): Action[AnyContent] = Action.async { _ =>
+    dataStoreService.validateAccess(name, key) { _ =>
         for {
           credential <- credentialDAO.findOne(credentialId)
         } yield Ok(Json.toJson(credential))

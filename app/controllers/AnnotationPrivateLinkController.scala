@@ -28,8 +28,7 @@ class AnnotationPrivateLinkController @Inject()(
 
   private val bearerTokenService = wkSilhouetteEnvironment.combinedAuthenticatorService.tokenAuthenticatorService
 
-  def annotationSource(accessTokenOrId: String, userToken: Option[String]): Action[AnyContent] = Action.async {
-    implicit request =>
+  def annotationSource(accessTokenOrId: String, userToken: Option[String]): Action[AnyContent] = Action.async { _ =>
       for {
         annotationByLinkBox <- findAnnotationByPrivateLinkIfNotExpired(accessTokenOrId).shiftBox
         annotation <- annotationByLinkBox match {

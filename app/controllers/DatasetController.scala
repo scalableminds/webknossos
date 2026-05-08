@@ -195,7 +195,7 @@ class DatasetController @Inject()(userService: UserService,
       (__ \ "folderId").readNullable[ObjectId]).tupled
 
   def removeFromThumbnailCache(datasetId: ObjectId): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.async { _ =>
       for {
         _ <- thumbnailCachingService.removeFromCache(datasetId)
       } yield Ok
@@ -544,7 +544,7 @@ class DatasetController @Inject()(userService: UserService,
     }
 
   def isValidNewName(datasetName: String): Action[AnyContent] =
-    sil.SecuredAction.async { implicit request =>
+    sil.SecuredAction.async { _ =>
       for {
         validName <- datasetService.assertValidDatasetName(datasetName).futureBox
       } yield

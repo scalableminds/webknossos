@@ -47,7 +47,7 @@ class OrganizationController @Inject()(
   private val combinedAuthenticatorService = wkSilhouetteEnvironment.combinedAuthenticatorService
   private lazy val Mailer = actorSystem.actorSelection("/user/mailActor")
 
-  def organizationsIsEmpty: Action[AnyContent] = Action.async { implicit request =>
+  def organizationsIsEmpty: Action[AnyContent] = Action.async { _ =>
     for {
       orgaTableIsEmpty <- organizationDAO.isEmpty ?~> "organization.list.failed"
     } yield {
@@ -109,7 +109,7 @@ class OrganizationController @Inject()(
     }
   }
 
-  def getByInvite(inviteToken: String): Action[AnyContent] = Action.async { implicit request =>
+  def getByInvite(inviteToken: String): Action[AnyContent] = Action.async { _ =>
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
       invite <- inviteDAO.findOneByTokenValue(inviteToken)

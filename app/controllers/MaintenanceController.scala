@@ -27,7 +27,7 @@ class MaintenanceController @Inject()(
 
   private val adHocMaintenanceDuration: FiniteDuration = 5 minutes
 
-  def listCurrentAndUpcoming: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  def listCurrentAndUpcoming: Action[AnyContent] = sil.UserAwareAction.async { _ =>
     for {
       currentAndUpcomingMaintenances <- maintenanceDAO.findCurrentAndUpcoming
       js = currentAndUpcomingMaintenances.map(maintenanceService.publicWrites)

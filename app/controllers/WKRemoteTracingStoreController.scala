@@ -107,7 +107,7 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
     else Fox.successful(())
 
   def dataSourceForAnnotation(name: String, key: String, annotationId: ObjectId): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async { _ =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         annotationDataSourceTemporaryStore.find(annotationId) match {
@@ -123,7 +123,7 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
     }
 
   def datasetIdForAnnotation(name: String, key: String, annotationId: ObjectId): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async { _ =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         annotationDataSourceTemporaryStore.find(annotationId) match {
@@ -138,7 +138,7 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
     }
 
   def annotationIdForTracing(name: String, key: String, tracingId: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async { _ =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         if (tracingId == TracingId.dummy) {
@@ -152,7 +152,7 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
     }
 
   def dataStoreUriForDataset(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async { _ =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
@@ -163,7 +163,7 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
     }
 
   def getDataSource(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async { _ =>
       tracingStoreService.validateAccess(name, key) { _ =>
         for {
           dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND

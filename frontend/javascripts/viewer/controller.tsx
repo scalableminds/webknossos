@@ -147,8 +147,8 @@ class Controller extends PureComponent<PropsWithRouter, State> {
       // 1. The browser's native beforeunload event
       // 2. The React-Router block function (useBlocker or withBlocker HOC)
 
-      Store.dispatch(exitingAnnotationAction());
-
+      // If the annotation isn't in a saved state, we ask the user if they really want
+      // to exit the page.
       if (!Model.stateSaved() && Store.getState().annotation.restrictions.allowUpdate) {
         window.onbeforeunload = null; // clear the event handler otherwise it would be called twice. Once from history.block once from the beforeunload event
 
@@ -166,6 +166,15 @@ class Controller extends PureComponent<PropsWithRouter, State> {
         // The React Router blocker accepts a boolean
         return "preventDefault" in args ? true : !confirm(messages["save.leave_page_unfinished"]);
       }
+
+      // Only when the state is left with a clean state, we dispatched the
+      // following action. Currently, that action is only used for releasing a mutex
+      // that is potentially held by the current user.
+      // If the user decides to leave the annotation in a non-clean state, we don't really
+      // have a way to react to that.
+      // If we dispatched the action even though the user decides to stay on the page,
+      // saving would not work anymore (because the mutex was released).
+      Store.dispatch(exitingAnnotationAction());
 
       // The native event requires an empty return value to not show a message
       return;

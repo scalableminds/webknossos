@@ -54,7 +54,7 @@ class CredentialController @Inject()(credentialDAO: CredentialDAO, sil: Silhouet
                                   request.body.password,
                                   Some(request.identity._id.toString),
                                   Some(request.identity._organization))
-        ) ?~> "create.failed"
+        ) ?~> Msg.DataVault.createCredentialFailed
       } yield Ok(Json.toJson(_id))
     }
 
@@ -70,7 +70,7 @@ class CredentialController @Inject()(credentialDAO: CredentialDAO, sil: Silhouet
                                 request.body.secretAccessKey,
                                 Some(request.identity._id.toString),
                                 Some(request.identity._organization))
-        ) ?~> "create.failed"
+        ) ?~> Msg.DataVault.createCredentialFailed
       } yield Ok(Json.toJson(_id))
     }
 
@@ -85,7 +85,7 @@ class CredentialController @Inject()(credentialDAO: CredentialDAO, sil: Silhouet
                                          request.body.secretJson,
                                          Some(request.identity._id.toString),
                                          Some(request.identity._organization))
-        ) ?~> "create.failed"
+        ) ?~> Msg.DataVault.createCredentialFailed
       } yield Ok(Json.toJson(_id))
     }
 

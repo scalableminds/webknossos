@@ -78,6 +78,10 @@ object Msg {
       val success: String = "Successfully updated the annotation."
       val accessingTeamFailed: String = "Could not access a team during annotation shared team update."
     }
+    object Update {
+      val updateGroupVersionsNotSortedDesc: String =
+        "Annotation update group versions are not sorted in descending order."
+    }
     object Download {
       val failed: String = "Could not download annotation."
       val fetchVolumeLayerFailed: String = "Could not fetch volume annotation layer."
@@ -314,6 +318,7 @@ object Msg {
   }
   object DataVault {
     def setupFailed: String = "Could not set up remote file system access."
+    def createCredentialFailed: String = "Could not set up remote file system credential."
   }
   val notAllowed: String = "You are not authorized to view or edit this resource."
   val notFound: String = "Couldn’t find or access the requested resource."

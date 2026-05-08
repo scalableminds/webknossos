@@ -458,7 +458,10 @@ function MeasurementToolMenu({ adaptedActiveTool: _adaptedActiveTool }: ToolButt
           icon: (
             <Icon
               component={AnnotationTool.LINE_MEASUREMENT.icon}
-              style={{ ...getMaybeDisabledButtonStyle(isLineMeasurementDisabled), transform: "scale(1.5)" }}
+              style={{
+                ...getMaybeDisabledButtonStyle(isLineMeasurementDisabled),
+                transform: "scale(1.5)",
+              }}
             />
           ),
           disabled: isLineMeasurementDisabled,
@@ -479,7 +482,10 @@ function MeasurementToolMenu({ adaptedActiveTool: _adaptedActiveTool }: ToolButt
           icon: (
             <Icon
               component={AnnotationTool.AREA_MEASUREMENT.icon}
-              style={{ ...getMaybeDisabledButtonStyle(isAreaMeasurementDisabled), transform: "scale(1.5)" }}
+              style={{
+                ...getMaybeDisabledButtonStyle(isAreaMeasurementDisabled),
+                transform: "scale(1.5)",
+              }}
             />
           ),
           disabled: isAreaMeasurementDisabled,

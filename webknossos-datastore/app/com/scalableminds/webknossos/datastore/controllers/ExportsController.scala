@@ -2,14 +2,11 @@ package com.scalableminds.webknossos.datastore.controllers
 
 import java.nio.file.{Files, Path}
 import com.google.inject.Inject
+import com.scalableminds.util.Msg
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.services.{
-  DSRemoteWebknossosClient,
-  DataStoreAccessTokenService,
-  UserAccessRequest
-}
+import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataStoreAccessTokenService, UserAccessRequest}
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent}
 
@@ -38,7 +35,7 @@ class ExportsController @Inject()(webknossosClient: DSRemoteWebknossosClient,
       for {
         exportProperties <- webknossosClient.getJobExportProperties(jobId)
         fullPath = exportProperties.fullPathIn(config.Datastore.baseDirectory)
-        _ <- Fox.fromBool(Files.exists(fullPath)) ?~> "job.export.fileNotFound"
+        _ <- Fox.fromBool(Files.exists(fullPath)) ?~> Msg.Job.exportFileNotFound
       } yield Ok.sendPath(fullPath, inline = false)
     }
 

@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.explore
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.mvc.Formatter
@@ -82,7 +83,7 @@ class ExploreRemoteLayerService @Inject()(dataVaultService: DataVaultService,
         .toFox ?~> s"Received invalid URI: $layerUri"
       _ <- assertLocalPathInWhitelist(upath)
       credentialOpt: Option[DataVaultCredential] <- Fox.runOptional(credentialId)(remoteWebknossosClient.getCredential)
-      remotePath <- dataVaultService.vaultPathFor(CredentializedUPath(upath, credentialOpt)) ?~> "dataVault.setup.failed"
+      remotePath <- dataVaultService.vaultPathFor(CredentializedUPath(upath, credentialOpt)) ?~> Msg.DataVault.setupFailed
       layersWithVoxelSizes <- recursivelyExploreRemoteLayerAtPaths(
         List((remotePath, 0)),
         credentialId,

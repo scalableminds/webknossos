@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
@@ -41,7 +42,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Array[Byte]] =
     for {
-      tracing <- annotationService.findVolume(annotationId, tracingId, version) ?~> "tracing.notFound"
+      tracing <- annotationService.findVolume(annotationId, tracingId, version) ?~> Msg.Annotation.notFound
       data <- if (fullMeshRequest.meshFileName.isDefined)
         loadFullMeshFromMeshFile(annotationId, tracingId, tracing, fullMeshRequest)
       else loadFullMeshFromAdHoc(annotationId, tracingId, tracing, fullMeshRequest)

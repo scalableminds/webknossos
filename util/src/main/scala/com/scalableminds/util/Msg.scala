@@ -94,6 +94,13 @@ object Msg {
         s"The largest segment id $id specified for the annotation layer exceeds the range of its data type “$ec”"
       def wrongMag(tracingId: String, mag: String): String =
         s"Annotation layer “$tracingId” does not have mag “$mag”."
+      val fallbackDataSplitFailed: String =
+        "Could not split flat fallback layer bucket data from datastore into buckets."
+      val fallbackDataLengthMismatch: String =
+        "Length mismatch when unpacking bucket data from datastore for fallback layer."
+    }
+    object EditableMapping {
+      val numEdgesExceedsInt: String = "Edge count for editable mapping exceeds int32 range."
     }
     object Upload {
       def zipFileNotFound: String = "Could not extract zipped data from upload request."
@@ -115,6 +122,7 @@ object Msg {
     val duplicateFailed: String = "Could not duplicate annotation."
     val updateStateFailed: String = "Could not update state of annotation."
     val nameNotAvailable: String = "Could not determine name for annotation."
+    def idForTracingFailed(tracingId: String): String = s"Could not determine annotation id for tracing id $tracingId."
   }
   object Organization {
     def notFound(id: String): String = s"Organization “$id” could not be found or accessed."
@@ -156,6 +164,7 @@ object Msg {
       val wrongOrga: String = "Running AI models is only allowed for datasets of your own organization."
       val submitFailed: String = "Submitting the AI Inference job failed."
     }
+    val exportFileNotFound: String = "Exported file not found. The link may be expired."
   }
   object Dataset {
     val noBoundingBox: String = "This dataset has no bounding box. Please make sure this dataset is imported correctly."
@@ -171,8 +180,12 @@ object Msg {
       s"Dataset “$datasetId” could not be found or accessed. Please check whether you are on the correct WEBKNOSSOS instance. The uploaded file indicates “$gotHost” while this instance is “$thisHost”."
     def notUsable(id: ObjectId): String = s"Dataset “$id” is not imported or incomplete."
     def publicWritesFailed(id: ObjectId): String = s"Could not write Json for dataset “$id”."
+    def noData = "Could not load data for the requested dataset."
+    def bucketCountMismatch = "Bucket count mismatch while loading multiple data buckets for dataset."
     object DataSource {
       val notFound: String = "Datasource not found on datastore server. Might still be initializing."
+      val alreadyPresent: String = "A datasource-properties.json file already exists at the target location."
+      val updateFileFailed: String = "Could not update datasource-properties.json file."
     }
     object Layer {
       def notFound(layerName: String): String = s"Could not find layer “$layerName” in dataset."
@@ -191,6 +204,9 @@ object Msg {
     object Upload {
       def finishFailed(datasetId: ObjectId): String = s"Could not finalize upload for dataset “$datasetId”."
       def noSuchUpload(uploadId: String): String = s"Could not find running upload with upload id “$uploadId”."
+    }
+    object Chunk {
+      def decompressFailed: String = "Could not decompress data chunk."
     }
   }
   object Task {
@@ -291,6 +307,9 @@ object Msg {
   object Zarr {
     def invalidChunkCoordinates(coordinates: String): String =
       s"Invalid chunk coordinates $coordinates. Expected dot separated coordinates like c.<additional_axes.>x.y.z"
+  }
+  object DataVault {
+    def setupFailed: String = "Could not set up remote file system access."
   }
   val notAllowed: String = "You are not authorized to view or edit this resource."
   val notFound: String = "Couldn’t find or access the requested resource."

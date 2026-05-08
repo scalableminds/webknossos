@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datavault.{ByteRange, VaultPath}
@@ -46,6 +47,6 @@ class ChunkReader(header: DatasetHeader) extends FoxImplicits {
       tc: TokenContext): Fox[(Array[Byte], Option[Array[Int]])] =
     for {
       bytes <- path.readBytes(range)
-      decompressed <- tryo(header.compressorImpl.decompress(bytes)).toFox ?~> "chunk.decompress.failed"
+      decompressed <- tryo(header.compressorImpl.decompress(bytes)).toFox ?~> Msg.Dataset.Chunk.decompressFailed
     } yield (decompressed, None)
 }

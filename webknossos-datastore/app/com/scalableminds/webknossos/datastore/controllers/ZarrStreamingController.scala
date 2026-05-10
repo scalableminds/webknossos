@@ -255,7 +255,7 @@ class ZarrStreamingController @Inject()(
       // Failures in parsing coordinates or mag need to still be NOT_FOUND, not BAD_REQUEST because neuroglancer tries to access :layer_name/:mag/.zattrs
       (x, y, z, additionalCoordinates) <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates(
         coordinates,
-        reorderedAdditionalAxes) ?~> "zarr.invalidChunkCoordinates" ~> NOT_FOUND
+        reorderedAdditionalAxes) ?~> Msg.Zarr.invalidChunkCoordinates(coordinates) ~> NOT_FOUND
       magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Layer
         .invalidMag(mag) ~> NOT_FOUND
       _ <- Fox.fromBool(dataLayer.containsMag(magParsed)) ?~> Msg.Dataset.Layer

@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
+import com.scalableminds.util.Msg
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
@@ -84,14 +85,14 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       dataLayer: DataLayer,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Float] =
     for {
-      mag <- fullMeshRequest.mag.toFox ?~> "mag.neededForAdHoc"
-      segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> "dataLayer.mustBeSegmentation"
+      mag <- fullMeshRequest.mag.toFox ?~> Msg.Mag.neededForAdHoc
+      segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Msg.Dataset.layerMustBeSegmentation
       hasSegmentIndexFile = segmentationLayer.attachments.flatMap(_.segmentIndex).isDefined
       verticesForChunks <- if (hasSegmentIndexFile)
         getAllAdHocChunksWithSegmentIndex(datasetId, dataSource, segmentationLayer, fullMeshRequest, mag)
       else {
         for {
-          seedPosition <- fullMeshRequest.seedPosition.toFox ?~> "seedPosition.neededForAdHocWithoutSegmentIndex"
+          seedPosition <- fullMeshRequest.seedPosition.toFox ?~> Msg.Mag.neededForAdHoc
           chunks <- getAllAdHocChunksWithNeighborLogic(
             datasetId,
             dataSource,
@@ -118,15 +119,15 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       dataLayer: DataLayer,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      mag <- fullMeshRequest.mag.toFox ?~> "mag.neededForAdHoc"
-      segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> "dataLayer.mustBeSegmentation"
+      mag <- fullMeshRequest.mag.toFox ?~> Msg.Mag.neededForAdHoc
+      segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Msg.Dataset.layerMustBeSegmentation
       hasSegmentIndexFile = segmentationLayer.attachments.flatMap(_.segmentIndex).isDefined
       before = Instant.now
       verticesForChunks <- if (hasSegmentIndexFile)
         getAllAdHocChunksWithSegmentIndex(datasetId, dataSource, segmentationLayer, fullMeshRequest, mag)
       else {
         for {
-          seedPosition <- fullMeshRequest.seedPosition.toFox ?~> "seedPosition.neededForAdHocWithoutSegmentIndex"
+          seedPosition <- fullMeshRequest.seedPosition.toFox ?~> Msg.Mag.neededForAdHoc
           chunks <- getAllAdHocChunksWithNeighborLogic(
             datasetId,
             dataSource,
@@ -259,7 +260,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       dataLayer: DataLayer,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Seq[Array[Byte]]] =
     for {
-      meshFileName <- fullMeshRequest.meshFileName.toFox ?~> "mesh.meshFileName.required"
+      meshFileName <- fullMeshRequest.meshFileName.toFox ?~> Msg.Mesh.meshFileNameRequired
       meshFileKey <- meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, meshFileName)
       mappingNameForMeshFile <- meshFileService.mappingNameForMeshFile(meshFileKey)
       segmentIds <- segmentIdsForAgglomerateIdIfNeeded(
@@ -309,7 +310,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       (dracoMeshChunkBytes, encoding) <- meshFileService.readMeshChunk(
         meshFileKey,
         List(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize, Some(segmentId)))
-      ) ?~> "mesh.file.loadChunk.failed"
+      ) ?~> Msg.Mesh.File.loadChunkFailed
       _ <- Fox.fromBool(encoding == "draco") ?~> s"mesh file encoding is $encoding, only draco is supported"
       stlEncodedChunk <- getStlEncodedChunkFromDraco(chunkInfo, transform, dracoMeshChunkBytes, vertexQuantizationBits)
     } yield stlEncodedChunk

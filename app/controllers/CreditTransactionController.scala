@@ -87,7 +87,7 @@ class CreditTransactionController @Inject()(organizationDAO: OrganizationDAO,
   def list(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       isSuperUser <- userService.isSuperUser(request.identity._multiUser)
-      _ <- Fox.fromBool(isSuperUser || request.identity.isAdmin) ?~> "organization.listCreditTransactions.onlyAdmin"
+      _ <- Fox.fromBool(isSuperUser || request.identity.isAdmin) ?~> Msg.Organization.listCreditTransactionsOnlyAdmin
       transactions <- creditTransactionDAO.findAll
       compactedTransactions = creditTransactionService.compactFreeCreditsForDisplay(transactions)
       nonZeroTransactions = compactedTransactions.filter(_.milliCreditDelta != 0)

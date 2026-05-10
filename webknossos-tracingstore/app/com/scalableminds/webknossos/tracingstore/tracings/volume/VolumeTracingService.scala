@@ -102,7 +102,7 @@ class VolumeTracingService @Inject()(
                                                bucketPosition,
                                                bucketBytes,
                                                previousBucketBytesBox,
-                                               editableMappingTracingId) ?~> "volumeSegmentIndex.update.failed"
+                                               editableMappingTracingId) ?~> Msg.VolumeSegmentIndex.updateFailed
 
   def applyBucketMutatingActions(tracingId: String,
                                  annotationId: ObjectId,
@@ -140,7 +140,7 @@ class VolumeTracingService @Inject()(
       _ <- Fox.runIf(volumeLayer.tracing.getHasSegmentIndex)(volumeBucketBuffer.prefill(updateActions.flatMap {
         case a: UpdateBucketVolumeAction => Some(a.bucketPosition)
         case _                           => None
-      }) ?~> "annotation.update.failed.prefillBucketBuffer")
+      }) ?~> Msg.Annotation.Update.prefillBucketBufferFailed)
       _ <- Fox.serialCombined(updateActions) {
         case a: UpdateBucketVolumeAction =>
           if (tracing.getHasEditableMapping) {
@@ -573,7 +573,7 @@ class VolumeTracingService @Inject()(
         hasSegmentIndex = Some(hasSegmentIndex),
         userStates = userStates
       )
-      _ <- Fox.fromBool(newTracing.mags.nonEmpty) ?~> "magRestrictions.tooTight"
+      _ <- Fox.fromBool(newTracing.mags.nonEmpty) ?~> Msg.Mag.restrictionsTooTight
     } yield newTracing
   }
 
@@ -870,7 +870,7 @@ class VolumeTracingService @Inject()(
           .mergeAndAssertSameAdditionalAxes(
             volumeLayers.map(l => AdditionalAxis.fromProtosAsOpt(l.tracing.additionalAxes)))
           .toFox
-        firstVolumeLayer <- volumeLayers.headOption.toFox ?~> "merge.noTracings"
+        firstVolumeLayer <- volumeLayers.headOption.toFox ?~> Msg.Annotation.Volume.mergeLargestSegmentIdUnset
         firstVolumeAnnotationId <- firstVolumeAnnotationIdOpt.toFox
         fallbackLayer <- getFallbackLayer(firstVolumeAnnotationId, firstVolumeLayer.tracing)
         segmentIndexBuffer = new VolumeSegmentIndexBuffer(
@@ -931,7 +931,7 @@ class VolumeTracingService @Inject()(
       else {
         val volumeLayer = volumeTracingLayer(annotationId, tracingId, tracing)
         for {
-          largestSegmentId <- tracing.largestSegmentId.toFox ?~> "annotation.volume.merge.largestSegmentId.unset"
+          largestSegmentId <- tracing.largestSegmentId.toFox ?~> Msg.Annotation.Volume.mergeLargestSegmentIdUnset
           mergedVolume = new MergedVolume(tracing.elementClass, largestSegmentId)
           _ <- mergedVolume.addIdSetFromDataZip(zipFile)
           _ = mergedVolume.addFromBucketStream(sourceVolumeIndex = 0, volumeLayer.bucketProvider.bucketStream())

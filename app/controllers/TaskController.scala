@@ -43,7 +43,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
 
   def read(taskId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      task <- taskDAO.findOne(taskId) ?~> "task.notFound" ~> NOT_FOUND
+      task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound ~> NOT_FOUND
       js <- taskService.publicWrites(task)
     } yield Ok(js)
   }
@@ -51,17 +51,17 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
   def create: Action[List[TaskParameters]] =
     sil.SecuredAction.async(validateJson[List[TaskParameters]]) { implicit request =>
       for {
-        _ <- Fox.fromBool(request.body.nonEmpty) ?~> "task.create.noTasks"
+        _ <- Fox.fromBool(request.body.nonEmpty) ?~> Msg.Task.Create.noTasks
         taskTypeId <- SequenceUtils
           .findUniqueElement(request.body.map(_.taskTypeId))
-          .toFox ?~> "task.create.notOnSameTaskType"
-        taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound"
+          .toFox ?~> Msg.Task.Create.notOnSameTaskType
+        taskType <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound
         datasetId <- SequenceUtils
           .findUniqueElement(request.body.map(_.datasetId))
-          .toFox ?~> "task.create.notOnSameDataset"
+          .toFox ?~> Msg.Task.Create.notOnSameDataset
         dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId)
         usableDataSource <- datasetService.usableDataSourceFor(dataset)
-        _ <- Fox.fromBool(dataset._organization == request.identity._organization) ?~> "task.create.datasetOfOtherOrga"
+        _ <- Fox.fromBool(dataset._organization == request.identity._organization) ?~> Msg.Task.Create.datasetOfOtherOrga
         _ <- taskCreationService.assertBatchLimit(request.body.length, taskType)
         taskParametersWithIds = taskCreationService.addNewIdsToTaskParameters(request.body, taskType)
         taskParametersFull <- taskCreationService.createTracingsFromBaseAnnotations(taskParametersWithIds,
@@ -95,14 +95,14 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
    */
   def createFromFiles: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      body <- request.body.asMultipartFormData.toFox ?~> "binary.payload.invalid"
+      body <- request.body.asMultipartFormData.toFox ?~> Msg.binaryPayloadInvalid
       inputFiles = body.files.filter(file =>
         file.filename.toLowerCase.endsWith(".nml") || file.filename.toLowerCase.endsWith(".zip"))
-      _ <- Fox.fromBool(inputFiles.nonEmpty) ?~> "nml.file.notFound"
-      jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption).toFox ?~> "format.json.missing"
-      params <- JsonHelper.parseAs[NmlTaskParameters](jsonString).toFox ?~> "task.create.failed"
+      _ <- Fox.fromBool(inputFiles.nonEmpty) ?~> Msg.Nml.fileNotFound
+      jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption).toFox ?~> Msg.formatJsonMissing
+      params <- JsonHelper.parseAs[NmlTaskParameters](jsonString).toFox ?~> Msg.Task.Create.failed
       userOrganizationId = request.identity._organization
-      taskType <- taskTypeDAO.findOne(params.taskTypeId) ?~> "taskType.notFound" ~> NOT_FOUND
+      taskType <- taskTypeDAO.findOne(params.taskTypeId) ?~> Msg.TaskType.notFound ~> NOT_FOUND
       _ <- taskCreationService.assertBatchLimit(inputFiles.length, taskType)
       project <- projectDAO
         .findOneByNameAndOrganization(params.projectName, request.identity._organization) ?~> Msg.Project.notFound(
@@ -156,7 +156,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
 
   def listTasksForType(taskTypeId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      tasks <- taskDAO.findAllByTaskType(taskTypeId) ?~> "taskType.notFound" ~> NOT_FOUND
+      tasks <- taskDAO.findAllByTaskType(taskTypeId) ?~> Msg.TaskType.notFound ~> NOT_FOUND
       js <- Fox.serialCombined(tasks)(taskService.publicWrites(_))
     } yield Ok(Json.toJson(js))
   }

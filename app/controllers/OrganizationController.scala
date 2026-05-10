@@ -49,7 +49,7 @@ class OrganizationController @Inject()(
 
   def organizationsIsEmpty: Action[AnyContent] = Action.async { _ =>
     for {
-      orgaTableIsEmpty <- organizationDAO.isEmpty ?~> "organization.list.failed"
+      orgaTableIsEmpty <- organizationDAO.isEmpty ?~> Msg.Organization.listFailed
     } yield {
       Ok(Json.toJson(orgaTableIsEmpty))
     }
@@ -67,7 +67,7 @@ class OrganizationController @Inject()(
 
   def list(compact: Option[Boolean]): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      organizations <- organizationDAO.findAll ?~> "organization.list.failed"
+      organizations <- organizationDAO.findAll ?~> Msg.Organization.listFailed
       js <- if (compact.getOrElse(false)) Fox.successful(organizations.map(organizationService.compactWrites))
       else Fox.serialCombined(organizations)(o => organizationService.publicWrites(o))
     } yield Ok(Json.toJson(js))
@@ -98,8 +98,8 @@ class OrganizationController @Inject()(
 
   def getDefault: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
-      allOrgs <- organizationDAO.findAll(GlobalAccessContext) ?~> "organization.list.failed"
-      org <- allOrgs.headOption.toFox ?~> "organization.list.failed"
+      allOrgs <- organizationDAO.findAll(GlobalAccessContext) ?~> Msg.Organization.listFailed
+      org <- allOrgs.headOption.toFox ?~> Msg.Organization.listFailed
       js <- organizationService.publicWrites(org, request.identity)
     } yield {
       if (allOrgs.length > 1) // Cannot list organizations publicly if there are multiple ones, due to privacy reasons
@@ -150,7 +150,7 @@ class OrganizationController @Inject()(
 
   def acceptTermsOfService(version: Int): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- Fox.fromBool(request.identity.isOrganizationOwner) ?~> "termsOfService.onlyOrganizationOwner"
+      _ <- Fox.fromBool(request.identity.isOrganizationOwner) ?~> Msg.Organization.TermsOfService.onlyOrganizationOwner
       _ <- organizationService.acceptTermsOfService(request.identity._organization, version)
     } yield Ok
   }
@@ -323,7 +323,7 @@ class OrganizationController @Inject()(
     sil.SecuredAction.async { implicit request =>
       for {
         isSuperUser <- userService.isSuperUser(request.identity._multiUser)
-        _ <- Fox.fromBool(isSuperUser || request.identity.isAdmin) ?~> "organization.listPlanUpdates.onlyAdmin"
+        _ <- Fox.fromBool(isSuperUser || request.identity.isAdmin) ?~> Msg.Organization.listPlanUpdatesOnlyAdmin
         planUpdates <- organizationDAO.findPlanUpdates(request.identity._organization)
         planUpdatesWithFallback <- if (planUpdates.nonEmpty) {
           Fox.successful(planUpdates)

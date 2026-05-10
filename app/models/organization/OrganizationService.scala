@@ -78,22 +78,22 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     for {
       usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
       _ <- Fox.runOptional(organization.includedStorageBytes)(includedStorage =>
-        Fox.fromBool(usedStorageBytes + additionalRequestedStorage.getOrElse(0L) <= includedStorage)) ?~> "organization.storageExceeded"
+        Fox.fromBool(usedStorageBytes + additionalRequestedStorage.getOrElse(0L) <= includedStorage)) ?~> Msg.Organization.storageExceeded
     } yield ()
 
   def findOneByInviteOrDefault(inviteOpt: Option[Invite])(implicit ctx: DBAccessContext): Fox[Organization] =
     inviteOpt match {
-      case Some(invite) => organizationDAO.findOne(invite._organization) ?~> "organization.notFound.byInvite"
+      case Some(invite) => organizationDAO.findOne(invite._organization) ?~> Msg.Organization.notFoundByInvite
       case None =>
         for {
           allOrganizations <- organizationDAO.findAll(GlobalAccessContext)
-          _ <- Fox.fromBool(allOrganizations.length == 1) ?~> "organization.ambiguous"
+          _ <- Fox.fromBool(allOrganizations.length == 1) ?~> Msg.Organization.ambiguous
           defaultOrganization <- allOrganizations.headOption.toFox
         } yield defaultOrganization
     }
 
   def assertMayCreateOrganization(requestingUser: Option[User]): Fox[Unit] = {
-    val activatedInConfig = Fox.fromBool(conf.Features.isWkorgInstance) ?~> "allowOrganizationCreation.notEnabled"
+    val activatedInConfig = Fox.fromBool(conf.Features.isWkorgInstance) ?~> Msg.Organization.allowOrganizationCreationNotEnabled
     val userIsSuperUser = requestingUser.toFox.flatMap(
       user =>
         multiUserDAO
@@ -111,18 +111,18 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
   def assertNoOrganizationsPresent: Fox[Unit] =
     for {
       organizations <- organizationDAO.findAll(GlobalAccessContext)
-      _ <- Fox.fromBool(organizations.isEmpty) ?~> "organizationsNotEmpty"
+      _ <- Fox.fromBool(organizations.isEmpty) ?~> Msg.organizationsNotEmpty
     } yield ()
 
   def createOrganization(organizationIdOpt: Option[String], organizationName: String): Fox[Organization] =
     for {
-      normalizedName <- TextUtils.normalizeStrong(organizationName).toFox ?~> "organization.id.invalid"
+      normalizedName <- TextUtils.normalizeStrong(organizationName).toFox ?~> Msg.Organization.idInvalid
       organizationId = organizationIdOpt
         .flatMap(TextUtils.normalizeStrong)
         .getOrElse(normalizedName)
         .replaceAll(" ", "_")
       existingOrganization <- organizationDAO.findOne(organizationId)(GlobalAccessContext).shiftBox
-      _ <- Fox.fromBool(existingOrganization.isEmpty) ?~> "organization.id.alreadyInUse"
+      _ <- Fox.fromBool(existingOrganization.isEmpty) ?~> Msg.Organization.idAlreadyInUse
       initialPricingParameters = if (conf.Features.isWkorgInstance) (PricingPlan.Personal, Some(1), Some(50000000000L))
       else (PricingPlan.Custom, None, None)
       organizationRootFolder = Folder(ObjectId.generate, folderService.defaultRootName, JsArray.empty)
@@ -199,7 +199,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       isSuperUser <- userService.isSuperUser(user._multiUser)
-      _ <- Fox.runIf(!isSuperUser)(Fox.fromBool(organization.aiPlan.isDefined)) ?~> "job.creditTransaction.noAiPlan"
+      _ <- Fox.runIf(!isSuperUser)(Fox.fromBool(organization.aiPlan.isDefined)) ?~> Msg.Job.CreditTransaction.noAiPlan
     } yield ()
 
 }

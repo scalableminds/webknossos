@@ -232,15 +232,16 @@ class DatasetController @Inject()(userService: UserService,
       for {
         exploreResponse <- wkExploreRemoteLayerService.exploreRemoteDatasource(List(adaptedParameters),
                                                                                request.identity)
-        dataSource <- exploreResponse.dataSource.toFox ?~> "dataset.explore.failed"
-        _ <- Fox.fromBool(dataSource.dataLayers.nonEmpty) ?~> "dataset.explore.zeroLayers"
+        dataSource <- exploreResponse.dataSource.toFox ?~> Msg.Dataset.Explore.failed
+        _ <- Fox.fromBool(dataSource.dataLayers.nonEmpty) ?~> Msg.Dataset.Explore.zeroLayers
         dataStore <- dataStoreDAO.findOneWithUploadsAllowed
-        _ <- datasetService.validatePaths(dataSource.allExplicitPaths, dataStore) ?~> "dataSource.add.pathsNotAllowed"
+        _ <- datasetService.validatePaths(dataSource.allExplicitPaths, dataStore) ?~> Msg.Dataset.DataSource.addPathsNotAllowed
         folderIdOpt <- request.body.folderId match {
           case Some(passedFolderId) => Fox.successful(Some(passedFolderId))
           case None =>
             Fox.runOptional(request.body.folderPath)(folderPath =>
-              folderService.getOrCreateFromPathLiteral(folderPath, request.identity._organization)) ?~> "dataset.explore.autoAdd.getFolder.failed"
+              folderService
+                .getOrCreateFromPathLiteral(folderPath, request.identity._organization)) ?~> Msg.Dataset.Explore.autoAddGetFolderFailed
         }
         _ <- datasetService.assertValidDatasetName(request.body.datasetName)
         _ <- Fox.serialCombined(dataSource.dataLayers)(layer => datasetService.assertValidLayerNameLax(layer.name))
@@ -252,7 +253,7 @@ class DatasetController @Inject()(userService: UserService,
           request.identity,
           isVirtual = true,
           creationType = DatasetCreationType.ExploreAndAdd
-        ) ?~> "dataset.explore.autoAdd.failed"
+        ) ?~> Msg.Dataset.Explore.autoAddFailed
       } yield Ok(Json.toJson(newDataset._id))
     }
 
@@ -263,8 +264,8 @@ class DatasetController @Inject()(userService: UserService,
         user = request.identity
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
         _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ~> FORBIDDEN
-        _ <- Fox.fromBool(request.body.dataSource.dataLayers.nonEmpty) ?~> "dataset.explore.zeroLayers"
-        _ <- datasetService.validatePaths(request.body.dataSource.allExplicitPaths, dataStore) ?~> "dataSource.add.pathsNotAllowed"
+        _ <- Fox.fromBool(request.body.dataSource.dataLayers.nonEmpty) ?~> Msg.Dataset.Explore.zeroLayers
+        _ <- datasetService.validatePaths(request.body.dataSource.allExplicitPaths, dataStore) ?~> Msg.Dataset.DataSource.addPathsNotAllowed
         dataset <- datasetService.createAndSetUpDataset(
           name,
           dataStore,
@@ -335,8 +336,8 @@ class DatasetController @Inject()(userService: UserService,
                                                    uploaderId,
                                                    searchQuery,
                                                    recursive.getOrElse(false),
-                                                   limit) ?~> "dataset.list.failed"
-          js <- listGrouped(datasets, request.identity) ?~> "dataset.list.grouping.failed"
+                                                   limit) ?~> Msg.Dataset.List.failed
+          js <- listGrouped(datasets, request.identity) ?~> Msg.Dataset.List.groupingFailed
         } yield Json.toJson(js)
       }
       _ = Fox.runOptional(request.identity)(user => userDAO.updateLastActivity(user._id))
@@ -351,7 +352,8 @@ class DatasetController @Inject()(userService: UserService,
       groupedByOrga = datasets.groupBy(_._organization).toList
       js <- Fox.serialCombined(groupedByOrga) { byOrgaTuple: (String, List[Dataset]) =>
         for {
-          organization <- organizationDAO.findOne(byOrgaTuple._1)(GlobalAccessContext) ?~> "organization.notFound"
+          organization <- organizationDAO.findOne(byOrgaTuple._1)(GlobalAccessContext) ?~> Msg.Organization.notFound(
+            byOrgaTuple._1)
           groupedByDataStore = byOrgaTuple._2.groupBy(_._dataStore).toList
           result <- Fox.serialCombined(groupedByDataStore) { byDataStoreTuple: (String, List[Dataset]) =>
             for {
@@ -374,7 +376,7 @@ class DatasetController @Inject()(userService: UserService,
     for {
       dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
       organization <- organizationDAO.findOne(dataset._organization)
-      allowedTeams <- teamService.allowedTeamIdsForDataset(dataset, cumulative = true) ?~> "allowedTeams.notFound"
+      allowedTeams <- teamService.allowedTeamIdsForDataset(dataset, cumulative = true) ?~> Msg.allowedTeamsNotFound
       usersByTeams <- userDAO.findAllByTeams(allowedTeams)
       adminsAndDatasetManagers <- userDAO.findAdminsAndDatasetManagersByOrg(organization._id)
       usersFiltered = (usersByTeams ++ adminsAndDatasetManagers).distinct.filter(!_.isUnlisted)
@@ -388,7 +390,7 @@ class DatasetController @Inject()(userService: UserService,
         for {
           _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "This route is only allowed for super users." ~> FORBIDDEN
           dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
-          dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataset.list.fetchDataSourceFailed"
+          dataSource <- datasetService.dataSourceFor(dataset) ?~> Msg.Dataset.List.fetchDataSourceFailed
         } yield Ok(Json.toJson(dataSource))
       }
     }
@@ -399,10 +401,11 @@ class DatasetController @Inject()(userService: UserService,
         for {
           _ <- userService.assertIsSuperUser(request.identity._multiUser) ?~> "This route is only allowed for super users." ~> FORBIDDEN
           dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
-          dataSource <- datasetService.dataSourceFor(dataset) ?~> "dataset.list.fetchDataSourceFailed"
-          dataStore <- dataStoreDAO.findOneByName(dataset._dataStore)(GlobalAccessContext) ?~> "dataStore.notFound"
+          dataSource <- datasetService.dataSourceFor(dataset) ?~> Msg.Dataset.List.fetchDataSourceFailed
+          dataStore <- dataStoreDAO.findOneByName(dataset._dataStore)(GlobalAccessContext) ?~> Msg.DataStore.notFound
           _ <- Fox.fromBool(dataset.isVirtual) ?~> "duplicateToOrga is only possible for virtual datasets"
-          _ <- organizationDAO.findOne(targetOrganizationId)(GlobalAccessContext) ?~> "organization.notFound"
+          _ <- organizationDAO.findOne(targetOrganizationId)(GlobalAccessContext) ?~> Msg.Organization.notFound(
+            targetOrganizationId)
           newDatasetId = ObjectId.generate
           newDirectoryName = datasetService.generateDirectoryName(dataset.name, newDatasetId)
           adaptedDataSource = dataSource.withUpdatedId(DataSourceId(newDirectoryName, targetOrganizationId))
@@ -453,11 +456,11 @@ class DatasetController @Inject()(userService: UserService,
       for {
         dataset <- datasetDAO.findOne(datasetId)(ctx) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
         usableDataSource <- datasetService.usableDataSourceFor(dataset)
-        datalayer <- usableDataSource.dataLayers.headOption.toFox ?~> "dataset.noLayers"
+        datalayer <- usableDataSource.dataLayers.headOption.toFox ?~> Msg.Dataset.noLayers
         _ <- datasetService
           .clientFor(dataset)(GlobalAccessContext)
           .flatMap(_.findPositionWithData(dataset, datalayer.name).flatMap(posWithData =>
-            Fox.fromBool(posWithData.value("position") != JsNull))) ?~> "dataset.loadingDataFailed"
+            Fox.fromBool(posWithData.value("position") != JsNull))) ?~> Msg.Dataset.loadingDataFailed
       } yield Ok("Ok")
     }
 
@@ -516,7 +519,7 @@ class DatasetController @Inject()(userService: UserService,
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
         includeMemberOnlyTeams = request.identity.isDatasetManager
         userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
-        oldAllowedTeams <- teamService.allowedTeamIdsForDataset(dataset, cumulative = false) ?~> "allowedTeams.notFound"
+        oldAllowedTeams <- teamService.allowedTeamIdsForDataset(dataset, cumulative = false) ?~> Msg.allowedTeamsNotFound
         teamsWithoutUpdate = oldAllowedTeams.filterNot(t => userTeams.exists(_._id == t))
         teamsWithUpdate = request.body.filter(t => userTeams.exists(_._id == t))
         newTeams = (teamsWithUpdate ++ teamsWithoutUpdate).distinct
@@ -614,11 +617,11 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async(validateJson[SegmentAnythingMaskParameters]) { implicit request =>
       log() {
         for {
-          _ <- Fox.fromBool(conf.Features.segmentAnythingEnabled) ?~> "segmentAnything.notEnabled"
-          _ <- Fox.fromBool(conf.SegmentAnything.uri.nonEmpty) ?~> "segmentAnything.noUri"
+          _ <- Fox.fromBool(conf.Features.segmentAnythingEnabled) ?~> Msg.SegmentAnything.notEnabled
+          _ <- Fox.fromBool(conf.SegmentAnything.uri.nonEmpty) ?~> Msg.SegmentAnything.noUri
           dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
           usableDataSource <- datasetService.usableDataSourceFor(dataset)
-          dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName).toFox ?~> "dataset.noLayers"
+          dataLayer <- usableDataSource.dataLayers.find(_.name == dataLayerName).toFox ?~> Msg.Dataset.noLayers
           datastoreClient <- datasetService.clientFor(dataset)(GlobalAccessContext)
           targetMagSelectedBbox: BoundingBox = request.body.surroundingBoundingBox / request.body.mag
           _ <- Fox.fromBool(targetMagSelectedBbox.size.sorted.z <= 1024 && targetMagSelectedBbox.size.sorted.y <= 1024) ?~> s"Target-mag selected bbox must be smaller than 1024×1024×depth (or transposed), got ${targetMagSelectedBbox.size}"
@@ -638,7 +641,7 @@ class DatasetController @Inject()(userService: UserService,
             request.body.surroundingBoundingBox,
             request.body.mag,
             request.body.additionalCoordinates
-          ) ?~> "segmentAnything.getData.failed"
+          ) ?~> Msg.SegmentAnything.getDataFailed
           _ = Instant.logSince(beforeDataLoading, "Data loading for SAM", logger)
           _ = logger.debug(
             s"Sending ${data.length} bytes to SAM server, element class is ${dataLayer.elementClass}, range: $intensityMin-$intensityMax...")
@@ -658,7 +661,7 @@ class DatasetController @Inject()(userService: UserService,
             targetMagSelectedBbox.size,
             intensityMin,
             intensityMax
-          ) ?~> "segmentAnything.getMask.failed"
+          ) ?~> Msg.SegmentAnything.getMaskFailed
           _ = Instant.logSince(beforeMask, "Fetching SAM masks from torchserve", logger)
           _ = logger.debug(s"Received ${mask.length} bytes of mask from SAM server, forwarding to front-end...")
         } yield Ok(mask)
@@ -671,7 +674,7 @@ class DatasetController @Inject()(userService: UserService,
         logTime(slackNotificationService.noticeSlowRequest) {
           for {
             dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
-            _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
+            _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> Msg.Dataset.Delete.disabled
             _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
             before = Instant.now
             _ = logger.info(
@@ -686,28 +689,28 @@ class DatasetController @Inject()(userService: UserService,
   def compose(): Action[ComposeRequest] =
     sil.SecuredAction.async(validateJson[ComposeRequest]) { implicit request =>
       for {
-        (_, newDatasetId) <- composeService.composeDataset(request.body, request.identity) ?~> "dataset.compose.failed"
+        (_, newDatasetId) <- composeService.composeDataset(request.body, request.identity) ?~> Msg.Dataset.Compose.failed
       } yield Ok(Json.obj("newDatasetId" -> newDatasetId))
     }
 
   def composeAddLayer(datasetId: ObjectId): Action[ComposeRequestLayer] =
     sil.SecuredAction.async(validateJson[ComposeRequestLayer]) { implicit request =>
       for {
-        _ <- composeService.addLayer(datasetId, request.body) ?~> "dataset.compose.addLayer.failed"
+        _ <- composeService.addLayer(datasetId, request.body) ?~> Msg.Dataset.Compose.addLayerFailed
       } yield Ok
     }
 
   def composeAddMag(datasetId: ObjectId): Action[ComposeAddMagRequest] =
     sil.SecuredAction.async(validateJson[ComposeAddMagRequest]) { implicit request =>
       for {
-        _ <- composeService.addMag(datasetId, request.body) ?~> "dataset.compose.addMag.failed"
+        _ <- composeService.addMag(datasetId, request.body) ?~> Msg.Dataset.Compose.addMagFailed
       } yield Ok
     }
 
   def composeAddAttachment(datasetId: ObjectId): Action[ComposeAddAttachmentRequest] =
     sil.SecuredAction.async(validateJson[ComposeAddAttachmentRequest]) { implicit request =>
       for {
-        _ <- composeService.addAttachment(datasetId, request.body) ?~> "dataset.compose.addAttachment.failed"
+        _ <- composeService.addAttachment(datasetId, request.body) ?~> Msg.Dataset.Compose.addAttachmentFailed
       } yield Ok
     }
 
@@ -715,7 +718,7 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async(validateJson[ReserveMagUploadToPathRequest]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
-        _ <- Fox.fromBool(dataset.isVirtual) ?~> "dataset.reserveMagUploadToPath.notVirtual"
+        _ <- Fox.fromBool(dataset.isVirtual) ?~> Msg.Dataset.ReserveMagUpload.notVirtual
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
         magPath <- datasetUploadToPathsService.reserveMagUploadToPath(dataset, request.body)
       } yield Ok(Json.toJson(magPath))

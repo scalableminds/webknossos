@@ -151,7 +151,7 @@ class JobService @Inject()(wkConf: WkConf,
               "Your WEBKNOSSOS dataset animation is ready."
             ))
         case _ => None
-      }).toFox ?~> "job.emailNotifactionsDisabled"
+      }).toFox ?~> Msg.Job.emailNotificationsDisabled
       // some jobs, e.g. "find largest segment ideas", do not require an email notification
       _ = Mailer ! Send(emailTemplate)
     } yield ()
@@ -183,9 +183,9 @@ class JobService @Inject()(wkConf: WkConf,
 
   def publicWrites(job: Job)(implicit ctx: DBAccessContext): Fox[JsValue] =
     for {
-      owner <- userDAO.findOne(job._owner) ?~> "user.notFound"
+      owner <- userDAO.findOne(job._owner) ?~> Msg.User.notFound
       ownerMultiUser <- multiUserDAO.findOne(owner._multiUser)
-      organization <- organizationDAO.findOne(owner._organization) ?~> "organization.notFound"
+      organization <- organizationDAO.findOne(owner._organization) ?~> Msg.Organization.notFound(owner._organization)
       creditTransactionBox <- creditTransactionService.findTransactionOfJob(job._id).shiftBox
     } yield
       Json.toJson(
@@ -224,8 +224,8 @@ class JobService @Inject()(wkConf: WkConf,
 
   def submitJob(command: JobCommand, commandArgs: JsObject, owner: User, dataStoreName: String): Fox[Job] =
     for {
-      _ <- Fox.fromBool(wkConf.Features.jobsEnabled) ?~> "job.disabled"
-      _ <- Fox.assertTrue(jobIsSupportedByAvailableWorkers(command, dataStoreName)) ?~> "job.noWorkerForDatastoreAndJob"
+      _ <- Fox.fromBool(wkConf.Features.jobsEnabled) ?~> Msg.Job.disabled
+      _ <- Fox.assertTrue(jobIsSupportedByAvailableWorkers(command, dataStoreName)) ?~> Msg.Job.noWorkerForDatastoreAndJob
       job = Job(ObjectId.generate, owner._id, dataStoreName, command, commandArgs)
       _ <- jobDAO.insertOne(job)
       _ = analyticsService.track(RunJobEvent(owner, command))
@@ -236,7 +236,8 @@ class JobService @Inject()(wkConf: WkConf,
                             voxelSizeFactor: Vec3Double,
                             voxelSizeUnit: Option[LengthUnit]): Fox[Unit] =
     for {
-      organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> "organization.notFound"
+      organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization.notFound(
+        dataset._organization)
       voxelSize = VoxelSize.fromFactorAndUnitWithDefault(voxelSizeFactor, voxelSizeUnit)
       commandArgs = Json.obj(
         "organization_id" -> organization._id,
@@ -247,7 +248,7 @@ class JobService @Inject()(wkConf: WkConf,
         "voxel_size_factor" -> voxelSize.factor.toUriLiteral,
         "voxel_size_unit" -> voxelSize.unit
       )
-      _ <- submitJob(JobCommand.convert_to_wkw, commandArgs, user, dataset._dataStore) ?~> "job.couldNotRunCubing"
+      _ <- submitJob(JobCommand.convert_to_wkw, commandArgs, user, dataset._dataStore) ?~> Msg.Job.couldNotRunCubing
     } yield ()
 
   def submitPaidJob(command: JobCommand,
@@ -258,7 +259,7 @@ class JobService @Inject()(wkConf: WkConf,
                     datastoreName: String)(implicit ctx: DBAccessContext): Fox[Job] =
     for {
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
-      _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ?~> "job.paid.noAdminOrManager"
+      _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ?~> Msg.Job.paidNoAdminOrManager
       costInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBoxInTargetMag, command)
       _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costInMilliCredits)) ?~> Msg.Job.notEnoughCredits
       creditTransaction <- creditTransactionService.reserveCredits(user._organization,
@@ -287,9 +288,9 @@ class JobService @Inject()(wkConf: WkConf,
 
   def assertBoundingBoxLimits(boundingBox: String, mag: Option[String]): Fox[Unit] =
     for {
-      boundingBoxInMag <- BoundingBox.fromLiteralWithMagOpt(boundingBox, mag).toFox ?~> "job.invalidBoundingBoxOrMag"
-      _ <- Fox.fromBool(boundingBoxInMag.volume <= wkConf.Features.exportTiffMaxVolumeMVx * 1024 * 1024) ?~> "job.volumeExceeded"
-      _ <- Fox.fromBool(boundingBoxInMag.size.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> "job.edgeLengthExceeded"
+      boundingBoxInMag <- BoundingBox.fromLiteralWithMagOpt(boundingBox, mag).toFox ?~> Msg.Job.invalidBoundingBoxOrMag
+      _ <- Fox.fromBool(boundingBoxInMag.volume <= wkConf.Features.exportTiffMaxVolumeMVx * 1024 * 1024) ?~> Msg.Job.volumeExceeded
+      _ <- Fox.fromBool(boundingBoxInMag.size.maxDim <= wkConf.Features.exportTiffMaxEdgeLengthVx) ?~> Msg.Job.edgeLengthExceeded
     } yield ()
 
   private def getJobCostInMilliCreditsPerGVx(jobCommand: JobCommand): Fox[Int] =

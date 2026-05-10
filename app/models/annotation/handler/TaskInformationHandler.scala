@@ -1,5 +1,6 @@
 package models.annotation.handler
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 
@@ -29,12 +30,12 @@ class TaskInformationHandler @Inject()(
   override def provideAnnotation(taskId: ObjectId, userOpt: Option[User])(
       implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
-      task <- taskDAO.findOne(taskId) ?~> "task.notFound"
+      task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound
       annotations <- annotationDAO.findAllByTaskIdAndType(task._id, AnnotationType.Task)
       finishedAnnotations = annotations.filter(_.state == Finished)
       _ <- assertAllOnSameDataset(finishedAnnotations)
-      _ <- assertNonEmpty(finishedAnnotations) ?~> "task.noAnnotations"
-      user <- userOpt.toFox ?~> "user.notAuthorised"
+      _ <- assertNonEmpty(finishedAnnotations) ?~> Msg.Task.noAnnotations
+      user <- userOpt.toFox ?~> Msg.User.notAuthenticated
       project <- projectDAO.findOne(task._project)
       datasetId <- finishedAnnotations.headOption.map(_._dataset).toFox
       _ <- registerDataSourceInTemporaryStore(taskId, datasetId)
@@ -46,12 +47,12 @@ class TaskInformationHandler @Inject()(
                                                   project._team,
                                                   AnnotationType.CompoundTask,
                                                   finishedAnnotations,
-                                                  taskBoundingBoxes) ?~> "annotation.merge.failed.compound"
+                                                  taskBoundingBoxes) ?~> Msg.Annotation.Merge.failedCompound
     } yield mergedAnnotation
 
   def restrictionsFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =
     for {
-      task <- taskDAO.findOne(taskId) ?~> "task.notFound"
+      task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound
       project <- projectDAO.findOne(task._project)
     } yield {
       new AnnotationRestrictions {

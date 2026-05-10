@@ -24,7 +24,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   UsableDataSource
 }
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent}
-import play.api.i18n.Messages
 import utils.MetadataAssertions
 
 import scala.concurrent.ExecutionContext

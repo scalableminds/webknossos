@@ -56,12 +56,12 @@ class TimeController @Inject()(userService: UserService,
     implicit request =>
       for {
         projectIdsValidated <- ObjectId.fromCommaSeparated(projectIds)
-        annotationTypesValidated <- AnnotationType.fromCommaSeparated(annotationTypes) ?~> "invalidAnnotationType"
-        annotationStatesValidated <- AnnotationState.fromCommaSeparated(annotationStates) ?~> "invalidAnnotationState"
+        annotationTypesValidated <- AnnotationType.fromCommaSeparated(annotationTypes) ?~> Msg.invalidAnnotationType
+        annotationStatesValidated <- AnnotationState.fromCommaSeparated(annotationStates) ?~> Msg.invalidAnnotationState
         user <- userService.findOneCached(userId) ?~> Msg.User.notFound(userId) ~> NOT_FOUND
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOf(request.identity, user)
         _ <- Fox
-          .fromBool(isTeamManagerOrAdmin || user._id == request.identity._id) ?~> "user.notAuthorised" ~> FORBIDDEN
+          .fromBool(isTeamManagerOrAdmin || user._id == request.identity._id) ?~> Msg.User.notAuthenticated ~> FORBIDDEN
         timesByAnnotation <- timeSpanDAO.summedByAnnotationForUser(user._id,
                                                                    Instant(start),
                                                                    Instant(end),
@@ -80,11 +80,11 @@ class TimeController @Inject()(userService: UserService,
     sil.SecuredAction.async { implicit request =>
       for {
         projectIdsValidated <- ObjectId.fromCommaSeparated(projectIds)
-        annotationTypesValidated <- AnnotationType.fromCommaSeparated(annotationTypes) ?~> "invalidAnnotationType"
-        annotationStatesValidated <- AnnotationState.fromCommaSeparated(annotationStates) ?~> "invalidAnnotationState"
+        annotationTypesValidated <- AnnotationType.fromCommaSeparated(annotationTypes) ?~> Msg.invalidAnnotationType
+        annotationStatesValidated <- AnnotationState.fromCommaSeparated(annotationStates) ?~> Msg.invalidAnnotationState
         user <- userService.findOneCached(userId) ?~> Msg.User.notFound(userId) ~> NOT_FOUND
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOf(request.identity, user)
-        _ <- Fox.fromBool(isTeamManagerOrAdmin || user._id == request.identity._id) ?~> "user.notAuthorised" ~> FORBIDDEN
+        _ <- Fox.fromBool(isTeamManagerOrAdmin || user._id == request.identity._id) ?~> Msg.User.notAuthenticated ~> FORBIDDEN
         timeSpansJs <- timeSpanDAO.findAllByUserWithTask(user._id,
                                                          Instant(start),
                                                          Instant(end),
@@ -102,12 +102,12 @@ class TimeController @Inject()(userService: UserService,
                    projectIds: Option[String]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        teamIdsValidated <- ObjectId.fromCommaSeparated(teamIds) ?~> "invalidTeamId"
-        annotationTypesValidated <- AnnotationType.fromCommaSeparated(annotationTypes) ?~> "invalidAnnotationType"
-        annotationStatesValidated <- AnnotationState.fromCommaSeparated(annotationStates) ?~> "invalidAnnotationState"
-        _ <- Fox.fromBool(annotationTypesValidated.nonEmpty) ?~> "annotationTypesEmpty"
+        teamIdsValidated <- ObjectId.fromCommaSeparated(teamIds) ?~> Msg.invalidTeamId
+        annotationTypesValidated <- AnnotationType.fromCommaSeparated(annotationTypes) ?~> Msg.invalidAnnotationType
+        annotationStatesValidated <- AnnotationState.fromCommaSeparated(annotationStates) ?~> Msg.invalidAnnotationState
+        _ <- Fox.fromBool(annotationTypesValidated.nonEmpty) ?~> Msg.Annotation.typesEmpty
         _ <- Fox.fromBool(annotationTypesValidated.forall(typ =>
-          typ == AnnotationType.Explorational || typ == AnnotationType.Task)) ?~> "unsupportedAnnotationType"
+          typ == AnnotationType.Explorational || typ == AnnotationType.Task)) ?~> Msg.unsupportedAnnotationType
         projectIdsValidated <- ObjectId.fromCommaSeparated(projectIds)
         usersByTeams <- if (teamIdsValidated.isEmpty) userDAO.findAll else userDAO.findAllByTeams(teamIdsValidated)
         admins <- userDAO.findAdminsByOrg(request.identity._organization)

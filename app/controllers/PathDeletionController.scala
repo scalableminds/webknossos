@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import jakarta.inject.Inject
@@ -30,7 +31,7 @@ class PathDeletionController @Inject()(conf: WkConf, pathDeletionDAO: PathDeleti
   }
 
   private def authenticateExternalPathDeletionService(key: String): Fox[Unit] =
-    Fox.fromBool(key == conf.ExternalPathDeletionService.key) ?~> "externalPathDeletionService.wrongKey"
+    Fox.fromBool(key == conf.ExternalPathDeletionService.key) ?~> Msg.externalPathDeletionServiceWrongKey
 
 }
 

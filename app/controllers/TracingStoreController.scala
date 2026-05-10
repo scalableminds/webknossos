@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.annotation.{TracingStore, TracingStoreDAO, TracingStoreService}
@@ -25,7 +26,7 @@ class TracingStoreController @Inject()(tracingStoreService: TracingStoreService,
 
   def listOne: Action[AnyContent] = sil.UserAwareAction.async {
     for {
-      tracingStore <- tracingStoreDAO.findFirst ?~> "tracingStore.list.failed"
+      tracingStore <- tracingStoreDAO.findFirst ?~> Msg.TracingStore.listFailed
       js <- tracingStoreService.publicWrites(tracingStore)
     } yield Ok(Json.toJson(js))
   }
@@ -34,9 +35,9 @@ class TracingStoreController @Inject()(tracingStoreService: TracingStoreService,
     withJsonBodyUsing(tracingStorePublicReads) { tracingStore =>
       for {
         _ <- Fox.fromBool(request.identity.isAdmin)
-        _ <- tracingStoreDAO.findOneByName(name) ?~> "tracingStore.notFound" ~> NOT_FOUND
+        _ <- tracingStoreDAO.findOneByName(name) ?~> Msg.TracingStore.notFound ~> NOT_FOUND
         _ <- Fox.fromBool(tracingStore.name == name)
-        _ <- tracingStoreDAO.updateOne(tracingStore) ?~> "tracingStore.create.failed"
+        _ <- tracingStoreDAO.updateOne(tracingStore) ?~> Msg.TracingStore.createFailed
         js <- tracingStoreService.publicWrites(tracingStore)
       } yield Ok(Json.toJson(js))
     }

@@ -95,7 +95,7 @@ class BinaryDataController @Inject()(
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
         (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
-        magParsed <- Vec3Int.fromMagLiteral(mag).toFox ?~> "malformedMag"
+        magParsed <- Vec3Int.fromMagLiteral(mag).toFox ?~> Msg.Mag.malformed
         dataRequest = DataRequest(
           VoxelPosition(x, y, z, magParsed),
           width,
@@ -160,7 +160,7 @@ class BinaryDataController @Inject()(
       for {
         (dataSource, dataLayer) <- datasetCache
           .getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
-        magParsed <- Vec3Int.fromMagLiteral(mag).toFox ?~> "malformedMag"
+        magParsed <- Vec3Int.fromMagLiteral(mag).toFox ?~> Msg.Mag.malformed
         dataRequest = DataRequest(
           VoxelPosition(x, y, z, magParsed),
           width,
@@ -186,8 +186,8 @@ class BinaryDataController @Inject()(
         dataWithFallback = if (data.length == 0)
           new Array[Byte](width * height * dataLayer.bytesPerElement)
         else data
-        spriteSheet <- ImageCreator.spriteSheetFor(dataWithFallback, params).toFox ?~> "image.create.failed"
-        firstSheet <- spriteSheet.pages.headOption.toFox ?~> "image.page.failed"
+        spriteSheet <- ImageCreator.spriteSheetFor(dataWithFallback, params).toFox ?~> Msg.Image.createFailed
+        firstSheet <- spriteSheet.pages.headOption.toFox ?~> Msg.Image.pageFailed
         outputStream = new ByteArrayOutputStream()
         _ = new JPEGWriter().writeToOutputStream(firstSheet.image)(outputStream)
       } yield Ok(outputStream.toByteArray).as(jpegMimeType)
@@ -219,7 +219,7 @@ class BinaryDataController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
-          segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> "dataLayer.mustBeSegmentation"
+          segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Msg.Dataset.layerMustBeSegmentation
           adHocMeshRequest = AdHocMeshRequest(
             Some(datasetId),
             Some(dataSource.id),

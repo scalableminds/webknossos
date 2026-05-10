@@ -98,7 +98,7 @@ class JobController @Inject()(jobDAO: JobDAO,
   def list(command: Option[String], skipForDeletedDatasets: Option[Boolean]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> "job.disabled"
+        _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> Msg.Job.disabled
         commandValidatedOpt <- Fox.runOptional(command)(JobCommand.fromString(_).toFox)
         jobsCompact <- jobDAO.findAllCompact(commandValidatedOpt, skipForDeletedDatasets.getOrElse(false))
       } yield Ok(Json.toJson(jobsCompact.map(_.enrich)))
@@ -106,8 +106,8 @@ class JobController @Inject()(jobDAO: JobDAO,
 
   def get(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> "job.disabled"
-      job <- jobDAO.findOne(id) ?~> "job.notFound"
+      _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> Msg.Job.disabled
+      job <- jobDAO.findOne(id) ?~> Msg.Job.notFound
       js <- jobService.publicWrites(job)
     } yield Ok(js)
   }
@@ -120,12 +120,12 @@ class JobController @Inject()(jobDAO: JobDAO,
    */
   def cancel(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> "job.disabled"
+      _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> Msg.Job.disabled
       job <- jobDAO.findOne(id)
       _ <- jobDAO.updateManualState(id, JobState.CANCELLED)
       _ <- Fox.runIf(job.state == JobState.PENDING || job.state == JobState.STARTED) {
         creditTransactionService
-          .refundTransactionForJob(job._id, isCancelled = true)(GlobalAccessContext) ?~> "job.creditTransaction.refund.failed"
+          .refundTransactionForJob(job._id, isCancelled = true)(GlobalAccessContext) ?~> Msg.Job.CreditTransaction.refundFailed
       }
       js <- jobService.publicWrites(job)
     } yield Ok(js)
@@ -133,7 +133,7 @@ class JobController @Inject()(jobDAO: JobDAO,
 
   def retry(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> "job.disabled"
+      _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> Msg.Job.disabled
       _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
       job <- jobDAO.findOne(id)
       _ <- creditTransactionService.reserveCreditsForRetry(job._id)
@@ -151,7 +151,7 @@ class JobController @Inject()(jobDAO: JobDAO,
         dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
         organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization
           .notFound(dataset._organization)
-        _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.meshFile.notAllowed.organization" ~> FORBIDDEN
+        _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> Msg.Job.meshFileNotAllowedOrganization ~> FORBIDDEN
         _ <- datasetService.assertValidLayerNameLax(layerName)
         command = JobCommand.compute_mesh_file
         commandArgs = Json.obj(
@@ -163,7 +163,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           "mag" -> mag,
           "agglomerate_view" -> agglomerateView
         )
-        job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunComputeMeshFile"
+        job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> Msg.Job.couldNotRunComputeMeshFile
         js <- jobService.publicWrites(job)
       } yield Ok(js)
     }
@@ -174,7 +174,7 @@ class JobController @Inject()(jobDAO: JobDAO,
         dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
         organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization
           .notFound(dataset._organization)
-        _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.segmentIndexFile.notAllowed.organization" ~> FORBIDDEN
+        _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> Msg.Job.segmentIndexFileNotAllowedOrganization ~> FORBIDDEN
         _ <- datasetService.assertValidLayerNameLax(layerName)
         command = JobCommand.compute_segment_index_file
         commandArgs = Json.obj(
@@ -184,7 +184,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           "dataset_directory_name" -> dataset.directoryName,
           "segmentation_layer_name" -> layerName,
         )
-        job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunSegmentIndexFile"
+        job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> Msg.Job.couldNotRunSegmentIndexFile
         js <- jobService.publicWrites(job)
       } yield Ok(js)
     }
@@ -199,7 +199,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization
             .notFound(dataset._organization)
-          _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.inferMitochondria.notAllowed.organization" ~> FORBIDDEN
+          _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> Msg.Job.inferMitochondriaNotAllowedOrganization ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(layerName)
           (_, dataLayer) <- datasetService.getDataSourceAndLayerFor(dataset, layerName)
@@ -235,11 +235,11 @@ class JobController @Inject()(jobDAO: JobDAO,
           dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization
             .notFound(dataset._organization)
-          _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.alignSections.notAllowed.organization" ~> FORBIDDEN
+          _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> Msg.Job.alignSectionsNotAllowedOrganization ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(request.body.layerName)
-          (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.layerName) ?~> "dataset.notUsable"
-          layerMag <- layer.finestMag.toFox ?~> "dataset.noMags"
+          (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.layerName) ?~> Msg.Dataset.notUsableGeneric
+          layerMag <- layer.finestMag.toFox ?~> Msg.Dataset.noMags
           finestMagDatasetBoundingBox = dataSource.boundingBox / layerMag
           command = JobCommand.align_sections
           commandArgs = Json.obj(
@@ -312,7 +312,7 @@ class JobController @Inject()(jobDAO: JobDAO,
             "annotation_layer_name" -> annotationLayerName,
             "annotation_id" -> annotationId,
           )
-          job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunTiffExport"
+          job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> Msg.Job.couldNotRunTiffExport
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }
@@ -334,7 +334,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization
             .notFound(dataset._organization)
-          _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.materializeVolumeAnnotation.notAllowed.organization" ~> FORBIDDEN
+          _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> Msg.Job.materializeVolumeAnnotationNotAllowedOrganization ~> FORBIDDEN
           _ <- datasetService.assertValidLayerNameLax(fallbackLayerName)
           command = JobCommand.materialize_volume_annotation
           _ <- datasetService.assertValidDatasetName(newDatasetName)
@@ -357,7 +357,7 @@ class JobController @Inject()(jobDAO: JobDAO,
             "use_zarr_streaming" -> includesEditableMapping,
             "bounding_box" -> boundingBox
           )
-          job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunApplyMergerMode"
+          job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> Msg.Job.couldNotRunApplyMergerMode
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }
@@ -370,7 +370,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
           organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization
             .notFound(dataset._organization)
-          _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> "job.findLargestSegmentId.notAllowed.organization" ~> FORBIDDEN
+          _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> Msg.Job.findLargestSegmentIdNotAllowedOrganization ~> FORBIDDEN
           _ <- datasetService.assertValidLayerNameLax(layerName)
           command = JobCommand.find_largest_segment_id
           commandArgs = Json.obj(
@@ -380,7 +380,7 @@ class JobController @Inject()(jobDAO: JobDAO,
             "dataset_directory_name" -> dataset.directoryName,
             "layer_name" -> layerName
           )
-          job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunFindLargestSegmentId"
+          job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> Msg.Job.couldNotRunFindLargestSegmentId
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }
@@ -396,10 +396,10 @@ class JobController @Inject()(jobDAO: JobDAO,
           userOrganization <- organizationDAO.findOne(request.identity._organization)
           animationJobOptions = request.body
           _ <- Fox.runIf(!PricingPlan.isPaidPlan(userOrganization.pricingPlan)) {
-            Fox.fromBool(animationJobOptions.includeWatermark) ?~> "job.renderAnimation.mustIncludeWatermark"
+            Fox.fromBool(animationJobOptions.includeWatermark) ?~> Msg.Job.renderAnimationMustIncludeWatermark
           }
           _ <- Fox.runIf(!PricingPlan.isPaidPlan(userOrganization.pricingPlan)) {
-            Fox.fromBool(animationJobOptions.movieResolution == MovieResolutionSetting.SD) ?~> "job.renderAnimation.resolutionMustBeSD"
+            Fox.fromBool(animationJobOptions.movieResolution == MovieResolutionSetting.SD) ?~> Msg.Job.renderAnimationResolutionMustBeSD
           }
           _ <- Fox.runIf(animationJobOptions.saveBlenderFile) {
             userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
@@ -427,7 +427,7 @@ class JobController @Inject()(jobDAO: JobDAO,
             "include_skeletons" -> animationJobOptions.includeSkeletons,
             "save_blender_file" -> animationJobOptions.saveBlenderFile,
           )
-          job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> "job.couldNotRunRenderAnimation"
+          job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> Msg.Job.couldNotRunRenderAnimation
           js <- jobService.publicWrites(job)
         } yield Ok(js)
       }
@@ -437,7 +437,7 @@ class JobController @Inject()(jobDAO: JobDAO,
     sil.SecuredAction.async { implicit request =>
       for {
         job <- jobDAO.findOne(jobId)
-        dataStore <- dataStoreDAO.findOneByName(job._dataStore) ?~> "dataStore.notFound"
+        dataStore <- dataStoreDAO.findOneByName(job._dataStore) ?~> Msg.DataStore.notFound
         userAuthToken <- Fox.fromFuture(
           wkSilhouetteEnvironment.combinedAuthenticatorService.findOrCreateToken(request.identity.loginInfo))
         uri = s"${dataStore.publicUrl}/data/exports/$jobId/download"

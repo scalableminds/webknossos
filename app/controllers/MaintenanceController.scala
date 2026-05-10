@@ -45,7 +45,7 @@ class MaintenanceController @Inject()(
     sil.SecuredAction.async(validateJson[MaintenanceParameters]) { implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
-        _ <- maintenanceDAO.findOne(id) ?~> "maintenance.notFound"
+        _ <- maintenanceDAO.findOne(id) ?~> Msg.maintenanceNotFound
         _ <- maintenanceDAO.updateOne(id, request.body)
         updated <- maintenanceDAO.findOne(id)
       } yield Ok(maintenanceService.publicWrites(updated))

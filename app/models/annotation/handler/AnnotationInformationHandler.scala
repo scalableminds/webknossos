@@ -1,5 +1,6 @@
 package models.annotation.handler
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 
@@ -66,7 +67,7 @@ trait AnnotationInformationHandler extends FoxImplicits {
 
   protected def registerDataSourceInTemporaryStore(temporaryAnnotationId: ObjectId, datasetId: ObjectId): Fox[Unit] =
     for {
-      dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation"
+      dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Msg.Dataset.notFoundForAnnotation
       dataSource <- datasetService.usableDataSourceFor(dataset)
       _ = annotationDataSourceTemporaryStore.store(temporaryAnnotationId, dataSource, datasetId)
     } yield ()

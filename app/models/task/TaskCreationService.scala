@@ -416,10 +416,10 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
       for {
         datasetId <- SequenceUtils
           .findUniqueElement(flattenedRequestedTasks.map(_._1.datasetId))
-          .toFox ?~> "task.create.notOnSameDataset"
+          .toFox ?~> Msg.Task.Create.notOnSameDataset
         dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId)
         dataSource <- datasetService.usableDataSourceFor(dataset)
-        _ <- assertEachHasEitherSkeletonOrVolume(flattenedRequestedTasks) ?~> "task.create.needsEitherSkeletonOrVolume"
+        _ <- assertEachHasEitherSkeletonOrVolume(flattenedRequestedTasks) ?~> Msg.Task.Create.needsEitherSkeletonOrVolume
         _ = if (flattenedRequestedTasks.exists(task => task._1.baseAnnotation.isDefined))
           slackNotificationService.noticeBaseAnnotationTaskCreation(
             taskType._id,
@@ -523,11 +523,11 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
                                               requestingUser: User)(implicit ctx: DBAccessContext): Fox[Task] =
     for {
       params <- paramBox.toFox
-      _ <- Fox.fromBool(params.newSkeletonTracingId.isDefined || params.newVolumeTracingId.isDefined) ?~> "task.create.needsEitherSkeletonOrVolume"
+      _ <- Fox.fromBool(params.newSkeletonTracingId.isDefined || params.newVolumeTracingId.isDefined) ?~> Msg.Task.Create.needsEitherSkeletonOrVolume
       _ <- Fox.runIf(params.newSkeletonTracingId.isDefined && !params.baseAnnotation.exists(_.skeletonId.isDefined))(
-        skeletonSaveResult.toFox) ?~> "task.create.saveSkeleton.failed"
+        skeletonSaveResult.toFox) ?~> Msg.Task.Create.saveSkeletonFailed
       _ <- Fox.runIf(params.newVolumeTracingId.isDefined && !params.baseAnnotation.exists(_.volumeId.isDefined))(
-        volumeSaveResult.toFox) ?~> "task.create.saveVolume.failed"
+        volumeSaveResult.toFox) ?~> Msg.Task.Create.saveVolumeFailed
       project <- projectDAO.findOneByNameAndOrganization(params.projectName, requestingUser._organization) ?~> Msg.Project
         .notFound(params.projectName)
       _ <- Fox.runOptional(params.scriptId)(id => scriptDAO.findOne(id) ?~> Msg.Script.notFound(id))

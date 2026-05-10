@@ -9,7 +9,6 @@ import javax.inject.Inject
 import models.dataset.{DatasetDAO, DatasetService}
 import models.configuration.DatasetConfigurationService
 import models.user.UserService
-import play.api.i18n.Messages
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{URLSharing, WkEnv}

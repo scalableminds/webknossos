@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import play.silhouette.api.{LoginInfo, Silhouette}
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
@@ -357,7 +358,7 @@ Samplecountry
 
   private def assertInitialDataEnabled: Fox[Unit] =
     for {
-      _ <- Fox.fromBool(conf.WebKnossos.SampleOrganization.enabled) ?~> "initialData.notEnabled"
+      _ <- Fox.fromBool(conf.WebKnossos.SampleOrganization.enabled) ?~> Msg.initialDataNotEnabled
     } yield ()
 
   private def insertRootFolder(): Fox[Unit] =
@@ -527,5 +528,5 @@ Samplecountry
     } else Fox.successful(())
 
   private def createOrganizationDirectory(): Fox[Unit] =
-    organizationService.createOrganizationDirectory(defaultOrganization._id) ?~> "organization.directoryCreation.failed"
+    organizationService.createOrganizationDirectory(defaultOrganization._id) ?~> Msg.Organization.Create.directoryCreationFailed
 }

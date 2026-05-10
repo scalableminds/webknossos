@@ -122,7 +122,7 @@ class DataSourceController @Inject()(
           isKnownUpload <- uploadService.isKnownUpload(request.body.uploadId)
           _ <- if (!isKnownUpload) {
             for {
-              reserveUploadAdditionalInfo <- dsRemoteWebknossosClient.reserveDataSourceUpload(request.body) ?~> "dataset.upload.validation.failed"
+              reserveUploadAdditionalInfo <- dsRemoteWebknossosClient.reserveDataSourceUpload(request.body) ?~> Msg.Dataset.Upload.validationFailed
               _ <- uploadService.reserveUpload(request.body, reserveUploadAdditionalInfo)
             } yield ()
           } else Fox.successful(())
@@ -183,7 +183,7 @@ class DataSourceController @Inject()(
                       for {
                         isKnownUpload <- uploadService.isKnownUpload(uploadId)
                         _ <- Fox.fromBool(isKnownUpload) ?~> Msg.Dataset.Upload.noSuchUpload(uploadId)
-                        chunkFile <- request.body.file("file").toFox ?~> "zip.file.notFound"
+                        chunkFile <- request.body.file("file").toFox ?~> Msg.zipFileNotFound
                         _ <- uploadService.handleUploadChunk(uploadFileId,
                                                              chunkSize,
                                                              currentChunkSize,
@@ -238,7 +238,7 @@ class DataSourceController @Inject()(
       datasetIdFox.flatMap { datasetId =>
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.deleteDataset(datasetId)) {
           for {
-            _ <- dsRemoteWebknossosClient.deleteDataset(datasetId) ?~> "dataset.delete.webknossos.failed"
+            _ <- dsRemoteWebknossosClient.deleteDataset(datasetId) ?~> Msg.Dataset.Delete.webknossosFailed
             _ <- uploadService.cancelUpload(request.body) ?~> "Could not cancel the upload."
           } yield Ok
         }
@@ -315,7 +315,7 @@ class DataSourceController @Inject()(
         (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
         position <- agglomerateService
-          .positionForSegmentId(agglomerateFileKey, segmentId) ?~> "getSegmentPositionFromAgglomerateFile.failed"
+          .positionForSegmentId(agglomerateFileKey, segmentId) ?~> Msg.getSegmentPositionFromAgglomerateFileFailed
       } yield Ok(Json.toJson(position))
     }
   }
@@ -432,7 +432,7 @@ class DataSourceController @Inject()(
             datasetId,
             dataSourceId.organizationId,
             dataSourceId.directoryName,
-            reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"
+            reason = Some("the user wants to delete the dataset")) ?~> Msg.Dataset.Delete.failed
         } yield Ok
       }
     }
@@ -667,7 +667,7 @@ class DataSourceController @Inject()(
               (datasetId, dataLayer.name, fullMeshRequest),
               _ =>
                 fullMeshService
-                  .computeSurfaceArea(datasetId, dataSource, dataLayer, fullMeshRequest) ?~> "mesh.loadFull.failed"
+                  .computeSurfaceArea(datasetId, dataSource, dataLayer, fullMeshRequest) ?~> Msg.Mesh.LoadFull.failed
             )
           }
         } yield Ok(Json.toJson(surfaceAreas))

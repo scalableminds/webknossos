@@ -30,11 +30,11 @@ class ProjectInformationHandler @Inject()(
       implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
       project <- projectDAO.findOne(projectId) ?~> Msg.Project.notFound(projectId)
-      user <- userOpt.toFox ?~> "user.notAuthorised"
+      user <- userOpt.toFox ?~> Msg.User.notAuthenticated
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(user, project._team))
       annotations <- annotationDAO.findAllFinishedForProject(project._id)
       _ <- assertAllOnSameDataset(annotations)
-      _ <- assertNonEmpty(annotations) ?~> "project.noAnnotations"
+      _ <- assertNonEmpty(annotations) ?~> Msg.Project.noAnnotations
       datasetId <- annotations.headOption.map(_._dataset).toFox
       _ <- registerDataSourceInTemporaryStore(projectId, datasetId)
       taskBoundingBoxes <- taskDAO.findTaskBoundingBoxesByAnnotationIds(annotations.map(_._id))
@@ -45,7 +45,7 @@ class ProjectInformationHandler @Inject()(
                                                   project._team,
                                                   AnnotationType.CompoundProject,
                                                   annotations,
-                                                  taskBoundingBoxes) ?~> "annotation.merge.failed.compound"
+                                                  taskBoundingBoxes) ?~> Msg.Annotation.Merge.failedCompound
     } yield mergedAnnotation
 
   override def restrictionsFor(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =

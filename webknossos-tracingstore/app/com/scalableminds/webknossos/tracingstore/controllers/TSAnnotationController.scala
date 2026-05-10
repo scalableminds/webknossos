@@ -132,13 +132,14 @@ class TSAnnotationController @Inject()(
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
             for {
               datasetBoundingBoxParsed <- Fox.runOptional(datasetBoundingBox)(b => BoundingBox.fromLiteral(b).toFox)
-              annotationProto <- annotationService.duplicate(annotationId,
-                                                             newAnnotationId,
-                                                             ownerId,
-                                                             requestingUserId,
-                                                             version,
-                                                             isFromTask,
-                                                             datasetBoundingBoxParsed) ?~> "annotation.duplicate.failed"
+              annotationProto <- annotationService.duplicate(
+                annotationId,
+                newAnnotationId,
+                ownerId,
+                requestingUserId,
+                version,
+                isFromTask,
+                datasetBoundingBoxParsed) ?~> Msg.Annotation.duplicateFailed
             } yield Ok(annotationProto.toByteArray).as(protobufMimeType)
           }
         }
@@ -301,12 +302,13 @@ class TSAnnotationController @Inject()(
               case Empty               => Fox.successful((None, 0L))
               case f: Failure          => f.toFox
             }
-            mergedVolumeStats <- volumeTracingService.mergeVolumeData(firstVolumeAnnotationId,
-                                                                      volumeLayers.map(_.tracingId),
-                                                                      volumeTracings,
-                                                                      newVolumeId,
-                                                                      newVersion = newTargetVersion,
-                                                                      toTemporaryStore) ?~> "mergeVolumeData.failed"
+            mergedVolumeStats <- volumeTracingService.mergeVolumeData(
+              firstVolumeAnnotationId,
+              volumeLayers.map(_.tracingId),
+              volumeTracings,
+              newVolumeId,
+              newVersion = newTargetVersion,
+              toTemporaryStore) ?~> Msg.Annotation.mergeVolumeDataFailed
             mergedVolumeOpt <- Fox.runIf(volumeTracings.nonEmpty)(
               volumeTracingService
                 .merge(volumeTracings,
@@ -314,7 +316,7 @@ class TSAnnotationController @Inject()(
                        newMappingName,
                        newVersion = newTargetVersion,
                        additionalBoundingBoxes = request.body.additionalBoundingBoxes)
-                .toFox) ?~> "mergeVolume.failed"
+                .toFox) ?~> Msg.Annotation.mergeVolumeFailed
             _ <- Fox.runOptional(mergedVolumeOpt)(
               volumeTracingService.saveVolume(newVolumeId, version = newTargetVersion, _, toTemporaryStore))
             skeletonTracingsAdaptedNested: Seq[Seq[SkeletonTracing]] <- Fox.serialCombined(

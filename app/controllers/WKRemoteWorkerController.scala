@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
@@ -30,7 +31,7 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
 
   def requestJobs(key: String, workerVersion: Option[String]): Action[AnyContent] = Action.async {
     for {
-      worker <- workerDAO.findOneByKey(key) ?~> "job.worker.notFound"
+      worker <- workerDAO.findOneByKey(key) ?~> Msg.Job.workerNotFound
       _ = workerDAO.updateHeartBeat(worker._id)
       _ = if (workerVersion != worker.lastReportedVersion)
         workerVersion.map(workerDAO.updateLastReportedVersion(worker._id, _))
@@ -79,21 +80,21 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
   def updateJobStatus(key: String, id: ObjectId): Action[JobStatus] = Action.async(validateJson[JobStatus]) {
     implicit request =>
       for {
-        _ <- workerDAO.findOneByKey(key) ?~> "job.worker.notFound"
+        _ <- workerDAO.findOneByKey(key) ?~> Msg.Job.workerNotFound
         jobBeforeChange <- jobDAO.findOne(id)(GlobalAccessContext)
-        _ <- jobDAO.updateStatus(id, request.body) ?~> "job.updateStatus.failed"
-        jobAfterChange <- jobDAO.findOne(id)(GlobalAccessContext) ?~> "job.notFound"
+        _ <- jobDAO.updateStatus(id, request.body) ?~> Msg.Job.updateStatusFailed
+        jobAfterChange <- jobDAO.findOne(id)(GlobalAccessContext) ?~> Msg.Job.notFound
         _ = jobService.trackStatusChange(jobBeforeChange, jobAfterChange)
-        _ <- jobService.cleanUpIfFailed(jobAfterChange) ?~> "job.cleanup.failed"
+        _ <- jobService.cleanUpIfFailed(jobAfterChange) ?~> Msg.Job.cleanupFailed
         _ <- Fox.runIf(request.body.state == JobState.SUCCESS) {
           creditTransactionService
-            .completeTransactionOfJob(jobAfterChange._id)(GlobalAccessContext) ?~> "job.creditTransaction.failed"
+            .completeTransactionOfJob(jobAfterChange._id)(GlobalAccessContext) ?~> Msg.Job.CreditTransaction.failed
         }
         _ <- Fox.runIf(
           jobBeforeChange.state != request.body.state && (request.body.state == JobState.FAILURE || request.body.state == JobState.CANCELLED)) {
           creditTransactionService.refundTransactionForJob(jobBeforeChange._id,
                                                            isCancelled = request.body.state == JobState.CANCELLED)(
-            GlobalAccessContext) ?~> "job.creditTransaction.refund.failed"
+            GlobalAccessContext) ?~> Msg.Job.CreditTransaction.refundFailed
         }
       } yield Ok
   }
@@ -101,9 +102,9 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
   def attachVoxelyticsWorkflow(key: String, id: ObjectId): Action[String] = Action.async(validateJson[String]) {
     implicit request =>
       for {
-        _ <- workerDAO.findOneByKey(key) ?~> "job.worker.notFound"
-        _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> "voxelytics.disabled"
-        organizationId <- jobDAO.organizationIdForJobId(id) ?~> "job.notFound"
+        _ <- workerDAO.findOneByKey(key) ?~> Msg.Job.workerNotFound
+        _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.disabled
+        organizationId <- jobDAO.organizationIdForJobId(id) ?~> Msg.Job.notFound
         workflowHash = request.body
         existingWorkflowBox <- voxelyticsDAO.findWorkflowByHashAndOrganization(organizationId, workflowHash).shiftBox
         _ <- existingWorkflowBox match {
@@ -119,10 +120,10 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
     Action.async(validateJson[String]) { implicit request =>
       implicit val ctx: DBAccessContext = GlobalAccessContext
       for {
-        _ <- workerDAO.findOneByKey(key) ?~> "job.worker.notFound"
-        organizationId <- jobDAO.organizationIdForJobId(id) ?~> "job.notFound"
+        _ <- workerDAO.findOneByKey(key) ?~> Msg.Job.workerNotFound
+        organizationId <- jobDAO.organizationIdForJobId(id) ?~> Msg.Job.notFound
         dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(request.body, organizationId)
-        aiInference <- aiInferenceDAO.findOneByJobId(id) ?~> "aiInference.notFound"
+        aiInference <- aiInferenceDAO.findOneByJobId(id) ?~> Msg.AiInference.notFound
         _ <- aiInferenceDAO.updateDataset(aiInference._id, dataset._id)
       } yield Ok
     }

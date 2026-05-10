@@ -1,5 +1,6 @@
 package models.annotation.handler
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 
@@ -28,15 +29,15 @@ class TaskTypeInformationHandler @Inject()(
   override def provideAnnotation(taskTypeId: ObjectId, userOpt: Option[User])(
       implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
-      taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound"
+      taskType <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound
       tasks <- taskDAO.findAllByTaskType(taskType._id)
       annotations <- Fox
         .serialCombined(tasks)(task => annotationDAO.findAllByTaskIdAndType(task._id, AnnotationType.Task))
         .map(_.flatten)
       finishedAnnotations = annotations.filter(_.state == Finished)
       _ <- assertAllOnSameDataset(finishedAnnotations)
-      _ <- assertNonEmpty(finishedAnnotations) ?~> "taskType.noAnnotations"
-      user <- userOpt.toFox ?~> "user.notAuthorised"
+      _ <- assertNonEmpty(finishedAnnotations) ?~> Msg.TaskType.noAnnotations
+      user <- userOpt.toFox ?~> Msg.User.notAuthenticated
       datasetId <- finishedAnnotations.headOption.map(_._dataset).toFox
       _ <- registerDataSourceInTemporaryStore(taskTypeId, datasetId)
       taskBoundingBoxes <- taskDAO.findTaskBoundingBoxesByAnnotationIds(annotations.map(_._id))
@@ -47,12 +48,12 @@ class TaskTypeInformationHandler @Inject()(
                                                   taskType._team,
                                                   AnnotationType.CompoundTaskType,
                                                   finishedAnnotations,
-                                                  taskBoundingBoxes) ?~> "annotation.merge.failed.compound"
+                                                  taskBoundingBoxes) ?~> Msg.Annotation.Merge.failedCompound
     } yield mergedAnnotation
 
   override def restrictionsFor(taskTypeId: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =
     for {
-      taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound"
+      taskType <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound
     } yield {
       new AnnotationRestrictions {
         override def allowAccess(userOption: Option[User]): Fox[Boolean] =

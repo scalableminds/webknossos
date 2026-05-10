@@ -265,10 +265,11 @@ class AuthenticationController @Inject()(
             } else {
               for {
                 inviteBox <- inviteService.findInviteByTokenOpt(signUpData.inviteToken).shiftBox
-                _ <- Fox.fromBool(inviteBox.isDefined || conf.Features.registerToDefaultOrgaEnabled) ?~> "auth.register.needInvite"
+                _ <- Fox
+                  .fromBool(inviteBox.isDefined || conf.Features.registerToDefaultOrgaEnabled) ?~> Msg.Auth.Register.needInvite
                 organization <- organizationService.findOneByInviteOrDefault(inviteBox.toOption)(GlobalAccessContext)
                 _ <- organizationService
-                  .assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec) ?~> "organization.users.userLimitReached"
+                  .assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec) ?~> Msg.Organization.usersUserLimitReached
                 autoActivate = inviteBox.toOption.map(_.autoActivate).getOrElse(organization.enableAutoVerify)
                 _ <- createUser(organization,
                                 email,
@@ -311,7 +312,7 @@ class AuthenticationController @Inject()(
         isOrganizationOwner = false,
         isEmailVerified = isEmailVerified,
         teamMemberships = teamMemberships
-      ) ?~> "user.creation.failed"
+      ) ?~> Msg.User.creationFailed
       multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
       _ = analyticsService.track(SignupEvent(user, inviteBox.isDefined))
       _ <- Fox.runIf(inviteBox.isDefined)(Fox.runOptional(inviteBox.toOption)(i =>
@@ -377,8 +378,8 @@ class AuthenticationController @Inject()(
     implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
     for {
       requestingMultiUser <- multiUserDAO.findOne(request.identity._multiUser)
-      _ <- Fox.fromBool(requestingMultiUser.isSuperUser) ?~> "user.notAuthorised" ~> FORBIDDEN
-      targetUser <- userService.userFromMultiUserEmail(email) ?~> "user.notFound" ~> NOT_FOUND
+      _ <- Fox.fromBool(requestingMultiUser.isSuperUser) ?~> Msg.User.notAuthenticated ~> FORBIDDEN
+      targetUser <- userService.userFromMultiUserEmail(email) ?~> Msg.User.notFound ~> NOT_FOUND
       result <- Fox.fromFuture(switchToUser(targetUser._id))
     } yield result
   }
@@ -388,8 +389,8 @@ class AuthenticationController @Inject()(
       organization <- organizationDAO.findOne(organizationId) ?~> Msg.Organization.notFound(organizationId) ~> NOT_FOUND
       _ <- userService.fillSuperUserIdentity(request.identity, organization._id)
       targetUser <- userDAO.findOneByOrgaAndMultiUser(organization._id, request.identity._multiUser)(
-        GlobalAccessContext) ?~> "user.notFound" ~> NOT_FOUND
-      _ <- Fox.fromBool(!targetUser.isDeactivated) ?~> "user.deactivated"
+        GlobalAccessContext) ?~> Msg.User.notFound ~> NOT_FOUND
+      _ <- Fox.fromBool(!targetUser.isDeactivated) ?~> Msg.User.isDeactivated
       result <- Fox.fromFuture(switchToUser(targetUser._id))
       _ <- multiUserDAO.updateLastLoggedInIdentity(request.identity._multiUser, targetUser._id)
     } yield result
@@ -420,13 +421,13 @@ class AuthenticationController @Inject()(
 
   def joinOrganization(inviteToken: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      invite <- inviteDAO.findOneByTokenValue(inviteToken) ?~> "invite.invalidToken"
-      organization <- organizationDAO.findOne(invite._organization)(GlobalAccessContext) ?~> "invite.invalidToken"
+      invite <- inviteDAO.findOneByTokenValue(inviteToken) ?~> Msg.Invite.invalidToken
+      organization <- organizationDAO.findOne(invite._organization)(GlobalAccessContext) ?~> Msg.Invite.invalidToken
       _ <- userService.assertNotInOrgaYet(request.identity._multiUser, organization._id)
       requestingMultiUser <- multiUserDAO.findOne(request.identity._multiUser)
       alreadyPayingOrgaForMultiUser <- userDAO.findPayingOrgaIdForMultiUser(requestingMultiUser._id)
       _ <- Fox.runIf(!requestingMultiUser.isSuperUser && alreadyPayingOrgaForMultiUser.isEmpty)(organizationService
-        .assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec)) ?~> "organization.users.userLimitReached"
+        .assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec)) ?~> Msg.Organization.usersUserLimitReached
       teamMemberships <- userService.initialTeamMemberships(organization._id, Some(invite._id))
       _ <- userService.joinOrganization(
         request.identity,
@@ -624,8 +625,8 @@ class AuthenticationController @Inject()(
 
   def webauthnAuthStart(): Action[AnyContent] = Action.async { _ =>
     for {
-      _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "auth.passkeys.disabled"
-      _ <- Fox.fromBool(usesHttps) ?~> "auth.passkeys.requiresHttps"
+      _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> Msg.Auth.Passkeys.disabled
+      _ <- Fox.fromBool(usesHttps) ?~> Msg.Auth.Passkeys.requiresHttps
       sessionId = UUID.randomUUID().toString
       cookie = Cookie(name = "webauthn-session",
                       value = sessionId,
@@ -649,22 +650,22 @@ class AuthenticationController @Inject()(
   def webauthnAuthFinalize(): Action[WebAuthnAuthentication] = Action.async(validateJson[WebAuthnAuthentication]) {
     implicit request =>
       for {
-        _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "auth.passkeys.disabled"
-        _ <- Fox.fromBool(usesHttps) ?~> "auth.passkeys.requiresHttps"
+        _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> Msg.Auth.Passkeys.disabled
+        _ <- Fox.fromBool(usesHttps) ?~> Msg.Auth.Passkeys.requiresHttps
         cookie <- request.cookies.get("webauthn-session").toFox
         sessionId = cookie.value
         challenge <- temporaryAssertionStore
           .pop(sessionId)
           .toFox ?~> "Timeout during authentication. Please try again." ~> UNAUTHORIZED
         authData <- tryo(webAuthnManager.parseAuthenticationResponseJSON(Json.stringify(request.body.key))).toFox ??~>
-          "auth.passkeys.unauthorized" ~> UNAUTHORIZED
+          Msg.Auth.Passkeys.unauthorized ~> UNAUTHORIZED
         credentialId = authData.getCredentialId
         multiUserId <- ObjectId.fromString(new String(authData.getUserHandle)) ??~>
-          "auth.passkeys.unauthorized" ~> UNAUTHORIZED
+          Msg.Auth.Passkeys.unauthorized ~> UNAUTHORIZED
         multiUser <- multiUserDAO.findOneById(multiUserId)(GlobalAccessContext) ??~>
-          "auth.passkeys.unauthorized" ~> UNAUTHORIZED
+          Msg.Auth.Passkeys.unauthorized ~> UNAUTHORIZED
         credential <- webAuthnCredentialDAO.findByCredentialId(multiUser._id, credentialId)(GlobalAccessContext) ??~>
-          "auth.passkeys.unauthorized" ~> UNAUTHORIZED
+          Msg.Auth.Passkeys.unauthorized ~> UNAUTHORIZED
         serverProperty = new ServerProperty(origin, origin.getHost, challenge)
 
         params = new AuthenticationParameters(
@@ -674,15 +675,15 @@ class AuthenticationController @Inject()(
           false, // User verification is not required put preferred.
           false // User presence is not required.
         )
-        _ <- tryo(webAuthnManager.verify(authData, params)).toFox ??~> "auth.passkeys.unauthorized" ~> UNAUTHORIZED
+        _ <- tryo(webAuthnManager.verify(authData, params)).toFox ??~> Msg.Auth.Passkeys.unauthorized ~> UNAUTHORIZED
         oldSignCount = credential.credentialRecord.getCounter
         newSignCount = authData.getAuthenticatorData.getSignCount
         _ = credential.credentialRecord.setCounter(newSignCount)
-        _ <- webAuthnCredentialDAO.updateSignCount(credential) ??~> "auth.passkeys.unauthorized" ~> UNAUTHORIZED
+        _ <- webAuthnCredentialDAO.updateSignCount(credential) ??~> Msg.Auth.Passkeys.unauthorized ~> UNAUTHORIZED
 
         // Sign count is 0 if not used by the authenticator.
         _ <- Fox.fromBool((oldSignCount == 0 && newSignCount == 0) || (oldSignCount < newSignCount)) ??~>
-          "auth.passkeys.unauthorized" ~> UNAUTHORIZED
+          Msg.Auth.Passkeys.unauthorized ~> UNAUTHORIZED
         userId <- multiUser._lastLoggedInIdentity.toFox
         loginInfo = LoginInfo("credentials", userId.toString)
         result <- Fox.fromFuture(authenticateInner(loginInfo))
@@ -691,8 +692,8 @@ class AuthenticationController @Inject()(
 
   def webauthnRegisterStart(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "auth.passkeys.disabled"
-      _ <- Fox.fromBool(usesHttps) ?~> "auth.passkeys.requiresHttps"
+      _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> Msg.Auth.Passkeys.disabled
+      _ <- Fox.fromBool(usesHttps) ?~> Msg.Auth.Passkeys.requiresHttps
       multiUser <- multiUserDAO.findOne(request.identity._multiUser)
       user = WebAuthnCreationOptionsUser(
         displayName = multiUser.fullName,
@@ -737,8 +738,8 @@ class AuthenticationController @Inject()(
   def webauthnRegisterFinalize(): Action[WebAuthnRegistration] =
     sil.SecuredAction.async(validateJson[WebAuthnRegistration]) { implicit request =>
       for {
-        _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "auth.passkeys.disabled"
-        _ <- Fox.fromBool(usesHttps) ?~> "auth.passkeys.requiresHttps"
+        _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> Msg.Auth.Passkeys.disabled
+        _ <- Fox.fromBool(usesHttps) ?~> Msg.Auth.Passkeys.requiresHttps
         registrationData <- tryo(webAuthnManager.parseRegistrationResponseJSON(Json.stringify(request.body.key))).toFox
         cookie <- request.cookies.get("webauthn-registration").toFox
         sessionId = cookie.value
@@ -772,8 +773,8 @@ class AuthenticationController @Inject()(
   def webauthnListKeys: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     {
       for {
-        _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "auth.passkeys.disabled"
-        _ <- Fox.fromBool(usesHttps) ?~> "auth.passkeys.requiresHttps"
+        _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> Msg.Auth.Passkeys.disabled
+        _ <- Fox.fromBool(usesHttps) ?~> Msg.Auth.Passkeys.requiresHttps
         keys <- webAuthnCredentialDAO.findAllForUser(request.identity._multiUser)
         reducedKeys = keys.map(credential => WebAuthnKeyDescriptor(credential._id, credential.name))
       } yield Ok(Json.toJson(reducedKeys))
@@ -783,8 +784,8 @@ class AuthenticationController @Inject()(
   def webauthnRemoveKey(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     {
       for {
-        _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> "auth.passkeys.disabled"
-        _ <- Fox.fromBool(usesHttps) ?~> "auth.passkeys.requiresHttps"
+        _ <- Fox.fromBool(conf.Features.passkeysEnabled) ?~> Msg.Auth.Passkeys.disabled
+        _ <- Fox.fromBool(usesHttps) ?~> Msg.Auth.Passkeys.requiresHttps
         _ <- webAuthnCredentialDAO.removeById(id, request.identity._multiUser) ?~> "Passkey not found" ~> NOT_FOUND
       } yield Ok(Json.obj())
     }
@@ -852,7 +853,7 @@ class AuthenticationController @Inject()(
       (accessToken: JsObject, idToken: Option[JsObject]) <- openIdConnectClient.getAndValidateTokens(
         absoluteOpenIdConnectCallbackURL,
         request.queryString.get("code").flatMap(_.headOption).getOrElse("missing code"),
-      ) ?~> "oidc.getToken.failed" ?~> "oidc.authentication.failed"
+      ) ?~> Msg.Oidc.getTokenFailed ?~> Msg.Oidc.authenticationFailed
       userInfoFromTokens <- extractUserInfoFromTokenResponses(accessToken, idToken)
       userResult <- Fox.fromFuture(loginOrSignupViaOidc(userInfoFromTokens)(request))
     } yield userResult
@@ -875,7 +876,7 @@ class AuthenticationController @Inject()(
         newOrganizationId = RandomIDGenerator.generateBlocking(8, useHex = true)
         organization <- organizationService.createOrganization(Some(newOrganizationId),
                                                                request.body.newOrganizationName)
-        _ <- organizationService.createOrganizationDirectory(organization._id) ?~> "organization.folderCreation.failed"
+        _ <- organizationService.createOrganizationDirectory(organization._id) ?~> Msg.Organization.folderCreationFailed
         teamMemberships <- userService.initialTeamMemberships(organization._id, None)
         _ <- userService.joinOrganization(
           user,
@@ -910,7 +911,7 @@ class AuthenticationController @Inject()(
                     _ <- initialDataService.insertLocalDataStoreIfEnabled()
                     organization <- organizationService.createOrganization(
                       Option(signUpData.organization).filter(_.trim.nonEmpty),
-                      signUpData.organizationName) ?~> "organization.create.failed"
+                      signUpData.organizationName) ?~> Msg.Organization.Create.failed
                     teamMemberships <- userService.initialTeamMemberships(organization._id, inviteIdOpt = None)
                     user <- userService.insert(
                       organization._id,
@@ -924,7 +925,7 @@ class AuthenticationController @Inject()(
                       isOrganizationOwner = true,
                       isEmailVerified = false,
                       teamMemberships = teamMemberships
-                    ) ?~> "user.creation.failed"
+                    ) ?~> Msg.User.creationFailed
                     _ = analyticsService.track(SignupEvent(user, hadInvite = false))
                     multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
                     _ <- organizationService

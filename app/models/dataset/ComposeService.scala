@@ -1,5 +1,6 @@
 package models.dataset
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
@@ -128,14 +129,14 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
 
   def addLayer(targetDatasetId: ObjectId, request: ComposeRequestLayer)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      targetDataset <- datasetDAO.findOne(targetDatasetId) ?~> "dataset.notFound"
-      _ <- Fox.fromBool(targetDataset.isVirtual) ?~> "dataset.composeInPlace.mustBeVirtual"
+      targetDataset <- datasetDAO.findOne(targetDatasetId) ?~> Msg.Dataset.notFound(targetDatasetId)
+      _ <- Fox.fromBool(targetDataset.isVirtual) ?~> Msg.Dataset.Compose.inPlaceMustBeVirtual
       targetDataSource <- datasetService.usableDataSourceFor(targetDataset)
-      _ <- Fox.fromBool(!targetDataSource.dataLayers.exists(_.name == request.targetLayerName)) ?~> "dataset.layer.nameAlreadyExists"
-      sourceDataset <- datasetDAO.findOne(request.sourceDatasetId) ?~> "dataset.notFound"
-      _ <- Fox.fromBool(targetDataset._dataStore == sourceDataset._dataStore) ?~> "compose.differingDataStores"
+      _ <- Fox.fromBool(!targetDataSource.dataLayers.exists(_.name == request.targetLayerName)) ?~> Msg.Dataset.layerNameAlreadyExists
+      sourceDataset <- datasetDAO.findOne(request.sourceDatasetId) ?~> Msg.Dataset.notFound(request.sourceDatasetId)
+      _ <- Fox.fromBool(targetDataset._dataStore == sourceDataset._dataStore) ?~> Msg.Dataset.Compose.differingDataStores
       sourceDataSource <- datasetService.usableDataSourceFor(sourceDataset)
-      sourceLayer <- sourceDataSource.getDataLayer(request.sourceLayerName).toFox ?~> "layer.notFound"
+      sourceLayer <- sourceDataSource.getDataLayer(request.sourceLayerName).toFox ?~> Msg.Layer.notFound
       updatedDataSource = targetDataSource.copy(
         dataLayers = targetDataSource.dataLayers :+ sourceLayer.mapped(name = request.targetLayerName))
       _ <- datasetDAO.updateDataSource(targetDatasetId,
@@ -149,18 +150,18 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
 
   def addMag(targetDatasetId: ObjectId, request: ComposeAddMagRequest)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      targetDataset <- datasetDAO.findOne(targetDatasetId) ?~> "dataset.notFound"
-      _ <- Fox.fromBool(targetDataset.isVirtual) ?~> "dataset.composeInPlace.mustBeVirtual"
+      targetDataset <- datasetDAO.findOne(targetDatasetId) ?~> Msg.Dataset.notFound(targetDatasetId)
+      _ <- Fox.fromBool(targetDataset.isVirtual) ?~> Msg.Dataset.Compose.inPlaceMustBeVirtual
       targetDataSource <- datasetService.usableDataSourceFor(targetDataset)
-      targetLayer <- targetDataSource.getDataLayer(request.targetLayerName).toFox ?~> "layer.notFound"
-      sourceDataset <- datasetDAO.findOne(request.sourceDatasetId) ?~> "dataset.notFound"
-      _ <- Fox.fromBool(targetDataset._dataStore == sourceDataset._dataStore) ?~> "compose.differingDataStores"
+      targetLayer <- targetDataSource.getDataLayer(request.targetLayerName).toFox ?~> Msg.Layer.notFound
+      sourceDataset <- datasetDAO.findOne(request.sourceDatasetId) ?~> Msg.Dataset.notFound(request.sourceDatasetId)
+      _ <- Fox.fromBool(targetDataset._dataStore == sourceDataset._dataStore) ?~> Msg.Dataset.Compose.differingDataStores
       sourceDataSource <- datasetService.usableDataSourceFor(sourceDataset)
-      sourceLayer <- sourceDataSource.getDataLayer(request.sourceLayerName).toFox ?~> "layer.notFound"
-      sourceMag <- sourceLayer.mags.find(_.mag == request.sourceMag).toFox ?~> "mag.notFound"
+      sourceLayer <- sourceDataSource.getDataLayer(request.sourceLayerName).toFox ?~> Msg.Layer.notFound
+      sourceMag <- sourceLayer.mags.find(_.mag == request.sourceMag).toFox ?~> Msg.Mag.notFound
       adaptedMag = sourceMag.copy(mag = request.targetMag.getOrElse(sourceMag.mag))
       updatedLayer = targetLayer.mapped(newMags = Some((targetLayer.mags :+ adaptedMag).sortBy(_.mag.maxDim)))
-      _ <- Fox.fromBool(updatedLayer.mags.distinctBy(_.mag.maxDim).length == updatedLayer.mags.length) ?~> "compose.duplicateMag"
+      _ <- Fox.fromBool(updatedLayer.mags.distinctBy(_.mag.maxDim).length == updatedLayer.mags.length) ?~> Msg.Dataset.Compose.duplicateMag
       updatedLayers = targetDataSource.dataLayers.map(l => if (l.name == request.targetLayerName) updatedLayer else l)
       updatedDataSource = targetDataSource.copy(dataLayers = updatedLayers)
       _ <- datasetDAO.updateDataSource(targetDatasetId,
@@ -175,19 +176,19 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
   def addAttachment(targetDatasetId: ObjectId, request: ComposeAddAttachmentRequest)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      targetDataset <- datasetDAO.findOne(targetDatasetId) ?~> "dataset.notFound"
-      _ <- Fox.fromBool(targetDataset.isVirtual) ?~> "dataset.composeInPlace.mustBeVirtual"
+      targetDataset <- datasetDAO.findOne(targetDatasetId) ?~> Msg.Dataset.notFound(targetDatasetId)
+      _ <- Fox.fromBool(targetDataset.isVirtual) ?~> Msg.Dataset.Compose.inPlaceMustBeVirtual
       targetDataSource <- datasetService.usableDataSourceFor(targetDataset)
-      targetLayer <- targetDataSource.getDataLayer(request.targetLayerName).toFox ?~> "layer.notFound"
-      sourceDataset <- datasetDAO.findOne(request.sourceDatasetId) ?~> "dataset.notFound"
-      _ <- Fox.fromBool(targetDataset._dataStore == sourceDataset._dataStore) ?~> "compose.differingDataStores"
+      targetLayer <- targetDataSource.getDataLayer(request.targetLayerName).toFox ?~> Msg.Layer.notFound
+      sourceDataset <- datasetDAO.findOne(request.sourceDatasetId) ?~> Msg.Dataset.notFound(request.sourceDatasetId)
+      _ <- Fox.fromBool(targetDataset._dataStore == sourceDataset._dataStore) ?~> Msg.Dataset.Compose.differingDataStores
       sourceDataSource <- datasetService.usableDataSourceFor(sourceDataset)
-      sourceLayer <- sourceDataSource.getDataLayer(request.sourceLayerName).toFox ?~> "layer.notFound"
+      sourceLayer <- sourceDataSource.getDataLayer(request.sourceLayerName).toFox ?~> Msg.Layer.notFound
       targetAttachments = targetLayer.attachments.getOrElse(DataLayerAttachments())
       sourceAttachment <- sourceLayer.attachments
         .getOrElse(DataLayerAttachments())
         .getByTypeAndName(request.attachmentType, request.sourceAttachmentName)
-        .toFox ?~> "attachment.notFound"
+        .toFox ?~> Msg.Attachment.notFound
       adaptedAttachment = sourceAttachment.copy(name = request.targetAttachmentName.getOrElse(sourceAttachment.name))
       updatedAttachments = targetAttachments.withAdded(adaptedAttachment, request.attachmentType)
       _ <- Fox.fromBool(!updatedAttachments.containsDuplicateNames) ?~> "Attachment renamings create name collisions."

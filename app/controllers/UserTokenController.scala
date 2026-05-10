@@ -124,7 +124,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
       for {
         idStr <- idOpt.toFox
         datasetId <- ObjectId.fromString(idStr)
-        dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> "dataset.notFound"
+        dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId)
         isAllowed <- userBox match {
           case Full(user) => datasetService.isEditableBy(dataset, Some(user))
           case _          => Fox.successful(false)
@@ -134,10 +134,10 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
 
     def tryDelete: Fox[UserAccessAnswer] =
       for {
-        _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
+        _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> Msg.Dataset.Delete.disabled
         idStr <- idOpt.toFox
         datasetId <- ObjectId.fromString(idStr)
-        dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> "dataset.notFound"
+        dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId)
         isAllowed = userBox match {
           case Full(user) => user._organization == dataset._organization && user.isAdmin
           case _          => false
@@ -208,9 +208,10 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
           .getOrElse(Fox.empty)
           .shiftBox
         allowedByToken = annotationAccessByToken.exists(annotation._id == _._annotation)
-        restrictions <- annotationInformationProvider.restrictionsFor(
-          AnnotationIdentifier(annotation.typ, annotation._id))(GlobalAccessContext) ?~> "restrictions.notFound"
-        allowedByUser <- checkRestrictions(restrictions) ?~> "restrictions.failedToCheck"
+        restrictions <- annotationInformationProvider.restrictionsFor(AnnotationIdentifier(annotation.typ,
+                                                                                           annotation._id))(
+          GlobalAccessContext) ?~> Msg.Annotation.Restrictions.notFound
+        allowedByUser <- checkRestrictions(restrictions) ?~> Msg.Annotation.Restrictions.failedToCheck
         allowed = allowedByToken || allowedByUser
       } yield {
         if (allowed) UserAccessAnswer(granted = true)

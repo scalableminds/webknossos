@@ -1,5 +1,6 @@
 package models.annotation
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.IdWithBool.Id32WithBool
@@ -171,7 +172,7 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
     if (existingAnnotationLayers.isEmpty) Fox.successful(None)
     else
       for {
-        existingAnnotationId <- existingAnnotationIdOpt.toFox ?~> "fetchOldPrecedenceLayer.needsAnnotationId"
+        existingAnnotationId <- existingAnnotationIdOpt.toFox ?~> Msg.fetchOldPrecedenceLayerNeedsAnnotationId
         oldPrecedenceLayer <- selectLayerWithPrecedence(existingAnnotationLayers)
         oldPrecedenceLayerFetched <- if (oldPrecedenceLayer.typ == AnnotationLayerType.Skeleton)
           tracingStoreClient.getSkeletonTracing(existingAnnotationId, oldPrecedenceLayer, previousVersion)

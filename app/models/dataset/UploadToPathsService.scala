@@ -1,5 +1,6 @@
 package models.dataset
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
@@ -59,7 +60,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
       newDatasetId: ObjectId)(implicit ec: ExecutionContext, ctx: DBAccessContext): Fox[UsableDataSource] =
     for {
       organization <- organizationDAO.findOne(requestingUser._organization)
-      _ <- organizationService.assertUsedStorageNotExceeded(organization) ?~> "dataset.upload.storageExceeded" ~> FORBIDDEN
+      _ <- organizationService.assertUsedStorageNotExceeded(organization) ?~> Msg.Dataset.Upload.storageExceeded ~> FORBIDDEN
       _ <- Fox.runIf(parameters.requireUniqueName)(
         datasetService.checkNameAvailable(parameters.datasetName, organization._id))
       _ <- datasetService.assertValidDatasetName(parameters.datasetName)
@@ -69,7 +70,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
         datasetService.assertValidLayerNameLax(newLayerName))
       newDirectoryName = datasetService.generateDirectoryName(parameters.datasetName, newDatasetId)
       dataSourceWithNewDirectoryName = parameters.dataSource.copy(id = DataSourceId(newDirectoryName, organization._id))
-      _ <- Fox.fromBool(parameters.dataSource.dataLayers.nonEmpty) ?~> "dataset.reserveUploadToPaths.noLayers"
+      _ <- Fox.fromBool(parameters.dataSource.dataLayers.nonEmpty) ?~> Msg.Dataset.Upload.noLayers
       dataSourceWithPaths <- addPathsToDatasource(dataSourceWithNewDirectoryName,
                                                   organization._id,
                                                   parameters.pathPrefix)
@@ -77,7 +78,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
                                                                                    parameters.layersToLink)
       _ <- assertValidDataSource(dataSourceWithLayersToLink).toFox
       folderIdWithFallback = parameters.folderId.getOrElse(organization._rootFolder)
-      _ <- folderDAO.assertUpdateAccess(folderIdWithFallback) ?~> "folder.noWriteAccess"
+      _ <- folderDAO.assertUpdateAccess(folderIdWithFallback) ?~> Msg.Folder.noWriteAccess
       dataStore <- findReferencedDataStore(parameters.layersToLink)
       dataset <- datasetService.createDataset(
         dataStore,
@@ -122,12 +123,12 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
     for {
       datasets <- Fox.serialCombined(datasetIds)(datasetDAO.findOne)
       referencedDatastoreNames = datasets.filter(!_.isVirtual).map(_._dataStore).distinct
-      _ <- Fox.fromBool(referencedDatastoreNames.length <= 1) ?~> "dataStore.ambiguous"
+      _ <- Fox.fromBool(referencedDatastoreNames.length <= 1) ?~> Msg.DataStore.ambiguous
       dataStore <- referencedDatastoreNames.headOption match {
         case Some(firstDatastoreName) => dataStoreDAO.findOneByName(firstDatastoreName)
         case None                     => dataStoreDAO.findOneWithUploadsToPathsAllowed
       }
-      _ <- Fox.fromBool(dataStore.allowsUploadToPaths) ?~> "dataStore.uploadToPathsNotAllowed"
+      _ <- Fox.fromBool(dataStore.allowsUploadToPaths) ?~> Msg.DataStore.uploadToPathsNotAllowed
     } yield dataStore
   }
 
@@ -166,7 +167,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
   private def selectPathPrefixDatasetParent(requestedPrefix: Option[UPath], organizationId: String)(
       implicit ec: ExecutionContext): Fox[UPath] =
     for {
-      uploadToPathsPrefix <- selectPathPrefix(requestedPrefix).toFox ?~> "uploadToPaths.noMatchingPrefix"
+      uploadToPathsPrefix <- selectPathPrefix(requestedPrefix).toFox ?~> Msg.uploadToPathsNoMatchingPrefix
       withOrgaDirOrSame = if (conf.WebKnossos.Datasets.UploadToPaths.insertOrganizationDirectory)
         uploadToPathsPrefix / organizationId
       else uploadToPathsPrefix
@@ -240,7 +241,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
   def generateAiModelPath(id: ObjectId, organizationId: String, pathPrefix: Option[UPath])(
       implicit ec: ExecutionContext): Fox[UPath] =
     for {
-      uploadToPathsPrefix <- selectPathPrefix(pathPrefix).toFox ?~> "uploadToPaths.noMatchingPrefix"
+      uploadToPathsPrefix <- selectPathPrefix(pathPrefix).toFox ?~> Msg.uploadToPathsNoMatchingPrefix
     } yield uploadToPathsPrefix / organizationId / ".aiModels" / id
 
   private def generateMagPath(mag: Vec3Int, layerPath: UPath): UPath =

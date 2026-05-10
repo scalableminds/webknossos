@@ -257,9 +257,8 @@ class UserController @Inject()(userService: UserService,
 
   private def checkNoActivateBeyondLimit(user: User, isActive: Boolean): Fox[Unit] =
     for {
-      _ <- Fox.runIf(user.isDeactivated && isActive)(
-        organizationService
-          .assertUsersCanBeAdded(user._organization)(GlobalAccessContext, ec)) ?~> "organization.users.userLimitReached"
+      _ <- Fox.runIf(user.isDeactivated && isActive)(organizationService
+        .assertUsersCanBeAdded(user._organization)(GlobalAccessContext, ec)) ?~> Msg.Organization.usersUserLimitReached
     } yield ()
 
   private def checkNoDeactivateWithRemainingTask(user: User, isActive: Boolean): Fox[Unit] =
@@ -275,7 +274,7 @@ class UserController @Inject()(userService: UserService,
     if (user.isAdmin && !isAdmin) {
       for {
         adminCount <- userDAO.countAdminsForOrganization(user._organization)
-        _ <- Fox.fromBool(adminCount > 1) ?~> "user.lastAdmin"
+        _ <- Fox.fromBool(adminCount > 1) ?~> Msg.User.lastAdmin
       } yield ()
     } else Fox.successful(())
 
@@ -283,7 +282,7 @@ class UserController @Inject()(userService: UserService,
     if (user.isOrganizationOwner && !user.isDeactivated && !isActive) {
       for {
         ownerCount <- userDAO.countOwnersForOrganization(user._organization)
-        _ <- Fox.fromBool(ownerCount > 1) ?~> "user.lastOwner"
+        _ <- Fox.fromBool(ownerCount > 1) ?~> Msg.User.lastOwner
       } yield ()
     } else Fox.successful(())
 

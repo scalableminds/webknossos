@@ -34,7 +34,7 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
 
   def list: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
-      dataStores <- dataStoreDAO.findAll ?~> "dataStore.list.failed"
+      dataStores <- dataStoreDAO.findAll ?~> Msg.DataStore.listFailed
       js <- Fox.serialCombined(dataStores)(d => dataStoreService.publicWrites(d))
     } yield {
       Ok(Json.toJson(js))
@@ -47,7 +47,7 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
         case Empty =>
           for {
             _ <- userService.assertIsSuperUser(request.identity) ~> FORBIDDEN
-            _ <- dataStoreDAO.insertOne(dataStore) ?~> "dataStore.create.failed"
+            _ <- dataStoreDAO.insertOne(dataStore) ?~> Msg.DataStore.createFailed
             js <- dataStoreService.publicWrites(dataStore)
           } yield { Ok(Json.toJson(js)) }
         case _ => Fox.successful(JsonBadRequest(Msg.DataStore.nameTaken(dataStore.name)))
@@ -59,7 +59,7 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
     for {
       multiUser <- multiUserDAO.findOne(request.identity._multiUser)
       _ <- Fox.fromBool(multiUser.isSuperUser) ?~> Msg.notAllowed ~> FORBIDDEN
-      _ <- dataStoreDAO.deleteOneByName(name) ?~> "dataStore.remove.failure"
+      _ <- dataStoreDAO.deleteOneByName(name) ?~> Msg.DataStore.removeFailed
     } yield Ok
   }
 

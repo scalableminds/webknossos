@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import com.scalableminds.util.Msg
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
@@ -71,21 +72,20 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       }
       previousBucketBytesWithEmptyFallback <- segmentIndexBuffer
         .bytesWithEmptyFallback(previousBucketBytesBox)
-        .toFox ?~> "volumeSegmentIndex.update.getPreviousBucket.failed"
+        .toFox ?~> Msg.VolumeSegmentIndex.updateGetPreviousBucketFailed
       segmentIds: Set[Long] <- collectSegmentIds(bucketBytesDecompressed, volumeLayer.elementClass).toFox
-      previousSegmentIds: Set[Long] <- collectSegmentIds(previousBucketBytesWithEmptyFallback, volumeLayer.elementClass).toFox ?~> "volumeSegmentIndex.update.collectSegmentIds.failed"
+      previousSegmentIds: Set[Long] <- collectSegmentIds(previousBucketBytesWithEmptyFallback, volumeLayer.elementClass).toFox ?~> Msg.VolumeSegmentIndex.updateCollectSegmentIdsFailed
       additions = segmentIds.diff(previousSegmentIds)
       removals = previousSegmentIds.diff(segmentIds)
-      _ <- Fox.serialCombined(removals.toList)(
-        segmentId =>
-          // When fallback layer is used we also need to include relevant segments here into the fossildb since otherwise the fallback layer would be used with invalid data
-          removeBucketFromSegmentIndex(segmentIndexBuffer, segmentId, bucketPosition, editableMappingTracingId)) ?~> "volumeSegmentIndex.update.removeBucket.failed"
+      _ <- Fox.serialCombined(removals.toList)(segmentId =>
+        // When fallback layer is used we also need to include relevant segments here into the fossildb since otherwise the fallback layer would be used with invalid data
+        removeBucketFromSegmentIndex(segmentIndexBuffer, segmentId, bucketPosition, editableMappingTracingId)) ?~> Msg.VolumeSegmentIndex.updateRemoveBucketFailed
       // When fallback layer is used, copy the entire bucketlist for this segment instead of one bucket
       _ <- Fox.runIf(additions.nonEmpty)(addBucketToSegmentIndex(
         segmentIndexBuffer,
         additions.toList,
         bucketPosition,
-        editableMappingTracingId)) ?~> "volumeSegmentIndex.update.addBucket.failed"
+        editableMappingTracingId)) ?~> Msg.VolumeSegmentIndex.updateAddBucketFailed
     } yield ()
 
   private def removeBucketFromSegmentIndex(

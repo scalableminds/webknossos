@@ -73,10 +73,10 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       tracing: VolumeTracing,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      mag <- fullMeshRequest.mag.toFox ?~> "mag.neededForAdHoc"
-      _ <- Fox.fromBool(tracing.mags.contains(vec3IntToProto(mag))) ?~> "mag.notPresentInTracing"
+      mag <- fullMeshRequest.mag.toFox ?~> Msg.Mag.neededForAdHoc
+      _ <- Fox.fromBool(tracing.mags.contains(vec3IntToProto(mag))) ?~> Msg.Mag.notPresentInTracing
       before = Instant.now
-      voxelSize <- remoteWebknossosClient.voxelSizeForAnnotationWithCache(annotationId) ?~> "voxelSize.failedToFetch"
+      voxelSize <- remoteWebknossosClient.voxelSizeForAnnotationWithCache(annotationId) ?~> Msg.voxelSizeFailedToFetch
       verticesForChunks <- if (tracing.hasSegmentIndex.getOrElse(false))
         getAllAdHocChunksWithSegmentIndex(annotationId, tracingId, tracing, mag, voxelSize, fullMeshRequest)
       else
@@ -188,7 +188,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       }
 
     for {
-      topLeft <- topLeftOpt.toFox ?~> "seedPosition.neededForAdHoc"
+      topLeft <- topLeftOpt.toFox ?~> Msg.Mag.neededForAdHoc
       result <- processFrontier(List(topLeft), List.empty)
     } yield result
   }

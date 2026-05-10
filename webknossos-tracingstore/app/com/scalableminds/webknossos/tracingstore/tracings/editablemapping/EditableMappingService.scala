@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
+import com.scalableminds.util.Msg
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
@@ -184,7 +185,7 @@ class EditableMappingService @Inject()(
   }
 
   def assertTracingHasEditableMapping(tracing: VolumeTracing)(implicit ec: ExecutionContext): Fox[Unit] =
-    Fox.fromBool(tracing.getHasEditableMapping) ?~> "annotation.volume.noEditableMapping"
+    Fox.fromBool(tracing.getHasEditableMapping) ?~> Msg.Annotation.Volume.noEditableMapping
 
   def findSegmentIdAtPositionIfNeeded(remoteFallbackLayer: RemoteFallbackLayer,
                                       positionOpt: Option[Vec3Int],
@@ -304,7 +305,7 @@ class EditableMappingService @Inject()(
                                      agglomerateId: Long)(implicit tc: TokenContext): Fox[Array[Byte]] =
     for {
       agglomerateGraphBox <- getAgglomerateGraphForId(tracingId, version, agglomerateId).shiftBox
-      _ <- Fox.fromBool(agglomerateGraphBox.map(_.segments.nonEmpty).getOrElse(true)) ?~> "annotation.editableMapping.getAgglomerateTree.empty"
+      _ <- Fox.fromBool(agglomerateGraphBox.map(_.segments.nonEmpty).getOrElse(true)) ?~> Msg.Annotation.EditableMapping.getAgglomerateTreeEmpty
       skeletonBytes <- agglomerateGraphBox match {
         case Full(agglomerateGraph) =>
           Fox.successful(agglomerateGraphToTree(tracingId, agglomerateGraph, agglomerateId))
@@ -457,7 +458,7 @@ class EditableMappingService @Inject()(
                                                                tracingId,
                                                                version,
                                                                parameters.agglomerateId,
-                                                               remoteFallbackLayer) ?~> "getAgglomerateGraph.failed"
+                                                               remoteFallbackLayer) ?~> Msg.AgglomerateGraph.failed
       edgesToCut <- minCut(agglomerateGraph, parameters.partition1, parameters.partition2).toFox ?~> "Could not calculate min-cut on agglomerate graph."
       edgesWithPositions = annotateEdgesWithPositions(edgesToCut, agglomerateGraph)
     } yield edgesWithPositions

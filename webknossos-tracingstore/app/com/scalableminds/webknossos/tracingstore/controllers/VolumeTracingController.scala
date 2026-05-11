@@ -129,7 +129,7 @@ class VolumeTracingController @Inject()(
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
             for {
-              initialData <- request.body.asRaw.map(_.asFile).toFox ?~> Msg.Annotation.Upload.zipFileNotFound
+              initialData <- request.body.asRaw.map(_.asFile).toFox ?~> Msg.Nml.zipFileNotFound
               // The annotation object may not yet exist here. Caller is responsible to save that too.
               tracing <- annotationService.findVolumeRaw(tracingId) ?~> Msg.Annotation.notFound
               magRestrictions = MagRestrictions(minMag, maxMag)
@@ -183,7 +183,7 @@ class VolumeTracingController @Inject()(
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
             for {
-              initialData <- request.body.asRaw.map(_.asFile).toFox ?~> Msg.Annotation.Upload.zipFileNotFound
+              initialData <- request.body.asRaw.map(_.asFile).toFox ?~> Msg.Nml.zipFileNotFound
               // The annotation object may not yet exist here. Caller is responsible to save that too.
               tracing <- annotationService.findVolumeRaw(tracingId) ?~> Msg.Annotation.notFound
               mergedVolumeStats <- volumeTracingService.initializeWithDataMultiple(annotationId,

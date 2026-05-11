@@ -173,7 +173,7 @@ class AnnotationController @Inject()(
       _ <- isReopenAllowed(request.identity, annotation) ?~> Msg.Annotation.Reopen.failed
       _ = logger.info(
         s"Reopening annotation $id, new state will be ${AnnotationState.Active.toString}, access context: ${request.identity.toStringAnonymous}")
-      _ <- annotationDAO.updateState(annotation._id, AnnotationState.Active) ?~> Msg.Annotation.updateStateFailed
+      _ <- annotationDAO.updateState(annotation._id, AnnotationState.Active) ?~> Msg.Annotation.Reopen.updateStateFailed
       _ <- Fox.runOptional(annotation._task)(taskService.clearCompoundCache)
       updatedAnnotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
       json <- annotationService
@@ -276,7 +276,7 @@ class AnnotationController @Inject()(
       for {
         annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
         restrictions <- provider.restrictionsFor(typ, id) ?~> Msg.Annotation.Restrictions.notFound ~> NOT_FOUND
-        _ <- restrictions.allowUpdate(request.identity) ?~> Msg.Annotation.updateNotAllowed ~> FORBIDDEN
+        _ <- restrictions.allowUpdate(request.identity) ?~> Msg.Annotation.Edit.notAllowed ~> FORBIDDEN
         name = (request.body \ "name").asOpt[String]
         visibility = (request.body \ "visibility").asOpt[AnnotationVisibility.Value]
         _ <- if (visibility.contains(AnnotationVisibility.Private))
@@ -347,7 +347,7 @@ class AnnotationController @Inject()(
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
       newAnnotation <- duplicateAnnotation(annotation, request.identity) ?~> Msg.Annotation.duplicateFailed
-      restrictions <- provider.restrictionsFor(typ, id) ?~> Msg.Annotation.Restrictions.notFound
+      restrictions <- provider.restrictionsFor(typ, id) ?~> Msg.Annotation.Restrictions.notFound ~> NOT_FOUND
       json <- annotationService
         .publicWrites(newAnnotation, Some(request.identity), Some(restrictions)) ?~> Msg.Annotation.publicWritesFailed
     } yield JsonOk(json)

@@ -93,7 +93,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     }
 
   def assertMayCreateOrganization(requestingUser: Option[User]): Fox[Unit] = {
-    val activatedInConfig = Fox.fromBool(conf.Features.isWkorgInstance) ?~> Msg.Organization.allowOrganizationCreationNotEnabled
+    val activatedInConfig = Fox.fromBool(conf.Features.isWkorgInstance) ?~> Msg.Organization.organizationCreationNotEnabled
     val userIsSuperUser = requestingUser.toFox.flatMap(
       user =>
         multiUserDAO
@@ -140,7 +140,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         organizationRootFolder._id
       )
       organizationTeam = Team(ObjectId.generate, organization._id, "Default", isOrganizationTeam = true)
-      _ <- folderDAO.insertAsRoot(organizationRootFolder)
+      _ <- folderDAO.insertAsRoot(organizationRootFolder) ?~> Msg.Organization.folderCreationFailed
       _ <- organizationDAO.insertOne(organization)
       _ <- teamDAO.insertOne(organizationTeam)
     } yield organization

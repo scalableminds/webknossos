@@ -49,14 +49,14 @@ trait AnnotationReversion extends FoxImplicits {
                                                     sourceVersion,
                                                     sourceTracing,
                                                     newVersion: Long,
-                                                    tracingBeforeRevert)) ?~> Msg.Annotation.TSRevert.volumeDataFailed
+                                                    tracingBeforeRevert)) ?~> Msg.Annotation.Revert.volumeDataFailed
             _ <- Fox.runIf(shouldRevertElements && sourceTracing.getHasEditableMapping)(
               revertEditableMappingFields(annotationId,
                                           currentAnnotationWithTracings,
                                           tracingBeforeRevert,
                                           sourceVersion,
                                           newVersion,
-                                          tracingId)) ?~> Msg.Annotation.TSRevert.editableMappingDataFailed
+                                          tracingId)) ?~> Msg.Annotation.Revert.editableMappingDataFailed
           } yield ()
       }
     } yield ()

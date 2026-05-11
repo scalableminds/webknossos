@@ -308,7 +308,7 @@ class TSAnnotationController @Inject()(
               volumeTracings,
               newVolumeId,
               newVersion = newTargetVersion,
-              toTemporaryStore) ?~> Msg.Annotation.mergeVolumeDataFailed
+              toTemporaryStore) ?~> Msg.Annotation.Merge.mergeVolumeDataFailed
             mergedVolumeOpt <- Fox.runIf(volumeTracings.nonEmpty)(
               volumeTracingService
                 .merge(volumeTracings,
@@ -316,7 +316,7 @@ class TSAnnotationController @Inject()(
                        newMappingName,
                        newVersion = newTargetVersion,
                        additionalBoundingBoxes = request.body.additionalBoundingBoxes)
-                .toFox) ?~> Msg.Annotation.mergeVolumeFailed
+                .toFox) ?~> Msg.Annotation.Merge.mergeVolumeFailed
             _ <- Fox.runOptional(mergedVolumeOpt)(
               volumeTracingService.saveVolume(newVolumeId, version = newTargetVersion, _, toTemporaryStore))
             skeletonTracingsAdaptedNested: Seq[Seq[SkeletonTracing]] <- Fox.serialCombined(

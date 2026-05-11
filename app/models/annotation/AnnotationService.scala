@@ -464,7 +464,7 @@ class AnnotationService @Inject()(
       task <- taskFox
       skeletonIdOpt <- skeletonTracingIdBox.toFox
       volumeIdOpt <- volumeTracingIdBox.toFox
-      _ <- Fox.fromBool(skeletonIdOpt.isDefined || volumeIdOpt.isDefined) ?~> Msg.Annotation.needsAtleastOne
+      _ <- Fox.fromBool(skeletonIdOpt.isDefined || volumeIdOpt.isDefined) ?~> Msg.Annotation.needsEitherSkeletonOrVolume
       project <- projectDAO.findOne(task._project)
       annotationLayers <- AnnotationLayer.layersFromIds(skeletonIdOpt, volumeIdOpt)
       annotationBase = Annotation(ObjectId.generate,
@@ -709,10 +709,10 @@ class AnnotationService @Inject()(
 
   def resetToBase(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- Fox.fromBool(annotation.typ == AnnotationType.Task) ?~> Msg.Annotation.Revert.tasksOnly
+      _ <- Fox.fromBool(annotation.typ == AnnotationType.Task) ?~> Msg.Annotation.Reset.tasksOnly
       dataset <- datasetDAO.findOne(annotation._dataset)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
-      _ <- tracingStoreClient.resetToBase(annotation._id) ?~> Msg.Annotation.Revert.failed
+      _ <- tracingStoreClient.resetToBase(annotation._id) ?~> Msg.Annotation.Reset.failed
     } yield ()
 
   private def settingsFor(annotation: Annotation)(implicit ctx: DBAccessContext) =

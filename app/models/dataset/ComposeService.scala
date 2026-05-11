@@ -188,7 +188,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
       sourceAttachment <- sourceLayer.attachments
         .getOrElse(DataLayerAttachments())
         .getByTypeAndName(request.attachmentType, request.sourceAttachmentName)
-        .toFox ?~> Msg.Attachment.notFound
+        .toFox ?~> Msg.Dataset.Layer.attachmentNotFound(sourceLayer.name, request.sourceAttachmentName)
       adaptedAttachment = sourceAttachment.copy(name = request.targetAttachmentName.getOrElse(sourceAttachment.name))
       updatedAttachments = targetAttachments.withAdded(adaptedAttachment, request.attachmentType)
       _ <- Fox.fromBool(!updatedAttachments.containsDuplicateNames) ?~> "Attachment renamings create name collisions."

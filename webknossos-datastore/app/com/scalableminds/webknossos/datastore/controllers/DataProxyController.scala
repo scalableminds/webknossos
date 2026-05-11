@@ -37,7 +37,7 @@ class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenServ
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.Layer
             .notFound(dataLayerName) ~> NOT_FOUND
           magLocator <- dataLayer.mags.find(_.mag == magValidated).toFox ?~> Msg.Dataset.Layer
-            .wrongMag(dataLayerName, mag) ~> NOT_FOUND
+            .magNotFound(dataLayerName, mag) ~> NOT_FOUND
           magPath <- dataVaultService.vaultPathFor(magLocator, dataSource.id, dataLayerName)
           requestedPath = magPath / path
           byteRange <- ByteRange.fromRequest(request)
@@ -67,7 +67,7 @@ class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenServ
         attachmentTypeValidated <- LayerAttachmentType.fromString(attachmentType).toFox
         attachment <- dataLayer.attachments
           .flatMap(_.getByTypeAndName(attachmentTypeValidated, attachmentName))
-          .toFox ?~> Msg.Dataset.Layer.wrongAttachment(dataLayerName, attachmentName) ~> NOT_FOUND
+          .toFox ?~> Msg.Dataset.Layer.attachmentNotFound(dataLayerName, attachmentName) ~> NOT_FOUND
         attachmentPath <- dataVaultService.vaultPathFor(attachment)
         requestedPath = attachmentPath / path
         byteRange <- ByteRange.fromRequest(request)

@@ -21,6 +21,7 @@ import {
   convertUserBoundingBoxesFromServerToFrontend,
 } from "viewer/model/reducers/reducer_helpers";
 import {
+  addSegmentGroupReducer,
   addToContourListReducer,
   createCellReducer,
   expandSegmentParents,
@@ -107,6 +108,7 @@ export function serverVolumeToClientVolumeTracing(
     hideUnregisteredSegments: tracing.hideUnregisteredSegments ?? false,
     proofreadingMarkerPosition: undefined,
     segmentJournal: [],
+    idReservations: { SegmentGroup: [], Segment: [] },
   };
   return volumeTracing;
 }
@@ -297,6 +299,16 @@ function VolumeTracingReducer(
       return setSegmentGroups(state, action.layerName, segmentGroups);
     }
 
+    case "ADD_SEGMENT_GROUP": {
+      return addSegmentGroupReducer(
+        state,
+        action.volumeTracingId,
+        action.id,
+        action.name,
+        action.parentGroupId,
+      );
+    }
+
     case "SET_HIDE_UNREGISTERED_SEGMENTS": {
       const volumeTracing = getVolumeTracingFromAction(state, action);
       if (volumeTracing) {
@@ -449,6 +461,19 @@ function VolumeTracingReducer(
 
       return updateVolumeTracing(state, volumeTracing.tracingId, {
         mappingIsLocked: true,
+      });
+    }
+
+    case "SET_ID_RESERVATIONS": {
+      const volumeTracing = getVolumeTracingFromAction(state, action);
+      if (!volumeTracing) {
+        return state;
+      }
+      return updateVolumeTracing(state, action.tracingId, {
+        idReservations: {
+          ...volumeTracing.idReservations,
+          [action.domain]: action.reservations,
+        },
       });
     }
 

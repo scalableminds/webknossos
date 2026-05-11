@@ -1,3 +1,6 @@
+import Deferred from "libs/async/deferred";
+import type { Dispatch } from "redux";
+import type { AnnotationIdDomain } from "types/api_types";
 import type { AnnotationActionTypes } from "viewer/model/actions/annotation_actions";
 import type { ConnectomeAction } from "viewer/model/actions/connectome_actions";
 import type { DatasetAction } from "viewer/model/actions/dataset_actions";
@@ -16,6 +19,11 @@ import type { ViewModeAction } from "viewer/model/actions/view_mode_actions";
 import type { VolumeTracingAction } from "viewer/model/actions/volumetracing_actions";
 
 export type EscalateErrorAction = ReturnType<typeof escalateErrorAction>;
+export type GetNewIdAction = ReturnType<typeof getNewIdAction>;
+export type SetIdReservationsAction = ReturnType<typeof setIdReservationsAction>;
+export type RequestIdReplenishmentAction = ReturnType<typeof requestIdReplenishmentAction>;
+export type IdsReplenishedAction = ReturnType<typeof idsReplenishedAction>;
+export type IdsReplenishmentFailedAction = ReturnType<typeof idsReplenishmentFailedAction>;
 
 export type Action =
   | SkeletonTracingAction
@@ -40,7 +48,12 @@ export type Action =
   | ReturnType<typeof restartSagaAction>
   | ReturnType<typeof resetStoreAction>
   | ReturnType<typeof cancelSagaAction>
-  | EscalateErrorAction;
+  | EscalateErrorAction
+  | GetNewIdAction
+  | SetIdReservationsAction
+  | RequestIdReplenishmentAction
+  | IdsReplenishedAction
+  | IdsReplenishmentFailedAction;
 
 // This action indicates that webknossos was initialized successfully, meaning all relevant data
 // was fetched and the controllers, sagas and keyboard handlers were initialized.
@@ -80,5 +93,76 @@ export const cancelSagaAction = () =>
 export const escalateErrorAction = (error: unknown) =>
   ({
     type: "ESCALATE_ERROR",
+    error,
+  }) as const;
+
+export const getNewIdAction = (
+  callback: (newId: number) => void,
+  errorCallback: (error: unknown) => void,
+  tracingId: string,
+  domain: AnnotationIdDomain,
+) =>
+  ({
+    type: "GET_NEW_ID",
+    callback,
+    errorCallback,
+    tracingId,
+    domain,
+  }) as const;
+
+export const dispatchGetNewIdAsync = async (
+  dispatch: Dispatch<any>,
+  tracingId: string,
+  domain: "SegmentGroup",
+): Promise<number> => {
+  const readyDeferred = new Deferred<number, unknown>();
+  const action = getNewIdAction(
+    (newId) => readyDeferred.resolve(newId),
+    (error) => readyDeferred.reject(error),
+    tracingId,
+    domain,
+  );
+  dispatch(action);
+  return await readyDeferred.promise();
+};
+
+export const setIdReservationsAction = (
+  tracingId: string,
+  domain: "SegmentGroup" | "Segment",
+  reservations: { id: number; used: boolean }[],
+) =>
+  ({
+    type: "SET_ID_RESERVATIONS",
+    tracingId,
+    domain,
+    reservations,
+  }) as const;
+
+export const requestIdReplenishmentAction = (
+  tracingId: string,
+  domain: "SegmentGroup" | "Segment",
+) =>
+  ({
+    type: "REQUEST_ID_REPLENISHMENT",
+    tracingId,
+    domain,
+  }) as const;
+
+export const idsReplenishedAction = (tracingId: string, domain: "SegmentGroup" | "Segment") =>
+  ({
+    type: "IDS_REPLENISHED",
+    tracingId,
+    domain,
+  }) as const;
+
+export const idsReplenishmentFailedAction = (
+  tracingId: string,
+  domain: "SegmentGroup" | "Segment",
+  error: unknown,
+) =>
+  ({
+    type: "IDS_REPLENISHMENT_FAILED",
+    tracingId,
+    domain,
     error,
   }) as const;

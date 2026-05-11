@@ -1,5 +1,6 @@
 import size from "lodash-es/size";
 import type {
+  APIAnnotationInfo,
   APIAnnotationUserState,
   APIUserBase,
   SkeletonUserState,
@@ -33,6 +34,10 @@ export function isAnnotationFromDifferentOrganization(state: WebknossosState) {
   const activeUser = state.activeUser;
 
   return !!(activeUser && activeUser?.organization !== state.annotation.organization);
+}
+
+export function isAnnotationEditableByNonOwners(annotation: StoreAnnotation | APIAnnotationInfo) {
+  return annotation.collaborationMode !== "OwnerOnly";
 }
 
 export type SkeletonTracingStats = {

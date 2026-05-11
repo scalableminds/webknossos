@@ -18,6 +18,8 @@ import zip from "lodash-es/zip";
 import messages from "messages";
 import {
   type AdditionalCoordinate,
+  type AnnotationCollaborationMode,
+  type AnnotationIdDomain,
   type AnnotationLayerDescriptor,
   AnnotationLayerEnum,
   type AnnotationViewConfiguration,
@@ -83,7 +85,7 @@ import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_
 import type { DatasourceConfiguration } from "types/schemas/datasource.types";
 import type { ArbitraryObject } from "types/type_utils";
 import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "viewer/constants";
-import { AnnotationStateFilterEnum } from "viewer/constants";
+import Constants, { AnnotationStateFilterEnum } from "viewer/constants";
 import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import {
   getDataOrTracingStoreUrl,
@@ -545,13 +547,13 @@ export function editLockedState(
   );
 }
 
-export function setOthersMayEditForAnnotation(
+export function setCollaborationModeForAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
-  othersMayEdit: boolean,
+  collaborationMode: AnnotationCollaborationMode,
 ): Promise<void> {
   return Request.receiveJSON(
-    `/api/annotations/${annotationType}/${annotationId}/othersMayEdit?othersMayEdit=${othersMayEdit}`,
+    `/api/annotations/${annotationType}/${annotationId}/collaborationMode?collaborationMode=${collaborationMode}`,
     {
       method: "PATCH",
     },
@@ -1012,6 +1014,59 @@ export async function downloadAnnotation(
 
   const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${params}`;
   await downloadWithFilename(downloadUrl);
+}
+
+export async function getIdReservationsForAnnotation(
+  annotationId: string,
+  tracingId: string,
+  domain: AnnotationIdDomain,
+) {
+  const params = new URLSearchParams({ tracingId, domain });
+
+  const ids: number[] = await Request.receiveJSON(
+    `/api/annotations/${annotationId}/reservedIds?${params}`,
+  );
+  return ids;
+}
+
+export async function reserveIdsForAnnotation(
+  annotationId: string,
+  tracingId: string,
+  domain: AnnotationIdDomain,
+  numberOfIdsToReserve: number,
+  idsToRelease: number[] = [],
+): Promise<number[]> {
+  /*
+   * Will reserve new ids for the specified domain.
+   */
+  if (numberOfIdsToReserve <= 0) {
+    // Otherwise, the backend cannot reliably use the largest id
+    // in a domain as a starting point to generate new ids.
+    // For example:
+    // User 1 has reservations for ids 1 and 2.
+    // User 2 has reservations for ids 3 and 4 and releases
+    // these (without reserving new ones).
+    // Then, the known maximum is 2 (instead of 4).
+    throw new Error("Must reserve at least 1 id");
+  }
+  if (numberOfIdsToReserve > Constants.IDEAL_ID_BUFFER_SIZE) {
+    throw new Error(
+      `Tried to request too many ids. numberOfIdsToReserve (${numberOfIdsToReserve} > ${Constants.IDEAL_ID_BUFFER_SIZE})`,
+    );
+  }
+  const ids: number[] = await Request.sendJSONReceiveJSON(
+    `/api/annotations/${annotationId}/reserveIds`,
+    {
+      data: {
+        domain,
+        tracingId,
+        numberOfIdsToReserve,
+        idsToRelease,
+      },
+      method: "POST",
+    },
+  );
+  return ids;
 }
 
 // ### Datasets

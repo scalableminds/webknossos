@@ -29,7 +29,7 @@ export function mayEditAnnotation(state: WebknossosState) {
   //   - because isUpdatingCurrentlyAllowed is initialized while respecting
   //     annotation.restrictions.allowUpdate (which in turn respects isLockedByOwner).
   // - showVersionRestore
-  //   - because will be set to false while the version view is open
+  //   - because isUpdatingCurrentlyAllowed will be set to false while the version view is open
   // - annotation.restrictions.allowSave
   //   - because in sandbox mode, one can edit things but not save them
   //
@@ -64,12 +64,6 @@ export function mayAddToSaveQueue(state: WebknossosState): boolean {
     !state.save.rebaseRelevantServerAnnotationState.isRebasingOrForwarding
   );
 }
-
-// todop:
-// - pull and push should not happen in parallel
-//   - maybe not a problem?
-// - potential race condition: polling could get the update that were just pushed (without
-//   knowing that the save already succeeded)
 
 export function maySendSaveRequest(state: WebknossosState) {
   /*

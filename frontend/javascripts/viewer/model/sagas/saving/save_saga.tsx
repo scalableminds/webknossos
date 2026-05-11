@@ -148,7 +148,6 @@ function needsPollAnnotationUpdates(state: WebknossosState): "yes" | "no" | "lat
 
   // If the version restore view is open, newer versions should not be fetched
   // as this could mess up the current state.
-  // todop: what happens if the view is opened after the fetch started but before it completed?
   const isVersionRestoreActive = state.uiInformation.showVersionRestore;
   if (isVersionRestoreActive) {
     return "later";

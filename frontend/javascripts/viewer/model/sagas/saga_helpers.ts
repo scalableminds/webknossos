@@ -2,6 +2,7 @@ import type { ActionPattern } from "@redux-saga/types";
 import { Modal } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
+import { race } from "redux-saga/effects";
 import { call, delay, fork, put, take, takeEvery } from "typed-redux-saga";
 import { MappingStatusEnum, type SagaIdentifier } from "viewer/constants";
 import type { Action } from "viewer/model/actions/actions";
@@ -14,7 +15,6 @@ import {
   setMappingIsLockedAction,
   setVolumeBucketDataHasChangedAction,
 } from "../actions/volumetracing_actions";
-import { race } from "redux-saga/effects";
 
 export function* takeEveryUnlessBusy<P extends ActionPattern>(
   actionDescriptor: P,

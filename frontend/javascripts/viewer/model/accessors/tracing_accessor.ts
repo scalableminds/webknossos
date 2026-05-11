@@ -42,7 +42,7 @@ export function getSomeTracing(
 }
 
 export function hasTracing(annotation: StoreAnnotation): boolean {
-  return getSomeTracing(annotation) != null;
+  return maybeGetSomeTracing(annotation) != null;
 }
 
 export function getTracingType(annotation: StoreAnnotation): TracingType {

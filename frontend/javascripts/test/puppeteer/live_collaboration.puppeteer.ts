@@ -18,7 +18,12 @@ import urljoin from "url-join";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { sleep } from "libs/utils";
 import { vi } from "vitest";
-import { createExplorational, getUsers } from "../../admin/rest_api";
+import {
+  createExplorational,
+  getTeams,
+  getUsers,
+  updateDatasetPartial,
+} from "../../admin/rest_api";
 import { launchBrowser } from "./dataset_rendering_helpers";
 import { PAGE_HEIGHT, PAGE_WIDTH } from "./screenshot_test_config";
 
@@ -66,8 +71,7 @@ const ORG_NAME = "sample_organization";
 // Dataset that has at least one HDF5 agglomerate mapping available
 const DATASET_NAME = "l4dense_motta_et_al_dev";
 
-// TODO: fill in the actual HDF5 mapping name available for this dataset
-const HDF5_MAPPING_NAME = "TODO_hdf5_mapping_name";
+const HDF5_MAPPING_NAME = "agglomerate_view_30";
 
 // TODO: fill in two agglomerate/supervoxel IDs that exist in the dataset and
 //       can be merged without side effects.  The "source" is set as the active
@@ -295,7 +299,9 @@ async function getUserAuthToken(email: string, password: string): Promise<string
     headers: { Cookie: cookie },
   });
   if (!tokenRes.ok) {
-    throw new Error(`getAuthToken failed for ${email}: ${tokenRes.status} ${await tokenRes.text()}`);
+    throw new Error(
+      `getAuthToken failed for ${email}: ${tokenRes.status} ${await tokenRes.text()}`,
+    );
   }
   const { token } = await tokenRes.json();
   return token as string;
@@ -332,7 +338,10 @@ async function waitForTracingViewLoad(page: Page): Promise<void> {
         .waitForSelector(".initialization-error-message", { timeout: 30_000 })
         .then(() => ({ type: "error" as const, elements: [] })),
     ]);
-    if (result.type === "error") throw new Error("Tracing view showed an initialization error.");
+    if (result.type === "error") {
+      await sleep(15000);
+      throw new Error("Tracing view showed an initialization error.");
+    }
     inputCatchers = result.elements;
   }
 }
@@ -347,7 +356,7 @@ async function waitForDataLoading(page: Page): Promise<void> {
 async function waitForMappingEnabled(page: Page): Promise<void> {
   let enabled = false;
   while (!enabled) {
-    await sleep(3_000);
+    await sleep(1_000);
     enabled = await page.evaluate(() =>
       (window as any).webknossos.apiReady().then((api: any) => api.data.isMappingEnabled()),
     );
@@ -396,6 +405,12 @@ describe("Live Collaboration", () => {
       collabUsers.push({ id: user.id, email, authToken });
     }
 
+    const teams = await getTeams(adminRequestOptions());
+    const defaultTeam = teams.find((team) => team.name === "Default");
+    if (defaultTeam == null) {
+      throw new Error("Could not find default team.");
+    }
+    await updateDatasetPartial(datasetId, { allowedTeams: [defaultTeam] }, adminRequestOptions());
     annotation = await createHybridAnnotation(datasetId);
 
     const defaultTeamId = await getDefaultTeamId();
@@ -419,7 +434,7 @@ describe("Live Collaboration", () => {
       (mappingName: string) =>
         (window as any).webknossos
           .apiReady()
-          .then((api: any) => api.data.activateMapping(mappingName)),
+          .then((api: any) => api.data.activateMapping(mappingName, "HDF5")),
       HDF5_MAPPING_NAME,
     );
     await waitForMappingEnabled(page);
@@ -463,6 +478,7 @@ describe("Live Collaboration", () => {
     // TODO: replace the sleep with a proper completion signal once the
     //       proofreading saga exposes one (e.g. poll
     //       api.tracing.hasUnsavedChanges() or watch the by-product trees).
+    console.log("Wait 3s for merge operation");
     await sleep(3_000);
 
     // Save
@@ -506,7 +522,7 @@ describe("Live Collaboration", () => {
           (mappingName: string) =>
             (window as any).webknossos
               .apiReady()
-              .then((api: any) => api.data.activateMapping(mappingName)),
+              .then((api: any) => api.data.activateMapping(mappingName, "HDF5")),
           HDF5_MAPPING_NAME,
         );
         await waitForMappingEnabled(page);

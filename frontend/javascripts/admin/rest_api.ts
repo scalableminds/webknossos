@@ -326,10 +326,13 @@ export function updateTaskType(taskTypeId: string, taskType: APITaskType): Promi
 }
 
 // ### Teams
-export async function getTeams(): Promise<Array<APITeam>> {
-  const teams = await Request.receiveJSON("/api/teams", {
-    doNotInvestigate: true,
-  });
+export async function getTeams(options?: RequestOptions): Promise<Array<APITeam>> {
+  const teams = await Request.receiveJSON(
+    "/api/teams",
+    options ?? {
+      doNotInvestigate: true,
+    },
+  );
   assertResponseLimit(teams);
   return teams;
 }
@@ -1105,11 +1108,13 @@ export type DatasetUpdater = {
 
 export function updateDatasetPartial(
   datasetId: string,
-  updater: DatasetUpdater,
+  updater: Partial<APIDataset>,
+  options: RequestOptions = {},
 ): Promise<APIDataset> {
   return Request.sendJSONReceiveJSON(`/api/datasets/${datasetId}/updatePartial`, {
     method: "PATCH",
     data: updater,
+    ...options,
   });
 }
 

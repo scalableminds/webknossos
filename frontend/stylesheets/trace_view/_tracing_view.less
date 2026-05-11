@@ -522,6 +522,27 @@ img.keyboard-mouse-icon:first-child {
         white-space: nowrap;
         border: 1px solid var(--ant-color-border);
         border-radius: 4px;
+
+        span {
+          display: flex;
+          align-items: center;
+          gap: 4px; /* Adjust spacing as needed */
+        }
+
+        .mouse-icon-large {
+          svg {
+            height: 23px;
+            width: auto;
+          }
+          height: 23px;
+          width: auto;
+        }
+        .mouse-icon-tooltip-wrapper {
+          display: inline-flex;
+          justify-content: center;
+          align-items: center;
+          height: 32px;
+        }
       }
     }
 
@@ -531,15 +552,6 @@ img.keyboard-mouse-icon:first-child {
       justify-content: flex-end;
       margin-left: auto;
       min-width: 0;
-    }
-
-    .mouse-icon-large {
-      svg {
-        height: 23px;
-        width: auto;
-      }
-      height: 23px;
-      width: auto;
     }
   }
 }

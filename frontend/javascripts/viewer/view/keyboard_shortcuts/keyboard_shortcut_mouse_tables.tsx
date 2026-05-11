@@ -16,7 +16,7 @@ const { Title } = Typography;
 
 function MouseLeftClick() {
   return (
-    <FastTooltip title="Press left mouse button">
+    <FastTooltip title="Press left mouse button" className="mouse-icon-tooltip-wrapper">
       <Icon
         component={IconStatusbarMouseLeft}
         aria-label="Left Mouse Click"
@@ -28,7 +28,10 @@ function MouseLeftClick() {
 
 function MouseLeftDrag() {
   return (
-    <FastTooltip title="Keep left mouse button pressed & drag">
+    <FastTooltip
+      title="Keep left mouse button pressed & drag"
+      className="mouse-icon-tooltip-wrapper"
+    >
       <Icon
         component={IconStatusbarMouseLeftDrag}
         aria-label="Left Mouse Drag"
@@ -40,7 +43,7 @@ function MouseLeftDrag() {
 
 function MouseMove() {
   return (
-    <FastTooltip title="Move mouse (no button pressed)">
+    <FastTooltip title="Move mouse (no button pressed)" className="mouse-icon-tooltip-wrapper">
       <Icon
         component={IconStatusbarMouseMove}
         aria-label="Mouse Move"
@@ -52,7 +55,7 @@ function MouseMove() {
 
 function MouseRightClick() {
   return (
-    <FastTooltip title="Press right mouse button">
+    <FastTooltip title="Press right mouse button" className="mouse-icon-tooltip-wrapper">
       <Icon
         component={IconStatusbarMouseRight}
         aria-label="Right Mouse Click"
@@ -64,7 +67,10 @@ function MouseRightClick() {
 
 function MouseRightDrag() {
   return (
-    <FastTooltip title="Keep right mouse button pressed & drag">
+    <FastTooltip
+      title="Keep right mouse button pressed & drag"
+      className="mouse-icon-tooltip-wrapper"
+    >
       <Icon
         component={IconStatusbarMouseRightDrag}
         aria-label="Right Mouse Drag"
@@ -76,7 +82,7 @@ function MouseRightDrag() {
 
 function MouseWheel() {
   return (
-    <FastTooltip title="Scroll with the mouse wheel">
+    <FastTooltip title="Scroll with the mouse wheel" className="mouse-icon-tooltip-wrapper">
       <Icon
         component={IconStatusbarMouseWheel}
         aria-label="Mouse Wheel"
@@ -112,7 +118,7 @@ const mouseShortcutColumns = [
       <div className="keyboard-shortcuts-container">
         {shortcuts.map((shortcut, index) => (
           <div key={index} className="single-keyboard-shortcut-container">
-            {shortcut}
+            <span style={{ padding: "0px 4px" }}>{shortcut}</span>
           </div>
         ))}
       </div>

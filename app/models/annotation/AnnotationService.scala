@@ -267,7 +267,6 @@ class AnnotationService @Inject()(
                                                    existingAnnotationLayers = List.empty,
                                                    previousVersion = None)
           layerName = annotationLayerParameters.name.getOrElse(
-            //AnnotationLayer.defaultNameForType(annotationLayerParameters.typ)
             tracing match {
               case Left(_) => AnnotationLayer.defaultNameForType(annotationLayerParameters.typ)
               case Right(volume) =>

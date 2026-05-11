@@ -38,7 +38,7 @@ describe("Saving guards", () => {
 
     const saveCountBefore = context.receivedDataPerSaveRequest.length;
 
-    // Force a save attempt — the gate (checked after the race fires) should block it.
+    // Force a save attempt — the guard (checked after the race fires) should block it.
     Store.dispatch({ type: "SAVE_NOW" });
 
     // Also provoke via dispatchEnsureHasNewestVersionAsync (which watchForNewerAnnotationVersion
@@ -64,19 +64,19 @@ describe("Saving guards", () => {
     Store.dispatch(createNodeAction([1, 1, 1], [], [0, 0, 0], 0, 0));
 
     // Open version restore while the race is running (before SAVE_NOW fires).
-    // The gate is checked after the race, so it will catch this.
+    // The guard is checked after the race, so it will catch this.
     Store.dispatch(setVersionRestoreVisibilityAction(true));
     Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
 
     const saveCountAfterOpen = context.receivedDataPerSaveRequest.length;
 
-    // Force-push: the race fires, then the gate blocks the drain.
+    // Force-push: the race fires, then the guard blocks the drain.
     Store.dispatch({ type: "SAVE_NOW" });
     await new Promise((r) => setTimeout(r, 200));
 
     expect(context.receivedDataPerSaveRequest.length).toBe(saveCountAfterOpen);
 
-    // Close version restore — the gate unblocks and the pending drain completes.
+    // Close version restore — the guard unblocks and the pending drain completes.
     Store.dispatch(setVersionRestoreVisibilityAction(false));
     Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(true));
 

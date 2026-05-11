@@ -302,65 +302,68 @@ object Msg {
   object Job {
     object TrainModel {
       val wrongOrga: String = "Training AI models is only allowed for datasets of your own organization."
-      val submitFailed: String = "Could not submit the AI model training job."
+      val submitFailed: String = "Could not start the AI model training job."
     }
     object Inference {
       val wrongOrga: String = "Running AI models is only allowed for datasets of your own organization."
-      val submitFailed: String = "Could not submit the AI inference job."
+      val submitFailed: String = "Could not start the AI inference job."
     }
-    object CreditTransaction {
-      val failed: String = "Failed to perform credit transaction"
+    object AlignSections {
+      val wrongOrga: String = "Aligning sections is only allowed for datasets of your own organization."
+      val submitFailed: String = "Could not start the section alignment job."
+    }
+    object MaterializeVolumeAnnotation {
+      val wrongOrga: String =
+        "Materializing volume annotations is only allowed for datasets of your own organization."
+      val submitFailed = "Could not start the materialize volume annotation job."
+    }
+    object ComputeMeshFile {
+      val wrongOrga: String = "Computing mesh files is only allowed for datasets of your own organization."
+      val submitFailed: String = "Could not start mesh file computation job."
+    }
+    object ComputeSegmentIndex {
+      val wrongOrga: String = "Computing mesh files is only allowed for datasets of your own organization."
+      val submitFailed: String = "Could not start segment index file computation job."
+    }
+    object ExportTiff {
+      val submitFailed: String = "Could not start Tiff export job."
+    }
+    object ConvertToWkw {
+      val submitFailed: String = "Could not start image conversion/import job."
+    }
+    object RenderAnimation {
+      val submitFailed: String = "Could not start render animation job."
+      val mustIncludeWatermark: String = "Render animation jobs for free plans must include the WEBKNOSSOS watermark."
+      val resolutionMustBeSD: String = "Render animation jobs for free plans must use SD resolution."
+    }
+    object FindLargestSegmentId {
+      val submitFailed: String = "Could not start find largest segment id job."
+      val wrongOrga: String = "Finding the largest segment id is only allowed for datasets of your own organization."
+    }
+    object Credits {
+      val failed: String = "Could not perform credit transaction."
       val noAiPlan: String = "Only organizations with an AI plan are allowed to start this job."
-      val refundFailed: String = "Failed to perform credit transaction refund"
+      val refundFailed: String = "Could not perform credit transaction refund."
+      val notEnoughCredits: String = "Your organization does not have enough WEBKNOSSOS credits to run this job."
     }
-    val alignSectionsNotAllowedOrganization: String =
-      "Aligning sections is only allowed for datasets of your own organization."
     val cleanupFailed: String = "Could not clean up failed job."
-    val couldNotRunApplyMergerMode: String =
-      "Failed to start job to apply merger mode annotation."
-    val couldNotRunComputeMeshFile: String = "Failed to start mesh file computation job."
-    val couldNotRunCubing: String = "Failed to start WKW conversion job."
-    val couldNotRunFindLargestSegmentId: String = "Could not start find largest segment id job."
-    val couldNotRunRenderAnimation: String = "Could not start render animation job."
-    val couldNotRunSegmentIndexFile: String =
-      "Could not start segment index file computation job."
-    val couldNotRunTiffExport: String = "Failed to start Tiff export job."
-    val disabled: String =
-      "Long-running jobs are not enabled for this WEBKNOSSOS instance."
-    val edgeLengthExceeded: String =
-      "An edge length of the selected bounding box is too large."
-    val emailNotificationsDisabled: String =
-      "Email notifications are not enabled for this job type."
-    val exportFileNotFound: String = "Exported file not found. The link may be expired."
-    val findLargestSegmentIdNotAllowedOrganization: String =
-      "Finding the largest segment id is only allowed for datasets of your own organization."
-    val inferMitochondriaNotAllowedOrganization: String =
-      "Inferring mitochondria is only allowed for datasets of your own organization."
+    val disabled: String = "Long-running jobs are not enabled for this WEBKNOSSOS instance."
+    val edgeLengthExceeded: String = "An edge length of the selected bounding box is too large."
+    val volumeExceeded: String = "The volume of the selected bounding box is too large."
     val invalidBoundingBoxOrMag: String =
       "Either the selected bounding box could not be parsed (must be x,y,z,width,height,depth) or the mag is wrong or does not exist."
-    val materializeVolumeAnnotationNotAllowedOrganization: String =
-      "Materializing volume annotations is only allowed for datasets of your own organization."
-    val meshFileNotAllowedOrganization: String =
-      "Calculating mesh files is only allowed for datasets of your own organization."
+    val exportFileNotFound: String = "Exported file not found. The link may be expired."
     val noExportFileName: String = "Job does not have an export file name."
-    val notEnoughCredits: String =
-      "Your organization does not have enough WEBKNOSSOS credits to run this job."
-    val notFound: String = "Job could not be found."
+    val notFound: String = "Job could not be found or accessed."
     val notRun: String = "Job has not run yet."
     val noWorkerForDatastoreAndJob: String =
       "No webknossos-worker supporting the requested job is available for the selected datastore."
     val paidNoAdminOrManager: String =
       "Starting paid jobs is only allowed for Administrators, Dataset Managers or Team Managers."
-    val renderAnimationMustIncludeWatermark: String =
-      "Render animation jobs must include the WEBKNOSSOS watermark."
-    val renderAnimationResolutionMustBeSD: String =
-      "Render animation jobs must use SD resolution."
-    val segmentIndexFileNotAllowedOrganization: String =
-      "Calculating segment index files is only allowed for datasets of your own organization."
     val updateStatusFailed: String = "Failed to update long-running job’s status"
-    val volumeExceeded: String = "The volume of the selected bounding box is too large."
     val workerNotFound: String = "Could not find this worker in the database."
   }
+// TODO proofread from here
   object Dataset {
     val noBoundingBox: String =
       "This dataset has no bounding box. Please make sure this dataset is imported correctly."

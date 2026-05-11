@@ -199,7 +199,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       isSuperUser <- userService.isSuperUser(user._multiUser)
-      _ <- Fox.runIf(!isSuperUser)(Fox.fromBool(organization.aiPlan.isDefined)) ?~> Msg.Job.CreditTransaction.noAiPlan
+      _ <- Fox.runIf(!isSuperUser)(Fox.fromBool(organization.aiPlan.isDefined)) ?~> Msg.Job.Credits.noAiPlan
     } yield ()
 
 }

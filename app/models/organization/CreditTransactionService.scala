@@ -67,7 +67,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
         case Full(existingTransaction) =>
           val milliCreditsToSpend = -existingTransaction.milliCreditDelta
           for {
-            _ <- Fox.assertTrue(hasEnoughCredits(existingTransaction._organization, milliCreditsToSpend)) ?~> Msg.Job.notEnoughCredits
+            _ <- Fox.assertTrue(hasEnoughCredits(existingTransaction._organization, milliCreditsToSpend)) ?~> Msg.Job.Credits.notEnoughCredits
             newTransaction = CreditTransaction(
               ObjectId.generate,
               existingTransaction._organization,

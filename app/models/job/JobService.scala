@@ -151,7 +151,7 @@ class JobService @Inject()(wkConf: WkConf,
               "Your WEBKNOSSOS dataset animation is ready."
             ))
         case _ => None
-      }).toFox ?~> Msg.Job.emailNotificationsDisabled
+      }).toFox
       // some jobs, e.g. "find largest segment ideas", do not require an email notification
       _ = Mailer ! Send(emailTemplate)
     } yield ()
@@ -248,7 +248,7 @@ class JobService @Inject()(wkConf: WkConf,
         "voxel_size_factor" -> voxelSize.factor.toUriLiteral,
         "voxel_size_unit" -> voxelSize.unit
       )
-      _ <- submitJob(JobCommand.convert_to_wkw, commandArgs, user, dataset._dataStore) ?~> Msg.Job.couldNotRunCubing
+      _ <- submitJob(JobCommand.convert_to_wkw, commandArgs, user, dataset._dataStore) ?~> Msg.Job.ConvertToWkw.submitFailed
     } yield ()
 
   def submitPaidJob(command: JobCommand,
@@ -261,7 +261,7 @@ class JobService @Inject()(wkConf: WkConf,
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
       _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ?~> Msg.Job.paidNoAdminOrManager
       costInMilliCredits <- calculateJobCostInMilliCredits(jobBoundingBoxInTargetMag, command)
-      _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costInMilliCredits)) ?~> Msg.Job.notEnoughCredits
+      _ <- Fox.assertTrue(creditTransactionService.hasEnoughCredits(user._organization, costInMilliCredits)) ?~> Msg.Job.Credits.notEnoughCredits
       creditTransaction <- creditTransactionService.reserveCredits(user._organization,
                                                                    costInMilliCredits,
                                                                    creditTransactionComment)

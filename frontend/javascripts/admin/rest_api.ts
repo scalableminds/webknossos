@@ -167,8 +167,8 @@ export async function logoutUserEverywhere(): Promise<void> {
   await Request.receiveJSON("/api/auth/logoutEverywhere", { method: "POST" });
 }
 
-export async function getUsers(): Promise<Array<APIUser>> {
-  const users = await Request.receiveJSON("/api/users");
+export async function getUsers(options: RequestOptions = {}): Promise<Array<APIUser>> {
+  const users = await Request.receiveJSON("/api/users", options);
   assertResponseLimit(users);
   return users;
 }

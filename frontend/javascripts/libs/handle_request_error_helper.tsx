@@ -77,11 +77,14 @@ export const handleError = async (
     }
   }
 
-  // If doInvestigate is false or the error is not instanceof Response,
-  // still add additional information to the error
-  if (!(error instanceof Response)) {
-    error.message += ` - Url: ${requestedUrl}`;
+  // If doInvestigate is false but the error is still a Response, read the body
+  // so callers get a proper Error with the status and body text instead of a
+  // raw Response object (whose body is a ReadableStream that can't be inspected).
+  if (error instanceof Response) {
+    const text = await error.text().catch(() => "<unreadable body>");
+    return Promise.reject(new Error(`Request failed with status ${error.status} for ${requestedUrl}: ${text}`));
   }
 
+  error.message += ` - Url: ${requestedUrl}`;
   return Promise.reject(error);
 };

@@ -120,6 +120,8 @@ const BASE_URL = (() => {
 if (!WK_AUTH_TOKEN) throw new Error("WK_AUTH_TOKEN must be set (see .env).");
 if (!ADMIN_PASSWORD) throw new Error("ADMIN_PASSWORD must be set (see .env).");
 
+const defaultOptions = { host: BASE_URL, headers: adminHeaders() };
+
 // ---------------------------------------------------------------------------
 // REST helpers
 // ---------------------------------------------------------------------------
@@ -177,7 +179,7 @@ type APITeam = { id: string; name: string };
 type APIAnnotation = { id: string; typ: string };
 
 async function getUserByEmail(email: string) {
-  const users = await getUsers();
+  const users = await getUsers(defaultOptions);
   return users.find((u) => u.email === email);
 }
 

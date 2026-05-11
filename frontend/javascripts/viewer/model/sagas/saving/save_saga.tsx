@@ -5,7 +5,6 @@ import ErrorHandling from "libs/error_handling";
 import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Toast from "libs/toast";
 import { sleep } from "libs/utils";
-import compact from "lodash-es/compact";
 import sum from "lodash-es/sum";
 import { buffers, type Channel } from "redux-saga";
 import {
@@ -27,6 +26,7 @@ import {
   getSegmentationLayerByName,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { hasTracing } from "viewer/model/accessors/tracing_accessor";
 import {
   getAllLoadedMeshes,
   getSegmentsForLayer,
@@ -66,10 +66,11 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import { Model, Store } from "viewer/singletons";
-import type { NumberLike, SkeletonTracing, StoreAnnotation, VolumeTracing } from "viewer/store";
+import type { NumberLike, StoreAnnotation, WebknossosState } from "viewer/store";
 import {
   enforceExecutionAsBusyBlockingUnlessAllowed,
   takeEveryWithBatchActionSupport,
+  waitFor,
 } from "../saga_helpers";
 import {
   refreshAffectedMeshes,
@@ -141,51 +142,44 @@ function* getPollInterval(): Saga<number> {
   return VERSION_POLL_INTERVAL_SINGLE_EDITOR;
 }
 
-function* shouldCheckForNewerAnnotationVersions(): Saga<boolean> {
-  // todop: adapt this function
-  const allowSave = yield* select(
-    (state) =>
-      state.annotation.restrictions.allowSave && state.annotation.isUpdatingCurrentlyAllowed,
-  );
-  const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
+function needsPollAnnotationUpdates(state: WebknossosState): "yes" | "no" | "later" {
+  // We usually want to poll for new annotation versions. We merely avoid this
+  // in the following cases:
 
-  const userCanSaveAndNoLiveCollab = allowSave && collaborationMode !== "Concurrent";
-  if (userCanSaveAndNoLiveCollab) {
+  // If the version restore view is open, newer versions should not be fetched
+  // as this could mess up the current state.
+  // todop: what happens if the view is opened after the fetch started but before it completed?
+  const isVersionRestoreActive = state.uiInformation.showVersionRestore;
+  if (isVersionRestoreActive) {
+    return "later";
+  }
+
+  // If the current user is currently the only allowed editor, we don't need to fetch newer versions.
+  const allowSave =
+    state.annotation.restrictions.allowSave && state.annotation.isUpdatingCurrentlyAllowed;
+  const { collaborationMode } = state.annotation;
+  const userIsSoleEditor = allowSave && collaborationMode !== "Concurrent";
+  if (userIsSoleEditor) {
     // The active user is currently the only one that is allowed to mutate the annotation.
-    // Since we only acquire the mutex upon page load (because adhoc mutex strategy is only used
-    // for concurrent collab mode), there shouldn't be any unseen updates
-    // between the page load and this check here.
-    // A race condition where
-    //   1) another user saves version X
-    //   2) we load the annotation but only get see version X - 1 (this is the race)
-    //   3) we acquire a mutex
-    // should not occur, because there is a grace period for which the mutex has to be free until it can
-    // be acquired again (see annotation.mutex.expiryTime in application.conf).
-    // The downside of an early return here is that we won't be able to warn the user early
-    // if the user opened the annotation in two tabs and mutated it there.
-    // However,
-    //   a) this scenario is pretty rare and the worst case is that they get a 409 error
-    //      during saving and
-    //   b) checking for newer versions when the active user may update the annotation introduces
-    //      a race condition between this saga and the actual save saga. Synchronizing these sagas
-    //      would be possible, but would add further complexity to the mission critical save saga.
-    return false;
+    // WK should already show the newest version of the annotation.
+    // Two rare scenarios are imaginable where this is not the case:
+    // - the current user opened the annotation twice (we don't guard against this, yet)
+    // - there was a race condition where the current user C loads version X, another user U pushes
+    //   version X+1 and U releases the mutex, only then C acquires the mutex. Now, C doesn't know about
+    //   X+1.
+    // The worst case is that the users gets a 409 error during saving (thus, losing 30 seconds of work).
+    // We can improve this in the future by always polling once all update actions are supported in rebasing
+    // (see #9052)
+    return "no";
   }
 
-  // Check for tracings which could need updating
-  const maybeSkeletonTracing = yield* select((state) => state.annotation.skeleton);
-  const volumeTracings = yield* select((state) => state.annotation.volumes);
-
-  const tracings: Array<SkeletonTracing | VolumeTracing> = compact([
-    ...volumeTracings,
-    maybeSkeletonTracing,
-  ]);
-
-  if (tracings.length === 0) {
-    // If there are not tracings that could need updates, no update fetching is needed.
-    return false;
+  // If there are no tracings, we don't need need to poll for updates
+  if (hasTracing(state.annotation)) {
+    return "no";
   }
-  return true;
+
+  // In all other cases, poll
+  return "yes";
 }
 
 function* fetchNewestMissingUpdateActions(): Saga<APIUpdateActionBatch[]> {
@@ -516,29 +510,26 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
       sleep: call(sleep, interval),
       ensureHasNewestVersion: take(channel),
     });
-    const shouldCheckForUpdatesOnServer = yield* call(shouldCheckForNewerAnnotationVersions);
-    const isVersionRestoreActive = yield* select((state) => state.uiInformation.showVersionRestore);
-    if (!shouldCheckForUpdatesOnServer || isVersionRestoreActive) {
+    const needsCheckForUpdatesOnServer = yield* select(needsPollAnnotationUpdates);
+    if (needsCheckForUpdatesOnServer === "no") {
+      // We don't need to poll for the newest version (because we can safely assume that
+      // we already know about it).
+      yield* call(fulfillAllEnsureHasNewestVersionActions, ensureHasNewestVersion, channel);
+      continue;
+    } else if (needsCheckForUpdatesOnServer === "later") {
+      // We need to postpone the poll operation (because the version restore is open).
       if (ensureHasNewestVersion != null) {
-        if (isVersionRestoreActive) {
-          // Version restore is open: the action was already dequeued from the channel.
-          // Wait for a relevant state change, then re-enqueue so the callback is called
-          // once we can safely poll (after version restore closes). The take prevents
-          // a tight loop where we'd immediately dequeue and re-enqueue in every iteration.
-          yield* take([
-            "SET_VERSION_RESTORE_VISIBILITY",
-            "SET_ANNOTATION_ALLOW_UPDATE",
-            "DISABLE_SAVING",
-          ]);
-          yield* put(ensureHasNewestVersion);
-        } else {
-          // !shouldCheckForUpdatesOnServer: we already know we have the newest version
-          // (e.g. we're the sole editor). Callers can proceed immediately.
-          yield* call(fulfillAllEnsureHasNewestVersionActions, ensureHasNewestVersion, channel);
-        }
+        // The ensureHasNewestVersion action was already dequeued from the channel.
+        // Put it back by dispatching it again.
+        yield* put(ensureHasNewestVersion);
+        // Now, wait in a throttled manner until needsPollAnnotationUpdates becomes "yes".
+        yield* waitFor((state) => needsPollAnnotationUpdates(state) === "yes", 1000);
       }
       continue;
     }
+
+    // Now, initiate the actual polling.
+
     // In live collab mode, the user could update the annotation concurrently with rebasing.
     // Therefore, acquire the busy lock to prevent user update actions from interfering with the rebase.
     // In non-live-collab mode (typically read-only polling), skip busy blocking to avoid freezing the UI.

@@ -12,6 +12,7 @@ import memoizeOne from "memoize-one";
 import messages from "messages";
 import { call, delay, put, race, take } from "typed-redux-saga";
 import { ControlModeEnum } from "viewer/constants";
+import { maySendSaveRequest } from "viewer/model/accessors/annotation_accessor";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   dispatchEnsureHasNewestVersionAsync,
@@ -34,13 +35,12 @@ import {
 } from "viewer/model/sagas/saving/save_saga_constants";
 import { Model, Store } from "viewer/singletons";
 import type { SaveQueueEntry } from "viewer/store";
+import { waitFor } from "../saga_helpers";
 import {
   getCurrentMutexFetchingStrategy,
   MutexFetchingStrategy,
   subscribeToAnnotationMutex,
 } from "./save_mutex_saga";
-import { maySendSaveRequest } from "viewer/model/accessors/annotation_accessor";
-import { waitFor } from "../saga_helpers";
 
 const MAX_ON_CONFLICT_RETRIES = 10;
 

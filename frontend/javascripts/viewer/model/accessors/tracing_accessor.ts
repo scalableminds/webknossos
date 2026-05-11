@@ -41,6 +41,10 @@ export function getSomeTracing(
   return maybeSomeTracing;
 }
 
+export function hasTracing(annotation: StoreAnnotation): boolean {
+  return getSomeTracing(annotation) != null;
+}
+
 export function getTracingType(annotation: StoreAnnotation): TracingType {
   if (annotation.skeleton != null && annotation.volumes.length > 0) {
     return TracingTypeEnum.hybrid;

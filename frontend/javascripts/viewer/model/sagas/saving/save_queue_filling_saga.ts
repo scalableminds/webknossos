@@ -6,6 +6,7 @@
 
 import { buffers } from "redux-saga";
 import { actionChannel, call, flush, put, race, take, takeLatest } from "typed-redux-saga";
+import { mayAddToSaveQueue } from "viewer/model/accessors/annotation_accessor";
 import { selectTracing } from "viewer/model/accessors/tracing_accessor";
 import { FlycamActions } from "viewer/model/actions/flycam_actions";
 import {
@@ -41,7 +42,6 @@ import type {
 import { getFlooredPosition, getRotationInDegrees } from "../../accessors/flycam_accessor";
 import type { Action } from "../../actions/actions";
 import type { BatchedAnnotationInitializationAction } from "../../actions/annotation_actions";
-import { mayAddToSaveQueue } from "viewer/model/accessors/annotation_accessor";
 
 export function* setupSavingForAnnotation(
   _action: BatchedAnnotationInitializationAction,

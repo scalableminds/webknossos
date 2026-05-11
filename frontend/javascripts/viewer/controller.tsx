@@ -329,7 +329,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
     this.unsubscribeFromPreventScrollingViaSpaceBar = () =>
       document.removeEventListener("keydown", globalKeydownHandler);
     this.unsubscribeKeyboardListener = listenToStoreProperty(
-      (state) => state.keyboardShortcutsConfig,
+      (state) => state.keyboardConfiguration.shortcutsConfig,
       (keyboardShortcutsConfig) => this.reloadKeyboardShortcuts(keyboardShortcutsConfig),
       true,
     );

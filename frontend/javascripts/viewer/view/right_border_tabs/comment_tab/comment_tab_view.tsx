@@ -129,7 +129,9 @@ function CommentTabView(props: Props) {
 
   const dispatch = useDispatch();
 
-  const keyboardShortcutsConfig = useWkSelector((state) => state.keyboardShortcutsConfig);
+  const keyboardShortcutsConfig = useWkSelector(
+    (state) => state.keyboardConfiguration.shortcutsConfig,
+  );
   const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
   const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);
   const isOwner = useWkSelector((state) => isAnnotationOwner(state));

@@ -123,6 +123,7 @@ import type {
   UserConfiguration,
 } from "viewer/store";
 import Store from "viewer/store";
+import { initializeKeyboardLayoutMap } from "viewer/view/keyboard_shortcuts/keyboard_layout_utils";
 import { getAllDefaultKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 import {
   sanitizeKeyboardShortcuts,
@@ -265,6 +266,7 @@ export async function initialize(
   const shortcuts: KeyboardShortcutsMap =
     parsed != null ? sanitizeKeyboardShortcuts(parsed) : getAllDefaultKeyboardShortcuts();
   Store.dispatch(setKeyboardShortcutsConfigAction(shortcuts));
+  initializeKeyboardLayoutMap();
 
   let initializationInformation = null;
 

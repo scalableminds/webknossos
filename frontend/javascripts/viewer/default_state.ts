@@ -119,7 +119,10 @@ const defaultState: WebknossosState = {
       [AnnotationTool.VOXEL_PIPETTE.id]: 0,
     },
   },
-  keyboardShortcutsConfig: getAllDefaultKeyboardShortcuts(),
+  keyboardConfiguration: {
+    shortcutsConfig: getAllDefaultKeyboardShortcuts(),
+    unmodifiedLayoutMap: new Map(),
+  },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,
     histogramData: {},

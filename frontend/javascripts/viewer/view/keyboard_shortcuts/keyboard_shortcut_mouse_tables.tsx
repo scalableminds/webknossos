@@ -86,6 +86,12 @@ function MouseWheel() {
   );
 }
 
+const EMPTY_MAP = new Map();
+
+function modifierKeyToUiElement(modifier: string) {
+  return keySequenceToUiElements([[modifier]], false, "", EMPTY_MAP);
+}
+
 type MouseShortcutEntry = {
   shortcuts: React.ReactNode[];
   action: string;
@@ -155,8 +161,7 @@ function MouseShortcutDomainTable({
 const mergeActiveNodeEntry: MouseShortcutEntry = {
   shortcuts: [
     <React.Fragment key="1">
-      {keySequenceToUiElements([["Shift"]], false)} + {keySequenceToUiElements([["Alt"]], false)} +{" "}
-      <MouseLeftClick />
+      {modifierKeyToUiElement("Shift")} + {modifierKeyToUiElement("Alt")} + <MouseLeftClick />
     </React.Fragment>,
   ],
   action: "Merge with Active Node and Combine Trees",
@@ -165,8 +170,8 @@ const mergeActiveNodeEntry: MouseShortcutEntry = {
 const deleteEdgeEntry: MouseShortcutEntry = {
   shortcuts: [
     <React.Fragment key="1">
-      {keySequenceToUiElements([["Shift"]], false)} + {keySequenceToUiElements([["Ctrl"]], false)}/
-      {keySequenceToUiElements([["Meta"]], false)} + <MouseLeftClick />
+      {modifierKeyToUiElement("Shift")} + {modifierKeyToUiElement("Ctrl")}/
+      {modifierKeyToUiElement("Meta")} + <MouseLeftClick />
     </React.Fragment>,
   ],
   action: "Delete Edge to this Node and Split Trees",
@@ -215,7 +220,7 @@ export function PlaneNavigationMouseShortcutsTable() {
           shortcuts: [
             <MouseLeftDrag key="1" />,
             <React.Fragment key="2">
-              {keySequenceToUiElements([["Alt"]], false)} + <MouseMove />
+              {modifierKeyToUiElement("Alt")} + <MouseMove />
             </React.Fragment>,
           ],
           action: "Move In-Plane",
@@ -246,7 +251,7 @@ export function PlaneTdViewportMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keySequenceToUiElements([["Shift"]], false)} + <MouseLeftClick />
+              {modifierKeyToUiElement("Shift")} + <MouseLeftClick />
             </React.Fragment>,
           ],
           action: "Move the camera to the clicked position",
@@ -254,8 +259,7 @@ export function PlaneTdViewportMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keySequenceToUiElements([["Ctrl"]], false)}/
-              {keySequenceToUiElements([["Meta"]], false)} + <MouseLeftClick />
+              {modifierKeyToUiElement("Ctrl")}/{modifierKeyToUiElement("Meta")} + <MouseLeftClick />
             </React.Fragment>,
           ],
           action: "Select the mesh and its segment ID",
@@ -273,7 +277,7 @@ export function SkeletonToolMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keySequenceToUiElements([["Shift"]], false)} + <MouseWheel />
+              {modifierKeyToUiElement("Shift")} + <MouseWheel />
             </React.Fragment>,
           ],
           action: "Change Node Radius",
@@ -313,7 +317,7 @@ export function SkeletonToolClassicControlsMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keySequenceToUiElements([["Shift"]], false)} + <MouseLeftClick />
+              {modifierKeyToUiElement("Shift")} + <MouseLeftClick />
             </React.Fragment>,
           ],
           action: "Select Hovered Node",
@@ -335,24 +339,20 @@ export function VolumeToolMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keySequenceToUiElements([["Ctrl"]], false)}/
-              {keySequenceToUiElements([["Meta"]], false)} + <MouseLeftDrag />
+              {modifierKeyToUiElement("Ctrl")}/{modifierKeyToUiElement("Meta")} + <MouseLeftDrag />
             </React.Fragment>,
           ],
           action: "Add to Current Segment (Draw) with Inverted Overwrite Mode",
         },
         {
-          shortcuts: [
-            <React.Fragment key="1">{keySequenceToUiElements([["Shift"]], false)}</React.Fragment>,
-          ],
+          shortcuts: [<React.Fragment key="1">{modifierKeyToUiElement("Shift")}</React.Fragment>],
           action: "Quick Switch to Segment Picker Tool",
         },
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keySequenceToUiElements([["Ctrl"]], false)}/
-              {keySequenceToUiElements([["Meta"]], false)} +{" "}
-              {keySequenceToUiElements([["Shift"]], false)}
+              {modifierKeyToUiElement("Ctrl")}/{modifierKeyToUiElement("Meta")} +{" "}
+              {modifierKeyToUiElement("Shift")}
             </React.Fragment>,
           ],
           action: "Quick Switch to Eraser Tool",
@@ -360,7 +360,7 @@ export function VolumeToolMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keySequenceToUiElements([["Shift"]], false)} + <MouseWheel />
+              {modifierKeyToUiElement("Shift")} + <MouseWheel />
             </React.Fragment>,
           ],
           action: "Change Brush Size",
@@ -386,8 +386,7 @@ export function VolumeToolClassicControlsMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keySequenceToUiElements([["Ctrl"]], false)}/
-              {keySequenceToUiElements([["Meta"]], false)} + <MouseRightDrag />
+              {modifierKeyToUiElement("Ctrl")}/{modifierKeyToUiElement("Meta")} + <MouseRightDrag />
             </React.Fragment>,
           ],
           action: "Remove Voxels (Erase) with Inverted Overwrite Mode",
@@ -405,8 +404,7 @@ export function ProofreadingToolMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keySequenceToUiElements([["Ctrl"]], false)}/
-              {keySequenceToUiElements([["Meta"]], false)} + <MouseLeftClick />
+              {modifierKeyToUiElement("Ctrl")}/{modifierKeyToUiElement("Meta")} + <MouseLeftClick />
             </React.Fragment>,
           ],
           action: "Add Segment to Partition One for Multi Cut",
@@ -414,9 +412,8 @@ export function ProofreadingToolMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keySequenceToUiElements([["Ctrl"]], false)}/
-              {keySequenceToUiElements([["Meta"]], false)} +{" "}
-              {keySequenceToUiElements([["Shift"]], false)} + <MouseLeftClick />
+              {modifierKeyToUiElement("Ctrl")}/{modifierKeyToUiElement("Meta")} +{" "}
+              {modifierKeyToUiElement("Shift")} + <MouseLeftClick />
             </React.Fragment>,
           ],
           action: "Add Segment to Partition Two for Multi Cut",
@@ -439,7 +436,7 @@ export function ProofreadingToolOrthoMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keySequenceToUiElements([["Shift"]], false)} + <MouseWheel />
+              {modifierKeyToUiElement("Shift")} + <MouseWheel />
             </React.Fragment>,
           ],
           action: "Import Agglomerate Tree of Hovered Agglomerate",
@@ -447,7 +444,7 @@ export function ProofreadingToolOrthoMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keySequenceToUiElements([["Shift"]], false)} + <MouseLeftClick />
+              {modifierKeyToUiElement("Shift")} + <MouseLeftClick />
             </React.Fragment>,
           ],
           action: "Merge with Active Segment",
@@ -455,8 +452,7 @@ export function ProofreadingToolOrthoMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keySequenceToUiElements([["Ctrl"]], false)}/
-              {keySequenceToUiElements([["Meta"]], false)} + <MouseLeftClick />
+              {modifierKeyToUiElement("Ctrl")}/{modifierKeyToUiElement("Meta")} + <MouseLeftClick />
             </React.Fragment>,
           ],
           action: "Split from Active Segment",
@@ -475,8 +471,7 @@ export function ProofreadingToolTDMouseShortcutsTable() {
         {
           shortcuts: [
             <React.Fragment key="1">
-              {keySequenceToUiElements([["Ctrl"]], false)}/
-              {keySequenceToUiElements([["Meta"]], false)} + <MouseWheel />
+              {modifierKeyToUiElement("Ctrl")}/{modifierKeyToUiElement("Meta")} + <MouseWheel />
             </React.Fragment>,
           ],
           action: "Activate Segment of Agglomerate",

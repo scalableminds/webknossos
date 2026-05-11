@@ -28,7 +28,6 @@ import {
   getAllDefaultKeyboardShortcuts,
   type KeyboardShortcutId,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
-import { useLayoutMapVersionMaybe } from "./keyboard_layout_utils";
 import {
   FlightNavigationMouseShortcutsTable,
   PlaneGeneralEditingMouseShortcutsTable,
@@ -95,11 +94,15 @@ const KeyboardShortcutDomainTable: React.FC<KeyboardShortcutDomainTableProps> = 
 };
 
 export default function KeyboardShortcutConfigModal({ isOpen, onClose }: ShortcutConfigModalProps) {
-  const layoutMapVersion = useLayoutMapVersionMaybe(); // re-render when sign-key labels become available
   const dispatch = useDispatch();
   const activeUser = useWkSelector((state) => state.activeUser);
   const isEditable = activeUser != null;
-  const keyboardShortcutsConfigFromStore = useWkSelector((state) => state.keyboardShortcutsConfig);
+  const keyboardShortcutsConfigFromStore = useWkSelector(
+    (state) => state.keyboardConfiguration.shortcutsConfig,
+  );
+  const unmodifiedLayoutMap = useWkSelector(
+    (state) => state.keyboardConfiguration.unmodifiedLayoutMap,
+  );
   const [isJsonView, setIsJsonView] = useState(false);
   const [isRecorderOpen, setIsRecorderOpen] = useState(false);
   const [recorderTargetShortcutId, setRecorderTargetShortcutId] =
@@ -173,7 +176,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       });
     });
     return domainToEntries;
-  }, [localShortcutConfig, layoutMapVersion]);
+  }, [localShortcutConfig]);
 
   const keyboardShortcutsColumns = [
     {
@@ -213,8 +216,8 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
             ) : (
               combos.map((comboChain, index) => (
                 <div key={index} className="single-keyboard-shortcut-container">
-                  <span style={{ padding: "0px 4px" }} key={layoutMapVersion}>
-                    {keySequenceToUiElements(comboChain, false)}
+                  <span style={{ padding: "0px 4px" }}>
+                    {keySequenceToUiElements(comboChain, false, "", unmodifiedLayoutMap)}
                   </span>
                   <FastTooltip title="Edit keyboard shortcut">
                     <Button

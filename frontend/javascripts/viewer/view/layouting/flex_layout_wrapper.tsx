@@ -289,7 +289,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
 
   attachKeyboardShortcuts() {
     return listenToStoreProperty(
-      (state) => state.keyboardShortcutsConfig,
+      (state) => state.keyboardConfiguration.shortcutsConfig,
       (keyboardShortcutsConfig) => this.reloadLayoutKeyboardShortcuts(keyboardShortcutsConfig),
       true,
     );

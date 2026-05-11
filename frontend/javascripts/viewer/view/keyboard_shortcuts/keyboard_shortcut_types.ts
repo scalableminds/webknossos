@@ -48,6 +48,13 @@ export type KeyCombination = string[];
 export type KeySequence = KeyCombination[];
 export type KeySequenceAlternatives = KeySequence[];
 export type KeyboardShortcutsMap = Record<KeyboardShortcutId, KeySequenceAlternatives>;
+// Stores a mapping from US-Keyboard key to key on the currently active layout.
+// The mapping is only used for visual display as it is not guaranteed to be complete.
+export type UnmodifiedLayoutMap = Map<string, string>;
+export type KeyboardConfiguration = {
+  readonly shortcutsConfig: KeyboardShortcutsMap;
+  readonly unmodifiedLayoutMap: UnmodifiedLayoutMap;
+};
 
 export function getAllCollidingDomainsOf(
   domain: KeyboardShortcutCollisionDomain,

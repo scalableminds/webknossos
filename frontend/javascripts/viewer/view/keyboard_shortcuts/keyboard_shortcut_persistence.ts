@@ -91,8 +91,8 @@ export function validateShortcutMapText(input: string): {
  */
 export function loadKeyboardShortcuts(): KeyboardShortcutsMap {
   const state = Store.getState();
-  if (state.keyboardShortcutsConfig != null) {
-    return state.keyboardShortcutsConfig;
+  if (state.keyboardConfiguration.shortcutsConfig != null) {
+    return state.keyboardConfiguration.shortcutsConfig;
   }
   return getAllDefaultKeyboardShortcuts();
 }

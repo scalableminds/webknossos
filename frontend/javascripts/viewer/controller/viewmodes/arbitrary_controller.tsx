@@ -318,7 +318,7 @@ class ArbitraryController extends React.PureComponent<Props> {
   initKeyboard(): void {
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        (state) => state.keyboardShortcutsConfig,
+        (state) => state.keyboardConfiguration.shortcutsConfig,
         (keyboardShortcutsConfig) => this.reloadKeyboardShortcuts(keyboardShortcutsConfig),
         true,
       ),

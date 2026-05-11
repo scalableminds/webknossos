@@ -375,9 +375,15 @@ class PlaneController extends PureComponent<Props> {
       ...toolBindings,
       // Enter & Escape are constant and not configurable.
       enter: {
-        onPressedWithRepeat: (_, _isOriginalEvent, event) => Store.dispatch(enterAction(event)),
+        onPressed: (event) => {
+          Store.dispatch(enterAction(event));
+        },
       },
-      esc: { onPressedWithRepeat: () => Store.dispatch(escapeAction()) },
+      esc: {
+        onPressed: () => {
+          Store.dispatch(escapeAction());
+        },
+      },
     });
   }
 
@@ -396,7 +402,7 @@ class PlaneController extends PureComponent<Props> {
     // register refresh keyboard shortcuts listener
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        (state) => state.keyboardShortcutsConfig,
+        (state) => state.keyboardConfiguration.shortcutsConfig,
         (keyboardShortcutsConfig) => this.reloadKeyboardShortcuts(keyboardShortcutsConfig),
         true,
       ),

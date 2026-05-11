@@ -1,4 +1,5 @@
 import { Alert, Button, Flex, Modal, Space, Typography } from "antd";
+import { useWkSelector } from "libs/react_hooks";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { registerKeyForLayoutMap } from "./keyboard_layout_utils";
 import {
@@ -28,6 +29,9 @@ type CollisionWarningAlertProps = {
 export const CollisionWarningAlert: React.FC<CollisionWarningAlertProps> = ({
   shortcutCollisions,
 }) => {
+  const unmodifiedLayoutMap = useWkSelector(
+    (state) => state.keyboardConfiguration.unmodifiedLayoutMap,
+  );
   return (
     shortcutCollisions.length > 0 && (
       <Alert
@@ -41,7 +45,9 @@ export const CollisionWarningAlert: React.FC<CollisionWarningAlertProps> = ({
               return (
                 <li key={index}>
                   <Space wrap>
-                    <span>{keySequenceToUiElements(keySequence, false)}</span>
+                    <span>
+                      {keySequenceToUiElements(keySequence, false, "", unmodifiedLayoutMap)}
+                    </span>
                     <Text>is used by:</Text>
                   </Space>
                   <ul style={{ margin: "2px 0 0", paddingLeft: 20 }}>
@@ -142,6 +148,9 @@ export function ShortcutRecorderModal({
   onCancel,
   onSave,
 }: ShortcutRecorderModalProps) {
+  const unmodifiedLayoutMap = useWkSelector(
+    (state) => state.keyboardConfiguration.unmodifiedLayoutMap,
+  );
   const [keySequence, setKeySequence] = useState<KeySequence>(initialKeySequence ?? []);
   const [previewKeyCombination, setPreviewKeyCombination] = useState<KeyCombination>([]);
   const keyboardShortcutConfigWithoutInitialKeySequence = useMemo<KeyboardShortcutsMap>(() => {
@@ -308,8 +317,8 @@ export function ShortcutRecorderModal({
         <CollisionWarningAlert shortcutCollisions={shortcutCollisions} />
         <Text type="secondary">
           Press a keyboard combination now to record it. You can also record a sequence of keys.
-          Example: {keySequenceToUiElements(SAMPLE_KEY_SEQUENCE, false)}. Reset everything with{" "}
-          <Text code>Ctrl</Text> + <Text code>Esc</Text>
+          Example: {keySequenceToUiElements(SAMPLE_KEY_SEQUENCE, false, "", unmodifiedLayoutMap)}.
+          Reset everything with <Text code>Ctrl</Text> + <Text code>Esc</Text>
         </Text>
         .
         <div
@@ -337,7 +346,8 @@ export function ShortcutRecorderModal({
               <div style={{ width: "100%", overflow: "auto" }}>
                 <Text strong>Recorded:</Text>{" "}
                 <span style={{ marginLeft: 8 }}>
-                  {keySequenceToUiElements(keySequence, false) || "— waiting for user input —"}
+                  {keySequenceToUiElements(keySequence, false, "", unmodifiedLayoutMap) ||
+                    "— waiting for user input —"}
                 </span>
               </div>
             </div>
@@ -362,7 +372,7 @@ export function ShortcutRecorderModal({
           >
             <Text italic>
               {previewKeyCombination.length > 0
-                ? keySequenceToUiElements([previewKeyCombination], false)
+                ? keySequenceToUiElements([previewKeyCombination], false, "", unmodifiedLayoutMap)
                 : "— no keys down —"}
             </Text>
           </div>

@@ -68,7 +68,7 @@ import UserReducer from "viewer/model/reducers/user_reducer";
 import ViewModeReducer from "viewer/model/reducers/view_mode_reducer";
 import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
 import type { UpdateAction } from "viewer/model/sagas/volume/update_actions";
-import type { KeyboardShortcutsMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
+import type { KeyboardConfiguration } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import type { Toolkit } from "./model/accessors/tool_accessor";
 import { eventEmitterMiddleware } from "./model/helpers/event_emitter_middleware";
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
@@ -670,7 +670,7 @@ export type StoreDataset = APIDataset & {
 export type WebknossosState = {
   readonly datasetConfiguration: DatasetConfiguration;
   readonly userConfiguration: UserConfiguration;
-  readonly keyboardShortcutsConfig: KeyboardShortcutsMap;
+  readonly keyboardConfiguration: KeyboardConfiguration;
   readonly temporaryConfiguration: TemporaryConfiguration;
   readonly dataset: StoreDataset;
   readonly annotation: StoreAnnotation;

@@ -9,7 +9,10 @@ import type {
   TemporaryConfiguration,
   UserConfiguration,
 } from "viewer/store";
-import type { KeyboardShortcutsMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
+import type {
+  KeyboardShortcutsMap,
+  UnmodifiedLayoutMap,
+} from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 
 export type UpdateUserSettingAction = ReturnType<typeof updateUserSettingAction>;
 type UpdateDatasetSettingAction = ReturnType<typeof updateDatasetSettingAction>;
@@ -33,6 +36,8 @@ export type SetMappingAction = ReturnType<typeof setMappingAction>;
 export type SetMappingNameAction = ReturnType<typeof setMappingNameAction>;
 type SetHideUnmappedIdsAction = ReturnType<typeof setHideUnmappedIdsAction>;
 export type SetKeyboardShortcutsConfigAction = ReturnType<typeof setKeyboardShortcutsConfigAction>;
+export type SetKeyboardLayoutMapAction = ReturnType<typeof setKeyboardLayoutMapAction>;
+export type SetKeyboardLayoutMapEntryAction = ReturnType<typeof setKeyboardLayoutMapEntryAction>;
 
 export type SettingAction =
   | UpdateUserSettingAction
@@ -53,7 +58,9 @@ export type SettingAction =
   | SetHistogramDataForLayerAction
   | ReloadHistogramAction
   | InitializeGpuSetupAction
-  | SetKeyboardShortcutsConfigAction;
+  | SetKeyboardShortcutsConfigAction
+  | SetKeyboardLayoutMapAction
+  | SetKeyboardLayoutMapEntryAction;
 
 export const updateUserSettingAction = <Key extends keyof UserConfiguration>(
   propertyName: Key,
@@ -268,4 +275,17 @@ export const setKeyboardShortcutsConfigAction = (shortcuts: KeyboardShortcutsMap
   ({
     type: "SET_KEYBOARD_SHORTCUTS_CONFIG",
     shortcuts,
+  }) as const;
+
+export const setKeyboardLayoutMapAction = (map: UnmodifiedLayoutMap) =>
+  ({
+    type: "SET_KEYBOARD_LAYOUT_MAP",
+    map,
+  }) as const;
+
+export const setKeyboardLayoutMapEntryAction = (code: string, key: string) =>
+  ({
+    type: "SET_KEYBOARD_LAYOUT_MAP_ENTRY",
+    code,
+    key,
   }) as const;

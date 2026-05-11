@@ -404,10 +404,11 @@ export interface ScreenshotTestContext extends TestContext {
   browser: Browser;
 }
 
-export async function setupBeforeEach(context: ScreenshotTestContext) {
+export async function launchBrowser(sessionName?: string): Promise<Browser> {
+  let browser: Browser;
+
   if (USE_LOCAL_CHROME) {
-    // Use this for connecting to local Chrome browser instance
-    context.browser = await puppeteer.launch({
+    browser = await puppeteer.launch({
       args: (HEADLESS
         ? [
             "--hide-scrollbars",
@@ -431,20 +432,24 @@ export async function setupBeforeEach(context: ScreenshotTestContext) {
       browser_version: "latest",
       os: "os x",
       os_version: "sequoia",
-      name: context.task.name, // add test name to BrowserStack session
+      name: sessionName,
       "browserstack.username": process.env.BROWSERSTACK_USERNAME,
       "browserstack.accessKey": process.env.BROWSERSTACK_ACCESS_KEY,
     };
-    const browser = await puppeteer.connect({
+    browser = await puppeteer.connect({
       browserWSEndpoint: `ws://cdp.browserstack.com/puppeteer?caps=${encodeURIComponent(
         JSON.stringify(caps),
       )}`,
     });
-    context.browser = browser;
     console.log(`\nBrowserStack Session Id ${await getBrowserstackSessionId(browser)}\n`);
   }
 
-  console.log(`\nRunning chrome version ${await context.browser.version()}\n`);
+  console.log(`\nRunning chrome version ${await browser.version()}\n`);
+  return browser;
+}
+
+export async function setupBeforeEach(context: ScreenshotTestContext) {
+  context.browser = await launchBrowser(context.task.name);
 }
 
 export async function setupAfterEach(context: ScreenshotTestContext) {

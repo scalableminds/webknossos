@@ -5,8 +5,6 @@
  *
  * Prerequisites / .env file (place at frontend/javascripts/test/puppeteer/.env):
  *   WK_AUTH_TOKEN=<admin auth token>
- *   ADMIN_EMAIL=sample@scm.io
- *   ADMIN_PASSWORD=<password>
  *   URL=https://master.webknossos.xyz   # optional, defaults to master.webknossos.xyz
  *
  * Run with:
@@ -15,14 +13,14 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import type { Browser, BrowserContext, Page } from "puppeteer-core";
-import puppeteer from "puppeteer-core";
+import type { Browser, Page } from "puppeteer-core";
 import urljoin from "url-join";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { sleep } from "libs/utils";
 import { vi } from "vitest";
 import { createExplorational, getUsers } from "../../admin/rest_api";
-import { HEADLESS, PAGE_HEIGHT, PAGE_WIDTH } from "./screenshot_test_config";
+import { launchBrowser } from "./dataset_rendering_helpers";
+import { PAGE_HEIGHT, PAGE_WIDTH } from "./screenshot_test_config";
 
 vi.mock("libs/request", async (importOriginal) => {
   return await importOriginal();
@@ -109,8 +107,6 @@ const PARALLEL_USER_OPERATIONS: Array<{
 // ---------------------------------------------------------------------------
 
 const { WK_AUTH_TOKEN } = process.env;
-const ADMIN_EMAIL = process.env.ADMIN_EMAIL ?? "sample@scm.io";
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 const BASE_URL = (() => {
   let url = process.env.URL ?? "https://master.webknossos.xyz/";
   if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
@@ -118,9 +114,6 @@ const BASE_URL = (() => {
 })();
 
 if (!WK_AUTH_TOKEN) throw new Error("WK_AUTH_TOKEN must be set (see .env).");
-if (!ADMIN_PASSWORD) throw new Error("ADMIN_PASSWORD must be set (see .env).");
-
-const defaultOptions = { host: BASE_URL, headers: adminHeaders() };
 
 // ---------------------------------------------------------------------------
 // REST helpers
@@ -130,6 +123,17 @@ function adminHeaders(): HeadersInit {
   return {
     "Content-Type": "application/json",
     "X-Auth-Token": WK_AUTH_TOKEN!,
+  };
+}
+
+// Factory — returns a fresh object every time because the Request lib mutates
+// options.headers in-place (replacing the plain object with a Headers instance),
+// which would break any subsequent call that reuses the same options object.
+function adminRequestOptions() {
+  return {
+    host: BASE_URL,
+    doNotInvestigate: true,
+    headers: { "X-Auth-Token": WK_AUTH_TOKEN! },
   };
 }
 
@@ -179,7 +183,7 @@ type APITeam = { id: string; name: string };
 type APIAnnotation = { id: string; typ: string };
 
 async function getUserByEmail(email: string) {
-  const users = await getUsers(defaultOptions);
+  const users = await getUsers(adminRequestOptions());
   return users.find((u) => u.email === email);
 }
 
@@ -232,11 +236,6 @@ async function resolveDatasetId(datasetName: string): Promise<string> {
 }
 
 async function createHybridAnnotation(datasetId: string): Promise<APIAnnotation> {
-  const options = {
-    host: BASE_URL,
-    doNotInvestigate: true,
-    headers: { "X-Auth-Token": WK_AUTH_TOKEN! },
-  };
   // createExplorational sends the layers array as the POST body, which is what the
   // backend expects. "hybrid" produces both a Skeleton and a Volume layer.
   const annotation = await createExplorational(
@@ -246,7 +245,7 @@ async function createHybridAnnotation(datasetId: string): Promise<APIAnnotation>
     null,
     null,
     null,
-    options,
+    adminRequestOptions(),
   );
   console.log(`Created annotation ${annotation.id}`);
   return annotation;
@@ -279,42 +278,33 @@ async function shareAnnotationWithTeam(annotation: APIAnnotation, teamId: string
 // Puppeteer helpers
 // ---------------------------------------------------------------------------
 
-async function launchBrowser(): Promise<Browser> {
-  return puppeteer.launch({
-    args: (HEADLESS
-      ? ["--hide-scrollbars", "--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"]
-      : []
-    ).concat([`--window-size=${PAGE_WIDTH},${PAGE_HEIGHT}`]),
-    headless: HEADLESS,
-    dumpio: true,
-    executablePath: "/usr/bin/google-chrome",
-    // TODO: on Mac use "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+// Fetch the auth token for an arbitrary user by logging in via REST and reading
+// /api/auth/token.  Node.js fetch does not persist cookies automatically, so we
+// extract Set-Cookie from the login response and forward it manually.
+async function getUserAuthToken(email: string, password: string): Promise<string> {
+  const loginRes = await fetch(urljoin(BASE_URL, "/api/auth/login"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
   });
+  if (!loginRes.ok) {
+    throw new Error(`Login failed for ${email}: ${loginRes.status} ${await loginRes.text()}`);
+  }
+  const cookie = loginRes.headers.get("set-cookie") ?? "";
+  const tokenRes = await fetch(urljoin(BASE_URL, "/api/auth/token"), {
+    headers: { Cookie: cookie },
+  });
+  if (!tokenRes.ok) {
+    throw new Error(`getAuthToken failed for ${email}: ${tokenRes.status} ${await tokenRes.text()}`);
+  }
+  const { token } = await tokenRes.json();
+  return token as string;
 }
 
-async function loginWithCredentials(
-  context: BrowserContext,
-  email: string,
-  password: string,
-): Promise<Page> {
-  const page = await context.newPage();
+async function getNewPage(browser: Browser, authToken: string): Promise<Page> {
+  const page = await browser.newPage();
   await page.setViewport({ width: PAGE_WIDTH, height: PAGE_HEIGHT });
-
-  const loginUrl = urljoin(BASE_URL, "/auth/login");
-  console.log(`Logging in as ${email} at ${loginUrl}`);
-  await page.goto(loginUrl, { timeout: 60_000 });
-
-  // TODO: verify these selectors against the rendered login form.
-  //       Ant Design wraps inputs — inspect the DOM if these fail.
-  await page.waitForSelector('input[name="email"], input[type="email"]', { timeout: 15_000 });
-  await page.type('input[name="email"], input[type="email"]', email, { delay: 30 });
-  await page.type('input[name="password"], input[type="password"]', password, { delay: 30 });
-  await page.click('button[type="submit"]');
-
-  await page.waitForFunction(() => !window.location.pathname.startsWith("/auth/login"), {
-    timeout: 30_000,
-  });
-  console.log(`Logged in as ${email}`);
+  await page.setExtraHTTPHeaders({ "X-Auth-Token": authToken });
   return page;
 }
 
@@ -379,7 +369,7 @@ function collectPageErrors(page: Page): string[] {
 
 let browser: Browser;
 let annotation: APIAnnotation;
-const collabUsers: Array<{ id: string; email: string; password: string }> = [];
+const collabUsers: Array<{ id: string; email: string; authToken: string }> = [];
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -387,7 +377,7 @@ const collabUsers: Array<{ id: string; email: string; password: string }> = [];
 
 describe("Live Collaboration", () => {
   beforeAll(async () => {
-    browser = await launchBrowser();
+    browser = await launchBrowser("Live Collaboration");
 
     const datasetId = await resolveDatasetId(DATASET_NAME);
     console.log(`Dataset "${DATASET_NAME}" → id=${datasetId}`);
@@ -402,7 +392,8 @@ describe("Live Collaboration", () => {
       // TODO: ensure the user is a member of the relevant team so they can
       //       open the shared annotation.  Use PATCH /api/users/{id} with a
       //       teams array if needed.
-      collabUsers.push({ id: user.id, email, password });
+      const authToken = await getUserAuthToken(email, password);
+      collabUsers.push({ id: user.id, email, authToken });
     }
 
     annotation = await createHybridAnnotation(datasetId);
@@ -417,8 +408,7 @@ describe("Live Collaboration", () => {
   });
 
   it("admin sets up the annotation: activate mapping, switch to proofreading, merge, save, enable othersMayEdit", async () => {
-    const ctx = await browser.createBrowserContext();
-    const page = await loginWithCredentials(ctx, ADMIN_EMAIL, ADMIN_PASSWORD!);
+    const page = await getNewPage(browser, WK_AUTH_TOKEN!);
     const adminErrors = collectPageErrors(page);
 
     await openAnnotationPage(page, annotation.id);
@@ -496,16 +486,14 @@ describe("Live Collaboration", () => {
     expect(adminErrors, "Admin session produced page errors").toHaveLength(0);
 
     await page.close();
-    await ctx.close();
   }, 120_000);
 
   it("collaborators merge/split in parallel, all save successfully, no errors", async () => {
-    const sessions: Array<{ ctx: BrowserContext; page: Page; errors: string[] }> = [];
+    const sessions: Array<{ page: Page; errors: string[] }> = [];
 
-    for (const { email, password } of collabUsers) {
-      const ctx = await browser.createBrowserContext();
-      const page = await loginWithCredentials(ctx, email, password);
-      sessions.push({ ctx, page, errors: collectPageErrors(page) });
+    for (const { authToken } of collabUsers) {
+      const page = await getNewPage(browser, authToken);
+      sessions.push({ page, errors: collectPageErrors(page) });
     }
 
     // Open the annotation and activate the mapping in all sessions in parallel
@@ -593,8 +581,7 @@ describe("Live Collaboration", () => {
     //         the expected merged agglomerate ID
     //
     // Example sketch:
-    //   const adminCtx = await browser.createBrowserContext();
-    //   const adminPage = await loginWithCredentials(adminCtx, ADMIN_EMAIL, ADMIN_PASSWORD!);
+    //   const adminPage = await getNewPage(browser, WK_AUTH_TOKEN!);
     //   await openAnnotationPage(adminPage, annotation.id);
     //   await waitForDataLoading(adminPage);
     //   await adminPage.evaluate(...activate mapping...);
@@ -608,6 +595,6 @@ describe("Live Collaboration", () => {
     //   );
     //   expect(mergedId).toBe(MERGE_SOURCE_AGGLOMERATE_ID);
 
-    await Promise.all(sessions.map(({ ctx }) => ctx.close()));
+    await Promise.all(sessions.map(({ page }) => page.close()));
   }, 300_000);
 });

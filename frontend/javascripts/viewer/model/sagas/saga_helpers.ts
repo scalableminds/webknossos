@@ -14,6 +14,7 @@ import {
   setMappingIsLockedAction,
   setVolumeBucketDataHasChangedAction,
 } from "../actions/volumetracing_actions";
+import { race } from "redux-saga/effects";
 
 export function* takeEveryUnlessBusy<P extends ActionPattern>(
   actionDescriptor: P,
@@ -208,16 +209,23 @@ export function* waitFor(
   throttleMs: number,
 ): Saga<void> {
   // Waits for the specified selector to return true.
-  // The selector is changed after each dispatched action (because
+  // The selector is checked after each dispatched action (because
   // each action may have changed the store).
-  // Actions are dispatched so often that it shouldn't be
-  // necessary to do a race(take("*"), delay(X)).
   // Too avoid performance problems, we wait for throttleMs after each
   // negative check.
   if (yield select(selector)) return;
 
   while (true) {
-    yield take("*");
+    if (import.meta.env.MODE !== "test") {
+      // Actions are dispatched so often that it shouldn't be
+      // necessary to do a race(take("*"), delay(X)) (see else-branch).
+      yield take("*");
+    } else {
+      // In tests the assumption from above is not necessarily true.
+      // Few actions are dispatched and we usually check for the expected
+      // states quickly. So, we do the proper approach:
+      yield race([take("*"), delay(200)]);
+    }
     if (yield select(selector)) return;
     yield delay(throttleMs);
   }

@@ -173,7 +173,7 @@ function needsPollAnnotationUpdates(state: WebknossosState): "yes" | "no" | "lat
   }
 
   // If there are no tracings, we don't need need to poll for updates
-  if (hasTracing(state.annotation)) {
+  if (!hasTracing(state.annotation)) {
     return "no";
   }
 

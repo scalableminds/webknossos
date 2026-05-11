@@ -1,5 +1,9 @@
+import { sleep } from "libs/utils";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
-import { setIsUpdatingAnnotationCurrentlyAllowedAction } from "viewer/model/actions/annotation_actions";
+import {
+  setCollaborationModeAction,
+  setIsUpdatingAnnotationCurrentlyAllowedAction,
+} from "viewer/model/actions/annotation_actions";
 import {
   disableSavingAction,
   dispatchEnsureHasNewestVersionAsync,
@@ -83,7 +87,7 @@ describe("Saving guards", () => {
 
   it<WebknossosTestContext>("ENSURE_HAS_NEWEST_VERSION callback should not fire while version restore is open, but should fire after it closes", async (context) => {
     await context.api.tracing.save();
-
+    Store.dispatch(setCollaborationModeAction("Concurrent"));
     Store.dispatch(setVersionRestoreVisibilityAction(true));
     Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
 
@@ -92,7 +96,7 @@ describe("Saving guards", () => {
       ensureResolved = true;
     });
 
-    await new Promise((r) => setTimeout(r, 200));
+    await sleep(200);
     expect(ensureResolved).toBe(false);
 
     // Close version restore — watchForNewerAnnotationVersion should re-enqueue the

@@ -10232,9 +10232,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"protobufjs@npm:^6.11.4":
-  version: 6.11.4
-  resolution: "protobufjs@npm:6.11.4"
+"protobufjs@npm:^6.11.5":
+  version: 6.11.6
+  resolution: "protobufjs@npm:6.11.6"
   dependencies:
     "@protobufjs/aspromise": "npm:^1.1.2"
     "@protobufjs/base64": "npm:^1.1.2"
@@ -10252,7 +10252,7 @@ __metadata:
   bin:
     pbjs: bin/pbjs
     pbts: bin/pbts
-  checksum: 10c0/c244d7b9b6d3258193da5c0d1e558dfb47f208ae345e209f90ec45c9dca911b90fa17e937892a9a39a4136ab9886981aae9efdf6039f7baff4f7225f5eeb9812
+  checksum: 10c0/a7ed63a75b86c7d22abdfef48e9775f373befbaad4beceadf5bd047066365d735386d57851b35f89ae2c1afdea2da1c93a17682aa9a4a8f3df7ca54ccdce309b
   languageName: node
   linkType: hard
 
@@ -13252,7 +13252,7 @@ __metadata:
     pngjs: "npm:^3.3.3"
     pretty-bytes: "npm:^5.1.0"
     process: "npm:^0.11.10"
-    protobufjs: "npm:^6.11.4"
+    protobufjs: "npm:^6.11.5"
     puppeteer-core: "npm:^24.40.0"
     react: "npm:^19.2.0"
     react-colorful: "npm:^5.6.1"

@@ -24,7 +24,7 @@ import {
   getUsers,
   updateDatasetPartial,
 } from "../../admin/rest_api";
-import { launchBrowser } from "./dataset_rendering_helpers";
+import { launchBrowser, waitForTracingViewLoad } from "./dataset_rendering_helpers";
 import { PAGE_HEIGHT, PAGE_WIDTH } from "./screenshot_test_config";
 
 vi.mock("libs/request", async (importOriginal) => {
@@ -316,30 +316,6 @@ async function openAnnotationPage(page: Page, annotationId: string): Promise<voi
   await page.goto(url, { timeout: 0 });
   await waitForTracingViewLoad(page);
   console.log("Annotation view loaded");
-}
-
-async function waitForTracingViewLoad(page: Page): Promise<void> {
-  let inputCatchers = null;
-  let iterations = 0;
-  while (inputCatchers == null || (inputCatchers as unknown[]).length < 4) {
-    iterations++;
-    if (iterations > 10) console.log("Waiting suspiciously long for tracing view to load…");
-    await sleep(500);
-    const result = await Promise.race([
-      page
-        .waitForSelector(".inputcatcher", { timeout: 30_000 })
-        .then(() => page.$$(".inputcatcher"))
-        .then((els) => ({ type: "ok" as const, elements: els })),
-      page
-        .waitForSelector(".initialization-error-message", { timeout: 30_000 })
-        .then(() => ({ type: "error" as const, elements: [] })),
-    ]);
-    if (result.type === "error") {
-      await sleep(15000);
-      throw new Error("Tracing view showed an initialization error.");
-    }
-    inputCatchers = result.elements;
-  }
 }
 
 async function waitForDataLoading(page: Page): Promise<void> {

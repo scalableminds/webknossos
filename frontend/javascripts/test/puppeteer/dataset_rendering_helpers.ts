@@ -223,7 +223,7 @@ async function waitForMappingEnabled(page: Page) {
   console.log("Mapping was enabled");
 }
 
-async function waitForTracingViewLoad(page: Page) {
+export async function waitForTracingViewLoad(page: Page) {
   let inputCatchers;
   let iterationCount = 0;
 

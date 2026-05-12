@@ -5,6 +5,7 @@ import {
 } from "viewer/model/actions/settings_actions";
 import Store from "viewer/store";
 import type { UnmodifiedLayoutMap } from "./keyboard_shortcut_types";
+import { document } from "libs/window";
 
 const LOCAL_STORAGE_KEY = "keyboardLayoutMap";
 
@@ -33,7 +34,7 @@ const US_LAYOUT_FALLBACK: Record<string, string> = {
 };
 
 function seedDigits(base: UnmodifiedLayoutMap = new Map()): UnmodifiedLayoutMap {
-  const result = { ...base };
+  const result = new Map(base);
   for (let i = 0; i <= 9; i++) {
     if (!(`Digit${i}` in result)) {
       result.set(`Digit${i}`, String(i));

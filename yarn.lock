@@ -2,7 +2,7 @@
 # Manual changes might be lost - proceed with caution!
 
 __metadata:
-  version: 8
+  version: 9
   cacheKey: 10c0
 
 "@airbrake/browser@npm:^2.1.7":
@@ -13288,6 +13288,13 @@ __metadata:
     vite-plugin-wasm: "npm:^3.5.0"
     vite-tsconfig-paths: "npm:^6.0.3"
     vitest: "npm:^4.0.16"
+  dependenciesMeta:
+    esbuild:
+      built: true
+    msw:
+      built: true
+    protobufjs:
+      built: true
   languageName: unknown
   linkType: soft
 

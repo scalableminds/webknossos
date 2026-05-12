@@ -42,7 +42,8 @@ export function getSomeTracing(
 }
 
 export function hasTracing(annotation: StoreAnnotation): boolean {
-  return maybeGetSomeTracing(annotation) != null;
+  const maybeTracing = maybeGetSomeTracing(annotation);
+  return maybeTracing != null && maybeTracing.type !== "readonly";
 }
 
 export function getTracingType(annotation: StoreAnnotation): TracingType {

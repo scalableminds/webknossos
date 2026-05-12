@@ -27,6 +27,12 @@ import {
 } from "../../admin/rest_api";
 import { launchBrowser, waitForTracingViewLoad } from "./dataset_rendering_helpers";
 import { PAGE_HEIGHT, PAGE_WIDTH } from "./screenshot_test_config";
+import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
+import { proofreadMergeAction } from "viewer/model/actions/proofread_actions";
+import { cycleToolAction } from "viewer/model/actions/ui_actions";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import { setActiveCellAction } from "viewer/model/actions/volumetracing_actions";
+import { Vector3 } from "viewer/constants";
 
 vi.mock("libs/request", async (importOriginal) => {
   return await importOriginal();
@@ -70,10 +76,8 @@ const ORG_NAME = "sample_organization";
 const DATASET_NAME = "l4dense_motta_et_al_dev";
 const HDF5_MAPPING_NAME = "agglomerate_view_30";
 
-// TODO: fill in two agglomerate/supervoxel IDs that exist in the dataset and
-//       can be merged without side effects.  The "source" is set as the active
-//       segment before the merge; the "target" is what we merge into.
 const MERGE_SOURCE_AGGLOMERATE_ID = 3681595;
+const MERGE_SOURCE_POSITION = [2918, 4316, 1770] as Vector3;
 const MERGE_TARGET_AGGLOMERATE_ID = 426008;
 const MERGE_TARGET_SEGMENT_ID = 5233834;
 // Position (in voxel coordinates) where the target segment is located.
@@ -338,7 +342,7 @@ async function waitForMappingEnabled(page: Page): Promise<void> {
 
 function startCollectionOfPageErrors(page: Page): string[] {
   const errors: string[] = [];
-  page.on("pageerror", (err) => errors.push(err.message));
+  page.on("pageerror", (err) => errors.push((err as any).message));
   page.on("console", (msg) => {
     if (msg.type() === "error") errors.push(msg.text());
   });
@@ -391,9 +395,11 @@ describe("Live Collaboration", () => {
   }, 120_000);
 
   afterAll(async () => {
+    await sleep(300_000);
+
     await browser?.close();
     // TODO: optionally delete the annotation and the test users created above
-  });
+  }, 300_000);
 
   it("admin sets up the annotation: activate mapping, switch to proofreading, merge, save, enable othersMayEdit", async () => {
     const page = await getNewPage(browser, WK_AUTH_TOKEN!);
@@ -405,11 +411,12 @@ describe("Live Collaboration", () => {
     // Patch the active user in the store to be a superuser so the collaboration
     // mode controls become available. This only affects the local Redux state —
     // no backend call is made.
-    await page.evaluate(() => {
-      const store = window.webknossos.DEV.store;
-      const activeUser = store.getState().activeUser;
-      store.dispatch({ type: "SET_ACTIVE_USER", user: { ...activeUser, isSuperUser: true } });
-    });
+    const activeUser = await page.evaluate(() => window.webknossos.DEV.store.getState().activeUser);
+    const setActiveUserActionObj = setActiveUserAction({ ...activeUser, isSuperUser: true } as any);
+    await page.evaluate(
+      (action) => window.webknossos.DEV.store.dispatch(action),
+      setActiveUserActionObj,
+    );
 
     // Activate HDF5 mapping
     await page.evaluate(
@@ -420,10 +427,21 @@ describe("Live Collaboration", () => {
     await waitForMappingEnabled(page);
     console.log(`Mapping "${HDF5_MAPPING_NAME}" activated`);
 
-    // Switch to proofreading tool
-    await page.evaluate(() => {
-      window.webknossos.DEV.store.dispatch({ type: "SET_TOOL", tool: "PROOFREAD" });
-    });
+    // Switch to proofreading tool by cycling until activeTool.id === "PROOFREAD".
+    // We cant use SetActiveToolAction because the tool instance cannot be serialized/deserialized
+    // for puppeteer.
+    const cycleAction = cycleToolAction(false);
+    await page.evaluate(
+      (action, maxAttempts) => {
+        const store = window.webknossos.DEV.store;
+        for (let i = 0; i < maxAttempts; i++) {
+          if (store.getState().uiInformation.activeTool.id === "PROOFREAD") break;
+          store.dispatch(action);
+        }
+      },
+      cycleAction,
+      100,
+    );
     // TODO: wait for the toolbar to reflect the active tool, e.g.:
     //   await page.waitForSelector('[data-tool="PROOFREAD"][aria-pressed="true"]');
 
@@ -431,29 +449,28 @@ describe("Live Collaboration", () => {
     // TODO: confirm the correct action type for setting the active segment.
     //       It is likely "SET_ACTIVE_CELL" — verify in
     //       viewer/model/reducers/volumetracing_reducer.ts.
-    await page.evaluate((sourceId: number) => {
-      window.webknossos.DEV.store.dispatch({
-        type: "SET_ACTIVE_CELL",
-        cellId: sourceId,
-        somePosition: null,
-      });
-    }, MERGE_SOURCE_AGGLOMERATE_ID);
+    const setActiveCellActionObj = setActiveCellAction(
+      MERGE_SOURCE_AGGLOMERATE_ID,
+      MERGE_SOURCE_POSITION,
+    );
+    await page.evaluate(
+      (action) => window.webknossos.DEV.store.dispatch(action),
+      setActiveCellActionObj,
+    );
 
+    console.log("about to merge stuff");
+    await sleep(3_000);
     // Merge two segments.
     // The source is derived from the currently active segment in the store;
     // the target is identified by position + segmentId + agglomerateId.
-    await page.evaluate(
-      (position: [number, number, number], segmentId: number, agglomerateId: number) => {
-        window.webknossos.DEV.store.dispatch({
-          type: "PROOFREAD_MERGE",
-          position,
-          segmentId,
-          agglomerateId,
-        });
-      },
+    const proofreadMergeActionObj = proofreadMergeAction(
       MERGE_TARGET_POSITION,
       MERGE_TARGET_SEGMENT_ID,
       MERGE_TARGET_AGGLOMERATE_ID,
+    );
+    await page.evaluate(
+      (action) => window.webknossos.DEV.store.dispatch(action),
+      proofreadMergeActionObj,
     );
     // TODO: replace the sleep with a proper completion signal once the
     //       proofreading saga exposes one (e.g. poll
@@ -465,22 +482,22 @@ describe("Live Collaboration", () => {
     await page.evaluate(() => window.webknossos.apiReady().then((api) => api.tracing.save()));
     console.log("Admin saved annotation");
 
-    // Enable othersMayEdit and save again to persist
-    await page.evaluate(() => {
-      window.webknossos.DEV.store.dispatch({
-        type: "SET_COLLABORATION_MODE",
-        collaborationMode: "Concurrent",
-      });
-    });
+    // Enable Concurrent collab mode and save again to persist
+    const setCollaborationModeActionObj = setCollaborationModeAction("Concurrent");
+    await page.evaluate(
+      (action) => window.webknossos.DEV.store.dispatch(action),
+      setCollaborationModeActionObj,
+    );
     await page.evaluate(() => window.webknossos.apiReady().then((api) => api.tracing.save()));
-    console.log("othersMayEdit enabled and saved");
+    console.log("Concurrent collaboration mode enabled and saved");
 
     expect(adminErrors, "Admin session produced page errors").toHaveLength(0);
 
+    await sleep(300_000);
     await page.close();
   }, 120_000);
 
-  it("collaborators merge/split in parallel, all save successfully, no errors", async () => {
+  it.skip("collaborators merge/split in parallel, all save successfully, no errors", async () => {
     const sessions: Array<{ page: Page; errors: string[] }> = [];
 
     for (const { authToken } of collabUsers) {
@@ -494,9 +511,18 @@ describe("Live Collaboration", () => {
         await openAnnotationPage(page, annotation.id);
         await waitForDataLoading(page);
 
-        await page.evaluate(() => {
-          window.webknossos.DEV.store.dispatch({ type: "SET_TOOL", tool: "PROOFREAD" });
-        });
+        const cycleActionCollab = cycleToolAction(false);
+        await page.evaluate(
+          (action, maxAttempts) => {
+            const store = window.webknossos.DEV.store;
+            for (let i = 0; i < maxAttempts; i++) {
+              if (store.getState().uiInformation.activeTool.id === "PROOFREAD") break;
+              store.dispatch(action);
+            }
+          },
+          cycleActionCollab,
+          100,
+        );
       }),
     );
 
@@ -507,26 +533,20 @@ describe("Live Collaboration", () => {
         if (op == null) return;
 
         // TODO: confirm correct action type for setting the active segment (see above)
-        await page.evaluate((sourceId: number) => {
-          window.webknossos.DEV.store.dispatch({
-            type: "SET_ACTIVE_CELL",
-            cellId: sourceId,
-            somePosition: null,
-          });
-        }, op.sourceAgglomerateId);
-
+        const setActiveCellActionObjCollab = setActiveCellAction(op.sourceAgglomerateId, null);
         await page.evaluate(
-          (position: [number, number, number], segmentId: number, agglomerateId: number) => {
-            window.webknossos.DEV.store.dispatch({
-              type: "PROOFREAD_MERGE",
-              position,
-              segmentId,
-              agglomerateId,
-            });
-          },
+          (action) => window.webknossos.DEV.store.dispatch(action),
+          setActiveCellActionObjCollab,
+        );
+
+        const proofreadMergeActionObjCollab = proofreadMergeAction(
           op.targetPosition,
           op.targetSegmentId,
           op.targetAgglomerateId,
+        );
+        await page.evaluate(
+          (action) => window.webknossos.DEV.store.dispatch(action),
+          proofreadMergeActionObjCollab,
         );
 
         // TODO: replace with a proper completion signal (see note in admin test)

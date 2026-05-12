@@ -1163,7 +1163,7 @@ export type DatasetUpdater = {
 
 export function updateDatasetPartial(
   datasetId: string,
-  updater: Partial<APIDataset>,
+  updater: Partial<DatasetUpdater>,
   options: RequestOptions = {},
 ): Promise<APIDataset> {
   return Request.sendJSONReceiveJSON(`/api/datasets/${datasetId}/updatePartial`, {
@@ -1469,10 +1469,12 @@ export async function isDatasetNameValid(datasetName: string): Promise<string | 
 export function updateDatasetTeams(
   datasetId: string,
   newTeams: Array<string>,
+  options: RequestOptions = {},
 ): Promise<APIDataset> {
   return Request.sendJSONReceiveJSON(`/api/datasets/${datasetId}/teams`, {
     method: "PATCH",
     data: newTeams,
+    ...options,
   });
 }
 

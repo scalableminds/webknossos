@@ -23,6 +23,7 @@ import {
   getTeams,
   getUsers,
   updateDatasetPartial,
+  updateDatasetTeams,
 } from "../../admin/rest_api";
 import { launchBrowser, waitForTracingViewLoad } from "./dataset_rendering_helpers";
 import { PAGE_HEIGHT, PAGE_WIDTH } from "./screenshot_test_config";
@@ -358,8 +359,6 @@ const collabUsers: Array<{ id: string; email: string; authToken: string }> = [];
 
 describe("Live Collaboration", () => {
   beforeAll(async () => {
-    browser = await launchBrowser("Live Collaboration");
-
     const datasetId = await resolveDatasetId(DATASET_NAME);
     console.log(`Dataset "${DATASET_NAME}" → id=${datasetId}`);
 
@@ -382,11 +381,13 @@ describe("Live Collaboration", () => {
     if (defaultTeam == null) {
       throw new Error("Could not find default team.");
     }
-    await updateDatasetPartial(datasetId, { allowedTeams: [defaultTeam] }, adminRequestOptions());
+    const res = await updateDatasetTeams(datasetId, [defaultTeam.id], adminRequestOptions());
     annotation = await createHybridAnnotation(datasetId);
 
     const defaultTeamId = await getDefaultTeamId();
     await shareAnnotationWithTeam(annotation, defaultTeamId);
+
+    browser = await launchBrowser("Live Collaboration");
   }, 120_000);
 
   afterAll(async () => {
@@ -400,6 +401,15 @@ describe("Live Collaboration", () => {
 
     await openAnnotationPage(page, annotation.id);
     await waitForDataLoading(page);
+
+    // Patch the active user in the store to be a superuser so the collaboration
+    // mode controls become available. This only affects the local Redux state —
+    // no backend call is made.
+    await page.evaluate(() => {
+      const store = window.webknossos.DEV.store;
+      const activeUser = store.getState().activeUser;
+      store.dispatch({ type: "SET_ACTIVE_USER", user: { ...activeUser, isSuperUser: true } });
+    });
 
     // Activate HDF5 mapping
     await page.evaluate(

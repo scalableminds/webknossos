@@ -1,11 +1,11 @@
 import UserLocalStorage from "libs/user_local_storage";
+import { document } from "libs/window";
 import {
   setKeyboardLayoutMapAction,
   setKeyboardLayoutMapEntryAction,
 } from "viewer/model/actions/settings_actions";
 import Store from "viewer/store";
 import type { UnmodifiedLayoutMap } from "./keyboard_shortcut_types";
-import { document } from "libs/window";
 
 const LOCAL_STORAGE_KEY = "keyboardLayoutMap";
 

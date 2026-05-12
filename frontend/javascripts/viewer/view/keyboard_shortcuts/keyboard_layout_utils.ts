@@ -120,7 +120,8 @@ export function registerKeyForLayoutMap(e: KeyboardEvent) {
   } else {
     // Non-API path: learn keys one by one; clear the whole map on layout switch.
     if (existing == null) {
-      const updated = { ...currentMap, [e.code]: e.key };
+      const copy = new Map(currentMap);
+      const updated = copy.set(e.code, e.key);
       Store.dispatch(setKeyboardLayoutMapEntryAction(e.code, e.key));
       persistToLocalStorage(updated);
     } else if (existing !== e.key) {

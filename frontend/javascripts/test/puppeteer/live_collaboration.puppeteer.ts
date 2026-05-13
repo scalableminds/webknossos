@@ -22,7 +22,7 @@ import {
   createExplorational,
   getTeams,
   getUsers,
-  updateDatasetPartial,
+  setCollaborationModeForAnnotation,
   updateDatasetTeams,
 } from "../../admin/rest_api";
 import { launchBrowser, waitForTracingViewLoad } from "./dataset_rendering_helpers";
@@ -32,6 +32,7 @@ import { proofreadMergeAction } from "viewer/model/actions/proofread_actions";
 import { cycleToolAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import { setActiveCellAction } from "viewer/model/actions/volumetracing_actions";
+import type { APIAnnotationType } from "types/api_types";
 import { Vector3 } from "viewer/constants";
 
 vi.mock("libs/request", async (importOriginal) => {
@@ -373,9 +374,6 @@ describe("Live Collaboration", () => {
       if (!user.isActive) {
         await activateUser(user.id);
       }
-      // TODO: ensure the user is a member of the relevant team so they can
-      //       open the shared annotation.  Use PATCH /api/users/{id} with a
-      //       teams array if needed.
       const authToken = await getUserAuthToken(email, password);
       collabUsers.push({ id: user.id, email, authToken });
     }
@@ -488,12 +486,17 @@ describe("Live Collaboration", () => {
       (action) => window.webknossos.DEV.store.dispatch(action),
       setCollaborationModeActionObj,
     );
+    await setCollaborationModeForAnnotation(
+      annotation.id,
+      annotation.typ as APIAnnotationType,
+      "Concurrent",
+      adminRequestOptions(),
+    );
     await page.evaluate(() => window.webknossos.apiReady().then((api) => api.tracing.save()));
     console.log("Concurrent collaboration mode enabled and saved");
 
     expect(adminErrors, "Admin session produced page errors").toHaveLength(0);
 
-    await sleep(300_000);
     await page.close();
   }, 120_000);
 

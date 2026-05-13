@@ -551,11 +551,13 @@ export function setCollaborationModeForAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
   collaborationMode: AnnotationCollaborationMode,
+  options?: RequestOptions,
 ): Promise<void> {
   return Request.receiveJSON(
     `/api/annotations/${annotationType}/${annotationId}/collaborationMode?collaborationMode=${collaborationMode}`,
     {
       method: "PATCH",
+      ...options,
     },
   );
 }

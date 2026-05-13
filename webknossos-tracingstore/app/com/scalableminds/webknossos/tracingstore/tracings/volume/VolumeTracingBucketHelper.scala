@@ -11,7 +11,6 @@ import net.jpountz.lz4.{LZ4Compressor, LZ4Factory, LZ4FastDecompressor}
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 
-import scala.annotation.tailrec
 import scala.collection.mutable.ListBuffer
 import scala.concurrent.ExecutionContext
 

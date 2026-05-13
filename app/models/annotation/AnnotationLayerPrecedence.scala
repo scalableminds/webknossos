@@ -150,7 +150,7 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
       Fox.successful(skeletonLayers.minBy(_.tracingId))
     } else if (volumeLayers.nonEmpty) {
       Fox.successful(volumeLayers.minBy(_.tracingId))
-    } else Fox.failure("annotation.download.noLayers")
+    } else Fox.failure(Msg.Annotation.downloadNoLayers)
 
   private def selectLayerWithPrecedence(annotationLayers: List[AnnotationLayer])(
       implicit ec: ExecutionContext): Fox[AnnotationLayer] = {

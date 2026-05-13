@@ -222,17 +222,17 @@ class UserController @Inject()(userService: UserService,
               .flatMap { loginInfo =>
                 userService.retrieve(loginInfo).map {
                   case Some(_) => Full(())
-                  case None    => Failure("error.noUser")
+                  case None    => Failure(Msg.User.noUserWithThisEmail)
                 }
               }
               .recover {
                 case _: ProviderException =>
-                  Failure("user.email.change.passwordWrong")
+                  Failure(Msg.User.invalidCredentials)
               })
-        case None => Fox.failure("user.email.change.passwordWrong")
+        case None => Fox.failure(Msg.User.invalidCredentials)
       }
     } else {
-      Fox.failure("notAllowed")
+      Fox.failure(Msg.notAllowed)
     }
 
   private def checkEmailDoesNotExistIfChanged(email: String, oldEmail: String)(
@@ -242,7 +242,7 @@ class UserController @Inject()(userService: UserService,
     } else {
       multiUserDAO.emailNotPresentYet(email).flatMap {
         case true  => Fox.successful(())
-        case false => Fox.failure("user.email.alreadyInUse")
+        case false => Fox.failure(Msg.User.Email.taken)
       }
     }
 

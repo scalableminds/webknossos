@@ -288,7 +288,7 @@ class WKRemoteTracingStoreClient(
           .addQueryParam("startVersion", startVersion)
           .postFileWithJsonResponse[Long](zipfile)
       case (None, None) => Fox.successful(0L)
-      case _            => Fox.failure("annotation.upload.editableMappingIncompleteInformation")
+      case _            => Fox.failure(Msg.Annotation.uploadEditableMappingIncompleteInformation)
     }
 
   def getVolumeTracing(annotationId: ObjectId,

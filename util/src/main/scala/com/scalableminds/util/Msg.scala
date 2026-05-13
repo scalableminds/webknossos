@@ -62,6 +62,8 @@ object Msg {
     val finishFailed: String = "Could not finish/archive the annotation."
     val finished: String = "Annotation is archived."
     val allFinished: String = "All selected annotations were finished/archived."
+    val notActive: String = "The annotation is not active and cannot be finished."
+    val finishNotAllowed: String = "Could not access annotation to finish it."
     def reserveTooManyIds(limit: Int): String = s"Cannot reserve more than $limit ids in one request."
     val countListableFailed: String = "Could not count listable annotations."
     val duplicateFailed: String = "Could not duplicate annotation."
@@ -88,6 +90,8 @@ object Msg {
     val flushAnnotationInfoFailed: String = "Could not flush annotation info."
     val flushEditableMappingUpdaterBuffersFailed: String =
       "Could not flush editable mapping updater buffers."
+    val initEditableMappingUpdaterFailed: String =
+      "Could not initialize EditableMappingUpdater."
     val flushUpdatedTracingsFailed: String = "Could not flush updated tracings."
     val getAnnotationFailed: String = "Could not retrieve annotation from tracingstore."
     val getEditableMappingFailed: String = "Could not retrieve editable mapping."
@@ -96,6 +100,9 @@ object Msg {
     val getWithTracingsFailed: String = "Could not retrieve annotation with tracings."
     val makeEditableNoBaseMapping: String = "Cannot make editable: no base mapping is set."
     val updateRemoteFailed: String = "Could not update remote annotation info."
+    val downloadNoLayers: String = "Cannot download annotation that has no layers."
+    val uploadEditableMappingIncompleteInformation: String =
+      "Could not store editable mapping, either file or baseMappingName is missing."
     object Restrictions {
       val notFound: String = "Could not determine annotation access restrictions."
       val failedToCheck: String = "Could not check annotation access."
@@ -200,6 +207,8 @@ object Msg {
         "Mag restrictions are too tight, resulting annotation has no magnifications."
       val mergeLargestSegmentIdUnset: String =
         "Cannot merge volume annotation: largest segment id is not set."
+      val magsDoNotMatch: String =
+        "Cannot merge volume annotation: mag sets do not match."
       val noEditableMapping: String =
         "This volume tracing does not have an editable mapping (is not a “proofreading” annotation layer)."
       object SegmentIndex {
@@ -322,6 +331,7 @@ object Msg {
     val volumeExceeded: String = "The volume of the selected bounding box is too large."
     val invalidBoundingBoxOrMag: String =
       "Either the selected bounding box could not be parsed (must be x,y,z,width,height,depth) or the mag is wrong or does not exist."
+    val invalidBoundingBox: String = "The selected bounding box could not be parsed, must be x,y,z,width,height,depth."
     val exportFileNotFound: String = "Exported file not found. The link may be expired."
     val noExportFileName: String = "Job does not have an export file name."
     val notFound: String = "Job could not be found or accessed."
@@ -332,6 +342,7 @@ object Msg {
       "Starting paid jobs is only allowed for Administrators, Dataset Managers or Team Managers."
     val updateStatusFailed: String = "Could not update job status."
     val workerNotFound: String = "Could not find this worker in the database."
+    val submitFailed: String = "Could not submit job."
     object TrainModel {
       val wrongOrga: String = "Training AI models is only allowed for datasets of your own organization."
       val submitFailed: String = "Could not start the AI model training job."
@@ -400,6 +411,7 @@ object Msg {
     val noMags: String = "Data layer does not contain any mags."
     val allowedTeamsNotFound: String = "Could not find allowed teams for dataset."
     val voxelSizeFailedToFetch: String = "Could not fetch voxel size for annotation."
+    val additionalCoordinatesDiffer: String = "Additional coordinates differ in merged units."
     object Compose {
       val failed: String = "Could not compose dataset."
       val addAttachmentFailed: String = "Could not add attachment to composed dataset."
@@ -445,6 +457,10 @@ object Msg {
       def magNotFound(layer: String, mag: String): String = s"Data layer “$layer” does not have mag “$mag”."
       def attachmentNotFound(layer: String, attachment: String): String =
         s"Data layer “$layer” does not have attachment “$attachment”."
+      val attachmentSingletonAlreadyFilled: String =
+        "There is already an attachment of this type in this layer. Only one attachment of this type can be registered per layer."
+      val attachmentNameTaken: String =
+        "An attachment with this name already exists in this layer. Please choose a different name."
       val duplicateNames: String = "Dataset layers must have unique names."
       val mustBeSegmentation: String = "Data layer must be a segmentation layer."
       val nameInvalidCharacters: String = "Layer name contains invalid characters."
@@ -519,6 +535,7 @@ object Msg {
       val magUploadOnlyVirtual: String = "Adding mags to existing datasets is only allowed for virtual datasets."
       val uploadToPathsNoMatchingPrefix: String =
         "Could not determine a configured path prefix that matches the request."
+      val magAlreadyPending: String = "This mag is already pending."
     }
     object Chunk {
       val decompressFailed: String = "Could not decompress data chunk."
@@ -541,6 +558,7 @@ object Msg {
     val editSuccess: String = "Task was successfully updated."
     val noAnnotations: String = "Could not find finished annotations for this task."
     val assigned: String = "You got a new task."
+    val finished: String = "Task is finished."
     object Create {
       val multipartPayloadInvalid: String = "Could not parse task creation multipart request."
       val formJsonMissing: String = "Could not parse task creation multipart request: no form data."
@@ -554,6 +572,7 @@ object Msg {
       val datasetOfOtherOrga: String = "Cannot create tasks for datasets of other organizations."
       val saveSkeletonFailed: String = "Could not save skeleton tracing for new task."
       val saveVolumeFailed: String = "Could not save volume tracing for new task."
+      val notOneAnnotation: String = "The specified base task does not have exactly one (finished) instance."
     }
   }
   object Project {
@@ -562,6 +581,8 @@ object Msg {
     def deleteSuccess(id: ObjectId): String = s"Project “$id” was successfully deleted."
     def nameTaken(name: String): String =
       s"A project named “$name” already exists. Please choose a different name."
+    def nameInvalidChars(name: String): String =
+      s"Project name “$name” contains invalid characters. Please use only letters and numbers."
     val createFailed: String = "Could not create project."
     val increaseTaskInstancesNegative: String = "Cannot increment task counts by negative number."
     val listFailed: String = "Could not retrieve list of projects."
@@ -629,6 +650,7 @@ object Msg {
     val passwordsDontMatch: String = "The two passwords do not match."
     val isDeactivated: String =
       s"Your account has not been activated by an admin yet. Please contact your organization’s admin for help."
+    val noUserWithThisEmail: String = "There is no user registered with this email."
     val invalidCredentials: String = "Incorrect email or password. Please try again."
     val createFailed: String = "Could not create user."
     val idNotFound: String = "Could not find a user id in the request."
@@ -642,6 +664,8 @@ object Msg {
     val needsInvite: String =
       "Registration without invite is not enabled for this WEBKNOSSOS instance."
     val invalidInviteToken: String = "This invite token is invalid."
+    val invalidFirstName: String = "Please check your first name for any special characters."
+    val invalidLastName: String = "Please check your last name for any special characters."
     object Token {
       val deleted: String = "Token was deleted."
       val invalid: String = "The supplied token is invalid."
@@ -689,6 +713,7 @@ object Msg {
     object File {
       val meshFileNameRequired: String =
         "Trying to load mesh from mesh file, but no mesh file name was supplied."
+      val openFailed: String = "Could not open mesh file for reading."
       def lookUpFailed(name: String): String = s"Could not look up mesh file “$name”."
       def readVersionFailed(name: String): String =
         s"Could not read format version from mesh file “$name”."
@@ -721,6 +746,9 @@ object Msg {
     val invalidFirstChunkCoord: String = "First channel must be 0."
     val notEnoughCoordinates: String =
       "Invalid number of chunk coordinates. Expected to get at least 3 dimensions and channel 0."
+    val chunkLoadingError: String =
+      "Failed to load zarr chunk for streaming."
+    val readShardIndexFailed: String = "Failed to read shard information for zarr data. This may indicate missing data."
   }
   object SegmentAnything {
     val notEnabled: String = "AI-based quick select is not enabled for this WEBKNOSSOS instance."

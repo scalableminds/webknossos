@@ -257,7 +257,8 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
         parameters.layerName,
         if (isSingletonAttachment) None else Some(parameters.attachmentName),
         parameters.attachmentType)
-      existsError = if (isSingletonAttachment) "attachment.singleton.alreadyFilled" else "attachment.name.taken"
+      existsError = if (isSingletonAttachment) Msg.Dataset.Layer.attachmentSingletonAlreadyFilled
+      else Msg.Dataset.Layer.attachmentNameTaken
       _ <- Fox.fromBool(existingAttachmentsCount == 0) ?~> existsError
       datasetParent <- selectPathPrefixDatasetParent(parameters.pathPrefix, dataset._organization)
       datasetPath = datasetParent / dataset.directoryName
@@ -303,7 +304,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
               _ <- pathDeletionService.deletePaths(client, Seq(existingMagLocatorPath))
               _ <- datasetMagsDAO.deletePendingMagLocator(dataset._id, layerName, mag)
             } yield ()
-          } else Fox.failure("dataset.reserveMagUploadToPath.exists")
+          } else Fox.failure(Msg.Dataset.Upload.magAlreadyPending)
         case Empty      => Fox.successful(())
         case f: Failure => f.toFox
       }

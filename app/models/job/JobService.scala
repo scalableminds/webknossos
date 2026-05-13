@@ -270,7 +270,7 @@ class JobService @Inject()(wkConf: WkConf,
         case _ =>
           creditTransactionService
             .refundTransactionWhenStartingJobFailed(creditTransaction)
-            .flatMap(_ => Fox.failure("job.submission.failed"))
+            .flatMap(_ => Fox.failure(Msg.Job.submitFailed))
       }
       _ <- creditTransactionService.addJobIdToTransaction(creditTransaction, job._id)
     } yield job

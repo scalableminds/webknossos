@@ -152,7 +152,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       val positions = createPositions(dataLayer, 2).distinct
       histogramForPositions(datasetId, dataSourceId, dataLayer, positions, dataLayer.resolutions.minBy(_.maxDim))
     } else
-      Fox.failure("dataset.noMags")
+      Fox.failure(Msg.Dataset.noMags)
 
   private def histogramForPositions(datasetId: ObjectId,
                                     dataSourceId: DataSourceId,

@@ -125,7 +125,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
           nonCancelledTaskAnnotations.nonEmpty &&
           nonCancelledTaskAnnotations.head.state == AnnotationState.Finished)
         Fox.successful(nonCancelledTaskAnnotations.head)
-      else Fox.failure("task.create.notOneAnnotation")
+      else Fox.failure(Msg.Task.Create.notOneAnnotation)
     }).flatten
 
   // Used in create (without files) in case of base annotation

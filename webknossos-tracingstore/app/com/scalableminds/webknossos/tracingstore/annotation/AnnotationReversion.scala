@@ -88,6 +88,6 @@ trait AnnotationReversion extends FoxImplicits {
                                            tracingBeforeRevert,
                                            editableMappingInfo.value,
                                            tracingBeforeRevert.version,
-                                           targetVersion) ?~> "EditableMappingUpdater.initialize.failed"
+                                           targetVersion) ?~> Msg.Annotation.initEditableMappingUpdaterFailed
     } yield updater
 }

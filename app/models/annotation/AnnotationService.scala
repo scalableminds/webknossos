@@ -318,9 +318,9 @@ class AnnotationService @Inject()(
         _ <- Fox.runOptional(annotation._task)(taskService.clearCompoundCache)
       } yield {
         if (annotation._task.isEmpty)
-          "annotation.finished"
+          Msg.Annotation.finished
         else
-          "task.finished"
+          Msg.Task.finished
       }
 
     (for {
@@ -334,16 +334,16 @@ class AnnotationService @Inject()(
         } else if (annotation.state == Finished) {
           logger.info(
             s"Silently not finishing annotation ${annotation._id.toString} for it is already finished. Access context: ${ctx.toStringAnonymous}")
-          Fox.successful("annotation.finished")
+          Fox.successful(Msg.Annotation.finished)
         } else {
           logger.info(
             s"Not finishing annotation ${annotation._id.toString} for its state is ${annotation.state.toString}. Access context: ${ctx.toStringAnonymous}")
-          Fox.failure("annotation.notActive")
+          Fox.failure(Msg.Annotation.notActive)
         }
       } else {
         logger.info(
           s"Not finishing annotation ${annotation._id.toString} due to missing permissions. Access context: ${ctx.toStringAnonymous}")
-        Fox.failure("annotation.notPossible")
+        Fox.failure(Msg.Annotation.finishNotAllowed)
       }
     }).flatten
   }

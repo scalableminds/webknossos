@@ -232,7 +232,7 @@ class DataSourceController @Inject()(
   def cancelUpload(): Action[CancelUploadInformation] =
     Action.async(validateJson[CancelUploadInformation]) { implicit request =>
       val datasetIdFox = uploadService.isKnownUpload(request.body.uploadId).flatMap {
-        case false => Fox.failure("dataset.upload.validation.failed")
+        case false => Fox.failure(Msg.Dataset.Upload.noSuchUpload(request.body.uploadId))
         case true  => uploadService.getDatasetIdByUploadId(request.body.uploadId)
       }
       datasetIdFox.flatMap { datasetId =>

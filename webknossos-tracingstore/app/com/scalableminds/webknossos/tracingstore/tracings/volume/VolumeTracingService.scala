@@ -362,7 +362,7 @@ class VolumeTracingService @Inject()(
             magSets.forall(_ == head)
           }
           if (!magsDoMatch)
-            Fox.failure("annotation.volume.magsDoNotMatch")
+            Fox.failure(Msg.Annotation.Volume.magsDoNotMatch)
           else {
             val mergedVolume = new MergedVolume(tracing.elementClass)
             for {

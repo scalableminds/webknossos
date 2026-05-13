@@ -586,7 +586,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       case Empty => // Dataset reported but ignored (non-existing/forbidden org)
         Fox.successful(())
       case e: EmptyBox =>
-        Fox.failure("dataset.notFound", e)
+        Fox.failure(Msg.Dataset.notFound(pathInfo.dataSourceId.directoryName), e)
     }
   }
 

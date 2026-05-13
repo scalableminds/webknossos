@@ -1011,11 +1011,11 @@ class AuthenticationController @Inject()(
   private def normalizeName(firstName: String, lastName: String) = {
     var errors = List[String]()
     val fN = TextUtils.normalizeStrong(firstName).getOrElse {
-      errors ::= "user.firstName.invalid"
+      errors ::= Msg.User.invalidFirstName
       ""
     }
     val lN = TextUtils.normalizeStrong(lastName).getOrElse {
-      errors ::= "user.lastName.invalid"
+      errors ::= Msg.User.invalidLastName
       ""
     }
     (errors, fN, lN)

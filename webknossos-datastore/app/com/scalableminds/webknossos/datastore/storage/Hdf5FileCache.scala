@@ -9,6 +9,7 @@ import ch.systemsx.cisd.hdf5.{
   IHDF5ShortReader,
   IHDF5StringReader
 }
+import com.scalableminds.util.Msg
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Failure, Full}
@@ -91,7 +92,7 @@ class Hdf5FileCache(val maxEntries: Int) extends LRUConcurrentCache[String, Cach
       _ <- if (filePath.toFile.exists()) {
         Full(true)
       } else {
-        Failure("mesh.file.open.failed")
+        Failure(Msg.Mesh.File.openFailed)
       }
       result = Using(this.getCachedHdf5File(filePath)(CachedHdf5File.fromPath)) {
         block

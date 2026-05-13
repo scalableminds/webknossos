@@ -91,7 +91,9 @@ user_A, user_B, user_C, user_D, user_E
     setUserAuthToken(tokenUserD);
 
     await expect(deleteTeam("69882b370d889b84020efd4f")).rejects.toMatchObject(
-      getExpectedErrorObject("You do not have permission to delete teams. Please ask an organization admin."),
+      getExpectedErrorObject(
+        "You do not have permission to delete teams. Please ask an organization admin.",
+      ),
     );
   });
 
@@ -103,7 +105,9 @@ user_A, user_B, user_C, user_D, user_E
       name: "test-team-name",
     };
     await expect(createTeam(newTeam)).rejects.toMatchObject(
-      getExpectedErrorObject("You do not have permission to create teams. Please ask an organization admin."),
+      getExpectedErrorObject(
+        "You do not have permission to create teams. Please ask an organization admin.",
+      ),
     );
   });
 

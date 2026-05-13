@@ -47,7 +47,9 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
       for {
         _ <- Fox.successful(logger.info(s"Try acquire mutex inner for user $userId and id $annotationId."))
         mutexBox <- annotationMutexDAO.findOne(annotationId).shiftBox
-        _ <- Fox.successful(logger.info(s"Try acquire mutex inner for user $userId and id $annotationId got mutex from findOne $mutexBox."))
+        _ <- Fox.successful(
+          logger.info(
+            s"Try acquire mutex inner for user $userId and id $annotationId got mutex from findOne $mutexBox."))
         result <- mutexBox match {
           case Full(mutex) =>
             if (mutex.userId == userId)
@@ -57,7 +59,8 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
           case _ =>
             acquire(annotationId, userId)
         }
-        _ <- Fox.successful(logger.info(s"Try acquire mutex inner for user $userId and id $annotationId returning result: $result."))
+        _ <- Fox.successful(
+          logger.info(s"Try acquire mutex inner for user $userId and id $annotationId returning result: $result."))
       } yield result
     }
 

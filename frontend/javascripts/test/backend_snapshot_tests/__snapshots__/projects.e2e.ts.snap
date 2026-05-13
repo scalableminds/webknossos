@@ -44,7 +44,7 @@ exports[`Project API (E2E) > createProject and deleteProject 2`] = `
 {
   "messages": [
     {
-      "success": "Project “6a047f291c00003100b4cdce” was successfully deleted.",
+      "success": "Project was successfully deleted.",
     },
   ],
 }

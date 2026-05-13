@@ -578,7 +578,7 @@ object Msg {
   object Project {
     def notFound(id: ObjectId): String = s"Project “$id” could not be found or accessed."
     def notFound(name: String): String = s"Project with name “$name” could not be found or accessed."
-    def deleteSuccess(id: ObjectId): String = s"Project “$id” was successfully deleted."
+    val deleteSuccess: String = s"Project was successfully deleted."
     def nameTaken(name: String): String =
       s"A project named “$name” already exists. Please choose a different name."
     def nameInvalidChars(name: String): String =

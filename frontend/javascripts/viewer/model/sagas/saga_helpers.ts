@@ -204,9 +204,11 @@ export function* takeEveryWithBatchActionSupport(
   });
 }
 
+const DEFAULT_WAIT_FOR_THROTTLE_MS = import.meta.env.MODE !== "test" ? 1000 : 100;
+
 export function* waitFor(
   selector: (state: WebknossosState) => boolean,
-  throttleMs: number,
+  throttleMs: number = DEFAULT_WAIT_FOR_THROTTLE_MS,
 ): Saga<void> {
   // Waits for the specified selector to return true.
   // The selector is checked after each dispatched action (because

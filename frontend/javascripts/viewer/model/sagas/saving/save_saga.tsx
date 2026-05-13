@@ -522,7 +522,7 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
         // Put it back by dispatching it again.
         yield* put(ensureHasNewestVersion);
         // Now, wait in a throttled manner until needsPollAnnotationUpdates becomes "yes".
-        yield* waitFor((state) => needsPollAnnotationUpdates(state) === "yes", 1000);
+        yield* waitFor((state) => needsPollAnnotationUpdates(state) === "yes");
       }
       continue;
     }

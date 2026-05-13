@@ -76,7 +76,7 @@ export function* pushSaveQueueAsync(): Saga<never> {
       forcePush: take("SAVE_NOW"),
     });
 
-    yield* waitFor(maySendSaveRequest, 1000);
+    yield* waitFor(maySendSaveRequest);
 
     yield* put(setSaveBusyAction(true));
     const enforceEmptySaveQueue = forcePush != null;

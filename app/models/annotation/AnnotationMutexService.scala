@@ -80,21 +80,23 @@ class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionC
 
   def tryAcquireReturningOwner(annotationId: ObjectId, userId: ObjectId, expiry: Instant): Fox[ObjectId] =
     for {
-      rows <- run(q"""WITH attempt AS (
-                        INSERT INTO webknossos.annotation_mutexes(_annotation, _user, expiry)
-                        VALUES($annotationId, $userId, $expiry)
-                        ON CONFLICT (_annotation)
-                          DO UPDATE SET
-                            _user = EXCLUDED._user,
-                            expiry = EXCLUDED.expiry
-                          WHERE webknossos.annotation_mutexes._user = EXCLUDED._user
-                             OR webknossos.annotation_mutexes.expiry < NOW()
-                      )
+      rows <- run(q"""INSERT INTO webknossos.annotation_mutexes(_annotation, _user, expiry)
+                      VALUES($annotationId, $userId, $expiry)
+                      ON CONFLICT (_annotation)
+                        DO UPDATE SET
+                          _user = EXCLUDED._user,
+                          expiry = EXCLUDED.expiry
+                        WHERE webknossos.annotation_mutexes._user = EXCLUDED._user
+                           OR webknossos.annotation_mutexes.expiry < NOW()
+                      RETURNING _annotation, _user, expiry
+
+                      UNION ALL
+
                       SELECT _annotation, _user, expiry
                       FROM webknossos.annotation_mutexes
                       WHERE _annotation = $annotationId
-                      AND expiry >= NOW()""".as[AnnotationMutexesRow])
-      first <- rows.headOption.toFox
+                        AND expiry >= NOW()""".as[AnnotationMutexesRow]) ~> "Upserting annotation mutex failed."
+      first <- rows.headOption.toFox ~> "Could not find mutex for annotation."
       parsed = parse(first)
     } yield parsed.userId
 

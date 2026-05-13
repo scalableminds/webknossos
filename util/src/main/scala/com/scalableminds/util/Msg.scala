@@ -6,7 +6,7 @@ import scala.concurrent.duration.FiniteDuration
 
 object Msg {
   val initialDataNotEnabled: String =
-    "Initial data (sample organization) is not enabled in for this WEBKNOSSOS instance."
+    "Initial data (sample organization) is not enabled for this WEBKNOSSOS instance."
   val maintenanceNotFound: String = "Maintenance entry could not be found."
   val publicationNotFound: String = "Publication could not be found."
   val shortLinkNotFound: String = "No shortlink with this key could be found."
@@ -40,7 +40,7 @@ object Msg {
     }
     object Reserve {
       val notPending: String = "Cannot reserve upload to path for AI model that is not currently marked as pending."
-      val wrongOrga: String = "Cannot publish AI model to a different organization than it was not reserved for."
+      val wrongOrga: String = "Cannot publish AI model to a different organization than it was reserved for."
     }
     object Training {
       val zeroAnnotations: String = "Need at least one training annotation for model training."
@@ -248,7 +248,7 @@ object Msg {
       "You do not have permission to order WEBKNOSSOS credits for your organization. Please contact the organization owner."
     val creditOrdersNotPositive: String = "Cannot order a negative number of WEBKNOSSOS credits."
     val alreadyJoined: String = "Your account is already associated with the selected organization."
-    val ambiguous: String = "Registration without invite is now allowed for instances with multiple organizations."
+    val ambiguous: String = "Registration without invite is not allowed for instances with multiple organizations."
     val organizationCreationNotEnabled: String = "Organization creation is not enabled for this WEBKNOSSOS instance."
     val folderCreateFailed: String = "Could not create organization root folder."
     val idTaken: String =
@@ -566,7 +566,7 @@ object Msg {
     val increaseTaskInstancesNegative: String = "Cannot increment task counts by negative number."
     val listFailed: String = "Could not retrieve list of projects."
     val noAnnotations: String = "Could not find annotations for this project."
-    val deleteNotAllowed: String = "You do do not have permissionto delete this project. Please ask the project owner."
+    val deleteNotAllowed: String = "You do not have permission to delete this project. Please ask the project owner."
     val deleteFailed: String = "Could not delete project."
     val updateFailed: String = "Could not update project."
   }
@@ -574,7 +574,7 @@ object Msg {
     def notFound(id: ObjectId): String = s"Script “$id” could not be found or accessed."
     def nameInvalidChars(name: String): String =
       s"Script name “$name” is invalid. Please use only letters, digits, dots, space, underscores, hyphens."
-    val updateOnlyOwner: String = "You do do not have permissionto update this script. Please ask the script owner."
+    val updateOnlyOwner: String = "You do not have permission to update this script. Please ask the script owner."
     val deleteOnlyOwner: String = "You do not have permission to delete this script. Please ask the script owner."
     val deleteFailed: String = "Could not delete script."
     val publicWritesFailed: String = "Could not write script json."
@@ -676,7 +676,7 @@ object Msg {
     val createOnlyAdmin: String = "You do not have permission to create teams. Please ask an organization admin."
     val deleteOnlyAdmin: String = "You do not have permission to delete teams. Please ask an organization admin."
     val deleteInUse: String =
-      "Team cannot be deleted as it is referenced in an at least one annotation, project or task type."
+      "Team cannot be deleted as it is referenced by at least one annotation, project or task type."
     val deleteOrganizationTeam: String =
       "This team cannot be deleted. Each organization requires at least one base team."
     def nameTaken(name: String): String =
@@ -724,7 +724,7 @@ object Msg {
   object SegmentAnything {
     val notEnabled: String = "AI-based quick select is not enabled for this WEBKNOSSOS instance."
     val noUri: String = "No Uri for SAM server configured."
-    val getDataFailed: String = "Could notCould not get image data to send to SAM server."
+    val getDataFailed: String = "Could not get image data to send to SAM server."
     val getMaskFailed: String = "Could not get image mask from SAM server."
   }
   object DataVault {

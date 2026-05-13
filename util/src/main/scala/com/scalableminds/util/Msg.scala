@@ -93,7 +93,7 @@ object Msg {
     val initEditableMappingUpdaterFailed: String =
       "Could not initialize EditableMappingUpdater."
     val flushUpdatedTracingsFailed: String = "Could not flush updated tracings."
-    val getAnnotationFailed: String = "Could not retrieve annotation from tracingstore."
+    val getAnnotationFailed: String = "Could not retrieve annotation from tracing store."
     val getEditableMappingFailed: String = "Could not retrieve editable mapping."
     val getEditableMappingInfoRawFailed: String = "Could not retrieve raw editable mapping info."
     val getNewestMaterializedFailed: String = "Could not find newest materialized annotation."
@@ -196,11 +196,11 @@ object Msg {
       def wrongMag(tracingId: String, mag: String): String =
         s"Annotation layer “$tracingId” does not have mag “$mag”."
       val fallbackDataSplitFailed: String =
-        "Could not split flat fallback layer bucket data from datastore into buckets."
+        "Could not split flat fallback layer bucket data from data store into buckets."
       val fallbackDataLengthMismatch: String =
-        "Length mismatch when unpacking bucket data from datastore for fallback layer."
+        "Length mismatch when unpacking bucket data from data store for fallback layer."
       val mergedVolumeStatsNotFound: String =
-        "Could not find mergedVolumeStats from previous merge steps."
+        "Could not find merged volume stats from previous merge steps."
       val invalidLargestSegmentId: String =
         "Cannot create tasks with fallback segmentation layers that do not have a valid largest segment id."
       val magRestrictionsTooTight: String =
@@ -285,24 +285,24 @@ object Msg {
   object DataStore {
     val notFound: String = "Data store could not be found or accessed."
     val notFoundForDataset: String = "Data store for dataset could not be found or accessed."
-    def nameTaken(name: String): String = s"A dataStore named “$name” already exists. Please choose a different name."
-    val ambiguous: String = "Can only link layers of datasets from the same dataStore."
-    val createFailed: String = "Could not create dataStore."
+    def nameTaken(name: String): String = s"A data store named “$name” already exists. Please choose a different name."
+    val ambiguous: String = "Can only link layers of datasets from the same data store."
+    val createFailed: String = "Could not create data store."
     val listFailed: String = "Could not retrieve list of data stores."
-    val deleteFailed: String = "Could not delete dataStore."
+    val deleteFailed: String = "Could not delete data store."
     val uploadToPathsNotAllowed: String =
-      "The datastore that holds the layers requested to be linked does not support dataset upload to paths."
+      "The data store that holds the layers requested to be linked does not support dataset upload to paths."
   }
   object TracingStore {
-    val notFound: String = "TracingStore could not be found or accessed."
-    val createFailed: String = "Could not create or update tracingStore entry."
-    val listFailed: String = "Could not retrieve list of tracingStores."
+    val notFound: String = "Tracing store could not be found or accessed."
+    val createFailed: String = "Could not create or update tracing store entry."
+    val listFailed: String = "Could not retrieve list of tracing stores."
   }
   object ObjectId {
     def invalid(literal: String): String = s"The supplied resource id “$literal” is not a valid ObjectId."
   }
   object Oidc {
-    val authenticationFailed: String = "Could not register or log in via single sign on (SSO/OIDC)."
+    val authenticationFailed: String = "Could not register or log in via single sign-on (SSO/OIDC)."
     val configurationInvalid: String = "SSO/OIDC configuration is invalid."
     val notEnabled: String = "SSO/OIDC is not enabled for this WEBKNOSSOS instance."
     val getTokenFailed: String = "Could not get token from SSO/OIDC provider."
@@ -337,7 +337,7 @@ object Msg {
     val notFound: String = "Job could not be found or accessed."
     val notRun: String = "Job has not run yet."
     val noWorkerForDatastoreAndJob: String =
-      "No worker supporting the requested job is available for the selected datastore."
+      "No worker supporting the requested job is available for the selected data store."
     val paidNoAdminOrManager: String =
       "Starting paid jobs is only allowed for Administrators, Dataset Managers or Team Managers."
     val updateStatusFailed: String = "Could not update job status."
@@ -424,7 +424,7 @@ object Msg {
       val duplicateMag: String = "Cannot compose dataset: duplicate mag in resulting layer."
     }
     object DataSource {
-      val notFound: String = "Datasource not found on datastore server. Might still be initializing."
+      val notFound: String = "Data source not found on data store server. It may still be initializing."
       val usableButNoVoxelSize: String =
         "Dataset is marked as usable but has no voxel size."
       val noBoundingBox: String =
@@ -433,7 +433,7 @@ object Msg {
         "A datasource-properties.json file already exists at the target location."
       val updateFileFailed: String = "Could not update datasource-properties.json file."
       val addPathsNotAllowed: String =
-        "Cannot directly add a datasource with local paths that leave the dataset, or with paths that match the WEBKNOSSOS reserved paths."
+        "Cannot directly add a data source with local paths that leave the dataset, or with paths that match the WEBKNOSSOS reserved paths."
     }
     object Delete {
       val notEnabled: String = "Dataset deletion is not enabled for this WEBKNOSSOS instance."
@@ -513,9 +513,9 @@ object Msg {
       val couldNotLoadUnfinishedUploads: String = "Could not load unfinished uploads of user."
       val createFailed: String = "Could not create dataset."
       val datastoreRestricted: String =
-        "Your organization does not have permission to upload datasets to this datastore. Please choose another datastore."
+        "Your organization does not have permission to upload datasets to this data store. Please choose another data store."
       val disallowedPaths: String =
-        "Cannot upload a datasource with local paths that leave the dataset, or with paths that match the WEBKNOSSOS reserved paths."
+        "Cannot upload a data source with local paths that leave the dataset, or with paths that match the WEBKNOSSOS reserved paths."
       val fileSizeCheckFailed: String = "File size check failed during dataset upload."
       val invalidLinkedLayers: String = "Could not link all requested layers."
       val linkRestricted: String =
@@ -557,7 +557,7 @@ object Msg {
     val deleteFailed: String = "Could not delete task."
     val editSuccess: String = "Task was successfully updated."
     val noAnnotations: String = "Could not find finished annotations for this task."
-    val assigned: String = "You got a new task."
+    val assigned: String = "You have been assigned a new task."
     val finished: String = "Task is finished."
     object Create {
       val multipartPayloadInvalid: String = "Could not parse task creation multipart request."
@@ -584,7 +584,7 @@ object Msg {
     def nameInvalidChars(name: String): String =
       s"Project name “$name” contains invalid characters. Please use only letters and numbers."
     val createFailed: String = "Could not create project."
-    val increaseTaskInstancesNegative: String = "Cannot increment task counts by negative number."
+    val increaseTaskInstancesNegative: String = "Cannot increment task counts by a negative number."
     val listFailed: String = "Could not retrieve list of projects."
     val noAnnotations: String = "Could not find annotations for this project."
     val deleteNotAllowed: String = "You do not have permission to delete this project. Please ask the project owner."
@@ -768,7 +768,7 @@ object Msg {
     val noWorkflowFound: String = "No voxelytics workflows found."
     val runNotFound: String = "Voxelytics workflow runs not found."
     val workflowNotFound: String = "Voxelytics workflow not found."
-    val workflowUserMismatch: String = "Voxelytics workflow run already exists by other user."
+    val workflowUserMismatch: String = "Voxelytics workflow run already exists by another user."
     val zeroRunWorkflow: String = "No runs for this voxelytics workflow found."
   }
   object Image {

@@ -104,7 +104,7 @@ function setMutexLogicSate(state: MutexLogicState): void {
   mutexLogicState = state;
 }
 
-export function* acquireAnnotationMutexMaybe(): Saga<void> {
+export function* annotationMutexSaga(): Saga<void> {
   /*
    * This saga is directly called by the root saga.
    *
@@ -470,6 +470,7 @@ function* watchForMutexSubscriptionActions(mutexLogicState: MutexLogicState): Sa
       const subscriptionCount = Object.keys(mutexLogicState.subscribersToMutex).length;
       // Stop the mutex acquisition if needed.
       if (subscriptionCount === 0) {
+        // todop: why continuous saga? shouldn't it be adhoc? doublecheck that the cont saga is not needed. when is it started?
         if (mutexLogicState.runningContinuousMutexAcquiringSaga != null) {
           yield* cancel(mutexLogicState.runningContinuousMutexAcquiringSaga);
           mutexLogicState.runningContinuousMutexAcquiringSaga = null;

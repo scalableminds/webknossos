@@ -44,7 +44,7 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
   def tryAcquiringAnnotationMutex(annotationId: ObjectId, userId: ObjectId): Fox[MutexResult] =
     for {
       _ <- Fox.successful(logger.info(s"Try acquire mutex inner for user $userId and id $annotationId."))
-      ownerUserId <- annotationMutexDAO.tryAcquireReturningOwner(annotationId, userId, Instant.in(defaultExpiryTime))
+      ownerUserId <- annotationMutexDAO.tryAcquireReturningOwner(annotationId, userId, Instant.in(defaultExpiryTime)) ?~> "annotationMutexDAO.tryAcquireReturningOwner failed"
       _ <- Fox.successful(
         logger.info(s"Try acquire mutex inner for user $userId and id $annotationId got ownerUserId $ownerUserId."))
       result = if (ownerUserId == userId)
@@ -80,15 +80,18 @@ class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionC
 
   def tryAcquireReturningOwner(annotationId: ObjectId, userId: ObjectId, expiry: Instant): Fox[ObjectId] =
     for {
-      rows <- run(q"""INSERT INTO webknossos.annotation_mutexes(_annotation, _user, expiry)
-                      VALUES($annotationId, $userId, $expiry)
-                      ON CONFLICT (_annotation)
-                        DO UPDATE SET
-                          _user = EXCLUDED._user,
-                          expiry = EXCLUDED.expiry
-                        WHERE webknossos.annotation_mutexes._user = EXCLUDED._user
-                           OR webknossos.annotation_mutexes.expiry < NOW()
-                      RETURNING _annotation, _user, expiry
+      rows <- run(q"""WITH attempt AS (
+                        INSERT INTO webknossos.annotation_mutexes(_annotation, _user, expiry)
+                        VALUES($annotationId, $userId, $expiry)
+                        ON CONFLICT (_annotation)
+                          DO UPDATE SET
+                            _user = EXCLUDED._user,
+                            expiry = EXCLUDED.expiry
+                          WHERE webknossos.annotation_mutexes._user = EXCLUDED._user
+                             OR webknossos.annotation_mutexes.expiry < NOW()
+                        RETURNING _annotation, _user, expiry
+                      )
+                      SELECT _annotation, _user, expiry FROM attempt
 
                       UNION ALL
 

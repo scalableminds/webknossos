@@ -5,6 +5,15 @@ import com.scalableminds.util.objectid.ObjectId
 import scala.concurrent.duration.FiniteDuration
 
 object Msg {
+  val initialDataNotEnabled: String =
+    "Initial data (sample organization) is not enabled in for this WEBKNOSSOS instance."
+  val maintenanceNotFound: String = "Maintenance entry could not be found."
+  val publicationNotFound: String = "Publication could not be found."
+  val shortLinkNotFound: String = "No shortlink with this key could be found."
+  val zipFileNotFound: String = "No or invalid zip file specified."
+  val notAllowed: String = "You are not authorized to view or edit this resource."
+  val notFound: String = "Could not find or access the requested resource."
+  val invalidJson: String = "Invalid json format."
   object AgglomerateGraph {
     val failed: String = "Could not look up an agglomerate graph for requested agglomerate."
   }
@@ -15,6 +24,13 @@ object Msg {
     val notFound: String = "Could not find requested AI inference."
   }
   object AiModel {
+    val dataStoreMismatch: String = "Cannot use AI model on a dataset on a different data store."
+    def nameTaken(name: String): String =
+      s"An AI model with the name “$name” already exists. Please choose a different name."
+    val notFound: String = "Could not find requested AI model."
+    val updatingFailed: String = "Could not update AI model’s name and comment."
+    val updatingSharedFailed: String = "Could not update the organizations that may access the AI model."
+    val notOwned: String = "Only the owner of the AI model can perform this change."
     object FinishUpload {
       val notPending: String = "Cannot finish upload to path for AI model that is not currently marked as pending."
       val wrongOrga: String = "Cannot finish upload to path for AI models of other organizations."
@@ -29,15 +45,57 @@ object Msg {
     object Training {
       val zeroAnnotations: String = "Need at least one training annotation for model training."
     }
-    val dataStoreMismatch: String = "Cannot use AI model on a dataset on a different data store."
-    def nameInUse(name: String): String =
-      s"An AI model with the name “$name” already exists in this organization. Please chose a different name"
-    val notFound: String = "Could not find requested AI model."
-    val updatingFailed: String = "Could not update AI model’s name and comment."
-    val updatingSharedFailed: String = "Could not update the organizations that may access the AI model."
-    val notOwned: String = "Only the owner of the AI model can perform this change."
   }
   object Annotation {
+    val fetchOldPrecedenceLayerNeedsAnnotationId: String =
+      "Annotation id is required to fetch old precedence layer."
+    val notFound: String = "Annotation could not be found or accessed."
+    val notFoundConsiderLogin: String =
+      "Annotation could not be found or accessed. You may need to log in to see it."
+    val cancelled: String = "This annotation is marked as cancelled and cannot be viewed."
+    def invalidType(typ: String): String = s"The supplied annotation type “$typ” is not a valid annotation type."
+    val publicWritesFailed: String = "Could not convert annotation to json."
+    val sandboxSkeletonOnly: String = "Sandbox annotations are currently available as skeleton only."
+    val createFailed: String = "Could not create annotation."
+    val createForbidden: String = "You do not have permission to create annotations for this dataset."
+    val createTracingsFailed: String = "Could not set up annotation layers."
+    val finishFailed: String = "Could not finish/archive the annotation."
+    val finished: String = "Annotation is archived."
+    val allFinished: String = "All selected annotations were finished/archived."
+    def reserveTooManyIds(limit: Int): String = s"Cannot reserve more than $limit ids in one request."
+    val countListableFailed: String = "Could not count listable annotations."
+    val duplicateFailed: String = "Could not duplicate annotation."
+    val nameNotAvailable: String = "Could not determine name for annotation."
+    def idForTracingFailed(tracingId: String): String = s"Could not determine annotation id for tracing id $tracingId."
+    val mismatchingSkeletonIdsAndTracings: String = "Annotation has mismatching skeleton ids and tracings."
+    val mismatchingVolumeIdsAndTracings: String = "Annotation has mismatching volume ids and tracings."
+    val multiLayersSkeletonNotImplemented: String =
+      "This feature is not implemented for annotations with more than one skeleton layer."
+    val multiLayersVolumeNotImplemented: String =
+      "This feature is not implemented for annotations with more than one volume layer."
+    val needsEitherSkeletonOrVolume: String = "Annotation needs at least one skeleton or volume layer."
+    val transfereeNoDatasetAccess: String =
+      "Cannot transfer annotation to a user who has no access to the dataset."
+    val typesEmpty: String = "No annotation types specified."
+    val volumeBucketsNotEmpty: String =
+      "Cannot make mapping editable in an annotation with mutated volume data."
+    val determineTargetVersionFailed: String = "Could not determine target version for annotation."
+    val findEditableMappingsFailed: String = "Could not find editable mappings for annotation."
+    val findPendingUpdatesFailed: String = "Could not find pending updates for annotation."
+    val findSkeletonRawFailed: String = "Could not find raw skeleton tracing."
+    val findTracingsFailed: String = "Could not find tracings for annotation."
+    val findVolumeRawFailed: String = "Could not find raw volume tracing."
+    val flushAnnotationInfoFailed: String = "Could not flush annotation info."
+    val flushEditableMappingUpdaterBuffersFailed: String =
+      "Could not flush editable mapping updater buffers."
+    val flushUpdatedTracingsFailed: String = "Could not flush updated tracings."
+    val getAnnotationFailed: String = "Could not retrieve annotation from tracingstore."
+    val getEditableMappingFailed: String = "Could not retrieve editable mapping."
+    val getEditableMappingInfoRawFailed: String = "Could not retrieve raw editable mapping info."
+    val getNewestMaterializedFailed: String = "Could not find newest materialized annotation."
+    val getWithTracingsFailed: String = "Could not retrieve annotation with tracings."
+    val makeEditableNoBaseMapping: String = "Cannot make editable: no base mapping is set."
+    val updateRemoteFailed: String = "Could not update remote annotation info."
     object Restrictions {
       val notFound: String = "Could not determine annotation access restrictions."
       val failedToCheck: String = "Could not check annotation access."
@@ -91,32 +149,30 @@ object Msg {
       val accessingTeamFailed: String = "Could not access a team during annotation shared team update."
       val notAllowed: String = "You do not have permission to edit this annotation."
     }
-    object Update {
-      object Apply {
-        val updateGroupVersionsNotSortedDesc: String =
-          "Annotation update group versions are not sorted in descending order."
-        val prefillBucketBufferFailed: String = "Could not prefill bucket buffer for annotation update."
-        val failed: String = "Could not apply annotation updates."
-        val innerFailed: String = "Could not apply inner annotation updates."
-        val addEditableMappingFailed: String = "Could not add editable mapping during annotation update."
-        val addLayerFailed: String = "Could not add layer during annotation update."
-        val editableMappingActionFailed: String =
-          "Could not apply editable mapping action during annotation update."
-        val resetToBaseFailed: String = "Could not reset to base during annotation update."
-        val revertToVersionFailed: String = "Could not revert to version during annotation update."
-        val skeletonActionFailed: String = "Could not apply skeleton action during annotation update."
-        val volumeActionFailed: String = "Could not apply volume action during annotation update."
-        val layerNameInUse: String =
-          "An annotation layer with this name already exists in this annotation. Please change it to prevent duplicates."
-        val onlyOneSkeletonAllowed: String = "Only one skeleton layer is allowed per annotation."
-        val mappingIsLocked: String = "Cannot modify mapping in a locked annotation."
-      }
+    object ApplyUpdate {
+      val updateGroupVersionsNotSortedDesc: String =
+        "Annotation update group versions are not sorted in descending order."
+      val prefillBucketBufferFailed: String = "Could not prefill bucket buffer for annotation update."
+      val failed: String = "Could not apply annotation updates."
+      val innerFailed: String = "Could not apply inner annotation updates."
+      val addEditableMappingFailed: String = "Could not add editable mapping during annotation update."
+      val addLayerFailed: String = "Could not add layer during annotation update."
+      val editableMappingActionFailed: String =
+        "Could not apply editable mapping action during annotation update."
+      val resetToBaseFailed: String = "Could not reset to base during annotation update."
+      val revertToVersionFailed: String = "Could not revert to version during annotation update."
+      val skeletonActionFailed: String = "Could not apply skeleton action during annotation update."
+      val volumeActionFailed: String = "Could not apply volume action during annotation update."
+      val layerNameTaken: String =
+        "An annotation layer with this name already exists in this annotation. Please change it to prevent duplicates."
+      val onlyOneSkeletonAllowed: String = "Only one skeleton layer is allowed per annotation."
+      val mappingIsLocked: String = "Cannot modify mapping in a locked annotation."
     }
     object Download {
       val failed: String = "Could not download annotation."
       val fetchVolumeLayerFailed: String = "Could not fetch volume annotation layer."
       val fetchSkeletonLayerFailed: String = "Could not fetch skeleton annotation layer."
-      val fetchNotSkeleton: String = "Cannot fetch skeleton annotation: not a skeleton layer"
+      val fetchNotSkeleton: String = "Cannot fetch skeleton annotation: not a skeleton layer."
       val fetchTypeMismatch: String = "Type mismatch when fetching annotation layer for download."
       val multipleSkeletons: String = "Cannot download annotation with multiple skeleton layers."
       val volumeNameForMultiple: String = "Cannot download multiple volume layers if volume name is passed."
@@ -129,7 +185,7 @@ object Msg {
     }
     object Volume {
       def largestSegmentIdExceedsRange(id: Long, ec: String): String =
-        s"The largest segment id $id specified for the annotation layer exceeds the range of its data type “$ec”"
+        s"The largest segment id $id specified for the annotation layer exceeds the range of its data type “$ec”."
       def wrongMag(tracingId: String, mag: String): String =
         s"Annotation layer “$tracingId” does not have mag “$mag”."
       val fallbackDataSplitFailed: String =
@@ -174,56 +230,6 @@ object Msg {
       val deleteSuccess: String = "Annotation private link was successfully deleted."
       val publicWritesFailed = "Could not convert annotation private link to json."
     }
-    val fetchOldPrecedenceLayerNeedsAnnotationId: String =
-      "Annotation id is required to fetch old precedence layer."
-    val notFound: String = "Annotation could not be found or accessed."
-    val notFoundConsiderLogin: String =
-      "Annotation could not be found or accessed. You may need to log in to see it."
-    val cancelled: String = "This annotation is marked as cancelled and cannot be viewed."
-    def invalidType(typ: String): String = s"The supplied annotation type “$typ” is not a valid annotation type."
-    val publicWritesFailed: String = "Could not convert annotation to json."
-    val sandboxSkeletonOnly: String = "Sandbox annotations are currently available as skeleton only."
-    val createFailed: String = "Could not create annotation."
-    val createForbidden: String = "You do not have permission to create annotations for this dataset."
-    val createTracingsFailed: String = "Could not set up annotation layers"
-    val finishFailed: String = "Could not finish/archive the annotation."
-    val finished: String = "Annotation is archived."
-    val allFinished: String = "All selected annotations were finished/archived."
-    def reserveTooManyIds(limit: Int): String = s"Cannot reserve more than $limit ids in one request."
-    val countListableFailed: String = "Could not count listable annotations."
-    val duplicateFailed: String = "Could not duplicate annotation."
-    val nameNotAvailable: String = "Could not determine name for annotation."
-    def idForTracingFailed(tracingId: String): String =
-      s"Could not determine annotation id for tracing id $tracingId."
-    val mismatchingSkeletonIdsAndTracings: String = "Annotation has mismatching skeleton ids and tracings."
-    val mismatchingVolumeIdsAndTracings: String = "Annotation has mismatching volume ids and tracings."
-    val multiLayersSkeletonNotImplemented: String =
-      "This feature is not implemented for annotations with more than one skeleton layer."
-    val multiLayersVolumeNotImplemented: String =
-      "This feature is not implemented for annotations with more than one volume layer."
-    val needsEitherSkeletonOrVolume: String = "Annotation needs at least one skeleton or volume layer."
-    val transfereeNoDatasetAccess: String =
-      "Cannot transfer annotation to a user who has no access to the dataset."
-    val typesEmpty: String = "No annotation types specified."
-    val volumeBucketsNotEmpty: String =
-      "Cannot make mapping editable in an annotation with mutated volume data."
-    val determineTargetVersionFailed: String = "Could not determine target version for annotation."
-    val findEditableMappingsFailed: String = "Could not find editable mappings for annotation."
-    val findPendingUpdatesFailed: String = "Could not find pending updates for annotation."
-    val findSkeletonRawFailed: String = "Could not find raw skeleton tracing."
-    val findTracingsFailed: String = "Could not find tracings for annotation."
-    val findVolumeRawFailed: String = "Could not find raw volume tracing."
-    val flushAnnotationInfoFailed: String = "Could not flush annotation info."
-    val flushEditableMappingUpdaterBuffersFailed: String =
-      "Could not flush editable mapping updater buffers."
-    val flushUpdatedTracingsFailed: String = "Could not flush updated tracings."
-    val getAnnotationFailed: String = "Could not retrieve annotation from tracingstore."
-    val getEditableMappingFailed: String = "Could not retrieve editable mapping."
-    val getEditableMappingInfoRawFailed: String = "Could not retrieve raw editable mapping info."
-    val getNewestMaterializedFailed: String = "Could not find newest materialized annotation."
-    val getWithTracingsFailed: String = "Could not retrieve annotation with tracings."
-    val makeEditableNoBaseMapping: String = "Cannot make editable: no base mapping is set."
-    val updateRemoteFailed: String = "Could not update remote annotation info."
   }
   object Passkeys {
     val notEnabled: String = "Passkeys are not enabled for this WEBKNOSSOS instance."
@@ -231,57 +237,47 @@ object Msg {
     val unauthorized: String = "Passkey authentication failed."
   }
   object Organization {
-    object TermsOfService {
-      def versionMismatch(requiredVersion: Int, version: Int): String =
-        s"Terms of service version mismatch. Current version is $requiredVersion, received acceptance for $version."
-      val notEnabled: String =
-        "Cannot accept terms of service, as it is not configured for this WEBKNOSSOS instance."
-      val onlyOrganizationOwner: String =
-        "Only the organization owner can accept terms of service."
-    }
-    object Create {
-      val forbidden: String = "You do not have permission to create a new organization."
-      val directoryCreateFailed: String = "Could not create organization directory on disk."
-      val failed: String = "Could not create a new organization."
-    }
     def notFound(id: String): String = s"Organization “$id” could not be found or accessed."
     def notFoundWrongHost(orgaId: String, gotHost: String, thisHost: String): String =
       s"Organization “$orgaId” could not be found or accessed. Please check whether you are on the correct WEBKNOSSOS instance. The uploaded file indicates “$gotHost” while this instance is “$thisHost”."
     val pricingUpdatesOnlyAdmin: String =
       "You do not have permission to request any changes to your organization WEBKNOSSOS plan. Please contact an organization admin."
-    val listCreditTransactionsOnlyAdmin: String =
-      "Only organization admins can list credit transactions."
+    val listCreditTransactionsOnlyAdmin: String = "Only organization admins can list credit transactions."
     val listPlanUpdatesOnlyAdmin: String = "Only organization admins can list plan updates."
     val creditOrdersOnlyOwner: String =
       "You do not have permission to order WEBKNOSSOS credits for your organization. Please contact the organization owner."
-    val creditOrdersNotPositive: String =
-      "Cannot order a negative number of WEBKNOSSOS credits."
-    val alreadyJoined: String =
-      "Your account is already associated with the selected organization."
-    val ambiguous: String =
-      "Registration without invite is now allowed for instances with multiple organizations."
-    val organizationCreationNotEnabled: String =
-      "Organization creation is not enabled for this WEBKNOSSOS instance."
+    val creditOrdersNotPositive: String = "Cannot order a negative number of WEBKNOSSOS credits."
+    val alreadyJoined: String = "Your account is already associated with the selected organization."
+    val ambiguous: String = "Registration without invite is now allowed for instances with multiple organizations."
+    val organizationCreationNotEnabled: String = "Organization creation is not enabled for this WEBKNOSSOS instance."
     val folderCreateFailed: String = "Could not create organization root folder."
-    val idAlreadyInUse: String =
-      "This id is already claimed by a different organization and not available anymore. Please choose a different id."
-    val idInvalid: String =
-      "This organization id contains illegal characters. Please only use letters and numbers."
+    val idTaken: String =
+      "This id is already in use by a different organization and not available anymore. Please choose a different id."
+    val idInvalid: String = "This organization id contains illegal characters. Please only use letters and numbers."
     val listFailed: String = "Could not retrieve list of organizations."
     val notFoundByInvite: String = "Organization specified in the invite could not be found."
     val storageExceeded: String = "The storage quota of the organization is exceeded."
     val usersUserLimitReached: String =
       "Cannot add new user to this organization because it would exceed the organization’s user limit. Please ask the organization owner to upgrade."
     val notEmpty: String =
-      "There are already organizations present in the database. Please refresh the db schema and try again"
+      "There are already organizations present in the database. Please refresh the db schema and try again."
+    object TermsOfService {
+      def versionMismatch(requiredVersion: Int, version: Int): String =
+        s"Terms of service version mismatch. Current version is $requiredVersion, received acceptance for $version."
+      val notEnabled: String = "Cannot accept terms of service, as it is not configured for this WEBKNOSSOS instance."
+      val onlyOrganizationOwner: String = "Only the organization owner can accept terms of service."
+    }
+    object Create {
+      val forbidden: String = "You do not have permission to create a new organization."
+      val directoryCreateFailed: String = "Could not create organization directory on disk."
+      val failed: String = "Could not create a new organization."
+    }
   }
   object DataStore {
-    val notFound: String = "DataStore could not be found or accessed."
-    val notFoundForDataset: String = "DataStore for dataset could not be found or accessed."
-    def nameTaken(name: String): String =
-      s"A dataStore named “$name” already exists. The name needs to be unique."
-    val ambiguous: String =
-      "Can only link layers of datasets from the same dataStore."
+    val notFound: String = "Data store could not be found or accessed."
+    val notFoundForDataset: String = "Data store for dataset could not be found or accessed."
+    def nameTaken(name: String): String = s"A dataStore named “$name” already exists. Please choose a different name."
+    val ambiguous: String = "Can only link layers of datasets from the same dataStore."
     val createFailed: String = "Could not create dataStore."
     val listFailed: String = "Could not retrieve list of data stores."
     val deleteFailed: String = "Could not delete dataStore."
@@ -294,15 +290,13 @@ object Msg {
     val listFailed: String = "Could not retrieve list of tracingStores."
   }
   object ObjectId {
-    def invalid(literal: String): String =
-      s"The supplied resource id “$literal” is not a valid ObjectId."
+    def invalid(literal: String): String = s"The supplied resource id “$literal” is not a valid ObjectId."
   }
   object Oidc {
-    val authenticationFailed: String =
-      "Could not register / log in via Single-Sign-On (SSO with OIDC)"
-    val configurationInvalid: String = "OIDC configuration is invalid"
-    val notEnabled: String = "OIDC is not enabled for this WEBKNOSSOS instance."
-    val getTokenFailed: String = "Could not get token from OIDC provider."
+    val authenticationFailed: String = "Could not register or log in via single sign on (SSO/OIDC)."
+    val configurationInvalid: String = "SSO/OIDC configuration is invalid."
+    val notEnabled: String = "SSO/OIDC is not enabled for this WEBKNOSSOS instance."
+    val getTokenFailed: String = "Could not get token from SSO/OIDC provider."
   }
   object Folder {
     val notFound: String = "Could not find the requested folder."
@@ -322,6 +316,22 @@ object Msg {
     val updateTeamsFailed: String = "Could not update the folder’s allowed teams."
   }
   object Job {
+    val cleanupFailed: String = "Could not clean up failed job."
+    val notEnabled: String = "Long-running jobs are not enabled for this WEBKNOSSOS instance."
+    val edgeLengthExceeded: String = "An edge length of the selected bounding box is too large."
+    val volumeExceeded: String = "The volume of the selected bounding box is too large."
+    val invalidBoundingBoxOrMag: String =
+      "Either the selected bounding box could not be parsed (must be x,y,z,width,height,depth) or the mag is wrong or does not exist."
+    val exportFileNotFound: String = "Exported file not found. The link may be expired."
+    val noExportFileName: String = "Job does not have an export file name."
+    val notFound: String = "Job could not be found or accessed."
+    val notRun: String = "Job has not run yet."
+    val noWorkerForDatastoreAndJob: String =
+      "No worker supporting the requested job is available for the selected datastore."
+    val paidNoAdminOrManager: String =
+      "Starting paid jobs is only allowed for Administrators, Dataset Managers or Team Managers."
+    val updateStatusFailed: String = "Could not update job status."
+    val workerNotFound: String = "Could not find this worker in the database."
     object TrainModel {
       val wrongOrga: String = "Training AI models is only allowed for datasets of your own organization."
       val submitFailed: String = "Could not start the AI model training job."
@@ -368,22 +378,6 @@ object Msg {
       val refundFailed: String = "Could not perform credit transaction refund."
       val notEnoughCredits: String = "Your organization does not have enough WEBKNOSSOS credits to run this job."
     }
-    val cleanupFailed: String = "Could not clean up failed job."
-    val notEnabled: String = "Long-running jobs are not enabled for this WEBKNOSSOS instance."
-    val edgeLengthExceeded: String = "An edge length of the selected bounding box is too large."
-    val volumeExceeded: String = "The volume of the selected bounding box is too large."
-    val invalidBoundingBoxOrMag: String =
-      "Either the selected bounding box could not be parsed (must be x,y,z,width,height,depth) or the mag is wrong or does not exist."
-    val exportFileNotFound: String = "Exported file not found. The link may be expired."
-    val noExportFileName: String = "Job does not have an export file name."
-    val notFound: String = "Job could not be found or accessed."
-    val notRun: String = "Job has not run yet."
-    val noWorkerForDatastoreAndJob: String =
-      "No worker supporting the requested job is available for the selected datastore."
-    val paidNoAdminOrManager: String =
-      "Starting paid jobs is only allowed for Administrators, Dataset Managers or Team Managers."
-    val updateStatusFailed: String = "Could not update job status."
-    val workerNotFound: String = "Could not find this worker in the database."
   }
   object Dataset {
     def notFound(name: String): String =
@@ -399,7 +393,7 @@ object Msg {
       s"Dataset “$datasetId” could not be found or accessed. Please check whether you are on the correct WEBKNOSSOS instance. The uploaded file indicates “$gotHost” while this instance is “$thisHost”."
     def notUsable(id: ObjectId): String = s"Dataset “$id” is not imported or incomplete."
     def publicWritesFailed(id: ObjectId): String = s"Could not write json for dataset “$id”."
-    def bucketCountMismatch: String =
+    val bucketCountMismatch: String =
       "Bucket count mismatch while loading multiple data buckets for dataset."
     val loadingDataFailed: String = "Could not load data for the requested dataset."
     val noLayers: String = "Dataset has no data layers."
@@ -443,7 +437,7 @@ object Msg {
     }
     object InitialTeams {
       val invalidTeams: String = "Can only assign teams the requesting user is in."
-      val teamsNotEmpty: String = "Dataset already has allowed teams"
+      val teamsNotEmpty: String = "Dataset already has allowed teams."
       val forbidden: String = "No access to update dataset teams."
     }
     object Layer {
@@ -507,9 +501,9 @@ object Msg {
       val disallowedPaths: String =
         "Cannot upload a datasource with local paths that leave the dataset, or with paths that match the WEBKNOSSOS reserved paths."
       val fileSizeCheckFailed: String = "File size check failed during dataset upload."
-      val invalidLinkedLayers: String = "Could not link all requested layers"
+      val invalidLinkedLayers: String = "Could not link all requested layers."
       val linkRestricted: String =
-        "Can only link layers of datasets that are either public or allowed to be administrated by your account"
+        "Can only link layers of datasets that are either public or allowed to be administrated by your account."
       val measureTotalSizeFailed: String = "Could not measure total size of uploaded dataset."
       val moveToTargetFailed: String = "Could not move uploaded dataset to target directory."
       val moveUnpackedToTargetFailed: String = "Could not move unpacked dataset to target directory."
@@ -519,7 +513,7 @@ object Msg {
       val noLayers: String = "Cannot reserve upload for dataset with no layers."
       val reportUploadFailed: String = "Could not report upload completion from the data store to WEBKNOSSOS."
       val storageExceeded: String = "Cannot upload dataset because the storage quota of the organization is exceeded."
-      val uploaderNotEmpty: String = "Dataset already has non-empty uploader"
+      val uploaderNotEmpty: String = "Dataset already has non-empty uploader."
       val setUploaderForbidden: String = "No permission to set uploader for this dataset."
       val validationFailed: String = "Could not validate dataset information for upload."
       val magUploadOnlyVirtual: String = "Adding mags to existing datasets is only allowed for virtual datasets."
@@ -536,7 +530,7 @@ object Msg {
     }
   }
   object Task {
-    def notFound: String = s"Task could not be found or accessed."
+    val notFound: String = s"Task could not be found or accessed."
     def notFound(id: ObjectId): String = s"Task “$id” could not be found or accessed."
     val findAnnotationsFailed: String = "Could not retrieve annotations for this task."
     val unavailable: String = "There is currently no task available."
@@ -546,7 +540,7 @@ object Msg {
     val deleteFailed: String = "Could not delete task."
     val editSuccess: String = "Task was successfully updated."
     val noAnnotations: String = "Could not find finished annotations for this task."
-    def assigned: String = "You got a new task."
+    val assigned: String = "You got a new task."
     object Create {
       val multipartPayloadInvalid: String = "Could not parse task creation multipart request."
       val formJsonMissing: String = "Could not parse task creation multipart request: no form data."
@@ -566,7 +560,8 @@ object Msg {
     def notFound(id: ObjectId): String = s"Project “$id” could not be found or accessed."
     def notFound(name: String): String = s"Project with name “$name” could not be found or accessed."
     def deleteSuccess(id: ObjectId): String = s"Project “$id” was successfully deleted."
-    def nameTaken(name: String): String = s"A project named “$name” already exists. The name needs to be unique."
+    def nameTaken(name: String): String =
+      s"A project named “$name” already exists. Please choose a different name."
     val createFailed: String = "Could not create project."
     val increaseTaskInstancesNegative: String = "Cannot increment task counts by negative number."
     val listFailed: String = "Could not retrieve list of projects."
@@ -592,17 +587,16 @@ object Msg {
     val fileNotFound: String = "Could not extract NML file."
     def parseFailed(fileName: String, error: String): String =
       s"Could not parse file “$fileName”: $error"
-    def parametersNotFound: String = "No parameters section found."
-    def duplicateVolumeLayerNames: String =
+    val parametersNotFound: String = "No parameters section found."
+    val duplicateVolumeLayerNames: String =
       "Annotations with multiple volume layers must have a unique name for each layer."
     def invalidElements(name: String): String = s"Invalid $name elements."
-    def invalidTreeElements(name: String, treeId: Int): String =
-      s"Invalid $name in tree $treeId."
+    def invalidTreeElements(name: String, treeId: Int): String = s"Invalid $name in tree $treeId."
     def invalidTreeGroupId(id: String): String = s"Invalid tree group id “$id”."
     def invalidSegmentGroupId(id: String): String = s"Invalid segment group id “$id”."
     def invalidUserBboxId(id: String): String = s"Invalid user bounding box id “$id”."
     def invalidTreeId(id: String): String = s"Invalid tree id “$id”."
-    def additionalCoordinatesNotUnique: String =
+    val additionalCoordinatesNotUnique: String =
       "Additional coordinates do not have unique names."
     def invalidNodeId(label: String, id: String): String = s"Invalid$label node id “$id”."
     def invalidNodeIdInComment(nodeId: String): String =
@@ -614,8 +608,8 @@ object Msg {
   object TaskType {
     def notFound(id: ObjectId): String = s"Task type “$id” could not be found or accessed."
     def summaryTaken(summary: String): String =
-      s"A task type with summary “$summary” already exists. The summary needs to be unique."
-    def editSuccess: String = "Task type was successfully updated."
+      s"A task type with summary “$summary” already exists. Please choose a different name."
+    val editSuccess: String = "Task type was successfully updated."
     def deleteSuccess(summary: String): String = s"Task type “$summary” was successfully deleted."
     def deleteFailed(summary: String): String = s"Could not delete task type “$summary”."
     val magRestrictionsImmutable: String =
@@ -649,16 +643,17 @@ object Msg {
     val invalidInviteToken: String = "This invite token is invalid."
     object Token {
       val deleted: String = "Token was deleted."
-      def invalid: String = "The supplied token is invalid."
+      val invalid: String = "The supplied token is invalid."
     }
     object Configuration {
       val updateSuccess: String = "Your configuration was successfully updated."
       val updateSuccessForDataset: String = "Dataset configuration was successfully updated."
-      def invalid: String = "Could not parse configuration."
-      def invalidForDataset: String = "Could not parse dataset configuration."
+      val invalid: String = "Could not parse configuration."
+      val invalidForDataset: String = "Could not parse dataset configuration."
     }
     object Email {
-      val taken: String = "This email address is already in use."
+      val taken: String =
+        "An account with this email address already exists. Please log in instead or use a different email."
       object Verification {
         val notVerified: String = "Your email address is not verified yet. A new verification email has been sent."
         val emailDoesNotMatch: String = "This verification key is associated with a different email address."
@@ -676,18 +671,23 @@ object Msg {
     def adminNotPossibleBy(teamName: String, userName: String): String =
       s"User “$userName” cannot be assigned administrative rights in team “$teamName” because they are not in the same organization."
     val deleteSuccess: String = "Team was successfully deleted."
-    def createSuccess: String = "Team was successfully created."
+    val createSuccess: String = "Team was successfully created."
     val adminNotAllowed: String = "You do not have permission to administrate this team."
     val createOnlyAdmin: String = "You do not have permission to create teams. Please ask an organization admin."
     val deleteOnlyAdmin: String = "You do not have permission to delete teams. Please ask an organization admin."
     val deleteInUse: String =
-      "Team cannot be deleted as it is referenced in an at least one annotation, project or task type"
+      "Team cannot be deleted as it is referenced in an at least one annotation, project or task type."
     val deleteOrganizationTeam: String =
       "This team cannot be deleted. Each organization requires at least one base team."
-    val nameTaken: String = "This name is already assigned to a different team. Please choose a different name."
+    def nameTaken(name: String): String =
+      s"A team named “$name” already exists. Please choose a different name."
   }
   object Mesh {
+    val loadFullFailed: String = "Could not load full segment mesh."
+    val magNeededForAdHoc: String = "A mag needs to be provided for ad-hoc mesh computation."
     object File {
+      val meshFileNameRequired: String =
+        "Trying to load mesh from mesh file, but no mesh file name was supplied."
       def lookUpFailed(name: String): String = s"Could not look up mesh file “$name”."
       def readVersionFailed(name: String): String =
         s"Could not read format version from mesh file “$name”."
@@ -699,18 +699,14 @@ object Msg {
         s"Zero mesh chunks for segment $segmentIds in mesh file “$name”."
       def loadChunkFailed: String = "Could not load mesh chunk for segment."
     }
-    val loadFullFailed: String = "Could not load full segment mesh."
-    val meshFileNameRequired: String =
-      "Trying to load mesh from mesh file, but no mesh file name was supplied."
-    val magNeededForAdHoc: String = "A mag needs to be provided for ad-hoc mesh computation."
   }
   object ConnectomeFile {
     def lookUpFailed(name: String): String = s"Could not look up connectome file “$name”."
     def readMappingNameFailed(name: String): String =
       s"Could not read mapping name from connectome file “$name”."
-    def openFailed: String = "Could not open connectome file for reading."
     def readEncodingFailed(name: String): String =
       s"Could not read encoding from connectome file “$name”."
+    val openFailed: String = "Could not open connectome file for reading."
   }
   object AgglomerateFile {
     def getSegmentPositionFailed(fileName: String): String =
@@ -718,7 +714,7 @@ object Msg {
   }
   object Zarr {
     def invalidChunkCoordinates(coordinates: String): String =
-      s"Invalid chunk coordinates $coordinates. Expected dot separated coordinates like c.<additional_axes.>x.y.z"
+      s"Invalid chunk coordinates $coordinates. Expected dot-separated coordinates like “c.<additional_axes.>x.y.z”."
     val invalidAdditionalCoordinates: String =
       "Invalid additional coordinates for this data layer."
     val invalidFirstChunkCoord: String = "First Channel must be 0."
@@ -754,20 +750,6 @@ object Msg {
     val invalidTeamIds = "Invalid team ids."
     val invalidAnnotationState: String = "Invalid annotation state."
     val invalidAnnotationType: String = "Invalid annotation type."
-    def unsupportedAnnotationType: String = "One of the selected annotation types is not supported for time tracking."
+    val unsupportedAnnotationType: String = "One of the selected annotation types is not supported for time tracking."
   }
-  val initialDataNotEnabled: String =
-    "Initial data (sample organization) is not enabled in for this WEBKNOSSOS instance."
-  val maintenanceNotFound: String = "Maintenance entry could not be found."
-  val publicationNotFound: String = "Publication could not be found."
-  val shortLinkNotFound: String = "No shortlink with this key could be found"
-  val zipFileNotFound: String = "No or invalid zip file specified"
-  val notAllowed: String = "You are not authorized to view or edit this resource."
-  val notFound: String = "Could not find or access the requested resource."
-  val invalidJson: String = "Invalid json format."
 }
-
-// TODO no more without dot? no more not sentences? format in one line where possible. static should be val.
-// TODO detect unused?
-// TODO codespell? typos and grammar issues?
-// TODO unify nameTaken

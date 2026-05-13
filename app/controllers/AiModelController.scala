@@ -179,7 +179,7 @@ class AiModelController @Inject()(
         organization <- organizationDAO.findOne(request.identity._organization)
         existingAiModelsCount <- aiModelDAO.countByNameAndOrganization(request.body.name,
                                                                        request.identity._organization)
-        _ <- Fox.fromBool(existingAiModelsCount == 0) ?~> Msg.AiModel.nameInUse(request.body.name)
+        _ <- Fox.fromBool(existingAiModelsCount == 0) ?~> Msg.AiModel.nameTaken(request.body.name)
         jobCommand = JobCommand.train_neuron_model
         commandArgs = Json.obj(
           "training_annotations" -> Json.toJson(trainingAnnotations),
@@ -235,7 +235,7 @@ class AiModelController @Inject()(
         organization <- organizationDAO.findOne(request.identity._organization)
         existingAiModelsCount <- aiModelDAO.countByNameAndOrganization(request.body.name,
                                                                        request.identity._organization)
-        _ <- Fox.fromBool(existingAiModelsCount == 0) ?~> Msg.AiModel.nameInUse(request.body.name)
+        _ <- Fox.fromBool(existingAiModelsCount == 0) ?~> Msg.AiModel.nameTaken(request.body.name)
         jobCommand = JobCommand.train_instance_model
         commandArgs = Json.obj(
           "training_annotations" -> Json.toJson(trainingAnnotations),
@@ -461,7 +461,7 @@ class AiModelController @Inject()(
       implicit ctx: DBAccessContext): Fox[ObjectId] = {
     val newId = ObjectId.generate
     for {
-      _ <- aiModelDAO.findOneByName(params.name).reverse ?~> Msg.AiModel.nameInUse(params.name)
+      _ <- aiModelDAO.findOneByName(params.name).reverse ?~> Msg.AiModel.nameTaken(params.name)
       path <- uploadToPathsService.generateAiModelPath(newId, user._organization, params.pathPrefix)
       newAiModel = AiModel(
         _id = newId,

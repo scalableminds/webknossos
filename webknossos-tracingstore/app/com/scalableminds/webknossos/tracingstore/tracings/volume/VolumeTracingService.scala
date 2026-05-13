@@ -141,7 +141,7 @@ class VolumeTracingService @Inject()(
       _ <- Fox.runIf(volumeLayer.tracing.getHasSegmentIndex)(volumeBucketBuffer.prefill(updateActions.flatMap {
         case a: UpdateBucketVolumeAction => Some(a.bucketPosition)
         case _                           => None
-      }) ?~> Msg.Annotation.Update.Apply.prefillBucketBufferFailed)
+      }) ?~> Msg.Annotation.ApplyUpdate.prefillBucketBufferFailed)
       _ <- Fox.serialCombined(updateActions) {
         case a: UpdateBucketVolumeAction =>
           if (tracing.getHasEditableMapping) {

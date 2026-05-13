@@ -45,7 +45,7 @@ class TeamController @Inject()(teamDAO: TeamDAO, userDAO: UserDAO, teamService: 
       for {
         _ <- Fox.fromBool(request.identity.isAdmin) ?~> Msg.Team.createOnlyAdmin ~> FORBIDDEN
         existingTeamCount <- teamDAO.countByNameAndOrganization(teamName, request.identity._organization)
-        _ <- Fox.fromBool(existingTeamCount == 0) ?~> Msg.Team.nameTaken
+        _ <- Fox.fromBool(existingTeamCount == 0) ?~> Msg.Team.nameTaken(teamName)
         team = Team(ObjectId.generate, request.identity._organization, teamName)
         _ <- teamDAO.insertOne(team)
         js <- teamService.publicWrites(team)

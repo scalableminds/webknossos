@@ -260,7 +260,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       dataLayer: DataLayer,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Seq[Array[Byte]]] =
     for {
-      meshFileName <- fullMeshRequest.meshFileName.toFox ?~> Msg.Mesh.meshFileNameRequired
+      meshFileName <- fullMeshRequest.meshFileName.toFox ?~> Msg.Mesh.File.meshFileNameRequired
       meshFileKey <- meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, meshFileName)
       mappingNameForMeshFile <- meshFileService.mappingNameForMeshFile(meshFileKey)
       segmentIds <- segmentIdsForAgglomerateIdIfNeeded(

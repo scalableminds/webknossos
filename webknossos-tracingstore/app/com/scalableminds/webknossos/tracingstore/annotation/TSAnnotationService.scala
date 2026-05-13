@@ -110,7 +110,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         materializedAnnotation.version,
         targetVersion // Note: this targetVersion is used for the updater buffers, and is overwritten for each update group, see annotation.withNewUpdaters
       ) ?~> Msg.Annotation.findEditableMappingsFailed
-      updated <- applyPendingUpdates(annotationWithTracingsAndMappings, annotationId, targetVersion, reportChangesToWk) ?~> Msg.Annotation.Update.Apply.failed
+      updated <- applyPendingUpdates(annotationWithTracingsAndMappings, annotationId, targetVersion, reportChangesToWk) ?~> Msg.Annotation.ApplyUpdate.failed
     } yield updated
 
   def currentMaterializableVersion(annotationId: ObjectId): Fox[Long] =
@@ -150,7 +150,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
   )(implicit ec: ExecutionContext, tc: TokenContext): Fox[AnnotationWithTracings] =
     updateAction match {
       case a: AddLayerAnnotationAction =>
-        addLayer(annotationId, annotationWithTracings, a, targetVersion) ?~> Msg.Annotation.Update.Apply.addLayerFailed
+        addLayer(annotationId, annotationWithTracings, a, targetVersion) ?~> Msg.Annotation.ApplyUpdate.addLayerFailed
       case a: DeleteLayerAnnotationAction =>
         Fox.successful(annotationWithTracings.deleteLayer(a))
       case a: UpdateLayerMetadataAnnotationAction =>
@@ -160,20 +160,20 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       case a: UpdateCameraAnnotationAction =>
         Fox.successful(annotationWithTracings.updateCamera(a))
       case a: SkeletonUpdateAction =>
-        annotationWithTracings.applySkeletonAction(a).toFox ?~> Msg.Annotation.Update.Apply.skeletonActionFailed
+        annotationWithTracings.applySkeletonAction(a).toFox ?~> Msg.Annotation.ApplyUpdate.skeletonActionFailed
       case a: UpdateMappingNameVolumeAction if a.isEditable.contains(true) =>
         for {
-          withNewEditableMapping <- addEditableMapping(annotationId, annotationWithTracings, a, targetVersion) ?~> Msg.Annotation.Update.Apply.addEditableMappingFailed
+          withNewEditableMapping <- addEditableMapping(annotationId, annotationWithTracings, a, targetVersion) ?~> Msg.Annotation.ApplyUpdate.addEditableMappingFailed
           withApplyedVolumeAction <- withNewEditableMapping.applyVolumeAction(a).toFox
         } yield withApplyedVolumeAction
       case a: ApplyableVolumeUpdateAction =>
-        annotationWithTracings.applyVolumeAction(a).toFox ?~> Msg.Annotation.Update.Apply.volumeActionFailed
+        annotationWithTracings.applyVolumeAction(a).toFox ?~> Msg.Annotation.ApplyUpdate.volumeActionFailed
       case a: EditableMappingUpdateAction =>
-        annotationWithTracings.applyEditableMappingAction(a) ?~> Msg.Annotation.Update.Apply.editableMappingActionFailed
+        annotationWithTracings.applyEditableMappingAction(a) ?~> Msg.Annotation.ApplyUpdate.editableMappingActionFailed
       case a: RevertToVersionAnnotationAction =>
-        revertToVersion(annotationId, annotationWithTracings, a, targetVersion) ?~> Msg.Annotation.Update.Apply.revertToVersionFailed
+        revertToVersion(annotationId, annotationWithTracings, a, targetVersion) ?~> Msg.Annotation.ApplyUpdate.revertToVersionFailed
       case _: ResetToBaseAnnotationAction =>
-        resetToBase(annotationId, annotationWithTracings, targetVersion) ?~> Msg.Annotation.Update.Apply.resetToBaseFailed
+        resetToBase(annotationId, annotationWithTracings, targetVersion) ?~> Msg.Annotation.ApplyUpdate.resetToBaseFailed
       case _: CompactVolumeUpdateAction =>
         Fox.successful(annotationWithTracings) // No-op, as legacy compacted update actions cannot be applied
       case _: UpdateTdCameraAnnotationAction =>
@@ -189,9 +189,9 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       tracingId <- action.tracingId.toFox ?~> "add layer action has no tracingId"
       _ <- Fox.fromBool(
         !annotationWithTracings.annotation.annotationLayers
-          .exists(_.name == action.layerParameters.getNameWithDefault)) ?~> Msg.Annotation.Update.Apply.layerNameInUse
+          .exists(_.name == action.layerParameters.getNameWithDefault)) ?~> Msg.Annotation.ApplyUpdate.layerNameTaken
       _ <- Fox.fromBool(!annotationWithTracings.annotation.annotationLayers.exists(
-        _.typ == AnnotationLayerTypeProto.Skeleton && action.layerParameters.typ == AnnotationLayerType.Skeleton)) ?~> Msg.Annotation.Update.Apply.onlyOneSkeletonAllowed
+        _.typ == AnnotationLayerTypeProto.Skeleton && action.layerParameters.typ == AnnotationLayerType.Skeleton)) ?~> Msg.Annotation.ApplyUpdate.onlyOneSkeletonAllowed
       tracing <- remoteWebknossosClient.createTracingFor(annotationId,
                                                          action.layerParameters,
                                                          previousVersion = targetVersion - 1)
@@ -296,7 +296,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     } yield annotationWithTracings.addEditableMapping(action.actionTracingId, editableMappingInfo, updater)
 
   private def assertMappingIsNotLocked(volumeTracing: VolumeTracing)(implicit ec: ExecutionContext): Fox[Unit] =
-    Fox.fromBool(!volumeTracing.mappingIsLocked.getOrElse(false)) ?~> Msg.Annotation.Update.Apply.mappingIsLocked
+    Fox.fromBool(!volumeTracing.mappingIsLocked.getOrElse(false)) ?~> Msg.Annotation.ApplyUpdate.mappingIsLocked
 
   private def applyPendingUpdates(
       annotationWithTracingsAndMappings: AnnotationWithTracings,
@@ -309,7 +309,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       updated <- applyUpdatesGrouped(annotationWithTracingsAndMappings,
                                      annotationId,
                                      updatesGroupsRegrouped,
-                                     reportChangesToWk) ?~> Msg.Annotation.Update.Apply.innerFailed
+                                     reportChangesToWk) ?~> Msg.Annotation.ApplyUpdate.innerFailed
     } yield
       updated.withVersion(targetVersion) // set version again, because extraSkeleton update filtering may skip latest version
 

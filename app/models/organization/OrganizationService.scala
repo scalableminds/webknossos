@@ -122,7 +122,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         .getOrElse(normalizedName)
         .replaceAll(" ", "_")
       existingOrganization <- organizationDAO.findOne(organizationId)(GlobalAccessContext).shiftBox
-      _ <- Fox.fromBool(existingOrganization.isEmpty) ?~> Msg.Organization.idAlreadyInUse
+      _ <- Fox.fromBool(existingOrganization.isEmpty) ?~> Msg.Organization.idTaken
       initialPricingParameters = if (conf.Features.isWkorgInstance) (PricingPlan.Personal, Some(1), Some(50000000000L))
       else (PricingPlan.Custom, None, None)
       organizationRootFolder = Folder(ObjectId.generate, folderService.defaultRootName, JsArray.empty)

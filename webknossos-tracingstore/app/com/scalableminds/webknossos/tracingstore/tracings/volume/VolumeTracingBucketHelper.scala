@@ -357,7 +357,8 @@ trait VolumeTracingBucketHelper
     }
   }
 
-  def bucketStream(volumeLayer: VolumeTracingLayer, version: Option[Long]): AsyncIterator[(BucketPosition, Array[Byte])] = {
+  def bucketStream(volumeLayer: VolumeTracingLayer,
+                   version: Option[Long]): AsyncIterator[(BucketPosition, Array[Byte])] = {
     val keyPrefix = buildKeyPrefix(volumeLayer.name)
     val versionedIter =
       new VersionedBucketIterator(keyPrefix,
@@ -383,15 +384,17 @@ trait VolumeTracingBucketHelper
 
   def bucketStreamFromTemporaryStore(volumeLayer: VolumeTracingLayer): AsyncIterator[(BucketPosition, Array[Byte])] = {
     val keyPrefix = buildKeyPrefix(volumeLayer.name)
-    val items = temporaryTracingService.getAllVolumeBucketsWithPrefix(keyPrefix).flatMap {
-      case (bucketKey, data) =>
-        parseBucketKey(bucketKey, volumeLayer.additionalAxes).map(tuple => (tuple._2, data))
-    }.toList
+    val items = temporaryTracingService
+      .getAllVolumeBucketsWithPrefix(keyPrefix)
+      .flatMap {
+        case (bucketKey, data) =>
+          parseBucketKey(bucketKey, volumeLayer.additionalAxes).map(tuple => (tuple._2, data))
+      }
+      .toList
     new AsyncIterator[(BucketPosition, Array[Byte])] {
       private var emitted = false
       override def nextBatch(): Fox[List[(BucketPosition, Array[Byte])]] =
-        if (!emitted) { emitted = true; Fox.successful(items) }
-        else Fox.successful(Nil)
+        if (!emitted) { emitted = true; Fox.successful(items) } else Fox.successful(Nil)
     }
   }
 }
@@ -415,18 +418,15 @@ class VersionedBucketIterator(prefix: String,
         if (rawBatch.isEmpty) Fox.successful(Nil)
         else {
           currentStartAfterKey = rawBatch.lastOption.map(_.key)
-          val parsed = rawBatch
-            .filterNot(isRevertedElement)
-            .flatMap { bucket =>
-              parseBucketKey(bucket.key, additionalAxes).map {
-                case (_, pos) =>
-                  val debugInfo = s"key: ${bucket.key}, ${bucket.value.length} bytes, version ${bucket.version}"
-                  (pos, decompressIfNeeded(bucket.value, expectedUncompressedBucketSize, debugInfo), bucket.version)
-              }
+          val parsed = rawBatch.filterNot(isRevertedElement).flatMap { bucket =>
+            parseBucketKey(bucket.key, additionalAxes).map {
+              case (_, pos) =>
+                val debugInfo = s"key: ${bucket.key}, ${bucket.value.length} bytes, version ${bucket.version}"
+                (pos, decompressIfNeeded(bucket.value, expectedUncompressedBucketSize, debugInfo), bucket.version)
             }
+          }
           if (parsed.nonEmpty) Fox.successful(parsed)
           else nextBatch()
         }
     }
 }
-

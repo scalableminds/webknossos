@@ -51,7 +51,8 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit val ec: Ex
   override def bucketStream(version: Option[Long] = None): AsyncIterator[(BucketPosition, Array[Byte])] =
     bucketStream(layer, version)
 
-  override def bucketStreamWithVersion(version: Option[Long] = None): AsyncIterator[(BucketPosition, Array[Byte], Long)] =
+  override def bucketStreamWithVersion(
+      version: Option[Long] = None): AsyncIterator[(BucketPosition, Array[Byte], Long)] =
     bucketStreamWithVersion(layer, version)
 }
 
@@ -71,7 +72,8 @@ class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit v
   override def bucketStream(version: Option[Long] = None): AsyncIterator[(BucketPosition, Array[Byte])] =
     bucketStreamFromTemporaryStore(layer)
 
-  override def bucketStreamWithVersion(version: Option[Long] = None): AsyncIterator[(BucketPosition, Array[Byte], Long)] =
+  override def bucketStreamWithVersion(
+      version: Option[Long] = None): AsyncIterator[(BucketPosition, Array[Byte], Long)] =
     throw new UnsupportedOperationException // Temporary Volume Tracings do not support versioning
 }
 

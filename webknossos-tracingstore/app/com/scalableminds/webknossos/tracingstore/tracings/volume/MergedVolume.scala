@@ -55,8 +55,8 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
     } yield ()
   }
 
-  def addIdSetFromBucketStream(bucketStream: AsyncIterator[(BucketPosition, Array[Byte])],
-                               allowedMags: Set[Vec3Int])(implicit ec: ExecutionContext): Fox[Unit] = {
+  def addIdSetFromBucketStream(bucketStream: AsyncIterator[(BucketPosition, Array[Byte])], allowedMags: Set[Vec3Int])(
+      implicit ec: ExecutionContext): Fox[Unit] = {
     val idSet: mutable.Set[Long] = scala.collection.mutable.Set()
     for {
       _ <- Fox.serialCombined(bucketStream) {

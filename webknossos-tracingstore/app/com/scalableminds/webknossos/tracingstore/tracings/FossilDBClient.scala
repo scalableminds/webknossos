@@ -145,12 +145,14 @@ class FossilDBClient(collection: String,
     }
 
     for {
-      reply <- wrapException(stub.getMultipleKeys(GetMultipleKeysRequest(collection, startAfterKey, prefix, version, limit)))
+      reply <- wrapException(
+        stub.getMultipleKeys(GetMultipleKeysRequest(collection, startAfterKey, prefix, version, limit)))
       _ <- assertSuccess(reply.success, reply.errorMessage)
       parsedValues: List[Box[T]] = reply.values.map(v => fromByteArray(v.toByteArray)).toList
-    } yield flatCombineTuples(reply.keys.toList, reply.actualVersions.toList, parsedValues).map { t =>
-      VersionedKeyValuePair(VersionedKey(t._1, t._2), t._3)
-    }
+    } yield
+      flatCombineTuples(reply.keys.toList, reply.actualVersions.toList, parsedValues).map { t =>
+        VersionedKeyValuePair(VersionedKey(t._1, t._2), t._3)
+      }
   }
 
   def getMultipleKeysByList[T](keys: Seq[String], version: Option[Long], batchSize: Int = 1000)(

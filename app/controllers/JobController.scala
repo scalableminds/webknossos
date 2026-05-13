@@ -98,7 +98,7 @@ class JobController @Inject()(jobDAO: JobDAO,
   def list(command: Option[String], skipForDeletedDatasets: Option[Boolean]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> Msg.Job.disabled
+        _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> Msg.Job.notEnabled
         commandValidatedOpt <- Fox.runOptional(command)(JobCommand.fromString(_).toFox)
         jobsCompact <- jobDAO.findAllCompact(commandValidatedOpt, skipForDeletedDatasets.getOrElse(false))
       } yield Ok(Json.toJson(jobsCompact.map(_.enrich)))
@@ -106,7 +106,7 @@ class JobController @Inject()(jobDAO: JobDAO,
 
   def get(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> Msg.Job.disabled
+      _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> Msg.Job.notEnabled
       job <- jobDAO.findOne(id) ?~> Msg.Job.notFound
       js <- jobService.publicWrites(job)
     } yield Ok(js)
@@ -120,7 +120,7 @@ class JobController @Inject()(jobDAO: JobDAO,
    */
   def cancel(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> Msg.Job.disabled
+      _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> Msg.Job.notEnabled
       job <- jobDAO.findOne(id)
       _ <- jobDAO.updateManualState(id, JobState.CANCELLED)
       _ <- Fox.runIf(job.state == JobState.PENDING || job.state == JobState.STARTED) {
@@ -133,7 +133,7 @@ class JobController @Inject()(jobDAO: JobDAO,
 
   def retry(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> Msg.Job.disabled
+      _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> Msg.Job.notEnabled
       _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
       job <- jobDAO.findOne(id)
       _ <- creditTransactionService.reserveCreditsForRetry(job._id)
@@ -238,7 +238,8 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> Msg.Job.AlignSections.wrongOrga ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(request.body.layerName)
-          (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.layerName) ?~> Msg.Dataset.notUsableGeneric
+          (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.layerName) ?~> Msg.Dataset
+            .notUsable(dataset._id)
           layerMag <- layer.finestMag.toFox ?~> Msg.Dataset.noMags
           finestMagDatasetBoundingBox = dataSource.boundingBox / layerMag
           command = JobCommand.align_sections
@@ -396,10 +397,10 @@ class JobController @Inject()(jobDAO: JobDAO,
           userOrganization <- organizationDAO.findOne(request.identity._organization)
           animationJobOptions = request.body
           _ <- Fox.runIf(!PricingPlan.isPaidPlan(userOrganization.pricingPlan)) {
-            Fox.fromBool(animationJobOptions.includeWatermark) ?~> Msg.Job.renderAnimationMustIncludeWatermark
+            Fox.fromBool(animationJobOptions.includeWatermark) ?~> Msg.Job.RenderAnimation.mustIncludeWatermark
           }
           _ <- Fox.runIf(!PricingPlan.isPaidPlan(userOrganization.pricingPlan)) {
-            Fox.fromBool(animationJobOptions.movieResolution == MovieResolutionSetting.SD) ?~> Msg.Job.renderAnimationResolutionMustBeSD
+            Fox.fromBool(animationJobOptions.movieResolution == MovieResolutionSetting.SD) ?~> Msg.Job.RenderAnimation.resolutionMustBeSD
           }
           _ <- Fox.runIf(animationJobOptions.saveBlenderFile) {
             userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN

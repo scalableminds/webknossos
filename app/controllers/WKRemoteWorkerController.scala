@@ -103,7 +103,7 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
     implicit request =>
       for {
         _ <- workerDAO.findOneByKey(key) ?~> Msg.Job.workerNotFound
-        _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.disabled
+        _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.notEnabled
         organizationId <- jobDAO.organizationIdForJobId(id) ?~> Msg.Job.notFound
         workflowHash = request.body
         existingWorkflowBox <- voxelyticsDAO.findWorkflowByHashAndOrganization(organizationId, workflowHash).shiftBox

@@ -496,8 +496,8 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
       implicit ctx: DBAccessContext): Fox[List[String]] = {
     val projectNames = requestedTasks.map(_.projectName).distinct
     for {
-      projects: List[Project] <- Fox.serialCombined(projectNames)(
-        projectDAO.findOneByNameAndOrganization(_, requestingUser._organization)) ?~> Msg.Project.notFound
+      projects: List[Project] <- Fox.serialCombined(projectNames)(name =>
+        projectDAO.findOneByNameAndOrganization(name, requestingUser._organization) ?~> Msg.Project.notFound(name))
       datasetTeamIds <- teamService.allowedTeamIdsForDataset(dataset, cumulative = true)
       noAccessTeamIds = projects.map(_._team).diff(datasetTeamIds)
       noAccessTeamIdsTransitive <- Fox.serialCombined(noAccessTeamIds)(id =>

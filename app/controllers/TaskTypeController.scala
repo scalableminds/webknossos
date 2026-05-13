@@ -50,7 +50,7 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
 
   def get(taskTypeId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      taskType <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound ~> NOT_FOUND
+      taskType <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound(taskTypeId) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team))
       js <- taskTypeService.publicWrites(taskType)
     } yield Ok(js)
@@ -66,7 +66,7 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
   def update(taskTypeId: ObjectId): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(taskTypePublicReads) { taskTypeFromForm =>
       for {
-        taskType <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound ~> NOT_FOUND
+        taskType <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound(taskTypeId) ~> NOT_FOUND
         _ <- Fox.fromBool(taskTypeFromForm.tracingType == taskType.tracingType) ?~> Msg.TaskType.tracingTypeImmutable
         _ <- Fox
           .fromBool(taskTypeFromForm.settings.magRestrictions == taskType.settings.magRestrictions) ?~> Msg.TaskType.magRestrictionsImmutable

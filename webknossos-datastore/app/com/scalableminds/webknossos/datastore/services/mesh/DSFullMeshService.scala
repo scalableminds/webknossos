@@ -85,14 +85,14 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       dataLayer: DataLayer,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Float] =
     for {
-      mag <- fullMeshRequest.mag.toFox ?~> Msg.Mag.neededForAdHoc
-      segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Msg.Dataset.layerMustBeSegmentation
+      mag <- fullMeshRequest.mag.toFox ?~> Msg.Mesh.magNeededForAdHoc
+      segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Msg.Dataset.Layer.mustBeSegmentation
       hasSegmentIndexFile = segmentationLayer.attachments.flatMap(_.segmentIndex).isDefined
       verticesForChunks <- if (hasSegmentIndexFile)
         getAllAdHocChunksWithSegmentIndex(datasetId, dataSource, segmentationLayer, fullMeshRequest, mag)
       else {
         for {
-          seedPosition <- fullMeshRequest.seedPosition.toFox ?~> Msg.Mag.neededForAdHoc
+          seedPosition <- fullMeshRequest.seedPosition.toFox ?~> Msg.Mesh.magNeededForAdHoc
           chunks <- getAllAdHocChunksWithNeighborLogic(
             datasetId,
             dataSource,
@@ -119,15 +119,15 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       dataLayer: DataLayer,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      mag <- fullMeshRequest.mag.toFox ?~> Msg.Mag.neededForAdHoc
-      segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Msg.Dataset.layerMustBeSegmentation
+      mag <- fullMeshRequest.mag.toFox ?~> Msg.Mesh.magNeededForAdHoc
+      segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Msg.Dataset.Layer.mustBeSegmentation
       hasSegmentIndexFile = segmentationLayer.attachments.flatMap(_.segmentIndex).isDefined
       before = Instant.now
       verticesForChunks <- if (hasSegmentIndexFile)
         getAllAdHocChunksWithSegmentIndex(datasetId, dataSource, segmentationLayer, fullMeshRequest, mag)
       else {
         for {
-          seedPosition <- fullMeshRequest.seedPosition.toFox ?~> Msg.Mag.neededForAdHoc
+          seedPosition <- fullMeshRequest.seedPosition.toFox ?~> Msg.Mesh.magNeededForAdHoc
           chunks <- getAllAdHocChunksWithNeighborLogic(
             datasetId,
             dataSource,

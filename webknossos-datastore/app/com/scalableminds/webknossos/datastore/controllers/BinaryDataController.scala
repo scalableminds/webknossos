@@ -95,7 +95,7 @@ class BinaryDataController @Inject()(
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
         (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
-        magParsed <- Vec3Int.fromMagLiteral(mag).toFox ?~> Msg.Mag.malformed
+        magParsed <- Vec3Int.fromMagLiteral(mag).toFox ?~> Msg.Dataset.Mag.invalid(mag)
         dataRequest = DataRequest(
           VoxelPosition(x, y, z, magParsed),
           width,
@@ -160,7 +160,7 @@ class BinaryDataController @Inject()(
       for {
         (dataSource, dataLayer) <- datasetCache
           .getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
-        magParsed <- Vec3Int.fromMagLiteral(mag).toFox ?~> Msg.Mag.malformed
+        magParsed <- Vec3Int.fromMagLiteral(mag).toFox ?~> Msg.Dataset.Mag.invalid(mag)
         dataRequest = DataRequest(
           VoxelPosition(x, y, z, magParsed),
           width,
@@ -219,7 +219,7 @@ class BinaryDataController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
-          segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Msg.Dataset.layerMustBeSegmentation
+          segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Msg.Dataset.Layer.mustBeSegmentation
           adHocMeshRequest = AdHocMeshRequest(
             Some(datasetId),
             Some(dataSource.id),

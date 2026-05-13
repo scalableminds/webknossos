@@ -34,7 +34,7 @@ class LayerToLinkService @Inject()(datasetDAO: DatasetDAO, userService: UserServ
     for {
       linkedLayers <- Fox.serialCombined(layersToLink)(resolveLayerToLink) ?~> Msg.Dataset.LayerToLink.failed
       allLayers = linkedLayers ++ dataSource.dataLayers
-      _ <- Fox.fromBool(allLayers.length == allLayers.map(_.name).distinct.length) ?~> Msg.Dataset.duplicateLayerNames
+      _ <- Fox.fromBool(allLayers.length == allLayers.map(_.name).distinct.length) ?~> Msg.Dataset.Layer.duplicateNames
     } yield dataSource.copy(dataLayers = allLayers)
 
   private def resolveLayerToLink(layerToLink: LinkedLayerIdentifier)(implicit ctx: DBAccessContext,

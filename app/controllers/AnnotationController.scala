@@ -313,7 +313,7 @@ class AnnotationController @Inject()(
           for {
             _ <- Fox.runIf(annotation.state == AnnotationState.Finished)(taskService.clearCompoundCache(taskId))
             _ <- annotationDAO.updateState(annotation._id, Cancelled)
-          } yield JsonOk(Msg.Task.cancelled)
+          } yield JsonOk(Msg.Task.cancelSuccess)
         case _ =>
           Fox.successful(JsonOk(Msg.Annotation.finished))
       }
@@ -424,7 +424,7 @@ class AnnotationController @Inject()(
     for {
       // GlobalAccessContext is allowed here because the user was already allowed to see the annotation
       dataset <- datasetDAO.findOne(annotation._dataset)(GlobalAccessContext) ?~> Msg.Dataset
-        .notFoundforAnnotation(annotation._dataset, annotation._id) ~> NOT_FOUND
+        .notFoundForAnnotation(annotation._dataset, annotation._id) ~> NOT_FOUND
       _ <- Fox.fromBool(dataset.isUsable) ?~> Msg.Dataset.notUsable(dataset._id)
       dataSource <- if (annotation._task.isDefined)
         datasetService.usableDataSourceFor(dataset).map(Some(_))

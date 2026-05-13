@@ -67,7 +67,8 @@ trait AnnotationInformationHandler extends FoxImplicits {
 
   protected def registerDataSourceInTemporaryStore(temporaryAnnotationId: ObjectId, datasetId: ObjectId): Fox[Unit] =
     for {
-      dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Msg.Dataset.notFoundForAnnotation
+      dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Msg.Dataset
+        .notFoundForAnnotation(datasetId, temporaryAnnotationId)
       dataSource <- datasetService.usableDataSourceFor(dataset)
       _ = annotationDataSourceTemporaryStore.store(temporaryAnnotationId, dataSource, datasetId)
     } yield ()

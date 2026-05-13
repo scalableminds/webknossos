@@ -97,12 +97,13 @@ class VolumeTracingService @Inject()(
                                  bucketBytes: Array[Byte],
                                  previousBucketBytesBox: Box[Array[Byte]],
                                  editableMappingTracingId: Option[String]): Fox[Unit] =
-    volumeSegmentIndexService.updateFromBucket(volumeLayer: VolumeTracingLayer,
-                                               segmentIndexBuffer,
-                                               bucketPosition,
-                                               bucketBytes,
-                                               previousBucketBytesBox,
-                                               editableMappingTracingId) ?~> Msg.VolumeSegmentIndex.updateFailed
+    volumeSegmentIndexService.updateFromBucket(
+      volumeLayer: VolumeTracingLayer,
+      segmentIndexBuffer,
+      bucketPosition,
+      bucketBytes,
+      previousBucketBytesBox,
+      editableMappingTracingId) ?~> Msg.Annotation.Volume.SegmentIndex.updateFailed
 
   def applyBucketMutatingActions(tracingId: String,
                                  annotationId: ObjectId,
@@ -573,7 +574,7 @@ class VolumeTracingService @Inject()(
         hasSegmentIndex = Some(hasSegmentIndex),
         userStates = userStates
       )
-      _ <- Fox.fromBool(newTracing.mags.nonEmpty) ?~> Msg.Mag.restrictionsTooTight
+      _ <- Fox.fromBool(newTracing.mags.nonEmpty) ?~> Msg.Annotation.Volume.magRestrictionsTooTight
     } yield newTracing
   }
 

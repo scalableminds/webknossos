@@ -43,7 +43,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
 
   def read(taskId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound ~> NOT_FOUND
+      task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound(taskId) ~> NOT_FOUND
       js <- taskService.publicWrites(task)
     } yield Ok(js)
   }
@@ -55,7 +55,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         taskTypeId <- SequenceUtils
           .findUniqueElement(request.body.map(_.taskTypeId))
           .toFox ?~> Msg.Task.Create.notOnSameTaskType
-        taskType <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound
+        taskType <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound(taskTypeId)
         datasetId <- SequenceUtils
           .findUniqueElement(request.body.map(_.datasetId))
           .toFox ?~> Msg.Task.Create.notOnSameDataset
@@ -95,14 +95,14 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
    */
   def createFromFiles: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      body <- request.body.asMultipartFormData.toFox ?~> Msg.binaryPayloadInvalid
+      body <- request.body.asMultipartFormData.toFox ?~> Msg.Task.Create.multipartPayloadInvalid
       inputFiles = body.files.filter(file =>
         file.filename.toLowerCase.endsWith(".nml") || file.filename.toLowerCase.endsWith(".zip"))
       _ <- Fox.fromBool(inputFiles.nonEmpty) ?~> Msg.Nml.fileNotFound
-      jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption).toFox ?~> Msg.formatJsonMissing
+      jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption).toFox ?~> Msg.Task.Create.formJsonMissing
       params <- JsonHelper.parseAs[NmlTaskParameters](jsonString).toFox ?~> Msg.Task.Create.failed
       userOrganizationId = request.identity._organization
-      taskType <- taskTypeDAO.findOne(params.taskTypeId) ?~> Msg.TaskType.notFound ~> NOT_FOUND
+      taskType <- taskTypeDAO.findOne(params.taskTypeId) ?~> Msg.TaskType.notFound(params.taskTypeId) ~> NOT_FOUND
       _ <- taskCreationService.assertBatchLimit(inputFiles.length, taskType)
       project <- projectDAO
         .findOneByNameAndOrganization(params.projectName, request.identity._organization) ?~> Msg.Project.notFound(
@@ -150,13 +150,13 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
       task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound(taskId) ~> NOT_FOUND
       project <- projectDAO.findOne(task._project)
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed
-      _ <- taskDAO.removeOneAndItsAnnotations(task._id) ?~> Msg.Task.deleteFailure
+      _ <- taskDAO.removeOneAndItsAnnotations(task._id) ?~> Msg.Task.deleteFailed
     } yield JsonOk(Msg.Task.deleteSuccess)
   }
 
   def listTasksForType(taskTypeId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      tasks <- taskDAO.findAllByTaskType(taskTypeId) ?~> Msg.TaskType.notFound ~> NOT_FOUND
+      tasks <- taskDAO.findAllByTaskType(taskTypeId) ?~> Msg.TaskType.notFound(taskTypeId) ~> NOT_FOUND
       js <- Fox.serialCombined(tasks)(taskService.publicWrites(_))
     } yield Ok(Json.toJson(js))
   }

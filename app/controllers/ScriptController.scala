@@ -37,15 +37,15 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
         _ <- Fox.fromBool(script._owner == request.identity._id) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- scriptService.assertValidScriptName(script.name)
         _ <- scriptDAO.insertOne(script)
-        js <- scriptService.publicWrites(script) ?~> Msg.Script.writeFailed
+        js <- scriptService.publicWrites(script) ?~> Msg.Script.publicWritesFailed
       } yield Ok(js)
     }
   }
 
   def get(scriptId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      script <- scriptDAO.findOne(scriptId) ?~> Msg.Script.notFound ~> NOT_FOUND
-      js <- scriptService.publicWrites(script) ?~> Msg.Script.writeFailed
+      script <- scriptDAO.findOne(scriptId) ?~> Msg.Script.notFound(scriptId) ~> NOT_FOUND
+      js <- scriptService.publicWrites(script) ?~> Msg.Script.publicWritesFailed
     } yield {
       Ok(js)
     }
@@ -63,12 +63,12 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
   def update(scriptId: ObjectId): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(scriptPublicReads) { scriptFromForm =>
       for {
-        oldScript <- scriptDAO.findOne(scriptId) ?~> Msg.Script.notFound ~> NOT_FOUND
-        _ <- Fox.fromBool(oldScript._owner == request.identity._id) ?~> Msg.Script.notOwner ~> FORBIDDEN
+        oldScript <- scriptDAO.findOne(scriptId) ?~> Msg.Script.notFound(scriptId) ~> NOT_FOUND
+        _ <- Fox.fromBool(oldScript._owner == request.identity._id) ?~> Msg.Script.updateOnlyOwner ~> FORBIDDEN
         _ <- scriptService.assertValidScriptName(scriptFromForm.name)
         updatedScript = scriptFromForm.copy(_id = oldScript._id)
         _ <- scriptDAO.updateOne(updatedScript)
-        js <- scriptService.publicWrites(updatedScript) ?~> Msg.Script.writeFailed
+        js <- scriptService.publicWrites(updatedScript) ?~> Msg.Script.publicWritesFailed
       } yield {
         Ok(js)
       }
@@ -77,10 +77,10 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
 
   def delete(scriptId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      oldScript <- scriptDAO.findOne(scriptId) ?~> Msg.Script.notFound ~> NOT_FOUND
-      _ <- Fox.fromBool(oldScript._owner == request.identity._id) ?~> Msg.Script.notOwner ~> FORBIDDEN
-      _ <- scriptDAO.deleteOne(scriptId) ?~> Msg.Script.removalFailed
-      _ <- taskDAO.removeScriptFromAllTasks(scriptId) ?~> Msg.Script.removalFailed
+      oldScript <- scriptDAO.findOne(scriptId) ?~> Msg.Script.notFound(scriptId) ~> NOT_FOUND
+      _ <- Fox.fromBool(oldScript._owner == request.identity._id) ?~> Msg.Script.deleteOnlyOwner ~> FORBIDDEN
+      _ <- scriptDAO.deleteOne(scriptId) ?~> Msg.Script.deleteFailed
+      _ <- taskDAO.removeScriptFromAllTasks(scriptId) ?~> Msg.Script.deleteFailed
     } yield {
       Ok
     }

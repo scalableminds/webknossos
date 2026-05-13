@@ -38,7 +38,7 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
    */
   def getRedirectUrl(callbackUrl: String): Fox[String] =
     for {
-      _ <- Fox.fromBool(conf.Features.openIdConnectEnabled) ?~> Msg.Oidc.disabled
+      _ <- Fox.fromBool(conf.Features.openIdConnectEnabled) ?~> Msg.Oidc.notEnabled
       _ <- Fox.fromBool(oidcConfig.isValid) ?~> Msg.Oidc.configurationInvalid
       redirectUrl <- discover.map { serverInfos =>
         def queryParams: Map[String, String] = Map(
@@ -59,7 +59,7 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
    */
   def getAndValidateTokens(redirectUrl: String, code: String): Fox[(JsObject, Option[JsObject])] =
     for {
-      _ <- Fox.fromBool(conf.Features.openIdConnectEnabled) ?~> Msg.Oidc.disabled
+      _ <- Fox.fromBool(conf.Features.openIdConnectEnabled) ?~> Msg.Oidc.notEnabled
       _ <- Fox.fromBool(oidcConfig.isValid) ?~> Msg.Oidc.configurationInvalid
       serverInfos <- discover
       tokenResponse <- rpc(serverInfos.token_endpoint)

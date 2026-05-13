@@ -33,7 +33,7 @@ class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenServ
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           _ <- validatePath(path)
-          magValidated <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Layer.invalidMag(mag)
+          magValidated <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Mag.invalid(mag)
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.Layer
             .notFound(dataLayerName) ~> NOT_FOUND
           magLocator <- dataLayer.mags.find(_.mag == magValidated).toFox ?~> Msg.Dataset.Layer

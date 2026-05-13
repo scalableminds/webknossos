@@ -71,7 +71,7 @@ class EmailVerificationService @Inject()(conf: WkConf,
     for {
       emailVerificationOk <- userHasVerifiedEmail(user)
       _ <- Fox.runIf(!emailVerificationOk)(sendEmailVerification(user))
-      _ <- Fox.fromBool(emailVerificationOk) ?~> Msg.User.Email.notVerified
+      _ <- Fox.fromBool(emailVerificationOk) ?~> Msg.User.Email.Verification.notVerified
     } yield ()
 
   private def userHasVerifiedEmail(user: User)(

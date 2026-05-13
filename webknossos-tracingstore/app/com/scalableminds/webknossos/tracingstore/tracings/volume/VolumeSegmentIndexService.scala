@@ -72,20 +72,20 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       }
       previousBucketBytesWithEmptyFallback <- segmentIndexBuffer
         .bytesWithEmptyFallback(previousBucketBytesBox)
-        .toFox ?~> Msg.VolumeSegmentIndex.updateGetPreviousBucketFailed
+        .toFox ?~> Msg.Annotation.Volume.SegmentIndex.updateGetPreviousBucketFailed
       segmentIds: Set[Long] <- collectSegmentIds(bucketBytesDecompressed, volumeLayer.elementClass).toFox
-      previousSegmentIds: Set[Long] <- collectSegmentIds(previousBucketBytesWithEmptyFallback, volumeLayer.elementClass).toFox ?~> Msg.VolumeSegmentIndex.updateCollectSegmentIdsFailed
+      previousSegmentIds: Set[Long] <- collectSegmentIds(previousBucketBytesWithEmptyFallback, volumeLayer.elementClass).toFox ?~> Msg.Annotation.Volume.SegmentIndex.updateCollectSegmentIdsFailed
       additions = segmentIds.diff(previousSegmentIds)
       removals = previousSegmentIds.diff(segmentIds)
       _ <- Fox.serialCombined(removals.toList)(segmentId =>
         // When fallback layer is used we also need to include relevant segments here into the fossildb since otherwise the fallback layer would be used with invalid data
-        removeBucketFromSegmentIndex(segmentIndexBuffer, segmentId, bucketPosition, editableMappingTracingId)) ?~> Msg.VolumeSegmentIndex.updateRemoveBucketFailed
+        removeBucketFromSegmentIndex(segmentIndexBuffer, segmentId, bucketPosition, editableMappingTracingId)) ?~> Msg.Annotation.Volume.SegmentIndex.updateRemoveBucketFailed
       // When fallback layer is used, copy the entire bucketlist for this segment instead of one bucket
       _ <- Fox.runIf(additions.nonEmpty)(addBucketToSegmentIndex(
         segmentIndexBuffer,
         additions.toList,
         bucketPosition,
-        editableMappingTracingId)) ?~> Msg.VolumeSegmentIndex.updateAddBucketFailed
+        editableMappingTracingId)) ?~> Msg.Annotation.Volume.SegmentIndex.updateAddBucketFailed
     } yield ()
 
   private def removeBucketFromSegmentIndex(

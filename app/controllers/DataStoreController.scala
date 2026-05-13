@@ -59,7 +59,7 @@ class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
     for {
       multiUser <- multiUserDAO.findOne(request.identity._multiUser)
       _ <- Fox.fromBool(multiUser.isSuperUser) ?~> Msg.notAllowed ~> FORBIDDEN
-      _ <- dataStoreDAO.deleteOneByName(name) ?~> Msg.DataStore.removeFailed
+      _ <- dataStoreDAO.deleteOneByName(name) ?~> Msg.DataStore.deleteFailed
     } yield Ok
   }
 

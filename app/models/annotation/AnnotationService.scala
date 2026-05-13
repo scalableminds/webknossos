@@ -106,7 +106,7 @@ class AnnotationService @Inject()(
   private def selectSuitableTeam(user: User, dataset: Dataset): Fox[ObjectId] =
     (for {
       userTeamIds <- userService.teamIdsFor(user._id)
-      datasetAllowedTeamIds <- teamService.allowedTeamIdsForDataset(dataset, cumulative = true) ?~> Msg.allowedTeamsNotFound
+      datasetAllowedTeamIds <- teamService.allowedTeamIdsForDataset(dataset, cumulative = true) ?~> Msg.Dataset.allowedTeamsNotFound
     } yield {
       val selectedTeamOpt = datasetAllowedTeamIds.intersect(userTeamIds).headOption
       selectedTeamOpt match {
@@ -356,7 +356,8 @@ class AnnotationService @Inject()(
     for {
       annotationBaseId <- annotationDAO.findBaseIdForTask(taskId) ?~> "Failed to retrieve annotation base id."
       annotationBase <- annotationDAO.findOne(annotationBaseId) ?~> "Failed to retrieve annotation base."
-      datasetName <- datasetDAO.getNameById(annotationBase._dataset)(GlobalAccessContext) ?~> Msg.Dataset.notFoundForAnnotation
+      datasetName <- datasetDAO.getNameById(annotationBase._dataset)(GlobalAccessContext) ?~> Msg.Dataset
+        .notFoundForAnnotation(annotationBase._dataset, annotationBase._id)
       dataset <- datasetDAO.findOne(annotationBase._dataset) ?~> Msg.Dataset.notFound(annotationBase._dataset)
       _ <- Fox.fromBool(dataset.isUsable) ?~> Msg.Dataset.notUsable(dataset._id)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
@@ -701,7 +702,7 @@ class AnnotationService @Inject()(
       implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
       annotation <- annotationInformationProvider.provideAnnotation(typ, id, issuingUser) ?~> Msg.Annotation.notFound
-      newUser <- userDAO.findOne(userId) ?~> Msg.User.notFound
+      newUser <- userDAO.findOne(userId) ?~> Msg.User.notFound(userId)
       _ <- datasetDAO.findOne(annotation._dataset)(AuthorizedAccessContext(newUser)) ?~> Msg.Annotation.transfereeNoDatasetAccess
       _ <- annotationDAO.updateUser(annotation._id, newUser._id)
       updated <- annotationInformationProvider.provideAnnotation(typ, id, issuingUser)
@@ -719,8 +720,8 @@ class AnnotationService @Inject()(
     if (annotation.typ == AnnotationType.Task || annotation.typ == AnnotationType.TracingBase)
       for {
         taskId <- annotation._task.toFox
-        task: Task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound
-        taskType <- taskTypeDAO.findOne(task._taskType) ?~> Msg.TaskType.notFound
+        task: Task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound(taskId)
+        taskType <- taskTypeDAO.findOne(task._taskType) ?~> Msg.TaskType.notFound(task._taskType)
       } yield {
         taskType.settings
       } else
@@ -734,7 +735,8 @@ class AnnotationService @Inject()(
                    restrictionsOpt: Option[AnnotationRestrictions] = None): Fox[JsObject] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
-      dataset <- datasetDAO.findOne(annotation._dataset) ?~> Msg.Dataset.notFoundForAnnotation
+      dataset <- datasetDAO.findOne(annotation._dataset) ?~> Msg.Dataset.notFoundForAnnotation(annotation._dataset,
+                                                                                               annotation._id)
       organization <- organizationDAO.findOne(dataset._organization) ?~> Msg.Organization.notFound(
         dataset._organization)
       taskFox = annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId))
@@ -787,7 +789,8 @@ class AnnotationService @Inject()(
   def writesWithDataset(annotation: Annotation): Fox[JsObject] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
-      dataset <- datasetDAO.findOne(annotation._dataset) ?~> Msg.Dataset.notFoundForAnnotation
+      dataset <- datasetDAO.findOne(annotation._dataset) ?~> Msg.Dataset.notFoundForAnnotation(annotation._dataset,
+                                                                                               annotation._id)
       tracingStore <- tracingStoreDAO.findFirst
       tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
       datasetJs <- datasetService.publicWrites(dataset, None)
@@ -805,7 +808,8 @@ class AnnotationService @Inject()(
   def writesAsAnnotationSource(annotation: Annotation, accessViaPrivateLink: Boolean): Fox[JsValue] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
-      dataset <- datasetDAO.findOne(annotation._dataset) ?~> Msg.Dataset.notFoundForAnnotation
+      dataset <- datasetDAO.findOne(annotation._dataset) ?~> Msg.Dataset.notFoundForAnnotation(annotation._dataset,
+                                                                                               annotation._id)
       organization <- organizationDAO.findOne(dataset._organization) ?~> Msg.Organization.notFound(
         dataset._organization)
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> Msg.DataStore.notFound

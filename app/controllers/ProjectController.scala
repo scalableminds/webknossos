@@ -59,7 +59,8 @@ class ProjectController @Inject()(projectService: ProjectService,
   def readByName(name: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        project <- projectDAO.findOneByNameAndOrganization(name, request.identity._organization) ?~> Msg.Project.notFound ~> NOT_FOUND
+        project <- projectDAO.findOneByNameAndOrganization(name, request.identity._organization) ?~> Msg.Project
+          .notFound(name) ~> NOT_FOUND
         js <- projectService.publicWrites(project)
       } yield Ok(js)
     }
@@ -67,8 +68,8 @@ class ProjectController @Inject()(projectService: ProjectService,
   def delete(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       project <- projectDAO.findOne(id) ?~> Msg.Project.notFound(id) ~> NOT_FOUND
-      _ <- Fox.fromBool(project.isDeletableBy(request.identity)) ?~> Msg.Project.removeNotAllowed ~> FORBIDDEN
-      _ <- projectService.deleteOne(project._id) ?~> Msg.Project.removeFailed
+      _ <- Fox.fromBool(project.isDeletableBy(request.identity)) ?~> Msg.Project.deleteNotAllowed ~> FORBIDDEN
+      _ <- projectService.deleteOne(project._id) ?~> Msg.Project.deleteFailed
     } yield JsonOk(Msg.Project.deleteSuccess(id))
   }
 
@@ -79,7 +80,7 @@ class ProjectController @Inject()(projectService: ProjectService,
           .findOneByNameAndOrganization(project.name, request.identity._organization)(GlobalAccessContext)
           .reverse ?~> Msg.Project.nameTaken(project.name)
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN
-        _ <- projectDAO.insertOne(project, request.identity._organization) ?~> Msg.Project.creationFailed
+        _ <- projectDAO.insertOne(project, request.identity._organization) ?~> Msg.Project.createFailed
         js <- projectService.publicWrites(project)
       } yield Ok(js)
     }
@@ -117,7 +118,7 @@ class ProjectController @Inject()(projectService: ProjectService,
 
   def projectsForTaskType(taskTypeId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound ~> NOT_FOUND
+      _ <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound(taskTypeId) ~> NOT_FOUND
       projects <- projectDAO.findAllWithTaskType(taskTypeId.toString) ?~> Msg.Project.listFailed
       allCounts <- taskDAO.countPendingInstancesAndTimeByProject
       js <- Fox.serialCombined(projects) { project =>

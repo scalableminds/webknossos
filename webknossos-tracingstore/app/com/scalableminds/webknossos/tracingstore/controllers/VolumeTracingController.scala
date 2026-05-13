@@ -321,7 +321,7 @@ class VolumeTracingController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-          data: Array[Byte] <- fullMeshService.loadFor(annotationId, tracingId, request.body, version = None) ?~> Msg.Mesh.LoadFull.failed
+          data: Array[Byte] <- fullMeshService.loadFor(annotationId, tracingId, request.body, version = None) ?~> Msg.Mesh.loadFullFailed
         } yield Ok(data)
       }
     }
@@ -408,7 +408,7 @@ class VolumeTracingController @Inject()(
               data: Array[Byte] <- fullMeshService.loadFor(annotationId,
                                                            tracingId,
                                                            fullMeshRequest,
-                                                           request.body.annotationVersion) ?~> Msg.Mesh.LoadFull.failed
+                                                           request.body.annotationVersion) ?~> Msg.Mesh.loadFullFailed
               surfaceArea <- fullMeshService.surfaceAreaFromStlBytes(data).toFox
             } yield surfaceArea
           }

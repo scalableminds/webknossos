@@ -29,14 +29,14 @@ class TaskTypeInformationHandler @Inject()(
   override def provideAnnotation(taskTypeId: ObjectId, userOpt: Option[User])(
       implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
-      taskType <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound
+      taskType <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound(taskTypeId)
       tasks <- taskDAO.findAllByTaskType(taskType._id)
       annotations <- Fox
         .serialCombined(tasks)(task => annotationDAO.findAllByTaskIdAndType(task._id, AnnotationType.Task))
         .map(_.flatten)
       finishedAnnotations = annotations.filter(_.state == Finished)
       _ <- assertAllOnSameDataset(finishedAnnotations)
-      _ <- assertNonEmpty(finishedAnnotations) ?~> Msg.TaskType.noAnnotations
+      _ <- assertNonEmpty(finishedAnnotations) ?~> Msg.TaskType.noFinishedAnnotations
       user <- userOpt.toFox ?~> Msg.User.notAuthenticated
       datasetId <- finishedAnnotations.headOption.map(_._dataset).toFox
       _ <- registerDataSourceInTemporaryStore(taskTypeId, datasetId)
@@ -53,7 +53,7 @@ class TaskTypeInformationHandler @Inject()(
 
   override def restrictionsFor(taskTypeId: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =
     for {
-      taskType <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound
+      taskType <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound(taskTypeId)
     } yield {
       new AnnotationRestrictions {
         override def allowAccess(userOption: Option[User]): Fox[Boolean] =

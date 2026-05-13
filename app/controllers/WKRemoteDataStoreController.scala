@@ -71,7 +71,7 @@ class WKRemoteDataStoreController @Inject()(
           _ <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l =>
             layerToLinkService.validateLayerToLink(l, user)) ?~> Msg.Dataset.Upload.invalidLinkedLayers
           _ <- Fox.runIf(request.body.requireUniqueName.getOrElse(false))(
-            datasetService.assertNewDatasetNameUnique(request.body.name, organization._id))
+            datasetService.checkNameAvailable(organization._id, request.body.name))
           preliminaryDataSource = UnusableDataSource(DataSourceId("", ""), None, DataSourceStatus.notYetUploaded)
           dataset <- datasetService.createAndSetUpDataset(
             uploadInfo.name,
@@ -81,7 +81,7 @@ class WKRemoteDataStoreController @Inject()(
             user,
             isVirtual = uploadInfo.isVirtual.getOrElse(true),
             creationType = DatasetCreationType.Upload
-          ) ?~> Msg.Dataset.Upload.creationFailed
+          ) ?~> Msg.Dataset.Upload.createFailed
           _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
           additionalInfo = ReserveAdditionalInformation(dataset._id, dataset.directoryName)
         } yield Ok(Json.toJson(additionalInfo))

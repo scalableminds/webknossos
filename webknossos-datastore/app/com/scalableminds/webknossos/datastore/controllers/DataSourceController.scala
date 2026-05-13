@@ -314,8 +314,8 @@ class DataSourceController @Inject()(
       for {
         (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
-        position <- agglomerateService
-          .positionForSegmentId(agglomerateFileKey, segmentId) ?~> Msg.getSegmentPositionFromAgglomerateFileFailed
+        position <- agglomerateService.positionForSegmentId(agglomerateFileKey, segmentId) ?~> Msg.AgglomerateFile
+          .getSegmentPositionFailed(agglomerateFileKey.attachment.name)
       } yield Ok(Json.toJson(position))
     }
   }
@@ -667,7 +667,7 @@ class DataSourceController @Inject()(
               (datasetId, dataLayer.name, fullMeshRequest),
               _ =>
                 fullMeshService
-                  .computeSurfaceArea(datasetId, dataSource, dataLayer, fullMeshRequest) ?~> Msg.Mesh.LoadFull.failed
+                  .computeSurfaceArea(datasetId, dataSource, dataLayer, fullMeshRequest) ?~> Msg.Mesh.loadFullFailed
             )
           }
         } yield Ok(Json.toJson(surfaceAreas))

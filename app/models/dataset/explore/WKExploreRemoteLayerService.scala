@@ -83,7 +83,7 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
     for {
       dataStoreNameOpt <- SequenceUtils
         .findUniqueElement(dataStoreNames)
-        .toFox ?~> Msg.exploreDataStoreMustBeEqualForAll
+        .toFox ?~> Msg.Dataset.Explore.dataStoreMustBeEqualForAll
       dataStore <- dataStoreNameOpt match {
         case Some(dataStoreName) => dataStoreDAO.findOneByName(dataStoreName)(GlobalAccessContext)
         case None                => dataStoreDAO.findOneWithUploadsAllowed(GlobalAccessContext)

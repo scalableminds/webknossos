@@ -106,7 +106,7 @@ class UserService @Inject()(conf: WkConf,
              teamMemberships: Seq[TeamMembership]): Fox[User] = {
     implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
     for {
-      _ <- Fox.assertTrue(multiUserDAO.emailNotPresentYet(email)(GlobalAccessContext)) ?~> Msg.User.Email.alreadyInUse
+      _ <- Fox.assertTrue(multiUserDAO.emailNotPresentYet(email)(GlobalAccessContext)) ?~> Msg.User.Email.taken
       multiUserId = ObjectId.generate
       multiUser = MultiUser(
         multiUserId,

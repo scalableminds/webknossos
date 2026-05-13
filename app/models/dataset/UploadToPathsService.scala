@@ -167,7 +167,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
   private def selectPathPrefixDatasetParent(requestedPrefix: Option[UPath], organizationId: String)(
       implicit ec: ExecutionContext): Fox[UPath] =
     for {
-      uploadToPathsPrefix <- selectPathPrefix(requestedPrefix).toFox ?~> Msg.uploadToPathsNoMatchingPrefix
+      uploadToPathsPrefix <- selectPathPrefix(requestedPrefix).toFox ?~> Msg.Dataset.Upload.uploadToPathsNoMatchingPrefix
       withOrgaDirOrSame = if (conf.WebKnossos.Datasets.UploadToPaths.insertOrganizationDirectory)
         uploadToPathsPrefix / organizationId
       else uploadToPathsPrefix
@@ -241,7 +241,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
   def generateAiModelPath(id: ObjectId, organizationId: String, pathPrefix: Option[UPath])(
       implicit ec: ExecutionContext): Fox[UPath] =
     for {
-      uploadToPathsPrefix <- selectPathPrefix(pathPrefix).toFox ?~> Msg.uploadToPathsNoMatchingPrefix
+      uploadToPathsPrefix <- selectPathPrefix(pathPrefix).toFox ?~> Msg.Dataset.Upload.uploadToPathsNoMatchingPrefix
     } yield uploadToPathsPrefix / organizationId / ".aiModels" / id
 
   private def generateMagPath(mag: Vec3Int, layerPath: UPath): UPath =

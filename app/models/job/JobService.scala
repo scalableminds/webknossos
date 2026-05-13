@@ -224,7 +224,7 @@ class JobService @Inject()(wkConf: WkConf,
 
   def submitJob(command: JobCommand, commandArgs: JsObject, owner: User, dataStoreName: String): Fox[Job] =
     for {
-      _ <- Fox.fromBool(wkConf.Features.jobsEnabled) ?~> Msg.Job.disabled
+      _ <- Fox.fromBool(wkConf.Features.jobsEnabled) ?~> Msg.Job.notEnabled
       _ <- Fox.assertTrue(jobIsSupportedByAvailableWorkers(command, dataStoreName)) ?~> Msg.Job.noWorkerForDatastoreAndJob
       job = Job(ObjectId.generate, owner._id, dataStoreName, command, commandArgs)
       _ <- jobDAO.insertOne(job)

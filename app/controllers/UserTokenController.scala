@@ -134,7 +134,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
 
     def tryDelete: Fox[UserAccessAnswer] =
       for {
-        _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> Msg.Dataset.Delete.disabled
+        _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> Msg.Dataset.Delete.notEnabled
         idStr <- idOpt.toFox
         datasetId <- ObjectId.fromString(idStr)
         dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId)

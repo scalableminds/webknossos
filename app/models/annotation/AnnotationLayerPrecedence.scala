@@ -172,7 +172,7 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
     if (existingAnnotationLayers.isEmpty) Fox.successful(None)
     else
       for {
-        existingAnnotationId <- existingAnnotationIdOpt.toFox ?~> Msg.fetchOldPrecedenceLayerNeedsAnnotationId
+        existingAnnotationId <- existingAnnotationIdOpt.toFox ?~> Msg.Annotation.fetchOldPrecedenceLayerNeedsAnnotationId
         oldPrecedenceLayer <- selectLayerWithPrecedence(existingAnnotationLayers)
         oldPrecedenceLayerFetched <- if (oldPrecedenceLayer.typ == AnnotationLayerType.Skeleton)
           tracingStoreClient.getSkeletonTracing(existingAnnotationId, oldPrecedenceLayer, previousVersion)

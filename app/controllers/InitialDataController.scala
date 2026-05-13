@@ -528,5 +528,5 @@ Samplecountry
     } else Fox.successful(())
 
   private def createOrganizationDirectory(): Fox[Unit] =
-    organizationService.createOrganizationDirectory(defaultOrganization._id) ?~> Msg.Organization.Create.directoryCreationFailed
+    organizationService.createOrganizationDirectory(defaultOrganization._id) ?~> Msg.Organization.Create.directoryCreateFailed
 }

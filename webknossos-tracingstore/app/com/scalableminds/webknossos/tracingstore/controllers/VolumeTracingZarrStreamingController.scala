@@ -91,8 +91,8 @@ class VolumeTracingZarrStreamingController @Inject()(
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
           tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound ~> NOT_FOUND
           existingMags = tracing.mags.map(vec3IntFromProto)
-          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Layer
-            .invalidMag(mag) ~> NOT_FOUND
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Mag
+            .invalid(mag) ~> NOT_FOUND
           _ <- Fox.fromBool(existingMags.contains(magParsed)) ?~> Msg.Annotation.Volume
             .wrongMag(tracingId, mag) ~> NOT_FOUND
           files = if (zarrVersion == 2) List(".zarray") else List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
@@ -113,8 +113,8 @@ class VolumeTracingZarrStreamingController @Inject()(
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
           tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound ~> NOT_FOUND
           existingMags = tracing.mags.map(vec3IntFromProto)
-          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Layer
-            .invalidMag(mag) ~> NOT_FOUND
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Mag
+            .invalid(mag) ~> NOT_FOUND
           _ <- Fox.fromBool(existingMags.contains(magParsed)) ?~> Msg.Annotation.Volume
             .wrongMag(tracingId, mag) ~> NOT_FOUND
           files = if (zarrVersion == 2) List(".zarray") else List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
@@ -129,8 +129,8 @@ class VolumeTracingZarrStreamingController @Inject()(
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
           tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound ~> NOT_FOUND
           existingMags = tracing.mags.map(vec3IntFromProto)
-          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Layer
-            .invalidMag(mag) ~> NOT_FOUND
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Mag
+            .invalid(mag) ~> NOT_FOUND
           _ <- Fox.fromBool(existingMags.contains(magParsed)) ?~> Msg.Annotation.Volume
             .wrongMag(tracingId, mag) ~> NOT_FOUND
 
@@ -167,8 +167,8 @@ class VolumeTracingZarrStreamingController @Inject()(
           tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound ~> NOT_FOUND
 
           existingMags = tracing.mags.map(vec3IntFromProto)
-          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Layer
-            .invalidMag(mag) ~> NOT_FOUND
+          magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Mag
+            .invalid(mag) ~> NOT_FOUND
           _ <- Fox.fromBool(existingMags.contains(magParsed)) ?~> Msg.Annotation.Volume
             .wrongMag(tracingId, mag) ~> NOT_FOUND
 
@@ -289,8 +289,8 @@ class VolumeTracingZarrStreamingController @Inject()(
             tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound ~> BAD_REQUEST
             existingMags = tracing.mags.map(vec3IntFromProto)
             // Failures in parsing coordinates or mag need to still be NOT_FOUND, not BAD_REQUEST because neuroglancer tries to access :layer_name/:mag/.zattrs
-            magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Layer
-              .invalidMag(mag) ~> NOT_FOUND
+            magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Mag
+              .invalid(mag) ~> NOT_FOUND
             _ <- Fox.fromBool(existingMags.contains(magParsed)) ?~> Msg.Annotation.Volume
               .wrongMag(tracingId, mag) ~> NOT_FOUND
             reorderedAdditionalAxes = reorderAdditionalAxes(AdditionalAxis.fromProtos(tracing.additionalAxes))

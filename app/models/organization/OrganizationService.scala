@@ -111,7 +111,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
   def assertNoOrganizationsPresent: Fox[Unit] =
     for {
       organizations <- organizationDAO.findAll(GlobalAccessContext)
-      _ <- Fox.fromBool(organizations.isEmpty) ?~> Msg.organizationsNotEmpty
+      _ <- Fox.fromBool(organizations.isEmpty) ?~> Msg.Organization.notEmpty
     } yield ()
 
   def createOrganization(organizationIdOpt: Option[String], organizationName: String): Fox[Organization] =
@@ -140,7 +140,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         organizationRootFolder._id
       )
       organizationTeam = Team(ObjectId.generate, organization._id, "Default", isOrganizationTeam = true)
-      _ <- folderDAO.insertAsRoot(organizationRootFolder) ?~> Msg.Organization.folderCreationFailed
+      _ <- folderDAO.insertAsRoot(organizationRootFolder) ?~> Msg.Organization.folderCreateFailed
       _ <- organizationDAO.insertOne(organization)
       _ <- teamDAO.insertOne(organizationTeam)
     } yield organization

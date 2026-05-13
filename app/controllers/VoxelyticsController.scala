@@ -35,7 +35,7 @@ class VoxelyticsController @Inject()(
   def storeWorkflow: Action[WorkflowDescription] =
     sil.SecuredAction.async(validateJson[WorkflowDescription]) { implicit request =>
       for {
-        _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.disabled
+        _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.notEnabled
         _ <- voxelyticsService.checkAuthForWorkflowCreation(request.body.run.name, request.identity) ?~> Msg.Voxelytics.workflowUserMismatch ~> UNAUTHORIZED
         _ <- voxelyticsDAO.upsertWorkflow(request.body.workflow.hash,
                                           request.body.workflow.name,
@@ -66,7 +66,7 @@ class VoxelyticsController @Inject()(
   def listWorkflows: Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.disabled
+        _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.notEnabled
         // Auth is implemented in `voxelyticsDAO.findRunsForWorkflowListing`
         runs <- voxelyticsDAO.findRunsForWorkflowListing(request.identity, conf.staleTimeout)
         result <- if (runs.nonEmpty) {
@@ -114,7 +114,7 @@ class VoxelyticsController @Inject()(
   def getWorkflow(workflowHash: String, runIdOpt: Option[ObjectId]): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.disabled
+        _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.notEnabled
         // Auth is implemented in `voxelyticsDAO.findRuns`
         workflow <- voxelyticsDAO.findWorkflowByHashAndOrganization(request.identity._organization, workflowHash) ?~> Msg.Voxelytics.workflowNotFound ~> NOT_FOUND
 
@@ -164,7 +164,7 @@ class VoxelyticsController @Inject()(
   def deleteWorkflow(workflowHash: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.disabled
+        _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.notEnabled
         _ <- userService.assertIsSuperUser(request.identity)
         _ <- voxelyticsDAO.findWorkflowByHash(workflowHash) ?~> Msg.Voxelytics.workflowNotFound ~> NOT_FOUND
         _ = logger.info(s"Deleting workflow with hash $workflowHash in organization ${request.identity._organization}")
@@ -214,7 +214,7 @@ class VoxelyticsController @Inject()(
       val groupedEvents = request.body.groupBy(_.getClass)
 
       for {
-        _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.disabled
+        _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.notEnabled
         // Also checks authorization
         runId <- voxelyticsDAO.getRunIdByNameAndWorkflowHash(runName, workflowHash, request.identity) ?~> Msg.Voxelytics.runNotFound ~> NOT_FOUND
         _ <- Fox.serialCombined(groupedEvents.values.toList)(eventGroup => createWorkflowEvent(runId, eventGroup)) ~> INTERNAL_SERVER_ERROR
@@ -225,7 +225,7 @@ class VoxelyticsController @Inject()(
     sil.SecuredAction.async { implicit request =>
       {
         for {
-          _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.disabled
+          _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.notEnabled
           runs <- voxelyticsDAO.findRuns(request.identity,
                                          runIdOpt.map(List(_)),
                                          Some(workflowHash),
@@ -244,7 +244,7 @@ class VoxelyticsController @Inject()(
     sil.SecuredAction.async { implicit request =>
       {
         for {
-          _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.disabled
+          _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.notEnabled
           runs <- voxelyticsDAO.findRuns(request.identity,
                                          runIdOpt.map(List(_)),
                                          Some(workflowHash),
@@ -259,7 +259,7 @@ class VoxelyticsController @Inject()(
   def appendLogs: Action[List[JsObject]] =
     sil.SecuredAction.async(validateJson[List[JsObject]]) { implicit request =>
       for {
-        _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.disabled
+        _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.notEnabled
         organization <- organizationDAO.findOne(request.identity._organization)
         logEntries = request.body
         _ <- lokiClient.bulkInsertBatched(logEntries, organization._id)
@@ -275,7 +275,7 @@ class VoxelyticsController @Inject()(
     sil.SecuredAction.async { implicit request =>
       {
         for {
-          _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.disabled
+          _ <- Fox.fromBool(wkConf.Features.voxelyticsEnabled) ?~> Msg.Voxelytics.notEnabled
           runName <- voxelyticsDAO.getRunNameById(runId, request.identity._organization)
           _ <- voxelyticsService.checkAuth(runId, request.identity) ~> UNAUTHORIZED
           organization <- organizationDAO.findOne(request.identity._organization)

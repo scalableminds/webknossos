@@ -306,7 +306,7 @@ class AnnotationIOController @Inject()(
     if (zipParseResult.containsFailure) {
       val errors = zipParseResult.parseResults.flatMap {
         case result: NmlResults.NmlParseFailure =>
-          Some("error" -> Msg.Nml.parseFailure(result.fileName, result.error))
+          Some("error" -> Msg.Nml.parseFailed(result.fileName, result.error))
         case _ => None
       }
       Fox.paramFailure("NML upload failed", Empty, Empty, Json.toJson(errors.map(m => Json.obj(m._1 -> m._2))))
@@ -562,7 +562,7 @@ class AnnotationIOController @Inject()(
       mimeType = exportMimeTypeForAnnotation(annotation)
       _ <- restrictions.allowDownload(requestingUser) ?~> Msg.Annotation.Download.notAllowed ~> FORBIDDEN
       dataset <- datasetDAO.findOne(annotation._dataset)(GlobalAccessContext) ?~> Msg.Dataset
-        .notFoundforAnnotation(annotation._dataset, annotation._id) ~> NOT_FOUND
+        .notFoundForAnnotation(annotation._dataset, annotation._id) ~> NOT_FOUND
       organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization.notFound(
         dataset._organization) ~> NOT_FOUND
       temporaryFile <- annotationToTemporaryFile(dataset, annotation, name, organization._id) ?~> Msg.Annotation.Download.writeToFileFailed

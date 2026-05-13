@@ -172,7 +172,7 @@ class AiModelController @Inject()(
         _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> Msg.Job.TrainModel.wrongOrga ~> FORBIDDEN
         datasetBoundingBox <- datasetService
           .usableDataSourceFor(dataset)
-          .map(_.boundingBox) ?~> Msg.Dataset.noBoundingBox
+          .map(_.boundingBox) ?~> Msg.Dataset.DataSource.noBoundingBox
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> Msg.DataStore.notFound
         _ <- Fox.serialCombined(request.body.trainingAnnotations.map(_.annotationId))(annotationDAO.findOne) ?~> Msg.Annotation.notFound
         modelId = ObjectId.generate
@@ -228,7 +228,7 @@ class AiModelController @Inject()(
         _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> Msg.Job.TrainModel.wrongOrga ~> FORBIDDEN
         datasetBoundingBox <- datasetService
           .usableDataSourceFor(dataset)
-          .map(_.boundingBox) ?~> Msg.Dataset.noBoundingBox
+          .map(_.boundingBox) ?~> Msg.Dataset.DataSource.noBoundingBox
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> Msg.DataStore.notFound
         _ <- Fox.serialCombined(request.body.trainingAnnotations.map(_.annotationId))(annotationDAO.findOne) ?~> Msg.Annotation.notFound
         modelId = ObjectId.generate

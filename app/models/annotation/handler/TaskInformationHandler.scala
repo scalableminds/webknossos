@@ -30,7 +30,7 @@ class TaskInformationHandler @Inject()(
   override def provideAnnotation(taskId: ObjectId, userOpt: Option[User])(
       implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
-      task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound
+      task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound(taskId)
       annotations <- annotationDAO.findAllByTaskIdAndType(task._id, AnnotationType.Task)
       finishedAnnotations = annotations.filter(_.state == Finished)
       _ <- assertAllOnSameDataset(finishedAnnotations)
@@ -52,7 +52,7 @@ class TaskInformationHandler @Inject()(
 
   def restrictionsFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =
     for {
-      task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound
+      task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound(taskId)
       project <- projectDAO.findOne(task._project)
     } yield {
       new AnnotationRestrictions {

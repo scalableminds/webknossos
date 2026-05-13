@@ -82,20 +82,14 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   // but we don’t want to disable features for those now
   def assertValidLayerNameLax(name: String): Fox[Unit] =
     for {
-      _ <- Fox.fromBool(!name.contains("/")) ?~> Msg.Dataset.layerNameInvalidCharacters
-      _ <- Fox.fromBool(!name.startsWith(".")) ?~> Msg.Dataset.layerNameInvalidStartsWithDot
-    } yield ()
-
-  def assertNewDatasetNameUnique(name: String, organizationId: String): Fox[Unit] =
-    for {
-      exists <- datasetDAO.doesDatasetNameExistInOrganization(name, organizationId)
-      _ <- Fox.fromBool(!exists) ?~> Msg.Dataset.Name.taken
+      _ <- Fox.fromBool(!name.contains("/")) ?~> Msg.Dataset.Layer.nameInvalidCharacters
+      _ <- Fox.fromBool(!name.startsWith(".")) ?~> Msg.Dataset.Layer.nameInvalidStartsWithDot
     } yield ()
 
   def checkNameAvailable(organizationId: String, datasetName: String): Fox[Unit] =
     for {
-      isDatasetNameAlreadyTaken <- datasetDAO.doesDatasetNameExistInOrganization(datasetName, organizationId)
-      _ <- Fox.fromBool(!isDatasetNameAlreadyTaken) ?~> Msg.Dataset.Name.alreadyTaken
+      exists <- datasetDAO.doesDatasetNameExistInOrganization(datasetName, organizationId)
+      _ <- Fox.fromBool(!exists) ?~> Msg.Dataset.Name.taken(datasetName)
     } yield ()
 
   def getAllUnfinishedDatasetUploadsOfUser(userId: ObjectId, organizationId: String)(
@@ -496,7 +490,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     val dataSourceId = DataSourceId(dataset.directoryName, dataset._organization)
     if (dataset.isUsable)
       for {
-        voxelSize <- dataset.voxelSize.toFox ?~> Msg.Dataset.Source.usableButNoVoxelSize
+        voxelSize <- dataset.voxelSize.toFox ?~> Msg.Dataset.DataSource.usableButNoVoxelSize
         dataLayers <- datasetDataLayerDAO.findAllForDataset(dataset._id, useRealPaths)
       } yield UsableDataSource(dataSourceId, dataLayers, voxelSize)
     else
@@ -566,7 +560,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
   def addInitialTeams(dataset: Dataset, teamIds: Seq[ObjectId], user: User)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      previousDatasetTeams <- teamService.allowedTeamIdsForDataset(dataset, cumulative = false) ?~> Msg.allowedTeamsNotFound
+      previousDatasetTeams <- teamService.allowedTeamIdsForDataset(dataset, cumulative = false) ?~> Msg.Dataset.allowedTeamsNotFound
       _ <- Fox.fromBool(previousDatasetTeams.isEmpty) ?~> Msg.Dataset.InitialTeams.teamsNotEmpty
       includeMemberOnlyTeams = user.isDatasetManager
       userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
@@ -578,7 +572,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   def addUploader(dataset: Dataset, _uploader: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- Fox.fromBool(dataset._uploader.isEmpty) ?~> Msg.Dataset.Upload.uploaderNotEmpty
-      _ <- datasetDAO.updateUploader(dataset._id, Some(_uploader)) ?~> Msg.Dataset.uploaderForbidden
+      _ <- datasetDAO.updateUploader(dataset._id, Some(_uploader)) ?~> Msg.Dataset.Upload.setUploaderForbidden
     } yield ()
 
   private def updateRealPathsForDataSource(pathInfo: DataSourcePathInfo)(implicit ctx: DBAccessContext): Fox[Unit] = {

@@ -256,8 +256,7 @@ class ZarrStreamingController @Inject()(
       (x, y, z, additionalCoordinates) <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates(
         coordinates,
         reorderedAdditionalAxes) ?~> Msg.Zarr.invalidChunkCoordinates(coordinates) ~> NOT_FOUND
-      magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Layer
-        .invalidMag(mag) ~> NOT_FOUND
+      magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Mag.invalid(mag) ~> NOT_FOUND
       _ <- Fox.fromBool(dataLayer.containsMag(magParsed)) ?~> Msg.Dataset.Layer
         .magNotFound(dataLayerName, mag) ~> NOT_FOUND
       cubeSize = DataLayer.bucketLength
@@ -293,8 +292,7 @@ class ZarrStreamingController @Inject()(
   private def zArray(datasetId: ObjectId, dataLayerName: String, mag: String): Fox[Result] =
     for {
       (_, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
-      magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Layer
-        .invalidMag(mag) ~> NOT_FOUND
+      magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Mag.invalid(mag) ~> NOT_FOUND
       _ <- Fox.fromBool(dataLayer.containsMag(magParsed)) ?~> Msg.Dataset.Layer
         .magNotFound(dataLayerName, mag) ~> NOT_FOUND
       zarrHeader = ZarrHeader.fromLayer(dataLayer, magParsed)
@@ -313,8 +311,7 @@ class ZarrStreamingController @Inject()(
   private def zarrJsonForMag(datasetId: ObjectId, dataLayerName: String, mag: String): Fox[Result] =
     for {
       (_, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
-      magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Layer
-        .invalidMag(mag) ~> NOT_FOUND
+      magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Mag.invalid(mag) ~> NOT_FOUND
       _ <- Fox.fromBool(dataLayer.containsMag(magParsed)) ?~> Msg.Dataset.Layer
         .magNotFound(dataLayerName, mag) ~> NOT_FOUND
       zarrHeader = Zarr3ArrayHeader.fromDataLayer(dataLayer, magParsed)
@@ -378,8 +375,7 @@ class ZarrStreamingController @Inject()(
                                             zarrVersion: Int): Fox[Result] =
     for {
       (_, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
-      magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Layer
-        .invalidMag(mag) ~> NOT_FOUND
+      magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Mag.invalid(mag) ~> NOT_FOUND
       _ <- Fox.fromBool(dataLayer.containsMag(magParsed)) ?~> Msg.Dataset.Layer
         .magNotFound(dataLayerName, mag) ~> NOT_FOUND
       additionalEntries = if (zarrVersion == 2) List(ZarrHeader.FILENAME_DOT_ZARRAY)

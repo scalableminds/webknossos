@@ -9,7 +9,6 @@ import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.schema.Tables.AnnotationMutexesRow
 import com.typesafe.scalalogging.LazyLogging
 import models.user.{UserDAO, UserService}
-import com.scalableminds.util.tools.Full
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
 import utils.WkConf
@@ -43,30 +42,16 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
   private val defaultExpiryTime = wkConf.WebKnossos.Annotation.Mutex.expiryTime
 
   def tryAcquiringAnnotationMutex(annotationId: ObjectId, userId: ObjectId): Fox[MutexResult] =
-    this.synchronized {
-      for {
-        mutexBox <- annotationMutexDAO.findOne(annotationId).shiftBox
-        result <- mutexBox match {
-          case Full(mutex) =>
-            if (mutex.userId == userId)
-              refresh(mutex)
-            else
-              Fox.successful(MutexResult(canEdit = false, blockedByUser = Some(mutex.userId)))
-          case _ =>
-            acquire(annotationId, userId)
-        }
-      } yield result
-    }
-
-  private def acquire(annotationId: ObjectId, userId: ObjectId): Fox[MutexResult] =
     for {
-      _ <- annotationMutexDAO.upsertOne(AnnotationMutex(annotationId, userId, Instant.in(defaultExpiryTime)))
-    } yield MutexResult(canEdit = true, None)
-
-  private def refresh(mutex: AnnotationMutex): Fox[MutexResult] =
-    for {
-      _ <- annotationMutexDAO.upsertOne(mutex.copy(expiry = Instant.in(defaultExpiryTime)))
-    } yield MutexResult(canEdit = true, None)
+      _ <- Fox.successful(logger.info(s"Try acquire mutex inner for user $userId and id $annotationId."))
+      ownerUserId <- annotationMutexDAO.tryAcquireReturningOwner(annotationId, userId, Instant.in(defaultExpiryTime))
+      _ <- Fox.successful(
+        logger.info(s"Try acquire mutex inner for user $userId and id $annotationId got ownerUserId $ownerUserId."))
+      result = if (ownerUserId == userId)
+        MutexResult(canEdit = true, None)
+      else
+        MutexResult(canEdit = false, blockedByUser = Some(ownerUserId))
+    } yield result
 
   def release(annotationId: ObjectId, userId: ObjectId): Fox[Unit] =
     annotationMutexDAO.deleteForUser(annotationId, userId)
@@ -93,26 +78,25 @@ class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionC
       Instant.fromSql(r.expiry)
     )
 
-  def findOne(annotationId: ObjectId): Fox[AnnotationMutex] =
+  def tryAcquireReturningOwner(annotationId: ObjectId, userId: ObjectId, expiry: Instant): Fox[ObjectId] =
     for {
-      rows <- run(q"""SELECT _annotation, _user, expiry
-            FROM webknossos.annotation_mutexes
-            WHERE _annotation = $annotationId
-            AND expiry > NOW()""".as[AnnotationMutexesRow])
+      rows <- run(q"""WITH attempt AS (
+                        INSERT INTO webknossos.annotation_mutexes(_annotation, _user, expiry)
+                        VALUES($annotationId, $userId, $expiry)
+                        ON CONFLICT (_annotation)
+                          DO UPDATE SET
+                            _user = EXCLUDED._user,
+                            expiry = EXCLUDED.expiry
+                          WHERE webknossos.annotation_mutexes._user = EXCLUDED._user
+                             OR webknossos.annotation_mutexes.expiry < NOW()
+                      )
+                      SELECT _annotation, _user, expiry
+                      FROM webknossos.annotation_mutexes
+                      WHERE _annotation = $annotationId
+                      AND expiry >= NOW()""".as[AnnotationMutexesRow])
       first <- rows.headOption.toFox
       parsed = parse(first)
-    } yield parsed
-
-  def upsertOne(annotationMutex: AnnotationMutex): Fox[Unit] =
-    for {
-      _ <- run(q"""INSERT INTO webknossos.annotation_mutexes(_annotation, _user, expiry)
-                   VALUES(${annotationMutex.annotationId}, ${annotationMutex.userId}, ${annotationMutex.expiry})
-                   ON CONFLICT (_annotation)
-                     DO UPDATE SET
-                       _user = ${annotationMutex.userId},
-                       expiry = ${annotationMutex.expiry}
-                   """.asUpdate)
-    } yield ()
+    } yield parsed.userId
 
   def deleteExpired(): Fox[Int] =
     run(q"DELETE FROM webknossos.annotation_mutexes WHERE expiry < NOW()".asUpdate)

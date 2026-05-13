@@ -44,7 +44,7 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
   def tryAcquiringAnnotationMutex(annotationId: ObjectId, userId: ObjectId): Fox[MutexResult] =
     for {
       _ <- Fox.successful(logger.info(s"Try acquire mutex inner for user $userId and id $annotationId."))
-      ownerUserId <- annotationMutexDAO.tryAcquireReturningOwner(annotationId, userId, Instant.in(defaultExpiryTime))
+      ownerUserId <- annotationMutexDAO.tryAcquireReturningOwner(annotationId, userId, Instant.in(defaultExpiryTime)) ?~> "annotationMutexDAO.tryAcquireReturningOwner failed"
       _ <- Fox.successful(
         logger.info(s"Try acquire mutex inner for user $userId and id $annotationId got ownerUserId $ownerUserId."))
       result = if (ownerUserId == userId)
@@ -89,12 +89,17 @@ class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionC
                             expiry = EXCLUDED.expiry
                           WHERE webknossos.annotation_mutexes._user = EXCLUDED._user
                              OR webknossos.annotation_mutexes.expiry < NOW()
+                        RETURNING _annotation, _user, expiry
                       )
+                      SELECT _annotation, _user, expiry FROM attempt
+
+                      UNION ALL
+
                       SELECT _annotation, _user, expiry
                       FROM webknossos.annotation_mutexes
                       WHERE _annotation = $annotationId
-                      AND expiry >= NOW()""".as[AnnotationMutexesRow])
-      first <- rows.headOption.toFox
+                        AND expiry >= NOW()""".as[AnnotationMutexesRow]) ~> "Upserting annotation mutex failed."
+      first <- rows.headOption.toFox ~> "Could not find mutex for annotation."
       parsed = parse(first)
     } yield parsed.userId
 

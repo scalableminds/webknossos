@@ -56,8 +56,8 @@ export function* setupSavingForAnnotation(
       ...ViewModeSaveRelevantActions,
       ...SkeletonTracingSaveRelevantActions,
     ]);
-    const allowSave = yield* select(mayAddToSaveQueue);
-    if (!allowSave) {
+    const shouldDiff = yield* select(mayAddToSaveQueue);
+    if (!shouldDiff) {
       // Note that we completely ignore changes if adding to save queue
       // is not allowed.
       continue;

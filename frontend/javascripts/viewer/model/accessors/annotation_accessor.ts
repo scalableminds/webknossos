@@ -46,17 +46,16 @@ export function mayAddToSaveQueue(state: WebknossosState): boolean {
    * annotation state with the previous one to fill the save queue
    * with update actions.
    */
-  // allowSave is initialized with allowUpdate and may be overriden when
-  // saving is disabled (via DISABLE_SAVING action).
-  // We *don't* check isUpdatingCurrentlyAllowed here, because the save queue
-  // is only filled with changes that already happened. If isUpdatingCurrentlyAllowed is
-  // false, the annotation should not have been modified in the first place.
-  // *If* we checked isUpdatingCurrentlyAllowed here, there might be a race condition
-  // where the annotation is changed, but it's changes will never be added to the save
-  // queue, because was isUpdatingCurrentlyAllowed disabled for some reason.
   return (
+    // allowSave is initialized with allowUpdate and may be overriden when
+    // saving is disabled (via DISABLE_SAVING action).
     Boolean(state.annotation.restrictions.allowSave) &&
     !state.uiInformation.showVersionRestore &&
+    // The mayEditAnnotation accessor should prevent "proper" modifications to the annotation.
+    // However, view-related changes (e.g., camera movement) are still allowed and are
+    // stored in the annotation. Therefore, we still need to check isUpdatingCurrentlyAllowed
+    // to avoid that those changes are tried to be saved.
+    state.annotation.isUpdatingCurrentlyAllowed &&
     // Ignore changes while rebasing or forwarding new backend actions as during this time actions
     // are simply replayed on top of the server's state.
     // Therefore, these actions were already added to the save queue or originate from the server itself

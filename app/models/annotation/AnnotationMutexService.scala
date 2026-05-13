@@ -98,7 +98,8 @@ class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionC
                       SELECT _annotation, _user, expiry
                       FROM webknossos.annotation_mutexes
                       WHERE _annotation = $annotationId
-                        AND expiry >= NOW()""".as[AnnotationMutexesRow]) ~> "Upserting annotation mutex failed."
+                        AND expiry >= NOW()
+                        AND NOT EXISTS (SELECT 1 FROM attempt)""".as[AnnotationMutexesRow]) ~> "Upserting annotation mutex failed."
       first <- rows.headOption.toFox ~> "Could not find mutex for annotation."
       parsed = parse(first)
     } yield parsed.userId

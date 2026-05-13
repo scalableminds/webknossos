@@ -1,121 +1,60 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
+import com.scalableminds.util.tools.{AsyncIterator, Fox}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.SegmentToAgglomerateChunkProto
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ReversionHelper
-import com.scalableminds.webknossos.tracingstore.tracings.{
-  FossilDBClient,
-  KeyValueStoreImplicits,
-  VersionedKeyValuePair
-}
-import com.scalableminds.util.tools.Full
+import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, KeyValueStoreImplicits}
 
-import scala.annotation.tailrec
+import scala.concurrent.ExecutionContext
 
 class VersionedAgglomerateToGraphIterator(prefix: String,
                                           segmentToAgglomerateDataStore: FossilDBClient,
-                                          version: Option[Long] = None)
-    extends Iterator[(String, AgglomerateGraph, Long)]
+                                          version: Option[Long] = None)(implicit ec: ExecutionContext)
+    extends AsyncIterator[(String, AgglomerateGraph, Long)]
     with ReversionHelper
     with KeyValueStoreImplicits {
   private val batchSize = 64
-
   private var currentStartAfterKey: Option[String] = None
-  private var currentBatchIterator: Iterator[VersionedKeyValuePair[Array[Byte]]] = fetchNext
-  private var nextGraph: Option[VersionedKeyValuePair[AgglomerateGraph]] = None
 
-  private def fetchNext: Iterator[VersionedKeyValuePair[Array[Byte]]] =
-    segmentToAgglomerateDataStore.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize)).iterator
-
-  private def fetchNextAndSave = {
-    currentBatchIterator = fetchNext
-    currentBatchIterator
-  }
-
-  @tailrec
-  private def getNextNonRevertedGraph: Option[VersionedKeyValuePair[AgglomerateGraph]] =
-    if (currentBatchIterator.hasNext) {
-      val chunk = currentBatchIterator.next()
-      currentStartAfterKey = Some(chunk.key)
-      val graphParsedBox = fromProtoBytes[AgglomerateGraph](chunk.value)
-      graphParsedBox match {
-        case _ if isRevertedElement(chunk.value) => getNextNonRevertedGraph
-        case Full(graphParsed)                   => Some(VersionedKeyValuePair(versionedKey = chunk.versionedKey, value = graphParsed))
-        case _                                   => getNextNonRevertedGraph
+  override def nextBatch(): Fox[List[(String, AgglomerateGraph, Long)]] =
+    segmentToAgglomerateDataStore
+      .getMultipleKeys[Array[Byte]](currentStartAfterKey, Some(prefix), version, Some(batchSize))
+      .flatMap { rawBatch =>
+        if (rawBatch.isEmpty) Fox.successful(Nil)
+        else {
+          currentStartAfterKey = rawBatch.lastOption.map(_.key)
+          val parsed = rawBatch.filterNot(item => isRevertedElement(item.value)).flatMap { item =>
+            fromProtoBytes[AgglomerateGraph](item.value).toOption.map(graph => (item.key, graph, item.version))
+          }
+          if (parsed.nonEmpty) Fox.successful(parsed)
+          else nextBatch()
+        }
       }
-    } else {
-      if (!fetchNextAndSave.hasNext) None
-      else getNextNonRevertedGraph
-    }
-
-  override def hasNext: Boolean =
-    if (nextGraph.isDefined) true
-    else {
-      nextGraph = getNextNonRevertedGraph
-      nextGraph.isDefined
-    }
-
-  override def next(): (String, AgglomerateGraph, Long) = {
-    val nextRes = nextGraph match {
-      case Some(bucket) => bucket
-      case None         => getNextNonRevertedGraph.getOrElse(throw new NoSuchElementException())
-    }
-    nextGraph = None
-    (nextRes.key, nextRes.value, nextRes.version)
-  }
-
 }
 
 class VersionedSegmentToAgglomerateChunkIterator(prefix: String,
                                                  segmentToAgglomerateDataStore: FossilDBClient,
-                                                 version: Option[Long] = None)
-    extends Iterator[(String, SegmentToAgglomerateChunkProto, Long)]
+                                                 version: Option[Long] = None)(implicit ec: ExecutionContext)
+    extends AsyncIterator[(String, SegmentToAgglomerateChunkProto, Long)]
     with ReversionHelper
     with KeyValueStoreImplicits {
   private val batchSize = 64
-
   private var currentStartAfterKey: Option[String] = None
-  private var currentBatchIterator: Iterator[VersionedKeyValuePair[Array[Byte]]] = fetchNext
-  private var nextChunk: Option[VersionedKeyValuePair[SegmentToAgglomerateChunkProto]] = None
 
-  private def fetchNext: Iterator[VersionedKeyValuePair[Array[Byte]]] =
-    segmentToAgglomerateDataStore.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize)).iterator
-
-  private def fetchNextAndSave = {
-    currentBatchIterator = fetchNext
-    currentBatchIterator
-  }
-
-  @tailrec
-  private def getNextNonRevertedChunk: Option[VersionedKeyValuePair[SegmentToAgglomerateChunkProto]] =
-    if (currentBatchIterator.hasNext) {
-      val chunk = currentBatchIterator.next()
-      currentStartAfterKey = Some(chunk.key)
-      val chunkParsedBox = fromProtoBytes[SegmentToAgglomerateChunkProto](chunk.value)
-      chunkParsedBox match {
-        case _ if isRevertedElement(chunk.value) => getNextNonRevertedChunk
-        case Full(chunkParsed)                   => Some(VersionedKeyValuePair(versionedKey = chunk.versionedKey, value = chunkParsed))
-        case _                                   => getNextNonRevertedChunk
+  override def nextBatch(): Fox[List[(String, SegmentToAgglomerateChunkProto, Long)]] =
+    segmentToAgglomerateDataStore
+      .getMultipleKeys[Array[Byte]](currentStartAfterKey, Some(prefix), version, Some(batchSize))
+      .flatMap { rawBatch =>
+        if (rawBatch.isEmpty) Fox.successful(Nil)
+        else {
+          currentStartAfterKey = rawBatch.lastOption.map(_.key)
+          val parsed = rawBatch.filterNot(item => isRevertedElement(item.value)).flatMap { item =>
+            fromProtoBytes[SegmentToAgglomerateChunkProto](item.value).toOption.map(chunk =>
+              (item.key, chunk, item.version))
+          }
+          if (parsed.nonEmpty) Fox.successful(parsed)
+          else nextBatch()
+        }
       }
-    } else {
-      if (!fetchNextAndSave.hasNext) None
-      else getNextNonRevertedChunk
-    }
-
-  override def hasNext: Boolean =
-    if (nextChunk.isDefined) true
-    else {
-      nextChunk = getNextNonRevertedChunk
-      nextChunk.isDefined
-    }
-
-  override def next(): (String, SegmentToAgglomerateChunkProto, Long) = {
-    val nextRes = nextChunk match {
-      case Some(bucket) => bucket
-      case None         => getNextNonRevertedChunk.getOrElse(throw new NoSuchElementException())
-    }
-    nextChunk = None
-    (nextRes.key, nextRes.value, nextRes.version)
-  }
-
 }

@@ -136,6 +136,28 @@ class FossilDBClient(collection: String,
       startAfterKey: Option[String],
       prefix: Option[String],
       version: Option[Long] = None,
+      limit: Option[Int] = None)(implicit fromByteArray: Array[Byte] => Box[T]): Fox[List[VersionedKeyValuePair[T]]] = {
+    def flatCombineTuples[A, B, C](keys: List[A], versions: List[B], values: List[Box[C]]) = {
+      val boxTuples: List[Box[(A, B, C)]] = keys.zip(versions).zip(values).map {
+        case ((k, v), Full(value)) => Full(k, v, value)
+        case _                     => Empty
+      }
+      boxTuples.flatten
+    }
+
+    for {
+      reply <- wrapException(stub.getMultipleKeys(GetMultipleKeysRequest(collection, startAfterKey, prefix, version, limit)))
+      _ <- assertSuccess(reply.success, reply.errorMessage)
+      parsedValues: List[Box[T]] = reply.values.map(v => fromByteArray(v.toByteArray)).toList
+    } yield flatCombineTuples(reply.keys.toList, reply.actualVersions.toList, parsedValues).map { t =>
+      VersionedKeyValuePair(VersionedKey(t._1, t._2), t._3)
+    }
+  }
+
+  def getMultipleKeysBlocking[T](
+      startAfterKey: Option[String],
+      prefix: Option[String],
+      version: Option[Long] = None,
       limit: Option[Int] = None)(implicit fromByteArray: Array[Byte] => Box[T]): List[VersionedKeyValuePair[T]] = {
     def flatCombineTuples[A, B, C](keys: List[A], versions: List[B], values: List[Box[C]]) = {
       val boxTuples: List[Box[(A, B, C)]] = keys.zip(versions).zip(values).map {
@@ -147,9 +169,7 @@ class FossilDBClient(collection: String,
 
     val reply = blockingStub.getMultipleKeys(GetMultipleKeysRequest(collection, startAfterKey, prefix, version, limit))
     if (!reply.success) throw new Exception(reply.errorMessage.getOrElse(""))
-    val parsedValues: List[Box[T]] = reply.values.map { v =>
-      fromByteArray(v.toByteArray)
-    }.toList
+    val parsedValues: List[Box[T]] = reply.values.map(v => fromByteArray(v.toByteArray)).toList
     flatCombineTuples(reply.keys.toList, reply.actualVersions.toList, parsedValues).map { t =>
       VersionedKeyValuePair(VersionedKey(t._1, t._2), t._3)
     }

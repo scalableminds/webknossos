@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{AsyncIterator, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
@@ -21,7 +21,7 @@ import scala.concurrent.ExecutionContext
 
 trait AbstractVolumeTracingBucketProvider extends BucketProvider with VolumeTracingBucketHelper with FoxImplicits {
 
-  def bucketStreamWithVersion(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)]
+  def bucketStreamWithVersion(version: Option[Long] = None): AsyncIterator[(BucketPosition, Array[Byte], Long)]
 
   def bucketStream(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])]
 }
@@ -51,7 +51,7 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit val ec: Ex
   override def bucketStream(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
     bucketStream(layer, version)
 
-  override def bucketStreamWithVersion(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)] =
+  override def bucketStreamWithVersion(version: Option[Long] = None): AsyncIterator[(BucketPosition, Array[Byte], Long)] =
     bucketStreamWithVersion(layer, version)
 }
 
@@ -71,7 +71,7 @@ class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit v
   override def bucketStream(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
     bucketStreamFromTemporaryStore(layer)
 
-  override def bucketStreamWithVersion(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte], Long)] =
+  override def bucketStreamWithVersion(version: Option[Long] = None): AsyncIterator[(BucketPosition, Array[Byte], Long)] =
     throw new UnsupportedOperationException // Temporary Volume Tracings do not support versioning
 }
 

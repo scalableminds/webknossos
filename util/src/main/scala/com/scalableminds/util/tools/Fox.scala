@@ -108,6 +108,20 @@ object Fox extends FoxImplicits {
     runNext(Nil)
   }
 
+  // Run serially over async batches, fail on the first failure
+  def serialCombined[A, B](it: AsyncIterator[A])(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] = {
+    def runNext(results: List[B]): Fox[List[B]] =
+      it.nextBatch().flatMap {
+        case Nil => Fox.successful(results.reverse)
+        case batch =>
+          for {
+            batchResults <- serialCombined(batch)(f)
+            allResults <- runNext(batchResults.reverse ::: results)
+          } yield allResults
+      }
+    runNext(Nil)
+  }
+
   // Run batches in parallel. Sequentially run the elements within each batch.
   def batchCombined[A, B](seq: Seq[A], parallelity: Int)(f: A => Fox[B])(implicit ec: ExecutionContext): Fox[List[B]] =
     if (parallelity <= 0)

@@ -299,7 +299,7 @@ class WKRemoteTracingStoreClient(
                        voxelSize: Option[VoxelSize])(implicit ec: ExecutionContext): Fox[FetchedAnnotationLayer] = {
     logger.info(s"Called to get VolumeTracing $annotationId/${annotationLayer.tracingId}." + baseInfo)
     for {
-      _ <- Fox.fromBool(annotationLayer.typ == AnnotationLayerType.Volume) ?~> Msg.Annotation.Download.fetchNotSkeleton
+      _ <- Fox.fromBool(annotationLayer.typ == AnnotationLayerType.Volume) ?~> Msg.Annotation.Download.fetchNotVolume
       tracingId = annotationLayer.tracingId
       tracing <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId")
         .addQueryParam("token", RpcTokenHolder.webknossosToken)

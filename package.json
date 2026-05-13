@@ -72,7 +72,7 @@
     "start-fossildb": "fossildb/run.sh > fossildb/logs",
     "dev-gen-tls": "./tools/gen-ssl-dev-certs.sh",
     "@comment build-backend": "Only check for errors in the backend code like done by the CI. This command is not needed to run WEBKNOSSOS",
-    "build-backend": "yarn build-wk-backend && yarn build-wk-datastore && yarn build-wk-tracingstore && rm webknossos-tracingstore/conf/messages webknossos-datastore/conf/messages",
+    "build-backend": "yarn build-wk-backend && yarn build-wk-datastore && yarn build-wk-tracingstore",
     "build-wk-backend": "sbt -no-colors -DfailOnWarning compile stage",
     "build-wk-datastore": "sbt -no-colors -DfailOnWarning \"project webknossosDatastore\" compile stage",
     "build-wk-tracingstore": "sbt -no-colors -DfailOnWarning \"project webknossosTracingstore\" compile stage",

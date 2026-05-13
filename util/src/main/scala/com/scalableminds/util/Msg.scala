@@ -180,6 +180,7 @@ object Msg {
       val fetchVolumeLayerFailed: String = "Could not fetch volume annotation layer."
       val fetchSkeletonLayerFailed: String = "Could not fetch skeleton annotation layer."
       val fetchNotSkeleton: String = "Cannot fetch skeleton annotation: not a skeleton layer."
+      val fetchNotVolume: String = "Cannot fetch volume annotation: not a volume layer."
       val fetchTypeMismatch: String = "Type mismatch when fetching annotation layer for download."
       val multipleSkeletons: String = "Cannot download annotation with multiple skeleton layers."
       val volumeNameForMultiple: String = "Cannot download multiple volume layers if volume name is passed."
@@ -710,6 +711,7 @@ object Msg {
   object Mesh {
     val loadFullFailed: String = "Could not load full segment mesh."
     val magNeededForAdHoc: String = "A mag needs to be provided for ad-hoc mesh computation."
+    val seedPosNeededForAdHoc: String = "A seed position needs to be provided for ad-hoc mesh computation."
     object File {
       val meshFileNameRequired: String =
         "Trying to load mesh from mesh file, but no mesh file name was supplied."

@@ -92,7 +92,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
         getAllAdHocChunksWithSegmentIndex(datasetId, dataSource, segmentationLayer, fullMeshRequest, mag)
       else {
         for {
-          seedPosition <- fullMeshRequest.seedPosition.toFox ?~> Msg.Mesh.magNeededForAdHoc
+          seedPosition <- fullMeshRequest.seedPosition.toFox ?~> Msg.Mesh.seedPosNeededForAdHoc
           chunks <- getAllAdHocChunksWithNeighborLogic(
             datasetId,
             dataSource,

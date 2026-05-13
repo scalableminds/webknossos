@@ -53,7 +53,7 @@ class FolderController @Inject()(
         params = request.body
         organization <- organizationDAO.findOne(request.identity._organization)
         _ <- folderDAO.findOne(id) ?~> Msg.Folder.notFound
-        - <- Fox.assertTrue(folderDAO.isEditable(id)) ?~> Msg.Folder.updateNotAllowed ~> FORBIDDEN
+        _ <- Fox.assertTrue(folderDAO.isEditable(id)) ?~> Msg.Folder.updateNotAllowed ~> FORBIDDEN
         _ <- folderService.assertValidFolderName(params.name)
         _ <- assertNoDuplicateMetadataKeys(params.metadata)
         _ <- folderDAO.updateMetadata(id, params.metadata)

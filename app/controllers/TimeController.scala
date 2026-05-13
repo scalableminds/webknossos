@@ -62,8 +62,7 @@ class TimeController @Inject()(userService: UserService,
           .fromCommaSeparated(annotationStates) ?~> Msg.TimeTracking.invalidAnnotationState
         user <- userService.findOneCached(userId) ?~> Msg.User.notFound(userId) ~> NOT_FOUND
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOf(request.identity, user)
-        _ <- Fox
-          .fromBool(isTeamManagerOrAdmin || user._id == request.identity._id) ?~> Msg.User.notAuthenticated ~> FORBIDDEN
+        _ <- Fox.fromBool(isTeamManagerOrAdmin || user._id == request.identity._id) ?~> Msg.notAllowed ~> FORBIDDEN
         timesByAnnotation <- timeSpanDAO.summedByAnnotationForUser(user._id,
                                                                    Instant(start),
                                                                    Instant(end),
@@ -86,7 +85,7 @@ class TimeController @Inject()(userService: UserService,
         annotationStatesValidated <- AnnotationState.fromCommaSeparated(annotationStates) ?~> Msg.TimeTracking.invalidAnnotationState
         user <- userService.findOneCached(userId) ?~> Msg.User.notFound(userId) ~> NOT_FOUND
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOf(request.identity, user)
-        _ <- Fox.fromBool(isTeamManagerOrAdmin || user._id == request.identity._id) ?~> Msg.User.notAuthenticated ~> FORBIDDEN
+        _ <- Fox.fromBool(isTeamManagerOrAdmin || user._id == request.identity._id) ?~> Msg.notAllowed ~> FORBIDDEN
         timeSpansJs <- timeSpanDAO.findAllByUserWithTask(user._id,
                                                          Instant(start),
                                                          Instant(end),

@@ -189,7 +189,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       }
 
     for {
-      topLeft <- topLeftOpt.toFox ?~> Msg.Mesh.magNeededForAdHoc
+      topLeft <- topLeftOpt.toFox ?~> Msg.Mesh.seedPosNeededForAdHoc
       result <- processFrontier(List(topLeft), List.empty)
     } yield result
   }

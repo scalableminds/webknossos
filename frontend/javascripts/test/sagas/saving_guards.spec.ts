@@ -48,7 +48,7 @@ describe("Saving guards", () => {
       ensureResolved = true;
     });
 
-    await new Promise((r) => setTimeout(r, 200));
+    await sleep(200);
 
     expect(context.receivedDataPerSaveRequest.length).toBe(saveCountBefore);
     // The ensure-newest-version promise fulfills immediately because the sole-editor
@@ -72,7 +72,7 @@ describe("Saving guards", () => {
 
     // Force-push: the race fires, then the guard blocks the drain.
     Store.dispatch({ type: "SAVE_NOW" });
-    await new Promise((r) => setTimeout(r, 200));
+    await sleep(200);
 
     expect(context.receivedDataPerSaveRequest.length).toBe(saveCountAfterOpen);
 

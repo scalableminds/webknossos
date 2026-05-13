@@ -354,7 +354,7 @@ object Msg {
       val submitFailed: String = "Could not start mesh file computation job."
     }
     object ComputeSegmentIndex {
-      val wrongOrga: String = "Computing mesh files is only allowed for datasets of your own organization."
+      val wrongOrga: String = "Computing segment index files is only allowed for datasets of your own organization."
       val submitFailed: String = "Could not start segment index file computation job."
     }
     object ExportTiff {
@@ -598,7 +598,8 @@ object Msg {
     def invalidTreeId(id: String): String = s"Invalid tree id “$id”."
     val additionalCoordinatesNotUnique: String =
       "Additional coordinates do not have unique names."
-    def invalidNodeId(label: String, id: String): String = s"Invalid$label node id “$id”."
+    def invalidNodeId(labelWithLeadingSpace: String, id: String): String =
+      s"Invalid$labelWithLeadingSpace node id “$id”."
     def invalidNodeIdInComment(nodeId: String): String =
       s"Invalid node id “$nodeId” in comment."
     def invalidEdge(src: String, dst: String): String = s"Invalid edge “$src-$dst”."
@@ -717,13 +718,13 @@ object Msg {
       s"Invalid chunk coordinates $coordinates. Expected dot-separated coordinates like “c.<additional_axes.>x.y.z”."
     val invalidAdditionalCoordinates: String =
       "Invalid additional coordinates for this data layer."
-    val invalidFirstChunkCoord: String = "First Channel must be 0."
+    val invalidFirstChunkCoord: String = "First channel must be 0."
     val notEnoughCoordinates: String =
       "Invalid number of chunk coordinates. Expected to get at least 3 dimensions and channel 0."
   }
   object SegmentAnything {
     val notEnabled: String = "AI-based quick select is not enabled for this WEBKNOSSOS instance."
-    val noUri: String = "No Uri for SAM server configured."
+    val noUri: String = "No URI for SAM server configured."
     val getDataFailed: String = "Could not get image data to send to SAM server."
     val getMaskFailed: String = "Could not get image mask from SAM server."
   }

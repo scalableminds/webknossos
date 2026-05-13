@@ -222,13 +222,13 @@ object Msg {
         "The requested agglomerate was empty. It was likely merged into another agglomerate already."
     }
     object PrivateLink {
-      def notFound(id: ObjectId) = s"Annotation private link “$id” could not be found or accessed."
+      def notFound(id: ObjectId): String = s"Annotation private link “$id” could not be found or accessed."
       val createFailed: String = "Could not create annotation private link."
       val expired: String = "Annotation private link token is expired."
       val updateFailed: String = "Could not update annotation private link."
       val deleteFailed: String = "Could not delete annotation private link."
       val deleteSuccess: String = "Annotation private link was successfully deleted."
-      val publicWritesFailed = "Could not convert annotation private link to json."
+      val publicWritesFailed: String = "Could not convert annotation private link to json."
     }
   }
   object Passkeys {
@@ -347,7 +347,7 @@ object Msg {
     object MaterializeVolumeAnnotation {
       val wrongOrga: String =
         "Materializing volume annotations is only allowed for datasets of your own organization."
-      val submitFailed = "Could not start the materialize volume annotation job."
+      val submitFailed: String = "Could not start the materialize volume annotation job."
     }
     object ComputeMeshFile {
       val wrongOrga: String = "Computing mesh files is only allowed for datasets of your own organization."
@@ -530,7 +530,7 @@ object Msg {
     }
   }
   object Task {
-    val notFound: String = s"Task could not be found or accessed."
+    val notFound: String = "Task could not be found or accessed."
     def notFound(id: ObjectId): String = s"Task “$id” could not be found or accessed."
     val findAnnotationsFailed: String = "Could not retrieve annotations for this task."
     val unavailable: String = "There is currently no task available."
@@ -620,7 +620,7 @@ object Msg {
     val noFinishedAnnotations: String = "Could not find any finished annotations for this task type."
   }
   object User {
-    def notFound: String = s"User could not be found or accessed."
+    def notFound: String = "User could not be found or accessed."
     def notFound(id: ObjectId): String = s"User “$id” could not be found or accessed."
     val noSelfDeactivate: String =
       "You cannot deactivate yourself. Please contact an admin to do it for you."
@@ -698,7 +698,7 @@ object Msg {
         s"Could not load chunk list for segment $segmentIds from mesh file “$name”."
       def zeroChunks(segmentIds: String, name: String): String =
         s"Zero mesh chunks for segment $segmentIds in mesh file “$name”."
-      def loadChunkFailed: String = "Could not load mesh chunk for segment."
+      val loadChunkFailed: String = "Could not load mesh chunk for segment."
     }
   }
   object ConnectomeFile {
@@ -748,7 +748,7 @@ object Msg {
     val pageFailed: String = "Could not get page from 2d image sprite sheet."
   }
   object TimeTracking {
-    val invalidTeamIds = "Invalid team ids."
+    val invalidTeamIds: String = "Invalid team ids."
     val invalidAnnotationState: String = "Invalid annotation state."
     val invalidAnnotationType: String = "Invalid annotation type."
     val unsupportedAnnotationType: String = "One of the selected annotation types is not supported for time tracking."

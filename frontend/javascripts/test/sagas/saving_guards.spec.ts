@@ -4,17 +4,17 @@ import {
   setCollaborationModeAction,
   setIsUpdatingAnnotationCurrentlyAllowedAction,
 } from "viewer/model/actions/annotation_actions";
+import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import {
   disableSavingAction,
   dispatchEnsureHasNewestVersionAsync,
 } from "viewer/model/actions/save_actions";
 import { createNodeAction, createTreeAction } from "viewer/model/actions/skeletontracing_actions";
-import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import { setVersionRestoreVisibilityAction } from "viewer/model/actions/ui_actions";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+import { Model } from "viewer/singletons";
 import Store from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { Model } from "viewer/singletons";
 
 describe("Saving guards", () => {
   beforeEach<WebknossosTestContext>(async (context) => {

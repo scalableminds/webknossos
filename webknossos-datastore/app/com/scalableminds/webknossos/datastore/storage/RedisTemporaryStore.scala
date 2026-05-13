@@ -96,7 +96,7 @@ trait RedisTemporaryStore extends LazyLogging {
     }
 
   def withExceptionHandler[B](f: => B): Fox[B] =
-    try {
+    try { // TODO check whether f might return a fox and this break the synchronized mechanism
       r.synchronized {
         Fox.successful(f)
       }

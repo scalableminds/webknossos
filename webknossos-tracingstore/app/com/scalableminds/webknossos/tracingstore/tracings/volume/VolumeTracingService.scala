@@ -477,20 +477,21 @@ class VolumeTracingService @Inject()(
                                     voxelSize: Option[VoxelSize],
                                     os: OutputStream)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Unit] = {
     val volumeLayer = volumeTracingLayer(annotationId, tracingId, tracing)
-    val buckets: Iterator[NamedStream] = volumeDataZipFormat match {
+    val asyncBuckets = volumeLayer.bucketProvider.bucketStream(Some(tracing.version))
+    val namedStreams = volumeDataZipFormat match {
       case VolumeDataZipFormat.wkw =>
         new WKWBucketStreamSink(volumeLayer, tracing.fallbackLayer.nonEmpty)(
-          volumeLayer.bucketProvider.bucketStream(Some(tracing.version)),
+          asyncBuckets,
           tracing.mags.map(mag => vec3IntFromProto(mag)))
       case VolumeDataZipFormat.zarr3 =>
         new Zarr3BucketStreamSink(volumeLayer, tracing.fallbackLayer.nonEmpty)(
-          volumeLayer.bucketProvider.bucketStream(Some(tracing.version)),
+          asyncBuckets,
           tracing.mags.map(mag => vec3IntFromProto(mag)),
           voxelSize)
     }
 
     val before = Instant.now
-    val zipResult = ZipIO.zip(buckets, os, level = Deflater.BEST_SPEED)
+    val zipResult = ZipIO.zip(namedStreams, os, level = Deflater.BEST_SPEED)
 
     zipResult.onComplete { resultBox =>
       logger.info(
@@ -609,8 +610,7 @@ class VolumeTracingService @Inject()(
     for {
       isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(sourceTracingId)
       sourceVolumeLayer = volumeTracingLayer(sourceAnnotationId, sourceTracingId, sourceTracing, isTemporaryTracing)
-      buckets: Iterator[(BucketPosition, Array[Byte])] = sourceVolumeLayer.bucketProvider.bucketStream(
-        Some(sourceTracing.version))
+      buckets = sourceVolumeLayer.bucketProvider.bucketStream(Some(sourceTracing.version))
       destinationVolumeLayer = volumeTracingLayer(newAnnotationId, newTracingId, newTracing)
       fallbackLayer <- getFallbackLayer(sourceAnnotationId, sourceTracing)
       mappingName <- getMappingNameUnlessEditable(sourceTracing)
@@ -721,14 +721,13 @@ class VolumeTracingService @Inject()(
       _ <- Fox.successful(())
       isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
       volumeLayer = volumeTracingLayer(annotationId, tracingId, tracing, isTemporaryTracing = isTemporaryTracing)
-      bucketStream = volumeLayer.bucketStream
-      bucketPosOpt = if (bucketStream.hasNext) {
-        val bucket = bucketStream.next()
-        val bucketPos = bucket._1
-        getPositionOfNonZeroData(bucket._2,
-                                 Vec3Int(bucketPos.voxelMag1X, bucketPos.voxelMag1Y, bucketPos.voxelMag1Z),
-                                 volumeLayer.bytesPerElement)
-      } else None
+      firstBatch <- volumeLayer.bucketStream.nextBatch()
+      bucketPosOpt = firstBatch.headOption.flatMap {
+        case (bucketPos, data) =>
+          getPositionOfNonZeroData(data,
+                                   Vec3Int(bucketPos.voxelMag1X, bucketPos.voxelMag1Y, bucketPos.voxelMag1Z),
+                                   volumeLayer.bytesPerElement)
+      }
     } yield bucketPosOpt
 
   def merge(tracings: Seq[VolumeTracing],
@@ -834,91 +833,93 @@ class VolumeTracingService @Inject()(
       volumeLayers.headOption.map(_.tracing.elementClass).getOrElse(ElementClassProto.uint8)
 
     val magSets = new mutable.HashSet[Set[Vec3Int]]()
-    volumeLayers.foreach { volumeLayer =>
-      val magSet = new mutable.HashSet[Vec3Int]()
-      volumeLayer.bucketStream.foreach {
-        case (bucketPosition, _) =>
-          magSet.add(bucketPosition.mag)
-      }
-      if (magSet.nonEmpty) { // empty tracings should have no impact in this check
-        magSets.add(magSet.toSet)
-      }
-    }
 
     val shouldCreateSegmentIndex =
       volumeSegmentIndexService.shouldCreateSegmentIndexForMerged(volumeLayers.map(_.tracing))
 
-    // If none of the tracings contained any volume data. Do not save buckets, do not touch mag list
-    if (magSets.isEmpty)
-      Fox.successful(MergedVolumeStats.empty(shouldCreateSegmentIndex))
-    else {
-      val magsIntersection: Set[Vec3Int] = magSets.headOption.map { head =>
-        magSets.foldLeft(head) { (acc, element) =>
-          acc.intersect(element)
-        }
-      }.getOrElse(Set.empty)
-
-      val mergedVolume = new MergedVolume(elementClassProto)
-
-      volumeLayers.foreach { volumeLayer =>
-        mergedVolume.addIdSetFromBucketStream(volumeLayer.bucketStream, magsIntersection)
+    for {
+      // Collect mags from all layers to determine their intersection
+      _ <- Fox.serialCombined(volumeLayers) { volumeLayer =>
+        val magSet = new mutable.HashSet[Vec3Int]()
+        for {
+          _ <- Fox.serialCombined(volumeLayer.bucketStream) {
+            case (bucketPosition, _) => Fox.successful(magSet.add(bucketPosition.mag))
+          }
+          _ = if (magSet.nonEmpty) magSets.add(magSet.toSet)
+        } yield ()
       }
 
-      volumeLayers.zipWithIndex.foreach {
-        case (volumeLayer, sourceVolumeIndex) =>
-          mergedVolume.addFromBucketStream(sourceVolumeIndex, volumeLayer.bucketStream, Some(magsIntersection))
+      // If none of the tracings contained any volume data. Do not save buckets, do not touch mag list
+      result <- if (magSets.isEmpty) {
+        Fox.successful(MergedVolumeStats.empty(shouldCreateSegmentIndex))
+      } else {
+        val magsIntersection: Set[Vec3Int] = magSets.headOption.map { head =>
+          magSets.foldLeft(head) { (acc, element) =>
+            acc.intersect(element)
+          }
+        }.getOrElse(Set.empty)
+
+        val mergedVolume = new MergedVolume(elementClassProto)
+
+        for {
+          _ <- Fox.serialCombined(volumeLayers) { volumeLayer =>
+            mergedVolume.addIdSetFromBucketStream(volumeLayer.bucketStream, magsIntersection)
+          }
+          _ <- Fox.serialCombined(volumeLayers.zipWithIndex) {
+            case (volumeLayer, sourceVolumeIndex) =>
+              mergedVolume.addFromBucketStream(sourceVolumeIndex, volumeLayer.bucketStream, Some(magsIntersection))
+          }
+          _ <- Fox.fromBool(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId, elementClassProto)) ?~> Messages(
+            "annotation.volume.largestSegmentIdExceedsRange",
+            mergedVolume.largestSegmentId,
+            elementClassProto)
+          mergedAdditionalAxes <- AdditionalAxis
+            .mergeAndAssertSameAdditionalAxes(
+              volumeLayers.map(l => AdditionalAxis.fromProtosAsOpt(l.tracing.additionalAxes)))
+            .toFox
+          firstVolumeLayer <- volumeLayers.headOption.toFox ?~> "merge.noTracings"
+          firstVolumeAnnotationId <- firstVolumeAnnotationIdOpt.toFox
+          fallbackLayer <- getFallbackLayer(firstVolumeAnnotationId, firstVolumeLayer.tracing)
+          segmentIndexBuffer = new VolumeSegmentIndexBuffer(
+            newVolumeTracingId,
+            elementClassProto,
+            volumeLayers.headOption.flatMap(_.tracing.mappingName),
+            volumeSegmentIndexClient,
+            newVersion,
+            remoteDatastoreClient,
+            fallbackLayer,
+            mergedAdditionalAxes,
+            temporaryTracingService,
+            tc,
+            isReadOnly = false,
+            toTemporaryStore = toTemporaryStore
+          )
+          volumeBucketPutBuffer = new FossilDBPutBuffer(volumeDataStore, Some(newVersion))
+          _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
+            for {
+              _ <- saveBucket(
+                newVolumeTracingId,
+                firstVolumeLayer.expectedUncompressedBucketSize,
+                bucketPosition,
+                bucketBytes,
+                newVersion,
+                toTemporaryStore,
+                mergedAdditionalAxes,
+                Some(volumeBucketPutBuffer)
+              )
+              _ <- Fox.runIf(shouldCreateSegmentIndex)(
+                updateSegmentIndex(firstVolumeLayer, segmentIndexBuffer, bucketPosition, bucketBytes, Empty, None))
+            } yield ()
+          }
+          _ <- volumeBucketPutBuffer.flush()
+          _ <- segmentIndexBuffer.flush()
+          _ = Instant.logSince(
+            before,
+            s"Merging buckets from ${volumeLayers.length} volume tracings into new $newVolumeTracingId, with createSegmentIndex = $shouldCreateSegmentIndex"
+          )
+        } yield mergedVolume.stats(shouldCreateSegmentIndex)
       }
-      for {
-        _ <- Fox.fromBool(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId, elementClassProto)) ?~> Messages(
-          "annotation.volume.largestSegmentIdExceedsRange",
-          mergedVolume.largestSegmentId,
-          elementClassProto)
-        mergedAdditionalAxes <- AdditionalAxis
-          .mergeAndAssertSameAdditionalAxes(
-            volumeLayers.map(l => AdditionalAxis.fromProtosAsOpt(l.tracing.additionalAxes)))
-          .toFox
-        firstVolumeLayer <- volumeLayers.headOption.toFox ?~> "merge.noTracings"
-        firstVolumeAnnotationId <- firstVolumeAnnotationIdOpt.toFox
-        fallbackLayer <- getFallbackLayer(firstVolumeAnnotationId, firstVolumeLayer.tracing)
-        segmentIndexBuffer = new VolumeSegmentIndexBuffer(
-          newVolumeTracingId,
-          elementClassProto,
-          volumeLayers.headOption.flatMap(_.tracing.mappingName),
-          volumeSegmentIndexClient,
-          newVersion,
-          remoteDatastoreClient,
-          fallbackLayer,
-          mergedAdditionalAxes,
-          temporaryTracingService,
-          tc,
-          isReadOnly = false,
-          toTemporaryStore = toTemporaryStore
-        )
-        volumeBucketPutBuffer = new FossilDBPutBuffer(volumeDataStore, Some(newVersion))
-        _ <- mergedVolume.withMergedBuckets { (bucketPosition, bucketBytes) =>
-          for {
-            _ <- saveBucket(
-              newVolumeTracingId,
-              firstVolumeLayer.expectedUncompressedBucketSize,
-              bucketPosition,
-              bucketBytes,
-              newVersion,
-              toTemporaryStore,
-              mergedAdditionalAxes,
-              Some(volumeBucketPutBuffer)
-            )
-            _ <- Fox.runIf(shouldCreateSegmentIndex)(
-              updateSegmentIndex(firstVolumeLayer, segmentIndexBuffer, bucketPosition, bucketBytes, Empty, None))
-          } yield ()
-        }
-        _ <- volumeBucketPutBuffer.flush()
-        _ <- segmentIndexBuffer.flush()
-        _ = Instant.logSince(
-          before,
-          s"Merging buckets from ${volumeLayers.length} volume tracings into new $newVolumeTracingId, with createSegmentIndex = $shouldCreateSegmentIndex"
-        )
-      } yield mergedVolume.stats(shouldCreateSegmentIndex)
-    }
+    } yield result
   }
 
   def importVolumeData(annotationId: ObjectId,
@@ -941,7 +942,7 @@ class VolumeTracingService @Inject()(
           largestSegmentId <- tracing.largestSegmentId.toFox ?~> "annotation.volume.merge.largestSegmentId.unset"
           mergedVolume = new MergedVolume(tracing.elementClass, largestSegmentId)
           _ <- mergedVolume.addIdSetFromDataZip(zipFile)
-          _ = mergedVolume.addFromBucketStream(sourceVolumeIndex = 0, volumeLayer.bucketProvider.bucketStream())
+          _ <- mergedVolume.addFromBucketStream(sourceVolumeIndex = 0, volumeLayer.bucketProvider.bucketStream())
           _ <- mergedVolume.addFromDataZip(sourceVolumeIndex = 1, zipFile)
           _ <- Fox.fromBool(ElementClass.largestSegmentIdIsInRange(mergedVolume.largestSegmentId, tracing.elementClass)) ?~> Messages(
             "annotation.volume.largestSegmentIdExceedsRange",

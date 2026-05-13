@@ -23,7 +23,7 @@ trait AbstractVolumeTracingBucketProvider extends BucketProvider with VolumeTrac
 
   def bucketStreamWithVersion(version: Option[Long] = None): AsyncIterator[(BucketPosition, Array[Byte], Long)]
 
-  def bucketStream(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])]
+  def bucketStream(version: Option[Long] = None): AsyncIterator[(BucketPosition, Array[Byte])]
 }
 
 class VolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit val ec: ExecutionContext)
@@ -48,7 +48,7 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit val ec: Ex
       } yield bucketBoxes
     }
 
-  override def bucketStream(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
+  override def bucketStream(version: Option[Long] = None): AsyncIterator[(BucketPosition, Array[Byte])] =
     bucketStream(layer, version)
 
   override def bucketStreamWithVersion(version: Option[Long] = None): AsyncIterator[(BucketPosition, Array[Byte], Long)] =
@@ -68,7 +68,7 @@ class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit v
       data <- loadBucket(layer, readInstruction.bucket, readInstruction.version)
     } yield data
 
-  override def bucketStream(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])] =
+  override def bucketStream(version: Option[Long] = None): AsyncIterator[(BucketPosition, Array[Byte])] =
     bucketStreamFromTemporaryStore(layer)
 
   override def bucketStreamWithVersion(version: Option[Long] = None): AsyncIterator[(BucketPosition, Array[Byte], Long)] =
@@ -127,7 +127,7 @@ case class VolumeTracingLayer(
   override def containsMag(mag: Vec3Int) =
     true // allow requesting buckets of all mags. database takes care of missing.
 
-  def bucketStream: Iterator[(BucketPosition, Array[Byte])] = bucketProvider.bucketStream(Some(tracing.version))
+  def bucketStream: AsyncIterator[(BucketPosition, Array[Byte])] = bucketProvider.bucketStream(Some(tracing.version))
 
   lazy val expectedUncompressedBucketSize: Int =
     ElementClass.bytesPerElement(elementClass) * scala.math.pow(DataLayer.bucketLength, 3).intValue

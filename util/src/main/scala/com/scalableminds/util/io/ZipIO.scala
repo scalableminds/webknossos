@@ -3,7 +3,7 @@ package com.scalableminds.util.io
 import java.io._
 import java.nio.file.{Files, Path}
 import java.util.zip.{GZIPOutputStream => DefaultGZIPOutputStream, _}
-import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
+import com.scalableminds.util.tools.{AsyncIterator, Fox, FoxImplicits, TextUtils}
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import com.scalableminds.util.tools.Box.tryo
@@ -86,6 +86,17 @@ object ZipIO extends LazyLogging with FoxImplicits {
     }
   }
 
+  def zip(sources: AsyncIterator[NamedStream], out: OutputStream, level: Int)(
+      implicit ec: ExecutionContext): Fox[Unit] = {
+    val zipOut = startZip(out)
+    if (level != -1) zipOut.stream.setLevel(level)
+    for {
+      _ <- zipAsyncIterator(sources, zipOut)
+      _ = zipOut.close()
+      _ = out.close()
+    } yield ()
+  }
+
   private def zipIterator(sources: Iterator[NamedStream], zip: OpenZip)(implicit ec: ExecutionContext): Fox[Unit] =
     if (!sources.hasNext) {
       Fox.successful(())
@@ -98,6 +109,17 @@ object ZipIO extends LazyLogging with FoxImplicits {
           logger.warn("Error packing zip: " + TextUtils.stackTraceAsString(e))
           throw new Exception(e.getMessage)
       }
+    }
+
+  private def zipAsyncIterator(sources: AsyncIterator[NamedStream], zip: OpenZip)(
+      implicit ec: ExecutionContext): Fox[Unit] =
+    sources.nextBatch().flatMap {
+      case Nil => Fox.successful(())
+      case batch =>
+        for {
+          _ <- Fox.serialCombined(batch)(s => zip.withFile(s.normalizedName)(s.writeTo))
+          _ <- zipAsyncIterator(sources, zip)
+        } yield ()
     }
 
   def startZip(out: OutputStream): OpenZip =

@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.geometry.{Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedFunctionStream, NamedStream}
-import com.scalableminds.util.tools.{ByteUtils, Fox}
+import com.scalableminds.util.tools.{AsyncIterator, ByteUtils, Fox}
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.datareaders.zarr3._
@@ -32,35 +32,53 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
   private lazy val rank = layer.additionalAxes.getOrElse(Seq.empty).length + 4
   private lazy val additionalAxesSorted = reorderAdditionalAxes(layer.additionalAxes.getOrElse(Seq.empty))
 
-  def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])], mags: Seq[Vec3Int], voxelSize: Option[VoxelSize])(
-      implicit ec: ExecutionContext): Iterator[NamedStream] = {
+  def apply(bucketStream: AsyncIterator[(BucketPosition, Array[Byte])],
+            mags: Seq[Vec3Int],
+            voxelSize: Option[VoxelSize])(implicit ec: ExecutionContext): AsyncIterator[NamedStream] = {
 
     val header = Zarr3ArrayHeader.fromDataLayer(layer,
                                                 mags.headOption.getOrElse(Vec3Int.ones),
                                                 additionalCodecs = Seq(BloscCodecConfiguration.defaultForWKZarrOutput))
-    bucketStream.flatMap {
-      case (bucket, data) =>
-        val skipBucket = if (tracingHasFallbackLayer) isAllZero(data) else isRevertedElement(data)
-        if (skipBucket) {
-          // If the tracing has no fallback segmentation, all-zero buckets can be omitted entirely
-          None
-        } else {
-          val filePath = zarrChunkFilePath(defaultLayerName, bucket, additionalAxesSorted)
-          Some(
-            NamedFunctionStream(
-              filePath,
-              os => Fox.successful(os.write(compressor.compress(data)))
-            )
+
+    new AsyncIterator[NamedStream] {
+      private var bucketsExhausted = false
+      private var headersEmitted = false
+
+      override def nextBatch(): Fox[List[NamedStream]] =
+        if (!bucketsExhausted) {
+          bucketStream.nextBatch().flatMap {
+            case Nil =>
+              bucketsExhausted = true
+              nextBatch()
+            case batch =>
+              val streams: List[NamedStream] = batch.flatMap {
+                case (bucket, data) =>
+                  val skipBucket = if (tracingHasFallbackLayer) isAllZero(data) else isRevertedElement(data)
+                  if (skipBucket) None
+                  else
+                    Some(
+                      NamedFunctionStream(
+                        zarrChunkFilePath(defaultLayerName, bucket, additionalAxesSorted),
+                        os => Fox.successful(os.write(compressor.compress(data)))
+                      ))
+              }
+              if (streams.nonEmpty) Fox.successful(streams)
+              else nextBatch()
+          }
+        } else if (!headersEmitted) {
+          headersEmitted = true
+          val magHeaders: List[NamedStream] = mags.map { mag =>
+            NamedFunctionStream.fromJsonSerializable(zarrHeaderFilePath(defaultLayerName, mag), header)
+          }.toList
+          val dsPropsFile: NamedStream = NamedFunctionStream.fromJsonSerializable(
+            UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON,
+            createVolumeDataSource(voxelSize)
           )
+          Fox.successful(magHeaders :+ dsPropsFile)
+        } else {
+          Fox.successful(Nil)
         }
-      case _ => None
-    } ++ mags.map { mag =>
-      NamedFunctionStream.fromJsonSerializable(zarrHeaderFilePath(defaultLayerName, mag), header)
-    } ++ Seq(
-      NamedFunctionStream.fromJsonSerializable(
-        UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON,
-        createVolumeDataSource(voxelSize)
-      ))
+    }
   }
 
   private def createVolumeDataSource(voxelSize: Option[VoxelSize]): UsableDataSource = {

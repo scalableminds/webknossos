@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import java.io.File
 import com.scalableminds.util.geometry.Vec3Int
-import com.scalableminds.util.tools.{ByteUtils, Fox}
+import com.scalableminds.util.tools.{AsyncIterator, ByteUtils, Fox}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
@@ -55,18 +55,20 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
     } yield ()
   }
 
-  def addIdSetFromBucketStream(bucketStream: Iterator[(BucketPosition, Array[Byte])],
-                               allowedMags: Set[Vec3Int]): Unit = {
+  def addIdSetFromBucketStream(bucketStream: AsyncIterator[(BucketPosition, Array[Byte])],
+                               allowedMags: Set[Vec3Int])(implicit ec: ExecutionContext): Fox[Unit] = {
     val idSet: mutable.Set[Long] = scala.collection.mutable.Set()
-    bucketStream.foreach {
-      case (bucketPosition, data) =>
-        if (allowedMags.contains(bucketPosition.mag)) {
-          val bucketSegmentIds =
-            bucketScanner.collectSegmentIds(data, bytesPerElement, elementsAreSigned, skipZeroes = true)
-          idSet ++= bucketSegmentIds
-        }
-    }
-    addIdSet(idSet)
+    for {
+      _ <- Fox.serialCombined(bucketStream) {
+        case (bucketPosition, data) =>
+          if (allowedMags.contains(bucketPosition.mag)) {
+            val bucketSegmentIds =
+              bucketScanner.collectSegmentIds(data, bytesPerElement, elementsAreSigned, skipZeroes = true)
+            Fox.successful(idSet ++= bucketSegmentIds)
+          } else Fox.successful(())
+      }
+      _ = addIdSet(idSet)
+    } yield ()
   }
 
   private def addIdSet(idSet: mutable.Set[Long]): Unit = idSets += idSet
@@ -94,14 +96,16 @@ class MergedVolume(elementClass: ElementClassProto, initialLargestSegmentId: Lon
     }
 
   def addFromBucketStream(sourceVolumeIndex: Int,
-                          bucketStream: Iterator[(BucketPosition, Array[Byte])],
-                          allowedMags: Option[Set[Vec3Int]] = None): Unit =
-    bucketStream.foreach {
-      case (bucketPosition, bytes) =>
-        if (!isAllZero(bytes) && allowedMags.forall(_.contains(bucketPosition.mag))) {
-          add(sourceVolumeIndex, bucketPosition, bytes)
-        }
-    }
+                          bucketStream: AsyncIterator[(BucketPosition, Array[Byte])],
+                          allowedMags: Option[Set[Vec3Int]] = None)(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      _ <- Fox.serialCombined(bucketStream) {
+        case (bucketPosition, bytes) =>
+          if (!isAllZero(bytes) && allowedMags.forall(_.contains(bucketPosition.mag))) {
+            Fox.successful(add(sourceVolumeIndex, bucketPosition, bytes))
+          } else Fox.successful(())
+      }
+    } yield ()
 
   def addFromDataZip(sourceVolumeIndex: Int, zipFile: File)(implicit ec: ExecutionContext): Fox[Unit] =
     withBucketsFromZip(zipFile) { (bucketPosition, bytes) =>

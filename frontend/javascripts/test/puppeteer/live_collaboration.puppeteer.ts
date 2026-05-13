@@ -13,11 +13,17 @@
 
 import fs from "node:fs";
 import path from "node:path";
-import type { Browser, Page } from "puppeteer-core";
-import urljoin from "url-join";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { sleep } from "libs/utils";
-import { vi } from "vitest";
+import type { Browser, Page } from "puppeteer-core";
+import type { APIAnnotationType } from "types/api_types";
+import urljoin from "url-join";
+import type { Vector3 } from "viewer/constants";
+import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
+import { proofreadMergeAction } from "viewer/model/actions/proofread_actions";
+import { cycleToolAction } from "viewer/model/actions/ui_actions";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import { setActiveCellAction } from "viewer/model/actions/volumetracing_actions";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   createExplorational,
   getTeams,
@@ -27,13 +33,6 @@ import {
 } from "../../admin/rest_api";
 import { launchBrowser, waitForTracingViewLoad } from "./dataset_rendering_helpers";
 import { PAGE_HEIGHT, PAGE_WIDTH } from "./screenshot_test_config";
-import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
-import { proofreadMergeAction } from "viewer/model/actions/proofread_actions";
-import { cycleToolAction } from "viewer/model/actions/ui_actions";
-import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import { setActiveCellAction } from "viewer/model/actions/volumetracing_actions";
-import type { APIAnnotationType } from "types/api_types";
-import { Vector3 } from "viewer/constants";
 
 vi.mock("libs/request", async (importOriginal) => {
   return await importOriginal();
@@ -383,7 +382,7 @@ describe("Live Collaboration", () => {
     if (defaultTeam == null) {
       throw new Error("Could not find default team.");
     }
-    const res = await updateDatasetTeams(datasetId, [defaultTeam.id], adminRequestOptions());
+    await updateDatasetTeams(datasetId, [defaultTeam.id], adminRequestOptions());
     annotation = await createHybridAnnotation(datasetId);
 
     const defaultTeamId = await getDefaultTeamId();
@@ -500,7 +499,7 @@ describe("Live Collaboration", () => {
     await page.close();
   }, 120_000);
 
-  it.skip("collaborators merge/split in parallel, all save successfully, no errors", async () => {
+  it("collaborators merge/split in parallel, all save successfully, no errors", async () => {
     const sessions: Array<{ page: Page; errors: string[] }> = [];
 
     for (const { authToken } of collabUsers) {

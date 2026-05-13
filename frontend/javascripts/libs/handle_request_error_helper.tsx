@@ -82,7 +82,9 @@ export const handleError = async (
   // raw Response object (whose body is a ReadableStream that can't be inspected).
   if (error instanceof Response) {
     const text = await error.text().catch(() => "<unreadable body>");
-    return Promise.reject(new Error(`Request failed with status ${error.status} for ${requestedUrl}: ${text}`));
+    return Promise.reject(
+      new Error(`Request failed with status ${error.status} for ${requestedUrl}: ${text}`),
+    );
   }
 
   error.message += ` - Url: ${requestedUrl}`;

@@ -26,7 +26,7 @@ import models.user.{MultiUserDAO, User, UserService}
 import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
-import controllers.{AttachmentRenaming, LayerRenaming, PathDeletionService}
+import controllers.{AttachmentRenaming, DatasetUpdateParameters, LayerRenaming, PathDeletionService}
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.annotation.AnnotationDAO
@@ -98,8 +98,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.fromBool(!isDatasetNameAlreadyTaken) ?~> "dataset.name.alreadyTaken"
     } yield ()
 
-  def findOneByImportURL(importURL: String, organizationId: String)(
-      implicit ctx: DBAccessContext): Fox[Dataset] =
+  def findOneByImportURL(importURL: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
     datasetDAO.findOneByImportURL(importURL, organizationId)
 
   def getAllUnfinishedDatasetUploadsOfUser(userId: ObjectId, organizationId: String)(
@@ -121,7 +120,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                             folderId: Option[ObjectId],
                             user: User,
                             isVirtual: Boolean,
-                            creationType: DatasetCreationType)(implicit mp: MessagesProvider): Fox[Dataset] =
+                            creationType: DatasetCreationType,
+                            importURLOpt: Option[String])(implicit mp: MessagesProvider): Fox[Dataset] =
     for {
       _ <- assertValidDatasetName(datasetName)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> "organization.notFound"
@@ -139,6 +139,15 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       )
       datasetId = dataset._id
       _ <- datasetDAO.updateFolder(datasetId, folderIdWithFallback)(GlobalAccessContext)
+      _ <- Fox.runOptional(importURLOpt) { importURL =>
+        datasetDAO.updatePartial(
+          datasetId,
+          DatasetUpdateParameters(
+            description = None,
+            name = None,
+            metadata = Some(JsArray(Seq(Json.obj("key" -> "importURL", "type" -> "string", "value" -> importURL)))))
+        )(GlobalAccessContext)
+      }
       _ <- addUploader(dataset, user._id)(GlobalAccessContext)
     } yield dataset
 

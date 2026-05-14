@@ -1443,7 +1443,7 @@ export async function storeRemoteDataset(
 ): Promise<NewDatasetReply> {
   const payload: StoreRemoteDatasetArgs = {
     dataSource,
-    dataStoreName: dataStoreName,
+    dataStoreName,
   };
   if (importUrl) {
     payload["importUrl"] = importUrl;

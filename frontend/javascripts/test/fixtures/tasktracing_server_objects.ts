@@ -173,7 +173,7 @@ export const annotation: APIAnnotation = {
     ],
   },
   contributors: [],
-  othersMayEdit: false,
+  collaborationMode: "OwnerOnly",
   isLockedByOwner: false,
   teams: [
     {

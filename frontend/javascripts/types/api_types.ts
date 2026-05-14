@@ -504,6 +504,9 @@ export type AnnotationLayerDescriptor = {
 export type EditableLayerProperties = {
   name: string;
 };
+export type AnnotationCollaborationMode = "OwnerOnly" | "Exclusive" | "Concurrent";
+export const AnnotationCollaborationModes = ["OwnerOnly", "Exclusive", "Concurrent"] as const;
+
 export type APIAnnotationInfo = {
   readonly annotationLayers: Array<AnnotationLayerDescriptor>;
   readonly datasetId: string;
@@ -524,7 +527,7 @@ export type APIAnnotationInfo = {
   // or due to missing permissions).
   readonly owner?: APIUserCompact;
   readonly teams: APITeam[];
-  readonly othersMayEdit: boolean;
+  readonly collaborationMode: AnnotationCollaborationMode;
 };
 
 export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInfo {
@@ -541,7 +544,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     typ,
     owner,
     teams,
-    othersMayEdit,
+    collaborationMode,
     organization,
     annotationLayers,
   } = annotation;
@@ -561,7 +564,7 @@ export function annotationToCompact(annotation: APIAnnotation): APIAnnotationInf
     typ,
     owner,
     teams,
-    othersMayEdit,
+    collaborationMode,
   };
 }
 
@@ -586,7 +589,7 @@ type APIAnnotationBase = APIAnnotationInfo & {
   // This `user` attribute is deprecated and should not be used, anymore. It only exists to satisfy e2e type checks
   readonly user?: APIUserBase;
   readonly contributors: APIUserBase[];
-  readonly othersMayEdit: boolean;
+  readonly collaborationMode: AnnotationCollaborationMode;
 };
 export type APIAnnotation = APIAnnotationBase & {
   readonly task: APITask | null | undefined;
@@ -803,6 +806,7 @@ export type APIFeatureToggles = {
   readonly segmentAnythingEnabled?: boolean;
   readonly passkeysEnabled: boolean;
   readonly registerToDefaultOrgaEnabled?: boolean;
+  readonly supportAiAgentUrl?: string;
 };
 
 export type APIJobState = "PENDING" | "STARTED" | "SUCCESS" | "FAILURE" | "CANCELLED";
@@ -1048,6 +1052,14 @@ export type ServerEditableMapping = {
   // The id of the volume tracing the editable mapping belongs to
   tracingId: string;
 };
+
+export type AnnotationIdDomain =
+  | "Segment"
+  | "SegmentGroup"
+  | "Tree"
+  | "Node"
+  | "TreeGroup"
+  | "BoundingBox";
 
 export type APIMeshFileInfo = {
   name: string;

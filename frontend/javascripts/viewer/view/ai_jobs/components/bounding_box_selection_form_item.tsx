@@ -7,7 +7,7 @@ import { type ReactElement, useCallback } from "react";
 import { ControlModeEnum } from "viewer/constants";
 import { getColorLayers } from "viewer/model/accessors/dataset_accessor";
 import type { UserBoundingBox } from "viewer/store";
-import { isBoundingBoxExportable } from "viewer/view/action_bar/download_modal_view";
+import { isBoundingBoxExportable } from "viewer/view/action_bar/download_modal/download_tiff_export_tab";
 import { BoundingBoxSelection } from "./bounding_box_selection";
 
 type BoundingBoxSelectionProps = {

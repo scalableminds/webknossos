@@ -121,7 +121,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                             folderId: Option[ObjectId],
                             user: User,
                             isVirtual: Boolean,
-                            creationType: DatasetCreationType): Fox[Dataset] =
+                            creationType: DatasetCreationType)(implicit mp: MessagesProvider): Fox[Dataset] =
     for {
       _ <- assertValidDatasetName(datasetName)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> "organization.notFound"
@@ -151,7 +151,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       metadata: JsArray = JsArray.empty,
       description: Option[String] = None,
       creationType: DatasetCreationType.Value
-  ): Fox[Dataset] = {
+  )(implicit mp: MessagesProvider): Fox[Dataset] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
 
     val dataSourceHash = if (dataSource.isUsable) Some(dataSource.hashCode()) else None
@@ -184,11 +184,13 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- datasetDAO.insertOne(dataset)
       _ <- datasetDataLayerDAO.updateLayers(datasetId, dataSource)
       _ <- teamDAO.updateAllowedTeamsForDataset(datasetId, List())
+      _ <- scanRealpathsIfVirtual(dataset)
     } yield dataset
   }
 
   def updateDataSources(dataStore: DataStore, dataSources: List[DataSource])(
-      implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
+      implicit ctx: DBAccessContext,
+      mp: MessagesProvider): Fox[List[ObjectId]] = {
 
     val groupedByOrga = dataSources.groupBy(_.id.organizationId).toList
     Fox
@@ -219,7 +221,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       dataStore: DataStore,
       dataSource: DataSource,
       foundDatasetsByDirectoryName: Map[String, List[Dataset]]
-  )(implicit ctx: DBAccessContext): Fox[Option[ObjectId]] = {
+  )(implicit ctx: DBAccessContext, mp: MessagesProvider): Fox[Option[ObjectId]] = {
     val foundDatasetOpt = foundDatasetsByDirectoryName.get(dataSource.id.directoryName).flatMap(_.headOption)
     val isVirtual = foundDatasetOpt.exists(_.isVirtual)
     if (isVirtual) { // Virtual datasets should not be updated from the datastore, as we do not expect them to exist as data source properties on the datastore.
@@ -487,18 +489,19 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     }
   }
 
-  def usableDataSourceFor(dataset: Dataset)(implicit mp: MessagesProvider): Fox[UsableDataSource] =
+  def usableDataSourceFor(dataset: Dataset, useRealPaths: Boolean = true)(
+      implicit mp: MessagesProvider): Fox[UsableDataSource] =
     for {
-      dataSource <- dataSourceFor(dataset) ?~> "dataSource.notFound" ~> NOT_FOUND
+      dataSource <- dataSourceFor(dataset, useRealPaths) ?~> "dataSource.notFound" ~> NOT_FOUND
       usableDataSource <- dataSource.toUsable.toFox ?~> Messages("dataset.notImported", dataSource.id.directoryName)
     } yield usableDataSource
 
-  def dataSourceFor(dataset: Dataset): Fox[DataSource] = {
+  def dataSourceFor(dataset: Dataset, useRealPaths: Boolean = true): Fox[DataSource] = {
     val dataSourceId = DataSourceId(dataset.directoryName, dataset._organization)
     if (dataset.isUsable)
       for {
         voxelSize <- dataset.voxelSize.toFox ?~> "dataset.source.usableButNoVoxelSize"
-        dataLayers <- datasetDataLayerDAO.findAllForDataset(dataset._id)
+        dataLayers <- datasetDataLayerDAO.findAllForDataset(dataset._id, useRealPaths)
       } yield UsableDataSource(dataSourceId, dataLayers, voxelSize)
     else
       Fox.successful(UnusableDataSource(dataSourceId, None, dataset.status, dataset.voxelSize))
@@ -586,13 +589,11 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   private def updateRealPathsForDataSource(pathInfo: DataSourcePathInfo)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val datasetBox = datasetDAO.findOneByDataSourceId(pathInfo.dataSourceId).shiftBox
     datasetBox.flatMap {
-      case Full(dataset) if !dataset.isVirtual =>
+      case Full(dataset) =>
         for {
           _ <- datasetMagsDAO.updateMagRealPathsForDataset(dataset._id, pathInfo.magPathInfos)
           _ <- datasetLayerAttachmentsDAO.updateAttachmentRealPathsForDataset(dataset._id, pathInfo.attachmentPathInfos)
         } yield ()
-      case Full(_) => // Dataset is virtual, no updates from datastore are accepted.
-        Fox.successful(())
       case Empty => // Dataset reported but ignored (non-existing/forbidden org)
         Fox.successful(())
       case e: EmptyBox =>
@@ -703,6 +704,15 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ = slackNotificationService.info(s"Dataset added ($addVariantLabel)$superUserLabel",
                                         s"For organization: ${organization.name}. <$resultLink|Result>")
     } yield ()
+
+  def scanRealpathsIfVirtual(dataset: Dataset)(implicit mp: MessagesProvider, ctx: DBAccessContext): Fox[Unit] =
+    if (dataset.isVirtual && dataset.isUsable) {
+      for {
+        dataSource <- usableDataSourceFor(dataset, useRealPaths = false)
+        client <- clientFor(dataset)
+        _ <- client.scanRealPathsForVirtual(Seq(dataSource))
+      } yield ()
+    } else Fox.successful(())
 
   def publicWrites(dataset: Dataset,
                    requestingUserOpt: Option[User],

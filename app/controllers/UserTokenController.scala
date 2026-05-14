@@ -187,7 +187,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     def checkRestrictions(restrictions: AnnotationRestrictions) =
       mode match {
         case AccessMode.read  => restrictions.allowAccess(userBox.toOption)
-        case AccessMode.write => restrictions.allowUpdate(userBox.toOption)
+        case AccessMode.write => restrictions.allowUpdateWithMutex(userBox.toOption)
         case _                => Fox.successful(false)
       }
 

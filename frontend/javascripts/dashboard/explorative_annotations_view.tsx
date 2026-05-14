@@ -53,6 +53,7 @@ import {
   annotationToCompact,
 } from "types/api_types";
 import { AnnotationContentTypes } from "viewer/constants";
+import { isAnnotationEditableByNonOwners } from "viewer/model/accessors/annotation_accessor";
 import { getVolumeDescriptors } from "viewer/model/accessors/volumetracing_accessor";
 import CategorizationLabel, {
   CategorizationSearch,
@@ -520,7 +521,10 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
   }
 
   isAnnotationEditable(annotation: APIAnnotationInfo): boolean {
-    return annotation.owner?.id === this.props.activeUser.id || annotation.othersMayEdit;
+    return (
+      annotation.owner?.id === this.props.activeUser.id ||
+      isAnnotationEditableByNonOwners(annotation)
+    );
   }
 
   renderTable() {
@@ -619,13 +623,13 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
         render: (owner: APIUser | null, annotation: APIAnnotationInfo) => {
           const ownerName = owner != null ? renderOwner(owner) : null;
           const teamTags = annotation.teams.map((t) => (
-            <Tag key={t.id} color={stringToColor(t.name)}>
+            <Tag key={t.id} color={stringToColor(t.name)} variant="outlined">
               {t.name}
             </Tag>
           ));
 
           return (
-            <>
+            <Space orientation="vertical" size="small">
               <Space align="start">
                 <UserOutlined />
                 {ownerName}
@@ -636,7 +640,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
                   {teamTags}
                 </Space>
               </Space>
-            </>
+            </Space>
           );
         },
       },

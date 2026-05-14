@@ -39,8 +39,8 @@ class MailchimpTicker @Inject()(val lifecycle: ApplicationLifecycle,
   private def withErrorLogging(multiUser: MultiUser, block: MultiUser => Fox[Unit]): Unit =
     block(multiUser).futureBox.map {
       case Full(_)    => ()
-      case f: Failure => logger.debug(s"Failed to tag multiuser ${multiUser._id} by activity: $f")
-      case Empty      => logger.debug(s"Failed to tag multiuser ${multiUser._id} by activity: Empty")
+      case f: Failure => logger.info(s"Failed to tag multiuser ${multiUser._id} by activity: $f")
+      case Empty      => logger.info(s"Failed to tag multiuser ${multiUser._id} by activity: Empty")
     }
 
   private def tagUserByActivity(multiUser: MultiUser): Fox[Unit] =

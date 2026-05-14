@@ -1,5 +1,5 @@
 import { CardContainer, DatastoreFormItem } from "admin/dataset/dataset_components";
-import { findDatasetByImportUrl, isDatasetNameValid, storeRemoteDataset } from "admin/rest_api";
+import { isDatasetNameValid, storeRemoteDataset } from "admin/rest_api";
 import { Button, Col, Divider, Flex, Form, type FormInstance, List, Modal, Row } from "antd";
 import BrainSpinner from "components/brain_spinner";
 import type { DatasetSettingsFormData } from "dashboard/dataset/dataset_settings_context";
@@ -9,19 +9,16 @@ import DatasetSettingsDataTab, {
 import { DatasetSettingsProvider } from "dashboard/dataset/dataset_settings_provider";
 import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
-import { useFetch } from "libs/react_helpers";
-import { useWkSelector } from "libs/react_hooks";
+import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { computeHash } from "libs/utils";
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import type { APIDataStore } from "types/api_types";
 import type {
   DataLayer,
   DataLayerWithTransformations,
   DatasourceConfiguration,
 } from "types/schemas/datasource.types";
-import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import type { RotationAndMirroringSettings } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { dataPrivacyInfo } from "./dataset_upload_view";
 import { AddRemoteLayer } from "./remote/add_remote_layer";
@@ -83,27 +80,12 @@ function DatasetAddRemoteView(props: Props) {
   const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
   const maybeDataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
   const datasourceConfig = Form.useWatch(["dataSource"], form);
-  const navigate = useNavigate();
 
-  useEffect(() => {
+  useEffectOnlyOnce(() => {
     const params = new URLSearchParams(location.search);
     const targetFolderId = params.get("to");
     setTargetFolderId(targetFolderId);
-  }, []);
-
-  const maybeExistingDS = useFetch(
-    async () => {
-      if (defaultDatasetUrl == null) return;
-      try {
-        return await findDatasetByImportUrl(defaultDatasetUrl);
-      } catch (_e) {
-        console.error(_e); //TODO remove, dev only
-        return null;
-      }
-    },
-    null,
-    [defaultDatasetUrl],
-  );
+  });
 
   const getDefaultDatasetName = (url: string) => {
     if (url === "") return "";
@@ -228,11 +210,6 @@ function DatasetAddRemoteView(props: Props) {
   }
 
   const hideDatasetUI = maybeDataLayers == null || maybeDataLayers.length === 0;
-  if (maybeExistingDS?.dataSource) {
-    const url = getViewDatasetURL(maybeExistingDS);
-    navigate(url);
-    return;
-  }
   return (
     // Using Forms here only to validate fields and for easy layout
     <div style={{ padding: 5 }}>

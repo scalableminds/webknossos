@@ -440,8 +440,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       parsed <- parseFirst(r, s"$organizationId/$directoryName")
     } yield parsed
 
-  def findOneByImportURL(importURL: String, organizationId: String)(
-      implicit ctx: DBAccessContext): Fox[Dataset] =
+  def findOneByImportURL(importURL: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns

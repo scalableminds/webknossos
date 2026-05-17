@@ -16,6 +16,7 @@ export function getSceneControllerOrNull(): SceneControllerType | null {
 
 export function setSceneController(c: SceneControllerType): void {
   sceneController = c;
+  window.sceneController = c;
 }
 
 export function destroySceneController(): void {

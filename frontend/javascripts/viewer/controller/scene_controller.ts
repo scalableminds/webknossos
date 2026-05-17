@@ -38,6 +38,7 @@ import {
   LineMeasurementGeometry,
   QuickSelectGeometry,
 } from "viewer/geometries/helper_geometries";
+import { MipVolume } from "viewer/geometries/mip_volume";
 import Plane from "viewer/geometries/plane";
 import Skeleton from "viewer/geometries/skeleton";
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
@@ -330,6 +331,11 @@ class SceneController {
 
   getSplitBoundaryMesh() {
     return this.splitBoundaryMesh;
+  }
+
+  addMipVolume(): void {
+    const mipVolume = new MipVolume();
+    this.rootNode.add(mipVolume.mesh);
   }
 
   addSkeleton(

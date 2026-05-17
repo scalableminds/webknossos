@@ -7,8 +7,8 @@ import {
   Mesh,
   RedFormat,
   ShaderMaterial,
-  UnsignedByteType,
   Vector3 as ThreeVector3,
+  UnsignedByteType,
 } from "three";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import { getLayerByName, getMagInfo } from "viewer/model/accessors/dataset_accessor";
@@ -193,7 +193,7 @@ export class MipVolume {
       );
     }
 
-    // @ts-ignore — Uint8Array<ArrayBufferLike> vs ArrayBufferView<ArrayBuffer> in TS 5.9
+    // @ts-expect-error — Uint8Array<ArrayBufferLike> vs ArrayBufferView<ArrayBuffer> in TS 5.9
     this.texture = new Data3DTexture(initialData, texWidth, texHeight, texDepth);
     this.texture.format = RedFormat;
     this.texture.type = UnsignedByteType;
@@ -237,11 +237,7 @@ export class MipVolume {
     this.material.uniforms.uMax.value = rawMax / 255;
     this.material.uniforms.uIsInverted.value = isInverted ? 1.0 : 0.0;
     if (color != null) {
-      this.material.uniforms.uLayerColor.value.set(
-        color[0] / 255,
-        color[1] / 255,
-        color[2] / 255,
-      );
+      this.material.uniforms.uLayerColor.value.set(color[0] / 255, color[1] / 255, color[2] / 255);
     }
     this.material.uniforms.uAlpha.value = isDisabled ? 0 : alpha / 100;
   }
@@ -262,8 +258,7 @@ export class MipVolume {
   }
 
   async loadData(datasource: DataSource): Promise<void> {
-    const actualZoomStep =
-      this.actualZoomStep ?? resolveDataSource(datasource).actualZoomStep;
+    const actualZoomStep = this.actualZoomStep ?? resolveDataSource(datasource).actualZoomStep;
     const rawData = await api.data.getDataForBoundingBox(
       datasource.layerName,
       datasource.mag1Bbox,

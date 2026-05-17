@@ -11,18 +11,26 @@ import {
   Vector3 as ThreeVector3,
 } from "three";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
-import { api } from "viewer/singletons";
+import { getLayerByName, getMagInfo } from "viewer/model/accessors/dataset_accessor";
+import { scaleGlobalPositionWithMagnification } from "viewer/model/helpers/position_converter";
+import { api, Store } from "viewer/singletons";
 
-const VOLUME_SIZE = 32;
+const MOCK_SIZE = 32;
+const MAX_VOXELS = 100 * 1024 * 1024; // 100 MB of uint8 voxels
 
 type MockedCrossSource = { type: "mocked cross" };
-type DataSource = { type: "data"; layerName: string; mag1Bbox: BoundingBoxMinMaxType };
+type DataSource = {
+  type: "data";
+  layerName: string;
+  mag1Bbox: BoundingBoxMinMaxType;
+  zoomStep?: number;
+};
 export type MipDatasource = MockedCrossSource | DataSource;
 
 function createCrossData(size: number): Uint8Array {
   const data = new Uint8Array(new ArrayBuffer(size ** 3));
-  const lo = size / 2 - 1; // 15
-  const hi = size / 2; // 16
+  const lo = size / 2 - 1;
+  const hi = size / 2;
   for (let z = 0; z < size; z++) {
     for (let y = 0; y < size; y++) {
       for (let x = 0; x < size; x++) {
@@ -39,11 +47,12 @@ function createCrossData(size: number): Uint8Array {
 }
 
 const VERTEX_SHADER = /* glsl */ `
+uniform vec3 uVolumeSize;
 out vec3 vLocalPos;
 
 void main() {
-  // BoxGeometry(32,32,32) vertices range [-16, 16]; normalize to [-0.5, 0.5]
-  vLocalPos = position / 32.0;
+  // BoxGeometry vertices are in [-size/2, size/2]; normalize to [-0.5, 0.5]
+  vLocalPos = position / uVolumeSize;
   gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 }
 `;
@@ -54,6 +63,7 @@ precision highp sampler3D;
 
 uniform sampler3D uVolume;
 uniform mat4 uInvModelMatrix;
+uniform vec3 uVolumeSize;
 
 in vec3 vLocalPos;
 out vec4 fragColor;
@@ -69,8 +79,8 @@ vec2 intersectAABB(vec3 ro, vec3 rd) {
 }
 
 void main() {
-  // Transform camera position to local box space ([-0.5, 0.5]^3)
-  vec3 localCam = (uInvModelMatrix * vec4(cameraPosition, 1.0)).xyz / 32.0;
+  // Transform camera to normalized local space ([-0.5, 0.5]^3)
+  vec3 localCam = (uInvModelMatrix * vec4(cameraPosition, 1.0)).xyz / uVolumeSize;
   vec3 rd = normalize(vLocalPos - localCam);
 
   vec2 t = intersectAABB(localCam, rd);
@@ -95,51 +105,84 @@ void main() {
 }
 `;
 
-function validateBboxSize(bbox: BoundingBoxMinMaxType): void {
-  const [dx, dy, dz] = [
-    bbox.max[0] - bbox.min[0],
-    bbox.max[1] - bbox.min[1],
-    bbox.max[2] - bbox.min[2],
-  ];
-  if (dx !== VOLUME_SIZE || dy !== VOLUME_SIZE || dz !== VOLUME_SIZE) {
-    throw new Error(
-      `MipVolume: bbox must be ${VOLUME_SIZE}³, got ${dx}×${dy}×${dz}`,
-    );
-  }
+function resolveDataSource(datasource: DataSource): {
+  actualZoomStep: number;
+  textureDims: [number, number, number];
+} {
+  const layer = getLayerByName(Store.getState().dataset, datasource.layerName);
+  const magInfo = getMagInfo(layer.mags);
+  const actualZoomStep = magInfo.getClosestExistingIndex(datasource.zoomStep ?? 0);
+  const mag = magInfo.getMagByIndexOrThrow(actualZoomStep);
+  const topLeft = scaleGlobalPositionWithMagnification(datasource.mag1Bbox.min, mag);
+  const bottomRight = scaleGlobalPositionWithMagnification(datasource.mag1Bbox.max, mag, true);
+  return {
+    actualZoomStep,
+    textureDims: [
+      bottomRight[0] - topLeft[0],
+      bottomRight[1] - topLeft[1],
+      bottomRight[2] - topLeft[2],
+    ],
+  };
 }
 
 export class MipVolume {
   mesh: Mesh;
   private texture: Data3DTexture;
+  private material: ShaderMaterial;
+  private actualZoomStep: number | null = null;
 
   constructor(datasource: MipDatasource = { type: "mocked cross" }) {
+    let texWidth: number;
+    let texHeight: number;
+    let texDepth: number;
     let initialData: Uint8Array;
     let meshCenter: ThreeVector3;
+    let volumeSize: ThreeVector3;
 
     if (datasource.type === "mocked cross") {
-      initialData = createCrossData(VOLUME_SIZE);
-      meshCenter = new ThreeVector3(VOLUME_SIZE / 2, VOLUME_SIZE / 2, VOLUME_SIZE / 2);
+      initialData = createCrossData(MOCK_SIZE);
+      texWidth = texHeight = texDepth = MOCK_SIZE;
+      volumeSize = new ThreeVector3(MOCK_SIZE, MOCK_SIZE, MOCK_SIZE);
+      meshCenter = new ThreeVector3(MOCK_SIZE / 2, MOCK_SIZE / 2, MOCK_SIZE / 2);
     } else {
-      validateBboxSize(datasource.mag1Bbox);
-      initialData = new Uint8Array(new ArrayBuffer(VOLUME_SIZE ** 3));
-      const { min } = datasource.mag1Bbox;
+      const { mag1Bbox } = datasource;
+      const dx = mag1Bbox.max[0] - mag1Bbox.min[0];
+      const dy = mag1Bbox.max[1] - mag1Bbox.min[1];
+      const dz = mag1Bbox.max[2] - mag1Bbox.min[2];
+
+      const { actualZoomStep, textureDims } = resolveDataSource(datasource);
+      const [tw, th, td] = textureDims;
+      const totalVoxels = tw * th * td;
+      if (totalVoxels > MAX_VOXELS) {
+        throw new Error(
+          `MipVolume: ${tw}×${th}×${td} = ${totalVoxels} voxels exceeds the ${MAX_VOXELS}-voxel (100 MB) limit`,
+        );
+      }
+
+      this.actualZoomStep = actualZoomStep;
+      initialData = new Uint8Array(new ArrayBuffer(tw * th * td));
+      texWidth = tw;
+      texHeight = th;
+      texDepth = td;
+      volumeSize = new ThreeVector3(dx, dy, dz);
       meshCenter = new ThreeVector3(
-        min[0] + VOLUME_SIZE / 2,
-        min[1] + VOLUME_SIZE / 2,
-        min[2] + VOLUME_SIZE / 2,
+        mag1Bbox.min[0] + dx / 2,
+        mag1Bbox.min[1] + dy / 2,
+        mag1Bbox.min[2] + dz / 2,
       );
     }
 
-    // @ts-ignore — Uint8Array<ArrayBufferLike> vs ArrayBufferView<ArrayBuffer> mismatch in TS 5.9 typings; works at runtime
-    this.texture = new Data3DTexture(initialData, VOLUME_SIZE, VOLUME_SIZE, VOLUME_SIZE);
+    // @ts-ignore — Uint8Array<ArrayBufferLike> vs ArrayBufferView<ArrayBuffer> in TS 5.9
+    this.texture = new Data3DTexture(initialData, texWidth, texHeight, texDepth);
     this.texture.format = RedFormat;
     this.texture.type = UnsignedByteType;
     this.texture.needsUpdate = true;
 
-    const material = new ShaderMaterial({
+    this.material = new ShaderMaterial({
       uniforms: {
         uVolume: { value: this.texture },
         uInvModelMatrix: { value: new Matrix4() },
+        uVolumeSize: { value: volumeSize },
       },
       vertexShader: VERTEX_SHADER,
       fragmentShader: FRAGMENT_SHADER,
@@ -150,25 +193,29 @@ export class MipVolume {
       depthWrite: false,
     });
 
-    const geometry = new BoxGeometry(VOLUME_SIZE, VOLUME_SIZE, VOLUME_SIZE);
-    this.mesh = new Mesh(geometry, material);
+    const geometry = new BoxGeometry(volumeSize.x, volumeSize.y, volumeSize.z);
+    this.mesh = new Mesh(geometry, this.material);
     this.mesh.position.copy(meshCenter);
-    // Keep the inverse world matrix uniform in sync each frame (avoids inverse() in GLSL)
     this.mesh.onBeforeRender = () => {
-      material.uniforms.uInvModelMatrix.value.copy(this.mesh.matrixWorld).invert();
+      this.material.uniforms.uInvModelMatrix.value.copy(this.mesh.matrixWorld).invert();
     };
   }
 
   async loadData(datasource: DataSource): Promise<void> {
-    const { layerName, mag1Bbox } = datasource;
-    const rawData = await api.data.getDataForBoundingBox(layerName, mag1Bbox, 0);
+    const actualZoomStep =
+      this.actualZoomStep ?? resolveDataSource(datasource).actualZoomStep;
+    const rawData = await api.data.getDataForBoundingBox(
+      datasource.layerName,
+      datasource.mag1Bbox,
+      actualZoomStep,
+    );
     this.texture.image.data = new Uint8Array(rawData.buffer);
     this.texture.needsUpdate = true;
   }
 
   dispose(): void {
-    (this.mesh.material as ShaderMaterial).uniforms.uVolume.value.dispose();
+    this.texture.dispose();
     this.mesh.geometry.dispose();
-    (this.mesh.material as ShaderMaterial).dispose();
+    this.material.dispose();
   }
 }

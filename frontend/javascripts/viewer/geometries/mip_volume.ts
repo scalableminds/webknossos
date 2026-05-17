@@ -12,8 +12,10 @@ import {
 } from "three";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import { getLayerByName, getMagInfo } from "viewer/model/accessors/dataset_accessor";
+import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { scaleGlobalPositionWithMagnification } from "viewer/model/helpers/position_converter";
 import { api, Store } from "viewer/singletons";
+import type { DatasetLayerConfiguration } from "viewer/store";
 
 const MOCK_SIZE = 32;
 const MAX_VOXELS = 100 * 1024 * 1024; // 100 MB of uint8 voxels
@@ -65,6 +67,12 @@ uniform sampler3D uVolume;
 uniform mat4 uInvModelMatrix;
 uniform vec3 uVolumeSize;
 
+uniform float uMin;
+uniform float uMax;
+uniform float uIsInverted;
+uniform vec3 uLayerColor;
+uniform float uAlpha;
+
 in vec3 vLocalPos;
 out vec4 fragColor;
 
@@ -79,6 +87,8 @@ vec2 intersectAABB(vec3 ro, vec3 rd) {
 }
 
 void main() {
+  if (uAlpha <= 0.0) discard;
+
   // Transform camera to normalized local space ([-0.5, 0.5]^3)
   vec3 localCam = (uInvModelMatrix * vec4(cameraPosition, 1.0)).xyz / uVolumeSize;
   vec3 rd = normalize(vLocalPos - localCam);
@@ -100,8 +110,18 @@ void main() {
     maxVal = max(maxVal, val);
   }
 
-  if (maxVal < 0.001) discard;
-  fragColor = vec4(vec3(maxVal), 1.0);
+  // Discard empty space when not inverted (inverted view: maxVal=0 → bright)
+  if (maxVal < 0.001 && uIsInverted < 0.5) discard;
+
+  // Apply intensity window: clamp then scale [uMin, uMax] → [0, 1]
+  float scaled = clamp(maxVal, uMin, uMax);
+  scaled = (uMax == uMin) ? 0.0 : (scaled - uMin) / (uMax - uMin);
+
+  // Inversion: abs(val - isInverted). When isInverted=1.0 → 1-val, when 0.0 → val.
+  scaled = abs(scaled - uIsInverted);
+
+  vec3 color = scaled * uLayerColor;
+  fragColor = vec4(color, uAlpha);
 }
 `;
 
@@ -130,6 +150,7 @@ export class MipVolume {
   private texture: Data3DTexture;
   private material: ShaderMaterial;
   private actualZoomStep: number | null = null;
+  private unsubscribeFromStore: (() => void) | null = null;
 
   constructor(datasource: MipDatasource = { type: "mocked cross" }) {
     let texWidth: number;
@@ -183,6 +204,12 @@ export class MipVolume {
         uVolume: { value: this.texture },
         uInvModelMatrix: { value: new Matrix4() },
         uVolumeSize: { value: volumeSize },
+        // Intensity / display uniforms (defaults: full range, white, fully opaque)
+        uMin: { value: 0.0 },
+        uMax: { value: 1.0 },
+        uIsInverted: { value: 0.0 },
+        uLayerColor: { value: new ThreeVector3(1, 1, 1) },
+        uAlpha: { value: 1.0 },
       },
       vertexShader: VERTEX_SHADER,
       fragmentShader: FRAGMENT_SHADER,
@@ -201,6 +228,39 @@ export class MipVolume {
     };
   }
 
+  // Updates display uniforms from layer configuration — mirrors updateUniformsForLayer
+  // in plane_material_factory.ts. intensityRange values are in raw uint8 range [0, 255].
+  updateLayerUniforms(settings: DatasetLayerConfiguration): void {
+    const { alpha, intensityRange, isDisabled, isInverted, color } = settings;
+    const [rawMin, rawMax] = intensityRange ?? [0, 255];
+    this.material.uniforms.uMin.value = rawMin / 255;
+    this.material.uniforms.uMax.value = rawMax / 255;
+    this.material.uniforms.uIsInverted.value = isInverted ? 1.0 : 0.0;
+    if (color != null) {
+      this.material.uniforms.uLayerColor.value.set(
+        color[0] / 255,
+        color[1] / 255,
+        color[2] / 255,
+      );
+    }
+    this.material.uniforms.uAlpha.value = isDisabled ? 0 : alpha / 100;
+  }
+
+  // Subscribes to store changes for the given layer and keeps uniforms in sync.
+  // Immediately applies the current settings on subscribe.
+  subscribeToLayerSettings(layerName: string): void {
+    this.unsubscribeFromStore?.();
+    this.unsubscribeFromStore = listenToStoreProperty(
+      (state) => state.datasetConfiguration.layers[layerName],
+      (settings) => {
+        if (settings != null) {
+          this.updateLayerUniforms(settings);
+        }
+      },
+      true,
+    );
+  }
+
   async loadData(datasource: DataSource): Promise<void> {
     const actualZoomStep =
       this.actualZoomStep ?? resolveDataSource(datasource).actualZoomStep;
@@ -214,6 +274,7 @@ export class MipVolume {
   }
 
   dispose(): void {
+    this.unsubscribeFromStore?.();
     this.texture.dispose();
     this.mesh.geometry.dispose();
     this.material.dispose();

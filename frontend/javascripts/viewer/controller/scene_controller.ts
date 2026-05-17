@@ -337,6 +337,7 @@ class SceneController {
     const mipVolume = new MipVolume(datasource);
     this.rootNode.add(mipVolume.mesh);
     if (datasource.type === "data") {
+      mipVolume.subscribeToLayerSettings(datasource.layerName);
       await mipVolume.loadData(datasource);
     }
   }

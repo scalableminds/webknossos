@@ -38,7 +38,7 @@ import {
   LineMeasurementGeometry,
   QuickSelectGeometry,
 } from "viewer/geometries/helper_geometries";
-import { MipVolume } from "viewer/geometries/mip_volume";
+import { MipVolume, type MipDatasource } from "viewer/geometries/mip_volume";
 import Plane from "viewer/geometries/plane";
 import Skeleton from "viewer/geometries/skeleton";
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
@@ -333,9 +333,12 @@ class SceneController {
     return this.splitBoundaryMesh;
   }
 
-  addMipVolume(): void {
-    const mipVolume = new MipVolume();
+  async addMipVolume(datasource: MipDatasource = { type: "mocked cross" }): Promise<void> {
+    const mipVolume = new MipVolume(datasource);
     this.rootNode.add(mipVolume.mesh);
+    if (datasource.type === "data") {
+      await mipVolume.loadData(datasource);
+    }
   }
 
   addSkeleton(

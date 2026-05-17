@@ -8,9 +8,16 @@ import {
   RedFormat,
   ShaderMaterial,
   UnsignedByteType,
+  Vector3 as ThreeVector3,
 } from "three";
+import type { BoundingBoxMinMaxType } from "types/bounding_box";
+import { api } from "viewer/singletons";
 
 const VOLUME_SIZE = 32;
+
+type MockedCrossSource = { type: "mocked cross" };
+type DataSource = { type: "data"; layerName: string; mag1Bbox: BoundingBoxMinMaxType };
+export type MipDatasource = MockedCrossSource | DataSource;
 
 function createCrossData(size: number): Uint8Array {
   const data = new Uint8Array(new ArrayBuffer(size ** 3));
@@ -88,20 +95,50 @@ void main() {
 }
 `;
 
+function validateBboxSize(bbox: BoundingBoxMinMaxType): void {
+  const [dx, dy, dz] = [
+    bbox.max[0] - bbox.min[0],
+    bbox.max[1] - bbox.min[1],
+    bbox.max[2] - bbox.min[2],
+  ];
+  if (dx !== VOLUME_SIZE || dy !== VOLUME_SIZE || dz !== VOLUME_SIZE) {
+    throw new Error(
+      `MipVolume: bbox must be ${VOLUME_SIZE}³, got ${dx}×${dy}×${dz}`,
+    );
+  }
+}
+
 export class MipVolume {
   mesh: Mesh;
+  private texture: Data3DTexture;
 
-  constructor() {
-    const data = createCrossData(VOLUME_SIZE);
+  constructor(datasource: MipDatasource = { type: "mocked cross" }) {
+    let initialData: Uint8Array;
+    let meshCenter: ThreeVector3;
+
+    if (datasource.type === "mocked cross") {
+      initialData = createCrossData(VOLUME_SIZE);
+      meshCenter = new ThreeVector3(VOLUME_SIZE / 2, VOLUME_SIZE / 2, VOLUME_SIZE / 2);
+    } else {
+      validateBboxSize(datasource.mag1Bbox);
+      initialData = new Uint8Array(new ArrayBuffer(VOLUME_SIZE ** 3));
+      const { min } = datasource.mag1Bbox;
+      meshCenter = new ThreeVector3(
+        min[0] + VOLUME_SIZE / 2,
+        min[1] + VOLUME_SIZE / 2,
+        min[2] + VOLUME_SIZE / 2,
+      );
+    }
+
     // @ts-ignore — Uint8Array<ArrayBufferLike> vs ArrayBufferView<ArrayBuffer> mismatch in TS 5.9 typings; works at runtime
-    const texture = new Data3DTexture(data, VOLUME_SIZE, VOLUME_SIZE, VOLUME_SIZE);
-    texture.format = RedFormat;
-    texture.type = UnsignedByteType;
-    texture.needsUpdate = true;
+    this.texture = new Data3DTexture(initialData, VOLUME_SIZE, VOLUME_SIZE, VOLUME_SIZE);
+    this.texture.format = RedFormat;
+    this.texture.type = UnsignedByteType;
+    this.texture.needsUpdate = true;
 
     const material = new ShaderMaterial({
       uniforms: {
-        uVolume: { value: texture },
+        uVolume: { value: this.texture },
         uInvModelMatrix: { value: new Matrix4() },
       },
       vertexShader: VERTEX_SHADER,
@@ -115,12 +152,18 @@ export class MipVolume {
 
     const geometry = new BoxGeometry(VOLUME_SIZE, VOLUME_SIZE, VOLUME_SIZE);
     this.mesh = new Mesh(geometry, material);
-    // BoxGeometry is centered at origin; shift so it covers voxels [0, 32]^3
-    this.mesh.position.set(VOLUME_SIZE / 2, VOLUME_SIZE / 2, VOLUME_SIZE / 2);
+    this.mesh.position.copy(meshCenter);
     // Keep the inverse world matrix uniform in sync each frame (avoids inverse() in GLSL)
     this.mesh.onBeforeRender = () => {
       material.uniforms.uInvModelMatrix.value.copy(this.mesh.matrixWorld).invert();
     };
+  }
+
+  async loadData(datasource: DataSource): Promise<void> {
+    const { layerName, mag1Bbox } = datasource;
+    const rawData = await api.data.getDataForBoundingBox(layerName, mag1Bbox, 0);
+    this.texture.image.data = new Uint8Array(rawData.buffer);
+    this.texture.needsUpdate = true;
   }
 
   dispose(): void {

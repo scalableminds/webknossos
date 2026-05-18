@@ -300,6 +300,15 @@ jobs:
           run: docker push "scalableminds/webknossos-tracingstore:${{ env.NORMALIZED_BRANCH }}"
           retries: 5
           retry_delay_seconds: 10
+      - name: Trigger autodeployment
+        if: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'autodeployment') }}
+        run: |
+          curl -X POST kubernetix.scm.io/hooks/onBranchImagePushed \
+            -H "Content-Type: application/json" \
+            -H "X-Auth-Token: $AUTO_DEV_DEPLOY_TOKEN" \
+            -d "{\"branch\": \"${{ github.head_ref }}\"}"
+        env:
+          AUTO_DEV_DEPLOY_TOKEN: ${{ secrets.AUTO_DEV_DEPLOY_TOKEN }}
       - name: Slack Notification
         if: github.ref == 'refs/heads/master'
         run: .github/slack-notification.sh

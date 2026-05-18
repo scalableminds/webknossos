@@ -71,6 +71,7 @@ import type { UpdateAction } from "viewer/model/sagas/volume/update_actions";
 import type { Toolkit } from "./model/accessors/tool_accessor";
 import { eventEmitterMiddleware } from "./model/helpers/event_emitter_middleware";
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
+import MipBboxReducer from "./model/reducers/mip_bbox_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import ProofreadingReducer from "./model/reducers/proofreading_reducer";
 import type { TreeGroup, TreeMap } from "./model/types/tree_types";
@@ -96,6 +97,11 @@ export type UserBoundingBoxWithoutId = {
   name: string;
   color: Vector3;
   isVisible: boolean;
+};
+
+export type MipBboxConfig = {
+  layerName: string;
+  zoomStep: number;
 };
 export type UserBoundingBox = UserBoundingBoxWithoutId & {
   id: number;
@@ -685,6 +691,8 @@ export type WebknossosState = {
     string, // layerName
     LocalSegmentationData
   >;
+  // Frontend-only, not persisted to server
+  readonly mipBboxSettings: Record<number, MipBboxConfig>;
 };
 const sagaMiddleware = createSagaMiddleware();
 export type Reducer = (state: WebknossosState, action: Action) => WebknossosState;
@@ -704,6 +712,7 @@ export const combinedReducer = reduceReducers(
   UiReducer,
   ConnectomeReducer,
   OrganizationReducer,
+  MipBboxReducer,
 ) as Reducer;
 
 const store = createStore<WebknossosState, Action>(

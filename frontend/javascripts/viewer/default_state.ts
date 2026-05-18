@@ -312,5 +312,6 @@ const defaultState: WebknossosState = {
     },
   },
   localSegmentationData: {},
+  mipBboxSettings: {},
 };
 export default defaultState;

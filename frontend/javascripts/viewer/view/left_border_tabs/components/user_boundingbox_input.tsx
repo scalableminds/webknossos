@@ -3,18 +3,24 @@ import {
   DeleteOutlined,
   DownloadOutlined,
   EllipsisOutlined,
+  ExperimentOutlined,
   InfoCircleOutlined,
   ScanOutlined,
 } from "@ant-design/icons";
-import { Flex, Input, type MenuProps, Switch } from "antd";
+import { Dropdown, Flex, Input, type MenuProps, Switch } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { numberArrayToVector6, rgbToHex, stringToNumberArray } from "libs/utils";
 import messages from "messages";
 import { useEffect, useState } from "react";
+import { useDispatch } from "react-redux";
 import type { Vector3, Vector6 } from "viewer/constants";
-import { getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
+import { getColorLayers, getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
+import {
+  removeMipForBboxAction,
+  setMipForBboxAction,
+} from "viewer/model/actions/annotation_actions";
 import { api } from "viewer/singletons";
 import ButtonComponent from "../../components/button_component";
 import ColorSetting from "./color_setting";
@@ -68,12 +74,16 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
     onHideContextMenu,
   } = props;
 
+  const dispatch = useDispatch();
+
   const [isEditing, setIsEditing] = useState(false);
   const [isValid, setIsValid] = useState(true);
   const [text, setText] = useState(computeText(propValue));
   const [name, setName] = useState(propName);
 
   const visibleSegmentationLayer = useWkSelector((state) => getVisibleSegmentationLayer(state));
+  const colorLayers = useWkSelector((state) => getColorLayers(state.dataset));
+  const mipConfig = useWkSelector((state) => state.mipBboxSettings[bboxId] ?? null);
 
   useEffect(() => {
     if (!isEditing && propValue !== undefined) {
@@ -164,7 +174,34 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
     : "This WEBKNOSSOS instance is not configured to run export jobs.";
 
   const getContextMenu = () => {
+    const renderAsMipItem: NonNullable<MenuProps["items"]>[number] =
+      mipConfig != null
+        ? {
+            key: "removeMip",
+            label: "Remove MIP rendering",
+            icon: <ExperimentOutlined />,
+            onClick: () => {
+              dispatch(removeMipForBboxAction(bboxId));
+              maybeCloseContextMenu();
+            },
+          }
+        : {
+            key: "renderAsMip",
+            label: "Render as MIP",
+            icon: <ExperimentOutlined />,
+            disabled: colorLayers.length === 0,
+            children: colorLayers.map((layer) => ({
+              key: `mip-${layer.name}`,
+              label: layer.name,
+              onClick: () => {
+                dispatch(setMipForBboxAction(bboxId, { layerName: layer.name, zoomStep: 0 }));
+                maybeCloseContextMenu();
+              },
+            })),
+          };
+
     const items: MenuProps["items"] = [
+      renderAsMipItem,
       {
         key: "registerSegments",
         label: (
@@ -246,6 +283,29 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
             onClick={(e) => e.stopPropagation()}
           />
         </FastTooltip>
+        {mipConfig != null && (
+          <Dropdown
+            menu={{
+              items: [
+                {
+                  key: "removeMip",
+                  label: "Remove MIP rendering",
+                  icon: <DeleteOutlined />,
+                  onClick: () => dispatch(removeMipForBboxAction(bboxId)),
+                },
+              ],
+            }}
+            trigger={["click"]}
+          >
+            <ButtonComponent
+              type="text"
+              size="small"
+              title={`MIP: ${mipConfig.layerName}`}
+              icon={<ExperimentOutlined style={{ color: "#1677ff" }} />}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </Dropdown>
+        )}
         <ButtonComponent
           title={disabled ? editingDisallowedExplanation : "Delete Bounding Box"}
           onClick={(e) => {

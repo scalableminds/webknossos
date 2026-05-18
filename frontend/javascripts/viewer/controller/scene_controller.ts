@@ -62,14 +62,19 @@ import {
   getRotationInRadian,
 } from "viewer/model/accessors/flycam_accessor";
 import { getSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
-import { getSomeTracing, getTaskBoundingBoxes } from "viewer/model/accessors/tracing_accessor";
+import {
+  type MipEnabledBbox,
+  getMipEnabledBboxes,
+  getSomeTracing,
+  getTaskBoundingBoxes,
+} from "viewer/model/accessors/tracing_accessor";
 import { getPlaneScalingFactor } from "viewer/model/accessors/view_mode_accessor";
 import { sceneControllerInitializedAction } from "viewer/model/actions/actions";
 import Dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { Transform } from "viewer/model/helpers/transformation_helpers";
 import { Model } from "viewer/singletons";
-import type { SkeletonTracing, UserBoundingBox, WebknossosState } from "viewer/store";
+import type { MipBboxConfig, SkeletonTracing, UserBoundingBox, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import type CustomLOD from "./custom_lod";
 import SegmentMeshController from "./segment_mesh_controller";
@@ -110,6 +115,7 @@ class SceneController {
   public segmentMeshController: SegmentMeshController;
   private storePropertyUnsubscribers: Array<() => void>;
   private splitBoundaryMesh: Mesh | null = null;
+  private mipVolumes = new Map<number, { volume: MipVolume; config: MipBboxConfig }>();
 
   // Created as instance properties to avoid creating objects in each update call.
   private rotatedPositionOffsetVector = new ThreeVector3();
@@ -339,6 +345,38 @@ class SceneController {
     if (datasource.type === "data") {
       mipVolume.subscribeToLayerSettings(datasource.layerName);
       await mipVolume.loadData(datasource);
+    }
+  }
+
+  private updateMipVolumes(entries: MipEnabledBbox[]): void {
+    const entryMap = new Map(entries.map((e) => [e.bbox.id, e]));
+
+    for (const [bboxId, { volume, config }] of this.mipVolumes) {
+      const entry = entryMap.get(bboxId);
+      const configChanged =
+        entry == null ||
+        entry.config.layerName !== config.layerName ||
+        entry.config.zoomStep !== config.zoomStep;
+      if (configChanged) {
+        this.rootNode.remove(volume.mesh);
+        volume.dispose();
+        this.mipVolumes.delete(bboxId);
+      }
+    }
+
+    for (const { bbox, config } of entries) {
+      if (this.mipVolumes.has(bbox.id)) continue;
+      const datasource: MipDatasource = {
+        type: "data",
+        layerName: config.layerName,
+        mag1Bbox: { min: bbox.boundingBox.min, max: bbox.boundingBox.max },
+        zoomStep: config.zoomStep,
+      };
+      const volume = new MipVolume(datasource);
+      this.rootNode.add(volume.mesh);
+      volume.subscribeToLayerSettings(config.layerName);
+      volume.loadData(datasource).catch(console.error);
+      this.mipVolumes.set(bbox.id, { volume, config });
     }
   }
 
@@ -813,6 +851,7 @@ class SceneController {
         (showSkeletons) => this.setSkeletonGroupVisibility(showSkeletons),
         true,
       ),
+      listenToStoreProperty(getMipEnabledBboxes, (entries) => this.updateMipVolumes(entries), true),
     ];
   }
 }

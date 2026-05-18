@@ -16,6 +16,7 @@ import Constants from "viewer/constants";
 import type {
   Annotation,
   MappingType,
+  MipBboxConfig,
   UserBoundingBox,
   UserBoundingBoxWithoutId,
   UserBoundingBoxWithoutIdMaybe,
@@ -62,6 +63,8 @@ type AddUserBoundingBoxesAction = ReturnType<typeof addUserBoundingBoxesAction>;
 export type AddNewUserBoundingBox = ReturnType<typeof addUserBoundingBoxAction>;
 export type ChangeUserBoundingBoxAction = ReturnType<typeof changeUserBoundingBoxAction>;
 type DeleteUserBoundingBox = ReturnType<typeof deleteUserBoundingBoxAction>;
+export type SetMipForBboxAction = ReturnType<typeof setMipForBboxAction>;
+export type RemoveMipForBboxAction = ReturnType<typeof removeMipForBboxAction>;
 export type UpdateMeshVisibilityAction = ReturnType<typeof updateMeshVisibilityAction>;
 export type UpdateMeshOpacityAction = ReturnType<typeof updateMeshOpacityAction>;
 export type MaybeFetchMeshFilesAction = ReturnType<typeof maybeFetchMeshFilesAction>;
@@ -106,7 +109,9 @@ export type AnnotationActionTypes =
   | RemoveMeshAction
   | AddAdHocMeshAction
   | AddPrecomputedMeshAction
-  | SetCollaborationModeAction;
+  | SetCollaborationModeAction
+  | SetMipForBboxAction
+  | RemoveMipForBboxAction;
 
 export type UserBoundingBoxAction =
   | SetUserBoundingBoxesAction
@@ -203,6 +208,19 @@ export const addUserBoundingBoxAction = (
 export const deleteUserBoundingBoxAction = (id: number) =>
   ({
     type: "DELETE_USER_BOUNDING_BOX",
+    id,
+  }) as const;
+
+export const setMipForBboxAction = (id: number, config: MipBboxConfig) =>
+  ({
+    type: "SET_MIP_FOR_BBOX",
+    id,
+    config,
+  }) as const;
+
+export const removeMipForBboxAction = (id: number) =>
+  ({
+    type: "REMOVE_MIP_FOR_BBOX",
     id,
   }) as const;
 

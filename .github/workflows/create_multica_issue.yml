@@ -49,9 +49,8 @@ jobs:
 
       - name: Install Multica CLI
         run: |
-          curl -sSL https://github.com/multica-ai/multica/releases/download/v0.3.2/multica-desktop-0.3.2-linux-amd64.deb \
-            -o /tmp/multica.deb
-          sudo dpkg -i /tmp/multica.deb
+          curl -fsSL https://github.com/multica-ai/multica/releases/download/v0.3.2/multica-cli-0.3.2-linux-amd64.tar.gz \
+            | tar -xz -C /usr/local/bin
 
       - name: Authenticate with Multica
         run: multica login --token "${{ secrets.MULTICA_TOKEN }}"

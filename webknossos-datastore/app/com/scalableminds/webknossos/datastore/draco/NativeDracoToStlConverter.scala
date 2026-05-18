@@ -1,16 +1,17 @@
 package com.scalableminds.webknossos.datastore.draco
 
-import com.github.sbt.jni.nativeLoader
+import com.github.sbt.jni.syntax.NativeLoader
 
-@nativeLoader("webknossosJni0")
-class NativeDracoToStlConverter() {
-  @native def dracoToStl(a: Array[Byte],
-                         offsetX: Float,
-                         offsetY: Float,
-                         offsetZ: Float,
-                         scaleX: Double,
-                         scaleY: Double,
-                         scaleZ: Double,
-                         vertexQuantizationBits: Int): Array[Byte]
+class NativeDracoToStlConverter() extends NativeLoader("webknossosJni0") {
+  @native def dracoToStl(
+      a: Array[Byte],
+      offsetX: Float,
+      offsetY: Float,
+      offsetZ: Float,
+      scaleX: Double,
+      scaleY: Double,
+      scaleZ: Double,
+      vertexQuantizationBits: Int
+  ): Array[Byte]
 
 }

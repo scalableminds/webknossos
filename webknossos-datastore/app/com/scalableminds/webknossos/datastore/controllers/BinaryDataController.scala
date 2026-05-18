@@ -68,7 +68,7 @@ class BinaryDataController @Inject()(
                   + request.body.headOption
                     .map(firstReq => s" First of ${request.body.size} requests was $firstReq")
                     .getOrElse(""))
-          } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+          } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
         }
       }
     }
@@ -105,7 +105,7 @@ class BinaryDataController @Inject()(
           DataServiceRequestSettings(halfByte = halfByte, appliedAgglomerate = mappingName)
         )
         (data, indices) <- requestData(datasetId, dataSource.id, dataLayer, dataRequest)
-      } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+      } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
     }
   }
 
@@ -115,7 +115,7 @@ class BinaryDataController @Inject()(
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
           (data, indices) <- requestData(datasetId, dataSource.id, dataLayer, request.body)
-        } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+        } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
       }
     }
 
@@ -140,7 +140,7 @@ class BinaryDataController @Inject()(
           cubeSize
         )
         (data, indices) <- requestData(datasetId, dataSource.id, dataLayer, dataRequest)
-      } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+      } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
     }
   }
 
@@ -243,7 +243,7 @@ class BinaryDataController @Inject()(
           // We need four bytes for each float
           val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
           responseBuffer.asFloatBuffer().put(vertices)
-          Ok(responseBuffer.array()).withHeaders(getNeighborIndices(neighbors): _*)
+          Ok(responseBuffer.array()).withHeaders(getNeighborIndices(neighbors)*)
         }
       }
     }

@@ -46,7 +46,7 @@ class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenServ
           byteRange <- ByteRange.fromRequest(request)
           (bytes, encoding, rangeHeader) <- requestedPath.readBytesEncodingAndRangeHeader(byteRange)
           headers = buildResponseHeaders(encoding, rangeHeader)
-        } yield resultWithStatus(byteRange.successResponseCode, bytes).withHeaders(headers: _*)
+        } yield resultWithStatus(byteRange.successResponseCode, bytes).withHeaders(headers*)
       }
     }
 
@@ -76,7 +76,7 @@ class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenServ
         byteRange <- ByteRange.fromRequest(request)
         (bytes, encoding, rangeHeader) <- requestedPath.readBytesEncodingAndRangeHeader(byteRange)
         headers = buildResponseHeaders(encoding, rangeHeader)
-      } yield resultWithStatus(byteRange.successResponseCode, bytes).withHeaders(headers: _*)
+      } yield resultWithStatus(byteRange.successResponseCode, bytes).withHeaders(headers*)
     }
   }
 

@@ -9,17 +9,17 @@ import scala.reflect.ClassTag
 
 trait DataConverter extends FoxImplicits {
 
-  def putByte(buf: ByteBuffer, lon: Long): ByteBuffer = buf put lon.toByte
-  def putShort(buf: ByteBuffer, lon: Long): ByteBuffer = buf putShort lon.toShort
-  def putInt(buf: ByteBuffer, lon: Long): ByteBuffer = buf putInt lon.toInt
-  def putLong(buf: ByteBuffer, lon: Long): ByteBuffer = buf putLong lon
+  def putByte(buf: ByteBuffer, lon: Long): ByteBuffer = buf `put` lon.toByte
+  def putShort(buf: ByteBuffer, lon: Long): ByteBuffer = buf `putShort` lon.toShort
+  def putInt(buf: ByteBuffer, lon: Long): ByteBuffer = buf `putInt` lon.toInt
+  def putLong(buf: ByteBuffer, lon: Long): ByteBuffer = buf `putLong` lon
 
   def uByteToLong(uByte: Byte): Long = uByte & 0xffL
   def uShortToLong(uShort: Short): Long = uShort & 0xffffL
   def uIntToLong(uInt: Int): Long = uInt & 0xffffffffL
 
   def convertData(data: Array[Byte],
-                  elementClass: ElementClass.Value): Array[_ >: Byte with Short with Int with Long with Float] =
+                  elementClass: ElementClass.Value): Array[? >: Byte & Short & Int & Long & Float] =
     elementClass match {
       case ElementClass.uint8 | ElementClass.int8 =>
         convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
@@ -47,8 +47,8 @@ trait DataConverter extends FoxImplicits {
     dstArray
   }
 
-  def filterZeroes(data: Array[_ >: Byte with Short with Int with Long with Float],
-                   skip: Boolean = false): Array[_ >: Byte with Short with Int with Long with Float] =
+  def filterZeroes(data: Array[? >: Byte & Short & Int & Long & Float],
+                   skip: Boolean = false): Array[? >: Byte & Short & Int & Long & Float] =
     if (skip) data
     else {
       val zeroByte = 0.toByte
@@ -64,7 +64,7 @@ trait DataConverter extends FoxImplicits {
       }
     }
 
-  def toBytes(typed: Array[_ >: Byte with Short with Int with Long with Float],
+  def toBytes(typed: Array[? >: Byte & Short & Int & Long & Float],
               elementClass: ElementClass.Value): Array[Byte] = {
     val numBytes = ElementClass.bytesPerElement(elementClass)
     val byteBuffer = ByteBuffer.allocate(numBytes * typed.length).order(ByteOrder.LITTLE_ENDIAN)

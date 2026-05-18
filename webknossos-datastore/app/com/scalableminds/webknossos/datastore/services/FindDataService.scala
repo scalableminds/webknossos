@@ -164,7 +164,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       convertedData = filterZeroes(convertData(dataConcatenated, dataLayer.elementClass), skip = isUint24)
     } yield calculateHistogramValues(convertedData, dataLayer.elementClass)
 
-  def calculateHistogramValues(data: Array[_ >: Byte with Short with Int with Long with Float],
+  def calculateHistogramValues(data: Array[? >: Byte & Short & Int & Long & Float],
                                elementClass: ElementClass.Value): Seq[Histogram] = {
     val bytesPerElement = ElementClass.bytesPerElement(elementClass)
     val isUint24 = elementClass == ElementClass.uint24

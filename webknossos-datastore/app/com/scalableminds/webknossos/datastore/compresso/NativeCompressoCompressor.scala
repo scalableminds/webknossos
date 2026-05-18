@@ -1,8 +1,7 @@
 package com.scalableminds.webknossos.datastore.compresso
 
-import com.github.sbt.jni.nativeLoader
+import com.github.sbt.jni.syntax.NativeLoader
 
-@nativeLoader("webknossosJni0")
-class NativeCompressoCompressor {
+class NativeCompressoCompressor extends NativeLoader("webknossosJni0") {
   @native def decompress(bytes: Array[Byte]): Array[Byte]
 }

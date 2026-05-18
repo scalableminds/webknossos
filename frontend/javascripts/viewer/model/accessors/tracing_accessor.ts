@@ -130,10 +130,12 @@ export const getUserBoundingBoxesThatContainPosition = (
 
 export type MipEnabledBbox = { bbox: UserBoundingBox; config: MipBboxConfig };
 
-export const getMipEnabledBboxes = (state: WebknossosState): MipEnabledBbox[] => {
-  const bboxes = getUserBoundingBoxesFromState(state);
-  return bboxes.flatMap((bbox) => {
-    const config = state.mipBboxSettings[bbox.id];
-    return config != null ? [{ bbox, config }] : [];
-  });
-};
+export const getMipEnabledBboxes = reuseInstanceOnEquality(
+  (state: WebknossosState): MipEnabledBbox[] => {
+    const bboxes = getUserBoundingBoxesFromState(state);
+    return bboxes.flatMap((bbox) => {
+      const config = state.mipBboxSettings[bbox.id];
+      return config != null ? [{ bbox, config }] : [];
+    });
+  },
+);

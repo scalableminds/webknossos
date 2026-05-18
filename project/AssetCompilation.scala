@@ -47,10 +47,10 @@ object AssetCompilation {
 
     Files
       .walk(from.toPath)
-      .forEach(toConsumer(cpSrc => {
+      .forEach(toConsumer { cpSrc =>
         val cpDest = to.toPath.resolve(from.toPath.relativize(cpSrc))
         Files.copy(cpSrc, cpDest)
-      }))
+      })
   }
 
   private def deleteRecursively(file: File): Unit = {
@@ -106,13 +106,12 @@ object AssetCompilation {
       val sourceManagedValue = sourceManaged.value
 
       val schemaPath = baseDirectoryValue / "schema" / "postgres" / "schema.sql"
-      val slickTablesOutPath = sourceManagedValue / "schema" / "com" / "scalableminds" / "webknossos" / "schema" / "Tables.scala"
+      val slickTablesOutPath =
+        sourceManagedValue / "schema" / "com" / "scalableminds" / "webknossos" / "schema" / "Tables.scala"
 
       val shouldUpdate = !slickTablesOutPath.exists || slickTablesOutPath.lastModified < schemaPath.lastModified
 
       if (shouldUpdate) {
-        // SourceCodeGenerator marks the output file read-only; delete it first so the write succeeds.
-        IO.delete(slickTablesOutPath)
         streamsValue.log.info(
           "Ensuring Postgres DB is running for Slick code generation..."
         )
@@ -140,7 +139,7 @@ object AssetCompilation {
         streamsValue.log.info("Slick SQL schema already up to date.")
       }
 
-      Seq((slickTablesOutPath))
+      Seq(slickTablesOutPath)
     }
 
   val settings = Seq(

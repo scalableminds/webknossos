@@ -12,7 +12,7 @@ inThisBuild(
 // fix jni for scala version 3
 sbtJniCoreScope := Compile
 
-val failOnWarning = if (sys.props.contains("failOnWarning")) Seq("-Xfatal-warnings") else Seq()
+val failOnWarning = Seq() // if (sys.props.contains("failOnWarning")) Seq("-Xfatal-warnings") else Seq()
 ThisBuild / scalacOptions ++= Seq(
   "-explain", // More detailed compiler output
   "-explain-types", // Explain type errors in detail
@@ -23,9 +23,7 @@ ThisBuild / scalacOptions ++= Seq(
   "-language:postfixOps",
   "-Wconf:src=target/.*:s",
   "-Wconf:src=webknossos-datastore/target/.*:s",
-  "-Wconf:src=webknossos-tracingstore/target/.*:s",
-  "-rewrite",
-  "-source:3.4-migration"
+  "-Wconf:src=webknossos-tracingstore/target/.*:s"
 ) ++ failOnWarning
 ThisBuild / javacOptions ++= Seq(
   "-Xlint:unchecked",

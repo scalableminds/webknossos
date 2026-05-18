@@ -1,5 +1,5 @@
 import { ReloadOutlined } from "@ant-design/icons";
-import { updateDatasetPartial } from "admin/rest_api";
+import { getDataset, updateDatasetPartial } from "admin/rest_api";
 import { Button, InputNumber, Slider, Tooltip, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -138,12 +138,14 @@ export function LayerTransformSettingsContent({
   const handleSaveForAllUsers = useCallback(async () => {
     setIsSaving(true);
     try {
-      // Tracing/annotation layers (identified by tracingId) are not accepted by the
-      // updatePartial endpoint — only persist the real dataset layers.
+      // Fetch the authoritative backend state so we only change coordinateTransformations
+      // for this layer — avoiding accidentally persisting any other live frontend changes.
+      const currentTransforms = transforms;
+      const backendDataset = await getDataset(dataset.id);
       const dataSource = {
-        ...dataset.dataSource,
-        dataLayers: dataset.dataSource.dataLayers.filter(
-          (l) => l.category !== "segmentation" || l.tracingId == null,
+        ...backendDataset.dataSource,
+        dataLayers: backendDataset.dataSource.dataLayers.map((l) =>
+          l.name === layer.name ? { ...l, coordinateTransformations: currentTransforms } : l,
         ),
       };
       await updateDatasetPartial(dataset.id, { dataSource });
@@ -153,7 +155,7 @@ export function LayerTransformSettingsContent({
     } finally {
       setIsSaving(false);
     }
-  }, [dataset]);
+  }, [dataset.id, layer.name, transforms]);
 
   if (!isCompatible) {
     return (

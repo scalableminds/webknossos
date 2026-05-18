@@ -237,18 +237,18 @@ jobs:
           run: curl -v --fail-with-body "http://localhost:9000/api/health"
           retries: 20
           retry_delay_seconds: 5
-      # - name: Run webknossos-datastore smoke test
-      #   uses: ./.github/actions/retry
-      #   with:
-      #     run: curl -v --fail-with-body "http://localhost:9090/data/health"
-      #     retries: 20
-      #     retry_delay_seconds: 5
-      # - name: Run webknossos-tracingstore smoke test
-      #   uses: ./.github/actions/retry
-      #   with:
-      #     run: curl -v --fail-with-body "http://localhost:9050/tracings/health"
-      #     retries: 20
-      #     retry_delay_seconds: 5
+      - name: Run webknossos-datastore smoke test
+        uses: ./.github/actions/retry
+        with:
+          run: curl -v --fail-with-body "http://localhost:9090/data/health"
+          retries: 20
+          retry_delay_seconds: 5
+      - name: Run webknossos-tracingstore smoke test
+        uses: ./.github/actions/retry
+        with:
+          run: curl -v --fail-with-body "http://localhost:9050/tracings/health"
+          retries: 20
+          retry_delay_seconds: 5
       - name: Stop webknossos, datastore and tracingstore
         run: docker compose --file .github/docker-compose.yml down --volumes --remove-orphans
 

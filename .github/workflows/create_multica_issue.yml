@@ -65,4 +65,4 @@ jobs:
           multica issue create \
             --title "${{ steps.issue.outputs.title }}" \
             --description "$(cat "$RUNNER_TEMP/multica_description.txt")" \
-            --project "WEBKNOSSOS"
+            --project "5447d56f-e1ca-4074-87c9-e3357ae41b89" # WEBKNOSSOS project

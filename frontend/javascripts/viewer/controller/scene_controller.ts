@@ -869,6 +869,15 @@ class SceneController {
         true,
       ),
       listenToStoreProperty(getMipEnabledBboxes, (entries) => this.updateMipVolumes(entries), true),
+      listenToStoreProperty(
+        (state) => state.userConfiguration.mipRaymarchingSteps,
+        (numSteps) => {
+          for (const { volume } of this.mipVolumes.values()) {
+            volume.setNumSteps(numSteps);
+          }
+        },
+        true,
+      ),
     ];
   }
 }

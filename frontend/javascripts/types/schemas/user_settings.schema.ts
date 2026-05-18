@@ -139,6 +139,11 @@ export const userSettings = {
   useLegacyBindings: {
     type: "boolean",
   },
+  mipRaymarchingSteps: {
+    type: "number",
+    minimum: 16,
+    maximum: 512,
+  },
   ...baseDatasetViewConfiguration,
 };
 export default {

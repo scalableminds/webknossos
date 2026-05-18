@@ -1,6 +1,7 @@
 import {
   AppstoreAddOutlined,
   DeleteOutlined,
+  FireOutlined,
   PlusOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
@@ -9,6 +10,8 @@ import {
   Empty,
   Flex,
   type MenuProps,
+  Popover,
+  Slider,
   Space,
   Table,
   type TableProps,
@@ -33,6 +36,7 @@ import {
   deleteUserBoundingBoxAction,
 } from "viewer/model/actions/annotation_actions";
 import { setPositionAction } from "viewer/model/actions/flycam_actions";
+import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setActiveUserBoundingBoxId } from "viewer/model/actions/ui_actions";
 import type { UserBoundingBox } from "viewer/store";
 import DownloadModalView from "../action_bar/download_modal/download_modal_view";
@@ -58,6 +62,8 @@ export default function BoundingBoxTab() {
   const dataset = useWkSelector((state) => state.dataset);
   const activeBoundingBoxId = useWkSelector((state) => state.uiInformation.activeUserBoundingBoxId);
   const { userBoundingBoxes } = getSomeTracing(annotation);
+  const hasMipEnabled = useWkSelector((state) => Object.keys(state.mipBboxSettings).length > 0);
+  const mipRaymarchingSteps = useWkSelector((state) => state.userConfiguration.mipRaymarchingSteps);
   const [contextMenuPosition, setContextMenuPosition] = useState<[number, number] | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
   const [menu, setMenu] = useState<MenuProps | null>(null);
@@ -329,6 +335,35 @@ export default function BoundingBoxTab() {
           onClick={deleteSelectedBoundingBoxes}
           icon={<DeleteOutlined />}
         />
+        {hasMipEnabled && (
+          <Popover
+            title="MIP Settings"
+            trigger="click"
+            content={
+              <div style={{ width: 260 }}>
+                <div style={{ marginBottom: 4 }}>Ray marching steps</div>
+                <Flex gap="small" align="center">
+                  <Slider
+                    style={{ flex: 1 }}
+                    min={16}
+                    max={512}
+                    step={16}
+                    value={mipRaymarchingSteps}
+                    onChange={(v) => dispatch(updateUserSettingAction("mipRaymarchingSteps", v))}
+                  />
+                  <span style={{ width: 30, textAlign: "right" }}>{mipRaymarchingSteps}</span>
+                </Flex>
+              </div>
+            }
+          >
+            <ButtonComponent
+              variant="text"
+              color="default"
+              title="MIP rendering settings"
+              icon={<FireOutlined />}
+            />
+          </Popover>
+        )}
       </Space>
       <Divider size="small" />
       <ContextMenuContainer

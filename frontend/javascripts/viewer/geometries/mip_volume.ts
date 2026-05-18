@@ -131,6 +131,7 @@ uniform float uMax;
 uniform float uIsInverted;
 uniform vec3 uLayerColor;
 uniform float uAlpha;
+uniform int uNumSteps;
 
 in vec3 vLocalPos;
 out vec4 fragColor;
@@ -158,11 +159,10 @@ void main() {
   float tStart = max(t.x, 0.0);
   float tEnd   = t.y;
 
-  const int NUM_STEPS = 128;
-  float stepSize = (tEnd - tStart) / float(NUM_STEPS);
+  float stepSize = (tEnd - tStart) / float(uNumSteps);
   float maxVal = 0.0;
 
-  for (int i = 0; i < NUM_STEPS; i++) {
+  for (int i = 0; i < uNumSteps; i++) {
     vec3 pos = localCam + (tStart + (float(i) + 0.5) * stepSize) * rd;
     // map [-0.5, 0.5] -> [0.0, 1.0] for texture lookup
     float val = texture(uVolume, pos + 0.5).r;
@@ -277,6 +277,7 @@ export class MipVolume {
         uIsInverted: { value: 0.0 },
         uLayerColor: { value: new ThreeVector3(1, 1, 1) },
         uAlpha: { value: 1.0 },
+        uNumSteps: { value: 128 },
       },
       vertexShader: VERTEX_SHADER,
       fragmentShader: FRAGMENT_SHADER,
@@ -307,6 +308,10 @@ export class MipVolume {
       this.material.uniforms.uLayerColor.value.set(color[0] / 255, color[1] / 255, color[2] / 255);
     }
     this.material.uniforms.uAlpha.value = isDisabled ? 0 : alpha / 100;
+  }
+
+  setNumSteps(n: number): void {
+    this.material.uniforms.uNumSteps.value = n;
   }
 
   // Subscribes to store changes for the given layer and keeps uniforms in sync.

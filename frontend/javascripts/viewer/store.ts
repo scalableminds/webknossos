@@ -388,6 +388,7 @@ export type UserConfiguration = {
   readonly erasePreference: "ERASE_BRUSH" | "ERASE_TRACE";
   readonly writePreference: "BRUSH" | "TRACE";
   readonly measurementPreference: "LINE_MEASUREMENT" | "AREA_MEASUREMENT";
+  readonly mipRaymarchingSteps: number;
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &

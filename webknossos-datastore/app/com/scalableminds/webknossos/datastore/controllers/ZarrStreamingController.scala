@@ -216,7 +216,7 @@ class ZarrStreamingController @Inject()(
         )
         excludedDatasetLayerNames = ZarrStreamingController.excludedDatasetLayerNames(
           volumeAnnotationLayers,
-          annotationLayersWithFallbacks.map(_._2)
+          annotationLayersWithFallbacks.map { case (_, fallbackLayerName) => fallbackLayerName }
         )
         dataSourceLayers = dataSource.dataLayers
           .filter(dL => !excludedDatasetLayerNames.contains(dL.name))

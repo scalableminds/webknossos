@@ -89,6 +89,7 @@ This is an example:
     "dataFormat" : "wkw"
   }, {
     "name" : "segmentation",
+    "category" : "segmentation",
     "boundingBox" : {
       "topLeft" : [ 0, 0, 0 ],
       "width" : 1024,
@@ -99,13 +100,11 @@ This is an example:
       { "mag" : [1, 1, 1], "path": "my_team/great_dataset/segmentation/1" },
       { "mag" : [2, 2, 1], "path": "my_team/great_dataset/segmentation/2" }
     ],
-    "cubeLength": 1024,
     "elementClass" : "uint32",
     "largestSegmentId" : 1000000000,
-    "category" : "segmentation",
     "dataFormat" : "wkw"
   } ],
-  "scale" : [ 11.24, 11.24, 28 ]
+  "scale" : { "factor": [ 11.24, 11.24, 28 ], "unit": "nanometer" }
 }
 ```
 
@@ -135,9 +134,32 @@ WEBKNOSSOS requires several metadata properties for each dataset to properly dis
     * `dataLayers.mags.mag`: A 3-tuple (e.g., `[1, 1, 1]`, `[2, 2, 1]`) for uniform or non-uniform magnifications.
     * `dataLayers.mags.path`: The path to the directory containing the data for this magnification step.
 
-  + `dataLayers.elementClass`: The underlying datatype of the layer, e.g., `uint8`, `uint16`, `uint24` (rgb), `uint32`, `uint64`, `float` (32-bit) or `double` (64-bit).
+  + `dataLayers.elementClass`: The underlying datatype of the layer. Supported values: `uint8`, `uint16`, `uint24` (rgb), `uint32`, `uint64`, `int8`, `int16`, `int32`, `int64`, `float` (32-bit) or `double` (64-bit).
+  + `dataLayers.dataFormat`: The storage format of the layer data. Supported values: `wkw`, `zarr`, `zarr3`, `n5`, `neuroglancerPrecomputed`.
   + `dataLayers.largestSegmentId`: The highest ID that is currently used in the respective segmentation layer. This is required for volume annotations where new objects with incrementing IDs are created. Only applies to segmentation layers.
-  + `dataLayers.dataFormat`: Should be `wkw`.
+  + `dataLayers.mappings` *(optional)*: A set of pre-computed agglomerate mapping names available for this segmentation layer. Only applies to segmentation layers.
+  + `dataLayers.defaultViewConfiguration` *(optional)*: A key-value map of default rendering settings for this layer (e.g., color, opacity, intensity range). Overridden by `adminViewConfiguration`.
+  + `dataLayers.adminViewConfiguration` *(optional)*: A key-value map of rendering settings set by dataset administrators. Takes precedence over `defaultViewConfiguration`.
+  + `dataLayers.coordinateTransformations` *(optional)*: An array of coordinate transformations to apply to this layer. Each transformation has:
+    * `type`: Either `"affine"` or `"thin_plate_spline"`.
+    * `matrix` *(for affine)*: A 4×4 row-major transformation matrix as a list of 4 lists of 4 doubles.
+    * `correspondences` *(for thin_plate_spline)*: An object with `source` and `target` arrays of `[x, y, z]` control points.
+  + `dataLayers.additionalAxes` *(optional)*: Defines additional coordinate axes beyond x, y, z for n-dimensional datasets. Each axis has:
+    * `name`: A string identifier for the axis (e.g., `"t"` for time, `"c"` for channel).
+    * `bounds`: A 2-element array `[lowerBound, upperBound]` where lower is inclusive and upper is exclusive.
+    * `index`: An integer ordering index used for sorting.
+  + `dataLayers.attachments` *(optional)*: Pre-computed attachment files associated with this layer. Each attachment has a `name`, `path`, `dataFormat` (`hdf5`, `json`, `zarr3`, or `neuroglancerPrecomputed`), and optional `credentialId`. Attachment collections:
+    * `meshes`: Array of pre-computed mesh files.
+    * `agglomerates`: Array of agglomerate mapping files (HDF5).
+    * `segmentIndex` *(single)*: A segment index file for fast segment lookup.
+    * `connectomes`: Array of connectome files.
+    * `cumsum` *(single)*: A cumulative sum file used together with agglomerate mappings.
+
+- `scale`: The real-world size of a single voxel at magnification 1. Can be specified as:
+  + An object `{ "factor": [x, y, z], "unit": "<unit>" }` where `unit` is a physical length unit string (e.g., `"nanometer"`, `"micrometer"`, `"millimeter"`). Common SI prefixes from yoctometer to yottameter are supported, as well as `angstrom`, `inch`, `foot`, `yard`, `mile`, and `parsec`. Defaults to `"nanometer"`.
+  + A plain array `[x, y, z]` (legacy format, interpreted as nanometers).
+
+- `defaultViewConfiguration` *(optional)*: A key-value map of default rendering settings for the entire dataset (e.g., default position, zoom level).
 
 ## NML Files
 When working with skeleton annotation data, WEBKNOSSOS uses the NML format.
@@ -148,15 +170,22 @@ See the following example for reference:
 ```xml
 <things>
   <parameters>
-    <experiment name="great_dataset" />
-    <scale x="11.24" y="11.24" z="25.0" />
+    <experiment name="great_dataset" organization="my_org" datasetId="abc123" description="My annotation" wkUrl="https://webknossos.org" />
+    <scale x="11.24" y="11.24" z="25.0" unit="nanometer" />
     <offset x="0" y="0" z="0" />
     <time ms="1534787309180" />
     <editPosition x="1024" y="1024" z="512" />
     <editRotation xRot="0.0" yRot="0.0" zRot="0.0" />
     <zoomLevel zoom="1.0" />
+    <activeNode id="1" />
+    <userBoundingBox id="1" name="My Box" isVisible="true" color.r="1.0" color.g="0.0" color.b="0.0" color.a="1.0"
+      topLeftX="0" topLeftY="0" topLeftZ="0" width="512" height="512" depth="512" />
+    <taskBoundingBox topLeftX="0" topLeftY="0" topLeftZ="0" width="512" height="512" depth="512" />
+    <additionalAxes>
+      <additionalAxis name="t" index="0" start="0" end="10" />
+    </additionalAxes>
   </parameters>
-  <thing id="1" groupId="2" color.r="0.0" color.g="0.0" color.b="1.0" color.a="1.0" name="explorative_2018-08-20_Example">
+  <thing id="1" groupId="2" color.r="0.0" color.g="0.0" color.b="1.0" color.a="1.0" name="explorative_2018-08-20_Example" isVisible="true" type="NORMAL">
     <nodes>
       <node id="1" radius="120.0" x="1475" y="987" z="512" rotX="0.0" rotY="0.0" rotZ="0.0" inVp="0" inMag="0" bitDepth="8" interpolation="false" time="1534787309180" />
       <node id="2" radius="120.0" x="1548" y="1008" z="512" rotX="0.0" rotY="0.0" rotZ="0.0" inVp="0" inMag="0" bitDepth="8" interpolation="false" time="1534787309180" />
@@ -164,6 +193,9 @@ See the following example for reference:
     <edges>
       <edge source="1" target="2" />
     </edges>
+    <metadata>
+      <metadataEntry key="comment" stringValue="interesting tree" />
+    </metadata>
   </thing>
   <branchpoints>
     <branchpoint id="1" time="1534787309180" />
@@ -172,20 +204,163 @@ See the following example for reference:
     <comment node="2" content="This is a really interesting node" />
   </comments>
   <groups>
-    <group id="1" name="Axon 1">
-        <group id="2" name="Foo" />
+    <group id="1" name="Axon 1" isExpanded="true">
+        <group id="2" name="Foo" isExpanded="false" />
     </group>
   </groups>
+  <volume id="0" name="Volume Layer" location="data.zip" format="zip"
+    fallbackLayer="segmentation" largestSegmentId="1000" mappingName="agglomerate_view" mappingIsLocked="false">
+    <segments>
+      <segment id="1" name="Cell 1" isVisible="true" created="1534787309180"
+        anchorPositionX="1475" anchorPositionY="987" anchorPositionZ="512"
+        color.r="1.0" color.g="0.0" color.b="0.0" color.a="1.0" groupId="1">
+        <metadata>
+          <metadataEntry key="score" numberValue="0.95" />
+          <metadataEntry key="reviewed" boolValue="true" />
+        </metadata>
+      </segment>
+    </segments>
+    <groups>
+      <group id="1" name="Group A" />
+    </groups>
+  </volume>
 </things>
 
 ```
 
-Each NML contains some metadata about the annotation inside the `<parameters>`-tag. 
-An example of important metadata is the dataset name inside the `<experiment>`-tag and the scale of the dataset saved in the `<scale>`-tag.
-Each skeleton tree has its own `<thing>`-tag containing a list of its nodes and edges.
-All comments of the skeleton annotation are saved in a separate list and refer to their corresponding nodes by id.
-The structure of the tree groups is listed inside the `<groups>`-tag. 
-Groups can be freely nested inside each other.
+### NML Specification
+
+#### `<parameters>` section
+
+Holds global metadata for the annotation.
+
+- `<experiment>`: Dataset reference and annotation context.
+  + `name` *(required)*: The dataset name.
+  + `organization` *(optional)*: The organization the dataset belongs to.
+  + `datasetId` *(optional)*: Unique identifier of the dataset.
+  + `description` *(optional)*: A free-text description of the annotation.
+  + `wkUrl` *(optional)*: URL of the WEBKNOSSOS instance that created this annotation.
+
+- `<scale>`: The real-world voxel size of the dataset.
+  + `x`, `y`, `z`: Voxel size in the given unit.
+  + `unit` *(optional)*: Physical unit string (e.g., `nanometer`). Defaults to `nanometer` if omitted.
+
+- `<offset>`: A global offset applied to all node positions (usually `0, 0, 0`). Attributes: `x`, `y`, `z`.
+
+- `<time>`: Creation timestamp. Attribute: `ms` (Unix timestamp in milliseconds).
+
+- `<editPosition>`: The viewport position when the annotation was last saved.
+  + `x`, `y`, `z`: Position in voxel coordinates.
+  + `additionalCoordinate-<name>` *(optional, multiple)*: Position along each additional axis (e.g., `additionalCoordinate-t="3"`).
+
+- `<editRotation>`: The viewport rotation when last saved. Attributes: `xRot`, `yRot`, `zRot`.
+
+- `<zoomLevel>`: The zoom level when last saved. Attribute: `zoom`.
+
+- `<activeNode>` *(optional)*: The node that was selected when the annotation was last saved. Attribute: `id`.
+
+- `<userBoundingBox>` *(optional, multiple)*: User-defined bounding boxes for regions of interest.
+  + `id` *(required)*: Unique integer ID.
+  + `name` *(optional)*: Display name.
+  + `isVisible` *(optional)*: Boolean visibility flag.
+  + `color.r`, `color.g`, `color.b`, `color.a` *(optional)*: RGBA color (floats 0.0–1.0).
+  + `topLeftX`, `topLeftY`, `topLeftZ`, `width`, `height`, `depth`: Bounding box geometry in voxels.
+
+- `<taskBoundingBox>` *(optional)*: The task bounding box (present only for task-based annotations). Same geometry attributes as `userBoundingBox` but without `id`, `name`, `isVisible`, or color.
+
+- `<additionalAxes>` *(optional)*: Declares additional coordinate axes for n-dimensional datasets.
+  + `<additionalAxis>` child elements with:
+    * `name`: Axis name (e.g., `"t"`).
+    * `index`: Sort order index.
+    * `start`: Lower bound (inclusive).
+    * `end`: Upper bound (exclusive).
+
+#### `<thing>` (skeleton tree) attributes
+
+Each `<thing>` element represents one skeleton tree.
+
+- `id` *(required)*: Unique integer tree ID.
+- `name` *(required)*: Display name of the tree.
+- `color.r`, `color.g`, `color.b`, `color.a` *(optional)*: RGBA color (floats 0.0–1.0).
+- `isVisible` *(optional)*: Boolean visibility flag.
+- `groupId` *(optional)*: ID of the tree group this tree belongs to.
+- `type` *(optional)*: Tree type string (e.g., `"NORMAL"`, `"AGGLOMERATE"`).
+- `<nodes>`: Contains `<node>` child elements.
+- `<edges>`: Contains `<edge>` child elements.
+- `<metadata>` *(optional)*: Contains `<metadataEntry>` child elements (see [Metadata Entries](#metadata-entries)).
+
+#### `<node>` attributes
+
+- `id`, `radius`, `x`, `y`, `z`, `rotX`, `rotY`, `rotZ`: Basic node properties.
+- `inVp`: Viewport index the node was created in.
+- `inMag`: Magnification step at time of creation.
+- `bitDepth`: Bit depth of the data at time of creation.
+- `interpolation`: Boolean, whether the node position was interpolated.
+- `time`: Unix timestamp (ms) of creation.
+- `additionalCoordinate-<name>` *(optional, multiple)*: Coordinate along an additional axis (e.g., `additionalCoordinate-t="3"`).
+
+#### `<edge>` attributes
+
+- `source`, `target`: Node IDs of the connected nodes.
+
+#### `<branchpoint>` attributes
+
+- `id`: Node ID of the branch point.
+- `time`: Unix timestamp (ms).
+
+#### `<comment>` attributes
+
+- `node`: Node ID.
+- `content`: Free-text content of the comment.
+
+#### `<group>` (tree groups) attributes
+
+Tree groups are nested under the top-level `<groups>` element.
+
+- `id` *(required)*: Unique integer group ID.
+- `name` *(required)*: Display name.
+- `isExpanded` *(optional)*: Boolean, whether the group is expanded in the UI (default: `true`).
+- Child `<group>` elements for nesting.
+
+#### `<volume>` attributes
+
+Represents a volume annotation layer.
+
+- `id` *(required)*: Layer index (integer).
+- `name` *(required)*: Layer name.
+- `location` *(optional)*: Path to the volume data ZIP file within the annotation ZIP archive.
+- `format` *(optional)*: Format of the volume data ZIP (e.g., `"zip"`, `"nmlV4"`).
+- `fallbackLayer` *(optional)*: Name of a dataset segmentation layer to use as read-only fallback.
+- `largestSegmentId` *(optional)*: The highest segment ID currently used.
+- `mappingName` *(optional)*: Name of the active agglomerate mapping.
+- `mappingIsLocked` *(optional)*: Boolean, whether the active mapping is locked.
+- `editedMappingEdgesLocation` *(optional)*: Path to the editable mapping edges ZIP (present only for editable mappings).
+- `editedMappingBaseMappingName` *(optional)*: The underlying mapping name for editable mappings.
+- `<segments>`: Contains `<segment>` child elements.
+- `<groups>`: Contains `<group>` child elements for segment groups.
+
+#### `<segment>` attributes
+
+- `id` *(required)*: Segment ID.
+- `name` *(optional)*: Display name.
+- `isVisible` *(optional)*: Boolean visibility flag.
+- `created` *(optional)*: Unix timestamp (ms) of creation.
+- `anchorPositionX`, `anchorPositionY`, `anchorPositionZ` *(optional)*: Anchor voxel position.
+- `additionalCoordinate-<name>` *(optional, multiple)*: Anchor position along additional axes.
+- `color.r`, `color.g`, `color.b`, `color.a` *(optional)*: RGBA color (floats 0.0–1.0).
+- `groupId` *(optional)*: ID of the segment group this segment belongs to.
+- `<metadata>` *(optional)*: Contains `<metadataEntry>` child elements.
+
+Segment `<group>` elements (inside `<volume>/<groups>`) have `id`, `name`, and support recursive nesting, but no `isExpanded` attribute.
+
+#### Metadata Entries
+
+Both `<thing>` (tree) and `<segment>` elements may contain a `<metadata>` child with `<metadataEntry>` elements. Each entry has a `key` and exactly one value attribute:
+
+- `stringValue`: A string value.
+- `numberValue`: A floating-point number.
+- `boolValue`: A boolean (`true` or `false`).
+- `stringListValue-0`, `stringListValue-1`, … : A string array stored as indexed attributes.
 
 
 ## ID Mapping Files
@@ -198,9 +373,9 @@ E.g.:
 ```
 my_dataset                      # Dataset root
 ├─ segmentation                 # Dataset layer name (e.g., color, segmentation)
-│  ├─ agglomerates         # parent directory for all mappings
-│  │  ├─ my_mapping_file.hdf5   # one or more mapping files
-│  │  ├─ different_mapping.hdf5 # one mapping file per pre-computed mapping strategy
+│  ├─ agglomerates         # parent directory for all mappings
+│  │  ├─ my_mapping_file.hdf5   # one or more mapping files
+│  │  ├─ different_mapping.hdf5 # one mapping file per pre-computed mapping strategy
 ```
 
 Note that JSON mappings are deprecated and support will be removed in a future version.

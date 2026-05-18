@@ -74,10 +74,16 @@ import Dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { Transform } from "viewer/model/helpers/transformation_helpers";
 import { Model } from "viewer/singletons";
-import type { MipBboxConfig, SkeletonTracing, UserBoundingBox, WebknossosState } from "viewer/store";
+import type {
+  MipBboxConfig,
+  SkeletonTracing,
+  UserBoundingBox,
+  WebknossosState,
+} from "viewer/store";
 import Store from "viewer/store";
 import type CustomLOD from "./custom_lod";
 import SegmentMeshController from "./segment_mesh_controller";
+import { V3 } from "libs/mjs";
 
 // Add the extension functions
 BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
@@ -115,7 +121,10 @@ class SceneController {
   public segmentMeshController: SegmentMeshController;
   private storePropertyUnsubscribers: Array<() => void>;
   private splitBoundaryMesh: Mesh | null = null;
-  private mipVolumes = new Map<number, { volume: MipVolume; config: MipBboxConfig }>();
+  private mipVolumes = new Map<
+    number,
+    { volume: MipVolume; config: MipBboxConfig; bbox: UserBoundingBox }
+  >();
 
   // Created as instance properties to avoid creating objects in each update call.
   private rotatedPositionOffsetVector = new ThreeVector3();
@@ -351,13 +360,16 @@ class SceneController {
   private updateMipVolumes(entries: MipEnabledBbox[]): void {
     const entryMap = new Map(entries.map((e) => [e.bbox.id, e]));
 
-    for (const [bboxId, { volume, config }] of this.mipVolumes) {
+    for (const [bboxId, { volume, config, bbox: storedBbox }] of this.mipVolumes) {
       const entry = entryMap.get(bboxId);
-      const configChanged =
+      const bb = storedBbox.boundingBox;
+      const changed =
         entry == null ||
         entry.config.layerName !== config.layerName ||
-        entry.config.zoomStep !== config.zoomStep;
-      if (configChanged) {
+        entry.config.zoomStep !== config.zoomStep ||
+        !V3.equals(entry.bbox.boundingBox.min, bb.min) ||
+        !V3.equals(entry.bbox.boundingBox.max, bb.max);
+      if (changed) {
         this.rootNode.remove(volume.mesh);
         volume.dispose();
         this.mipVolumes.delete(bboxId);
@@ -376,7 +388,7 @@ class SceneController {
       this.rootNode.add(volume.mesh);
       volume.subscribeToLayerSettings(config.layerName);
       volume.loadData(datasource).catch(console.error);
-      this.mipVolumes.set(bbox.id, { volume, config });
+      this.mipVolumes.set(bbox.id, { volume, config, bbox });
     }
   }
 

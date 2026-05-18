@@ -47,9 +47,9 @@ trait Controller extends InjectedController with ExtendedController with UserAwa
   implicit def userToDBAccess(user: User): DBAccessContext =
     AuthorizedAccessContext(user)
 
-  implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, _]): DBAccessContext =
+  implicit def userAwareRequestToDBAccess(implicit request: UserAwareRequest[WkEnv, ?]): DBAccessContext =
     DBAccessContext(request.identity)
 
-  implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, _]): DBAccessContext =
+  implicit def securedRequestToDBAccess(implicit request: SecuredRequest[WkEnv, ?]): DBAccessContext =
     DBAccessContext(Some(request.identity))
 }

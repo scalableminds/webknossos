@@ -267,7 +267,7 @@ class VolumeTracingController @Inject()(
               val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
               editableMappingService.volumeData(mappingLayer, request.body)
             } else volumeTracingService.data(annotationId, tracingId, tracing, request.body)
-          } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+          } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
         }
       }
     }
@@ -312,7 +312,7 @@ class VolumeTracingController @Inject()(
           // We need four bytes for each float
           val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
           responseBuffer.asFloatBuffer().put(vertices)
-          Ok(responseBuffer.array()).withHeaders(getNeighborIndices(neighbors): _*)
+          Ok(responseBuffer.array()).withHeaders(getNeighborIndices(neighbors)*)
         }
       }
     }

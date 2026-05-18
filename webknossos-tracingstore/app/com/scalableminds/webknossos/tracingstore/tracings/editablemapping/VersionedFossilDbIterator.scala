@@ -22,7 +22,7 @@ class VersionedFossilDbIterator(prefix: String, fossilDbClient: FossilDBClient, 
   private var nextKeyValuePair: Option[VersionedKeyValuePair[Array[Byte]]] = None
 
   private def fetchNext() =
-    fossilDbClient.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize)).iterator
+    fossilDbClient.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize))(wrapInBox).iterator
 
   private def fetchNextAndSave = {
     currentBatchIterator = fetchNext()

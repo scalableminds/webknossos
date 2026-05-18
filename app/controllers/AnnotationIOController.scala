@@ -116,7 +116,7 @@ class AnnotationIOController @Inject()(
           parsedFilesWrapped = annotationUploadService.wrapOrPrefixGroups(parsedFiles.parseResults,
                                                                           shouldCreateGroupForEachFile)
           parseResultsFiltered: List[NmlParseResult] = parsedFilesWrapped.filter(_.succeeded)
-          _ <- Fox.fromBool(parseResultsFiltered.nonEmpty) orElse returnError(parsedFiles)
+          _ <- Fox.fromBool(parseResultsFiltered.nonEmpty) `orElse` returnError(parsedFiles)
           parseSuccesses <- Fox.serialCombined(parseResultsFiltered)(r => r.toSuccessBox.toFox)
           name = nameForUploaded(parseResultsFiltered.map(_.fileName))
           description = overwritingDescription.getOrElse(descriptionForNMLs(parseResultsFiltered.map(_.description)))

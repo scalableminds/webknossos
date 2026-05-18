@@ -35,7 +35,7 @@ class TimeController @Inject()(userService: UserService,
         timeSpansBox: Box[List[TimeSpan]] <- timeSpanDAO.findAllByUser(user._id).shiftBox
         timesGrouped: Map[Month, Duration] = timeSpanService.sumTimespansPerInterval(TimeSpan.groupByMonth,
                                                                                      timeSpansBox)
-        timesGroupedSorted = ListMap(timesGrouped.toSeq.sortBy(_._1): _*)
+        timesGroupedSorted = ListMap(timesGrouped.toSeq.sortBy(_._1)*)
       } yield {
         JsonOk(
           Json.obj("loggedTime" ->

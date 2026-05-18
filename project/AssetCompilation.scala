@@ -111,6 +111,8 @@ object AssetCompilation {
       val shouldUpdate = !slickTablesOutPath.exists || slickTablesOutPath.lastModified < schemaPath.lastModified
 
       if (shouldUpdate) {
+        // SourceCodeGenerator marks the output file read-only; delete it first so the write succeeds.
+        IO.delete(slickTablesOutPath)
         streamsValue.log.info(
           "Ensuring Postgres DB is running for Slick code generation..."
         )

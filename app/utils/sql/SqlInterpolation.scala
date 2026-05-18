@@ -55,7 +55,7 @@ case class SqlToken(sql: String, values: List[SqlValue] = List()) {
     new StreamingInvokerAction[Vector[R], R, Effect] {
       def statements: List[String] = List(sql)
 
-      protected[this] def createInvoker(statements: Iterable[String]): StatementInvoker[R] = new StatementInvoker[R] {
+      protected def createInvoker(statements: Iterable[String]): StatementInvoker[R] = new StatementInvoker[R] {
         val getStatement: String = statements.head
 
         protected def setParam(st: PreparedStatement): Unit = {
@@ -68,7 +68,7 @@ case class SqlToken(sql: String, values: List[SqlValue] = List()) {
 
       override def getDumpInfo = DumpInfo(DumpInfo.simpleNameFor(getClass), mainInfo = s"[$debugInfo]")
 
-      protected[this] def createBuilder: mutable.Builder[R, Vector[R]] = Vector.newBuilder[R]
+      protected def createBuilder: mutable.Builder[R, Vector[R]] = Vector.newBuilder[R]
     }
 
   def asUpdate: SqlAction[Int, NoStream, Effect] = as[Int](GetUpdateValue).head

@@ -32,6 +32,7 @@ import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import features from "features";
+import { deleteWithUndo } from "libs/delete_with_undo";
 import { handleGenericError } from "libs/error_handling";
 import { formatSeconds, formatTuple } from "libs/format_utils";
 import Persistence from "libs/persistence";
@@ -114,19 +115,13 @@ function TaskListView({ initialFieldValues }: Props) {
   }
 
   function deleteTask(task: APITask) {
-    modal.confirm({
-      title: messages["task.delete"],
-      onOk: async () => {
-        try {
-          setIsLoading(true);
-          await deleteTaskAPI(task.id);
-          setTasks(tasks.filter((t) => t.id !== task.id));
-        } catch (error) {
-          handleGenericError(error as Error);
-        } finally {
-          setIsLoading(false);
-        }
-      },
+    const snapshot = tasks;
+    deleteWithUndo({
+      item: task,
+      toastMessage: `Task "${task.id}" was deleted.`,
+      deleteApi: deleteTaskAPI,
+      onDelete: () => setTasks((current) => current.filter((t) => t.id !== task.id)),
+      onRestore: () => setTasks(snapshot),
     });
   }
 

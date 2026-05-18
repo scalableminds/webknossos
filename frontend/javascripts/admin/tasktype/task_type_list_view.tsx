@@ -15,11 +15,11 @@ import {
   downloadAnnotation,
   getTaskTypes,
 } from "admin/rest_api";
-import { App, Button, Input, Space, Spin, Table, Tag } from "antd";
+import { Button, Input, Space, Spin, Table, Tag } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
-import { handleGenericError } from "libs/error_handling";
+import { deleteWithUndo } from "libs/delete_with_undo";
 import Markdown from "libs/markdown_adapter";
 import Persistence from "libs/persistence";
 import { useQueryWithErrorHandling } from "libs/react_hooks";
@@ -46,7 +46,6 @@ function TaskTypeListView() {
   const initialSearchValue = location.hash.slice(1);
 
   const queryClient = useQueryClient();
-  const { modal } = App.useApp();
 
   const { data: taskTypes = [], isFetching: isLoadingTaskTypes } = useQueryWithErrorHandling({
     queryKey: ["taskTypes"],
@@ -57,9 +56,7 @@ function TaskTypeListView() {
   const [searchQuery, setSearchQuery] = useState(() =>
     initialSearchValue !== "" ? initialSearchValue : persistence.load().searchQuery || "",
   );
-  const [isLoadingMutation, setIsLoadingMutation] = useState(false);
-
-  const isLoading = isLoadingTaskTypes || isLoadingMutation;
+  const isLoading = isLoadingTaskTypes;
 
   function handleSearch(event: React.ChangeEvent<HTMLInputElement>): void {
     const newSearchQuery = event.target.value;
@@ -68,21 +65,17 @@ function TaskTypeListView() {
   }
 
   function deleteTaskType(taskType: APITaskType) {
-    modal.confirm({
-      title: messages["taskType.delete"],
-      onOk: async () => {
-        try {
-          setIsLoadingMutation(true);
-          await deleteTaskTypeAPI(taskType.id);
-          queryClient.setQueryData(["taskTypes"], (currentTaskTypes: APITaskType[]) =>
-            currentTaskTypes.filter((p) => p.id !== taskType.id),
-          );
-        } catch (error) {
-          handleGenericError(error as Error);
-        } finally {
-          setIsLoadingMutation(false);
-        }
-      },
+    const snapshot = queryClient.getQueryData<APITaskType[]>(["taskTypes"]);
+    deleteWithUndo({
+      item: taskType,
+      toastMessage: `Task type "${taskType.summary}" was deleted.`,
+      deleteApi: deleteTaskTypeAPI,
+      onDelete: () =>
+        queryClient.setQueryData(
+          ["taskTypes"],
+          (current: APITaskType[] | undefined) => (current ?? []).filter((t) => t.id !== taskType.id),
+        ),
+      onRestore: () => queryClient.setQueryData(["taskTypes"], snapshot),
     });
   }
 

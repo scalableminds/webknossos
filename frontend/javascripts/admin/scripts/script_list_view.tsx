@@ -2,14 +2,13 @@ import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import AdminPage from "admin/admin_page";
 import { deleteScript as deleteScriptAPI, getScripts } from "admin/rest_api";
-import { App, Button, Input, Space, Spin, Table } from "antd";
+import { Button, Input, Space, Spin, Table } from "antd";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
-import { handleGenericError } from "libs/error_handling";
+import { deleteWithUndo } from "libs/delete_with_undo";
 import Persistence from "libs/persistence";
 import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import partial from "lodash-es/partial";
-import messages from "messages";
 import type React from "react";
 import { Fragment, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -26,8 +25,6 @@ const persistence = new Persistence<{ searchQuery: string }>(
 );
 
 function ScriptListView() {
-  const { modal } = App.useApp();
-
   const [isLoading, setIsLoading] = useState(true);
   const [scripts, setScripts] = useState<APIScript[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -53,19 +50,13 @@ function ScriptListView() {
   }
 
   function deleteScript(script: APIScript) {
-    modal.confirm({
-      title: messages["script.delete"],
-      onOk: async () => {
-        try {
-          setIsLoading(true);
-          await deleteScriptAPI(script.id);
-          setScripts(scripts.filter((s) => s.id !== script.id));
-        } catch (error) {
-          handleGenericError(error as Error);
-        } finally {
-          setIsLoading(false);
-        }
-      },
+    const snapshot = scripts;
+    deleteWithUndo({
+      item: script,
+      toastMessage: `Script "${script.name}" was deleted.`,
+      deleteApi: deleteScriptAPI,
+      onDelete: () => setScripts((current) => current.filter((s) => s.id !== script.id)),
+      onRestore: () => setScripts(snapshot),
     });
   }
 

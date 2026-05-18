@@ -31,6 +31,7 @@ import FormattedDate from "components/formatted_date";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
 import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
+import { deleteWithUndo } from "libs/delete_with_undo";
 import Toast from "libs/toast";
 import {
   compareBy,
@@ -112,23 +113,21 @@ function ProjectListView() {
   }
 
   function deleteProject(project: APIProjectWithStatus) {
-    modal.confirm({
-      title: messages["project.delete"],
-      onOk: async () => {
-        setIsLoadingMutation(true);
-        try {
-          await deleteProjectAPI(project.id);
-          queryClient.setQueryData(
-            ["projectsWithStatus", taskTypeId],
-            (currentProjects: APIProjectWithStatus[]) =>
-              currentProjects.filter((p) => p.id !== project.id),
-          );
-        } catch (error) {
-          handleGenericError(error as Error);
-        } finally {
-          setIsLoadingMutation(false);
-        }
-      },
+    const snapshot = queryClient.getQueryData<APIProjectWithStatus[]>([
+      "projectsWithStatus",
+      taskTypeId,
+    ]);
+    deleteWithUndo({
+      item: project,
+      toastMessage: `Project "${project.name}" was deleted.`,
+      deleteApi: deleteProjectAPI,
+      onDelete: () =>
+        queryClient.setQueryData(
+          ["projectsWithStatus", taskTypeId],
+          (current: APIProjectWithStatus[] | undefined) =>
+            (current ?? []).filter((p) => p.id !== project.id),
+        ),
+      onRestore: () => queryClient.setQueryData(["projectsWithStatus", taskTypeId], snapshot),
     });
   }
 

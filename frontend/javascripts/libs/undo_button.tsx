@@ -1,7 +1,7 @@
 import { Button } from "antd";
 import { useEffect, useState } from "react";
 
-export function UndoButton({ onUndo, seconds = 5 }: { onUndo: () => void; seconds?: number }) {
+export function UndoButton({ onUndo, seconds }: { onUndo: () => void; seconds: number }) {
   const [remaining, setRemaining] = useState(seconds);
 
   useEffect(() => {

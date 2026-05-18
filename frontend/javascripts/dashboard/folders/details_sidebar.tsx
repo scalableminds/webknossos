@@ -10,6 +10,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getOrganization } from "admin/api/organization";
 import { deleteDatasetOnDisk } from "admin/rest_api";
 import { Button, Result, Space, Spin, Tag, Tooltip } from "antd";
+import { UNDO_SECONDS } from "libs/delete_with_undo";
 import { UndoButton } from "libs/undo_button";
 import FormattedId from "components/formatted_id";
 import features from "features";
@@ -297,14 +298,14 @@ function DatasetsDetails({
     Toast.info(`${n} ${pluralize("dataset", n)} deleted.`, {
       key: toastKey,
       sticky: true,
-      customFooter: <UndoButton onUndo={undo} />,
+      customFooter: <UndoButton onUndo={undo} seconds={UNDO_SECONDS} />,
     });
 
     timeoutRef.current = setTimeout(() => {
       setIsDeletionPending(false);
       Toast.close(toastKey);
       deleteDatasetsMutation.mutate(deletableDatasets);
-    }, 5000);
+    }, UNDO_SECONDS * 1000);
   };
 
   return (

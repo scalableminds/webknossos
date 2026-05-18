@@ -4,6 +4,7 @@ import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { deleteDatasetOnDisk } from "admin/rest_api";
 import { Button, Col, Row } from "antd";
 import Toast from "libs/toast";
+import { UNDO_SECONDS } from "libs/delete_with_undo";
 import { UndoButton } from "libs/undo_button";
 import { useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
@@ -48,7 +49,7 @@ const DatasetSettingsDeleteTab = () => {
     Toast.info(`Dataset "${dataset.name}" was deleted.`, {
       key: toastKey,
       sticky: true,
-      customFooter: <UndoButton onUndo={undo} />,
+      customFooter: <UndoButton onUndo={undo} seconds={UNDO_SECONDS} />,
     });
 
     timeoutRef.current = setTimeout(async () => {
@@ -61,7 +62,7 @@ const DatasetSettingsDeleteTab = () => {
         Toast.error(`Failed to delete dataset ${dataset.name}.`);
         queryClient.setQueryData(["datasetsByFolder", dataset.folderId], snapshot);
       }
-    }, 5000);
+    }, UNDO_SECONDS * 1000);
   }, [dataset, navigate, queryClient]);
 
   return (

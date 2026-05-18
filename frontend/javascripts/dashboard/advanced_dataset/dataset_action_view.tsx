@@ -11,6 +11,7 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { clearCache, deleteDatasetOnDisk, getDataset } from "admin/rest_api";
 import { type MenuProps, Modal } from "antd";
+import { UNDO_SECONDS } from "libs/delete_with_undo";
 import { UndoButton } from "libs/undo_button";
 import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
 import Toast from "libs/toast";
@@ -166,7 +167,7 @@ function DatasetActionView(props: Props) {
     Toast.info(`Dataset "${dataset.name}" was deleted.`, {
       key: toastKey,
       sticky: true,
-      customFooter: <UndoButton onUndo={undo} />,
+      customFooter: <UndoButton onUndo={undo} seconds={UNDO_SECONDS} />,
     });
 
     timeoutRef.current = setTimeout(async () => {
@@ -179,7 +180,7 @@ function DatasetActionView(props: Props) {
         Toast.error(`Failed to delete dataset ${dataset.name}.`);
         queryClient.setQueryData(["datasetsByFolder", folderId], snapshot);
       }
-    }, 5000);
+    }, UNDO_SECONDS * 1000);
   };
 
   const disabledWhenReloadingStyle = getDisabledWhenReloadingStyle(isReloading);

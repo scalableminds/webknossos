@@ -4,9 +4,9 @@ import { useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
 import { deleteTeam as deleteTeamAPI, getEditableTeams, getEditableUsers } from "admin/rest_api";
 import CreateTeamModal from "admin/team/create_team_modal_view";
-import { App, Button, Input, Space, Spin, Table, Tag, Tooltip } from "antd";
+import { Button, Input, Space, Spin, Table, Tag, Tooltip } from "antd";
 import LinkButton from "components/link_button";
-import { handleGenericError } from "libs/error_handling";
+import { deleteWithUndo } from "libs/delete_with_undo";
 import { stringToColor } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import { useQueryWithErrorHandling } from "libs/react_hooks";
@@ -140,14 +140,11 @@ function TeamListView() {
   });
 
   const [searchQuery, setSearchQuery] = useState(() => persistence.load().searchQuery || "");
-  const [isLoadingMutation, setIsLoadingMutation] = useState(false);
   const [isTeamCreationModalVisible, setIsTeamCreationModalVisible] = useState(false);
   const [isTeamEditModalVisible, setIsTeamEditModalVisible] = useState(false);
   const [selectedTeam, setSelectedTeam] = useState<APITeam | null>(null);
 
-  const isLoading = isLoadingTeams || isLoadingUsers || isLoadingMutation;
-
-  const { modal } = App.useApp();
+  const isLoading = isLoadingTeams || isLoadingUsers;
 
   function handleSearch(event: React.ChangeEvent<HTMLInputElement>): void {
     const newSearchQuery = event.target.value;
@@ -156,21 +153,17 @@ function TeamListView() {
   }
 
   function deleteTeam(team: APITeam) {
-    modal.confirm({
-      title: messages["team.delete"],
-      onOk: async () => {
-        try {
-          setIsLoadingMutation(true);
-          await deleteTeamAPI(team.id);
-          queryClient.setQueryData(["editableTeams"], (currentTeams: APITeam[]) =>
-            currentTeams.filter((t) => t.id !== team.id),
-          );
-        } catch (error) {
-          handleGenericError(error as Error);
-        } finally {
-          setIsLoadingMutation(false);
-        }
-      },
+    const snapshot = queryClient.getQueryData<APITeam[]>(["editableTeams"]);
+    deleteWithUndo({
+      item: team,
+      toastMessage: `Team "${team.name}" was deleted.`,
+      deleteApi: deleteTeamAPI,
+      onDelete: () =>
+        queryClient.setQueryData(
+          ["editableTeams"],
+          (current: APITeam[] | undefined) => (current ?? []).filter((t) => t.id !== team.id),
+        ),
+      onRestore: () => queryClient.setQueryData(["editableTeams"], snapshot),
     });
   }
 

@@ -96,7 +96,7 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
   def agglomerateIdsForSegmentIds(agglomerateFileKey: AgglomerateFileKey, segmentIds: Seq[Long]): Box[Seq[Long]] =
     tryo {
       val cachedAgglomerateFile = agglomerateFileCache.withCache(agglomerateFileKey)(openAsCachedAgglomerateFile)
-      val agglomerateIds = segmentIds.map { segmentId: Long =>
+      val agglomerateIds = segmentIds.map { (segmentId: Long) =>
         cachedAgglomerateFile.agglomerateIdCache.withCache(segmentId,
                                                            cachedAgglomerateFile.reader,
                                                            cachedAgglomerateFile.dataset)(readHDF)

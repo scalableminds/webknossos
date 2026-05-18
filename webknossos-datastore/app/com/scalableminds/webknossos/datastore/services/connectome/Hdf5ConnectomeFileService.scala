@@ -51,7 +51,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
                                                                      (toPtr - fromPtr).toInt,
                                                                      fromPtr)
         } ?~> "Could not read agglomerate pairs from connectome file"
-      synapseIdsNested <- Fox.serialCombined(agglomeratePairs.toList) { agglomeratePair: Long =>
+      synapseIdsNested <- Fox.serialCombined(agglomeratePairs.toList) { (agglomeratePair: Long) =>
         for {
           from <- finishAccessOnFailure(cachedConnectomeFile) {
             cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keyAgglomeratePairOffsets, 1, agglomeratePair)
@@ -93,7 +93,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
       cachedConnectomeFile <- fileHandleCache
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
         .toFox ?~> "connectome.file.open.failed"
-      agglomerateIds <- Fox.serialCombined(synapseIds) { synapseId: Long =>
+      agglomerateIds <- Fox.serialCombined(synapseIds) { (synapseId: Long) =>
         finishAccessOnFailure(cachedConnectomeFile) {
           cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(synapticPartnerKey(direction), 1, synapseId)
         }.flatMap(_.headOption.toFox)
@@ -107,7 +107,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
       cachedConnectomeFile <- fileHandleCache
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
         .toFox ?~> "connectome.file.open.failed"
-      synapsePositions <- Fox.serialCombined(synapseIds) { synapseId: Long =>
+      synapsePositions <- Fox.serialCombined(synapseIds) { (synapseId: Long) =>
         finishAccessOnFailure(cachedConnectomeFile) {
           cachedConnectomeFile.uint64Reader.readMatrixBlockWithOffset(keySynapsePositions, 1, 3, synapseId, 0)
         }.flatMap(_.headOption.toFox)
@@ -122,7 +122,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
         .toFox ?~> "connectome.file.open.failed"
       // Hard coded type name list, as all legacy files have this value.
-      synapseTypes <- Fox.serialCombined(synapseIds) { synapseId: Long =>
+      synapseTypes <- Fox.serialCombined(synapseIds) { (synapseId: Long) =>
         finishAccessOnFailure(cachedConnectomeFile) {
           cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keySynapseTypes, 1, synapseId)
         }.flatMap(_.headOption.toFox)
@@ -162,7 +162,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
     } yield synapses
 
   private def finishAccessOnFailure[T](f: CachedHdf5File)(block: => T)(implicit ec: ExecutionContext): Fox[T] =
-    tryo { _: Throwable =>
+    tryo { (_: Throwable) =>
       f.finishAccess()
     } {
       block

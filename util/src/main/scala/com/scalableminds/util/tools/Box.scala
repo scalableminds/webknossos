@@ -86,7 +86,7 @@ object Box extends Tryo {
     * @return `Full` with the contents if the `Option` is `Some`
     *         and `Empty` otherwise.
     */
-  def apply[T](in: Option[T]) = in match {
+  def apply[T](in: Option[T]): Box[T] = in match {
     case Some(x) => Full(x)
     case _       => Empty
   }
@@ -97,7 +97,7 @@ object Box extends Tryo {
     * @return `Full(in)` if `in` is a `Full` box and its value is non-null,
     *         `Empty` otherwise.
     */
-  def apply[T](in: Box[T]) = in match {
+  def apply[T](in: Box[T]): Box[T] = in match {
     case Full(x)     => legacyNullTest(x)
     case x: EmptyBox => x
     case _           => Empty
@@ -110,7 +110,7 @@ object Box extends Tryo {
     * @return `Full(x)` with the head of the list if it contains at least one
     *         element and `Empty` otherwise.
     */
-  def apply[T](in: List[T]) = in match {
+  def apply[T](in: List[T]): Box[T] = in match {
     case x :: _ => Full(x)
     case _      => Empty
   }
@@ -691,7 +691,7 @@ final case class Full[+A](value: A) extends Box[A] {
 
   override def toOption: Option[A] = Some(value)
 
-  override def run[T](in: => T)(f: (T, A) => T) = f(in, value)
+  override def run[T](in: => T)(f: (T, A) => T): T = f(in, value)
 
   override def fullXform[T](v: T)(f: T => A => T): T = f(v)(value)
 
@@ -718,7 +718,7 @@ sealed abstract class EmptyBox extends Box[Nothing] with Serializable {
 
   def isEmpty: Boolean = true
 
-  def getOrThrow(justification: => String) =
+  def getOrThrow(justification: => String): Nothing =
     throw new NullPointerException(
       "An Empty Box was opened.  The justification for allowing the getOrThrow was " + justification)
 
@@ -752,7 +752,7 @@ object Failure {
 sealed case class Failure(msg: String, exception: Box[Throwable], chain: Box[Failure]) extends EmptyBox {
   type A = Nothing
 
-  override def getOrThrow(justification: => String) =
+  override def getOrThrow(justification: => String): Nothing =
     throw new NullPointerException(s"Opened Failure Box (justification: $justification). Details: $this") {
       override def getCause: Throwable = exception getOrElse null
     }

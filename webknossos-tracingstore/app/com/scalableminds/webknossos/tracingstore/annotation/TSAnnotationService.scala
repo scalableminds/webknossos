@@ -554,7 +554,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       implicit ec: ExecutionContext) = {
     // Flush updated tracing objects, but only if they were updated.
     // If they weren’t updated, the older versions that will automatically be fetched are guaranteed identical
-    val allMayHaveUpdates = updates.exists { update: UpdateAction =>
+    val allMayHaveUpdates = updates.exists { (update: UpdateAction) =>
       update match {
         case _: RevertToVersionAnnotationAction => true
         case _: ResetToBaseAnnotationAction     => true

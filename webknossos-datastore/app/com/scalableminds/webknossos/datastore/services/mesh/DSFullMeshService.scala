@@ -288,7 +288,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
         Array(0, lodTransform(1)(1), 0),
         Array(0, 0, lodTransform(2)(2))
       )
-      stlEncodedChunks: Seq[Array[Byte]] <- Fox.serialCombined(allChunkRanges) { chunkRange: MeshChunk =>
+      stlEncodedChunks: Seq[Array[Byte]] <- Fox.serialCombined(allChunkRanges) { (chunkRange: MeshChunk) =>
         readMeshChunkAsStl(fullMeshRequest.segmentId, meshFileKey, chunkRange, transform, vertexQuantizationBits)
       }
     } yield stlEncodedChunks

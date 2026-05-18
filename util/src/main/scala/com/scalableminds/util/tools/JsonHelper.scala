@@ -101,7 +101,7 @@ object JsonHelper extends LazyLogging {
     jsValue match {
       case JsObject(fields) =>
         val processedAsMap = fields.filter { case (k, _) => !keysToRemove.contains(k) }.view.mapValues {
-          value: JsValue =>
+          (value: JsValue) =>
             removeKeyRecursively(value, keysToRemove)
         }.toMap
         Json.toJson(processedAsMap)

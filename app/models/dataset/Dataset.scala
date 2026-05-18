@@ -176,7 +176,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     q"isPublic OR ($tokenAccess)"
   }
 
-  override def readAccessQ(requestingUserId: ObjectId) =
+  override def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""isPublic
         OR ( -- user is matching orga admin or dataset manager
           _organization IN (
@@ -847,7 +847,7 @@ class DatasetMagsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   def updateMags(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
     val clearQuery =
       q"DELETE FROM webknossos.dataset_mags WHERE _dataset = $datasetId AND NOT uploadToPathIsPending".asUpdate
-    val insertQueries = dataLayers.flatMap { layer: StaticLayer =>
+    val insertQueries = dataLayers.flatMap { (layer: StaticLayer) =>
       layer.mags.map { mag =>
         q"""INSERT INTO webknossos.dataset_mags(_dataset, dataLayerName, mag, path, axisOrder, channelIndex, credentialId, uploadToPathIsPending)
             VALUES($datasetId, ${layer.name}, ${mag.mag}, ${mag.path}, ${mag.axisOrder.map(Json.toJson(_))}, ${mag.channelIndex}, ${mag.credentialId}, ${false})
@@ -1250,7 +1250,7 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
 
     val clearQuery =
       q"DELETE FROM webknossos.dataset_layer_attachments WHERE _dataset = $datasetId AND NOT uploadToPathIsPending".asUpdate
-    val insertQueries = dataLayers.flatMap { layer: StaticLayer =>
+    val insertQueries = dataLayers.flatMap { (layer: StaticLayer) =>
       layer.attachments match {
         case Some(attachments) =>
           attachments.agglomerates.map { agglomerate =>
@@ -1464,7 +1464,7 @@ class DatasetCoordinateTransformationsDAO @Inject()(sqlClient: SqlClient)(implic
   def updateCoordinateTransformations(datasetId: ObjectId, layers: List[DataLayer]): Fox[Unit] = {
     val clearQuery =
       q"DELETE FROM webknossos.dataset_layer_coordinateTransformations WHERE _dataset = $datasetId".asUpdate
-    val insertQueries = layers.flatMap { layer: DataLayer =>
+    val insertQueries = layers.flatMap { (layer: DataLayer) =>
       layer.coordinateTransformations.getOrElse(List.empty).zipWithIndex.map { tuple =>
         {
           val coordinateTransformation: CoordinateTransformation = tuple._1
@@ -1500,7 +1500,7 @@ class DatasetLayerAdditionalAxesDAO @Inject()(sqlClient: SqlClient)(implicit ec:
   def updateAdditionalAxes(datasetId: ObjectId, dataLayers: List[StaticLayer]): Fox[Unit] = {
     val clearQuery =
       q"DELETE FROM webknossos.dataset_layer_additionalAxes WHERE _dataset = $datasetId".asUpdate
-    val insertQueries = dataLayers.flatMap { layer: StaticLayer =>
+    val insertQueries = dataLayers.flatMap { (layer: StaticLayer) =>
       layer.additionalAxes.getOrElse(List.empty).map { additionalAxis =>
         {
           q"""INSERT INTO webknossos.dataset_layer_additionalAxes(_dataset, layerName, name, lowerBound, upperBound, index)

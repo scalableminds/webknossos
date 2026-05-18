@@ -183,7 +183,7 @@ trait VolumeTracingBucketHelper
       }
       bucketBoxesWithFallback <- addFallbackBucketData(volumeLayer, bucketPositions, bucketKeyValueBoxesFromFossil)
       bucketBoxesUnpacked = bucketBoxesWithFallback.map { bucketBox =>
-        bucketBox.flatMap { volumeBucket: Array[Byte] =>
+        bucketBox.flatMap { (volumeBucket: Array[Byte]) =>
           if (isRevertedElement(volumeBucket)) Empty
           else {
             tryo(decompressIfNeeded(volumeBucket, volumeLayer.expectedUncompressedBucketSize, ""))

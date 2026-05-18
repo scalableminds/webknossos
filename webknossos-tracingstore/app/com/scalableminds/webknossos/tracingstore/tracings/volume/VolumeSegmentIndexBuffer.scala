@@ -25,7 +25,7 @@ trait SegmentIndexKeyHelper extends AdditionalCoordinateKey {
                                 segmentId: Long,
                                 mag: Vec3Int,
                                 additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-                                axes: Option[Seq[AdditionalAxis]]) =
+                                axes: Option[Seq[AdditionalAxis]]): String =
     s"$tracingId/$segmentId/${mag.toMagLiteral(allowScalar = false)}${additionalCoordinatesKeyPart(additionalCoordinates.getOrElse(Seq()), axes.getOrElse(Seq()), "/")}"
 }
 

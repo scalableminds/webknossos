@@ -374,7 +374,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext)
     }
 
   private def writeNodesAsXml(nodes: Seq[Node])(implicit writer: XMLStreamWriter): Unit =
-    nodes.toSet.foreach { n: Node => // toSet as workaround for some erroneously duplicate nodes in the db, this was not checked on upload until 2017
+    nodes.toSet.foreach { (n: Node) => // toSet as workaround for some erroneously duplicate nodes in the db, this was not checked on upload until 2017
       Xml.withinElementSync("node") {
         writer.writeAttribute("id", n.id.toString)
         writer.writeAttribute("radius", n.radius.toString)

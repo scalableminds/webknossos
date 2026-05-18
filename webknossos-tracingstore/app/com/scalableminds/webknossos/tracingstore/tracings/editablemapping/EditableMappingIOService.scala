@@ -105,7 +105,7 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService,
     } yield tempFilePath
 
   private def edgeIsAdditionToZarrChunks(editedEdges: Seq[(Long, Long, Boolean)]): Iterator[Array[Byte]] =
-    editedEdges.grouped(ChunkSize).map { edgeTupleChunk: Seq[(Long, Long, Boolean)] =>
+    editedEdges.grouped(ChunkSize).map { (edgeTupleChunk: Seq[(Long, Long, Boolean)]) =>
       val bytes = ByteBuffer.allocate(ChunkSize)
       edgeTupleChunk.foreach {
         case (_, _, isAddedEdge) =>
@@ -116,7 +116,7 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService,
     }
 
   private def editedEdgesToZarrChunks(editedEdges: Seq[(Long, Long, Boolean)]): Iterator[Array[Byte]] =
-    editedEdges.grouped(ChunkSize).map { edgeTupleChunk: Seq[(Long, Long, Boolean)] =>
+    editedEdges.grouped(ChunkSize).map { (edgeTupleChunk: Seq[(Long, Long, Boolean)]) =>
       val bytes = ByteBuffer.allocate(2 * ChunkSize * 8)
       edgeTupleChunk.foreach {
         case (src, dst, _) =>

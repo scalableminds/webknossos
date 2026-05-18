@@ -67,7 +67,7 @@ class EditableMappingMergeService @Inject()(val tracingDataStore: TracingDataSto
           var updateVersion = 1L
           val annotationUpdatesPutBuffer = new FossilDBPutBuffer(tracingDataStore.annotationUpdates)
           Fox
-            .serialCombined(linearizedEditableMappingUpdates) { update: UpdateAction =>
+            .serialCombined(linearizedEditableMappingUpdates) { (update: UpdateAction) =>
               for {
                 _ <- annotationUpdatesPutBuffer.put(newAnnotationId.toString,
                                                     Json.toJson(List(update)),

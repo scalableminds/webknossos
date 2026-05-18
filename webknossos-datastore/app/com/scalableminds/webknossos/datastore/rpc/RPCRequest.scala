@@ -253,7 +253,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     }
     request
       .execute()
-      .map { result: WSResponse =>
+      .map { (result: WSResponse) =>
         val duration = Instant.since(before)
         val logSlow = verbose && duration > slowRequestLoggingThreshold
         if (Status.isSuccessful(result.status)) {

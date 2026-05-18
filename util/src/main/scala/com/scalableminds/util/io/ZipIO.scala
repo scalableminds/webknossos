@@ -176,7 +176,7 @@ object ZipIO extends LazyLogging with FoxImplicits {
                           excludeFromPrefix: Option[List[String]] = None)(f: (Path, InputStream) => Fox[A])(
       implicit ec: ExecutionContext): Fox[List[A]] = {
 
-    val zipEntries = zip.entries.asScala.filter { e: ZipEntry =>
+    val zipEntries = zip.entries.asScala.filter { (e: ZipEntry) =>
       !e.isDirectory && (includeHiddenFiles || !isFileHidden(e) || hiddenFilesWhitelist.contains(
         Path.of(e.getName).getFileName.toString))
     }.toList
@@ -228,7 +228,7 @@ object ZipIO extends LazyLogging with FoxImplicits {
                      truncateCommonPrefix: Boolean = false,
                      excludeFromPrefix: Option[List[String]] = None)(f: (Path, InputStream) => Box[A]): Box[List[A]] = {
 
-    val zipEntries = zip.entries.asScala.filter { e: ZipEntry =>
+    val zipEntries = zip.entries.asScala.filter { (e: ZipEntry) =>
       !e.isDirectory && (includeHiddenFiles || !isFileHidden(e) || hiddenFilesWhitelist.contains(
         Path.of(e.getName).getFileName.toString))
     }.toList

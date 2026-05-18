@@ -252,7 +252,7 @@ class TaskCreationService @Inject()(annotationService: AnnotationService,
   // Used in createFromFiles. For all volume tracings that have an empty bounding box, reset it to the dataset bounding box
   def addVolumeFallbackBoundingBoxes(tracingBoxes: List[TracingBoxContainer])(
       implicit mp: MessagesProvider): Fox[List[TracingBoxContainer]] =
-    Fox.serialCombined(tracingBoxes) { tracingBox: TracingBoxContainer =>
+    Fox.serialCombined(tracingBoxes) { (tracingBox: TracingBoxContainer) =>
       tracingBox match {
         case TracingBoxContainer(_, _, _, Full(v), Full(datasetId)) =>
           for { volumeAdapted <- addVolumeFallbackBoundingBox(v._1, datasetId) } yield

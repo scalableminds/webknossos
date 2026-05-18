@@ -315,7 +315,7 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
     futureBox.map(_.map(f))
 
   def onComplete(f: Box[A] => Unit): Unit =
-    futureBox.onComplete { t: Try[Box[A]] =>
+    futureBox.onComplete { (t: Try[Box[A]]) =>
       t match {
         case Success(resultBox)    => f(resultBox)
         case scala.util.Failure(e) => f(Failure(e.toString, Full(e), Empty))

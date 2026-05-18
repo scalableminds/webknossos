@@ -11,7 +11,7 @@ addSbtPlugin("com.thesamet" % "sbt-protoc" % "1.0.8")
 addSbtPlugin("org.scalameta" % "sbt-scalafmt" % "2.6.0")
 
 // scala linter
-addSbtPlugin("com.sksamuel.scapegoat" %% "sbt-scapegoat" % "1.2.13")
+addSbtPlugin("ch.epfl.scala" % "sbt-scalafix" % "0.14.6")
 
 // check dependencies against published vulnerabilities with sbt dependencyCheck
 addSbtPlugin("net.nmoncho" % "sbt-dependency-check" % "1.9.0")
@@ -21,3 +21,5 @@ libraryDependencies += "com.thesamet.scalapb" %% "compilerplugin" % "0.11.20"
 
 // java native interface
 addSbtPlugin("com.github.sbt" % "sbt-jni" % "1.7.1")
+
+addSbtPlugin("ch.epfl.scala" % "sbt-scala3-migrate" % "0.7.5")

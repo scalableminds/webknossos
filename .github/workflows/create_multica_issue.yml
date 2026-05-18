@@ -52,6 +52,11 @@ jobs:
           curl -fsSL https://github.com/multica-ai/multica/releases/download/v0.3.2/multica-cli-0.3.2-linux-amd64.tar.gz \
             | tar -xz -C /usr/local/bin
 
+      - name: Configure Multica
+        run: |
+          mkdir -p ~/.multica
+          echo '{"server_url":"https://api.multica.ai","app_url":"https://multica.ai"}' > ~/.multica/config.json
+
       - name: Authenticate with Multica
         run: multica login --token "${{ secrets.MULTICA_TOKEN }}"
 

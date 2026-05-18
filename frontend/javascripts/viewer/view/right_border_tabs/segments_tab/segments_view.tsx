@@ -649,6 +649,45 @@ class SegmentsView extends React.Component<Props, State> {
     if (segmentAdditionalCoordinates != null) {
       this.props.setAdditionalCoordinates(segmentAdditionalCoordinates);
     }
+    // Fire-and-forget: check anchor position asynchronously without blocking navigation
+    this.checkAnchorPositionSync(segment, visibleSegmentationLayer.name);
+  };
+
+  checkAnchorPositionSync = async (segment: Segment, layerName: string) => {
+    if (!segment.anchorPosition) return;
+
+    try {
+      const voxelValue = await api.data.getDataValue(
+        layerName,
+        segment.anchorPosition,
+        null,
+        segment.additionalCoordinates ?? null,
+      );
+
+      if (voxelValue !== segment.id) {
+        const toastKey = `anchor-out-of-sync-${segment.id}`;
+        Toast.warning(
+          <span>
+            The saved position of segment <strong>{getSegmentName(segment, true)}</strong> no
+            longer contains this segment's ID — it was likely overwritten by another segment. To
+            re-anchor it, activate this segment ID and brush over the saved position again.{" "}
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                Store.dispatch(removeSegmentAction(segment.id, layerName));
+                Toast.close(toastKey);
+              }}
+            >
+              Remove segment.
+            </a>
+          </span>,
+          { key: toastKey, sticky: true },
+        );
+      }
+    } catch (_e) {
+      // Cannot read voxel data at this position; skip the check silently
+    }
   };
 
   handleMeshFileSelected = async (meshFileName: string) => {

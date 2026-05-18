@@ -1,5 +1,5 @@
-import type { SceneControllerType } from "./scene_controller";
 import window from "libs/window";
+import type { SceneControllerType } from "./scene_controller";
 
 let sceneController: SceneControllerType | null | undefined = null;
 
@@ -17,7 +17,7 @@ export function getSceneControllerOrNull(): SceneControllerType | null {
 
 export function setSceneController(c: SceneControllerType): void {
   sceneController = c;
-  // @ts-ignore
+  // @ts-expect-error
   window.sceneController = c;
 }
 

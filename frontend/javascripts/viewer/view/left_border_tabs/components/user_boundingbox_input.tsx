@@ -10,9 +10,9 @@ import {
 } from "@ant-design/icons";
 import { Dropdown, Flex, Input, type MenuProps, Switch } from "antd";
 import FastTooltip from "components/fast_tooltip";
+import { formatBytes } from "libs/format_utils";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { formatBytes } from "libs/format_utils";
 import { numberArrayToVector6, rgbToHex, stringToNumberArray } from "libs/utils";
 import messages from "messages";
 import { useEffect, useState } from "react";
@@ -80,7 +80,6 @@ function getBytesPerElement(elementClass: string): number {
       return 1;
   }
 }
-
 
 export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
   const {

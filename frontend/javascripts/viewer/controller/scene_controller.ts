@@ -1,4 +1,5 @@
 import app from "app";
+import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { rgbToInt } from "libs/utils";
 import window from "libs/window";
@@ -63,10 +64,10 @@ import {
 } from "viewer/model/accessors/flycam_accessor";
 import { getSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import {
-  type MipEnabledBbox,
   getMipEnabledBboxes,
   getSomeTracing,
   getTaskBoundingBoxes,
+  type MipEnabledBbox,
 } from "viewer/model/accessors/tracing_accessor";
 import { getPlaneScalingFactor } from "viewer/model/accessors/view_mode_accessor";
 import { sceneControllerInitializedAction } from "viewer/model/actions/actions";
@@ -84,7 +85,6 @@ import type {
 import Store from "viewer/store";
 import type CustomLOD from "./custom_lod";
 import SegmentMeshController from "./segment_mesh_controller";
-import { V3 } from "libs/mjs";
 
 // Add the extension functions
 BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;

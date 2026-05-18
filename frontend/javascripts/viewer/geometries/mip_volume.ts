@@ -8,8 +8,8 @@ import {
   Mesh,
   RedFormat,
   ShaderMaterial,
-  UnsignedByteType,
   Vector3 as ThreeVector3,
+  UnsignedByteType,
 } from "three";
 import type { ElementClass } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
@@ -35,25 +35,48 @@ type MipTextureConfig = {
 function getMipTextureConfig(elementClass: SupportedMipElementClass): MipTextureConfig {
   switch (elementClass) {
     case "uint8":
-      return { textureType: UnsignedByteType, normalizationFactor: 255, createInitialBuffer: (n) => new Uint8Array(n) };
+      return {
+        textureType: UnsignedByteType,
+        normalizationFactor: 255,
+        createInitialBuffer: (n) => new Uint8Array(n),
+      };
     case "uint16":
       // WebGL2 has no GL_R16 (normalized 16-bit red) — only OpenGL core does.
       // Convert Uint16Array → Float32 at load time so we can use GL_R32F.
-      return { textureType: FloatType, normalizationFactor: 65535, createInitialBuffer: (n) => new Float32Array(n) };
+      return {
+        textureType: FloatType,
+        normalizationFactor: 65535,
+        createInitialBuffer: (n) => new Float32Array(n),
+      };
     case "uint32":
       // No normalized R32 format in WebGL2 — convert to float at load time
-      return { textureType: FloatType, normalizationFactor: 4294967295, createInitialBuffer: (n) => new Float32Array(n) };
+      return {
+        textureType: FloatType,
+        normalizationFactor: 4294967295,
+        createInitialBuffer: (n) => new Float32Array(n),
+      };
     case "float":
       // Raw float — no normalization; uMin/uMax uniforms stay in data units
-      return { textureType: FloatType, normalizationFactor: 1, createInitialBuffer: (n) => new Float32Array(n) };
+      return {
+        textureType: FloatType,
+        normalizationFactor: 1,
+        createInitialBuffer: (n) => new Float32Array(n),
+      };
   }
 }
 
 function assertSupportedElementClass(elementClass: ElementClass): SupportedMipElementClass {
-  if (elementClass === "uint8" || elementClass === "uint16" || elementClass === "uint32" || elementClass === "float") {
+  if (
+    elementClass === "uint8" ||
+    elementClass === "uint16" ||
+    elementClass === "uint32" ||
+    elementClass === "float"
+  ) {
     return elementClass;
   }
-  throw new Error(`MipVolume: unsupported element class "${elementClass}". Supported: uint8, uint16, uint32, float.`);
+  throw new Error(
+    `MipVolume: unsupported element class "${elementClass}". Supported: uint8, uint16, uint32, float.`,
+  );
 }
 
 type MockedCrossSource = { type: "mocked cross" };

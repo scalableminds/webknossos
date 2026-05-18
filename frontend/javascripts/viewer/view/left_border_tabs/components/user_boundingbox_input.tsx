@@ -16,7 +16,11 @@ import messages from "messages";
 import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { Vector3, Vector6 } from "viewer/constants";
-import { getColorLayers, getVisibleSegmentationLayer } from "viewer/model/accessors/dataset_accessor";
+import {
+  getColorLayers,
+  getMagInfoByLayer,
+  getVisibleSegmentationLayer,
+} from "viewer/model/accessors/dataset_accessor";
 import {
   removeMipForBboxAction,
   setMipForBboxAction,
@@ -83,6 +87,7 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
 
   const visibleSegmentationLayer = useWkSelector((state) => getVisibleSegmentationLayer(state));
   const colorLayers = useWkSelector((state) => getColorLayers(state.dataset));
+  const magInfoByLayer = useWkSelector((state) => getMagInfoByLayer(state.dataset));
   const mipConfig = useWkSelector((state) => state.mipBboxSettings[bboxId] ?? null);
 
   useEffect(() => {
@@ -190,14 +195,21 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
             label: "Render as MIP",
             icon: <ExperimentOutlined />,
             disabled: colorLayers.length === 0,
-            children: colorLayers.map((layer) => ({
-              key: `mip-${layer.name}`,
-              label: layer.name,
-              onClick: () => {
-                dispatch(setMipForBboxAction(bboxId, { layerName: layer.name, zoomStep: 0 }));
-                maybeCloseContextMenu();
-              },
-            })),
+            children: colorLayers.map((layer) => {
+              const mags = magInfoByLayer[layer.name]?.getMagsWithIndices() ?? [];
+              return {
+                key: `mip-${layer.name}`,
+                label: layer.name,
+                children: mags.map(([zoomStep, mag]) => ({
+                  key: `mip-${layer.name}-${zoomStep}`,
+                  label: mag.join("-"),
+                  onClick: () => {
+                    dispatch(setMipForBboxAction(bboxId, { layerName: layer.name, zoomStep }));
+                    maybeCloseContextMenu();
+                  },
+                })),
+              };
+            }),
           };
 
     const items: MenuProps["items"] = [

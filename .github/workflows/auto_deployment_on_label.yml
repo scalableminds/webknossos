@@ -1,0 +1,35 @@
+name: Autodeployment
+
+on:
+  pull_request:
+    types:
+      - labeled
+
+jobs:
+  trigger-autodeployment-on-label:
+    runs-on: ubuntu-22.04
+    if: ${{ github.event.label.name == 'autodeploy' }}
+    steps:
+      - name: Check for in-progress CI build on this branch
+        id: check_build
+        run: |
+          run_id=$(gh run list \
+            --branch "${{ github.head_ref }}" \
+            --workflow "CI Pipeline" \
+            --json databaseId,status,event \
+            --jq 'first(.[] | select((.status == "in_progress" or .status == "queued") and .event == "push") | .databaseId) // empty')
+          if [ -n "$run_id" ]; then
+            echo "CI run $run_id is in progress and will trigger deployment on completion — skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Trigger autodeployment
+        if: ${{ steps.check_build.outputs.skip != 'true' }}
+        run: |
+          curl -X POST kubernetix.scm.io/hooks/onBranchImagePushed \
+            -H "Content-Type: application/json" \
+            -H "X-Auth-Token: $AUTO_DEV_DEPLOY_TOKEN" \
+            -d "{\"branch\": \"${{ github.head_ref }}\"}"
+        env:
+          AUTO_DEV_DEPLOY_TOKEN: ${{ secrets.AUTO_DEV_DEPLOY_TOKEN }}

@@ -5,7 +5,7 @@ import type { Vector3 } from "viewer/constants";
 import type { SaveQueueType } from "viewer/model/actions/save_actions";
 import type {
   EditableMapping,
-  MipBboxConfig,
+  MipBboxSettings,
   ReadOnlyTracing,
   SkeletonTracing,
   StoreAnnotation,
@@ -128,7 +128,7 @@ export const getUserBoundingBoxesThatContainPosition = (
   return bboxes.filter((el) => new BoundingBox(el.boundingBox).containsPoint(position));
 };
 
-export type MipEnabledBbox = { bbox: UserBoundingBox; config: MipBboxConfig };
+export type MipEnabledBbox = { bbox: UserBoundingBox; config: MipBboxSettings };
 
 export const getMipEnabledBboxes = reuseInstanceOnEquality(
   (state: WebknossosState): MipEnabledBbox[] => {

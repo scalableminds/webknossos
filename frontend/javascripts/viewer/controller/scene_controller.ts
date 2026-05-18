@@ -70,12 +70,13 @@ import {
 } from "viewer/model/accessors/tracing_accessor";
 import { getPlaneScalingFactor } from "viewer/model/accessors/view_mode_accessor";
 import { sceneControllerInitializedAction } from "viewer/model/actions/actions";
+import { setMipForBboxAction } from "viewer/model/actions/annotation_actions";
 import Dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { Transform } from "viewer/model/helpers/transformation_helpers";
 import { Model } from "viewer/singletons";
 import type {
-  MipBboxConfig,
+  MipBboxSettings,
   SkeletonTracing,
   UserBoundingBox,
   WebknossosState,
@@ -123,7 +124,7 @@ class SceneController {
   private splitBoundaryMesh: Mesh | null = null;
   private mipVolumes = new Map<
     number,
-    { volume: MipVolume; config: MipBboxConfig; bbox: UserBoundingBox }
+    { volume: MipVolume; config: MipBboxSettings; bbox: UserBoundingBox }
   >();
 
   // Created as instance properties to avoid creating objects in each update call.
@@ -387,7 +388,11 @@ class SceneController {
       const volume = new MipVolume(datasource);
       this.rootNode.add(volume.mesh);
       volume.subscribeToLayerSettings(config.layerName);
-      volume.loadData(datasource).catch(console.error);
+      Store.dispatch(setMipForBboxAction(bbox.id, { ...config, isLoading: true }));
+      volume
+        .loadData(datasource)
+        .then(() => Store.dispatch(setMipForBboxAction(bbox.id, { ...config, isLoading: false })))
+        .catch(console.error);
       this.mipVolumes.set(bbox.id, { volume, config, bbox });
     }
   }

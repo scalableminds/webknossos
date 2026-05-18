@@ -1,5 +1,5 @@
 import type { Action } from "viewer/model/actions/actions";
-import type { MipBboxConfig, WebknossosState } from "viewer/store";
+import type { MipBboxSettings, WebknossosState } from "viewer/store";
 
 function MipBboxReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
@@ -14,14 +14,14 @@ function MipBboxReducer(state: WebknossosState, action: Action): WebknossosState
     }
 
     case "REMOVE_MIP_FOR_BBOX": {
-      const next: Record<number, MipBboxConfig> = { ...state.mipBboxSettings };
+      const next: Record<number, MipBboxSettings> = { ...state.mipBboxSettings };
       delete next[action.id];
       return { ...state, mipBboxSettings: next };
     }
 
     case "DELETE_USER_BOUNDING_BOX": {
       if (!(action.id in state.mipBboxSettings)) return state;
-      const next: Record<number, MipBboxConfig> = { ...state.mipBboxSettings };
+      const next: Record<number, MipBboxSettings> = { ...state.mipBboxSettings };
       delete next[action.id];
       return { ...state, mipBboxSettings: next };
     }

@@ -5,6 +5,7 @@ import {
   EllipsisOutlined,
   ExperimentOutlined,
   InfoCircleOutlined,
+  LoadingOutlined,
   ScanOutlined,
 } from "@ant-design/icons";
 import { Dropdown, Flex, Input, type MenuProps, Switch } from "antd";
@@ -237,7 +238,13 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
                     key: `mip-${layer.name}-${zoomStep}`,
                     label: `Mag ${mag.join("-")} (${sizeLabel})`,
                     onClick: () => {
-                      dispatch(setMipForBboxAction(bboxId, { layerName: layer.name, zoomStep }));
+                      dispatch(
+                        setMipForBboxAction(bboxId, {
+                          layerName: layer.name,
+                          zoomStep,
+                          isLoading: true,
+                        }),
+                      );
                       maybeCloseContextMenu();
                     },
                   };
@@ -347,7 +354,13 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
               type="text"
               size="small"
               title={`MIP: ${mipConfig.layerName}`}
-              icon={<ExperimentOutlined style={{ color: "#1677ff" }} />}
+              icon={
+                mipConfig.isLoading ? (
+                  <LoadingOutlined style={{ color: "#1677ff" }} />
+                ) : (
+                  <ExperimentOutlined style={{ color: "#1677ff" }} />
+                )
+              }
               onClick={(e) => e.stopPropagation()}
             />
           </Dropdown>

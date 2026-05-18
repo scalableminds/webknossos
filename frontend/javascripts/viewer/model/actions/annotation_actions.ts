@@ -16,7 +16,7 @@ import Constants from "viewer/constants";
 import type {
   Annotation,
   MappingType,
-  MipBboxConfig,
+  MipBboxSettings,
   UserBoundingBox,
   UserBoundingBoxWithoutId,
   UserBoundingBoxWithoutIdMaybe,
@@ -211,7 +211,7 @@ export const deleteUserBoundingBoxAction = (id: number) =>
     id,
   }) as const;
 
-export const setMipForBboxAction = (id: number, config: MipBboxConfig) =>
+export const setMipForBboxAction = (id: number, config: MipBboxSettings) =>
   ({
     type: "SET_MIP_FOR_BBOX",
     id,

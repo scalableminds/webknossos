@@ -10,14 +10,14 @@ import {
 } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { clearCache, deleteDatasetOnDisk, getDataset } from "admin/rest_api";
-import { type MenuProps, Modal, Typography } from "antd";
+import { type MenuProps, Modal } from "antd";
+import { UndoButton } from "libs/undo_button";
 import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
-import { confirmAsync } from "dashboard/dataset/helper_components";
 import Toast from "libs/toast";
 import window from "libs/window";
 import messages from "messages";
 import type * as React from "react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import type { APIDataset, APIDatasetCompact } from "types/api_types";
 import { getReadableURLPart, getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
@@ -125,6 +125,7 @@ function DatasetActionView(props: Props) {
 
   const [isReloading, setIsReloading] = useState(false);
   const [isCreateExplorativeModalVisible, setIsCreateExplorativeModalVisible] = useState(false);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const onClearCache = async (compactDataset: APIDatasetCompact) => {
     setIsReloading(true);
@@ -141,47 +142,44 @@ function DatasetActionView(props: Props) {
 
   const onDeleteDataset = async () => {
     const dataset = await getDataset(props.dataset.id);
+    const { folderId } = dataset;
+    const toastKey = `delete-dataset-${dataset.id}`;
 
-    const deleteDataset = await confirmAsync({
-      title: "Danger Zone",
-      content: (
-        <>
-          <Typography.Title level={4} type="danger">
-            Deleting a dataset from disk cannot be undone. Are you certain to delete dataset{" "}
-            {dataset.name}?
-          </Typography.Title>
-          <Typography.Paragraph>
-            Note, WEBKNOSSOS cannot delete datasets that have annotations associated with them.
-          </Typography.Paragraph>
-        </>
-      ),
-      okText: "Yes, delete dataset from disk",
-      okType: "danger",
-    });
-
-    if (!deleteDataset) {
-      return;
-    }
-
-    await deleteDatasetOnDisk(dataset.id);
-
-    Toast.success(
-      messages["dataset.delete_success"]({
-        datasetName: dataset.name,
-      }),
-    );
-
-    // Invalidate the dataset list cache to exclude the deleted dataset
+    const snapshot = queryClient.getQueryData<APIDatasetCompact[]>(["datasetsByFolder", folderId]);
     queryClient.setQueryData(
-      ["datasetsByFolder", dataset.folderId],
-      (oldItems: APIDatasetCompact[] | undefined) => {
-        if (oldItems == null) {
-          return oldItems;
-        }
-        return oldItems.filter((item) => item.id !== dataset.id);
-      },
+      ["datasetsByFolder", folderId],
+      (oldItems: APIDatasetCompact[] | undefined) =>
+        oldItems?.filter((item) => item.id !== dataset.id),
     );
     queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
+
+    const undo = () => {
+      if (timeoutRef.current != null) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      Toast.close(toastKey);
+      queryClient.setQueryData(["datasetsByFolder", folderId], snapshot);
+      queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
+    };
+
+    Toast.info(`Dataset "${dataset.name}" was deleted.`, {
+      key: toastKey,
+      sticky: true,
+      customFooter: <UndoButton onUndo={undo} />,
+    });
+
+    timeoutRef.current = setTimeout(async () => {
+      Toast.close(toastKey);
+      try {
+        await deleteDatasetOnDisk(dataset.id);
+        queryClient.invalidateQueries({ queryKey: ["datasetsByFolder", folderId] });
+        queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
+      } catch (_e) {
+        Toast.error(`Failed to delete dataset ${dataset.name}.`);
+        queryClient.setQueryData(["datasetsByFolder", folderId], snapshot);
+      }
+    }, 5000);
   };
 
   const disabledWhenReloadingStyle = getDisabledWhenReloadingStyle(isReloading);

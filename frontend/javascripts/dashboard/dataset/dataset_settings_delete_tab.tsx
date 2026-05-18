@@ -4,47 +4,64 @@ import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { deleteDatasetOnDisk } from "admin/rest_api";
 import { Button, Col, Row } from "antd";
 import Toast from "libs/toast";
-import messages from "messages";
-import { useCallback, useState } from "react";
+import { UndoButton } from "libs/undo_button";
+import { useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import type { APIDatasetCompact } from "types/api_types";
 import { useDatasetSettingsContext } from "./dataset_settings_context";
-import { confirmAsync } from "./helper_components";
 
 const DatasetSettingsDeleteTab = () => {
   const { dataset } = useDatasetSettingsContext();
-  const [isDeleting, setIsDeleting] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleDeleteButtonClicked = useCallback(async () => {
     if (!dataset) {
       return;
     }
 
-    const deleteDataset = await confirmAsync({
-      title: `Deleting a dataset on disk cannot be undone. Are you certain to delete dataset ${dataset.name}? Note that the name of a dataset is not guaranteed to be free to use afterwards.`,
-      okText: "Yes, Delete Dataset on Disk now",
-    });
+    const toastKey = `delete-dataset-${dataset.id}`;
+    const snapshot = queryClient.getQueryData<APIDatasetCompact[]>([
+      "datasetsByFolder",
+      dataset.folderId,
+    ]);
 
-    if (!deleteDataset) {
-      return;
-    }
-
-    setIsDeleting(true);
-    await deleteDatasetOnDisk(dataset.id);
-    Toast.success(
-      messages["dataset.delete_success"]({
-        datasetName: dataset.name,
-      }),
+    queryClient.setQueryData(
+      ["datasetsByFolder", dataset.folderId],
+      (oldItems: APIDatasetCompact[] | undefined) =>
+        oldItems?.filter((item) => item.id !== dataset.id),
     );
-    setIsDeleting(false);
-    // Invalidate the dataset list cache to exclude the deleted dataset
-    queryClient.invalidateQueries({
-      queryKey: ["datasetsByFolder", dataset.folderId],
-    });
     queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
-
     navigate("/dashboard");
+
+    const undo = () => {
+      if (timeoutRef.current != null) {
+        clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+      Toast.close(toastKey);
+      queryClient.setQueryData(["datasetsByFolder", dataset.folderId], snapshot);
+      queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
+    };
+
+    Toast.info(`Dataset "${dataset.name}" was deleted.`, {
+      key: toastKey,
+      sticky: true,
+      customFooter: <UndoButton onUndo={undo} />,
+    });
+
+    timeoutRef.current = setTimeout(async () => {
+      Toast.close(toastKey);
+      try {
+        await deleteDatasetOnDisk(dataset.id);
+        queryClient.invalidateQueries({ queryKey: ["datasetsByFolder", dataset.folderId] });
+        queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
+      } catch (_e) {
+        Toast.error(`Failed to delete dataset ${dataset.name}.`);
+        queryClient.setQueryData(["datasetsByFolder", dataset.folderId], snapshot);
+      }
+    }, 5000);
   }, [dataset, navigate, queryClient]);
 
   return (
@@ -65,7 +82,7 @@ const DatasetSettingsDeleteTab = () => {
                   Admins, dataset managers and team managers of the datasets' team(s) are allowed to
                   delete datasets.
                 </p>
-                <Button danger loading={isDeleting} onClick={handleDeleteButtonClicked}>
+                <Button danger onClick={handleDeleteButtonClicked}>
                   Delete Dataset on Disk
                 </Button>
               </>

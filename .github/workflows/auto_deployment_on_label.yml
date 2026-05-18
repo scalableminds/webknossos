@@ -37,10 +37,8 @@ jobs:
           SHA="${{ github.event.pull_request.head.sha }}"
           PR_NUMBER="${{ github.event.pull_request.number }}"
           MARKER="<!-- autodeployment-comment -->"
-          BODY="${MARKER}
-🚀 Deployed commit \`${SHA:0:7}\` to [$DEPLOYMENT_URL]($DEPLOYMENT_URL)
-
-_Triggered at: ${TIMESTAMP}_"
+          BODY=$(printf '%s\n🚀 Deployed commit `%s` to [%s](%s)\n\n_Triggered at: %s_' \
+            "$MARKER" "${SHA:0:7}" "$DEPLOYMENT_URL" "$DEPLOYMENT_URL" "$TIMESTAMP")
           COMMENT_ID=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
             --jq ".[] | select(.body | contains(\"$MARKER\")) | .id" | head -1)
           if [ -n "$COMMENT_ID" ]; then

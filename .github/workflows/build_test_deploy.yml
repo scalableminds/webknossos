@@ -303,7 +303,7 @@ jobs:
         run: |
           LABELS=$(gh pr list --head "$GITHUB_REF_NAME" --json labels --jq '.[0].labels[].name' 2>/dev/null || echo "")
           if echo "$LABELS" | grep -qx "autodeploy"; then
-            curl -X POST kubernetix.scm.io/hooks/onBranchImagePushed \
+            curl -X POST https://kubernetix.scm.io/hooks/onBranchImagePushed \
               -H "Content-Type: application/json" \
               -H "X-Auth-Token: $AUTO_DEV_DEPLOY_TOKEN" \
               -d "{\"branch\": \"$GITHUB_REF_NAME\"}"

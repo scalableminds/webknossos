@@ -1,0 +1,65 @@
+name: Create Multica Issue
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  create-multica-issue:
+    if: github.event.label.name == 'ai-task'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: read
+
+    steps:
+      - name: Compose issue description
+        id: issue
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = context.payload.issue;
+
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issue.number,
+            });
+
+            const commentSection = comments.length === 0 ? '' : [
+              '',
+              '## Comments',
+              comments.map(c =>
+                `**@${c.user.login}** (${c.created_at.slice(0, 10)}):\n${c.body}`
+              ).join('\n\n---\n\n'),
+            ].join('\n');
+
+            const description = [
+              `**GitHub Issue:** ${issue.html_url}`,
+              '',
+              '## Description',
+              issue.body || '_No description provided._',
+              commentSection,
+            ].join('\n');
+
+            const fs = require('fs');
+            fs.writeFileSync(process.env.RUNNER_TEMP + '/multica_description.txt', description);
+
+            core.setOutput('title', issue.title);
+
+      - name: Install Multica CLI
+        run: |
+          # TODO: verify the correct binary URL from https://github.com/multica-ai/multica/releases
+          curl -sSL https://github.com/multica-ai/multica/releases/latest/download/multica-linux-amd64 \
+            -o /usr/local/bin/multica
+          chmod +x /usr/local/bin/multica
+
+      - name: Authenticate with Multica
+        run: multica login --token "${{ secrets.MULTICA_TOKEN }}"
+
+      - name: Create Multica issue
+        run: |
+          multica issue create \
+            --title "${{ steps.issue.outputs.title }}" \
+            --description "$(cat "$RUNNER_TEMP/multica_description.txt")" \
+            --project "WEBKNOSSOS"

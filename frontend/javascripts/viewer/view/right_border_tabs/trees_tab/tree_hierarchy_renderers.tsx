@@ -112,7 +112,7 @@ export function renderTreeNode(
       onContextMenu={(evt) =>
         onOpenContextMenu(createMenuForTree(tree, props, hideContextMenu), evt)
       }
-      style={{ wordBreak: "break-word" }}
+      style={{ wordBreak: "break-word", width: "100%" }}
     >
       <ColoredDotIcon colorRGBA={[...tree.color, 1.0]} />
       <span style={{ whiteSpace: "nowrap" }}>
@@ -261,7 +261,7 @@ export function renderGroupNode(
           evt,
         )
       }
-      style={{ wordBreak: "break-word" }}
+      style={{ wordBreak: "break-word", width: "100%" }}
     >
       <FolderOutlined />
       <EditableTextLabel

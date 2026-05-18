@@ -5,6 +5,7 @@ import Icon, {
   DeleteOutlined,
   DownloadOutlined,
   ExclamationCircleOutlined,
+  FolderAddOutlined,
   MenuOutlined,
   PlusOutlined,
   SearchOutlined,
@@ -91,7 +92,10 @@ import {
   wrapInNewGroup,
 } from "viewer/model/helpers/nml_helpers";
 import { parseProtoTracing } from "viewer/model/helpers/proto_helpers";
-import { createMutableTreeMapFromTreeArray } from "viewer/model/reducers/skeletontracing_reducer_helpers";
+import {
+  createMutableTreeMapFromTreeArray,
+  getMaximumGroupId,
+} from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import type { MutableTreeMap, Tree, TreeGroup, TreeMap } from "viewer/model/types/tree_types";
 import { api, Model } from "viewer/singletons";
 import Store, { type UserBoundingBox, type WebknossosState } from "viewer/store";
@@ -104,6 +108,7 @@ import {
   createGroupToParentMap,
   createGroupToTreesMap,
   GroupTypeEnum,
+  makeBasicGroupObject,
   MISSING_GROUP_ID,
 } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 import AdvancedSearchPopover from "../advanced_search_popover";
@@ -722,6 +727,16 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     });
   };
 
+  createNewGroup = () => {
+    const treeGroups = cloneDeep(this.props.skeletonTracing?.treeGroups || []);
+    const newGroupId = getMaximumGroupId(treeGroups) + 1;
+    const newGroup = makeBasicGroupObject(newGroupId, `Group ${newGroupId}`);
+    treeGroups.push(newGroup);
+    Store.dispatch(setTreeGroupsAction(treeGroups));
+    this.deselectAllTrees();
+    Store.dispatch(setActiveTreeGroupAction(newGroupId));
+  };
+
   maybeExpandParentGroups = (selectedElement: TreeOrTreeGroup) => {
     const { skeletonTracing } = this.props;
     if (!skeletonTracing) {
@@ -974,6 +989,14 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     title={isEditingDisabled ? isEditingDisabledMessage : "Create new Tree (C)"}
                     disabled={isEditingDisabled}
                     icon={<PlusOutlined />}
+                    variant="text"
+                    color="default"
+                  />
+                  <ButtonComponent
+                    onClick={this.createNewGroup}
+                    title={isEditingDisabled ? isEditingDisabledMessage : "Create new Group"}
+                    disabled={isEditingDisabled}
+                    icon={<FolderAddOutlined />}
                     variant="text"
                     color="default"
                   />

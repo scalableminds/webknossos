@@ -11,6 +11,7 @@ import { Dropdown, Flex, Input, type MenuProps, Switch } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
+import { formatBytes } from "libs/format_utils";
 import { numberArrayToVector6, rgbToHex, stringToNumberArray } from "libs/utils";
 import messages from "messages";
 import { useEffect, useState } from "react";
@@ -79,10 +80,6 @@ function getBytesPerElement(elementClass: string): number {
   }
 }
 
-function formatDataSize(bytes: number): string {
-  if (bytes < 1024 * 1024) return `~${Math.round(bytes / 1024)} KB`;
-  return `~${Math.round(bytes / (1024 * 1024))} MB`;
-}
 
 export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
   const {
@@ -235,7 +232,7 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
                     Math.ceil(bboxW / mag[0]) *
                     Math.ceil(bboxH / mag[1]) *
                     Math.ceil(bboxD / mag[2]);
-                  const sizeLabel = formatDataSize(voxels * bytesPerVoxel);
+                  const sizeLabel = formatBytes(voxels * bytesPerVoxel);
                   return {
                     key: `mip-${layer.name}-${zoomStep}`,
                     label: `Mag ${mag.join("-")} (${sizeLabel})`,

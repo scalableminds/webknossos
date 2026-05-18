@@ -479,7 +479,7 @@ export function formatCPU(cpuShare: number) {
   return `${(cpuShare * 100).toFixed(0)}%`;
 }
 
-function _formatBytes(nbytes: number) {
+export function formatBytes(nbytes: number) {
   if (nbytes == null || !Number.isFinite(nbytes)) {
     return "";
   }

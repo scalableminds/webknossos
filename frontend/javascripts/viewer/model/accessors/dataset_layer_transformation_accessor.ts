@@ -536,3 +536,76 @@ export function layerToGlobalTransformedPosition(
   }
   return layerPos;
 }
+
+export const LIVE_TRANSFORM_LENGTH = 7;
+
+// Returns true when the transform list is in a format editable by the live SRT editor:
+// null/empty (no transforms) or exactly 7 affine matrices.
+export function isLiveTransformCompatible(
+  transforms: CoordinateTransformation[] | null | undefined,
+): boolean {
+  if (transforms == null || transforms.length === 0) return true;
+  return (
+    transforms.length === LIVE_TRANSFORM_LENGTH &&
+    transforms.every((t) => t.type === "affine")
+  );
+}
+
+// Row-major scale matrix: diagonal [sx, sy, sz, 1]
+export function makeScaleMatrix(sx: number, sy: number, sz: number): AffineTransformation {
+  const m = new Matrix4().makeScale(sx, sy, sz).transpose();
+  return { type: "affine", matrix: flatToNestedMatrix(m.toArray()) };
+}
+
+// Row-major translation matrix: last column = [tx, ty, tz]
+export function makeTranslationMatrix(
+  tx: number,
+  ty: number,
+  tz: number,
+): AffineTransformation {
+  const m = new Matrix4().makeTranslation(tx, ty, tz).transpose();
+  return { type: "affine", matrix: flatToNestedMatrix(m.toArray()) };
+}
+
+// Extract [sx, sy, sz] from the diagonal of a scale matrix.
+export function extractScaleFromMatrix(t: AffineTransformation): [number, number, number] {
+  return [t.matrix[0][0], t.matrix[1][1], t.matrix[2][2]];
+}
+
+// Extract [tx, ty, tz] from the last column of a translation matrix.
+export function extractTranslationFromMatrix(t: AffineTransformation): [number, number, number] {
+  return [t.matrix[0][3], t.matrix[1][3], t.matrix[2][3]];
+}
+
+// Extract the Euler angle in degrees from a single-axis rotation matrix
+// (stored in row-major format, no 90° rounding).
+export function extractEulerAngleDegreesFromMatrix(
+  t: AffineTransformation,
+  axis: "x" | "y" | "z",
+): number {
+  const sinLoc = sinusLocationOfRotationInMatrix[axis];
+  const cosLoc = cosineLocationOfRotationInMatrix[axis];
+  const sinVal = t.matrix[sinLoc[0]][sinLoc[1]];
+  const cosVal = t.matrix[cosLoc[0]][cosLoc[1]];
+  const radians = Math.atan2(sinVal, cosVal);
+  return ((radians * 180) / Math.PI + 360) % 360;
+}
+
+// Build the 7-matrix SRT transform array for a layer.
+// Order: center→origin, scale, rotX, rotY, rotZ, translation, origin→center
+export function buildLiveTransforms(
+  datasetBbox: BoundingBox,
+  scale: [number, number, number],
+  rotation: [number, number, number],
+  translation: [number, number, number],
+): AffineTransformation[] {
+  return [
+    fromCenterToOrigin(datasetBbox),
+    makeScaleMatrix(...scale),
+    getRotationMatrixAroundAxis("x", { rotationInDegrees: rotation[0], isMirrored: false }),
+    getRotationMatrixAroundAxis("y", { rotationInDegrees: rotation[1], isMirrored: false }),
+    getRotationMatrixAroundAxis("z", { rotationInDegrees: rotation[2], isMirrored: false }),
+    makeTranslationMatrix(...translation),
+    fromOriginToCenter(datasetBbox),
+  ];
+}

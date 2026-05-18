@@ -235,7 +235,7 @@ object Fox extends FoxImplicits {
     runNext(foxes)
   }
 
-  def assertNoFailure(boxes: Seq[Box[_]])(implicit ec: ExecutionContext): Fox[Unit] = {
+  def assertNoFailure(boxes: Seq[Box[?]])(implicit ec: ExecutionContext): Fox[Unit] = {
     val firstFailure = boxes.find {
       case _: Failure => true
       case _          => false
@@ -313,7 +313,7 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
   def filter(f: A => Boolean): Fox[A] =
     new Fox(futureBox.map(_.filter(f)))
 
-  def foreach(f: A => _): Unit =
+  def foreach(f: A => ?): Unit =
     futureBox.map(_.map(f))
 
   def onComplete(f: Box[A] => Unit): Unit =

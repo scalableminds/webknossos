@@ -754,7 +754,7 @@ sealed case class Failure(msg: String, exception: Box[Throwable], chain: Box[Fai
 
   override def getOrThrow(justification: => String): Nothing =
     throw new NullPointerException(s"Opened Failure Box (justification: $justification). Details: $this") {
-      override def getCause: Throwable = exception getOrElse null
+      override def getCause: Throwable = exception `getOrElse` null
     }
 
   override def map[B](f: A => B): Box[B] = this
@@ -778,7 +778,7 @@ sealed case class Failure(msg: String, exception: Box[Throwable], chain: Box[Fai
   def exceptionChain: List[Throwable] = {
     import scala.collection.mutable.ListBuffer
     val ret = new ListBuffer[Throwable]()
-    var e: Throwable = exception getOrElse null
+    var e: Throwable = exception `getOrElse` null
 
     while (e ne null) {
       ret += e
@@ -842,7 +842,7 @@ object ParamFailure {
 
   def apply[T](msg: String, param: T) = new ParamFailure(msg, Empty, Empty, param)
 
-  def unapply(in: Box[_]): Option[(String, Box[Throwable], Box[Failure], Any)] = in match {
+  def unapply(in: Box[?]): Option[(String, Box[Throwable], Box[Failure], Any)] = in match {
     case pf: ParamFailure[_] => Some((pf.msg, pf.exception, pf.chain, pf.param))
     case _                   => None
   }

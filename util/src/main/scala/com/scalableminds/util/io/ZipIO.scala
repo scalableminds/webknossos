@@ -53,7 +53,7 @@ object ZipIO extends LazyLogging with FoxImplicits {
       * @return
       *   future, completes when file is added
       */
-    def withFile(name: String)(f: OutputStream => Fox[_]): Fox[Unit] = {
+    def withFile(name: String)(f: OutputStream => Fox[?]): Fox[Unit] = {
       stream.putNextEntry(new ZipEntry(name))
       f(stream).map(_ => stream.closeEntry())
     }

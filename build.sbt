@@ -23,7 +23,9 @@ ThisBuild / scalacOptions ++= Seq(
   "-language:postfixOps",
   "-Wconf:src=target/.*:s",
   "-Wconf:src=webknossos-datastore/target/.*:s",
-  "-Wconf:src=webknossos-tracingstore/target/.*:s"
+  "-Wconf:src=webknossos-tracingstore/target/.*:s",
+  "-rewrite",
+  "-source:3.4-migration"
 ) ++ failOnWarning
 ThisBuild / javacOptions ++= Seq(
   "-Xlint:unchecked",

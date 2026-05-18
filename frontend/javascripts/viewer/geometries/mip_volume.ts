@@ -9,7 +9,6 @@ import {
   RedFormat,
   ShaderMaterial,
   UnsignedByteType,
-  UnsignedShortType,
   Vector3 as ThreeVector3,
 } from "three";
 import type { ElementClass } from "types/api_types";
@@ -26,7 +25,7 @@ const MAX_VOXELS = 100 * 1024 * 1024;
 type SupportedMipElementClass = "uint8" | "uint16" | "uint32" | "float";
 
 type MipTextureConfig = {
-  textureType: typeof UnsignedByteType | typeof UnsignedShortType | typeof FloatType;
+  textureType: typeof UnsignedByteType | typeof FloatType;
   // Factor by which raw intensityRange values are divided to obtain the [0,1] (or float) range
   // that texture(uVolume, ...).r actually returns at runtime.
   normalizationFactor: number;
@@ -38,8 +37,9 @@ function getMipTextureConfig(elementClass: SupportedMipElementClass): MipTexture
     case "uint8":
       return { textureType: UnsignedByteType, normalizationFactor: 255, createInitialBuffer: (n) => new Uint8Array(n) };
     case "uint16":
-      // WebGL2 gl.R16: UnsignedShortType normalizes 65535 → 1.0 in the sampler
-      return { textureType: UnsignedShortType, normalizationFactor: 65535, createInitialBuffer: (n) => new Uint16Array(n) };
+      // WebGL2 has no GL_R16 (normalized 16-bit red) — only OpenGL core does.
+      // Convert Uint16Array → Float32 at load time so we can use GL_R32F.
+      return { textureType: FloatType, normalizationFactor: 65535, createInitialBuffer: (n) => new Float32Array(n) };
     case "uint32":
       // No normalized R32 format in WebGL2 — convert to float at load time
       return { textureType: FloatType, normalizationFactor: 4294967295, createInitialBuffer: (n) => new Float32Array(n) };
@@ -198,8 +198,7 @@ export class MipVolume {
     let initialData: Uint8Array | Uint16Array | Float32Array;
     let meshCenter: ThreeVector3;
     let volumeSize: ThreeVector3;
-    let textureType: typeof UnsignedByteType | typeof UnsignedShortType | typeof FloatType =
-      UnsignedByteType;
+    let textureType: typeof UnsignedByteType | typeof FloatType = UnsignedByteType;
 
     if (datasource.type === "mocked cross") {
       initialData = createCrossData(MOCK_SIZE);
@@ -319,7 +318,10 @@ export class MipVolume {
       for (let i = 0; i < src.length; i++) dst[i] = src[i] / 4294967295;
       textureData = dst;
     } else if (resolved.elementClass === "uint16") {
-      textureData = rawData as Uint16Array;
+      const src = rawData as Uint16Array;
+      const dst = new Float32Array(src.length);
+      for (let i = 0; i < src.length; i++) dst[i] = src[i] / 65535;
+      textureData = dst;
     } else if (resolved.elementClass === "float") {
       textureData = rawData as Float32Array;
     } else {

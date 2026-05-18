@@ -311,9 +311,18 @@ jobs:
             DEPLOYMENT_URL="https://${SANITIZED}.webknossos.xyz"
             TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
             PR_NUMBER=$(gh pr list --head "$GITHUB_REF_NAME" --json number --jq '.[0].number')
-            gh pr comment "$PR_NUMBER" --body "🚀 Deployed commit \`${GITHUB_SHA:0:7}\` to [$DEPLOYMENT_URL]($DEPLOYMENT_URL)
+            MARKER="<!-- autodeployment-comment -->"
+            BODY="${MARKER}
+🚀 Deployed commit \`${GITHUB_SHA:0:7}\` to [$DEPLOYMENT_URL]($DEPLOYMENT_URL)
 
 _Triggered at: ${TIMESTAMP}_"
+            COMMENT_ID=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" \
+              --jq ".[] | select(.body | contains(\"$MARKER\")) | .id" | head -1)
+            if [ -n "$COMMENT_ID" ]; then
+              gh api --method PATCH "repos/${{ github.repository }}/issues/comments/${COMMENT_ID}" --field body="$BODY"
+            else
+              gh pr comment "$PR_NUMBER" --body "$BODY"
+            fi
           fi
         env:
           AUTO_DEV_DEPLOY_TOKEN: ${{ secrets.AUTO_DEV_DEPLOY_TOKEN }}

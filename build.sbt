@@ -1,7 +1,7 @@
 import sbt._
 
 ThisBuild / version := "wk"
-ThisBuild / scalaVersion := "2.13.18"
+ThisBuild / scalaVersion := "3.8.3"
 ThisBuild / scalafixDependencies += "io.github.dedis" %% "scapegoat-scalafix" % "1.1.4"
 inThisBuild(
   List(
@@ -14,8 +14,8 @@ sbtJniCoreScope := Compile
 
 val failOnWarning = if (sys.props.contains("failOnWarning")) Seq("-Xfatal-warnings") else Seq()
 ThisBuild / scalacOptions ++= Seq(
-  // "-explain", // More detailed compiler output
-  // "-explain-types", // Explain type errors in detail
+  "-explain", // More detailed compiler output
+  "-explain-types", // Explain type errors in detail
   "-release:17",
   "-feature",
   "-deprecation",

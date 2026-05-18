@@ -3,7 +3,7 @@ import {
   DeleteOutlined,
   DownloadOutlined,
   EllipsisOutlined,
-  ExperimentOutlined,
+  FireOutlined,
   InfoCircleOutlined,
   LoadingOutlined,
   ScanOutlined,
@@ -209,7 +209,7 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
         ? {
             key: "removeMip",
             label: "Remove MIP rendering",
-            icon: <ExperimentOutlined />,
+            icon: <FireOutlined />,
             onClick: () => {
               dispatch(removeMipForBboxAction(bboxId));
               maybeCloseContextMenu();
@@ -218,7 +218,7 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
         : {
             key: "renderAsMip",
             label: "Render as MIP",
-            icon: <ExperimentOutlined />,
+            icon: <FireOutlined />,
             disabled: colorLayers.length === 0,
             children: colorLayers.map((layer) => {
               const mags = magInfoByLayer[layer.name]?.getMagsWithIndices() ?? [];
@@ -357,7 +357,7 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
                 mipConfig.isLoading ? (
                   <LoadingOutlined style={{ color: "#1677ff" }} />
                 ) : (
-                  <ExperimentOutlined style={{ color: "#1677ff" }} />
+                  <FireOutlined style={{ color: "#1677ff" }} />
                 )
               }
               onClick={(e) => e.stopPropagation()}

@@ -1,8 +1,36 @@
 package com.scalableminds.webknossos.datastore.helpers
 
-import com.github.sbt.jni.syntax.NativeLoader
+import java.nio.file.Files
 
-class NativeBucketScanner() extends NativeLoader("webknossosJni0") {
+// Load the native library from this class's classloader (application classloader).
+// Extending NativeLoader directly causes the load to happen from the sbt-jni-core classloader
+// (parent), so JNI cannot resolve native methods declared on NativeBucketScanner (child).
+object NativeBucketScanner {
+  val loaded: Boolean = {
+    val libName = "webknossosJni0"
+    try
+      System.loadLibrary(libName)
+    catch {
+      case _: UnsatisfiedLinkError =>
+        println("####################### loadLibary failed")
+        val lib = System.mapLibraryName(libName)
+        val uname = scala.sys.process.Process("uname -sm").!!.trim.split(" ")
+        val plat = uname(1).toLowerCase + "-" + uname(0).toLowerCase
+        val resourcePath = s"/native/$plat/$lib"
+        val stream = getClass.getResourceAsStream(resourcePath)
+        if (stream == null)
+          throw new UnsatisfiedLinkError(s"Native library $lib ($resourcePath) cannot be found on the classpath.")
+        val tmp = Files.createTempDirectory("jni-")
+        val extracted = tmp.resolve(lib)
+        Files.copy(stream, extracted)
+        System.load(extracted.toAbsolutePath.toString)
+    }
+    true
+  }
+}
+
+class NativeBucketScanner() {
+  NativeBucketScanner.loaded // triggers companion object initialization and library load
   @native def collectSegmentIds(
       bucketBytes: Array[Byte],
       bytesPerElement: Int,

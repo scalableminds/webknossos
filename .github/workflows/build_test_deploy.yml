@@ -3,9 +3,9 @@ name: CI Pipeline
 on:
   push:
     branches:
-      - '*'
+      - "*"
     tags:
-      - '*'
+      - "*"
   workflow_dispatch: {}
 
 env:
@@ -40,18 +40,19 @@ jobs:
         run: yarn check-cyclic-dependencies
       - name: Run frontend tests
         run: yarn run vitest run --config vitest_spec.config.ts --coverage.enabled true
-      - name: Download Coverage Artifacts
+      - name:
+          Download Coverage Artifacts
           # Can not use actions/download-artifact@v4 because it does not support downloading artifacts from other GA runs
         run: |
-            gh_last_success_run_id=$(gh run list --workflow "CI Pipeline" --json conclusion,headBranch,databaseId --branch master --jq 'first(.[] | select(.conclusion | contains("success"))) | .databaseId')
-            [ -z "$gh_last_success_run_id" ] && echo "No successful run found" && exit 1 || true
-            gh run download $gh_last_success_run_id -n $ARTIFACT_NAME -D $OUTPUT_DIR
+          gh_last_success_run_id=$(gh run list --workflow "CI Pipeline" --json conclusion,headBranch,databaseId --branch master --jq 'first(.[] | select(.conclusion | contains("success"))) | .databaseId')
+          [ -z "$gh_last_success_run_id" ] && echo "No successful run found" && exit 1 || true
+          gh run download $gh_last_success_run_id -n $ARTIFACT_NAME -D $OUTPUT_DIR
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           ARTIFACT_NAME: vitest-coverage-master
           OUTPUT_DIR: coverage-master
-      - name: 'Report Coverage'
-        uses:  davelosert/vitest-coverage-report-action@v2
+      - name: "Report Coverage"
+        uses: davelosert/vitest-coverage-report-action@v2
         with:
           comment-on: none # alternative: pr
           json-summary-compare-path: coverage-master/coverage-summary.json
@@ -77,8 +78,8 @@ jobs:
 
       - uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '21'
+          distribution: "temurin"
+          java-version: "21"
       - uses: sbt/setup-sbt@v1
 
       - name: Start Docker Services Postgres, Redis
@@ -98,7 +99,6 @@ jobs:
         run: tools/assert-complete-migrations.sh
       - name: Assert no 'SELECT *'  are present in scala files
         run: tools/assert-no-select-asterisk-present.sh
-
 
       - name: Lint backend code and check formatting
         run: sbt ";scapegoat; util/scapegoat; webknossosTracingstore/scapegoat; webknossosDatastore/scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
@@ -121,7 +121,6 @@ jobs:
       - name: Check response types of e2e tests
         run: yarn tsc
 
-
   build-smoketest-push:
     runs-on: ubuntu-22.04
     steps:
@@ -143,8 +142,8 @@ jobs:
 
       - uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
-          java-version: '21'
+          distribution: "temurin"
+          java-version: "21"
       - uses: sbt/setup-sbt@v1
 
       - name: "Install System Dependencies"
@@ -301,7 +300,7 @@ jobs:
           retries: 5
           retry_delay_seconds: 10
       - name: Trigger autodeployment
-        if: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'autodeployment') }}
+        if: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'autodeploy') }}
         run: |
           curl -X POST kubernetix.scm.io/hooks/onBranchImagePushed \
             -H "Content-Type: application/json" \

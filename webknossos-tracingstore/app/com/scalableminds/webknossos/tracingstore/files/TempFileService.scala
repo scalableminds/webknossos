@@ -33,7 +33,7 @@ trait TempFileService extends LazyLogging {
   def create(prefix: String = "tmpFile", lifeTime: FiniteDuration = 2 hours, isDirectory: Boolean = false): Path = {
     ensureParent()
     val path = tmpDir.resolve(f"$prefix-${Random.alphanumeric.take(15).mkString("")}")
-    logger.debug(f"Creating temp ${if (isDirectory) "dir" else "file"} at $path")
+    logger.info(f"Creating temp ${if (isDirectory) "dir" else "file"} at $path")
     if (isDirectory)
       Files.createDirectory(path)
     else

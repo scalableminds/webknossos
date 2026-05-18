@@ -39,7 +39,7 @@ class TSRemoteDatastoreClient @Inject()(
   private lazy val largestAgglomerateIdCache: AlfuCache[(RemoteFallbackLayer, String, Option[String]), Long] =
     AlfuCache(timeToLive = 10 minutes)
 
-  def getAgglomerateSkeleton(remoteFallbackLayer: RemoteFallbackLayer, mappingName: String, agglomerateId: Long)(
+  def getAgglomerateTree(remoteFallbackLayer: RemoteFallbackLayer, mappingName: String, agglomerateId: Long)(
       implicit tc: TokenContext): Fox[Array[Byte]] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)

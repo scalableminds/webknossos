@@ -478,6 +478,7 @@ class DatasetController @Inject()(userService: UserService,
                                                            request.body.layerRenamings.getOrElse(Seq.empty),
                                                            request.body.attachmentRenamings.getOrElse(Seq.empty)))
         updated <- datasetDAO.findOne(datasetId)
+        _ <- datasetService.scanRealpathsIfVirtual(updated)
         _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
         js <- datasetService.publicWrites(updated, Some(request.identity))
       } yield Ok(js)
@@ -734,6 +735,7 @@ class DatasetController @Inject()(userService: UserService,
             _ <- dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource)
           } yield ()
         }
+        _ <- datasetService.scanRealpathsIfVirtual(dataset)
         _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
       } yield Ok
     }
@@ -764,6 +766,7 @@ class DatasetController @Inject()(userService: UserService,
             _ <- dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource)
           } yield ()
         }
+        _ <- datasetService.scanRealpathsIfVirtual(dataset)
         _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
       } yield Ok
     }
@@ -798,7 +801,9 @@ class DatasetController @Inject()(userService: UserService,
           dataset.status == DataSourceStatus.notYetUploadedToPaths || dataset.status == DataSourceStatus.notYetUploaded) ?~> s"Dataset is not in uploading-to-paths status, got ${dataset.status}."
         _ <- Fox.fromBool(!dataset.isUsable) ?~> s"Dataset is already marked as usable."
         _ <- datasetDAO.updateDatasetStatusByDatasetId(datasetId, newStatus = "", isUsable = true)
-        _ <- usedStorageService.refreshStorageReportForDataset(dataset)
+        updated <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+        _ <- datasetService.scanRealpathsIfVirtual(updated)
+        _ <- usedStorageService.refreshStorageReportForDataset(updated)
         _ = logger.info(
           s"Successfully finished uploadToPaths/publish of dataset $datasetId for user ${request.identity._id}")
       } yield Ok

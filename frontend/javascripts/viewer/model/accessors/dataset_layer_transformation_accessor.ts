@@ -546,8 +546,7 @@ export function isLiveTransformCompatible(
 ): boolean {
   if (transforms == null || transforms.length === 0) return true;
   return (
-    transforms.length === LIVE_TRANSFORM_LENGTH &&
-    transforms.every((t) => t.type === "affine")
+    transforms.length === LIVE_TRANSFORM_LENGTH && transforms.every((t) => t.type === "affine")
   );
 }
 
@@ -558,11 +557,7 @@ export function makeScaleMatrix(sx: number, sy: number, sz: number): AffineTrans
 }
 
 // Row-major translation matrix: last column = [tx, ty, tz]
-export function makeTranslationMatrix(
-  tx: number,
-  ty: number,
-  tz: number,
-): AffineTransformation {
+export function makeTranslationMatrix(tx: number, ty: number, tz: number): AffineTransformation {
   const m = new Matrix4().makeTranslation(tx, ty, tz).transpose();
   return { type: "affine", matrix: flatToNestedMatrix(m.toArray()) };
 }

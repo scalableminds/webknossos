@@ -307,6 +307,13 @@ jobs:
               -H "Content-Type: application/json" \
               -H "X-Auth-Token: $AUTO_DEV_DEPLOY_TOKEN" \
               -d "{\"branch\": \"$GITHUB_REF_NAME\"}"
+            SANITIZED=$(echo "$GITHUB_REF_NAME" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]' | sed 's/^[0-9]*//')
+            DEPLOYMENT_URL="https://${SANITIZED}.webknossos.xyz"
+            TIMESTAMP=$(date -u '+%Y-%m-%d %H:%M:%S UTC')
+            PR_NUMBER=$(gh pr list --head "$GITHUB_REF_NAME" --json number --jq '.[0].number')
+            gh pr comment "$PR_NUMBER" --body "🚀 Deployed commit \`${GITHUB_SHA:0:7}\` to [$DEPLOYMENT_URL]($DEPLOYMENT_URL)
+
+_Triggered at: ${TIMESTAMP}_"
           fi
         env:
           AUTO_DEV_DEPLOY_TOKEN: ${{ secrets.AUTO_DEV_DEPLOY_TOKEN }}

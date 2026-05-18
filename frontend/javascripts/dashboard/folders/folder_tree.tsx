@@ -1,15 +1,17 @@
 import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
+import { useQueryClient } from "@tanstack/react-query";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
-import { Dropdown, type MenuProps, Modal, Tree } from "antd";
+import { Button, Dropdown, type MenuProps, Modal, Tree } from "antd";
 import type { DataNode, DirectoryTreeProps } from "antd/lib/tree";
 import classNames from "classnames";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import Toast from "libs/toast";
+import { pluralize } from "libs/utils";
 import memoizeOne from "memoize-one";
 import type React from "react";
 import { type Key, useCallback, useEffect, useRef, useState } from "react";
 import { type ConnectDropTarget, type DropTargetMonitor, useDrop } from "react-dnd";
-import type { FolderItem } from "types/api_types";
+import { type APIDatasetCompact, type FolderItem } from "types/api_types";
 import type { ArbitraryObject } from "types/type_utils";
 import { DraggableDatasetType } from "../advanced_dataset/dataset_table";
 import {
@@ -316,7 +318,10 @@ export function useDatasetDrop(
   ConnectDropTarget,
 ] {
   const context = useDatasetCollectionContext();
+  const queryClient = useQueryClient();
   const { selectedDatasets, setSelectedDatasets } = context;
+  const targetFolderName =
+    context.queries.folderHierarchyQuery.data?.itemById[folderId]?.title ?? folderId;
   const [collectedProps, drop] = useDrop<
     DnDDropItemProps,
     void,
@@ -335,10 +340,12 @@ export function useDatasetDrop(
           return;
         }
 
+        const datasetsToMove = selectedDatasets;
+
         // Show a modal so that the user cannot do anything else while the datasets are being moved.
         const modal = Modal.info({
           title: "Moving Datasets",
-          content: `Preparing to move ${selectedDatasets.length} datasets...`,
+          content: `Preparing to move ${datasetsToMove.length} datasets...`,
           onCancel: (_close) => {},
           onOk: (_close) => {},
           okText: null,
@@ -346,20 +353,61 @@ export function useDatasetDrop(
 
         let successCounter = 0;
         Promise.all(
-          selectedDatasets.map((ds) =>
+          datasetsToMove.map((ds) =>
             context.queries.updateDatasetMutation.mutateAsync([ds.id, { folderId }]).then(() => {
               successCounter++;
               modal.update({
-                content: `Already moved ${successCounter} of ${selectedDatasets.length} datasets.`,
+                content: `Already moved ${successCounter} of ${datasetsToMove.length} datasets.`,
               });
             }),
           ),
         )
           .then(
-            () => Toast.success(`Successfully moved ${selectedDatasets.length} datasets.`),
+            () => {
+              const toastKey = "move-datasets-undo";
+              const undo = () => {
+                Toast.close(toastKey);
+                datasetsToMove.forEach((ds) => {
+                  queryClient.setQueryData(
+                    ["datasetsByFolder", ds.folderId],
+                    (oldItems: APIDatasetCompact[] | undefined) => {
+                      if (oldItems == null) return oldItems;
+                      return [...oldItems.filter((el) => el.id !== ds.id), ds];
+                    },
+                  );
+                });
+                queryClient.setQueryData(
+                  ["datasetsByFolder", folderId],
+                  (oldItems: APIDatasetCompact[] | undefined) =>
+                    oldItems?.filter((el) => !datasetsToMove.some((ds) => ds.id === el.id)),
+                );
+                Promise.all(
+                  datasetsToMove.map((ds) =>
+                    context.queries.updateDatasetMutation.mutateAsync([
+                      ds.id,
+                      { folderId: ds.folderId },
+                    ]),
+                  ),
+                ).then(
+                  () =>
+                    Toast.success(
+                      `Successfully moved ${datasetsToMove.length} ${pluralize("dataset", datasetsToMove.length)} back.`,
+                    ),
+                  (err) => {
+                    Toast.error("Couldn't undo all moves. See console for details.");
+                    console.error(err);
+                  },
+                );
+              };
+              const n = datasetsToMove.length;
+              Toast.info(`${n} ${pluralize("dataset", n)} moved to "${targetFolderName}".`, {
+                key: toastKey,
+                customFooter: <Button onClick={undo}>Undo</Button>,
+              });
+            },
             (err) => {
               Toast.error(
-                `Couldn't move all ${selectedDatasets.length} datasets. See console for details`,
+                `Couldn't move all ${datasetsToMove.length} datasets. See console for details`,
               );
               console.error(err);
             },
@@ -374,7 +422,33 @@ export function useDatasetDrop(
         const dataset = context.datasets.find((ds) => ds.id === item.datasetId);
 
         if (dataset) {
-          context.queries.updateDatasetMutation.mutateAsync([dataset.id, { folderId }]);
+          const originalFolderId = dataset.folderId;
+          const toastKey = `move-dataset-${dataset.id}`;
+          context.queries.updateDatasetMutation.mutateAsync([dataset.id, { folderId }]).then(() => {
+            const undo = () => {
+              Toast.close(toastKey);
+              queryClient.setQueryData(
+                ["datasetsByFolder", originalFolderId],
+                (oldItems: APIDatasetCompact[] | undefined) => {
+                  if (oldItems == null) return oldItems;
+                  return [...oldItems.filter((el) => el.id !== dataset.id), dataset];
+                },
+              );
+              queryClient.setQueryData(
+                ["datasetsByFolder", folderId],
+                (oldItems: APIDatasetCompact[] | undefined) =>
+                  oldItems?.filter((el) => el.id !== dataset.id),
+              );
+              context.queries.updateDatasetMutation.mutateAsync([
+                dataset.id,
+                { folderId: originalFolderId },
+              ]);
+            };
+            Toast.info(`Dataset “${dataset.name}” was moved to folder “${targetFolderName}”.`, {
+              key: toastKey,
+              customFooter: <Button onClick={undo}>Undo</Button>,
+            });
+          });
         } else {
           Toast.error("Could not move dataset. Please try again.");
         }

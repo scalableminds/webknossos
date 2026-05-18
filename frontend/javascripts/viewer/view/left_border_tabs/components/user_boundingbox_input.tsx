@@ -56,6 +56,34 @@ type UserBoundingBoxInputProps = {
 
 const FORMAT_TOOLTIP = "Format: minX, minY, minZ, width, height, depth";
 
+function getBytesPerElement(elementClass: string): number {
+  switch (elementClass) {
+    case "uint8":
+    case "int8":
+      return 1;
+    case "uint16":
+    case "int16":
+      return 2;
+    case "uint24":
+      return 3;
+    case "uint32":
+    case "int32":
+    case "float":
+      return 4;
+    case "uint64":
+    case "int64":
+    case "double":
+      return 8;
+    default:
+      return 1;
+  }
+}
+
+function formatDataSize(bytes: number): string {
+  if (bytes < 1024 * 1024) return `~${Math.round(bytes / 1024)} KB`;
+  return `~${Math.round(bytes / (1024 * 1024))} MB`;
+}
+
 export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
   const {
     bboxId,
@@ -197,17 +225,26 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
             disabled: colorLayers.length === 0,
             children: colorLayers.map((layer) => {
               const mags = magInfoByLayer[layer.name]?.getMagsWithIndices() ?? [];
+              const bytesPerVoxel = getBytesPerElement(layer.elementClass);
+              const [, , , bboxW, bboxH, bboxD] = propValue;
               return {
                 key: `mip-${layer.name}`,
                 label: layer.name,
-                children: mags.map(([zoomStep, mag]) => ({
-                  key: `mip-${layer.name}-${zoomStep}`,
-                  label: mag.join("-"),
-                  onClick: () => {
-                    dispatch(setMipForBboxAction(bboxId, { layerName: layer.name, zoomStep }));
-                    maybeCloseContextMenu();
-                  },
-                })),
+                children: mags.map(([zoomStep, mag]) => {
+                  const voxels =
+                    Math.ceil(bboxW / mag[0]) *
+                    Math.ceil(bboxH / mag[1]) *
+                    Math.ceil(bboxD / mag[2]);
+                  const sizeLabel = formatDataSize(voxels * bytesPerVoxel);
+                  return {
+                    key: `mip-${layer.name}-${zoomStep}`,
+                    label: `Mag ${mag.join("-")} (${sizeLabel})`,
+                    onClick: () => {
+                      dispatch(setMipForBboxAction(bboxId, { layerName: layer.name, zoomStep }));
+                      maybeCloseContextMenu();
+                    },
+                  };
+                }),
               };
             }),
           };

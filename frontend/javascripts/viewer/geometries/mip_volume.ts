@@ -2,14 +2,17 @@ import {
   BackSide,
   BoxGeometry,
   Data3DTexture,
+  FloatType,
   GLSL3,
   Matrix4,
   Mesh,
   RedFormat,
   ShaderMaterial,
-  Vector3 as ThreeVector3,
   UnsignedByteType,
+  UnsignedShortType,
+  Vector3 as ThreeVector3,
 } from "three";
+import type { ElementClass } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import { getLayerByName, getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
@@ -18,7 +21,40 @@ import { api, Store } from "viewer/singletons";
 import type { DatasetLayerConfiguration } from "viewer/store";
 
 const MOCK_SIZE = 32;
-const MAX_VOXELS = 100 * 1024 * 1024; // 100 MB of uint8 voxels
+const MAX_VOXELS = 100 * 1024 * 1024;
+
+type SupportedMipElementClass = "uint8" | "uint16" | "uint32" | "float";
+
+type MipTextureConfig = {
+  textureType: typeof UnsignedByteType | typeof UnsignedShortType | typeof FloatType;
+  // Factor by which raw intensityRange values are divided to obtain the [0,1] (or float) range
+  // that texture(uVolume, ...).r actually returns at runtime.
+  normalizationFactor: number;
+  createInitialBuffer: (n: number) => Uint8Array | Uint16Array | Float32Array;
+};
+
+function getMipTextureConfig(elementClass: SupportedMipElementClass): MipTextureConfig {
+  switch (elementClass) {
+    case "uint8":
+      return { textureType: UnsignedByteType, normalizationFactor: 255, createInitialBuffer: (n) => new Uint8Array(n) };
+    case "uint16":
+      // WebGL2 gl.R16: UnsignedShortType normalizes 65535 → 1.0 in the sampler
+      return { textureType: UnsignedShortType, normalizationFactor: 65535, createInitialBuffer: (n) => new Uint16Array(n) };
+    case "uint32":
+      // No normalized R32 format in WebGL2 — convert to float at load time
+      return { textureType: FloatType, normalizationFactor: 4294967295, createInitialBuffer: (n) => new Float32Array(n) };
+    case "float":
+      // Raw float — no normalization; uMin/uMax uniforms stay in data units
+      return { textureType: FloatType, normalizationFactor: 1, createInitialBuffer: (n) => new Float32Array(n) };
+  }
+}
+
+function assertSupportedElementClass(elementClass: ElementClass): SupportedMipElementClass {
+  if (elementClass === "uint8" || elementClass === "uint16" || elementClass === "uint32" || elementClass === "float") {
+    return elementClass;
+  }
+  throw new Error(`MipVolume: unsupported element class "${elementClass}". Supported: uint8, uint16, uint32, float.`);
+}
 
 type MockedCrossSource = { type: "mocked cross" };
 type DataSource = {
@@ -128,6 +164,7 @@ void main() {
 function resolveDataSource(datasource: DataSource): {
   actualZoomStep: number;
   textureDims: [number, number, number];
+  elementClass: SupportedMipElementClass;
 } {
   const layer = getLayerByName(Store.getState().dataset, datasource.layerName);
   const magInfo = getMagInfo(layer.mags);
@@ -142,6 +179,7 @@ function resolveDataSource(datasource: DataSource): {
       bottomRight[1] - topLeft[1],
       bottomRight[2] - topLeft[2],
     ],
+    elementClass: assertSupportedElementClass(layer.elementClass),
   };
 }
 
@@ -151,14 +189,17 @@ export class MipVolume {
   private material: ShaderMaterial;
   private actualZoomStep: number | null = null;
   private unsubscribeFromStore: (() => void) | null = null;
+  private normalizationFactor = 255; // updated per element class for "data" sources
 
   constructor(datasource: MipDatasource = { type: "mocked cross" }) {
     let texWidth: number;
     let texHeight: number;
     let texDepth: number;
-    let initialData: Uint8Array;
+    let initialData: Uint8Array | Uint16Array | Float32Array;
     let meshCenter: ThreeVector3;
     let volumeSize: ThreeVector3;
+    let textureType: typeof UnsignedByteType | typeof UnsignedShortType | typeof FloatType =
+      UnsignedByteType;
 
     if (datasource.type === "mocked cross") {
       initialData = createCrossData(MOCK_SIZE);
@@ -171,17 +212,21 @@ export class MipVolume {
       const dy = mag1Bbox.max[1] - mag1Bbox.min[1];
       const dz = mag1Bbox.max[2] - mag1Bbox.min[2];
 
-      const { actualZoomStep, textureDims } = resolveDataSource(datasource);
+      const { actualZoomStep, textureDims, elementClass } = resolveDataSource(datasource);
+      const config = getMipTextureConfig(elementClass);
+      textureType = config.textureType;
+      this.normalizationFactor = config.normalizationFactor;
+
       const [tw, th, td] = textureDims;
       const totalVoxels = tw * th * td;
       if (totalVoxels > MAX_VOXELS) {
         throw new Error(
-          `MipVolume: ${tw}×${th}×${td} = ${totalVoxels} voxels exceeds the ${MAX_VOXELS}-voxel (100 MB) limit`,
+          `MipVolume: ${tw}×${th}×${td} = ${totalVoxels} voxels exceeds the ${MAX_VOXELS}-voxel limit`,
         );
       }
 
       this.actualZoomStep = actualZoomStep;
-      initialData = new Uint8Array(new ArrayBuffer(tw * th * td));
+      initialData = config.createInitialBuffer(tw * th * td);
       texWidth = tw;
       texHeight = th;
       texDepth = td;
@@ -196,7 +241,7 @@ export class MipVolume {
     // @ts-expect-error — Uint8Array<ArrayBufferLike> vs ArrayBufferView<ArrayBuffer> in TS 5.9
     this.texture = new Data3DTexture(initialData, texWidth, texHeight, texDepth);
     this.texture.format = RedFormat;
-    this.texture.type = UnsignedByteType;
+    this.texture.type = textureType;
     this.texture.needsUpdate = true;
 
     this.material = new ShaderMaterial({
@@ -229,12 +274,12 @@ export class MipVolume {
   }
 
   // Updates display uniforms from layer configuration — mirrors updateUniformsForLayer
-  // in plane_material_factory.ts. intensityRange values are in raw uint8 range [0, 255].
+  // in plane_material_factory.ts. intensityRange values are in raw data units.
   updateLayerUniforms(settings: DatasetLayerConfiguration): void {
     const { alpha, intensityRange, isDisabled, isInverted, color } = settings;
-    const [rawMin, rawMax] = intensityRange ?? [0, 255];
-    this.material.uniforms.uMin.value = rawMin / 255;
-    this.material.uniforms.uMax.value = rawMax / 255;
+    const [rawMin, rawMax] = intensityRange ?? [0, this.normalizationFactor];
+    this.material.uniforms.uMin.value = rawMin / this.normalizationFactor;
+    this.material.uniforms.uMax.value = rawMax / this.normalizationFactor;
     this.material.uniforms.uIsInverted.value = isInverted ? 1.0 : 0.0;
     if (color != null) {
       this.material.uniforms.uLayerColor.value.set(color[0] / 255, color[1] / 255, color[2] / 255);
@@ -258,13 +303,31 @@ export class MipVolume {
   }
 
   async loadData(datasource: DataSource): Promise<void> {
-    const actualZoomStep = this.actualZoomStep ?? resolveDataSource(datasource).actualZoomStep;
+    const resolved = resolveDataSource(datasource);
+    const actualZoomStep = this.actualZoomStep ?? resolved.actualZoomStep;
     const rawData = await api.data.getDataForBoundingBox(
       datasource.layerName,
       datasource.mag1Bbox,
       actualZoomStep,
     );
-    this.texture.image.data = new Uint8Array(rawData.buffer);
+
+    let textureData: Uint8Array | Uint16Array | Float32Array;
+    if (resolved.elementClass === "uint32") {
+      // No normalized R32 format in WebGL2 — normalize to [0, 1] as float
+      const src = rawData as Uint32Array;
+      const dst = new Float32Array(src.length);
+      for (let i = 0; i < src.length; i++) dst[i] = src[i] / 4294967295;
+      textureData = dst;
+    } else if (resolved.elementClass === "uint16") {
+      textureData = rawData as Uint16Array;
+    } else if (resolved.elementClass === "float") {
+      textureData = rawData as Float32Array;
+    } else {
+      textureData = new Uint8Array(rawData.buffer);
+    }
+
+    // @ts-expect-error — typed array variant not matching narrow ArrayBufferView in TS 5.9
+    this.texture.image.data = textureData;
     this.texture.needsUpdate = true;
   }
 

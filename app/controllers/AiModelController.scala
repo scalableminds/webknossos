@@ -56,7 +56,7 @@ object RunInstanceModelTrainingParameters {
 }
 
 case class RunInferenceParameters(datasetId: ObjectId,
-                                  aiModelId: Option[String],
+                                  aiModelId: Option[ObjectId],
                                   colorLayerName: String,
                                   boundingBox: String, // Always in mag1
                                   annotationId: Option[ObjectId],
@@ -126,7 +126,7 @@ class AiModelController @Inject()(
       _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(request.identity)
       aiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
       dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)
-      voxelSize <- aiModelService.findModelVoxelSize(Some(aiModel), dataStore)
+      voxelSize <- aiModelService.findModelVoxelSize(aiModel, dataStore)
     } yield Ok(Json.toJson(voxelSize))
   }
 
@@ -280,11 +280,9 @@ class AiModelController @Inject()(
       for {
         dataset <- datasetDAO.findOne(request.body.datasetId)
         _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
-        aiModelOpt <- Fox.runOptional(request.body.aiModelId)(id =>
-          ObjectId.fromString(id).flatMap(oid => aiModelDAO.findOne(oid))) ?~> "aiModel.notFound"
-        _ <- Fox.runOptional(aiModelOpt) { aiModel =>
-          Fox.fromBool(aiModel.isPretrainedModel || aiModel._dataStore == dataset._dataStore) ?~> "aiModel.dataStoreMismatch"
-        }
+        aiModelOpt <- Fox.runOptional(request.body.aiModelId)(aiModelDAO.findOne) ?~> "aiModel.notFound"
+        aiModel <- aiModelOpt.toFox ?~> "aiModel.required"
+        _ <- Fox.fromBool(aiModel.isPretrained || aiModel._dataStore == dataset._dataStore) ?~> "aiModel.dataStoreMismatch"
         (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.colorLayerName)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
@@ -297,7 +295,7 @@ class AiModelController @Inject()(
           "layer_name" -> request.body.colorLayerName,
           "bbox" -> mag1BoundingBox.toLiteral,
           "model_id" -> request.body.aiModelId,
-          "model_organization_id" -> aiModelOpt.filterNot(_.isPretrainedModel).map(_._organization),
+          "model_organization_id" -> Some(aiModel).filterNot(_.isPretrained).map(_._organization),
           "dataset_directory_name" -> dataset.directoryName,
           "new_dataset_name" -> request.body.newDatasetName,
           "invert_color_layer" -> request.body.invertColorLayer,
@@ -308,7 +306,7 @@ class AiModelController @Inject()(
         targetMagBoundingBox <- aiModelService.inferenceBBoxToTargetMag(mag1BoundingBox,
                                                                         layer,
                                                                         dataSource.scale,
-                                                                        aiModelOpt,
+                                                                        aiModel,
                                                                         dataStore)
         newInferenceJob <- jobService.submitPaidJob(jobCommand,
                                                     commandArgs,
@@ -319,7 +317,7 @@ class AiModelController @Inject()(
         newAiInference = AiInference(
           _id = ObjectId.generate,
           _organization = request.identity._organization,
-          _aiModel = aiModelOpt.map(_._id),
+          _aiModel = Some(aiModel._id),
           _newDataset = None,
           _annotation = request.body.annotationId,
           boundingBox = mag1BoundingBox,
@@ -337,11 +335,9 @@ class AiModelController @Inject()(
       for {
         dataset <- datasetDAO.findOne(request.body.datasetId)
         _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> "job.runInference.notAllowed.organization" ~> FORBIDDEN
-        aiModelOpt <- Fox.runOptional(request.body.aiModelId)(id =>
-          ObjectId.fromString(id).flatMap(oid => aiModelDAO.findOne(oid))) ?~> "aiModel.notFound"
-        _ <- Fox.runOptional(aiModelOpt) { aiModel =>
-          Fox.fromBool(aiModel.isPretrainedModel || aiModel._dataStore == dataset._dataStore) ?~> "aiModel.dataStoreMismatch"
-        }
+        aiModelOpt <- Fox.runOptional(request.body.aiModelId)(aiModelDAO.findOne) ?~> "aiModel.notFound"
+        aiModel <- aiModelOpt.toFox ?~> "aiModel.required"
+        _ <- Fox.fromBool(aiModel.isPretrained || aiModel._dataStore == dataset._dataStore) ?~> "aiModel.dataStoreMismatch"
         (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.colorLayerName)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> "dataStore.notFound"
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
@@ -350,7 +346,7 @@ class AiModelController @Inject()(
         targetMagBoundingBox <- aiModelService.inferenceBBoxToTargetMag(mag1BoundingBox,
                                                                         layer,
                                                                         dataSource.scale,
-                                                                        aiModelOpt,
+                                                                        aiModel,
                                                                         dataStore)
         doSplitMergerEvaluation: Boolean = request.body.doSplitMergerEvaluation.getOrElse(false)
         commandArgs = Json.obj(
@@ -360,7 +356,7 @@ class AiModelController @Inject()(
           "layer_name" -> request.body.colorLayerName,
           "bbox" -> mag1BoundingBox.toLiteral,
           "model_id" -> request.body.aiModelId,
-          "model_organization_id" -> aiModelOpt.filterNot(_.isPretrainedModel).map(_._organization),
+          "model_organization_id" -> Some(aiModel).filterNot(_.isPretrained).map(_._organization),
           "annotation_id" -> request.body.annotationId,
           "dataset_directory_name" -> dataset.directoryName,
           "new_dataset_name" -> request.body.newDatasetName,
@@ -382,7 +378,7 @@ class AiModelController @Inject()(
         newAiInference = AiInference(
           _id = ObjectId.generate,
           _organization = request.identity._organization,
-          _aiModel = aiModelOpt.map(_._id),
+          _aiModel = Some(aiModel._id),
           _newDataset = None,
           _annotation = request.body.annotationId,
           boundingBox = mag1BoundingBox,

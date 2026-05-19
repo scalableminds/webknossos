@@ -151,7 +151,7 @@ const renderActionsForModel = (
   onChangeSharedOrganizations: () => void,
 ) => {
   const organizationSharingButton =
-    model.isOwnedByUsersOrganization && !model.isPretrainedModel ? (
+    model.isOwnedByUsersOrganization && !model.isPretrained ? (
       <LinkButton onClick={onChangeSharedOrganizations} icon={<TeamOutlined />}>
         Manage Access
       </LinkButton>

@@ -3,7 +3,7 @@ START TRANSACTION;
 do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 161 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
 -- Remove pretrained models inserted by application startup
-DELETE FROM webknossos.aiModels WHERE isPretrainedModel = TRUE;
+DELETE FROM webknossos.aiModels WHERE isPretrained;
 
 -- Clear any rows using the new enum values before removing them
 UPDATE webknossos.aiModels SET category = NULL WHERE category IN ('em_generic', 'em_somata', 'em_mitochondria');
@@ -11,7 +11,7 @@ UPDATE webknossos.aiModels SET category = NULL WHERE category IN ('em_generic', 
 DROP VIEW webknossos.aiModels_;
 
 ALTER TABLE webknossos.aiModels DROP COLUMN isSuperUserOnly;
-ALTER TABLE webknossos.aiModels DROP COLUMN isPretrainedModel;
+ALTER TABLE webknossos.aiModels DROP COLUMN isPretrained;
 
 -- Recreate the enum type without the three new values by temporarily casting to text
 ALTER TABLE webknossos.aiModels ALTER COLUMN category TYPE VARCHAR(255);

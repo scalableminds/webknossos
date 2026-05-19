@@ -679,7 +679,7 @@ CREATE TABLE webknossos.aiModels(
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   isSuperUserOnly BOOLEAN NOT NULL DEFAULT FALSE,
-  isPretrainedModel BOOLEAN NOT NULL DEFAULT FALSE,
+  isPretrained BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE (_organization, name)
 );
 

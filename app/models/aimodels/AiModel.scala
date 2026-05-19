@@ -41,7 +41,7 @@ case class AiModel(_id: ObjectId,
                    modified: Instant = Instant.now,
                    isDeleted: Boolean = false,
                    isSuperUserOnly: Boolean = false,
-                   isPretrainedModel: Boolean = false)
+                   isPretrained: Boolean = false)
 
 class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
                                dataStoreService: DataStoreService,
@@ -53,6 +53,11 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
                                rpc: RPC)
     extends FoxImplicits
     with LazyLogging {
+
+  val pretrainedNeuronModelId: ObjectId = ObjectId("576500000000000000000001")
+  val pretrainedMitochondriaModelId: ObjectId = ObjectId("576500000000000000000002")
+  val pretrainedNucleiModelId: ObjectId = ObjectId("576500000000000000000003")
+  val pretrainedSomataModelId: ObjectId = ObjectId("576500000000000000000004")
 
   def publicWrites(aiModel: AiModel, requestingUser: User)(implicit ec: ExecutionContext,
                                                            ctx: DBAccessContext): Fox[JsObject] =
@@ -77,7 +82,7 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
         sharedOrgasIdsUserCanAccess = aiModel._sharedOrganizations.filter(orgaIdsUserCanAccess.contains)
       } yield Some(sharedOrgasIdsUserCanAccess)
       else Fox.successful(None)
-      path <- if (aiModel.isPretrainedModel) Fox.successful(Option.empty[UPath])
+      path <- if (aiModel.isPretrained) Fox.successful(Option.empty[UPath])
       else pathWithFallback(aiModel).map(Some(_))
       isUsable = !aiModel.uploadToPathIsPending && trainingJobOpt.flatten.forall(_.effectiveState == JobState.SUCCESS)
     } yield
@@ -95,27 +100,23 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
         "path" -> path,
         "isUsable" -> isUsable,
         "isSuperUserOnly" -> aiModel.isSuperUserOnly,
-        "isPretrainedModel" -> aiModel.isPretrainedModel
+        "isPretrained" -> aiModel.isPretrained
       )
 
   def inferenceBBoxToTargetMag(mag1BoundingBox: BoundingBox,
                                layer: StaticLayer,
                                datasetVoxelSize: VoxelSize,
-                               aiModelOpt: Option[AiModel],
+                               aiModel: AiModel,
                                dataStore: DataStore)(implicit ec: ExecutionContext): Fox[BoundingBox] =
     for {
-      modelVoxelSize <- aiModelOpt match {
-        case Some(aiModel) if aiModel.isPretrainedModel =>
-          findPretrainedModelVoxelSize(aiModel._id).toFox ?~> s"No voxel size known for pretrained model '${aiModel.name}'"
-        case Some(aiModel) =>
-          for {
-            modelPath <- pathWithFallback(aiModel)
-            dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
-            voxelSize <- dataStoreClient.getEffectiveAiModelVoxelSize(modelPath)
-          } yield voxelSize
-        case None =>
-          Fox.failure("Expected an AI model")
-      }
+      modelVoxelSize <- if (aiModel.isPretrained)
+        findPretrainedVoxelSize(aiModel._id).toFox ?~> s"No voxel size known for pretrained model '${aiModel.name}'"
+      else
+        for {
+          modelPath <- pathWithFallback(aiModel)
+          dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
+          voxelSize <- dataStoreClient.getEffectiveAiModelVoxelSize(modelPath)
+        } yield voxelSize
       targetMag <- findBestMatchingMag(modelVoxelSize, datasetVoxelSize, layer)
       targetMagBoundingBox = mag1BoundingBox / targetMag
     } yield targetMagBoundingBox
@@ -145,33 +146,25 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
         } yield fallbackPath
     }
 
-  private lazy val PretrainedNeuronModelVoxelSize = VoxelSize(Vec3Double(7.96, 7.96, 31.2), LengthUnit.nanometer)
-  private lazy val PretrainedMitchondriaVoxelSize = VoxelSize(Vec3Double(7.96, 7.96, 31.2), LengthUnit.nanometer)
-  private lazy val PretrainedNucleiModelVoxelSize = VoxelSize(Vec3Double(179.84, 179.84, 224.0), LengthUnit.nanometer)
-  private lazy val PretrainedSomataModelVoxelSize = VoxelSize(Vec3Double(179.84, 179.84, 224.0), LengthUnit.nanometer)
+  private lazy val pretrainedVoxelSizes: Map[ObjectId, VoxelSize] = Map(
+    pretrainedNeuronModelId -> VoxelSize(Vec3Double(7.96, 7.96, 31.2), LengthUnit.nanometer),
+    pretrainedMitochondriaModelId -> VoxelSize(Vec3Double(7.96, 7.96, 31.2), LengthUnit.nanometer),
+    pretrainedNucleiModelId -> VoxelSize(Vec3Double(179.84, 179.84, 224.0), LengthUnit.nanometer),
+    pretrainedSomataModelId -> VoxelSize(Vec3Double(179.84, 179.84, 224.0), LengthUnit.nanometer)
+  )
 
-  def findPretrainedModelVoxelSize(pretrainedModelId: ObjectId): Option[VoxelSize] =
-    pretrainedModelId.id match {
-      case "576500000000000000000001" => Some(PretrainedNeuronModelVoxelSize)
-      case "576500000000000000000002" => Some(PretrainedMitchondriaVoxelSize)
-      case "576500000000000000000003" => Some(PretrainedNucleiModelVoxelSize)
-      case "576500000000000000000004" => Some(PretrainedSomataModelVoxelSize)
-      case _                          => None
-    }
+  private def findPretrainedVoxelSize(pretrainedModelId: ObjectId): Option[VoxelSize] =
+    pretrainedVoxelSizes.get(pretrainedModelId)
 
-  def findModelVoxelSize(aiModelOpt: Option[AiModel], dataStore: DataStore)(
-      implicit ec: ExecutionContext): Fox[VoxelSize] =
-    aiModelOpt match {
-      case Some(aiModel) if aiModel.isPretrainedModel =>
-        findPretrainedModelVoxelSize(aiModel._id).toFox ?~> s"No voxel size known for pretrained model '${aiModel.name}'"
-      case Some(aiModel) =>
-        for {
-          modelPath <- pathWithFallback(aiModel)
-          dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
-          modelVoxelSize <- dataStoreClient.getEffectiveAiModelVoxelSize(modelPath)
-        } yield modelVoxelSize
-      case None => Fox.failure("No AI model provided")
-    }
+  def findModelVoxelSize(aiModel: AiModel, dataStore: DataStore)(implicit ec: ExecutionContext): Fox[VoxelSize] =
+    if (aiModel.isPretrained)
+      findPretrainedVoxelSize(aiModel._id).toFox ?~> s"No voxel size known for pretrained model '${aiModel.name}'"
+    else
+      for {
+        modelPath <- pathWithFallback(aiModel)
+        dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
+        modelVoxelSize <- dataStoreClient.getEffectiveAiModelVoxelSize(modelPath)
+      } yield modelVoxelSize
 
 }
 
@@ -202,31 +195,41 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         Instant.fromSql(r.modified),
         r.isdeleted,
         r.issuperuseronly,
-        r.ispretrainedmodel
+        r.ispretrained
       )
       organizations <- findSharedOrganizationsFor(aiModelWithoutSharedOrgas)
     } yield aiModelWithoutSharedOrgas.copy(_sharedOrganizations = organizations)
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
-    q"""_id IN (
-          SELECT a._aiModel
-          FROM webknossos.aiModel_organizations AS a
-          INNER JOIN webknossos.organizations AS o
-            ON a._organization = o._id
-          WHERE
-              (o._id IN (
-                  SELECT _organization
-                  FROM webknossos.users_
-                  WHERE _id = $requestingUserId
-              ))
+    q"""(
+          _id IN (
+            SELECT a._aiModel
+            FROM webknossos.aiModel_organizations AS a
+            INNER JOIN webknossos.organizations AS o
+              ON a._organization = o._id
+            WHERE o._id IN (
+              SELECT _organization
+              FROM webknossos.users_
+              WHERE _id = $requestingUserId
+            )
           )
-         OR
-        (_organization IN (
+          OR _organization IN (
             SELECT _organization
             FROM webknossos.users_
             WHERE _id = $requestingUserId
-        ))
-        OR isPretrainedModel = TRUE
+          )
+          -- The pretrained models should be visible by all users of all orgas
+          OR isPretrained
+        )
+        AND (
+          NOT isSuperUserOnly
+          OR TRUE IN (
+            SELECT isSuperUser FROM webknossos.multiUsers_
+            WHERE _id IN (
+              SELECT _multiUser FROM webknossos.users_ WHERE _id = $requestingUserId
+            )
+          )
+        )
      """
 
   override protected def updateAccessQ(requestingUserId: ObjectId): SqlToken =
@@ -250,10 +253,10 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     val insertModelQuery =
       q"""INSERT INTO webknossos.aiModels (
                       _id, _organization, _dataStore, _user, _trainingJob, path, uploadToPathIsPending, name,
-                       comment, category, created, modified, isDeleted, isSuperUserOnly, isPretrainedModel
+                       comment, category, created, modified, isDeleted, isSuperUserOnly, isPretrained
                     ) VALUES (
                       ${a._id}, ${a._organization}, ${a._dataStore}, ${a._user}, ${a._trainingJob}, ${a.path}, ${a.uploadToPathIsPending}, ${a.name},
-                      ${a.comment}, ${a.category}, ${a.created}, ${a.modified}, ${a.isDeleted}, ${a.isSuperUserOnly}, ${a.isPretrainedModel}
+                      ${a.comment}, ${a.category}, ${a.created}, ${a.modified}, ${a.isDeleted}, ${a.isSuperUserOnly}, ${a.isPretrained}
                     )
            """.asUpdate
     val insertTrainingAnnotationQueries = insertTrainingAnnotationIdQueries(a._id, a._trainingAnnotations)

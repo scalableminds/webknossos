@@ -14,7 +14,7 @@ START TRANSACTION;
 DROP VIEW webknossos.aiModels_;
 
 ALTER TABLE webknossos.aiModels ADD COLUMN isSuperUserOnly BOOLEAN NOT NULL DEFAULT FALSE;
-ALTER TABLE webknossos.aiModels ADD COLUMN isPretrainedModel BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE webknossos.aiModels ADD COLUMN isPretrained BOOLEAN NOT NULL DEFAULT FALSE;
 
 CREATE VIEW webknossos.aiModels_ AS SELECT * FROM webknossos.aiModels WHERE NOT isDeleted;
 

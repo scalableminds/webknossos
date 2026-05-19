@@ -7,7 +7,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import models.aimodels.{AiModel, AiModelCategory, AiModelDAO}
+import models.aimodels.{AiModel, AiModelCategory, AiModelDAO, AiModelService}
 import models.annotation.{TracingStore, TracingStoreDAO}
 import models.dataset._
 import models.folder.{Folder, FolderDAO, FolderService}
@@ -61,6 +61,7 @@ class InitialDataService @Inject()(userService: UserService,
                                    dataStoreDAO: DataStoreDAO,
                                    folderDAO: FolderDAO,
                                    aiModelDAO: AiModelDAO,
+                                   aiModelService: AiModelService,
                                    folderService: FolderService,
                                    tracingStoreDAO: TracingStoreDAO,
                                    teamDAO: TeamDAO,
@@ -162,84 +163,85 @@ Samplecountry
   private val defaultDataStore =
     DataStore(conf.Datastore.name, conf.Http.uri, conf.Datastore.publicUri.getOrElse(conf.Http.uri), conf.Datastore.key)
   private val defaultAiModel = AiModel(
-    ObjectId("66544a56d20000af0e42ba0f"),
-    defaultOrganization._id,
-    List(),
-    defaultDataStore.name,
-    Some(defaultUser._id),
-    None,
-    List.empty,
-    None,
+    _id = ObjectId("66544a56d20000af0e42ba0f"),
+    _organization = defaultOrganization._id,
+    _sharedOrganizations = List(),
+    _dataStore = defaultDataStore.name,
+    _user = Some(defaultUser._id),
+    _trainingJob = None,
+    _trainingAnnotations = List.empty,
+    path = None,
     uploadToPathIsPending = false,
-    "sample_ai_model",
-    Some("Works if model files are manually placed at binaryData/sample_organization/66544a56d20000af0e42ba0f/"),
-    Some(AiModelCategory.em_neurons)
+    name = "sample_ai_model",
+    comment =
+      Some("Works if model files are manually placed at binaryData/sample_organization/66544a56d20000af0e42ba0f/"),
+    category = Some(AiModelCategory.em_neurons)
   )
   private val pretrainedNeuronModel = AiModel(
-    ObjectId("576500000000000000000001"),
-    defaultOrganization._id,
-    List(),
-    defaultDataStore.name,
-    None,
-    None,
-    List.empty,
-    None,
+    _id = aiModelService.pretrainedNeuronModelId,
+    _organization = defaultOrganization._id,
+    _sharedOrganizations = List(),
+    _dataStore = defaultDataStore.name,
+    _user = None,
+    _trainingJob = None,
+    _trainingAnnotations = List.empty,
+    path = None,
     uploadToPathIsPending = false,
-    "Neuron Segmentation",
-    Some(
+    name = "Neuron Segmentation",
+    comment = Some(
       "Advanced neuron segmentation and reconstruction pipeline. Optimized for dense neuronal tissue from SEM, FIB-SEM, SBEM, Multi-SEM microscopes."),
-    Some(AiModelCategory.em_neurons),
+    category = Some(AiModelCategory.em_neurons),
     isSuperUserOnly = false,
-    isPretrainedModel = true
+    isPretrained = true
   )
   private val pretrainedMitochondriaModel = AiModel(
-    ObjectId("576500000000000000000002"),
-    defaultOrganization._id,
-    List(),
-    defaultDataStore.name,
-    None,
-    None,
-    List.empty,
-    None,
+    _id = aiModelService.pretrainedMitochondriaModelId,
+    _organization = defaultOrganization._id,
+    _sharedOrganizations = List(),
+    _dataStore = defaultDataStore.name,
+    _user = None,
+    _trainingJob = None,
+    _trainingAnnotations = List.empty,
+    path = None,
     uploadToPathIsPending = false,
-    "Mitochondria Detection",
-    Some(
+    name = "Mitochondria Detection",
+    comment = Some(
       "Instance segmentation model for mitochondria detection. Optimized for EM data. Powered by [MitoNet (Conrad & Narayan 2022)](https://volume-em.github.io/empanada)."),
-    Some(AiModelCategory.em_mitochondria),
+    category = Some(AiModelCategory.em_mitochondria),
     isSuperUserOnly = false,
-    isPretrainedModel = true
+    isPretrained = true
   )
   private val pretrainedNucleiModel = AiModel(
-    ObjectId("576500000000000000000003"),
-    defaultOrganization._id,
-    List(),
-    defaultDataStore.name,
-    None,
-    None,
-    List.empty,
-    None,
+    _id = aiModelService.pretrainedNucleiModelId,
+    _organization = defaultOrganization._id,
+    _sharedOrganizations = List(),
+    _dataStore = defaultDataStore.name,
+    _user = None,
+    _trainingJob = None,
+    _trainingAnnotations = List.empty,
+    path = None,
     uploadToPathIsPending = false,
-    "Nuclei Detection",
-    Some("Instance segmentation model for nuclei detection. Optimized for EM data."),
-    Some(AiModelCategory.em_nuclei),
+    name = "Nuclei Detection",
+    comment = Some("Instance segmentation model for nuclei detection. Optimized for EM data."),
+    category = Some(AiModelCategory.em_nuclei),
     isSuperUserOnly = true,
-    isPretrainedModel = true
+    isPretrained = true
   )
   private val pretrainedSomaModel = AiModel(
-    ObjectId("576500000000000000000004"),
-    defaultOrganization._id,
-    List(),
-    defaultDataStore.name,
-    None,
-    None,
-    List.empty,
-    None,
+    _id = aiModelService.pretrainedSomataModelId,
+    _organization = defaultOrganization._id,
+    _sharedOrganizations = List(),
+    _dataStore = defaultDataStore.name,
+    _user = None,
+    _trainingJob = None,
+    _trainingAnnotations = List.empty,
+    path = None,
     uploadToPathIsPending = false,
-    "Soma Detection",
-    Some("Instance segmentation model for soma detection. Optimized for EM data."),
-    Some(AiModelCategory.em_somata),
+    name = "Soma Detection",
+    comment = Some("Instance segmentation model for soma detection. Optimized for EM data."),
+    category = Some(AiModelCategory.em_somata),
     isSuperUserOnly = true,
-    isPretrainedModel = true
+    isPretrained = true
   )
   private val defaultDataSource = UsableDataSource(
     id = DataSourceId("l4_sample_remote", defaultOrganization._id),
@@ -404,11 +406,12 @@ Samplecountry
       _ <- updateLocalTracingStorePublicUri()
       _ <- insertLocalDataStoreIfEnabled()
       _ <- insertLocalTracingStoreIfEnabled()
+      _ <- insertPretrainedAiModels()
+      // All insert calls below this assertion are only executed in the dev setup (where initialDataEnabled is true)!
       _ <- assertInitialDataEnabled
       _ <- organizationService.assertNoOrganizationsPresent
       _ <- insertRootFolder()
       _ <- insertOrganization()
-      _ <- insertPretrainedAiModels()
       _ <- createOrganizationDirectory()
       _ <- insertTeams()
       _ <- insertDefaultUser(defaultUserEmail, defaultMultiUser, defaultUser, isTeamManager = true)

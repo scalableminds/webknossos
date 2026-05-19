@@ -59,8 +59,8 @@ export const AiModelSelector: React.FC = () => {
     "Could not load model list.",
   );
 
-  const pretrainedModels = useMemo(() => allModels.filter((m) => m.isPretrainedModel), [allModels]);
-  const customModels = useMemo(() => allModels.filter((m) => !m.isPretrainedModel), [allModels]);
+  const pretrainedModels = useMemo(() => allModels.filter((m) => m.isPretrained), [allModels]);
+  const customModels = useMemo(() => allModels.filter((m) => !m.isPretrained), [allModels]);
 
   const onSelectModel = (model: AiModel) => {
     if (!model.category) return;

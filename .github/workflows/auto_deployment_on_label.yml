@@ -4,8 +4,22 @@ on:
   pull_request:
     types:
       - labeled
+      - closed
 
 jobs:
+  cleanup-deployment-on-close:
+    runs-on: ubuntu-22.04
+    if: ${{ github.event.action == 'closed' }}
+    permissions:
+      deployments: write
+    steps:
+      - name: Deactivate deployment environment
+        uses: bobheadxi/deployments@v1
+        with:
+          step: deactivate-env
+          token: ${{ secrets.GITHUB_TOKEN }}
+          env: ${{ github.head_ref }}
+
   trigger-autodeployment-on-label:
     runs-on: ubuntu-22.04
     if: ${{ github.event.label.name == 'autodeploy' }}

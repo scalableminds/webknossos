@@ -4,6 +4,7 @@ import { useCallback, useMemo } from "react";
 import { useDispatch } from "react-redux";
 import { getAntdTheme, getThemeFromUser } from "theme";
 import Constants from "viewer/constants";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import {
   setDownloadModalVisibilityAction,
   setDuplicateAnnotationModalVisibilityAction,

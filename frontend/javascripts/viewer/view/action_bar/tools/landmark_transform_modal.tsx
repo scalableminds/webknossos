@@ -24,7 +24,6 @@ import { setNodePositionAction } from "viewer/model/actions/skeletontracing_acti
 import type { Tree } from "viewer/model/types/tree_types";
 import { createGroupToTreesMap } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 
-
 function nestedToThreeMatrix(t: AffineTransformation): Matrix4 {
   const m = t.matrix;
   return new Matrix4().set(
@@ -143,10 +142,22 @@ export function applyAffineOnTopOfTransforms(
   // Three.js Matrix4.elements is column-major; convert back to row-major flat.
   const e = landmarkMatrix.elements;
   const combinedFlat: Matrix4x4 = [
-    e[0], e[4], e[8],  e[12],
-    e[1], e[5], e[9],  e[13],
-    e[2], e[6], e[10], e[14],
-    e[3], e[7], e[11], e[15],
+    e[0],
+    e[4],
+    e[8],
+    e[12],
+    e[1],
+    e[5],
+    e[9],
+    e[13],
+    e[2],
+    e[6],
+    e[10],
+    e[14],
+    e[3],
+    e[7],
+    e[11],
+    e[15],
   ];
 
   return decomposeAffineToSRT(combinedFlat, datasetBbox);
@@ -234,7 +245,11 @@ export function LandmarkTransformModal({
       const currentTransforms =
         dataset.dataSource.dataLayers.find((l) => l.name === layerName)
           ?.coordinateTransformations ?? [];
-      const newTransforms = applyAffineOnTopOfTransforms(currentTransforms, affineFlat, datasetBbox);
+      const newTransforms = applyAffineOnTopOfTransforms(
+        currentTransforms,
+        affineFlat,
+        datasetBbox,
+      );
       dispatch(setLayerTransformsAction(layerName, newTransforms));
 
       // Snapshot original positions before moving nodes so they can be restored on reset

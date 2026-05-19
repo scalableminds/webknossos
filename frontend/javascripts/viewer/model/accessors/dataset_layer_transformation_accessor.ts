@@ -552,13 +552,13 @@ export function isLiveTransformCompatible(
 
 // Row-major scale matrix: diagonal [sx, sy, sz, 1]
 export function makeScaleMatrix(sx: number, sy: number, sz: number): AffineTransformation {
-  const m = new Matrix4().makeScale(sx, sy, sz).transpose();
+  const m = new Matrix4().makeScale(sx, sy, sz).transpose(); // column-major to row-major
   return { type: "affine", matrix: flatToNestedMatrix(m.toArray()) };
 }
 
 // Row-major translation matrix: last column = [tx, ty, tz]
 export function makeTranslationMatrix(tx: number, ty: number, tz: number): AffineTransformation {
-  const m = new Matrix4().makeTranslation(tx, ty, tz).transpose();
+  const m = new Matrix4().makeTranslation(tx, ty, tz).transpose(); // column-major to row-major
   return { type: "affine", matrix: flatToNestedMatrix(m.toArray()) };
 }
 

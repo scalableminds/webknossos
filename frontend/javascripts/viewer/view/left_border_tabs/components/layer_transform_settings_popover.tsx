@@ -1,8 +1,8 @@
-import { ReloadOutlined } from "@ant-design/icons";
-import Icon from "@ant-design/icons";
+import Icon, { ReloadOutlined } from "@ant-design/icons";
 import SkeletonIcon from "@images/icons/icon-skeleton.svg?react";
 import { getDataset, updateDatasetPartial } from "admin/rest_api";
-import { Button, InputNumber, Slider, Tooltip, Typography } from "antd";
+import { Button, Divider, InputNumber, Slider, Tooltip, Typography } from "antd";
+import { discardLandmarkSnapshot, getLandmarkSnapshot } from "libs/landmark_position_store";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -24,10 +24,6 @@ import {
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
 import { setNodePositionAction } from "viewer/model/actions/skeletontracing_actions";
-import {
-  discardLandmarkSnapshot,
-  getLandmarkSnapshot,
-} from "libs/landmark_position_store";
 import { LandmarkTransformModal } from "viewer/view/action_bar/tools/landmark_transform_modal";
 
 const { Text, Title } = Typography;
@@ -125,6 +121,15 @@ export function LayerTransformSettingsContent({
   const [storedSRT, setStoredSRT] = useState<SRTValues>(DEFAULT_SRT);
   const [isFetchingStored, setIsFetchingStored] = useState(false);
   const dataset = useWkSelector((state) => state.dataset);
+  const datasetBbox = useMemo(() => getDatasetBoundingBox(dataset), [dataset]);
+  const translationExtents = useMemo<[number, number, number]>(
+    () => [
+      datasetBbox.max[0] - datasetBbox.min[0],
+      datasetBbox.max[1] - datasetBbox.min[1],
+      datasetBbox.max[2] - datasetBbox.min[2],
+    ],
+    [datasetBbox],
+  );
   const transforms = useWkSelector((state) => {
     const dataLayer = state.dataset.dataSource.dataLayers.find((l) => l.name === layer.name);
     return dataLayer?.coordinateTransformations ?? null;
@@ -158,7 +163,6 @@ export function LayerTransformSettingsContent({
 
   const handleChange = useCallback(
     (newSRT: SRTValues) => {
-      const datasetBbox = getDatasetBoundingBox(dataset);
       const newTransforms = buildLiveTransforms(
         datasetBbox,
         newSRT.scale,
@@ -167,7 +171,7 @@ export function LayerTransformSettingsContent({
       );
       dispatch(setLayerTransformsAction(layer.name, newTransforms));
     },
-    [dispatch, dataset, layer.name],
+    [dispatch, layer.name, datasetBbox],
   );
 
   const handleSaveForAllUsers = useCallback(async () => {
@@ -185,7 +189,8 @@ export function LayerTransformSettingsContent({
       };
       await updateDatasetPartial(dataset.id, { dataSource });
       Toast.success("Layer transforms saved for all users.");
-    } catch {
+    } catch (e) {
+      console.error("Failed to save layer transforms:", e);
       Toast.error("Failed to save layer transforms. Please try again.");
     } finally {
       setIsSaving(false);
@@ -228,6 +233,8 @@ export function LayerTransformSettingsContent({
       <Title level={5} style={{ marginTop: 0, marginBottom: 8 }}>
         Scaling
       </Title>
+
+      {/* Negative scale mirrors the layer along that axis. */}
       {(["X", "Y", "Z"] as const).map((axis, i) => (
         <AxisSliderRow
           key={axis}
@@ -251,8 +258,8 @@ export function LayerTransformSettingsContent({
           value={rotation[i]}
           storedValue={storedSRT.rotation[i]}
           min={0}
-          max={360}
-          step={1}
+          max={359}
+          step={0.1}
           onChange={(v) => updateRotation(i as 0 | 1 | 2, v)}
           resetDisabled={isFetchingStored}
         />
@@ -266,14 +273,21 @@ export function LayerTransformSettingsContent({
           label={axis}
           value={translation[i]}
           storedValue={storedSRT.translation[i]}
-          min={-1000}
-          max={1000}
+          min={-translationExtents[i]}
+          max={translationExtents[i]}
           step={1}
           onChange={(v) => updateTranslation(i as 0 | 1 | 2, v)}
           resetDisabled={isFetchingStored}
         />
       ))}
-      <div style={{ marginTop: 16, borderTop: "1px solid #303030", paddingTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+      <Divider />
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+        }}
+      >
         <Button
           size="small"
           icon={<ReloadOutlined />}

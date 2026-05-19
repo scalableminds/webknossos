@@ -31,7 +31,7 @@ jobs:
         run: |
           run_id=$(gh run list \
             --repo "${{ github.repository }}" \
-            --branch "${{ github.head_ref }}" \
+            --branch "$HEAD_REF" \
             --workflow "CI Pipeline" \
             --json databaseId,status,event \
             --jq 'first(.[] | select((.status == "in_progress" or .status == "queued") and .event == "push") | .databaseId) // empty')
@@ -39,10 +39,11 @@ jobs:
             echo "CI run $run_id is in progress and will trigger deployment on completion — skipping."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           fi
-          SANITIZED=$(echo "${{ github.head_ref }}" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]' | sed 's/^[0-9]*//')
+          SANITIZED=$(echo "$HEAD_REF" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]' | sed 's/^[0-9]*//')
           echo "env_url=https://${SANITIZED}.webknossos.xyz" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_REF: ${{ github.head_ref }}
       - name: Start deployment
         if: steps.check_build.outputs.skip != 'true'
         uses: bobheadxi/deployments@v1.5.0
@@ -57,9 +58,10 @@ jobs:
           curl -X POST https://kubernetix.scm.io/hooks/onBranchImagePushed \
             -H "Content-Type: application/json" \
             -H "X-Auth-Token: $AUTO_DEV_DEPLOY_TOKEN" \
-            -d "{\"branch\": \"${{ github.head_ref }}\"}"
+            -d "{\"branch\": \"$HEAD_REF\"}"
         env:
           AUTO_DEV_DEPLOY_TOKEN: ${{ secrets.AUTO_DEV_DEPLOY_TOKEN }}
+          HEAD_REF: ${{ github.head_ref }}
       - name: Finish deployment
         if: always() && steps.gh_deployment.outputs.deployment_id != ''
         uses: bobheadxi/deployments@v1.5.0

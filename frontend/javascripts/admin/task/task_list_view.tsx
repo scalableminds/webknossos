@@ -118,7 +118,7 @@ function TaskListView({ initialFieldValues }: Props) {
     const snapshot = tasks;
     deleteWithUndo({
       item: task,
-      toastMessage: `Task "${task.id}" was deleted.`,
+      toastMessage: `Task “${task.id}” was deleted.`,
       deleteApi: deleteTaskAPI,
       onDelete: () => setTasks((current) => current.filter((t) => t.id !== task.id)),
       onRestore: () => setTasks(snapshot),

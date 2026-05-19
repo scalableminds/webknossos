@@ -3,8 +3,8 @@ import { SettingsCard } from "admin/account/helpers/settings_card";
 import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { deleteDatasetOnDisk } from "admin/rest_api";
 import { Button, Col, Row } from "antd";
-import Toast from "libs/toast";
 import { UNDO_SECONDS } from "libs/delete_with_undo";
+import Toast from "libs/toast";
 import { UndoButton } from "libs/undo_button";
 import { useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
@@ -46,7 +46,7 @@ const DatasetSettingsDeleteTab = () => {
       queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
     };
 
-    Toast.info(`Dataset "${dataset.name}" was deleted.`, {
+    Toast.info(`Dataset “${dataset.name}” was deleted.`, {
       key: toastKey,
       sticky: true,
       customFooter: <UndoButton onUndo={undo} seconds={UNDO_SECONDS} />,

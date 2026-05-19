@@ -28,10 +28,10 @@ import {
 import { App, Button, Input, Spin, Table, Tooltip } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
+import { deleteWithUndo } from "libs/delete_with_undo";
 import { handleGenericError } from "libs/error_handling";
 import Persistence from "libs/persistence";
 import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
-import { deleteWithUndo } from "libs/delete_with_undo";
 import Toast from "libs/toast";
 import {
   compareBy,
@@ -119,7 +119,7 @@ function ProjectListView() {
     ]);
     deleteWithUndo({
       item: project,
-      toastMessage: `Project "${project.name}" was deleted.`,
+      toastMessage: `Project “${project.name}” was deleted.`,
       deleteApi: deleteProjectAPI,
       onDelete: () =>
         queryClient.setQueryData(

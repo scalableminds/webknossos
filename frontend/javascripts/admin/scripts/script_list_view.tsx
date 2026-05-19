@@ -53,7 +53,7 @@ function ScriptListView() {
     const snapshot = scripts;
     deleteWithUndo({
       item: script,
-      toastMessage: `Script "${script.name}" was deleted.`,
+      toastMessage: `Script “${script.name}” was deleted.`,
       deleteApi: deleteScriptAPI,
       onDelete: () => setScripts((current) => current.filter((s) => s.id !== script.id)),
       onRestore: () => setScripts(snapshot),

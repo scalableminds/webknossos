@@ -10,14 +10,14 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { getOrganization } from "admin/api/organization";
 import { deleteDatasetOnDisk } from "admin/rest_api";
 import { Button, Result, Space, Spin, Tag, Tooltip } from "antd";
-import { UNDO_SECONDS } from "libs/delete_with_undo";
-import { UndoButton } from "libs/undo_button";
 import FormattedId from "components/formatted_id";
 import features from "features";
+import { UNDO_SECONDS } from "libs/delete_with_undo";
 import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
+import { UndoButton } from "libs/undo_button";
 import { pluralize } from "libs/utils";
 import keyBy from "lodash-es/keyBy";
 import uniq from "lodash-es/uniq";
@@ -316,7 +316,11 @@ function DatasetsDetails({
           with drag and drop.
         </div>
         {deletableDatasets.length > 0 && features().allowDeleteDatasets && (
-          <Button onClick={handleDeleteClick} disabled={isDeletionPending} icon={<DeleteOutlined />}>
+          <Button
+            onClick={handleDeleteClick}
+            disabled={isDeletionPending}
+            icon={<DeleteOutlined />}
+          >
             Delete {deletableDatasetString}
           </Button>
         )}

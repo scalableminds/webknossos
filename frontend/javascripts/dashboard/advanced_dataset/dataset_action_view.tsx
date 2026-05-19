@@ -11,10 +11,10 @@ import {
 import { useQueryClient } from "@tanstack/react-query";
 import { clearCache, deleteDatasetOnDisk, getDataset } from "admin/rest_api";
 import { type MenuProps, Modal } from "antd";
-import { UNDO_SECONDS } from "libs/delete_with_undo";
-import { UndoButton } from "libs/undo_button";
 import CreateExplorativeModal from "dashboard/advanced_dataset/create_explorative_modal";
+import { UNDO_SECONDS } from "libs/delete_with_undo";
 import Toast from "libs/toast";
+import { UndoButton } from "libs/undo_button";
 import window from "libs/window";
 import messages from "messages";
 import type * as React from "react";
@@ -164,7 +164,7 @@ function DatasetActionView(props: Props) {
       queryClient.invalidateQueries({ queryKey: ["dataset", "search"] });
     };
 
-    Toast.info(`Dataset "${dataset.name}" was deleted.`, {
+    Toast.info(`Dataset “${dataset.name}” was deleted.`, {
       key: toastKey,
       sticky: true,
       customFooter: <UndoButton onUndo={undo} seconds={UNDO_SECONDS} />,

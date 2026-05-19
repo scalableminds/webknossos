@@ -156,12 +156,11 @@ function TeamListView() {
     const snapshot = queryClient.getQueryData<APITeam[]>(["editableTeams"]);
     deleteWithUndo({
       item: team,
-      toastMessage: `Team "${team.name}" was deleted.`,
+      toastMessage: `Team “${team.name}” was deleted.`,
       deleteApi: deleteTeamAPI,
       onDelete: () =>
-        queryClient.setQueryData(
-          ["editableTeams"],
-          (current: APITeam[] | undefined) => (current ?? []).filter((t) => t.id !== team.id),
+        queryClient.setQueryData(["editableTeams"], (current: APITeam[] | undefined) =>
+          (current ?? []).filter((t) => t.id !== team.id),
         ),
       onRestore: () => queryClient.setQueryData(["editableTeams"], snapshot),
     });

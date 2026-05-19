@@ -11,9 +11,5 @@ export function UndoButton({ onUndo, seconds }: { onUndo: () => void; seconds: n
     return () => clearInterval(interval);
   }, []);
 
-  return (
-    <Button onClick={onUndo}>
-      Undo ({remaining})
-    </Button>
-  );
+  return <Button onClick={onUndo}>Undo ({remaining})</Button>;
 }

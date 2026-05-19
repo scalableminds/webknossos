@@ -25,7 +25,6 @@ import Persistence from "libs/persistence";
 import { useQueryWithErrorHandling } from "libs/react_hooks";
 import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import partial from "lodash-es/partial";
-import messages from "messages";
 import type React from "react";
 import { Fragment, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
@@ -68,12 +67,11 @@ function TaskTypeListView() {
     const snapshot = queryClient.getQueryData<APITaskType[]>(["taskTypes"]);
     deleteWithUndo({
       item: taskType,
-      toastMessage: `Task type "${taskType.summary}" was deleted.`,
+      toastMessage: `Task type “${taskType.summary}” was deleted.`,
       deleteApi: deleteTaskTypeAPI,
       onDelete: () =>
-        queryClient.setQueryData(
-          ["taskTypes"],
-          (current: APITaskType[] | undefined) => (current ?? []).filter((t) => t.id !== taskType.id),
+        queryClient.setQueryData(["taskTypes"], (current: APITaskType[] | undefined) =>
+          (current ?? []).filter((t) => t.id !== taskType.id),
         ),
       onRestore: () => queryClient.setQueryData(["taskTypes"], snapshot),
     });

@@ -8,6 +8,7 @@ import { useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import { Euler, Matrix4, Quaternion, Vector3 } from "three";
 import type { AffineTransformation, CoordinateTransformation } from "types/api_types";
+import type { Vector3 as WkVector3 } from "viewer/constants";
 import { getDatasetBoundingBox } from "viewer/model/accessors/dataset_accessor";
 import {
   buildLiveTransforms,
@@ -26,20 +27,6 @@ import ButtonComponent from "viewer/view/components/button_component";
 import { createGroupToTreesMap } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 import { NARROW_BUTTON_STYLE } from "./tool_helpers";
 
-export function LandmarkTransformButton() {
-  const [isOpen, setIsOpen] = useState(false);
-  return (
-    <>
-      <ButtonComponent
-        style={NARROW_BUTTON_STYLE}
-        title="Configure landmark-based layer transform"
-        icon={<AimOutlined />}
-        onClick={() => setIsOpen(true)}
-      />
-      <LandmarkTransformModal open={isOpen} onClose={() => setIsOpen(false)} />
-    </>
-  );
-}
 
 function nestedToThreeMatrix(t: AffineTransformation): Matrix4 {
   const m = t.matrix;
@@ -127,19 +114,47 @@ function affineToLayerTransforms(
   return [{ type: "affine", matrix: flatToNestedMatrix(affineFlat) }];
 }
 
+// If all source points share the same coordinate along one axis the 3-D affine
+// system is degenerate. Fix it by duplicating every pair with a unit offset along
+// that axis — the duplicated target is shifted by the same amount, so the solver
+// learns "identity" for that direction.
+function augmentIfCoplanar(
+  src: WkVector3[],
+  tgt: WkVector3[],
+): { src: WkVector3[]; tgt: WkVector3[] } {
+  for (const axis of [0, 1, 2] as const) {
+    const vals = src.map((p) => p[axis]);
+    if (Math.max(...vals) - Math.min(...vals) < 1e-6) {
+      const shift = (p: WkVector3): WkVector3 => {
+        const q = [...p] as WkVector3;
+        q[axis] += 1;
+        return q;
+      };
+      return { src: [...src, ...src.map(shift)], tgt: [...tgt, ...tgt.map(shift)] };
+    }
+  }
+  return { src, tgt };
+}
+
 function getSortedTrees(groupId: number, groupToTrees: Record<number, Tree[]>): Tree[] {
   const trees = groupToTrees[groupId] ?? [];
   return [...trees].sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function LandmarkTransformModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+export function LandmarkTransformModal({
+  open,
+  onClose,
+  layerName,
+}: {
+  open: boolean;
+  onClose: () => void;
+  layerName: string;
+}) {
   const dispatch = useDispatch();
   const dataset = useWkSelector((state) => state.dataset);
-  const layers = useWkSelector((state) => state.dataset.dataSource.dataLayers);
   const skeletonTracing = useWkSelector((state) => getSkeletonTracing(state.annotation));
   const treeGroups = skeletonTracing ? Array.from(getFlatTreeGroups(skeletonTracing)) : [];
 
-  const [selectedLayer, setSelectedLayer] = useState<string | null>(null);
   const [sourceGroup, setSourceGroup] = useState<number | null>(null);
   const [targetGroup, setTargetGroup] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -150,7 +165,7 @@ function LandmarkTransformModal({ open, onClose }: { open: boolean; onClose: () 
   );
 
   const validationError = useMemo(() => {
-    if (!selectedLayer || sourceGroup == null || targetGroup == null) return null;
+    if (sourceGroup == null || targetGroup == null) return null;
     if (sourceGroup === targetGroup) return "Source and target groups must be different.";
     const srcTrees = getSortedTrees(sourceGroup, groupToTrees);
     const tgtTrees = getSortedTrees(targetGroup, groupToTrees);
@@ -162,11 +177,10 @@ function LandmarkTransformModal({ open, onClose }: { open: boolean; onClose: () 
     if (tgtTrees.some((t) => t.nodes.size() !== 1))
       return "Each target tree must contain exactly one node.";
     return null;
-  }, [selectedLayer, sourceGroup, targetGroup, groupToTrees]);
+  }, [sourceGroup, targetGroup, groupToTrees]);
 
   const handleApply = () => {
-    if (selectedLayer == null || sourceGroup == null || targetGroup == null || validationError)
-      return;
+    if (sourceGroup == null || targetGroup == null || validationError) return;
 
     const srcTrees = getSortedTrees(sourceGroup, groupToTrees);
     const tgtTrees = getSortedTrees(targetGroup, groupToTrees);
@@ -176,10 +190,11 @@ function LandmarkTransformModal({ open, onClose }: { open: boolean; onClose: () 
 
     setIsLoading(true);
     try {
-      const affineFlat = estimateAffineMatrix4x4(sourcePoints, targetPoints);
+      const { src: augSrc, tgt: augTgt } = augmentIfCoplanar(sourcePoints, targetPoints);
+      const affineFlat = estimateAffineMatrix4x4(augSrc, augTgt);
       const datasetBbox = getDatasetBoundingBox(dataset);
       const newTransforms = affineToLayerTransforms(affineFlat, datasetBbox);
-      dispatch(setLayerTransformsAction(selectedLayer, newTransforms));
+      dispatch(setLayerTransformsAction(layerName, newTransforms));
 
       // Move source nodes to their transformed positions so they track the layer
       const A = new Matrix4().set(
@@ -214,12 +229,11 @@ function LandmarkTransformModal({ open, onClose }: { open: boolean; onClose: () 
     }
   };
 
-  const layerOptions = layers.map((l) => ({ label: l.name, value: l.name }));
   const groupOptions = treeGroups.map((g) => ({ label: g.name, value: g.groupId }));
 
   return (
     <Modal
-      title="Landmark-Based Transform"
+      title={`Landmark-Based Transform – ${layerName}`}
       open={open}
       onCancel={onClose}
       onOk={handleApply}
@@ -227,16 +241,6 @@ function LandmarkTransformModal({ open, onClose }: { open: boolean; onClose: () 
       okButtonProps={{ disabled: !!validationError || isLoading, loading: isLoading }}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: "8px 0" }}>
-        <div>
-          <label style={{ display: "block", marginBottom: 4 }}>Layer</label>
-          <Select
-            style={{ width: "100%" }}
-            placeholder="Select a layer"
-            options={layerOptions}
-            value={selectedLayer}
-            onChange={setSelectedLayer}
-          />
-        </div>
         <div>
           <label style={{ display: "block", marginBottom: 4 }}>
             Source Landmarks (skeleton group)

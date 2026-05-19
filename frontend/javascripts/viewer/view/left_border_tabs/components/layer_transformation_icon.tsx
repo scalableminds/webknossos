@@ -121,7 +121,7 @@ export default function LayerTransformationIcon({
         trigger="click"
         placement="left"
         title="Layer Transforms"
-        content={<LayerTransformSettingsContent layer={layer} />}
+        content={<LayerTransformSettingsContent layer={layer} isVisible={popoverOpen} />}
       >
         <ButtonComponent
           variant="text"

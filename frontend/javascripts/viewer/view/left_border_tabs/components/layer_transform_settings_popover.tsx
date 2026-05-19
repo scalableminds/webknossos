@@ -1,9 +1,9 @@
-import { ReloadOutlined } from "@ant-design/icons";
+import { AimOutlined, ReloadOutlined } from "@ant-design/icons";
 import { getDataset, updateDatasetPartial } from "admin/rest_api";
 import { Button, InputNumber, Slider, Tooltip, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import type {
   AffineTransformation,
@@ -21,6 +21,7 @@ import {
   LIVE_TRANSFORM_LENGTH,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
+import { LandmarkTransformModal } from "viewer/view/action_bar/tools/landmark_transform_modal";
 
 const { Text, Title } = Typography;
 
@@ -52,19 +53,21 @@ function extractSRTFromTransforms(transforms: CoordinateTransformation[]): SRTVa
 function AxisSliderRow({
   label,
   value,
-  defaultValue,
+  storedValue,
   min,
   max,
   step,
   onChange,
+  resetDisabled,
 }: {
   label: string;
   value: number;
-  defaultValue: number;
+  storedValue: number;
   min: number;
   max: number;
   step: number;
   onChange: (v: number) => void;
+  resetDisabled: boolean;
 }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
@@ -88,12 +91,13 @@ function AxisSliderRow({
         size="small"
         style={{ width: 62 }}
       />
-      <Tooltip title="Reset to default">
+      <Tooltip title="Reset to stored value">
         <Button
           type="text"
           size="small"
           icon={<ReloadOutlined />}
-          onClick={() => onChange(defaultValue)}
+          onClick={() => onChange(storedValue)}
+          disabled={resetDisabled}
           style={{ flexShrink: 0, padding: "0 4px" }}
         />
       </Tooltip>
@@ -103,11 +107,16 @@ function AxisSliderRow({
 
 export function LayerTransformSettingsContent({
   layer,
+  isVisible,
 }: {
   layer: APIDataLayer | APISkeletonLayer;
+  isVisible: boolean;
 }) {
   const dispatch = useDispatch();
   const [isSaving, setIsSaving] = useState(false);
+  const [isLandmarkModalOpen, setIsLandmarkModalOpen] = useState(false);
+  const [storedSRT, setStoredSRT] = useState<SRTValues>(DEFAULT_SRT);
+  const [isFetchingStored, setIsFetchingStored] = useState(false);
   const dataset = useWkSelector((state) => state.dataset);
   const transforms = useWkSelector((state) => {
     const dataLayer = state.dataset.dataSource.dataLayers.find((l) => l.name === layer.name);
@@ -115,6 +124,25 @@ export function LayerTransformSettingsContent({
   });
 
   const isCompatible = isLiveTransformCompatible(transforms);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    setIsFetchingStored(true);
+    getDataset(dataset.id)
+      .then((backendDataset) => {
+        const backendLayer = backendDataset.dataSource.dataLayers.find(
+          (l) => l.name === layer.name,
+        );
+        const stored = backendLayer?.coordinateTransformations ?? null;
+        setStoredSRT(
+          stored && isLiveTransformCompatible(stored)
+            ? extractSRTFromTransforms(stored)
+            : DEFAULT_SRT,
+        );
+      })
+      .catch(() => setStoredSRT(DEFAULT_SRT))
+      .finally(() => setIsFetchingStored(false));
+  }, [isVisible, dataset.id, layer.name]);
 
   const srt = useMemo((): SRTValues => {
     if (!transforms || transforms.length === 0) return DEFAULT_SRT;
@@ -198,11 +226,12 @@ export function LayerTransformSettingsContent({
           key={axis}
           label={axis}
           value={scale[i]}
-          defaultValue={1}
+          storedValue={storedSRT.scale[i]}
           min={-10}
           max={10}
           step={0.1}
           onChange={(v) => updateScale(i as 0 | 1 | 2, v)}
+          resetDisabled={isFetchingStored}
         />
       ))}
       <Title level={5} style={{ marginTop: 12, marginBottom: 8 }}>
@@ -213,11 +242,12 @@ export function LayerTransformSettingsContent({
           key={axis}
           label={axis}
           value={rotation[i]}
-          defaultValue={0}
+          storedValue={storedSRT.rotation[i]}
           min={0}
           max={360}
           step={1}
           onChange={(v) => updateRotation(i as 0 | 1 | 2, v)}
+          resetDisabled={isFetchingStored}
         />
       ))}
       <Title level={5} style={{ marginTop: 12, marginBottom: 8 }}>
@@ -228,14 +258,25 @@ export function LayerTransformSettingsContent({
           key={axis}
           label={axis}
           value={translation[i]}
-          defaultValue={0}
+          storedValue={storedSRT.translation[i]}
           min={-1000}
           max={1000}
           step={1}
           onChange={(v) => updateTranslation(i as 0 | 1 | 2, v)}
+          resetDisabled={isFetchingStored}
         />
       ))}
-      <div style={{ marginTop: 16, borderTop: "1px solid #303030", paddingTop: 12 }}>
+      <div style={{ marginTop: 16, borderTop: "1px solid #303030", paddingTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+        <Button
+          size="small"
+          icon={<ReloadOutlined />}
+          loading={isFetchingStored}
+          disabled={isFetchingStored}
+          onClick={() => handleChange(storedSRT)}
+          block
+        >
+          Reset to Stored Values
+        </Button>
         <Button
           type="primary"
           size="small"
@@ -245,6 +286,23 @@ export function LayerTransformSettingsContent({
         >
           Store as Default
         </Button>
+        {"category" in layer && layer.category === "color" && (
+          <>
+            <Button
+              size="small"
+              icon={<AimOutlined />}
+              onClick={() => setIsLandmarkModalOpen(true)}
+              block
+            >
+              Landmark-Based Transform…
+            </Button>
+            <LandmarkTransformModal
+              open={isLandmarkModalOpen}
+              onClose={() => setIsLandmarkModalOpen(false)}
+              layerName={layer.name}
+            />
+          </>
+        )}
       </div>
     </div>
   );

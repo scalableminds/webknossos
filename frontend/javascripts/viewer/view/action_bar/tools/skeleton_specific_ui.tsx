@@ -19,7 +19,6 @@ import {
 } from "viewer/model/actions/skeletontracing_actions";
 import { MaterializeVolumeAnnotationModal } from "viewer/view/action_bar/materialize_volume_annotation_modal";
 import ButtonComponent, { ToggleButton } from "viewer/view/components/button_component";
-import { LandmarkTransformButton } from "./landmark_transform_modal";
 import { ACTIONBAR_MARGIN_LEFT, NARROW_BUTTON_STYLE } from "./tool_helpers";
 
 export function SkeletonSpecificButtons() {
@@ -116,7 +115,6 @@ export function SkeletonSpecificButtons() {
           handleClose={() => setShowMaterializeVolumeAnnotationModal(false)}
         />
       )}
-      <LandmarkTransformButton />
     </Space.Compact>
   );
 }

@@ -8,7 +8,7 @@ export default function FormattedId({ id }: { id: string }) {
 
   return (
     <FastTooltip title={`Click to copy full ID ${id}`}>
-      <span onClick={() => copyToClipboard(id, "ID")} style={{ cursor: "pointer" }}>
+      <span onClick={() => copyToClipboard(id, "ID", true)} style={{ cursor: "pointer" }}>
         <Typography.Text type="secondary">
           <Space size="small">
             {`${_shortId}`}

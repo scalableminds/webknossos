@@ -930,6 +930,15 @@ class SceneController {
         },
         true,
       ),
+      listenToStoreProperty(
+        (state) => state.userConfiguration.mipDepthWrite,
+        (enabled) => {
+          for (const { volume } of this.mipVolumes.values()) {
+            volume.setDepthWrite(enabled);
+          }
+        },
+        true,
+      ),
     ];
   }
 }

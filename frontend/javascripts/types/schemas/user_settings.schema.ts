@@ -144,6 +144,9 @@ export const userSettings = {
     minimum: 16,
     maximum: 512,
   },
+  mipDepthWrite: {
+    type: "boolean",
+  },
   ...baseDatasetViewConfiguration,
 };
 export default {

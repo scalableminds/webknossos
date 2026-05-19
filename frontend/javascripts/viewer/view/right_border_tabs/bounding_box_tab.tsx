@@ -13,6 +13,7 @@ import {
   Popover,
   Slider,
   Space,
+  Switch,
   Table,
   type TableProps,
   Typography,
@@ -64,6 +65,7 @@ export default function BoundingBoxTab() {
   const { userBoundingBoxes } = getSomeTracing(annotation);
   const hasMipEnabled = useWkSelector((state) => Object.keys(state.mipBboxSettings).length > 0);
   const mipRaymarchingSteps = useWkSelector((state) => state.userConfiguration.mipRaymarchingSteps);
+  const mipDepthWrite = useWkSelector((state) => state.userConfiguration.mipDepthWrite);
   const [contextMenuPosition, setContextMenuPosition] = useState<[number, number] | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<number[]>([]);
   const [menu, setMenu] = useState<MenuProps | null>(null);
@@ -352,6 +354,14 @@ export default function BoundingBoxTab() {
                     onChange={(v) => dispatch(updateUserSettingAction("mipRaymarchingSteps", v))}
                   />
                   <span style={{ width: 30, textAlign: "right" }}>{mipRaymarchingSteps}</span>
+                </Flex>
+                <Flex gap="small" align="center" style={{ marginTop: 8 }}>
+                  <Switch
+                    size="small"
+                    checked={mipDepthWrite}
+                    onChange={(v) => dispatch(updateUserSettingAction("mipDepthWrite", v))}
+                  />
+                  <span>Depth-correct rendering</span>
                 </Flex>
               </div>
             }

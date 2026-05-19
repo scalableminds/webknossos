@@ -391,6 +391,7 @@ export type UserConfiguration = {
   readonly writePreference: "BRUSH" | "TRACE";
   readonly measurementPreference: "LINE_MEASUREMENT" | "AREA_MEASUREMENT";
   readonly mipRaymarchingSteps: number;
+  readonly mipDepthWrite: boolean;
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &

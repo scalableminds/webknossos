@@ -155,7 +155,7 @@ void main() {
 }
 `;
 
-const FRAGMENT_SHADER = /* glsl */ `
+const FRAGMENT_SHADER_COMMON_HEAD = /* glsl */ `
 precision highp float;
 precision highp sampler3D;
 
@@ -169,6 +169,8 @@ uniform float uLayerMaxs[MAX_LAYERS];
 uniform float uLayerIsInverted[MAX_LAYERS];
 uniform float uLayerAlphas[MAX_LAYERS];
 uniform mat4 uInvModelMatrix;
+uniform mat4 uModelViewMatrix;
+uniform mat4 uProjectionMatrix;
 uniform vec3 uVolumeSize;
 uniform int uNumSteps;
 uniform vec3 uCameraForward;
@@ -194,7 +196,12 @@ float sampleVolume(int j, vec3 uvw) {
   if (j == 2) return texture(uVolumes[2], uvw).r;
   return texture(uVolumes[3], uvw).r;
 }
+`;
 
+function buildFragmentShader(writeDepth: boolean): string {
+  return (
+    FRAGMENT_SHADER_COMMON_HEAD +
+    /* glsl */ `
 void main() {
   if (uNumLayers == 0) discard;
 
@@ -217,14 +224,38 @@ void main() {
 
   float maxVals[MAX_LAYERS];
   for (int j = 0; j < MAX_LAYERS; j++) maxVals[j] = 0.0;
-
+  ${
+    writeDepth
+      ? `
+  // Track the step with the highest combined weighted intensity for gl_FragDepth.
+  float maxCombinedVal = 0.0;
+  float bestT = tStart;
+  `
+      : ""
+  }
   for (int i = 0; i < uNumSteps; i++) {
-    vec3 pos = vLocalPos + (tStart + (float(i) + 0.5) * stepSize) * rd;
+    float stepT = tStart + (float(i) + 0.5) * stepSize;
+    vec3 pos = vLocalPos + stepT * rd;
     // map [-0.5, 0.5] -> [0.0, 1.0] for texture lookup
     vec3 uvw = pos + 0.5;
+    ${
+      writeDepth
+        ? `
+    float combined = 0.0;
+    `
+        : ""
+    }
     for (int j = 0; j < uNumLayers; j++) {
       float val = sampleVolume(j, uvw);
       maxVals[j] = max(maxVals[j], val);
+      ${writeDepth ? "combined += val * uLayerAlphas[j];" : ""}
+    }
+    ${
+      writeDepth
+        ? `
+    if (combined > maxCombinedVal) { maxCombinedVal = combined; bestT = stepT; }
+    `
+        : ""
     }
   }
 
@@ -244,8 +275,22 @@ void main() {
 
   if (alpha < 0.001) discard;
   fragColor = vec4(color, alpha);
+  ${
+    writeDepth
+      ? `
+  // Write the depth of the dominant voxel so meshes occlude/are occluded correctly.
+  // vLocalPos + bestT * rd is in normalized [-0.5, 0.5] space; multiply by uVolumeSize
+  // to get mesh-local coordinates for the modelViewMatrix transform.
+  vec3 localBest = (vLocalPos + bestT * rd) * uVolumeSize;
+  vec4 clipPos = uProjectionMatrix * uModelViewMatrix * vec4(localBest, 1.0);
+  gl_FragDepth = (clipPos.z / clipPos.w + 1.0) * 0.5;
+  `
+      : ""
+  }
 }
-`;
+`
+  );
+}
 
 type LayerState = {
   layerName: string;
@@ -266,6 +311,7 @@ export class MipVolume {
   private layers: LayerState[] = [];
   private placeholderTexture: Data3DTexture;
   private mag1Bbox: BoundingBoxMinMaxType;
+  private depthWriteEnabled = false;
 
   constructor(mag1Bbox: BoundingBoxMinMaxType) {
     this.mag1Bbox = mag1Bbox;
@@ -293,12 +339,14 @@ export class MipVolume {
         uLayerIsInverted: { value: zeros.slice() },
         uLayerAlphas: { value: ones.slice() },
         uInvModelMatrix: { value: new Matrix4() },
+        uModelViewMatrix: { value: new Matrix4() },
+        uProjectionMatrix: { value: new Matrix4() },
         uVolumeSize: { value: volumeSize },
         uNumSteps: { value: 128 },
         uCameraForward: { value: new ThreeVector3(0, 0, -1) },
       },
       vertexShader: VERTEX_SHADER,
-      fragmentShader: FRAGMENT_SHADER,
+      fragmentShader: buildFragmentShader(false),
       glslVersion: GLSL3,
       side: BackSide,
       transparent: true,
@@ -312,6 +360,13 @@ export class MipVolume {
     this.mesh.onBeforeRender = (_renderer, _scene, camera) => {
       this.material.uniforms.uInvModelMatrix.value.copy(this.mesh.matrixWorld).invert();
       camera.getWorldDirection(this.material.uniforms.uCameraForward.value);
+      this.material.uniforms.uModelViewMatrix.value.multiplyMatrices(
+        camera.matrixWorldInverse,
+        this.mesh.matrixWorld,
+      );
+      (this.material.uniforms.uProjectionMatrix.value as Matrix4).copy(
+        (camera as { projectionMatrix: Matrix4 }).projectionMatrix,
+      );
     };
   }
 
@@ -363,6 +418,14 @@ export class MipVolume {
 
   setNumSteps(n: number): void {
     this.material.uniforms.uNumSteps.value = n;
+  }
+
+  setDepthWrite(enabled: boolean): void {
+    if (enabled === this.depthWriteEnabled) return;
+    this.depthWriteEnabled = enabled;
+    // Swap to the appropriate shader variant; needsUpdate triggers recompilation.
+    this.material.fragmentShader = buildFragmentShader(enabled);
+    this.material.needsUpdate = true;
   }
 
   hasLayer(layerName: string): boolean {

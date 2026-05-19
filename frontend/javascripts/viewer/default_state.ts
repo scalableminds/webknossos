@@ -103,6 +103,7 @@ const defaultState: WebknossosState = {
     writePreference: "BRUSH",
     measurementPreference: "LINE_MEASUREMENT",
     mipRaymarchingSteps: 128,
+    mipDepthWrite: false,
     timestampsForTools: {
       [AnnotationTool.MOVE.id]: 0,
       [AnnotationTool.BRUSH.id]: 0,

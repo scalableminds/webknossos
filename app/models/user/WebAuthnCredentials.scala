@@ -1,6 +1,6 @@
 package models.user
 
-import com.fasterxml.jackson.core.`type`.TypeReference
+import tools.jackson.core.`type`.TypeReference
 import com.fasterxml.jackson.annotation._
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
@@ -29,7 +29,7 @@ case class WebAuthnCredential(
     isDeleted: Boolean,
 ) extends FoxImplicits {
   def serializeAttestedCredential(objectConverter: ObjectConverter): Array[Byte] = {
-    val converter = new AttestedCredentialDataConverter(objectConverter);
+    val converter = new AttestedCredentialDataConverter(objectConverter)
     converter.convert(credentialRecord.getAttestedCredentialData)
   }
 
@@ -37,12 +37,12 @@ case class WebAuthnCredential(
     val envelope = new AttestationStatementEnvelope()
     envelope.fmt = credentialRecord.getAttestationStatement.getFormat
     envelope.attestationStatement = credentialRecord.getAttestationStatement
-    val rawJson = objectConverter.getJsonConverter.writeValueAsString(envelope)
+    val rawJson = objectConverter.getJsonMapper.writeValueAsString(envelope)
     JsonHelper.parseAs[JsObject](rawJson).toFox
   }
 
   def serializedExtensions(converter: ObjectConverter)(implicit ec: ExecutionContext): Fox[JsObject] = {
-    val rawJson = converter.getJsonConverter.writeValueAsString(credentialRecord.getAuthenticatorExtensions)
+    val rawJson = converter.getJsonMapper.writeValueAsString(credentialRecord.getAuthenticatorExtensions)
     JsonHelper.parseAs[JsObject](rawJson).toFox
   }
 }
@@ -78,7 +78,7 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
 
   protected def parse(r: WebauthncredentialsRow): Fox[WebAuthnCredential] = {
     val objectConverter = new ObjectConverter()
-    val converter = objectConverter.getJsonConverter
+    val converter = objectConverter.getJsonMapper
     val attestedCredentialDataConverter = new AttestedCredentialDataConverter(objectConverter)
     for {
       attestedCredential <- tryo(attestedCredentialDataConverter.convert(r.serializedattestedcredential)).toFox

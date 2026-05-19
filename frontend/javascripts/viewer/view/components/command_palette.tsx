@@ -130,7 +130,6 @@ export const CommandPalette = () => {
   const theme = getThemeFromUser(activeUser);
 
   const getTabsAndSettingsMenuItems = () => {
-    if (!isInAnnotationView) return [];
     const commands: CommandWithoutId[] = [];
 
     (Object.keys(userConfig) as [keyof UserConfiguration]).forEach((key) => {

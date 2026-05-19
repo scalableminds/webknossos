@@ -314,7 +314,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Start deployment
         if: steps.autodeploy.outputs.enabled == 'true'
-        uses: bobheadxi/deployments@v1
+        uses: bobheadxi/deployments@v1.5.0
         id: gh_deployment
         with:
           step: start
@@ -330,8 +330,8 @@ jobs:
         env:
           AUTO_DEV_DEPLOY_TOKEN: ${{ secrets.AUTO_DEV_DEPLOY_TOKEN }}
       - name: Finish deployment
-        if: always() && steps.autodeploy.outputs.enabled == 'true'
-        uses: bobheadxi/deployments@v1
+        if: always() && steps.gh_deployment.outputs.deployment_id != ''
+        uses: bobheadxi/deployments@v1.5.0
         with:
           step: finish
           token: ${{ secrets.GITHUB_TOKEN }}

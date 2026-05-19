@@ -151,7 +151,7 @@ export function useZarrLinkMenu(maybeAccessToken: string | null) {
 
   const copyTokenToClipboard = async ({ key: layerName }: { key: string }) => {
     await navigator.clipboard.writeText(`${baseUrl}/${layerName}`);
-    Toast.success("URL copied to clipboard");
+    Toast.success("Copied URL to clipboard.");
   };
 
   const copyLayerUrlMenu: MenuProps = {

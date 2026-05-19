@@ -8,7 +8,7 @@ export function CopyIconWithTooltip({ value, title }: { value: string | number; 
       <CopyOutlined
         onClick={async () => {
           await navigator.clipboard.writeText(value.toString());
-          Toast.success(`"${value}" copied to clipboard`);
+          Toast.success(`Copied “${value}” to clipboard.`);
         }}
       />
     </FastTooltip>

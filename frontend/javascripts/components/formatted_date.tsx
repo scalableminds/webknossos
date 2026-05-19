@@ -73,7 +73,7 @@ export default function FormattedDate({
     <span
       onClick={() => {
         navigator.clipboard.writeText(tooltipText);
-        Toast.success("Copied date to clipboard.");
+        Toast.success(`Copied date “${tooltipText}” to clipboard.`);
       }}
     >
       <FastTooltip title={tooltipText}>{displayText}</FastTooltip>

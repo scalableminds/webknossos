@@ -33,7 +33,7 @@ export function MoreInfoHint() {
 
 async function copyToClipboard(code: string) {
   await navigator.clipboard.writeText(code);
-  Toast.success("Snippet copied to clipboard.");
+  Toast.success("Copied snippet to clipboard.");
 }
 
 export function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: () => void }) {

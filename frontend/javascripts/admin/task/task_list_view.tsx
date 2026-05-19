@@ -216,7 +216,7 @@ function TaskListView({ initialFieldValues }: Props) {
         onOk={() => {
           navigator.clipboard
             .writeText(tasksString)
-            .then(() => Toast.success("Links copied to clipboard"));
+            .then(() => Toast.success("Copied links to clipboard."));
           setIsAnonymousTaskLinkModalOpen(false);
         }}
         onCancel={() => setIsAnonymousTaskLinkModalOpen(false)}

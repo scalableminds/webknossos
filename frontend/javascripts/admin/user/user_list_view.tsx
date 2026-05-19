@@ -430,7 +430,7 @@ function UserListView() {
                       onClick={async (evt) => {
                         evt.stopPropagation();
                         await navigator.clipboard.writeText(domain);
-                        Toast.success(`"${domain}" copied to clipboard`);
+                        Toast.success(`Copied experience domain “${domain}” to clipboard.`);
                       }}
                     />
                   </Tag>

@@ -61,7 +61,7 @@ export function isObjectEmpty(obj: Record<string, any>) {
 
 export async function copyToClipboad(text: string) {
   await navigator.clipboard.writeText(text);
-  message.success("Copied to clipboard");
+  message.success("Copied to clipboard.");
 }
 
 export function addBeforePadding(date: Date): Date {

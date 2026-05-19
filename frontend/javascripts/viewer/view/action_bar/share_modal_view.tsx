@@ -138,7 +138,7 @@ export function getUrl(sharingToken: string, includeToken: boolean) {
 
 async function copyUrlToClipboard(url: string) {
   await navigator.clipboard.writeText(url);
-  Toast.success("URL copied to clipboard.");
+  Toast.success("Copied URL to clipboard.");
 }
 
 export function ShareButton(props: { dataset: APIDataset; style?: Record<string, any> }) {

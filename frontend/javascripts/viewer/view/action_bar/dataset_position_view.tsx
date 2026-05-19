@@ -44,7 +44,7 @@ function DatasetPositionView() {
   const copyPositionToClipboard = async () => {
     const position = V3.floor(getPosition(flycam)).join(", ");
     await navigator.clipboard.writeText(position);
-    Toast.success("Position copied to clipboard");
+    Toast.success("Copied position to clipboard.");
   };
 
   const handleChangePosition = useCallback(

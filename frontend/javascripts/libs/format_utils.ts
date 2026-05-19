@@ -143,13 +143,10 @@ export function formatTuple(tuple: (Array<number> | Vector3 | Vector6) | null | 
     return "";
   }
 }
-export function formatScale(
-  scale: VoxelSize | null | undefined,
+function getRoundedScaleValues(
+  scale: VoxelSize,
   roundToDigits: number = 2,
-): string {
-  if (scale == null) {
-    return "";
-  }
+): [[number, number, number], string] {
   const scaleFactor = scale.factor;
   const smallestScaleFactor = Math.min(...scaleFactor);
   const unitDimension = { unit: LongUnitToShortUnitMap[scale.unit], dimension: 1 };
@@ -160,11 +157,30 @@ export function formatScale(
     false,
     roundToDigits,
   );
-  const scaleInNmRounded = map3(
-    (value) => roundTo(value / conversionFactor, roundToDigits),
-    scaleFactor,
-  );
-  return `${scaleInNmRounded.join(ThinSpace + MultiplicationSymbol + ThinSpace)} ${newUnit}³/Vx`;
+  const scaleRounded = map3((value) => roundTo(value / conversionFactor, roundToDigits), scaleFactor);
+  return [scaleRounded, newUnit];
+}
+
+export function formatScale(
+  scale: VoxelSize | null | undefined,
+  roundToDigits: number = 2,
+): string {
+  if (scale == null) {
+    return "";
+  }
+  const [scaleRounded, newUnit] = getRoundedScaleValues(scale, roundToDigits);
+  return `${scaleRounded.join(ThinSpace + MultiplicationSymbol + ThinSpace)} ${newUnit}³/Vx`;
+}
+
+export function formatScaleForClipboard(
+  scale: VoxelSize | null | undefined,
+  roundToDigits: number = 2,
+): string {
+  if (scale == null) {
+    return "";
+  }
+  const [scaleRounded] = getRoundedScaleValues(scale, roundToDigits);
+  return scaleRounded.join(",");
 }
 
 function toOptionalFixed(num: number, decimalPrecision: number): string {

@@ -587,7 +587,7 @@ class PlaneController extends PureComponent<Props> {
           );
           navigator.clipboard
             .writeText(String(hoveredId))
-            .then(() => Toast.success(`Segment id ${hoveredId} copied to clipboard.`));
+            .then(() => Toast.success(`Copied segment id ${hoveredId} to clipboard.`));
         } else {
           Toast.warning("No segment under cursor.");
         }

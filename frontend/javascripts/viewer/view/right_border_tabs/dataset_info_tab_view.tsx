@@ -14,7 +14,8 @@ import { getOrganization } from "admin/api/organization";
 import { Space, Tag, Typography } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { ThemedIcon } from "components/themed_icon";
-import { formatNumberToVolume, formatScale, formatVoxels } from "libs/format_utils";
+import { formatNumberToVolume, formatScale, formatScaleForClipboard, formatVoxels } from "libs/format_utils";
+import Toast from "libs/toast";
 import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
 import { mayUserEditDataset, pluralize, safeNumberToStr } from "libs/utils";
@@ -37,6 +38,7 @@ import {
 import {
   getDatasetExtentAsString,
   getDatasetExtentInUnitAsProduct,
+  getDatasetExtentInVoxel,
   getDatasetExtentInVoxelAsProduct,
   getMagnificationUnion,
   getReadableURLPart,
@@ -163,6 +165,14 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
     );
   };
 
+  const copyExtentToClipboard = () => {
+    if (window.getSelection()?.toString()) return;
+    const { width, height, depth } = getDatasetExtentInVoxel(dataset);
+    const text = `${width},${height},${depth}`;
+    navigator.clipboard.writeText(text);
+    Toast.success(`Copied dataset voxel size “${text}” to clipboard.`);
+  };
+
   return (
     <FastTooltip
       dynamicRenderer={renderDSExtentTooltip}
@@ -182,6 +192,7 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
         style={{
           paddingTop: 10,
         }}
+        onClick={copyExtentToClipboard}
       >
         {extentInVoxel}
         <br /> {extentInLength}
@@ -191,6 +202,13 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
 }
 
 export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
+  const copyVoxelSizeToClipboard = () => {
+    if (window.getSelection()?.toString()) return;
+    const text = formatScaleForClipboard(dataset.dataSource.scale);
+    navigator.clipboard.writeText(text);
+    Toast.success(`Copied dataset voxel size “${text}” to clipboard.`);
+  };
+
   return (
     <FastTooltip title="Dataset voxel size" placement="left" wrapper="tr">
       <td
@@ -200,7 +218,9 @@ export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
       >
         <Icon component={IconVoxelsize} className="info-tab-icon" aria-label="Voxel size" />
       </td>
-      <td>{formatScale(dataset.dataSource.scale)}</td>
+      <td onClick={copyVoxelSizeToClipboard}>
+        {formatScale(dataset.dataSource.scale)}
+      </td>
     </FastTooltip>
   );
 }

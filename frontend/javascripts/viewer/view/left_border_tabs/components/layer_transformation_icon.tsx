@@ -1,4 +1,4 @@
-import Icon, { SettingOutlined } from "@ant-design/icons";
+import Icon, { DragOutlined } from "@ant-design/icons";
 import AffineTransformationIcon from "@images/icons/icon-affine-transformation.svg?react";
 import NoTransformationIcon from "@images/icons/icon-no-transformation.svg?react";
 import TpsTransformationIcon from "@images/icons/icon-tps-transformation.svg?react";
@@ -127,7 +127,7 @@ export default function LayerTransformationIcon({
           variant="text"
           color="default"
           size="small"
-          icon={<SettingOutlined />}
+          icon={<DragOutlined />}
           title="Edit layer transforms"
         />
       </Popover>

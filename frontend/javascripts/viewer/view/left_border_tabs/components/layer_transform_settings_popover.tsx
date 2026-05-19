@@ -1,4 +1,6 @@
-import { AimOutlined, ReloadOutlined } from "@ant-design/icons";
+import { ReloadOutlined } from "@ant-design/icons";
+import Icon from "@ant-design/icons";
+import SkeletonIcon from "@images/icons/icon-skeleton.svg?react";
 import { getDataset, updateDatasetPartial } from "admin/rest_api";
 import { Button, InputNumber, Slider, Tooltip, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
@@ -96,7 +98,7 @@ function AxisSliderRow({
         size="small"
         style={{ width: 62 }}
       />
-      <Tooltip title="Reset to stored value">
+      <Tooltip title="Reset to stored default">
         <Button
           type="text"
           size="small"
@@ -289,7 +291,7 @@ export function LayerTransformSettingsContent({
           }}
           block
         >
-          Reset to Stored Values
+          Reset to Stored Default
         </Button>
         <Button
           type="primary"
@@ -304,7 +306,7 @@ export function LayerTransformSettingsContent({
           <>
             <Button
               size="small"
-              icon={<AimOutlined />}
+              icon={<Icon component={SkeletonIcon} />}
               onClick={() => setIsLandmarkModalOpen(true)}
               disabled={
                 isFetchingStored ||

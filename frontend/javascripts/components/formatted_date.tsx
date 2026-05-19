@@ -1,6 +1,6 @@
 import dayjs from "dayjs";
-import FastTooltip from "./fast_tooltip";
 import Toast from "libs/toast";
+import FastTooltip from "./fast_tooltip";
 
 /**
  * Return current date and time. Please only use this function if you need
@@ -71,10 +71,10 @@ export default function FormattedDate({
 
   return (
     <span
-        onClick={() => {
-          navigator.clipboard.writeText(tooltipText);
-          Toast.success("Copied date to clipboard.");
-        }}
+      onClick={() => {
+        navigator.clipboard.writeText(tooltipText);
+        Toast.success("Copied date to clipboard.");
+      }}
     >
       <FastTooltip title={tooltipText}>{displayText}</FastTooltip>
     </span>

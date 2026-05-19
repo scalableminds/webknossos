@@ -189,7 +189,12 @@ import type {
   WebknossosState,
 } from "viewer/store";
 import Store from "viewer/store";
-import { downloadScreenshot } from "viewer/view/rendering_utils";
+import {
+  captureScreenshots,
+  downloadScreenshot,
+  downloadScreenshotsAsZip,
+  type ScreenshotBlob,
+} from "viewer/view/rendering_utils";
 import {
   callDeep,
   createGroupToSegmentsMap,
@@ -1490,6 +1495,16 @@ class TracingApi {
    */
   setCameraPosition(position: Vector3) {
     Store.dispatch(setPositionAction(position));
+  }
+
+  /**
+   * Sets the current camera rotation.
+   *
+   * @example
+   * api.tracing.setCameraRotation([180, 0, 90])
+   */
+  setCameraRotation(rotation: Vector3) {
+    Store.dispatch(setRotationAction(rotation));
   }
 
   //  VOLUMETRACING API
@@ -2849,6 +2864,14 @@ class DataApi {
 
   downloadScreenshot() {
     return downloadScreenshot();
+  }
+
+  captureScreenshots(): Promise<ScreenshotBlob[]> {
+    return captureScreenshots();
+  }
+
+  downloadScreenshotsAsZip(screenshots: ScreenshotBlob[], zipName?: string): Promise<void> {
+    return downloadScreenshotsAsZip(screenshots, zipName);
   }
 }
 /**

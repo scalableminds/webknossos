@@ -1,4 +1,5 @@
 import logoScreenshot from "@images/logo-screenshot.svg";
+import { BlobReader, BlobWriter, ZipWriter } from "@zip.js/zip.js";
 import { saveAs } from "file-saver";
 import { convertBufferToImage } from "libs/utils";
 import {
@@ -121,7 +122,9 @@ function getScreenshotLogoImage(): Promise<HTMLImageElement> {
   });
 }
 
-export async function downloadScreenshot() {
+export type ScreenshotBlob = { name: string; blob: Blob };
+
+export async function captureScreenshots(): Promise<ScreenshotBlob[]> {
   const { dataset, flycam, temporaryConfiguration, userConfiguration } = Store.getState();
   const { renderWatermark } = userConfiguration;
   const { viewMode } = temporaryConfiguration;
@@ -131,6 +134,8 @@ export async function downloadScreenshot() {
   const planeIds: Array<OrthoView | typeof ArbitraryViewport> =
     viewMode === constants.MODE_PLANE_TRACING ? OrthoViewValues : [ArbitraryViewport];
   const logo = renderWatermark ? await getScreenshotLogoImage() : null;
+
+  const results: ScreenshotBlob[] = [];
 
   for (const planeId of planeIds) {
     const { width, height } = getInputCatcherRect(Store.getState(), planeId);
@@ -182,10 +187,33 @@ export async function downloadScreenshot() {
     );
     if (blob != null) {
       const planeDescriptor = viewMode === constants.MODE_PLANE_TRACING ? planeId : viewMode;
-      saveAs(blob, `${baseName}__${planeDescriptor}.png`);
+      results.push({ name: `${baseName}__${planeDescriptor}.png`, blob });
     }
   }
+
   if (logo) {
     logo.remove();
   }
+
+  return results;
+}
+
+export async function downloadScreenshot() {
+  const screenshots = await captureScreenshots();
+  for (const { name, blob } of screenshots) {
+    saveAs(blob, name);
+  }
+}
+
+export async function downloadScreenshotsAsZip(
+  screenshots: ScreenshotBlob[],
+  zipName = "screenshots",
+) {
+  const zipBlob = new BlobWriter("application/zip");
+  const zipWriter = new ZipWriter(zipBlob);
+  for (const { name, blob } of screenshots) {
+    await zipWriter.add(name, new BlobReader(blob));
+  }
+  await zipWriter.close();
+  saveAs(await zipBlob.getData(), `${zipName}.zip`);
 }

@@ -463,7 +463,9 @@ class DatasetController @Inject()(userService: UserService,
         datasetBox <- datasetService.findOneByImportURL(importURL, request.identity._organization).shiftBox
         js <- datasetBox match {
           case Full(dataset) => datasetService.publicWrites(dataset, Some(request.identity))
-          case _             => Fox.successful(Json.toJson(None))
+          case Empty         => Fox.successful(Json.toJson(None))
+          case failure: Failure =>
+            Fox.failure("dataset.findByImportURL.failed", failure)
         }
       } yield Ok(js)
     }

@@ -133,6 +133,7 @@ uniform float uIsInverted;
 uniform vec3 uLayerColor;
 uniform float uAlpha;
 uniform int uNumSteps;
+uniform vec3 uCameraForward;
 
 in vec3 vLocalPos;
 out vec4 fragColor;
@@ -150,21 +151,27 @@ vec2 intersectAABB(vec3 ro, vec3 rd) {
 void main() {
   if (uAlpha <= 0.0) discard;
 
-  // Transform camera to normalized local space ([-0.5, 0.5]^3)
-  vec3 localCam = (uInvModelMatrix * vec4(cameraPosition, 1.0)).xyz / uVolumeSize;
-  vec3 rd = normalize(vLocalPos - localCam);
+  // Orthographic: all rays share the same direction (camera forward).
+  // Transform camera forward from world space to normalized local space ([-0.5, 0.5]^3).
+  // Using w=0 for a direction vector (no translation), then divide by uVolumeSize to match
+  // the vertex shader's normalization (vLocalPos = position / uVolumeSize).
+  vec3 localDir = (uInvModelMatrix * vec4(uCameraForward, 0.0)).xyz;
+  vec3 rd = normalize(localDir / uVolumeSize);
 
-  vec2 t = intersectAABB(localCam, rd);
+  // Use the fragment's position on the back face as the reference point on the ray.
+  // The slab test returns negative tNear (ray entered front face before vLocalPos)
+  // and tFar ≈ 0 (we are at/near the back face).
+  vec2 t = intersectAABB(vLocalPos, rd);
   if (t.x > t.y) discard;
 
-  float tStart = max(t.x, 0.0);
+  float tStart = t.x;
   float tEnd   = t.y;
 
   float stepSize = (tEnd - tStart) / float(uNumSteps);
   float maxVal = 0.0;
 
   for (int i = 0; i < uNumSteps; i++) {
-    vec3 pos = localCam + (tStart + (float(i) + 0.5) * stepSize) * rd;
+    vec3 pos = vLocalPos + (tStart + (float(i) + 0.5) * stepSize) * rd;
     // map [-0.5, 0.5] -> [0.0, 1.0] for texture lookup
     float val = texture(uVolume, pos + 0.5).r;
     maxVal = max(maxVal, val);
@@ -279,6 +286,7 @@ export class MipVolume {
         uLayerColor: { value: new ThreeVector3(1, 1, 1) },
         uAlpha: { value: 1.0 },
         uNumSteps: { value: 128 },
+        uCameraForward: { value: new ThreeVector3(0, 0, -1) },
       },
       vertexShader: VERTEX_SHADER,
       fragmentShader: FRAGMENT_SHADER,
@@ -292,8 +300,9 @@ export class MipVolume {
     const geometry = new BoxGeometry(volumeSize.x, volumeSize.y, volumeSize.z);
     this.mesh = new Mesh(geometry, this.material);
     this.mesh.position.copy(meshCenter);
-    this.mesh.onBeforeRender = () => {
+    this.mesh.onBeforeRender = (_renderer, _scene, camera) => {
       this.material.uniforms.uInvModelMatrix.value.copy(this.mesh.matrixWorld).invert();
+      camera.getWorldDirection(this.material.uniforms.uCameraForward.value);
     };
   }
 

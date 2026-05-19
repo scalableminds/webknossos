@@ -124,13 +124,14 @@ function getScreenshotLogoImage(): Promise<HTMLImageElement> {
 
 export type ScreenshotBlob = { name: string; blob: Blob };
 
-export async function captureScreenshots(): Promise<ScreenshotBlob[]> {
+export async function captureScreenshots(prefix?: string): Promise<ScreenshotBlob[]> {
   const { dataset, flycam, temporaryConfiguration, userConfiguration } = Store.getState();
   const { renderWatermark } = userConfiguration;
   const { viewMode } = temporaryConfiguration;
   const datasetName = dataset.name;
   const [x, y, z] = getFlooredPosition(flycam);
-  const baseName = `${datasetName}__${x}_${y}_${z}`;
+  const positionSuffix = `${datasetName}__${x}_${y}_${z}`;
+  const baseName = prefix != null ? `${prefix}__${positionSuffix}` : positionSuffix;
   const planeIds: Array<OrthoView | typeof ArbitraryViewport> =
     viewMode === constants.MODE_PLANE_TRACING ? OrthoViewValues : [ArbitraryViewport];
   const logo = renderWatermark ? await getScreenshotLogoImage() : null;

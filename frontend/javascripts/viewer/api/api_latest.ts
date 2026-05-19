@@ -2862,14 +2862,34 @@ class DataApi {
     }
   }
 
+  /**
+   * Takes a screenshot of the current viewport(s) and immediately downloads each image as a PNG.
+   * In plane mode, one file per visible viewport is downloaded. Use `captureScreenshots` +
+   * `downloadScreenshotsAsZip` instead when calling in a loop to avoid repeated save dialogs.
+   */
   downloadScreenshot() {
     return downloadScreenshot();
   }
 
-  captureScreenshots(): Promise<ScreenshotBlob[]> {
-    return captureScreenshots();
+  /**
+   * Renders the current viewport(s) and returns the images as an array of `{ name, blob }` objects
+   * without triggering any download. Suitable for collecting frames in a loop.
+   *
+   * @param prefix - Optional string prepended to each filename (e.g. a zero-padded frame index).
+   *   Resulting names follow the pattern `<prefix>__<dataset>__<x>_<y>_<z>__<plane>.png`, which
+   *   makes the files sort correctly when passed to `downloadScreenshotsAsZip`.
+   */
+  captureScreenshots(prefix?: string): Promise<ScreenshotBlob[]> {
+    return captureScreenshots(prefix);
   }
 
+  /**
+   * Packages an array of `{ name, blob }` entries (as returned by `captureScreenshots`) into a
+   * single ZIP archive and downloads it once.
+   *
+   * @param screenshots - The collected screenshot blobs to include.
+   * @param zipName - Base name for the downloaded file (without `.zip`). Defaults to `"screenshots"`.
+   */
   downloadScreenshotsAsZip(screenshots: ScreenshotBlob[], zipName?: string): Promise<void> {
     return downloadScreenshotsAsZip(screenshots, zipName);
   }

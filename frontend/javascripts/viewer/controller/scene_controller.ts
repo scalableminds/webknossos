@@ -78,7 +78,7 @@ import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { Transform } from "viewer/model/helpers/transformation_helpers";
 import { Model } from "viewer/singletons";
 import type {
-  MipBboxSettings,
+  MipLayerConfig,
   SkeletonTracing,
   UserBoundingBox,
   WebknossosState,
@@ -125,7 +125,7 @@ class SceneController {
   private splitBoundaryMesh: Mesh | null = null;
   private mipVolumes = new Map<
     number,
-    { volume: MipVolume; config: MipBboxSettings; bbox: UserBoundingBox }
+    { volume: MipVolume; configs: MipLayerConfig[]; bbox: UserBoundingBox }
   >();
 
   // Created as instance properties to avoid creating objects in each update call.
@@ -351,50 +351,90 @@ class SceneController {
   }
 
   async addMipVolume(datasource: MipDatasource = { type: "mocked cross" }): Promise<void> {
-    const mipVolume = new MipVolume(datasource);
+    let mag1Bbox: { min: [number, number, number]; max: [number, number, number] };
+    if (datasource.type === "mocked cross") {
+      const MOCK_SIZE = 32;
+      mag1Bbox = { min: [0, 0, 0], max: [MOCK_SIZE, MOCK_SIZE, MOCK_SIZE] };
+    } else {
+      mag1Bbox = datasource.mag1Bbox;
+    }
+    const mipVolume = new MipVolume(mag1Bbox);
     this.rootNode.add(mipVolume.mesh);
-    if (datasource.type === "data") {
-      mipVolume.subscribeToLayerSettings(datasource.layerName);
-      await mipVolume.loadData(datasource);
+    if (datasource.type === "mocked cross") {
+      mipVolume.addMockLayer();
+    } else {
+      await mipVolume.addLayer({
+        layerName: datasource.layerName,
+        zoomStep: datasource.zoomStep ?? 0,
+        isLoading: false,
+      });
     }
   }
 
   private updateMipVolumes(entries: MipEnabledBbox[]): void {
     const entryMap = new Map(entries.map((e) => [e.bbox.id, e]));
 
-    for (const [bboxId, { volume, config, bbox: storedBbox }] of this.mipVolumes) {
+    // Remove volumes whose bbox changed (need full recreation)
+    for (const [bboxId, { volume, bbox: storedBbox }] of this.mipVolumes) {
       const entry = entryMap.get(bboxId);
       const bb = storedBbox.boundingBox;
-      const changed =
+      const bboxChanged =
         entry == null ||
-        entry.config.layerName !== config.layerName ||
-        entry.config.zoomStep !== config.zoomStep ||
         !V3.equals(entry.bbox.boundingBox.min, bb.min) ||
         !V3.equals(entry.bbox.boundingBox.max, bb.max);
-      if (changed) {
+      if (bboxChanged) {
         this.rootNode.remove(volume.mesh);
         volume.dispose();
         this.mipVolumes.delete(bboxId);
       }
     }
 
-    for (const { bbox, config } of entries) {
-      if (this.mipVolumes.has(bbox.id)) continue;
-      const datasource: MipDatasource = {
-        type: "data",
-        layerName: config.layerName,
-        mag1Bbox: { min: bbox.boundingBox.min, max: bbox.boundingBox.max },
-        zoomStep: config.zoomStep,
-      };
-      const volume = new MipVolume(datasource);
-      this.rootNode.add(volume.mesh);
-      volume.subscribeToLayerSettings(config.layerName);
-      Store.dispatch(setMipForBboxAction(bbox.id, { ...config, isLoading: true }));
-      volume
-        .loadData(datasource)
-        .then(() => Store.dispatch(setMipForBboxAction(bbox.id, { ...config, isLoading: false })))
-        .catch(console.error);
-      this.mipVolumes.set(bbox.id, { volume, config, bbox });
+    for (const { bbox, configs } of entries) {
+      const mag1Bbox = { min: bbox.boundingBox.min, max: bbox.boundingBox.max };
+
+      if (!this.mipVolumes.has(bbox.id)) {
+        // New bbox: create volume and add all layers
+        const volume = new MipVolume(mag1Bbox);
+        this.rootNode.add(volume.mesh);
+        this.mipVolumes.set(bbox.id, { volume, configs: [], bbox });
+      }
+
+      const entry = this.mipVolumes.get(bbox.id)!;
+      const { volume } = entry;
+      const oldConfigs = entry.configs;
+
+      // Remove layers that are no longer in the new configs
+      const newLayerNames = new Set(configs.map((c) => c.layerName));
+      for (const oldConfig of oldConfigs) {
+        if (!newLayerNames.has(oldConfig.layerName)) {
+          volume.removeLayer(oldConfig.layerName);
+        }
+      }
+
+      // Add layers that are new
+      const oldLayerNames = new Set(oldConfigs.map((c) => c.layerName));
+      for (const config of configs) {
+        if (!oldLayerNames.has(config.layerName) && !volume.hasLayer(config.layerName)) {
+          Store.dispatch(setMipForBboxAction(bbox.id, { ...config, isLoading: true }));
+          volume
+            .addLayer(config)
+            .then(() =>
+              Store.dispatch(setMipForBboxAction(bbox.id, { ...config, isLoading: false })),
+            )
+            .catch(console.error);
+        }
+      }
+
+      entry.configs = configs;
+    }
+
+    // Remove volumes no longer in any entry
+    for (const [bboxId, { volume }] of this.mipVolumes) {
+      if (!entryMap.has(bboxId)) {
+        this.rootNode.remove(volume.mesh);
+        volume.dispose();
+        this.mipVolumes.delete(bboxId);
+      }
     }
   }
 

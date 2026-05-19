@@ -18,10 +18,11 @@ import { getLayerByName, getMagInfo } from "viewer/model/accessors/dataset_acces
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { scaleGlobalPositionWithMagnification } from "viewer/model/helpers/position_converter";
 import { api, Store } from "viewer/singletons";
-import type { DatasetLayerConfiguration } from "viewer/store";
+import type { DatasetLayerConfiguration, MipLayerConfig } from "viewer/store";
 
 const MOCK_SIZE = 32;
 const MAX_VOXELS = 100 * 1024 * 1024;
+const MAX_LAYERS = 4;
 
 type SupportedMipElementClass = "uint8" | "uint16" | "uint32" | "float";
 
@@ -80,6 +81,7 @@ function assertSupportedElementClass(elementClass: ElementClass): SupportedMipEl
   );
 }
 
+// Legacy type for the debug addMipVolume() function
 type MockedCrossSource = { type: "mocked cross" };
 type DataSource = {
   type: "data";
@@ -108,6 +110,40 @@ function createCrossData(size: number): Uint8Array {
   return data;
 }
 
+function createPlaceholderTexture(): Data3DTexture {
+  const tex = new Data3DTexture(new Uint8Array([0]), 1, 1, 1);
+  tex.format = RedFormat;
+  tex.type = UnsignedByteType;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+function resolveDataSource(
+  layerName: string,
+  mag1Bbox: BoundingBoxMinMaxType,
+  zoomStep?: number,
+): {
+  actualZoomStep: number;
+  textureDims: [number, number, number];
+  elementClass: SupportedMipElementClass;
+} {
+  const layer = getLayerByName(Store.getState().dataset, layerName);
+  const magInfo = getMagInfo(layer.mags);
+  const actualZoomStep = magInfo.getClosestExistingIndex(zoomStep ?? 0);
+  const mag = magInfo.getMagByIndexOrThrow(actualZoomStep);
+  const topLeft = scaleGlobalPositionWithMagnification(mag1Bbox.min, mag);
+  const bottomRight = scaleGlobalPositionWithMagnification(mag1Bbox.max, mag, true);
+  return {
+    actualZoomStep,
+    textureDims: [
+      bottomRight[0] - topLeft[0],
+      bottomRight[1] - topLeft[1],
+      bottomRight[2] - topLeft[2],
+    ],
+    elementClass: assertSupportedElementClass(layer.elementClass),
+  };
+}
+
 const VERTEX_SHADER = /* glsl */ `
 uniform vec3 uVolumeSize;
 out vec3 vLocalPos;
@@ -123,15 +159,17 @@ const FRAGMENT_SHADER = /* glsl */ `
 precision highp float;
 precision highp sampler3D;
 
-uniform sampler3D uVolume;
+const int MAX_LAYERS = ${MAX_LAYERS};
+
+uniform sampler3D uVolumes[MAX_LAYERS];
+uniform int uNumLayers;
+uniform vec3 uLayerColors[MAX_LAYERS];
+uniform float uLayerMins[MAX_LAYERS];
+uniform float uLayerMaxs[MAX_LAYERS];
+uniform float uLayerIsInverted[MAX_LAYERS];
+uniform float uLayerAlphas[MAX_LAYERS];
 uniform mat4 uInvModelMatrix;
 uniform vec3 uVolumeSize;
-
-uniform float uMin;
-uniform float uMax;
-uniform float uIsInverted;
-uniform vec3 uLayerColor;
-uniform float uAlpha;
 uniform int uNumSteps;
 uniform vec3 uCameraForward;
 
@@ -148,8 +186,17 @@ vec2 intersectAABB(vec3 ro, vec3 rd) {
   return vec2(tNear, tFar);
 }
 
+// GLSL ES 3.0 forbids indexing sampler arrays with non-constant expressions.
+// Use an explicit if-ladder so each array access uses a literal index.
+float sampleVolume(int j, vec3 uvw) {
+  if (j == 0) return texture(uVolumes[0], uvw).r;
+  if (j == 1) return texture(uVolumes[1], uvw).r;
+  if (j == 2) return texture(uVolumes[2], uvw).r;
+  return texture(uVolumes[3], uvw).r;
+}
+
 void main() {
-  if (uAlpha <= 0.0) discard;
+  if (uNumLayers == 0) discard;
 
   // Orthographic: all rays share the same direction (camera forward).
   // Transform camera forward from world space to normalized local space ([-0.5, 0.5]^3).
@@ -166,125 +213,87 @@ void main() {
 
   float tStart = t.x;
   float tEnd   = t.y;
-
   float stepSize = (tEnd - tStart) / float(uNumSteps);
-  float maxVal = 0.0;
+
+  float maxVals[MAX_LAYERS];
+  for (int j = 0; j < MAX_LAYERS; j++) maxVals[j] = 0.0;
 
   for (int i = 0; i < uNumSteps; i++) {
     vec3 pos = vLocalPos + (tStart + (float(i) + 0.5) * stepSize) * rd;
     // map [-0.5, 0.5] -> [0.0, 1.0] for texture lookup
-    float val = texture(uVolume, pos + 0.5).r;
-    maxVal = max(maxVal, val);
+    vec3 uvw = pos + 0.5;
+    for (int j = 0; j < uNumLayers; j++) {
+      float val = sampleVolume(j, uvw);
+      maxVals[j] = max(maxVals[j], val);
+    }
   }
 
-  // Discard empty space when not inverted (inverted view: maxVal=0 → bright)
-  if (maxVal < 0.001 && uIsInverted < 0.5) discard;
+  // Apply intensity window and layer color; blend additively across layers.
+  vec3 color = vec3(0.0);
+  float alpha = 0.0;
+  for (int j = 0; j < uNumLayers; j++) {
+    float layerMin = uLayerMins[j];
+    float layerMax = uLayerMaxs[j];
+    float scaled = clamp(maxVals[j], layerMin, layerMax);
+    scaled = (layerMax == layerMin) ? 0.0 : (scaled - layerMin) / (layerMax - layerMin);
+    // Inversion: abs(val - isInverted). When isInverted=1.0 → 1-val, when 0.0 → val.
+    scaled = abs(scaled - uLayerIsInverted[j]);
+    color += uLayerColors[j] * scaled;
+    alpha = max(alpha, scaled * uLayerAlphas[j]);
+  }
 
-  // Apply intensity window: clamp then scale [uMin, uMax] → [0, 1]
-  float scaled = clamp(maxVal, uMin, uMax);
-  scaled = (uMax == uMin) ? 0.0 : (scaled - uMin) / (uMax - uMin);
-
-  // Inversion: abs(val - isInverted). When isInverted=1.0 → 1-val, when 0.0 → val.
-  scaled = abs(scaled - uIsInverted);
-
-  vec3 color = scaled * uLayerColor;
-  fragColor = vec4(color, scaled * uAlpha);
+  if (alpha < 0.001) discard;
+  fragColor = vec4(color, alpha);
 }
 `;
 
-function resolveDataSource(datasource: DataSource): {
-  actualZoomStep: number;
-  textureDims: [number, number, number];
-  elementClass: SupportedMipElementClass;
-} {
-  const layer = getLayerByName(Store.getState().dataset, datasource.layerName);
-  const magInfo = getMagInfo(layer.mags);
-  const actualZoomStep = magInfo.getClosestExistingIndex(datasource.zoomStep ?? 0);
-  const mag = magInfo.getMagByIndexOrThrow(actualZoomStep);
-  const topLeft = scaleGlobalPositionWithMagnification(datasource.mag1Bbox.min, mag);
-  const bottomRight = scaleGlobalPositionWithMagnification(datasource.mag1Bbox.max, mag, true);
-  return {
-    actualZoomStep,
-    textureDims: [
-      bottomRight[0] - topLeft[0],
-      bottomRight[1] - topLeft[1],
-      bottomRight[2] - topLeft[2],
-    ],
-    elementClass: assertSupportedElementClass(layer.elementClass),
-  };
-}
+type LayerState = {
+  layerName: string;
+  texture: Data3DTexture;
+  unsubscribe: () => void;
+  normalizationFactor: number;
+  // Cached display values for rebuild after layer removal
+  displayMin: number;
+  displayMax: number;
+  isInverted: number;
+  alpha: number;
+  color: ThreeVector3;
+};
 
 export class MipVolume {
   mesh: Mesh;
-  private texture: Data3DTexture;
   private material: ShaderMaterial;
-  private actualZoomStep: number | null = null;
-  private unsubscribeFromStore: (() => void) | null = null;
-  private normalizationFactor = 255; // updated per element class for "data" sources
+  private layers: LayerState[] = [];
+  private placeholderTexture: Data3DTexture;
+  private mag1Bbox: BoundingBoxMinMaxType;
 
-  constructor(datasource: MipDatasource = { type: "mocked cross" }) {
-    let texWidth: number;
-    let texHeight: number;
-    let texDepth: number;
-    let initialData: Uint8Array | Uint16Array | Float32Array;
-    let meshCenter: ThreeVector3;
-    let volumeSize: ThreeVector3;
-    let textureType: typeof UnsignedByteType | typeof FloatType = UnsignedByteType;
+  constructor(mag1Bbox: BoundingBoxMinMaxType) {
+    this.mag1Bbox = mag1Bbox;
+    this.placeholderTexture = createPlaceholderTexture();
 
-    if (datasource.type === "mocked cross") {
-      initialData = createCrossData(MOCK_SIZE);
-      texWidth = texHeight = texDepth = MOCK_SIZE;
-      volumeSize = new ThreeVector3(MOCK_SIZE, MOCK_SIZE, MOCK_SIZE);
-      meshCenter = new ThreeVector3(MOCK_SIZE / 2, MOCK_SIZE / 2, MOCK_SIZE / 2);
-    } else {
-      const { mag1Bbox } = datasource;
-      const dx = mag1Bbox.max[0] - mag1Bbox.min[0];
-      const dy = mag1Bbox.max[1] - mag1Bbox.min[1];
-      const dz = mag1Bbox.max[2] - mag1Bbox.min[2];
+    const { min, max } = mag1Bbox;
+    const dx = max[0] - min[0];
+    const dy = max[1] - min[1];
+    const dz = max[2] - min[2];
+    const volumeSize = new ThreeVector3(dx, dy, dz);
+    const meshCenter = new ThreeVector3(min[0] + dx / 2, min[1] + dy / 2, min[2] + dz / 2);
 
-      const { actualZoomStep, textureDims, elementClass } = resolveDataSource(datasource);
-      const config = getMipTextureConfig(elementClass);
-      textureType = config.textureType;
-      this.normalizationFactor = config.normalizationFactor;
-
-      const [tw, th, td] = textureDims;
-      const totalVoxels = tw * th * td;
-      if (totalVoxels > MAX_VOXELS) {
-        throw new Error(
-          `MipVolume: ${tw}×${th}×${td} = ${totalVoxels} voxels exceeds the ${MAX_VOXELS}-voxel limit`,
-        );
-      }
-
-      this.actualZoomStep = actualZoomStep;
-      initialData = config.createInitialBuffer(tw * th * td);
-      texWidth = tw;
-      texHeight = th;
-      texDepth = td;
-      volumeSize = new ThreeVector3(dx, dy, dz);
-      meshCenter = new ThreeVector3(
-        mag1Bbox.min[0] + dx / 2,
-        mag1Bbox.min[1] + dy / 2,
-        mag1Bbox.min[2] + dz / 2,
-      );
-    }
-
-    // @ts-expect-error — Uint8Array<ArrayBufferLike> vs ArrayBufferView<ArrayBuffer> in TS 5.9
-    this.texture = new Data3DTexture(initialData, texWidth, texHeight, texDepth);
-    this.texture.format = RedFormat;
-    this.texture.type = textureType;
-    this.texture.needsUpdate = true;
+    const placeholders = Array.from({ length: MAX_LAYERS }, () => this.placeholderTexture);
+    const defaultColors = Array.from({ length: MAX_LAYERS }, () => new ThreeVector3(1, 1, 1));
+    const zeros = Array.from({ length: MAX_LAYERS }, () => 0);
+    const ones = Array.from({ length: MAX_LAYERS }, () => 1);
 
     this.material = new ShaderMaterial({
       uniforms: {
-        uVolume: { value: this.texture },
+        uVolumes: { value: placeholders },
+        uNumLayers: { value: 0 },
+        uLayerColors: { value: defaultColors },
+        uLayerMins: { value: zeros.slice() },
+        uLayerMaxs: { value: ones.slice() },
+        uLayerIsInverted: { value: zeros.slice() },
+        uLayerAlphas: { value: ones.slice() },
         uInvModelMatrix: { value: new Matrix4() },
         uVolumeSize: { value: volumeSize },
-        // Intensity / display uniforms (defaults: full range, white, fully opaque)
-        uMin: { value: 0.0 },
-        uMax: { value: 1.0 },
-        uIsInverted: { value: 0.0 },
-        uLayerColor: { value: new ThreeVector3(1, 1, 1) },
-        uAlpha: { value: 1.0 },
         uNumSteps: { value: 128 },
         uCameraForward: { value: new ThreeVector3(0, 0, -1) },
       },
@@ -297,7 +306,7 @@ export class MipVolume {
       depthWrite: false,
     });
 
-    const geometry = new BoxGeometry(volumeSize.x, volumeSize.y, volumeSize.z);
+    const geometry = new BoxGeometry(dx, dy, dz);
     this.mesh = new Mesh(geometry, this.material);
     this.mesh.position.copy(meshCenter);
     this.mesh.onBeforeRender = (_renderer, _scene, camera) => {
@@ -308,32 +317,184 @@ export class MipVolume {
 
   // Updates display uniforms from layer configuration — mirrors updateUniformsForLayer
   // in plane_material_factory.ts. intensityRange values are in raw data units.
-  updateLayerUniforms(settings: DatasetLayerConfiguration): void {
+  private updateUniformsForLayer(layerName: string, settings: DatasetLayerConfiguration): void {
+    const index = this.layers.findIndex((l) => l.layerName === layerName);
+    if (index === -1) return;
+    const layer = this.layers[index];
     const { alpha, intensityRange, isDisabled, isInverted, color } = settings;
-    const [rawMin, rawMax] = intensityRange ?? [0, this.normalizationFactor];
-    this.material.uniforms.uMin.value = rawMin / this.normalizationFactor;
-    this.material.uniforms.uMax.value = rawMax / this.normalizationFactor;
-    this.material.uniforms.uIsInverted.value = isInverted ? 1.0 : 0.0;
+    const [rawMin, rawMax] = intensityRange ?? [0, layer.normalizationFactor];
+    layer.displayMin = rawMin / layer.normalizationFactor;
+    layer.displayMax = rawMax / layer.normalizationFactor;
+    layer.isInverted = isInverted ? 1.0 : 0.0;
+    layer.alpha = isDisabled ? 0 : alpha / 100;
     if (color != null) {
-      this.material.uniforms.uLayerColor.value.set(color[0] / 255, color[1] / 255, color[2] / 255);
+      layer.color.set(color[0] / 255, color[1] / 255, color[2] / 255);
     }
-    this.material.uniforms.uAlpha.value = isDisabled ? 0 : alpha / 100;
+    (this.material.uniforms.uLayerMins.value as number[])[index] = layer.displayMin;
+    (this.material.uniforms.uLayerMaxs.value as number[])[index] = layer.displayMax;
+    (this.material.uniforms.uLayerIsInverted.value as number[])[index] = layer.isInverted;
+    (this.material.uniforms.uLayerAlphas.value as number[])[index] = layer.alpha;
+    (this.material.uniforms.uLayerColors.value as ThreeVector3[])[index].copy(layer.color);
+  }
+
+  private rebuildUniforms(): void {
+    const textures = this.material.uniforms.uVolumes.value as Data3DTexture[];
+    const colors = this.material.uniforms.uLayerColors.value as ThreeVector3[];
+    const mins = this.material.uniforms.uLayerMins.value as number[];
+    const maxs = this.material.uniforms.uLayerMaxs.value as number[];
+    const inverted = this.material.uniforms.uLayerIsInverted.value as number[];
+    const alphas = this.material.uniforms.uLayerAlphas.value as number[];
+
+    for (let i = 0; i < MAX_LAYERS; i++) {
+      if (i < this.layers.length) {
+        const l = this.layers[i];
+        textures[i] = l.texture;
+        colors[i].copy(l.color);
+        mins[i] = l.displayMin;
+        maxs[i] = l.displayMax;
+        inverted[i] = l.isInverted;
+        alphas[i] = l.alpha;
+      } else {
+        textures[i] = this.placeholderTexture;
+      }
+    }
+    this.material.uniforms.uNumLayers.value = this.layers.length;
   }
 
   setNumSteps(n: number): void {
     this.material.uniforms.uNumSteps.value = n;
   }
 
-  // CPU ray march matching the GLSL fragment shader logic.
-  // Returns the world-space position of the max-intensity voxel along the ray, or null.
-  findMaxIntensityPosition(ray: Ray): ThreeVector3 | null {
-    const { data, width, height, depth } = this.texture.image as {
-      data: ArrayLike<number> | null;
-      width: number;
-      height: number;
-      depth: number;
+  hasLayer(layerName: string): boolean {
+    return this.layers.some((l) => l.layerName === layerName);
+  }
+
+  get layerCount(): number {
+    return this.layers.length;
+  }
+
+  async addLayer(config: MipLayerConfig): Promise<void> {
+    if (this.layers.length >= MAX_LAYERS) {
+      console.warn("MipVolume: max layers reached, ignoring addLayer for", config.layerName);
+      return;
+    }
+    if (this.hasLayer(config.layerName)) {
+      return;
+    }
+
+    const index = this.layers.length;
+    const { elementClass, textureDims, actualZoomStep } = resolveDataSource(
+      config.layerName,
+      this.mag1Bbox,
+      config.zoomStep,
+    );
+    const texConfig = getMipTextureConfig(elementClass);
+    const [tw, th, td] = textureDims;
+    const totalVoxels = tw * th * td;
+    if (totalVoxels > MAX_VOXELS) {
+      throw new Error(
+        `MipVolume: ${tw}×${th}×${td} = ${totalVoxels} voxels exceeds the ${MAX_VOXELS}-voxel limit`,
+      );
+    }
+
+    const layerState: LayerState = {
+      layerName: config.layerName,
+      texture: this.placeholderTexture,
+      normalizationFactor: texConfig.normalizationFactor,
+      unsubscribe: () => {},
+      displayMin: 0,
+      displayMax: 1,
+      isInverted: 0,
+      alpha: 1,
+      color: new ThreeVector3(1, 1, 1),
     };
-    if (data == null || width === 0) return null;
+    this.layers.push(layerState);
+    (this.material.uniforms.uVolumes.value as Data3DTexture[])[index] = this.placeholderTexture;
+    this.material.uniforms.uNumLayers.value = this.layers.length;
+
+    layerState.unsubscribe = listenToStoreProperty(
+      (state) => state.datasetConfiguration.layers[config.layerName],
+      (settings) => {
+        if (settings != null) this.updateUniformsForLayer(config.layerName, settings);
+      },
+      true,
+    );
+
+    const rawData = await api.data.getDataForBoundingBox(
+      config.layerName,
+      this.mag1Bbox,
+      actualZoomStep,
+    );
+
+    let textureData: Uint8Array | Float32Array;
+    if (elementClass === "uint32") {
+      // No normalized R32 format in WebGL2 — normalize to [0, 1] as float
+      const src = rawData as Uint32Array;
+      const dst = new Float32Array(src.length);
+      for (let i = 0; i < src.length; i++) dst[i] = src[i] / 4294967295;
+      textureData = dst;
+    } else if (elementClass === "uint16") {
+      const src = rawData as Uint16Array;
+      const dst = new Float32Array(src.length);
+      for (let i = 0; i < src.length; i++) dst[i] = src[i] / 65535;
+      textureData = dst;
+    } else if (elementClass === "float") {
+      textureData = rawData as Float32Array;
+    } else {
+      textureData = new Uint8Array(rawData.buffer);
+    }
+
+    // @ts-expect-error — Uint8Array<ArrayBufferLike> vs ArrayBufferView<ArrayBuffer> in TS 5.9
+    const realTexture = new Data3DTexture(textureData, tw, th, td);
+    realTexture.format = RedFormat;
+    realTexture.type = texConfig.textureType;
+    realTexture.needsUpdate = true;
+
+    layerState.texture = realTexture;
+    (this.material.uniforms.uVolumes.value as Data3DTexture[])[index] = realTexture;
+  }
+
+  removeLayer(layerName: string): void {
+    const index = this.layers.findIndex((l) => l.layerName === layerName);
+    if (index === -1) return;
+    const layer = this.layers[index];
+    layer.unsubscribe();
+    if (layer.texture !== this.placeholderTexture) {
+      layer.texture.dispose();
+    }
+    this.layers.splice(index, 1);
+    this.rebuildUniforms();
+  }
+
+  // Dev helper: adds a mock 3D cross into slot 0 (no layer settings subscription)
+  addMockLayer(): void {
+    if (this.layers.length >= MAX_LAYERS) return;
+    const data = createCrossData(MOCK_SIZE);
+    // @ts-expect-error — typed array variant
+    const tex = new Data3DTexture(data, MOCK_SIZE, MOCK_SIZE, MOCK_SIZE);
+    tex.format = RedFormat;
+    tex.type = UnsignedByteType;
+    tex.needsUpdate = true;
+    const idx = this.layers.length;
+    this.layers.push({
+      layerName: "mock",
+      texture: tex,
+      unsubscribe: () => {},
+      normalizationFactor: 255,
+      displayMin: 0,
+      displayMax: 1,
+      isInverted: 0,
+      alpha: 1,
+      color: new ThreeVector3(1, 1, 1),
+    });
+    (this.material.uniforms.uVolumes.value as Data3DTexture[])[idx] = tex;
+    this.material.uniforms.uNumLayers.value = this.layers.length;
+  }
+
+  // CPU ray march matching the GLSL fragment shader logic.
+  // Returns the world-space position of the max-intensity voxel across all layers, or null.
+  findMaxIntensityPosition(ray: Ray): ThreeVector3 | null {
+    if (this.layers.length === 0) return null;
 
     const vs = this.material.uniforms.uVolumeSize.value as ThreeVector3;
     const numSteps = this.material.uniforms.uNumSteps.value as number;
@@ -372,16 +533,30 @@ export class MipVolume {
     let maxVal = 0;
     let maxT = tStart;
 
+    // Gather texture images for all layers
+    const images = this.layers.map((l) => {
+      const img = l.texture.image as {
+        data: ArrayLike<number> | null;
+        width: number;
+        height: number;
+        depth: number;
+      };
+      return img;
+    });
+
     for (let i = 0; i < numSteps; i++) {
       const t = tStart + (i + 0.5) * stepSize;
       const p = normOrigin.clone().addScaledVector(normDir, t);
-      const xi = Math.min(Math.floor((p.x + 0.5) * width), width - 1);
-      const yi = Math.min(Math.floor((p.y + 0.5) * height), height - 1);
-      const zi = Math.min(Math.floor((p.z + 0.5) * depth), depth - 1);
-      const val = data[xi + yi * width + zi * width * height];
-      if (val > maxVal) {
-        maxVal = val;
-        maxT = t;
+      for (const { data, width, height, depth } of images) {
+        if (data == null || width === 0) continue;
+        const xi = Math.min(Math.floor((p.x + 0.5) * width), width - 1);
+        const yi = Math.min(Math.floor((p.y + 0.5) * height), height - 1);
+        const zi = Math.min(Math.floor((p.z + 0.5) * depth), depth - 1);
+        const val = data[xi + yi * width + zi * width * height];
+        if (val > maxVal) {
+          maxVal = val;
+          maxT = t;
+        }
       }
     }
 
@@ -392,56 +567,15 @@ export class MipVolume {
     return localMax.applyMatrix4(this.mesh.matrixWorld);
   }
 
-  // Subscribes to store changes for the given layer and keeps uniforms in sync.
-  // Immediately applies the current settings on subscribe.
-  subscribeToLayerSettings(layerName: string): void {
-    this.unsubscribeFromStore?.();
-    this.unsubscribeFromStore = listenToStoreProperty(
-      (state) => state.datasetConfiguration.layers[layerName],
-      (settings) => {
-        if (settings != null) {
-          this.updateLayerUniforms(settings);
-        }
-      },
-      true,
-    );
-  }
-
-  async loadData(datasource: DataSource): Promise<void> {
-    const resolved = resolveDataSource(datasource);
-    const actualZoomStep = this.actualZoomStep ?? resolved.actualZoomStep;
-    const rawData = await api.data.getDataForBoundingBox(
-      datasource.layerName,
-      datasource.mag1Bbox,
-      actualZoomStep,
-    );
-
-    let textureData: Uint8Array | Uint16Array | Float32Array;
-    if (resolved.elementClass === "uint32") {
-      // No normalized R32 format in WebGL2 — normalize to [0, 1] as float
-      const src = rawData as Uint32Array;
-      const dst = new Float32Array(src.length);
-      for (let i = 0; i < src.length; i++) dst[i] = src[i] / 4294967295;
-      textureData = dst;
-    } else if (resolved.elementClass === "uint16") {
-      const src = rawData as Uint16Array;
-      const dst = new Float32Array(src.length);
-      for (let i = 0; i < src.length; i++) dst[i] = src[i] / 65535;
-      textureData = dst;
-    } else if (resolved.elementClass === "float") {
-      textureData = rawData as Float32Array;
-    } else {
-      textureData = new Uint8Array(rawData.buffer);
-    }
-
-    // @ts-expect-error — typed array variant not matching narrow ArrayBufferView in TS 5.9
-    this.texture.image.data = textureData;
-    this.texture.needsUpdate = true;
-  }
-
   dispose(): void {
-    this.unsubscribeFromStore?.();
-    this.texture.dispose();
+    for (const layer of this.layers) {
+      layer.unsubscribe();
+      if (layer.texture !== this.placeholderTexture) {
+        layer.texture.dispose();
+      }
+    }
+    this.layers = [];
+    this.placeholderTexture.dispose();
     this.mesh.geometry.dispose();
     this.material.dispose();
   }

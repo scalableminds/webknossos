@@ -99,11 +99,13 @@ export type UserBoundingBoxWithoutId = {
   isVisible: boolean;
 };
 
-export type MipBboxSettings = {
+export type MipLayerConfig = {
   layerName: string;
   zoomStep: number;
   isLoading: boolean;
 };
+/** @deprecated Use MipLayerConfig */
+export type MipBboxSettings = MipLayerConfig;
 export type UserBoundingBox = UserBoundingBoxWithoutId & {
   id: number;
 };
@@ -694,7 +696,7 @@ export type WebknossosState = {
     LocalSegmentationData
   >;
   // Frontend-only, not persisted to server
-  readonly mipBboxSettings: Record<number, MipBboxSettings>;
+  readonly mipBboxSettings: Record<number, MipLayerConfig[]>;
 };
 const sagaMiddleware = createSagaMiddleware();
 export type Reducer = (state: WebknossosState, action: Action) => WebknossosState;

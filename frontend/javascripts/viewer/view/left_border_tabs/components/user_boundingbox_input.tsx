@@ -25,6 +25,7 @@ import {
 } from "viewer/model/accessors/dataset_accessor";
 import {
   removeMipForBboxAction,
+  removeMipLayerForBboxAction,
   setMipForBboxAction,
 } from "viewer/model/actions/annotation_actions";
 import { api } from "viewer/singletons";
@@ -113,7 +114,8 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
   const visibleSegmentationLayer = useWkSelector((state) => getVisibleSegmentationLayer(state));
   const colorLayers = useWkSelector((state) => getColorLayers(state.dataset));
   const magInfoByLayer = useWkSelector((state) => getMagInfoByLayer(state.dataset));
-  const mipConfig = useWkSelector((state) => state.mipBboxSettings[bboxId] ?? null);
+  const mipLayers = useWkSelector((state) => state.mipBboxSettings[bboxId] ?? null);
+  const isMipLoading = mipLayers?.some((l) => l.isLoading) ?? false;
 
   useEffect(() => {
     if (!isEditing && propValue !== undefined) {
@@ -204,93 +206,115 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
     : "This WEBKNOSSOS instance is not configured to run export jobs.";
 
   const getContextMenu = () => {
-    const renderAsMipItem: NonNullable<MenuProps["items"]>[number] =
-      mipConfig != null
-        ? {
-            key: "removeMip",
-            label: "Remove MIP rendering",
-            icon: <FireOutlined />,
-            onClick: () => {
-              dispatch(removeMipForBboxAction(bboxId));
-              maybeCloseContextMenu();
-            },
+    const activeMipLayerNames = new Set(mipLayers?.map((l) => l.layerName) ?? []);
+    const availableColorLayers = colorLayers.filter((l) => !activeMipLayerNames.has(l.name));
+
+    const buildAutoSelectHandler = (layers: typeof colorLayers) => () => {
+      const MAX_BYTES = 50 * 1024 * 1024;
+      const [, , , bboxW, bboxH, bboxD] = propValue;
+      let bestLayerName: string | null = null;
+      let bestZoomStep: number | null = null;
+      let bestSize = -1;
+      let fallbackLayerName: string | null = null;
+      let fallbackZoomStep: number | null = null;
+      let fallbackSize = Number.MAX_SAFE_INTEGER;
+      for (const layer of layers) {
+        const mags = magInfoByLayer[layer.name]?.getMagsWithIndices() ?? [];
+        const bytesPerVoxel = getBytesPerElement(layer.elementClass);
+        for (const [zoomStep, mag] of mags) {
+          const voxels =
+            Math.ceil(bboxW / mag[0]) * Math.ceil(bboxH / mag[1]) * Math.ceil(bboxD / mag[2]);
+          const size = voxels * bytesPerVoxel;
+          if (size <= MAX_BYTES && size > bestSize) {
+            bestSize = size;
+            bestLayerName = layer.name;
+            bestZoomStep = zoomStep;
           }
-        : {
-            key: "renderAsMip",
-            label: "Render as MIP",
-            icon: <FireOutlined />,
-            disabled: colorLayers.length === 0,
-            onTitleClick: () => {
-              const MAX_BYTES = 50 * 1024 * 1024;
-              const [, , , bboxW, bboxH, bboxD] = propValue;
-              let bestLayerName: string | null = null;
-              let bestZoomStep: number | null = null;
-              let bestSize = -1;
-              let fallbackLayerName: string | null = null;
-              let fallbackZoomStep: number | null = null;
-              let fallbackSize = Number.MAX_SAFE_INTEGER;
-              for (const layer of colorLayers) {
-                const mags = magInfoByLayer[layer.name]?.getMagsWithIndices() ?? [];
-                const bytesPerVoxel = getBytesPerElement(layer.elementClass);
-                for (const [zoomStep, mag] of mags) {
-                  const voxels =
-                    Math.ceil(bboxW / mag[0]) *
-                    Math.ceil(bboxH / mag[1]) *
-                    Math.ceil(bboxD / mag[2]);
-                  const size = voxels * bytesPerVoxel;
-                  if (size <= MAX_BYTES && size > bestSize) {
-                    bestSize = size;
-                    bestLayerName = layer.name;
-                    bestZoomStep = zoomStep;
-                  }
-                  if (size < fallbackSize) {
-                    fallbackSize = size;
-                    fallbackLayerName = layer.name;
-                    fallbackZoomStep = zoomStep;
-                  }
-                }
-              }
-              const layerName = bestLayerName ?? fallbackLayerName;
-              const zoomStep = bestZoomStep ?? fallbackZoomStep;
-              if (layerName != null && zoomStep != null) {
-                dispatch(setMipForBboxAction(bboxId, { layerName, zoomStep, isLoading: true }));
+          if (size < fallbackSize) {
+            fallbackSize = size;
+            fallbackLayerName = layer.name;
+            fallbackZoomStep = zoomStep;
+          }
+        }
+      }
+      const layerName = bestLayerName ?? fallbackLayerName;
+      const zoomStep = bestZoomStep ?? fallbackZoomStep;
+      if (layerName != null && zoomStep != null) {
+        dispatch(setMipForBboxAction(bboxId, { layerName, zoomStep, isLoading: true }));
+        maybeCloseContextMenu();
+      }
+    };
+
+    const renderAsMipItem: NonNullable<MenuProps["items"]>[number] = {
+      key: "renderAsMip",
+      label: "Render as MIP",
+      icon: <FireOutlined />,
+      disabled: availableColorLayers.length === 0,
+      onTitleClick: buildAutoSelectHandler(availableColorLayers),
+      children: availableColorLayers.map((layer) => {
+        const mags = magInfoByLayer[layer.name]?.getMagsWithIndices() ?? [];
+        const bytesPerVoxel = getBytesPerElement(layer.elementClass);
+        const [, , , bboxW, bboxH, bboxD] = propValue;
+        return {
+          key: `mip-${layer.name}`,
+          label: layer.name,
+          children: mags.map(([zoomStep, mag]) => {
+            const voxels =
+              Math.ceil(bboxW / mag[0]) *
+              Math.ceil(bboxH / mag[1]) *
+              Math.ceil(bboxD / mag[2]);
+            const sizeLabel = formatBytes(voxels * bytesPerVoxel, 0);
+            return {
+              key: `mip-${layer.name}-${zoomStep}`,
+              label: `Mag ${mag.join("-")} (${sizeLabel})`,
+              onClick: () => {
+                dispatch(
+                  setMipForBboxAction(bboxId, {
+                    layerName: layer.name,
+                    zoomStep,
+                    isLoading: true,
+                  }),
+                );
                 maybeCloseContextMenu();
-              }
-            },
-            children: colorLayers.map((layer) => {
-              const mags = magInfoByLayer[layer.name]?.getMagsWithIndices() ?? [];
-              const bytesPerVoxel = getBytesPerElement(layer.elementClass);
-              const [, , , bboxW, bboxH, bboxD] = propValue;
-              return {
-                key: `mip-${layer.name}`,
-                label: layer.name,
-                children: mags.map(([zoomStep, mag]) => {
-                  const voxels =
-                    Math.ceil(bboxW / mag[0]) *
-                    Math.ceil(bboxH / mag[1]) *
-                    Math.ceil(bboxD / mag[2]);
-                  const sizeLabel = formatBytes(voxels * bytesPerVoxel, 0);
-                  return {
-                    key: `mip-${layer.name}-${zoomStep}`,
-                    label: `Mag ${mag.join("-")} (${sizeLabel})`,
-                    onClick: () => {
-                      dispatch(
-                        setMipForBboxAction(bboxId, {
-                          layerName: layer.name,
-                          zoomStep,
-                          isLoading: true,
-                        }),
-                      );
-                      maybeCloseContextMenu();
-                    },
-                  };
-                }),
-              };
-            }),
-          };
+              },
+            };
+          }),
+        };
+      }),
+    };
+
+    const activeMipLayersItem: NonNullable<MenuProps["items"]>[number] | null =
+      mipLayers != null && mipLayers.length > 0
+        ? {
+            key: "mipLayers",
+            label: "Active MIP layers",
+            icon: <FireOutlined />,
+            children: [
+              ...mipLayers.map((l) => ({
+                key: `removeMipLayer-${l.layerName}`,
+                label: l.layerName,
+                icon: <DeleteOutlined />,
+                onClick: () => {
+                  dispatch(removeMipLayerForBboxAction(bboxId, l.layerName));
+                  maybeCloseContextMenu();
+                },
+              })),
+              {
+                key: "removeAllMip",
+                label: "Remove all",
+                icon: <DeleteOutlined />,
+                onClick: () => {
+                  dispatch(removeMipForBboxAction(bboxId));
+                  maybeCloseContextMenu();
+                },
+              },
+            ],
+          }
+        : null;
 
     const items: MenuProps["items"] = [
       renderAsMipItem,
+      ...(activeMipLayersItem != null ? [activeMipLayersItem] : []),
       {
         key: "registerSegments",
         label: (
@@ -372,13 +396,19 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
             onClick={(e) => e.stopPropagation()}
           />
         </FastTooltip>
-        {mipConfig != null && (
+        {mipLayers != null && mipLayers.length > 0 && (
           <Dropdown
             menu={{
               items: [
+                ...mipLayers.map((l) => ({
+                  key: `removeMipLayer-${l.layerName}`,
+                  label: l.layerName,
+                  icon: <DeleteOutlined />,
+                  onClick: () => dispatch(removeMipLayerForBboxAction(bboxId, l.layerName)),
+                })),
                 {
-                  key: "removeMip",
-                  label: "Remove MIP rendering",
+                  key: "removeAllMip",
+                  label: "Remove all MIP layers",
                   icon: <DeleteOutlined />,
                   onClick: () => dispatch(removeMipForBboxAction(bboxId)),
                 },
@@ -389,9 +419,9 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
             <ButtonComponent
               type="text"
               size="small"
-              title={`MIP: ${mipConfig.layerName}`}
+              title={`MIP: ${mipLayers.map((l) => l.layerName).join(", ")}`}
               icon={
-                mipConfig.isLoading ? (
+                isMipLoading ? (
                   <LoadingOutlined style={{ color: "#1677ff" }} />
                 ) : (
                   <FireOutlined style={{ color: "#1677ff" }} />

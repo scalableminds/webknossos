@@ -155,15 +155,18 @@ function needsPollAnnotationUpdates(state: WebknossosState): "yes" | "no" | "lat
     return "later";
   }
 
-  // If the current user is currently the only allowed editor, we don't need to fetch newer versions.
-  const allowSave =
-    state.annotation.restrictions.allowSave && state.annotation.isUpdatingCurrentlyAllowed;
+  // If the current user may edit the annotation while the collab mode is *not*
+  // "Concurrent", we don't need to fetch newer versions. Typically, this is the
+  // case when the current user is either the owner or a collaborator with the mutex.
+  // Addtionally, this is also the case when saving is disabled (allowSave will be
+  // false then which is why we don't check it here).
+  const { isUpdatingCurrentlyAllowed } = state.annotation;
   const { collaborationMode } = state.annotation;
-  const userIsSoleEditor = allowSave && collaborationMode !== "Concurrent";
-  if (userIsSoleEditor) {
-    // The active user is currently the only one that is allowed to mutate the annotation.
-    // WK should already show the newest version of the annotation.
-    // Two rare scenarios are imaginable where this is not the case:
+  const mayEditInNonCollabMode = isUpdatingCurrentlyAllowed && collaborationMode !== "Concurrent";
+  if (mayEditInNonCollabMode) {
+    // WK should already show the newest version of the annotation OR should not care
+    // about newer versions (because saving was disabled by the user).
+    // However, there is a rare chance of two problematic scenarios currently:
     // - the current user opened the annotation twice (we don't guard against this, yet)
     // - there was a race condition where the current user C loads version X, another user U pushes
     //   version X+1 and U releases the mutex, only then C acquires the mutex. Now, C doesn't know about

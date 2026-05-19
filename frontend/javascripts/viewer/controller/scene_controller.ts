@@ -16,6 +16,7 @@ import {
   Mesh,
   MeshBasicMaterial,
   type Object3D,
+  Ray,
   Scene,
   Vector3 as ThreeVector3,
   type WebGLRenderer,
@@ -395,6 +396,14 @@ class SceneController {
         .catch(console.error);
       this.mipVolumes.set(bbox.id, { volume, config, bbox });
     }
+  }
+
+  getMipHitPosition(ray: Ray): ThreeVector3 | null {
+    for (const { volume } of this.mipVolumes.values()) {
+      const pos = volume.findMaxIntensityPosition(ray);
+      if (pos != null) return pos;
+    }
+    return null;
   }
 
   addSkeleton(

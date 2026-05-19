@@ -6,6 +6,7 @@ import {
   GLSL3,
   Matrix4,
   Mesh,
+  Ray,
   RedFormat,
   ShaderMaterial,
   Vector3 as ThreeVector3,
@@ -312,6 +313,60 @@ export class MipVolume {
 
   setNumSteps(n: number): void {
     this.material.uniforms.uNumSteps.value = n;
+  }
+
+  // CPU ray march matching the GLSL fragment shader logic.
+  // Returns the world-space position of the max-intensity voxel along the ray, or null.
+  findMaxIntensityPosition(ray: Ray): ThreeVector3 | null {
+    const { data, width, height, depth } = this.texture.image as {
+      data: ArrayLike<number> | null;
+      width: number;
+      height: number;
+      depth: number;
+    };
+    if (data == null || width === 0) return null;
+
+    const vs = this.material.uniforms.uVolumeSize.value as ThreeVector3;
+    const numSteps = this.material.uniforms.uNumSteps.value as number;
+
+    // Match shader: normPos = (invModelMatrix * worldPos) / uVolumeSize
+    const invMatrix = new Matrix4().copy(this.mesh.matrixWorld).invert();
+    const localOrigin = ray.origin.clone().applyMatrix4(invMatrix);
+    // Transform a point on the ray to local space to get direction (handles non-uniform scale)
+    const localPoint = ray.origin.clone().add(ray.direction).applyMatrix4(invMatrix);
+    const localDir = localPoint.sub(localOrigin);
+
+    const normOrigin = new ThreeVector3(localOrigin.x / vs.x, localOrigin.y / vs.y, localOrigin.z / vs.z);
+    const normDir = new ThreeVector3(localDir.x / vs.x, localDir.y / vs.y, localDir.z / vs.z).normalize();
+
+    // AABB slab test — identical to shader's intersectAABB; IEEE 754 handles ±Inf correctly
+    const t0x = (-0.5 - normOrigin.x) / normDir.x; const t1x = (0.5 - normOrigin.x) / normDir.x;
+    const t0y = (-0.5 - normOrigin.y) / normDir.y; const t1y = (0.5 - normOrigin.y) / normDir.y;
+    const t0z = (-0.5 - normOrigin.z) / normDir.z; const t1z = (0.5 - normOrigin.z) / normDir.z;
+    const tNear = Math.max(Math.min(t0x, t1x), Math.min(t0y, t1y), Math.min(t0z, t1z));
+    const tFar  = Math.min(Math.max(t0x, t1x), Math.max(t0y, t1y), Math.max(t0z, t1z));
+    if (tNear > tFar) return null;
+
+    const tStart = Math.max(tNear, 0);
+    const stepSize = (tFar - tStart) / numSteps;
+    let maxVal = 0;
+    let maxT = tStart;
+
+    for (let i = 0; i < numSteps; i++) {
+      const t = tStart + (i + 0.5) * stepSize;
+      const p = normOrigin.clone().addScaledVector(normDir, t);
+      const xi = Math.min(Math.floor((p.x + 0.5) * width),  width  - 1);
+      const yi = Math.min(Math.floor((p.y + 0.5) * height), height - 1);
+      const zi = Math.min(Math.floor((p.z + 0.5) * depth),  depth  - 1);
+      const val = data[xi + yi * width + zi * width * height];
+      if (val > maxVal) { maxVal = val; maxT = t; }
+    }
+
+    if (maxVal <= 0) return null;
+
+    const normMax = normOrigin.clone().addScaledVector(normDir, maxT);
+    const localMax = new ThreeVector3(normMax.x * vs.x, normMax.y * vs.y, normMax.z * vs.z);
+    return localMax.applyMatrix4(this.mesh.matrixWorld);
   }
 
   // Subscribes to store changes for the given layer and keeps uniforms in sync.

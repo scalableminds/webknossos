@@ -24,7 +24,7 @@ import {
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
 import { setNodePositionAction } from "viewer/model/actions/skeletontracing_actions";
-import { LandmarkTransformModal } from "viewer/view/action_bar/tools/landmark_transform_modal";
+import { LandmarkTransformModal } from "viewer/view/left_border_tabs/modals/landmark_transform_modal";
 
 const { Text, Title } = Typography;
 

@@ -260,9 +260,7 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
           label: layer.name,
           children: mags.map(([zoomStep, mag]) => {
             const voxels =
-              Math.ceil(bboxW / mag[0]) *
-              Math.ceil(bboxH / mag[1]) *
-              Math.ceil(bboxD / mag[2]);
+              Math.ceil(bboxW / mag[0]) * Math.ceil(bboxH / mag[1]) * Math.ceil(bboxD / mag[2]);
             const sizeLabel = formatBytes(voxels * bytesPerVoxel, 0);
             return {
               key: `mip-${layer.name}-${zoomStep}`,

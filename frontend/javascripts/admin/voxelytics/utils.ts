@@ -1,4 +1,3 @@
-import { message } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import { VoxelyticsRunState } from "types/api_types";
 
@@ -59,10 +58,6 @@ export function isObjectEmpty(obj: Record<string, any>) {
   return Object.keys(obj).length === 0 && obj.constructor === Object;
 }
 
-export async function copyToClipboad(text: string) {
-  await navigator.clipboard.writeText(text);
-  message.success("Copied to clipboard.");
-}
 
 export function addBeforePadding(date: Date): Date {
   return new Date(date.getTime() - LOG_TIME_PADDING);

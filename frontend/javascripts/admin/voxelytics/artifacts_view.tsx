@@ -5,7 +5,8 @@ import { formatCountToDataAmountUnit } from "libs/format_utils";
 import { JSONTree } from "react-json-tree";
 import { Link } from "react-router-dom";
 import type { VoxelyticsArtifactConfig } from "types/api_types";
-import { copyToClipboad, isObjectEmpty, useTheme } from "./utils";
+import { copyToClipboard } from "libs/clipboard";
+import { isObjectEmpty, useTheme } from "./utils";
 
 export function renderArtifactPath(artifact: VoxelyticsArtifactConfig) {
   return (
@@ -22,7 +23,7 @@ export function renderArtifactPath(artifact: VoxelyticsArtifactConfig) {
       <CopyOutlined
         style={{ top: 10, right: 10, position: "absolute" }}
         onClick={() => {
-          copyToClipboad(artifact.path);
+          copyToClipboard(artifact.path);
         }}
       />
     </div>

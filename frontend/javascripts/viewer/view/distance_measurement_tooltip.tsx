@@ -1,5 +1,5 @@
 import { CopyOutlined } from "@ant-design/icons";
-import { copyToClipboad } from "admin/voxelytics/utils";
+import { copyToClipboard } from "libs/clipboard";
 import { Tooltip } from "antd";
 import {
   formatAreaAsVx,
@@ -29,7 +29,7 @@ function DistanceEntry({ distance }: { distance: string }) {
       <Tooltip title="Copy to clipboard">
         <CopyOutlined
           onClick={() => {
-            copyToClipboad(distance);
+            copyToClipboard(distance);
           }}
         />
       </Tooltip>

@@ -21,7 +21,10 @@ import {
 } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { SagaIdentifier, type Vector3 } from "viewer/constants";
-import { isAnnotationEditableByNonOwners } from "viewer/model/accessors/annotation_accessor";
+import {
+  isAnnotationEditableByNonOwners,
+  mayEditAnnotation,
+} from "viewer/model/accessors/annotation_accessor";
 import {
   getSegmentationLayerByName,
   getVisibleSegmentationLayer,
@@ -331,10 +334,7 @@ function* applyNewestMissingUpdateActions(
     Toast.close(SAVING_CONFLICT_TOAST_KEY);
     return SuccessEmptyIncorporateActionsReturnValue;
   }
-  const allowSave = yield* select(
-    (state) =>
-      state.annotation.restrictions.allowSave && state.annotation.isUpdatingCurrentlyAllowed,
-  );
+  const mayEdit = yield* select((state) => mayEditAnnotation(state));
   try {
     if (!needsRewindingRebase) {
       // If no rebasing is currently done, we still need to inform the diffing saga, that the currently replayed
@@ -359,7 +359,7 @@ function* applyNewestMissingUpdateActions(
   const hasPendingUpdates = (yield* select((state) => state.save.queue)).length > 0;
 
   let msg = "";
-  if (!allowSave) {
+  if (!mayEdit) {
     msg =
       "A newer version of this annotation was found on the server. Reload the page to see the newest changes.";
   } else if (hasPendingUpdates) {
@@ -367,7 +367,7 @@ function* applyNewestMissingUpdateActions(
       "A newer version of this annotation was found on the server. Your current changes to this annotation cannot be saved anymore. Please reload.";
   } else {
     msg =
-      "A newer version of this annotation was found on the server. Please reload the page to see the newer version. Otherwise, changes to the annotation cannot be saved anymore.";
+      "A newer version of this annotation was found on the server. Please reload the page to see the newer version. Otherwise, new changes to this annotation cannot be saved anymore.";
   }
   Toast.warning(msg, {
     sticky: true,

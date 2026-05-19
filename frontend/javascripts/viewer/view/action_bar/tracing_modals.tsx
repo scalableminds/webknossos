@@ -25,6 +25,7 @@ function TracingModals() {
   const dispatch = useDispatch();
 
   const annotationType = useWkSelector((state) => state.annotation.annotationType);
+  const mayEdit = useWkSelector((state) => mayEditAnnotation(state));
   const { annotationId, owner: annotationOwner } = useWkSelector((state) => state.annotation);
   const restrictions = useWkSelector((state) => state.annotation.restrictions);
   const activeUser = useWkSelector((state) => state.activeUser);
@@ -132,7 +133,7 @@ function TracingModals() {
       );
     }
 
-    if (restrictions.allowSave && isSkeletonMode && activeUser != null) {
+    if (mayEdit && isSkeletonMode && activeUser != null) {
       modalList.push(
         <MergeModalView
           key="merge-modal"
@@ -156,6 +157,7 @@ function TracingModals() {
     annotationId,
     annotationType,
     restrictions,
+    mayEdit,
     handleShareClose,
     handleDownloadClose,
     handleMergeClose,

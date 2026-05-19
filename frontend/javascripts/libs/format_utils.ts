@@ -157,7 +157,10 @@ function getRoundedScaleValues(
     false,
     roundToDigits,
   );
-  const scaleRounded = map3((value) => roundTo(value / conversionFactor, roundToDigits), scaleFactor);
+  const scaleRounded = map3(
+    (value) => roundTo(value / conversionFactor, roundToDigits),
+    scaleFactor,
+  );
   return [scaleRounded, newUnit];
 }
 

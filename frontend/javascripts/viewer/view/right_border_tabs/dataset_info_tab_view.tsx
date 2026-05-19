@@ -14,10 +14,15 @@ import { getOrganization } from "admin/api/organization";
 import { Space, Tag, Typography } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { ThemedIcon } from "components/themed_icon";
-import { formatNumberToVolume, formatScale, formatScaleForClipboard, formatVoxels } from "libs/format_utils";
-import Toast from "libs/toast";
+import {
+  formatNumberToVolume,
+  formatScale,
+  formatScaleForClipboard,
+  formatVoxels,
+} from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
+import Toast from "libs/toast";
 import { mayUserEditDataset, pluralize, safeNumberToStr } from "libs/utils";
 import messages from "messages";
 import React, { type CSSProperties } from "react";
@@ -218,9 +223,7 @@ export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
       >
         <Icon component={IconVoxelsize} className="info-tab-icon" aria-label="Voxel size" />
       </td>
-      <td onClick={copyVoxelSizeToClipboard}>
-        {formatScale(dataset.dataSource.scale)}
-      </td>
+      <td onClick={copyVoxelSizeToClipboard}>{formatScale(dataset.dataSource.scale)}</td>
     </FastTooltip>
   );
 }

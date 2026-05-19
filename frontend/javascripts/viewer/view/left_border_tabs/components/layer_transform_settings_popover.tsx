@@ -306,6 +306,13 @@ export function LayerTransformSettingsContent({
               size="small"
               icon={<AimOutlined />}
               onClick={() => setIsLandmarkModalOpen(true)}
+              disabled={
+                isFetchingStored ||
+                srt.scale.some((v, i) => Math.abs(v - storedSRT.scale[i]) > 1e-6) ||
+                srt.rotation.some((v, i) => Math.abs(v - storedSRT.rotation[i]) > 1e-6) ||
+                srt.translation.some((v, i) => Math.abs(v - storedSRT.translation[i]) > 1e-6)
+              }
+              title="Only available when current transforms match the stored transforms"
               block
             >
               Landmark-Based Transform…

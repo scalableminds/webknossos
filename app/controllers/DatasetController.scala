@@ -56,6 +56,10 @@ case class DatasetUpdateParameters(
     layerRenamings: Option[Seq[LayerRenaming]] = None,
     attachmentRenamings: Option[Seq[AttachmentRenaming]] = None
 )
+object DatasetUpdateParameters extends TristateOptionJsonHelper {
+  implicit val jsonFormat: OFormat[DatasetUpdateParameters] =
+    Json.configured(tristateOptionParsing).format[DatasetUpdateParameters]
+}
 
 case class LayerRenaming(oldName: String, newName: String)
 object LayerRenaming {
@@ -68,13 +72,6 @@ case class AttachmentRenaming(
     newName: String)
 object AttachmentRenaming {
   implicit val jsonFormat: OFormat[AttachmentRenaming] = Json.format[AttachmentRenaming]
-}
-
-object DatasetUpdateParameters extends TristateOptionJsonHelper {
-  implicit val jsonFormat: OFormat[DatasetUpdateParameters] =
-    Json.configured(tristateOptionParsing).format[DatasetUpdateParameters]
-  def newEmpty: DatasetUpdateParameters =
-    DatasetUpdateParameters(description = None, name = None)
 }
 
 case class ReserveDatasetUploadToPathsRequest(
@@ -152,10 +149,12 @@ object SegmentAnythingMaskParameters {
   implicit val jsonFormat: Format[SegmentAnythingMaskParameters] = Json.format[SegmentAnythingMaskParameters]
 }
 
-case class DataSourceRegistrationInfo(dataSource: UsableDataSource,
-                                      folderId: Option[ObjectId],
-                                      dataStoreName: String,
-                                      importUrl: Option[String])
+case class DataSourceRegistrationInfo(
+    dataSource: UsableDataSource,
+    folderId: Option[ObjectId],
+    dataStoreName: String,
+    importUrl: Option[String]
+)
 
 object DataSourceRegistrationInfo {
   implicit val jsonFormat: OFormat[DataSourceRegistrationInfo] = Json.format[DataSourceRegistrationInfo]

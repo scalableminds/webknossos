@@ -24,7 +24,7 @@ export function DatasetURLImport() {
         checkedForExistence = true;
       } catch (_e) {
         checkedForExistence = true;
-        const errorText = "Check for existing dataset with the same remote URl failed.";
+        const errorText = "Check for existing dataset with the same remote URL failed.";
         Toast.error(errorText);
         console.error(errorText, _e);
       }
@@ -44,19 +44,24 @@ export function DatasetURLImport() {
     }
   }, [maybeExistingDS, navigate]);
 
-  if ((datasetUri !== null && !checkedForExistence) || maybeExistingDS?.dataSource) {
+  if (
+    (datasetUri !== null && !checkedForExistence) ||
+    maybeExistingDS?.dataSource ||
+    datastores == null
+  ) {
     // First check whether there is already a dataset with this import url
     // before rendering DatasetAddRemoteView which potentially auto-imports the dataset
     // and would thus duplicate it.
     // In case a duplicate was found, also render a placeholder while navigating to this dataset.
+    // Else if the datastores are still unknown, also render the placeholder.
     return <BrainSpinner />;
   }
 
-  return datastores != null ? (
+  return (
     <DatasetAddRemoteView
       datastores={datastores}
       onAdded={handleDatasetAdded}
       defaultDatasetUrl={datasetUri}
     />
-  ) : null;
+  );
 }

@@ -108,8 +108,6 @@ describe("Saving guards", () => {
 
     await ensurePromise;
     expect(ensureResolved).toBe(true);
-
-    await context.api.tracing.save();
   });
 
   it<WebknossosTestContext>("should not fill the save queue in a read-only annotation", async (context) => {

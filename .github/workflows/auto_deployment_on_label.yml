@@ -30,6 +30,7 @@ jobs:
         id: check_build
         run: |
           run_id=$(gh run list \
+            --repo "${{ github.repository }}" \
             --branch "${{ github.head_ref }}" \
             --workflow "CI Pipeline" \
             --json databaseId,status,event \

@@ -43,7 +43,7 @@ import React from "react";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import { LongUnitToShortUnitMap } from "viewer/constants";
-import { isAnnotationOwner } from "viewer/model/accessors/annotation_accessor";
+import { isAnnotationOwner, mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import {
   areGeometriesTransformed,
   enforceSkeletonTracing,
@@ -1086,7 +1086,7 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
 }
 
 const mapStateToProps = (state: WebknossosState) => ({
-  allowUpdate: state.annotation.isUpdatingCurrentlyAllowed,
+  allowUpdate: mayEditAnnotation(state),
   skeletonTracing: state.annotation.skeleton,
   annotationId: state.annotation.annotationId,
   userConfiguration: state.userConfiguration,

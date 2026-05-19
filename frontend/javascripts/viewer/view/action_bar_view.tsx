@@ -20,6 +20,7 @@ import constants, {
   MappingStatusEnum,
   type ViewMode,
 } from "viewer/constants";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import {
   doesSupportVolumeWithFallback,
   getColorLayers,
@@ -251,7 +252,7 @@ function CreateAnnotationButton() {
 function ModesView() {
   const controlMode = useWkSelector((state) => state.temporaryConfiguration.controlMode);
   const isViewMode = controlMode === ControlModeEnum.VIEW;
-  const isReadOnly = useWkSelector((state) => !state.annotation.isUpdatingCurrentlyAllowed);
+  const isReadOnly = useWkSelector((state) => !mayEditAnnotation(state));
   const isOrthoMode = useWkSelector(
     (state) => state.temporaryConfiguration.viewMode === "orthogonal",
   );

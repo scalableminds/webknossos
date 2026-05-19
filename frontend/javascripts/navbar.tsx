@@ -59,6 +59,7 @@ import {
   isAnnotationEditableByNonOwners,
   isAnnotationFromDifferentOrganization as isAnnotationFromDifferentOrganizationAccessor,
   isAnnotationOwner as isAnnotationOwnerAccessor,
+  mayEditAnnotation,
 } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
@@ -771,7 +772,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
   const othersMayEdit = useWkSelector((state) => isAnnotationEditableByNonOwners(state.annotation));
   const blockedByUser = useWkSelector((state) => state.save.mutexState.blockedByUser);
 
-  const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
+  const allowUpdate = useWkSelector(mayEditAnnotation);
   const isLockedByOwner = useWkSelector((state) => state.annotation.isLockedByOwner);
   const annotationOwnerName = useWkSelector((state) =>
     formatUserName(state.activeUser, state.annotation.owner),

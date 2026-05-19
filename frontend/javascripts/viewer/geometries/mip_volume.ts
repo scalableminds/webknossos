@@ -6,7 +6,7 @@ import {
   GLSL3,
   Matrix4,
   Mesh,
-  Ray,
+  type Ray,
   RedFormat,
   ShaderMaterial,
   Vector3 as ThreeVector3,
@@ -336,15 +336,26 @@ export class MipVolume {
     const localPoint = ray.origin.clone().add(ray.direction).applyMatrix4(invMatrix);
     const localDir = localPoint.sub(localOrigin);
 
-    const normOrigin = new ThreeVector3(localOrigin.x / vs.x, localOrigin.y / vs.y, localOrigin.z / vs.z);
-    const normDir = new ThreeVector3(localDir.x / vs.x, localDir.y / vs.y, localDir.z / vs.z).normalize();
+    const normOrigin = new ThreeVector3(
+      localOrigin.x / vs.x,
+      localOrigin.y / vs.y,
+      localOrigin.z / vs.z,
+    );
+    const normDir = new ThreeVector3(
+      localDir.x / vs.x,
+      localDir.y / vs.y,
+      localDir.z / vs.z,
+    ).normalize();
 
     // AABB slab test — identical to shader's intersectAABB; IEEE 754 handles ±Inf correctly
-    const t0x = (-0.5 - normOrigin.x) / normDir.x; const t1x = (0.5 - normOrigin.x) / normDir.x;
-    const t0y = (-0.5 - normOrigin.y) / normDir.y; const t1y = (0.5 - normOrigin.y) / normDir.y;
-    const t0z = (-0.5 - normOrigin.z) / normDir.z; const t1z = (0.5 - normOrigin.z) / normDir.z;
+    const t0x = (-0.5 - normOrigin.x) / normDir.x;
+    const t1x = (0.5 - normOrigin.x) / normDir.x;
+    const t0y = (-0.5 - normOrigin.y) / normDir.y;
+    const t1y = (0.5 - normOrigin.y) / normDir.y;
+    const t0z = (-0.5 - normOrigin.z) / normDir.z;
+    const t1z = (0.5 - normOrigin.z) / normDir.z;
     const tNear = Math.max(Math.min(t0x, t1x), Math.min(t0y, t1y), Math.min(t0z, t1z));
-    const tFar  = Math.min(Math.max(t0x, t1x), Math.max(t0y, t1y), Math.max(t0z, t1z));
+    const tFar = Math.min(Math.max(t0x, t1x), Math.max(t0y, t1y), Math.max(t0z, t1z));
     if (tNear > tFar) return null;
 
     const tStart = Math.max(tNear, 0);
@@ -355,11 +366,14 @@ export class MipVolume {
     for (let i = 0; i < numSteps; i++) {
       const t = tStart + (i + 0.5) * stepSize;
       const p = normOrigin.clone().addScaledVector(normDir, t);
-      const xi = Math.min(Math.floor((p.x + 0.5) * width),  width  - 1);
+      const xi = Math.min(Math.floor((p.x + 0.5) * width), width - 1);
       const yi = Math.min(Math.floor((p.y + 0.5) * height), height - 1);
-      const zi = Math.min(Math.floor((p.z + 0.5) * depth),  depth  - 1);
+      const zi = Math.min(Math.floor((p.z + 0.5) * depth), depth - 1);
       const val = data[xi + yi * width + zi * width * height];
-      if (val > maxVal) { maxVal = val; maxT = t; }
+      if (val > maxVal) {
+        maxVal = val;
+        maxT = t;
+      }
     }
 
     if (maxVal <= 0) return null;

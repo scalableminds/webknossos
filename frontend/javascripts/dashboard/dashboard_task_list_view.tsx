@@ -424,7 +424,7 @@ class DashboardTaskListView extends PureComponent<Props, State> {
 
     const TaskCardTitle = ({ task }: { task: APITaskWithAnnotation }) => (
       <Space>
-        {task.projectName} (<FormattedDate timestamp={task.created} />)
+        <span>{task.projectName} (<FormattedDate timestamp={task.created} />)</span>
         {getSkeletonDescriptor(task.annotation) == null ? null : (
           <Tag color="green" variant="outlined">
             skeleton

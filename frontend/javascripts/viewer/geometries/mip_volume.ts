@@ -188,7 +188,7 @@ void main() {
   scaled = abs(scaled - uIsInverted);
 
   vec3 color = scaled * uLayerColor;
-  fragColor = vec4(color, uAlpha);
+  fragColor = vec4(color, scaled * uAlpha);
 }
 `;
 

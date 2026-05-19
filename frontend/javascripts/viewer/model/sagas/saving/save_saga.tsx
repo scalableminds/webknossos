@@ -158,14 +158,14 @@ function needsPollAnnotationUpdates(state: WebknossosState): "yes" | "no" | "lat
     return "later";
   }
 
-  // If the current user may edit the annotation while the collab mode is *not*
-  // "Concurrent", we don't need to fetch newer versions. Typically, this is the
+  // If the current user may edit the annotation while the collab mode is OwnerOnly,
+  // we don't need to fetch newer versions. Typically, this is the
   // case when the current user is either the owner or a collaborator with the mutex.
-  // Addtionally, this is also the case when saving is disabled (allowSave will be
+  // Additionally, this is also the case when saving is disabled (allowSave will be
   // false then which is why we don't check it here).
   const { isUpdatingCurrentlyAllowed } = state.annotation;
   const { collaborationMode } = state.annotation;
-  const mayEditInNonCollabMode = isUpdatingCurrentlyAllowed && collaborationMode !== "Concurrent";
+  const mayEditInNonCollabMode = isUpdatingCurrentlyAllowed && collaborationMode === "OwnerOnly";
   if (mayEditInNonCollabMode) {
     // WK should already show the newest version of the annotation OR should not care
     // about newer versions (because saving was disabled by the user).
@@ -184,7 +184,6 @@ function needsPollAnnotationUpdates(state: WebknossosState): "yes" | "no" | "lat
   if (!hasTracing(state.annotation)) {
     return "no";
   }
-
   // In all other cases, poll
   return "yes";
 }

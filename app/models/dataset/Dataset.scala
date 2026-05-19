@@ -448,6 +448,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                    WHERE _organization = $organizationId
                    AND metadata @> jsonb_build_array(jsonb_build_object('type', 'string', 'key', 'importURL', 'value', $importURL))
                    AND $accessQuery
+                   ORDER BY created ASC, _id ASC
                    LIMIT 1""".as[DatasetsRow])
       parsed <- parseFirst(r, importURL)
     } yield parsed

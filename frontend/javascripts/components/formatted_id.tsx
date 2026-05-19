@@ -8,7 +8,7 @@ export default function FormattedId({ id }: { id: string }) {
 
   return (
     <FastTooltip title={`Click to copy full ID ${id}`}>
-      <div
+      <span
         onClick={() => {
           navigator.clipboard.writeText(id);
           Toast.success("Copied ID to clipboard.");
@@ -21,7 +21,7 @@ export default function FormattedId({ id }: { id: string }) {
             <CopyOutlined />
           </Space>
         </Typography.Text>
-      </div>
+      </span>
     </FastTooltip>
   );
 }

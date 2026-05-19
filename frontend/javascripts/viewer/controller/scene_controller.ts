@@ -400,6 +400,7 @@ class SceneController {
       }
 
       const entry = this.mipVolumes.get(bbox.id)!;
+      entry.bbox = bbox; // keep bbox reference current (e.g. isVisible changes)
       const { volume } = entry;
       const oldConfigs = entry.configs;
 
@@ -439,7 +440,8 @@ class SceneController {
   }
 
   getMipHitPosition(ray: Ray): ThreeVector3 | null {
-    for (const { volume } of this.mipVolumes.values()) {
+    for (const { volume, bbox } of this.mipVolumes.values()) {
+      if (!bbox.isVisible) continue;
       const pos = volume.findMaxIntensityPosition(ray);
       if (pos != null) return pos;
     }
@@ -550,8 +552,8 @@ class SceneController {
     if (this.splitBoundaryMesh != null) {
       this.splitBoundaryMesh.visible = id === OrthoViews.TDView;
     }
-    for (const { volume } of this.mipVolumes.values()) {
-      volume.mesh.visible = id === OrthoViews.TDView;
+    for (const { volume, bbox } of this.mipVolumes.values()) {
+      volume.mesh.visible = id === OrthoViews.TDView && bbox.isVisible;
     }
     this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;
     this.lineMeasurementGeometry.updateForCam(id);

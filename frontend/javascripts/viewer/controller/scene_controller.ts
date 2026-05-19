@@ -550,6 +550,9 @@ class SceneController {
     if (this.splitBoundaryMesh != null) {
       this.splitBoundaryMesh.visible = id === OrthoViews.TDView;
     }
+    for (const { volume } of this.mipVolumes.values()) {
+      volume.mesh.visible = id === OrthoViews.TDView;
+    }
     this.annotationToolsGeometryGroup.visible = id !== OrthoViews.TDView;
     this.lineMeasurementGeometry.updateForCam(id);
 

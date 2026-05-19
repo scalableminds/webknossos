@@ -189,6 +189,7 @@ import type {
   WebknossosState,
 } from "viewer/store";
 import Store from "viewer/store";
+import { downloadScreenshot } from "viewer/view/rendering_utils";
 import {
   callDeep,
   createGroupToSegmentsMap,
@@ -2844,6 +2845,10 @@ class DataApi {
         );
       }
     }
+  }
+
+  downloadScreenshot() {
+    return downloadScreenshot();
   }
 }
 /**

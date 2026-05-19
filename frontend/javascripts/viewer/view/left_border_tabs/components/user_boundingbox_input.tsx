@@ -220,6 +220,43 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
             label: "Render as MIP",
             icon: <FireOutlined />,
             disabled: colorLayers.length === 0,
+            onTitleClick: () => {
+              const MAX_BYTES = 50 * 1024 * 1024;
+              const [, , , bboxW, bboxH, bboxD] = propValue;
+              let bestLayerName: string | null = null;
+              let bestZoomStep: number | null = null;
+              let bestSize = -1;
+              let fallbackLayerName: string | null = null;
+              let fallbackZoomStep: number | null = null;
+              let fallbackSize = Number.MAX_SAFE_INTEGER;
+              for (const layer of colorLayers) {
+                const mags = magInfoByLayer[layer.name]?.getMagsWithIndices() ?? [];
+                const bytesPerVoxel = getBytesPerElement(layer.elementClass);
+                for (const [zoomStep, mag] of mags) {
+                  const voxels =
+                    Math.ceil(bboxW / mag[0]) *
+                    Math.ceil(bboxH / mag[1]) *
+                    Math.ceil(bboxD / mag[2]);
+                  const size = voxels * bytesPerVoxel;
+                  if (size <= MAX_BYTES && size > bestSize) {
+                    bestSize = size;
+                    bestLayerName = layer.name;
+                    bestZoomStep = zoomStep;
+                  }
+                  if (size < fallbackSize) {
+                    fallbackSize = size;
+                    fallbackLayerName = layer.name;
+                    fallbackZoomStep = zoomStep;
+                  }
+                }
+              }
+              const layerName = bestLayerName ?? fallbackLayerName;
+              const zoomStep = bestZoomStep ?? fallbackZoomStep;
+              if (layerName != null && zoomStep != null) {
+                dispatch(setMipForBboxAction(bboxId, { layerName, zoomStep, isLoading: true }));
+                maybeCloseContextMenu();
+              }
+            },
             children: colorLayers.map((layer) => {
               const mags = magInfoByLayer[layer.name]?.getMagsWithIndices() ?? [];
               const bytesPerVoxel = getBytesPerElement(layer.elementClass);

@@ -58,7 +58,6 @@ export function isObjectEmpty(obj: Record<string, any>) {
   return Object.keys(obj).length === 0 && obj.constructor === Object;
 }
 
-
 export function addBeforePadding(date: Date): Date {
   return new Date(date.getTime() - LOG_TIME_PADDING);
 }

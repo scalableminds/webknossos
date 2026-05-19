@@ -14,6 +14,7 @@ import { getOrganization } from "admin/api/organization";
 import { Space, Tag, Typography } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { ThemedIcon } from "components/themed_icon";
+import { copyToClipboard } from "libs/clipboard";
 import {
   formatNumberToVolume,
   formatScale,
@@ -22,7 +23,6 @@ import {
 } from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
-import Toast from "libs/toast";
 import { mayUserEditDataset, pluralize, safeNumberToStr } from "libs/utils";
 import messages from "messages";
 import React, { type CSSProperties } from "react";
@@ -171,11 +171,8 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
   };
 
   const copyExtentToClipboard = () => {
-    if (window.getSelection()?.toString()) return;
     const { width, height, depth } = getDatasetExtentInVoxel(dataset);
-    const text = `${width},${height},${depth}`;
-    navigator.clipboard.writeText(text);
-    Toast.success(`Copied dataset voxel size “${text}” to clipboard.`);
+    copyToClipboard(`${width},${height},${depth}`, "dataset extent", true);
   };
 
   return (
@@ -208,10 +205,7 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
 
 export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
   const copyVoxelSizeToClipboard = () => {
-    if (window.getSelection()?.toString()) return;
-    const text = formatScaleForClipboard(dataset.dataSource.scale);
-    navigator.clipboard.writeText(text);
-    Toast.success(`Copied dataset voxel size “${text}” to clipboard.`);
+    copyToClipboard(formatScaleForClipboard(dataset.dataSource.scale), "dataset voxel size", true);
   };
 
   return (

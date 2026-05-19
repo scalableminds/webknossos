@@ -31,7 +31,6 @@ export function MoreInfoHint() {
   );
 }
 
-
 export function CopyableCodeSnippet({ code, onCopy }: { code: string; onCopy?: () => void }) {
   return (
     <pre>

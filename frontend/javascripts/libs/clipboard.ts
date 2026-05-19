@@ -4,6 +4,6 @@ export async function copyToClipboard(value: string, label?: string, showValueIn
   if (window.getSelection()?.toString()) return;
   await navigator.clipboard.writeText(value);
   const labelPadded = label ? ` ${label}` : "";
-  const valueQuotedPadded = value && showValueInToast ? ` "${value}"` : "";
+  const valueQuotedPadded = value && showValueInToast ? ` “${value}”` : "";
   Toast.success(`Copied${labelPadded}${valueQuotedPadded} to clipboard.`);
 }

@@ -1,6 +1,6 @@
 import { CopyOutlined } from "@ant-design/icons";
-import { copyToClipboard } from "libs/clipboard";
 import { Tooltip } from "antd";
+import { copyToClipboard } from "libs/clipboard";
 import { useFetch } from "libs/react_helpers";
 import { useDebouncedValue, useWkSelector } from "libs/react_hooks";
 import compact from "lodash-es/compact";

@@ -38,9 +38,9 @@ import {
 import LinkButton from "components/link_button";
 import dayjs from "dayjs";
 import features from "features";
+import { copyToClipboard } from "libs/clipboard";
 import Persistence from "libs/persistence";
 import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
-import Toast from "libs/toast";
 import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import { location } from "libs/window";
 import keyBy from "lodash-es/keyBy";
@@ -427,10 +427,9 @@ function UserListView() {
                       style={{
                         margin: "0 0 0 5px",
                       }}
-                      onClick={async (evt) => {
+                      onClick={(evt) => {
                         evt.stopPropagation();
-                        await navigator.clipboard.writeText(domain);
-                        Toast.success(`Copied experience domain “${domain}” to clipboard.`);
+                        copyToClipboard(domain, "experience domain", true);
                       }}
                     />
                   </Tag>

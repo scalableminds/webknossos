@@ -1,6 +1,6 @@
 import { CopyOutlined } from "@ant-design/icons";
-import { copyToClipboard } from "libs/clipboard";
 import { Tooltip } from "antd";
+import { copyToClipboard } from "libs/clipboard";
 import {
   formatAreaAsVx,
   formatLengthAsVx,

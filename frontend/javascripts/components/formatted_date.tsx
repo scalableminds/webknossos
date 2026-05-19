@@ -1,5 +1,5 @@
 import dayjs from "dayjs";
-import Toast from "libs/toast";
+import { copyToClipboard } from "libs/clipboard";
 import FastTooltip from "./fast_tooltip";
 
 /**
@@ -70,12 +70,7 @@ export default function FormattedDate({
     : formatHumanReadable(localDate, dateOnly ?? false);
 
   return (
-    <span
-      onClick={() => {
-        navigator.clipboard.writeText(tooltipText);
-        Toast.success(`Copied date “${tooltipText}” to clipboard.`);
-      }}
-    >
+    <span onClick={() => copyToClipboard(tooltipText, "date", true)}>
       <FastTooltip title={tooltipText}>{displayText}</FastTooltip>
     </span>
   );

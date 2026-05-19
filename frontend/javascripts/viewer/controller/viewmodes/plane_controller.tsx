@@ -1,3 +1,4 @@
+import { copyToClipboard } from "libs/clipboard";
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type MouseBindingMap } from "libs/input";
 import Toast from "libs/toast";
 import { isNoEditableElementFocused, waitForElementWithId } from "libs/utils";
@@ -585,9 +586,7 @@ class PlaneController extends PureComponent<Props> {
             mapping,
             getActiveMagIndexForLayer(Store.getState(), segmentationLayer.name),
           );
-          navigator.clipboard
-            .writeText(String(hoveredId))
-            .then(() => Toast.success(`Copied segment id ${hoveredId} to clipboard.`));
+          copyToClipboard(String(hoveredId), "segment id", true);
         } else {
           Toast.warning("No segment under cursor.");
         }

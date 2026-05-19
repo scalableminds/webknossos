@@ -7,6 +7,7 @@ import {
 } from "admin/rest_api";
 import type { ItemType } from "antd/lib/menu/interface";
 import DOMPurify from "dompurify";
+import { copyToClipboard } from "libs/clipboard";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { getPhraseFromCamelCaseString, isUserAdminOrManager } from "libs/utils";
@@ -266,8 +267,7 @@ export const CommandPalette = () => {
       {
         name: "Copy Organization ID",
         command: async () => {
-          await navigator.clipboard.writeText(activeUser.organization);
-          Toast.success("Copied organization ID to clipboard.");
+          await copyToClipboard(activeUser.organization, "organization ID");
         },
         color: commandEntryColor,
       },
@@ -276,8 +276,7 @@ export const CommandPalette = () => {
         command: async () => {
           try {
             const token = await getAuthToken();
-            await navigator.clipboard.writeText(token);
-            Toast.success("Copied auth token to clipboard.");
+            await copyToClipboard(token, "auth token");
           } catch (error) {
             Toast.error("Failed to fetch auth token. Please refresh the page to try again.");
             console.error("Failed to fetch auth token:", error);

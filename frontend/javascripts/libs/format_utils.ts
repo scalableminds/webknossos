@@ -479,29 +479,24 @@ export function formatCPU(cpuShare: number) {
   return `${(cpuShare * 100).toFixed(0)}%`;
 }
 
-export function formatBytes(nbytes: number) {
+export function formatBytes(nbytes: number, precision = 0) {
   if (nbytes == null || !Number.isFinite(nbytes)) {
     return "";
   }
   if (nbytes > 2 ** 50) {
-    // Pebibyte
-    return `${(nbytes / 2 ** 50).toPrecision(4)} PiB`;
+    return `${(nbytes / 2 ** 50).toFixed(precision)} PiB`;
   }
   if (nbytes > 2 ** 40) {
-    // Tebibyte
-    return `${(nbytes / 2 ** 40).toPrecision(4)} TiB`;
+    return `${(nbytes / 2 ** 40).toFixed(precision)} TiB`;
   }
   if (nbytes > 2 ** 30) {
-    // Gibibyte
-    return `${(nbytes / 2 ** 30).toPrecision(4)} GiB`;
+    return `${(nbytes / 2 ** 30).toFixed(precision)} GiB`;
   }
   if (nbytes > 2 ** 20) {
-    // Mebibyte
-    return `${(nbytes / 2 ** 20).toPrecision(4)} MiB`;
+    return `${(nbytes / 2 ** 20).toFixed(precision)} MiB`;
   }
   if (nbytes > 2 ** 10) {
-    // Kibibyte
-    return `${(nbytes / 2 ** 10).toPrecision(4)} KiB`;
+    return `${(nbytes / 2 ** 10).toFixed(precision)} KiB`;
   }
   return `${nbytes} B`;
 }

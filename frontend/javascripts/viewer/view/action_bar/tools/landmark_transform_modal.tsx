@@ -24,6 +24,7 @@ import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
 import { setNodePositionAction } from "viewer/model/actions/skeletontracing_actions";
 import type { Tree } from "viewer/model/types/tree_types";
 import ButtonComponent from "viewer/view/components/button_component";
+import { snapshotLandmarkPositions } from "libs/landmark_position_store";
 import { createGroupToTreesMap } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 import { NARROW_BUTTON_STYLE } from "./tool_helpers";
 
@@ -104,14 +105,10 @@ function affineToLayerTransforms(
   const scaleArr: [number, number, number] = [scale.x, scale.y, scale.z];
   const transArr: [number, number, number] = [position.x, position.y, position.z];
 
-  const rebuilt = buildLiveTransforms(datasetBboxArg, scaleArr, rotDeg, transArr);
-  const rebuiltMat = composeAffines(rebuilt);
-  const maxDiff = Math.max(...A.elements.map((v, i) => Math.abs(v - rebuiltMat.elements[i])));
-
-  if (maxDiff < 1e-4) {
-    return rebuilt;
-  }
-  return [{ type: "affine", matrix: flatToNestedMatrix(affineFlat) }];
+  // Always return the SRT-decomposed form so the result stays editable in the
+  // layer transform popover (isLiveTransformCompatible requires exactly 7 affines).
+  // For transforms with shear this is the closest representable approximation.
+  return buildLiveTransforms(datasetBboxArg, scaleArr, rotDeg, transArr);
 }
 
 // If all source points share the same coordinate along one axis the 3-D affine
@@ -195,6 +192,15 @@ export function LandmarkTransformModal({
       const datasetBbox = getDatasetBoundingBox(dataset);
       const newTransforms = affineToLayerTransforms(affineFlat, datasetBbox);
       dispatch(setLayerTransformsAction(layerName, newTransforms));
+
+      // Snapshot original positions before moving nodes so they can be restored on reset
+      snapshotLandmarkPositions(
+        layerName,
+        srcTrees.map((tree) => {
+          const node = tree.nodes.values().next().value!;
+          return { nodeId: node.id, treeId: tree.treeId, position: node.untransformedPosition };
+        }),
+      );
 
       // Move source nodes to their transformed positions so they track the layer
       const A = new Matrix4().set(

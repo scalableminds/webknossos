@@ -21,6 +21,11 @@ import {
   LIVE_TRANSFORM_LENGTH,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
+import { setNodePositionAction } from "viewer/model/actions/skeletontracing_actions";
+import {
+  discardLandmarkSnapshot,
+  getLandmarkSnapshot,
+} from "libs/landmark_position_store";
 import { LandmarkTransformModal } from "viewer/view/action_bar/tools/landmark_transform_modal";
 
 const { Text, Title } = Typography;
@@ -272,7 +277,16 @@ export function LayerTransformSettingsContent({
           icon={<ReloadOutlined />}
           loading={isFetchingStored}
           disabled={isFetchingStored}
-          onClick={() => handleChange(storedSRT)}
+          onClick={() => {
+            handleChange(storedSRT);
+            const snapshots = getLandmarkSnapshot(layer.name);
+            if (snapshots) {
+              for (const { nodeId, treeId, position } of snapshots) {
+                dispatch(setNodePositionAction(position, nodeId, treeId));
+              }
+              discardLandmarkSnapshot(layer.name);
+            }
+          }}
           block
         >
           Reset to Stored Values

@@ -1,6 +1,6 @@
 import { Alert, Modal, Select } from "antd";
 import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
-import { type LandmarkPositionStore } from "libs/landmark_position_store";
+import type { LandmarkPositionStore } from "libs/landmark_position_store";
 import type { Matrix4x4 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";

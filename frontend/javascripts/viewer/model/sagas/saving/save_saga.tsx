@@ -148,8 +148,10 @@ function needsPollAnnotationUpdates(state: WebknossosState): "yes" | "no" | "lat
 
   // If the version restore view is open, newer versions should not be fetched
   // as this could mess up the current state.
+  // Similarily, we should not poll for updates when a rebase is in progress.
   const isVersionRestoreActive = state.uiInformation.showVersionRestore;
-  if (isVersionRestoreActive) {
+  const { isRebasingOrForwarding } = state.save.rebaseRelevantServerAnnotationState;
+  if (isVersionRestoreActive || isRebasingOrForwarding) {
     return "later";
   }
 

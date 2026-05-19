@@ -5,6 +5,7 @@ import { useFetch } from "libs/react_helpers";
 import Toast from "libs/toast";
 import { getUrlParamsObject } from "libs/utils";
 import has from "lodash-es/has";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 
@@ -36,16 +37,19 @@ export function DatasetURLImport() {
   const handleDatasetAdded = async (addedDatasetId: string): Promise<void> => {
     navigate(`/datasets/${addedDatasetId}/view`);
   };
-  if (datasetUri !== null && !checkedForExistence) {
+
+  useEffect(() => {
+    if (maybeExistingDS?.dataSource) {
+      navigate(getViewDatasetURL(maybeExistingDS), { replace: true });
+    }
+  }, [maybeExistingDS, navigate]);
+
+  if ((datasetUri !== null && !checkedForExistence) || maybeExistingDS?.dataSource) {
     // First check whether there is already a dataset with this import url
     // before rendering DatasetAddRemoteView which potentially auto-imports the dataset
     // and would thus duplicate it.
+    // In case a duplicate was found, also render a placeholder while navigating to this dataset.
     return <BrainSpinner />;
-  }
-  if (maybeExistingDS?.dataSource) {
-    const url = getViewDatasetURL(maybeExistingDS);
-    navigate(url);
-    return;
   }
 
   return datastores != null ? (

@@ -7,51 +7,20 @@ import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
-import type {
-  AffineTransformation,
-  APIDataLayer,
-  APISkeletonLayer,
-  CoordinateTransformation,
-} from "types/api_types";
+import type { APIDataLayer, APISkeletonLayer } from "types/api_types";
 import { getDatasetBoundingBox } from "viewer/model/accessors/dataset_accessor";
 import {
   buildLiveTransforms,
-  extractEulerAngleDegreesFromMatrix,
-  extractScaleFromMatrix,
-  extractTranslationFromMatrix,
+  DEFAULT_SRT,
+  extractSRTFromTransforms,
   isLiveTransformCompatible,
-  LIVE_TRANSFORM_LENGTH,
+  type SRTValues,
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
 import { setNodePositionAction } from "viewer/model/actions/skeletontracing_actions";
 import { LandmarkTransformModal } from "viewer/view/left_border_tabs/modals/landmark_transform_modal";
 
 const { Text, Title } = Typography;
-
-type SRTValues = {
-  scale: [number, number, number];
-  rotation: [number, number, number];
-  translation: [number, number, number];
-};
-
-const DEFAULT_SRT: SRTValues = {
-  scale: [1, 1, 1],
-  rotation: [0, 0, 0],
-  translation: [0, 0, 0],
-};
-
-function extractSRTFromTransforms(transforms: CoordinateTransformation[]): SRTValues {
-  if (transforms.length !== LIVE_TRANSFORM_LENGTH) return DEFAULT_SRT;
-  return {
-    scale: extractScaleFromMatrix(transforms[1] as AffineTransformation),
-    rotation: [
-      extractEulerAngleDegreesFromMatrix(transforms[2] as AffineTransformation, "x"),
-      extractEulerAngleDegreesFromMatrix(transforms[3] as AffineTransformation, "y"),
-      extractEulerAngleDegreesFromMatrix(transforms[4] as AffineTransformation, "z"),
-    ],
-    translation: extractTranslationFromMatrix(transforms[5] as AffineTransformation),
-  };
-}
 
 function AxisSliderRow({
   label,
@@ -123,7 +92,7 @@ export function LayerTransformSettingsContent({
   const [isFetchingStored, setIsFetchingStored] = useState(false);
   const dataset = useWkSelector((state) => state.dataset);
   const datasetBbox = useMemo(() => getDatasetBoundingBox(dataset), [dataset]);
-  const translationExtents = useMemo<[number, number, number]>(
+  const translationSettingLimits = useMemo<[number, number, number]>(
     () => [
       datasetBbox.max[0] - datasetBbox.min[0],
       datasetBbox.max[1] - datasetBbox.min[1],
@@ -136,7 +105,7 @@ export function LayerTransformSettingsContent({
     return dataLayer?.coordinateTransformations ?? null;
   });
 
-  const isCompatible = isLiveTransformCompatible(transforms);
+  const isCompatible = useMemo(() => isLiveTransformCompatible(transforms), [transforms]);
 
   useEffect(() => {
     if (!isVisible) return;
@@ -162,7 +131,7 @@ export function LayerTransformSettingsContent({
     fetchStoredSRT();
   }, [isVisible, dataset.id, layer.name]);
 
-  const srt = useMemo((): SRTValues => {
+  const srtFromStore = useMemo((): SRTValues => {
     if (!transforms || transforms.length === 0) return DEFAULT_SRT;
     return extractSRTFromTransforms(transforms);
   }, [transforms]);
@@ -170,10 +139,10 @@ export function LayerTransformSettingsContent({
   const handleChange = useCallback(
     (newSRT: SRTValues) => {
       const newTransforms = buildLiveTransforms(
-        datasetBbox,
         newSRT.scale,
         newSRT.rotation,
         newSRT.translation,
+        datasetBbox,
       );
       dispatch(setLayerTransformsAction(layer.name, newTransforms));
     },
@@ -240,13 +209,13 @@ export function LayerTransformSettingsContent({
       <div style={{ maxWidth: 240 }}>
         <Text type="secondary">
           The transform format of this layer is not editable here. Clear the layer&apos;s transforms
-          to use this editor.
+          in the dataset settings to use this editor.
         </Text>
       </div>
     );
   }
 
-  const { scale, rotation, translation } = srt;
+  const { scale, rotation, translation } = srtFromStore;
 
   const updateScale = (axis: 0 | 1 | 2, v: number) => {
     const newScale = [...scale] as [number, number, number];
@@ -272,7 +241,7 @@ export function LayerTransformSettingsContent({
         Scaling
       </Title>
 
-      {/* Negative scale mirrors the layer along that axis. */}
+      {/* Negative scale mirrors the layer along that axis and is intentionally allowed. */}
       {(["X", "Y", "Z"] as const).map((axis, i) => (
         <AxisSliderRow
           key={axis}
@@ -311,8 +280,8 @@ export function LayerTransformSettingsContent({
           label={axis}
           value={translation[i]}
           storedValue={storedSRT.translation[i]}
-          min={-translationExtents[i]}
-          max={translationExtents[i]}
+          min={-translationSettingLimits[i]}
+          max={translationSettingLimits[i]}
           step={1}
           onChange={(v) => updateTranslation(i as 0 | 1 | 2, v)}
           resetDisabled={isFetchingStored}
@@ -353,9 +322,11 @@ export function LayerTransformSettingsContent({
               onClick={() => setIsLandmarkModalOpen(true)}
               disabled={
                 isFetchingStored ||
-                srt.scale.some((v, i) => Math.abs(v - storedSRT.scale[i]) > 1e-6) ||
-                srt.rotation.some((v, i) => Math.abs(v - storedSRT.rotation[i]) > 1e-6) ||
-                srt.translation.some((v, i) => Math.abs(v - storedSRT.translation[i]) > 1e-6)
+                srtFromStore.scale.some((v, i) => Math.abs(v - storedSRT.scale[i]) > 1e-6) ||
+                srtFromStore.rotation.some((v, i) => Math.abs(v - storedSRT.rotation[i]) > 1e-6) ||
+                srtFromStore.translation.some(
+                  (v, i) => Math.abs(v - storedSRT.translation[i]) > 1e-6,
+                )
               }
               title="Only available when current transforms match the stored transforms"
               block

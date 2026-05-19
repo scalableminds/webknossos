@@ -21,7 +21,7 @@ import { Store } from "viewer/singletons";
 import ButtonComponent from "viewer/view/components/button_component";
 import { LayerTransformSettingsContent } from "./layer_transform_settings_popover";
 
-export default function LayerTransformationIcon({
+export default function LayerTransformationIcons({
   layer,
 }: {
   layer: APIDataLayer | APISkeletonLayer;

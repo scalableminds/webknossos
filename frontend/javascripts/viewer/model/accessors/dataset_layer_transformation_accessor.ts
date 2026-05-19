@@ -30,7 +30,7 @@ import {
   type Transform,
   transformPointUnscaled,
 } from "../helpers/transformation_helpers";
-import { getLayerByName } from "./dataset_accessor";
+import { type getDatasetBoundingBox, getLayerByName } from "./dataset_accessor";
 
 const IDENTITY_MATRIX = [
   [1, 0, 0, 0],
@@ -105,20 +105,26 @@ export function getRotationSettingsFromTransformationIn90DegreeSteps(
   return { rotationInDegrees: roundedRotation, isMirrored };
 }
 
-export function fromCenterToOrigin(bbox: BoundingBox): AffineTransformation {
-  const center = bbox.getCenter();
-  const translationMatrix = new Matrix4()
-    .makeTranslation(-center[0], -center[1], -center[2])
-    .transpose(); // Column-major to row-major
-  return { type: "affine", matrix: flatToNestedMatrix(translationMatrix.toArray()) };
+export function threeMatrix4ToAffine(m: Matrix4): AffineTransformation {
+  return { type: "affine", matrix: flatToNestedMatrix(m.clone().transpose().toArray()) };
 }
 
-export function fromOriginToCenter(bbox: BoundingBox): AffineTransformation {
+export function fromCenterToOrigin(bbox: BoundingBox): Matrix4 {
   const center = bbox.getCenter();
-  const translationMatrix = new Matrix4()
-    .makeTranslation(center[0], center[1], center[2])
-    .transpose(); // Column-major to row-major
-  return { type: "affine", matrix: flatToNestedMatrix(translationMatrix.toArray()) };
+  return new Matrix4().makeTranslation(-center[0], -center[1], -center[2]);
+}
+
+export function fromOriginToCenter(bbox: BoundingBox): Matrix4 {
+  const center = bbox.getCenter();
+  return new Matrix4().makeTranslation(center[0], center[1], center[2]);
+}
+
+export function fromCenterToOriginAsAffine(bbox: BoundingBox): AffineTransformation {
+  return threeMatrix4ToAffine(fromCenterToOrigin(bbox));
+}
+
+export function fromOriginToCenterAsAffine(bbox: BoundingBox): AffineTransformation {
+  return threeMatrix4ToAffine(fromOriginToCenter(bbox));
 }
 
 export function getRotationMatrixAroundAxis(
@@ -406,6 +412,28 @@ function isOnlyRotatedOrMirrored(transformation?: AffineTransformation) {
   );
 }
 
+function isRotationOnly(transformation?: AffineTransformation) {
+  if (!transformation) {
+    return false;
+  }
+  const threeMatrix = new Matrix4()
+    .fromArray(nestedToFlatMatrix(transformation.matrix))
+    .transpose();
+  threeMatrix.decompose(translation, quaternion, scale);
+  return translation.length() === 0 && scale.equals(NON_SCALED_VECTOR);
+}
+
+function isScaleOnly(transformation?: AffineTransformation) {
+  if (!transformation) {
+    return false;
+  }
+  const threeMatrix = new Matrix4()
+    .fromArray(nestedToFlatMatrix(transformation.matrix))
+    .transpose();
+  threeMatrix.decompose(translation, quaternion, scale);
+  return translation.length() === 0 && quaternion.equals(IDENTITY_QUATERNION);
+}
+
 function hasValidTransformationCount(dataLayers: Array<APIDataLayer>): boolean {
   return dataLayers.every((layer) => layer.coordinateTransformations?.length === 5);
 }
@@ -537,16 +565,42 @@ export function layerToGlobalTransformedPosition(
   return layerPos;
 }
 
+// The live SRT transform format uses exactly 7 affine matrices in this order:
+// [0]  dataset center→origin translation, [1] scale, [2] rotX, [3] rotY, [4] rotZ,
+// [5] user translation, [6] origin→center dataset translation.
+// They are stored separately to keep the extracted value consistent between reloads.
+// Else e.g. some rotations might be shown differently as euler angles are not deterministic.
 export const LIVE_TRANSFORM_LENGTH = 7;
+export type SRTValues = {
+  scale: [number, number, number];
+  rotation: [number, number, number];
+  translation: [number, number, number];
+};
+
+export const DEFAULT_SRT: SRTValues = {
+  scale: [1, 1, 1],
+  rotation: [0, 0, 0],
+  translation: [0, 0, 0],
+};
 
 // Returns true when the transform list is in a format editable by the live SRT editor:
-// null/empty (no transforms) or exactly 7 affine matrices.
+// null/empty (no transforms) or exactly the 7-affine pattern: translation, scale,
+// rotX, rotY, rotZ, translation, translation.
 export function isLiveTransformCompatible(
   transforms: CoordinateTransformation[] | null | undefined,
 ): boolean {
   if (transforms == null || transforms.length === 0) return true;
+  if (transforms.length !== LIVE_TRANSFORM_LENGTH) return false;
+  if (!transforms.every((t) => t.type === "affine")) return false;
+  const t = transforms as AffineTransformation[];
   return (
-    transforms.length === LIVE_TRANSFORM_LENGTH && transforms.every((t) => t.type === "affine")
+    isTranslationOnly(t[0]) &&
+    isScaleOnly(t[1]) &&
+    isRotationOnly(t[2]) &&
+    isRotationOnly(t[3]) &&
+    isRotationOnly(t[4]) &&
+    isTranslationOnly(t[5]) &&
+    isTranslationOnly(t[6])
   );
 }
 
@@ -586,21 +640,175 @@ export function extractEulerAngleDegreesFromMatrix(
   return ((radians * 180) / Math.PI + 360) % 360;
 }
 
+// Extracts the SRTValues (scale, rotation, translation) from a 7 matrix coordinate transformation of a layer.
+// Make sure this is only called with a compatible CoordinateTransformations.
+export function extractSRTFromTransforms(transforms: CoordinateTransformation[]): SRTValues {
+  if (transforms.length !== LIVE_TRANSFORM_LENGTH) return DEFAULT_SRT;
+  return {
+    scale: extractScaleFromMatrix(transforms[1] as AffineTransformation),
+    rotation: [
+      extractEulerAngleDegreesFromMatrix(transforms[2] as AffineTransformation, "x"),
+      extractEulerAngleDegreesFromMatrix(transforms[3] as AffineTransformation, "y"),
+      extractEulerAngleDegreesFromMatrix(transforms[4] as AffineTransformation, "z"),
+    ],
+    translation: extractTranslationFromMatrix(transforms[5] as AffineTransformation),
+  };
+}
+
+function nestedToThreeMatrix(t: AffineTransformation): Matrix4 {
+  const m = t.matrix;
+  return new Matrix4().set(
+    m[0][0],
+    m[0][1],
+    m[0][2],
+    m[0][3],
+    m[1][0],
+    m[1][1],
+    m[1][2],
+    m[1][3],
+    m[2][0],
+    m[2][1],
+    m[2][2],
+    m[2][3],
+    m[3][0],
+    m[3][1],
+    m[3][2],
+    m[3][3],
+  );
+}
+
+// Compose the existing layer transforms with a new affine (applied on top) and
+// return the result in the 7-affine SRT format.  Non-affine transforms (e.g. TPS)
+// are skipped; if there are no existing transforms the new affine is decomposed
+// directly.
+export function applyAffineOnTopOfTransforms(
+  existingTransforms: CoordinateTransformation[],
+  landmarkAffineFlat: Matrix4x4,
+  datasetBbox: ReturnType<typeof getDatasetBoundingBox>,
+): CoordinateTransformation[] {
+  const landmarkMatrix = new Matrix4().set(
+    landmarkAffineFlat[0],
+    landmarkAffineFlat[1],
+    landmarkAffineFlat[2],
+    landmarkAffineFlat[3],
+    landmarkAffineFlat[4],
+    landmarkAffineFlat[5],
+    landmarkAffineFlat[6],
+    landmarkAffineFlat[7],
+    landmarkAffineFlat[8],
+    landmarkAffineFlat[9],
+    landmarkAffineFlat[10],
+    landmarkAffineFlat[11],
+    landmarkAffineFlat[12],
+    landmarkAffineFlat[13],
+    landmarkAffineFlat[14],
+    landmarkAffineFlat[15],
+  );
+
+  if (existingTransforms.length > 0) {
+    // Compose all existing affine transforms: result = T[n] * ... * T[0]
+    // so that T[0] is applied first to any point.
+    const existingMatrix = new Matrix4();
+    for (const t of existingTransforms) {
+      if (t.type === "affine") {
+        existingMatrix.premultiply(nestedToThreeMatrix(t));
+      }
+    }
+    // Apply landmark on top: combined = landmark * existing
+    landmarkMatrix.multiply(existingMatrix);
+  }
+
+  // Three.js Matrix4.elements is column-major; convert back to row-major flat.
+  const e = landmarkMatrix.elements;
+  const combinedFlat: Matrix4x4 = [
+    e[0],
+    e[4],
+    e[8],
+    e[12],
+    e[1],
+    e[5],
+    e[9],
+    e[13],
+    e[2],
+    e[6],
+    e[10],
+    e[14],
+    e[3],
+    e[7],
+    e[11],
+    e[15],
+  ];
+
+  return decomposeAffineToSRT(combinedFlat, datasetBbox);
+}
+
+export function decomposeAffineToSRT(
+  affineFlat: Matrix4x4,
+  datasetBboxArg: ReturnType<typeof getDatasetBoundingBox>,
+): CoordinateTransformation[] {
+  const A = new Matrix4().set(
+    affineFlat[0],
+    affineFlat[1],
+    affineFlat[2],
+    affineFlat[3],
+    affineFlat[4],
+    affineFlat[5],
+    affineFlat[6],
+    affineFlat[7],
+    affineFlat[8],
+    affineFlat[9],
+    affineFlat[10],
+    affineFlat[11],
+    affineFlat[12],
+    affineFlat[13],
+    affineFlat[14],
+    affineFlat[15],
+  );
+
+  // Strip center matrices to isolate the inner SRT part
+  const T0 = fromCenterToOrigin(datasetBboxArg);
+  const T6 = fromOriginToCenter(datasetBboxArg);
+  const inner = new Matrix4()
+    .copy(T6)
+    .invert()
+    .multiply(A)
+    .multiply(new Matrix4().copy(T0).invert());
+
+  const position = new ThreeVector3();
+  const quaternion = new Quaternion();
+  const scale = new ThreeVector3();
+  inner.decompose(position, quaternion, scale);
+
+  const euler = new Euler().setFromQuaternion(quaternion, "XYZ");
+  const rotDeg: [number, number, number] = [
+    (euler.x * 180) / Math.PI,
+    (euler.y * 180) / Math.PI,
+    (euler.z * 180) / Math.PI,
+  ];
+  const scaleArr: [number, number, number] = [scale.x, scale.y, scale.z];
+  const transArr: [number, number, number] = [position.x, position.y, position.z];
+
+  // Always return the SRT-decomposed form so the result stays editable in the
+  // layer transform popover (isLiveTransformCompatible requires exactly 7 affines).
+  // For transforms with shear this is the closest representable approximation.
+  return buildLiveTransforms(scaleArr, rotDeg, transArr, datasetBboxArg);
+}
+
 // Build the 7-matrix SRT transform array for a layer.
 // Order: center→origin, scale, rotX, rotY, rotZ, translation, origin→center
 export function buildLiveTransforms(
-  datasetBbox: BoundingBox,
   scale: [number, number, number],
   rotation: [number, number, number],
   translation: [number, number, number],
+  datasetBbox: BoundingBox,
 ): AffineTransformation[] {
   return [
-    fromCenterToOrigin(datasetBbox),
+    fromCenterToOriginAsAffine(datasetBbox),
     makeScaleMatrix(...scale),
     getRotationMatrixAroundAxis("x", { rotationInDegrees: rotation[0], isMirrored: false }),
     getRotationMatrixAroundAxis("y", { rotationInDegrees: rotation[1], isMirrored: false }),
     getRotationMatrixAroundAxis("z", { rotationInDegrees: rotation[2], isMirrored: false }),
     makeTranslationMatrix(...translation),
-    fromOriginToCenter(datasetBbox),
+    fromOriginToCenterAsAffine(datasetBbox),
   ];
 }

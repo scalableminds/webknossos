@@ -70,7 +70,7 @@ import EditableTextLabel from "viewer/view/components/editable_text_label";
 import { validateReadableLayerName } from "../modals/add_volume_layer_modal";
 import { DragHandle, DummyDragHandle } from "./drag_handle";
 import LayerInfoIconWithTooltip from "./layer_info_icon_with_tooltip";
-import LayerTransformationIcon from "./layer_transformation_icon";
+import LayerTransformationIcons from "./layer_transformation_icon";
 
 function EnableDisableLayerSwitch({
   isDisabled,
@@ -609,7 +609,7 @@ export default function LayerSettingsHeader({
             />
           </FastTooltip>
         ) : null}
-        <LayerTransformationIcon layer={layer} />
+        <LayerTransformationIcons layer={layer} />
         {isVolumeTracing ? (
           <ButtonComponent
             variant="text"

@@ -810,24 +810,24 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     }
   }
 
-  getSettingsDropdown(): MenuProps {
+  getActionsDropdown(): MenuProps {
+    const isEditingDisabled = !this.props.allowUpdate;
     const activeMenuKey = this.props.userConfiguration.sortTreesByName
       ? "sortByName"
       : "sortByTime";
     return {
       selectedKeys: [activeMenuKey],
-      onClick: this.handleDropdownClick,
       items: [
-        { key: "sortByName", label: "by name" },
-        { key: "sortByTime", label: "by creation time" },
-      ],
-    };
-  }
-
-  getActionsDropdown(): MenuProps {
-    const isEditingDisabled = !this.props.allowUpdate;
-    return {
-      items: [
+        {
+          key: "sort",
+          icon: <SortAscendingOutlined />,
+          label: "Sort",
+          children: [
+            { key: "sortByName", label: "by name", onClick: this.handleDropdownClick },
+            { key: "sortByTime", label: "by creation time", onClick: this.handleDropdownClick },
+          ],
+        },
+        { type: "divider" },
         {
           key: "shuffleAllTreeColors",
           onClick: this.shuffleAllTreeColors,
@@ -1038,14 +1038,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     variant="text"
                     color="default"
                   />
-                  <Dropdown menu={this.getSettingsDropdown()} trigger={["click"]}>
-                    <ButtonComponent
-                      title="Sort"
-                      icon={<SortAscendingOutlined />}
-                      variant="text"
-                      color="default"
-                    />
-                  </Dropdown>
                   <Dropdown menu={this.getActionsDropdown()} trigger={["click"]}>
                     <ButtonComponent
                       icon={<MenuOutlined />}

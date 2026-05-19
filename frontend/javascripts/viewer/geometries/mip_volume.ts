@@ -238,7 +238,7 @@ void main() {
     scaled = (layerMax == layerMin) ? 0.0 : (scaled - layerMin) / (layerMax - layerMin);
     // Inversion: abs(val - isInverted). When isInverted=1.0 → 1-val, when 0.0 → val.
     scaled = abs(scaled - uLayerIsInverted[j]);
-    color += uLayerColors[j] * scaled;
+    color += uLayerColors[j] * scaled * uLayerAlphas[j];
     alpha = max(alpha, scaled * uLayerAlphas[j]);
   }
 

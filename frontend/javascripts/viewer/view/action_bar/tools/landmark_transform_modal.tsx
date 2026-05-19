@@ -1,6 +1,6 @@
 import { Alert, Modal, Select } from "antd";
 import { estimateAffineMatrix4x4 } from "libs/estimate_affine";
-import { snapshotLandmarkPositions } from "libs/landmark_position_store";
+import { type LandmarkPositionStore } from "libs/landmark_position_store";
 import type { Matrix4x4 } from "libs/mjs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -194,10 +194,12 @@ export function LandmarkTransformModal({
   open,
   onClose,
   layerName,
+  landmarkStore,
 }: {
   open: boolean;
   onClose: () => void;
   layerName: string;
+  landmarkStore: LandmarkPositionStore;
 }) {
   const dispatch = useDispatch();
   const dataset = useWkSelector((state) => state.dataset);
@@ -253,7 +255,7 @@ export function LandmarkTransformModal({
       dispatch(setLayerTransformsAction(layerName, newTransforms));
 
       // Snapshot original positions before moving nodes so they can be restored on reset
-      snapshotLandmarkPositions(
+      landmarkStore.snapshot(
         layerName,
         srcTrees.map((tree) => {
           const node = tree.nodes.values().next().value!;

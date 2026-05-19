@@ -2,7 +2,7 @@ import Icon, { ReloadOutlined } from "@ant-design/icons";
 import SkeletonIcon from "@images/icons/icon-skeleton.svg?react";
 import { getDataset, updateDatasetPartial } from "admin/rest_api";
 import { Button, Divider, InputNumber, Slider, Tooltip, Typography } from "antd";
-import { discardLandmarkSnapshot, getLandmarkSnapshot } from "libs/landmark_position_store";
+import { LandmarkPositionStore } from "libs/landmark_position_store";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -118,6 +118,7 @@ export function LayerTransformSettingsContent({
   const dispatch = useDispatch();
   const [isSaving, setIsSaving] = useState(false);
   const [isLandmarkModalOpen, setIsLandmarkModalOpen] = useState(false);
+  const [landmarkStore] = useState(() => new LandmarkPositionStore());
   const [storedSRT, setStoredSRT] = useState<SRTValues>(DEFAULT_SRT);
   const [isFetchingStored, setIsFetchingStored] = useState(false);
   const dataset = useWkSelector((state) => state.dataset);
@@ -139,9 +140,10 @@ export function LayerTransformSettingsContent({
 
   useEffect(() => {
     if (!isVisible) return;
-    setIsFetchingStored(true);
-    getDataset(dataset.id)
-      .then((backendDataset) => {
+    const fetchStoredSRT = async () => {
+      setIsFetchingStored(true);
+      try {
+        const backendDataset = await getDataset(dataset.id);
         const backendLayer = backendDataset.dataSource.dataLayers.find(
           (l) => l.name === layer.name,
         );
@@ -151,9 +153,13 @@ export function LayerTransformSettingsContent({
             ? extractSRTFromTransforms(stored)
             : DEFAULT_SRT,
         );
-      })
-      .catch(() => setStoredSRT(DEFAULT_SRT))
-      .finally(() => setIsFetchingStored(false));
+      } catch {
+        setStoredSRT(DEFAULT_SRT);
+      } finally {
+        setIsFetchingStored(false);
+      }
+    };
+    fetchStoredSRT();
   }, [isVisible, dataset.id, layer.name]);
 
   const srt = useMemo((): SRTValues => {
@@ -174,6 +180,33 @@ export function LayerTransformSettingsContent({
     [dispatch, layer.name, datasetBbox],
   );
 
+  const handleResetToStored = useCallback(async () => {
+    setIsFetchingStored(true);
+    try {
+      const backendDataset = await getDataset(dataset.id);
+      const backendLayer = backendDataset.dataSource.dataLayers.find((l) => l.name === layer.name);
+      const stored = backendLayer?.coordinateTransformations ?? null;
+      const restoredSRT =
+        stored && isLiveTransformCompatible(stored)
+          ? extractSRTFromTransforms(stored)
+          : DEFAULT_SRT;
+      setStoredSRT(restoredSRT);
+      handleChange(restoredSRT);
+      const snapshots = landmarkStore.get(layer.name);
+      if (snapshots) {
+        for (const { nodeId, treeId, position } of snapshots) {
+          dispatch(setNodePositionAction(position, nodeId, treeId));
+        }
+        landmarkStore.discard(layer.name);
+      }
+    } catch (e) {
+      console.error("Failed to fetch stored transforms:", e);
+      Toast.error("Failed to fetch stored transforms. Please try again.");
+    } finally {
+      setIsFetchingStored(false);
+    }
+  }, [dataset.id, layer.name, handleChange, landmarkStore, dispatch]);
+
   const handleSaveForAllUsers = useCallback(async () => {
     setIsSaving(true);
     try {
@@ -188,6 +221,11 @@ export function LayerTransformSettingsContent({
         ),
       };
       await updateDatasetPartial(dataset.id, { dataSource });
+      setStoredSRT(
+        currentTransforms && isLiveTransformCompatible(currentTransforms)
+          ? extractSRTFromTransforms(currentTransforms)
+          : DEFAULT_SRT,
+      );
       Toast.success("Layer transforms saved for all users.");
     } catch (e) {
       console.error("Failed to save layer transforms:", e);
@@ -293,16 +331,7 @@ export function LayerTransformSettingsContent({
           icon={<ReloadOutlined />}
           loading={isFetchingStored}
           disabled={isFetchingStored}
-          onClick={() => {
-            handleChange(storedSRT);
-            const snapshots = getLandmarkSnapshot(layer.name);
-            if (snapshots) {
-              for (const { nodeId, treeId, position } of snapshots) {
-                dispatch(setNodePositionAction(position, nodeId, treeId));
-              }
-              discardLandmarkSnapshot(layer.name);
-            }
-          }}
+          onClick={handleResetToStored}
           block
         >
           Reset to Stored Default
@@ -337,6 +366,7 @@ export function LayerTransformSettingsContent({
               open={isLandmarkModalOpen}
               onClose={() => setIsLandmarkModalOpen(false)}
               layerName={layer.name}
+              landmarkStore={landmarkStore}
             />
           </>
         )}

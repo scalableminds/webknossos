@@ -6,16 +6,18 @@ export type NodeSnapshot = {
   position: Vector3;
 };
 
-const store = new Map<string, NodeSnapshot[]>();
+export class LandmarkPositionStore {
+  private readonly snapshots = new Map<string, NodeSnapshot[]>();
 
-export function snapshotLandmarkPositions(layerName: string, snapshots: NodeSnapshot[]): void {
-  store.set(layerName, snapshots);
-}
+  snapshot(layerName: string, items: NodeSnapshot[]): void {
+    this.snapshots.set(layerName, items);
+  }
 
-export function getLandmarkSnapshot(layerName: string): NodeSnapshot[] | undefined {
-  return store.get(layerName);
-}
+  get(layerName: string): NodeSnapshot[] | undefined {
+    return this.snapshots.get(layerName);
+  }
 
-export function discardLandmarkSnapshot(layerName: string): void {
-  store.delete(layerName);
+  discard(layerName: string): void {
+    this.snapshots.delete(layerName);
+  }
 }

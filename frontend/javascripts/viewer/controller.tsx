@@ -30,6 +30,10 @@ import type { TraceOrViewCommand, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import { AnnotationTool } from "./model/accessors/tool_accessor";
 import { setViewModeAction, updateLayerSettingAction } from "./model/actions/settings_actions";
+import {
+  toggleAllTreesAction,
+  toggleInactiveTreesAction,
+} from "./model/actions/skeletontracing_actions";
 import type DataLayer from "./model/data_layer";
 import type {
   KeyboardShortcutHandlerMap,
@@ -304,6 +308,16 @@ class Controller extends PureComponent<PropsWithRouter, State> {
           const { allowedModes } = state.annotation.restrictions;
           const index = (allowedModes.indexOf(currentViewMode) + 1) % allowedModes.length;
           Store.dispatch(setViewModeAction(allowedModes[index]));
+        },
+      },
+      TOGGLE_ALL_TREES: {
+        onPressed: () => {
+          Store.dispatch(toggleAllTreesAction());
+        },
+      },
+      TOGGLE_INACTIVE_TREES: {
+        onPressed: () => {
+          Store.dispatch(toggleInactiveTreesAction());
         },
       },
       TOGGLE_SEGMENTATION: {

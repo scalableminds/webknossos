@@ -89,8 +89,6 @@ import {
   createBranchPointAction,
   createTreeAction,
   requestDeleteBranchPointAction,
-  toggleAllTreesAction,
-  toggleInactiveTreesAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import {
@@ -459,16 +457,6 @@ export class SkeletonToolController extends ToolController {
 
   static getKeyboardControls(): Partial<KeyboardShortcutHandlerMap> {
     return {
-      TOGGLE_ALL_TREES_PLANE: {
-        onPressed: () => {
-          Store.dispatch(toggleAllTreesAction());
-        },
-      },
-      TOGGLE_INACTIVE_TREES_PLANE: {
-        onPressed: () => {
-          Store.dispatch(toggleInactiveTreesAction());
-        },
-      },
       // Delete active node
       DELETE_ACTIVE_NODE_PLANE: {
         onPressed: () => {

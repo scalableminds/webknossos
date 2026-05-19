@@ -33,8 +33,6 @@ export type KeyboardShortcutId =
   | "ZOOM_OUT_FLIGHT"
   | "INCREASE_MOVE_VALUE_FLIGHT"
   | "DECREASE_MOVE_VALUE_FLIGHT"
-  | "TOGGLE_ALL_TREES_FLIGHT"
-  | "TOGGLE_INACTIVE_TREES_FLIGHT"
   | "DELETE_ACTIVE_NODE"
   | "CREATE_TREE_FLIGHT"
   | "CREATE_BRANCH_POINT_FLIGHT"
@@ -80,8 +78,8 @@ export type KeyboardShortcutId =
   | "SWITCH_TO_BOUNDING_BOX_TOOL"
   | "SWITCH_TO_PROOFREADING_TOOL"
   // Plane mode — skeleton tool
-  | "TOGGLE_ALL_TREES_PLANE"
-  | "TOGGLE_INACTIVE_TREES_PLANE"
+  | "TOGGLE_ALL_TREES"
+  | "TOGGLE_INACTIVE_TREES"
   | "DELETE_ACTIVE_NODE_PLANE"
   | "CREATE_TREE_PLANE"
   | "MOVE_ALONG_DIRECTION"
@@ -126,6 +124,16 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
     "GENERAL",
   ),
   CYCLE_VIEWMODE: new KeyboardShortcutMetaInfo("Cycle through viewing modes", [[["m"]]], "GENERAL"),
+  TOGGLE_ALL_TREES: new KeyboardShortcutMetaInfo(
+    "Toggle visibility of all trees",
+    [[["1"]]],
+    "GENERAL",
+  ),
+  TOGGLE_INACTIVE_TREES: new KeyboardShortcutMetaInfo(
+    "Toggle visibility of non-active trees (exclude active tree / group)",
+    [[["2"]]],
+    "GENERAL",
+  ),
   TOGGLE_SEGMENTATION: new KeyboardShortcutMetaInfo(
     "Toggle segmentation layer",
     [[["3"]]],
@@ -244,16 +252,6 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
     "Decrease move value",
     [[["g"]]],
     "FLIGHT_NAVIGATION",
-  ),
-  TOGGLE_ALL_TREES_FLIGHT: new KeyboardShortcutMetaInfo(
-    "Toggle all trees",
-    [[["1"]]],
-    "FLIGHT_EDITING",
-  ),
-  TOGGLE_INACTIVE_TREES_FLIGHT: new KeyboardShortcutMetaInfo(
-    "Toggle inactive trees",
-    [[["2"]]],
-    "FLIGHT_EDITING",
   ),
   DELETE_ACTIVE_NODE: new KeyboardShortcutMetaInfo(
     "Delete active node",
@@ -433,16 +431,6 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
   ),
 
   // ===================== GENERAL.PLANE.SKELETON =====================
-  TOGGLE_ALL_TREES_PLANE: new KeyboardShortcutMetaInfo(
-    "Toggle visibility of all trees",
-    [[["1"]]],
-    "PLANE_SKELETON_TOOL",
-  ),
-  TOGGLE_INACTIVE_TREES_PLANE: new KeyboardShortcutMetaInfo(
-    "Toggle visibility of non-active trees (exclude active tree / group)",
-    [[["2"]]],
-    "PLANE_SKELETON_TOOL",
-  ),
   DELETE_ACTIVE_NODE_PLANE: new KeyboardShortcutMetaInfo(
     "Delete Active Node",
     [[["Delete"]], [["Backspace"]]],

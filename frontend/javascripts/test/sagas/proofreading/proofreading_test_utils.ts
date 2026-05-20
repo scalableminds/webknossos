@@ -23,7 +23,7 @@ import {
   getVolumeTracingById,
   hasEditableMapping,
 } from "viewer/model/accessors/volumetracing_accessor";
-import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
+import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import {
@@ -354,7 +354,7 @@ export class BackendMock {
     });
   }
 
-  getEditableAgglomerateSkeleton = async (
+  getEditableAgglomerateTreeAsSkeletonTracing = async (
     _tracingStoreUrl: string,
     tracingId: string,
     agglomerateId: number,
@@ -372,16 +372,16 @@ export class BackendMock {
       );
     }
     const segmentId = someSegmentOfAgglomerate[0];
-    const agglomerateSkeletonAsServerTracing = createSkeletonTracingFromAdjacency(
+    const agglomerateTreeAsServerTracing = createSkeletonTracingFromAdjacency(
       adjacencyList,
       segmentId,
       agglomerateId,
       tracingId,
-      "agglomerateSkeleton",
+      "agglomerateTree",
       version,
     );
 
-    return encodeServerTracing(agglomerateSkeletonAsServerTracing, "skeleton");
+    return encodeServerTracing(agglomerateTreeAsServerTracing, "skeleton");
   };
 }
 
@@ -433,8 +433,8 @@ export function mockInitialBucketAndAgglomerateData(
   mocks.getPositionForSegmentInAgglomerate.mockImplementation(
     backendMock.getPositionForSegmentInAgglomerate,
   );
-  mocks.getEditableAgglomerateSkeleton.mockImplementation(
-    backendMock.getEditableAgglomerateSkeleton,
+  mocks.getEditableAgglomerateTreeAsSkeletonTracing.mockImplementation(
+    backendMock.getEditableAgglomerateTreeAsSkeletonTracing,
   );
 
   return backendMock;
@@ -557,7 +557,7 @@ export function* performCutFromAllNeighbours(
   yield makeMappingEditableForTest();
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
   yield* expectMapping(tracingId, initialMapping);
-  yield put(setOthersMayEditForAnnotationAction(true));
+  yield put(setCollaborationModeAction("Concurrent"));
 
   // Execute the actual merge and wait for the finished mapping.
   yield put(
@@ -610,7 +610,7 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
     (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
   );
   expect(mapping1).toEqual(expectedInitialMapping);
-  yield put(setOthersMayEditForAnnotationAction(true));
+  yield put(setCollaborationModeAction("Concurrent"));
 
   //Activate Multi-split tool
   yield put(updateUserSettingAction("isMultiSplitActive", true));

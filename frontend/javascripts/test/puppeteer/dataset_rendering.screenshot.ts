@@ -231,7 +231,7 @@ describe("Dataset Rendering", () => {
   );
 
   it.sequential<ScreenshotTestContext>(
-    "should render a dataset linked to with an active mapping and agglomerate skeleton correctly",
+    "should render a dataset linked to with an active mapping and agglomerate tree correctly",
     { retry: 3 },
     async ({ browser }) => {
       const datasetName = "test-agglomerate-file";
@@ -257,13 +257,13 @@ describe("Dataset Rendering", () => {
 
       expect(
         isPixelEquivalent(changedPixels, width, height),
-        `Dataset with name: "${datasetName}", mapping link and loaded agglomerate skeleton does not look the same.`,
+        `Dataset with name: "${datasetName}", mapping link and loaded agglomerate tree does not look the same.`,
       ).toBe(true);
     },
   );
 
   it.sequential<ScreenshotTestContext>(
-    "should render a dataset sandbox linked to with an active mapping and agglomerate skeleton correctly",
+    "should render a dataset sandbox linked to with an active mapping and agglomerate tree correctly",
     { retry: 3 },
     async ({ browser }) => {
       const datasetName = "test-agglomerate-file";
@@ -287,7 +287,7 @@ describe("Dataset Rendering", () => {
       await page.close();
       expect(
         isPixelEquivalent(changedPixels, width, height),
-        `Sandbox of dataset with name: "${datasetName}", mapping link and loaded agglomerate skeleton does not look the same.`,
+        `Sandbox of dataset with name: "${datasetName}", mapping link and loaded agglomerate tree does not look the same.`,
       ).toBe(true);
     },
   );

@@ -84,27 +84,28 @@ class AgglomerateService @Inject()(zarrAgglomerateService: ZarrAgglomerateServic
       }
     } yield data
 
-  def generateSkeleton(agglomerateFileKey: AgglomerateFileKey,
-                       agglomerateId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[SkeletonTracing] =
+  def generateTreeAsSkeleton(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long)(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[SkeletonTracing] =
     for {
       before <- Instant.nowFox
-      skeleton <- agglomerateFileKey.attachment.dataFormat match {
+      treeAsSkeleton <- agglomerateFileKey.attachment.dataFormat match {
         case LayerAttachmentDataformat.zarr3 =>
-          zarrAgglomerateService.generateSkeleton(agglomerateFileKey, agglomerateId)
+          zarrAgglomerateService.generateTree(agglomerateFileKey, agglomerateId)
         case LayerAttachmentDataformat.hdf5 =>
-          hdf5AgglomerateService.generateSkeleton(agglomerateFileKey, agglomerateId).toFox
+          hdf5AgglomerateService.generateTree(agglomerateFileKey, agglomerateId).toFox
         case _ => unsupportedDataFormat(agglomerateFileKey)
       }
       _ = if (Instant.since(before) > (100 milliseconds)) {
         Instant.logSince(
           before,
-          s"Generating skeleton from agglomerate file with ${skeleton.trees.headOption
+          s"Generating tree from agglomerate file with ${treeAsSkeleton.trees.headOption
             .map(_.edges.length)
-            .getOrElse(0)} edges, ${skeleton.trees.headOption.map(_.nodes.length).getOrElse(0)} nodes",
+            .getOrElse(0)} edges, ${treeAsSkeleton.trees.headOption.map(_.nodes.length).getOrElse(0)} nodes",
           logger
         )
       }
-    } yield skeleton
+    } yield treeAsSkeleton
 
   def largestAgglomerateId(agglomerateFileKey: AgglomerateFileKey)(implicit ec: ExecutionContext,
                                                                    tc: TokenContext): Fox[Long] =

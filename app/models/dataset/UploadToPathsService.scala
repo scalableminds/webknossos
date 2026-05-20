@@ -30,8 +30,9 @@ import controllers.{
   ReserveMagUploadToPathRequest
 }
 import models.folder.FolderDAO
-import models.organization.OrganizationDAO
+import models.organization.{OrganizationDAO, OrganizationService}
 import models.user.User
+import play.api.http.Status.FORBIDDEN
 import play.api.i18n.MessagesProvider
 import utils.WkConf
 import security.RandomIDGenerator
@@ -40,6 +41,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class UploadToPathsService @Inject()(datasetService: DatasetService,
+                                     organizationService: OrganizationService,
                                      organizationDAO: OrganizationDAO,
                                      datasetDAO: DatasetDAO,
                                      dataStoreDAO: DataStoreDAO,
@@ -59,6 +61,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
                                                           mp: MessagesProvider): Fox[UsableDataSource] =
     for {
       organization <- organizationDAO.findOne(requestingUser._organization)
+      _ <- organizationService.assertUsedStorageNotExceeded(organization) ?~> "dataset.upload.storageExceeded" ~> FORBIDDEN
       _ <- Fox.runIf(parameters.requireUniqueName)(
         datasetService.checkNameAvailable(parameters.datasetName, organization._id))
       _ <- datasetService.assertValidDatasetName(parameters.datasetName)

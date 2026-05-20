@@ -107,7 +107,7 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
             : null;
   };
 
-  const shouldAgglomerateSkeletonActionsBeDisabled =
+  const shouldAgglomerateTreeActionsBeDisabled =
     !isProofreadingActive ||
     activeSegmentMissing ||
     maybeUnmappedSegmentId == null ||
@@ -119,8 +119,8 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
           ? proofreadingMultiSplitToolActions
           : []),
         {
-          key: "merge-agglomerate-skeleton",
-          disabled: shouldAgglomerateSkeletonActionsBeDisabled || clickedMeshId === activeCellId,
+          key: "merge-agglomerate-tree",
+          disabled: shouldAgglomerateTreeActionsBeDisabled || clickedMeshId === activeCellId,
           onClick: () => {
             // Should not happen due to the disabled property.
             if (maybeUnmappedSegmentId == null) {
@@ -135,7 +135,7 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
         {
           key: "min-cut-agglomerate-at-position",
           disabled:
-            shouldAgglomerateSkeletonActionsBeDisabled ||
+            shouldAgglomerateTreeActionsBeDisabled ||
             clickedMeshId !== activeCellId ||
             activeUnmappedSegmentId == null ||
             maybeUnmappedSegmentId === activeUnmappedSegmentId,

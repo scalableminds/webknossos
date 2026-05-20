@@ -10,7 +10,7 @@ import type {
   RenderAnimationOptions,
   VoxelSize,
 } from "types/api_types";
-import type { UnitLong, Vector3, Vector6 } from "viewer/constants";
+import type { Vector3, Vector6 } from "viewer/constants";
 import { setActiveOrganizationsCreditBalance } from "viewer/model/actions/organization_actions";
 import { Store } from "viewer/singletons";
 import { assertResponseLimit } from "./api_utils";
@@ -92,19 +92,6 @@ export async function retryJob(jobId: string): Promise<APIJob> {
   return Request.receiveJSON(`/api/jobs/${jobId}/retry`, {
     method: "PATCH",
   });
-}
-
-export async function startConvertToWkwJob(
-  datasetId: string,
-  scale: Vector3,
-  unit: UnitLong,
-): Promise<APIJob> {
-  return Request.receiveJSON(
-    `/api/jobs/run/convertToWkw/${datasetId}?scale=${scale.toString()}&unit=${unit}`,
-    {
-      method: "POST",
-    },
-  );
 }
 
 export async function startFindLargestSegmentIdJob(

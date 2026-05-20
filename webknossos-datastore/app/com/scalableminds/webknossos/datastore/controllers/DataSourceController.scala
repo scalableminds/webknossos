@@ -105,6 +105,15 @@ class DataSourceController @Inject()(
     }
   }
 
+  def scanRealPathsForVirtual(): Action[Seq[DataSource]] = Action.async(validateJson[Seq[DataSource]]) {
+    implicit request =>
+      accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+        for {
+          _ <- dataSourceService.scanRealPathsForVirtual(request.body)
+        } yield Ok
+      }
+  }
+
   def reserveUpload(): Action[ReserveUploadInformation] =
     Action.async(validateJson[ReserveUploadInformation]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(
@@ -262,7 +271,7 @@ class DataSourceController @Inject()(
     }
   }
 
-  def generateAgglomerateSkeleton(
+  def generateAgglomerateTree(
       datasetId: ObjectId,
       dataLayerName: String,
       mappingName: String,
@@ -273,7 +282,7 @@ class DataSourceController @Inject()(
         (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
         skeleton <- agglomerateService
-          .generateSkeleton(agglomerateFileKey, agglomerateId) ?~> "agglomerateSkeleton.failed"
+          .generateTreeAsSkeleton(agglomerateFileKey, agglomerateId) ?~> "agglomerateTree.failed"
       } yield Ok(skeleton.toByteArray).as(protobufMimeType)
     }
   }

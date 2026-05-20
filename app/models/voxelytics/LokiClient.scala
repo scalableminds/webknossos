@@ -54,10 +54,10 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyste
         case Full(response) if Status.isSuccessful(response.status) =>
           Fox.successful(true)
         case Full(response) if response.status >= 500 && response.status < 600 =>
-          logger.debug(s"Loki status: ${response.status}")
+          logger.info(s"Loki status: ${response.status}")
           Fox.successful(false)
         case Failure(_, Full(e: java.net.ConnectException), _) =>
-          logger.debug(s"Loki connection exception: $e")
+          logger.info(s"Loki connection exception: $e")
           Fox.successful(false)
         case Failure(_, Full(e), _) =>
           Fox.failure("Unexpected error while trying to connect to Loki.", Full(e))

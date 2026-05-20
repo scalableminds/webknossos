@@ -26,11 +26,14 @@ case class MeshFileAttributes(
     meshFormat: String, // AKA encoding (e.g. "draco")
     lodScaleMultiplier: Double,
     transform: Array[Array[Double]],
-    hashFunction: String,
-    nBuckets: Long,
+    hashFunction: Option[String], // v9 hashmap only
+    nBuckets: Option[Long], // v9 hashmap only
+    btreeHeight: Option[Int], // v10 btree only
+    btreeLevelOffsets: Option[Array[Int]], // v10 btree only
     mappingName: Option[String]
 ) extends ArrayArtifactHashing {
-  lazy val applyHashFunction: Long => Long = getHashFunction(hashFunction)
+  def isBtreeFormat: Boolean = formatVersion >= 10
+  lazy val applyHashFunction: Long => Long = getHashFunction(hashFunction.getOrElse("identity"))
 }
 
 object MeshFileAttributes extends MeshFileUtils with VoxelyticsZarrArtifactUtils {
@@ -42,8 +45,10 @@ object MeshFileAttributes extends MeshFileUtils with VoxelyticsZarrArtifactUtils
         meshFormat <- (meshFileAttrs \ attrKeyMeshFormat).validate[String]
         lodScaleMultiplier <- (meshFileAttrs \ attrKeyLodScaleMultiplier).validate[Double]
         transform <- (meshFileAttrs \ attrKeyTransform).validate[Array[Array[Double]]]
-        hashFunction <- (meshFileAttrs \ attrKeyHashFunction).validate[String]
-        nBuckets <- (meshFileAttrs \ attrKeyNBuckets).validate[Long]
+        hashFunction <- (meshFileAttrs \ attrKeyHashFunction).validateOpt[String]
+        nBuckets <- (meshFileAttrs \ attrKeyNBuckets).validateOpt[Long]
+        btreeHeight <- (meshFileAttrs \ attrKeyBtreeHeight).validateOpt[Int]
+        btreeLevelOffsets <- (meshFileAttrs \ attrKeyBtreeLevelOffsets).validateOpt[Array[Int]]
         mappingName <- (meshFileAttrs \ attrKeyMappingName).validateOpt[String]
       } yield
         MeshFileAttributes(
@@ -53,6 +58,8 @@ object MeshFileAttributes extends MeshFileUtils with VoxelyticsZarrArtifactUtils
           transform,
           hashFunction,
           nBuckets,
+          btreeHeight,
+          btreeLevelOffsets,
           mappingName,
         )
     }
@@ -122,8 +129,17 @@ class ZarrMeshFileService @Inject()(chunkCacheService: DSChunkCacheService, data
   private def getNeuroglancerSegmentManifestOffsets(
       meshFileKey: MeshFileKey,
       meshFileAttributes: MeshFileAttributes,
+      segmentId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[(Long, Long)] =
+    if (meshFileAttributes.isBtreeFormat)
+      getBtreeNeuroglancerManifestOffsets(meshFileKey, meshFileAttributes, segmentId)
+    else
+      getHashmapNeuroglancerManifestOffsets(meshFileKey, meshFileAttributes, segmentId)
+
+  private def getHashmapNeuroglancerManifestOffsets(
+      meshFileKey: MeshFileKey,
+      meshFileAttributes: MeshFileAttributes,
       segmentId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[(Long, Long)] = {
-    val bucketIndex = meshFileAttributes.applyHashFunction(segmentId) % meshFileAttributes.nBuckets
+    val bucketIndex = meshFileAttributes.applyHashFunction(segmentId) % meshFileAttributes.nBuckets.getOrElse(1L)
     for {
       bucketOffsetsArray <- openZarrArray(meshFileKey, keyBucketOffsets)
       bucketRange <- bucketOffsetsArray.readAsMultiArray(offset = bucketIndex, shape = 2)
@@ -141,6 +157,57 @@ class ZarrMeshFileService @Inject()(chunkCacheService: DSChunkCacheService, data
 
   private def findLocalOffsetInBucket(bucket: MultiArray, segmentId: Long): Option[Int] =
     (0 until bucket.getShape()(0)).find(idx => bucket.getLong(bucket.getIndex.set(Array(idx, 0))) == segmentId)
+
+  private def getBtreeNeuroglancerManifestOffsets(
+      meshFileKey: MeshFileKey,
+      meshFileAttributes: MeshFileAttributes,
+      segmentId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[(Long, Long)] = {
+    val height = meshFileAttributes.btreeHeight.getOrElse(1)
+    val levelOffsets = meshFileAttributes.btreeLevelOffsets.getOrElse(Array.empty[Int])
+
+    def traverseInternals(level: Int, childIdx: Long): Fox[Long] =
+      if (level >= height - 1) Fox.successful(childIdx)
+      else
+        for {
+          internalArr <- openZarrArray(meshFileKey, keyBtreeInternal)
+          nodeArr <- internalArr.readAsMultiArray(offset = Array(levelOffsets(level).toLong + childIdx, 0L),
+                                                  shape = Array(1, BTREE_NODE_U64S))
+          nKeys = nodeArr.getLong(nodeArr.getIndex.set(Array(0, 0))).toInt
+          keyIdx = upperBound(nodeArr, nKeys, segmentId)
+          nextChild = nodeArr.getLong(nodeArr.getIndex.set(Array(0, nKeys + 1 + keyIdx)))
+          result <- traverseInternals(level + 1, nextChild)
+        } yield result
+
+    for {
+      leafIdx <- traverseInternals(0, 0L)
+      leavesArr <- openZarrArray(meshFileKey, keyBtreeLeaves)
+      leafArr <- leavesArr.readAsMultiArray(offset = Array(leafIdx, 0L), shape = Array(1, BTREE_NODE_U64S))
+      nEntries = leafArr.getLong(leafArr.getIndex.set(Array(0, 0))).toInt
+      result <- findInLeaf(leafArr, nEntries, segmentId).toFox ?~> s"SegmentId $segmentId not found in btree"
+    } yield result
+  }
+
+  // Upper-bound binary search: returns first index i in [0, nKeys] where keys[i] > target.
+  // Mirrors numpy searchsorted(keys, target, side="right").
+  private def upperBound(node: MultiArray, nKeys: Int, target: Long): Int = {
+    var lo = 0
+    var hi = nKeys
+    while (lo < hi) {
+      val mid = lo + (hi - lo) / 2
+      if (node.getLong(node.getIndex.set(Array(0, 1 + mid))) <= target) lo = mid + 1
+      else hi = mid
+    }
+    lo
+  }
+
+  private def findInLeaf(leaf: MultiArray, nEntries: Int, segmentId: Long): Option[(Long, Long)] =
+    (0 until nEntries)
+      .find(i => leaf.getLong(leaf.getIndex.set(Array(0, 1 + i * 3))) == segmentId)
+      .map { i =>
+        val start = leaf.getLong(leaf.getIndex.set(Array(0, 2 + i * 3)))
+        val end = leaf.getLong(leaf.getIndex.set(Array(0, 3 + i * 3)))
+        (start, end)
+      }
 
   private def openZarrArray(meshFileKey: MeshFileKey, zarrArrayName: String)(implicit ec: ExecutionContext,
                                                                              tc: TokenContext): Fox[DatasetArray] =
@@ -194,12 +261,15 @@ class ZarrMeshFileService @Inject()(chunkCacheService: DSChunkCacheService, data
                                               meshFileAttributes: MeshFileAttributes)(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[List[List[MeshLodInfo]]] = {
+    // For btree format, sorting segment IDs improves cache locality: consecutive IDs share
+    // traversal paths through internal nodes (Zarr chunks cached by sharedChunkContentsCache).
+    val orderedSegmentIds = if (meshFileAttributes.isBtreeFormat) segmentIds.sorted else segmentIds
     def lookupOne(segmentId: Long): Fox[Option[List[MeshLodInfo]]] =
       listMeshChunksForSegment(meshFileKey, segmentId, meshFileAttributes).map(Some(_)).orElse(Fox.successful(None))
     if (meshFileKey.attachment.path.isRemote)
-      Fox.batchCombined(segmentIds.toSeq, parallelity = 32)(lookupOne).map(_.flatten)
+      Fox.batchCombined(orderedSegmentIds.toSeq, parallelity = 32)(lookupOne).map(_.flatten)
     else
-      Fox.serialCombined(segmentIds)(lookupOne).map(_.flatten)
+      Fox.serialCombined(orderedSegmentIds)(lookupOne).map(_.flatten)
   }
 
   def readMeshChunk(meshFileKey: MeshFileKey, meshChunkDataRequests: Seq[MeshChunkDataRequest])(

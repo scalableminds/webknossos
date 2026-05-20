@@ -174,7 +174,7 @@
     "pako": "^2.1.0",
     "pretty-bytes": "^5.1.0",
     "process": "^0.11.10",
-    "protobufjs": "^6.11.4",
+    "protobufjs": "^6.11.5",
     "react": "^19.2.0",
     "react-colorful": "^5.6.1",
     "react-command-palette": "^0.22.1",
@@ -200,7 +200,18 @@
     "url": "^0.11.0",
     "url-join": "^4.0.0"
   },
-  "packageManager": "yarn@4.9.2",
+  "packageManager": "yarn@4.14.1",
+  "dependenciesMeta": {
+    "esbuild": {
+      "built": true
+    },
+    "msw": {
+      "built": true
+    },
+    "protobufjs": {
+      "built": true
+    }
+  },
   "resolutions": {
     "distance-transform": "https://github.com/scalableminds/distance-transform"
   }

@@ -5,6 +5,7 @@ import Icon, {
   DeleteOutlined,
   DownloadOutlined,
   ExclamationCircleOutlined,
+  FolderAddOutlined,
   MenuOutlined,
   PlusOutlined,
   SearchOutlined,
@@ -97,6 +98,7 @@ import { api, Model } from "viewer/singletons";
 import Store, { type UserBoundingBox, type WebknossosState } from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import DomVisibilityObserver from "viewer/view/components/dom_visibility_observer";
+import { createGroup } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_renderers";
 import TreeHierarchyView from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view";
 import {
   additionallyExpandGroup,
@@ -722,6 +724,14 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     });
   };
 
+  createNewGroup = () => {
+    createGroup(
+      this.props.skeletonTracing?.treeGroups || [],
+      MISSING_GROUP_ID,
+      this.deselectAllTrees,
+    );
+  };
+
   maybeExpandParentGroups = (selectedElement: TreeOrTreeGroup) => {
     const { skeletonTracing } = this.props;
     if (!skeletonTracing) {
@@ -795,24 +805,24 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
     }
   }
 
-  getSettingsDropdown(): MenuProps {
+  getActionsDropdown(): MenuProps {
+    const isEditingDisabled = !this.props.allowUpdate;
     const activeMenuKey = this.props.userConfiguration.sortTreesByName
       ? "sortByName"
       : "sortByTime";
     return {
       selectedKeys: [activeMenuKey],
-      onClick: this.handleDropdownClick,
       items: [
-        { key: "sortByName", label: "by name" },
-        { key: "sortByTime", label: "by creation time" },
-      ],
-    };
-  }
-
-  getActionsDropdown(): MenuProps {
-    const isEditingDisabled = !this.props.allowUpdate;
-    return {
-      items: [
+        {
+          key: "sort",
+          icon: <SortAscendingOutlined />,
+          label: "Sort",
+          children: [
+            { key: "sortByName", label: "by name", onClick: this.handleDropdownClick },
+            { key: "sortByTime", label: "by creation time", onClick: this.handleDropdownClick },
+          ],
+        },
+        { type: "divider" },
         {
           key: "shuffleAllTreeColors",
           onClick: this.shuffleAllTreeColors,
@@ -978,6 +988,14 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     color="default"
                   />
                   <ButtonComponent
+                    onClick={this.createNewGroup}
+                    title={isEditingDisabled ? isEditingDisabledMessage : "Create new Group"}
+                    disabled={isEditingDisabled}
+                    icon={<FolderAddOutlined />}
+                    variant="text"
+                    color="default"
+                  />
+                  <ButtonComponent
                     onClick={this.handleDelete}
                     title={isEditingDisabled ? isEditingDisabledMessage : "Delete Selected Trees"}
                     disabled={isEditingDisabled}
@@ -1015,14 +1033,6 @@ class SkeletonTabView extends React.PureComponent<Props, State> {
                     variant="text"
                     color="default"
                   />
-                  <Dropdown menu={this.getSettingsDropdown()} trigger={["click"]}>
-                    <ButtonComponent
-                      title="Sort"
-                      icon={<SortAscendingOutlined />}
-                      variant="text"
-                      color="default"
-                    />
-                  </Dropdown>
                   <Dropdown menu={this.getActionsDropdown()} trigger={["click"]}>
                     <ButtonComponent
                       icon={<MenuOutlined />}

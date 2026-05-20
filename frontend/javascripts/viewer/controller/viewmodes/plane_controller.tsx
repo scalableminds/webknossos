@@ -40,7 +40,12 @@ import {
   yawFlycamAction,
 } from "viewer/model/actions/flycam_actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
-import { cycleToolAction, enterAction, escapeAction } from "viewer/model/actions/ui_actions";
+import {
+  cycleToolAction,
+  enterAction,
+  escapeAction,
+  setToolAction,
+} from "viewer/model/actions/ui_actions";
 import { setViewportAction } from "viewer/model/actions/view_mode_actions";
 import Dimensions from "viewer/model/dimensions";
 import dimensions, { type DimensionIndices } from "viewer/model/dimensions";
@@ -268,6 +273,9 @@ class PlaneController extends PureComponent<Props> {
       const rotationAction = axisIndexToRotation[viewportIndices[dimensionIndex]];
       Store.dispatch(rotationAction(rotationAngle));
     };
+    const activateTool = (tool: AnnotationTool) => {
+      Store.dispatch(setToolAction(tool));
+    };
     return {
       // Looped navigation (no delay)
       MOVE_LEFT: {
@@ -354,6 +362,37 @@ class PlaneController extends PureComponent<Props> {
       },
       CYCLE_TOOLS_BACKWARDS: {
         onPressed: () => cycleToolsBackwards(),
+      },
+      // Tool Activation Shortcuts
+      SWITCH_TO_MOVE_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.MOVE),
+      },
+      SWITCH_TO_SKELETON_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.SKELETON),
+      },
+      SWITCH_TO_BRUSH_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.BRUSH),
+      },
+      SWITCH_TO_BRUSH_ERASE_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.ERASE_BRUSH),
+      },
+      SWITCH_TO_LASSO_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.TRACE),
+      },
+      SWITCH_TO_LASSO_ERASE_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.ERASE_TRACE),
+      },
+      SWITCH_TO_SEGMENT_PICKER_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.VOXEL_PIPETTE),
+      },
+      SWITCH_TO_QUICK_SELECT_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.QUICK_SELECT),
+      },
+      SWITCH_TO_BOUNDING_BOX_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.BOUNDING_BOX),
+      },
+      SWITCH_TO_PROOFREADING_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.PROOFREAD),
       },
     };
   }

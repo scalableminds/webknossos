@@ -123,6 +123,7 @@ export function* acquireAnnotationMutexMaybe(): Saga<void> {
   yield* fork(watchMutexStateChangesForNotification, mutexLogicState);
   yield* fork(watchForCollaborationModeChange, mutexLogicState);
   yield* fork(watchForMutexSubscriptionActions, mutexLogicState);
+  yield* fork(watchForDisableSaving, mutexLogicState);
   yield* takeEvery(["SUBSCRIBE_TO_ANNOTATION_MUTEX"], autoTimeoutSubscription);
 
   const othersMayEdit = yield* select((state) => isAnnotationEditableByNonOwners(state.annotation));
@@ -488,6 +489,22 @@ function* watchForMutexSubscriptionActions(mutexLogicState: MutexLogicState): Sa
     ["SUBSCRIBE_TO_ANNOTATION_MUTEX", "UNSUBSCRIBE_FROM_ANNOTATION_MUTEX"],
     reactToSubscriptionChange,
   );
+}
+
+function* watchForDisableSaving(mutexLogicState: MutexLogicState): Saga<void> {
+  yield* take("DISABLE_SAVING");
+  if (mutexLogicState.runningContinuousMutexAcquiringSaga != null) {
+    yield* cancel(mutexLogicState.runningContinuousMutexAcquiringSaga);
+    mutexLogicState.runningContinuousMutexAcquiringSaga = null;
+  }
+  if (mutexLogicState.runningAdHocMutexAcquiringSaga != null) {
+    yield* cancel(mutexLogicState.runningAdHocMutexAcquiringSaga);
+    mutexLogicState.runningAdHocMutexAcquiringSaga = null;
+  }
+  const stillHasMutex = yield* select((state) => state.save.mutexState.hasAnnotationMutex);
+  if (stillHasMutex) {
+    yield* call(releaseMutex);
+  }
 }
 
 function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState): Saga<void> {

@@ -22,6 +22,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { type Saga, select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
+import { disableSavingAction } from "viewer/model/actions/save_actions";
 import {
   clearAllSubscriptions,
   getMutexLogicState,
@@ -503,6 +504,50 @@ describe("Save Mutex Saga", () => {
       Store.dispatch(setToolAction(annotationToolWithoutLiveCollabSupport.tool));
       await sleep(100);
       expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("When disableSavingAction is dispatched", () => {
+    describe.each([
+      { collaborationMode: "Exclusive" as const },
+      { collaborationMode: "Concurrent" as const },
+    ])("collaborationMode=$collaborationMode", ({ collaborationMode }) => {
+      it<WebknossosTestContext>("the mutex acquiring saga should be cancelled", async (context: WebknossosTestContext) => {
+        await setupWebknossosForTestingWithRestrictions(context, collaborationMode, true);
+        const task = startSaga(function* task() {
+          // subscribeToAnnotationMutex blocks until the mutex is acquired.
+          // For Exclusive, the continuous saga is already acquiring; for Concurrent,
+          // subscribing triggers the ad-hoc saga.
+          yield call(subscribeToAnnotationMutex, "Test");
+          expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
+          context.mocks.acquireAnnotationMutex.mockClear();
+          Store.dispatch(disableSavingAction());
+          yield sleep(200);
+          context.mocks.acquireAnnotationMutex.mockClear();
+          // Wait longer than one acquire interval (1s in test mode) to confirm no retries.
+          yield sleep(2000);
+          expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
+        });
+        await task.toPromise();
+      });
+
+      it<WebknossosTestContext>("a held mutex should be released", async (context: WebknossosTestContext) => {
+        await setupWebknossosForTestingWithRestrictions(context, collaborationMode, true);
+        const task = startSaga(function* task() {
+          yield call(subscribeToAnnotationMutex, "Test");
+          expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
+          expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
+          Store.dispatch(disableSavingAction());
+          yield sleep(200);
+          expect(context.mocks.releaseAnnotationMutex).toHaveBeenCalled();
+          yield assertMutexStoreProperties({
+            hasAnnotationMutex: false,
+            blockingUser: null,
+            isUpdatingCurrentlyAllowed: true,
+          });
+        });
+        await task.toPromise();
+      });
     });
   });
 });

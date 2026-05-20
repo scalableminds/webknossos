@@ -1,26 +1,32 @@
 /**
  * Keyboard Layout Utilities
  *
- *
- * Important notes regarding how they are stored:
+ * ## Why shortcuts use `@code` notation
  *
  * Keyboard shortcuts that use symbol or punctuation keys (e.g. `+`, `#`, `[`) are stored
- * using the `@<KeyboardEvent.code>` property (e.g. `@BracketRight`) rather than a literal character
- * that was typed based on the keyboard layout (e.g. +). We cannot use `KeyboardEvent.key` directly for two reasons:
+ * as the value of `KeyboardEvent.code` prefixed with `@` (e.g. `@BracketRight`) rather than
+ * the literal character the key produces. We cannot use `KeyboardEvent.key` directly for two reasons:
  *
- * 1. **Modifier interference** (main reason) – The `key` property of keyboard events reflects the character
- *    *after* modifiers are applied, so `Shift + 1` on a German keyboard yields `!` instead of `1`.
- *    Thus to configure it with the keystrokes library "Shift + !" would be needed to pass to the library
- *     as it uses the key property by default. But, showing this in the UI is extremely unintuitive to the user. The user would expect to see `Shift + 1`!.
- *    Moreover, when the user switches keyboard layouts, a shortcut configured as Shift + ! would mean that the user now needs to press a different key.
+ * 1. **Modifier interference** (main reason) – `key` reflects the character *after* modifiers
+ *    are applied. On a German keyboard, `Shift + 1` yields `!` via `key`, so the shortcut
+ *    library we use (keystrokes) would have to be configured as `Shift + !`. That is highly
+ *    unintuitive: users expect the shortcut label to read `Shift + 1`, not `Shift + !`.
+ *
  * 2. **Layout variance** – the same physical key produces different characters on different
- *    layouts: `BracketRight` is `]` on US but `+` on German. When we would configure a shortcut for Shift + ! and the user switches keyboard layouts, the user suddenly needs to press different keys to yield the Shift + ! combo.
- *    Furthermore, a keyboard layout might need a different modifier than shift to print the !. In such a case Shift + ! can never be fulfilled.
+ *    layouts: `BracketRight` is `]` on US but `+` on German. If a shortcut were stored as
+ *    `Shift + !`, it would break entirely on layouts where `!` requires a different modifier
+ *    combination or cannot be produced at all.
  *
- * Using `code` (the physical key position) avoids both problems. The display label is
- * resolved at render time via the layout map maintained here. But this is not done for normal !characters! ([a-zA-Z]).
+ * Using `code` (the physical key position) avoids both problems. Note that this only applies
+ * to symbol/punctuation keys; regular letter keys (`[a-zA-Z]`) are stored as literal characters
+ * because they are stable across the layouts we support.
  *
- * The problem with this approach is, that we store the keys as if they were on a US keyboard layout. This might not match the users one, thus we have the following workaround to visually render the proper keys: We maintain a map from US-Keyboard keys to unmodified keys of the current layout to display them correctly. Th map is called "LayoutMap".
+ * ## Resolving display labels
+ *
+ * Storing keys by `code` means the labels are US-centric by default (`BracketRight` → `]`),
+ * which may not match what the key actually shows on the user's keyboard. To display the
+ * correct character we maintain a `layoutMap`: a map from `KeyboardEvent.code`s to the unmodified
+ * character they produce on the user's current layout.
  *
  * ## Building the layout map
  *
@@ -35,7 +41,8 @@
  *   to `localStorage` from a previous session, then learn new entries organically: every
  *   unmodified key press (no Shift/Ctrl/Alt/Meta) teaches us the mapping for that code.
  *   If the stored layout no longer matches (detected when a known code yields a different
- *   character), the entire map is cleared and rebuilt from scratch as this indicates a keyboard layout switch.
+ *   character -> likely a layout switch done by the user), the entire map is cleared and
+ *   rebuilt from scratch.
  *
  * - **Cold start / unknown keys** – when a code is not yet in the map, `displayKeyName`
  *   falls back to a hard-coded US layout table so the UI always shows *something* sensible

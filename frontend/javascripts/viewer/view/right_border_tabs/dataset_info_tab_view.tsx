@@ -55,8 +55,8 @@ import { KeyboardKeyIcon } from "../components/keyboard_key_icon";
 import { MarkdownModal } from "../components/markdown_modal";
 import type { KeyboardShortcutId } from "../keyboard_shortcuts/keyboard_shortcut_constants";
 import type {
+  KeyboardEventCodeToUnmodifiedKeyMap,
   KeyboardShortcutsMap,
-  UnmodifiedLayoutMap,
 } from "../keyboard_shortcuts/keyboard_shortcut_types";
 import { keySequenceToUiElements } from "../keyboard_shortcuts/keyboard_shortcut_utils";
 
@@ -70,7 +70,7 @@ type StateProps = {
   isPlaneMode: boolean;
   mayEditAnnotation: boolean;
   keyboardShortcutsConfig: KeyboardShortcutsMap;
-  unmodifiedLayoutMap: UnmodifiedLayoutMap;
+  keyboardEventCodeToUnmodifiedKeyMap: KeyboardEventCodeToUnmodifiedKeyMap;
 };
 type DispatchProps = {
   setAnnotationName: (arg0: string) => void;
@@ -90,7 +90,7 @@ type ShortcutInfo = {
 
 const getShortcuts = (
   keyboardShortcutsConfig: KeyboardShortcutsMap,
-  unmodifiedLayoutMap: UnmodifiedLayoutMap,
+  keyboardEventCodeToUnmodifiedKeyMap: KeyboardEventCodeToUnmodifiedKeyMap,
   isInPlaneMode: boolean,
 ): ShortcutInfo[] => {
   const toUiElement = (keyboardShortcutId: KeyboardShortcutId) =>
@@ -100,7 +100,7 @@ const getShortcuts = (
         capitalizedKeySeq,
         true,
         `${keyboardShortcutId}-${comboIndex}-`,
-        unmodifiedLayoutMap,
+        keyboardEventCodeToUnmodifiedKeyMap,
       );
     });
   return [
@@ -354,8 +354,12 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
   }
 
   getKeyboardShortcuts() {
-    const { isDatasetViewMode, keyboardShortcutsConfig, unmodifiedLayoutMap, isPlaneMode } =
-      this.props;
+    const {
+      isDatasetViewMode,
+      keyboardShortcutsConfig,
+      keyboardEventCodeToUnmodifiedKeyMap,
+      isPlaneMode,
+    } = this.props;
     return isDatasetViewMode ? (
       <div className="info-tab-block">
         <Typography.Title level={5}>Keyboard Shortcuts</Typography.Title>
@@ -372,22 +376,24 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
         </p>
         <table className="shortcut-table-info-tab">
           <tbody>
-            {getShortcuts(keyboardShortcutsConfig, unmodifiedLayoutMap, isPlaneMode).map(
-              (shortcut) => (
-                <tr key={shortcut.key}>
-                  <td
-                    style={{
-                      width: 170,
-                    }}
-                  >
-                    <Space size={4} align="center">
-                      {shortcut.keybinding}
-                    </Space>
-                  </td>
-                  <td>{shortcut.action}</td>
-                </tr>
-              ),
-            )}
+            {getShortcuts(
+              keyboardShortcutsConfig,
+              keyboardEventCodeToUnmodifiedKeyMap,
+              isPlaneMode,
+            ).map((shortcut) => (
+              <tr key={shortcut.key}>
+                <td
+                  style={{
+                    width: 170,
+                  }}
+                >
+                  <Space size={4} align="center">
+                    {shortcut.keybinding}
+                  </Space>
+                </td>
+                <td>{shortcut.action}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
@@ -723,7 +729,8 @@ const mapStateToProps = (state: WebknossosState): StateProps => ({
   isDatasetViewMode: state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   isPlaneMode: constants.MODES_PLANE.includes(state.temporaryConfiguration.viewMode),
   keyboardShortcutsConfig: state.keyboardConfiguration.shortcutsConfig,
-  unmodifiedLayoutMap: state.keyboardConfiguration.unmodifiedLayoutMap,
+  keyboardEventCodeToUnmodifiedKeyMap:
+    state.keyboardConfiguration.keyboardEventCodeToUnmodifiedKeyMap,
   activeMagInfo: getActiveMagInfo(state),
   mayEditAnnotation: mayEditAnnotationProperties(state),
 });

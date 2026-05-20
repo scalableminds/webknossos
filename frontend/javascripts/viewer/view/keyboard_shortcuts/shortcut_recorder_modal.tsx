@@ -29,15 +29,15 @@ type CollisionWarningAlertProps = {
 export const CollisionWarningAlert: React.FC<CollisionWarningAlertProps> = ({
   shortcutCollisions,
 }) => {
-  const unmodifiedLayoutMap = useWkSelector(
-    (state) => state.keyboardConfiguration.unmodifiedLayoutMap,
+  const keyboardEventCodeToUnmodifiedKeyMap = useWkSelector(
+    (state) => state.keyboardConfiguration.keyboardEventCodeToUnmodifiedKeyMap,
   );
   return (
     shortcutCollisions.length > 0 && (
       <Alert
         type="warning"
         style={{ marginTop: 16, marginBottom: 16 }}
-        title="Shortcut Collisions Detected"
+        title="Found Conflicting Shortcuts"
         description={
           <ul style={{ margin: 0, paddingLeft: 16 }}>
             {shortcutCollisions.map((collision, index) => {
@@ -46,7 +46,12 @@ export const CollisionWarningAlert: React.FC<CollisionWarningAlertProps> = ({
                 <li key={index}>
                   <Space wrap>
                     <span>
-                      {keySequenceToUiElements(keySequence, false, "", unmodifiedLayoutMap)}
+                      {keySequenceToUiElements(
+                        keySequence,
+                        false,
+                        "",
+                        keyboardEventCodeToUnmodifiedKeyMap,
+                      )}
                     </span>
                     <Text>is used by:</Text>
                   </Space>
@@ -124,6 +129,8 @@ function getKeyIdentifier(e: KeyboardEvent): string {
   // system regardless of what character the key produces with any modifier held.
   // e.g. pressing "+" on a German keyboard (BracketRight) → "@BracketRight"
   //      pressing Shift+same key (* on German)            → "@BracketRight" too
+  // See keyboard_layout_utils.ts for a full explanation of the @code format and why
+  // using KeyboardEvent.key directly is not viable for symbol/punctuation keys.
   if (e.key.length === 1) {
     return `@${e.code}`;
   }
@@ -148,8 +155,8 @@ export function ShortcutRecorderModal({
   onCancel,
   onSave,
 }: ShortcutRecorderModalProps) {
-  const unmodifiedLayoutMap = useWkSelector(
-    (state) => state.keyboardConfiguration.unmodifiedLayoutMap,
+  const keyboardEventCodeToUnmodifiedKeyMap = useWkSelector(
+    (state) => state.keyboardConfiguration.keyboardEventCodeToUnmodifiedKeyMap,
   );
   const [keySequence, setKeySequence] = useState<KeySequence>(initialKeySequence ?? []);
   const [previewKeyCombination, setPreviewKeyCombination] = useState<KeyCombination>([]);
@@ -317,8 +324,14 @@ export function ShortcutRecorderModal({
         <CollisionWarningAlert shortcutCollisions={shortcutCollisions} />
         <Text type="secondary">
           Press a keyboard combination now to record it. You can also record a sequence of keys.
-          Example: {keySequenceToUiElements(SAMPLE_KEY_SEQUENCE, false, "", unmodifiedLayoutMap)}.
-          Reset everything with <Text code>Ctrl</Text> + <Text code>Esc</Text>
+          Example:{" "}
+          {keySequenceToUiElements(
+            SAMPLE_KEY_SEQUENCE,
+            false,
+            "",
+            keyboardEventCodeToUnmodifiedKeyMap,
+          )}
+          . Reset everything with <Text code>Ctrl</Text> + <Text code>Esc</Text>
         </Text>
         .
         <div
@@ -346,8 +359,12 @@ export function ShortcutRecorderModal({
               <div style={{ width: "100%", overflow: "auto" }}>
                 <Text strong>Recorded:</Text>{" "}
                 <span style={{ marginLeft: 8 }}>
-                  {keySequenceToUiElements(keySequence, false, "", unmodifiedLayoutMap) ||
-                    "— waiting for user input —"}
+                  {keySequenceToUiElements(
+                    keySequence,
+                    false,
+                    "",
+                    keyboardEventCodeToUnmodifiedKeyMap,
+                  ) || "— waiting for user input —"}
                 </span>
               </div>
             </div>
@@ -372,7 +389,12 @@ export function ShortcutRecorderModal({
           >
             <Text italic>
               {previewKeyCombination.length > 0
-                ? keySequenceToUiElements([previewKeyCombination], false, "", unmodifiedLayoutMap)
+                ? keySequenceToUiElements(
+                    [previewKeyCombination],
+                    false,
+                    "",
+                    keyboardEventCodeToUnmodifiedKeyMap,
+                  )
                 : "— no keys down —"}
             </Text>
           </div>

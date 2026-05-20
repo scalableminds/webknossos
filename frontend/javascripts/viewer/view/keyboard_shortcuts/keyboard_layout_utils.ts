@@ -58,13 +58,14 @@ import {
   setKeyboardLayoutMapEntryAction,
 } from "viewer/model/actions/settings_actions";
 import Store from "viewer/store";
-import type { UnmodifiedLayoutMap } from "./keyboard_shortcut_types";
+import type { KeyboardEventCodeToUnmodifiedKeyMap } from "./keyboard_shortcut_types";
 
 const LOCAL_STORAGE_KEY = "keyboardLayoutMap";
 
 // US layout fallback for common sign/punctuation key codes.
 // Used when navigator.keyboard.getLayoutMap() is unavailable and the key has
-// not yet been seen unmodified in the current session.
+// not yet been seen unmodified in the current session. The key of the map is
+// the KeyboardEvent's code property.
 const US_LAYOUT_FALLBACK: Record<string, string> = {
   Minus: "-",
   Equal: "=",
@@ -86,7 +87,9 @@ const US_LAYOUT_FALLBACK: Record<string, string> = {
   NumpadDivide: "/",
 };
 
-function seedDigits(base: UnmodifiedLayoutMap = new Map()): UnmodifiedLayoutMap {
+function seedDigits(
+  base: KeyboardEventCodeToUnmodifiedKeyMap = new Map(),
+): KeyboardEventCodeToUnmodifiedKeyMap {
   const result = new Map(base);
   for (let i = 0; i <= 9; i++) {
     if (!(`Digit${i}` in result)) {
@@ -96,7 +99,7 @@ function seedDigits(base: UnmodifiedLayoutMap = new Map()): UnmodifiedLayoutMap 
   return result;
 }
 
-function persistToLocalStorage(map: UnmodifiedLayoutMap) {
+function persistToLocalStorage(map: KeyboardEventCodeToUnmodifiedKeyMap) {
   const mapAsObject = JSON.stringify(Object.fromEntries(map.entries()));
   UserLocalStorage.setItem(LOCAL_STORAGE_KEY, mapAsObject, false);
 }
@@ -110,7 +113,7 @@ export function isKeyboardLayoutApiAvailable(): boolean {
 async function loadFromLayoutAPI(): Promise<boolean> {
   try {
     const layoutMap: Map<string, string> = await (navigator as any).keyboard.getLayoutMap();
-    const map: UnmodifiedLayoutMap = new Map();
+    const map: KeyboardEventCodeToUnmodifiedKeyMap = new Map();
     for (const [code, key] of layoutMap) {
       map.set(code, key);
     }
@@ -153,8 +156,12 @@ export async function initializeKeyboardLayoutMap(): Promise<void> {
 }
 
 // Called from the shortcut recorder modal's keydown handler (all browsers) and the global
-// keydown listener registered above (non-API browsers only).
+// keydown listener registered above.
 export function registerKeyForLayoutMap(e: KeyboardEvent) {
+  if (e.repeat) {
+    // Skip repeated events.
+    return;
+  }
   // Only learn unmodified, non-dead, single-character key presses.
   const isEventModified =
     e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || e.key === "Dead" || e.key.length !== 1;
@@ -162,7 +169,7 @@ export function registerKeyForLayoutMap(e: KeyboardEvent) {
     return;
   }
 
-  const currentMap = Store.getState().keyboardConfiguration.unmodifiedLayoutMap;
+  const currentMap = Store.getState().keyboardConfiguration.keyboardEventCodeToUnmodifiedKeyMap;
   const existing = currentMap.get(e.code);
 
   if (isKeyboardLayoutApiAvailable()) {
@@ -192,7 +199,10 @@ export function registerKeyForLayoutMap(e: KeyboardEvent) {
 //   "Shift"         → "Shift" (unchanged — modifier)
 //   "F1"            → "F1"    (unchanged — named key)
 //   "@BracketRight" → "+" on German keyboard, "]" on US (via layout map)
-export function displayKeyName(key: string, layoutMap: UnmodifiedLayoutMap): string {
+export function displayKeyName(
+  key: string,
+  layoutMap: KeyboardEventCodeToUnmodifiedKeyMap,
+): string {
   if (!key.startsWith("@")) {
     return key;
   }

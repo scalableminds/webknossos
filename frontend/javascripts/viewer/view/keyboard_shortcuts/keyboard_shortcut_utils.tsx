@@ -20,13 +20,13 @@ import {
 } from "./keyboard_shortcut_constants";
 import {
   getAllCollidingDomainsOf,
+  type KeyboardEventCodeToUnmodifiedKeyMap,
   type KeyboardShortcutCollisionDomain,
   type KeyboardShortcutHandlerMap,
   type KeyboardShortcutsMap,
   type KeyCombination,
   type KeySequence,
   LeafCollisionDomains,
-  type UnmodifiedLayoutMap,
 } from "./keyboard_shortcut_types";
 
 const { Text } = Typography;
@@ -41,17 +41,18 @@ export function KeyboardLayoutApiNotice(): React.ReactNode {
     <Text type="warning" style={{ fontSize: 12 }}>
       Your browser does not support the Keyboard Layout API (Chrome and Edge do). Labels for
       punctuation and symbol keys fall back to US layout until you press those keys without a
-      modifier — after that, the correct label for your layout will be shown.
+      modifier — after that, the correct label for your layout will be shown. If you already use a
+      default US Keyboard Layout the shortcuts should always be displayed correctly.
     </Text>
   );
 }
 
 export function keyToUiElement(
   key: string,
-  unmodifiedLayoutMap: UnmodifiedLayoutMap,
+  keyboardEventCodeToUnmodifiedKeyMap: KeyboardEventCodeToUnmodifiedKeyMap,
 ): React.ReactNode {
   // Translate @code keys (e.g. "@BracketRight") to the layout-specific character (e.g. "+").
-  const displayName = displayKeyName(key, unmodifiedLayoutMap);
+  const displayName = displayKeyName(key, keyboardEventCodeToUnmodifiedKeyMap);
   switch (displayName) {
     case " ":
       return "Space";
@@ -121,7 +122,7 @@ export function keySequenceToUiElements(
   // Renders a "fancier" version of the combo chain. Currently only used in the info tab.
   useHighlightedIcon: boolean,
   keyPrefix: string = "",
-  unmodifiedLayoutMap: UnmodifiedLayoutMap,
+  keyboardEventCodeToUnmodifiedKeyMap: KeyboardEventCodeToUnmodifiedKeyMap,
 ): React.ReactNode[] {
   const uiElements: React.ReactNode[] = [];
   keySequence.forEach((keyCombination, outerIndex) => {
@@ -132,7 +133,7 @@ export function keySequenceToUiElements(
             key={`${keyPrefix}${outerIndex}-${innerIndex}`}
             className="keyboard-key-icon"
           >
-            {keyToUiElement(key, unmodifiedLayoutMap)}
+            {keyToUiElement(key, keyboardEventCodeToUnmodifiedKeyMap)}
           </KeyboardKeyIcon>,
         );
       } else {
@@ -142,7 +143,7 @@ export function keySequenceToUiElements(
             keyboard
             style={{ whiteSpace: "nowrap" }}
           >
-            {keyToUiElement(key, unmodifiedLayoutMap)}
+            {keyToUiElement(key, keyboardEventCodeToUnmodifiedKeyMap)}
           </Text>,
         );
       }

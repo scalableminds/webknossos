@@ -10,8 +10,8 @@ import type {
   UserConfiguration,
 } from "viewer/store";
 import type {
+  KeyboardEventCodeToUnmodifiedKeyMap,
   KeyboardShortcutsMap,
-  UnmodifiedLayoutMap,
 } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 
 export type UpdateUserSettingAction = ReturnType<typeof updateUserSettingAction>;
@@ -277,7 +277,7 @@ export const setKeyboardShortcutsConfigAction = (shortcuts: KeyboardShortcutsMap
     shortcuts,
   }) as const;
 
-export const setKeyboardLayoutMapAction = (map: UnmodifiedLayoutMap) =>
+export const setKeyboardLayoutMapAction = (map: KeyboardEventCodeToUnmodifiedKeyMap) =>
   ({
     type: "SET_KEYBOARD_LAYOUT_MAP",
     map,

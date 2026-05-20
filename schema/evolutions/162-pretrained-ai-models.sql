@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 160 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
+do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 161 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
 ALTER TYPE webknossos.AI_MODEL_CATEGORY ADD VALUE IF NOT EXISTS 'em_generic';
 ALTER TYPE webknossos.AI_MODEL_CATEGORY ADD VALUE IF NOT EXISTS 'em_somata';
@@ -18,6 +18,6 @@ ALTER TABLE webknossos.aiModels ADD COLUMN isPretrained BOOLEAN NOT NULL DEFAULT
 
 CREATE VIEW webknossos.aiModels_ AS SELECT * FROM webknossos.aiModels WHERE NOT isDeleted;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 161;
+UPDATE webknossos.releaseInformation SET schemaVersion = 162;
 
 COMMIT TRANSACTION;

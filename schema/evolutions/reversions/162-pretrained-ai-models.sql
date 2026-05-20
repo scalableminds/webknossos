@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 161 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
+do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 162 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
 -- Remove pretrained models inserted by application startup
 DELETE FROM webknossos.aiModels WHERE isPretrained;
@@ -21,6 +21,6 @@ ALTER TABLE webknossos.aiModels ALTER COLUMN category TYPE webknossos.AI_MODEL_C
 
 CREATE VIEW webknossos.aiModels_ AS SELECT * FROM webknossos.aiModels WHERE NOT isDeleted;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 160;
+UPDATE webknossos.releaseInformation SET schemaVersion = 161;
 
 COMMIT TRANSACTION;

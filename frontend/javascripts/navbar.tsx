@@ -861,8 +861,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
           activeUser={activeUser}
         />,
       );
-    }
-    if (isLockedByOwner) {
+    } else if (isLockedByOwner) {
       trailingNavItems.push(
         <AnnotationLockedByOwnerTag
           key="locked-by-owner-tag"

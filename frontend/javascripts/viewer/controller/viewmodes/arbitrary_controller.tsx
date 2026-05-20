@@ -41,8 +41,6 @@ import {
   createTreeAction,
   requestDeleteBranchPointAction,
   setActiveNodeAction,
-  toggleAllTreesAction,
-  toggleInactiveTreesAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
@@ -238,16 +236,6 @@ class ArbitraryController extends React.PureComponent<Props> {
         delayed: true,
       },
       // No-loop shortcuts
-      TOGGLE_ALL_TREES_FLIGHT: {
-        onPressed: () => {
-          Store.dispatch(toggleAllTreesAction());
-        },
-      },
-      TOGGLE_INACTIVE_TREES_FLIGHT: {
-        onPressed: () => {
-          Store.dispatch(toggleInactiveTreesAction());
-        },
-      },
       DELETE_ACTIVE_NODE: {
         onPressed: () => {
           Store.dispatch(deleteNodeAsUserAction(Store.getState()));

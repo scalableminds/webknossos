@@ -386,6 +386,7 @@ const quaternion = new Quaternion();
 const IDENTITY_QUATERNION = new Quaternion();
 
 const NON_SCALED_VECTOR = new ThreeVector3(1, 1, 1);
+const EPSILON = 0.0001;
 
 function isTranslationOnly(transformation?: AffineTransformation) {
   if (!transformation) {
@@ -395,7 +396,7 @@ function isTranslationOnly(transformation?: AffineTransformation) {
     .fromArray(nestedToFlatMatrix(transformation.matrix))
     .transpose();
   threeMatrix.decompose(translation, quaternion, scale);
-  return scale.equals(NON_SCALED_VECTOR) && quaternion.equals(IDENTITY_QUATERNION);
+  return scale.equals(NON_SCALED_VECTOR) && quaternion.angleTo(IDENTITY_QUATERNION) < EPSILON;
 }
 
 function isOnlyRotatedOrMirrored(transformation?: AffineTransformation) {
@@ -411,7 +412,6 @@ function isOnlyRotatedOrMirrored(transformation?: AffineTransformation) {
     isEqual([Math.abs(scale.x), Math.abs(scale.y), Math.abs(scale.z)], [1, 1, 1])
   );
 }
-
 function isRotationOnly(transformation?: AffineTransformation) {
   if (!transformation) {
     return false;
@@ -420,7 +420,7 @@ function isRotationOnly(transformation?: AffineTransformation) {
     .fromArray(nestedToFlatMatrix(transformation.matrix))
     .transpose();
   threeMatrix.decompose(translation, quaternion, scale);
-  return translation.length() === 0 && scale.equals(NON_SCALED_VECTOR);
+  return translation.length() <= EPSILON && scale.distanceToSquared(NON_SCALED_VECTOR) < EPSILON;
 }
 
 function isScaleOnly(transformation?: AffineTransformation) {
@@ -431,7 +431,7 @@ function isScaleOnly(transformation?: AffineTransformation) {
     .fromArray(nestedToFlatMatrix(transformation.matrix))
     .transpose();
   threeMatrix.decompose(translation, quaternion, scale);
-  return translation.length() === 0 && quaternion.equals(IDENTITY_QUATERNION);
+  return translation.length() <= EPSILON && quaternion.angleTo(IDENTITY_QUATERNION) < EPSILON;
 }
 
 function hasValidTransformationCount(dataLayers: Array<APIDataLayer>): boolean {

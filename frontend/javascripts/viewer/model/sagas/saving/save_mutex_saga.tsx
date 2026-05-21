@@ -158,8 +158,7 @@ function getUnsubscribeFromAnnotationMutexSaga(
     }
     const hasNoSubscribersLeft = Object.keys(state.subscribersToMutex).length === 0;
     if (hasNoSubscribersLeft && state.runningAdHocMutexAcquiringSaga) {
-      yield* cancel(state.runningAdHocMutexAcquiringSaga);
-      state.runningAdHocMutexAcquiringSaga = null;
+      yield* call(cancelMutexSagaIfRunning, state, MutexFetchingStrategy.AdHoc);
       yield* call(releaseMutex);
     }
   }
@@ -212,6 +211,23 @@ export function* clearAllSubscriptions() {
   }
 }
 
+function* cancelMutexSagaIfRunning(
+  mutexLogicState: MutexLogicState,
+  strategy: MutexFetchingStrategy,
+): Saga<void> {
+  if (strategy === MutexFetchingStrategy.Continuously) {
+    if (mutexLogicState.runningContinuousMutexAcquiringSaga != null) {
+      yield* cancel(mutexLogicState.runningContinuousMutexAcquiringSaga);
+      mutexLogicState.runningContinuousMutexAcquiringSaga = null;
+    }
+  } else {
+    if (mutexLogicState.runningAdHocMutexAcquiringSaga != null) {
+      yield* cancel(mutexLogicState.runningAdHocMutexAcquiringSaga);
+      mutexLogicState.runningAdHocMutexAcquiringSaga = null;
+    }
+  }
+}
+
 function* restartMutexAcquiringSaga(mutexLogicState: MutexLogicState): Saga<void> {
   const isSavingDisabled = yield* select((state) => state.save.isSavingDisabled);
   if (isSavingDisabled) {
@@ -222,12 +238,9 @@ function* restartMutexAcquiringSaga(mutexLogicState: MutexLogicState): Saga<void
   const newFetchingStrategy = yield* call(getCurrentMutexFetchingStrategy);
   const oldFetchingStrategy = mutexLogicState.fetchingStrategy;
   const didStrategyChange = newFetchingStrategy !== oldFetchingStrategy;
-  if (didStrategyChange && mutexLogicState.runningContinuousMutexAcquiringSaga != null) {
-    yield* cancel(mutexLogicState.runningContinuousMutexAcquiringSaga);
-    mutexLogicState.runningContinuousMutexAcquiringSaga = null;
-  } else if (didStrategyChange && mutexLogicState.runningAdHocMutexAcquiringSaga != null) {
-    yield* cancel(mutexLogicState.runningAdHocMutexAcquiringSaga);
-    mutexLogicState.runningAdHocMutexAcquiringSaga = null;
+  if (didStrategyChange) {
+    yield* call(cancelMutexSagaIfRunning, mutexLogicState, MutexFetchingStrategy.Continuously);
+    yield* call(cancelMutexSagaIfRunning, mutexLogicState, MutexFetchingStrategy.AdHoc);
   }
   const othersMayEdit = yield* select((state) => isAnnotationEditableByNonOwners(state.annotation));
   if (!othersMayEdit) {
@@ -434,14 +447,8 @@ function* watchForCollaborationModeChange(mutexLogicState: MutexLogicState): Sag
     } else {
       // Collaboration was turned off by the activeUser. Cancel any running mutex
       // acquisition saga and release the mutex if currently held.
-      if (mutexLogicState.runningContinuousMutexAcquiringSaga != null) {
-        yield* cancel(mutexLogicState.runningContinuousMutexAcquiringSaga);
-        mutexLogicState.runningContinuousMutexAcquiringSaga = null;
-      }
-      if (mutexLogicState.runningAdHocMutexAcquiringSaga != null) {
-        yield* cancel(mutexLogicState.runningAdHocMutexAcquiringSaga);
-        mutexLogicState.runningAdHocMutexAcquiringSaga = null;
-      }
+      yield* call(cancelMutexSagaIfRunning, mutexLogicState, MutexFetchingStrategy.Continuously);
+      yield* call(cancelMutexSagaIfRunning, mutexLogicState, MutexFetchingStrategy.AdHoc);
       const stillHasAnnotationMutex = yield* select(
         (state) => state.save.mutexState.hasAnnotationMutex,
       );
@@ -477,10 +484,7 @@ function* watchForMutexSubscriptionActions(mutexLogicState: MutexLogicState): Sa
       const subscriptionCount = Object.keys(mutexLogicState.subscribersToMutex).length;
       // Stop the mutex acquisition if needed.
       if (subscriptionCount === 0) {
-        if (mutexLogicState.runningContinuousMutexAcquiringSaga != null) {
-          yield* cancel(mutexLogicState.runningContinuousMutexAcquiringSaga);
-          mutexLogicState.runningContinuousMutexAcquiringSaga = null;
-        }
+        yield* call(cancelMutexSagaIfRunning, mutexLogicState, MutexFetchingStrategy.Continuously);
         const stillHasAnnotationMutex = yield* select(
           (state) => state.save.mutexState.hasAnnotationMutex,
         );
@@ -499,14 +503,8 @@ function* watchForMutexSubscriptionActions(mutexLogicState: MutexLogicState): Sa
 
 function* watchForDisableSaving(mutexLogicState: MutexLogicState): Saga<void> {
   yield* take("DISABLE_SAVING");
-  if (mutexLogicState.runningContinuousMutexAcquiringSaga != null) {
-    yield* cancel(mutexLogicState.runningContinuousMutexAcquiringSaga);
-    mutexLogicState.runningContinuousMutexAcquiringSaga = null;
-  }
-  if (mutexLogicState.runningAdHocMutexAcquiringSaga != null) {
-    yield* cancel(mutexLogicState.runningAdHocMutexAcquiringSaga);
-    mutexLogicState.runningAdHocMutexAcquiringSaga = null;
-  }
+  yield* call(cancelMutexSagaIfRunning, mutexLogicState, MutexFetchingStrategy.Continuously);
+  yield* call(cancelMutexSagaIfRunning, mutexLogicState, MutexFetchingStrategy.AdHoc);
   const stillHasMutex = yield* select((state) => state.save.mutexState.hasAnnotationMutex);
   if (stillHasMutex) {
     yield* call(releaseMutex);

@@ -13,7 +13,7 @@ import type {
 import { type TreeType, TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { loadAgglomerateTreeAtPosition } from "viewer/controller/combinations/segmentation_handlers";
 import { getTreesWithType } from "viewer/model/accessors/skeletontracing_accessor";
-import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
+import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import { minCutAgglomerateAction } from "viewer/model/actions/proofread_actions";
 import { deleteEdgeAction, mergeTreesAction } from "viewer/model/actions/skeletontracing_actions";
 import {
@@ -234,7 +234,7 @@ export function* performMergeTreesProofreading(
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
   yield* expectMapping(tracingId, initialMapping);
-  yield put(setOthersMayEditForAnnotationAction(true));
+  yield put(setCollaborationModeAction("Concurrent"));
   const agglomerateTrees = yield loadAgglomerateTrees(
     context,
     [1, 4],
@@ -269,7 +269,7 @@ export function* performSplitTreesProofreading(
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
   yield* expectMapping(tracingId, initialMapping);
-  yield put(setOthersMayEditForAnnotationAction(true));
+  yield put(setCollaborationModeAction("Concurrent"));
 
   const agglomerateTrees = yield loadAgglomerateTrees(context, [1], true, true);
   const sourceNode = agglomerateTrees.getOrThrow(3).nodes.getOrThrow(5);
@@ -301,7 +301,7 @@ export function* performMinCutWithNodesProofreading(
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
   yield* expectMapping(tracingId, initialMapping);
-  yield put(setOthersMayEditForAnnotationAction(true));
+  yield put(setCollaborationModeAction("Concurrent"));
   // Load agglomerate tree for agglomerate id 1.
   yield call(loadAgglomerateTrees, context, [1], true, true);
   yield call(() => api.tracing.save()); // Also pulls newest version from backend.

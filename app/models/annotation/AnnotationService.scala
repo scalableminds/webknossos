@@ -267,7 +267,12 @@ class AnnotationService @Inject()(
                                                    existingAnnotationLayers = List.empty,
                                                    previousVersion = None)
           layerName = annotationLayerParameters.name.getOrElse(
-            AnnotationLayer.defaultNameForType(annotationLayerParameters.typ))
+            tracing match {
+              case Left(_) => AnnotationLayer.defaultNameForType(annotationLayerParameters.typ)
+              case Right(volume) =>
+                volume.fallbackLayer.getOrElse(AnnotationLayer.defaultNameForType(annotationLayerParameters.typ))
+            }
+          )
           newTracingId = TracingId.generate
           _ <- tracing match {
             case Left(skeleton) => tracingStoreClient.saveSkeletonTracing(skeleton, newTracingId)
@@ -786,7 +791,7 @@ class AnnotationService @Inject()(
         "user" -> userJson,
         "owner" -> userJson,
         "contributors" -> contributorsJs,
-        "othersMayEdit" -> annotation.othersMayEdit
+        "collaborationMode" -> annotation.collaborationMode
       )
     }
   }
@@ -880,7 +885,7 @@ class AnnotationService @Inject()(
         "firstName" -> annotationInfo.ownerFirstName,
         "lastName" -> annotationInfo.ownerLastName
       ),
-      "othersMayEdit" -> annotationInfo.othersMayEdit,
+      "collaborationMode" -> annotationInfo.collaborationMode,
     )
   }
 

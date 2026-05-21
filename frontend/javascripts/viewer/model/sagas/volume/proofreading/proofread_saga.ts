@@ -19,7 +19,6 @@ import uniqBy from "lodash-es/uniqBy";
 import messages from "messages";
 import { all, call, put, spawn, takeEvery } from "typed-redux-saga";
 import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_types";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import Constants, {
   MappingStatusEnum,
   OrthoViews,
@@ -29,6 +28,7 @@ import Constants, {
 } from "viewer/constants";
 import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
+import { isAnnotationEditableByNonOwners } from "viewer/model/accessors/annotation_accessor";
 import {
   getLayerByName,
   getMagInfo,
@@ -268,8 +268,10 @@ function* pollNewestBackendVersion() {
 }
 
 function* subscribeToAnnotationMutexInLiveCollab(proofreadingSagaId: string) {
-  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
-  if (othersMayEdit && WkDevFlags.liveCollab) {
+  const isConcurrentCollab = yield* select(
+    (state) => state.annotation.collaborationMode === "Concurrent",
+  );
+  if (isConcurrentCollab) {
     return yield* call(subscribeToAnnotationMutex, proofreadingSagaId);
   }
   return null;
@@ -466,14 +468,19 @@ export function* createEditableMapping(): Saga<string> {
   const baseMappingName = volumeTracing.mappingName;
   yield* put(setMappingNameAction(layerName, volumeTracingId, "HDF5"));
   yield* put(setHasEditableMappingAction(volumeTracingId));
+
   // Ensure a saved state so that the mapping is locked and editable before doing the first proofreading operation.
+  // This needs to happen before initializeEditableMappingAction is dispatched, because the backend wouldn't be
+  // able to handle mapping requests that might be triggered right after initializing the mapping.
   yield* call(syncWithBackend);
+
   const editableMapping: ServerEditableMapping = {
     baseMappingName: baseMappingName,
     tracingId: volumeTracingId,
     createdTimestamp: Date.now(),
   };
   yield* put(initializeEditableMappingAction(editableMapping));
+
   yield* put(setTreesAgglomerateInfoTracingIdAction(volumeTracingId));
   // Save, that the agglomerate info of all agglomerate trees was updated.
   yield* call(syncWithBackend);
@@ -536,8 +543,9 @@ function* handleTreeProofreadingAction(action: Action): Saga<void> {
     "Proofreading via Trees",
   );
   try {
-    const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
-    const isLiveCollabActive = WkDevFlags.liveCollab && othersMayEdit;
+    const isLiveCollabActive = yield* select(
+      (state) => state.annotation.collaborationMode === "Concurrent",
+    );
     if (isLiveCollabActive) {
       // If live collab is active and the user did a proofreading merge via edge creation / merge trees,
       // the affected agglomerate tree(s) may not be in sync with the backend yet. So poll the latest updates.
@@ -1371,8 +1379,10 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     }
 
     if (action.type === "MIN_CUT_AGGLOMERATE" && sourceAgglomerateId !== targetAgglomerateId) {
-      const isOthersMayEditEnabled = yield* select((state) => state.annotation.othersMayEdit);
-      const additionalErrorExplanation = isOthersMayEditEnabled
+      const othersMayEdit = yield* select((state) =>
+        isAnnotationEditableByNonOwners(state.annotation),
+      );
+      const additionalErrorExplanation = othersMayEdit
         ? " Maybe another user already split the agglomerate in the meantime."
         : "";
       Toast.error(

@@ -57,7 +57,12 @@ class TracingStoreService @Inject()(
   def clientFor(dataset: Dataset): Fox[WKRemoteTracingStoreClient] =
     for {
       tracingStore <- tracingStoreDAO.findFirst ?~> "tracingStore.notFound"
-    } yield new WKRemoteTracingStoreClient(tracingStore, dataset, rpc, tracingDataSourceTemporaryStore)
+    } yield new WKRemoteTracingStoreClient(tracingStore, Some(dataset), rpc, tracingDataSourceTemporaryStore)
+
+  def client: Fox[WKRemoteTracingStoreClient] =
+    for {
+      tracingStore <- tracingStoreDAO.findFirst ?~> "tracingStore.notFound"
+    } yield new WKRemoteTracingStoreClient(tracingStore, None, rpc, tracingDataSourceTemporaryStore)
 }
 
 class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

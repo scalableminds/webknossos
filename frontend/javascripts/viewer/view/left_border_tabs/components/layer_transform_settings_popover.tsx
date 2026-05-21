@@ -265,7 +265,7 @@ export function LayerTransformSettingsContent({
           value={rotation[i]}
           storedValue={storedSRT.rotation[i]}
           min={0}
-          max={359}
+          max={359.9}
           step={0.1}
           onChange={(v) => updateRotation(i as 0 | 1 | 2, v)}
           resetDisabled={isFetchingStored}

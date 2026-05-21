@@ -23,21 +23,24 @@ import { createGroupToTreesMap } from "viewer/view/right_border_tabs/trees_tab/t
 // that axis — the duplicated target is shifted by the same amount, so the solver
 // learns "identity" for that direction.
 function augmentIfCoplanar(
-  src: WkVector3[],
-  tgt: WkVector3[],
-): { src: WkVector3[]; tgt: WkVector3[] } {
+  sourcePoints: WkVector3[],
+  targetPoints: WkVector3[],
+): { augmentedSourcePoints: WkVector3[]; augmentedTargetPoints: WkVector3[] } {
   for (const axis of [0, 1, 2] as const) {
-    const vals = src.map((p) => p[axis]);
-    if (Math.max(...vals) - Math.min(...vals) < 1e-6) {
-      const shift = (p: WkVector3): WkVector3 => {
-        const q = [...p] as WkVector3;
-        q[axis] += 1;
-        return q;
+    const allValsOfAxis = sourcePoints.map((p) => p[axis]);
+    if (Math.max(...allValsOfAxis) - Math.min(...allValsOfAxis) < 1e-6) {
+      const shift = (point: WkVector3): WkVector3 => {
+        const temp = [...point] as WkVector3;
+        temp[axis] += 1;
+        return temp;
       };
-      return { src: [...src, ...src.map(shift)], tgt: [...tgt, ...tgt.map(shift)] };
+      return {
+        augmentedSourcePoints: [...sourcePoints, ...sourcePoints.map(shift)],
+        augmentedTargetPoints: [...targetPoints, ...targetPoints.map(shift)],
+      };
     }
   }
-  return { src, tgt };
+  return { augmentedSourcePoints: sourcePoints, augmentedTargetPoints: targetPoints };
 }
 
 function getSortedTrees(groupId: number, groupToTrees: Record<number, Tree[]>): Tree[] {
@@ -96,15 +99,21 @@ export function LandmarkTransformModal({
 
     setIsLoading(true);
     try {
-      const { src: augSrc, tgt: augTgt } = augmentIfCoplanar(sourcePoints, targetPoints);
-      const affineFlat = estimateAffineMatrix4x4(augSrc, augTgt);
+      const { augmentedSourcePoints, augmentedTargetPoints } = augmentIfCoplanar(
+        sourcePoints,
+        targetPoints,
+      );
+      const transformationFromLandmarksFlat = estimateAffineMatrix4x4(
+        augmentedSourcePoints,
+        augmentedTargetPoints,
+      );
       const datasetBbox = getDatasetBoundingBox(dataset);
       const currentTransforms =
         dataset.dataSource.dataLayers.find((l) => l.name === layerName)
           ?.coordinateTransformations ?? [];
       const newTransforms = applyAffineOnTopOfTransforms(
         currentTransforms,
-        affineFlat,
+        transformationFromLandmarksFlat,
         datasetBbox,
       );
       dispatch(setLayerTransformsAction(layerName, newTransforms));
@@ -118,29 +127,23 @@ export function LandmarkTransformModal({
         }),
       );
 
-      // Move source nodes to their transformed positions so they track the layer
-      const A = new Matrix4().set(
-        affineFlat[0],
-        affineFlat[1],
-        affineFlat[2],
-        affineFlat[3],
-        affineFlat[4],
-        affineFlat[5],
-        affineFlat[6],
-        affineFlat[7],
-        affineFlat[8],
-        affineFlat[9],
-        affineFlat[10],
-        affineFlat[11],
-        affineFlat[12],
-        affineFlat[13],
-        affineFlat[14],
-        affineFlat[15],
-      );
+      // Move source nodes to their transformed positions so they track the layer.
+      // Note: transformationFromLandmarksFlat is in row-major and set accepts row-major order.
+      const transformationFromLandmarksAsM4 = new Matrix4().set(...transformationFromLandmarksFlat);
+      const forceNodePositionOverwrite = true;
       for (const tree of srcTrees) {
         const node = tree.nodes.values().next().value!;
-        const p = new Vector3(...node.untransformedPosition).applyMatrix4(A);
-        dispatch(setNodePositionAction([p.x, p.y, p.z], node.id, tree.treeId));
+        const adjustedPosition = new Vector3(...node.untransformedPosition).applyMatrix4(
+          transformationFromLandmarksAsM4,
+        );
+        dispatch(
+          setNodePositionAction(
+            [adjustedPosition.x, adjustedPosition.y, adjustedPosition.z],
+            node.id,
+            tree.treeId,
+            forceNodePositionOverwrite,
+          ),
+        );
       }
 
       onClose();
@@ -151,7 +154,9 @@ export function LandmarkTransformModal({
     }
   };
 
-  const groupOptions = treeGroups.map((g) => ({ label: g.name, value: g.groupId }));
+  const allGroupOptions = treeGroups.map((g) => ({ label: g.name, value: g.groupId }));
+  const sourceGroupOptions = allGroupOptions.filter((o) => o.value !== targetGroup);
+  const targetGroupOptions = allGroupOptions.filter((o) => o.value !== sourceGroup);
 
   return (
     <Modal
@@ -170,9 +175,10 @@ export function LandmarkTransformModal({
           <Select
             style={{ width: "100%" }}
             placeholder="Select skeleton group"
-            options={groupOptions}
+            options={sourceGroupOptions}
             value={sourceGroup}
             onChange={setSourceGroup}
+            allowClear
           />
         </div>
         <div>
@@ -182,9 +188,10 @@ export function LandmarkTransformModal({
           <Select
             style={{ width: "100%" }}
             placeholder="Select skeleton group"
-            options={groupOptions}
+            options={targetGroupOptions}
             value={targetGroup}
             onChange={setTargetGroup}
+            allowClear
           />
         </div>
         {validationError && <Alert type="error" message={validationError} showIcon />}

@@ -282,12 +282,18 @@ export const setNodeRadiusAction = (radius: number, nodeId?: number, treeId?: nu
     treeId,
   }) as const;
 
-export const setNodePositionAction = (position: Vector3, nodeId?: number, treeId?: number) =>
+export const setNodePositionAction = (
+  position: Vector3,
+  nodeId?: number,
+  treeId?: number,
+  forceOverwrite: boolean = false,
+) =>
   ({
     type: "SET_NODE_POSITION",
     position,
     nodeId,
     treeId,
+    forceOverwrite,
   }) as const;
 
 export const createBranchPointAction = (

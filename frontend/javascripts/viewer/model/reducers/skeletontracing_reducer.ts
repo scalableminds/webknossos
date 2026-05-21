@@ -848,7 +848,7 @@ function SkeletonTracingReducer(
     }
 
     case "SET_NODE_POSITION": {
-      if (areGeometriesTransformed(state)) {
+      if (areGeometriesTransformed(state) && !action.forceOverwrite) {
         // Don't move node if the skeleton layer is rendered with transforms.
         return state;
       }

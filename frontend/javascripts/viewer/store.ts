@@ -500,6 +500,7 @@ export type ProofreadingPostProcessingInfo = {
 };
 export type SaveState = {
   readonly isBusy: boolean;
+  readonly isSavingDisabled: boolean;
   readonly queue: Array<SaveQueueEntry>;
   readonly lastSaveTimestamp: number;
   readonly progressInfo: ProgressInfo;

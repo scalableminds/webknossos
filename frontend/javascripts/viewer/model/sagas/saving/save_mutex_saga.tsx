@@ -60,7 +60,6 @@ type MutexLogicState = {
   // a mutex is currently needed.
   runningAdHocMutexAcquiringSaga: FixedTask<void> | null;
   subscribersToMutex: Record<number, string>; // Mapping from self maintained id to caller id.
-  isSavingDisabled: boolean;
 };
 
 function* getDoesHaveMutex(): Saga<boolean> {
@@ -86,7 +85,6 @@ function* determineInitialMutexLogicState(): Saga<MutexLogicState> {
     runningContinuousMutexAcquiringSaga: null,
     runningAdHocMutexAcquiringSaga: null,
     subscribersToMutex: {},
-    isSavingDisabled: false,
   };
   return mutexLogicState;
 }
@@ -215,7 +213,10 @@ export function* clearAllSubscriptions() {
 }
 
 function* restartMutexAcquiringSaga(mutexLogicState: MutexLogicState): Saga<void> {
-  if (mutexLogicState.isSavingDisabled) {
+  const isSavingDisabled = yield* select((state) => state.save.isSavingDisabled);
+  if (isSavingDisabled) {
+    // Cancellation of running mutex sagas when saving is disabled is handled
+    // by watchForDisableSaving.
     return;
   }
   const newFetchingStrategy = yield* call(getCurrentMutexFetchingStrategy);
@@ -498,7 +499,6 @@ function* watchForMutexSubscriptionActions(mutexLogicState: MutexLogicState): Sa
 
 function* watchForDisableSaving(mutexLogicState: MutexLogicState): Saga<void> {
   yield* take("DISABLE_SAVING");
-  mutexLogicState.isSavingDisabled = true;
   if (mutexLogicState.runningContinuousMutexAcquiringSaga != null) {
     yield* cancel(mutexLogicState.runningContinuousMutexAcquiringSaga);
     mutexLogicState.runningContinuousMutexAcquiringSaga = null;

@@ -770,6 +770,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
   const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
   const othersMayEdit = useWkSelector((state) => isAnnotationEditableByNonOwners(state.annotation));
+  const isSavingDisabled = useWkSelector((state) => state.save.isSavingDisabled);
   const blockedByUser = useWkSelector((state) => state.save.mutexState.blockedByUser);
 
   const allowUpdate = useWkSelector(mayEditAnnotation);
@@ -848,27 +849,30 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
       menuItems.push(getTimeTrackingMenu(collapseAllNavItems));
     }
 
-    if (
-      othersMayEdit &&
-      !allowUpdate &&
-      !isLockedByOwner &&
-      !isAnnotationFromDifferentOrganization
-    ) {
-      trailingNavItems.push(
-        <AnnotationLockedByUserTag
-          key="locked-by-user-tag"
-          blockedByUser={blockedByUser}
-          activeUser={activeUser}
-        />,
-      );
-    } else if (isLockedByOwner) {
-      trailingNavItems.push(
-        <AnnotationLockedByOwnerTag
-          key="locked-by-owner-tag"
-          annotationOwnerName={annotationOwnerName}
-          isOwner={isAnnotationOwner}
-        />,
-      );
+    if (!isSavingDisabled) {
+      // Show Locked tags
+      if (
+        othersMayEdit &&
+        !allowUpdate &&
+        !isLockedByOwner &&
+        !isAnnotationFromDifferentOrganization
+      ) {
+        trailingNavItems.push(
+          <AnnotationLockedByUserTag
+            key="locked-by-user-tag"
+            blockedByUser={blockedByUser}
+            activeUser={activeUser}
+          />,
+        );
+      } else if (isLockedByOwner) {
+        trailingNavItems.push(
+          <AnnotationLockedByOwnerTag
+            key="locked-by-owner-tag"
+            annotationOwnerName={annotationOwnerName}
+            isOwner={isAnnotationOwner}
+          />,
+        );
+      }
     }
     trailingNavItems.push(
       <LoggedInAvatar

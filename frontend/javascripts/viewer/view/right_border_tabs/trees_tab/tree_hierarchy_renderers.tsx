@@ -112,7 +112,7 @@ export function renderTreeNode(
       onContextMenu={(evt) =>
         onOpenContextMenu(createMenuForTree(tree, props, hideContextMenu), evt)
       }
-      style={{ wordBreak: "break-word" }}
+      style={{ wordBreak: "break-word", width: "100%" }}
     >
       <ColoredDotIcon colorRGBA={[...tree.color, 1.0]} />
       <span style={{ whiteSpace: "nowrap" }}>
@@ -261,7 +261,7 @@ export function renderGroupNode(
           evt,
         )
       }
-      style={{ wordBreak: "break-word" }}
+      style={{ wordBreak: "break-word", width: "100%" }}
     >
       <FolderOutlined />
       <EditableTextLabel
@@ -288,22 +288,8 @@ const createMenuForTreeGroup = (
   const hasSubgroup = anySatisfyDeep(node.children, (child) => child.type === GroupTypeEnum.GROUP);
   const labelForActiveItems = getLabelForActiveItems();
 
-  function createGroup(groupId: number) {
-    const newTreeGroups = cloneDeep(props.treeGroups);
-
-    const newGroupId = getMaximumGroupId(newTreeGroups) + 1;
-    const newGroup = makeBasicGroupObject(newGroupId, `Group ${newGroupId}`);
-
-    if (groupId === MISSING_GROUP_ID) {
-      newTreeGroups.push(newGroup);
-    } else {
-      callDeep(newTreeGroups, groupId, (item) => {
-        item.children.push(newGroup);
-      });
-    }
-
-    setUpdateTreeGroups(newTreeGroups);
-    selectGroupById(props.deselectAllTrees, newGroupId);
+  function createGroupInMenu(groupId: number) {
+    createGroup(props.treeGroups, groupId, props.deselectAllTrees);
   }
 
   function shuffleTreeGroupColors(groupId: number) {
@@ -407,7 +393,7 @@ const createMenuForTreeGroup = (
       {
         key: "create",
         onClick: () => {
-          createGroup(id);
+          createGroupInMenu(id);
           hideContextMenu();
         },
         disabled: isEditingDisabled,
@@ -540,6 +526,27 @@ function setActiveTreeGroup(groupId: number) {
 
 export function setExpandedGroups(expandedTreeGroups: Set<string>) {
   Store.dispatch(setExpandedTreeGroupsByKeysAction(expandedTreeGroups));
+}
+
+export function createGroup(
+  treeGroups: TreeGroup[],
+  parentGroupId: number,
+  deselectAllTrees: () => void,
+) {
+  const newTreeGroups = cloneDeep(treeGroups);
+  const newGroupId = getMaximumGroupId(newTreeGroups) + 1;
+  const newGroup = makeBasicGroupObject(newGroupId, `Group ${newGroupId}`);
+
+  if (parentGroupId === MISSING_GROUP_ID) {
+    newTreeGroups.push(newGroup);
+  } else {
+    callDeep(newTreeGroups, parentGroupId, (item) => {
+      item.children.push(newGroup);
+    });
+  }
+
+  setUpdateTreeGroups(newTreeGroups);
+  selectGroupById(deselectAllTrees, newGroupId);
 }
 
 function handleMeasureTreeLength(treeId: number, treeName: string) {

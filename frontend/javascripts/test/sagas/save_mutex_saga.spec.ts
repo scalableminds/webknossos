@@ -15,6 +15,7 @@ import { setCollaborationModeAction } from "viewer/model/actions/annotation_acti
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { proofreadMergeAction } from "viewer/model/actions/proofread_actions";
+import { disableSavingAction } from "viewer/model/actions/save_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import {
   setActiveCellAction,
@@ -22,7 +23,6 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import { type Saga, select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
-import { disableSavingAction } from "viewer/model/actions/save_actions";
 import {
   clearAllSubscriptions,
   getMutexLogicState,

@@ -392,6 +392,7 @@ function* keepAnnotationMutexForAdHocStrategy(annotationId: string): Saga<void> 
   // We got the mutex once, now keep it until this saga is cancelled due to saving finished.
   let canEdit = true;
   let blockedByUser = null;
+  let blockedBySessionId = null;
   // Wait a little since we already just acquired the mutex in acquireMutexInitiallyForAdHocStrategy.
   yield* call(delay, ACQUIRE_MUTEX_INTERVAL);
   while (true) {
@@ -399,6 +400,7 @@ function* keepAnnotationMutexForAdHocStrategy(annotationId: string): Saga<void> 
       const mutexInfo = yield* call(acquireAnnotationMutex, annotationId, TAB_SESSION_ID);
       canEdit = mutexInfo.canEdit;
       blockedByUser = mutexInfo.blockedByUser;
+      blockedBySessionId = mutexInfo.blockedBySessionId;
       yield* put(setUserHoldingMutexAction(blockedByUser, mutexInfo.blockedBySessionId));
       yield* put(setIsMutexAcquiredAction(canEdit));
       if (canEdit) {
@@ -420,11 +422,15 @@ function* keepAnnotationMutexForAdHocStrategy(annotationId: string): Saga<void> 
       // If this code is reached, the user once already had the mutex, but re-acquiring was needed as saving took quite long.
       // In case of a network error, the catch block should take care of re-trying to acquire the mutex.
       // But if the server replies that the current user cannot edit at the moment, the previously acquired mutex must have
-      // expanded and another user must have it at the moment. This means that there a likely saving and version conflicts now as
+      // expired and another user must have it at the moment. This means that there a likely saving and version conflicts now as
       // this user lost the mutex while still in the process of syncing with the backend. Thus, throwing an error to show a toast and crashing the saga
       // leads the user to having to reload wk to minimize lost work, instead of allowing to continue to edit data.
       throw new Error(
-        `No longer owner of the annotation mutex. Instead user ${blockedByUser ? `${blockedByUser.firstName} ${blockedByUser?.lastName} (${blockedByUser?.id})` : "unknown user"} has the mutex.`,
+        `No longer owner of the annotation mutex. Instead user ${
+          blockedByUser || blockedBySessionId
+            ? `${blockedByUser?.firstName} ${blockedByUser?.lastName} (${blockedByUser?.id}, sessionId=${blockedBySessionId})`
+            : "unknown user"
+        } has the mutex.`,
       );
     }
   }
@@ -554,7 +560,7 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
             blockedByUser.id === activeUser?.id &&
             blockedBySessionId !== TAB_SESSION_ID
           ) {
-            message = messages["annotation.acquiringMutexFailed.sameSession"];
+            message = messages["annotation.acquiringMutexFailed.sameUserDifferentSession"];
           } else if (blockedByUser != null) {
             message = messages["annotation.acquiringMutexFailed"]({
               userName: `${blockedByUser.firstName} ${blockedByUser.lastName}`,

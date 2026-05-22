@@ -574,7 +574,14 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
           // Also, we need to delegate back to the saga middleware so that
           // this saga can be properly cancelled.
           yield* delay(500);
-          Toast.warning(message, { key: MUTEX_NOT_ACQUIRED_KEY });
+          const stillHasNoMutex = !(yield* select(
+            (state) => state.save.mutexState.hasAnnotationMutex,
+          ));
+          if (stillHasNoMutex) {
+            // Only show the warning if there is still no toast. Due to the 500ms delay,
+            // a new mutex acuiqre could have happened theoretically.
+            Toast.warning(message, { key: MUTEX_NOT_ACQUIRED_KEY });
+          }
         }
         wasMutexAlreadyAcquiredBefore = yield* select(
           (state) => state.save.mutexState.hasAnnotationMutex,

@@ -157,11 +157,18 @@ function needsPollAnnotationUpdates(state: WebknossosState): "yes" | "no" | "lat
     return "later";
   }
 
+  if (state.save.isSavingDisabled) {
+    // When saving is disabled, the user is free to edit the annotation however they like.
+    // If they had a mutex before, that will be released.
+    // Therefore, other users may edit the annotation at the same time.
+    // We must not poll for updates, because we cannot incorporate all possible update actions
+    // while having local changes.
+    return "no";
+  }
+
   // If the current user may edit the annotation while the collab mode is OwnerOnly,
   // we don't need to fetch newer versions. Typically, this is the
   // case when the current user is either the owner or a collaborator with the mutex.
-  // Additionally, this is also the case when saving is disabled (allowSave will be
-  // false then which is why we don't check it here).
   const { isUpdatingCurrentlyAllowed } = state.annotation;
   const { collaborationMode } = state.annotation;
   const mayEditInNonCollabMode = isUpdatingCurrentlyAllowed && collaborationMode === "OwnerOnly";

@@ -750,7 +750,8 @@ function AnnotationLockedByUserTag({
       </Tooltip>
     );
   } else if (blockedByUser.id === activeUser.id) {
-    tooltipTitle = messages["annotation.acquiringMutexFailed.sameUserDifferentSession"] + retryTooltipSuffix;
+    tooltipTitle =
+      messages["annotation.acquiringMutexFailed.sameUserDifferentSession"] + retryTooltipSuffix;
     tagLabel = "Locked by you in another tab.";
   } else {
     const blockingUserName = `${blockedByUser.firstName} ${blockedByUser.lastName}`;

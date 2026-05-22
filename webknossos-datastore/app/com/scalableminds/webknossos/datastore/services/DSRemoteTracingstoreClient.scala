@@ -2,7 +2,9 @@ package com.scalableminds.webknossos.datastore.services
 
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.datareaders.zarr.{NgffMetadata, ZarrHeader}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.{NgffZarr3GroupHeader, Zarr3ArrayHeader}
 import com.scalableminds.webknossos.datastore.models.datasource.StaticSegmentationLayer
@@ -47,6 +49,15 @@ class DSRemoteTracingstoreClient @Inject()(
       .getWithJsonResponse[StaticSegmentationLayer]
   }
 
+  def getVolumeTracing(tracingId: String,
+                       annotationId: ObjectId,
+                       tracingStoreUri: String,
+                       version: Option[Long] = None)(implicit tc: TokenContext): Fox[VolumeTracing] =
+    rpc(s"$tracingStoreUri/volume/$tracingId").withTokenFromContext
+      .addQueryParam("annotationId", annotationId)
+      .addQueryParam("version", version)
+      .getWithProtoResponse[VolumeTracing](VolumeTracing)
+
   def getOmeNgffHeader(tracingId: String, tracingStoreUri: String)(implicit tc: TokenContext): Fox[NgffMetadata] =
     rpc(s"$tracingStoreUri/tracings/volume/zarr/$tracingId/.zattrs").withTokenFromContext
       .getWithJsonResponse[NgffMetadata]
@@ -85,3 +96,4 @@ class DSRemoteTracingstoreClient @Inject()(
       .silent
       .getWithJsonResponse[EditableMappingSegmentListResult]
 }
+

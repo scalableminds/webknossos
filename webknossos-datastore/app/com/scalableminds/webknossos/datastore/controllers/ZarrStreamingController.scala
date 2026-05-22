@@ -201,15 +201,27 @@ class ZarrStreamingController @Inject()(
         else tokenContextForRequest
         volumeAnnotationLayers = annotationSource.annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
         dataSource <- datasetCache.getById(annotationSource.datasetId) ?~> Messages("dataSource.notFound") ~> NOT_FOUND
-        dataSourceLayers = dataSource.dataLayers
-          .filter(dL => !volumeAnnotationLayers.exists(_.name == dL.name))
-          .map(convertLayerToZarrLayer(_, zarrVersion))
-        annotationLayers <- Fox.serialCombined(volumeAnnotationLayers)(
+        annotationLayersWithFallbacks <- Fox.serialCombined(volumeAnnotationLayers)(
           l =>
-            remoteTracingstoreClient.getVolumeLayerAsZarrLayer(l.tracingId,
-                                                               Some(l.name),
-                                                               annotationSource.tracingStoreUrl,
-                                                               zarrVersion)(relevantTokenContext))
+            for {
+              tracing <- remoteTracingstoreClient.getVolumeTracing(l.tracingId,
+                                                                   annotationSource.id,
+                                                                   annotationSource.tracingStoreUrl)(
+                relevantTokenContext)
+              zarrLayer <- remoteTracingstoreClient.getVolumeLayerAsZarrLayer(l.tracingId,
+                                                                              Some(l.name),
+                                                                              annotationSource.tracingStoreUrl,
+                                                                              zarrVersion)(relevantTokenContext)
+            } yield (zarrLayer, tracing.fallbackLayer)
+        )
+        excludedDatasetLayerNames = ZarrStreamingController.excludedDatasetLayerNames(
+          volumeAnnotationLayers,
+          annotationLayersWithFallbacks.map { case (_, fallbackLayerName) => fallbackLayerName }
+        )
+        dataSourceLayers = dataSource.dataLayers
+          .filter(dL => !excludedDatasetLayerNames.contains(dL.name))
+          .map(convertLayerToZarrLayer(_, zarrVersion))
+        annotationLayers = annotationLayersWithFallbacks.map(_._1)
         allLayer = dataSourceLayers ++ annotationLayers
         zarrSource = UsableDataSource(dataSource.id, allLayer, dataSource.scale)
       } yield Ok(Json.toJson(zarrSource))
@@ -527,4 +539,10 @@ class ZarrStreamingController @Inject()(
         orElse = _ => Fox.successful(Ok(zGroupJson))
       )
     }
+}
+
+object ZarrStreamingController {
+  def excludedDatasetLayerNames(volumeAnnotationLayers: List[AnnotationLayer],
+                                fallbackLayerNames: Iterable[Option[String]]): Set[String] =
+    volumeAnnotationLayers.map(_.name).toSet ++ fallbackLayerNames.flatten
 }

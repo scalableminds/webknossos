@@ -73,6 +73,19 @@ export function* enforceExecutionAsBusyBlockingUnlessAllowed<T>(
   return retVal;
 }
 
+export function* waitUntilNotBusy(): Saga<void> {
+  const isBusy = yield* select((state) => state.uiInformation.busyBlockingInfo.isBusy);
+  if (!isBusy) {
+    return;
+  }
+  while (true) {
+    const setBusyAction = yield take("SET_BUSY_BLOCKING_INFO_ACTION");
+    if (!setBusyAction.value.isBusy) {
+      return;
+    }
+  }
+}
+
 type EnsureMappingIsLockedReturnType = {
   isMappingLockedIfNeeded: boolean;
   reason?: string;

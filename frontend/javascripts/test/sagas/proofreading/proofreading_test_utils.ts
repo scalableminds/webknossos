@@ -217,7 +217,9 @@ export class BackendMock {
     payload: RequestOptionsWithData<Array<SaveQueueEntry>>,
   ): Promise<void> => {
     if (payload.data[0].version !== this.agglomerateMapping.currentVersion + 1) {
-      throw new Error("Version mismatch");
+      throw new Error(
+        `Version mismatch. Newest version is ${this.agglomerateMapping.currentVersion}, but current payload contains version=${payload.data[0].version}`,
+      );
     }
     // Store the received request.
     this.receivedDataPerSaveRequest.push(payload.data);
@@ -317,9 +319,9 @@ export class BackendMock {
      * forcing the client that is tested to pull in the newer version before
      * saving can finish.
      */
-    // The injected version has already been reached, directly inject!
     const currentVersion = this.updateActionLog.at(-1)?.version || 1;
     if (currentVersion === targetVersion - 1) {
+      // The injected version has already been reached, directly inject!
       this.injectVersion(updateActions, targetVersion);
     } else if (currentVersion > targetVersion - 1) {
       throw new Error(
@@ -351,6 +353,15 @@ export class BackendMock {
     // tests expect.
     this.sendSaveRequestWithToken("unused", {
       data: createSaveQueueFromUpdateActions([updateActions], 0, null, false, targetVersion),
+    });
+  }
+
+  injectMultipleVersion(
+    updateActionBatches: UpdateActionWithoutIsolationRequirement[][],
+    startingVersion: number,
+  ) {
+    updateActionBatches.forEach((actions, index) => {
+      this.injectVersion(actions, startingVersion + index);
     });
   }
 

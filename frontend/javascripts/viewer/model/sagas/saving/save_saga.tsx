@@ -4,7 +4,6 @@ import features from "features";
 import ErrorHandling from "libs/error_handling";
 import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Toast from "libs/toast";
-import { sleep } from "libs/utils";
 import sum from "lodash-es/sum";
 import { buffers, type Channel } from "redux-saga";
 import {
@@ -510,7 +509,7 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
     // Use this annotation for rebasing the incoming update actions.
     const interval = yield* call(getPollInterval);
     let { ensureHasNewestVersion } = yield* race({
-      sleep: call(sleep, interval),
+      sleep: delay(interval),
       ensureHasNewestVersion: take(channel),
     });
     const needsCheckForUpdatesOnServer = yield* select(needsPollAnnotationUpdates);

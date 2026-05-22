@@ -6,7 +6,7 @@ import {
 } from "test/helpers/apiHelpers";
 import type { MinCutTargetEdge } from "admin/rest_api";
 import isEqual from "lodash-es/isEqual";
-import { call, put, take } from "redux-saga/effects";
+import { actionChannel, call, put, take } from "redux-saga/effects";
 import type { Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import {
@@ -55,7 +55,10 @@ describe("Proofreading (with mesh actions)", () => {
     expect(hasRootSagaCrashed()).toBe(false);
   });
 
-  function* simulateMergeAgglomeratesViaMeshes(context: WebknossosTestContext): Saga<void> {
+  function* simulateMergeAgglomeratesViaMeshes(
+    context: WebknossosTestContext,
+    injectVersionFn?: () => void,
+  ): Saga<void> {
     const { api } = context;
     const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
     yield call(initializeMappingAndTool, context, tracingId);
@@ -83,8 +86,14 @@ describe("Proofreading (with mesh actions)", () => {
         ).mapping,
     );
     expect(mapping1).toEqual(initialMapping);
+
+    if (injectVersionFn != null) {
+      yield call(injectVersionFn);
+    }
+
     yield put(setCollaborationModeAction("Concurrent"));
     // Execute the actual merge and wait for the finished mapping.
+    const finishMappingInitializationChannel = yield actionChannel("FINISH_MAPPING_INITIALIZATION");
     yield put(
       proofreadMergeAction(
         null, // mesh actions do not have a usable source position.
@@ -92,7 +101,7 @@ describe("Proofreading (with mesh actions)", () => {
         1337,
       ),
     );
-    yield take("FINISH_MAPPING_INITIALIZATION");
+    yield take(finishMappingInitializationChannel);
     // Checking optimistic merge is not necessary as no "foreign" update was injected.
     yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
@@ -172,13 +181,13 @@ describe("Proofreading (with mesh actions)", () => {
   it("should load unknown unmapped segment ids of mesh merge operation when incorporating interfered update actions.", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    backendMock.planMultipleVersionInjections(7, mergeSegment5And6);
+    const injectFn = () => backendMock.injectMultipleVersion(mergeSegment5And6, 7);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task(): Saga<void> {
-      yield simulateMergeAgglomeratesViaMeshes(context);
+      yield simulateMergeAgglomeratesViaMeshes(context, injectFn);
 
       const finalMapping = yield* select(
         (state) =>
@@ -208,7 +217,6 @@ describe("Proofreading (with mesh actions)", () => {
         backendMock,
       );
     });
-
     await task.toPromise();
   });
 

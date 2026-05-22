@@ -139,7 +139,6 @@ WEBKNOSSOS requires several metadata properties for each dataset to properly dis
   + `dataLayers.largestSegmentId`: The highest ID that is currently used in the respective segmentation layer. This is required for volume annotations where new objects with incrementing IDs are created. Only applies to segmentation layers.
   + `dataLayers.mappings` *(optional)*: A set of pre-computed agglomerate mapping names available for this segmentation layer. Only applies to segmentation layers.
   + `dataLayers.defaultViewConfiguration` *(optional)*: A key-value map of default rendering settings for this layer (e.g., color, opacity, intensity range). Overridden by `adminViewConfiguration`.
-  + `dataLayers.adminViewConfiguration` *(optional)*: A key-value map of rendering settings set by dataset administrators. Takes precedence over `defaultViewConfiguration`.
   + `dataLayers.coordinateTransformations` *(optional)*: An array of coordinate transformations to apply to this layer. Each transformation has:
     * `type`: Either `"affine"` or `"thin_plate_spline"`.
     * `matrix` *(for affine)*: A 4×4 row-major transformation matrix as a list of 4 lists of 4 doubles.

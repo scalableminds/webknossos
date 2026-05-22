@@ -356,7 +356,7 @@ export class BackendMock {
     });
   }
 
-  injectMultipleVersion(
+  injectMultipleVersions(
     updateActionBatches: UpdateActionWithoutIsolationRequirement[][],
     startingVersion: number,
   ) {

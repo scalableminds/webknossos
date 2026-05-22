@@ -181,7 +181,7 @@ describe("Proofreading (with mesh actions)", () => {
   it("should load unknown unmapped segment ids of mesh merge operation when incorporating interfered update actions.", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    const injectFn = () => backendMock.injectMultipleVersion(mergeSegment5And6, 7);
+    const injectFn = () => backendMock.injectMultipleVersions(mergeSegment5And6, 7);
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -252,7 +252,10 @@ describe("Proofreading (with mesh actions)", () => {
       },
     );
 
-  function* simulateSplitAgglomeratesViaMeshes(context: WebknossosTestContext): Saga<void> {
+  function* simulateSplitAgglomeratesViaMeshes(
+    context: WebknossosTestContext,
+    injectVersionFn?: () => void,
+  ): Saga<void> {
     // Splits segments 1337 and 1338 which are assumed to both be mapped to agglomerate 6.
     const { api } = context;
     const { tracingId } = yield* select((state: WebknossosState) => state.annotation.volumes[0]);
@@ -286,6 +289,11 @@ describe("Proofreading (with mesh actions)", () => {
         getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
     );
     expect(mapping1).toEqual(expectedInitialMapping);
+
+    if (injectVersionFn != null) {
+      injectVersionFn();
+    }
+
     yield put(setCollaborationModeAction("Concurrent"));
     // Execute the actual merge and wait for the finished mapping.
     yield put(
@@ -418,7 +426,7 @@ describe("Proofreading (with mesh actions)", () => {
       Store.getState(),
     );
 
-    backendMock.planMultipleVersionInjections(7, mergeSegment5And6);
+    const injectFn = () => backendMock.injectMultipleVersions(mergeSegment5And6, 7);
 
     mockEdgesForNormalAgglomerateMinCut(mocks);
 
@@ -426,7 +434,7 @@ describe("Proofreading (with mesh actions)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task(): Saga<void> {
-      yield simulateSplitAgglomeratesViaMeshes(context);
+      yield simulateSplitAgglomeratesViaMeshes(context, injectFn);
 
       const receivedUpdateActions = getFlattenedUpdateActions(context);
 

@@ -1,8 +1,10 @@
 import { Flex, Input, Spin, Typography } from "antd";
 import features from "features";
+import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { ColorWKBlue } from "theme";
+import type { APIUser } from "types/api_types";
 
 const STORAGE_MESSAGES_KEY = "wk_help_chat_messages";
 const STORAGE_SESSION_KEY = "wk_help_chat_session_id";
@@ -36,7 +38,11 @@ function loadSessionId(): string {
   return id;
 }
 
-async function askChatbot(chatInput: string, sessionId: string): Promise<string> {
+async function askChatbot(
+  chatInput: string,
+  sessionId: string,
+  activeUser?: APIUser | null,
+): Promise<string> {
   const chatUrl = features().supportAiAgentUrl;
   if (!chatUrl) throw new Error("AI agent URL is not configured");
 
@@ -48,6 +54,8 @@ async function askChatbot(chatInput: string, sessionId: string): Promise<string>
       action: "sendMessage",
       sessionId,
       chatInput,
+      userName: `${activeUser?.firstName} ${activeUser?.lastName}`,
+      userEmail: activeUser?.email,
     }),
   });
 
@@ -91,6 +99,8 @@ export function HelpChat({ isExpanded = false }: { isExpanded?: boolean }) {
   const sessionId = useRef(loadSessionId());
   const chatEndRef = useRef<HTMLDivElement>(null);
 
+  const activeUser = useWkSelector((state) => state.activeUser);
+
   useEffect(() => {
     sessionStorage.setItem(STORAGE_MESSAGES_KEY, JSON.stringify(chatMessages));
   }, [chatMessages]);
@@ -108,7 +118,7 @@ export function HelpChat({ isExpanded = false }: { isExpanded?: boolean }) {
     setIsLoadingChat(true);
 
     try {
-      const reply = await askChatbot(text, sessionId.current);
+      const reply = await askChatbot(text, sessionId.current, activeUser);
       setChatMessages((prev) => [...prev, { role: "assistant", content: reply }]);
     } catch {
       Toast.error("Could not reach the assistant. Please try again.");

@@ -392,11 +392,11 @@ describe("Live Collaboration", () => {
   }, 120_000);
 
   afterAll(async () => {
-    await sleep(300_000);
+    await sleep(1_000_000);
 
     await browser?.close();
     // TODO: optionally delete the annotation and the test users created above
-  }, 300_000);
+  }, 1_000_000);
 
   it("admin sets up the annotation: activate mapping, switch to proofreading, merge, save, enable othersMayEdit", async () => {
     const page = await getNewPage(browser, WK_AUTH_TOKEN!);

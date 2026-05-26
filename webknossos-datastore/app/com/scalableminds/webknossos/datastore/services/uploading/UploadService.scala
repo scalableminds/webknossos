@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services.uploading
 
+import com.scalableminds.util.Msg
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Double
@@ -138,8 +139,6 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   cleanUpOrphanUploads()
 
   override def dataBaseDir: Path = dataSourceService.dataBaseDir
-
-  def isKnownUploadByFileId(uploadFileId: String): Fox[Boolean] = isKnownUpload(extractDatasetUploadId(uploadFileId))
 
   def isKnownUpload(uploadId: String): Fox[Boolean] =
     runningUploadMetadataStore.contains(redisKeyForFileCount(uploadId))
@@ -318,10 +317,10 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       needsConversion = uploadInformation.needsConversion.getOrElse(false)
       uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId)
       _ <- backupRawUploadedData(uploadDir, uploadBackupDirectoryFor(dataSourceId.organizationId, uploadId), datasetId).toFox
-      _ <- checkWithinRequestedFileSize(uploadDir, uploadId, datasetId) ?~> "dataset.upload.fileSizeCheck.failed"
-      _ <- checkAllChunksUploaded(uploadId) ?~> "dataset.upload.allChunksUploadedCheck.failed"
+      _ <- checkWithinRequestedFileSize(uploadDir, uploadId, datasetId) ?~> Msg.Dataset.Upload.fileSizeCheckFailed
+      _ <- checkAllChunksUploaded(uploadId) ?~> Msg.Dataset.Upload.allChunksUploadedCheckFailed
       unpackToDir = unpackToDirFor(dataSourceId)
-      _ <- PathUtils.ensureDirectoryBox(unpackToDir.getParent).toFox ?~> "dataset.import.fileAccessDenied"
+      _ <- PathUtils.ensureDirectoryBox(unpackToDir.getParent).toFox ?~> Msg.Dataset.Upload.disallowedPaths
       unpackResult <- unpackDataset(uploadDir, unpackToDir, datasetId).shiftBox
       _ <- cleanUpUploadedDataset(uploadDir, uploadId, reason = "Upload complete, data unpacked.")
       _ <- cleanUpOnFailure(unpackResult,
@@ -335,8 +334,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                             dataSourceId,
                             needsConversion,
                             label = s"processing dataset at $unpackToDir")
-      datasetSizeBytes <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue).toFox ?~> "dataset.upload.measureTotalSize.failed"
-      dataSourceWithAbsolutePathsOpt <- moveUnpackedToTarget(unpackToDir, needsConversion, datasetId, dataSourceId) ?~> "dataset.upload.moveUnpackedToTarget.failed"
+      datasetSizeBytes <- tryo(FileUtils.sizeOfDirectoryAsBigInteger(new File(unpackToDir.toString)).longValue).toFox ?~> Msg.Dataset.Upload.measureTotalSizeFailed
+      dataSourceWithAbsolutePathsOpt <- moveUnpackedToTarget(unpackToDir, needsConversion, datasetId, dataSourceId) ?~> Msg.Dataset.Upload.moveUnpackedToTargetFailed
 
       _ <- remoteWebknossosClient.reportUpload(
         datasetId,
@@ -348,7 +347,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
           uploadInformation.voxelSizeFactor,
           uploadInformation.voxelSizeUnit
         )
-      ) ?~> "dataset.upload.reportUpload.failed"
+      ) ?~> Msg.Dataset.Upload.reportUploadFailed
     } yield ()
   }
 
@@ -461,7 +460,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     val dataSource = dataSourceService.dataSourceFromDir(unpackToDir, organizationId, resolvePaths = false)
     for {
       _ <- Fox.runOptional(dataSource.toUsable)(usableDataSource =>
-        Fox.fromBool(usableDataSource.allExplicitPaths.forall(dataVaultService.pathIsAllowedToAddDirectly)) ?~> "dataset.upload.disallowedPaths")
+        Fox.fromBool(usableDataSource.allExplicitPaths.forall(dataVaultService.pathIsAllowedToAddDirectly)) ?~> Msg.Dataset.Upload.disallowedPaths)
     } yield ()
   }
 
@@ -571,7 +570,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   private def checkAllChunksUploaded(uploadId: String): Fox[Unit] =
     for {
       fileCountStringOpt <- runningUploadMetadataStore.find(redisKeyForFileCount(uploadId)) ?~> "Could not look up reserved file count"
-      fileCountString <- fileCountStringOpt.toFox ?~> "dataset.upload.noFiles"
+      fileCountString <- fileCountStringOpt.toFox ?~> Msg.Dataset.Upload.noFiles
       fileCount <- tryo(fileCountString.toLong).toFox ?~> "Could not look up reserved file count (toLong)"
       fileNames <- runningUploadMetadataStore.findSet(redisKeyForFileNameSet(uploadId)) ?~> "Could not look up reserved file names"
       _ <- Fox.fromBool(fileCount == fileNames.size)
@@ -744,19 +743,19 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
               Some(excludeFromPrefix)
             )
             .toFox
-          _ <- Fox.fromBool(unpackToDir.toFile.exists()) ?~> "dataset.upload.noFiles"
+          _ <- Fox.fromBool(unpackToDir.toFile.exists()) ?~> Msg.Dataset.Upload.noFiles
         } yield ()
       } else {
         for {
           deepFileList: List[Path] <- PathUtils.listFilesRecursive(uploadDir, silent = false, maxDepth = 10).toFox
-          _ <- Fox.fromBool(deepFileList.nonEmpty) ?~> "dataset.upload.noFiles"
+          _ <- Fox.fromBool(deepFileList.nonEmpty) ?~> Msg.Dataset.Upload.noFiles
           commonPrefixPreliminary = PathUtils.commonPrefix(deepFileList)
           _ = logger.info(
             s"Detected dataset root during upload of $datasetId from ${deepFileList.length} files in $uploadDir with commonPrefixPreliminary=$commonPrefixPreliminary")
           strippedPrefix = PathUtils.cutOffPathAtLastOccurrenceOf(commonPrefixPreliminary, excludeFromPrefix)
           commonPrefix = PathUtils.removeSingleFileNameFromPrefix(strippedPrefix,
                                                                   deepFileList.map(_.getFileName.toString))
-          _ <- tryo(FileUtils.moveDirectory(new File(commonPrefix.toString), new File(unpackToDir.toString))).toFox ?~> "dataset.upload.moveToTarget.failed"
+          _ <- tryo(FileUtils.moveDirectory(new File(commonPrefix.toString), new File(unpackToDir.toString))).toFox ?~> Msg.Dataset.Upload.moveToTargetFailed
         } yield ()
       }
     } yield ()

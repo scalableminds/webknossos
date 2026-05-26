@@ -72,10 +72,10 @@
     "start-fossildb": "fossildb/run.sh > fossildb/logs",
     "dev-gen-tls": "./tools/gen-ssl-dev-certs.sh",
     "@comment build-backend": "Only check for errors in the backend code like done by the CI. This command is not needed to run WEBKNOSSOS",
-    "build-backend": "yarn build-wk-backend && yarn build-wk-datastore && yarn build-wk-tracingstore && rm webknossos-tracingstore/conf/messages webknossos-datastore/conf/messages",
+    "build-backend": "yarn build-wk-backend && yarn build-wk-datastore && yarn build-wk-tracingstore",
     "build-wk-backend": "sbt -no-colors -DfailOnWarning compile stage",
-    "build-wk-datastore": "sbt -no-colors -DfailOnWarning \"project webknossosDatastore\" copyMessages compile stage",
-    "build-wk-tracingstore": "sbt -no-colors -DfailOnWarning \"project webknossosTracingstore\" copyMessages compile stage",
+    "build-wk-datastore": "sbt -no-colors -DfailOnWarning \"project webknossosDatastore\" compile stage",
+    "build-wk-tracingstore": "sbt -no-colors -DfailOnWarning \"project webknossosTracingstore\" compile stage",
     "build-dev": "vite build",
     "build-watch": "vite build --watch",
     "listening": "lsof -i:5005,7155,9000,9001,9002",
@@ -174,7 +174,7 @@
     "pako": "^2.1.0",
     "pretty-bytes": "^5.1.0",
     "process": "^0.11.10",
-    "protobufjs": "^6.11.4",
+    "protobufjs": "^6.11.5",
     "react": "^19.2.0",
     "react-colorful": "^5.6.1",
     "react-command-palette": "^0.22.1",
@@ -200,7 +200,18 @@
     "url": "^0.11.0",
     "url-join": "^4.0.0"
   },
-  "packageManager": "yarn@4.9.2",
+  "packageManager": "yarn@4.14.1",
+  "dependenciesMeta": {
+    "esbuild": {
+      "built": true
+    },
+    "msw": {
+      "built": true
+    },
+    "protobufjs": {
+      "built": true
+    }
+  },
   "resolutions": {
     "distance-transform": "https://github.com/scalableminds/distance-transform"
   }

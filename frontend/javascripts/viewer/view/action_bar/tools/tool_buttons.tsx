@@ -19,6 +19,11 @@ import { ToolRadioButton, ToolRadioButtonWithDropdown } from "./tool_helpers";
 const getMaybeDisabledButtonStyle = (isDisabled: boolean): React.CSSProperties =>
   isDisabled ? { color: "rgb(255 255 255 / 25%)" } : {};
 
+const getDropdownIconStyle = (isDisabled: boolean): React.CSSProperties => ({
+  ...getMaybeDisabledButtonStyle(isDisabled),
+  transform: "scale(1.5)",
+});
+
 type ToolButtonProps = { adaptedActiveTool: AnnotationTool };
 
 export const ToolIdToComponent: Record<
@@ -142,7 +147,7 @@ function BrushToolMenu({ adaptedActiveTool }: ToolButtonProps) {
           icon: (
             <Icon
               component={AnnotationTool.BRUSH.icon}
-              style={getMaybeDisabledButtonStyle(isBrushDisabled)}
+              style={getDropdownIconStyle(isBrushDisabled)}
             />
           ),
           disabled: isBrushDisabled,
@@ -163,7 +168,7 @@ function BrushToolMenu({ adaptedActiveTool }: ToolButtonProps) {
           icon: (
             <Icon
               component={AnnotationTool.TRACE.icon}
-              style={getMaybeDisabledButtonStyle(isTraceDisabled)}
+              style={getDropdownIconStyle(isTraceDisabled)}
             />
           ),
           disabled: isTraceDisabled,
@@ -228,7 +233,7 @@ function EraseToolMenu({ adaptedActiveTool }: ToolButtonProps) {
           icon: (
             <Icon
               component={AnnotationTool.ERASE_BRUSH.icon}
-              style={getMaybeDisabledButtonStyle(isEraseBrushDisabled)}
+              style={getDropdownIconStyle(isEraseBrushDisabled)}
             />
           ),
           disabled: isEraseBrushDisabled,
@@ -249,7 +254,7 @@ function EraseToolMenu({ adaptedActiveTool }: ToolButtonProps) {
           icon: (
             <Icon
               component={AnnotationTool.ERASE_TRACE.icon}
-              style={getMaybeDisabledButtonStyle(isEraseTraceDisabled)}
+              style={getDropdownIconStyle(isEraseTraceDisabled)}
             />
           ),
           disabled: isEraseTraceDisabled,
@@ -458,7 +463,7 @@ function MeasurementToolMenu({ adaptedActiveTool: _adaptedActiveTool }: ToolButt
           icon: (
             <Icon
               component={AnnotationTool.LINE_MEASUREMENT.icon}
-              style={getMaybeDisabledButtonStyle(isLineMeasurementDisabled)}
+              style={getDropdownIconStyle(isLineMeasurementDisabled)}
             />
           ),
           disabled: isLineMeasurementDisabled,
@@ -479,7 +484,7 @@ function MeasurementToolMenu({ adaptedActiveTool: _adaptedActiveTool }: ToolButt
           icon: (
             <Icon
               component={AnnotationTool.AREA_MEASUREMENT.icon}
-              style={getMaybeDisabledButtonStyle(isAreaMeasurementDisabled)}
+              style={getDropdownIconStyle(isAreaMeasurementDisabled)}
             />
           ),
           disabled: isAreaMeasurementDisabled,

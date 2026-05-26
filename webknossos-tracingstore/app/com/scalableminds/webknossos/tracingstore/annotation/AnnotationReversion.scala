@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.annotation
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -48,14 +49,14 @@ trait AnnotationReversion extends FoxImplicits {
                                                     sourceVersion,
                                                     sourceTracing,
                                                     newVersion: Long,
-                                                    tracingBeforeRevert)) ?~> "revert.volumeData.failed"
+                                                    tracingBeforeRevert)) ?~> Msg.Annotation.Revert.volumeDataFailed
             _ <- Fox.runIf(shouldRevertElements && sourceTracing.getHasEditableMapping)(
               revertEditableMappingFields(annotationId,
                                           currentAnnotationWithTracings,
                                           tracingBeforeRevert,
                                           sourceVersion,
                                           newVersion,
-                                          tracingId)) ?~> "revert.editableMappingData.failed"
+                                          tracingId)) ?~> Msg.Annotation.Revert.editableMappingDataFailed
           } yield ()
       }
     } yield ()
@@ -81,12 +82,12 @@ trait AnnotationReversion extends FoxImplicits {
                                               tracingBeforeRevert: VolumeTracing,
                                               targetVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext) =
     for {
-      editableMappingInfo <- getEditableMappingInfoRaw(tracingId, version = None) ?~> "getEditableMappingInfoRaw.failed"
+      editableMappingInfo <- getEditableMappingInfoRaw(tracingId, version = None) ?~> Msg.Annotation.getEditableMappingInfoRawFailed
       updater <- editableMappingUpdaterFor(annotationId,
                                            tracingId,
                                            tracingBeforeRevert,
                                            editableMappingInfo.value,
                                            tracingBeforeRevert.version,
-                                           targetVersion) ?~> "EditableMappingUpdater.initialize.failed"
+                                           targetVersion) ?~> Msg.Annotation.initEditableMappingUpdaterFailed
     } yield updater
 }

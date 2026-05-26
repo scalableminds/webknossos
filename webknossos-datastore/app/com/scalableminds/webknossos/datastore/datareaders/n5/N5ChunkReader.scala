@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.n5
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.datareaders.{ChunkReader, DatasetHeader}
@@ -34,7 +35,7 @@ class N5ChunkReader(header: DatasetHeader) extends ChunkReader(header) with Lazy
     for {
       bytes <- path.readBytes(range)
       (blockHeader, data) <- dataExtractor.readBytesAndHeader(bytes).toFox
-      paddedChunkBytes <- processBytes(data, blockHeader.blockSize.product).toFox ?~> "chunk.decompress.failed"
+      paddedChunkBytes <- processBytes(data, blockHeader.blockSize.product).toFox ?~> Msg.Dataset.Chunk.decompressFailed
     } yield (paddedChunkBytes, Some(blockHeader.blockSize))
   }
 }

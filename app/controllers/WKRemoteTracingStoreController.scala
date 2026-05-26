@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
@@ -17,7 +18,6 @@ import models.annotation._
 import models.dataset.{DatasetDAO, DatasetService}
 import models.user.UserDAO
 import models.user.time.TimeSpanService
-import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import scalapb.GeneratedMessage
@@ -107,15 +107,16 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
     else Fox.successful(())
 
   def dataSourceForAnnotation(name: String, key: String, annotationId: ObjectId): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async { _ =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         annotationDataSourceTemporaryStore.find(annotationId) match {
           case Some(dataSourceAndDatasetId) => Fox.successful(Ok(Json.toJson(dataSourceAndDatasetId._1)))
           case None =>
             for {
-              annotation <- annotationDAO.findOne(annotationId) ?~> "annotation.notFound"
-              dataset <- datasetDAO.findOne(annotation._dataset) ?~> "dataset.notFound"
+              annotation <- annotationDAO.findOne(annotationId) ?~> Msg.Annotation.notFound
+              dataset <- datasetDAO.findOne(annotation._dataset) ?~> Msg.Dataset
+                .notFoundForAnnotation(annotation._dataset, annotation._id)
               dataSource <- datasetService.dataSourceFor(dataset)
             } yield Ok(Json.toJson(dataSource))
         }
@@ -123,22 +124,23 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
     }
 
   def datasetIdForAnnotation(name: String, key: String, annotationId: ObjectId): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async { _ =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         annotationDataSourceTemporaryStore.find(annotationId) match {
           case Some(dataSourceAndDatasetId) => Fox.successful(Ok(Json.toJson(dataSourceAndDatasetId._2)))
           case None =>
             for {
-              annotation <- annotationDAO.findOne(annotationId) ?~> "annotation.notFound"
-              dataset <- datasetDAO.findOne(annotation._dataset) ?~> "dataset.notFound"
+              annotation <- annotationDAO.findOne(annotationId) ?~> Msg.Annotation.notFound
+              dataset <- datasetDAO.findOne(annotation._dataset) ?~> Msg.Dataset
+                .notFoundForAnnotation(annotation._dataset, annotation._id)
             } yield Ok(Json.toJson(dataset._id))
         }
       }
     }
 
   def annotationIdForTracing(name: String, key: String, tracingId: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async { _ =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         if (tracingId == TracingId.dummy) {
@@ -152,21 +154,21 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
     }
 
   def dataStoreUriForDataset(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async { _ =>
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
-          dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
           dataStore <- datasetService.dataStoreFor(dataset)
         } yield Ok(Json.toJson(dataStore.url))
       }
     }
 
   def getDataSource(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async { _ =>
       tracingStoreService.validateAccess(name, key) { _ =>
         for {
-          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
           dataSource <- datasetService.dataSourceFor(dataset)
         } yield Ok(Json.toJson(dataSource))
       }
@@ -180,7 +182,7 @@ class WKRemoteTracingStoreController @Inject()(tracingStoreService: TracingStore
       tracingStoreService.validateAccess(name, key) { _ =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
-          annotation <- annotationDAO.findOne(annotationId) ?~> "annotation.notFound"
+          annotation <- annotationDAO.findOne(annotationId) ?~> Msg.Annotation.notFound
           dataset <- datasetDAO.findOne(annotation._dataset)
           tracingEither <- annotationService.createTracingForExplorational(dataset,
                                                                            request.body,

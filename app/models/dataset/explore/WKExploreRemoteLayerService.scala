@@ -1,5 +1,6 @@
 package models.dataset.explore
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -82,7 +83,7 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
     for {
       dataStoreNameOpt <- SequenceUtils
         .findUniqueElement(dataStoreNames)
-        .toFox ?~> "explore.dataStore.mustBeEqualForAll"
+        .toFox ?~> Msg.Dataset.Explore.dataStoreMustBeEqualForAll
       dataStore <- dataStoreNameOpt match {
         case Some(dataStoreName) => dataStoreDAO.findOneByName(dataStoreName)(GlobalAccessContext)
         case None                => dataStoreDAO.findOneWithUploadsAllowed(GlobalAccessContext)
@@ -101,7 +102,7 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
                                                             Some(requestingUser._id),
                                                             Some(requestingUser._organization))
       _ <- Fox.fromBool(uri.getScheme != null) ?~> s"Received invalid URI: $layerUri"
-      credentialId <- Fox.runOptional(credentialOpt)(c => credentialService.insertOne(c)) ?~> "dataVault.credential.insert.failed"
+      credentialId <- Fox.runOptional(credentialOpt)(c => credentialService.insertOne(c)) ?~> Msg.DataVault.credentialInsertFailed
     } yield credentialId
 
 }

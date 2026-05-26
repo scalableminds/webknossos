@@ -3,7 +3,7 @@ import BrainSpinner, { BrainSpinnerWithError, CoverWithLogin } from "components/
 import { fetchGistContent } from "libs/gist";
 import { InputKeyboardNoLoop } from "libs/input";
 import Toast from "libs/toast";
-import { getUrlParamValue, hasUrlParam, isNoElementFocused } from "libs/utils";
+import { getUrlParamValue, hasUrlParam, isNoEditableElementFocused } from "libs/utils";
 import window, { document } from "libs/window";
 import { type WithBlockerProps, withBlocker } from "libs/with_blocker_hoc";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
@@ -228,8 +228,9 @@ class Controller extends PureComponent<PropsWithRouter, State> {
     // avoid scrolling while pressing space
     document.addEventListener("keydown", (event: KeyboardEvent) => {
       if (
+        // 32 → Spacebar, 18 → Alt key, 37–40 → Arrow keys
         (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
-        isNoElementFocused()
+        isNoEditableElementFocused()
       ) {
         event.preventDefault();
       }

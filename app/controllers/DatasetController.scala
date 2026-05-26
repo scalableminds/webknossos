@@ -822,10 +822,10 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
-        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
-        _ <- Fox.fromBool(dataset.isVirtual) ?~> "dataset.writeMirror.onlyForVirtual"
-        _ <- Fox.fromBool(dataset.isUsable) ?~> "dataset.writeMirror.onlyForUsable"
-        _ <- datasetService.writeMirrorForVirtual(dataset) ?~> "dataset.writeMirror.failed"
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- Fox.fromBool(dataset.isVirtual) ?~> Msg.Dataset.Mirror.onlyForVirtual
+        _ <- Fox.fromBool(dataset.isUsable) ?~> Msg.Dataset.Mirror.onlyForUsable
+        _ <- datasetService.writeMirrorForVirtual(dataset) ?~> Msg.Dataset.Mirror.writeFailed
       } yield Ok
     }
 

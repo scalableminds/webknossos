@@ -732,7 +732,7 @@ class DataSourceController @Inject()(
     }
   }
 
-  def writeMirror(failOnError: Boolean): Action[Seq[ObjectId]] = Action.async(validateJson[Seq[ObjectId]]) {
+  def writeMirrors(failOnError: Boolean): Action[Seq[ObjectId]] = Action.async(validateJson[Seq[ObjectId]]) {
     implicit request =>
       if (dataStoreConfig.Datastore.writeVirtualDatasetsMirror) {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {

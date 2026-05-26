@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Box.tryo
@@ -42,25 +43,25 @@ class DataSourceMirrorService @Inject()(
         _ <- ensureMirrorParent(mirrorDir)
         _ <- Fox.runIf(Files.exists(tempMirrorDir)) {
           tryo(FileUtils.deleteDirectory(tempMirrorDir.toFile)).toFox
-        } ?~> "dataset.writeMirror.deleteStaleTempMirrorFailed"
-        _ <- tryo(Files.createDirectory(tempMirrorDir)).toFox ?~> "dataset.writeMirror.createTempMirrorDirFailed"
-        updatedLayers <- Fox.serialCombined(dataSource.dataLayers)(writeMirrorLayer(_, tempMirrorDir)) ?~> "dataset.writeMirror.writeMirrorLayersFailed"
+        } ?~> Msg.Dataset.Mirror.deleteStaleTempMirrorFailed
+        _ <- tryo(Files.createDirectory(tempMirrorDir)).toFox ?~> Msg.Dataset.Mirror.createTempMirrorDirFailed
+        updatedLayers <- Fox.serialCombined(dataSource.dataLayers)(writeMirrorLayer(_, tempMirrorDir)) ?~> Msg.Dataset.Mirror.writeMirrorLayersFailed
         mirrorDataSource = dataSource.copy(dataLayers = updatedLayers)
-        _ <- writeMirrorProperties(mirrorDataSource, tempMirrorDir) ?~> "dataset.writeMirror.writeMirrorPropertiesFailed"
-        _ <- writeReadme(tempMirrorDir, datasetId) ?~> "dataset.writeMirror.writeReadmeFailed"
+        _ <- writeMirrorProperties(mirrorDataSource, tempMirrorDir) ?~> Msg.Dataset.Mirror.writeMirrorPropertiesFailed
+        _ <- writeReadme(tempMirrorDir, datasetId) ?~> Msg.Dataset.Mirror.writeReadmeFailed
         _ <- Fox.runIf(Files.exists(mirrorDir)) {
           tryo(FileUtils.deleteDirectory(mirrorDir.toFile)).toFox
-        } ?~> "dataset.writeMirror.deleteExistingMirrorFailed"
-        _ <- tryo(Files.move(tempMirrorDir, mirrorDir)).toFox ?~> "dataset.writeMirror.moveTempMirrorFailed"
+        } ?~> Msg.Dataset.Mirror.deleteExistingMirrorFailed
+        _ <- tryo(Files.move(tempMirrorDir, mirrorDir)).toFox ?~> Msg.Dataset.Mirror.moveTempMirrorFailed
       } yield ()
     } else Fox.successful(())
 
   private def writeMirrorLayer(layer: StaticLayer, mirrorDir: Path)(implicit ec: ExecutionContext): Fox[StaticLayer] = {
     val layerDir = mirrorDir.resolve(layer.name)
     for {
-      _ <- tryo(Files.createDirectory(layerDir)).toFox ?~> "dataset.writeMirror.createLayerDirFailed"
-      updatedMags <- Fox.serialCombined(layer.mags.toList)(writeMirrorMag(_, layerDir)) ?~> "dataset.writeMirror.writeMirrorMagsFailed"
-      updatedAttachmentsOpt <- writeMirrorAttachments(layer.attachments, layerDir) ?~> "dataset.writeMirror.writeMirrorAttachmentsFailed"
+      _ <- tryo(Files.createDirectory(layerDir)).toFox ?~> Msg.Dataset.Mirror.createLayerDirFailed
+      updatedMags <- Fox.serialCombined(layer.mags.toList)(writeMirrorMag(_, layerDir)) ?~> Msg.Dataset.Mirror.writeMagsFailed
+      updatedAttachmentsOpt <- writeMirrorAttachments(layer.attachments, layerDir) ?~> Msg.Dataset.Mirror.writeAttachmentsFailed
       layerWithUpdatedMags = layer.mapped(newMags = Some(updatedMags))
       updatedLayer = updatedAttachmentsOpt.fold(layerWithUpdatedMags)(layerWithUpdatedMags.withAttachments)
     } yield updatedLayer
@@ -127,7 +128,7 @@ class DataSourceMirrorService @Inject()(
         |Last mirror update: ${Instant.now}
         |""".stripMargin
     for {
-      _ <- tryo(Files.write(readmeFile, content.getBytes(StandardCharsets.UTF_8))).toFox ?~> "dataset.writeMirror.readmeWriteFailed"
+      _ <- tryo(Files.write(readmeFile, content.getBytes(StandardCharsets.UTF_8))).toFox
     } yield ()
   }
 
@@ -140,15 +141,15 @@ class DataSourceMirrorService @Inject()(
     JsonHelper
       .writeToFile(propertiesFile,
                    JsonHelper.removeKeyRecursively(Json.toJson(dataSourceWithRelativizedPaths), Set("resolutions")))
-      .toFox ?~> "dataset.writeMirror.propertiesWriteFailed"
+      .toFox
   }
 
   private def ensureMirrorParent(mirrorDir: Path)(implicit ec: ExecutionContext): Fox[Unit] =
     if (Files.exists(mirrorDir.getParent)) {
-      Fox.fromBool(Files.isWritable(mirrorDir.getParent)) ?~> "Mirror dir not writable."
+      Fox.fromBool(Files.isWritable(mirrorDir.getParent)) ?~> Msg.Dataset.Mirror.parentNotWritable
     } else {
       tryo {
         Files.createDirectory(mirrorDir.getParent)
-      }.map(_ => ()).toFox ?~> "Could not create dataset mirror dir"
+      }.map(_ => ()).toFox ?~> Msg.Dataset.Mirror.createParentDirFailed
     }
 }

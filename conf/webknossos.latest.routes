@@ -89,7 +89,6 @@ GET           /teams/:id/projectProgressReport                                  
 POST          /datasets/:datasetId/createExplorational                                          controllers.AnnotationController.createExplorational(datasetId: ObjectId)
 GET           /datasets/:datasetId/sandbox/:typ                                                 controllers.AnnotationController.getSandbox(datasetId: ObjectId, typ: String, sharingToken: Option[String])
 GET           /datasets                                                                         controllers.DatasetController.list(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationId: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[ObjectId], folderId: Option[ObjectId], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
-POST          /datasets                                                                         controllers.DatasetController.create(typ: String)
 POST          /datasets/exploreRemote                                                           controllers.DatasetController.exploreRemoteDataset()
 POST          /datasets/exploreAndAddRemote                                                     controllers.DatasetController.exploreAndAddRemoteDataset()
 POST          /datasets/addVirtualDataset/:name                                                 controllers.DatasetController.addVirtualDataset(name: String)

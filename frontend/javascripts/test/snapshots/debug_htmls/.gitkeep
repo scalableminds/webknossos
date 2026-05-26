@@ -1,3 +1,0 @@
-This folder can be used to dump snapshots during testing.
-At the moment, this is used by e2e tests to write html dumps to disk,
-which allows to view snapshots conveniently.

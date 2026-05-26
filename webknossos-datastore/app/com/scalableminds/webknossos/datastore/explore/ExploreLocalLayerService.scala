@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.explore
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.PathUtils
@@ -47,7 +48,7 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
           mag <- Vec3Int
             .fromMagLiteral(dir.getFileName.toString, allowScalar = true)
             .toFox ?~> s"invalid mag: ${dir.getFileName}"
-          vaultPath <- dataVaultService.vaultPathFor(dir) ?~> "dataVault.setup.failed"
+          vaultPath <- dataVaultService.vaultPathFor(dir) ?~> Msg.DataVault.setupFailed
           layersWithVoxelSizes <- new ZarrArrayExplorer(mag).explore(vaultPath, None)(TokenContext(None))
         } yield layersWithVoxelSizes))
       (layers, voxelSize) <- adaptLayersAndVoxelSize(layersWithVoxelSizes.flatten, None)
@@ -133,7 +134,7 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
         val subdirs = Files.list(path).iterator().asScala.toList
         if (subdirs.size == 1) subdirs.head.getFileName.toString else layerDirectory
       } else layerDirectory
-      vaultPath <- dataVaultService.vaultPathFor(path.resolve(layer)) ?~> "dataVault.setup.failed"
+      vaultPath <- dataVaultService.vaultPathFor(path.resolve(layer)) ?~> Msg.DataVault.setupFailed
       layersWithVoxelSizes <- explorer.explore(vaultPath, None)(TokenContext(None))
       (layers, voxelSize) <- adaptLayersAndVoxelSize(layersWithVoxelSizes, None)
       relativeLayers = makeLayersRelative(layers)

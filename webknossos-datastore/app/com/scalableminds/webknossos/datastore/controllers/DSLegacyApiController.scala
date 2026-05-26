@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.controllers
 
+import com.scalableminds.util.Msg
 import com.google.inject.Inject
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, Full}
@@ -151,7 +152,7 @@ class DSLegacyApiController @Inject()(
               Some(false),
               needsConversion = None
             )
-          ) ?~> "dataset.upload.validation.failed"
+          ) ?~> Msg.Dataset.Upload.validationFailed
         } yield
           Ok(
             Json.obj("newDatasetId" -> reservedDatasetInfo.newDatasetId,

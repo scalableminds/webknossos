@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.objectid.ObjectId
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -24,14 +25,14 @@ class ShortLinkController @Inject()(shortLinkDAO: ShortLinkDAO, sil: Silhouette[
     val key = RandomIDGenerator.generateBlocking(12)
     for {
       _ <- Fox.fromBool(longLink.startsWith(wkConf.Http.uri)) ?~> "Could not generate short link: URI does not match"
-      _ <- shortLinkDAO.insertOne(ShortLink(_id, key, longLink)) ?~> "create.failed"
+      _ <- shortLinkDAO.insertOne(ShortLink(_id, key, longLink)) ?~> "Could not create short link."
       inserted <- shortLinkDAO.findOne(_id)
     } yield Ok(Json.toJson(inserted))
   }
 
-  def getByKey(key: String): Action[AnyContent] = Action.async { implicit request =>
+  def getByKey(key: String): Action[AnyContent] = Action.async { _ =>
     for {
-      shortLink <- shortLinkDAO.findOneByKey(key) ?~> "shortLink.notFound"
+      shortLink <- shortLinkDAO.findOneByKey(key) ?~> Msg.shortLinkNotFound
     } yield Ok(Json.toJson(shortLink))
   }
 }

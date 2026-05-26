@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Float
@@ -14,7 +15,6 @@ import com.scalableminds.webknossos.datastore.services.{
   VoxelyticsZarrArtifactUtils
 }
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
-import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsResult, JsValue, Reads}
 import ucar.ma2.{Array => MultiArray}
 
@@ -173,17 +173,15 @@ class ZarrMeshFileService @Inject()(chunkCacheService: DSChunkCacheService, data
 
   def listMeshChunksForMultipleSegments(meshFileKey: MeshFileKey, segmentIds: Seq[Long])(
       implicit ec: ExecutionContext,
-      tc: TokenContext,
-      m: MessagesProvider): Fox[WebknossosSegmentInfo] =
+      tc: TokenContext): Fox[WebknossosSegmentInfo] =
     for {
       meshFileAttributes <- readMeshFileAttributes(meshFileKey)
-      meshChunksForUnmappedSegments: List[List[MeshLodInfo]] <- listMeshChunksForSegmentsNested(meshFileKey,
-                                                                                                segmentIds,
-                                                                                                meshFileAttributes)
-      _ <- Fox.fromBool(meshChunksForUnmappedSegments.nonEmpty) ?~> "zero chunks" ?~> Messages(
-        "mesh.file.listChunks.failed",
-        segmentIds.mkString(","),
-        meshFileKey.attachment.name)
+      meshChunksForUnmappedSegments: List[List[MeshLodInfo]] <- listMeshChunksForSegmentsNested(
+        meshFileKey,
+        segmentIds,
+        meshFileAttributes) ?~> Msg.Mesh.File.listChunksFailed(segmentIds.mkString(","), meshFileKey.attachment.name)
+      _ <- Fox.fromBool(meshChunksForUnmappedSegments.nonEmpty) ?~> Msg.Mesh.File
+        .zeroChunks(segmentIds.mkString(","), meshFileKey.attachment.name)
       wkChunkInfos <- WebknossosSegmentInfo
         .fromMeshInfosAndMetadata(meshChunksForUnmappedSegments, meshFileAttributes.meshFormat)
         .toFox
@@ -197,7 +195,7 @@ class ZarrMeshFileService @Inject()(chunkCacheService: DSChunkCacheService, data
     def lookupOne(segmentId: Long): Fox[Option[List[MeshLodInfo]]] =
       listMeshChunksForSegment(meshFileKey, segmentId, meshFileAttributes).map(Some(_)).orElse(Fox.successful(None))
     if (meshFileKey.attachment.path.isRemote)
-      Fox.batchCombined(segmentIds.toSeq, parallelity = 32)(lookupOne).map(_.flatten)
+      Fox.batchCombined(segmentIds, parallelity = 32)(lookupOne).map(_.flatten)
     else
       Fox.serialCombined(segmentIds)(lookupOne).map(_.flatten)
   }

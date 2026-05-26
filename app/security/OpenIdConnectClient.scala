@@ -1,5 +1,6 @@
 package security
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.typesafe.scalalogging.LazyLogging
@@ -37,8 +38,8 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
    */
   def getRedirectUrl(callbackUrl: String): Fox[String] =
     for {
-      _ <- Fox.fromBool(conf.Features.openIdConnectEnabled) ?~> "oidc.disabled"
-      _ <- Fox.fromBool(oidcConfig.isValid) ?~> "oidc.configuration.invalid"
+      _ <- Fox.fromBool(conf.Features.openIdConnectEnabled) ?~> Msg.Oidc.notEnabled
+      _ <- Fox.fromBool(oidcConfig.isValid) ?~> Msg.Oidc.configurationInvalid
       redirectUrl <- discover.map { serverInfos =>
         def queryParams: Map[String, String] = Map(
           "client_id" -> oidcConfig.clientId,
@@ -58,8 +59,8 @@ class OpenIdConnectClient @Inject()(rpc: RPC, conf: WkConf)(implicit ec: Executi
    */
   def getAndValidateTokens(redirectUrl: String, code: String): Fox[(JsObject, Option[JsObject])] =
     for {
-      _ <- Fox.fromBool(conf.Features.openIdConnectEnabled) ?~> "oidc.disabled"
-      _ <- Fox.fromBool(oidcConfig.isValid) ?~> "oidc.configuration.invalid"
+      _ <- Fox.fromBool(conf.Features.openIdConnectEnabled) ?~> Msg.Oidc.notEnabled
+      _ <- Fox.fromBool(oidcConfig.isValid) ?~> Msg.Oidc.configurationInvalid
       serverInfos <- discover
       tokenResponse <- rpc(serverInfos.token_endpoint)
         .silentIf(!conf.SingleSignOn.OpenIdConnect.verboseLoggingEnabled)

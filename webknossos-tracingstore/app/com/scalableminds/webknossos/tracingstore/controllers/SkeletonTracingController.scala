@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.Msg
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
@@ -20,7 +21,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.skeleton._
 import com.scalableminds.webknossos.tracingstore.tracings.TracingSelector
 import com.scalableminds.webknossos.tracingstore.{TSRemoteWebknossosClient, TracingStoreAccessTokenService}
 import com.scalableminds.util.tools.Box
-import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
@@ -83,7 +83,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
           for {
-            tracing <- annotationService.findSkeleton(annotationId, tracingId, version) ?~> Messages("tracing.notFound")
+            tracing <- annotationService.findSkeleton(annotationId, tracingId, version) ?~> Msg.Annotation.notFound
           } yield Ok(tracing.toByteArray).as(protobufMimeType)
         }
       }

@@ -1970,7 +1970,7 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ex
   "isLockedByOwner": false,
   "messages": [
     {
-      "success": "Annotation is archived",
+      "success": "Annotation is archived.",
     },
   ],
   "modified": "modified",
@@ -2095,7 +2095,7 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ex
   "isLockedByOwner": false,
   "messages": [
     {
-      "success": "Annotation was reopened",
+      "success": "Annotation was reopened.",
     },
   ],
   "modified": "modified",
@@ -2215,7 +2215,7 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ta
   "isLockedByOwner": false,
   "messages": [
     {
-      "success": "Task is finished",
+      "success": "Task is finished.",
     },
   ],
   "modified": "modified",
@@ -2388,7 +2388,7 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ta
   "isLockedByOwner": false,
   "messages": [
     {
-      "success": "Annotation was reopened",
+      "success": "Annotation was reopened.",
     },
   ],
   "modified": "modified",

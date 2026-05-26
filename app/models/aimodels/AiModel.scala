@@ -1,5 +1,6 @@
 package models.aimodels
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
@@ -104,7 +105,7 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
   private def findBestMatchingMag(modelVoxelSize: VoxelSize, datasetVoxelSize: VoxelSize, layer: StaticLayer)(
       implicit ec: ExecutionContext): Fox[Vec3Int] =
     for {
-      _ <- Fox.fromBool(layer.mags.nonEmpty) ?~> "dataset.noMags"
+      _ <- Fox.fromBool(layer.mags.nonEmpty) ?~> Msg.Dataset.noMags
       modelVoxelSizeNm = modelVoxelSize.toNanometer
       datasetVoxelSizeNm = datasetVoxelSize.toNanometer
       bestMag = layer.mags.map(_.mag).minBy { mag =>

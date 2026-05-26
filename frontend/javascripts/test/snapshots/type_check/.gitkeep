@@ -1,3 +1,0 @@
-This folder is used to write backend objects that are retrieved during end-to-end testing to disk.
-The backend objects are written as part of a syntactically correct javascript file and include their respective flow type.
-After running the end-to-end tests, flow will be run to check whether the frontend flow types are in concordance with the objects retrieved from the backend.

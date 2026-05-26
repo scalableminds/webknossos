@@ -7,9 +7,9 @@ import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 
 export async function datasetURLImportLoader({ request }: LoaderFunctionArgs) {
   const url = new URL(request.url);
-  const datasetUri = url.searchParams.get("url");
+  const datasetUri = url.searchParams.get("url")?.trim() || null;
 
-  if (datasetUri != null) {
+  if (datasetUri) {
     let existingDataset;
     try {
       existingDataset = await findDatasetByImportUrl(datasetUri);

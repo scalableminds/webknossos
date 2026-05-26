@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
@@ -26,7 +27,6 @@ import models.organization.{OrganizationDAO, OrganizationService}
 import models.storage.UsedStorageService
 import models.team.TeamDAO
 import models.user.UserDAO
-import play.api.i18n.Messages
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{WebknossosBearerTokenAuthenticatorService, WkSilhouetteEnvironment}
@@ -62,17 +62,16 @@ class WKRemoteDataStoreController @Inject()(
         val uploadInfo = request.body
         for {
           user <- bearerTokenService.userForToken(token) ~> FORBIDDEN
-          organization <- organizationDAO.findOne(uploadInfo.organization)(GlobalAccessContext) ?~> Messages(
-            "organization.notFound",
-            uploadInfo.organization) ~> NOT_FOUND
-          _ <- organizationService.assertUsedStorageNotExceeded(organization, uploadInfo.totalFileSizeInBytes) ?~> "dataset.upload.storageExceeded" ~> FORBIDDEN
-          _ <- Fox.fromBool(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
+          organization <- organizationDAO.findOne(uploadInfo.organization)(GlobalAccessContext) ?~> Msg.Organization
+            .notFound(uploadInfo.organization) ~> NOT_FOUND
+          _ <- organizationService.assertUsedStorageNotExceeded(organization, uploadInfo.totalFileSizeInBytes) ?~> Msg.Dataset.Upload.storageExceeded ~> FORBIDDEN
+          _ <- Fox.fromBool(organization._id == user._organization) ?~> Msg.notAllowed ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(uploadInfo.name)
-          _ <- Fox.fromBool(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> "dataset.upload.Datastore.restricted"
+          _ <- Fox.fromBool(dataStore.onlyAllowedOrganization.forall(_ == organization._id)) ?~> Msg.Dataset.Upload.datastoreRestricted
           _ <- Fox.serialCombined(uploadInfo.layersToLink.getOrElse(List.empty))(l =>
-            layerToLinkService.validateLayerToLink(l, user)) ?~> "dataset.upload.invalidLinkedLayers"
+            layerToLinkService.validateLayerToLink(l, user)) ?~> Msg.Dataset.Upload.invalidLinkedLayers
           _ <- Fox.runIf(request.body.requireUniqueName.getOrElse(false))(
-            datasetService.assertNewDatasetNameUnique(request.body.name, organization._id))
+            datasetService.checkNameAvailable(organization._id, request.body.name))
           preliminaryDataSource = UnusableDataSource(DataSourceId("", ""), None, DataSourceStatus.notYetUploaded)
           dataset <- datasetService.createAndSetUpDataset(
             uploadInfo.name,
@@ -82,7 +81,7 @@ class WKRemoteDataStoreController @Inject()(
             user,
             isVirtual = uploadInfo.isVirtual.getOrElse(true),
             creationType = DatasetCreationType.Upload
-          ) ?~> "dataset.upload.creation.failed"
+          ) ?~> Msg.Dataset.Upload.createFailed
           _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
           additionalInfo = ReserveAdditionalInformation(dataset._id, dataset.directoryName)
         } yield Ok(Json.toJson(additionalInfo))
@@ -93,16 +92,15 @@ class WKRemoteDataStoreController @Inject()(
                                   key: String,
                                   token: String,
                                   organizationId: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async { _ =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           user <- bearerTokenService.userForToken(token) ~> FORBIDDEN
-          organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages(
-            "organization.notFound",
-            user._organization) ~> NOT_FOUND
-          _ <- Fox.fromBool(organization._id == user._organization) ?~> "notAllowed" ~> FORBIDDEN
+          organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Msg.Organization.notFound(
+            organizationId) ~> NOT_FOUND
+          _ <- Fox.fromBool(organization._id == user._organization) ?~> Msg.notAllowed ~> FORBIDDEN
           datasets <- datasetService.getAllUnfinishedDatasetUploadsOfUser(user._id, user._organization)(
-            GlobalAccessContext) ?~> "dataset.upload.couldNotLoadUnfinishedUploads"
+            GlobalAccessContext) ?~> Msg.Dataset.Upload.couldNotLoadUnfinishedUploads
           teamIdsPerDataset <- Fox.combined(datasets.map(dataset => teamDAO.findAllowedTeamIdsForDataset(dataset.id)))
           unfinishedUploads = datasets.zip(teamIdsPerDataset).map {
             case (d, teamIds) =>
@@ -127,7 +125,7 @@ class WKRemoteDataStoreController @Inject()(
       dataStoreService.validateAccess(name, key) { _ =>
         for {
           user <- bearerTokenService.userForToken(token) ~> FORBIDDEN
-          dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
           _ = datasetService.trackNewDataset(dataset,
                                              user,
                                              request.body.needsConversion,
@@ -145,12 +143,12 @@ class WKRemoteDataStoreController @Inject()(
                                         dataSource,
                                         isUsable = true)
           }
-          updated <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          updated <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
           _ <- Fox.runIf(!request.body.needsConversion)(usedStorageService.refreshStorageReportForDataset(updated))
           _ <- Fox.runIf(!request.body.needsConversion)(datasetService.scanRealpathsIfVirtual(updated))
           _ <- Fox.runIf(request.body.needsConversion) {
             for {
-              voxelSizeFactor <- request.body.voxelSizeFactor.toFox ?~> "dataset.upload.needsConversion.missingVoxelSize"
+              voxelSizeFactor <- request.body.voxelSizeFactor.toFox ?~> Msg.Dataset.Upload.needsConversionMissingVoxelSize
               _ <- jobService.submitConvertToWkwJob(dataset, user, voxelSizeFactor, request.body.voxelSizeUnit)
             } yield ()
           }
@@ -225,23 +223,22 @@ class WKRemoteDataStoreController @Inject()(
                     key: String,
                     datasetDirectoryName: String,
                     organizationId: String): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async { _ =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Messages(
-            "organization.notFound",
+          organization <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Msg.Organization.notFound(
             organizationId) ~> NOT_FOUND
           dataset <- datasetDAO.findOneByNameAndOrganization(datasetDirectoryName, organization._id)(
-            GlobalAccessContext) ?~> Messages("dataset.notFound", datasetDirectoryName)
+            GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetDirectoryName)
         } yield Ok(Json.toJson(dataset._id))
       }
     }
 
   def getDataSource(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
-    Action.async { implicit request =>
+    Action.async { _ =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
           dataSource <- datasetService.dataSourceFor(dataset)
         } yield Ok(Json.toJson(dataSource))
       }
@@ -251,7 +248,7 @@ class WKRemoteDataStoreController @Inject()(
     Action.async(validateJson[DataSource]) { implicit request =>
       dataStoreService.validateAccess(name, key) { _ =>
         for {
-          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
           _ <- Fox.runIf(!dataset.isVirtual)(
             datasetDAO.updateDataSource(datasetId,
                                         name,
@@ -262,27 +259,25 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
-  def jobExportProperties(name: String, key: String, jobId: ObjectId): Action[AnyContent] = Action.async {
-    implicit request =>
-      dataStoreService.validateAccess(name, key) { _ =>
-        for {
-          job <- jobDAO.findOne(jobId)(GlobalAccessContext)
-          jobOwner <- userDAO.findOne(job._owner)(GlobalAccessContext)
-          organization <- organizationDAO.findOne(jobOwner._organization)(GlobalAccessContext)
-          latestRunId <- job.latestRunId.toFox ?~> "job.notRun"
-          exportFileName <- job.exportFileName.toFox ?~> "job.noExportFileName"
-          jobExportProperties = JobExportProperties(jobId.toString, latestRunId, organization._id, exportFileName)
-        } yield Ok(Json.toJson(jobExportProperties))
-      }
+  def jobExportProperties(name: String, key: String, jobId: ObjectId): Action[AnyContent] = Action.async { _ =>
+    dataStoreService.validateAccess(name, key) { _ =>
+      for {
+        job <- jobDAO.findOne(jobId)(GlobalAccessContext)
+        jobOwner <- userDAO.findOne(job._owner)(GlobalAccessContext)
+        organization <- organizationDAO.findOne(jobOwner._organization)(GlobalAccessContext)
+        latestRunId <- job.latestRunId.toFox ?~> Msg.Job.notRun
+        exportFileName <- job.exportFileName.toFox ?~> Msg.Job.noExportFileName
+        jobExportProperties = JobExportProperties(jobId.toString, latestRunId, organization._id, exportFileName)
+      } yield Ok(Json.toJson(jobExportProperties))
+    }
   }
 
-  def findCredential(name: String, key: String, credentialId: ObjectId): Action[AnyContent] = Action.async {
-    implicit request =>
-      dataStoreService.validateAccess(name, key) { _ =>
-        for {
-          credential <- credentialDAO.findOne(credentialId)
-        } yield Ok(Json.toJson(credential))
-      }
+  def findCredential(name: String, key: String, credentialId: ObjectId): Action[AnyContent] = Action.async { _ =>
+    dataStoreService.validateAccess(name, key) { _ =>
+      for {
+        credential <- credentialDAO.findOne(credentialId)
+      } yield Ok(Json.toJson(credential))
+    }
   }
 
 }

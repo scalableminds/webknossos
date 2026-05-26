@@ -57,7 +57,7 @@ class Application @Inject()(actorSystem: ActorSystem,
     addNoCacheHeaderFallback(Ok("Ok"))
   }
 
-  def checkCertificate: Action[AnyContent] = Action.async { implicit request =>
+  def checkCertificate: Action[AnyContent] = Action.async { _ =>
     certificateValidationService.checkCertificateCached().map {
       case (true, expiresAt)  => Ok(Json.obj("isValid" -> true, "expiresAt" -> expiresAt))
       case (false, expiresAt) => BadRequest(Json.obj("isValid" -> false, "expiresAt" -> expiresAt))

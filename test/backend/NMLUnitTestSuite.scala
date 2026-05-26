@@ -17,8 +17,6 @@ import com.scalableminds.util.tools.{Empty, Failure, Fox, Full}
 import org.apache.commons.io.output.ByteArrayOutputStream
 import org.scalatest.Assertion
 import org.scalatest.wordspec.AsyncWordSpec
-import play.api.i18n.{DefaultMessagesApi, Messages, MessagesProvider}
-import play.api.test.FakeRequest
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -26,16 +24,11 @@ class NMLUnitTestSuite extends AsyncWordSpec {
 
   implicit private val ec: ExecutionContext = scala.concurrent.ExecutionContext.global
   implicit private val ctx: DBAccessContext = GlobalAccessContext
-  implicit private val messagesProvider: MessagesProvider = new MessagesProvider {
-    val m = new DefaultMessagesApi()
-    override def messages: Messages = m.preferred({ FakeRequest("GET", "/") })
-  }
 
   private val mockDatasetDAO = new DatasetDAOLike {
-    override def findOneByIdOrNameAndOrganization(
-        datasetIdOpt: Option[ObjectId],
-        datasetName: String,
-        organizationId: String)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Dataset] =
+    override def findOneByIdOrNameAndOrganization(datasetIdOpt: Option[ObjectId],
+                                                  datasetName: String,
+                                                  organizationId: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
       Fox.successful(
         Dataset(
           _id = ObjectId.dummyId,

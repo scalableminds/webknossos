@@ -1,5 +1,6 @@
 package models.task
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -10,7 +11,6 @@ import models.dataset.DatasetDAO
 import models.project.ProjectDAO
 import models.team.TeamDAO
 import models.user.{User, UserService}
-import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
 import utils.WkConf
 
@@ -62,7 +62,7 @@ class TaskService @Inject()(conf: WkConf,
       )
     }
 
-  def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[List[ObjectId]] =
+  def getAllowedTeamsForNextTask(user: User)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] =
     if (user.isAdmin)
       teamDAO.findAllIdsByOrganization(user._organization)
     else {
@@ -70,7 +70,7 @@ class TaskService @Inject()(conf: WkConf,
         numberOfOpen <- countOpenNonAdminTasks(user)
         teams <- if (numberOfOpen < conf.WebKnossos.Tasks.maxOpenPerUser) userService.teamIdsFor(user._id)
         else userService.teamManagerTeamIdsFor(user._id)
-        _ <- Fox.fromBool(teams.nonEmpty) ?~> Messages("task.tooManyOpenOnes")
+        _ <- Fox.fromBool(teams.nonEmpty) ?~> Msg.Task.tooManyOpenOnes
       } yield teams
     }
 

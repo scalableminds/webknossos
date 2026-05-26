@@ -6,7 +6,7 @@ exports[`Teams API (E2E) > createTeam and deleteTeam 1`] = `
   "isOrganizationTeam": false,
   "messages": [
     {
-      "success": "Team was created successfully",
+      "success": "Team was successfully created.",
     },
   ],
   "name": "test-team-name",
@@ -18,7 +18,7 @@ exports[`Teams API (E2E) > createTeam and deleteTeam 2`] = `
 {
   "messages": [
     {
-      "success": "team.deleted",
+      "success": "Team was successfully deleted.",
     },
   ],
 }

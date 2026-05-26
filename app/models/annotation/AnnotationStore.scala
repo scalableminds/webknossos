@@ -8,7 +8,6 @@ import com.typesafe.scalalogging.LazyLogging
 import models.annotation.handler.AnnotationInformationHandlerSelector
 import models.user.User
 import com.scalableminds.util.tools.{Box, Empty, Full}
-import play.api.i18n.MessagesProvider
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -21,8 +20,7 @@ class AnnotationStore @Inject()(
 
   private val cacheTimeout = 60 minutes
 
-  def requestAnnotation(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext,
-                                                                      mp: MessagesProvider): Fox[Annotation] =
+  def requestAnnotation(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
     requestFromCache(id).getOrElse(requestFromHandler(id, user))
 
   private def requestFromCache(id: AnnotationIdentifier): Option[Fox[Annotation]] = {
@@ -34,8 +32,7 @@ class AnnotationStore @Inject()(
       None
   }
 
-  private def requestFromHandler(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext,
-                                                                               mp: MessagesProvider) = {
+  private def requestFromHandler(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext) = {
     val handler = annotationInformationHandlerSelector.informationHandlers(id.annotationType)
     for {
       annotation <- handler.provideAnnotation(id.identifier, user)

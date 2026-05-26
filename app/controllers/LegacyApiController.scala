@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import play.silhouette.api.Silhouette
 import play.silhouette.api.actions.SecuredRequest
@@ -23,7 +24,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   UsableDataSource
 }
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent}
-import play.api.i18n.Messages
 import utils.MetadataAssertions
 
 import scala.concurrent.ExecutionContext
@@ -60,8 +60,8 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
   def updatePartialV12(datasetId: ObjectId): Action[DatasetUpdateParameters] =
     sil.SecuredAction.async(validateJson[DatasetUpdateParameters]) { implicit request =>
       for {
-        dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId) ~> NOT_FOUND
-        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- Fox.runOptional(request.body.metadata)(assertNoDuplicateMetadataKeys)
         _ <- datasetDAO.updatePartial(dataset._id, request.body)
         _ <- Fox.runOptional(request.body.dataSource) { dataSourceUpdates =>

@@ -200,7 +200,7 @@ class AiModelController @Inject()(
                                                    dataStore.name) ?~> "job.couldNotRunTrainModel"
         newAiModel = AiModel(
           _id = modelId,
-          _organization = request.identity._organization,
+          _organization = Some(request.identity._organization),
           _sharedOrganizations = List(),
           _dataStore = dataStore.name,
           _user = Some(request.identity._id),
@@ -258,7 +258,7 @@ class AiModelController @Inject()(
                                                    dataStore.name) ?~> "job.couldNotRunTrainModel"
         newAiModel = AiModel(
           _id = modelId,
-          _organization = request.identity._organization,
+          _organization = Some(request.identity._organization),
           _sharedOrganizations = List(),
           _dataStore = dataStore.name,
           _user = Some(request.identity._id),
@@ -295,7 +295,7 @@ class AiModelController @Inject()(
           "layer_name" -> request.body.colorLayerName,
           "bbox" -> mag1BoundingBox.toLiteral,
           "model_id" -> request.body.aiModelId,
-          "model_organization_id" -> Some(aiModel).filterNot(_.isPretrained).map(_._organization),
+          "model_organization_id" -> Some(aiModel).filterNot(_.isPretrained).flatMap(_._organization),
           "dataset_directory_name" -> dataset.directoryName,
           "new_dataset_name" -> request.body.newDatasetName,
           "invert_color_layer" -> request.body.invertColorLayer,
@@ -356,7 +356,7 @@ class AiModelController @Inject()(
           "layer_name" -> request.body.colorLayerName,
           "bbox" -> mag1BoundingBox.toLiteral,
           "model_id" -> request.body.aiModelId,
-          "model_organization_id" -> Some(aiModel).filterNot(_.isPretrained).map(_._organization),
+          "model_organization_id" -> Some(aiModel).filterNot(_.isPretrained).flatMap(_._organization),
           "annotation_id" -> request.body.annotationId,
           "dataset_directory_name" -> dataset.directoryName,
           "new_dataset_name" -> request.body.newDatasetName,
@@ -403,7 +403,7 @@ class AiModelController @Inject()(
         for {
           _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(request.identity)
           aiModel <- aiModelDAO.findOne(aiModelId) ?~> "aiModel.notFound" ~> NOT_FOUND
-          _ <- Fox.fromBool(aiModel._organization == request.identity._organization) ?~> "aiModel.notOwned"
+          _ <- Fox.fromBool(aiModel._organization.contains(request.identity._organization)) ?~> "aiModel.notOwned"
           _ <- aiModelDAO.updateOne(aiModel.copy(name = request.body.name,
                                                  comment = request.body.comment,
                                                  modified = Instant.now)) ?~> "aiModel.updatingFailed"
@@ -448,7 +448,7 @@ class AiModelController @Inject()(
                                                 user: User)(implicit ctx: DBAccessContext): Fox[ObjectId] =
     for {
       existingModel <- aiModelDAO.findOne(existingAiModelId)
-      _ <- Fox.fromBool(existingModel._organization == user._organization) ?~> "aiModel.reserve.wrongOrga" ~> FORBIDDEN
+      _ <- Fox.fromBool(existingModel._organization.contains(user._organization)) ?~> "aiModel.reserve.wrongOrga" ~> FORBIDDEN
       _ <- Fox.fromBool(existingModel.uploadToPathIsPending) ?~> "aiModel.reserve.notPending"
       path <- uploadToPathsService.generateAiModelPath(existingAiModelId, user._organization, params.pathPrefix)
       _ <- aiModelDAO.updatePath(existingAiModelId, path)
@@ -466,7 +466,7 @@ class AiModelController @Inject()(
       path <- uploadToPathsService.generateAiModelPath(newId, user._organization, params.pathPrefix)
       newAiModel = AiModel(
         _id = newId,
-        _organization = user._organization,
+        _organization = Some(user._organization),
         _sharedOrganizations = List(user._organization),
         _dataStore = params.dataStoreName,
         _user = Some(user._id),
@@ -487,7 +487,7 @@ class AiModelController @Inject()(
       for {
         existingAiModel <- aiModelDAO.findOne(id)
         _ <- Fox.fromBool(existingAiModel.uploadToPathIsPending) ?~> "aiModel.finish.notPending"
-        _ <- Fox.fromBool(existingAiModel._organization == request.identity._organization) ?~> "aiModel.finish.wrongOrga" ~> FORBIDDEN
+        _ <- Fox.fromBool(existingAiModel._organization.contains(request.identity._organization)) ?~> "aiModel.finish.wrongOrga" ~> FORBIDDEN
         _ <- aiModelDAO.finishUploadToPath(id)
       } yield Ok
     }

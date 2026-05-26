@@ -26,7 +26,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 case class AiModel(_id: ObjectId,
-                   _organization: String,
+                   _organization: Option[String],
                    _sharedOrganizations: List[String],
                    _dataStore: String,
                    _user: Option[ObjectId],
@@ -76,7 +76,7 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
           case _         => Fox.successful(None)
       })
       trainingJobJsOpt <- Fox.runOptional(trainingJobOpt.flatten)(jobService.publicWrites)
-      isOwnedByUsersOrganization = aiModel._organization == requestingUser._organization
+      isOwnedByUsersOrganization = aiModel._organization.contains(requestingUser._organization)
       sharedOrganizationIds <- if (isOwnedByUsersOrganization) for {
         orgaIdsUserCanAccess <- organizationDAO.findAll.flatMap(os => Fox.successful(os.map(_._id)))
         sharedOrgasIdsUserCanAccess = aiModel._sharedOrganizations.filter(orgaIdsUserCanAccess.contains)
@@ -137,12 +137,13 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
       case Some(path) => Fox.successful(path)
       case None =>
         for {
+          organizationId <- aiModel._organization.toFox ?~> "aiModel.noOrganization"
           dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)(GlobalAccessContext)
           dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
           dataStoreBaseDir <- dataStoreClient.getBaseDirAbsolute
           baseDirUPath <- UPath.fromString(dataStoreBaseDir).toFox
           // No custom path, use legacy path schema:
-          fallbackPath = baseDirUPath / aiModel._organization / ".aiModels" / aiModel._id.toString
+          fallbackPath = baseDirUPath / organizationId / ".aiModels" / aiModel._id.toString
         } yield fallbackPath
     }
 
@@ -289,8 +290,10 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         q"SELECT _organization FROM webknossos.aiModel_organizations WHERE _aiModel = ${aiModel._id} ORDER BY _organization"
           .as[String])
       ids = rows.toList
-      idsWithOwningOrganization = if (ids.contains(aiModel._organization)) ids
-      else ids :+ aiModel._organization
+      idsWithOwningOrganization = aiModel._organization match {
+        case Some(orgId) => if (ids.contains(orgId)) ids else ids :+ orgId
+        case None        => ids
+      }
     } yield idsWithOwningOrganization
 
   def updateOne(a: AiModel): Fox[Unit] =

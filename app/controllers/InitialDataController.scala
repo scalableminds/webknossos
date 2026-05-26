@@ -164,7 +164,7 @@ Samplecountry
     DataStore(conf.Datastore.name, conf.Http.uri, conf.Datastore.publicUri.getOrElse(conf.Http.uri), conf.Datastore.key)
   private val defaultAiModel = AiModel(
     _id = ObjectId("66544a56d20000af0e42ba0f"),
-    _organization = defaultOrganization._id,
+    _organization = Some(defaultOrganization._id),
     _sharedOrganizations = List(),
     _dataStore = defaultDataStore.name,
     _user = Some(defaultUser._id),
@@ -179,7 +179,7 @@ Samplecountry
   )
   private val pretrainedNeuronModel = AiModel(
     _id = aiModelService.pretrainedNeuronModelId,
-    _organization = defaultOrganization._id,
+    _organization = None,
     _sharedOrganizations = List(),
     _dataStore = defaultDataStore.name,
     _user = None,
@@ -196,7 +196,7 @@ Samplecountry
   )
   private val pretrainedMitochondriaModel = AiModel(
     _id = aiModelService.pretrainedMitochondriaModelId,
-    _organization = defaultOrganization._id,
+    _organization = None,
     _sharedOrganizations = List(),
     _dataStore = defaultDataStore.name,
     _user = None,
@@ -213,7 +213,7 @@ Samplecountry
   )
   private val pretrainedNucleiModel = AiModel(
     _id = aiModelService.pretrainedNucleiModelId,
-    _organization = defaultOrganization._id,
+    _organization = None,
     _sharedOrganizations = List(),
     _dataStore = defaultDataStore.name,
     _user = None,
@@ -229,7 +229,7 @@ Samplecountry
   )
   private val pretrainedSomaModel = AiModel(
     _id = aiModelService.pretrainedSomataModelId,
-    _organization = defaultOrganization._id,
+    _organization = None,
     _sharedOrganizations = List(),
     _dataStore = defaultDataStore.name,
     _user = None,

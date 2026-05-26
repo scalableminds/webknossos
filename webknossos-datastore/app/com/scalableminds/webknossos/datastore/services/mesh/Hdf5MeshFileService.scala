@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.geometry.Vec3Float
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, Full}
@@ -7,7 +8,6 @@ import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 import jakarta.inject.Inject
-import play.api.i18n.{Messages, MessagesProvider}
 
 import scala.concurrent.ExecutionContext
 
@@ -135,18 +135,15 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig)
   }
 
   def listMeshChunksForMultipleSegments(meshFileKey: MeshFileKey, segmentIds: Seq[Long])(
-      implicit ec: ExecutionContext,
-      m: MessagesProvider): Fox[WebknossosSegmentInfo] =
+      implicit ec: ExecutionContext): Fox[WebknossosSegmentInfo] =
     for {
       (meshFormat, lodScaleMultiplier, transform) <- readMeshFileMetadata(meshFileKey).toFox
       meshChunksForUnmappedSegments: List[List[MeshLodInfo]] = listMeshChunksForSegmentsNested(meshFileKey,
                                                                                                segmentIds,
                                                                                                lodScaleMultiplier,
                                                                                                transform)
-      _ <- Fox.fromBool(meshChunksForUnmappedSegments.nonEmpty) ?~> "zero chunks" ?~> Messages(
-        "mesh.file.listChunks.failed",
-        segmentIds.mkString(","),
-        meshFileKey.attachment.name)
+      _ <- Fox.fromBool(meshChunksForUnmappedSegments.nonEmpty) ?~> Msg.Mesh.File
+        .zeroChunks(segmentIds.mkString(","), meshFileKey.attachment.name)
       wkChunkInfos <- WebknossosSegmentInfo.fromMeshInfosAndMetadata(meshChunksForUnmappedSegments, meshFormat).toFox
     } yield wkChunkInfos
 

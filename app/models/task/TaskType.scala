@@ -1,5 +1,6 @@
 package models.task
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
@@ -43,7 +44,7 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO) {
 
   def publicWrites(taskType: TaskType): Fox[JsObject] =
     for {
-      team <- teamDAO.findOne(taskType._team)(GlobalAccessContext) ?~> "team.notFound"
+      team <- teamDAO.findOne(taskType._team)(GlobalAccessContext) ?~> Msg.Team.notFound(taskType._team)
     } yield
       Json.obj(
         "id" -> taskType._id.toString,

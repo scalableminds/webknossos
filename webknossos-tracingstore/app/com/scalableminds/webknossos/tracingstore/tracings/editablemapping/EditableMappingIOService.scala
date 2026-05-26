@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.{NamedFunctionStream, ZipIO}
@@ -189,7 +190,7 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService,
                                                  None,
                                                  chunkCacheService.sharedChunkContentsCache)
       numEdges <- editedEdgesZarrArray.datasetShape.flatMap(_.headOption).toFox
-      _ <- Fox.fromBool(numEdges.toInt.toLong == numEdges) ?~> "editableMappingFromZip.numEdges.exceedsInt"
+      _ <- Fox.fromBool(numEdges.toInt.toLong == numEdges) ?~> Msg.Annotation.EditableMapping.numEdgesExceedsInt
       editedEdges <- editedEdgesZarrArray.readAsMultiArray(offset = Array(0L, 0L), shape = Array(numEdges.toInt, 2))
       edgeIsAddition <- edgeIsAdditionZarrArray.readAsMultiArray(offset = 0L, shape = numEdges.toInt)
     } yield (editedEdges, edgeIsAddition)

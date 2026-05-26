@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.services
 
 import com.google.inject.Inject
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
@@ -64,7 +65,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
     for {
       dataBucketWise: Seq[Array[Byte]] <- Fox.fromFuture(
         Fox.sequenceOfFulls(positions.map(getDataFor(datasetId, dataSourceId, dataLayer, _, mag))))
-      _ <- Fox.fromBool(dataBucketWise.nonEmpty) ?~> "dataset.noData"
+      _ <- Fox.fromBool(dataBucketWise.nonEmpty) ?~> Msg.Dataset.loadingDataFailed
       dataConcatenated = concatenateBuckets(dataBucketWise)
     } yield dataConcatenated
 
@@ -151,7 +152,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
       val positions = createPositions(dataLayer, 2).distinct
       histogramForPositions(datasetId, dataSourceId, dataLayer, positions, dataLayer.resolutions.minBy(_.maxDim))
     } else
-      Fox.failure("dataset.noMags")
+      Fox.failure(Msg.Dataset.noMags)
 
   private def histogramForPositions(datasetId: ObjectId,
                                     dataSourceId: DataSourceId,
@@ -159,7 +160,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
                                     positions: List[Vec3Int],
                                     mag: Vec3Int)(implicit tc: TokenContext): Fox[Seq[Histogram]] =
     for {
-      dataConcatenated <- getConcatenatedDataFor(datasetId, dataSourceId, dataLayer, positions, mag) ?~> "dataset.noData"
+      dataConcatenated <- getConcatenatedDataFor(datasetId, dataSourceId, dataLayer, positions, mag) ?~> Msg.Dataset.loadingDataFailed
       isUint24 = dataLayer.elementClass == ElementClass.uint24
       convertedData = filterZeroes(convertData(dataConcatenated, dataLayer.elementClass), skip = isUint24)
     } yield calculateHistogramValues(convertedData, dataLayer.elementClass)

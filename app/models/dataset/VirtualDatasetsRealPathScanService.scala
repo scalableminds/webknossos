@@ -6,7 +6,6 @@ import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.typesafe.scalalogging.LazyLogging
 import jakarta.inject.Inject
 import org.apache.pekko.actor.ActorSystem
-import play.api.i18n.{Lang, MessagesApi, MessagesProvider}
 import play.api.inject.ApplicationLifecycle
 
 import scala.concurrent.duration._
@@ -15,7 +14,6 @@ import scala.concurrent.ExecutionContext
 class VirtualDatasetsRealPathScanService @Inject()(
     datasetService: DatasetService,
     datasetDAO: DatasetDAO,
-    messagesApi: MessagesApi,
     val actorSystem: ActorSystem,
     val lifecycle: ApplicationLifecycle)(implicit val ec: ExecutionContext)
     extends IntervalScheduler
@@ -23,7 +21,6 @@ class VirtualDatasetsRealPathScanService @Inject()(
     with FoxImplicits {
 
   implicit private val ctx: DBAccessContext = GlobalAccessContext
-  implicit private val mp: MessagesProvider = messagesApi.preferred(Seq(Lang.defaultLang))
 
   override protected def tickerInterval: FiniteDuration = 1 hour
 

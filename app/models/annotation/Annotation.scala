@@ -1,5 +1,6 @@
 package models.annotation
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
@@ -64,12 +65,12 @@ case class Annotation(
 
   def skeletonTracingId(implicit ec: ExecutionContext): Fox[Option[String]] =
     for {
-      _ <- Fox.fromBool(annotationLayers.count(_.typ == AnnotationLayerType.Skeleton) <= 1) ?~> "annotation.multiLayers.skeleton.notImplemented"
+      _ <- Fox.fromBool(annotationLayers.count(_.typ == AnnotationLayerType.Skeleton) <= 1) ?~> Msg.Annotation.multiLayersSkeletonNotImplemented
     } yield annotationLayers.find(_.typ == AnnotationLayerType.Skeleton).map(_.tracingId)
 
   def volumeTracingId(implicit ec: ExecutionContext): Fox[Option[String]] =
     for {
-      _ <- Fox.fromBool(annotationLayers.count(_.typ == AnnotationLayerType.Volume) <= 1) ?~> "annotation.multiLayers.volume.notImplemented"
+      _ <- Fox.fromBool(annotationLayers.count(_.typ == AnnotationLayerType.Volume) <= 1) ?~> Msg.Annotation.multiLayersVolumeNotImplemented
     } yield annotationLayers.find(_.typ == AnnotationLayerType.Volume).map(_.tracingId)
 
   def volumeAnnotationLayers: List[AnnotationLayer] = annotationLayers.filter(_.typ == AnnotationLayerType.Volume)

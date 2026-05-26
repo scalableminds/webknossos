@@ -1,5 +1,6 @@
 package models.annotation.nml
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
@@ -26,7 +27,6 @@ import models.annotation.{SharedParsingParameters, UploadedVolumeLayer}
 import models.dataset.DatasetDAOLike
 import com.scalableminds.util.tools.Box._
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
-import play.api.i18n.{Messages, MessagesProvider}
 
 import java.io.InputStream
 import javax.inject.Inject
@@ -53,14 +53,13 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
       nmlInputStream: InputStream,
       sharedParsingParameters: SharedParsingParameters,
       basePath: Option[String] = None
-  )(implicit m: MessagesProvider, ec: ExecutionContext, ctx: DBAccessContext): Fox[NmlParseSuccessWithoutFile] =
+  )(implicit ec: ExecutionContext, ctx: DBAccessContext): Fox[NmlParseSuccessWithoutFile] =
     for {
       nmlParsedParameters <- getParametersFromNML(nmlInputStream, name, sharedParsingParameters).toFox
       parsedResult <- nmlParametersToResult(nmlParsedParameters, basePath)
     } yield parsedResult
 
   private def nmlParametersToResult(nmlParams: NmlParsedParameters, basePath: Option[String])(implicit
-      m: MessagesProvider,
       ec: ExecutionContext,
       ctx: DBAccessContext
   ): Fox[NmlParseSuccessWithoutFile] =
@@ -135,20 +134,18 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
       nmlInputStream: InputStream,
       name: String,
       sharedParsingParameters: SharedParsingParameters
-  )(implicit m: MessagesProvider): Box[NmlParsedParameters] =
+  ): Box[NmlParsedParameters] =
     try {
       val nmlData = XML.load(nmlInputStream)
       for {
-        parameters <- Box((nmlData \ "parameters").headOption) ?~ Messages("nml.parameters.notFound")
+        parameters <- Box((nmlData \ "parameters").headOption) ?~ Msg.Nml.parametersNotFound
         timestamp = parseTime(parameters \ "time")
         comments <- parseComments(nmlData \ "comments")
         branchPoints <- parseBranchPoints(nmlData \ "branchpoints", timestamp)
         trees <- parseTrees(nmlData \ "thing", buildBranchPointMap(branchPoints), buildCommentMap(comments))
         treeGroups <- extractTreeGroups(nmlData \ "groups")
         volumes = extractVolumes(nmlData \ "volume")
-        _ <- Box.fromBool(volumes.length == volumes.map(_.name).distinct.length) ?~ Messages(
-          "nml.duplicateVolumeLayerNames"
-        )
+        _ <- Box.fromBool(volumes.length == volumes.map(_.name).distinct.length) ?~ Msg.Nml.duplicateVolumeLayerNames
         treesAndGroupsAfterSplitting = MultiComponentTreeSplitter.splitMulticomponentTrees(trees, treeGroups)
         treesSplit = treesAndGroupsAfterSplitting._1
         treeGroupsAfterSplit = treesAndGroupsAfterSplitting._2
@@ -213,24 +210,22 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
         Failure(s"Failed to parse NML '$name': " + e.toString)
     }
 
-  private def extractTreeGroups(
-      treeGroupContainerNodes: NodeSeq
-  )(implicit m: MessagesProvider): Box[List[TreeGroup]] = {
+  private def extractTreeGroups(treeGroupContainerNodes: NodeSeq): Box[List[TreeGroup]] = {
     val treeGroupNodes = treeGroupContainerNodes.flatMap(_ \ "group")
-    treeGroupNodes.map(parseTreeGroup).toList.toSingleBox(Messages("nml.element.invalid", "tree groups"))
+    treeGroupNodes.map(parseTreeGroup).toList.toSingleBox(Msg.Nml.invalidElements("tree group"))
   }
 
-  private def parseTreeGroup(node: XMLNode)(implicit m: MessagesProvider): Box[TreeGroup] = {
+  private def parseTreeGroup(node: XMLNode): Box[TreeGroup] = {
     val idText = getSingleAttribute(node, "id")
     for {
-      id <- Box(idText.toIntOpt) ?~ Messages("nml.treegroup.id.invalid", idText)
+      id <- Box(idText.toIntOpt) ?~ Msg.Nml.invalidTreeGroupId(idText)
       children <- (node \ "group").map(parseTreeGroup).toList.toSingleBox("")
       name = getSingleAttribute(node, "name")
       isExpanded = getSingleAttribute(node, "isExpanded").toBooleanOpt.getOrElse(true)
     } yield TreeGroup(name, id, children, isExpanded = Some(isExpanded))
   }
 
-  private def extractVolumes(volumeNodes: NodeSeq)(implicit m: MessagesProvider): immutable.Seq[NmlVolumeTag] =
+  private def extractVolumes(volumeNodes: NodeSeq): immutable.Seq[NmlVolumeTag] =
     volumeNodes.map(node =>
       NmlVolumeTag(
         getSingleAttribute(node, "location"),
@@ -246,17 +241,15 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
       )
     )
 
-  private def extractSegmentGroups(
-      segmentGroupContainerNodes: NodeSeq
-  )(implicit m: MessagesProvider): Box[List[SegmentGroup]] = {
+  private def extractSegmentGroups(segmentGroupContainerNodes: NodeSeq): Box[List[SegmentGroup]] = {
     val segmentGroupNodes = segmentGroupContainerNodes.flatMap(_ \ "group")
-    segmentGroupNodes.map(parseSegmentGroup).toList.toSingleBox(Messages("nml.element.invalid", "segment groups"))
+    segmentGroupNodes.map(parseSegmentGroup).toList.toSingleBox(Msg.Nml.invalidElements("segment group"))
   }
 
-  private def parseSegmentGroup(node: XMLNode)(implicit m: MessagesProvider): Box[SegmentGroup] = {
+  private def parseSegmentGroup(node: XMLNode): Box[SegmentGroup] = {
     val idText = getSingleAttribute(node, "id")
     for {
-      id <- Box(idText.toIntOpt) ?~ Messages("nml.segmentGroup.id.invalid", idText)
+      id <- Box(idText.toIntOpt) ?~ Msg.Nml.invalidSegmentGroupId(idText)
       children <- (node \ "group").map(parseSegmentGroup).toList.toSingleBox("")
       name = getSingleAttribute(node, "name")
     } yield SegmentGroup(name, id, children)
@@ -319,21 +312,21 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
       treeNodes: NodeSeq,
       branchPoints: Map[Int, List[BranchPoint]],
       comments: Map[Int, List[Comment]]
-  )(implicit m: MessagesProvider) =
+  ) =
     treeNodes
       .map(treeNode => parseTree(treeNode, branchPoints, comments))
       .toList
-      .toSingleBox(Messages("nml.element.invalid", "trees"))
+      .toSingleBox(Msg.Nml.invalidElements("tree"))
 
   @SuppressWarnings(Array("TraversableHead")) // We check that size == 1 before accessing head
-  private def parseBoundingBoxes(boundingBoxNodes: NodeSeq)(implicit m: MessagesProvider): Seq[NamedBoundingBoxProto] =
+  private def parseBoundingBoxes(boundingBoxNodes: NodeSeq): Seq[NamedBoundingBoxProto] =
     if (boundingBoxNodes.size == 1 && getSingleAttribute(boundingBoxNodes.head, "id").isEmpty) {
       Seq.empty ++ parseBoundingBox(boundingBoxNodes.head).map(NamedBoundingBoxProto(0, None, None, None, _))
     } else {
       boundingBoxNodes.flatMap { node =>
         val idText = getSingleAttribute(node, "id")
         (for {
-          id <- Box(idText.toIntOpt) ?~ Messages("nml.boundingbox.id.invalid", idText)
+          id <- Box(idText.toIntOpt) ?~ Msg.Nml.invalidUserBboxId(idText)
           name = getSingleAttribute(node, "name")
           isVisible = getSingleAttribute(node, "isVisible").toBooleanOpt
           color = parseColorOpt(node)
@@ -353,7 +346,6 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
     nodes.headOption.flatMap(node => parseBoundingBox(node)).map { bb =>
       val newId = if (userBoundingBoxes.isEmpty) 0 else userBoundingBoxes.map(_.id).max + 1
       NamedBoundingBoxProto(newId, Some("task bounding box"), None, Some(getRandomColor), bb)
-
     }
 
   private def parseBoundingBox(node: XMLNode) =
@@ -366,7 +358,7 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
       depth <- getSingleAttribute(node, "depth").toIntOpt
     } yield BoundingBox(Vec3Int(topLeftX, topLeftY, topLeftZ), width, height, depth)
 
-  private def parseAdditionalAxes(nodes: NodeSeq)(implicit m: MessagesProvider): Box[Seq[AdditionalAxisProto]] = {
+  private def parseAdditionalAxes(nodes: NodeSeq): Box[Seq[AdditionalAxisProto]] = {
     val additionalAxes: Option[collection.Seq[AdditionalAxisProto]] = nodes.headOption.map(
       _.child.flatMap(additionalAxisNode =>
         for {
@@ -382,11 +374,10 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
     )
     additionalAxes match {
       case Some(axes) =>
-        if (axes.map(_.name).distinct.size == axes.size) {
+        if (axes.map(_.name).distinct.size == axes.size)
           Full(axes.toSeq)
-        } else {
-          Failure(Messages("nml.additionalCoordinates.notUnique"))
-        }
+        else
+          Failure(Msg.Nml.additionalCoordinatesNotUnique)
       case None => Full(Seq())
     }
   }
@@ -425,16 +416,14 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
   private def parseZoomLevel(nodes: NodeSeq) =
     nodes.headOption.flatMap(node => getSingleAttribute(node, "zoom").toDoubleOpt)
 
-  private def parseBranchPoints(branchPoints: NodeSeq, defaultTimestamp: Long)(implicit
-      m: MessagesProvider
-  ): Box[List[BranchPoint]] =
+  private def parseBranchPoints(branchPoints: NodeSeq, defaultTimestamp: Long): Box[List[BranchPoint]] =
     (branchPoints \ "branchpoint").zipWithIndex.map { case (branchPoint, index) =>
       Box(getSingleAttribute(branchPoint, "id").toIntOpt).map { nodeId =>
         val parsedTimestamp = getSingleAttribute(branchPoint, "time").toLongOpt
         val timestamp = parsedTimestamp.getOrElse(defaultTimestamp - index)
         BranchPoint(nodeId, timestamp)
-      } ?~ Messages("nml.node.id.invalid", "branchpoint", getSingleAttribute(branchPoint, "id"))
-    }.toList.toSingleBox(Messages("nml.element.invalid", "branchpoints"))
+      } ?~ Msg.Nml.invalidNodeId(" branchpoint", getSingleAttribute(branchPoint, "id"))
+    }.toList.toSingleBox(Msg.Nml.invalidElements("branchpoint"))
 
   private def parseVec3Int(node: XMLNode) = {
     val xText = getSingleAttribute(node, "x")
@@ -488,25 +477,21 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
       case None            => color.map(c => !c.a.isNearZero)
     }
 
-  private def parseTree(tree: XMLNode, branchPoints: Map[Int, List[BranchPoint]], comments: Map[Int, List[Comment]])(
-      implicit m: MessagesProvider
+  private def parseTree(
+      tree: XMLNode,
+      branchPoints: Map[Int, List[BranchPoint]],
+      comments: Map[Int, List[Comment]]
   ): Box[Tree] = {
     val treeIdText = getSingleAttribute(tree, "id")
     for {
-      id <- Box(treeIdText.toIntOpt) ?~ Messages("nml.tree.id.invalid", treeIdText)
+      id <- Box(treeIdText.toIntOpt) ?~ Msg.Nml.invalidTreeId(treeIdText)
       color = parseColorOpt(tree)
       name = parseName(tree)
       treeType = parseType(tree)
       groupId = parseGroupId(tree)
       isVisible = parseVisibility(tree, color)
-      nodes <- (tree \ "nodes" \ "node")
-        .map(parseNode)
-        .toList
-        .toSingleBox(Messages("nml.tree.elements.invalid", "nodes", id))
-      edges <- (tree \ "edges" \ "edge")
-        .map(parseEdge)
-        .toList
-        .toSingleBox(Messages("nml.tree.elements.invalid", "edges", id))
+      nodes <- (tree \ "nodes" \ "node").map(parseNode).toList.toSingleBox(Msg.Nml.invalidTreeElements("nodes", id))
+      edges <- (tree \ "edges" \ "edge").map(parseEdge).toList.toSingleBox(Msg.Nml.invalidTreeElements("edges", id))
       nodeIds = nodes.map(_.id)
       treeBranchPoints = nodeIds.flatMap(nodeId => branchPoints.getOrElse(nodeId, List()))
       treeComments = nodeIds.flatMap(nodeId => comments.getOrElse(nodeId, List()))
@@ -530,19 +515,18 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
     )
   }
 
-  private def parseComments(comments: NodeSeq)(implicit m: MessagesProvider): Box[List[Comment]] =
+  private def parseComments(comments: NodeSeq): Box[List[Comment]] =
     (for {
       commentNode <- comments \ "comment"
     } yield
       for {
-        nodeId <- Box(getSingleAttribute(commentNode, "node").toIntOpt) ?~ Messages(
-          "nml.comment.node.invalid",
+        nodeId <- Box(getSingleAttribute(commentNode, "node").toIntOpt) ?~ Msg.Nml.invalidNodeIdInComment(
           getSingleAttribute(commentNode, "node")
         )
       } yield {
         val content = getSingleAttribute(commentNode, "content")
         Comment(nodeId, content)
-      }).toList.toSingleBox(Messages("nml.element.invalid", "comments"))
+      }).toList.toSingleBox(Msg.Nml.invalidElements("comment"))
 
   private def buildCommentMap(comments: List[Comment]): Map[Int, List[Comment]] = {
     val commentMap = new mutable.HashMap[Int, List[Comment]]()
@@ -574,12 +558,12 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
   private def getSingleAttributeOpt(xmlNode: XMLNode, attribute: String): Option[String] =
     xmlNode.attribute(attribute).flatMap(_.headOption.map(_.text))
 
-  private def parseEdge(edge: XMLNode)(implicit m: MessagesProvider): Box[Edge] = {
+  private def parseEdge(edge: XMLNode): Box[Edge] = {
     val sourceStr = getSingleAttribute(edge, "source")
     val targetStr = getSingleAttribute(edge, "target")
     for {
-      source <- Box(sourceStr.toIntOpt) ?~ Messages("nml.edge.invalid", sourceStr)
-      target <- Box(targetStr.toIntOpt) ?~ Messages("nml.edge.invalid", targetStr)
+      source <- Box(sourceStr.toIntOpt) ?~ Msg.Nml.invalidEdge(sourceStr, targetStr)
+      target <- Box(targetStr.toIntOpt) ?~ Msg.Nml.invalidEdge(sourceStr, targetStr)
     } yield Edge(source, target)
   }
 
@@ -598,13 +582,13 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
   private def parseTimestamp(node: XMLNode) =
     getSingleAttribute(node, "time").toLongOpt.getOrElse(DEFAULT_TIMESTAMP)
 
-  private def parseNode(node: XMLNode)(implicit m: MessagesProvider): Box[Node] = {
+  private def parseNode(node: XMLNode): Box[Node] = {
     val nodeIdText = getSingleAttribute(node, "id")
     for {
-      id <- Box(nodeIdText.toIntOpt) ?~ Messages("nml.node.id.invalid", "", nodeIdText)
+      id <- Box(nodeIdText.toIntOpt) ?~ Msg.Nml.invalidNodeId("", nodeIdText)
       radius = getSingleAttribute(node, "radius").toFloatOpt.getOrElse(NodeDefaults.radius)
       additionalCoordinates = parseAdditionalCoordinateValues(node)
-      position <- Box(parseVec3Int(node)) ?~ Messages("nml.node.attribute.invalid", "position", id)
+      position <- Box(parseVec3Int(node)) ?~ Msg.Nml.invalidNodeAttribute("position", id)
     } yield {
       val viewport = parseViewport(node)
       val mag = parseMag(node)

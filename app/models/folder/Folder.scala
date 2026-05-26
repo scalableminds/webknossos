@@ -1,5 +1,6 @@
 package models.folder
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.schema.Tables._
@@ -41,10 +42,10 @@ class FolderService @Inject()(teamDAO: TeamDAO,
       requestingUserOrganization: Option[Organization] = None)(implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       teams <- teamService.allowedTeamsForFolder(folder._id, cumulative = false, requestingUser)
-      teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t, requestingUserOrganization)) ?~> "dataset.list.teamWritesFailed"
+      teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t, requestingUserOrganization)) ?~> Msg.Dataset.List.teamWritesFailed
       teamsCumulative <- teamService.allowedTeamsForFolder(folder._id, cumulative = true, requestingUser)
       teamsCumulativeJs <- Fox.serialCombined(teamsCumulative)(t =>
-        teamService.publicWrites(t, requestingUserOrganization)) ?~> "dataset.list.teamWritesFailed"
+        teamService.publicWrites(t, requestingUserOrganization)) ?~> Msg.Dataset.List.teamWritesFailed
       isEditable <- folderDAO.isEditable(folder._id)
     } yield
       Json.obj(
@@ -68,7 +69,7 @@ class FolderService @Inject()(teamDAO: TeamDAO,
   def updateAllowedTeams(folderId: ObjectId, teams: List[ObjectId], requestingUser: User)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- folderDAO.findOne(folderId) ?~> "folder.notFound"
+      _ <- folderDAO.findOne(folderId) ?~> Msg.Folder.notFound
       includeMemberOnlyTeams = requestingUser.isDatasetManager
       userTeams <- if (includeMemberOnlyTeams) teamDAO.findAll else teamDAO.findAllEditable
       oldAllowedTeams: List[ObjectId] <- teamService.allowedTeamIdsForFolder(folderId, cumulative = false)
@@ -79,7 +80,7 @@ class FolderService @Inject()(teamDAO: TeamDAO,
     } yield ()
 
   def assertValidFolderName(name: String): Fox[Unit] =
-    Fox.fromBool(!name.contains("/")) ?~> "folder.nameMustNotContainSlash"
+    Fox.fromBool(!name.contains("/")) ?~> Msg.Folder.nameMustNotContainSlash
 
   def getOrCreateFromPathLiteral(folderPathLiteral: String, organizationId: String)(
       implicit ctx: DBAccessContext): Fox[ObjectId] =
@@ -87,10 +88,10 @@ class FolderService @Inject()(teamDAO: TeamDAO,
       organization <- organizationDAO.findOne(organizationId)
       foldersWithParents: Seq[FolderWithParent] <- folderDAO.findTreeOf(organization._rootFolder)
       root <- foldersWithParents.find(_._parent.isEmpty).toFox
-      _ <- Fox.fromBool(folderPathLiteral.startsWith("/")) ?~> "pathLiteral.mustStartWithSlash"
+      _ <- Fox.fromBool(folderPathLiteral.startsWith("/")) ?~> Msg.Folder.pathMustStartWithSlash
       pathNames = folderPathLiteral.drop(1).split("/").toList
       suppliedRootName <- pathNames.headOption.toFox
-      _ <- Fox.fromBool(suppliedRootName == root.name) ?~> "pathLiteral.mustStartAtOrganizationRootFolder"
+      _ <- Fox.fromBool(suppliedRootName == root.name) ?~> Msg.Folder.pathMustStartAtOrganizationRootFolder
       (existingFolderId, remainingPathNames) = findLowestMatchingFolder(root, foldersWithParents, pathNames)
       _ = if (remainingPathNames.nonEmpty) {
         logger.info(s"Creating new folder(s) under $existingFolderId by path literal: $remainingPathNames...")

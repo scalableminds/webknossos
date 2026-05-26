@@ -56,15 +56,6 @@ lazy val protocolBufferSettings = Seq(
   )
 )
 
-lazy val copyMessagesFilesSetting = {
-  lazy val copyMessages = taskKey[Unit]("Copy messages file to data- and tracing stores")
-  copyMessages := {
-    val messagesFile = baseDirectory.value / ".." / "conf" / "messages"
-    val targetPath = (baseDirectory.value / "conf" / "messages").toPath
-    java.nio.file.Files.copy(messagesFile.toPath, targetPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
-  }
-}
-
 lazy val util = (project in file("util")).settings(
   commonSettings,
   libraryDependencies ++= Dependencies.utilDependencies,
@@ -98,8 +89,7 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
       }
       ((libs +++ subs +++ targets) ** "*.jar").classpath
     },
-    routesImport += "com.scalableminds.util.objectid.ObjectId",
-    copyMessagesFilesSetting
+    routesImport += "com.scalableminds.util.objectid.ObjectId"
   )
 
 lazy val webknossosTracingstore = (project in file("webknossos-tracingstore"))
@@ -113,8 +103,7 @@ lazy val webknossosTracingstore = (project in file("webknossos-tracingstore"))
     generateReverseRouter := false,
     BuildInfoSettings.webknossosTracingstoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosTracingstoreDependencies,
-    dependencyOverrides ++= Dependencies.dependencyOverrides,
-    copyMessagesFilesSetting
+    dependencyOverrides ++= Dependencies.dependencyOverrides
   )
 
 lazy val webknossos = (project in file("."))

@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
@@ -242,8 +243,10 @@ trait VolumeTracingBucketHelper
           flatDataFromDataStore,
           datastoreMissingBucketIndices.toSet,
           volumeLayer.expectedUncompressedBucketSize
-        ).toFox ?~> "fallbackData.split.failed"
-        _ <- Fox.fromBool(bucketBoxesFromDataStore.length == indicesWhereEmpty.length) ?~> "length mismatch"
+        ).toFox ?~> Msg.Annotation.Volume.fallbackDataSplitFailed
+        _ <- Fox.fromBool(
+          bucketBoxesFromDataStore.length == indicesWhereEmpty.length
+        ) ?~> Msg.Annotation.Volume.fallbackDataLengthMismatch
         bucketBoxesFromDataStoreIterator = bucketBoxesFromDataStore.iterator
         bucketBoxesFilled = bucketBoxesFromFossil.map {
           case Full(bucketFromFossil) => Full(bucketFromFossil)

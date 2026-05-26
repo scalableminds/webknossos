@@ -1,5 +1,6 @@
 package models.team
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -12,7 +13,6 @@ import models.organization.{Organization, OrganizationDAO}
 import models.project.ProjectDAO
 import models.task.TaskTypeDAO
 import models.user.User
-import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import com.scalableminds.util.objectid.ObjectId
@@ -47,14 +47,14 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
       )
     }
 
-  def assertNoReferences(teamId: ObjectId)(implicit mp: MessagesProvider): Fox[Unit] =
+  def assertNoReferences(teamId: ObjectId): Fox[Unit] =
     for {
       projectCount <- projectDAO.countForTeam(teamId)
-      _ <- Fox.fromBool(projectCount == 0) ?~> Messages("team.inUse.projects", projectCount)
+      _ <- Fox.fromBool(projectCount == 0) ?~> Msg.Team.inUseByProjects(projectCount)
       taskTypeCount <- taskTypeDAO.countForTeam(teamId)
-      _ <- Fox.fromBool(taskTypeCount == 0) ?~> Messages("team.inUse.taskTypes", taskTypeCount)
+      _ <- Fox.fromBool(taskTypeCount == 0) ?~> Msg.Team.inUseByTaskTypes(taskTypeCount)
       annotationCount <- annotationDAO.countForTeam(teamId)
-      _ <- Fox.fromBool(annotationCount == 0) ?~> Messages("team.inUse.annotations", annotationCount)
+      _ <- Fox.fromBool(annotationCount == 0) ?~> Msg.Team.inUseByAnnotations(annotationCount)
     } yield ()
 
   def allowedTeamsForFolder(folderId: ObjectId, cumulative: Boolean, requestingUser: Option[User] = None)(

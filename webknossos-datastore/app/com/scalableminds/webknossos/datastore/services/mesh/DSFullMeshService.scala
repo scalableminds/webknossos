@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
+import com.scalableminds.util.Msg
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
@@ -16,7 +17,6 @@ import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.services.mapping.MappingService
 import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndexFileService
-import play.api.i18n.MessagesProvider
 import play.api.libs.json.{Json, OFormat}
 
 import scala.concurrent.ExecutionContext
@@ -67,12 +67,11 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
 
   // Computes surface area for a segment by summing per-chunk areas, never building the
   // combined STL buffer (which overflows Int for large segments).
-  def computeSurfaceArea(datasetId: ObjectId,
-                         dataSource: UsableDataSource,
-                         dataLayer: DataLayer,
-                         fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext,
-                                                           m: MessagesProvider,
-                                                           tc: TokenContext): Fox[Float] =
+  def computeSurfaceArea(
+      datasetId: ObjectId,
+      dataSource: UsableDataSource,
+      dataLayer: DataLayer,
+      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Float] =
     if (fullMeshRequest.meshFileName.isDefined)
       for {
         stlChunks <- loadMeshChunksFromMeshFile(dataSource, dataLayer, fullMeshRequest)
@@ -86,14 +85,14 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       dataLayer: DataLayer,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Float] =
     for {
-      mag <- fullMeshRequest.mag.toFox ?~> "mag.neededForAdHoc"
-      segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> "dataLayer.mustBeSegmentation"
+      mag <- fullMeshRequest.mag.toFox ?~> Msg.Mesh.magNeededForAdHoc
+      segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Msg.Dataset.Layer.mustBeSegmentation
       hasSegmentIndexFile = segmentationLayer.attachments.flatMap(_.segmentIndex).isDefined
       verticesForChunks <- if (hasSegmentIndexFile)
         getAllAdHocChunksWithSegmentIndex(datasetId, dataSource, segmentationLayer, fullMeshRequest, mag)
       else {
         for {
-          seedPosition <- fullMeshRequest.seedPosition.toFox ?~> "seedPosition.neededForAdHocWithoutSegmentIndex"
+          seedPosition <- fullMeshRequest.seedPosition.toFox ?~> Msg.Mesh.seedPosNeededForAdHoc
           chunks <- getAllAdHocChunksWithNeighborLogic(
             datasetId,
             dataSource,
@@ -108,9 +107,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
   def loadFor(datasetId: ObjectId,
               dataSource: UsableDataSource,
               dataLayer: DataLayer,
-              fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext,
-                                                m: MessagesProvider,
-                                                tc: TokenContext): Fox[Array[Byte]] =
+              fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     if (fullMeshRequest.meshFileName.isDefined)
       loadFullMeshFromMeshFile(dataSource, dataLayer, fullMeshRequest)
     else
@@ -122,15 +119,15 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       dataLayer: DataLayer,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      mag <- fullMeshRequest.mag.toFox ?~> "mag.neededForAdHoc"
-      segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> "dataLayer.mustBeSegmentation"
+      mag <- fullMeshRequest.mag.toFox ?~> Msg.Mesh.magNeededForAdHoc
+      segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Msg.Dataset.Layer.mustBeSegmentation
       hasSegmentIndexFile = segmentationLayer.attachments.flatMap(_.segmentIndex).isDefined
       before = Instant.now
       verticesForChunks <- if (hasSegmentIndexFile)
         getAllAdHocChunksWithSegmentIndex(datasetId, dataSource, segmentationLayer, fullMeshRequest, mag)
       else {
         for {
-          seedPosition <- fullMeshRequest.seedPosition.toFox ?~> "seedPosition.neededForAdHocWithoutSegmentIndex"
+          seedPosition <- fullMeshRequest.seedPosition.toFox ?~> Msg.Mesh.magNeededForAdHoc
           chunks <- getAllAdHocChunksWithNeighborLogic(
             datasetId,
             dataSource,
@@ -258,13 +255,12 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
 
   // Returns individual raw STL chunks (50 bytes/face, no header) for a mesh-file request.
   // Used both for serving the full mesh and for per-chunk surface-area computation.
-  private def loadMeshChunksFromMeshFile(dataSource: UsableDataSource,
-                                         dataLayer: DataLayer,
-                                         fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext,
-                                                                           m: MessagesProvider,
-                                                                           tc: TokenContext): Fox[Seq[Array[Byte]]] =
+  private def loadMeshChunksFromMeshFile(
+      dataSource: UsableDataSource,
+      dataLayer: DataLayer,
+      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Seq[Array[Byte]]] =
     for {
-      meshFileName <- fullMeshRequest.meshFileName.toFox ?~> "mesh.meshFileName.required"
+      meshFileName <- fullMeshRequest.meshFileName.toFox ?~> Msg.Mesh.File.meshFileNameRequired
       meshFileKey <- meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, meshFileName)
       mappingNameForMeshFile <- meshFileService.mappingNameForMeshFile(meshFileKey)
       segmentIds <- segmentIdsForAgglomerateIdIfNeeded(
@@ -293,11 +289,10 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       }
     } yield stlEncodedChunks
 
-  private def loadFullMeshFromMeshFile(dataSource: UsableDataSource,
-                                       dataLayer: DataLayer,
-                                       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext,
-                                                                         m: MessagesProvider,
-                                                                         tc: TokenContext): Fox[Array[Byte]] =
+  private def loadFullMeshFromMeshFile(
+      dataSource: UsableDataSource,
+      dataLayer: DataLayer,
+      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       before <- Instant.nowFox
       stlEncodedChunks <- loadMeshChunksFromMeshFile(dataSource, dataLayer, fullMeshRequest)
@@ -315,7 +310,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       (dracoMeshChunkBytes, encoding) <- meshFileService.readMeshChunk(
         meshFileKey,
         List(MeshChunkDataRequest(chunkInfo.byteOffset, chunkInfo.byteSize, Some(segmentId)))
-      ) ?~> "mesh.file.loadChunk.failed"
+      ) ?~> Msg.Mesh.File.loadChunkFailed
       _ <- Fox.fromBool(encoding == "draco") ?~> s"mesh file encoding is $encoding, only draco is supported"
       stlEncodedChunk <- getStlEncodedChunkFromDraco(chunkInfo, transform, dracoMeshChunkBytes, vertexQuantizationBits)
     } yield stlEncodedChunk

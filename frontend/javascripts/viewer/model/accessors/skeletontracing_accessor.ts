@@ -333,8 +333,8 @@ export function getTreeGroupsMap(
   return Object.fromEntries(flatGroups.map((group) => [group.groupId, group]));
 }
 
-// This is the pattern for the automatically assigned names for agglomerate skeletons
-export const getTreeNameForAgglomerateSkeleton = (
+// This is the pattern for the automatically assigned names for agglomerate trees
+export const getTreeNameForAgglomerateTree = (
   agglomerateId: NumberLike,
   mappingName: string,
 ): string => `agglomerate ${agglomerateId} (${mappingName})`;

@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
@@ -25,7 +26,6 @@ import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceRequestSettings
 }
 import com.scalableminds.webknossos.datastore.services._
-import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc._
 
@@ -58,8 +58,8 @@ class ZarrStreamingController @Inject()(
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
-        (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Messages(
-          "dataSource.notFound") ~> NOT_FOUND
+        (dataSource, dataLayer) <- datasetCache
+          .getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
         omeNgffHeader = NgffMetadata.fromNameVoxelSizeAndMags(dataLayerName, dataSource.scale, dataLayer.sortedMags)
       } yield Ok(Json.toJson(omeNgffHeader))
     }
@@ -71,8 +71,8 @@ class ZarrStreamingController @Inject()(
   ): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
-        (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Messages(
-          "dataSource.notFound") ~> NOT_FOUND
+        (dataSource, dataLayer) <- datasetCache
+          .getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
         omeNgffHeaderV0_5 = NgffMetadataV0_5.fromNameVoxelSizeAndMags(dataLayerName,
                                                                       dataSource.scale,
                                                                       dataLayer.sortedMags,
@@ -95,7 +95,7 @@ class ZarrStreamingController @Inject()(
         orElse = annotationSource =>
           for {
             (dataSource, dataLayer) <- datasetCache
-              .getWithLayer(annotationSource.datasetId, dataLayerName) ?~> Messages("dataSource.notFound") ~> NOT_FOUND
+              .getWithLayer(annotationSource.datasetId, dataLayerName) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
             dataSourceOmeNgffHeader = NgffMetadata.fromNameVoxelSizeAndMags(dataLayerName,
                                                                             dataSource.scale,
                                                                             dataLayer.sortedMags)
@@ -117,7 +117,7 @@ class ZarrStreamingController @Inject()(
         orElse = annotationSource =>
           for {
             (dataSource, dataLayer) <- datasetCache
-              .getWithLayer(annotationSource.datasetId, dataLayerName) ?~> Messages("dataSource.notFound") ~> NOT_FOUND
+              .getWithLayer(annotationSource.datasetId, dataLayerName) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
             dataSourceOmeNgffHeader = NgffMetadataV0_5.fromNameVoxelSizeAndMags(dataLayerName,
                                                                                 dataSource.scale,
                                                                                 dataLayer.sortedMags,
@@ -200,7 +200,7 @@ class ZarrStreamingController @Inject()(
         relevantTokenContext = if (annotationSource.accessViaPrivateLink) TokenContext(Some(accessToken))
         else tokenContextForRequest
         volumeAnnotationLayers = annotationSource.annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
-        dataSource <- datasetCache.getById(annotationSource.datasetId) ?~> Messages("dataSource.notFound") ~> NOT_FOUND
+        dataSource <- datasetCache.getById(annotationSource.datasetId) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
         dataSourceLayers = dataSource.dataLayers
           .filter(dL => !volumeAnnotationLayers.exists(_.name == dL.name))
           .map(convertLayerToZarrLayer(_, zarrVersion))
@@ -248,18 +248,17 @@ class ZarrStreamingController @Inject()(
       dataLayerName: String,
       mag: String,
       coordinates: String,
-  )(implicit m: MessagesProvider, tc: TokenContext): Fox[Result] =
+  )(implicit tc: TokenContext): Fox[Result] =
     for {
       (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> SERVICE_UNAVAILABLE
       reorderedAdditionalAxes = dataLayer.additionalAxes.map(reorderAdditionalAxes)
       // Failures in parsing coordinates or mag need to still be NOT_FOUND, not BAD_REQUEST because neuroglancer tries to access :layer_name/:mag/.zattrs
       (x, y, z, additionalCoordinates) <- ZarrCoordinatesParser.parseNDimensionalDotCoordinates(
         coordinates,
-        reorderedAdditionalAxes) ?~> "zarr.invalidChunkCoordinates" ~> NOT_FOUND
-      magParsed <- Vec3Int
-        .fromMagLiteral(mag, allowScalar = true)
-        .toFox ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
-      _ <- Fox.fromBool(dataLayer.containsMag(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> NOT_FOUND
+        reorderedAdditionalAxes) ?~> Msg.Zarr.invalidChunkCoordinates(coordinates) ~> NOT_FOUND
+      magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Mag.invalid(mag) ~> NOT_FOUND
+      _ <- Fox.fromBool(dataLayer.containsMag(magParsed)) ?~> Msg.Dataset.Layer
+        .magNotFound(dataLayerName, mag) ~> NOT_FOUND
       cubeSize = DataLayer.bucketLength
       request = DataServiceDataRequest(
         Some(datasetId),
@@ -277,7 +276,7 @@ class ZarrStreamingController @Inject()(
         DataServiceRequestSettings(halfByte = false, additionalCoordinates = additionalCoordinates)
       )
       (data, notFoundIndices) <- binaryDataService.handleDataRequests(List(request))
-      _ <- Fox.fromBool(notFoundIndices.isEmpty) ~> "zarr.chunkLoadingError" ~> INTERNAL_SERVER_ERROR
+      _ <- Fox.fromBool(notFoundIndices.isEmpty) ~> Msg.Zarr.chunkLoadingError ~> INTERNAL_SERVER_ERROR
     } yield Ok(data)
 
   def requestZArray(
@@ -290,14 +289,12 @@ class ZarrStreamingController @Inject()(
     }
   }
 
-  private def zArray(datasetId: ObjectId, dataLayerName: String, mag: String)(
-      implicit m: MessagesProvider): Fox[Result] =
+  private def zArray(datasetId: ObjectId, dataLayerName: String, mag: String): Fox[Result] =
     for {
-      (_, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Messages("dataSource.notFound") ~> NOT_FOUND
-      magParsed <- Vec3Int
-        .fromMagLiteral(mag, allowScalar = true)
-        .toFox ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
-      _ <- Fox.fromBool(dataLayer.containsMag(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> NOT_FOUND
+      (_, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
+      magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Mag.invalid(mag) ~> NOT_FOUND
+      _ <- Fox.fromBool(dataLayer.containsMag(magParsed)) ?~> Msg.Dataset.Layer
+        .magNotFound(dataLayerName, mag) ~> NOT_FOUND
       zarrHeader = ZarrHeader.fromLayer(dataLayer, magParsed)
     } yield Ok(Json.toJson(zarrHeader))
 
@@ -311,14 +308,12 @@ class ZarrStreamingController @Inject()(
     }
   }
 
-  private def zarrJsonForMag(datasetId: ObjectId, dataLayerName: String, mag: String)(
-      implicit m: MessagesProvider): Fox[Result] =
+  private def zarrJsonForMag(datasetId: ObjectId, dataLayerName: String, mag: String): Fox[Result] =
     for {
-      (_, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Messages("dataSource.notFound") ~> NOT_FOUND
-      magParsed <- Vec3Int
-        .fromMagLiteral(mag, allowScalar = true)
-        .toFox ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
-      _ <- Fox.fromBool(dataLayer.containsMag(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> NOT_FOUND
+      (_, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
+      magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Mag.invalid(mag) ~> NOT_FOUND
+      _ <- Fox.fromBool(dataLayer.containsMag(magParsed)) ?~> Msg.Dataset.Layer
+        .magNotFound(dataLayerName, mag) ~> NOT_FOUND
       zarrHeader = Zarr3ArrayHeader.fromDataLayer(dataLayer, magParsed)
     } yield Ok(Json.toJson(zarrHeader))
 
@@ -374,14 +369,15 @@ class ZarrStreamingController @Inject()(
       }
     }
 
-  private def dataLayerMagDirectoryContents(datasetId: ObjectId, dataLayerName: String, mag: String, zarrVersion: Int)(
-      implicit m: MessagesProvider): Fox[Result] =
+  private def dataLayerMagDirectoryContents(datasetId: ObjectId,
+                                            dataLayerName: String,
+                                            mag: String,
+                                            zarrVersion: Int): Fox[Result] =
     for {
       (_, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
-      magParsed <- Vec3Int
-        .fromMagLiteral(mag, allowScalar = true)
-        .toFox ?~> Messages("dataLayer.invalidMag", mag) ~> NOT_FOUND
-      _ <- Fox.fromBool(dataLayer.containsMag(magParsed)) ?~> Messages("dataLayer.wrongMag", dataLayerName, mag) ~> NOT_FOUND
+      magParsed <- Vec3Int.fromMagLiteral(mag, allowScalar = true).toFox ?~> Msg.Dataset.Mag.invalid(mag) ~> NOT_FOUND
+      _ <- Fox.fromBool(dataLayer.containsMag(magParsed)) ?~> Msg.Dataset.Layer
+        .magNotFound(dataLayerName, mag) ~> NOT_FOUND
       additionalEntries = if (zarrVersion == 2) List(ZarrHeader.FILENAME_DOT_ZARRAY)
       else List(Zarr3ArrayHeader.FILENAME_ZARR_JSON)
     } yield
@@ -427,10 +423,9 @@ class ZarrStreamingController @Inject()(
     }
   }
 
-  private def dataLayerDirectoryContents(datasetId: ObjectId, dataLayerName: String, zarrVersion: Int)(
-      implicit m: MessagesProvider): Fox[Result] =
+  private def dataLayerDirectoryContents(datasetId: ObjectId, dataLayerName: String, zarrVersion: Int): Fox[Result] =
     for {
-      (_, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Messages("dataSource.notFound") ~> NOT_FOUND
+      (_, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
       mags = dataLayer.sortedMags
       additionalFiles = if (zarrVersion == 2)
         List(NgffMetadata.FILENAME_DOT_ZATTRS, NgffGroupHeader.FILENAME_DOT_ZGROUP)
@@ -470,7 +465,7 @@ class ZarrStreamingController @Inject()(
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
-          dataSource <- datasetCache.getById(datasetId) ?~> Messages("dataSource.notFound") ~> NOT_FOUND
+          dataSource <- datasetCache.getById(datasetId) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
           layerNames = dataSource.dataLayers.map((dataLayer: DataLayer) => dataLayer.name)
           additionalVersionDependantFiles = if (zarrVersion == 2) List(NgffGroupHeader.FILENAME_DOT_ZGROUP)
           else List.empty
@@ -487,7 +482,7 @@ class ZarrStreamingController @Inject()(
     Action.async { implicit request =>
       for {
         annotationSource <- remoteWebknossosClient.getAnnotationSource(accessToken)
-        dataSource <- datasetCache.getById(annotationSource.datasetId) ?~> Messages("dataSource.notFound") ~> NOT_FOUND
+        dataSource <- datasetCache.getById(annotationSource.datasetId) ?~> Msg.Dataset.DataSource.notFound ~> NOT_FOUND
         annotationLayerNames = annotationSource.annotationLayers.filter(_.typ == AnnotationLayerType.Volume).map(_.name)
         dataSourceLayerNames = dataSource.dataLayers
           .map((dataLayer: DataLayer) => dataLayer.name)

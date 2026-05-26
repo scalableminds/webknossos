@@ -53,6 +53,7 @@ import {
   annotationToCompact,
 } from "types/api_types";
 import { AnnotationContentTypes } from "viewer/constants";
+import { isAnnotationEditableByNonOwners } from "viewer/model/accessors/annotation_accessor";
 import { getVolumeDescriptors } from "viewer/model/accessors/volumetracing_accessor";
 import CategorizationLabel, {
   CategorizationSearch,
@@ -520,7 +521,10 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
   }
 
   isAnnotationEditable(annotation: APIAnnotationInfo): boolean {
-    return annotation.owner?.id === this.props.activeUser.id || annotation.othersMayEdit;
+    return (
+      annotation.owner?.id === this.props.activeUser.id ||
+      isAnnotationEditableByNonOwners(annotation)
+    );
   }
 
   renderTable() {

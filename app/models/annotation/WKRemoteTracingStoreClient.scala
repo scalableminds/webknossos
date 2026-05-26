@@ -1,5 +1,6 @@
 package models.annotation
 
+import com.scalableminds.util.Msg
 import java.io.File
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.ZipIO
@@ -14,6 +15,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.{
 }
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.models.VoxelSize
+import com.scalableminds.webknossos.datastore.models.annotation.AnnotationIdDomain.AnnotationIdDomain
 import com.scalableminds.webknossos.datastore.models.annotation.{
   AnnotationLayer,
   AnnotationLayerType,
@@ -34,20 +36,23 @@ import scala.concurrent.ExecutionContext
 
 class WKRemoteTracingStoreClient(
     tracingStore: TracingStore,
-    dataset: Dataset,
+    dataset: Option[Dataset],
     rpc: RPC,
     annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore)(implicit ec: ExecutionContext)
     extends LazyLogging
     with FoxImplicits {
 
-  private def baseInfo = s" Dataset: ${dataset.name} Tracingstore: ${tracingStore.url}"
+  private def baseInfo = dataset match {
+    case Some(ds) => s" Dataset: ${ds.name} Tracingstore: ${tracingStore.url}"
+    case None     => s"Tracingstore: ${tracingStore.url}"
+  }
 
   def getSkeletonTracing(annotationId: ObjectId,
                          annotationLayer: AnnotationLayer,
                          version: Option[Long]): Fox[FetchedAnnotationLayer] = {
-    logger.debug(s"Called to get SkeletonTracing $annotationId/${annotationLayer.tracingId}." + baseInfo)
+    logger.info(s"Called to get SkeletonTracing $annotationId/${annotationLayer.tracingId}." + baseInfo)
     for {
-      _ <- Fox.fromBool(annotationLayer.typ == AnnotationLayerType.Skeleton) ?~> "annotation.download.fetch.notSkeleton"
+      _ <- Fox.fromBool(annotationLayer.typ == AnnotationLayerType.Skeleton) ?~> Msg.Annotation.Download.fetchNotSkeleton
       skeletonTracing <- rpc(s"${tracingStore.url}/tracings/skeleton/${annotationLayer.tracingId}")
         .addQueryParam("token", RpcTokenHolder.webknossosToken)
         .addQueryParam("annotationId", annotationId)
@@ -59,7 +64,7 @@ class WKRemoteTracingStoreClient(
   }
 
   def getSkeletonTracings(tracingIds: List[Option[String]]): Fox[SkeletonTracings] = {
-    logger.debug("Called to get multiple SkeletonTracings." + baseInfo)
+    logger.info("Called to get multiple SkeletonTracings." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/getMultiple")
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
       .withLongTimeout
@@ -68,7 +73,7 @@ class WKRemoteTracingStoreClient(
   }
 
   def getVolumeTracings(tracingIds: List[Option[String]]): Fox[VolumeTracings] = {
-    logger.debug("Called to get multiple VolumeTracings." + baseInfo)
+    logger.info("Called to get multiple VolumeTracings." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/volume/getMultiple")
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
       .withLongTimeout
@@ -77,7 +82,7 @@ class WKRemoteTracingStoreClient(
   }
 
   def saveSkeletonTracing(tracing: SkeletonTracing, newTracingId: String): Fox[Unit] = {
-    logger.debug(s"Called to save SkeletonTracing at $newTracingId." + baseInfo)
+    logger.info(s"Called to save SkeletonTracing at $newTracingId." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/save").withLongTimeout
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
       .addQueryParam("newTracingId", newTracingId)
@@ -86,14 +91,14 @@ class WKRemoteTracingStoreClient(
 
   // Uses Box[Boolean] because Box[Unit] cannot be json-serialized. The boolean value should be ignored.
   def saveSkeletonTracings(tracings: SkeletonTracingsWithIds): Fox[List[Box[Boolean]]] = {
-    logger.debug(s"Called to save ${tracings.tracings.length} SkeletonTracings." + baseInfo)
+    logger.info(s"Called to save ${tracings.tracings.length} SkeletonTracings." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/saveMultiple").withLongTimeout
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
       .postProtoWithJsonResponse[SkeletonTracingsWithIds, List[Box[Boolean]]](tracings)
   }
 
   def saveAnnotationProto(annotationId: ObjectId, annotationProto: AnnotationProto): Fox[Unit] = {
-    logger.debug(
+    logger.info(
       f"Called to save AnnotationProto $annotationId with layers ${annotationProto.annotationLayers.map(_.tracingId).mkString(",")}." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/annotation/save")
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
@@ -115,7 +120,7 @@ class WKRemoteTracingStoreClient(
                           version: Option[Long],
                           isFromTask: Boolean,
                           datasetBoundingBox: Option[BoundingBox]): Fox[AnnotationProto] = {
-    logger.debug(s"Called to duplicate annotation $annotationId to new id $newAnnotationId." + baseInfo)
+    logger.info(s"Called to duplicate annotation $annotationId to new id $newAnnotationId." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/annotation/$annotationId/duplicate").withLongTimeout
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
       .addQueryParam("newAnnotationId", newAnnotationId)
@@ -181,7 +186,7 @@ class WKRemoteTracingStoreClient(
                             requestingUserId: ObjectId,
                             additionalBoundingBoxes: Seq[NamedBoundingBox],
                             remapSegmentIds: Boolean): Fox[AnnotationProto] = {
-    logger.debug(s"Called to merge ${annotationIds.length} annotations by ids." + baseInfo)
+    logger.info(s"Called to merge ${annotationIds.length} annotations by ids." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/annotation/mergedFromIds").withLongTimeout
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
       .addQueryParam("toTemporaryStore", toTemporaryStore)
@@ -193,7 +198,7 @@ class WKRemoteTracingStoreClient(
   }
 
   def mergeSkeletonTracingsByContents(newTracingId: String, tracings: SkeletonTracings): Fox[Unit] = {
-    logger.debug(
+    logger.info(
       s"Called to merge ${tracings.tracings.length} SkeletonTracings by contents into $newTracingId." + baseInfo)
     rpc(s"${tracingStore.url}/tracings/skeleton/mergedFromContents").withLongTimeout
       .addQueryParam("newTracingId", newTracingId)
@@ -207,7 +212,7 @@ class WKRemoteTracingStoreClient(
                                     dataSource: UsableDataSource,
                                     datasetId: ObjectId,
                                     initialData: List[Option[File]]): Fox[Unit] = {
-    logger.debug(
+    logger.info(
       s"Called to merge ${tracings.tracings.length} VolumeTracings by contents into $newAnnotationId/$newTracingId." + baseInfo)
     for {
       _ <- rpc(s"${tracingStore.url}/tracings/volume/initializeForMerge")
@@ -253,7 +258,7 @@ class WKRemoteTracingStoreClient(
                         magRestrictions: MagRestrictions = MagRestrictions.empty,
                         dataSource: UsableDataSource,
                         datasetId: ObjectId): Fox[Unit] = {
-    logger.debug(s"Called to save VolumeTracing at $newTracingId for annotation $annotationId." + baseInfo)
+    logger.info(s"Called to save VolumeTracing at $newTracingId for annotation $annotationId." + baseInfo)
     annotationDataSourceTemporaryStore.store(annotationId, dataSource, datasetId)
     for {
       _ <- rpc(s"${tracingStore.url}/tracings/volume/save")
@@ -285,7 +290,7 @@ class WKRemoteTracingStoreClient(
           .addQueryParam("startVersion", startVersion)
           .postFileWithJsonResponse[Long](zipfile)
       case (None, None) => Fox.successful(0L)
-      case _            => Fox.failure("annotation.upload.editableMappingIncompleteInformation")
+      case _            => Fox.failure(Msg.Annotation.uploadEditableMappingIncompleteInformation)
     }
 
   def getVolumeTracing(annotationId: ObjectId,
@@ -294,9 +299,9 @@ class WKRemoteTracingStoreClient(
                        skipVolumeAndEdgesData: Boolean,
                        volumeDataZipFormat: VolumeDataZipFormat,
                        voxelSize: Option[VoxelSize])(implicit ec: ExecutionContext): Fox[FetchedAnnotationLayer] = {
-    logger.debug(s"Called to get VolumeTracing $annotationId/${annotationLayer.tracingId}." + baseInfo)
+    logger.info(s"Called to get VolumeTracing $annotationId/${annotationLayer.tracingId}." + baseInfo)
     for {
-      _ <- Fox.fromBool(annotationLayer.typ == AnnotationLayerType.Volume) ?~> "annotation.download.fetch.notSkeleton"
+      _ <- Fox.fromBool(annotationLayer.typ == AnnotationLayerType.Volume) ?~> Msg.Annotation.Download.fetchNotVolume
       tracingId = annotationLayer.tracingId
       tracing <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId")
         .addQueryParam("token", RpcTokenHolder.webknossosToken)
@@ -339,7 +344,7 @@ class WKRemoteTracingStoreClient(
   def getVolumeData(tracingId: String,
                     volumeDataZipFormat: VolumeDataZipFormat,
                     voxelSize: Option[VoxelSize]): Fox[Array[Byte]] = {
-    logger.debug(s"Called to get volume data of $tracingId." + baseInfo)
+    logger.info(s"Called to get volume data of $tracingId." + baseInfo)
     for {
       data <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId/allDataZip").withLongTimeout
         .addQueryParam("token", RpcTokenHolder.webknossosToken)
@@ -356,5 +361,14 @@ class WKRemoteTracingStoreClient(
         .addQueryParam("token", RpcTokenHolder.webknossosToken)
         .postEmpty()
     } yield ()
+
+  def getLargestIdOfDomainOrZero(annotationId: ObjectId, tracingId: String, domain: AnnotationIdDomain): Fox[Long] =
+    for {
+      id <- rpc(s"${tracingStore.url}/tracings/annotation/$annotationId/largestIdOrZero")
+        .addQueryParam("token", RpcTokenHolder.webknossosToken)
+        .addQueryParam("tracingId", tracingId)
+        .addQueryParam("domain", domain.toString)
+        .getWithJsonResponse[Long]
+    } yield id
 
 }

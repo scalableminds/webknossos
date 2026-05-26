@@ -4,7 +4,6 @@ import type { ConfigurationHash, ResumableUpload } from "./resumable_upload";
 
 /**
  * Represents a single chunk of a file to be uploaded.
- * @param preprocessState 0 = unprocessed, 1 = processing, 2 = finished
  */
 export class ResumableChunk {
   opts: Partial<ConfigurationHash> = {};
@@ -18,7 +17,6 @@ export class ResumableChunk {
   tested = false;
   retries = 0;
   pendingRetry = false;
-  preprocessState: 0 | 1 | 2 = 0; // 0 = unprocessed, 1 = processing, 2 = finished
   markComplete = false;
   startByte: number;
   endByte: number;
@@ -80,7 +78,7 @@ export class ResumableChunk {
       [this.getOpt("totalChunksParameterName")]: this.fileObj.chunks.length,
     };
 
-    const targetUrl = getTargetURI(this.resumableObj, "test", {
+    const targetUrl = getTargetURI(this.resumableObj, {
       ...queryParams,
       ...extraParams,
     });
@@ -102,7 +100,7 @@ export class ResumableChunk {
 
     try {
       const response = await fetch(targetUrl, {
-        method: this.getOpt("testMethod") as string,
+        method: "GET",
         headers: customHeaders,
         signal: this.abortController.signal,
         credentials: this.getOpt("withCredentials") ? "include" : "same-origin",
@@ -113,9 +111,9 @@ export class ResumableChunk {
       // Status 200: chunk already exists on server
       // Status 204: chunk does not exist on server, please upload
       if (response.ok && response.status !== 204) {
+        this.markComplete = true;
         this._message = await response.text();
         this.callback("success", this._message);
-        this.markComplete = true;
         this.resumableObj.uploadNextChunk();
       } else {
         this.send();
@@ -129,27 +127,8 @@ export class ResumableChunk {
     }
   }
 
-  preprocessFinished(): void {
-    this.preprocessState = 2;
-    this.send();
-  }
-
   // send() uploads the actual data in a POST call
   async send(): Promise<void> {
-    const preprocess = this.getOpt("preprocess");
-    if (typeof preprocess === "function") {
-      switch (this.preprocessState) {
-        case 0:
-          this.preprocessState = 1;
-          await Promise.resolve(preprocess(this));
-          return;
-        case 1:
-          return;
-        case 2:
-          break;
-      }
-    }
-
     if (this.getOpt("testChunks") && !this.tested) {
       this.test();
       return;
@@ -192,33 +171,28 @@ export class ResumableChunk {
     }
     const headers: Record<string, string> = Object.assign({}, customHeaders);
 
-    if (this.getOpt("method") === "octet") {
-      data = bytes;
-      headers["Content-Type"] = "application/octet-stream";
-    } else {
-      const formData = new FormData();
-      // Add data from the query options
-      Object.entries(queryParameters).forEach(([k, v]) => {
-        formData.append(k, v);
-      });
+    const formData = new FormData();
+    // Add data from the query options
+    Object.entries(queryParameters).forEach(([k, v]) => {
+      formData.append(k, v);
+    });
 
-      if (this.getOpt("chunkFormat") === "blob") {
-        formData.append(this.getOpt("fileParameterName"), bytes, this.fileObj.fileName);
-        data = formData;
-      } else {
-        // chunkFormat == base64
-        const readPromise = new Promise<string>((resolve) => {
-          const fr = new FileReader();
-          fr.onload = () => resolve(fr.result as string);
-          fr.readAsDataURL(bytes);
-        });
-        const base64Data = await readPromise;
-        formData.append(this.getOpt("fileParameterName"), base64Data);
-        data = formData;
-      }
+    if (this.getOpt("chunkFormat") === "blob") {
+      formData.append(this.getOpt("fileParameterName"), bytes, this.fileObj.fileName);
+      data = formData;
+    } else {
+      // chunkFormat == base64
+      const readPromise = new Promise<string>((resolve) => {
+        const fr = new FileReader();
+        fr.onload = () => resolve(fr.result as string);
+        fr.readAsDataURL(bytes);
+      });
+      const base64Data = await readPromise;
+      formData.append(this.getOpt("fileParameterName"), base64Data);
+      data = formData;
     }
 
-    const targetUrl = getTargetURI(this.resumableObj, "upload", queryParameters);
+    const targetUrl = getTargetURI(this.resumableObj, queryParameters);
     const fetchTimeout = this.getOpt("fetchTimeout");
     let hasTimedOut = false;
     const timeoutId =
@@ -231,7 +205,7 @@ export class ResumableChunk {
 
     try {
       const response = await fetch(targetUrl, {
-        method: this.getOpt("uploadMethod") as string,
+        method: "POST",
         headers,
         body: data,
         signal: this.abortController.signal,

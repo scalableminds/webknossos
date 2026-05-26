@@ -16,20 +16,20 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import { setActiveConnectomeAgglomerateIdsAction } from "viewer/model/actions/connectome_actions";
 import {
-  loadAgglomerateSkeletonAtPositionAction,
-  loadAgglomerateSkeletonFromIdAction,
+  loadAgglomerateTreeAtPositionAction,
+  loadAgglomerateTreeFromIdAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { clickSegmentAction } from "viewer/model/actions/volumetracing_actions";
 import { Model } from "viewer/singletons";
 import Store from "viewer/store";
 
-export async function handleAgglomerateSkeletonAtClick(clickPosition: Point2) {
+export async function handleAgglomerateTreeAtClick(clickPosition: Point2) {
   const state = Store.getState();
   const globalPosition = calculateGlobalPos(state, clickPosition);
-  loadAgglomerateSkeletonAtPosition(globalPosition.rounded);
+  loadAgglomerateTreeAtPosition(globalPosition.rounded);
 }
 
-function getAgglomerateSkeletonLoadingInfo(): [string, string] | null {
+function getAgglomerateTreeLoadingInfo(): [string, string] | null {
   const state = Store.getState();
   const segmentation = Model.getVisibleSegmentationLayer();
 
@@ -50,23 +50,23 @@ function getAgglomerateSkeletonLoadingInfo(): [string, string] | null {
   return null;
 }
 
-export function loadAgglomerateSkeletonAtPosition(position: Vector3): void {
-  const agglomerateSkeletonLoadingInfo = getAgglomerateSkeletonLoadingInfo();
+export function loadAgglomerateTreeAtPosition(position: Vector3): void {
+  const agglomerateTreeLoadingInfo = getAgglomerateTreeLoadingInfo();
 
-  if (agglomerateSkeletonLoadingInfo) {
-    const [layerName, mappingName] = agglomerateSkeletonLoadingInfo;
-    Store.dispatch(loadAgglomerateSkeletonAtPositionAction(layerName, mappingName, position));
+  if (agglomerateTreeLoadingInfo) {
+    const [layerName, mappingName] = agglomerateTreeLoadingInfo;
+    Store.dispatch(loadAgglomerateTreeAtPositionAction(layerName, mappingName, position));
   }
 }
 
-// loadAgglomerateSkeletonAtPosition should be preferred as it allows to use the up-to-date agglomerate id at the given position.
+// loadAgglomerateTreeAtPosition should be preferred as it allows to use the up-to-date agglomerate id at the given position.
 // Is needed in live-collab scenario.
-export function loadAgglomerateSkeletonFromId(agglomerateId: number): void {
-  const agglomerateSkeletonLoadingInfo = getAgglomerateSkeletonLoadingInfo();
+export function loadAgglomerateTreeFromId(agglomerateId: number): void {
+  const agglomerateTreeLoadingInfo = getAgglomerateTreeLoadingInfo();
 
-  if (agglomerateSkeletonLoadingInfo) {
-    const [layerName, mappingName] = agglomerateSkeletonLoadingInfo;
-    Store.dispatch(loadAgglomerateSkeletonFromIdAction(layerName, mappingName, agglomerateId));
+  if (agglomerateTreeLoadingInfo) {
+    const [layerName, mappingName] = agglomerateTreeLoadingInfo;
+    Store.dispatch(loadAgglomerateTreeFromIdAction(layerName, mappingName, agglomerateId));
   }
 }
 

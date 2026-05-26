@@ -5,6 +5,6 @@ do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 162 
 ALTER TABLE webknossos.dataset_layer_attachments DROP COLUMN uploadIsPending;
 ALTER TABLE webknossos.dataset_mags DROP COLUMN uploadIsPending;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 160;
+UPDATE webknossos.releaseInformation SET schemaVersion = 161;
 
 COMMIT TRANSACTION;

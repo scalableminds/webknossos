@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services.uploading
 
+import com.scalableminds.util.Msg
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Double
@@ -141,6 +142,11 @@ case class LinkedLayerIdentifier(datasetId: ObjectId, layerName: String, newLaye
 
 object LinkedLayerIdentifier {
   implicit val jsonFormat: OFormat[LinkedLayerIdentifier] = Json.format[LinkedLayerIdentifier]
+}
+
+case class CancelUploadInformation(uploadId: String)
+object CancelUploadInformation {
+  implicit val jsonFormat: OFormat[CancelUploadInformation] = Json.format[CancelUploadInformation]
 }
 
 class UploadService @Inject()(dataSourceService: DataSourceService,
@@ -368,8 +374,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       linkedLayerIdentifiers <- datasetUploadMetadataStore.findLinkedLayerIdentifiers(uploadId)
       uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId, UploadDomain.dataset)
       _ <- backupRawUploadedData(uploadDir, uploadBackupDirectoryFor(dataSourceId.organizationId, uploadId), datasetId).toFox
-      _ <- checkWithinRequestedFileSize(uploadDir, uploadId, datasetId, UploadDomain.dataset) ?~> "dataset.upload.fileSizeCheck.failed"
-      _ <- checkAllChunksUploaded(uploadId, UploadDomain.dataset) ?~> "dataset.upload.allChunksUploadedCheck.failed"
+      _ <- checkWithinRequestedFileSize(uploadDir, uploadId, datasetId, UploadDomain.dataset) ?~> Msg.Dataset.Upload.fileSizeCheckFailed
+      _ <- checkAllChunksUploaded(uploadId, UploadDomain.dataset) ?~> Msg.Dataset.Upload.allChunksUploadedCheckFailed
       unpackToDir = unpackToDirFor(dataSourceId, UploadDomain.dataset, uploadId)
       unpackResult <- unpackOrMoveUploaded(uploadDir, unpackToDir, datasetId, UploadDomain.dataset).shiftBox
       _ <- cleanUpUploaded(uploadId, reason = "Upload complete, data unpacked.", UploadDomain.dataset)
@@ -384,12 +390,12 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                             dataSourceId,
                             unpackToDir,
                             label = s"processing dataset at $unpackToDir")
-      datasetSizeBytes <- measureDirectorySizeBytes(unpackToDir) ?~> "dataset.upload.measureTotalSize.failed"
+      datasetSizeBytes <- measureDirectorySizeBytes(unpackToDir) ?~> Msg.Dataset.Upload.measureTotalSizeFailed
       dataSourceWithAbsolutePathsOpt <- moveUnpackedDatasetToTarget(
         unpackToDir,
         needsConversion,
         datasetId,
-        dataSourceId) ?~> "dataset.upload.moveUnpackedToTarget.failed"
+        dataSourceId) ?~> Msg.Dataset.Upload.moveUnpackedToTargetFailed
       _ <- remoteWebknossosClient.reportDatasetUpload(
         datasetId,
         ReportDatasetUploadParameters(
@@ -399,7 +405,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
           linkedLayerIdentifiers,
           voxelSizeBox.toOption
         )
-      ) ?~> "dataset.upload.reportUpload.failed"
+      ) ?~> Msg.Dataset.Upload.reportUploadFailed
     } yield ()
 
   private def measureDirectorySizeBytes(path: Path): Fox[Long] =
@@ -612,7 +618,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     val dataSource = dataSourceService.dataSourceFromDir(unpackToDir, organizationId, resolvePaths = false)
     for {
       _ <- Fox.runOptional(dataSource.toUsable)(usableDataSource =>
-        Fox.fromBool(usableDataSource.allExplicitPaths.forall(dataVaultService.pathIsAllowedToAddDirectly)) ?~> "dataset.upload.disallowedPaths")
+        Fox.fromBool(usableDataSource.allExplicitPaths.forall(dataVaultService.pathIsAllowedToAddDirectly)) ?~> Msg.Dataset.Upload.disallowedPaths)
     } yield ()
   }
 
@@ -899,19 +905,19 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
               Some(excludeFromPrefix)
             )
             .toFox
-          _ <- Fox.fromBool(unpackToDir.toFile.exists()) ?~> "dataset.upload.noFiles"
+          _ <- Fox.fromBool(unpackToDir.toFile.exists()) ?~> Msg.Dataset.Upload.noFiles
         } yield ()
       } else {
         for {
           deepFileList: List[Path] <- PathUtils.listFilesRecursive(uploadDir, silent = false, maxDepth = 10).toFox
-          _ <- Fox.fromBool(deepFileList.nonEmpty) ?~> "dataset.upload.noFiles"
+          _ <- Fox.fromBool(deepFileList.nonEmpty) ?~> Msg.Dataset.Upload.noFiles
           commonPrefixPreliminary = PathUtils.commonPrefix(deepFileList)
           _ = logger.info(
             s"Detected $uploadDomain root during finishUpload of $datasetId from ${deepFileList.length} files in $uploadDir with commonPrefixPreliminary=$commonPrefixPreliminary")
           strippedPrefix = PathUtils.cutOffPathAtLastOccurrenceOf(commonPrefixPreliminary, excludeFromPrefix)
           commonPrefix = PathUtils.removeSingleFileNameFromPrefix(strippedPrefix,
                                                                   deepFileList.map(_.getFileName.toString))
-          _ <- tryo(FileUtils.moveDirectory(new File(commonPrefix.toString), new File(unpackToDir.toString))).toFox ?~> "dataset.upload.moveToTarget.failed"
+          _ <- tryo(FileUtils.moveDirectory(new File(commonPrefix.toString), new File(unpackToDir.toString))).toFox ?~> Msg.Dataset.Upload.moveToTargetFailed
         } yield ()
       }
     } yield ()

@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
@@ -145,7 +146,7 @@ class DataSourceController @Inject()(
         (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
         skeleton <- agglomerateService
-          .generateTreeAsSkeleton(agglomerateFileKey, agglomerateId) ?~> "agglomerateTree.failed"
+          .generateTreeAsSkeleton(agglomerateFileKey, agglomerateId) ?~> Msg.AgglomerateTree.failed
       } yield Ok(skeleton.toByteArray).as(protobufMimeType)
     }
   }
@@ -161,7 +162,7 @@ class DataSourceController @Inject()(
         (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
         agglomerateGraph <- agglomerateService
-          .generateAgglomerateGraph(agglomerateFileKey, agglomerateId) ?~> "agglomerateGraph.failed"
+          .generateAgglomerateGraph(agglomerateFileKey, agglomerateId) ?~> Msg.AgglomerateGraph.failed
       } yield Ok(agglomerateGraph.toByteArray).as(protobufMimeType)
     }
   }
@@ -176,8 +177,8 @@ class DataSourceController @Inject()(
       for {
         (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
-        position <- agglomerateService
-          .positionForSegmentId(agglomerateFileKey, segmentId) ?~> "getSegmentPositionFromAgglomerateFile.failed"
+        position <- agglomerateService.positionForSegmentId(agglomerateFileKey, segmentId) ?~> Msg.AgglomerateFile
+          .getSegmentPositionFailed(agglomerateFileKey.attachment.name)
       } yield Ok(Json.toJson(position))
     }
   }
@@ -294,7 +295,7 @@ class DataSourceController @Inject()(
             datasetId,
             dataSourceId.organizationId,
             dataSourceId.directoryName,
-            reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"
+            reason = Some("the user wants to delete the dataset")) ?~> Msg.Dataset.Delete.failed
         } yield Ok
       }
     }
@@ -529,7 +530,7 @@ class DataSourceController @Inject()(
               (datasetId, dataLayer.name, fullMeshRequest),
               _ =>
                 fullMeshService
-                  .computeSurfaceArea(datasetId, dataSource, dataLayer, fullMeshRequest) ?~> "mesh.loadFull.failed"
+                  .computeSurfaceArea(datasetId, dataSource, dataLayer, fullMeshRequest) ?~> Msg.Mesh.loadFullFailed
             )
           }
         } yield Ok(Json.toJson(surfaceAreas))
@@ -558,7 +559,7 @@ class DataSourceController @Inject()(
               reportMutable += "Error when exploring as layer set: Resulted in zero layers."
               None
             case f: Failure =>
-              reportMutable += s"Error when exploring as layer set: ${formatFailureChain(f, includeStackTraces = true, messagesProviderOpt = Some(request.messages))}"
+              reportMutable += s"Error when exploring as layer set: ${formatFailureChain(f, includeStackTraces = true)}"
               None
             case Empty =>
               reportMutable += "Error when exploring as layer set: Empty"

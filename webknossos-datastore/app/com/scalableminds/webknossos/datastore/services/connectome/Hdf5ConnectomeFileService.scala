@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services.connectome
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -24,10 +25,10 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
     for {
       cachedConnectomeFile <- fileHandleCache
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
-        .toFox ?~> "connectome.file.open.failed"
+        .toFox ?~> Msg.ConnectomeFile.openFailed
       mappingName <- finishAccessOnFailure(cachedConnectomeFile) {
         cachedConnectomeFile.stringReader.getAttr("/", attrKeyMetadataMappingName)
-      } ?~> "connectome.file.readEncoding.failed"
+      } ?~> Msg.ConnectomeFile.readEncodingFailed(connectomeFileKey.attachment.name)
       _ = cachedConnectomeFile.finishAccess()
     } yield mappingName
 
@@ -36,7 +37,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
     for {
       cachedConnectomeFile <- fileHandleCache
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
-        .toFox ?~> "connectome.file.open.failed"
+        .toFox ?~> Msg.ConnectomeFile.openFailed
       fromAndToPtr: Array[Long] <- finishAccessOnFailure(cachedConnectomeFile) {
         cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keyCscIndptr, 2, agglomerateId)
       } ?~> "Could not read offsets from connectome file"
@@ -71,7 +72,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
     for {
       cachedConnectomeFile <- fileHandleCache
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
-        .toFox ?~> "connectome.file.open.failed"
+        .toFox ?~> Msg.ConnectomeFile.openFailed
       fromAndToPtr: Array[Long] <- finishAccessOnFailure(cachedConnectomeFile) {
         cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keyCsrIndptr, 2, agglomerateId)
       } ?~> "Could not read offsets from connectome file"
@@ -92,7 +93,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
     for {
       cachedConnectomeFile <- fileHandleCache
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
-        .toFox ?~> "connectome.file.open.failed"
+        .toFox ?~> Msg.ConnectomeFile.openFailed
       agglomerateIds <- Fox.serialCombined(synapseIds) { synapseId: Long =>
         finishAccessOnFailure(cachedConnectomeFile) {
           cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(synapticPartnerKey(direction), 1, synapseId)
@@ -106,7 +107,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
     for {
       cachedConnectomeFile <- fileHandleCache
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
-        .toFox ?~> "connectome.file.open.failed"
+        .toFox ?~> Msg.ConnectomeFile.openFailed
       synapsePositions <- Fox.serialCombined(synapseIds) { synapseId: Long =>
         finishAccessOnFailure(cachedConnectomeFile) {
           cachedConnectomeFile.uint64Reader.readMatrixBlockWithOffset(keySynapsePositions, 1, 3, synapseId, 0)
@@ -120,7 +121,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
     for {
       cachedConnectomeFile <- fileHandleCache
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
-        .toFox ?~> "connectome.file.open.failed"
+        .toFox ?~> Msg.ConnectomeFile.openFailed
       // Hard coded type name list, as all legacy files have this value.
       synapseTypes <- Fox.serialCombined(synapseIds) { synapseId: Long =>
         finishAccessOnFailure(cachedConnectomeFile) {
@@ -135,7 +136,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
     for {
       cachedConnectomeFile <- fileHandleCache
         .getCachedHdf5File(connectomeFileKey.attachment)(CachedHdf5File.fromPath)
-        .toFox ?~> "connectome.file.open.failed"
+        .toFox ?~> Msg.ConnectomeFile.openFailed
       fromAndToPtr: Array[Long] <- finishAccessOnFailure(cachedConnectomeFile) {
         cachedConnectomeFile.uint64Reader.readArrayBlockWithOffset(keyCsrIndptr, 2, srcAgglomerateId)
       } ?~> "Could not read offsets from connectome file"

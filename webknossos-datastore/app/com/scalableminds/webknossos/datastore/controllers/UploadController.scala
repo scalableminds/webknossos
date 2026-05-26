@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.controllers
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.services.{
   DSRemoteWebknossosClient,
@@ -8,6 +9,7 @@ import com.scalableminds.webknossos.datastore.services.{
 }
 import com.scalableminds.webknossos.datastore.services.uploading.{
   AttachmentUploadInfo,
+  CancelUploadInformation,
   DatasetUploadInfo,
   MagUploadInfo,
   UploadDomain,
@@ -16,7 +18,6 @@ import com.scalableminds.webknossos.datastore.services.uploading.{
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import play.api.data.Form
 import play.api.data.Forms.tuple
-import play.api.i18n.Messages
 import play.api.libs.Files
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
@@ -41,7 +42,7 @@ class UploadController @Inject()(
           isKnownUpload <- uploadService.isKnownUpload(request.body.resumableUploadInfo.uploadId, UploadDomain.dataset)
           _ <- Fox.runIf(!isKnownUpload) {
             for {
-              reserveUploadAdditionalInfo <- dsRemoteWebknossosClient.reserveDatasetUpload(request.body) ?~> "dataset.upload.validation.failed"
+              reserveUploadAdditionalInfo <- dsRemoteWebknossosClient.reserveDatasetUpload(request.body) ?~> Msg.Dataset.Upload.validationFailed
               _ <- uploadService.reserveDatasetUpload(request.body,
                                                       reserveUploadAdditionalInfo.newDatasetId,
                                                       reserveUploadAdditionalInfo.directoryName)
@@ -58,7 +59,7 @@ class UploadController @Inject()(
           isKnownUpload <- uploadService.isKnownUpload(request.body.resumableUploadInfo.uploadId, UploadDomain.mag)
           _ <- Fox.runIf(!isKnownUpload) {
             for {
-              reserveUploadAdditionalInfo <- dsRemoteWebknossosClient.reserveMagUpload(request.body) ?~> "dataset.upload.validation.failed"
+              reserveUploadAdditionalInfo <- dsRemoteWebknossosClient.reserveMagUpload(request.body) ?~> Msg.Dataset.Upload.validationFailed
               _ <- uploadService.reserveMagUpload(request.body, reserveUploadAdditionalInfo.dataSourceId)
             } yield ()
           }
@@ -128,11 +129,12 @@ class UploadController @Inject()(
             hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
             success = {
               case (chunkNumber, chunkSize, currentChunkSize, totalChunkCount, uploadFileId) =>
+                val uploadId = uploadService.extractDatasetUploadId(uploadFileId)
                 for {
                   uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox
-                  datasetId <- uploadService.getDatasetIdByUploadId(
-                    uploadService.extractDatasetUploadId(uploadFileId),
-                    uploadDomainValidated) ?~> "dataset.upload.validation.failed"
+                  datasetId <- uploadService
+                    .getDatasetIdByUploadId(uploadId, uploadDomainValidated) ?~> Msg.Dataset.Upload
+                    .noSuchUpload(uploadId, uploadDomain)
                   result <- accessTokenService
                     .validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
                       for {
@@ -156,14 +158,15 @@ class UploadController @Inject()(
 
   def testChunk(resumableChunkNumber: Int, resumableIdentifier: String, uploadDomain: String): Action[AnyContent] =
     Action.async { implicit request =>
+      val uploadId = uploadService.extractDatasetUploadId(resumableIdentifier)
       for {
         uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox
-        datasetId <- uploadService.getDatasetIdByUploadId(uploadService.extractDatasetUploadId(resumableIdentifier),
-                                                          uploadDomainValidated) ?~> "dataset.upload.validation.failed"
+        datasetId <- uploadService.getDatasetIdByUploadId(uploadId, uploadDomainValidated) ?~> Msg.Dataset.Upload
+          .noSuchUpload(uploadId, uploadDomain)
         result <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
           for {
             isKnownUpload <- uploadService.isKnownUploadByFileId(resumableIdentifier, uploadDomainValidated)
-            _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
+            _ <- Fox.fromBool(isKnownUpload) ?~> Msg.Dataset.Upload.noSuchUpload(uploadId, uploadDomain)
             isPresent <- uploadService.isChunkPresent(resumableIdentifier, resumableChunkNumber, uploadDomainValidated)
           } yield if (isPresent) Ok else NoContent
         }
@@ -175,15 +178,15 @@ class UploadController @Inject()(
       logTime(slackNotificationService.noticeSlowRequest) {
         for {
           uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox
-          datasetId <- uploadService
-            .getDatasetIdByUploadId(uploadId, uploadDomainValidated) ?~> s"Cannot find running upload with upload id $uploadId"
+          datasetId <- uploadService.getDatasetIdByUploadId(uploadId, uploadDomainValidated) ?~> Msg.Dataset.Upload
+            .noSuchUpload(uploadId, uploadDomain)
           response <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
             for {
               _ <- (uploadDomainValidated match {
                 case UploadDomain.dataset    => uploadService.finishDatasetUpload(uploadId, datasetId)
                 case UploadDomain.mag        => uploadService.finishMagUpload(uploadId, datasetId)
                 case UploadDomain.attachment => uploadService.finishAttachmentUpload(uploadId, datasetId)
-              }) ?~> Messages("dataset.upload.finishFailed", datasetId)
+              }) ?~> Msg.Dataset.Upload.finishFailed(datasetId, uploadDomain)
             } yield Ok(Json.obj("datasetId" -> datasetId))
           }
         } yield response
@@ -191,24 +194,24 @@ class UploadController @Inject()(
     }
   }
 
-  def cancelUpload(uploadDomain: String, uploadId: String): Action[AnyContent] = Action.async { implicit request =>
-    for {
-      uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox
-      _ <- Fox
-        .fromBool(uploadDomainValidated == UploadDomain.dataset) ?~> "Cancel upload is only supported for datasets."
-      datasetIdFox = uploadService.isKnownUpload(uploadId, uploadDomainValidated).flatMap {
-        case false => Fox.failure("dataset.upload.validation.failed")
-        case true  => uploadService.getDatasetIdByUploadId(uploadId, uploadDomainValidated)
-      }
-      result <- datasetIdFox.flatMap { datasetId =>
-        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.deleteDataset(datasetId)) {
-          for {
-            _ <- dsRemoteWebknossosClient.deleteDataset(datasetId) ?~> "dataset.delete.webknossos.failed"
-            _ <- uploadService.cancelUpload(uploadDomainValidated, uploadId) ?~> "Could not cancel the upload."
-          } yield Ok
+  def cancelUpload(uploadDomain: String, uploadId: String): Action[CancelUploadInformation] =
+    Action.async(validateJson[CancelUploadInformation]) { implicit request =>
+      for {
+        uploadDomainValidated <- UploadDomain.fromString(uploadDomain).toFox
+        _ <- Fox.fromBool(uploadDomainValidated == UploadDomain.dataset) ?~> "Cancel upload is only supported for datasets."
+        datasetIdFox = uploadService.isKnownUpload(uploadId, uploadDomainValidated).flatMap {
+          case false => Fox.failure(Msg.Dataset.Upload.noSuchUpload(request.body.uploadId, uploadDomain))
+          case true  => uploadService.getDatasetIdByUploadId(uploadId, uploadDomainValidated)
         }
-      }
-    } yield result
-  }
+        result <- datasetIdFox.flatMap { datasetId =>
+          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.deleteDataset(datasetId)) {
+            for {
+              _ <- dsRemoteWebknossosClient.deleteDataset(datasetId) ?~> Msg.Dataset.Delete.webknossosFailed
+              _ <- uploadService.cancelUpload(uploadDomainValidated, uploadId) ?~> "Could not cancel the upload."
+            } yield Ok
+          }
+        }
+      } yield result
+    }
 
 }

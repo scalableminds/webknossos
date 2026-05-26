@@ -1,5 +1,6 @@
 package models.task
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
@@ -26,7 +27,7 @@ class ScriptService @Inject()(userDAO: UserDAO, userService: UserService) {
   def publicWrites(script: Script): Fox[JsObject] = {
     implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
     for {
-      owner <- userDAO.findOne(script._owner) ?~> "user.notFound"
+      owner <- userDAO.findOne(script._owner) ?~> Msg.User.notFound(script._owner)
       ownerJs <- userService.compactWrites(owner)
     } yield {
       Json.obj(
@@ -39,7 +40,7 @@ class ScriptService @Inject()(userDAO: UserDAO, userService: UserService) {
   }
 
   def assertValidScriptName(scriptName: String)(implicit ec: ExecutionContext): Fox[Unit] =
-    Fox.fromBool(scriptName.matches("^[A-Za-z0-9\\-_\\. ß]+$")) ?~> "script.name.invalid.characters"
+    Fox.fromBool(scriptName.matches("^[A-Za-z0-9\\-_\\. ß]+$")) ?~> Msg.Script.nameInvalidChars(scriptName)
 }
 
 object Script {

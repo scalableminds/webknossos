@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -168,14 +169,14 @@ class ReportController @Inject()(reportDAO: ReportDAO,
 
   def projectProgressReport(teamId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- teamDAO.findOne(teamId) ?~> "team.notFound" ~> NOT_FOUND
+      _ <- teamDAO.findOne(teamId) ?~> Msg.Team.notFound(teamId) ~> NOT_FOUND
       entries <- reportDAO.projectProgress(teamId)
     } yield Ok(Json.toJson(entries))
   }
 
   def availableTasksReport(teamId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      team <- teamDAO.findOne(teamId) ?~> "team.notFound" ~> NOT_FOUND
+      team <- teamDAO.findOne(teamId) ?~> Msg.Team.notFound(teamId) ~> NOT_FOUND
       users <- userDAO.findAllByTeams(List(team._id))
       nonUnlistedUsers = users.filter(!_.isUnlisted)
       nonAdminUsers <- Fox.filterNot(nonUnlistedUsers)(u => userService.isTeamManagerOrAdminOf(u, teamId))

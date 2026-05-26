@@ -1,5 +1,6 @@
 package models.storage
 
+import com.scalableminds.util.Msg
 import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
@@ -211,7 +212,7 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
   def refreshStorageReportForDataset(dataset: Dataset): Fox[Unit] =
     for {
       _ <- Fox.successful(())
-      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> "datastore.notFound"
+      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> Msg.DataStore.notFound
       _ <- if (dataStore.reportUsedStorageEnabled) {
         for {
           organization <- organizationDAO.findOne(dataset._organization)

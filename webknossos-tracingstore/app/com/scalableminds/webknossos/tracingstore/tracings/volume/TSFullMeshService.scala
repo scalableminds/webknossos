@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
@@ -41,7 +42,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Array[Byte]] =
     for {
-      tracing <- annotationService.findVolume(annotationId, tracingId, version) ?~> "tracing.notFound"
+      tracing <- annotationService.findVolume(annotationId, tracingId, version) ?~> Msg.Annotation.notFound
       data <- if (fullMeshRequest.meshFileName.isDefined)
         loadFullMeshFromMeshFile(annotationId, tracingId, tracing, fullMeshRequest)
       else loadFullMeshFromAdHoc(annotationId, tracingId, tracing, fullMeshRequest)
@@ -72,10 +73,11 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       tracing: VolumeTracing,
       fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      mag <- fullMeshRequest.mag.toFox ?~> "mag.neededForAdHoc"
-      _ <- Fox.fromBool(tracing.mags.contains(vec3IntToProto(mag))) ?~> "mag.notPresentInTracing"
+      mag <- fullMeshRequest.mag.toFox ?~> Msg.Mesh.magNeededForAdHoc
+      _ <- Fox.fromBool(tracing.mags.contains(vec3IntToProto(mag))) ?~> Msg.Annotation.Volume
+        .wrongMag(tracingId, mag.toMagLiteral(allowScalar = true))
       before = Instant.now
-      voxelSize <- remoteWebknossosClient.voxelSizeForAnnotationWithCache(annotationId) ?~> "voxelSize.failedToFetch"
+      voxelSize <- remoteWebknossosClient.voxelSizeForAnnotationWithCache(annotationId) ?~> Msg.Dataset.voxelSizeFailedToFetch
       verticesForChunks <- if (tracing.hasSegmentIndex.getOrElse(false))
         getAllAdHocChunksWithSegmentIndex(annotationId, tracingId, tracing, mag, voxelSize, fullMeshRequest)
       else
@@ -187,7 +189,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       }
 
     for {
-      topLeft <- topLeftOpt.toFox ?~> "seedPosition.neededForAdHoc"
+      topLeft <- topLeftOpt.toFox ?~> Msg.Mesh.seedPosNeededForAdHoc
       result <- processFrontier(List(topLeft), List.empty)
     } yield result
   }

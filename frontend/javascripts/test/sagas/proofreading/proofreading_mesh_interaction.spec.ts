@@ -1,16 +1,14 @@
 // biome-ignore assist/source/organizeImports: apiHelpers need to be imported first for proper mocking of modules
+import {
+  getFlattenedUpdateActions,
+  setupWebknossosForTestingWithRestrictions,
+  type WebknossosTestContext,
+} from "test/helpers/apiHelpers";
 import type { MinCutTargetEdge } from "admin/rest_api";
 import isEqual from "lodash-es/isEqual";
 import { call, put, take } from "redux-saga/effects";
-import {
-  getFlattenedUpdateActions,
-  setupWebknossosForTesting,
-  type WebknossosTestContext,
-} from "test/helpers/apiHelpers";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
-import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
 import {
   minCutAgglomerateWithPositionAction,
   proofreadMergeAction,
@@ -39,6 +37,7 @@ import {
   mockInitialBucketAndAgglomerateData,
   simulatePartitionedSplitAgglomeratesViaMeshes,
 } from "./proofreading_test_utils";
+import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import {
   mergeSegment1And4,
   mergeSegment5And6,
@@ -46,14 +45,11 @@ import {
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_server_objects";
 
 describe("Proofreading (with mesh actions)", () => {
-  const initialLiveCollab = WkDevFlags.liveCollab;
   beforeEach<WebknossosTestContext>(async (context) => {
-    WkDevFlags.liveCollab = true;
-    await setupWebknossosForTesting(context, "hybrid");
+    await setupWebknossosForTestingWithRestrictions(context, "Exclusive", true, false, "hybrid");
   });
 
   afterEach<WebknossosTestContext>(async (context) => {
-    WkDevFlags.liveCollab = initialLiveCollab;
     context.tearDownPullQueues();
     // Saving after each test and checking that the root saga didn't crash,
     expect(hasRootSagaCrashed()).toBe(false);
@@ -74,7 +70,7 @@ describe("Proofreading (with mesh actions)", () => {
     yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
     yield put(setActiveCellAction(1, undefined, null, 1));
 
-    yield makeMappingEditableForTest();
+    yield call(makeMappingEditableForTest);
 
     // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
     const mapping1 = yield* select(
@@ -87,7 +83,7 @@ describe("Proofreading (with mesh actions)", () => {
         ).mapping,
     );
     expect(mapping1).toEqual(initialMapping);
-    yield put(setOthersMayEditForAnnotationAction(true));
+    yield put(setCollaborationModeAction("Concurrent"));
     // Execute the actual merge and wait for the finished mapping.
     yield put(
       proofreadMergeAction(
@@ -274,7 +270,7 @@ describe("Proofreading (with mesh actions)", () => {
     yield put(updateSegmentAction(6, { anchorPosition: getPositionForSegmentId(1337) }, tracingId));
     yield put(setActiveCellAction(6, undefined, null, 1337));
 
-    yield makeMappingEditableForTest();
+    yield call(makeMappingEditableForTest);
 
     // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
     const mapping1 = yield* select(
@@ -282,7 +278,7 @@ describe("Proofreading (with mesh actions)", () => {
         getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
     );
     expect(mapping1).toEqual(expectedInitialMapping);
-    yield put(setOthersMayEditForAnnotationAction(true));
+    yield put(setCollaborationModeAction("Concurrent"));
     // Execute the actual merge and wait for the finished mapping.
     yield put(
       minCutAgglomerateWithPositionAction(

@@ -125,6 +125,7 @@ const createStateWithSegments = (
         hideUnregisteredSegments: false,
         proofreadingMarkerPosition: undefined,
         segmentJournal: [],
+        idReservations: { SegmentGroup: [], Segment: [] },
       },
     ],
   },

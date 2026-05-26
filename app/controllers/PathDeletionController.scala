@@ -15,7 +15,7 @@ class PathDeletionController @Inject()(conf: WkConf, pathDeletionDAO: PathDeleti
                                                                                        bodyParsers: PlayBodyParsers)
     extends Controller {
 
-  def listPathsToDelete(key: String): Action[AnyContent] = Action.async { implicit request =>
+  def listPathsToDelete(key: String): Action[AnyContent] = Action.async { _ =>
     for {
       _ <- authenticateExternalPathDeletionService(key)
       paths <- pathDeletionDAO.findAll
@@ -30,7 +30,7 @@ class PathDeletionController @Inject()(conf: WkConf, pathDeletionDAO: PathDeleti
   }
 
   private def authenticateExternalPathDeletionService(key: String): Fox[Unit] =
-    Fox.fromBool(key == conf.ExternalPathDeletionService.key) ?~> "externalPathDeletionService.wrongKey"
+    Fox.fromBool(key == conf.ExternalPathDeletionService.key) ?~> "Wrong key for external path deletion service."
 
 }
 

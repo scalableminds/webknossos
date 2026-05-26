@@ -1,16 +1,15 @@
 import { type ActionPattern, call, put, take } from "redux-saga/effects";
 import {
   getNestedUpdateActions,
-  setupWebknossosForTesting,
+  setupWebknossosForTestingWithRestrictions,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
 import { actionChannel } from "typed-redux-saga";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import { TreeTypeEnum, type Vector3 } from "viewer/constants";
 import { loadAgglomerateTreeAtPosition } from "viewer/controller/combinations/segmentation_handlers";
 import { getTreesWithType } from "viewer/model/accessors/skeletontracing_accessor";
 import type { Action } from "viewer/model/actions/actions";
-import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
+import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import {
   cutAgglomerateFromNeighborsAction,
   minCutAgglomerateWithPositionAction,
@@ -47,14 +46,11 @@ import {
 } from "./proofreading_test_utils";
 
 describe("Proofreading agglomerate tree syncing", () => {
-  const initialLiveCollab = WkDevFlags.liveCollab;
   beforeEach<WebknossosTestContext>(async (context) => {
-    WkDevFlags.liveCollab = true;
-    await setupWebknossosForTesting(context, "hybrid");
+    await setupWebknossosForTestingWithRestrictions(context, "Exclusive", true, false, "hybrid");
   });
 
   afterEach<WebknossosTestContext>(async (context) => {
-    WkDevFlags.liveCollab = initialLiveCollab;
     context.tearDownPullQueues();
     // Saving after each test and checking that the root saga didn't crash,
     expect(hasRootSagaCrashed()).toBe(false);
@@ -74,7 +70,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
       yield makeMappingEditableForTest();
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
 
       const versionBeforeAgglomerateTreeLoading = yield* select(
         (state) => state.annotation.version,
@@ -146,7 +142,7 @@ describe("Proofreading agglomerate tree syncing", () => {
         yield put(setActiveCellAction(1));
         yield makeMappingEditableForTest();
         if (othersMayEdit) {
-          yield put(setOthersMayEditForAnnotationAction(true));
+          yield put(setCollaborationModeAction("Concurrent"));
         }
 
         yield loadAgglomerateTrees(context, [1, 4, 6], false, othersMayEdit);
@@ -206,7 +202,7 @@ describe("Proofreading agglomerate tree syncing", () => {
         yield put(setActiveCellAction(1));
         yield makeMappingEditableForTest();
         if (othersMayEdit) {
-          yield put(setOthersMayEditForAnnotationAction(true));
+          yield put(setCollaborationModeAction("Concurrent"));
         }
 
         yield loadAgglomerateTrees(context, [6], true, othersMayEdit);
@@ -269,7 +265,7 @@ describe("Proofreading agglomerate tree syncing", () => {
         yield put(setActiveCellAction(1));
         yield makeMappingEditableForTest();
         if (othersMayEdit) {
-          yield put(setOthersMayEditForAnnotationAction(true));
+          yield put(setCollaborationModeAction("Concurrent"));
         }
 
         yield* loadAgglomerateTrees(context, [1], false, othersMayEdit);
@@ -335,7 +331,7 @@ describe("Proofreading agglomerate tree syncing", () => {
         yield put(setActiveCellAction(1));
         yield makeMappingEditableForTest();
         if (othersMayEdit) {
-          yield put(setOthersMayEditForAnnotationAction(true));
+          yield put(setCollaborationModeAction("Concurrent"));
         }
 
         yield* loadAgglomerateTrees(context, [4], false, othersMayEdit);
@@ -404,7 +400,7 @@ describe("Proofreading agglomerate tree syncing", () => {
         yield makeMappingEditableForTest();
         yield loadAgglomerateMeshes([1, 6]);
         if (othersMayEdit) {
-          yield put(setOthersMayEditForAnnotationAction(true));
+          yield put(setCollaborationModeAction("Concurrent"));
         }
 
         yield* loadAgglomerateTrees(context, [1, 6], false, othersMayEdit);
@@ -458,7 +454,7 @@ describe("Proofreading agglomerate tree syncing", () => {
         yield makeMappingEditableForTest();
         yield loadAgglomerateMeshes([1, 6]);
         if (othersMayEdit) {
-          yield put(setOthersMayEditForAnnotationAction(true));
+          yield put(setCollaborationModeAction("Concurrent"));
         }
 
         yield* loadAgglomerateTrees(context, [1, 6], false, othersMayEdit);
@@ -556,7 +552,7 @@ describe("Proofreading agglomerate tree syncing", () => {
         // Load relevant meshes.
         yield makeMappingEditableForTest();
         if (othersMayEdit) {
-          yield put(setOthersMayEditForAnnotationAction(true));
+          yield put(setCollaborationModeAction("Concurrent"));
         }
 
         yield* loadAgglomerateTrees(context, [1, 6], false, othersMayEdit);
@@ -635,7 +631,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       yield put(setActiveCellAction(4));
       yield makeMappingEditableForTest();
       const othersMayEdit = true;
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
 
       yield* loadAgglomerateTrees(context, [1, 4, 6], false, othersMayEdit);
       // Execute the actual merge and wait for the finished mapping.
@@ -695,7 +691,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       yield put(setActiveCellAction(1));
       yield makeMappingEditableForTest();
       const othersMayEdit = true;
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
 
       yield* loadAgglomerateTrees(context, [1, 6, 4], false, othersMayEdit);
       // Execute the actual merge and wait for the finished mapping.
@@ -756,7 +752,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
       yield makeMappingEditableForTest();
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
 
       yield* loadAgglomerateTrees(context, [1, 4, 6], false, true);
 
@@ -831,7 +827,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(2) }, tracingId));
       yield put(setActiveCellAction(1));
       yield makeMappingEditableForTest();
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
 
       yield* loadAgglomerateTrees(context, [1, 4, 6], false, true);
 
@@ -933,7 +929,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(2) }, tracingId));
       yield put(setActiveCellAction(1));
       yield makeMappingEditableForTest();
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
 
       yield* loadAgglomerateTrees(context, [1, 4, 6], false, true);
 
@@ -1053,7 +1049,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       yield put(setActiveCellAction(1, undefined, null, 1337));
 
       yield makeMappingEditableForTest();
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
 
       yield* loadAgglomerateTrees(context, [1, 4, 6], false, true);
 
@@ -1137,7 +1133,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
       yield makeMappingEditableForTest();
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
 
       // Execute the actual merge and wait for the finished mapping.
       yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
@@ -1194,7 +1190,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
       yield put(setActiveCellAction(1));
       yield makeMappingEditableForTest();
-      yield put(setOthersMayEditForAnnotationAction(true));
+      yield put(setCollaborationModeAction("Concurrent"));
 
       // Prepare the server's reply for the upcoming split.
       vi.mocked(context.mocks.getEdgesForAgglomerateMinCut).mockReturnValue(

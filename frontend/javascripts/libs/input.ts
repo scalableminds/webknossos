@@ -8,7 +8,7 @@ import noop from "lodash-es/noop";
 import { createNanoEvents, type Emitter } from "nanoevents";
 import type { Point2 } from "viewer/constants";
 import constants, { isMac } from "viewer/constants";
-import { addEventListenerWithDelegation, isNoElementFocused } from "./utils";
+import { addEventListenerWithDelegation, isNoEditableElementFocused } from "./utils";
 
 // This is the main Input implementation.
 // Although all keys, buttons and sensor are mapped in
@@ -164,7 +164,7 @@ export class InputKeyboardNoLoop {
           return;
         }
 
-        if (!this.supportInputElements && !isNoElementFocused()) {
+        if (!this.supportInputElements && !isNoEditableElementFocused()) {
           return;
         }
 
@@ -264,7 +264,7 @@ export class InputKeyboard {
           return;
         }
 
-        if (!this.supportInputElements && !isNoElementFocused()) {
+        if (!this.supportInputElements && !isNoEditableElementFocused()) {
           return;
         }
 

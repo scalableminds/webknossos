@@ -99,6 +99,12 @@ export function getVolumeTracingByLayerName(
   return volumeTracing;
 }
 
+export function getVolumeTracingByNameOrActive(volumeLayerName: string | undefined) {
+  return volumeLayerName
+    ? getVolumeTracingByLayerName(Store.getState().annotation, volumeLayerName)
+    : getActiveSegmentationTracing(Store.getState());
+}
+
 export function hasVolumeTracings(annotation: StoreAnnotation): boolean {
   return annotation.volumes.length > 0;
 }

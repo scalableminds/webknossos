@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
@@ -43,7 +44,6 @@ import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.scalableminds.webknossos.datastore.slacknotification.DSSlackNotificationService
 import play.api.data.Form
 import play.api.data.Forms.{longNumber, nonEmptyText, number, tuple}
-import play.api.i18n.Messages
 import play.api.libs.Files
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
@@ -125,7 +125,7 @@ class DataSourceController @Inject()(
           isKnownUpload <- uploadService.isKnownUpload(request.body.uploadId)
           _ <- if (!isKnownUpload) {
             for {
-              reserveUploadAdditionalInfo <- dsRemoteWebknossosClient.reserveDataSourceUpload(request.body) ?~> "dataset.upload.validation.failed"
+              reserveUploadAdditionalInfo <- dsRemoteWebknossosClient.reserveDataSourceUpload(request.body) ?~> Msg.Dataset.Upload.validationFailed
               _ <- uploadService.reserveUpload(request.body, reserveUploadAdditionalInfo)
             } yield ()
           } else Fox.successful(())
@@ -177,15 +177,16 @@ class DataSourceController @Inject()(
             hasErrors = formWithErrors => Fox.successful(JsonBadRequest(formWithErrors.errors.head.message)),
             success = {
               case (chunkNumber, chunkSize, currentChunkSize, totalChunkCount, uploadFileId) =>
+                val uploadId = uploadService.extractDatasetUploadId(uploadFileId)
                 for {
-                  datasetId <- uploadService
-                    .getDatasetIdByUploadId(uploadService.extractDatasetUploadId(uploadFileId)) ?~> "dataset.upload.validation.failed"
+                  datasetId <- uploadService.getDatasetIdByUploadId(uploadId) ?~> Msg.Dataset.Upload
+                    .noSuchUpload(uploadId)
                   result <- accessTokenService
                     .validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
                       for {
-                        isKnownUpload <- uploadService.isKnownUploadByFileId(uploadFileId)
-                        _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
-                        chunkFile <- request.body.file("file").toFox ?~> "zip.file.notFound"
+                        isKnownUpload <- uploadService.isKnownUpload(uploadId)
+                        _ <- Fox.fromBool(isKnownUpload) ?~> Msg.Dataset.Upload.noSuchUpload(uploadId)
+                        chunkFile <- request.body.file("file").toFox ?~> Msg.zipFileNotFound
                         _ <- uploadService.handleUploadChunk(uploadFileId,
                                                              chunkSize,
                                                              currentChunkSize,
@@ -202,12 +203,13 @@ class DataSourceController @Inject()(
 
   def testChunk(resumableChunkNumber: Int, resumableIdentifier: String): Action[AnyContent] =
     Action.async { implicit request =>
+      val uploadId = uploadService.extractDatasetUploadId(resumableIdentifier)
       for {
-        datasetId <- uploadService.getDatasetIdByUploadId(uploadService.extractDatasetUploadId(resumableIdentifier)) ?~> "dataset.upload.validation.failed"
+        datasetId <- uploadService.getDatasetIdByUploadId(uploadId) ?~> Msg.Dataset.Upload.noSuchUpload(uploadId)
         result <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
           for {
-            isKnownUpload <- uploadService.isKnownUploadByFileId(resumableIdentifier)
-            _ <- Fox.fromBool(isKnownUpload) ?~> "dataset.upload.validation.failed"
+            isKnownUpload <- uploadService.isKnownUpload(uploadId)
+            _ <- Fox.fromBool(isKnownUpload) ?~> Msg.Dataset.Upload.noSuchUpload(uploadId)
             isPresent <- uploadService.isChunkPresent(resumableIdentifier, resumableChunkNumber)
           } yield if (isPresent) Ok else NoContent
         }
@@ -218,12 +220,11 @@ class DataSourceController @Inject()(
     log(Some(slackNotificationService.noticeFailedUploadRequest)) {
       logTime(slackNotificationService.noticeSlowRequest) {
         for {
-          datasetId <- uploadService
-            .getDatasetIdByUploadId(request.body.uploadId) ?~> s"Cannot find running upload with upload id ${request.body.uploadId}"
+          datasetId <- uploadService.getDatasetIdByUploadId(request.body.uploadId) ?~> Msg.Dataset.Upload
+            .noSuchUpload(request.body.uploadId)
           response <- accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeDataset(datasetId)) {
             for {
-              _ <- uploadService.finishUpload(request.body, datasetId) ?~> Messages("dataset.upload.finishFailed",
-                                                                                    datasetId)
+              _ <- uploadService.finishUpload(request.body, datasetId) ?~> Msg.Dataset.Upload.finishFailed(datasetId)
             } yield Ok(Json.obj("newDatasetId" -> datasetId))
           }
         } yield response
@@ -234,13 +235,13 @@ class DataSourceController @Inject()(
   def cancelUpload(): Action[CancelUploadInformation] =
     Action.async(validateJson[CancelUploadInformation]) { implicit request =>
       val datasetIdFox = uploadService.isKnownUpload(request.body.uploadId).flatMap {
-        case false => Fox.failure("dataset.upload.validation.failed")
+        case false => Fox.failure(Msg.Dataset.Upload.noSuchUpload(request.body.uploadId))
         case true  => uploadService.getDatasetIdByUploadId(request.body.uploadId)
       }
       datasetIdFox.flatMap { datasetId =>
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.deleteDataset(datasetId)) {
           for {
-            _ <- dsRemoteWebknossosClient.deleteDataset(datasetId) ?~> "dataset.delete.webknossos.failed"
+            _ <- dsRemoteWebknossosClient.deleteDataset(datasetId) ?~> Msg.Dataset.Delete.webknossosFailed
             _ <- uploadService.cancelUpload(request.body) ?~> "Could not cancel the upload."
           } yield Ok
         }
@@ -285,7 +286,7 @@ class DataSourceController @Inject()(
         (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
         skeleton <- agglomerateService
-          .generateTreeAsSkeleton(agglomerateFileKey, agglomerateId) ?~> "agglomerateTree.failed"
+          .generateTreeAsSkeleton(agglomerateFileKey, agglomerateId) ?~> Msg.AgglomerateTree.failed
       } yield Ok(skeleton.toByteArray).as(protobufMimeType)
     }
   }
@@ -301,7 +302,7 @@ class DataSourceController @Inject()(
         (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
         agglomerateGraph <- agglomerateService
-          .generateAgglomerateGraph(agglomerateFileKey, agglomerateId) ?~> "agglomerateGraph.failed"
+          .generateAgglomerateGraph(agglomerateFileKey, agglomerateId) ?~> Msg.AgglomerateGraph.failed
       } yield Ok(agglomerateGraph.toByteArray).as(protobufMimeType)
     }
   }
@@ -316,8 +317,8 @@ class DataSourceController @Inject()(
       for {
         (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
         agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSource.id, dataLayer, mappingName)
-        position <- agglomerateService
-          .positionForSegmentId(agglomerateFileKey, segmentId) ?~> "getSegmentPositionFromAgglomerateFile.failed"
+        position <- agglomerateService.positionForSegmentId(agglomerateFileKey, segmentId) ?~> Msg.AgglomerateFile
+          .getSegmentPositionFailed(agglomerateFileKey.attachment.name)
       } yield Ok(Json.toJson(position))
     }
   }
@@ -434,7 +435,7 @@ class DataSourceController @Inject()(
             datasetId,
             dataSourceId.organizationId,
             dataSourceId.directoryName,
-            reason = Some("the user wants to delete the dataset")) ?~> "dataset.delete.failed"
+            reason = Some("the user wants to delete the dataset")) ?~> Msg.Dataset.Delete.failed
         } yield Ok
       }
     }
@@ -669,7 +670,7 @@ class DataSourceController @Inject()(
               (datasetId, dataLayer.name, fullMeshRequest),
               _ =>
                 fullMeshService
-                  .computeSurfaceArea(datasetId, dataSource, dataLayer, fullMeshRequest) ?~> "mesh.loadFull.failed"
+                  .computeSurfaceArea(datasetId, dataSource, dataLayer, fullMeshRequest) ?~> Msg.Mesh.loadFullFailed
             )
           }
         } yield Ok(Json.toJson(surfaceAreas))
@@ -698,7 +699,7 @@ class DataSourceController @Inject()(
               reportMutable += "Error when exploring as layer set: Resulted in zero layers."
               None
             case f: Failure =>
-              reportMutable += s"Error when exploring as layer set: ${formatFailureChain(f, includeStackTraces = true, messagesProviderOpt = Some(request.messages))}"
+              reportMutable += s"Error when exploring as layer set: ${formatFailureChain(f, includeStackTraces = true)}"
               None
             case Empty =>
               reportMutable += "Error when exploring as layer set: Empty"

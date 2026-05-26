@@ -278,7 +278,8 @@ class AiModelController @Inject()(
         _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> Msg.Job.Inference.wrongOrga ~> FORBIDDEN
         aiModelOpt <- Fox.runOptional(request.body.aiModelId)(aiModelDAO.findOne) ?~> Msg.AiModel.notFound
         aiModel <- aiModelOpt.toFox ?~> "aiModel.required"
-        _ <- Fox.fromBool(aiModel.isPretrained || aiModel._dataStore == dataset._dataStore) ?~> Msg.AiModel.dataStoreMismatch
+        _ <- Fox.fromBool(aiModel.isPretrained || aiModel._dataStore == dataset._dataStore) ?~> Msg.AiModel
+          .dataStoreMismatch
         (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.colorLayerName)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> Msg.DataStore.notFound
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
@@ -333,7 +334,8 @@ class AiModelController @Inject()(
         _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> Msg.Job.Inference.wrongOrga ~> FORBIDDEN
         aiModelOpt <- Fox.runOptional(request.body.aiModelId)(aiModelDAO.findOne) ?~> Msg.AiModel.notFound
         aiModel <- aiModelOpt.toFox ?~> "aiModel.required"
-        _ <- Fox.fromBool(aiModel.isPretrained || aiModel._dataStore == dataset._dataStore) ?~> Msg.AiModel.dataStoreMismatch
+        _ <- Fox.fromBool(aiModel.isPretrained || aiModel._dataStore == dataset._dataStore) ?~> Msg.AiModel
+          .dataStoreMismatch
         (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.colorLayerName)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> Msg.DataStore.notFound
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)

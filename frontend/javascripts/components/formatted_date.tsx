@@ -42,7 +42,7 @@ function formatHumanReadable(localDate: dayjs.Dayjs, dateOnly: boolean): string 
     return localDate.format("HH:mm");
   }
 
-  if (localDate.isAfter(todayStart.subtract(6, "day"), "day")) {
+  if (localDate.isAfter(todayStart.subtract(7, "day"), "day")) {
     return localDate.format("dddd HH:mm");
   }
 

@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr3
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
@@ -118,7 +119,7 @@ class Zarr3Array(vaultPath: VaultPath,
   private def readAndParseShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext,
                                                            tc: TokenContext): Fox[Array[(Long, Long)]] =
     for {
-      shardIndexRaw <- readShardIndex(shardPath) ?=> "zarr.readShardIndex.failed"
+      shardIndexRaw <- readShardIndex(shardPath) ?=> Msg.Zarr.readShardIndexFailed
       parsed = parseShardIndex(shardIndexRaw)
     } yield parsed
 

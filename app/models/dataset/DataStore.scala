@@ -1,5 +1,6 @@
 package models.dataset
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -7,7 +8,6 @@ import com.scalableminds.webknossos.schema.Tables._
 import models.job.JobService
 
 import javax.inject.Inject
-import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{Format, JsObject, Json}
 import play.api.mvc.{Result, Results}
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
@@ -79,13 +79,12 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO, jobService: JobServ
         "jobsEnabled" -> jobsEnabled
       )
 
-  def validateAccess(name: String, key: String)(block: DataStore => Future[Result])(
-      implicit m: MessagesProvider): Fox[Result] =
+  def validateAccess(name: String, key: String)(block: DataStore => Future[Result]): Fox[Result] =
     Fox.fromFuture((for {
       dataStore <- dataStoreDAO.findOneByName(name)(GlobalAccessContext)
       _ <- Fox.fromBool(key == dataStore.key)
       result <- Fox.fromFuture(block(dataStore))
-    } yield result).getOrElse(Forbidden(Json.obj("granted" -> false, "msg" -> Messages("dataStore.notFound")))))
+    } yield result).getOrElse(Forbidden(Json.obj("granted" -> false, "msg" -> Msg.DataStore.notFound))))
 
 }
 

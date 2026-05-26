@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore
 
 import com.google.inject.Inject
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
@@ -97,7 +98,7 @@ class TSRemoteWebknossosClient @Inject()(
           .addQueryParam("key", tracingStoreKey)
           .silent
           .getWithJsonResponse[ObjectId]
-    ) ?~> "annotation.idForTracing.failed"
+    ) ?~> Msg.Annotation.idForTracingFailed(tracingId)
 
   def updateAnnotation(annotationId: ObjectId, annotationProto: AnnotationProto): Fox[Unit] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/updateAnnotation")

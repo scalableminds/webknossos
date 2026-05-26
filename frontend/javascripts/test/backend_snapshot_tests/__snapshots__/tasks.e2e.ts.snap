@@ -808,7 +808,7 @@ exports[`Task API  (E2E) > updateTask() 1`] = `
   "id": "58135c192faeb34c0081c058",
   "messages": [
     {
-      "success": "Task successfully edited",
+      "success": "Task was successfully updated.",
     },
   ],
   "neededExperience": {

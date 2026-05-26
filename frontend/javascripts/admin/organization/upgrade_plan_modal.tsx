@@ -75,7 +75,7 @@ function extendPricingPlan(organization: APIOrganization) {
           <FormattedDate timestamp={organization.paidUntil} dateOnly />
         </p>
         <p>
-          Buy extension until: <FormattedDate timestamp={extendedDate} dateOnly />
+          Buy extension until: <FormattedDate timestamp={extendedDate.valueOf()} dateOnly />
         </p>
         {ModalInformationFooter}
       </div>

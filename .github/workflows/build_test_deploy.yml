@@ -185,9 +185,9 @@ jobs:
       - name: Build webknossos (sbt)
         run: sbt -DfailOnWarning compile stage
       - name: Build webknossos-datastore (sbt)
-        run: sbt -DfailOnWarning "project webknossosDatastore" copyMessages compile stage
+        run: sbt -DfailOnWarning "project webknossosDatastore" compile stage
       - name: Build webknossos-tracingstore (sbt)
-        run: sbt -DfailOnWarning "project webknossosTracingstore" copyMessages compile stage
+        run: sbt -DfailOnWarning "project webknossosTracingstore" compile stage
       - name: Checksum App Dirs
         run: find app webknossos-datastore/app webknossos-tracingstore/app -type f -exec md5sum {} \; | sort -k 2 | md5sum > app_checksum.txt
 

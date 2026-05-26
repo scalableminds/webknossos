@@ -3,7 +3,6 @@ package com.scalableminds.util.mvc
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.TextUtils
 import com.scalableminds.util.tools.{Box, Failure, Full, ParamFailure}
-import play.api.i18n.{Messages, MessagesProvider}
 
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -83,8 +82,7 @@ trait Formatter {
 
   protected def formatFailureChain(failure: Failure,
                                    includeStackTraces: Boolean = false,
-                                   includeTime: Boolean = false,
-                                   messagesProviderOpt: Option[MessagesProvider] = None): String = {
+                                   includeTime: Boolean = false): String = {
 
     def formatStackTrace(failure: Failure) =
       failure.exception match {
@@ -98,17 +96,14 @@ trait Formatter {
 
     def formatNextChain(chainBox: Box[Failure]): String = chainBox match {
       case Full(chainFailure) =>
-        " <~ " + formatFailureChain(chainFailure, includeStackTraces, includeTime = false, messagesProviderOpt)
+        " <~ " + formatFailureChain(chainFailure, includeStackTraces)
       case _ => ""
     }
 
-    def formatMsg(msg: String): String =
-      messagesProviderOpt.map(mp => Messages(msg)(mp)).getOrElse(msg)
-
     def formatOneFailure(failure: Failure): String =
       failure match {
-        case ParamFailure(msg, _, _, param) => formatMsg(msg) + " " + param.toString
-        case Failure(msg, _, _)             => formatMsg(msg)
+        case ParamFailure(msg, _, _, param) => msg + " " + param.toString
+        case Failure(msg, _, _)             => msg
       }
 
     val serverTimeMsg = if (includeTime) s"[Server Time ${Instant.now}] " else ""

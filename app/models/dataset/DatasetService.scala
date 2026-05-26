@@ -26,7 +26,7 @@ import models.user.{MultiUserDAO, User, UserService}
 import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
-import controllers.{AttachmentRenaming, DatasetUpdateParameters, LayerRenaming, PathDeletionService}
+import controllers.{AttachmentRenaming, LayerRenaming, PathDeletionService}
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, UploadDatasetEvent}
 import models.annotation.AnnotationDAO
@@ -98,9 +98,6 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.fromBool(!isDatasetNameAlreadyTaken) ?~> "dataset.name.alreadyTaken"
     } yield ()
 
-  def findOneByImportURL(importURL: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
-    datasetDAO.findOneByImportURL(importURL, organizationId)
-
   def getAllUnfinishedDatasetUploadsOfUser(userId: ObjectId, organizationId: String)(
       implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
     datasetDAO.findAllCompactWithSearch(
@@ -135,19 +132,11 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         datasetName,
         dataSource.withUpdatedId(DataSourceId(directoryName, organization._id)),
         isVirtual = isVirtual,
-        creationType = creationType
+        creationType = creationType,
+        importURL = importURLOpt
       )
       datasetId = dataset._id
       _ <- datasetDAO.updateFolder(datasetId, folderIdWithFallback)(GlobalAccessContext)
-      _ <- Fox.runOptional(importURLOpt) { importURL =>
-        datasetDAO.updatePartial(
-          datasetId,
-          DatasetUpdateParameters(
-            description = None,
-            name = None,
-            metadata = Some(JsArray(Seq(Json.obj("key" -> "importURL", "type" -> "string", "value" -> importURL)))))
-        )(GlobalAccessContext)
-      }
       _ <- addUploader(dataset, user._id)(GlobalAccessContext)
     } yield dataset
 
@@ -159,7 +148,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       isVirtual: Boolean = false,
       metadata: JsArray = JsArray.empty,
       description: Option[String] = None,
-      creationType: DatasetCreationType.Value
+      creationType: DatasetCreationType.Value,
+      importURL: Option[String] = None
   )(implicit mp: MessagesProvider): Fox[Dataset] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
 
@@ -189,6 +179,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         logoUrl = None,
         metadata = metadata,
         creationType = Some(creationType),
+        importURL = importURL,
       )
       _ <- datasetDAO.insertOne(dataset)
       _ <- datasetDataLayerDAO.updateLayers(datasetId, dataSource)

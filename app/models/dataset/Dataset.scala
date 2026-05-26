@@ -72,6 +72,7 @@ case class Dataset(_id: ObjectId,
                    metadata: JsArray = JsArray.empty,
                    tags: List[String] = List.empty,
                    creationType: Option[DatasetCreationType] = None,
+                   importURL: Option[String] = None,
                    created: Instant = Instant.now,
                    isDeleted: Boolean = false)
 
@@ -159,6 +160,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         metadata,
         parseArrayLiteral(r.tags).sorted,
         creationType,
+        r.importurl,
         Instant.fromSql(r.created),
         r.isdeleted
       )
@@ -446,7 +448,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       r <- run(q"""SELECT $columns
                    FROM $existingCollectionName
                    WHERE _organization = $organizationId
-                   AND metadata @> jsonb_build_array(jsonb_build_object('type', 'string', 'key', 'importURL', 'value', $importURL))
+                   AND importURL = $importURL
                    AND $accessQuery
                    ORDER BY created ASC, _id ASC
                    LIMIT 1""".as[DatasetsRow])
@@ -668,7 +670,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      description, directoryName, isPublic, isUsable, isVirtual,
                      name, voxelSizeFactor, voxelSizeUnit, status,
                      sharingToken, sortingKey, metadata, tags, creationType,
-                     created, isDeleted
+                     importURL, created, isDeleted
                    )
                    VALUES(
                      ${d._id}, ${d._dataStore}, ${d._organization}, ${d._publication},
@@ -677,7 +679,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      ${d.description}, ${d.directoryName}, ${d.isPublic}, ${d.isUsable}, ${d.isVirtual},
                      ${d.name}, ${d.voxelSize.map(_.factor)}, ${d.voxelSize.map(_.unit)}, ${d.status.take(1024)},
                      ${d.sharingToken}, ${d.sortingKey}, ${d.metadata}, ${d.tags}, ${d.creationType},
-                     ${d.created}, ${d.isDeleted}
+                     ${d.importURL}, ${d.created}, ${d.isDeleted}
                    )""".asUpdate)
     } yield ()
   }

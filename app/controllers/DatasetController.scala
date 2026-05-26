@@ -459,7 +459,7 @@ class DatasetController @Inject()(userService: UserService,
   def findByImportURL(importURL: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        datasetBox <- datasetService.findOneByImportURL(importURL, request.identity._organization).shiftBox
+        datasetBox <- datasetDAO.findOneByImportURL(importURL, request.identity._organization).shiftBox
         js <- datasetBox match {
           case Full(dataset) => datasetService.publicWrites(dataset, Some(request.identity))
           case Empty         => Fox.successful(Json.toJson(None))

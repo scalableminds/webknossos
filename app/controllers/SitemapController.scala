@@ -12,7 +12,7 @@ class SitemapController @Inject()(sitemapWriter: SitemapWriter, sil: Silhouette[
     extends Controller {
 
   // Only called explicitly via RequestHandler
-  def getSitemap(prefix: String): Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+  def getSitemap(prefix: String): Action[AnyContent] = sil.UserAwareAction.async { _ =>
     for {
       sitemap <- sitemapWriter.getSitemap(prefix)
     } yield

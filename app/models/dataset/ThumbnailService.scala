@@ -1,4 +1,5 @@
 package models.dataset
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
@@ -12,7 +13,6 @@ import com.typesafe.scalalogging.LazyLogging
 import models.configuration.DatasetConfigurationService
 import com.scalableminds.util.tools.Full
 import play.api.http.Status.NOT_FOUND
-import play.api.i18n.{Messages, MessagesProvider}
 import com.scalableminds.util.objectid.ObjectId
 import play.api.libs.json.{JsArray, JsObject}
 import utils.sql.{SimpleSQLDAO, SqlClient}
@@ -35,12 +35,11 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
   private val MaxThumbnailWidth = 4000
   private val MaxThumbnailHeight = 4000
 
-  def getThumbnailWithCache(
-      datasetIdValidated: ObjectId,
-      layerName: String,
-      w: Option[Int],
-      h: Option[Int],
-      mappingName: Option[String])(implicit ec: ExecutionContext, mp: MessagesProvider): Fox[Array[Byte]] = {
+  def getThumbnailWithCache(datasetIdValidated: ObjectId,
+                            layerName: String,
+                            w: Option[Int],
+                            h: Option[Int],
+                            mappingName: Option[String])(implicit ec: ExecutionContext): Fox[Array[Byte]] = {
     val width = com.scalableminds.util.tools.Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailWidth)
     val height = com.scalableminds.util.tools.Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
     for {
@@ -51,20 +50,18 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
         width,
         height,
         mappingName,
-        _ => getThumbnail(dataset, layerName, width, height, mappingName)(ec, GlobalAccessContext, mp)
+        _ => getThumbnail(dataset, layerName, width, height, mappingName)(ec, GlobalAccessContext)
       )
     } yield image
   }
 
   private def getThumbnail(dataset: Dataset, layerName: String, width: Int, height: Int, mappingName: Option[String])(
       implicit ec: ExecutionContext,
-      ctx: DBAccessContext,
-      mp: MessagesProvider): Fox[Array[Byte]] =
+      ctx: DBAccessContext): Fox[Array[Byte]] =
     for {
       usableDataSource <- datasetService.usableDataSourceFor(dataset)
-      layer <- usableDataSource.dataLayers
-        .find(_.name == layerName)
-        .toFox ?~> Messages("dataLayer.notFound", layerName) ~> NOT_FOUND
+      layer <- usableDataSource.dataLayers.find(_.name == layerName).toFox ?~> Msg.Dataset.Layer
+        .notFound(layerName) ~> NOT_FOUND
       viewConfiguration <- datasetConfigurationService.getDatasetViewConfigurationForDataset(List.empty, dataset._id)(
         ctx)
       (mag1BoundingBox, mag, intensityRangeOpt, colorSettingsOpt, mapping) = selectParameters(viewConfiguration,

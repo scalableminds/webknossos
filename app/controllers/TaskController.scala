@@ -1,5 +1,7 @@
 package controllers
 
+import com.scalableminds.util.Msg
+
 import java.io.File
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
@@ -16,7 +18,6 @@ import models.project.ProjectDAO
 import models.task._
 import models.user._
 import com.scalableminds.util.tools.{Box, Full}
-import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
@@ -42,7 +43,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
 
   def read(taskId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      task <- taskDAO.findOne(taskId) ?~> "task.notFound" ~> NOT_FOUND
+      task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound(taskId) ~> NOT_FOUND
       js <- taskService.publicWrites(task)
     } yield Ok(js)
   }
@@ -50,17 +51,17 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
   def create: Action[List[TaskParameters]] =
     sil.SecuredAction.async(validateJson[List[TaskParameters]]) { implicit request =>
       for {
-        _ <- Fox.fromBool(request.body.nonEmpty) ?~> "task.create.noTasks"
+        _ <- Fox.fromBool(request.body.nonEmpty) ?~> Msg.Task.Create.noTasks
         taskTypeId <- SequenceUtils
           .findUniqueElement(request.body.map(_.taskTypeId))
-          .toFox ?~> "task.create.notOnSameTaskType"
-        taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound"
+          .toFox ?~> Msg.Task.Create.notOnSameTaskType
+        taskType <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound(taskTypeId)
         datasetId <- SequenceUtils
           .findUniqueElement(request.body.map(_.datasetId))
-          .toFox ?~> "task.create.notOnSameDataset"
-        dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId)
+          .toFox ?~> Msg.Task.Create.notOnSameDataset
+        dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId)
         usableDataSource <- datasetService.usableDataSourceFor(dataset)
-        _ <- Fox.fromBool(dataset._organization == request.identity._organization) ?~> "task.create.datasetOfOtherOrga"
+        _ <- Fox.fromBool(dataset._organization == request.identity._organization) ?~> Msg.Task.Create.datasetOfOtherOrga
         _ <- taskCreationService.assertBatchLimit(request.body.length, taskType)
         taskParametersWithIds = taskCreationService.addNewIdsToTaskParameters(request.body, taskType)
         taskParametersFull <- taskCreationService.createTracingsFromBaseAnnotations(taskParametersWithIds,
@@ -94,17 +95,18 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
    */
   def createFromFiles: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      body <- request.body.asMultipartFormData.toFox ?~> "binary.payload.invalid"
+      body <- request.body.asMultipartFormData.toFox ?~> Msg.Task.Create.multipartPayloadInvalid
       inputFiles = body.files.filter(file =>
         file.filename.toLowerCase.endsWith(".nml") || file.filename.toLowerCase.endsWith(".zip"))
-      _ <- Fox.fromBool(inputFiles.nonEmpty) ?~> "nml.file.notFound"
-      jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption).toFox ?~> "format.json.missing"
-      params <- JsonHelper.parseAs[NmlTaskParameters](jsonString).toFox ?~> "task.create.failed"
+      _ <- Fox.fromBool(inputFiles.nonEmpty) ?~> Msg.Nml.fileNotFound
+      jsonString <- body.dataParts.get("formJSON").flatMap(_.headOption).toFox ?~> Msg.Task.Create.formJsonMissing
+      params <- JsonHelper.parseAs[NmlTaskParameters](jsonString).toFox ?~> Msg.Task.Create.failed
       userOrganizationId = request.identity._organization
-      taskType <- taskTypeDAO.findOne(params.taskTypeId) ?~> "taskType.notFound" ~> NOT_FOUND
+      taskType <- taskTypeDAO.findOne(params.taskTypeId) ?~> Msg.TaskType.notFound(params.taskTypeId) ~> NOT_FOUND
       _ <- taskCreationService.assertBatchLimit(inputFiles.length, taskType)
       project <- projectDAO
-        .findOneByNameAndOrganization(params.projectName, request.identity._organization) ?~> "project.notFound" ~> NOT_FOUND
+        .findOneByNameAndOrganization(params.projectName, request.identity._organization) ?~> Msg.Project.notFound(
+        params.projectName) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team))
       extractedFiles <- nmlService.extractFromFiles(
         inputFiles.map(f => (f.ref.path.toFile, f.filename)),
@@ -133,28 +135,28 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     sil.SecuredAction.async(validateJson[TaskParameters]) { implicit request =>
       val params = request.body
       for {
-        task <- taskDAO.findOne(taskId) ?~> "task.notFound" ~> NOT_FOUND
+        task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound(taskId) ~> NOT_FOUND
         project <- projectDAO.findOne(task._project)
-        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- taskDAO.updateTotalInstances(task._id,
                                           task.totalInstances + params.pendingInstances - task.pendingInstances)
         updatedTask <- taskDAO.findOne(taskId)
         json <- taskService.publicWrites(updatedTask)
-      } yield JsonOk(json, Messages("task.editSuccess"))
+      } yield JsonOk(json, Msg.Task.editSuccess)
     }
 
   def delete(taskId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      task <- taskDAO.findOne(taskId) ?~> "task.notFound" ~> NOT_FOUND
+      task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound(taskId) ~> NOT_FOUND
       project <- projectDAO.findOne(task._project)
-      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed"
-      _ <- taskDAO.removeOneAndItsAnnotations(task._id) ?~> "task.remove.failed"
-    } yield JsonOk(Messages("task.removed"))
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed
+      _ <- taskDAO.removeOneAndItsAnnotations(task._id) ?~> Msg.Task.deleteFailed
+    } yield JsonOk(Msg.Task.deleteSuccess)
   }
 
   def listTasksForType(taskTypeId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      tasks <- taskDAO.findAllByTaskType(taskTypeId) ?~> "taskType.notFound" ~> NOT_FOUND
+      tasks <- taskDAO.findAllByTaskType(taskTypeId) ?~> Msg.TaskType.notFound(taskTypeId) ~> NOT_FOUND
       js <- Fox.serialCombined(tasks)(taskService.publicWrites(_))
     } yield Ok(Json.toJson(js))
   }
@@ -183,12 +185,12 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         teams <- taskService.getAllowedTeamsForNextTask(user)
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
         (taskId, initializingAnnotationId) <- taskDAO
-          .assignNext(user._id, teams, isTeamManagerOrAdmin) ?~> "task.unavailable"
+          .assignNext(user._id, teams, isTeamManagerOrAdmin) ?~> Msg.Task.unavailable
         insertedAnnotationBox <- annotationService.createAnnotationFor(user, taskId, initializingAnnotationId).shiftBox
         _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
         annotation <- insertedAnnotationBox.toFox
         annotationJSON <- annotationService.publicWrites(annotation, Some(user))
-      } yield JsonOk(annotationJSON, Messages("task.assigned"))
+      } yield JsonOk(annotationJSON, Msg.Task.assigned)
     }
   }
 
@@ -199,9 +201,9 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         teams <- userService.teamIdsFor(userId)
         task <- taskDAO.findOne(id)
         project <- projectDAO.findOne(task._project)
-        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> "notAllowed"
-        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, assignee)) ?~> "notAllowed"
-        (_, initializingAnnotationId) <- taskDAO.assignOneTo(id, userId, teams) ?~> "task.unavailable"
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, assignee)) ?~> Msg.notAllowed
+        (_, initializingAnnotationId) <- taskDAO.assignOneTo(id, userId, teams) ?~> Msg.Task.unavailable
         insertedAnnotationBox <- annotationService.createAnnotationFor(assignee, id, initializingAnnotationId).shiftBox
         _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
         _ <- insertedAnnotationBox.toFox
@@ -216,7 +218,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     for {
       teamIds <- userService.teamIdsFor(user._id)
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
-      task <- taskDAO.peekNextAssignment(user._id, teamIds, isTeamManagerOrAdmin) ?~> "task.unavailable"
+      task <- taskDAO.peekNextAssignment(user._id, teamIds, isTeamManagerOrAdmin) ?~> Msg.Task.unavailable
       taskJson <- taskService.publicWrites(task)(GlobalAccessContext)
     } yield Ok(taskJson)
   }

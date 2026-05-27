@@ -7,6 +7,26 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 For upgrade instructions, please check the [migration guide](MIGRATIONS.released.md).
 
+## [26.06.0](https://github.com/scalableminds/webknossos/releases/tag/26.06.0) - 2026-05-27
+[Commits](https://github.com/scalableminds/webknossos/compare/26.05.2...26.06.0)
+
+### Highlights
+- Added new functions to the JavaScript API: setCameraRotation, downloadScreenshot as well as captureScreenshots downloadScreenshotsAsZip (the last two can be used in conjunction to download many screenshots in one go). [#9599](https://github.com/scalableminds/webknossos/pull/9599)
+
+### Added
+- Added the experimental feature (only available for super-users) to concurrently edit an annotation. This feature can be enabled via the Share dialog for an annotation. Only the proofreading tool will be available in that mode, currently. [#9297](https://github.com/scalableminds/webknossos/pull/9297)
+- Added "Create Group" button to the skeleton and segment tabs. [#9592](https://github.com/scalableminds/webknossos/pull/9592)
+
+### Changed
+- Unified the wording of various error messages. [#9566](https://github.com/scalableminds/webknossos/pull/9566)
+- Improved the icons for the measurement tools. [#9569](https://github.com/scalableminds/webknossos/pull/9569)
+- Enabled AI features for dataset managers and disabled them for members who are only team managers. [#9575](https://github.com/scalableminds/webknossos/pull/9575)
+
+### Fixed
+- Fixed that shortcuts weren't working when the tree/segment list is focussed. [#9567](https://github.com/scalableminds/webknossos/pull/9567)
+- When creating a new annotation from the dataset table in the dashbaord, the volume annotation layer get the name of the fallback layer instead of always "Volume". [#9571](https://github.com/scalableminds/webknossos/pull/9571)
+- Fixed an issue where the context menu would not trigger for skeletons and segments tab entries. Made entries full width for larger click targets. [#9592](https://github.com/scalableminds/webknossos/pull/9592)
+
 ## [26.05.2](https://github.com/scalableminds/webknossos/releases/tag/26.05.2) - 2026-05-07
 [Commits](https://github.com/scalableminds/webknossos/compare/26.05.1...26.05.2)
 

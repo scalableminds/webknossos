@@ -12,6 +12,7 @@ inThisBuild(
 // fix jni for scala version 3
 sbtJniCoreScope := Compile
 
+// failOnWarning is temporarily disabled after scala3 upgrade. See https://github.com/scalableminds/webknossos/issues/9606
 val failOnWarning = Seq() // if (sys.props.contains("failOnWarning")) Seq("-Xfatal-warnings") else Seq()
 ThisBuild / scalacOptions ++= Seq(
   "-explain", // More detailed compiler output

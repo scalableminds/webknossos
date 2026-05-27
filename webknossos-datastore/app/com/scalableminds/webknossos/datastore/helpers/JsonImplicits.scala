@@ -15,7 +15,7 @@ trait JsonImplicits {
 
     override def writes(number: Number): JsValue = {
       val longVal = number.longValue()
-      if (number.doubleValue() == longVal.toDouble)
+      if (math.abs(number.doubleValue() - longVal.toDouble) < 1e-9)
         JsNumber(longVal)
       else
         JsNumber(BigDecimal(number.doubleValue()))

@@ -382,6 +382,9 @@ class PlaneController extends PureComponent<Props> {
       SWITCH_TO_LASSO_ERASE_TOOL: {
         onPressed: () => activateTool(AnnotationTool.ERASE_TRACE),
       },
+      SWITCH_TO_FILL_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.FILL_CELL),
+      },
       SWITCH_TO_SEGMENT_PICKER_TOOL: {
         onPressed: () => activateTool(AnnotationTool.VOXEL_PIPETTE),
       },
@@ -393,6 +396,12 @@ class PlaneController extends PureComponent<Props> {
       },
       SWITCH_TO_PROOFREADING_TOOL: {
         onPressed: () => activateTool(AnnotationTool.PROOFREAD),
+      },
+      SWITCH_TO_LINE_MEASUREMENT_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.LINE_MEASUREMENT),
+      },
+      SWITCH_TO_AREA_MEASUREMENT_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.AREA_MEASUREMENT),
       },
     };
   }

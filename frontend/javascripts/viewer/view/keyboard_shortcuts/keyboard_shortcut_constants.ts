@@ -73,10 +73,13 @@ export type KeyboardShortcutId =
   | "SWITCH_TO_BRUSH_ERASE_TOOL"
   | "SWITCH_TO_LASSO_TOOL"
   | "SWITCH_TO_LASSO_ERASE_TOOL"
+  | "SWITCH_TO_FILL_TOOL"
   | "SWITCH_TO_SEGMENT_PICKER_TOOL"
   | "SWITCH_TO_QUICK_SELECT_TOOL"
   | "SWITCH_TO_BOUNDING_BOX_TOOL"
   | "SWITCH_TO_PROOFREADING_TOOL"
+  | "SWITCH_TO_LINE_MEASUREMENT_TOOL"
+  | "SWITCH_TO_AREA_MEASUREMENT_TOOL"
   // Plane mode — skeleton tool
   | "TOGGLE_ALL_TREES"
   | "TOGGLE_INACTIVE_TREES"
@@ -409,6 +412,11 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
     [[["Control", "k"], ["r"]]],
     "PLANE_TOOL_SWITCHING",
   ),
+  SWITCH_TO_FILL_TOOL: new KeyboardShortcutMetaInfo(
+    "Fill Tool",
+    [[["Control", "k"], ["f"]]],
+    "PLANE_TOOL_SWITCHING",
+  ),
   SWITCH_TO_SEGMENT_PICKER_TOOL: new KeyboardShortcutMetaInfo(
     "Segment Picker Tool",
     [[["Control", "k"], ["p"]]],
@@ -427,6 +435,16 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
   SWITCH_TO_PROOFREADING_TOOL: new KeyboardShortcutMetaInfo(
     "Proofreading Tool",
     [[["Control", "k"], ["o"]]],
+    "PLANE_TOOL_SWITCHING",
+  ),
+  SWITCH_TO_LINE_MEASUREMENT_TOOL: new KeyboardShortcutMetaInfo(
+    "Line Measurement Tool",
+    [[["Control", "k"], ["i"]]],
+    "PLANE_TOOL_SWITCHING",
+  ),
+  SWITCH_TO_AREA_MEASUREMENT_TOOL: new KeyboardShortcutMetaInfo(
+    "Area Measurement Tool",
+    [[["Control", "k"], ["a"]]],
     "PLANE_TOOL_SWITCHING",
   ),
 

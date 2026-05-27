@@ -11,7 +11,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 [Commits](https://github.com/scalableminds/webknossos/compare/26.05.2...26.06.0)
 
 ### Highlights
-- Added new functions to the JavaScript API: setCameraRotation, downloadScreenshot as well as captureScreenshots downloadScreenshotsAsZip (the last two can be used in conjunction to download many screenshots in one go). [#9599](https://github.com/scalableminds/webknossos/pull/9599)
+- Added new functions to the JavaScript API: `setCameraRotation`, `downloadScreenshot`, `captureScreenshots`, and `downloadScreenshotsAsZip` (the last two can be used together to download many screenshots in one go). [`#9599`](https://github.com/scalableminds/webknossos/pull/9599)
 
 ### Added
 - Added the experimental feature (only available for super-users) to concurrently edit an annotation. This feature can be enabled via the Share dialog for an annotation. Only the proofreading tool will be available in that mode, currently. [#9297](https://github.com/scalableminds/webknossos/pull/9297)
@@ -24,7 +24,7 @@ For upgrade instructions, please check the [migration guide](MIGRATIONS.released
 
 ### Fixed
 - Fixed that shortcuts weren't working when the tree/segment list is focussed. [#9567](https://github.com/scalableminds/webknossos/pull/9567)
-- When creating a new annotation from the dataset table in the dashbaord, the volume annotation layer get the name of the fallback layer instead of always "Volume". [#9571](https://github.com/scalableminds/webknossos/pull/9571)
+- When creating a new annotation from the dataset table in the dashboard, the volume annotation layer gets the name of the fallback layer instead of always "Volume". [`#9571`](https://github.com/scalableminds/webknossos/pull/9571)
 - Fixed an issue where the context menu would not trigger for skeletons and segments tab entries. Made entries full width for larger click targets. [#9592](https://github.com/scalableminds/webknossos/pull/9592)
 
 ## [26.05.2](https://github.com/scalableminds/webknossos/releases/tag/26.05.2) - 2026-05-07

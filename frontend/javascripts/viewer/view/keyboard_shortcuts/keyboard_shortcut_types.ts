@@ -53,10 +53,10 @@ export type KeyboardShortcutsMap = Record<KeyboardShortcutId, KeySequenceAlterna
 // display as punctuation and symbols are stored by the KeyboardEvent's code property:
 // The map resolves the `@code` strings from the KeyboardShortcutsMap to characters actually on the users keyboard.
 // See keyboard_layout_utils.ts for why shortcuts use `@code` instead of literal characters.
-export type KeyboardEventCodeToUnmodifiedKeyMap = Map<string, string>;
+export type UnmodifiedLayoutMap = Map<string, string>;
 export type KeyboardConfiguration = {
   readonly shortcutsConfig: KeyboardShortcutsMap;
-  readonly keyboardEventCodeToUnmodifiedKeyMap: KeyboardEventCodeToUnmodifiedKeyMap;
+  readonly unmodifiedLayoutMap: UnmodifiedLayoutMap;
 };
 
 export function getAllCollidingDomainsOf(

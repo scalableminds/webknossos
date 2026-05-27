@@ -316,21 +316,19 @@ function SettingsReducer(state: WebknossosState, action: Action): WebknossosStat
         ...state,
         keyboardConfiguration: {
           ...state.keyboardConfiguration,
-          keyboardEventCodeToUnmodifiedKeyMap: action.map,
+          unmodifiedLayoutMap: action.map,
         },
       };
     }
 
     case "SET_KEYBOARD_LAYOUT_MAP_ENTRY": {
-      const copy = new Map(
-        state.keyboardConfiguration.keyboardEventCodeToUnmodifiedKeyMap.entries(),
-      );
+      const copy = new Map(state.keyboardConfiguration.unmodifiedLayoutMap.entries());
       const copyWithNewEntry = copy.set(action.code, action.key);
       return {
         ...state,
         keyboardConfiguration: {
           ...state.keyboardConfiguration,
-          keyboardEventCodeToUnmodifiedKeyMap: copyWithNewEntry,
+          unmodifiedLayoutMap: copyWithNewEntry,
         },
       };
     }

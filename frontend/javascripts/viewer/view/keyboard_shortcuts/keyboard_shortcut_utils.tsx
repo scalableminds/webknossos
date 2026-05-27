@@ -20,13 +20,13 @@ import {
 } from "./keyboard_shortcut_constants";
 import {
   getAllCollidingDomainsOf,
-  type KeyboardEventCodeToUnmodifiedKeyMap,
   type KeyboardShortcutCollisionDomain,
   type KeyboardShortcutHandlerMap,
   type KeyboardShortcutsMap,
   type KeyCombination,
   type KeySequence,
   LeafCollisionDomains,
+  type UnmodifiedLayoutMap,
 } from "./keyboard_shortcut_types";
 
 const { Text } = Typography;
@@ -49,10 +49,10 @@ export function KeyboardLayoutApiNotice(): React.ReactNode {
 
 export function keyToUiElement(
   key: string,
-  keyboardEventCodeToUnmodifiedKeyMap: KeyboardEventCodeToUnmodifiedKeyMap,
+  unmodifiedLayoutMap: UnmodifiedLayoutMap,
 ): React.ReactNode {
   // Translate @code keys (e.g. "@BracketRight") to the layout-specific character (e.g. "+").
-  const displayName = displayKeyName(key, keyboardEventCodeToUnmodifiedKeyMap);
+  const displayName = displayKeyName(key, unmodifiedLayoutMap);
   switch (displayName) {
     case " ":
       return "Space";
@@ -122,7 +122,7 @@ export function keySequenceToUiElements(
   // Renders a "fancier" version of the combo chain. Currently only used in the info tab.
   useHighlightedIcon: boolean,
   keyPrefix: string = "",
-  keyboardEventCodeToUnmodifiedKeyMap: KeyboardEventCodeToUnmodifiedKeyMap,
+  unmodifiedLayoutMap: UnmodifiedLayoutMap,
 ): React.ReactNode[] {
   const uiElements: React.ReactNode[] = [];
   keySequence.forEach((keyCombination, outerIndex) => {
@@ -133,7 +133,7 @@ export function keySequenceToUiElements(
             key={`${keyPrefix}${outerIndex}-${innerIndex}`}
             className="keyboard-key-icon"
           >
-            {keyToUiElement(key, keyboardEventCodeToUnmodifiedKeyMap)}
+            {keyToUiElement(key, unmodifiedLayoutMap)}
           </KeyboardKeyIcon>,
         );
       } else {
@@ -143,7 +143,7 @@ export function keySequenceToUiElements(
             keyboard
             style={{ whiteSpace: "nowrap" }}
           >
-            {keyToUiElement(key, keyboardEventCodeToUnmodifiedKeyMap)}
+            {keyToUiElement(key, unmodifiedLayoutMap)}
           </Text>,
         );
       }

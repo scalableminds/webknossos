@@ -100,8 +100,8 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
   const keyboardShortcutsConfigFromStore = useWkSelector(
     (state) => state.keyboardConfiguration.shortcutsConfig,
   );
-  const keyboardEventCodeToUnmodifiedKeyMap = useWkSelector(
-    (state) => state.keyboardConfiguration.keyboardEventCodeToUnmodifiedKeyMap,
+  const unmodifiedLayoutMap = useWkSelector(
+    (state) => state.keyboardConfiguration.unmodifiedLayoutMap,
   );
   const [isJsonView, setIsJsonView] = useState(false);
   const [isRecorderOpen, setIsRecorderOpen] = useState(false);
@@ -217,12 +217,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
               combos.map((comboChain, index) => (
                 <div key={index} className="single-keyboard-shortcut-container">
                   <span style={{ padding: "0px 4px" }}>
-                    {keySequenceToUiElements(
-                      comboChain,
-                      false,
-                      "",
-                      keyboardEventCodeToUnmodifiedKeyMap,
-                    )}
+                    {keySequenceToUiElements(comboChain, false, "", unmodifiedLayoutMap)}
                   </span>
                   <FastTooltip title="Edit keyboard shortcut">
                     <Button

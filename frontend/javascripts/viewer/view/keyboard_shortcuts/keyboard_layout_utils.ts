@@ -58,7 +58,7 @@ import {
   setKeyboardLayoutMapEntryAction,
 } from "viewer/model/actions/settings_actions";
 import Store from "viewer/store";
-import type { KeyboardEventCodeToUnmodifiedKeyMap } from "./keyboard_shortcut_types";
+import type { UnmodifiedLayoutMap } from "./keyboard_shortcut_types";
 
 const LOCAL_STORAGE_KEY = "keyboardLayoutMap";
 
@@ -87,9 +87,7 @@ const US_LAYOUT_FALLBACK: Record<string, string> = {
   NumpadDivide: "/",
 };
 
-function seedDigits(
-  base: KeyboardEventCodeToUnmodifiedKeyMap = new Map(),
-): KeyboardEventCodeToUnmodifiedKeyMap {
+function seedDigits(base: UnmodifiedLayoutMap = new Map()): UnmodifiedLayoutMap {
   const result = new Map(base);
   for (let i = 0; i <= 9; i++) {
     if (!(`Digit${i}` in result)) {
@@ -99,7 +97,7 @@ function seedDigits(
   return result;
 }
 
-function persistToLocalStorage(map: KeyboardEventCodeToUnmodifiedKeyMap) {
+function persistToLocalStorage(map: UnmodifiedLayoutMap) {
   const mapAsObject = JSON.stringify(Object.fromEntries(map.entries()));
   UserLocalStorage.setItem(LOCAL_STORAGE_KEY, mapAsObject, false);
 }
@@ -113,7 +111,7 @@ export function isKeyboardLayoutApiAvailable(): boolean {
 async function loadFromLayoutAPI(): Promise<boolean> {
   try {
     const layoutMap: Map<string, string> = await (navigator as any).keyboard.getLayoutMap();
-    const map: KeyboardEventCodeToUnmodifiedKeyMap = new Map();
+    const map: UnmodifiedLayoutMap = new Map();
     for (const [code, key] of layoutMap) {
       map.set(code, key);
     }
@@ -169,7 +167,7 @@ export function registerKeyForLayoutMap(e: KeyboardEvent) {
     return;
   }
 
-  const currentMap = Store.getState().keyboardConfiguration.keyboardEventCodeToUnmodifiedKeyMap;
+  const currentMap = Store.getState().keyboardConfiguration.unmodifiedLayoutMap;
   const existing = currentMap.get(e.code);
 
   if (isKeyboardLayoutApiAvailable()) {
@@ -199,10 +197,7 @@ export function registerKeyForLayoutMap(e: KeyboardEvent) {
 //   "Shift"         → "Shift" (unchanged — modifier)
 //   "F1"            → "F1"    (unchanged — named key)
 //   "@BracketRight" → "+" on German keyboard, "]" on US (via layout map)
-export function displayKeyName(
-  key: string,
-  layoutMap: KeyboardEventCodeToUnmodifiedKeyMap,
-): string {
+export function displayKeyName(key: string, layoutMap: UnmodifiedLayoutMap): string {
   if (!key.startsWith("@")) {
     return key;
   }

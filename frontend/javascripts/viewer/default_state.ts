@@ -121,7 +121,7 @@ const defaultState: WebknossosState = {
   },
   keyboardConfiguration: {
     shortcutsConfig: getAllDefaultKeyboardShortcuts(),
-    keyboardEventCodeToUnmodifiedKeyMap: new Map(),
+    unmodifiedLayoutMap: new Map(),
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,

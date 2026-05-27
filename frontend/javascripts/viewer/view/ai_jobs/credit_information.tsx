@@ -39,8 +39,7 @@ export const RunAiModelCreditInformation: React.FC = () => {
   } = useRunAiModelJobContext();
   const dataset = useWkSelector((state) => state.dataset);
 
-  const aiModelId =
-    selectedModel != null && "trainingJob" in selectedModel ? selectedModel.id : undefined;
+  const aiModelId = selectedModel?.id;
 
   const { data: adjustedBoundingBox } = useQuery<UserBoundingBox | null>({
     queryKey: [
@@ -166,7 +165,6 @@ const CreditInformation: React.FC<CreditInformationProps> = ({
   const jobTypeToCreditCostPerGVxInMillis: Partial<Record<APIJobCommand, number>> = useMemo(
     () => ({
       [APIJobCommand.INFER_NEURONS]: features().neuronInferralCostInMilliCreditsPerGVx,
-      [APIJobCommand.INFER_NUCLEI]: features().nucleiInferralCostInMilliCreditsPerGVx,
       [APIJobCommand.INFER_MITOCHONDRIA]: features().mitochondriaInferralCostInMilliCreditsPerGVx,
       [APIJobCommand.INFER_INSTANCES]: features().instancesInferralCostInMilliCreditsPerGVx,
       [APIJobCommand.ALIGN_SECTIONS]: features().alignmentCostInMilliCreditsPerGVx,

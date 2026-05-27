@@ -20,9 +20,16 @@ import urljoin from "url-join";
 import type { Vector3 } from "viewer/constants";
 import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import { proofreadMergeAction } from "viewer/model/actions/proofread_actions";
+import {
+  updateLayerSettingAction,
+  updateUserSettingAction,
+} from "viewer/model/actions/settings_actions";
 import { cycleToolAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import { setActiveCellAction } from "viewer/model/actions/volumetracing_actions";
+import {
+  setActiveCellAction,
+  setHideUnregisteredSegmentsAction,
+} from "viewer/model/actions/volumetracing_actions";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   createExplorational,
@@ -70,41 +77,82 @@ loadEnvFile(path.join(__dirname, ".env"));
 // Config
 // ---------------------------------------------------------------------------
 
-const N_COLLAB_USERS = 2;
+const N_COLLAB_USERS = 1;
 
 const ORG_NAME = "sample_organization";
-const DATASET_NAME = "l4dense_motta_et_al_dev";
-const HDF5_MAPPING_NAME = "agglomerate_view_30";
 
-const MERGE_SOURCE_AGGLOMERATE_ID = 3681595;
-const MERGE_SOURCE_POSITION = [2918, 4316, 1770] as Vector3;
-const MERGE_TARGET_AGGLOMERATE_ID = 426008;
-const MERGE_TARGET_SEGMENT_ID = 5233834;
+// Localhost
+const DATASET_NAME = "l4_v2_sample"; // "l4dense_motta_et_al_dev";
+const HDF5_MAPPING_NAME = "agglomerate_view_5"; // "agglomerate_view_30";
+
+// const MERGE_SOURCE_AGGLOMERATE_ID = 3681595;
+// const MERGE_SOURCE_POSITION = [2918, 4316, 1770] as Vector3;
+// const MERGE_TARGET_AGGLOMERATE_ID = 426008;
+// const MERGE_TARGET_SEGMENT_ID = 5233834;
+// // Position (in voxel coordinates) where the target segment is located.
+// // Used by the proofreading saga to look up the segment under the cursor.
+// const MERGE_TARGET_POSITION: [number, number, number] = [2826, 4318, 1770];
+
+const MERGE_SOURCE_AGGLOMERATE_ID = 8465;
+const MERGE_SOURCE_POSITION = [1462, 1535, 1536] as Vector3;
+const MERGE_TARGET_AGGLOMERATE_ID = 31002;
+const MERGE_TARGET_SEGMENT_ID = 186487;
 // Position (in voxel coordinates) where the target segment is located.
 // Used by the proofreading saga to look up the segment under the cursor.
-const MERGE_TARGET_POSITION: [number, number, number] = [2826, 4318, 1770];
+const MERGE_TARGET_POSITION: [number, number, number] = [1429, 1578, 1536];
+
+// DEV Instance
+// const DATASET_NAME = "l4dense_motta_et_al_dev";
+// const HDF5_MAPPING_NAME = "agglomerate_view_30";
+
+// // const MERGE_SOURCE_AGGLOMERATE_ID = 3681595;
+// // const MERGE_SOURCE_POSITION = [2918, 4316, 1770] as Vector3;
+// // const MERGE_TARGET_AGGLOMERATE_ID = 426008;
+// // const MERGE_TARGET_SEGMENT_ID = 5233834;
+// // // Position (in voxel coordinates) where the target segment is located.
+// // // Used by the proofreading saga to look up the segment under the cursor.
+// // const MERGE_TARGET_POSITION: [number, number, number] = [2826, 4318, 1770];
+
+// const MERGE_SOURCE_AGGLOMERATE_ID = 8465;
+// const MERGE_SOURCE_POSITION = [1462, 1535, 1536] as Vector3;
+// const MERGE_TARGET_AGGLOMERATE_ID = 31002;
+// const MERGE_TARGET_SEGMENT_ID = 186487;
+// // Position (in voxel coordinates) where the target segment is located.
+// // Used by the proofreading saga to look up the segment under the cursor.
+// const MERGE_TARGET_POSITION: [number, number, number] = [1429, 1578, 1536];
 
 // Additional per-user merge/split operations performed during the parallel phase.
 // Each entry describes what one collaborating user should do.
 // TODO: fill in real IDs once the dataset is known
 const PARALLEL_USER_OPERATIONS: Array<{
   sourceAgglomerateId: number;
+  sourcePosition: [number, number, number];
   targetAgglomerateId: number;
   targetSegmentId: number;
   targetPosition: [number, number, number];
 }> = [
+  // {
+  //   sourceAgglomerateId: 212176, // TODO
+  //   targetAgglomerateId: 3681813, // TODO
+  //   targetSegmentId: 5237667, // TODO
+  //   targetPosition: [2885, 4308, 1770], // TODO
+  // },
+  // localhost:
   {
-    sourceAgglomerateId: 212176, // TODO
-    targetAgglomerateId: 3681813, // TODO
-    targetSegmentId: 5237667, // TODO
-    targetPosition: [2885, 4308, 1770], // TODO
+    sourceAgglomerateId: 2165257,
+    sourcePosition: [1551, 1503, 1536],
+    targetAgglomerateId: 2165413,
+    targetSegmentId: 2261859,
+    targetPosition: [1571, 1517, 1536],
   },
-  {
-    sourceAgglomerateId: 212176, // TODO
-    targetAgglomerateId: 3681813, // TODO
-    targetSegmentId: 5237667, // TODO
-    targetPosition: [2885, 4308, 1770], // TODO
-  },
+
+  // {
+  //   sourceAgglomerateId: 212176, // TODO
+  //   sourcePosition: [],
+  //   targetAgglomerateId: 3681813, // TODO
+  //   targetSegmentId: 5237667, // TODO
+  //   targetPosition: [2885, 4308, 1770], // TODO
+  // },
 ];
 
 // ---------------------------------------------------------------------------
@@ -227,10 +275,14 @@ async function activateUser(userId: string): Promise<void> {
 }
 
 async function resolveDatasetId(datasetName: string): Promise<string> {
+  console.log("fetch");
+
   const res = await fetch(
     urljoin(BASE_URL, `/api/datasets/disambiguate/${ORG_NAME}/${datasetName}/toId`),
     { headers: adminHeaders() },
   );
+  console.log("fetch");
+
   if (!res.ok) {
     throw new Error(
       `Could not resolve dataset "${datasetName}": ${res.status} ${await res.text()}`,
@@ -330,6 +382,35 @@ async function waitForDataLoading(page: Page): Promise<void> {
   );
 }
 
+async function setupPageForProofreading(page: Page): Promise<void> {
+  const layers = await page.evaluate(() =>
+    window.webknossos.DEV.store
+      .getState()
+      .dataset.dataSource.dataLayers.map((l: any) => ({ name: l.name, category: l.category })),
+  );
+
+  const actions = [
+    ...layers
+      .filter((l: { name: string; category: string }) => l.category !== "segmentation")
+      .map((l: { name: string; category: string }) =>
+        updateLayerSettingAction(l.name, "isDisabled", true),
+      ),
+    ...layers
+      .filter((l: { name: string; category: string }) => l.category === "segmentation")
+      .map((l: { name: string; category: string }) =>
+        updateLayerSettingAction(l.name, "alpha", 100),
+      ),
+    setHideUnregisteredSegmentsAction(false),
+    updateUserSettingAction("selectiveVisibilityInProofreading", false),
+  ];
+
+  await page.evaluate((actions) => {
+    for (const action of actions) {
+      window.webknossos.DEV.store.dispatch(action);
+    }
+  }, actions);
+}
+
 async function waitForMappingEnabled(page: Page): Promise<void> {
   let enabled = false;
   while (!enabled) {
@@ -363,6 +444,7 @@ const collabUsers: Array<{ id: string; email: string; authToken: string }> = [];
 
 describe("Live Collaboration", () => {
   beforeAll(async () => {
+    console.log("beforeAll");
     const datasetId = await resolveDatasetId(DATASET_NAME);
     console.log(`Dataset "${DATASET_NAME}" → id=${datasetId}`);
 
@@ -403,6 +485,7 @@ describe("Live Collaboration", () => {
     const adminErrors = startCollectionOfPageErrors(page);
 
     await openAnnotationPage(page, annotation.id);
+    await setupPageForProofreading(page);
     await waitForDataLoading(page);
 
     // Patch the active user in the store to be a superuser so the collaboration
@@ -503,6 +586,7 @@ describe("Live Collaboration", () => {
     const sessions: Array<{ page: Page; errors: string[] }> = [];
 
     for (const { authToken } of collabUsers) {
+      console.log("Open page with token=", authToken);
       const page = await getNewPage(browser, authToken);
       sessions.push({ page, errors: startCollectionOfPageErrors(page) });
     }
@@ -511,6 +595,7 @@ describe("Live Collaboration", () => {
     await Promise.all(
       sessions.map(async ({ page }) => {
         await openAnnotationPage(page, annotation.id);
+        await setupPageForProofreading(page);
         await waitForDataLoading(page);
 
         const cycleActionCollab = cycleToolAction(false);
@@ -534,12 +619,15 @@ describe("Live Collaboration", () => {
         const op = PARALLEL_USER_OPERATIONS[i];
         if (op == null) return;
 
-        // TODO: confirm correct action type for setting the active segment (see above)
-        const setActiveCellActionObjCollab = setActiveCellAction(op.sourceAgglomerateId, null);
+        const setActiveCellActionObjCollab = setActiveCellAction(
+          op.sourceAgglomerateId,
+          op.sourcePosition,
+        );
         await page.evaluate(
           (action) => window.webknossos.DEV.store.dispatch(action),
           setActiveCellActionObjCollab,
         );
+        await sleep(100); // give WK sagas some time to create the actual segment item
 
         const proofreadMergeActionObjCollab = proofreadMergeAction(
           op.targetPosition,

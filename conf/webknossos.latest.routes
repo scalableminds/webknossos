@@ -120,6 +120,8 @@ POST          /datasets/:datasetId/compose/addLayer                             
 POST          /datasets/:datasetId/compose/addMag                                               controllers.DatasetController.composeAddMag(datasetId: ObjectId)
 POST          /datasets/:datasetId/compose/addAttachment                                        controllers.DatasetController.composeAddAttachment(datasetId: ObjectId)
 POST          /datasets/reserveUploadToPaths                                                    controllers.DatasetController.reserveUploadToPaths()
+POST          /datasets/:datasetId/writeMirror                                                  controllers.DatasetController.writeMirror(datasetId: ObjectId)
+POST          /datasets/writeAllMirrors                                                         controllers.DatasetController.writeAllMirrors()
 
 # Folders
 GET           /folders/root                                                                     controllers.FolderController.getRoot()

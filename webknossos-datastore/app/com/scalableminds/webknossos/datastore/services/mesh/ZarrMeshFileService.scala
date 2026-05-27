@@ -14,6 +14,7 @@ import com.scalableminds.webknossos.datastore.services.{
   VoxelyticsZarrArtifactUtils
 }
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
+import com.typesafe.scalalogging.LazyLogging
 import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsResult, JsValue, Reads}
 import ucar.ma2.{Array => MultiArray}
@@ -69,7 +70,8 @@ object MeshFileAttributes extends MeshFileUtils with VoxelyticsZarrArtifactUtils
 class ZarrMeshFileService @Inject()(chunkCacheService: DSChunkCacheService, dataVaultService: DataVaultService)
     extends FoxImplicits
     with MeshFileUtils
-    with NeuroglancerMeshHelper {
+    with NeuroglancerMeshHelper
+    with LazyLogging {
 
   private lazy val openArraysCache = AlfuCache[(MeshFileKey, String), DatasetArray]()
   private lazy val attributesCache = AlfuCache[MeshFileKey, MeshFileAttributes]()
@@ -187,6 +189,109 @@ class ZarrMeshFileService @Inject()(chunkCacheService: DSChunkCacheService, data
     } yield result
   }
 
+  private def bulkGetBtreeManifestRanges(
+      meshFileKey: MeshFileKey,
+      meshFileAttributes: MeshFileAttributes,
+      segmentIds: Seq[Long])(implicit ec: ExecutionContext, tc: TokenContext): Fox[Map[Long, (Long, Long)]] = {
+
+    val height       = meshFileAttributes.btreeHeight.getOrElse(1)
+    val levelOffsets = meshFileAttributes.btreeLevelOffsets.getOrElse(Array.empty[Int])
+
+    // assignments: Seq[(segmentId, nodeIdx at current level)]
+    def traverseLevel(level: Int, assignments: Seq[(Long, Long)]): Fox[Seq[(Long, Long)]] =
+      if (level >= height - 1) Fox.successful(assignments)
+      else {
+        val uniqueNodeIndices = assignments.map(_._2).distinct
+        for {
+          internalArr <- openZarrArray(meshFileKey, keyBtreeInternal)
+          nodeDataSeq <- Fox.combined(uniqueNodeIndices.toList.map { nodeIdx =>
+            internalArr
+              .readAsMultiArray(offset = Array(levelOffsets(level).toLong + nodeIdx, 0L),
+                                shape  = Array(1, BTREE_NODE_U64S))
+              .map(nodeIdx -> _)
+          })
+          nodeDataMap = nodeDataSeq.toMap
+          nextAssignments = assignments.map {
+            case (segId, nodeIdx) =>
+              val node   = nodeDataMap(nodeIdx)
+              val nKeys  = node.getLong(node.getIndex.set(Array(0, 0))).toInt
+              val keyIdx = upperBound(node, nKeys, segId)
+              val child  = node.getLong(node.getIndex.set(Array(0, nKeys + 1 + keyIdx)))
+              segId -> child
+          }
+          result <- traverseLevel(level + 1, nextAssignments)
+        } yield result
+      }
+
+    for {
+      leafAssignments   <- traverseLevel(0, segmentIds.map(_ -> 0L))
+      uniqueLeafIndices  = leafAssignments.map(_._2).distinct
+      leavesArr         <- openZarrArray(meshFileKey, keyBtreeLeaves)
+      leafDataMap <- {
+        val leafArray = uniqueLeafIndices.toIndexedSeq
+        val counter   = new java.util.concurrent.atomic.AtomicInteger(0)
+        def worker(slotIdx: Int): Fox[List[(Long, MultiArray)]] = {
+          val slotStart = System.currentTimeMillis()
+          def go(acc: List[(Long, MultiArray)]): Fox[List[(Long, MultiArray)]] = {
+            val idx = counter.getAndIncrement()
+            if (idx >= leafArray.size) {
+              logger.info(
+                s"Btree leaf slot $slotIdx/${math.min(32, leafArray.size)} (${acc.size} leaves): ${System.currentTimeMillis() - slotStart}ms")
+              Fox.successful(acc)
+            } else {
+              val leafIdx = leafArray(idx)
+              for {
+                result      <- leavesArr.readAsMultiArray(offset = Array(leafIdx, 0L), shape = Array(1, BTREE_NODE_U64S)).map(leafIdx -> _)
+                moreResults <- go(result :: acc)
+              } yield moreResults
+            }
+          }
+          go(Nil)
+        }
+        Fox.combined((0 until math.min(32, leafArray.size)).toList.map(worker)).map(_.flatten.toMap)
+      }
+      results = leafAssignments.flatMap {
+        case (segId, leafIdx) =>
+          leafDataMap.get(leafIdx).flatMap { leafArr =>
+            val nEntries = leafArr.getLong(leafArr.getIndex.set(Array(0, 0))).toInt
+            findInLeaf(leafArr, nEntries, segId).map(segId -> _)
+          }
+      }
+    } yield results.toMap
+  }
+
+  private def bulkListMeshChunksForBtreeRemoteSegments(
+      meshFileKey: MeshFileKey,
+      segmentIds: Seq[Long],
+      meshFileAttributes: MeshFileAttributes)(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[List[List[MeshLodInfo]]] =
+    for {
+      manifestRanges  <- bulkGetBtreeManifestRanges(meshFileKey, meshFileAttributes, segmentIds)
+      lodInfos <- if (manifestRanges.isEmpty) Fox.successful(List.empty)
+      else
+        for {
+          neuroglancerArr <- openZarrArray(meshFileKey, keyNeuroglancer)
+          minStart         = manifestRanges.values.map(_._1).min
+          maxEnd           = manifestRanges.values.map(_._2).max
+          bulkArr <- neuroglancerArr.readAsMultiArray(offset = minStart,
+                                                      shape  = (maxEnd - minStart).toInt)
+          bulkBytes = bulkArr.getStorage.asInstanceOf[Array[Byte]]
+          infos <- Fox.combined(manifestRanges.toList.map {
+            case (segId, (start, end)) =>
+              val manifestBytes = bulkBytes.slice((start - minStart).toInt, (end - minStart).toInt)
+              for {
+                segmentManifest <- tryo(NeuroglancerSegmentManifest.fromBytes(manifestBytes)).toFox
+              } yield
+                enrichSegmentInfo(segmentManifest,
+                                  meshFileAttributes.lodScaleMultiplier,
+                                  meshFileAttributes.transform,
+                                  start,
+                                  segId)
+          })
+        } yield infos
+    } yield lodInfos
+
   // Upper-bound binary search: returns first index i in [0, nKeys] where keys[i] > target.
   // Mirrors numpy searchsorted(keys, target, side="right").
   private def upperBound(node: MultiArray, nKeys: Int, target: Long): Int = {
@@ -266,7 +371,9 @@ class ZarrMeshFileService @Inject()(chunkCacheService: DSChunkCacheService, data
     val orderedSegmentIds = if (meshFileAttributes.isBtreeFormat) segmentIds.sorted else segmentIds
     def lookupOne(segmentId: Long): Fox[Option[List[MeshLodInfo]]] =
       listMeshChunksForSegment(meshFileKey, segmentId, meshFileAttributes).map(Some(_)).orElse(Fox.successful(None))
-    if (meshFileKey.attachment.path.isRemote)
+    if (meshFileAttributes.isBtreeFormat && meshFileKey.attachment.path.isRemote)
+      bulkListMeshChunksForBtreeRemoteSegments(meshFileKey, orderedSegmentIds, meshFileAttributes)
+    else if (meshFileKey.attachment.path.isRemote)
       Fox.batchCombined(orderedSegmentIds.toSeq, parallelity = 32)(lookupOne).map(_.flatten)
     else
       Fox.serialCombined(orderedSegmentIds)(lookupOne).map(_.flatten)

@@ -19,6 +19,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachmentType,
   UsableDataSource
 }
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.LinkedLayerIdentifier
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
@@ -181,6 +182,7 @@ class DatasetController @Inject()(userService: UserService,
                                   mailchimpClient: MailchimpClient,
                                   wkExploreRemoteLayerService: WKExploreRemoteLayerService,
                                   composeService: ComposeService,
+                                  rpc: RPC,
                                   sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with MetadataAssertions {
@@ -481,6 +483,7 @@ class DatasetController @Inject()(userService: UserService,
                                                            request.body.attachmentRenamings.getOrElse(Seq.empty)))
         updated <- datasetDAO.findOne(datasetId)
         _ <- datasetService.scanRealpathsIfVirtual(updated)
+        _ <- datasetService.writeMirrorForVirtual(updated)(GlobalAccessContext)
         _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
         js <- datasetService.publicWrites(updated, Some(request.identity))
       } yield Ok(js)
@@ -743,6 +746,7 @@ class DatasetController @Inject()(userService: UserService,
         _ <- usedStorageService.refreshStorageReportForDataset(dataset)
         _ <- datasetService.scanRealpathsIfVirtual(dataset)
         _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
+        _ <- datasetService.writeMirrorForVirtual(dataset)(GlobalAccessContext)
       } yield Ok
     }
 
@@ -780,6 +784,7 @@ class DatasetController @Inject()(userService: UserService,
         _ <- usedStorageService.refreshStorageReportForDataset(dataset)
         _ <- datasetService.scanRealpathsIfVirtual(dataset)
         _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
+        _ <- datasetService.writeMirrorForVirtual(dataset)(GlobalAccessContext)
       } yield Ok
     }
 
@@ -815,10 +820,50 @@ class DatasetController @Inject()(userService: UserService,
         _ <- datasetDAO.updateDatasetStatusByDatasetId(datasetId, newStatus = "", isUsable = true)
         updated <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
         _ <- datasetService.scanRealpathsIfVirtual(updated)
+        _ <- datasetService.writeMirrorForVirtual(updated)(GlobalAccessContext)
         _ <- usedStorageService.refreshStorageReportForDataset(updated)
         _ = logger.info(
           s"Successfully finished uploadToPaths/publish of dataset $datasetId for user ${request.identity._id}")
       } yield Ok
     }
 
+  def writeMirror(datasetId: ObjectId): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- Fox.fromBool(dataset.isVirtual) ?~> Msg.Dataset.Mirror.onlyForVirtual
+        _ <- Fox.fromBool(dataset.isUsable) ?~> Msg.Dataset.Mirror.onlyForUsable
+        _ <- datasetService.writeMirrorForVirtual(dataset) ?~> Msg.Dataset.Mirror.writeFailed
+      } yield Ok
+    }
+
+  def writeAllMirrors(): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        _ <- userService.assertIsSuperUser(request.identity)
+        _ = logger.info(s"Writing mirrors for all datasets as requested by superuser ${request.identity._id}...")
+        beforeAll = Instant.now
+        datasets <- datasetDAO.findAll(GlobalAccessContext)
+        _ = Instant.logSince(beforeAll, s"Writing mirrors for all datasets: fetch datasets from DB", logger)
+        eligibleDatasets = datasets.filter(d => d.isVirtual && d.isUsable)
+        byDataStore = eligibleDatasets.groupBy(_._dataStore)
+        _ <- Fox.serialCombined(byDataStore.keys) { dataStoreName =>
+          for {
+            before <- Instant.nowFox
+            dataStore <- dataStoreDAO.findOneByName(dataStoreName.trim) ?~> "datastore.notFound"
+            client = new WKRemoteDataStoreClient(dataStore, rpc)
+            datasetsForDatastore = byDataStore(dataStoreName)
+            _ <- client.writeMirror(datasetsForDatastore.map(_._id), failOnError = false)
+            _ = Instant.logSince(
+              before,
+              s"Writing mirrors for ${datasetsForDatastore.length} datasets on datastore $dataStoreName (for details see datastore logging)",
+              logger)
+          } yield ()
+        }
+        _ = Instant.logSince(beforeAll,
+                             s"Writing mirrors for all ${datasets.length} datasets (for details see datastore logging)",
+                             logger)
+      } yield Ok
+    }
 }

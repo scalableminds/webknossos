@@ -103,7 +103,6 @@ object Msg {
     val downloadNoLayers: String = "Cannot download annotation that has no layers."
     val uploadEditableMappingIncompleteInformation: String =
       "Could not store editable mapping, either file or baseMappingName is missing."
-    val versionMismatch = ""
     object Restrictions {
       val notFound: String = "Could not determine annotation access restrictions."
       val failedToCheck: String = "Could not check annotation access."

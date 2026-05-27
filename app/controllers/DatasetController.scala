@@ -587,7 +587,7 @@ class DatasetController @Inject()(userService: UserService,
                          "directoryName" -> dataset.directoryName)))
           case Empty =>
             for {
-              user <- request.identity.toFox ~> Unauthorized
+              user <- request.identity.toFox ~> UNAUTHORIZED
               dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)(GlobalAccessContext)
               // Just checking if the user can switch to an organization to access the dataset.
               _ <- authenticationService.getOrganizationToSwitchTo(user, Some(dataset._id), None, None)

@@ -103,6 +103,7 @@ object Msg {
     val downloadNoLayers: String = "Cannot download annotation that has no layers."
     val uploadEditableMappingIncompleteInformation: String =
       "Could not store editable mapping, either file or baseMappingName is missing."
+    val versionMismatch = ""
     object Restrictions {
       val notFound: String = "Could not determine annotation access restrictions."
       val failedToCheck: String = "Could not check annotation access."
@@ -208,8 +209,8 @@ object Msg {
         "Mag restrictions are too tight, resulting annotation has no magnifications."
       val mergeLargestSegmentIdUnset: String =
         "Cannot merge volume annotation: largest segment id is not set."
-      val magsDoNotMatch: String =
-        "Cannot merge volume annotation: mag sets do not match."
+      val magsDoNotMatch: String = "Cannot merge volume annotation: mag sets do not match."
+      val importVersionMismatch: String = "Cannot merge volume annotation: Version mismatch."
       val noEditableMapping: String =
         "This volume tracing does not have an editable mapping (is not a “proofreading” annotation layer)."
       object SegmentIndex {

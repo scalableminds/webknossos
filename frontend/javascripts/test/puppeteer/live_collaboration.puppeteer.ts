@@ -87,16 +87,12 @@ const HDF5_MAPPING_NAME = "agglomerate_view_5"; // "agglomerate_view_30";
 
 // const MERGE_SOURCE_AGGLOMERATE_ID = 3681595;
 // const MERGE_SOURCE_POSITION = [2918, 4316, 1770] as Vector3;
-// const MERGE_TARGET_AGGLOMERATE_ID = 426008;
-// const MERGE_TARGET_SEGMENT_ID = 5233834;
 // // Position (in voxel coordinates) where the target segment is located.
 // // Used by the proofreading saga to look up the segment under the cursor.
 // const MERGE_TARGET_POSITION: [number, number, number] = [2826, 4318, 1770];
 
 const MERGE_SOURCE_AGGLOMERATE_ID = 8465;
 const MERGE_SOURCE_POSITION = [1462, 1535, 1536] as Vector3;
-const MERGE_TARGET_AGGLOMERATE_ID = 31002;
-const MERGE_TARGET_SEGMENT_ID = 186487;
 // Position (in voxel coordinates) where the target segment is located.
 // Used by the proofreading saga to look up the segment under the cursor.
 const MERGE_TARGET_POSITION: [number, number, number] = [1429, 1578, 1536];
@@ -107,16 +103,12 @@ const MERGE_TARGET_POSITION: [number, number, number] = [1429, 1578, 1536];
 
 // // const MERGE_SOURCE_AGGLOMERATE_ID = 3681595;
 // // const MERGE_SOURCE_POSITION = [2918, 4316, 1770] as Vector3;
-// // const MERGE_TARGET_AGGLOMERATE_ID = 426008;
-// // const MERGE_TARGET_SEGMENT_ID = 5233834;
 // // // Position (in voxel coordinates) where the target segment is located.
 // // // Used by the proofreading saga to look up the segment under the cursor.
 // // const MERGE_TARGET_POSITION: [number, number, number] = [2826, 4318, 1770];
 
 // const MERGE_SOURCE_AGGLOMERATE_ID = 8465;
 // const MERGE_SOURCE_POSITION = [1462, 1535, 1536] as Vector3;
-// const MERGE_TARGET_AGGLOMERATE_ID = 31002;
-// const MERGE_TARGET_SEGMENT_ID = 186487;
 // // Position (in voxel coordinates) where the target segment is located.
 // // Used by the proofreading saga to look up the segment under the cursor.
 // const MERGE_TARGET_POSITION: [number, number, number] = [1429, 1578, 1536];
@@ -127,30 +119,22 @@ const MERGE_TARGET_POSITION: [number, number, number] = [1429, 1578, 1536];
 const PARALLEL_USER_OPERATIONS: Array<{
   sourceAgglomerateId: number;
   sourcePosition: [number, number, number];
-  targetAgglomerateId: number;
-  targetSegmentId: number;
   targetPosition: [number, number, number];
 }> = [
   // {
   //   sourceAgglomerateId: 212176, // TODO
-  //   targetAgglomerateId: 3681813, // TODO
-  //   targetSegmentId: 5237667, // TODO
   //   targetPosition: [2885, 4308, 1770], // TODO
   // },
   // localhost:
   {
     sourceAgglomerateId: 2165257,
     sourcePosition: [1551, 1503, 1536],
-    targetAgglomerateId: 2165413,
-    targetSegmentId: 2261859,
     targetPosition: [1571, 1517, 1536],
   },
 
   // {
   //   sourceAgglomerateId: 212176, // TODO
   //   sourcePosition: [],
-  //   targetAgglomerateId: 3681813, // TODO
-  //   targetSegmentId: 5237667, // TODO
   //   targetPosition: [2885, 4308, 1770], // TODO
   // },
 ];
@@ -543,11 +527,7 @@ describe("Live Collaboration", () => {
     // Merge two segments.
     // The source is derived from the currently active segment in the store;
     // the target is identified by position + segmentId + agglomerateId.
-    const proofreadMergeActionObj = proofreadMergeAction(
-      MERGE_TARGET_POSITION,
-      MERGE_TARGET_SEGMENT_ID,
-      MERGE_TARGET_AGGLOMERATE_ID,
-    );
+    const proofreadMergeActionObj = proofreadMergeAction(MERGE_TARGET_POSITION);
     await page.evaluate(
       (action) => window.webknossos.DEV.store.dispatch(action),
       proofreadMergeActionObj,
@@ -629,11 +609,7 @@ describe("Live Collaboration", () => {
         );
         await sleep(100); // give WK sagas some time to create the actual segment item
 
-        const proofreadMergeActionObjCollab = proofreadMergeAction(
-          op.targetPosition,
-          op.targetSegmentId,
-          op.targetAgglomerateId,
-        );
+        const proofreadMergeActionObjCollab = proofreadMergeAction(op.targetPosition);
         await page.evaluate(
           (action) => window.webknossos.DEV.store.dispatch(action),
           proofreadMergeActionObjCollab,

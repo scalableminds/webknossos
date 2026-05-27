@@ -1322,8 +1322,8 @@ type DatasetUploadInfo = {
   initialTeamIds: Array<string>;
   folderId: string | null;
   needsConversion: boolean;
-  voxelSizeFactor: Vector3 | null | undefined;
-  voxelSizeUnit: string | null | undefined;
+  voxelSizeFactor: Vector3 | undefined;
+  voxelSizeUnit: string | undefined;
 };
 
 export function reserveDatasetUpload(

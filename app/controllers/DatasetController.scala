@@ -740,6 +740,7 @@ class DatasetController @Inject()(userService: UserService,
             _ <- dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource)
           } yield ()
         }
+        _ <- usedStorageService.refreshStorageReportForDataset(dataset)
         _ <- datasetService.scanRealpathsIfVirtual(dataset)
         _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
       } yield Ok
@@ -776,6 +777,7 @@ class DatasetController @Inject()(userService: UserService,
             _ <- dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource)
           } yield ()
         }
+        _ <- usedStorageService.refreshStorageReportForDataset(dataset)
         _ <- datasetService.scanRealpathsIfVirtual(dataset)
         _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
       } yield Ok

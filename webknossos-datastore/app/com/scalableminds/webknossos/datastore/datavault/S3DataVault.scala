@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Box, Empty, Fox, FoxImplicits, Full, Failure => BoxFailure}
 import com.scalableminds.webknossos.datastore.storage.{
   CredentializedUPath,
   LegacyDataVaultCredential,
@@ -10,7 +10,6 @@ import com.scalableminds.webknossos.datastore.storage.{
   S3ClientPool
 }
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Empty, Full, Failure => BoxFailure}
 import com.scalableminds.webknossos.datastore.helpers.{S3UriUtils, UPath}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.lang3.builder.HashCodeBuilder
@@ -189,13 +188,15 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
 
 object S3DataVault {
   def create(credentializedUpath: CredentializedUPath, s3ClientPool: S3ClientPool)(
-      implicit ec: ExecutionContext): S3DataVault = {
+      implicit ec: ExecutionContext): Box[S3DataVault] = {
     val credential = credentializedUpath.credential.flatMap {
       case f: S3AccessKeyCredential     => Some(f)
       case f: LegacyDataVaultCredential => Some(f.toS3AccessKey)
       case _                            => None
     }
-    new S3DataVault(credential, credentializedUpath.upath.toRemoteUriUnsafe, s3ClientPool, ec)
+    for {
+      remoteUri <- credentializedUpath.upath.toRemoteUri
+    } yield new S3DataVault(credential, remoteUri, s3ClientPool, ec)
   }
 
 }

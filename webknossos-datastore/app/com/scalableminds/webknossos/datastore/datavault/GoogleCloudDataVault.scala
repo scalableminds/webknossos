@@ -4,7 +4,7 @@ import com.google.auth.oauth2.ServiceAccountCredentials
 import com.google.cloud.storage.Storage.BlobSourceOption
 import com.google.cloud.storage.{BlobId, BlobInfo, Storage, StorageException, StorageOptions}
 import com.scalableminds.util.accesscontext.TokenContext
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.storage.{CredentializedUPath, GoogleServiceAccountCredential}
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.helpers.UPath
@@ -41,9 +41,10 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] = {
 
-    val objName = path.toRemoteUriUnsafe.getPath.tail
-    val blobId = BlobId.of(bucket, objName)
     for {
+      remoteUri <- path.toRemoteUri
+      objName = remoteUri.getPath.tail
+      blobId = BlobId.of(bucket, objName)
       bytes <- try {
         range match {
           case r: StartEndExclusiveByteRange =>
@@ -123,8 +124,9 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
 }
 
 object GoogleCloudDataVault {
-  def create(credentializedUpath: CredentializedUPath): GoogleCloudDataVault = {
-    val credential = credentializedUpath.credential.map(f => f.asInstanceOf[GoogleServiceAccountCredential])
-    new GoogleCloudDataVault(credentializedUpath.upath.toRemoteUriUnsafe, credential)
-  }
+  def create(credentializedUpath: CredentializedUPath): Box[GoogleCloudDataVault] =
+    for {
+      credential <- tryo(credentializedUpath.credential.map(f => f.asInstanceOf[GoogleServiceAccountCredential]))
+      remoteUri <- credentializedUpath.upath.toRemoteUri
+    } yield new GoogleCloudDataVault(remoteUri, credential)
 }

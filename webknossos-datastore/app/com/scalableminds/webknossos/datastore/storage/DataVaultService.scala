@@ -157,7 +157,7 @@ class DataVaultService @Inject()(ws: WSClient,
         case Some(PathSchemes.schemeS3) => S3DataVault.create(credentializedUpath, s3ClientPoolHolder.s3ClientPool)
         case Some(PathSchemes.schemeHttps) | Some(PathSchemes.schemeHttp) =>
           HttpsDataVault.create(credentializedUpath, ws, config.Http.uri)
-        case None => FileSystemDataVault.create
+        case None => Full(FileSystemDataVault.create)
         case _    => throw new Exception(s"Unknown file system scheme $scheme")
       }
       logger.info(s"Created data vault for ${credentializedUpath.upath.toString}")

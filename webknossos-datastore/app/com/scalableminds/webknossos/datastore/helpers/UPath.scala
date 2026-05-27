@@ -10,6 +10,8 @@ import java.net.URI
 import java.nio.file.Path
 
 trait UPath {
+  def toRemoteUri: Box[URI]
+
   def toRemoteUriUnsafe: URI
 
   def /(other: String): UPath
@@ -124,6 +126,8 @@ private case class LocalUPath(nioPath: Path) extends UPath {
 
   override def toRemoteUriUnsafe: URI = throw new Exception(s"Called toUriUnsafe on LocalUPath $toString")
 
+  override def toRemoteUri: Box[URI] = Failure(s"Called toRemoteUri on LocalUPath $toString")
+
   override def relativizedIn(potentialAncestor: UPath): UPath =
     potentialAncestor match {
       case LocalUPath(potentialAncestorNioPath) =>
@@ -190,6 +194,8 @@ private case class RemoteUPath(scheme: String, segments: Seq[String]) extends UP
   override def getScheme: Option[String] = Some(scheme)
 
   override def toRemoteUriUnsafe: URI = new URI(toString)
+
+  override def toRemoteUri: Box[URI] = Full(new URI(toString))
 
   override def relativizedIn(potentialAncestor: UPath): UPath = this
 

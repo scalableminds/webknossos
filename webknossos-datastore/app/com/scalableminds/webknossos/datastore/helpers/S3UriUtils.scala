@@ -21,9 +21,6 @@ object S3UriUtils {
     }
   }
 
-  def hostBucketFromUpath(path: UPath): Option[String] =
-    hostBucketFromUri(path.toRemoteUriUnsafe)
-
   // https://bucket-name.s3.region-code.amazonaws.com/key-name
   private def isVirtualHostedStyle(uri: URI): Boolean =
     uri.getHost.endsWith(".s3.amazonaws.com")

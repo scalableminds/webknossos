@@ -106,9 +106,9 @@ class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionC
                           AND expiry >= NOW()
                           AND NOT EXISTS (SELECT 1 FROM attempt)""".as[AnnotationMutexesRow]) ?~> "Upserting annotation mutex failed."
         result <- rows.headOption match {
-          case Some(first) => Fox.successful(parse(first).userId)
+          case Some(first)                   => Fox.successful(parse(first).userId)
           case None if remainingAttempts > 1 => attempt(remainingAttempts - 1)
-          case None => Fox.failure("Could not find mutex for annotation after retries.")
+          case None                          => Fox.failure("Could not find mutex for annotation after retries.")
         }
       } yield result
 

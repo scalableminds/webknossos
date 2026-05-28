@@ -32,8 +32,6 @@ trait UPath {
 
   def isLocal: Boolean = !isRemote
 
-  def toLocalPathUnsafe: Path
-
   def resolvedIn(parentIfRelative: UPath): UPath =
     if (isRelative) {
       parentIfRelative / this
@@ -103,8 +101,6 @@ object UPath {
 private case class LocalUPath(nioPath: Path) extends UPath {
   override def isAbsolute: Boolean = nioPath.isAbsolute
 
-  def toLocalPathUnsafe: Path = nioPath
-
   override def /(other: String): UPath =
     UPath.fromLocalPath(nioPath.resolve(other))
 
@@ -173,8 +169,6 @@ private case class RemoteUPath(scheme: String, segments: Seq[String]) extends UP
     }
     RemoteUPath(scheme, collectedSegmentsMutable.toSeq)
   }
-
-  override def toLocalPathUnsafe: Path = throw new Exception(s"Called toLocalPathUnsafe on RemotePath $this")
 
   override def toString: String = scheme + UPath.schemeSeparator + segments.mkString(UPath.separator)
 

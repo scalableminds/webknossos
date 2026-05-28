@@ -267,6 +267,7 @@ const defaultState: WebknossosState = {
     activeUserBoundingBoxId: null,
     showDropzoneModal: false,
     showVersionRestore: false,
+    isRestoringVersion: false,
     showDownloadModal: false,
     showAddScriptModal: false,
     showMergeAnnotationModal: false,

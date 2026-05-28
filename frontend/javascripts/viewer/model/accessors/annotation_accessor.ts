@@ -74,7 +74,7 @@ export function maySendSaveRequest(state: WebknossosState) {
 
   return Boolean(
     state.annotation.restrictions.allowSave &&
-      !state.uiInformation.showVersionRestore &&
+      (!state.uiInformation.showVersionRestore || state.uiInformation.isRestoringVersion) &&
       // Ignore changes while rebasing or forwarding as this manipulates the save queue
       // (and for sending save requests, we also manipulate the save queue).
       !state.save.rebaseRelevantServerAnnotationState.isRebasingOrForwarding,

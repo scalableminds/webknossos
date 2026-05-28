@@ -8,6 +8,7 @@ import {
 import PriorityQueue from "js-priority-queue";
 import { InputKeyboardNoLoop } from "libs/input";
 import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
+import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Request from "libs/request";
 import type { ToastStyle } from "libs/toast";
 import Toast from "libs/toast";
@@ -83,6 +84,7 @@ import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/to
 import {
   enforceActiveVolumeTracing,
   getActiveCellId,
+  getEditableMappingForVolumeTracingId,
   getNameOfRequestedOrVisibleSegmentationLayer,
   getRequestedOrDefaultSegmentationTracingLayer,
   getRequestedOrVisibleSegmentationLayer,
@@ -94,6 +96,7 @@ import {
   getVolumeTracingByNameOrActive,
   getVolumeTracings,
   hasVolumeTracings,
+  needsLocalHdf5Mapping,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
   dispatchGetNewIdAsync,
@@ -173,6 +176,7 @@ import {
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
 import { getHalfViewportExtentsInUnitFromState } from "viewer/model/sagas/saga_selectors";
 import { applyLabeledVoxelMapToAllMissingMags } from "viewer/model/sagas/volume/helpers";
+import { fetchAgglomeratesForSegmentIds } from "viewer/model/sagas/volume/mapping_saga";
 import type { MutableNode, Node, Tree, TreeGroupTypeFlat } from "viewer/model/types/tree_types";
 import { applyVoxelMap } from "viewer/model/volumetracing/volume_annotation_sampling";
 import { api, Model } from "viewer/singletons";
@@ -189,6 +193,12 @@ import type {
   WebknossosState,
 } from "viewer/store";
 import Store from "viewer/store";
+import {
+  captureScreenshots,
+  downloadScreenshot,
+  downloadScreenshotsAsZip,
+  type ScreenshotBlob,
+} from "viewer/view/rendering_utils";
 import {
   callDeep,
   createGroupToSegmentsMap,
@@ -1491,6 +1501,16 @@ class TracingApi {
     Store.dispatch(setPositionAction(position));
   }
 
+  /**
+   * Sets the current camera rotation.
+   *
+   * @example
+   * api.tracing.setCameraRotation([180, 0, 90])
+   */
+  setCameraRotation(rotation: Vector3) {
+    Store.dispatch(setRotationAction(rotation));
+  }
+
   //  VOLUMETRACING API
 
   /**
@@ -1907,6 +1927,61 @@ class DataApi {
       channelIndex,
     );
     return dataValue;
+  }
+
+  /**
+   * Returns the mapped (agglomerate) id for the segment at the given position, respecting the
+   * active HDF5 mapping. For layers without a local HDF5 mapping, delegates to getDataValue
+   * with respectMapping enabled. For layers with a local HDF5 mapping (proofread mode or
+   * editable mapping), looks up the id in the local mapping and fetches from the server if
+   * the id is not cached yet.
+   */
+  async getMappedDataValue(
+    layerName: string,
+    position: Vector3,
+    zoomStep: number | null | undefined = null,
+    additionalCoordinates: AdditionalCoordinate[] | null = null,
+  ): Promise<number> {
+    const state = Store.getState();
+
+    if (!needsLocalHdf5Mapping(state, layerName)) {
+      return this.getDataValue(layerName, position, zoomStep, additionalCoordinates, true);
+    }
+
+    const unmappedId = await this.getDataValue(layerName, position, zoomStep, additionalCoordinates);
+
+    const activeMappingInfo = getMappingInfo(
+      state.temporaryConfiguration.activeMappingByLayer,
+      layerName,
+    );
+
+    if (activeMappingInfo.mapping != null) {
+      const mappedId = new NumberLikeMapWrapper(activeMappingInfo.mapping).getAsNumber(unmappedId);
+      if (mappedId != null) {
+        return mappedId;
+      }
+    }
+
+    const mappingName = activeMappingInfo.mappingName;
+    if (mappingName == null) {
+      throw new Error(`No active mapping for layer ${layerName}`);
+    }
+
+    const fetchedEntries = await fetchAgglomeratesForSegmentIds(
+      state.dataset,
+      state.annotation,
+      getEditableMappingForVolumeTracingId(state, layerName),
+      layerName,
+      getLayerByName(state.dataset, layerName),
+      mappingName,
+      new Set([unmappedId]),
+    );
+
+    const agglomerateId = new NumberLikeMapWrapper(fetchedEntries).getAsNumber(unmappedId);
+    if (agglomerateId == null) {
+      throw new Error(`Could not map id ${unmappedId} at position ${position}`);
+    }
+    return agglomerateId;
   }
 
   /**
@@ -2844,6 +2919,38 @@ class DataApi {
         );
       }
     }
+  }
+
+  /**
+   * Takes a screenshot of the current viewport(s) and immediately downloads each image as a PNG.
+   * In plane mode, one file per visible viewport is downloaded. Use `captureScreenshots` +
+   * `downloadScreenshotsAsZip` instead when calling in a loop to avoid repeated save dialogs.
+   */
+  downloadScreenshot() {
+    return downloadScreenshot();
+  }
+
+  /**
+   * Renders the current viewport(s) and returns the images as an array of `{ name, blob }` objects
+   * without triggering any download. Suitable for collecting frames in a loop.
+   *
+   * @param prefix - Optional string prepended to each filename (e.g. a zero-padded frame index).
+   *   Resulting names follow the pattern `<prefix>__<dataset>__<x>_<y>_<z>__<plane>.png`, which
+   *   makes the files sort correctly when passed to `downloadScreenshotsAsZip`.
+   */
+  captureScreenshots(prefix?: string): Promise<ScreenshotBlob[]> {
+    return captureScreenshots(prefix);
+  }
+
+  /**
+   * Packages an array of `{ name, blob }` entries (as returned by `captureScreenshots`) into a
+   * single ZIP archive and downloads it once.
+   *
+   * @param screenshots - The collected screenshot blobs to include.
+   * @param zipName - Base name for the downloaded file (without `.zip`). Defaults to `"screenshots"`.
+   */
+  downloadScreenshotsAsZip(screenshots: ScreenshotBlob[], zipName?: string): Promise<void> {
+    return downloadScreenshotsAsZip(screenshots, zipName);
   }
 }
 /**

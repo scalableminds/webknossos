@@ -106,6 +106,7 @@ import {
 } from "viewer/model/actions/volumetracing_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
+import { getAgglomeratesForSegmentIds } from "viewer/model/sagas/volume/mapping_saga";
 import {
   mergeAgglomerate,
   splitAgglomerate,
@@ -1672,7 +1673,7 @@ type Preparation = {
   mapSegmentId: (segmentId: number, overrideMapping?: Mapping | null) => number;
   getMappedAndUnmapped: (
     position: Vector3,
-  ) => Promise<{ agglomerateId: number; unmappedId: number }>;
+  ) => Saga<{ agglomerateId: number; unmappedId: number }>;
   activeMapping: ActiveMappingInfo;
   volumeTracing: VolumeTracing & { mappingName: string };
   annotationVersion: number;
@@ -1763,22 +1764,27 @@ export function* prepareSplitOrMerge(isTreeProofreading: boolean): Saga<Preparat
     return mappedId;
   };
 
-  const getMappedAndUnmapped = async (position: Vector3) => {
-    const unmappedId = await getUnmappedDataValue(position);
-    const agglomerateId = isNumberMap(mapping)
+  const getMappedAndUnmapped = function* (position: Vector3) {
+    const unmappedId = yield* call(getUnmappedDataValue, position);
+    let agglomerateId = isNumberMap(mapping)
       ? mapping.get(unmappedId)
       : // TODO: Proper 64 bit support (#6921)
         Number(mapping.get(BigInt(unmappedId)));
 
     if (agglomerateId == null) {
-      // It could happen that the user tries to perform a proofreading operation
-      // that involves an id for which the mapped id wasn't fetched yet.
-      // In that case, we currently just throw an error. A toast will appear
-      // that asks the user to retry. If we notice that this happens in production,
-      // we can think about a better way to handle this.
-      throw new SoftError(
-        `Could not map id ${unmappedId} at position ${position}. The mapped partner might not be known yet. Please retry.`,
+      const fetchedEntries = yield* call(
+        getAgglomeratesForSegmentIds,
+        volumeTracing.tracingId,
+        volumeTracingLayer,
+        mappingName,
+        new Set([unmappedId]),
       );
+      agglomerateId = new NumberLikeMapWrapper(fetchedEntries).getAsNumber(unmappedId);
+      if (agglomerateId == null) {
+        throw new SoftError(
+          `Could not map id ${unmappedId} at position ${position}. The mapped partner might not be known yet. Please retry.`,
+        );
+      }
     }
     return { agglomerateId, unmappedId };
   };
@@ -1865,7 +1871,7 @@ function* reloadMappingAndAggloIds(
 function* getAgglomerateInfos(
   getMappedAndUnmapped: (
     position: Vector3,
-  ) => Promise<{ agglomerateId: number; unmappedId: number }>,
+  ) => Saga<{ agglomerateId: number; unmappedId: number }>,
   positions: Vector3[],
 ): Saga<Array<{
   agglomerateId: number;

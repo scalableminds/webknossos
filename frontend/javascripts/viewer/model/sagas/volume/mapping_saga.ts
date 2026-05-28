@@ -508,18 +508,6 @@ function* updateLocalHdf5Mapping(
   layerInfo: APIDataLayer,
   mappingName: string,
 ): Saga<void> {
-  const dataset = yield* select((state) => state.dataset);
-  const annotation = yield* select((state) => state.annotation);
-  // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
-  const mappingLayerName =
-    "fallbackLayer" in layerInfo && layerInfo.fallbackLayer != null
-      ? layerInfo.fallbackLayer
-      : layerName;
-
-  const editableMapping = yield* select((state) =>
-    getEditableMappingForVolumeTracingId(state, layerName),
-  );
-
   const previousMapping = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer[layerName].mapping,
   );
@@ -559,24 +547,13 @@ function* updateLocalHdf5Mapping(
 
   let newEntries;
   try {
-    newEntries =
-      editableMapping != null
-        ? yield* call(
-            getAgglomeratesForSegmentsFromTracingstore,
-            annotation.tracingStore.url,
-            editableMapping.tracingId,
-            Array.from(newSegmentIds),
-            annotation.annotationId,
-            annotation.version,
-          )
-        : yield* call(
-            getAgglomeratesForSegmentsFromDatastore,
-            dataset.dataStore.url,
-            dataset,
-            mappingLayerName,
-            mappingName,
-            Array.from(newSegmentIds),
-          );
+    newEntries = yield* call(
+      getAgglomeratesForSegmentIds,
+      layerName,
+      layerInfo,
+      mappingName,
+      newSegmentIds,
+    );
   } catch (exception) {
     console.error("Could not load agglomerate ids for segments due to", exception);
     Toast.error(
@@ -608,6 +585,42 @@ function* updateLocalHdf5Mapping(
     // for finishing the initialization).
     yield put(finishMappingInitializationAction(layerName));
   }
+}
+
+export function* getAgglomeratesForSegmentIds(
+  layerName: string,
+  layerInfo: APIDataLayer,
+  mappingName: string,
+  newSegmentIds: Set<NumberLike>,
+) {
+  const dataset = yield* select((state) => state.dataset);
+  const annotation = yield* select((state) => state.annotation);
+  // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
+  const mappingLayerName =
+    "fallbackLayer" in layerInfo && layerInfo.fallbackLayer != null
+      ? layerInfo.fallbackLayer
+      : layerName;
+  const editableMapping = yield* select((state) =>
+    getEditableMappingForVolumeTracingId(state, layerName),
+  );
+
+  return editableMapping != null
+    ? yield* call(
+        getAgglomeratesForSegmentsFromTracingstore,
+        annotation.tracingStore.url,
+        editableMapping.tracingId,
+        Array.from(newSegmentIds),
+        annotation.annotationId,
+        annotation.version,
+      )
+    : yield* call(
+        getAgglomeratesForSegmentsFromDatastore,
+        dataset.dataStore.url,
+        dataset,
+        mappingLayerName,
+        mappingName,
+        Array.from(newSegmentIds),
+      );
 }
 
 function* adaptActiveSegmentToProofreadingMarker(layerName: string) {

@@ -82,12 +82,19 @@ class DataVaultService @Inject()(ws: WSClient,
   def resolveMagPath(magLocator: MagLocator, localDatasetDir: Path, layerDir: Path): UPath =
     magLocator.path match {
       case Some(magLocatorPath) =>
-        if (magLocatorPath.isAbsolute) {
-          magLocatorPath
-        } else {
-          // relative local path, resolve in dataset dir
-          UPath.fromLocalPath(localDatasetDir.resolve(magLocatorPath.toLocalPathUnsafe).normalize)
+        magLocatorPath.toLocalPath match {
+          case Full(localPath) =>
+            if (localPath.isAbsolute) {
+              // absolute local path, keep unchanged
+              magLocatorPath
+            } else {
+              // relative local path, resolve in dataset dir
+              UPath.fromLocalPath(localDatasetDir.resolve(localPath).normalize)
+            }
+          case _ => // remote path, keep unchanged
+            magLocatorPath
         }
+
       case _ =>
         val localDirWithScalarMag = layerDir.resolve(magLocator.mag.toMagLiteral(allowScalar = true))
         val localDirWithVec3Mag = layerDir.resolve(magLocator.mag.toMagLiteral(allowScalar = false))
@@ -131,10 +138,12 @@ class DataVaultService @Inject()(ws: WSClient,
       !managedS3Service.pathIsInManagedS3(path)
 
   private def pathIsDataSourceLocal(path: UPath): Boolean =
-    path.isLocal && {
-      val workingDir = Path.of(".").toAbsolutePath.normalize
-      val inWorkingDir = workingDir.resolve(path.toLocalPathUnsafe).toAbsolutePath.normalize
-      !path.isAbsolute && inWorkingDir.startsWith(workingDir)
+    path.toLocalPath match {
+      case Full(localPath) =>
+        val workingDir = Path.of(".").toAbsolutePath.normalize
+        val inWorkingDir = workingDir.resolve(localPath).toAbsolutePath.normalize
+        !localPath.isAbsolute && inWorkingDir.startsWith(workingDir)
+      case _ => false
     }
 
   private def pathIsInLocalDirectoryWhitelist(path: UPath): Boolean =

@@ -62,6 +62,7 @@ object UPath {
 
   def fromString(literal: String): Box[UPath] = tryo(fromStringUnsafe(literal))
 
+  // Warning: throws! Prefer fromString (returns Box) for user-supplied input
   def fromStringUnsafe(literal: String): UPath = {
     val schemeOpt = if (literal.contains(schemeSeparator)) literal.split(schemeSeparator).headOption else None
     schemeOpt match {

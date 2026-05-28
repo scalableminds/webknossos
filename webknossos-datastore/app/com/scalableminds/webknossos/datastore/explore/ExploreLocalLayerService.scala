@@ -118,11 +118,10 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
     } yield explored
 
   private def selectLastDirectory(l: StaticLayer) =
-    l.mapped(magMapping = m => m.copy(path = m.path.map(p => UPath.fromStringUnsafe(p.toString.split("/").last))))
+    l.mapped(magMapping = m => m.copy(path = m.path.map(p => p.relativizedIn(p.parent))))
 
   private def selectLastTwoDirectories(l: StaticLayer) =
-    l.mapped(magMapping = m =>
-      m.copy(path = m.path.map(p => UPath.fromStringUnsafe(p.toString.split("/").takeRight(2).mkString("/")))))
+    l.mapped(magMapping = m => m.copy(path = m.path.map(p => p.relativizedIn(p.parent.parent))))
 
   private def exploreLocalLayer(
       makeLayersRelative: List[StaticLayer] => List[StaticLayer],

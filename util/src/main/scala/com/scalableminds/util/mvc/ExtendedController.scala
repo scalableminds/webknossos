@@ -1,6 +1,7 @@
 package com.scalableminds.util.mvc
 
 import com.google.protobuf.CodedInputStream
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
@@ -8,7 +9,6 @@ import com.scalableminds.util.tools._
 import com.scalableminds.util.tools.Box.tryo
 import play.api.http.Status._
 import play.api.http.{HeaderNames, HttpEntity, Status, Writeable}
-import play.api.i18n.{I18nSupport, Messages, MessagesProvider}
 import play.api.libs.json._
 import play.api.mvc.Results.BadRequest
 import play.api.mvc._
@@ -19,29 +19,29 @@ import play.filters.csp.CSPConfig
 import java.io.FileInputStream
 import scala.concurrent.{ExecutionContext, Future}
 
-trait BoxToResultHelpers extends I18nSupport with Formatter with RemoteOriginHelpers with HeaderNames {
+trait BoxToResultHelpers extends Formatter with RemoteOriginHelpers with HeaderNames {
 
   protected def defaultErrorCode: Int = BAD_REQUEST
 
-  def asResult[T <: Result](b: Box[T])(implicit messages: MessagesProvider): Result = {
+  def asResult[T <: Result](b: Box[T]): Result = {
     val result = b match {
       case Full(result) =>
         result
-      case ParamFailure(msg, h_, chain, statusCode: Int) =>
-        new JsonResult(statusCode)(Messages(msg), formatChainOpt(chain))
-      case ParamFailure(_s, _b, _c, msgs: JsArray) =>
+      case ParamFailure(msg, _, chain, statusCode: Int) =>
+        new JsonResult(statusCode)(msg, formatChainOpt(chain))
+      case ParamFailure(_, _, _, msgs: JsArray) =>
         new JsonResult(defaultErrorCode)(jsonMessages(msgs))
       case Failure(msg, _, chain) =>
-        new JsonResult(defaultErrorCode)(Messages(msg), formatChainOpt(chain))
+        new JsonResult(defaultErrorCode)(msg, formatChainOpt(chain))
       case Empty =>
-        new JsonResult(NOT_FOUND)("Couldn't find the requested resource.")
+        new JsonResult(NOT_FOUND)(Msg.notFound)
     }
     allowRemoteOriginIfSelected(addNoCacheHeaderFallback(result))
   }
 
-  private def formatChainOpt(chainBox: Box[Failure])(implicit messages: MessagesProvider): Option[String] =
+  private def formatChainOpt(chainBox: Box[Failure]): Option[String] =
     chainBox match {
-      case Full(chain) => Some(formatFailureChain(chain, includeTime = true, messagesProviderOpt = Some(messages)))
+      case Full(chain) => Some(formatFailureChain(chain, includeTime = true))
       case _           => None
     }
 
@@ -84,14 +84,12 @@ trait CspHeaders extends HeaderNames {
     action.apply(request).map(addCspHeader)
 }
 
-trait ResultImplicits extends BoxToResultHelpers with I18nSupport {
+trait ResultImplicits extends BoxToResultHelpers {
 
-  implicit def fox2FutureResult[T <: Result](b: Fox[T])(implicit ec: ExecutionContext,
-                                                        messages: MessagesProvider): Future[Result] =
+  implicit def fox2FutureResult[T <: Result](b: Fox[T])(implicit ec: ExecutionContext): Future[Result] =
     b.futureBox.map(asResult)
 
-  implicit def futureBox2Result[T <: Result](b: Box[Future[T]])(implicit ec: ExecutionContext,
-                                                                messages: MessagesProvider): Future[Result] =
+  implicit def futureBox2Result[T <: Result](b: Box[Future[T]])(implicit ec: ExecutionContext): Future[Result] =
     b match {
       case Full(f) =>
         f.map(value => asResult(Full(value)))
@@ -101,13 +99,12 @@ trait ResultImplicits extends BoxToResultHelpers with I18nSupport {
         Future.successful(asResult(f))
     }
 
-  implicit def boxFuture2Result[T <: Result](f: Future[Box[T]])(implicit ec: ExecutionContext,
-                                                                messages: MessagesProvider): Future[Result] =
+  implicit def boxFuture2Result[T <: Result](f: Future[Box[T]])(implicit ec: ExecutionContext): Future[Result] =
     f.map { b =>
       asResult(b)
     }
 
-  implicit def box2Result[T <: Result](b: Box[T])(implicit messages: MessagesProvider): Result =
+  implicit def box2Result[T <: Result](b: Box[T]): Result =
     asResult(b)
 
 }
@@ -116,14 +113,12 @@ class JsonResult(status: Int)
     extends Result(header = ResponseHeader(status), body = HttpEntity.NoEntity)
     with JsonResultAttribues {
 
-  val isSuccess: Boolean = List(OK) contains status
-
   private def createResult(content: JsValue)(implicit writeable: Writeable[JsValue]): Result =
     Result(header = ResponseHeader(status),
            body = HttpEntity.Strict(writeable.transform(content), writeable.contentType))
 
   private def messageTypeFromStatus =
-    if (isSuccess)
+    if (status == OK)
       jsonSuccess
     else
       jsonError
@@ -184,7 +179,6 @@ trait MimeTypes {
   val xmlMimeType: String = "application/xml"
   val zipMimeType: String = "application/zip"
   val jsonMimeType: String = "application/json"
-  val formUrlEncodedMimeType: String = "application/x-www-form-urlencoded"
   val octetStreamMimeType: String = "application/octet-stream"
 }
 
@@ -232,7 +226,6 @@ trait ExtendedController
     with FoxImplicits
     with ResultImplicits
     with Status
-    with I18nSupport
     with InjectedController
     with MimeTypes
     with ValidationHelpers

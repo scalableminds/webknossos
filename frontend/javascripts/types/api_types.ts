@@ -819,7 +819,6 @@ export enum APIJobCommand {
   COMPUTE_MESH_FILE = "compute_mesh_file",
   COMPUTE_SEGMENT_INDEX_FILE = "compute_segment_index_file",
   FIND_LARGEST_SEGMENT_ID = "find_largest_segment_id",
-  INFER_NUCLEI = "infer_nuclei",
   INFER_NEURONS = "infer_neurons",
   INFER_MITOCHONDRIA = "infer_mitochondria",
   INFER_INSTANCES = "infer_instances",
@@ -827,6 +826,7 @@ export enum APIJobCommand {
   TRAIN_NEURON_MODEL = "train_neuron_model",
   TRAIN_INSTANCE_MODEL = "train_instance_model",
   // Only used for backwards compatibility, e.g. to display results.
+  DEPRECATED_INFER_NUCLEI = "infer_nuclei",
   DEPRECATED_INFER_WITH_MODEL = "infer_with_model",
   DEPRECATED_TRAIN_MODEL = "train_model",
 }
@@ -880,6 +880,8 @@ export type AiModel = {
   readonly created: number;
   readonly trainingJob: APIJob | null;
   readonly category: APIAiModelCategory;
+  readonly isSuperUserOnly: boolean;
+  readonly isPretrained: boolean;
 };
 
 // Tracing related datatypes

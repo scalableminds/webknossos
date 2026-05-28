@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.Msg
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.mesh.{
@@ -77,7 +78,7 @@ class DSMeshController @Inject()(
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
           meshFileKey <- meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, request.body.meshFileName)
-          (data, encoding) <- meshFileService.readMeshChunk(meshFileKey, request.body.requests) ?~> "mesh.file.loadChunk.failed"
+          (data, encoding) <- meshFileService.readMeshChunk(meshFileKey, request.body.requests) ?~> Msg.Mesh.File.loadChunkFailed
         } yield {
           if (encoding.contains("gzip")) {
             Ok(data).withHeaders("Content-Encoding" -> "gzip")
@@ -91,7 +92,7 @@ class DSMeshController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
-          data: Array[Byte] <- fullMeshService.loadFor(datasetId, dataSource, dataLayer, request.body) ?~> "mesh.file.loadChunk.failed"
+          data: Array[Byte] <- fullMeshService.loadFor(datasetId, dataSource, dataLayer, request.body) ?~> Msg.Mesh.File.loadChunkFailed
 
         } yield Ok(data)
       }

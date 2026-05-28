@@ -324,6 +324,12 @@ export function startAlignSectionsJob(
 export enum APIAiModelCategory {
   EM_NEURONS = "em_neurons",
   EM_NUCLEI = "em_nuclei",
+  EM_SYNAPSES = "em_synapses",
+  EM_NEURON_TYPES = "em_neuron_types",
+  EM_CELL_ORGANELLES = "em_cell_organelles",
+  EM_GENERIC = "em_generic",
+  EM_SOMATA = "em_somata",
+  EM_MITOCHONDRIA = "em_mitochondria",
 }
 
 export type AiModelTrainingAnnotationSpecification = {
@@ -353,7 +359,7 @@ export type JsonPrimitive = string | number | boolean;
 type RunInstanceModelTrainingParameters = {
   trainingAnnotations: AiModelTrainingAnnotationSpecification[];
   name: string;
-  aiModelCategory: APIAiModelCategory.EM_NUCLEI;
+  aiModelCategory: APIAiModelCategory.EM_GENERIC;
   instanceDiameterNm: number;
   comment?: string;
   workflowYaml?: string;

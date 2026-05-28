@@ -85,6 +85,8 @@ class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionC
     // As this rarely happens, we simply retry in this case.
     def attempt(remainingAttempts: Int): Fox[ObjectId] =
       for {
+        _ <- Fox.successful(
+          logger.info(s"Trying Upserting Mutex for user $userId with attempt ${4 - remainingAttempts}"))
         rows <- run(q"""WITH attempt AS (
                           INSERT INTO webknossos.annotation_mutexes(_annotation, _user, expiry)
                           VALUES($annotationId, $userId, $expiry)

@@ -621,26 +621,42 @@ describe("Live Collaboration", () => {
       ).toHaveLength(0);
     }
 
-    // TODO: verify the merges are reflected in the saved annotation.
-    //       After all saves, reload as admin and for each merge check:
-    //       - a proofreading by-product tree exists in the skeleton tracing
-    //       - api.data.getDataValue("segmentation", targetPosition) returns
-    //         the expected merged agglomerate ID
-    //
-    // Example sketch:
-    //   const adminPage = await getNewPage(browser, WK_AUTH_TOKEN!);
-    //   await openAnnotationPage(adminPage, annotation.id);
-    //   await waitForDataLoading(adminPage);
-    //   await adminPage.evaluate(...activate mapping...);
-    //   await waitForMappingEnabled(adminPage);
-    //   const mergedId = await adminPage.evaluate(
-    //     (pos) =>
-    //       (window).webknossos.apiReady().then((api) =>
-    //         api.data.getDataValue("segmentation", pos),
-    //       ),
-    //     MERGE_TARGET_POSITION,
-    //   );
-    //   expect(mergedId).toBe(MERGE_SOURCE_AGGLOMERATE_ID);
+    // Save all sessions so the merges are persisted before we verify.
+    await Promise.all(
+      sessions.map(({ page }) =>
+        page.evaluate(() => window.webknossos.apiReady().then((api) => api.tracing.save())),
+      ),
+    );
+
+    // Open a fresh admin page, reload the annotation, and verify all merges.
+    const adminVerifyPage = await getNewPage(browser, WK_AUTH_TOKEN!);
+    await openAnnotationPage(adminVerifyPage, annotation.id);
+    await setupPageForProofreading(adminVerifyPage);
+    await waitForDataLoading(adminVerifyPage);
+
+    await waitForMappingEnabled(adminVerifyPage);
+
+    const segLayerName = await adminVerifyPage.evaluate(() =>
+      window.webknossos.apiReady().then((api) => api.data.getVolumeTracingLayerIds()[0]),
+    );
+
+    for (const op of PARALLEL_USER_OPERATIONS) {
+      const [sourceMappedId, targetMappedId] = await adminVerifyPage.evaluate(
+        async (layerName, sourcePos, targetPos) => {
+          const api = await (window as any).webknossos.apiReady();
+          return Promise.all([
+            api.data.getMappedDataValue(layerName, sourcePos),
+            api.data.getMappedDataValue(layerName, targetPos),
+          ]);
+        },
+        segLayerName,
+        op.sourcePosition,
+        op.targetPosition,
+      );
+      expect(sourceMappedId, `Merge of ${op.sourcePosition} → ${op.targetPosition} not reflected`).toBe(targetMappedId);
+    }
+
+    await adminVerifyPage.close();
 
     await Promise.all(sessions.map(({ page }) => page.close()));
   }, 300_000);

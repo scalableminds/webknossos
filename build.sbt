@@ -5,9 +5,13 @@ ThisBuild / scalaVersion := "3.8.3"
 ThisBuild / scalafixDependencies += "io.github.dedis" %% "scapegoat-scalafix" % "1.1.4"
 inThisBuild(
   List(
-    semanticdbEnabled := true,
+    semanticdbEnabled := false,
     semanticdbVersion := scalafixSemanticdb.revision
   )
+)
+addCommandAlias(
+  "fix",
+  "set ThisBuild / semanticdbEnabled := true; scalafix; set ThisBuild / semanticdbEnabled := false"
 )
 // fix jni for scala version 3
 sbtJniCoreScope := Compile

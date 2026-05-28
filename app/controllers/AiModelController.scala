@@ -124,7 +124,7 @@ class AiModelController @Inject()(
       _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(request.identity)
       aiModel <- aiModelDAO.findOne(aiModelId) ?~> Msg.AiModel.notFound ~> NOT_FOUND
       dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)
-      voxelSize <- aiModelService.findModelVoxelSize(Some(aiModel), usePretrainedNeuronModel = false, dataStore)
+      voxelSize <- aiModelService.findModelVoxelSize(aiModel, dataStore)
     } yield Ok(Json.toJson(voxelSize))
   }
 
@@ -197,10 +197,10 @@ class AiModelController @Inject()(
                                                    dataStore.name) ?~> Msg.Job.TrainModel.submitFailed
         newAiModel = AiModel(
           _id = modelId,
-          _organization = request.identity._organization,
+          _organization = Some(request.identity._organization),
           _sharedOrganizations = List(),
           _dataStore = dataStore.name,
-          _user = request.identity._id,
+          _user = Some(request.identity._id),
           _trainingJob = Some(newTrainingJob._id),
           _trainingAnnotations = trainingAnnotations.map(_.annotationId),
           path = None,
@@ -254,10 +254,10 @@ class AiModelController @Inject()(
                                                    dataStore.name) ?~> Msg.Job.TrainModel.submitFailed
         newAiModel = AiModel(
           _id = modelId,
-          _organization = request.identity._organization,
+          _organization = Some(request.identity._organization),
           _sharedOrganizations = List(),
           _dataStore = dataStore.name,
-          _user = request.identity._id,
+          _user = Some(request.identity._id),
           _trainingJob = Some(newTrainingJob._id),
           _trainingAnnotations = trainingAnnotations.map(_.annotationId),
           path = None,
@@ -271,16 +271,15 @@ class AiModelController @Inject()(
       } yield Ok(newAiModelJs)
     }
 
-  // If no model is selected, the pretrained *nuclei model* is used
   def runInstanceModelInference: Action[RunInferenceParameters] =
     sil.SecuredAction.async(validateJson[RunInferenceParameters]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(request.body.datasetId)
         _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> Msg.Job.Inference.wrongOrga ~> FORBIDDEN
         aiModelOpt <- Fox.runOptional(request.body.aiModelId)(aiModelDAO.findOne) ?~> Msg.AiModel.notFound
-        _ <- Fox.runOptional(aiModelOpt) { aiModel =>
-          Fox.fromBool(aiModel._dataStore == dataset._dataStore) ?~> Msg.AiModel.dataStoreMismatch
-        }
+        aiModel <- aiModelOpt.toFox ?~> "aiModel.required"
+        _ <- Fox.fromBool(aiModel.isPretrained || aiModel._dataStore == dataset._dataStore) ?~> Msg.AiModel
+          .dataStoreMismatch
         (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.colorLayerName)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> Msg.DataStore.notFound
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
@@ -293,7 +292,7 @@ class AiModelController @Inject()(
           "layer_name" -> request.body.colorLayerName,
           "bbox" -> mag1BoundingBox.toLiteral,
           "model_id" -> request.body.aiModelId,
-          "model_organization_id" -> aiModelOpt.map(_._organization),
+          "model_organization_id" -> Some(aiModel).filterNot(_.isPretrained).flatMap(_._organization),
           "dataset_directory_name" -> dataset.directoryName,
           "new_dataset_name" -> request.body.newDatasetName,
           "invert_color_layer" -> request.body.invertColorLayer,
@@ -304,8 +303,7 @@ class AiModelController @Inject()(
         targetMagBoundingBox <- aiModelService.inferenceBBoxToTargetMag(mag1BoundingBox,
                                                                         layer,
                                                                         dataSource.scale,
-                                                                        aiModelOpt,
-                                                                        usePretrainedNeuronModel = false,
+                                                                        aiModel,
                                                                         dataStore)
         newInferenceJob <- jobService.submitPaidJob(jobCommand,
                                                     commandArgs,
@@ -316,7 +314,7 @@ class AiModelController @Inject()(
         newAiInference = AiInference(
           _id = ObjectId.generate,
           _organization = request.identity._organization,
-          _aiModel = request.body.aiModelId,
+          _aiModel = Some(aiModel._id),
           _newDataset = None,
           _annotation = request.body.annotationId,
           boundingBox = mag1BoundingBox,
@@ -335,9 +333,9 @@ class AiModelController @Inject()(
         dataset <- datasetDAO.findOne(request.body.datasetId)
         _ <- Fox.fromBool(request.identity._organization == dataset._organization) ?~> Msg.Job.Inference.wrongOrga ~> FORBIDDEN
         aiModelOpt <- Fox.runOptional(request.body.aiModelId)(aiModelDAO.findOne) ?~> Msg.AiModel.notFound
-        _ <- Fox.runOptional(aiModelOpt) { aiModel =>
-          Fox.fromBool(aiModel._dataStore == dataset._dataStore) ?~> Msg.AiModel.dataStoreMismatch
-        }
+        aiModel <- aiModelOpt.toFox ?~> "aiModel.required"
+        _ <- Fox.fromBool(aiModel.isPretrained || aiModel._dataStore == dataset._dataStore) ?~> Msg.AiModel
+          .dataStoreMismatch
         (dataSource, layer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.colorLayerName)
         dataStore <- dataStoreDAO.findOneByName(dataset._dataStore) ?~> Msg.DataStore.notFound
         _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
@@ -346,8 +344,7 @@ class AiModelController @Inject()(
         targetMagBoundingBox <- aiModelService.inferenceBBoxToTargetMag(mag1BoundingBox,
                                                                         layer,
                                                                         dataSource.scale,
-                                                                        aiModelOpt,
-                                                                        usePretrainedNeuronModel = aiModelOpt.isEmpty,
+                                                                        aiModel,
                                                                         dataStore)
         doSplitMergerEvaluation: Boolean = request.body.doSplitMergerEvaluation.getOrElse(false)
         commandArgs = Json.obj(
@@ -357,7 +354,7 @@ class AiModelController @Inject()(
           "layer_name" -> request.body.colorLayerName,
           "bbox" -> mag1BoundingBox.toLiteral,
           "model_id" -> request.body.aiModelId,
-          "model_organization_id" -> aiModelOpt.map(_._organization),
+          "model_organization_id" -> Some(aiModel).filterNot(_.isPretrained).flatMap(_._organization),
           "annotation_id" -> request.body.annotationId,
           "dataset_directory_name" -> dataset.directoryName,
           "new_dataset_name" -> request.body.newDatasetName,
@@ -379,7 +376,7 @@ class AiModelController @Inject()(
         newAiInference = AiInference(
           _id = ObjectId.generate,
           _organization = request.identity._organization,
-          _aiModel = request.body.aiModelId,
+          _aiModel = Some(aiModel._id),
           _newDataset = None,
           _annotation = request.body.annotationId,
           boundingBox = mag1BoundingBox,
@@ -404,7 +401,7 @@ class AiModelController @Inject()(
         for {
           _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(request.identity)
           aiModel <- aiModelDAO.findOne(aiModelId) ?~> Msg.AiModel.notFound ~> NOT_FOUND
-          _ <- Fox.fromBool(aiModel._organization == request.identity._organization) ?~> Msg.AiModel.notOwned
+          _ <- Fox.fromBool(aiModel._organization.contains(request.identity._organization)) ?~> Msg.AiModel.notOwned
           _ <- aiModelDAO.updateOne(aiModel.copy(name = request.body.name,
                                                  comment = request.body.comment,
                                                  modified = Instant.now)) ?~> Msg.AiModel.updatingFailed
@@ -449,7 +446,7 @@ class AiModelController @Inject()(
                                                 user: User)(implicit ctx: DBAccessContext): Fox[ObjectId] =
     for {
       existingModel <- aiModelDAO.findOne(existingAiModelId)
-      _ <- Fox.fromBool(existingModel._organization == user._organization) ?~> Msg.AiModel.Reserve.wrongOrga ~> FORBIDDEN
+      _ <- Fox.fromBool(existingModel._organization.contains(user._organization)) ?~> Msg.AiModel.Reserve.wrongOrga ~> FORBIDDEN
       _ <- Fox.fromBool(existingModel.uploadToPathIsPending) ?~> Msg.AiModel.Reserve.notPending
       path <- uploadToPathsService.generateAiModelPath(existingAiModelId, user._organization, params.pathPrefix)
       _ <- aiModelDAO.updatePath(existingAiModelId, path)
@@ -465,10 +462,10 @@ class AiModelController @Inject()(
       path <- uploadToPathsService.generateAiModelPath(newId, user._organization, params.pathPrefix)
       newAiModel = AiModel(
         _id = newId,
-        _organization = user._organization,
+        _organization = Some(user._organization),
         _sharedOrganizations = List(user._organization),
         _dataStore = params.dataStoreName,
-        _user = user._id,
+        _user = Some(user._id),
         _trainingJob = None,
         _trainingAnnotations = List.empty,
         path = Some(path),
@@ -486,7 +483,7 @@ class AiModelController @Inject()(
       for {
         existingAiModel <- aiModelDAO.findOne(id)
         _ <- Fox.fromBool(existingAiModel.uploadToPathIsPending) ?~> Msg.AiModel.FinishUpload.notPending
-        _ <- Fox.fromBool(existingAiModel._organization == request.identity._organization) ?~> Msg.AiModel.FinishUpload.wrongOrga ~> FORBIDDEN
+        _ <- Fox.fromBool(existingAiModel._organization.contains(request.identity._organization)) ?~> Msg.AiModel.FinishUpload.wrongOrga ~> FORBIDDEN
         _ <- aiModelDAO.finishUploadToPath(id)
       } yield Ok
     }

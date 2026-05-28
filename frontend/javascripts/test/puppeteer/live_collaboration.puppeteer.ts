@@ -40,6 +40,7 @@ import {
 } from "../../admin/rest_api";
 import { launchBrowser, waitForTracingViewLoad } from "./dataset_rendering_helpers";
 import { PAGE_HEIGHT, PAGE_WIDTH } from "./screenshot_test_config";
+import { setPositionAction } from "viewer/model/actions/flycam_actions";
 
 vi.mock("libs/request", async (importOriginal) => {
   return await importOriginal();
@@ -77,66 +78,51 @@ loadEnvFile(path.join(__dirname, ".env"));
 // Config
 // ---------------------------------------------------------------------------
 
-const N_COLLAB_USERS = 1;
+const N_COLLAB_USERS = 2;
 
 const ORG_NAME = "sample_organization";
 
 // Localhost
-const DATASET_NAME = "l4_v2_sample"; // "l4dense_motta_et_al_dev";
-const HDF5_MAPPING_NAME = "agglomerate_view_5"; // "agglomerate_view_30";
-
-// const MERGE_SOURCE_AGGLOMERATE_ID = 3681595;
-// const MERGE_SOURCE_POSITION = [2918, 4316, 1770] as Vector3;
-// // Position (in voxel coordinates) where the target segment is located.
-// // Used by the proofreading saga to look up the segment under the cursor.
-// const MERGE_TARGET_POSITION: [number, number, number] = [2826, 4318, 1770];
-
-const MERGE_SOURCE_AGGLOMERATE_ID = 8465;
-const MERGE_SOURCE_POSITION = [1462, 1535, 1536] as Vector3;
-// Position (in voxel coordinates) where the target segment is located.
-// Used by the proofreading saga to look up the segment under the cursor.
-const MERGE_TARGET_POSITION: [number, number, number] = [1429, 1578, 1536];
-
-// DEV Instance
-// const DATASET_NAME = "l4dense_motta_et_al_dev";
-// const HDF5_MAPPING_NAME = "agglomerate_view_30";
-
-// // const MERGE_SOURCE_AGGLOMERATE_ID = 3681595;
-// // const MERGE_SOURCE_POSITION = [2918, 4316, 1770] as Vector3;
-// // // Position (in voxel coordinates) where the target segment is located.
-// // // Used by the proofreading saga to look up the segment under the cursor.
-// // const MERGE_TARGET_POSITION: [number, number, number] = [2826, 4318, 1770];
-
+// const DATASET_NAME = "l4_v2_sample";
+// const HDF5_MAPPING_NAME = "agglomerate_view_5";
 // const MERGE_SOURCE_AGGLOMERATE_ID = 8465;
 // const MERGE_SOURCE_POSITION = [1462, 1535, 1536] as Vector3;
 // // Position (in voxel coordinates) where the target segment is located.
 // // Used by the proofreading saga to look up the segment under the cursor.
 // const MERGE_TARGET_POSITION: [number, number, number] = [1429, 1578, 1536];
 
+// DEV Instance
+const DATASET_NAME = "l4dense_motta_et_al_dev";
+const HDF5_MAPPING_NAME = "agglomerate_view_30";
+const MERGE_SOURCE_AGGLOMERATE_ID = 3681595;
+const MERGE_SOURCE_POSITION = [2918, 4316, 1770] as Vector3;
+// Position (in voxel coordinates) where the target segment is located.
+// Used by the proofreading saga to look up the segment under the cursor.
+const MERGE_TARGET_POSITION: [number, number, number] = [2826, 4318, 1770];
+
 // Additional per-user merge/split operations performed during the parallel phase.
 // Each entry describes what one collaborating user should do.
-// TODO: fill in real IDs once the dataset is known
 const PARALLEL_USER_OPERATIONS: Array<{
   sourceAgglomerateId: number;
   sourcePosition: [number, number, number];
   targetPosition: [number, number, number];
 }> = [
-  // {
-  //   sourceAgglomerateId: 212176, // TODO
-  //   targetPosition: [2885, 4308, 1770], // TODO
-  // },
   // localhost:
-  {
-    sourceAgglomerateId: 2165257,
-    sourcePosition: [1551, 1503, 1536],
-    targetPosition: [1571, 1517, 1536],
-  },
-
   // {
-  //   sourceAgglomerateId: 212176, // TODO
-  //   sourcePosition: [],
-  //   targetPosition: [2885, 4308, 1770], // TODO
+  //   sourceAgglomerateId: 2165257,
+  //   sourcePosition: [1551, 1503, 1536],
+  //   targetPosition: [1571, 1517, 1536],
   // },
+  {
+    sourceAgglomerateId: 8465,
+    sourcePosition: [1462, 1535, 1536],
+    targetPosition: [1431, 1585, 1536],
+  },
+  {
+    sourceAgglomerateId: 8465,
+    sourcePosition: [1462, 1535, 1536],
+    targetPosition: [1431, 1585, 1536],
+  },
 ];
 
 // ---------------------------------------------------------------------------
@@ -268,11 +254,13 @@ async function resolveDatasetId(datasetName: string): Promise<string> {
   console.log("fetch");
 
   if (!res.ok) {
+    console.log("could not resolve");
     throw new Error(
       `Could not resolve dataset "${datasetName}": ${res.status} ${await res.text()}`,
     );
   }
   const { id } = await res.json();
+  console.log(id);
   return id;
 }
 
@@ -599,6 +587,10 @@ describe("Live Collaboration", () => {
         const op = PARALLEL_USER_OPERATIONS[i];
         if (op == null) return;
 
+        await page.evaluate(
+          (action) => window.webknossos.DEV.store.dispatch(action),
+          setPositionAction(op.sourcePosition),
+        );
         const setActiveCellActionObjCollab = setActiveCellAction(
           op.sourceAgglomerateId,
           op.sourcePosition,
@@ -607,7 +599,8 @@ describe("Live Collaboration", () => {
           (action) => window.webknossos.DEV.store.dispatch(action),
           setActiveCellActionObjCollab,
         );
-        await sleep(100); // give WK sagas some time to create the actual segment item
+
+        await sleep(2000); // give WK sagas some time to create the actual segment item
 
         const proofreadMergeActionObjCollab = proofreadMergeAction(op.targetPosition);
         await page.evaluate(

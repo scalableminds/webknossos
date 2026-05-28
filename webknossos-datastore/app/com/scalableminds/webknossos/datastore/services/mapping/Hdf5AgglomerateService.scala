@@ -131,7 +131,9 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
           if (nodeCount == 0L) {
             Array.empty[Array[Long]]
           } else {
-            reader.uint64().readMatrixBlockWithOffset(keyAgglomerateToPositions, nodeCount.toInt, 3, positionsRange(0), 0)
+            reader
+              .uint64()
+              .readMatrixBlockWithOffset(keyAgglomerateToPositions, nodeCount.toInt, 3, positionsRange(0), 0)
           }
         val edges: Array[Array[Long]] = {
           if (edgeCount == 0L) {
@@ -197,7 +199,9 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
         val positions: Array[Array[Long]] =
           if (nodeCount == 0L) Array[Array[Long]]()
           else
-            reader.uint64().readMatrixBlockWithOffset(keyAgglomerateToPositions, nodeCount.toInt, 3, positionsRange(0), 0)
+            reader
+              .uint64()
+              .readMatrixBlockWithOffset(keyAgglomerateToPositions, nodeCount.toInt, 3, positionsRange(0), 0)
         val edges: Array[Array[Long]] =
           if (edgeCount == 0L) Array[Array[Long]]()
           else

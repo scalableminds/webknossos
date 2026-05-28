@@ -78,31 +78,42 @@ class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionC
       Instant.fromSql(r.expiry)
     )
 
-  def tryAcquireReturningOwner(annotationId: ObjectId, userId: ObjectId, expiry: Instant): Fox[ObjectId] =
-    for {
-      rows <- run(q"""WITH attempt AS (
-                        INSERT INTO webknossos.annotation_mutexes(_annotation, _user, expiry)
-                        VALUES($annotationId, $userId, $expiry)
-                        ON CONFLICT (_annotation)
-                          DO UPDATE SET
-                            _user = EXCLUDED._user,
-                            expiry = EXCLUDED.expiry
-                          WHERE webknossos.annotation_mutexes._user = EXCLUDED._user
-                             OR webknossos.annotation_mutexes.expiry < NOW()
-                        RETURNING _annotation, _user, expiry
-                      )
-                      SELECT _annotation, _user, expiry FROM attempt
+  def tryAcquireReturningOwner(annotationId: ObjectId, userId: ObjectId, expiry: Instant): Fox[ObjectId] = {
+    // Parallel executions can produce an empty result when both upserts race and one might read
+    // an outdated version in the lower select but an updated one in the insert part.
+    // This is possible due to the default isolation level.
+    // As this rarely happens, we simply retry in this case.
+    def attempt(remainingAttempts: Int): Fox[ObjectId] =
+      for {
+        rows <- run(q"""WITH attempt AS (
+                          INSERT INTO webknossos.annotation_mutexes(_annotation, _user, expiry)
+                          VALUES($annotationId, $userId, $expiry)
+                          ON CONFLICT (_annotation)
+                            DO UPDATE SET
+                              _user = EXCLUDED._user,
+                              expiry = EXCLUDED.expiry
+                            WHERE webknossos.annotation_mutexes._user = EXCLUDED._user
+                               OR webknossos.annotation_mutexes.expiry < NOW()
+                          RETURNING _annotation, _user, expiry
+                        )
+                        SELECT _annotation, _user, expiry FROM attempt
 
-                      UNION ALL
+                        UNION ALL
 
-                      SELECT _annotation, _user, expiry
-                      FROM webknossos.annotation_mutexes
-                      WHERE _annotation = $annotationId
-                        AND expiry >= NOW()
-                        AND NOT EXISTS (SELECT 1 FROM attempt)""".as[AnnotationMutexesRow]) ?~> "Upserting annotation mutex failed."
-      first <- rows.headOption.toFox ?~> "Could not find mutex for annotation."
-      parsed = parse(first)
-    } yield parsed.userId
+                        SELECT _annotation, _user, expiry
+                        FROM webknossos.annotation_mutexes
+                        WHERE _annotation = $annotationId
+                          AND expiry >= NOW()
+                          AND NOT EXISTS (SELECT 1 FROM attempt)""".as[AnnotationMutexesRow]) ?~> "Upserting annotation mutex failed."
+        result <- rows.headOption match {
+          case Some(first) => Fox.successful(parse(first).userId)
+          case None if remainingAttempts > 1 => attempt(remainingAttempts - 1)
+          case None => Fox.failure("Could not find mutex for annotation after retries.")
+        }
+      } yield result
+
+    attempt(remainingAttempts = 3)
+  }
 
   def deleteExpired(): Fox[Int] =
     run(q"DELETE FROM webknossos.annotation_mutexes WHERE expiry < NOW()".asUpdate)

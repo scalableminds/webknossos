@@ -764,7 +764,7 @@ function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwne
   );
 }
 
-function useAnnotationLockedTag(): React.ReactElement | null {
+function AnnotationLockedTag(): React.ReactElement | null {
   const isSavingDisabled = useWkSelector((state) => state.save.isSavingDisabled);
   const othersMayEdit = useWkSelector((state) => isAnnotationEditableByNonOwners(state.annotation));
   const allowUpdate = useWkSelector(mayEditAnnotation);
@@ -807,8 +807,6 @@ function Navbar() {
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
   const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
   const navbarHeight = useWkSelector((state) => state.uiInformation.navbarHeight);
-  const annotationLockedTag = useAnnotationLockedTag();
-
   const historyLocation = useLocation();
 
   const handleLogout = async (event: React.SyntheticEvent) => {
@@ -873,9 +871,7 @@ function Navbar() {
       menuItems.push(getTimeTrackingMenu(collapseAllNavItems));
     }
 
-    if (annotationLockedTag != null) {
-      trailingNavItems.push(annotationLockedTag);
-    }
+    trailingNavItems.push(<AnnotationLockedTag key="annotation-locked-tag" />);
     trailingNavItems.push(
       <LoggedInAvatar
         key="logged-in-avatar"

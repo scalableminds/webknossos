@@ -2,8 +2,9 @@ package com.scalableminds.webknossos.datastore.storage
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.cache.AlfuCache
+import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Failure, Fox, FoxImplicits, Full}
+import com.scalableminds.util.tools.{Box, Failure, Fox, FoxImplicits, Full, Empty}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.datavault.{
   DataVault,
@@ -32,6 +33,7 @@ class DataVaultService @Inject()(ws: WSClient,
                                  managedS3Service: ManagedS3Service,
                                  s3ClientPoolHolder: S3ClientPoolHolder)
     extends LazyLogging
+    with Formatter
     with FoxImplicits {
 
   private val vaultCache: AlfuCache[CredentializedUPath, DataVault] =
@@ -160,17 +162,23 @@ class DataVaultService @Inject()(ws: WSClient,
 
   private def createVault(credentializedUpath: CredentializedUPath)(implicit ec: ExecutionContext): Box[DataVault] = {
     val scheme = credentializedUpath.upath.getScheme
-    for {
-      fs: DataVault <- scheme match {
-        case Some(PathSchemes.schemeGS) => GoogleCloudDataVault.create(credentializedUpath)
-        case Some(PathSchemes.schemeS3) => S3DataVault.create(credentializedUpath, s3ClientPoolHolder.s3ClientPool)
-        case Some(PathSchemes.schemeHttps) | Some(PathSchemes.schemeHttp) =>
-          HttpsDataVault.create(credentializedUpath, ws, config.Http.uri)
-        case None => Full(FileSystemDataVault.create)
-        case _    => Failure(s"Unknown file system scheme $scheme")
-      }
-      _ = logger.info(s"Created data vault for ${credentializedUpath.upath.toString}")
-    } yield fs
+    val vaultBox = scheme match {
+      case Some(PathSchemes.schemeGS) => GoogleCloudDataVault.create(credentializedUpath)
+      case Some(PathSchemes.schemeS3) => S3DataVault.create(credentializedUpath, s3ClientPoolHolder.s3ClientPool)
+      case Some(PathSchemes.schemeHttps) | Some(PathSchemes.schemeHttp) =>
+        HttpsDataVault.create(credentializedUpath, ws, config.Http.uri)
+      case None => Full(FileSystemDataVault.create)
+      case _    => Failure(s"Unknown file system scheme $scheme")
+    }
+    vaultBox match {
+      case Full(_) => logger.info(s"Created data vault for ${credentializedUpath.upath.toString}.")
+      case f: Failure =>
+        logger.warn(s"Failed to create DataVault for ${credentializedUpath.upath.toString}: ${formatFailureChain(f)}")
+      case Empty =>
+        logger.warn(s"Failed to create DataVault for ${credentializedUpath.upath.toString}.")
+    }
+
+    vaultBox
   }
 
 }

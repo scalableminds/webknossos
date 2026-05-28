@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.datastore.storage
 import com.scalableminds.util.Msg
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, Full}
+import com.scalableminds.util.tools.{Box, Failure, Fox, FoxImplicits, Full}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.datavault.{
   DataVault,
@@ -143,31 +143,25 @@ class DataVaultService @Inject()(ws: WSClient,
 
   def vaultPathFor(credentializedUpath: CredentializedUPath)(implicit ec: ExecutionContext): Fox[VaultPath] =
     for {
-      vault <- vaultCache.getOrLoad(credentializedUpath, createVault) ?~> Msg.DataVault.setupFailed
+      vault <- vaultCache.getOrLoad(credentializedUpath, createVault(_).toFox) ?~> Msg.DataVault.setupFailed
     } yield new VaultPath(credentializedUpath.upath, vault)
 
   private def removeVaultFromCache(credentializedUpath: CredentializedUPath)(implicit ec: ExecutionContext): Fox[Unit] =
     Fox.successful(vaultCache.remove(credentializedUpath))
 
-  private def createVault(credentializedUpath: CredentializedUPath)(implicit ec: ExecutionContext): Fox[DataVault] = {
+  private def createVault(credentializedUpath: CredentializedUPath)(implicit ec: ExecutionContext): Box[DataVault] = {
     val scheme = credentializedUpath.upath.getScheme
-    try {
-      val fs: DataVault = scheme match {
+    for {
+      fs: DataVault <- scheme match {
         case Some(PathSchemes.schemeGS) => GoogleCloudDataVault.create(credentializedUpath)
         case Some(PathSchemes.schemeS3) => S3DataVault.create(credentializedUpath, s3ClientPoolHolder.s3ClientPool)
         case Some(PathSchemes.schemeHttps) | Some(PathSchemes.schemeHttp) =>
           HttpsDataVault.create(credentializedUpath, ws, config.Http.uri)
         case None => Full(FileSystemDataVault.create)
-        case _    => throw new Exception(s"Unknown file system scheme $scheme")
+        case _    => Failure(s"Unknown file system scheme $scheme")
       }
-      logger.info(s"Created data vault for ${credentializedUpath.upath.toString}")
-      Fox.successful(fs)
-    } catch {
-      case e: Exception =>
-        val msg = s"Creating data vault errored for ${credentializedUpath.upath.toString}:"
-        logger.error(msg, e)
-        Fox.failure(msg, Full(e))
-    }
+      _ = logger.info(s"Created data vault for ${credentializedUpath.upath.toString}")
+    } yield fs
   }
 
 }

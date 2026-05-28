@@ -76,9 +76,6 @@ class VaultPath(upath: UPath, dataVault: DataVault) extends LazyLogging with Fox
   def toRemoteUri: Box[URI] =
     upath.toRemoteUri
 
-  def toRemoteUriUnsafe: URI =
-    upath.toRemoteUriUnsafe
-
   def toUPath: UPath = upath
 
   override def toString: String = upath.toString

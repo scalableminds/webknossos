@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.datastore.helpers
 
-import com.scalableminds.util.tools.{Box, Full, Failure}
+import com.scalableminds.util.tools.{Box, Failure, Full}
+import com.scalableminds.webknossos.datastore.datavault.VaultPath
 
 import java.net.URI
 
@@ -42,6 +43,12 @@ object S3UriUtils {
     } else if (isShortStyle(uri)) {
       Full(uri.getPath.tail)
     } else Failure(s"Not a valid s3 uri: $uri")
+
+  def objectKeyFromVaultPath(vaultPath: VaultPath): Box[String] =
+    for {
+      uri <- vaultPath.toRemoteUri
+      objectKey <- objectKeyFromUri(uri)
+    } yield objectKey
 
   def isNonAmazonHost(uri: URI): Boolean =
     (isPathStyle(uri) && !uri.getHost.endsWith(".amazonaws.com")) || uri.getHost == "localhost"

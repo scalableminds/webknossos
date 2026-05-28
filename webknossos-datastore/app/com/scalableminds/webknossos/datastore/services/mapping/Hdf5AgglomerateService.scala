@@ -35,14 +35,18 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
 
   def clearCache(predicate: AgglomerateFileKey => Boolean): Int = agglomerateFileCache.clear(predicate)
 
-  private def openHdf5(agglomerateFileKey: AgglomerateFileKey): Box[IHDF5Reader] =
-    agglomerateFileKey.attachment.localPath.flatMap(p => tryo(HDF5FactoryProvider.get.openForReading(p.toFile)))
+  private def withHdf5Reader[A](agglomerateFileKey: AgglomerateFileKey)(f: IHDF5Reader => Box[A]): Box[A] =
+    agglomerateFileKey.attachment.localPath.flatMap { localPath =>
+      tryo(HDF5FactoryProvider.get.openForReading(localPath.toFile)).flatMap { reader =>
+        try f(reader)
+        finally reader.close()
+      }
+    }
 
   def largestAgglomerateId(agglomerateFileKey: AgglomerateFileKey): Box[Long] =
-    for {
-      reader <- openHdf5(agglomerateFileKey)
-      result <- tryo(reader.`object`().getNumberOfElements(keyAgglomerateToSegmentsOffsets) - 1L)
-    } yield result
+    withHdf5Reader(agglomerateFileKey) { reader =>
+      tryo(reader.`object`().getNumberOfElements(keyAgglomerateToSegmentsOffsets) - 1L)
+    }
 
   def applyAgglomerate(agglomerateFileKey: AgglomerateFileKey, request: DataServiceDataRequest)(
       data: Array[Byte]): Box[Array[Byte]] = {
@@ -110,9 +114,8 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
     }
 
   def generateTree(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Box[SkeletonTracing] =
-    for {
-      reader <- openHdf5(agglomerateFileKey)
-      skeleton <- tryo {
+    withHdf5Reader(agglomerateFileKey) { reader =>
+      tryo {
         val positionsRange: Array[Long] =
           reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegmentsOffsets, 2, agglomerateId)
         val edgesRange: Array[Long] =
@@ -172,12 +175,11 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
 
         SkeletonTracingDefaults.createInstance.copy(trees = trees)
       }
-    } yield skeleton
+    }
 
   def generateAgglomerateGraph(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Box[AgglomerateGraph] =
-    for {
-      reader <- openHdf5(agglomerateFileKey)
-      graph <- tryo {
+    withHdf5Reader(agglomerateFileKey) { reader =>
+      tryo {
         val positionsRange: Array[Long] =
           reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegmentsOffsets, 2, agglomerateId)
         val edgesRange: Array[Long] =
@@ -221,12 +223,11 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
           affinities = ArraySeq.unsafeWrapArray(affinities)
         )
       }
-    } yield graph
+    }
 
   def segmentIdsForAgglomerateId(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Box[Seq[Long]] =
-    for {
-      reader <- openHdf5(agglomerateFileKey)
-      result <- tryo {
+    withHdf5Reader(agglomerateFileKey) { reader =>
+      tryo {
         val positionsRange: Array[Long] =
           reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegmentsOffsets, 2, agglomerateId)
 
@@ -238,19 +239,20 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
           }
         segmentIds.toSeq
       }
-    } yield result
+    }
 
   def positionForSegmentId(agglomerateFileKey: AgglomerateFileKey, segmentId: Long): Box[Vec3Int] =
-    for {
-      reader <- openHdf5(agglomerateFileKey)
-      agglomerateIdArr: Array[Long] <- tryo(
-        reader.uint64().readArrayBlockWithOffset(keySegmentToAgglomerate, 1, segmentId))
-      agglomerateId = agglomerateIdArr(0)
-      segmentsRange: Array[Long] <- tryo(
-        reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegmentsOffsets, 2, agglomerateId))
-      segmentIndex <- binarySearchForSegment(segmentsRange(0), segmentsRange(1), segmentId, reader)
-      position <- tryo(reader.uint64().readMatrixBlockWithOffset(keyAgglomerateToPositions, 1, 3, segmentIndex, 0)(0))
-    } yield Vec3Int(position(0).toInt, position(1).toInt, position(2).toInt)
+    withHdf5Reader(agglomerateFileKey) { reader =>
+      for {
+        agglomerateIdArr: Array[Long] <- tryo(
+          reader.uint64().readArrayBlockWithOffset(keySegmentToAgglomerate, 1, segmentId))
+        agglomerateId = agglomerateIdArr(0)
+        segmentsRange: Array[Long] <- tryo(
+          reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegmentsOffsets, 2, agglomerateId))
+        segmentIndex <- binarySearchForSegment(segmentsRange(0), segmentsRange(1), segmentId, reader)
+        position <- tryo(reader.uint64().readMatrixBlockWithOffset(keyAgglomerateToPositions, 1, 3, segmentIndex, 0)(0))
+      } yield Vec3Int(position(0).toInt, position(1).toInt, position(2).toInt)
+    }
 
   @tailrec
   private def binarySearchForSegment(rangeStart: Long,

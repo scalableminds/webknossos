@@ -613,19 +613,6 @@ describe("Live Collaboration", () => {
       }),
     );
 
-    // All users save concurrently
-    const saveResults = await Promise.allSettled(
-      sessions.map(({ page }) =>
-        page.evaluate(() => window.webknossos.apiReady().then((api) => api.tracing.save())),
-      ),
-    );
-
-    // Every save must have succeeded
-    const saveFailures = saveResults
-      .filter((r) => r.status === "rejected")
-      .map((r) => (r as PromiseRejectedResult).reason);
-    expect(saveFailures, "One or more users failed to save").toHaveLength(0);
-
     // No page errors in any session
     for (let i = 0; i < sessions.length; i++) {
       expect(

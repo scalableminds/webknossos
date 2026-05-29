@@ -22,6 +22,8 @@ export async function getNewPage(authToken: string): Promise<{ page: Page; brows
       ...NETWORK_THROTTLE,
     });
   }
+  // One page per browser — close the browser automatically when the page closes.
+  page.on("close", () => { browser.close().catch(() => {}); });
   return { page, browser };
 }
 

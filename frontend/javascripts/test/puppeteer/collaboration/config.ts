@@ -28,13 +28,13 @@ export function loadEnvFile(filePath: string): void {
   }
 }
 
-loadEnvFile(path.join(__dirname, "../.env"));
+loadEnvFile(path.join(process.cwd(), ".env"));
 
 // ---------------------------------------------------------------------------
 // Config
 // ---------------------------------------------------------------------------
 
-export const N_COLLAB_USERS = 2;
+export const N_COLLAB_USERS = 6;
 
 export const MbpsFactor = (1000 * 1024) / 8;
 // Set to null to disable network throttling.
@@ -84,7 +84,47 @@ export const PARALLEL_USER_OPERATIONS: Array<{
   {
     sourceAgglomerateId: 8465,
     sourcePosition: [1462, 1535, 1536],
-    targetPosition: [1431, 1585, 1536],
+    targetPosition: [2668, 4656, 1770],
+  },
+  {
+    sourceAgglomerateId: 8465,
+    sourcePosition: [1462, 1535, 1536],
+    targetPosition: [3064, 4655, 1770],
+  },
+  {
+    sourceAgglomerateId: 8465,
+    sourcePosition: [1462, 1535, 1536],
+    targetPosition: [3092, 4614, 1770],
+  },
+  {
+    sourceAgglomerateId: 8465,
+    sourcePosition: [1462, 1535, 1536],
+    targetPosition: [3092, 4614, 1770],
+  },
+  {
+    sourceAgglomerateId: 8465,
+    sourcePosition: [1462, 1535, 1536],
+    targetPosition: [3145, 4618, 1770],
+  },
+  {
+    sourceAgglomerateId: 8465,
+    sourcePosition: [1462, 1535, 1536],
+    targetPosition: [3145, 4618, 1770],
+  },
+  {
+    sourceAgglomerateId: 8465,
+    sourcePosition: [1462, 1535, 1536],
+    targetPosition: [3231, 4601, 1770],
+  },
+  {
+    sourceAgglomerateId: 8465,
+    sourcePosition: [1462, 1535, 1536],
+    targetPosition: [3296, 4573, 1770],
+  },
+  {
+    sourceAgglomerateId: 8465,
+    sourcePosition: [1462, 1535, 1536],
+    targetPosition: [3315, 4512, 1770],
   },
 ];
 

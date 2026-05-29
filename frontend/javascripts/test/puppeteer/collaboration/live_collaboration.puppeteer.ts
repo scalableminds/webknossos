@@ -104,9 +104,9 @@ describe("Live Collaboration", () => {
   }, 120_000);
 
   afterAll(async () => {
-    await sleep(1_000_000);
+    // await sleep(1_000_000);
 
-    await Promise.all(browsers.map((b) => b.close()));
+    await Promise.all(browsers.map((b) => b.close().catch(() => {})));
     // TODO: optionally delete the annotation and the test users created above
   }, 1_000_000);
 
@@ -237,7 +237,7 @@ describe("Live Collaboration", () => {
     // All users perform their merge operations concurrently
     await Promise.all(
       sessions.map(async ({ page }, i) => {
-        const op = PARALLEL_USER_OPERATIONS[i];
+        const op = PARALLEL_USER_OPERATIONS[i % PARALLEL_USER_OPERATIONS.length];
         if (op == null) return;
 
         await page.evaluate(

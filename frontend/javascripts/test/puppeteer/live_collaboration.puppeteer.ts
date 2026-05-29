@@ -80,6 +80,19 @@ loadEnvFile(path.join(__dirname, ".env"));
 
 const N_COLLAB_USERS = 2;
 
+const MbpsFactor = (1000 * 1024) / 8;
+// Set to null to disable network throttling.
+const NETWORK_THROTTLE: {
+  downloadThroughput: number;
+  uploadThroughput: number;
+  latency: number;
+} | null =
+  {
+    downloadThroughput: 1 * MbpsFactor,
+    uploadThroughput: 1 * MbpsFactor,
+    latency: 250,
+  } && null; // this is null
+
 const ORG_NAME = "sample_organization";
 
 // Localhost
@@ -339,6 +352,13 @@ async function getNewPage(authToken: string): Promise<Page> {
   const page = await browser.newPage();
   await page.setViewport({ width: PAGE_WIDTH, height: PAGE_HEIGHT });
   await page.setExtraHTTPHeaders({ "X-Auth-Token": authToken });
+  if (NETWORK_THROTTLE != null) {
+    const client = await page.target().createCDPSession();
+    await client.send("Network.emulateNetworkConditions", {
+      offline: false,
+      ...NETWORK_THROTTLE,
+    });
+  }
   return page;
 }
 

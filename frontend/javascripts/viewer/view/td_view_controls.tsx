@@ -12,6 +12,7 @@ import {
   Radio,
   type RadioChangeEvent,
   Row,
+  Select,
   Space,
   Switch,
   Tooltip,
@@ -33,7 +34,7 @@ type Props = {
   onChangeTdViewDisplayPlanes: (arg0: RadioChangeEvent) => void;
   onChangeTdViewDisplayDatasetBorders: SwitchChangeEventHandler;
   onChangeTdViewDisplayLayerBorders: SwitchChangeEventHandler;
-  onChangeTdViewUsePerspectiveCamera: SwitchChangeEventHandler;
+  onChangeTdViewUsePerspectiveCamera: (usePerspectiveCamera: boolean) => void;
 };
 
 function TDViewControls({
@@ -119,16 +120,27 @@ function TDViewControls({
       {
         key: "usePerspectiveCamera",
         label: (
-          <Row>
+          // Stop the click from bubbling to the parent Menu, which would otherwise
+          // close the whole TDViewControls dropdown when interacting with the Select.
+          <Row onClick={(e) => e.stopPropagation()}>
             <Col span={14}>
               <label className="setting-label">Camera Projection</label>
             </Col>
             <Col span={10}>
-              <Switch
-                checkedChildren="Perspective"
-                unCheckedChildren="Orthographic"
-                checked={tdViewUsePerspectiveCamera}
+              <Select
+                size="small"
+                style={{ width: "100%" }}
+                value={tdViewUsePerspectiveCamera}
                 onChange={onChangeTdViewUsePerspectiveCamera}
+                // Render the popup inside the dropdown's own DOM subtree. Otherwise it
+                // portals to document.body and selecting an option counts as a click
+                // outside the parent Dropdown, closing the whole TDViewControls menu.
+                getPopupContainer={(triggerNode) => triggerNode.parentElement as HTMLElement}
+                popupMatchSelectWidth={false}
+                options={[
+                  { value: true, label: "Perspective" },
+                  { value: false, label: "Orthographic" },
+                ]}
               />
             </Col>
           </Row>

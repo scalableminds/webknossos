@@ -12,7 +12,7 @@
  */
 
 import { sleep } from "libs/utils";
-import type { Browser } from "puppeteer-core";
+import type { Browser, Page } from "playwright-core";
 import type { APIAnnotationType } from "types/api_types";
 import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import { setPositionAction } from "viewer/model/actions/flycam_actions";
@@ -143,15 +143,14 @@ describe("Live Collaboration", () => {
     // for puppeteer.
     const cycleAction = cycleToolAction(false);
     await page.evaluate(
-      (action, maxAttempts) => {
+      ({ action, maxAttempts }: { action: any; maxAttempts: number }) => {
         const store = window.webknossos.DEV.store;
         for (let i = 0; i < maxAttempts; i++) {
           if (store.getState().uiInformation.activeTool.id === "PROOFREAD") break;
           store.dispatch(action);
         }
       },
-      cycleAction,
-      100,
+      { action: cycleAction, maxAttempts: 100 },
     );
 
     // Set the merge source as the active segment.
@@ -203,7 +202,7 @@ describe("Live Collaboration", () => {
   }, 120_000);
 
   it("collaborators merge/split in parallel, all save successfully, no errors", async () => {
-    const sessions: Array<{ page: import("puppeteer-core").Page; errors: string[] }> = [];
+    const sessions: Array<{ page: Page; errors: string[] }> = [];
 
     for (const { authToken } of collabUsers) {
       console.log("Open page with token=", authToken);
@@ -221,15 +220,14 @@ describe("Live Collaboration", () => {
 
         const cycleActionCollab = cycleToolAction(false);
         await page.evaluate(
-          (action, maxAttempts) => {
+          ({ action, maxAttempts }: { action: any; maxAttempts: number }) => {
             const store = window.webknossos.DEV.store;
             for (let i = 0; i < maxAttempts; i++) {
               if (store.getState().uiInformation.activeTool.id === "PROOFREAD") break;
               store.dispatch(action);
             }
           },
-          cycleActionCollab,
-          100,
+          { action: cycleActionCollab, maxAttempts: 100 },
         );
       }),
     );
@@ -294,19 +292,29 @@ describe("Live Collaboration", () => {
       window.webknossos.apiReady().then((api) => api.data.getVolumeTracingLayerIds()[0]),
     );
 
-    for (const op of PARALLEL_USER_OPERATIONS) {
-      const [sourceMappedId, targetMappedId] = await adminVerifyPage.evaluate(
-        async (layerName, sourcePos, targetPos) => {
+    for (const op of PARALLEL_USER_OPERATIONS.slice(0, N_COLLAB_USERS)) {
+      const [sourceMappedId, targetMappedId] = (await adminVerifyPage.evaluate(
+        async ({
+          layerName,
+          sourcePos,
+          targetPos,
+        }: {
+          layerName: string;
+          sourcePos: number[];
+          targetPos: number[];
+        }) => {
           const api = await (window as any).webknossos.apiReady();
           return Promise.all([
             api.data.getMappedDataValue(layerName, sourcePos),
             api.data.getMappedDataValue(layerName, targetPos),
           ]);
         },
-        segLayerName,
-        op.sourcePosition,
-        op.targetPosition,
-      );
+        {
+          layerName: segLayerName as string,
+          sourcePos: op.sourcePosition,
+          targetPos: op.targetPosition,
+        },
+      )) as [unknown, unknown];
       console.log("Check merge operation");
       expect(
         sourceMappedId,

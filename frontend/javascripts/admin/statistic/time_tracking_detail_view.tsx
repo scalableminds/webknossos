@@ -28,7 +28,6 @@ const renderRow = (
   userDataPerAnnotation: APITimeTrackingPerAnnotation[],
 ): [ReactElement[], ReactElement[]] => {
   if (userDataPerAnnotation == null) return [[], []];
-
   const groupedByProject = groupBy(userDataPerAnnotation, "projectName");
   let taskRows: ReactElement[] = [];
   let annotationRows: ReactElement[] = [];

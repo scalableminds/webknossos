@@ -7,6 +7,7 @@ import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Box, Empty, Failure, Fox, FoxImplicits, Full}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
 import com.scalableminds.webknossos.datastore.explore.{
   ExploreRemoteDatasetRequest,
@@ -64,7 +65,9 @@ object PathValidationResult {
 
 class DataSourceController @Inject()(
     dataSourceService: DataSourceService,
+    dataSourceMirrorService: DataSourceMirrorService,
     datasetCache: DatasetCache,
+    dataStoreConfig: DataStoreConfig,
     accessTokenService: DataStoreAccessTokenService,
     val binaryDataServiceHolder: BinaryDataServiceHolder,
     connectomeFileService: ConnectomeFileService,
@@ -727,6 +730,38 @@ class DataSourceController @Inject()(
         _ = dataSourceBox.foreach(clearCachesOfDataSource(datasetId, _, layerName = None))
       } yield Ok
     }
+  }
+
+  def writeMirrors(failOnError: Boolean): Action[Seq[ObjectId]] = Action.async(validateJson[Seq[ObjectId]]) {
+    implicit request =>
+      if (dataStoreConfig.Datastore.writeVirtualDatasetsMirror) {
+        accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+          if (failOnError) {
+            for {
+              _ <- Fox.serialCombined(request.body)(writeMirrorForDataset)
+              _ = logger.info(s"Successfully wrote dataset mirrors where needed for ${request.body.length} datasets.")
+            } yield Ok
+          } else {
+            for {
+              resultBoxes <- Fox.serialSequence(request.body)(writeMirrorForDataset)
+              failures = resultBoxes.filter(_.isEmpty)
+              failuresFormatted = failures.map(_.toString).mkString(", ")
+              _ = logger.info(
+                s"Wrote dataset mirrors where needed for ${request.body.length} datasets (${failures.length} failures: $failuresFormatted)")
+            } yield Ok
+          }
+        }
+      } else Fox.successful(Ok)
+  }
+
+  private def writeMirrorForDataset(datasetId: ObjectId): Fox[Unit] = {
+    datasetCache.invalidateCache(datasetId)
+    for {
+      dataSourceBox <- datasetCache.getById(datasetId).shiftBox
+      _ <- Fox.runOptional(dataSourceBox.toOption) { dataSource =>
+        dataSourceMirrorService.writeMirror(dataSource, datasetId) ?~> s"Error writing datasource mirror for $datasetId"
+      }
+    } yield ()
   }
 
   private def refreshDataSource(datasetId: ObjectId)(implicit tc: TokenContext): Fox[DataSource] =

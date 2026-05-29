@@ -94,6 +94,7 @@ GET           /datasets/disambiguate/:datasetName/toNew                         
 GET           /datasets/disambiguate/:organizationId/:datasetName/toId                          controllers.DatasetController.getDatasetIdFromNameAndOrganization(datasetName: String, organizationId: String, sharingToken: Option[String])
 GET           /datasets/pathsToDelete                                                           controllers.PathDeletionController.listPathsToDelete(key: String)
 POST          /datasets/pathsToDelete/markAsDeleted                                             controllers.PathDeletionController.markAsDeleted(key: String)
+GET           /datasets/findByImportURL                                                         controllers.DatasetController.findByImportURL(importURL: String)
 GET           /datasets/:datasetId/health                                                       controllers.DatasetController.health(datasetId: ObjectId, sharingToken: Option[String])
 PATCH         /datasets/:datasetId                                                              controllers.DatasetController.update(datasetId: ObjectId)
 PATCH         /datasets/:datasetId/updatePartial                                                controllers.DatasetController.updatePartial(datasetId: ObjectId)
@@ -120,6 +121,8 @@ POST          /datasets/:datasetId/compose/addLayer                             
 POST          /datasets/:datasetId/compose/addMag                                               controllers.DatasetController.composeAddMag(datasetId: ObjectId)
 POST          /datasets/:datasetId/compose/addAttachment                                        controllers.DatasetController.composeAddAttachment(datasetId: ObjectId)
 POST          /datasets/reserveUploadToPaths                                                    controllers.DatasetController.reserveUploadToPaths()
+POST          /datasets/:datasetId/writeMirror                                                  controllers.DatasetController.writeMirror(datasetId: ObjectId)
+POST          /datasets/writeAllMirrors                                                         controllers.DatasetController.writeAllMirrors()
 
 # Folders
 GET           /folders/root                                                                     controllers.FolderController.getRoot()

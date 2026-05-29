@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.storage
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, Full}
@@ -142,7 +143,7 @@ class DataVaultService @Inject()(ws: WSClient,
 
   def vaultPathFor(credentializedUpath: CredentializedUPath)(implicit ec: ExecutionContext): Fox[VaultPath] =
     for {
-      vault <- vaultCache.getOrLoad(credentializedUpath, createVault) ?~> "dataVault.setup.failed"
+      vault <- vaultCache.getOrLoad(credentializedUpath, createVault) ?~> Msg.DataVault.setupFailed
     } yield new VaultPath(credentializedUpath.upath, vault)
 
   private def removeVaultFromCache(credentializedUpath: CredentializedUPath)(implicit ec: ExecutionContext): Fox[Unit] =

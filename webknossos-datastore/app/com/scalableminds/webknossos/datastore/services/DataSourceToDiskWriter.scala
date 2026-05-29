@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Box, Failure, Fox, FoxImplicits, Full, JsonHelper}
@@ -28,13 +29,13 @@ trait DataSourceToDiskWriter extends DataSourceValidation with FoxImplicits {
       _ <- Fox.runIf(validate)(assertValidDataSource(dataSource).toFox)
       propertiesFile = dataSourcePath.resolve(propertiesFileName)
       _ <- Fox.runIf(!expectExisting)(PathUtils.ensureDirectoryBox(dataSourcePath).toFox)
-      _ <- Fox.runIf(!expectExisting)(Fox.fromBool(!Files.exists(propertiesFile))) ?~> "dataSource.alreadyPresent"
-      _ <- Fox.runIf(expectExisting)(backupPreviousProperties(dataSourcePath).toFox) ?~> "Could not update datasource-properties.json"
+      _ <- Fox.runIf(!expectExisting)(Fox.fromBool(!Files.exists(propertiesFile))) ?~> Msg.Dataset.DataSource.alreadyPresent
+      _ <- Fox.runIf(expectExisting)(backupPreviousProperties(dataSourcePath).toFox) ?~> Msg.Dataset.DataSource.updateFileFailed
       dataSourceWithRelativizedPaths = relativizePathsOfDataSource(dataSourcePath, dataSource)
       _ <- JsonHelper
         .writeToFile(propertiesFile,
                      JsonHelper.removeKeyRecursively(Json.toJson(dataSourceWithRelativizedPaths), Set("resolutions")))
-        .toFox ?~> "Could not update datasource-properties.json"
+        .toFox ?~> Msg.Dataset.DataSource.updateFileFailed
     } yield ()
   }
 

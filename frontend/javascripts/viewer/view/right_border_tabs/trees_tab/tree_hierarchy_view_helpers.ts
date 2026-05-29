@@ -296,7 +296,7 @@ export function createGroupHelper(
 
   const newSegmentGroups = cloneDeep(segmentGroups);
   const newGroup = {
-    name: name || `Group ${newGroupId}`,
+    name: name || `Unnamed Group`,
     groupId: newGroupId,
     children: [],
   };
@@ -308,7 +308,7 @@ export function createGroupHelper(
       item.children.push(newGroup);
     });
   }
-  return { newSegmentGroups, newGroupId };
+  return newSegmentGroups;
 }
 
 export function deepFilter<T extends TreeNode | TreeGroup | SegmentHierarchyNode>(

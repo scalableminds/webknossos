@@ -1,6 +1,6 @@
 services:
   webknossos:
-    image: scalableminds/webknossos:${DOCKER_TAG:-25.12.0}
+    image: scalableminds/webknossos:${DOCKER_TAG:-26.01.1}
     ports:
       - "127.0.0.1:9000:9000"
     depends_on:

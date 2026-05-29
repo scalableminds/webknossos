@@ -138,7 +138,7 @@ If Multi Cut Tool is activated, the following shortcuts are available:
 | Key Binding                     | Operation                                                |
 |---------------------------------|----------------------------------------------------------|
 | Left Click                      | Activate Segment of Agglomerate for Proofreading Actions |
-| ++shift++ + Middle Click        | Import Agglomerate Skeleton of hovered agglomerate       |
+| ++shift++ + Middle Click        | Import Agglomerate Tree of hovered agglomerate       |
 | ++shift++ + Left Click          | Merge with Active Segment                                |
 | ++ctrl++ / ++cmd++ + Left Click | Split from Active Segment                                |
 

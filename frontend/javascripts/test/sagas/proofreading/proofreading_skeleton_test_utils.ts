@@ -11,9 +11,9 @@ import type {
   ServerTracing,
 } from "types/api_types";
 import { type TreeType, TreeTypeEnum, type Vector3 } from "viewer/constants";
-import { loadAgglomerateSkeletonAtPosition } from "viewer/controller/combinations/segmentation_handlers";
+import { loadAgglomerateTreeAtPosition } from "viewer/controller/combinations/segmentation_handlers";
 import { getTreesWithType } from "viewer/model/accessors/skeletontracing_accessor";
-import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
+import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import { minCutAgglomerateAction } from "viewer/model/actions/proofread_actions";
 import { deleteEdgeAction, mergeTreesAction } from "viewer/model/actions/skeletontracing_actions";
 import {
@@ -55,7 +55,7 @@ export function encodeServerTracing(
 }
 
 /**
- * Create an agglomerate skeleton as a ServerSkeletonTracing for the agglomerate given by the adjacencyList.
+ * Create an agglomerate tree as a ServerSkeletonTracing for the agglomerate given by the adjacencyList.
  *
  * @param adjacencyList array of tuples of edges between the segments
  * @param startNode the node id we want the skeleton for
@@ -176,22 +176,22 @@ export function createSkeletonTracingFromAdjacency(
   return tracing;
 }
 
-// Little helper to load a list of agglomerate skeletons in a test.
+// Little helper to load a list of agglomerate trees in a test.
 // Should be done before any other mapping changes. Else the assumptions of the tests are not correct.
 // The agglomerate ids must correspond to one of the agglomerate positions.
 // Should be the case initially for all proofreading tests.
-export function* loadAgglomerateSkeletons(
+export function* loadAgglomerateTrees(
   context: WebknossosTestContext,
   agglomerateIdsToLoad: number[],
   shouldSaveAfterLoadingTrees: boolean,
   isInLiveCollabMode: boolean,
 ): Saga<TreeMap> {
-  // Restore original parsing of tracings to make the mocked agglomerate skeleton implementation work.
+  // Restore original parsing of tracings to make the mocked agglomerate tree implementation work.
   vi.mocked(context.mocks.parseProtoTracing).mockRestore();
   for (let index = 0; index < agglomerateIdsToLoad.length; ++index) {
     const agglomerateId = agglomerateIdsToLoad[index];
-    yield call(loadAgglomerateSkeletonAtPosition, getPositionForSegmentId(agglomerateId));
-    // Wait until skeleton saga has loaded the skeleton.
+    yield call(loadAgglomerateTreeAtPosition, getPositionForSegmentId(agglomerateId));
+    // Wait until skeleton saga has loaded the agglomerate trees.
     if (isInLiveCollabMode) {
       yield take("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");
     } else {
@@ -234,8 +234,8 @@ export function* performMergeTreesProofreading(
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
   yield* expectMapping(tracingId, initialMapping);
-  yield put(setOthersMayEditForAnnotationAction(true));
-  const agglomerateTrees = yield loadAgglomerateSkeletons(
+  yield put(setCollaborationModeAction("Concurrent"));
+  const agglomerateTrees = yield loadAgglomerateTrees(
     context,
     [1, 4],
     shouldSaveAfterLoadingTrees,
@@ -269,9 +269,9 @@ export function* performSplitTreesProofreading(
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
   yield* expectMapping(tracingId, initialMapping);
-  yield put(setOthersMayEditForAnnotationAction(true));
+  yield put(setCollaborationModeAction("Concurrent"));
 
-  const agglomerateTrees = yield loadAgglomerateSkeletons(context, [1], true, true);
+  const agglomerateTrees = yield loadAgglomerateTrees(context, [1], true, true);
   const sourceNode = agglomerateTrees.getOrThrow(3).nodes.getOrThrow(5);
   const targetNode = agglomerateTrees.getOrThrow(3).nodes.getOrThrow(6);
   yield put(deleteEdgeAction(sourceNode.id, targetNode.id));
@@ -301,9 +301,9 @@ export function* performMinCutWithNodesProofreading(
 
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
   yield* expectMapping(tracingId, initialMapping);
-  yield put(setOthersMayEditForAnnotationAction(true));
-  // Load agglomerate skeleton for agglomerate id 1.
-  yield call(loadAgglomerateSkeletons, context, [1], true, true);
+  yield put(setCollaborationModeAction("Concurrent"));
+  // Load agglomerate tree for agglomerate id 1.
+  yield call(loadAgglomerateTrees, context, [1], true, true);
   yield call(() => api.tracing.save()); // Also pulls newest version from backend.
   const skeletonWithAgglomerateTrees = yield* select(
     (state: WebknossosState) => state.annotation.skeleton,

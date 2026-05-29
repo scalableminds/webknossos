@@ -25,7 +25,6 @@ import {
   reserveDatasetUpload,
   sendAnalyticsEvent,
   sendFailedRequestAnalyticsEvent,
-  startConvertToWkwJob,
   type UnfinishedUpload,
 } from "admin/rest_api";
 import {
@@ -386,51 +385,30 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       const uploadInfo = {
         uploadId,
         needsConversion: this.state.needsConversion,
+        voxelSizeFactor: this.state.needsConversion ? formValues.voxelSizeFactor : undefined,
+        voxelSizeUnit: this.state.needsConversion ? formValues.voxelSizeUnit : undefined,
       };
       this.setState({
         isFinishing: true,
       });
       finishDatasetUpload(datastoreUrl, uploadInfo).then(
         async ({ newDatasetId }) => {
-          let maybeError;
-
-          if (this.state.needsConversion) {
-            try {
-              const datastore = this.getDatastoreForUrl(datastoreUrl);
-
-              if (!datastore) {
-                throw new Error("Selected datastore does not match available datastores");
-              }
-
-              await startConvertToWkwJob(
-                newDatasetId,
-                formValues.voxelSizeFactor,
-                formValues.voxelSizeUnit,
-              );
-            } catch (error) {
-              maybeError = error;
-            }
-
-            if (maybeError != null) {
-              Toast.error(
-                "The upload was successful, but the conversion for the dataset could not be started. Please try again or contact us if this issue occurs again.",
-              );
-            }
-          }
+          const { needsConversion } = this.state;
           this.setState({
             isUploading: false,
             isFinishing: false,
+            isRetrying: false,
+            uploadProgress: 0,
             unfinishedUploadToContinue: null,
             uploadId: undefined,
+            needsConversion: false,
           });
 
-          if (maybeError == null) {
-            newestForm.setFieldsValue({
-              name: "",
-              zipFile: [],
-            });
-            this.props.onUploaded(newDatasetId, newDatasetName, this.state.needsConversion);
-          }
+          newestForm.setFieldsValue({
+            name: "",
+            zipFile: [],
+          });
+          this.props.onUploaded(newDatasetId, newDatasetName, needsConversion);
         },
         (error) => {
           sendFailedRequestAnalyticsEvent("finish_dataset_upload", error, {
@@ -579,9 +557,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       fileNames.push(file.name);
       const fileExtension = getFileExtension(file.name);
       fileExtensions.push(fileExtension);
-      sendAnalyticsEvent("add_files_to_upload", {
-        fileExtension,
-      });
 
       if (fileExtension === "zip") {
         try {
@@ -638,12 +613,9 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     ) {
       needsConversion = false;
     }
-    Object.entries(countedFileExtensions).map(([fileExtension, count]) =>
-      sendAnalyticsEvent("add_files_to_upload", {
-        fileExtension,
-        count,
-      }),
-    );
+    sendAnalyticsEvent("add_files_to_upload", {
+      fileExtensions: countedFileExtensions,
+    });
     this.handleNeedsConversionInfo(needsConversion);
   };
 

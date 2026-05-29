@@ -345,7 +345,7 @@ export const getProofreadingCrossHairOverlay: ShaderModule = {
         return vec4(0.0);
       }
 
-      vec3 flooredGlobalPosUVW = transDim(floor(worldCoordUVW));
+      vec3 flooredGlobalPosUVW = floor(worldCoordUVW);
       vec3 activeSegmentPosUVW = transDim(proofreadingMarkerPosition);
 
       // Compute the anisotropy of the dataset so that the cross hair looks the same in

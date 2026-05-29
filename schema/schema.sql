@@ -21,13 +21,14 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(160);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(164);
 COMMIT TRANSACTION;
 
 
 CREATE TYPE webknossos.ANNOTATION_TYPE AS ENUM ('Task', 'Explorational', 'TracingBase', 'Orphan');
 CREATE TYPE webknossos.ANNOTATION_STATE AS ENUM ('Active', 'Finished', 'Cancelled', 'Initializing');
 CREATE TYPE webknossos.ANNOTATION_VISIBILITY AS ENUM ('Private', 'Internal', 'Public');
+CREATE TYPE webknossos.ANNOTATION_COLLABORATION_MODE AS ENUM('OwnerOnly', 'Exclusive', 'Concurrent');
 CREATE TABLE webknossos.annotations(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   _dataset TEXT CONSTRAINT _dataset_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
@@ -44,7 +45,7 @@ CREATE TABLE webknossos.annotations(
   tags TEXT[] NOT NULL DEFAULT '{}',
   tracingTime BIGINT,
   typ webknossos.ANNOTATION_TYPE NOT NULL,
-  othersMayEdit BOOLEAN NOT NULL DEFAULT FALSE,
+  collaborationMode webknossos.ANNOTATION_COLLABORATION_MODE NOT NULL DEFAULT 'OwnerOnly',
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
@@ -80,6 +81,16 @@ CREATE TABLE webknossos.annotation_mutexes(
   _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
   expiry TIMESTAMP NOT NULL
+);
+
+CREATE TYPE webknossos.ANNOTATION_ID_DOMAIN AS ENUM ('Segment', 'SegmentGroup', 'Tree', 'Node', 'TreeGroup', 'BoundingBox');
+CREATE TABLE webknossos.annotation_reserved_ids(
+  _annotation TEXT NOT NULL CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$'),
+  tracingId TEXT NOT NULL,
+  domain webknossos.ANNOTATION_ID_DOMAIN NOT NULL,
+  _user TEXT NOT NULL CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$'),
+  id BIGINT NOT NULL,
+  PRIMARY KEY (_annotation, tracingId, domain, id)
 );
 
 CREATE TABLE webknossos.publications(
@@ -119,6 +130,7 @@ CREATE TABLE webknossos.datasets(
   metadata JSONB NOT NULL DEFAULT '[]',
   tags TEXT[] NOT NULL DEFAULT '{}',
   creationType webknossos.DATASET_CREATION_TYPE,
+  importURL TEXT,
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE (directoryName, _organization),
@@ -662,13 +674,13 @@ CREATE TABLE webknossos.emailVerificationKeys(
   isUsed BOOLEAN NOT NULL DEFAULT FALSE
 );
 
-CREATE TYPE webknossos.AI_MODEL_CATEGORY AS ENUM ('em_neurons', 'em_nuclei', 'em_synapses', 'em_neuron_types', 'em_cell_organelles');
+CREATE TYPE webknossos.AI_MODEL_CATEGORY AS ENUM ('em_neurons', 'em_nuclei', 'em_synapses', 'em_neuron_types', 'em_cell_organelles', 'em_generic', 'em_somata', 'em_mitochondria');
 
 CREATE TABLE webknossos.aiModels(
   _id TEXT CONSTRAINT _id_objectId CHECK (_id ~ '^[0-9a-f]{24}$') PRIMARY KEY,
-  _organization TEXT NOT NULL,
+  _organization TEXT,
   _dataStore TEXT NOT NULL, -- redundant to job, but must be available for jobless models
-  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
+  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$'),
   _trainingJob TEXT CONSTRAINT _trainingJob_objectId CHECK (_trainingJob ~ '^[0-9a-f]{24}$'),
   path TEXT,
   uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
@@ -678,6 +690,8 @@ CREATE TABLE webknossos.aiModels(
   created TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   modified TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   isDeleted BOOLEAN NOT NULL DEFAULT FALSE,
+  isSuperUserOnly BOOLEAN NOT NULL DEFAULT FALSE,
+  isPretrained BOOLEAN NOT NULL DEFAULT FALSE,
   UNIQUE (_organization, name)
 );
 
@@ -907,6 +921,9 @@ ALTER TABLE webknossos.annotation_contributors
     ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE,
     ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.annotation_mutexes
+    ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE,
+    ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.annotation_reserved_ids
     ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE,
     ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.datasets

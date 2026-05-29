@@ -1,5 +1,6 @@
 package models.aimodels
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.time.Instant
@@ -26,10 +27,10 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 case class AiModel(_id: ObjectId,
-                   _organization: String,
+                   _organization: Option[String],
                    _sharedOrganizations: List[String],
                    _dataStore: String,
-                   _user: ObjectId,
+                   _user: Option[ObjectId],
                    _trainingJob: Option[ObjectId],
                    _trainingAnnotations: List[ObjectId],
                    path: Option[UPath],
@@ -39,7 +40,9 @@ case class AiModel(_id: ObjectId,
                    category: Option[AiModelCategory],
                    created: Instant = Instant.now,
                    modified: Instant = Instant.now,
-                   isDeleted: Boolean = false)
+                   isDeleted: Boolean = false,
+                   isSuperUserOnly: Boolean = false,
+                   isPretrained: Boolean = false)
 
 class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
                                dataStoreService: DataStoreService,
@@ -52,12 +55,21 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
     extends FoxImplicits
     with LazyLogging {
 
+  val pretrainedNeuronModelId: ObjectId = ObjectId("576500000000000000000001")
+  val pretrainedMitochondriaModelId: ObjectId = ObjectId("576500000000000000000002")
+  val pretrainedNucleiModelId: ObjectId = ObjectId("576500000000000000000003")
+  val pretrainedSomataModelId: ObjectId = ObjectId("576500000000000000000004")
+
   def publicWrites(aiModel: AiModel, requestingUser: User)(implicit ec: ExecutionContext,
                                                            ctx: DBAccessContext): Fox[JsObject] =
     for {
       dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)
-      userBox <- userDAO.findOne(aiModel._user).shiftBox
-      userJs <- Fox.runOptional(userBox.toOption)(userService.compactWrites)
+      userBox <- Fox.runOptional(aiModel._user)(userId =>
+        userDAO.findOne(userId).shiftBox.flatMap {
+          case Full(user) => Fox.successful(Some(user))
+          case _          => Fox.successful(None)
+      })
+      userJs <- Fox.runOptional(userBox.flatten)(userService.compactWrites)
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
       trainingJobOpt <- Fox.runOptional(aiModel._trainingJob)(trainingJobId =>
         jobDAO.findOne(trainingJobId).shiftBox.flatMap {
@@ -65,13 +77,14 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
           case _         => Fox.successful(None)
       })
       trainingJobJsOpt <- Fox.runOptional(trainingJobOpt.flatten)(jobService.publicWrites)
-      isOwnedByUsersOrganization = aiModel._organization == requestingUser._organization
+      isOwnedByUsersOrganization = aiModel._organization.contains(requestingUser._organization)
       sharedOrganizationIds <- if (isOwnedByUsersOrganization) for {
         orgaIdsUserCanAccess <- organizationDAO.findAll.flatMap(os => Fox.successful(os.map(_._id)))
         sharedOrgasIdsUserCanAccess = aiModel._sharedOrganizations.filter(orgaIdsUserCanAccess.contains)
       } yield Some(sharedOrgasIdsUserCanAccess)
       else Fox.successful(None)
-      path <- pathWithFallback(aiModel)
+      path <- if (aiModel.isPretrained) Fox.successful(Option.empty[UPath])
+      else pathWithFallback(aiModel).map(Some(_))
       isUsable = !aiModel.uploadToPathIsPending && trainingJobOpt.flatten.forall(_.effectiveState == JobState.SUCCESS)
     } yield
       Json.obj(
@@ -86,17 +99,25 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
         "sharedOrganizationIds" -> sharedOrganizationIds,
         "category" -> aiModel.category,
         "path" -> path,
-        "isUsable" -> isUsable
+        "isUsable" -> isUsable,
+        "isSuperUserOnly" -> aiModel.isSuperUserOnly,
+        "isPretrained" -> aiModel.isPretrained
       )
 
   def inferenceBBoxToTargetMag(mag1BoundingBox: BoundingBox,
                                layer: StaticLayer,
                                datasetVoxelSize: VoxelSize,
-                               aiModelOpt: Option[AiModel],
-                               usePretrainedNeuronModel: Boolean,
+                               aiModel: AiModel,
                                dataStore: DataStore)(implicit ec: ExecutionContext): Fox[BoundingBox] =
     for {
-      modelVoxelSize <- findModelVoxelSize(aiModelOpt, usePretrainedNeuronModel, dataStore)
+      modelVoxelSize <- if (aiModel.isPretrained)
+        findPretrainedVoxelSize(aiModel._id).toFox ?~> s"No voxel size known for pretrained model '${aiModel.name}'"
+      else
+        for {
+          modelPath <- pathWithFallback(aiModel)
+          dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
+          voxelSize <- dataStoreClient.getEffectiveAiModelVoxelSize(modelPath)
+        } yield voxelSize
       targetMag <- findBestMatchingMag(modelVoxelSize, datasetVoxelSize, layer)
       targetMagBoundingBox = mag1BoundingBox / targetMag
     } yield targetMagBoundingBox
@@ -104,7 +125,7 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
   private def findBestMatchingMag(modelVoxelSize: VoxelSize, datasetVoxelSize: VoxelSize, layer: StaticLayer)(
       implicit ec: ExecutionContext): Fox[Vec3Int] =
     for {
-      _ <- Fox.fromBool(layer.mags.nonEmpty) ?~> "dataset.noMags"
+      _ <- Fox.fromBool(layer.mags.nonEmpty) ?~> Msg.Dataset.noMags
       modelVoxelSizeNm = modelVoxelSize.toNanometer
       datasetVoxelSizeNm = datasetVoxelSize.toNanometer
       bestMag = layer.mags.map(_.mag).minBy { mag =>
@@ -117,34 +138,35 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
       case Some(path) => Fox.successful(path)
       case None =>
         for {
+          organizationId <- aiModel._organization.toFox ?~> "aiModel.noOrganization"
           dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)(GlobalAccessContext)
           dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
           dataStoreBaseDir <- dataStoreClient.getBaseDirAbsolute
           baseDirUPath <- UPath.fromString(dataStoreBaseDir).toFox
           // No custom path, use legacy path schema:
-          fallbackPath = baseDirUPath / aiModel._organization / ".aiModels" / aiModel._id.toString
+          fallbackPath = baseDirUPath / organizationId / ".aiModels" / aiModel._id.toString
         } yield fallbackPath
     }
 
-  private lazy val PretrainedNeuronModelVoxelSize = VoxelSize(Vec3Double(7.96, 7.96, 31.2), LengthUnit.nanometer)
-  private lazy val PretrainedNucleiModelVoxelSize = VoxelSize(Vec3Double(179.84, 179.84, 224.0), LengthUnit.nanometer)
+  private lazy val pretrainedVoxelSizes: Map[ObjectId, VoxelSize] = Map(
+    pretrainedNeuronModelId -> VoxelSize(Vec3Double(7.96, 7.96, 31.2), LengthUnit.nanometer),
+    pretrainedMitochondriaModelId -> VoxelSize(Vec3Double(7.96, 7.96, 31.2), LengthUnit.nanometer),
+    pretrainedNucleiModelId -> VoxelSize(Vec3Double(179.84, 179.84, 224.0), LengthUnit.nanometer),
+    pretrainedSomataModelId -> VoxelSize(Vec3Double(179.84, 179.84, 224.0), LengthUnit.nanometer)
+  )
 
-  def findModelVoxelSize(aiModelOpt: Option[AiModel], usePretrainedNeuronModel: Boolean, dataStore: DataStore)(
-      implicit ec: ExecutionContext): Fox[VoxelSize] =
-    aiModelOpt match {
-      case None =>
-        if (usePretrainedNeuronModel) Fox.successful(PretrainedNeuronModelVoxelSize)
-        else {
-          // No custom model, not pretrained neuron model. Assume pretrained nuclei model.
-          Fox.successful(PretrainedNucleiModelVoxelSize)
-        }
-      case Some(aiModel) =>
-        for {
-          modelPath <- pathWithFallback(aiModel)
-          dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
-          modelVoxelSize <- dataStoreClient.getEffectiveAiModelVoxelSize(modelPath)
-        } yield modelVoxelSize
-    }
+  private def findPretrainedVoxelSize(pretrainedModelId: ObjectId): Option[VoxelSize] =
+    pretrainedVoxelSizes.get(pretrainedModelId)
+
+  def findModelVoxelSize(aiModel: AiModel, dataStore: DataStore)(implicit ec: ExecutionContext): Fox[VoxelSize] =
+    if (aiModel.isPretrained)
+      findPretrainedVoxelSize(aiModel._id).toFox ?~> s"No voxel size known for pretrained model '${aiModel.name}'"
+    else
+      for {
+        modelPath <- pathWithFallback(aiModel)
+        dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
+        modelVoxelSize <- dataStoreClient.getEffectiveAiModelVoxelSize(modelPath)
+      } yield modelVoxelSize
 
 }
 
@@ -163,7 +185,7 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r._Organization,
         List(),
         r._Datastore.trim,
-        ObjectId(r._User),
+        r._User.map(ObjectId(_)),
         r._Trainingjob.map(ObjectId(_)),
         trainingAnnotationIds,
         path,
@@ -173,30 +195,43 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.category.flatMap(AiModelCategory.fromString),
         Instant.fromSql(r.created),
         Instant.fromSql(r.modified),
-        r.isdeleted
+        r.isdeleted,
+        r.issuperuseronly,
+        r.ispretrained
       )
       organizations <- findSharedOrganizationsFor(aiModelWithoutSharedOrgas)
     } yield aiModelWithoutSharedOrgas.copy(_sharedOrganizations = organizations)
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
-    q"""_id IN (
-          SELECT a._aiModel
-          FROM webknossos.aiModel_organizations AS a
-          INNER JOIN webknossos.organizations AS o
-            ON a._organization = o._id
-          WHERE
-              (o._id IN (
-                  SELECT _organization
-                  FROM webknossos.users_
-                  WHERE _id = $requestingUserId
-              ))
+    q"""(
+          _id IN (
+            SELECT a._aiModel
+            FROM webknossos.aiModel_organizations AS a
+            INNER JOIN webknossos.organizations AS o
+              ON a._organization = o._id
+            WHERE o._id IN (
+              SELECT _organization
+              FROM webknossos.users_
+              WHERE _id = $requestingUserId
+            )
           )
-         OR
-        (_organization IN (
+          OR _organization IN (
             SELECT _organization
             FROM webknossos.users_
             WHERE _id = $requestingUserId
-        ))
+          )
+          -- The pretrained models should be visible by all users of all orgas
+          OR isPretrained
+        )
+        AND (
+          NOT isSuperUserOnly
+          OR TRUE IN (
+            SELECT isSuperUser FROM webknossos.multiUsers_
+            WHERE _id IN (
+              SELECT _multiUser FROM webknossos.users_ WHERE _id = $requestingUserId
+            )
+          )
+        )
      """
 
   override protected def updateAccessQ(requestingUserId: ObjectId): SqlToken =
@@ -220,10 +255,10 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     val insertModelQuery =
       q"""INSERT INTO webknossos.aiModels (
                       _id, _organization, _dataStore, _user, _trainingJob, path, uploadToPathIsPending, name,
-                       comment, category, created, modified, isDeleted
+                       comment, category, created, modified, isDeleted, isSuperUserOnly, isPretrained
                     ) VALUES (
                       ${a._id}, ${a._organization}, ${a._dataStore}, ${a._user}, ${a._trainingJob}, ${a.path}, ${a.uploadToPathIsPending}, ${a.name},
-                      ${a.comment}, ${a.category}, ${a.created}, ${a.modified}, ${a.isDeleted}
+                      ${a.comment}, ${a.category}, ${a.created}, ${a.modified}, ${a.isDeleted}, ${a.isSuperUserOnly}, ${a.isPretrained}
                     )
            """.asUpdate
     val insertTrainingAnnotationQueries = insertTrainingAnnotationIdQueries(a._id, a._trainingAnnotations)
@@ -256,8 +291,10 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         q"SELECT _organization FROM webknossos.aiModel_organizations WHERE _aiModel = ${aiModel._id} ORDER BY _organization"
           .as[String])
       ids = rows.toList
-      idsWithOwningOrganization = if (ids.contains(aiModel._organization)) ids
-      else ids :+ aiModel._organization
+      idsWithOwningOrganization = aiModel._organization match {
+        case Some(orgId) => if (ids.contains(orgId)) ids else ids :+ orgId
+        case None        => ids
+      }
     } yield idsWithOwningOrganization
 
   def updateOne(a: AiModel): Fox[Unit] =

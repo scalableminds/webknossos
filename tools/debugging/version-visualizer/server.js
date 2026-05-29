@@ -29,12 +29,11 @@ app.get("/", (_req, res) => {
 
 app.get("/creationTime", (req, res) => {
   try {
-    
-      const files = fs.readdirSync(DATA_DIR).filter((f) => f.endsWith(".json"));
-      if (files.length === 0) {
-        return res.status(404).json({ error: "no json files in data directory" });
-      }
-      const fileName = files[0];
+    const files = fs.readdirSync(DATA_DIR).filter((f) => f.endsWith(".json"));
+    if (files.length === 0) {
+      return res.status(404).json({ error: "no json files in data directory" });
+    }
+    const fileName = files[0];
 
     const filePath = path.join(DATA_DIR, fileName);
 
@@ -49,6 +48,13 @@ app.get("/creationTime", (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`Visualizer running at http://localhost:${PORT}`);
+});
+
+server.on("error", (err) => {
+  if (err.code === "EADDRINUSE") {
+    console.error(`❌ Port ${PORT} is already in use.`);
+    process.exit(1);
+  }
 });

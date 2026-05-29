@@ -975,10 +975,6 @@ export function parseNml(nmlString: string): Promise<{
           nodeIdToTreeId[nodeId] = currentTree.treeId;
           currentTree.nodes.mutableSet(currentNode.id, currentNode);
           existingNodeIds.add(currentNode.id);
-
-          if (node.isSelfClosing) {
-            currentNode = null;
-          }
           break;
         }
 
@@ -1075,11 +1071,8 @@ export function parseNml(nmlString: string): Promise<{
 
           existingTreeGroupIds.add(newGroup.groupId);
 
-          if (!node.isSelfClosing) {
-            // If the xml tag is self-closing, there won't be a separate tagclose event!
-            treeGroupIdToParent[newGroup.groupId] = currentTreeGroup;
-            currentTreeGroup = newGroup;
-          }
+          treeGroupIdToParent[newGroup.groupId] = currentTreeGroup;
+          currentTreeGroup = newGroup;
 
           break;
         }

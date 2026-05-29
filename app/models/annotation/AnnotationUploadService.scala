@@ -17,7 +17,7 @@ import models.annotation.nml.NmlResults._
 import models.annotation.nml.{NmlParseSuccessWithoutFile, NmlParser, NmlResults}
 import com.scalableminds.util.tools.{Empty, Failure, Full}
 import com.scalableminds.util.tools.Box.tryo
-import play.api.i18n.MessagesProvider
+import com.scalableminds.webknossos.tracingstore.tracings.GroupUtils
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -45,17 +45,15 @@ class AnnotationUploadService @Inject()(tempFileService: WkTempFileService, nmlP
     with Formatter {
 
   private def extractFromNmlFile(file: File, name: String, sharedParsingParameters: SharedParsingParameters)(
-      implicit m: MessagesProvider,
-      ec: ExecutionContext,
+      implicit ec: ExecutionContext,
       ctx: DBAccessContext): Future[NmlParseResult] =
     extractFromNml(new FileInputStream(file), name, sharedParsingParameters)
 
-  private def extractFromNml(inputStream: InputStream,
-                             name: String,
-                             sharedParsingParameters: SharedParsingParameters,
-                             basePath: Option[String] = None)(implicit m: MessagesProvider,
-                                                              ec: ExecutionContext,
-                                                              ctx: DBAccessContext): Future[NmlParseResult] = {
+  private def extractFromNml(
+      inputStream: InputStream,
+      name: String,
+      sharedParsingParameters: SharedParsingParameters,
+      basePath: Option[String] = None)(implicit ec: ExecutionContext, ctx: DBAccessContext): Future[NmlParseResult] = {
     val parserOutput =
       nmlParser.parse(
         name,
@@ -66,13 +64,13 @@ class AnnotationUploadService @Inject()(tempFileService: WkTempFileService, nmlP
     parserOutput.futureBox.map {
       case Full(NmlParseSuccessWithoutFile(skeletonTracing, uploadedVolumeLayers, datasetId, description, wkUrl)) =>
         NmlParseSuccess(name, skeletonTracing, uploadedVolumeLayers, datasetId, description, wkUrl)
-      case f: Failure => NmlParseFailure(name, formatFailureChain(f, messagesProviderOpt = Some(m)))
+      case f: Failure => NmlParseFailure(name, formatFailureChain(f))
       case Empty      => NmlParseEmpty(name)
     }
   }
 
   private def extractFromZip(file: File, zipFileName: Option[String], sharedParsingParameters: SharedParsingParameters,
-  )(implicit m: MessagesProvider, ec: ExecutionContext, ctx: DBAccessContext): Fox[MultiNmlParseResult] = {
+  )(implicit ec: ExecutionContext, ctx: DBAccessContext): Fox[MultiNmlParseResult] = {
     val name = zipFileName getOrElse file.getName
     var otherFiles = Map.empty[String, File]
     var pendingResults = List.empty[Fox[NmlParseResult]]
@@ -120,18 +118,11 @@ class AnnotationUploadService @Inject()(tempFileService: WkTempFileService, nmlP
   }
 
   private def wrapInGroups(parseResults: List[NmlParseResult]): List[NmlParseResult] = {
-    def getMaximumTreeGroupId(treeGroups: Seq[TreeGroup]): Int =
-      if (treeGroups.isEmpty) 0
-      else Math.max(treeGroups.map(_.groupId).max, getMaximumTreeGroupId(treeGroups.flatMap(_.children)))
-
-    def getMaximumSegmentGroupId(segmentGroups: Seq[SegmentGroup]): Int =
-      if (segmentGroups.isEmpty) 0
-      else Math.max(segmentGroups.map(_.groupId).max, getMaximumSegmentGroupId(segmentGroups.flatMap(_.children)))
 
     def wrapTreesInGroup(name: String, tracing: SkeletonTracing): SkeletonTracing =
       if (tracing.trees.isEmpty && tracing.treeGroups.isEmpty) tracing
       else {
-        val unusedGroupId = getMaximumTreeGroupId(tracing.treeGroups) + 1
+        val unusedGroupId = GroupUtils.getMaximumTreeGroupId(tracing.treeGroups) + 1
         val newTrees = tracing.trees.map(tree => tree.copy(groupId = Some(tree.groupId.getOrElse(unusedGroupId))))
         val newTreeGroups = Seq(TreeGroup(name, unusedGroupId, tracing.treeGroups, isExpanded = Some(true)))
         tracing.copy(trees = newTrees, treeGroups = newTreeGroups)
@@ -140,7 +131,7 @@ class AnnotationUploadService @Inject()(tempFileService: WkTempFileService, nmlP
     def wrapSegmentsInGroup(name: String, tracing: VolumeTracing): VolumeTracing =
       if (tracing.segments.isEmpty && tracing.segmentGroups.isEmpty) tracing
       else {
-        val unusedGroupId = getMaximumSegmentGroupId(tracing.segmentGroups) + 1
+        val unusedGroupId = GroupUtils.getMaximumSegmentGroupId(tracing.segmentGroups) + 1
         val newSegments =
           tracing.segments.map(segment => segment.copy(groupId = Some(segment.groupId.getOrElse(unusedGroupId))))
         val newSegmentGroups = Seq(SegmentGroup(name, unusedGroupId, tracing.segmentGroups))
@@ -161,8 +152,7 @@ class AnnotationUploadService @Inject()(tempFileService: WkTempFileService, nmlP
   }
 
   def extractFromFiles(files: Seq[(File, String)], sharedParams: SharedParsingParameters)(
-      implicit m: MessagesProvider,
-      ec: ExecutionContext,
+      implicit ec: ExecutionContext,
       ctx: DBAccessContext): Fox[MultiNmlParseResult] =
     Fox.foldLeft(files.iterator, NmlResults.MultiNmlParseResult()) {
       case (collectedResults, (file, name)) =>
@@ -191,8 +181,7 @@ class AnnotationUploadService @Inject()(tempFileService: WkTempFileService, nmlP
     }
 
   private def extractFromFile(file: File, fileName: String, sharedParsingParameters: SharedParsingParameters)(
-      implicit m: MessagesProvider,
-      ec: ExecutionContext,
+      implicit ec: ExecutionContext,
       ctx: DBAccessContext): Fox[MultiNmlParseResult] =
     if (fileName.endsWith(".zip")) {
       logger.trace("Extracting from Zip file")

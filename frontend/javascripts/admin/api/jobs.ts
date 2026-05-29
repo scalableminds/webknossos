@@ -10,7 +10,7 @@ import type {
   RenderAnimationOptions,
   VoxelSize,
 } from "types/api_types";
-import type { UnitLong, Vector3, Vector6 } from "viewer/constants";
+import type { Vector3, Vector6 } from "viewer/constants";
 import { setActiveOrganizationsCreditBalance } from "viewer/model/actions/organization_actions";
 import { Store } from "viewer/singletons";
 import { assertResponseLimit } from "./api_utils";
@@ -92,19 +92,6 @@ export async function retryJob(jobId: string): Promise<APIJob> {
   return Request.receiveJSON(`/api/jobs/${jobId}/retry`, {
     method: "PATCH",
   });
-}
-
-export async function startConvertToWkwJob(
-  datasetId: string,
-  scale: Vector3,
-  unit: UnitLong,
-): Promise<APIJob> {
-  return Request.receiveJSON(
-    `/api/jobs/run/convertToWkw/${datasetId}?scale=${scale.toString()}&unit=${unit}`,
-    {
-      method: "POST",
-    },
-  );
 }
 
 export async function startFindLargestSegmentIdJob(
@@ -337,6 +324,12 @@ export function startAlignSectionsJob(
 export enum APIAiModelCategory {
   EM_NEURONS = "em_neurons",
   EM_NUCLEI = "em_nuclei",
+  EM_SYNAPSES = "em_synapses",
+  EM_NEURON_TYPES = "em_neuron_types",
+  EM_CELL_ORGANELLES = "em_cell_organelles",
+  EM_GENERIC = "em_generic",
+  EM_SOMATA = "em_somata",
+  EM_MITOCHONDRIA = "em_mitochondria",
 }
 
 export type AiModelTrainingAnnotationSpecification = {
@@ -366,7 +359,7 @@ export type JsonPrimitive = string | number | boolean;
 type RunInstanceModelTrainingParameters = {
   trainingAnnotations: AiModelTrainingAnnotationSpecification[];
   name: string;
-  aiModelCategory: APIAiModelCategory.EM_NUCLEI;
+  aiModelCategory: APIAiModelCategory.EM_GENERIC;
   instanceDiameterNm: number;
   comment?: string;
   workflowYaml?: string;

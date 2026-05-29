@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
@@ -16,7 +17,6 @@ import models.dataset.{DataStoreService, DatasetDAO, DatasetService}
 import models.job.JobDAO
 import models.user.{User, UserService}
 import com.scalableminds.util.tools.{Box, Full}
-import play.api.i18n.MessagesProvider
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers, Result}
 import play.silhouette.api.Silhouette
@@ -84,8 +84,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
        - a dataset sharing token (allow seeing dataset / annotations that token belongs to)
    */
   private def validateUserAccess(accessRequest: UserAccessRequest, token: Option[String])(
-      implicit ec: ExecutionContext,
-      mp: MessagesProvider): Fox[Result] =
+      implicit ec: ExecutionContext): Fox[Result] =
     if (token.contains(RpcTokenHolder.webknossosToken)) {
       Fox.successful(Ok(Json.toJson(UserAccessAnswer(granted = true))))
     } else {
@@ -125,7 +124,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
       for {
         idStr <- idOpt.toFox
         datasetId <- ObjectId.fromString(idStr)
-        dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> "dataset.notFound"
+        dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId)
         isAllowed <- userBox match {
           case Full(user) => datasetService.isEditableBy(dataset, Some(user))
           case _          => Fox.successful(false)
@@ -135,10 +134,10 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
 
     def tryDelete: Fox[UserAccessAnswer] =
       for {
-        _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> "dataset.delete.disabled"
+        _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> Msg.Dataset.Delete.notEnabled
         idStr <- idOpt.toFox
         datasetId <- ObjectId.fromString(idStr)
-        dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> "dataset.notFound"
+        dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId)
         isAllowed = userBox match {
           case Full(user) => user._organization == dataset._organization && user.isAdmin
           case _          => false
@@ -167,27 +166,27 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
   private def handleTracingAccess(tracingIdOpt: Option[String],
                                   mode: AccessMode,
                                   userBox: Box[User],
-                                  token: Option[String])(implicit mp: MessagesProvider): Fox[UserAccessAnswer] =
+                                  token: Option[String]): Fox[UserAccessAnswer] =
     if (tracingIdOpt.contains(TracingId.dummy))
       Fox.successful(UserAccessAnswer(granted = true))
     else
       for {
         tracingId <- tracingIdOpt.toFox
-        annotation <- annotationInformationProvider.annotationForTracing(tracingId)(GlobalAccessContext) ?~> "annotation.notFound"
+        annotation <- annotationInformationProvider.annotationForTracing(tracingId)(GlobalAccessContext) ?~> Msg.Annotation.notFound
         result <- handleAnnotationAccess(Some(annotation._id.toString), mode, userBox, token)
       } yield result
 
   private def handleAnnotationAccess(annotationIdOpt: Option[String],
                                      mode: AccessMode,
                                      userBox: Box[User],
-                                     token: Option[String])(implicit mp: MessagesProvider): Fox[UserAccessAnswer] = {
+                                     token: Option[String]): Fox[UserAccessAnswer] = {
     // Access is explicitly checked by userBox, not by DBAccessContext, as there is no token sharing for annotations
     // Optionally, an accessToken can be provided which explicitly looks up the read right the private link table
 
     def checkRestrictions(restrictions: AnnotationRestrictions) =
       mode match {
         case AccessMode.read  => restrictions.allowAccess(userBox.toOption)
-        case AccessMode.write => restrictions.allowUpdate(userBox.toOption)
+        case AccessMode.write => restrictions.allowUpdateWithMutex(userBox.toOption)
         case _                => Fox.successful(false)
       }
 
@@ -198,7 +197,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
         annotationIdStr <- annotationIdOpt.toFox
         annotationId <- ObjectId.fromString(annotationIdStr)
         annotationBox <- annotationInformationProvider
-          .provideAnnotation(annotationId, userBox.toOption)(GlobalAccessContext, mp)
+          .provideAnnotation(annotationId, userBox.toOption)(GlobalAccessContext)
           .shiftBox
         annotation <- annotationBox match {
           case Full(_) => annotationBox.toFox
@@ -209,9 +208,10 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
           .getOrElse(Fox.empty)
           .shiftBox
         allowedByToken = annotationAccessByToken.exists(annotation._id == _._annotation)
-        restrictions <- annotationInformationProvider.restrictionsFor(
-          AnnotationIdentifier(annotation.typ, annotation._id))(GlobalAccessContext) ?~> "restrictions.notFound"
-        allowedByUser <- checkRestrictions(restrictions) ?~> "restrictions.failedToCheck"
+        restrictions <- annotationInformationProvider.restrictionsFor(AnnotationIdentifier(annotation.typ,
+                                                                                           annotation._id))(
+          GlobalAccessContext) ?~> Msg.Annotation.Restrictions.notFound
+        allowedByUser <- checkRestrictions(restrictions) ?~> Msg.Annotation.Restrictions.failedToCheck
         allowed = allowedByToken || allowedByUser
       } yield {
         if (allowed) UserAccessAnswer(granted = true)

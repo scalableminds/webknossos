@@ -209,12 +209,13 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
 }
 
 class UserKeyboardShortcutsConfigsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
-  extends SimpleSQLDAO(sqlClient) {
+    extends SimpleSQLDAO(sqlClient) {
 
   def findOneForUser(multiUserId: ObjectId): Fox[JsObject] =
     for {
       rows <- run(
-        q"SELECT shortcutsConfig FROM webknossos.multiUser_keyboardShortcutsConfigs WHERE _multiUser = $multiUserId".as[String])
+        q"SELECT shortcutsConfig FROM webknossos.multiUser_keyboardShortcutsConfigs WHERE _multiUser = $multiUserId"
+          .as[String])
     } yield rows.headOption.flatMap(r => JsonHelper.parseAs[JsObject](r).toOption).getOrElse(Json.obj())
 
   def updateForUser(multiUserId: ObjectId, shortcutsConfig: JsObject): Fox[Unit] =

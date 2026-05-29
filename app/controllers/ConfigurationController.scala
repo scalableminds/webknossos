@@ -48,7 +48,7 @@ class ConfigurationController @Inject()(
   def updateKeyboardShortcutsConfig(): Action[JsValue] = sil.SecuredAction.async(parse.json(maxLength = 204800)) {
     implicit request =>
       for {
-        shortcuts <- request.body.asOpt[JsObject].toFox ?~> Msg.User.Configuration.invalidKeyboardShortcutsConfig
+        shortcuts <- request.body.validate[JsObject].asOpt.toFox ?~> Msg.User.Configuration.invalidKeyboardShortcutsConfig
         _ <- userKeyboardShortcutsConfigsDAO.updateForUser(request.identity._multiUser, shortcuts)
       } yield JsonOk(Msg.User.Configuration.updatedKeyboardShortcutsConfig)
   }

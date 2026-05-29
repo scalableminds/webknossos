@@ -696,8 +696,8 @@ object Msg {
       val updateSuccessForDataset: String = "Dataset configuration was successfully updated."
       val invalid: String = "Could not parse configuration."
       val invalidForDataset: String = "Could not parse dataset configuration."
-      val invalidKeyboardShortcutsConfig = "Keyboard Shortcuts Configuration is invalid"
-      val updatedKeyboardShortcutsConfig = "Keyboard Shortcuts Configuration updated"
+      val invalidKeyboardShortcutsConfig = "Keyboard shortcuts configuration is invalid."
+      val updatedKeyboardShortcutsConfig = "Keyboard shortcuts configuration was updated."
     }
     object Email {
       val taken: String =

@@ -111,7 +111,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                             folderId: Option[ObjectId],
                             user: User,
                             isVirtual: Boolean,
-                            creationType: DatasetCreationType): Fox[Dataset] =
+                            creationType: DatasetCreationType,
+                            importURLOpt: Option[String]): Fox[Dataset] =
     for {
       _ <- assertValidDatasetName(datasetName)
       organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext) ?~> Msg.Organization.notFound(
@@ -126,7 +127,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         datasetName,
         dataSource.withUpdatedId(DataSourceId(directoryName, organization._id)),
         isVirtual = isVirtual,
-        creationType = creationType
+        creationType = creationType,
+        importURL = importURLOpt
       )
       datasetId = dataset._id
       _ <- datasetDAO.updateFolder(datasetId, folderIdWithFallback)(GlobalAccessContext)
@@ -141,7 +143,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       isVirtual: Boolean = false,
       metadata: JsArray = JsArray.empty,
       description: Option[String] = None,
-      creationType: DatasetCreationType.Value
+      creationType: DatasetCreationType.Value,
+      importURL: Option[String] = None
   ): Fox[Dataset] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
 
@@ -172,11 +175,13 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         logoUrl = None,
         metadata = metadata,
         creationType = Some(creationType),
+        importURL = importURL,
       )
       _ <- datasetDAO.insertOne(dataset)
       _ <- datasetDataLayerDAO.updateLayers(datasetId, dataSource)
       _ <- teamDAO.updateAllowedTeamsForDataset(datasetId, List())
       _ <- scanRealpathsIfVirtual(dataset)
+      _ <- writeMirrorForVirtual(dataset)
     } yield dataset
   }
 
@@ -693,6 +698,14 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ = slackNotificationService.info(s"Dataset added ($addVariantLabel)$superUserLabel",
                                         s"For organization: ${organization.name}. <$resultLink|Result>")
     } yield ()
+
+  def writeMirrorForVirtual(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[Unit] =
+    if (dataset.isVirtual && dataset.isUsable) {
+      for {
+        client <- clientFor(dataset)
+        _ <- client.writeMirror(Seq(dataset._id), failOnError = true)
+      } yield ()
+    } else Fox.successful(())
 
   def scanRealpathsIfVirtual(dataset: Dataset)(implicit ctx: DBAccessContext): Fox[Unit] =
     if (dataset.isVirtual && dataset.isUsable) {

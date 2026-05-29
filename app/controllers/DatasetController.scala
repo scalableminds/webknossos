@@ -19,6 +19,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachmentType,
   UsableDataSource
 }
+import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.LinkedLayerIdentifier
 import mail.{MailchimpClient, MailchimpTag}
 import models.analytics.{AnalyticsService, ChangeDatasetSettingsEvent, OpenDatasetEvent}
@@ -47,15 +48,19 @@ import scala.concurrent.ExecutionContext
 case class DatasetUpdateParameters(
     description: Option[Option[String]] = Some(None),
     name: Option[Option[String]] = Some(None),
-    sortingKey: Option[Instant],
-    isPublic: Option[Boolean],
-    tags: Option[List[String]],
-    metadata: Option[JsArray],
-    folderId: Option[ObjectId],
-    dataSource: Option[UsableDataSource],
-    layerRenamings: Option[Seq[LayerRenaming]],
-    attachmentRenamings: Option[Seq[AttachmentRenaming]]
+    sortingKey: Option[Instant] = None,
+    isPublic: Option[Boolean] = None,
+    tags: Option[List[String]] = None,
+    metadata: Option[JsArray] = None,
+    folderId: Option[ObjectId] = None,
+    dataSource: Option[UsableDataSource] = None,
+    layerRenamings: Option[Seq[LayerRenaming]] = None,
+    attachmentRenamings: Option[Seq[AttachmentRenaming]] = None
 )
+object DatasetUpdateParameters extends TristateOptionJsonHelper {
+  implicit val jsonFormat: OFormat[DatasetUpdateParameters] =
+    Json.configured(tristateOptionParsing).format[DatasetUpdateParameters]
+}
 
 case class LayerRenaming(oldName: String, newName: String)
 object LayerRenaming {
@@ -68,11 +73,6 @@ case class AttachmentRenaming(
     newName: String)
 object AttachmentRenaming {
   implicit val jsonFormat: OFormat[AttachmentRenaming] = Json.format[AttachmentRenaming]
-}
-
-object DatasetUpdateParameters extends TristateOptionJsonHelper {
-  implicit val jsonFormat: OFormat[DatasetUpdateParameters] =
-    Json.configured(tristateOptionParsing).format[DatasetUpdateParameters]
 }
 
 case class ReserveDatasetUploadToPathsRequest(
@@ -150,7 +150,12 @@ object SegmentAnythingMaskParameters {
   implicit val jsonFormat: Format[SegmentAnythingMaskParameters] = Json.format[SegmentAnythingMaskParameters]
 }
 
-case class DataSourceRegistrationInfo(dataSource: UsableDataSource, folderId: Option[ObjectId], dataStoreName: String)
+case class DataSourceRegistrationInfo(
+    dataSource: UsableDataSource,
+    folderId: Option[ObjectId],
+    dataStoreName: String,
+    importUrl: Option[String]
+)
 
 object DataSourceRegistrationInfo {
   implicit val jsonFormat: OFormat[DataSourceRegistrationInfo] = Json.format[DataSourceRegistrationInfo]
@@ -180,6 +185,7 @@ class DatasetController @Inject()(userService: UserService,
                                   mailchimpClient: MailchimpClient,
                                   wkExploreRemoteLayerService: WKExploreRemoteLayerService,
                                   composeService: ComposeService,
+                                  rpc: RPC,
                                   sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with MetadataAssertions {
@@ -252,7 +258,8 @@ class DatasetController @Inject()(userService: UserService,
           folderIdOpt,
           request.identity,
           isVirtual = true,
-          creationType = DatasetCreationType.ExploreAndAdd
+          creationType = DatasetCreationType.ExploreAndAdd,
+          importURLOpt = None
         ) ?~> Msg.Dataset.Explore.autoAddFailed
       } yield Ok(Json.toJson(newDataset._id))
     }
@@ -273,7 +280,8 @@ class DatasetController @Inject()(userService: UserService,
           request.body.folderId,
           user,
           isVirtual = true,
-          creationType = DatasetCreationType.ExploreAndAdd
+          creationType = DatasetCreationType.ExploreAndAdd,
+          importURLOpt = request.body.importUrl,
         )
         _ = datasetService.trackNewDataset(dataset,
                                            user,
@@ -451,6 +459,19 @@ class DatasetController @Inject()(userService: UserService,
       }
     }
 
+  def findByImportURL(importURL: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        datasetBox <- datasetDAO.findOneByImportURL(importURL, request.identity._organization).shiftBox
+        js <- datasetBox match {
+          case Full(dataset) => datasetService.publicWrites(dataset, Some(request.identity))
+          case Empty         => Fox.successful(Json.toJson(None))
+          case failure: Failure =>
+            Fox.failure(Msg.Dataset.findByImportURLFailed, failure)
+        }
+      } yield Ok(js)
+    }
+
   def health(datasetId: ObjectId, sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
@@ -480,6 +501,7 @@ class DatasetController @Inject()(userService: UserService,
                                                            request.body.attachmentRenamings.getOrElse(Seq.empty)))
         updated <- datasetDAO.findOne(datasetId)
         _ <- datasetService.scanRealpathsIfVirtual(updated)
+        _ <- datasetService.writeMirrorForVirtual(updated)(GlobalAccessContext)
         _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
         js <- datasetService.publicWrites(updated, Some(request.identity))
       } yield Ok(js)
@@ -740,6 +762,7 @@ class DatasetController @Inject()(userService: UserService,
         }
         _ <- datasetService.scanRealpathsIfVirtual(dataset)
         _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
+        _ <- datasetService.writeMirrorForVirtual(dataset)(GlobalAccessContext)
       } yield Ok
     }
 
@@ -771,6 +794,7 @@ class DatasetController @Inject()(userService: UserService,
         }
         _ <- datasetService.scanRealpathsIfVirtual(dataset)
         _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
+        _ <- datasetService.writeMirrorForVirtual(dataset)(GlobalAccessContext)
       } yield Ok
     }
 
@@ -806,10 +830,50 @@ class DatasetController @Inject()(userService: UserService,
         _ <- datasetDAO.updateDatasetStatusByDatasetId(datasetId, newStatus = "", isUsable = true)
         updated <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
         _ <- datasetService.scanRealpathsIfVirtual(updated)
+        _ <- datasetService.writeMirrorForVirtual(updated)(GlobalAccessContext)
         _ <- usedStorageService.refreshStorageReportForDataset(updated)
         _ = logger.info(
           s"Successfully finished uploadToPaths/publish of dataset $datasetId for user ${request.identity._id}")
       } yield Ok
     }
 
+  def writeMirror(datasetId: ObjectId): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- Fox.fromBool(dataset.isVirtual) ?~> Msg.Dataset.Mirror.onlyForVirtual
+        _ <- Fox.fromBool(dataset.isUsable) ?~> Msg.Dataset.Mirror.onlyForUsable
+        _ <- datasetService.writeMirrorForVirtual(dataset) ?~> Msg.Dataset.Mirror.writeFailed
+      } yield Ok
+    }
+
+  def writeAllMirrors(): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        _ <- userService.assertIsSuperUser(request.identity)
+        _ = logger.info(s"Writing mirrors for all datasets as requested by superuser ${request.identity._id}...")
+        beforeAll = Instant.now
+        datasets <- datasetDAO.findAll(GlobalAccessContext)
+        _ = Instant.logSince(beforeAll, s"Writing mirrors for all datasets: fetch datasets from DB", logger)
+        eligibleDatasets = datasets.filter(d => d.isVirtual && d.isUsable)
+        byDataStore = eligibleDatasets.groupBy(_._dataStore)
+        _ <- Fox.serialCombined(byDataStore.keys) { dataStoreName =>
+          for {
+            before <- Instant.nowFox
+            dataStore <- dataStoreDAO.findOneByName(dataStoreName.trim) ?~> "datastore.notFound"
+            client = new WKRemoteDataStoreClient(dataStore, rpc)
+            datasetsForDatastore = byDataStore(dataStoreName)
+            _ <- client.writeMirror(datasetsForDatastore.map(_._id), failOnError = false)
+            _ = Instant.logSince(
+              before,
+              s"Writing mirrors for ${datasetsForDatastore.length} datasets on datastore $dataStoreName (for details see datastore logging)",
+              logger)
+          } yield ()
+        }
+        _ = Instant.logSince(beforeAll,
+                             s"Writing mirrors for all ${datasets.length} datasets (for details see datastore logging)",
+                             logger)
+      } yield Ok
+    }
 }

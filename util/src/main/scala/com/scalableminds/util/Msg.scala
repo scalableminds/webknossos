@@ -413,6 +413,7 @@ object Msg {
     val allowedTeamsNotFound: String = "Could not find allowed teams for dataset."
     val voxelSizeFailedToFetch: String = "Could not fetch voxel size for annotation."
     val additionalCoordinatesDiffer: String = "Additional coordinates differ in merged units."
+    val findByImportURLFailed = "Failed to look up whether a dataset with the import url already exists."
     object Compose {
       val failed: String = "Could not compose dataset."
       val addAttachmentFailed: String = "Could not add attachment to composed dataset."
@@ -545,6 +546,25 @@ object Msg {
         "Could not create chunk from fill value (shortcut path)."
       val shortcutWrapAndTypeFailed: String = "Could not wrap and type chunk data (shortcut path)."
       val wrapAndTypeFailed: String = "Could not wrap and type chunk data."
+    }
+    object Mirror {
+      val writeFailed: String = "Could not write on-disk dataset mirror."
+      val onlyForUsable: String = "Can only write on-disk dataset mirrors for usable datasets."
+      val onlyForVirtual: String = "Can only write on-disk dataset mirrors for virtual (db-based) datasets."
+      val deleteStaleTempMirrorFailed: String = "Could not delete stale temporary on-disk dataset mirror."
+      val deleteExistingMirrorFailed: String = "Could not clean up existing on-disk dataset mirror."
+      val createTempMirrorDirFailed: String = "Could not create temporary directory for on-disk dataset mirror."
+      val createLayerDirFailed: String = "Could not create layer directory for on-disk dataset mirror."
+      val writeMagsFailed: String = "Could not write mags."
+      val writeAttachmentsFailed: String = "Could not write attachments."
+      val writeMirrorLayersFailed: String = "Could not write layer structure in on-disk dataset mirror."
+      val writeMirrorPropertiesFailed: String =
+        "Could not write datasource-properties.json file for on-disk dataset mirror."
+      val writeReadmeFailed: String =
+        "Could not write readme.txt file for on-disk dataset mirror."
+      val moveTempMirrorFailed: String = "Could not finalize temporary on-disk dataset mirror."
+      val createParentDirFailed: String = "Could not create dataset mirror directory."
+      val parentNotWritable: String = "Dataset mirror directory is not writable."
     }
   }
   object Task {

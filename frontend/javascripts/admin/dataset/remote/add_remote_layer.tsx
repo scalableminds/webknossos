@@ -255,6 +255,7 @@ export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
   }, [isExploring, buildExploreParams, onSuccess, handleFailure]);
 
   // Effects
+  // biome-ignore lint/correctness/useExhaustiveDependencies: handleExplore is intentionally excluded — it changes when isExploring toggles, which would re-trigger a second exploration after the first completes
   useEffect(() => {
     if (defaultUrl != null && datasourceUrl == null) {
       form.setFieldValue("url", defaultUrl);
@@ -262,7 +263,7 @@ export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
     } else if (defaultUrl != null && datasourceUrl != null) {
       handleExplore();
     }
-  }, [defaultUrl, datasourceUrl, form, handleExplore]);
+  }, [defaultUrl, datasourceUrl, form]);
 
   // Reset credentials when protocol changes
   // biome-ignore lint/correctness/useExhaustiveDependencies: We explicitly want to reset the credentials when the protocol changes

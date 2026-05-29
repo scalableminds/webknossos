@@ -71,13 +71,16 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
       _ <- Fox.assertTrue(isComposable(composeRequest)) ?~> "Datasets are not composable, they are not on the same data store"
       dataSource <- createDatasource(composeRequest, composeRequest.newDatasetName, composeRequest.organizationId)
       dataStore <- dataStoreDAO.findOneWithUploadsAllowed
-      dataset <- datasetService.createAndSetUpDataset(composeRequest.newDatasetName,
-                                                      dataStore,
-                                                      dataSource,
-                                                      Some(composeRequest.targetFolderId),
-                                                      user,
-                                                      isVirtual = true,
-                                                      creationType = DatasetCreationType.Compose)
+      dataset <- datasetService.createAndSetUpDataset(
+        composeRequest.newDatasetName,
+        dataStore,
+        dataSource,
+        Some(composeRequest.targetFolderId),
+        user,
+        isVirtual = true,
+        creationType = DatasetCreationType.Compose,
+        importURLOpt = None
+      )
     } yield (dataSource, dataset._id)
 
   private def getLayerFromComposeLayer(composeLayer: ComposeRequestLayer)(

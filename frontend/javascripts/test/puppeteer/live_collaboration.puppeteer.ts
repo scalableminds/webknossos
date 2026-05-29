@@ -82,16 +82,18 @@ const N_COLLAB_USERS = 2;
 
 const MbpsFactor = (1000 * 1024) / 8;
 // Set to null to disable network throttling.
+const ENABLE_THROTTLING = false;
 const NETWORK_THROTTLE: {
   downloadThroughput: number;
   uploadThroughput: number;
   latency: number;
-} | null =
-  {
-    downloadThroughput: 1 * MbpsFactor,
-    uploadThroughput: 1 * MbpsFactor,
-    latency: 250,
-  } && null; // this is null
+} | null = ENABLE_THROTTLING
+  ? {
+      downloadThroughput: 1 * MbpsFactor,
+      uploadThroughput: 1 * MbpsFactor,
+      latency: 250,
+    }
+  : null;
 
 const ORG_NAME = "sample_organization";
 

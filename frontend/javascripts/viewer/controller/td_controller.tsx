@@ -376,13 +376,28 @@ class TDController extends PureComponent<Props> {
       this.controls != null
         ? this.controls.target.clone()
         : new ThreeVector3(...(prevCameraData.target || [0, 0, 0]));
+    // updateTDCamera may have pulled the live camera back along its view direction
+    // (to avoid perspective distortion when zoomed out). Strip that pullback here so
+    // the store always holds the canonical, un-pulled-back position. Persisting the
+    // pulled-back position would make setTargetAndFixPosition project from a shifted
+    // base and re-introduce the camera jitter on hover (e.g. after a SHIFT+click jump
+    // engages TrackballControls and triggers this callback).
+    const pullback = (tdCamera.userData.tdPullbackDistance as number) || 0;
+    const position = tdCamera.position.clone();
+    if (pullback > 0) {
+      const fromTarget = position.clone().sub(target);
+      const length = fromTarget.length();
+      if (length > 1e-6) {
+        position.copy(target).addScaledVector(fromTarget, (length - pullback) / length);
+      }
+    }
     // Write threeJS camera into store
     Store.dispatch(
       setCameraAction({
         ...prevCameraData,
         near: tdCamera.near,
         far: tdCamera.far,
-        position: objToArr(tdCamera.position),
+        position: objToArr(position),
         up: objToArr(tdCamera.up),
         target: objToArr(target),
       }),

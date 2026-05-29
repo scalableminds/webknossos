@@ -341,15 +341,23 @@ class CameraController extends PureComponent<Props> {
       const minSafeDistance = maxViewExtent * 1.5;
       const effectiveDistance = Math.max(this.lastTDProjectionDistance, minSafeDistance);
 
+      // Record how far the live camera was pulled back from its stored position so
+      // that onTDCameraChanged can strip it again before persisting the position to
+      // the store. Otherwise the pulled-back position leaks into the store (e.g. when
+      // a click engages TrackballControls), breaking the invariant that the stored
+      // position is the canonical, un-pulled-back one — which re-introduces the
+      // projection jitter on hover.
+      let appliedPullback = 0;
       if (effectiveDistance > this.lastTDProjectionDistance) {
         // Compute the pulled-back position from storedPos along the camera's backward
         // direction, NOT from threeTarget. Using threeTarget as the base would shift
         // P_pb whenever setTargetAndFixPosition moves the target along the look ray,
         // even though the camera and scene haven't moved — causing jitter on hover.
         const forward = new ThreeVector3(0, 0, -1).applyQuaternion(tdCamera.quaternion);
-        const pullback = effectiveDistance - this.lastTDProjectionDistance;
-        tdCamera.position.copy(newStoredPosition).addScaledVector(forward, -pullback);
+        appliedPullback = effectiveDistance - this.lastTDProjectionDistance;
+        tdCamera.position.copy(newStoredPosition).addScaledVector(forward, -appliedPullback);
       }
+      tdCamera.userData.tdPullbackDistance = appliedPullback;
 
       // Use near = effectiveDistance/1000 for good near/far ratio and depth precision.
       // so near = effectiveDistance/1000 is safe against clipping.
@@ -373,6 +381,7 @@ class CameraController extends PureComponent<Props> {
         Math.abs(cameraData.top - cameraData.bottom),
       );
       const dynamicFar = Math.max(cameraData.far, viewExtent * 2);
+      tdCamera.userData.tdPullbackDistance = 0;
       tdCamera.left = cameraData.left;
       tdCamera.right = cameraData.right;
       tdCamera.top = cameraData.top;

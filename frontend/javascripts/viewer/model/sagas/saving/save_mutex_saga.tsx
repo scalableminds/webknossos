@@ -159,7 +159,7 @@ function getUnsubscribeFromAnnotationMutexSaga(
     if (hasNoSubscribersLeft && state.runningAdHocMutexAcquiringSaga) {
       yield* cancel(state.runningAdHocMutexAcquiringSaga);
       state.runningAdHocMutexAcquiringSaga = null;
-      yield* call(releaseMutex);
+      yield* call(releaseMutexIfAcquired);
     }
   }
   return unsubscribe;
@@ -247,12 +247,7 @@ function* startSagaWithAppropriateMutexFetchingStrategy(
       mutexLogicState.runningAdHocMutexAcquiringSaga = taskPermanentlyAcquiringMutex;
     } else {
       // If we still have the mutex, release it first as strategy is now ad-hoc.
-      const currentlyHavingMutex = yield* select(
-        (state) => state.save.mutexState.hasAnnotationMutex,
-      );
-      if (currentlyHavingMutex) {
-        yield* call(releaseMutex);
-      }
+      yield* call(releaseMutexIfAcquired);
     }
   } else {
     const continuousSaga = yield* fork(tryAcquireMutexContinuously, mutexLogicState);
@@ -313,7 +308,7 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
 
 function* acquireMutexInitiallyForAdHocStrategy(annotationId: string): Saga<void> {
   let backoffTime = INITIAL_BACKOFF_TIME;
-  const startingTime = new Date().getMilliseconds();
+  const startingTime = Date.now();
   let canEdit = false;
   let blockedByUser = null;
   let showingToast = false;
@@ -341,15 +336,14 @@ function* acquireMutexInitiallyForAdHocStrategy(annotationId: string): Saga<void
       }
       console.error("Error while trying to acquire mutex.", error);
     }
-    if (!showingToast && new Date().getMilliseconds() - startingTime > MAX_AD_HOC_RETRY_TIME) {
+    if (!showingToast && Date.now() - startingTime > MAX_AD_HOC_RETRY_TIME) {
       const blockingUserName = blockedByUser
         ? `${blockedByUser.firstName} ${blockedByUser.lastName}`
         : "unknown";
       Toast.warning(
         `Could not get the annotations write-lock for more than ${MAX_AD_HOC_RETRY_TIME / 1000} seconds.
         User ${blockingUserName} is currently blocking the annotation.
-        This might be due to using non-live collab supported features.
-        Ensure they are sticking to tools supporting live collaboration.`,
+        Retrying...`,
         { sticky: true },
       );
       showingToast = true;
@@ -435,12 +429,7 @@ function* watchForCollaborationModeChange(mutexLogicState: MutexLogicState): Sag
         yield* cancel(mutexLogicState.runningAdHocMutexAcquiringSaga);
         mutexLogicState.runningAdHocMutexAcquiringSaga = null;
       }
-      const stillHasAnnotationMutex = yield* select(
-        (state) => state.save.mutexState.hasAnnotationMutex,
-      );
-      if (stillHasAnnotationMutex) {
-        yield* call(releaseMutex);
-      }
+      yield* call(releaseMutexIfAcquired);
       // Since only the owner can turn off collaboration, they should be able to edit, too.
       // Still, let's check that owner === activeUser to be extra safe.
       const owner = yield* select((storeState) => storeState.annotation.owner);
@@ -475,12 +464,7 @@ function* watchForMutexSubscriptionActions(mutexLogicState: MutexLogicState): Sa
           yield* cancel(mutexLogicState.runningContinuousMutexAcquiringSaga);
           mutexLogicState.runningContinuousMutexAcquiringSaga = null;
         }
-        const stillHasAnnotationMutex = yield* select(
-          (state) => state.save.mutexState.hasAnnotationMutex,
-        );
-        if (stillHasAnnotationMutex) {
-          yield* call(releaseMutex);
-        }
+        yield* call(releaseMutexIfAcquired);
       }
     }
   }
@@ -537,7 +521,12 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
   );
 }
 
-function* releaseMutex() {
+function* releaseMutexIfAcquired() {
+  const currentlyHavingMutex = yield* select((state) => state.save.mutexState.hasAnnotationMutex);
+  if (!currentlyHavingMutex) {
+    // Nothing to do.
+    return;
+  }
   const annotationId = yield* select((storeState) => storeState.annotation.annotationId);
   let successfullyReleaseMutex = false;
   let backoffTime = 1000;

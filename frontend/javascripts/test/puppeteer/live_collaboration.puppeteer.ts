@@ -254,7 +254,7 @@ async function resolveDatasetId(datasetName: string): Promise<string> {
   console.log("fetch");
 
   if (!res.ok) {
-    console.log("could not resolve");
+    console.log("could not resolve" + `${res.status} ${await res.text()}`);
     throw new Error(
       `Could not resolve dataset "${datasetName}": ${res.status} ${await res.text()}`,
     );
@@ -332,7 +332,10 @@ async function getUserAuthToken(email: string, password: string): Promise<string
   return token as string;
 }
 
-async function getNewPage(browser: Browser, authToken: string): Promise<Page> {
+async function getNewPage(authToken: string): Promise<Page> {
+  // Each page gets its own browser process so Chrome doesn't throttle background tabs.
+  const browser = await launchBrowser("Live Collaboration");
+  browsers.push(browser);
   const page = await browser.newPage();
   await page.setViewport({ width: PAGE_WIDTH, height: PAGE_HEIGHT });
   await page.setExtraHTTPHeaders({ "X-Auth-Token": authToken });
@@ -406,7 +409,7 @@ function startCollectionOfPageErrors(page: Page): string[] {
 // Shared state
 // ---------------------------------------------------------------------------
 
-let browser: Browser;
+const browsers: Browser[] = [];
 let annotation: APIAnnotation;
 const collabUsers: Array<{ id: string; email: string; authToken: string }> = [];
 
@@ -441,19 +444,17 @@ describe("Live Collaboration", () => {
 
     const defaultTeamId = await getDefaultTeamId();
     await shareAnnotationWithTeam(annotation, defaultTeamId);
-
-    browser = await launchBrowser("Live Collaboration");
   }, 120_000);
 
   afterAll(async () => {
     await sleep(1_000_000);
 
-    await browser?.close();
+    await Promise.all(browsers.map((b) => b.close()));
     // TODO: optionally delete the annotation and the test users created above
   }, 1_000_000);
 
   it("admin sets up the annotation: activate mapping, switch to proofreading, merge, save, enable othersMayEdit", async () => {
-    const page = await getNewPage(browser, WK_AUTH_TOKEN!);
+    const page = await getNewPage(WK_AUTH_TOKEN!);
     const adminErrors = startCollectionOfPageErrors(page);
 
     await openAnnotationPage(page, annotation.id);
@@ -555,7 +556,7 @@ describe("Live Collaboration", () => {
 
     for (const { authToken } of collabUsers) {
       console.log("Open page with token=", authToken);
-      const page = await getNewPage(browser, authToken);
+      const page = await getNewPage(authToken);
       sessions.push({ page, errors: startCollectionOfPageErrors(page) });
     }
 
@@ -629,7 +630,7 @@ describe("Live Collaboration", () => {
     );
 
     // Open a fresh admin page, reload the annotation, and verify all merges.
-    const adminVerifyPage = await getNewPage(browser, WK_AUTH_TOKEN!);
+    const adminVerifyPage = await getNewPage(WK_AUTH_TOKEN!);
     await openAnnotationPage(adminVerifyPage, annotation.id);
     await setupPageForProofreading(adminVerifyPage);
     await waitForDataLoading(adminVerifyPage);

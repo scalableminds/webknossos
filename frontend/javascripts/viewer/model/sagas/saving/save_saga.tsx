@@ -217,8 +217,8 @@ const SAVING_CONFLICT_TOAST_KEY = "save_conflicts_warning";
 // This info can then be used to trigger side effects after saving is done to e.g. reload the newest auxiliary agglomerate meshes.
 
 type ApplyingUpdateArtifacts = {
-  meshIdsToRemovePerLayer: Map<string, Set<number>>;
-  meshIdsToLoadPerLayer: Map<string, Set<number>>;
+  meshIdsToRemovePerLayer: ReadonlyMap<string, ReadonlySet<number>>;
+  meshIdsToLoadPerLayer: ReadonlyMap<string, ReadonlySet<number>>;
 };
 
 type ApplyingUpdateResults = { success: boolean; artifactInfos: ApplyingUpdateArtifacts };

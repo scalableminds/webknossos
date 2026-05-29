@@ -132,7 +132,6 @@ export const DatasetSettingsProvider: React.FC<DatasetSettingsProviderProps> = (
       });
 
       form.setFieldsValue({
-        // @ts-expect-error Mismatch between APIDataSource and MutableAPIDataset
         dataSource,
       });
 

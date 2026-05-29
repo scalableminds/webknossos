@@ -1,5 +1,6 @@
 package models.dataset
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.objectid.ObjectId
@@ -30,9 +31,9 @@ import controllers.{
   ReserveMagUploadToPathRequest
 }
 import models.folder.FolderDAO
-import models.organization.OrganizationDAO
+import models.organization.{OrganizationDAO, OrganizationService}
 import models.user.User
-import play.api.i18n.MessagesProvider
+import play.api.http.Status.FORBIDDEN
 import utils.WkConf
 import security.RandomIDGenerator
 
@@ -40,6 +41,7 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 class UploadToPathsService @Inject()(datasetService: DatasetService,
+                                     organizationService: OrganizationService,
                                      organizationDAO: OrganizationDAO,
                                      datasetDAO: DatasetDAO,
                                      dataStoreDAO: DataStoreDAO,
@@ -52,13 +54,13 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
     extends FoxImplicits
     with DataSourceValidation {
 
-  def reserveDatasetUploadToPaths(parameters: ReserveDatasetUploadToPathsRequest,
-                                  requestingUser: User,
-                                  newDatasetId: ObjectId)(implicit ec: ExecutionContext,
-                                                          ctx: DBAccessContext,
-                                                          mp: MessagesProvider): Fox[UsableDataSource] =
+  def reserveDatasetUploadToPaths(
+      parameters: ReserveDatasetUploadToPathsRequest,
+      requestingUser: User,
+      newDatasetId: ObjectId)(implicit ec: ExecutionContext, ctx: DBAccessContext): Fox[UsableDataSource] =
     for {
       organization <- organizationDAO.findOne(requestingUser._organization)
+      _ <- organizationService.assertUsedStorageNotExceeded(organization) ?~> Msg.Dataset.Upload.storageExceeded ~> FORBIDDEN
       _ <- Fox.runIf(parameters.requireUniqueName)(
         datasetService.checkNameAvailable(parameters.datasetName, organization._id))
       _ <- datasetService.assertValidDatasetName(parameters.datasetName)
@@ -68,7 +70,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
         datasetService.assertValidLayerNameLax(newLayerName))
       newDirectoryName = datasetService.generateDirectoryName(parameters.datasetName, newDatasetId)
       dataSourceWithNewDirectoryName = parameters.dataSource.copy(id = DataSourceId(newDirectoryName, organization._id))
-      _ <- Fox.fromBool(parameters.dataSource.dataLayers.nonEmpty) ?~> "dataset.reserveUploadToPaths.noLayers"
+      _ <- Fox.fromBool(parameters.dataSource.dataLayers.nonEmpty) ?~> Msg.Dataset.Upload.noLayers
       dataSourceWithPaths <- addPathsToDatasource(dataSourceWithNewDirectoryName,
                                                   organization._id,
                                                   parameters.pathPrefix)
@@ -76,7 +78,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
                                                                                    parameters.layersToLink)
       _ <- assertValidDataSource(dataSourceWithLayersToLink).toFox
       folderIdWithFallback = parameters.folderId.getOrElse(organization._rootFolder)
-      _ <- folderDAO.assertUpdateAccess(folderIdWithFallback) ?~> "folder.noWriteAccess"
+      _ <- folderDAO.assertUpdateAccess(folderIdWithFallback) ?~> Msg.Folder.noWriteAccess
       dataStore <- findReferencedDataStore(parameters.layersToLink)
       dataset <- datasetService.createDataset(
         dataStore,
@@ -121,12 +123,12 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
     for {
       datasets <- Fox.serialCombined(datasetIds)(datasetDAO.findOne)
       referencedDatastoreNames = datasets.filter(!_.isVirtual).map(_._dataStore).distinct
-      _ <- Fox.fromBool(referencedDatastoreNames.length <= 1) ?~> "dataStore.ambiguous"
+      _ <- Fox.fromBool(referencedDatastoreNames.length <= 1) ?~> Msg.DataStore.ambiguous
       dataStore <- referencedDatastoreNames.headOption match {
         case Some(firstDatastoreName) => dataStoreDAO.findOneByName(firstDatastoreName)
         case None                     => dataStoreDAO.findOneWithUploadsToPathsAllowed
       }
-      _ <- Fox.fromBool(dataStore.allowsUploadToPaths) ?~> "dataStore.uploadToPathsNotAllowed"
+      _ <- Fox.fromBool(dataStore.allowsUploadToPaths) ?~> Msg.DataStore.uploadToPathsNotAllowed
     } yield dataStore
   }
 
@@ -165,7 +167,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
   private def selectPathPrefixDatasetParent(requestedPrefix: Option[UPath], organizationId: String)(
       implicit ec: ExecutionContext): Fox[UPath] =
     for {
-      uploadToPathsPrefix <- selectPathPrefix(requestedPrefix).toFox ?~> "uploadToPaths.noMatchingPrefix"
+      uploadToPathsPrefix <- selectPathPrefix(requestedPrefix).toFox ?~> Msg.Dataset.Upload.uploadToPathsNoMatchingPrefix
       withOrgaDirOrSame = if (conf.WebKnossos.Datasets.UploadToPaths.insertOrganizationDirectory)
         uploadToPathsPrefix / organizationId
       else uploadToPathsPrefix
@@ -239,15 +241,14 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
   def generateAiModelPath(id: ObjectId, organizationId: String, pathPrefix: Option[UPath])(
       implicit ec: ExecutionContext): Fox[UPath] =
     for {
-      uploadToPathsPrefix <- selectPathPrefix(pathPrefix).toFox ?~> "uploadToPaths.noMatchingPrefix"
+      uploadToPathsPrefix <- selectPathPrefix(pathPrefix).toFox ?~> Msg.Dataset.Upload.uploadToPathsNoMatchingPrefix
     } yield uploadToPathsPrefix / organizationId / ".aiModels" / id
 
   private def generateMagPath(mag: Vec3Int, layerPath: UPath): UPath =
     layerPath / f"${mag.toMagLiteral(allowScalar = true)}__${RandomIDGenerator.generateBlocking(12)}"
 
   def reserveAttachmentUploadToPath(dataset: Dataset, parameters: ReserveAttachmentUploadToPathRequest)(
-      implicit ec: ExecutionContext,
-      mp: MessagesProvider): Fox[UPath] =
+      implicit ec: ExecutionContext): Fox[UPath] =
     for {
       _ <- datasetService.usableDataSourceFor(dataset)
       isSingletonAttachment = LayerAttachmentType.isSingletonAttachment(parameters.attachmentType)
@@ -256,7 +257,8 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
         parameters.layerName,
         if (isSingletonAttachment) None else Some(parameters.attachmentName),
         parameters.attachmentType)
-      existsError = if (isSingletonAttachment) "attachment.singleton.alreadyFilled" else "attachment.name.taken"
+      existsError = if (isSingletonAttachment) Msg.Dataset.Layer.attachmentSingletonAlreadyFilled
+      else Msg.Dataset.Layer.attachmentNameTaken
       _ <- Fox.fromBool(existingAttachmentsCount == 0) ?~> existsError
       datasetParent <- selectPathPrefixDatasetParent(parameters.pathPrefix, dataset._organization)
       datasetPath = datasetParent / dataset.directoryName
@@ -273,8 +275,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
     } yield attachmentPath
 
   def reserveMagUploadToPath(dataset: Dataset, parameters: ReserveMagUploadToPathRequest)(
-      implicit ec: ExecutionContext,
-      mp: MessagesProvider): Fox[UPath] =
+      implicit ec: ExecutionContext): Fox[UPath] =
     for {
       _ <- datasetService.usableDataSourceFor(dataset)
       _ <- handleExistingPendingMagIfExists(dataset, parameters.layerName, parameters.mag, parameters.overwritePending)
@@ -303,7 +304,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
               _ <- pathDeletionService.deletePaths(client, Seq(existingMagLocatorPath))
               _ <- datasetMagsDAO.deletePendingMagLocator(dataset._id, layerName, mag)
             } yield ()
-          } else Fox.failure("dataset.reserveMagUploadToPath.exists")
+          } else Fox.failure(Msg.Dataset.Upload.magAlreadyPending)
         case Empty      => Fox.successful(())
         case f: Failure => f.toFox
       }

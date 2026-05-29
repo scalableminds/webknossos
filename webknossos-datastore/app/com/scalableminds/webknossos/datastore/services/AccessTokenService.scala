@@ -77,17 +77,20 @@ trait AccessTokenService {
       Future.successful(block)
     }
 
-  def validateAccessFromTokenContext(accessRequest: UserAccessRequest)(
+  def validateAccessFromTokenContext(accessRequest: UserAccessRequest, useCaching: Boolean = true)(
       block: => Future[Result])(implicit ec: ExecutionContext, tc: TokenContext): Fox[Result] =
     for {
-      userAccessAnswer <- hasUserAccess(accessRequest) ?~> "Failed to check data access, token may be expired, consider reloading."
+      userAccessAnswer <- hasUserAccess(accessRequest, useCaching) ?~> "Failed to check data access, token may be expired, consider reloading."
       result <- Fox.fromFuture(executeBlockOnPositiveAnswer(userAccessAnswer, block))
     } yield result
 
-  private def hasUserAccess(accessRequest: UserAccessRequest)(implicit ec: ExecutionContext,
-                                                              tc: TokenContext): Fox[UserAccessAnswer] =
-    accessAnswersCache.getOrLoad((accessRequest, tc.userTokenOpt),
-                                 _ => remoteWebknossosClient.requestUserAccess(accessRequest))
+  private def hasUserAccess(accessRequest: UserAccessRequest, useCaching: Boolean)(
+      implicit ec: ExecutionContext,
+      tc: TokenContext): Fox[UserAccessAnswer] =
+    if (useCaching) {
+      accessAnswersCache.getOrLoad((accessRequest, tc.userTokenOpt),
+                                   _ => remoteWebknossosClient.requestUserAccess(accessRequest))
+    } else remoteWebknossosClient.requestUserAccess(accessRequest)
 
   private def executeBlockOnPositiveAnswer(userAccessAnswer: UserAccessAnswer,
                                            block: => Future[Result]): Future[Result] =

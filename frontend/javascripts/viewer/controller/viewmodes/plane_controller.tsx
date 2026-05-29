@@ -1,6 +1,6 @@
 import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type MouseBindingMap } from "libs/input";
 import Toast from "libs/toast";
-import { isNoElementFocused, waitForElementWithId } from "libs/utils";
+import { isNoEditableElementFocused, waitForElementWithId } from "libs/utils";
 import { document } from "libs/window";
 import intersection from "lodash-es/intersection";
 import union from "lodash-es/union";
@@ -441,8 +441,9 @@ class PlaneController extends PureComponent<Props> {
 
     document.addEventListener("keydown", (event: KeyboardEvent) => {
       if (
+        // 32 → Spacebar, 18 → Alt key, 37–40 → Arrow keys
         (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
-        isNoElementFocused()
+        isNoEditableElementFocused()
       ) {
         event.preventDefault();
       }
@@ -604,7 +605,6 @@ class PlaneController extends PureComponent<Props> {
       ...BoundingBoxKeybindings.getExtendedKeyboardControls(),
     };
 
-    // TODO: Find a nicer way to express this, while satisfying flow
     const emptyDefaultHandler = {
       c: null,
     };

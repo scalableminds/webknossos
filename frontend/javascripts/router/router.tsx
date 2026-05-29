@@ -6,7 +6,7 @@ import RegistrationView from "admin/auth/registration_view";
 import StartResetPasswordView from "admin/auth/start_reset_password_view";
 import VerifyEmailView from "admin/auth/verify_email_view";
 import DatasetAddView from "admin/dataset/dataset_add_view";
-import { DatasetURLImport } from "admin/dataset/dataset_url_import";
+import { DatasetURLImport, datasetURLImportLoader } from "admin/dataset/dataset_url_import";
 import JobListView from "admin/job/job_list_view";
 import OrganizationView from "admin/organization/organization_view";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
@@ -85,13 +85,10 @@ const AsyncWorkflowListView = loadable<EmptyObject>(
 
 function RootLayout() {
   const isAuthenticated = useWkSelector((state) => state.activeUser != null);
-  const isAdminView = useWkSelector((state) => !state.uiInformation.isInAnnotationView);
 
   return (
     <Layout>
-      {/* TODO: always show command palette; remove logic from router
-      within tracing view, the command palette is rendered in the status bar. */}
-      {isAuthenticated && isAdminView && <CommandPalette label={null} />}
+      <CommandPalette />
       <Navbar isAuthenticated={isAuthenticated} />
       <Content>
         <ErrorBoundary>
@@ -142,6 +139,7 @@ const routes = createRoutesFromElements(
     />
     <Route
       path="/import"
+      loader={datasetURLImportLoader}
       element={
         <SecuredRoute requiresAdminOrManagerRole>
           <DatasetURLImport />

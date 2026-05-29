@@ -56,13 +56,14 @@ import { getAntdTheme } from "theme";
 import type { APIOrganizationCompact, APIUser, APIUserCompact } from "types/api_types";
 import constants from "viewer/constants";
 import {
+  isAnnotationEditableByNonOwners,
   isAnnotationFromDifferentOrganization as isAnnotationFromDifferentOrganizationAccessor,
   isAnnotationOwner as isAnnotationOwnerAccessor,
 } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
 import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
 import { Store } from "viewer/singletons";
-import { HelpModal } from "viewer/view/help_modal";
+import { HelpModal } from "viewer/view/help/help_modal";
 import { PortalTarget } from "viewer/view/layouting/portal_utils";
 
 const { Header } = Layout;
@@ -767,7 +768,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
   const activeUser = useWkSelector((state) => state.activeUser);
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
   const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
-  const othersMayEdit = useWkSelector((state) => state.annotation.othersMayEdit);
+  const othersMayEdit = useWkSelector((state) => isAnnotationEditableByNonOwners(state.annotation));
   const blockedByUser = useWkSelector((state) => state.save.mutexState.blockedByUser);
 
   const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);

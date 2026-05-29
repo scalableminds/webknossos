@@ -6,7 +6,7 @@ import lassoPointedSolidBorderCursor from "@images/cursors/lasso-pointed-solid-b
 import paintBrushSolidBorderCursor from "@images/cursors/paint-brush-solid-border.svg";
 import rulerPointedBorderCursor from "@images/cursors/ruler-pointed-border.svg";
 import { useEffectOnlyOnce, useKeyPress, useWkSelector } from "libs/react_hooks";
-import { waitForCondition } from "libs/utils";
+import { sleep, waitForCondition } from "libs/utils";
 import isEqual from "lodash-es/isEqual";
 import type * as React from "react";
 import { useRef } from "react";
@@ -75,7 +75,23 @@ const renderedInputCatchers = new Map();
 export async function initializeInputCatcherSizes() {
   // In an interval of 100 ms we check whether the input catchers can be initialized
   const pollInterval = 100;
-  await waitForCondition(() => renderedInputCatchers.size > 0, pollInterval);
+  await waitForCondition(() => {
+    if (renderedInputCatchers.size === 0) {
+      return false;
+    }
+    if (renderedInputCatchers.has("TDView")) {
+      // If (and only if) the 3D viewport is visible (e.g., it might be invisible
+      // due to another tab being maximized), we need to do an isNaN check here
+      // to await proper initialization.
+      // Otherwise, the initial zoom value of the 3D viewport would be flaky.
+      const { tdCamera } = Store.getState().viewModeData.plane;
+      return !Number.isNaN(tdCamera.left);
+    }
+
+    return true;
+  }, pollInterval);
+  // Without this sleep, maximized viewports are not rendered correctly on page load.
+  await sleep(50);
   recalculateInputCatcherSizes();
 }
 

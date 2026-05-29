@@ -99,29 +99,85 @@ function ensureDb() {
   }
 }
 
+// Order matters: ForeignKey constraints require parent tables before child tables.
+// E.g. user_dataSetConfigurations references users and datasets, so users must be imported first.
+// session_replication_role = replica (set below per-file) should bypass FK triggers,
+// but requires superuser/replication privileges which may not be available.
+const TEST_CSV_IMPORT_ORDER = [
+  "multiusers.csv",             // no deps
+  "tracingStores.csv",          // no deps
+  "dataStores.csv",             // no deps
+  "folders.csv",                // no deps
+  "organizations.csv",          // → folders
+  "teams.csv",                  // → organizations
+  "users.csv",                  // → multiusers, organizations
+  "folder_paths.csv",           // → folders
+  "datasets.csv",               // → organizations, dataStores, users, folders
+  "dataset_layers.csv",         // → datasets
+  "dataset_mags.csv",           // → datasets
+  "dataset_allowedTeams.csv",   // → datasets, teams
+  "scripts.csv",                // → users
+  "taskTypes.csv",              // → teams, organizations
+  "projects.csv",               // → teams, users, organizations
+  "tasks.csv",                  // → projects, scripts, taskTypes
+  "annotations.csv",            // → datasets, tasks, teams, users
+  "annotation_layers.csv",      // → annotations
+  "user_team_roles.csv",        // → users, teams
+  "user_datasetConfigurations.csv", // → users, datasets
+  "user_datasetLayerConfigurations.csv", // → user_dataset, dataset_layer
+  "user_experiences.csv",       // → users
+  "timeSpans.csv",              // → users, annotations
+  "tokens.csv",                 // no strict FK, but after users
+];
+
+function importTestCsvFiles() {
+  const csvFolder = path.join(__dirname, "..", "..", "test", "db");
+  const allCsvFiles = new Set(fs.readdirSync(csvFolder).filter((f) => f.endsWith(".csv")));
+  const unknownFiles = [...allCsvFiles].filter((f) => !TEST_CSV_IMPORT_ORDER.includes(f));
+  if (unknownFiles.length > 0) {
+    throw new Error(
+      `Some test DB CSV files are not listed in TEST_CSV_IMPORT_ORDER (add them in ForeignKey dependency order):\n${unknownFiles.join("\n")}`,
+    );
+  }
+
+  for (const filename of TEST_CSV_IMPORT_ORDER) {
+    if (!allCsvFiles.has(filename)) continue;
+    console.log(`IMPORT ${filename}`);
+    safePsqlSpawn(
+      [
+        PG_CONFIG.url,
+        "-c",
+        `SET session_replication_role = replica; COPY webknossos.${filename.slice(
+          0,
+          -4,
+        )} FROM STDOUT WITH CSV HEADER QUOTE ''''`,
+      ],
+      {
+        input: fs.readFileSync(path.join(csvFolder, filename)),
+      },
+    );
+  }
+}
+
 function prepareTestDb() {
   ensureDb();
   refreshSchema();
+  importTestCsvFiles();
+  console.log("✨✨ Done preparing test database");
+}
 
-  const csvFolder = path.join(__dirname, "..", "..", "test", "db");
-  for (const filename of fs.readdirSync(csvFolder)) {
-    if (filename.endsWith(".csv")) {
-      console.log(`IMPORT ${filename}`);
-      safePsqlSpawn(
-        [
-          PG_CONFIG.url,
-          "-c",
-          `SET session_replication_role = replica; COPY webknossos.${filename.slice(
-            0,
-            -4,
-          )} FROM STDOUT WITH CSV HEADER QUOTE ''''`,
-        ],
-        {
-          input: fs.readFileSync(path.join(csvFolder, filename)),
-        },
+function prepareTestDbWithoutSchemaRefresh() {
+  ensureDb();
+  callPsql(`
+    DO $$ BEGIN
+      EXECUTE (
+        SELECT 'TRUNCATE TABLE ' || string_agg('webknossos.' || quote_ident(tablename), ', ') || ' CASCADE'
+        FROM pg_tables
+        WHERE schemaname = 'webknossos' AND tablename != 'releaseinformation'
       );
-    }
-  }
+    END $$;
+  `);
+  importTestCsvFiles();
   console.log("✨✨ Done preparing test database");
 }
 
@@ -371,6 +427,13 @@ program
   .description("Sets up database for testing")
   .action(() => {
     prepareTestDb();
+  });
+
+program
+  .command("prepare-test-db-no-schema-refresh")
+  .description("Sets up database for testing without dropping/recreating the schema (truncates all tables instead, avoids postgres cache lookup errors)")
+  .action(() => {
+    prepareTestDbWithoutSchemaRefresh();
   });
 
 program

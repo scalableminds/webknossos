@@ -343,7 +343,13 @@ const Constants = {
   PARALLEL_PRECOMPUTED_MESH_LOADING_COUNT: 32,
   NARROW_SCREEN_WIDTH: 1400,
   VERY_NARROW_SCREEN_WIDTH: 1200,
+  NUMBER_OF_TOOLS_IN_TOOLBAR: 5,
   SETTING_SAVE_DEBOUNCE_MS: 2500, // delay before user, layer and dataset settings are saved
+
+  // How many IDs should be held in a buffer for new instances of segment groups, trees etc
+  // (see id reservation saga).
+  // Note: this value 10 should match the limit in the backend see AnnotationController.reserveIds
+  IDEAL_ID_BUFFER_SIZE: import.meta.env.MODE === "test" ? 5 : 10,
 } as const;
 
 /* Note that this must stay in sync with the back-end constant MaxMagForAgglomerateMapping
@@ -383,6 +389,7 @@ export enum LOG_LEVELS {
 export enum BLEND_MODES {
   Additive = "Additive",
   Cover = "Cover",
+  CoverWithBlackAsTransparent = "CoverWithBlackAsTransparent",
 }
 
 export const Identity4x4: Matrix4x4 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];

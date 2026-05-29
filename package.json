@@ -54,7 +54,7 @@
     "pg": "^7.4.1",
     "pixelmatch": "^5.2.0",
     "pngjs": "^3.3.3",
-    "puppeteer-core": "^19.7.2",
+    "puppeteer-core": "^24.40.0",
     "redux-mock-store": "^1.2.2",
     "shelljs": "^0.8.5",
     "typescript": "~5.9.0",
@@ -72,10 +72,10 @@
     "start-fossildb": "fossildb/run.sh > fossildb/logs",
     "dev-gen-tls": "./tools/gen-ssl-dev-certs.sh",
     "@comment build-backend": "Only check for errors in the backend code like done by the CI. This command is not needed to run WEBKNOSSOS",
-    "build-backend": "yarn build-wk-backend && yarn build-wk-datastore && yarn build-wk-tracingstore && rm webknossos-tracingstore/conf/messages webknossos-datastore/conf/messages",
+    "build-backend": "yarn build-wk-backend && yarn build-wk-datastore && yarn build-wk-tracingstore",
     "build-wk-backend": "sbt -no-colors -DfailOnWarning compile stage",
-    "build-wk-datastore": "sbt -no-colors -DfailOnWarning \"project webknossosDatastore\" copyMessages compile stage",
-    "build-wk-tracingstore": "sbt -no-colors -DfailOnWarning \"project webknossosTracingstore\" copyMessages compile stage",
+    "build-wk-datastore": "sbt -no-colors -DfailOnWarning \"project webknossosDatastore\" compile stage",
+    "build-wk-tracingstore": "sbt -no-colors -DfailOnWarning \"project webknossosTracingstore\" compile stage",
     "build-dev": "vite build",
     "build-watch": "vite build --watch",
     "listening": "lsof -i:5005,7155,9000,9001,9002",
@@ -103,6 +103,7 @@
     "lint-backend": "sbt \";scapegoat\"",
     "licenses-backend": "sbt dumpLicenseReport",
     "docs": "node_modules/.bin/documentation build --shallow frontend/javascripts/viewer/api/api_loader.ts frontend/javascripts/viewer/api/api_latest.ts --github --project-name \"WEBKNOSSOS Frontend API\" --format html --output public/assets/docs/frontend-api",
+    "@comment docs": "To preview the documentation under docs/, go to your local webknossos-libs repository, cd into its docs directory, ensure the webknossos repo is symlinked there (e.g. `wk-repo -> /<some path>/webknossos`), then run ./generate.sh to start a local documentation server.",
     "refresh-schema": "./tools/postgres/dbtool.js refresh-schema && rm -f target/scala-2.13/src_managed/schema/com/scalableminds/webknossos/schema/Tables.scala",
     "enable-storage-scan": "./tools/postgres/dbtool.js enable-storage-scan",
     "enable-jobs": "sed -i -e 's/jobsEnabled = false/jobsEnabled = true/g' ./conf/application.conf; sed -i -e 's/voxelyticsEnabled = false/voxelyticsEnabled = true/g' ./conf/application.conf; ./tools/postgres/dbtool.js enable-jobs",
@@ -134,7 +135,7 @@
     "@tanstack/react-query-persist-client": "^5.83.0",
     "@zip.js/zip.js": "^2.7.32",
     "ansi-to-react": "^6.1.6",
-    "antd": "^6.3.5",
+    "antd": "^6.3.6",
     "ball-morphology": "^0.1.0",
     "base64-js": "^1.2.1",
     "beautiful-react-hooks": "^5.0.3",
@@ -159,7 +160,7 @@
     "js-priority-queue": "^0.1.5",
     "jsonschema": "^1.2.4",
     "keyboardjs": "^2.7.0",
-    "lodash-es": "^4.17.23",
+    "lodash-es": "^4.18.1",
     "lz-string": "^1.4.4",
     "lz4-wasm": "^0.9.2",
     "memoize-one": "^6.0.0",
@@ -173,7 +174,7 @@
     "pako": "^2.1.0",
     "pretty-bytes": "^5.1.0",
     "process": "^0.11.10",
-    "protobufjs": "^6.11.4",
+    "protobufjs": "^6.11.5",
     "react": "^19.2.0",
     "react-colorful": "^5.6.1",
     "react-command-palette": "^0.22.1",
@@ -199,7 +200,18 @@
     "url": "^0.11.0",
     "url-join": "^4.0.0"
   },
-  "packageManager": "yarn@4.9.2",
+  "packageManager": "yarn@4.14.1",
+  "dependenciesMeta": {
+    "esbuild": {
+      "built": true
+    },
+    "msw": {
+      "built": true
+    },
+    "protobufjs": {
+      "built": true
+    }
+  },
   "resolutions": {
     "distance-transform": "https://github.com/scalableminds/distance-transform"
   }

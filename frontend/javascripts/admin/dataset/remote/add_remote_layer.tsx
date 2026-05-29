@@ -11,7 +11,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import type { APIDataStore, VoxelSize } from "types/api_types";
 import type { DatasourceConfiguration } from "types/schemas/datasource.types";
 import type { ArbitraryObject } from "types/type_utils";
-import { Hint } from "viewer/view/action_bar/download_modal_view";
+import { Hint } from "viewer/view/action_bar/download_modal/download_shared";
 import { GoogleAuthFormItem } from "./google_auth_form_item";
 
 const FormItem = Form.Item;
@@ -255,6 +255,7 @@ export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
   }, [isExploring, buildExploreParams, onSuccess, handleFailure]);
 
   // Effects
+  // biome-ignore lint/correctness/useExhaustiveDependencies: handleExplore is intentionally excluded — it changes when isExploring toggles, which would re-trigger a second exploration after the first completes
   useEffect(() => {
     if (defaultUrl != null && datasourceUrl == null) {
       form.setFieldValue("url", defaultUrl);
@@ -262,7 +263,7 @@ export const AddRemoteLayer: React.FC<AddRemoteLayerProps> = ({
     } else if (defaultUrl != null && datasourceUrl != null) {
       handleExplore();
     }
-  }, [defaultUrl, datasourceUrl, form, handleExplore]);
+  }, [defaultUrl, datasourceUrl, form]);
 
   // Reset credentials when protocol changes
   // biome-ignore lint/correctness/useExhaustiveDependencies: We explicitly want to reset the credentials when the protocol changes

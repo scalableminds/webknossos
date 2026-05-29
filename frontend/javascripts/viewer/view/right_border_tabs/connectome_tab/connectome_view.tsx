@@ -20,13 +20,13 @@ import {
   getMappingInfo,
   getVisibleOrLastSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
-import { getTreeNameForAgglomerateSkeleton } from "viewer/model/accessors/skeletontracing_accessor";
+import { getTreeNameForAgglomerateTree } from "viewer/model/accessors/skeletontracing_accessor";
 import {
   addConnectomeTreesAction,
   deleteConnectomeTreesAction,
   initializeConnectomeTracingAction,
-  loadConnectomeAgglomerateSkeletonAction,
-  removeConnectomeAgglomerateSkeletonAction,
+  loadConnectomeAgglomerateTreeAction,
+  removeConnectomeAgglomerateTreeAction,
   removeConnectomeTracingAction,
   setActiveConnectomeAgglomerateIdsAction,
   setConnectomeTreesVisibilityAction,
@@ -381,8 +381,8 @@ class ConnectomeView extends React.Component<Props, State> {
         getSynapsePositions(...fetchProperties, allSynapseIds),
         getSynapseTypes(...fetchProperties, allSynapseIds),
       ]);
-    // TODO: Remove once the backend sends the typeToString mapping from the hdf5 file.
-    // Currently, the used jhdf5 library seems to have a bug which makes it impossible to read
+    // Ideally, the backend would send the typeToString mapping from the hdf5 file.
+    // However, the used jhdf5 library seems to have a bug which makes it impossible to read
     // hdf5 array attributes which is why this information is read from a json file, instead.
     // Since it's easy to forget to create the json file, this code exists to act as a fail-safe.
     const { synapseTypes, typeToString } = ensureTypeToString(synapseTypesAndNames);
@@ -595,7 +595,7 @@ class ConnectomeView extends React.Component<Props, State> {
       for (const agglomerateId of deletedAgglomerateIds) {
         // The check whether these skeleton were actually loaded and need to be removed is done by the saga
         Store.dispatch(
-          removeConnectomeAgglomerateSkeletonAction(layerName, mappingName, agglomerateId),
+          removeConnectomeAgglomerateTreeAction(layerName, mappingName, agglomerateId),
         );
       }
     }
@@ -615,7 +615,7 @@ class ConnectomeView extends React.Component<Props, State> {
 
       for (const agglomerateId of hiddenAgglomerateIds) {
         // Hide agglomerates that are no longer visible
-        const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
+        const treeName = getTreeNameForAgglomerateTree(agglomerateId, mappingName);
         const tree = treeNameToTree[treeName];
 
         if (tree != null) {
@@ -629,7 +629,7 @@ class ConnectomeView extends React.Component<Props, State> {
 
       for (const agglomerateId of addedAgglomerateIds) {
         // Show agglomerates that were made visible
-        const treeName = getTreeNameForAgglomerateSkeleton(agglomerateId, mappingName);
+        const treeName = getTreeNameForAgglomerateTree(agglomerateId, mappingName);
         const tree = treeNameToTree[treeName];
 
         // If the tree was already loaded, make it visible, otherwise load it
@@ -637,7 +637,7 @@ class ConnectomeView extends React.Component<Props, State> {
           Store.dispatch(setConnectomeTreesVisibilityAction([tree.treeId], true, layerName));
         } else {
           Store.dispatch(
-            loadConnectomeAgglomerateSkeletonAction(layerName, mappingName, agglomerateId),
+            loadConnectomeAgglomerateTreeAction(layerName, mappingName, agglomerateId),
           );
         }
       }

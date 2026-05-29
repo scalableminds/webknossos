@@ -36,6 +36,8 @@ Compile / console / scalacOptions -= "-Xlint:unused"
 
 lazy val commonSettings = Seq(
   resolvers ++= Dependencies.dependencyResolvers,
+  // Fallback for cisd artifacts (jhdf5 + base) in case maven.scijava.org is unavailable
+  resolvers += "local-maven-cisd" at ((ThisBuild / baseDirectory).value / "lib" / "local-maven").toURI.toString,
   Compile / doc / sources := Seq.empty,
   Compile / packageDoc / publishArtifact := false,
   scapegoatIgnoredFiles := Seq(".*/Tables.scala",
@@ -51,15 +53,6 @@ lazy val protocolBufferSettings = Seq(
     scalapb.gen() -> (Compile / sourceManaged).value / "proto"
   )
 )
-
-lazy val copyMessagesFilesSetting = {
-  lazy val copyMessages = taskKey[Unit]("Copy messages file to data- and tracing stores")
-  copyMessages := {
-    val messagesFile = baseDirectory.value / ".." / "conf" / "messages"
-    val targetPath = (baseDirectory.value / "conf" / "messages").toPath
-    java.nio.file.Files.copy(messagesFile.toPath, targetPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
-  }
-}
 
 lazy val util = (project in file("util")).settings(
   commonSettings,
@@ -94,8 +87,7 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
       }
       ((libs +++ subs +++ targets) ** "*.jar").classpath
     },
-    routesImport += "com.scalableminds.util.objectid.ObjectId",
-    copyMessagesFilesSetting
+    routesImport += "com.scalableminds.util.objectid.ObjectId"
   )
 
 lazy val webknossosTracingstore = (project in file("webknossos-tracingstore"))
@@ -109,8 +101,7 @@ lazy val webknossosTracingstore = (project in file("webknossos-tracingstore"))
     generateReverseRouter := false,
     BuildInfoSettings.webknossosTracingstoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosTracingstoreDependencies,
-    dependencyOverrides ++= Dependencies.dependencyOverrides,
-    copyMessagesFilesSetting,
+    dependencyOverrides ++= Dependencies.dependencyOverrides
   )
 
 lazy val webknossos = (project in file("."))

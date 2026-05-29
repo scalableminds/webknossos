@@ -1,5 +1,6 @@
 package models.annotation
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.rpc.RPC
@@ -8,7 +9,6 @@ import com.typesafe.scalalogging.LazyLogging
 
 import javax.inject.Inject
 import models.dataset.Dataset
-import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Result, Results}
 import utils.sql.{SQLDAO, SqlClient}
@@ -43,21 +43,25 @@ class TracingStoreService @Inject()(
         "url" -> tracingStore.publicUrl
       ))
 
-  def validateAccess(name: String, key: String)(block: TracingStore => Future[Result])(
-      implicit m: MessagesProvider): Fox[Result] =
+  def validateAccess(name: String, key: String)(block: TracingStore => Future[Result]): Fox[Result] =
     Fox.fromFuture(
       tracingStoreDAO
         .findOneByKey(key) // Check if key is valid
         .flatMap(tracingStore => Fox.fromFuture(block(tracingStore))) // Run underlying action
         .getOrElse {
           logger.info(s"Denying tracing store request from $name due to unknown key.")
-          Forbidden(Messages("tracingStore.notFound"))
+          Forbidden(Msg.TracingStore.notFound)
         }) // Default error
 
   def clientFor(dataset: Dataset): Fox[WKRemoteTracingStoreClient] =
     for {
-      tracingStore <- tracingStoreDAO.findFirst ?~> "tracingStore.notFound"
-    } yield new WKRemoteTracingStoreClient(tracingStore, dataset, rpc, tracingDataSourceTemporaryStore)
+      tracingStore <- tracingStoreDAO.findFirst ?~> Msg.TracingStore.notFound
+    } yield new WKRemoteTracingStoreClient(tracingStore, Some(dataset), rpc, tracingDataSourceTemporaryStore)
+
+  def client: Fox[WKRemoteTracingStoreClient] =
+    for {
+      tracingStore <- tracingStoreDAO.findFirst ?~> Msg.TracingStore.notFound
+    } yield new WKRemoteTracingStoreClient(tracingStore, None, rpc, tracingDataSourceTemporaryStore)
 }
 
 class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

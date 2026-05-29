@@ -2008,12 +2008,10 @@ export function getAgglomerateTreeAsSkeletonTracing(
   );
 }
 
-export async function getAgglomeratesForSegmentsFromDatastore<T extends number | bigint>(
-  dataStoreUrl: string,
-  dataset: APIDataset,
-  layerName: string,
-  mappingId: string,
+async function _getAgglomeratesForSegmentsHelper<T extends number | bigint>(
   segmentIds: Set<T>,
+  url: string,
+  extraParams: URLSearchParams,
 ): Promise<Mapping> {
   if (segmentIds.size === 0) {
     return new Map();
@@ -2022,21 +2020,19 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
     Number(a - b),
   );
   const segmentIdBuffer = serializeProtoListOfLong<T>(sortedSegmentIdArray);
-  const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
-    const params = new URLSearchParams({ token });
+  const listArrayBuffer = await doWithToken((token) => {
+    const params = new URLSearchParams(extraParams);
+    params.set("token", token);
     return retryAsyncFunction(() =>
-      Request.receiveArraybuffer(
-        `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?${params}`,
-        {
-          method: "POST",
-          body: segmentIdBuffer,
-          headers: {
-            "Content-Type": "application/octet-stream",
-          },
-        },
-      ),
+      Request.receiveArraybuffer(`${url}?${params}`, {
+        method: "POST",
+        body: segmentIdBuffer,
+        headers: { "Content-Type": "application/octet-stream" },
+        showErrorToast: false,
+      }),
     );
   });
+
   // Ensure that the values are bigint if the keys are bigint
   const adaptToType = getAdaptToTypeFunctionFromList(sortedSegmentIdArray);
   const mappedIds = parseProtoListOfLong(listArrayBuffer).map(adaptToType);
@@ -2052,54 +2048,36 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   return new Map(keyValues);
 }
 
-export async function getAgglomeratesForSegmentsFromTracingstore<T extends number | bigint>(
+export function getAgglomeratesForSegmentsFromDatastore<T extends number | bigint>(
+  dataStoreUrl: string,
+  dataset: APIDataset,
+  layerName: string,
+  mappingId: string,
+  segmentIds: Set<T>,
+): Promise<Mapping> {
+  return _getAgglomeratesForSegmentsHelper(
+    segmentIds,
+    `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments`,
+    new URLSearchParams(),
+  );
+}
+
+export function getAgglomeratesForSegmentsFromTracingstore<T extends number | bigint>(
   tracingStoreUrl: string,
   tracingId: string,
   segmentIds: Set<T>,
   annotationId: string,
   version: number,
 ): Promise<Mapping> {
-  if (segmentIds.size === 0) {
-    return new Map();
-  }
-  const params = new URLSearchParams({ annotationId });
+  const extraParams = new URLSearchParams({ annotationId });
   if (version != null) {
-    params.set("version", version.toString());
+    extraParams.set("version", version.toString());
   }
-  const sortedSegmentIdArray = [...segmentIds].sort(<T extends NumberLike>(a: T, b: T) =>
-    Number(a - b),
+  return _getAgglomeratesForSegmentsHelper(
+    segmentIds,
+    `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments`,
+    extraParams,
   );
-  const segmentIdBuffer = serializeProtoListOfLong<T>(sortedSegmentIdArray); // The tracing store expects the ids to be sorted
-  const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
-    params.set("token", token);
-    return retryAsyncFunction(() =>
-      Request.receiveArraybuffer(
-        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?${params}`,
-        {
-          method: "POST",
-          body: segmentIdBuffer,
-          headers: {
-            "Content-Type": "application/octet-stream",
-          },
-          showErrorToast: false,
-        },
-      ),
-    );
-  });
-
-  // Ensure that the values are bigint if the keys are bigint
-  const adaptToType = getAdaptToTypeFunctionFromList(sortedSegmentIdArray);
-  const mappedIds = parseProtoListOfLong(listArrayBuffer).map(adaptToType);
-
-  if (sortedSegmentIdArray.length !== mappedIds.length) {
-    throw new Error(
-      "Unexpected mismatch of keys and values while mapping segment ids using tracing store.",
-    );
-  }
-
-  const keyValues = zip(sortedSegmentIdArray, mappedIds);
-  // @ts-expect-error
-  return new Map(keyValues);
 }
 
 export function getEditableAgglomerateTreeAsSkeletonTracing(

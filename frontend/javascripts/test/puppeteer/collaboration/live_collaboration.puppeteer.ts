@@ -21,7 +21,11 @@ import { cycleToolAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import { setActiveCellAction } from "viewer/model/actions/volumetracing_actions";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { getTeams, setCollaborationModeForAnnotation, updateDatasetTeams } from "../../../admin/rest_api";
+import {
+  getTeams,
+  setCollaborationModeForAnnotation,
+  updateDatasetTeams,
+} from "../../../admin/rest_api";
 import {
   DATASET_NAME,
   HDF5_MAPPING_NAME,
@@ -41,15 +45,15 @@ import {
   waitForMappingEnabled,
 } from "./page_helpers";
 import {
+  type APIAnnotation,
   activateUser,
   adminRequestOptions,
   createHybridAnnotation,
   getDefaultTeamId,
   getOrCreateUser,
+  getUserAuthToken,
   resolveDatasetId,
   shareAnnotationWithTeam,
-  type APIAnnotation,
-  getUserAuthToken,
 } from "./rest_helpers";
 
 vi.mock("libs/request", async (importOriginal) => {

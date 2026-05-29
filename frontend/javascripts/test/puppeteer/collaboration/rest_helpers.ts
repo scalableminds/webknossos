@@ -1,5 +1,5 @@
 import urljoin from "url-join";
-import { createExplorational, getTeams, getUsers } from "../../../admin/rest_api";
+import { createExplorational, getUsers } from "../../../admin/rest_api";
 import { BASE_URL, ORG_NAME, WK_AUTH_TOKEN } from "./config";
 
 // ---------------------------------------------------------------------------

@@ -7,7 +7,7 @@ import {
 import { setHideUnregisteredSegmentsAction } from "viewer/model/actions/volumetracing_actions";
 import { launchBrowser, waitForTracingViewLoad } from "../dataset_rendering_helpers";
 import { PAGE_HEIGHT, PAGE_WIDTH } from "../screenshot_test_config";
-import { BASE_URL, NETWORK_THROTTLE, WK_AUTH_TOKEN } from "./config";
+import { BASE_URL, NETWORK_THROTTLE } from "./config";
 
 export async function getNewPage(authToken: string): Promise<{ page: Page; browser: Browser }> {
   // Each page gets its own browser process so Chrome doesn't throttle background tabs.

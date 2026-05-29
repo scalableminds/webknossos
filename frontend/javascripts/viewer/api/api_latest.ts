@@ -1948,7 +1948,12 @@ class DataApi {
       return this.getDataValue(layerName, position, zoomStep, additionalCoordinates, true);
     }
 
-    const unmappedId = await this.getDataValue(layerName, position, zoomStep, additionalCoordinates);
+    const unmappedId = await this.getDataValue(
+      layerName,
+      position,
+      zoomStep,
+      additionalCoordinates,
+    );
 
     const activeMappingInfo = getMappingInfo(
       state.temporaryConfiguration.activeMappingByLayer,

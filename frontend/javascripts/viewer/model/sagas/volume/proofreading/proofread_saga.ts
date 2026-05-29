@@ -1671,9 +1671,7 @@ type Preparation = {
   agglomerateFileMag: Vector3;
   getDataValue: (position: Vector3, overrideMapping?: Mapping | null) => Promise<number>;
   mapSegmentId: (segmentId: number, overrideMapping?: Mapping | null) => number;
-  getMappedAndUnmapped: (
-    position: Vector3,
-  ) => Saga<{ agglomerateId: number; unmappedId: number }>;
+  getMappedAndUnmapped: (position: Vector3) => Saga<{ agglomerateId: number; unmappedId: number }>;
   activeMapping: ActiveMappingInfo;
   volumeTracing: VolumeTracing & { mappingName: string };
   annotationVersion: number;
@@ -1869,9 +1867,7 @@ function* reloadMappingAndAggloIds(
 }
 
 function* getAgglomerateInfos(
-  getMappedAndUnmapped: (
-    position: Vector3,
-  ) => Saga<{ agglomerateId: number; unmappedId: number }>,
+  getMappedAndUnmapped: (position: Vector3) => Saga<{ agglomerateId: number; unmappedId: number }>,
   positions: Vector3[],
 ): Saga<Array<{
   agglomerateId: number;

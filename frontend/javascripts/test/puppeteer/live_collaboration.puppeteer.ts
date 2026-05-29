@@ -19,6 +19,7 @@ import type { APIAnnotationType } from "types/api_types";
 import urljoin from "url-join";
 import type { Vector3 } from "viewer/constants";
 import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
+import { setPositionAction } from "viewer/model/actions/flycam_actions";
 import { proofreadMergeAction } from "viewer/model/actions/proofread_actions";
 import {
   updateLayerSettingAction,
@@ -40,7 +41,6 @@ import {
 } from "../../admin/rest_api";
 import { launchBrowser, waitForTracingViewLoad } from "./dataset_rendering_helpers";
 import { PAGE_HEIGHT, PAGE_WIDTH } from "./screenshot_test_config";
-import { setPositionAction } from "viewer/model/actions/flycam_actions";
 
 vi.mock("libs/request", async (importOriginal) => {
   return await importOriginal();
@@ -653,7 +653,11 @@ describe("Live Collaboration", () => {
         op.sourcePosition,
         op.targetPosition,
       );
-      expect(sourceMappedId, `Merge of ${op.sourcePosition} → ${op.targetPosition} not reflected`).toBe(targetMappedId);
+      console.log("Check merge operation");
+      expect(
+        sourceMappedId,
+        `Merge of ${op.sourcePosition} → ${op.targetPosition} not reflected`,
+      ).toBe(targetMappedId);
     }
 
     await adminVerifyPage.close();

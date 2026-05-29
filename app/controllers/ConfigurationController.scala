@@ -40,7 +40,7 @@ class ConfigurationController @Inject()(
   def readKeyboardShortcutsConfig: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
       shortcuts <- request.identity
-        .map(u => userKeyboardShortcutsConfigsDAO.findOneForUser(u._id))
+        .map(u => userKeyboardShortcutsConfigsDAO.findOneForUser(u._multiUser))
         .getOrElse(Fox.successful(Json.obj()))
     } yield addNoCacheHeaderFallback(Ok(shortcuts))
   }
@@ -49,7 +49,7 @@ class ConfigurationController @Inject()(
     implicit request =>
       for {
         shortcuts <- request.body.asOpt[JsObject].toFox ?~> Msg.User.Configuration.invalidKeyboardShortcutsConfig
-        _ <- userKeyboardShortcutsConfigsDAO.updateForUser(request.identity._id, shortcuts)
+        _ <- userKeyboardShortcutsConfigsDAO.updateForUser(request.identity._multiUser, shortcuts)
       } yield JsonOk(Msg.User.Configuration.updatedKeyboardShortcutsConfig)
   }
 

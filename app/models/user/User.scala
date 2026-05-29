@@ -669,21 +669,3 @@ class UserDatasetLayerConfigurationDAO @Inject()(sqlClient: SqlClient, userDAO: 
       )
     } yield ()
 }
-
-class UserKeyboardShortcutsConfigsDAO @Inject()(sqlClient: SqlClient, userDAO: UserDAO)(implicit ec: ExecutionContext)
-    extends SimpleSQLDAO(sqlClient) {
-
-  def findOneForUser(userId: ObjectId): Fox[JsObject] =
-    for {
-      rows <- run(
-        q"SELECT shortcutsConfig FROM webknossos.user_keyboardShortcutsConfigs WHERE _user = $userId".as[String])
-    } yield rows.headOption.flatMap(r => JsonHelper.parseAs[JsObject](r).toOption).getOrElse(Json.obj())
-
-  def updateForUser(userId: ObjectId, shortcutsConfig: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      _ <- userDAO.assertUpdateAccess(userId)
-      _ <- run(q"""INSERT INTO webknossos.user_keyboardShortcutsConfigs(_user, shortcutsConfig)
-                   VALUES($userId, $shortcutsConfig)
-                   ON CONFLICT (_user) DO UPDATE SET shortcutsConfig = EXCLUDED.shortcutsConfig""".asUpdate)
-    } yield ()
-}

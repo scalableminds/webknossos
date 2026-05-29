@@ -10,7 +10,7 @@ import models.user.Theme.Theme
 import play.api.libs.json.Format.GenericFormat
 import play.api.libs.json.{JsObject, Json}
 import com.scalableminds.util.objectid.ObjectId
-import utils.sql.{SQLDAO, SqlClient}
+import utils.sql.{SQLDAO, SimpleSQLDAO, SqlClient}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
@@ -206,4 +206,21 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
                                   GROUP BY m._id""".as[Instant])
       head <- lastActivityList.headOption.toFox
     } yield head
+}
+
+class UserKeyboardShortcutsConfigsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+  extends SimpleSQLDAO(sqlClient) {
+
+  def findOneForUser(multiUserId: ObjectId): Fox[JsObject] =
+    for {
+      rows <- run(
+        q"SELECT shortcutsConfig FROM webknossos.multiUser_keyboardShortcutsConfigs WHERE _multiUser = $multiUserId".as[String])
+    } yield rows.headOption.flatMap(r => JsonHelper.parseAs[JsObject](r).toOption).getOrElse(Json.obj())
+
+  def updateForUser(multiUserId: ObjectId, shortcutsConfig: JsObject): Fox[Unit] =
+    for {
+      _ <- run(q"""INSERT INTO webknossos.multiUser_keyboardShortcutsConfigs(_user, shortcutsConfig)
+                   VALUES($multiUserId, $shortcutsConfig)
+                   ON CONFLICT (_user) DO UPDATE SET shortcutsConfig = EXCLUDED.shortcutsConfig""".asUpdate)
+    } yield ()
 }

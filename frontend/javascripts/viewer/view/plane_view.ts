@@ -307,9 +307,20 @@ class PlaneView {
   }
 
   switchTDCamera(usePerspective: boolean): void {
-    const { scene } = getSceneController();
     const oldCamera = this.cameras[OrthoViews.TDView];
 
+    const isAlreadyCorrectType = usePerspective
+      ? oldCamera instanceof PerspectiveCamera
+      : oldCamera instanceof OrthographicCamera;
+    if (isAlreadyCorrectType) {
+      // The constructor already builds the TDView camera with the correct projection
+      // type, so the call-on-init invocation at startup has nothing to swap. Skipping
+      // here avoids a redundant camera re-creation (and the store round-trip below) on
+      // every startup, and makes any redundant toggle a no-op.
+      return;
+    }
+
+    const { scene } = getSceneController();
     const newCamera = createCamera(usePerspective);
     newCamera.name = OrthoViews.TDView;
     newCamera.position.copy(oldCamera.position);

@@ -162,7 +162,7 @@ class TDController extends PureComponent<Props> {
       return;
     }
     const cameraData = Store.getState().viewModeData.plane.tdCamera;
-    const target = new ThreeVector3(...(cameraData.target || [0, 0, 0]));
+    const target = new ThreeVector3(...cameraData.target);
     this.controls.target.copy(target);
     // Ensure that external target updates don't shift the camera (TrackballControls
     // derives the eye vector from `lastTarget`).
@@ -375,7 +375,7 @@ class TDController extends PureComponent<Props> {
     const target =
       this.controls != null
         ? this.controls.target.clone()
-        : new ThreeVector3(...(prevCameraData.target || [0, 0, 0]));
+        : new ThreeVector3(...prevCameraData.target);
     // updateTDCamera may have pulled the live camera back along its view direction
     // (to avoid perspective distortion when zoomed out). Strip that pullback here so
     // the store always holds the canonical, un-pulled-back position. Persisting the

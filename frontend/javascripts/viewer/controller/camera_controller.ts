@@ -83,14 +83,6 @@ function getCameraFromQuaternion(quat: { x: number; y: number; z: number; w: num
   };
 }
 
-function getTDCameraTarget(cameraData: CameraData): Vector3 {
-  if (cameraData.target != null) {
-    return cameraData.target;
-  }
-  const state = Store.getState();
-  return voxelToUnit(state.dataset.dataSource.scale, getPosition(state.flycam));
-}
-
 class CameraController extends PureComponent<Props> {
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'storePropertyUnsubscribers' has no initi... Remove this comment to see the full error message
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any>;
@@ -103,6 +95,14 @@ class CameraController extends PureComponent<Props> {
   lastTDCameraUp = new ThreeVector3(Number.NaN, Number.NaN, Number.NaN);
   lastTDCameraTarget = new ThreeVector3(Number.NaN, Number.NaN, Number.NaN);
   lastTDProjectionDistance = 1;
+  // Last seen TDView frustum extents, used to detect a re-centering (centerTDView)
+  // even when its new target happens to land on the current look ray.
+  lastTDCameraFrustum = {
+    left: Number.NaN,
+    right: Number.NaN,
+    top: Number.NaN,
+    bottom: Number.NaN,
+  };
   // Properties are only created here to avoid creating new objects for each update call.
   flycamRotationEuler = new Euler();
   flycamRotationMatrix = new Matrix4();
@@ -257,8 +257,7 @@ class CameraController extends PureComponent<Props> {
   // TD-View methods
   updateTDCamera(cameraData: CameraData): void {
     const tdCamera = this.props.cameras[OrthoViews.TDView];
-    const target = getTDCameraTarget(cameraData);
-    const threeTarget = new ThreeVector3(...target);
+    const threeTarget = new ThreeVector3(...cameraData.target);
 
     const newStoredPosition = new ThreeVector3(...cameraData.position);
     const newStoredUp = new ThreeVector3(...cameraData.up);
@@ -270,6 +269,15 @@ class CameraController extends PureComponent<Props> {
     const positionChanged = !newStoredPosition.equals(this.lastTDCameraPosition);
     const upChanged = !newStoredUp.equals(this.lastTDCameraUp);
     const targetChanged = !threeTarget.equals(this.lastTDCameraTarget);
+    const frustumChanged =
+      cameraData.left !== this.lastTDCameraFrustum.left ||
+      cameraData.right !== this.lastTDCameraFrustum.right ||
+      cameraData.top !== this.lastTDCameraFrustum.top ||
+      cameraData.bottom !== this.lastTDCameraFrustum.bottom;
+    this.lastTDCameraFrustum.left = cameraData.left;
+    this.lastTDCameraFrustum.right = cameraData.right;
+    this.lastTDCameraFrustum.top = cameraData.top;
+    this.lastTDCameraFrustum.bottom = cameraData.bottom;
 
     if (positionChanged || upChanged) {
       this.lastTDCameraPosition.copy(newStoredPosition);
@@ -306,13 +314,19 @@ class CameraController extends PureComponent<Props> {
       // Distinguish the two by measuring the perpendicular distance from the new
       // target to the current forward ray. Projected targets land on the ray
       // (perpDistance ≈ 0); actual flycam positions can be significantly off-axis.
+      //
+      // The perpendicular test alone misclassifies the rare case where the flycam
+      // position happens to lie on the look ray (perpDistance ≈ 0 at a different
+      // depth), leaving projDist stale. centerTDViewReducer always re-centers the
+      // frustum in the same store update, while setTargetAndFixPosition never touches
+      // it, so a simultaneous frustum change is an unambiguous recenter signal.
       const forward = new ThreeVector3(0, 0, -1).applyQuaternion(tdCamera.quaternion);
       const toTarget = threeTarget.clone().sub(newStoredPosition);
       const perpDistance = toTarget
         .clone()
         .addScaledVector(forward, -toTarget.dot(forward))
         .length();
-      if (perpDistance > 1.0) {
+      if (perpDistance > 1.0 || frustumChanged) {
         lookAtRequired = true;
       }
     }
@@ -338,6 +352,17 @@ class CameraController extends PureComponent<Props> {
         Math.abs(cameraData.top),
         Math.abs(cameraData.bottom),
       );
+      if (maxViewExtent === 0) {
+        // Degenerate frustum (left==right and top==bottom), e.g. the initial all-zero
+        // default store state before rotate3DViewTo populates real extents. Unlike the
+        // orthographic branch, makePerspective would divide by (right-left)=0 here and
+        // produce a NaN/Infinity projection matrix. Skip the update and wait for the next
+        // frame, which will carry real extents.
+        tdCamera.userData.tdPullbackDistance = 0;
+        this.props.onCameraPositionChanged();
+        return;
+      }
+
       const minSafeDistance = maxViewExtent * 1.5;
       const effectiveDistance = Math.max(this.lastTDProjectionDistance, minSafeDistance);
 

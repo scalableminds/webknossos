@@ -55,23 +55,6 @@ export const viteConfig = {
     outDir: "public", // note: /public is handled by the backend/Play framework for asset delivery
     emptyOutDir: true,
     sourcemap: true,
-    rolldownOptions: {
-      output: {
-        strictExecutionOrder: true,
-        codeSplitting: {
-          minSize: 250000, // 250KB global minimum chunk size to avoid small artifacts
-          groups: [
-            {
-              name: "vendor",
-              test: /[\\/]node_modules[\\/]/,
-              // minSize: 250000, // 250KB minimum size for vendor chunks
-              // maxSize: 1000000, // 1MB maximum size per vendor chunk (prevents monolithic bundle)
-              // priority: 10,
-            },
-          ],
-        },
-      },
-    },
   },
   worker: {
     format: "es",

@@ -296,7 +296,7 @@ function* updatePendingProofreadingOperationInfoAction() {
       getAgglomeratesForSegmentsFromTracingstore,
       tracingStoreUrl,
       tracingId,
-      idsToRequest,
+      new Set(idsToRequest),
       annotationId,
       annotationVersion,
     );
@@ -859,7 +859,7 @@ export function* tryToIncorporateActions(
           false,
           // In the very rare case where split actions of two different agglomerate ids were included in the same version
           // we also request those other agglomerate ids in the same request to save requests.
-          agglomerateIdToRefresh.slice(1),
+          new Set(agglomerateIdToRefresh.slice(1)),
         );
 
         if (splitMappingInfo == null) {

@@ -14,7 +14,6 @@ import { getAdaptToTypeFunction, isEditableEventTarget, isNumberMap, SoftError }
 import window from "libs/window";
 import { uniq } from "lodash-es";
 import isEqual from "lodash-es/isEqual";
-import union from "lodash-es/union";
 import uniqBy from "lodash-es/uniqBy";
 import messages from "messages";
 import { all, call, put, spawn, takeEvery } from "typed-redux-saga";
@@ -1032,14 +1031,13 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
       agglomerateId = mappingWrapper.getAsNumber(partitions[1][0]) ?? agglomerateId;
     }
 
-    const unmappedSegmentsOfPartitions = [...partitions[1], ...partitions[2]];
+    const unmappedSegmentsOfPartitions = new Set([...partitions[1], ...partitions[2]]);
     // Make sure the reloaded partial mapping has mapping info about the partitions and first removed edge. The first removed edge is used for reloading the meshes.
     // The unmapped segments of this edge might not be present in the partial mapping of the frontend as splitting can be done via mesh interactions.
     // There is no guarantee that for all mesh parts the mapping is locally stored.
-    const additionalUnmappedSegmentsToReRequest = union(unmappedSegmentsOfPartitions, [
-      edgesToRemove[0].segmentId1,
-      edgesToRemove[0].segmentId2,
-    ]);
+    const additionalUnmappedSegmentsToReRequest = unmappedSegmentsOfPartitions.union(
+      new Set([edgesToRemove[0].segmentId1, edgesToRemove[0].segmentId2]),
+    );
 
     // Now that the changes are saved, we can split the mapping locally (because it requires
     // communication with the backend).
@@ -1835,7 +1833,7 @@ function* reloadMappingAndAggloIds(
 
     // As an additional safety net we look up the IDs again. Actually,
     // this should not happen in production.
-    const segmentsToRequest = [unmappedSourceId, unmappedTargetId];
+    const segmentsToRequest = new Set([unmappedSourceId, unmappedTargetId]);
     const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
     const annotationVersion = yield* select((state) => state.annotation.version);
     const annotationId = yield* select((state) => state.annotation.annotationId);
@@ -2044,7 +2042,7 @@ export function* splitAgglomerateInMapping(
   volumeTracingId: string,
   version: number,
   syncAgglomerateTrees: boolean,
-  additionalSegmentsToRequest: number[] = [],
+  additionalSegmentsToRequest: Set<number> = new Set(),
 ): Saga<
   | { splitMapping: Mapping; oldAgglomerateIds: Set<number>; newAgglomerateIds: Set<number> }
   | undefined
@@ -2053,13 +2051,13 @@ export function* splitAgglomerateInMapping(
     activeMapping,
     sourceAgglomerateId,
   );
-  const splitSegmentIds = union(segmentIdsFromLocalMapping, additionalSegmentsToRequest);
+  const splitSegmentIds = new Set(segmentIdsFromLocalMapping).union(additionalSegmentsToRequest);
   const annotationId = yield* select((state) => state.annotation.annotationId);
   const tracingStoreUrl = yield* select((state) => state.annotation.tracingStore.url);
   // Ask the server to map the (split) segment ids. This creates a partial mapping
   // that only contains these ids.
   const unsplitMapping = activeMapping.mapping;
-  if (splitSegmentIds.length === 0) {
+  if (splitSegmentIds.size === 0) {
     return unsplitMapping != null
       ? { splitMapping: unsplitMapping, newAgglomerateIds: new Set(), oldAgglomerateIds: new Set() }
       : undefined;
@@ -2073,7 +2071,7 @@ export function* splitAgglomerateInMapping(
     version,
   );
   const oldAgglomerateIds = new Set<number>([sourceAgglomerateId]);
-  if (unsplitMapping && additionalSegmentsToRequest.length > 0) {
+  if (unsplitMapping && additionalSegmentsToRequest.size > 0) {
     // Add the additionally reloaded segments' agglomerate ids to the once maybe refreshed.
     const mappingWrapper = new NumberLikeMapWrapper(unsplitMapping);
 

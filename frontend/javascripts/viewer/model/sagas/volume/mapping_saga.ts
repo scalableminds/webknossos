@@ -608,7 +608,7 @@ export async function fetchAgglomeratesForSegmentIds(
     ? getAgglomeratesForSegmentsFromTracingstore(
         annotation.tracingStore.url,
         editableMapping.tracingId,
-        Array.from(newSegmentIds),
+        newSegmentIds,
         annotation.annotationId,
         annotation.version,
       )
@@ -617,7 +617,7 @@ export async function fetchAgglomeratesForSegmentIds(
         dataset,
         mappingLayerName,
         mappingName,
-        Array.from(newSegmentIds),
+        newSegmentIds,
       );
 }
 

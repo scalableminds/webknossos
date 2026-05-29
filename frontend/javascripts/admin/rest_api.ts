@@ -2013,12 +2013,15 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
   dataset: APIDataset,
   layerName: string,
   mappingId: string,
-  segmentIds: Array<T>,
+  segmentIds: Set<T>,
 ): Promise<Mapping> {
-  if (segmentIds.length === 0) {
+  if (segmentIds.size === 0) {
     return new Map();
   }
-  const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
+  const sortedSegmentIdArray = [...segmentIds].sort(<T extends NumberLike>(a: T, b: T) =>
+    Number(a - b),
+  );
+  const segmentIdBuffer = serializeProtoListOfLong<T>(sortedSegmentIdArray);
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
     const params = new URLSearchParams({ token });
     return retryAsyncFunction(() =>
@@ -2035,8 +2038,16 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
     );
   });
   // Ensure that the values are bigint if the keys are bigint
-  const adaptToType = getAdaptToTypeFunctionFromList(segmentIds);
-  const keyValues = zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
+  const adaptToType = getAdaptToTypeFunctionFromList(sortedSegmentIdArray);
+  const mappedIds = parseProtoListOfLong(listArrayBuffer).map(adaptToType);
+
+  if (sortedSegmentIdArray.length !== mappedIds.length) {
+    throw new Error(
+      "Unexpected mismatch of keys and values while mapping segment ids using tracing store.",
+    );
+  }
+
+  const keyValues = zip(sortedSegmentIdArray, mappedIds);
   // @ts-expect-error
   return new Map(keyValues);
 }
@@ -2044,25 +2055,21 @@ export async function getAgglomeratesForSegmentsFromDatastore<T extends number |
 export async function getAgglomeratesForSegmentsFromTracingstore<T extends number | bigint>(
   tracingStoreUrl: string,
   tracingId: string,
-  segmentIds: Array<T>,
+  segmentIds: Set<T>,
   annotationId: string,
   version: number,
 ): Promise<Mapping> {
-  if (segmentIds.length === 0) {
+  if (segmentIds.size === 0) {
     return new Map();
   }
   const params = new URLSearchParams({ annotationId });
   if (version != null) {
     params.set("version", version.toString());
   }
-  console.log(
-    "getAgglomeratesForSegmentsFromTracingstore > ids=",
-    segmentIds.sort(<T extends NumberLike>(a: T, b: T) => Number(a - b)),
+  const sortedSegmentIdArray = [...segmentIds].sort(<T extends NumberLike>(a: T, b: T) =>
+    Number(a - b),
   );
-  const segmentIdBuffer = serializeProtoListOfLong<T>(
-    // The tracing store expects the ids to be sorted
-    segmentIds.sort(<T extends NumberLike>(a: T, b: T) => Number(a - b)),
-  );
+  const segmentIdBuffer = serializeProtoListOfLong<T>(sortedSegmentIdArray); // The tracing store expects the ids to be sorted
   const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
     params.set("token", token);
     return retryAsyncFunction(() =>
@@ -2081,13 +2088,16 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   });
 
   // Ensure that the values are bigint if the keys are bigint
-  const adaptToType = getAdaptToTypeFunctionFromList(segmentIds);
+  const adaptToType = getAdaptToTypeFunctionFromList(sortedSegmentIdArray);
+  const mappedIds = parseProtoListOfLong(listArrayBuffer).map(adaptToType);
 
-  console.log(
-    "getAgglomeratesForSegmentsFromTracingstore > received list of longs",
-    parseProtoListOfLong(listArrayBuffer),
-  );
-  const keyValues = zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
+  if (sortedSegmentIdArray.length !== mappedIds.length) {
+    throw new Error(
+      "Unexpected mismatch of keys and values while mapping segment ids using tracing store.",
+    );
+  }
+
+  const keyValues = zip(sortedSegmentIdArray, mappedIds);
   // @ts-expect-error
   return new Map(keyValues);
 }

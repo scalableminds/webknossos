@@ -64,9 +64,9 @@ export const viteConfig = {
             {
               name: "vendor",
               test: /[\\/]node_modules[\\/]/,
-              minSize: 250000, // 250KB minimum size for vendor chunks
-              maxSize: 1000000, // 1MB maximum size per vendor chunk (prevents monolithic bundle)
-              priority: 10,
+              // minSize: 250000, // 250KB minimum size for vendor chunks
+              // maxSize: 1000000, // 1MB maximum size per vendor chunk (prevents monolithic bundle)
+              // priority: 10,
             },
           ],
         },

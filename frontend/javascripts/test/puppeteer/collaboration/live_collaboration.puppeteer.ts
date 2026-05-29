@@ -1,0 +1,317 @@
+/* eslint no-await-in-loop: 0 */
+
+/**
+ * Live Collaboration Integration Test
+ *
+ * Prerequisites / .env file (place at frontend/javascripts/test/puppeteer/.env):
+ *   WK_AUTH_TOKEN=<admin auth token>
+ *   URL=https://master.webknossos.xyz   # optional, defaults to master.webknossos.xyz
+ *
+ * Run with:
+ *   yarn vitest --config vitest_collaboration.config.ts
+ */
+
+import { sleep } from "libs/utils";
+import type { Browser } from "puppeteer-core";
+import type { APIAnnotationType } from "types/api_types";
+import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
+import { setPositionAction } from "viewer/model/actions/flycam_actions";
+import { proofreadMergeAction } from "viewer/model/actions/proofread_actions";
+import { cycleToolAction } from "viewer/model/actions/ui_actions";
+import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import { setActiveCellAction } from "viewer/model/actions/volumetracing_actions";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { getTeams, setCollaborationModeForAnnotation, updateDatasetTeams } from "../../../admin/rest_api";
+import {
+  DATASET_NAME,
+  HDF5_MAPPING_NAME,
+  MERGE_SOURCE_AGGLOMERATE_ID,
+  MERGE_SOURCE_POSITION,
+  MERGE_TARGET_POSITION,
+  N_COLLAB_USERS,
+  PARALLEL_USER_OPERATIONS,
+  WK_AUTH_TOKEN,
+} from "./config";
+import {
+  getNewPage,
+  openAnnotationPage,
+  setupPageForProofreading,
+  startCollectionOfPageErrors,
+  waitForDataLoading,
+  waitForMappingEnabled,
+} from "./page_helpers";
+import {
+  activateUser,
+  adminRequestOptions,
+  createHybridAnnotation,
+  getDefaultTeamId,
+  getOrCreateUser,
+  resolveDatasetId,
+  shareAnnotationWithTeam,
+  type APIAnnotation,
+  getUserAuthToken,
+} from "./rest_helpers";
+
+vi.mock("libs/request", async (importOriginal) => {
+  // The request lib is globally mocked for unit tests. In the screenshot tests, we actually
+  // want to run the proper fetch calls so we revert to the original implementation.
+  return await importOriginal();
+});
+
+// ---------------------------------------------------------------------------
+// Shared state
+// ---------------------------------------------------------------------------
+
+const browsers: Browser[] = [];
+let annotation: APIAnnotation;
+const collabUsers: Array<{ id: string; email: string; authToken: string }> = [];
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+describe("Live Collaboration", () => {
+  beforeAll(async () => {
+    console.log("beforeAll");
+    const datasetId = await resolveDatasetId(DATASET_NAME);
+    console.log(`Dataset "${DATASET_NAME}" → id=${datasetId}`);
+
+    for (let i = 0; i < N_COLLAB_USERS; i++) {
+      const email = `collab_test_user_${i}@example.com`;
+      const password = `CollabTestPwd${i}!`;
+      const user = await getOrCreateUser(email, password, `CollabUser${i}`, "Test");
+      if (!user.isActive) {
+        await activateUser(user.id);
+      }
+      const authToken = await getUserAuthToken(email, password);
+      collabUsers.push({ id: user.id, email, authToken });
+    }
+
+    const teams = await getTeams(adminRequestOptions());
+    const defaultTeam = teams.find((team) => team.name === "Default");
+    if (defaultTeam == null) {
+      throw new Error("Could not find default team.");
+    }
+    await updateDatasetTeams(datasetId, [defaultTeam.id], adminRequestOptions());
+    annotation = await createHybridAnnotation(datasetId);
+
+    const defaultTeamId = await getDefaultTeamId();
+    await shareAnnotationWithTeam(annotation, defaultTeamId);
+  }, 120_000);
+
+  afterAll(async () => {
+    await sleep(1_000_000);
+
+    await Promise.all(browsers.map((b) => b.close()));
+    // TODO: optionally delete the annotation and the test users created above
+  }, 1_000_000);
+
+  it("admin sets up the annotation: activate mapping, switch to proofreading, merge, save, enable othersMayEdit", async () => {
+    const { page, browser } = await getNewPage(WK_AUTH_TOKEN!);
+    browsers.push(browser);
+    const adminErrors = startCollectionOfPageErrors(page);
+
+    await openAnnotationPage(page, annotation.id);
+    await setupPageForProofreading(page);
+    await waitForDataLoading(page);
+
+    // Patch the active user in the store to be a superuser so the collaboration
+    // mode controls become available. This only affects the local Redux state —
+    // no backend call is made.
+    const activeUser = await page.evaluate(() => window.webknossos.DEV.store.getState().activeUser);
+    const setActiveUserActionObj = setActiveUserAction({ ...activeUser, isSuperUser: true } as any);
+    await page.evaluate(
+      (action) => window.webknossos.DEV.store.dispatch(action),
+      setActiveUserActionObj,
+    );
+
+    // Activate HDF5 mapping
+    await page.evaluate(
+      (mappingName: string) =>
+        window.webknossos.apiReady().then((api) => api.data.activateMapping(mappingName, "HDF5")),
+      HDF5_MAPPING_NAME,
+    );
+    await waitForMappingEnabled(page);
+    console.log(`Mapping "${HDF5_MAPPING_NAME}" activated`);
+
+    // Switch to proofreading tool by cycling until activeTool.id === "PROOFREAD".
+    // We can't use SetActiveToolAction because the tool instance cannot be serialized/deserialized
+    // for puppeteer.
+    const cycleAction = cycleToolAction(false);
+    await page.evaluate(
+      (action, maxAttempts) => {
+        const store = window.webknossos.DEV.store;
+        for (let i = 0; i < maxAttempts; i++) {
+          if (store.getState().uiInformation.activeTool.id === "PROOFREAD") break;
+          store.dispatch(action);
+        }
+      },
+      cycleAction,
+      100,
+    );
+
+    // Set the merge source as the active segment.
+    const setActiveCellActionObj = setActiveCellAction(
+      MERGE_SOURCE_AGGLOMERATE_ID,
+      MERGE_SOURCE_POSITION,
+    );
+    await page.evaluate(
+      (action) => window.webknossos.DEV.store.dispatch(action),
+      setActiveCellActionObj,
+    );
+
+    console.log("about to merge stuff");
+    await sleep(3_000);
+    // Merge two segments.
+    const proofreadMergeActionObj = proofreadMergeAction(MERGE_TARGET_POSITION);
+    await page.evaluate(
+      (action) => window.webknossos.DEV.store.dispatch(action),
+      proofreadMergeActionObj,
+    );
+    // TODO: replace the sleep with a proper completion signal once the
+    //       proofreading saga exposes one (e.g. poll
+    //       api.tracing.hasUnsavedChanges() or watch the by-product trees).
+    console.log("Wait 3s for merge operation");
+    await sleep(3_000);
+
+    // Save
+    await page.evaluate(() => window.webknossos.apiReady().then((api) => api.tracing.save()));
+    console.log("Admin saved annotation");
+
+    // Enable Concurrent collab mode and save again to persist
+    const setCollaborationModeActionObj = setCollaborationModeAction("Concurrent");
+    await page.evaluate(
+      (action) => window.webknossos.DEV.store.dispatch(action),
+      setCollaborationModeActionObj,
+    );
+    await setCollaborationModeForAnnotation(
+      annotation.id,
+      annotation.typ as APIAnnotationType,
+      "Concurrent",
+      adminRequestOptions(),
+    );
+    await page.evaluate(() => window.webknossos.apiReady().then((api) => api.tracing.save()));
+    console.log("Concurrent collaboration mode enabled and saved");
+
+    expect(adminErrors, "Admin session produced page errors").toHaveLength(0);
+
+    await page.close();
+  }, 120_000);
+
+  it("collaborators merge/split in parallel, all save successfully, no errors", async () => {
+    const sessions: Array<{ page: import("puppeteer-core").Page; errors: string[] }> = [];
+
+    for (const { authToken } of collabUsers) {
+      console.log("Open page with token=", authToken);
+      const { page, browser } = await getNewPage(authToken);
+      browsers.push(browser);
+      sessions.push({ page, errors: startCollectionOfPageErrors(page) });
+    }
+
+    // Open the annotation and activate the mapping in all sessions in parallel
+    await Promise.all(
+      sessions.map(async ({ page }) => {
+        await openAnnotationPage(page, annotation.id);
+        await setupPageForProofreading(page);
+        await waitForDataLoading(page);
+
+        const cycleActionCollab = cycleToolAction(false);
+        await page.evaluate(
+          (action, maxAttempts) => {
+            const store = window.webknossos.DEV.store;
+            for (let i = 0; i < maxAttempts; i++) {
+              if (store.getState().uiInformation.activeTool.id === "PROOFREAD") break;
+              store.dispatch(action);
+            }
+          },
+          cycleActionCollab,
+          100,
+        );
+      }),
+    );
+
+    // All users perform their merge operations concurrently
+    await Promise.all(
+      sessions.map(async ({ page }, i) => {
+        const op = PARALLEL_USER_OPERATIONS[i];
+        if (op == null) return;
+
+        await page.evaluate(
+          (action) => window.webknossos.DEV.store.dispatch(action),
+          setPositionAction(op.sourcePosition),
+        );
+        const setActiveCellActionObjCollab = setActiveCellAction(
+          op.sourceAgglomerateId,
+          op.sourcePosition,
+        );
+        await page.evaluate(
+          (action) => window.webknossos.DEV.store.dispatch(action),
+          setActiveCellActionObjCollab,
+        );
+
+        await sleep(2000); // give WK sagas some time to create the actual segment item
+
+        const proofreadMergeActionObjCollab = proofreadMergeAction(op.targetPosition);
+        await page.evaluate(
+          (action) => window.webknossos.DEV.store.dispatch(action),
+          proofreadMergeActionObjCollab,
+        );
+
+        // TODO: replace with a proper completion signal (see note in admin test)
+        await sleep(3_000);
+      }),
+    );
+
+    // No page errors in any session
+    for (let i = 0; i < sessions.length; i++) {
+      expect(
+        sessions[i].errors,
+        `User ${i} (${collabUsers[i].email}) had page errors`,
+      ).toHaveLength(0);
+    }
+
+    // Save all sessions so the merges are persisted before we verify.
+    await Promise.all(
+      sessions.map(({ page }) =>
+        page.evaluate(() => window.webknossos.apiReady().then((api) => api.tracing.save())),
+      ),
+    );
+
+    // Open a fresh admin page, reload the annotation, and verify all merges.
+    const { page: adminVerifyPage, browser: adminVerifyBrowser } = await getNewPage(WK_AUTH_TOKEN!);
+    browsers.push(adminVerifyBrowser);
+    await openAnnotationPage(adminVerifyPage, annotation.id);
+    await setupPageForProofreading(adminVerifyPage);
+    await waitForDataLoading(adminVerifyPage);
+
+    await waitForMappingEnabled(adminVerifyPage);
+
+    const segLayerName = await adminVerifyPage.evaluate(() =>
+      window.webknossos.apiReady().then((api) => api.data.getVolumeTracingLayerIds()[0]),
+    );
+
+    for (const op of PARALLEL_USER_OPERATIONS) {
+      const [sourceMappedId, targetMappedId] = await adminVerifyPage.evaluate(
+        async (layerName, sourcePos, targetPos) => {
+          const api = await (window as any).webknossos.apiReady();
+          return Promise.all([
+            api.data.getMappedDataValue(layerName, sourcePos),
+            api.data.getMappedDataValue(layerName, targetPos),
+          ]);
+        },
+        segLayerName,
+        op.sourcePosition,
+        op.targetPosition,
+      );
+      console.log("Check merge operation");
+      expect(
+        sourceMappedId,
+        `Merge of ${op.sourcePosition} → ${op.targetPosition} not reflected`,
+      ).toBe(targetMappedId);
+    }
+
+    await adminVerifyPage.close();
+
+    await Promise.all(sessions.map(({ page }) => page.close()));
+  }, 300_000);
+});

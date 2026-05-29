@@ -2055,6 +2055,10 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   if (version != null) {
     params.set("version", version.toString());
   }
+  console.log(
+    "getAgglomeratesForSegmentsFromTracingstore > ids=",
+    segmentIds.sort(<T extends NumberLike>(a: T, b: T) => Number(a - b)),
+  );
   const segmentIdBuffer = serializeProtoListOfLong<T>(
     // The tracing store expects the ids to be sorted
     segmentIds.sort(<T extends NumberLike>(a: T, b: T) => Number(a - b)),
@@ -2079,6 +2083,10 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   // Ensure that the values are bigint if the keys are bigint
   const adaptToType = getAdaptToTypeFunctionFromList(segmentIds);
 
+  console.log(
+    "getAgglomeratesForSegmentsFromTracingstore > received list of longs",
+    parseProtoListOfLong(listArrayBuffer),
+  );
   const keyValues = zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
   // @ts-expect-error
   return new Map(keyValues);

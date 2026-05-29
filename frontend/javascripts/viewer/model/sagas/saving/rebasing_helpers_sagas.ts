@@ -185,6 +185,7 @@ function* addMissingSegmentsToLoadedMappings(
         Array.from(mappingWithMissingIds as NumberLikeMap),
       ),
     );
+    console.log("addMissingSegmentsToLoadedMappings > setMappingAction");
     yield* put(
       setMappingAction(
         volumeTracingId,
@@ -238,8 +239,13 @@ export function* updateSaveQueueEntriesToStateAfterRebase(
     saveQueue,
   );
   yield* call(addMissingSegmentsToLoadedMappings, idsToFetch);
+  console.log("updateSaveQueueEntriesToStateAfterRebase > activeMappingByLayer GET:");
   const activeMappingByLayer = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer,
+  );
+  console.log(
+    "updateSaveQueueEntriesToStateAfterRebase > activeMappingByLayer",
+    activeMappingByLayer,
   );
   // Reminder: Rebase = Rewind (local actions) + Forward (to newest backend state) + Reapply (local actions)
   const annotationBeforeReapplying = yield* select((state) => state.annotation);

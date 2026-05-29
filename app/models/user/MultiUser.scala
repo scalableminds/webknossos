@@ -219,8 +219,8 @@ class UserKeyboardShortcutsConfigsDAO @Inject()(sqlClient: SqlClient)(implicit e
 
   def updateForUser(multiUserId: ObjectId, shortcutsConfig: JsObject): Fox[Unit] =
     for {
-      _ <- run(q"""INSERT INTO webknossos.multiUser_keyboardShortcutsConfigs(_user, shortcutsConfig)
+      _ <- run(q"""INSERT INTO webknossos.multiUser_keyboardShortcutsConfigs(_multiUser, shortcutsConfig)
                    VALUES($multiUserId, $shortcutsConfig)
-                   ON CONFLICT (_user) DO UPDATE SET shortcutsConfig = EXCLUDED.shortcutsConfig""".asUpdate)
+                   ON CONFLICT (_multiUser) DO UPDATE SET shortcutsConfig = EXCLUDED.shortcutsConfig""".asUpdate)
     } yield ()
 }

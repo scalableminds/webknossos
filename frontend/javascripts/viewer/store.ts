@@ -501,6 +501,7 @@ export type ProofreadingPostProcessingInfo = {
 };
 export type SaveState = {
   readonly isBusy: boolean;
+  readonly isSavingDisabled: boolean; // true when the user explicitly disabled saving in the WK menu dropdown
   readonly queue: Array<SaveQueueEntry>;
   readonly lastSaveTimestamp: number;
   readonly progressInfo: ProgressInfo;
@@ -578,6 +579,7 @@ type UiInformation = {
   readonly globalProgress: number; // 0 to 1
   readonly showDropzoneModal: boolean;
   readonly showVersionRestore: boolean;
+  readonly isRestoringVersion: boolean;
   readonly showDownloadModal: boolean;
   readonly showPythonClientModal: boolean;
   readonly showShareModal: boolean;

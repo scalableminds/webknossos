@@ -189,8 +189,9 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
         return state;
       }
 
-      return updateKey2(state, "annotation", "restrictions", {
-        allowSave: false,
+      return update(state, {
+        annotation: { restrictions: { allowSave: { $set: false } } },
+        save: { isSavingDisabled: { $set: true } },
       });
     }
 

@@ -3,6 +3,7 @@ import FastTooltip from "components/fast_tooltip";
 import { useWkSelector } from "libs/react_hooks";
 import { useDispatch } from "react-redux";
 import { AltOrOptionKey, CtrlOrCmdKey } from "viewer/constants";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { getTreeAndNodeOrNull } from "viewer/model/accessors/skeletontracing_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
@@ -40,7 +41,7 @@ export function useNodeContextMenuOptions(
   const skeletonTracing = useWkSelector((state) => state.annotation.skeleton);
   const voxelSize = useWkSelector((state) => state.dataset.dataSource.scale);
   const useLegacyBindings = useWkSelector((state) => state.userConfiguration.useLegacyBindings);
-  const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
+  const allowUpdate = useWkSelector(mayEditAnnotation);
   const isProofreadingActive = useWkSelector(
     (state) => state.uiInformation.activeTool === AnnotationTool.PROOFREAD,
   );

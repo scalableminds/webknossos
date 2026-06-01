@@ -14,6 +14,7 @@ import type { Dispatch } from "redux";
 import { getAntdTheme } from "theme";
 import type { BorderTabType, OrthoView } from "viewer/constants";
 import { ArbitraryViews, BorderTabs, OrthoViews } from "viewer/constants";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { setBorderOpenStatusAction } from "viewer/model/actions/ui_actions";
 import { setViewportAction } from "viewer/model/actions/view_mode_actions";
 import type { BorderOpenStatus, BusyBlockingInfo, WebknossosState } from "viewer/store";
@@ -586,7 +587,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
 function mapStateToProps(state: WebknossosState): StateProps {
   return {
     displayScalebars: state.userConfiguration.displayScalebars,
-    isUpdateTracingAllowed: state.annotation.isUpdatingCurrentlyAllowed,
+    isUpdateTracingAllowed: mayEditAnnotation(state),
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
   };
 }

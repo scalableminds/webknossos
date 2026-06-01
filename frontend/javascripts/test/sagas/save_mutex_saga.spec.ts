@@ -15,6 +15,7 @@ import { setCollaborationModeAction } from "viewer/model/actions/annotation_acti
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { proofreadMergeAction } from "viewer/model/actions/proofread_actions";
+import { disableSavingAction } from "viewer/model/actions/save_actions";
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import {
   setActiveCellAction,
@@ -507,6 +508,66 @@ describe("Save Mutex Saga", () => {
       Store.dispatch(setToolAction(annotationToolWithoutLiveCollabSupport.tool));
       await sleep(100);
       expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("When disableSavingAction is dispatched", () => {
+    describe.each([
+      { collaborationMode: "Exclusive" as const },
+      { collaborationMode: "Concurrent" as const },
+    ])("collaborationMode=$collaborationMode", ({ collaborationMode }) => {
+      it<WebknossosTestContext>("the mutex acquiring saga should be cancelled", async (context: WebknossosTestContext) => {
+        await setupWebknossosForTestingWithRestrictions(context, collaborationMode, true);
+        const task = startSaga(function* task() {
+          // subscribeToAnnotationMutex blocks until the mutex is acquired.
+          // For Exclusive, the continuous saga is already acquiring; for Concurrent,
+          // subscribing triggers the ad-hoc saga.
+          yield call(subscribeToAnnotationMutex, "Test");
+          expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
+          context.mocks.acquireAnnotationMutex.mockClear();
+          Store.dispatch(disableSavingAction());
+          yield sleep(200);
+          context.mocks.acquireAnnotationMutex.mockClear();
+          // Wait longer than one acquire interval (1s in test mode) to confirm no retries.
+          yield sleep(2000);
+          expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
+        });
+        await task.toPromise();
+      });
+
+      it<WebknossosTestContext>("a held mutex should be released", async (context: WebknossosTestContext) => {
+        await setupWebknossosForTestingWithRestrictions(context, collaborationMode, true);
+        const task = startSaga(function* task() {
+          yield call(subscribeToAnnotationMutex, "Test");
+          expect(context.mocks.acquireAnnotationMutex).toHaveBeenCalled();
+          expect(context.mocks.releaseAnnotationMutex).not.toHaveBeenCalled();
+          Store.dispatch(disableSavingAction());
+          yield sleep(200);
+          expect(context.mocks.releaseAnnotationMutex).toHaveBeenCalled();
+          yield assertMutexStoreProperties({
+            hasAnnotationMutex: false,
+            blockingUser: null,
+            isUpdatingCurrentlyAllowed: true,
+          });
+        });
+        await task.toPromise();
+      });
+
+      it<WebknossosTestContext>("the saga should not restart after a collaboration mode change following disableSavingAction", async (context: WebknossosTestContext) => {
+        await setupWebknossosForTestingWithRestrictions(context, collaborationMode, true);
+        const task = startSaga(function* task() {
+          yield call(subscribeToAnnotationMutex, "Test");
+          Store.dispatch(disableSavingAction());
+          yield sleep(200);
+          context.mocks.acquireAnnotationMutex.mockClear();
+          // Switching collaboration mode would normally restart the acquiring saga.
+          yield put(setCollaborationModeAction("Exclusive"));
+          yield put(setCollaborationModeAction("Concurrent"));
+          yield sleep(2000);
+          expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
+        });
+        await task.toPromise();
+      });
     });
   });
 });

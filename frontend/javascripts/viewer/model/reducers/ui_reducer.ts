@@ -134,6 +134,12 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
+    case "SET_KEYBOARD_SHORTCUT_CONFIG_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showKeyboardShortcutConfigModal: action.visible,
+      });
+    }
+
     case "SET_DUPLICATE_ANNOTATION_MODAL_VISIBILITY": {
       return updateKey(state, "uiInformation", {
         showDuplicateAnnotationModal: action.visible,

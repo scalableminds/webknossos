@@ -480,13 +480,13 @@ class AnnotationService @Inject()(
                  description: String,
                  newAnnotationId: ObjectId): Annotation =
     Annotation(newAnnotationId,
-                              dataset._id,
-                              None,
-                              user._id,
-                              annotationLayers.toList,
-                              description,
-                              name = name.getOrElse(""),
-                              typ = annotationType)
+               dataset._id,
+               None,
+               user._id,
+               annotationLayers.toList,
+               description,
+               name = name.getOrElse(""),
+               typ = annotationType)
 
   def updateTeamsForSharedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(
       implicit ctx: DBAccessContext): Fox[Unit] =

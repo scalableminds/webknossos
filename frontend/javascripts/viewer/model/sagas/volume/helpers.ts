@@ -9,6 +9,7 @@ import Constants, {
   OverwriteModeEnum,
   type Vector3,
 } from "viewer/constants";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import {
   getDatasetBoundingBox,
   getLayerByName,
@@ -179,7 +180,7 @@ export function* labelWithVoxelBuffer2D(
   viewport: OrthoView,
   wroteVoxelsBox?: BooleanBox,
 ): Saga<void> {
-  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
+  const allowUpdate = yield* select(mayEditAnnotation);
   const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
   if (!allowUpdate) return;
   if (voxelBuffer.isEmpty()) return;

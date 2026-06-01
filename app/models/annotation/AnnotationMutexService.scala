@@ -18,9 +18,9 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
-case class AnnotationMutex(annotationId: ObjectId, userId: ObjectId, expiry: Instant)
+case class AnnotationMutex(annotationId: ObjectId, userId: ObjectId, sessionId: String, expiry: Instant)
 
-case class MutexResult(canEdit: Boolean, blockedByUser: Option[ObjectId])
+case class MutexResult(canEdit: Boolean, blockedByUser: Option[ObjectId], blockedBySessionId: Option[String])
 
 class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
                                        val actorSystem: ActorSystem,
@@ -41,16 +41,16 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
 
   private val defaultExpiryTime = wkConf.WebKnossos.Annotation.Mutex.expiryTime
 
-  def tryAcquiringAnnotationMutex(annotationId: ObjectId, userId: ObjectId): Fox[MutexResult] =
+  def tryAcquiringAnnotationMutex(annotationId: ObjectId, userId: ObjectId, sessionId: String): Fox[MutexResult] =
     for {
       _ <- Fox.successful(logger.info(s"Try acquire mutex inner for user $userId and id $annotationId."))
-      ownerUserId <- annotationMutexDAO.tryAcquireReturningOwner(annotationId, userId, Instant.in(defaultExpiryTime)) ?~> "Trying to acquire or find current annotation mutex failed."
+      mutex <- annotationMutexDAO.tryAcquire(annotationId, userId, sessionId, Instant.in(defaultExpiryTime)) ?~> "Trying to acquire or find current annotation mutex failed."
       _ <- Fox.successful(
-        logger.info(s"Try acquire mutex inner for user $userId and id $annotationId got ownerUserId $ownerUserId."))
-      result = if (ownerUserId == userId)
-        MutexResult(canEdit = true, None)
+        logger.info(s"Try acquire mutex inner for user $userId and id $annotationId got userId ${mutex.userId} and sessionId ${mutex.sessionId}."))
+      result = if (mutex.userId == userId && mutex.sessionId == sessionId)
+        MutexResult(canEdit = true, None, None)
       else
-        MutexResult(canEdit = false, blockedByUser = Some(ownerUserId))
+        MutexResult(canEdit = false, blockedByUser = Some(mutex.userId), blockedBySessionId = Some(mutex.sessionId))
     } yield result
 
   def release(annotationId: ObjectId, userId: ObjectId): Fox[Unit] =
@@ -63,7 +63,8 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
     } yield
       Json.obj(
         "canEdit" -> mutexResult.canEdit,
-        "blockedByUser" -> userJsonOpt
+        "blockedByUser" -> userJsonOpt,
+        "blockedBySessionId" -> mutexResult.blockedBySessionId
       )
 
 }
@@ -75,40 +76,45 @@ class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionC
     AnnotationMutex(
       ObjectId(r._Annotation),
       ObjectId(r._User),
+      r.sessionid,
       Instant.fromSql(r.expiry)
     )
 
-  def tryAcquireReturningOwner(annotationId: ObjectId, userId: ObjectId, expiry: Instant): Fox[ObjectId] = {
+  def tryAcquire(annotationId: ObjectId, userId: ObjectId, sessionId: String, expiry: Instant): Fox[AnnotationMutex] = {
+    // Returns the mutex object for the given annotation (either with the requested user & session or an old/existing mutex).
+    //
     // Parallel executions can produce an empty result when both upserts race and one might read
     // an outdated version in the lower select but an updated one in the insert part.
     // This is possible due to the default isolation level.
     // As this rarely happens, we simply retry in this case.
-    def attempt(remainingAttempts: Int): Fox[ObjectId] =
+    def attempt(remainingAttempts: Int): Fox[AnnotationMutex] =
       for {
         _ <- Fox.successful(
           logger.info(s"Trying Upserting Mutex for user $userId with attempt ${4 - remainingAttempts}"))
         rows <- run(q"""WITH attempt AS (
-                          INSERT INTO webknossos.annotation_mutexes(_annotation, _user, expiry)
-                          VALUES($annotationId, $userId, $expiry)
+                          INSERT INTO webknossos.annotation_mutexes(_annotation, _user, sessionId, expiry)
+                          VALUES($annotationId, $userId, $sessionId, $expiry)
                           ON CONFLICT (_annotation)
                             DO UPDATE SET
                               _user = EXCLUDED._user,
+                              sessionId = EXCLUDED.sessionId,
                               expiry = EXCLUDED.expiry
-                            WHERE webknossos.annotation_mutexes._user = EXCLUDED._user
-                               OR webknossos.annotation_mutexes.expiry < NOW()
-                          RETURNING _annotation, _user, expiry
+                            WHERE (webknossos.annotation_mutexes._user = EXCLUDED._user AND
+                              webknossos.annotation_mutexes.sessionId = EXCLUDED.sessionId
+                            ) OR webknossos.annotation_mutexes.expiry < NOW()
+                          RETURNING _annotation, _user, sessionId, expiry
                         )
-                        SELECT _annotation, _user, expiry FROM attempt
+                        SELECT _annotation, _user, sessionId, expiry FROM attempt
 
                         UNION ALL
 
-                        SELECT _annotation, _user, expiry
+                        SELECT _annotation, _user, sessionId, expiry
                         FROM webknossos.annotation_mutexes
                         WHERE _annotation = $annotationId
                           AND expiry >= NOW()
                           AND NOT EXISTS (SELECT 1 FROM attempt)""".as[AnnotationMutexesRow]) ?~> "Upserting annotation mutex failed."
         result <- rows.headOption match {
-          case Some(first)                   => Fox.successful(parse(first).userId)
+          case Some(first)                   => Fox.successful(parse(first))
           case None if remainingAttempts > 1 => attempt(remainingAttempts - 1)
           case None                          => Fox.failure("Could not find mutex for annotation after retries.")
         }

@@ -13,7 +13,7 @@ BRANCH_FILE=$(git diff master --name-only --diff-filter=A \
   | { grep -v "/reversions/" || true; } \
   | head -1)
 if [[ -z "$BRANCH_FILE" ]]; then
-  echo "No new evolution file found in this branch. Pass the old number explicitly." >&2
+  echo "No new evolution file found in this branch." >&2
   exit 1
 fi
 OLD_NUM=$(basename "$BRANCH_FILE" | grep -oE '^[0-9]+')
@@ -27,13 +27,19 @@ if [[ ! -f "$EVOLUTIONS_DIR/$OLD_FORWARD_EVOLUTION" ]]; then
 fi
 STEM=${OLD_FORWARD_EVOLUTION#${OLD_PAD}-}   # e.g. "job-error-details.sql"
 
-# --- determine the next free number ---
+# --- determine the next free number (excluding the branch file itself) ---
 MAX_NUM=$(ls "$EVOLUTIONS_DIR"/*.sql \
+  | grep -v "/${OLD_FORWARD_EVOLUTION}$" \
   | xargs -I{} basename {} \
   | grep -oE '^[0-9]+' \
   | sort -n \
   | tail -1)
 NEW_NUM=$((MAX_NUM + 1))
+
+if [[ "$OLD_NUM" -eq "$NEW_NUM" ]]; then
+  echo "Evolution $OLD_NUM is already at the correct number. No changes necessary."
+  exit 0
+fi
 
 NEW_FORWARD_EVOLUTION="${NEW_NUM}-${STEM}"
 NEW_REVERSION="${NEW_NUM}-${STEM}"

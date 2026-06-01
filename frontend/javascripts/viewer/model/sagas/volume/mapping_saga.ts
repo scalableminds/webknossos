@@ -82,6 +82,7 @@ import { setActiveCellAction, updateSegmentAction } from "../../actions/volumetr
 import type DataCube from "../../bucket_data_handling/data_cube";
 import { listenToStoreProperty } from "../../helpers/listener_helpers";
 import { ensureWkInitialized } from "../ready_sagas";
+import { waitUntilNotBusy } from "../saga_helpers";
 
 type APIMappings = Record<string, APIMapping>;
 type Container<T> = { value: T };
@@ -353,16 +354,7 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
         console.log("Cancelled updateHdf5");
       }
 
-      isBusy = yield* select((state) => state.uiInformation.busyBlockingInfo.isBusy);
-      if (isBusy) {
-        // Wait until WK is not busy anymore.
-        yield* take(
-          ((action: Action) =>
-            action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
-            !action.value.isBusy) as ActionPattern,
-        );
-      }
-
+      yield call(waitUntilNotBusy);
       console.log("Retrying updateHdf5...");
     }
   }

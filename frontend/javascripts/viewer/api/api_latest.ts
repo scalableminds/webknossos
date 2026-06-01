@@ -53,6 +53,7 @@ import {
 } from "viewer/controller/combinations/skeleton_handlers";
 import UrlManager from "viewer/controller/url_manager";
 import type { WebKnossosModel } from "viewer/model";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import {
   getLayerBoundingBox,
   getLayerByName,
@@ -2337,7 +2338,7 @@ class DataApi {
     optAdditionalCoordinates?: AdditionalCoordinate[] | null,
   ) {
     const state = Store.getState();
-    const allowUpdate = state.annotation.isUpdatingCurrentlyAllowed;
+    const allowUpdate = mayEditAnnotation(state);
     const additionalCoordinates =
       optAdditionalCoordinates === undefined
         ? state.flycam.additionalCoordinates

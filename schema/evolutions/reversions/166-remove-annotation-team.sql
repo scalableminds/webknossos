@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 165 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
+do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 166 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
 DROP VIEW webknossos.annotations_;
 
@@ -53,6 +53,6 @@ ALTER TABLE webknossos.annotations
 
 CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHERE NOT isDeleted;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 164;
+UPDATE webknossos.releaseInformation SET schemaVersion = 165;
 
 COMMIT TRANSACTION;

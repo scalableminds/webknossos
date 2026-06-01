@@ -685,6 +685,7 @@ object Msg {
     val needsInvite: String =
       "Registration without invite is not enabled for this WEBKNOSSOS instance."
     val invalidInviteToken: String = "This invite token is invalid."
+    val inviteTeamMembershipsFailed: String = "Could not retrieve team memberships for invite."
     val invalidFirstName: String = "Please check your first name for any special characters."
     val invalidLastName: String = "Please check your last name for any special characters."
     object Token {

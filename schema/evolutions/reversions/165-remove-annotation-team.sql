@@ -2,6 +2,8 @@ START TRANSACTION;
 
 do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 165 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
+DROP VIEW webknossos.annotations_;
+
 ALTER TABLE webknossos.annotations ADD COLUMN _team TEXT;
 
 -- Task and TracingBase annotations: use the team of the associated project
@@ -48,6 +50,8 @@ WHERE a.typ = 'Orphan';
 ALTER TABLE webknossos.annotations
   ALTER COLUMN _team SET NOT NULL,
   ADD CONSTRAINT _team_objectId CHECK (_team ~ '^[0-9a-f]{24}$');
+
+CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHERE NOT isDeleted;
 
 UPDATE webknossos.releaseInformation SET schemaVersion = 164;
 

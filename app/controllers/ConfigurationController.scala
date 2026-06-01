@@ -30,10 +30,9 @@ class ConfigurationController @Inject()(
     addNoCacheHeaderFallback(Ok(Json.toJson(config)))
   }
 
-  def update: Action[JsValue] = sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
+  def update: Action[JsObject] = sil.SecuredAction.async(validateJson[JsObject]) { implicit request =>
     for {
-      configuration <- request.body.asOpt[JsObject].toFox ?~> Msg.User.Configuration.invalid
-      _ <- userService.updateUserConfiguration(request.identity, configuration)
+      _ <- userService.updateUserConfiguration(request.identity, request.body)
     } yield JsonOk(Msg.User.Configuration.updateSuccess)
   }
 
@@ -45,14 +44,10 @@ class ConfigurationController @Inject()(
     } yield addNoCacheHeaderFallback(Ok(shortcuts))
   }
 
-  def updateKeyboardShortcutsConfig(): Action[JsValue] = sil.SecuredAction.async(parse.json(maxLength = 204800)) {
+  def updateKeyboardShortcutsConfig(): Action[JsObject] = sil.SecuredAction.async(validateJson[JsObject]) {
     implicit request =>
       for {
-        shortcuts <- request.body
-          .validate[JsObject]
-          .asOpt
-          .toFox ?~> Msg.User.Configuration.invalidKeyboardShortcutsConfig
-        _ <- userKeyboardShortcutsConfigsDAO.updateForMultiUser(request.identity._multiUser, shortcuts)
+        _ <- userKeyboardShortcutsConfigsDAO.updateForMultiUser(request.identity._multiUser, request.body)
       } yield JsonOk(Msg.User.Configuration.updatedKeyboardShortcutsConfig)
   }
 
@@ -71,13 +66,12 @@ class ConfigurationController @Inject()(
       } yield Ok(Json.toJson(configuration))
     }
 
-  def updateDatasetViewConfiguration(datasetId: ObjectId): Action[JsValue] =
-    sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
+  def updateDatasetViewConfiguration(datasetId: ObjectId): Action[JsObject] =
+    sil.SecuredAction.async(validateJson[JsObject]) { implicit request =>
+      val conf = request.body.fields.toMap
+      val datasetConf = conf - "layers"
+      val layerConf = conf.get("layers")
       for {
-        jsConfiguration <- request.body.asOpt[JsObject].toFox ?~> Msg.User.Configuration.invalidForDataset
-        conf = jsConfiguration.fields.toMap
-        datasetConf = conf - "layers"
-        layerConf = conf.get("layers")
         _ <- userService.updateDatasetViewConfiguration(request.identity, datasetId, datasetConf, layerConf)
       } yield JsonOk(Msg.User.Configuration.updateSuccessForDataset)
     }
@@ -89,13 +83,12 @@ class ConfigurationController @Inject()(
       } yield Ok(Json.toJson(configuration))
     }
 
-  def updateDatasetAdminViewConfiguration(datasetId: ObjectId): Action[JsValue] =
-    sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
+  def updateDatasetAdminViewConfiguration(datasetId: ObjectId): Action[JsObject] =
+    sil.SecuredAction.async(validateJson[JsObject]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext)
         _ <- datasetService.isEditableBy(dataset, Some(request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
-        jsObject <- request.body.asOpt[JsObject].toFox ?~> Msg.User.Configuration.invalidForDataset
-        _ <- datasetConfigurationService.updateAdminViewConfigurationFor(dataset, jsObject.fields.toMap)
+        _ <- datasetConfigurationService.updateAdminViewConfigurationFor(dataset, request.body.fields.toMap)
       } yield JsonOk(Msg.User.Configuration.updateSuccessForDataset)
     }
 }

@@ -30,7 +30,7 @@ import {
   mockInitialBucketAndAgglomerateData,
   getPositionForSegmentId,
 } from "./proofreading_test_utils";
-import { waitUntilNotBusy } from "test/helpers/saga_test_helpers";
+import { waitUntilNotBusy } from "viewer/model/sagas/saga_helpers";
 
 describe("Proofreading (Single User)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {

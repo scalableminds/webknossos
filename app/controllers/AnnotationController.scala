@@ -451,7 +451,7 @@ class AnnotationController @Inject()(
       _ <- annotationDAO.insertOne(clonedAnnotation)
     } yield clonedAnnotation
 
-  def tryAcquiringAnnotationMutex(id: ObjectId, sessionId: String): Action[AnyContent] =
+  def tryAcquiringAnnotationMutex(id: ObjectId, sessionId: String = ""): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
         for {

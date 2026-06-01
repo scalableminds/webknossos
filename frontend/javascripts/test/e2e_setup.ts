@@ -162,7 +162,7 @@ export function resetDatabase() {
   // The parameter needs to be set globally here.
   // See https://github.com/shelljs/shelljs/issues/981#issuecomment-626840798
   shell.config.fatal = true;
-  shell.exec("tools/postgres/dbtool.js prepare-test-db", { silent: true });
+  shell.exec("tools/postgres/dbtool.js prepare-test-db-no-schema-refresh", { silent: true });
 }
 export {
   tokenUserA,

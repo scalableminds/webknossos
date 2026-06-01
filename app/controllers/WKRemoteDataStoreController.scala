@@ -80,7 +80,8 @@ class WKRemoteDataStoreController @Inject()(
             uploadInfo.folderId,
             user,
             isVirtual = uploadInfo.isVirtual.getOrElse(true),
-            creationType = DatasetCreationType.Upload
+            creationType = DatasetCreationType.Upload,
+            importURLOpt = None,
           ) ?~> Msg.Dataset.Upload.createFailed
           _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeams, user)(AuthorizedAccessContext(user))
           additionalInfo = ReserveAdditionalInformation(dataset._id, dataset.directoryName)
@@ -146,10 +147,12 @@ class WKRemoteDataStoreController @Inject()(
           updated <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
           _ <- Fox.runIf(!request.body.needsConversion)(usedStorageService.refreshStorageReportForDataset(updated))
           _ <- Fox.runIf(!request.body.needsConversion)(datasetService.scanRealpathsIfVirtual(updated))
+          _ <- Fox.runIf(!request.body.needsConversion)(
+            datasetService.writeMirrorForVirtual(updated)(GlobalAccessContext))
           _ <- Fox.runIf(request.body.needsConversion) {
             for {
               voxelSizeFactor <- request.body.voxelSizeFactor.toFox ?~> Msg.Dataset.Upload.needsConversionMissingVoxelSize
-              _ <- jobService.submitConvertToWkwJob(dataset, user, voxelSizeFactor, request.body.voxelSizeUnit)
+              _ <- jobService.submitConvertToWkwJob(updated, user, voxelSizeFactor, request.body.voxelSizeUnit)
             } yield ()
           }
         } yield Ok

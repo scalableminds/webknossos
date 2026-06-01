@@ -1434,22 +1434,33 @@ export async function exploreRemoteDataset(
   return { dataSource, report };
 }
 
+export async function findDatasetByImportUrl(importUrl: string): Promise<APIDataset | null> {
+  return await Request.receiveJSON(
+    `/api/datasets/findByImportURL?importURL=${encodeURIComponent(importUrl)}`,
+  );
+}
+
 type StoreRemoteDatasetArgs = {
   dataStoreName: string;
   dataSource: APIDataSource;
   folderId?: string | null;
+  importUrl?: string | null;
 };
 
 export async function storeRemoteDataset(
   dataStoreName: string,
   datasetName: string,
   dataSource: APIDataSource,
+  importUrl: string | null | undefined,
   folderId: string | null,
 ): Promise<NewDatasetReply> {
   const payload: StoreRemoteDatasetArgs = {
     dataSource,
-    dataStoreName: dataStoreName,
+    dataStoreName,
   };
+  if (importUrl) {
+    payload["importUrl"] = importUrl;
+  }
   if (folderId) {
     payload["folderId"] = folderId;
   }

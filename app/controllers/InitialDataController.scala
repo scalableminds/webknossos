@@ -8,7 +8,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
-import models.aimodels.{AiModel, AiModelCategory, AiModelDAO}
+import models.aimodels.{AiModel, AiModelCategory, AiModelDAO, AiModelService}
 import models.annotation.{TracingStore, TracingStoreDAO}
 import models.dataset._
 import models.folder.{Folder, FolderDAO, FolderService}
@@ -62,6 +62,7 @@ class InitialDataService @Inject()(userService: UserService,
                                    dataStoreDAO: DataStoreDAO,
                                    folderDAO: FolderDAO,
                                    aiModelDAO: AiModelDAO,
+                                   aiModelService: AiModelService,
                                    folderService: FolderService,
                                    tracingStoreDAO: TracingStoreDAO,
                                    teamDAO: TeamDAO,
@@ -163,18 +164,85 @@ Samplecountry
   private val defaultDataStore =
     DataStore(conf.Datastore.name, conf.Http.uri, conf.Datastore.publicUri.getOrElse(conf.Http.uri), conf.Datastore.key)
   private val defaultAiModel = AiModel(
-    ObjectId("66544a56d20000af0e42ba0f"),
-    defaultOrganization._id,
-    List(),
-    defaultDataStore.name,
-    defaultUser._id,
-    None,
-    List.empty,
-    None,
+    _id = ObjectId("66544a56d20000af0e42ba0f"),
+    _organization = Some(defaultOrganization._id),
+    _sharedOrganizations = List(),
+    _dataStore = defaultDataStore.name,
+    _user = Some(defaultUser._id),
+    _trainingJob = None,
+    _trainingAnnotations = List.empty,
+    path = None,
     uploadToPathIsPending = false,
-    "sample_ai_model",
-    Some("Works if model files are manually placed at binaryData/sample_organization/66544a56d20000af0e42ba0f/"),
-    Some(AiModelCategory.em_neurons)
+    name = "sample_ai_model",
+    comment =
+      Some("Works if model files are manually placed at binaryData/sample_organization/66544a56d20000af0e42ba0f/"),
+    category = Some(AiModelCategory.em_neurons)
+  )
+  private val pretrainedNeuronModel = AiModel(
+    _id = aiModelService.pretrainedNeuronModelId,
+    _organization = None,
+    _sharedOrganizations = List(),
+    _dataStore = defaultDataStore.name,
+    _user = None,
+    _trainingJob = None,
+    _trainingAnnotations = List.empty,
+    path = None,
+    uploadToPathIsPending = false,
+    name = "Neuron Segmentation",
+    comment = Some(
+      "Advanced neuron segmentation and reconstruction pipeline. Optimized for dense neuronal tissue from SEM, FIB-SEM, SBEM, Multi-SEM microscopes."),
+    category = Some(AiModelCategory.em_neurons),
+    isSuperUserOnly = false,
+    isPretrained = true
+  )
+  private val pretrainedMitochondriaModel = AiModel(
+    _id = aiModelService.pretrainedMitochondriaModelId,
+    _organization = None,
+    _sharedOrganizations = List(),
+    _dataStore = defaultDataStore.name,
+    _user = None,
+    _trainingJob = None,
+    _trainingAnnotations = List.empty,
+    path = None,
+    uploadToPathIsPending = false,
+    name = "Mitochondria Detection",
+    comment = Some(
+      "Instance segmentation model for mitochondria detection. Optimized for EM data. Powered by [MitoNet (Conrad & Narayan 2022)](https://volume-em.github.io/empanada)."),
+    category = Some(AiModelCategory.em_mitochondria),
+    isSuperUserOnly = false,
+    isPretrained = true
+  )
+  private val pretrainedNucleiModel = AiModel(
+    _id = aiModelService.pretrainedNucleiModelId,
+    _organization = None,
+    _sharedOrganizations = List(),
+    _dataStore = defaultDataStore.name,
+    _user = None,
+    _trainingJob = None,
+    _trainingAnnotations = List.empty,
+    path = None,
+    uploadToPathIsPending = false,
+    name = "Nuclei Detection",
+    comment = Some("Instance segmentation model for nuclei detection. Optimized for EM data."),
+    category = Some(AiModelCategory.em_nuclei),
+    isSuperUserOnly = true,
+    isPretrained = true
+  )
+  private val pretrainedSomaModel = AiModel(
+    _id = aiModelService.pretrainedSomataModelId,
+    _organization = None,
+    _sharedOrganizations = List(),
+    _dataStore = defaultDataStore.name,
+    _user = None,
+    _trainingJob = None,
+    _trainingAnnotations = List.empty,
+    path = None,
+    uploadToPathIsPending = false,
+    name = "Soma Detection",
+    comment = Some("Instance segmentation model for soma detection. Optimized for EM data."),
+    category = Some(AiModelCategory.em_somata),
+    isSuperUserOnly = true,
+    isPretrained = true
   )
   private val defaultDataSource = UsableDataSource(
     id = DataSourceId("l4_sample_remote", defaultOrganization._id),
@@ -339,6 +407,8 @@ Samplecountry
       _ <- updateLocalTracingStorePublicUri()
       _ <- insertLocalDataStoreIfEnabled()
       _ <- insertLocalTracingStoreIfEnabled()
+      _ <- insertPretrainedAiModels()
+      // All insert calls below this assertion are only executed in the dev setup (where initialDataEnabled is true)!
       _ <- assertInitialDataEnabled
       _ <- organizationService.assertNoOrganizationsPresent
       _ <- insertRootFolder()
@@ -354,6 +424,7 @@ Samplecountry
       _ <- insertDataset()
       _ <- insertRemoteNDDataset()
       _ <- insertAiModel()
+
     } yield ()
 
   private def assertInitialDataEnabled: Fox[Unit] =
@@ -473,11 +544,21 @@ Samplecountry
       } else Fox.successful(())
   }
 
-  private def insertAiModel(): Fox[Unit] = aiModelDAO.findAll.flatMap { aiModels =>
-    if (aiModels.isEmpty) {
-      aiModelDAO.insertOne(defaultAiModel)
-    } else Fox.successful(())
-  }
+  private def insertModelIfAbsent(model: AiModel): Fox[Unit] =
+    aiModelDAO.findOne(model._id).shiftBox.flatMap {
+      case Full(_) => Fox.successful(())
+      case _       => aiModelDAO.insertOne(model)
+    }
+
+  private def insertAiModel(): Fox[Unit] = insertModelIfAbsent(defaultAiModel)
+
+  private def insertPretrainedAiModels(): Fox[Unit] =
+    for {
+      _ <- insertModelIfAbsent(pretrainedNeuronModel)
+      _ <- insertModelIfAbsent(pretrainedMitochondriaModel)
+      _ <- insertModelIfAbsent(pretrainedNucleiModel)
+      _ <- insertModelIfAbsent(pretrainedSomaModel)
+    } yield ()
 
   def insertLocalDataStoreIfEnabled(): Fox[Unit] =
     if (storeModules.localDataStoreEnabled) {

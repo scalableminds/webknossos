@@ -25,6 +25,7 @@ RUNNING_PID
 .metals
 metals.sbt
 __pycache__/
+.jvmopts
 
 
 # Webknossos

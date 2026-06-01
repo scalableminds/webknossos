@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 164 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
+do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 165 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
 CREATE TABLE webknossos.multiUser_keyboardShortcutsConfigs(
   _multiUser TEXT CONSTRAINT _multiUser_objectId CHECK (_multiUser ~ '^[0-9a-f]{24}$') NOT NULL,
@@ -12,6 +12,6 @@ CREATE TABLE webknossos.multiUser_keyboardShortcutsConfigs(
 ALTER TABLE webknossos.multiUser_keyboardShortcutsConfigs
   ADD CONSTRAINT multiUser_ref FOREIGN KEY(_multiUser) REFERENCES webknossos.multiUsers(_id) ON DELETE CASCADE DEFERRABLE;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 165;
+UPDATE webknossos.releaseInformation SET schemaVersion = 166;
 
 COMMIT TRANSACTION;

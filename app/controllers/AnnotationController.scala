@@ -224,7 +224,6 @@ class AnnotationController @Inject()(
           dataset._id,
           None,
           ObjectId.dummyId,
-          ObjectId.dummyId,
           List(
             AnnotationLayer(TracingId.dummy,
                             AnnotationLayerType.Skeleton,
@@ -444,13 +443,13 @@ class AnnotationController @Inject()(
         datasetBoundingBox = dataSource.map(_.boundingBox)
       )
       newAnnotationLayers = newAnnotationProto.annotationLayers.map(AnnotationLayer.fromProto)
-      clonedAnnotation <- annotationService.createFrom(user,
-                                                       dataset,
-                                                       newAnnotationLayers,
-                                                       AnnotationType.Explorational,
-                                                       None,
-                                                       annotation.description,
-                                                       newAnnotationId) ?~> Msg.Annotation.createFailed
+      clonedAnnotation = annotationService.createFrom(user,
+                                                      dataset,
+                                                      newAnnotationLayers,
+                                                      AnnotationType.Explorational,
+                                                      None,
+                                                      annotation.description,
+                                                      newAnnotationId)
       _ <- annotationDAO.insertOne(clonedAnnotation)
     } yield clonedAnnotation
 

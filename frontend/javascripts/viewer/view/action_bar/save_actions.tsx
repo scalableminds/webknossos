@@ -10,6 +10,7 @@ import { useDispatch } from "react-redux";
 import { type APIUser, TracingTypeEnum } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
 import UrlManager from "viewer/controller/url_manager";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getTracingType } from "viewer/model/accessors/tracing_accessor";
 import { setSkeletonTracingAction } from "viewer/model/actions/skeletontracing_actions";
@@ -32,14 +33,7 @@ function ReadOnlyActions({
   const dispatch = useDispatch();
   return (
     <Space.Compact>
-      <ButtonComponent
-        key="read-only-button"
-        danger
-        disabled
-        style={{
-          backgroundColor: "var(--ant-color-warning)",
-        }}
-      >
+      <ButtonComponent key="read-only-button" className="read-only-button" danger disabled>
         Read only
       </ButtonComponent>
       <ButtonWithAuthentication
@@ -126,9 +120,7 @@ function SandboxActions({
 function SaveActions() {
   const restrictions = useWkSelector((state) => state.annotation.restrictions);
   const annotationOwner = useWkSelector((state) => state.annotation.owner);
-  const isUpdatingCurrentlyAllowed = useWkSelector(
-    (state) => state.annotation.isUpdatingCurrentlyAllowed,
-  );
+  const isUpdatingCurrentlyAllowed = useWkSelector(mayEditAnnotation);
   const activeUser = useWkSelector((state) => state.activeUser);
   const hasTracing = useWkSelector(
     (state) => state.annotation.skeleton != null || state.annotation.volumes.length > 0,

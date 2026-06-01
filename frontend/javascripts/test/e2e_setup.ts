@@ -127,6 +127,15 @@ global.localStorage = {
   key: vi.fn(),
 };
 
+global.sessionStorage = {
+  getItem: vi.fn().mockReturnValue(undefined),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+  length: 0,
+  key: vi.fn(),
+};
+
 /**
  * Writes a TypeScript file that type-checks an object against a given type using the regular TS compiler.
  * Useful for verifying that API responses match their expected TypeScript interfaces during testing.

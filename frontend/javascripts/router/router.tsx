@@ -6,7 +6,7 @@ import RegistrationView from "admin/auth/registration_view";
 import StartResetPasswordView from "admin/auth/start_reset_password_view";
 import VerifyEmailView from "admin/auth/verify_email_view";
 import DatasetAddView from "admin/dataset/dataset_add_view";
-import { DatasetURLImport } from "admin/dataset/dataset_url_import";
+import { DatasetURLImport, datasetURLImportLoader } from "admin/dataset/dataset_url_import";
 import JobListView from "admin/job/job_list_view";
 import OrganizationView from "admin/organization/organization_view";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
@@ -59,7 +59,6 @@ import DatasetSettingsDeleteTab from "dashboard/dataset/dataset_settings_delete_
 import DatasetSettingsMetadataTab from "dashboard/dataset/dataset_settings_metadata_tab";
 import DatasetSettingsSharingTab from "dashboard/dataset/dataset_settings_sharing_tab";
 import DatasetSettingsViewConfigTab from "dashboard/dataset/dataset_settings_viewconfig_tab";
-import { useWkSelector } from "libs/react_hooks";
 import { PageNotFoundView } from "./page_not_found_view";
 import {
   AnnotationsRouteWrapper,
@@ -84,12 +83,10 @@ const AsyncWorkflowListView = loadable<EmptyObject>(
 );
 
 function RootLayout() {
-  const isAuthenticated = useWkSelector((state) => state.activeUser != null);
-
   return (
     <Layout>
       <CommandPalette />
-      <Navbar isAuthenticated={isAuthenticated} />
+      <Navbar />
       <Content>
         <ErrorBoundary>
           <Outlet />
@@ -139,6 +136,7 @@ const routes = createRoutesFromElements(
     />
     <Route
       path="/import"
+      loader={datasetURLImportLoader}
       element={
         <SecuredRoute requiresAdminOrManagerRole>
           <DatasetURLImport />

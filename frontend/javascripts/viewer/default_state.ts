@@ -204,12 +204,13 @@ const defaultState: WebknossosState = {
   save: {
     queue: [],
     isBusy: false,
+    isSavingDisabled: false,
     lastSaveTimestamp: 0,
     progressInfo: {
       processedActionCount: 0,
       totalActionCount: 0,
     },
-    mutexState: { hasAnnotationMutex: false, blockedByUser: null },
+    mutexState: { hasAnnotationMutex: false, blockedByUser: null, blockedBySessionId: null },
     rebaseRelevantServerAnnotationState: {
       annotationDescription: "",
       annotationVersion: 1,
@@ -266,6 +267,7 @@ const defaultState: WebknossosState = {
     activeUserBoundingBoxId: null,
     showDropzoneModal: false,
     showVersionRestore: false,
+    isRestoringVersion: false,
     showDownloadModal: false,
     showAddScriptModal: false,
     showMergeAnnotationModal: false,

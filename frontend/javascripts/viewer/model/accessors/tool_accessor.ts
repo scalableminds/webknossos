@@ -191,6 +191,8 @@ export const Toolkits: Record<Toolkit, AnnotationTool[]> = {
   ] as AnnotationTool[],
 };
 
+export const WRITE_TOOLS = without(Toolkits.ALL_TOOLS, ...Toolkits.READ_ONLY_TOOLS);
+
 export const VolumeTools = without(
   Toolkits.VOLUME_TOOLS,
   AnnotationTool.MOVE,

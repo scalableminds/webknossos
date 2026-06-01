@@ -585,6 +585,7 @@ export function* performCutFromAllNeighbours(
 export function* simulatePartitionedSplitAgglomeratesViaMeshes(
   context: WebknossosTestContext,
   loadMeshes: boolean,
+  injectVersionFn?: () => void,
 ): Saga<void> {
   const { tracingId } = yield* select((state) => state.annotation.volumes[0]);
   const expectedInitialMapping = new Map([
@@ -621,6 +622,9 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
     (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
   );
   expect(mapping1).toEqual(expectedInitialMapping);
+  if (injectVersionFn != null) {
+    injectVersionFn();
+  }
   yield put(setCollaborationModeAction("Concurrent"));
 
   //Activate Multi-split tool

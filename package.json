@@ -62,7 +62,7 @@
     "vite-plugin-svgr": "^4.5.0",
     "vite-plugin-wasm": "^3.5.0",
     "vite-tsconfig-paths": "^6.0.3",
-    "vitest": "^4.0.16"
+    "vitest": "^4.1.7"
   },
   "scripts": {
     "dev": "vite",
@@ -72,10 +72,10 @@
     "start-fossildb": "fossildb/run.sh > fossildb/logs",
     "dev-gen-tls": "./tools/gen-ssl-dev-certs.sh",
     "@comment build-backend": "Only check for errors in the backend code like done by the CI. This command is not needed to run WEBKNOSSOS",
-    "build-backend": "yarn build-wk-backend && yarn build-wk-datastore && yarn build-wk-tracingstore && rm webknossos-tracingstore/conf/messages webknossos-datastore/conf/messages",
+    "build-backend": "yarn build-wk-backend && yarn build-wk-datastore && yarn build-wk-tracingstore",
     "build-wk-backend": "sbt -no-colors -DfailOnWarning compile stage",
-    "build-wk-datastore": "sbt -no-colors -DfailOnWarning \"project webknossosDatastore\" copyMessages compile stage",
-    "build-wk-tracingstore": "sbt -no-colors -DfailOnWarning \"project webknossosTracingstore\" copyMessages compile stage",
+    "build-wk-datastore": "sbt -no-colors -DfailOnWarning \"project webknossosDatastore\" compile stage",
+    "build-wk-tracingstore": "sbt -no-colors -DfailOnWarning \"project webknossosTracingstore\" compile stage",
     "build-dev": "vite build",
     "build-watch": "vite build --watch",
     "listening": "lsof -i:5005,7155,9000,9001,9002",
@@ -97,12 +97,14 @@
     "refresh-e2e-snapshots": "yarn remove-e2e-snapshots && mkdir -p frontend/javascripts/test/snapshots/type_check && yarn stash-cmake-cache && ./tools/docker-env.sh sbt -v 'testOnly e2e.* -- -Ddatastore.watchFileSystem.enabled=false' && yarn stash-pop-cmake-cache",
     "refresh-all-snapshots": "yarn remove-all-snapshots && yarn test && yarn refresh-e2e-snapshots",
     "check-untyped-saga-selects": "./tools/check-no-untyped-select-imports.js",
-    "check-frontend": "yarn run biome check --diagnostic-level=error --max-diagnostics 50 frontend package.json  && tools/assert-no-test-only.sh && yarn check-untyped-saga-selects",
+    "check-untyped-use-selector": "./tools/check-no-untyped-use-selector-imports.js",
+    "check-frontend": "yarn run biome check --diagnostic-level=error --max-diagnostics 50 frontend package.json  && tools/assert-no-test-only.sh && yarn check-untyped-saga-selects && yarn check-untyped-use-selector",
     "fix-frontend": "yarn run biome check --diagnostic-level=error --max-diagnostics 50 frontend package.json --write && echo Please proofread the applied suggestions, as they may not be safe.",
     "format-backend": "sbt \";scalafmt; util/scalafmt; webknossosTracingstore/scalafmt; webknossosDatastore/scalafmt\"",
     "lint-backend": "sbt \";scapegoat\"",
     "licenses-backend": "sbt dumpLicenseReport",
     "docs": "node_modules/.bin/documentation build --shallow frontend/javascripts/viewer/api/api_loader.ts frontend/javascripts/viewer/api/api_latest.ts --github --project-name \"WEBKNOSSOS Frontend API\" --format html --output public/assets/docs/frontend-api",
+    "@comment docs": "To preview the documentation under docs/, go to your local webknossos-libs repository, cd into its docs directory, ensure the webknossos repo is symlinked there (e.g. `wk-repo -> /<some path>/webknossos`), then run ./generate.sh to start a local documentation server.",
     "refresh-schema": "./tools/postgres/dbtool.js refresh-schema && rm -f target/scala-2.13/src_managed/schema/com/scalableminds/webknossos/schema/Tables.scala",
     "enable-storage-scan": "./tools/postgres/dbtool.js enable-storage-scan",
     "enable-jobs": "sed -i -e 's/jobsEnabled = false/jobsEnabled = true/g' ./conf/application.conf; sed -i -e 's/voxelyticsEnabled = false/voxelyticsEnabled = true/g' ./conf/application.conf; ./tools/postgres/dbtool.js enable-jobs",
@@ -128,6 +130,7 @@
     "@dnd-kit/core": "^6.1.0",
     "@dnd-kit/sortable": "^8.0.0",
     "@github/webauthn-json": "^2.1.1",
+    "@rwh/keystrokes": "github:scalableminds/Keystrokes#dist/keystrokes",
     "@scalableminds/prop-types": "^15.8.1",
     "@tanstack/query-async-storage-persister": "^5.83.0",
     "@tanstack/react-query": "^5.83.0",
@@ -173,7 +176,7 @@
     "pako": "^2.1.0",
     "pretty-bytes": "^5.1.0",
     "process": "^0.11.10",
-    "protobufjs": "^6.11.4",
+    "protobufjs": "^6.11.5",
     "react": "^19.2.0",
     "react-colorful": "^5.6.1",
     "react-command-palette": "^0.22.1",
@@ -199,7 +202,18 @@
     "url": "^0.11.0",
     "url-join": "^4.0.0"
   },
-  "packageManager": "yarn@4.9.2",
+  "packageManager": "yarn@4.14.1",
+  "dependenciesMeta": {
+    "esbuild": {
+      "built": true
+    },
+    "msw": {
+      "built": true
+    },
+    "protobufjs": {
+      "built": true
+    }
+  },
   "resolutions": {
     "distance-transform": "https://github.com/scalableminds/distance-transform"
   }

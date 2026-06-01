@@ -526,9 +526,9 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       });
     }
 
-    case "SET_OTHERS_MAY_EDIT_FOR_ANNOTATION": {
+    case "SET_COLLABORATION_MODE": {
       return updateKey(state, "annotation", {
-        othersMayEdit: action.othersMayEdit,
+        collaborationMode: action.collaborationMode,
       });
     }
 

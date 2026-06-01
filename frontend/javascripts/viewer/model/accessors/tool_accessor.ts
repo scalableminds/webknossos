@@ -191,11 +191,14 @@ export const Toolkits: Record<Toolkit, AnnotationTool[]> = {
   ] as AnnotationTool[],
 };
 
+export const WRITE_TOOLS = without(Toolkits.ALL_TOOLS, ...Toolkits.READ_ONLY_TOOLS);
+
 export const VolumeTools = without(
   Toolkits.VOLUME_TOOLS,
   AnnotationTool.MOVE,
   AnnotationTool.VOXEL_PIPETTE,
 );
+export const VolumeToolsWithProofreading = VolumeTools.concat([AnnotationTool.PROOFREAD]);
 
 // MeasurementTools is not part of Toolkits as it should not
 // be shown in the UI. Also, it's important that the MOVE tool is not in

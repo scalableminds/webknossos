@@ -1,5 +1,5 @@
 import type { ModifierKeys } from "libs/input";
-import { InputKeyboard, InputKeyboardNoLoop, InputMouse } from "libs/input";
+import { InputKeyboard, InputMouse } from "libs/input";
 import type { Matrix4x4 } from "libs/mjs";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
@@ -40,14 +40,17 @@ import {
   createTreeAction,
   requestDeleteBranchPointAction,
   setActiveNodeAction,
-  toggleAllTreesAction,
-  toggleInactiveTreesAction,
 } from "viewer/model/actions/skeletontracing_actions";
 import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { api } from "viewer/singletons";
 import Store from "viewer/store";
 import ArbitraryView from "viewer/view/arbitrary_view";
+import type {
+  KeyboardShortcutHandlerMap,
+  KeyboardShortcutsMap,
+} from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
+import { buildKeyBindingsFromConfig } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_utils";
 import { downloadScreenshot } from "viewer/view/rendering_utils";
 import { SkeletonToolController } from "../combinations/tool_controls";
 
@@ -71,8 +74,6 @@ class ArbitraryController extends React.PureComponent<Props> {
   input: {
     mouseController: InputMouse | null | undefined;
     keyboard?: InputKeyboard;
-    keyboardLoopDelayed?: InputKeyboard;
-    keyboardNoLoop?: InputKeyboardNoLoop;
   };
 
   // @ts-expect-error ts-migrate(2564) FIXME: Property 'storePropertyUnsubscribers' has no initi... Remove this comment to see the full error message
@@ -132,131 +133,169 @@ class ArbitraryController extends React.PureComponent<Props> {
     });
   }
 
-  initKeyboard(): void {
+  getHandlerMap(): Partial<KeyboardShortcutHandlerMap> {
     const getRotateValue = () => Store.getState().userConfiguration.rotateValue;
+    return {
+      // Looped navigation (no delay)
+      MOVE_FORWARD_WITH_RECORDING: {
+        onPressedWithRepeat: (timeFactor: number) => {
+          this.setRecord(true);
+          this.move(timeFactor);
+        },
+      },
+      MOVE_BACKWARD_WITH_RECORDING: {
+        onPressedWithRepeat: (timeFactor: number) => {
+          this.setRecord(true);
+          this.move(-timeFactor);
+        },
+      },
+      MOVE_FORWARD_WITHOUT_RECORDING: {
+        onPressedWithRepeat: (timeFactor: number) => {
+          this.setRecord(false);
+          this.move(timeFactor);
+        },
+      },
+      MOVE_BACKWARD_WITHOUT_RECORDING: {
+        onPressedWithRepeat: (timeFactor: number) => {
+          this.setRecord(false);
+          this.move(-timeFactor);
+        },
+      },
+      YAW_FLYCAM_POSITIVE_AT_CENTER: {
+        onPressedWithRepeat: (timeFactor: number) => {
+          Store.dispatch(yawFlycamAction(getRotateValue() * timeFactor));
+        },
+      },
+      YAW_FLYCAM_INVERTED_AT_CENTER: {
+        onPressedWithRepeat: (timeFactor: number) => {
+          Store.dispatch(yawFlycamAction(-getRotateValue() * timeFactor));
+        },
+      },
+      PITCH_FLYCAM_POSITIVE_AT_CENTER: {
+        onPressedWithRepeat: (timeFactor: number) => {
+          Store.dispatch(pitchFlycamAction(getRotateValue() * timeFactor));
+        },
+      },
+      PITCH_FLYCAM_INVERTED_AT_CENTER: {
+        onPressedWithRepeat: (timeFactor: number) => {
+          Store.dispatch(pitchFlycamAction(-getRotateValue() * timeFactor));
+        },
+      },
+      YAW_FLYCAM_POSITIVE_IN_DISTANCE: {
+        onPressedWithRepeat: (timeFactor: number) => {
+          Store.dispatch(yawFlycamAction(getRotateValue() * timeFactor, true));
+        },
+      },
+      YAW_FLYCAM_INVERTED_IN_DISTANCE: {
+        onPressedWithRepeat: (timeFactor: number) => {
+          Store.dispatch(yawFlycamAction(-getRotateValue() * timeFactor, true));
+        },
+      },
+      PITCH_FLYCAM_POSITIVE_IN_DISTANCE: {
+        onPressedWithRepeat: (timeFactor: number) => {
+          Store.dispatch(pitchFlycamAction(-getRotateValue() * timeFactor, true));
+        },
+      },
+      PITCH_FLYCAM_INVERTED_IN_DISTANCE: {
+        onPressedWithRepeat: (timeFactor: number) => {
+          Store.dispatch(pitchFlycamAction(getRotateValue() * timeFactor, true));
+        },
+      },
+      ZOOM_IN_FLIGHT: {
+        onPressedWithRepeat: () => {
+          Store.dispatch(zoomInAction());
+        },
+      },
+      ZOOM_OUT_FLIGHT: {
+        onPressedWithRepeat: () => {
+          Store.dispatch(zoomOutAction());
+        },
+      },
+      // Looped navigation with delay
+      INCREASE_MOVE_VALUE_FLIGHT: {
+        onPressedWithRepeat: () => this.changeMoveValue(25),
+        delayed: true,
+      },
+      DECREASE_MOVE_VALUE_FLIGHT: {
+        onPressedWithRepeat: () => this.changeMoveValue(-25),
+        delayed: true,
+      },
+      // No-loop shortcuts
+      DELETE_ACTIVE_NODE: {
+        onPressed: () => {
+          Store.dispatch(deleteNodeAsUserAction(Store.getState()));
+        },
+      },
+      CREATE_TREE_FLIGHT: {
+        onPressed: () => {
+          Store.dispatch(createTreeAction());
+        },
+      },
+      CREATE_BRANCH_POINT_FLIGHT: {
+        onPressed: () => {
+          this.pushBranch();
+        },
+      },
+      DELETE_BRANCH_POINT_FLIGHT: {
+        onPressed: () => {
+          Store.dispatch(requestDeleteBranchPointAction());
+        },
+      },
+      RECENTER_ACTIVE_NODE_FLIGHT: {
+        onPressed: () => {
+          const state = Store.getState();
+          const skeletonTracing = state.annotation.skeleton;
 
-    this.input.keyboard = new InputKeyboard({
-      // KeyboardJS is sensitive to ordering (complex combos first)
-      // Move
-      space: (timeFactor: number) => {
-        this.setRecord(true);
-        this.move(timeFactor);
+          if (!skeletonTracing) {
+            return;
+          }
+
+          const activeNode = getActiveNode(skeletonTracing);
+          if (activeNode) {
+            api.tracing.centerPositionAnimated(
+              getNodePosition(activeNode, state),
+              false,
+              activeNode.rotation,
+              true,
+            );
+          }
+        },
       },
-      "ctrl + space": (timeFactor: number) => {
-        this.setRecord(true);
-        this.move(-timeFactor);
+      NEXT_NODE_FORWARD_FLIGHT: {
+        onPressed: () => {
+          this.nextNode(true);
+        },
       },
-      f: (timeFactor: number) => {
-        this.setRecord(false);
-        this.move(timeFactor);
+      NEXT_NODE_BACKWARD_FLIGHT: {
+        onPressed: () => {
+          this.nextNode(false);
+        },
       },
-      d: (timeFactor: number) => {
-        this.setRecord(false);
-        this.move(-timeFactor);
+      ROTATE_VIEW_180: {
+        onPressed: () => {
+          Store.dispatch(yawFlycamAction(Math.PI));
+        },
       },
-      // Rotate at centre
-      "shift + left": (timeFactor: number) => {
-        Store.dispatch(yawFlycamAction(getRotateValue() * timeFactor));
+      DOWNLOAD_SCREENSHOT_FLIGHT: {
+        onPressed: downloadScreenshot,
       },
-      "shift + right": (timeFactor: number) => {
-        Store.dispatch(yawFlycamAction(-getRotateValue() * timeFactor));
-      },
-      "shift + up": (timeFactor: number) => {
-        Store.dispatch(pitchFlycamAction(getRotateValue() * timeFactor));
-      },
-      "shift + down": (timeFactor: number) => {
-        Store.dispatch(pitchFlycamAction(-getRotateValue() * timeFactor));
-      },
-      // Rotate in distance
-      left: (timeFactor: number) => {
-        Store.dispatch(yawFlycamAction(getRotateValue() * timeFactor, true));
-      },
-      right: (timeFactor: number) => {
-        Store.dispatch(yawFlycamAction(-getRotateValue() * timeFactor, true));
-      },
-      up: (timeFactor: number) => {
-        Store.dispatch(pitchFlycamAction(-getRotateValue() * timeFactor, true));
-      },
-      down: (timeFactor: number) => {
-        Store.dispatch(pitchFlycamAction(getRotateValue() * timeFactor, true));
-      },
-      // Zoom in/out
-      i: () => {
-        Store.dispatch(zoomInAction());
-      },
-      o: () => {
-        Store.dispatch(zoomOutAction());
-      },
-    });
-    // Own InputKeyboard with delay for changing the Move Value, because otherwise the values changes to drastically
-    this.input.keyboardLoopDelayed = new InputKeyboard(
-      {
-        h: () => this.changeMoveValue(25),
-        g: () => this.changeMoveValue(-25),
-      },
-      {
-        delay: Store.getState().userConfiguration.keyboardDelay,
-      },
+    };
+  }
+
+  reloadKeyboardShortcuts(keyboardShortcutsConfig: KeyboardShortcutsMap) {
+    this.input.keyboard?.destroy();
+    const bindings = buildKeyBindingsFromConfig(keyboardShortcutsConfig, this.getHandlerMap());
+    this.input.keyboard = new InputKeyboard(bindings);
+  }
+
+  initKeyboard(): void {
+    this.storePropertyUnsubscribers.push(
+      listenToStoreProperty(
+        (state) => state.keyboardConfiguration.shortcutsConfig,
+        (keyboardShortcutsConfig) => this.reloadKeyboardShortcuts(keyboardShortcutsConfig),
+        true,
+      ),
     );
-    this.input.keyboardNoLoop = new InputKeyboardNoLoop({
-      "1": () => {
-        Store.dispatch(toggleAllTreesAction());
-      },
-      "2": () => {
-        Store.dispatch(toggleInactiveTreesAction());
-      },
-      // Delete active node
-      delete: () => {
-        Store.dispatch(deleteNodeAsUserAction(Store.getState()));
-      },
-      backspace: () => {
-        Store.dispatch(deleteNodeAsUserAction(Store.getState()));
-      },
-      c: () => {
-        Store.dispatch(createTreeAction());
-      },
-      // Branches
-      b: () => this.pushBranch(),
-      j: () => {
-        Store.dispatch(requestDeleteBranchPointAction());
-      },
-      // Recenter active node
-      s: () => {
-        const state = Store.getState();
-        const skeletonTracing = state.annotation.skeleton;
-
-        if (!skeletonTracing) {
-          return;
-        }
-
-        const activeNode = getActiveNode(skeletonTracing);
-        if (activeNode) {
-          api.tracing.centerPositionAnimated(
-            getNodePosition(activeNode, state),
-            false,
-            activeNode.rotation,
-            true,
-          );
-        }
-      },
-      ".": () => this.nextNode(true),
-      ",": () => this.nextNode(false),
-      // Rotate view by 180 deg
-      r: () => {
-        Store.dispatch(yawFlycamAction(Math.PI));
-      },
-      // Delete active node and recenter last node
-      "shift + space": () => {
-        const skeletonTracing = Store.getState().annotation.skeleton;
-
-        if (!skeletonTracing) {
-          return;
-        }
-
-        Store.dispatch(deleteNodeAsUserAction(Store.getState()));
-      },
-      q: downloadScreenshot,
-    });
   }
 
   setRecord(record: boolean): void {
@@ -326,16 +365,6 @@ class ArbitraryController extends React.PureComponent<Props> {
           }
         },
       ),
-      listenToStoreProperty(
-        (state) => state.userConfiguration.keyboardDelay,
-        (keyboardDelay) => {
-          const { keyboardLoopDelayed } = this.input;
-
-          if (keyboardLoopDelayed != null) {
-            keyboardLoopDelayed.delay = keyboardDelay;
-          }
-        },
-      ),
     );
   }
 
@@ -389,8 +418,6 @@ class ArbitraryController extends React.PureComponent<Props> {
   destroyInput() {
     this.input.mouseController?.destroy();
     this.input.keyboard?.destroy();
-    this.input.keyboardLoopDelayed?.destroy();
-    this.input.keyboardNoLoop?.destroy();
   }
 
   handleCreateNode(): void {

@@ -1,9 +1,11 @@
 import features from "features";
-import type { ModifierKeys } from "libs/input";
+import type { ModifierKeys, MouseBindingMap } from "libs/input";
 import { V3 } from "libs/mjs";
+import Toast from "libs/toast";
 import { clamp } from "libs/utils";
 import { document } from "libs/window";
 import { Color } from "three";
+import { userSettings } from "types/schemas/user_settings.schema";
 import {
   ContourModeEnum,
   type OrthoView,
@@ -30,7 +32,7 @@ import {
   zoomPlanes,
 } from "viewer/controller/combinations/move_handlers";
 import {
-  handleAgglomerateSkeletonAtClick,
+  handleAgglomerateTreeAtClick,
   handleClickSegment,
 } from "viewer/controller/combinations/segmentation_handlers";
 import {
@@ -41,7 +43,10 @@ import {
   handleOpenContextMenu,
   handleSelectNode,
   maybeGetNodeIdFromPosition,
+  moveAlongDirection,
   moveNode,
+  toPrecedingNode,
+  toSubsequentNode,
 } from "viewer/controller/combinations/skeleton_handlers";
 import {
   changeBrushSizeIfBrushIsActiveBy,
@@ -55,21 +60,37 @@ import {
   handlePickCell,
 } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
-import { AnnotationTool, isBrushTool } from "viewer/model/accessors/tool_accessor";
+import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
+import {
+  AnnotationTool,
+  type AnnotationToolId,
+  isBrushTool,
+} from "viewer/model/accessors/tool_accessor";
 import { calculateGlobalPos } from "viewer/model/accessors/view_mode_accessor";
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
   getContourTracingMode,
+  getMaximumBrushSize,
   getSegmentColorAsHSLA,
 } from "viewer/model/accessors/volumetracing_accessor";
-import { finishedResizingUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
+import {
+  addUserBoundingBoxAction,
+  finishedResizingUserBoundingBoxAction,
+} from "viewer/model/actions/annotation_actions";
 import {
   minCutAgglomerateWithPositionAction,
   proofreadAtPosition,
   proofreadMergeAction,
   toggleSegmentInPartitionAction,
 } from "viewer/model/actions/proofread_actions";
+import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
+import {
+  createBranchPointAction,
+  createTreeAction,
+  requestDeleteBranchPointAction,
+} from "viewer/model/actions/skeletontracing_actions";
+import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
 import {
   hideMeasurementTooltipAction,
   setActiveUserBoundingBoxId,
@@ -82,11 +103,16 @@ import {
   computeQuickSelectForPointAction,
   computeQuickSelectForRectAction,
   confirmQuickSelectAction,
+  createCellAction,
   hideBrushAction,
+  interpolateSegmentationLayerAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { api } from "viewer/singletons";
+import { api, Model } from "viewer/singletons";
 import Store, { type UserConfiguration } from "viewer/store";
+import { getDefaultBrushSizes } from "viewer/view/action_bar/tools/brush_presets";
 import type ArbitraryView from "viewer/view/arbitrary_view";
+import type { KeyboardShortcutHandlerMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
+import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_segment_id_modal";
 import type PlaneView from "viewer/view/plane_view";
 
 export type ActionDescriptor = {
@@ -114,8 +140,29 @@ export type ActionDescriptor = {
   so that the returned hint of class X is only rendered if `adaptActiveToolToShortcuts` returns X.
   Therefore, the returned actions of a tool class should only refer to the actions of that tool class.
 */
-export class MoveToolController {
-  static getMouseControls(planeId: OrthoView, planeView: PlaneView): Record<string, any> {
+
+abstract class ToolController {
+  static getMouseControls(_planeId: OrthoView, _planeView: PlaneView): MouseBindingMap {
+    return {};
+  }
+  static getActionDescriptors(
+    _activeTool: AnnotationTool,
+    _userConfiguration: UserConfiguration,
+    _shiftKey: boolean,
+    _ctrlOrMetaKey: boolean,
+    _altKey: boolean,
+    _isTDViewportActive: boolean,
+  ): ActionDescriptor {
+    return { rightClick: "Context menu" };
+  }
+  static getKeyboardControls(): Partial<KeyboardShortcutHandlerMap> {
+    return {};
+  }
+
+  static onToolDeselected() {}
+}
+export class MoveToolController extends ToolController {
+  static getMouseControls(planeId: OrthoView, planeView: PlaneView): MouseBindingMap {
     return {
       scroll: (delta: number, type: ModifierKeys | null | undefined) => {
         switch (type) {
@@ -186,7 +233,7 @@ export class MoveToolController {
       },
       middleClick: (pos: Point2, _plane: OrthoView, event: MouseEvent) => {
         if (event.shiftKey) {
-          handleAgglomerateSkeletonAtClick(pos);
+          handleAgglomerateTreeAtClick(pos);
         }
       },
       pinch: (delta: number, center: Point2) => {
@@ -249,12 +296,10 @@ export class MoveToolController {
           };
     return { ...leftClickInfo, leftDrag: "Move", rightClick: "Context Menu" };
   }
-
-  static onToolDeselected() {}
 }
 
-export class SkeletonToolController {
-  static getMouseControls(planeView: PlaneView) {
+export class SkeletonToolController extends ToolController {
+  static getMouseControls(_planeId: OrthoView, planeView: PlaneView): MouseBindingMap {
     const legacyRightClick = (
       position: Point2,
       plane: OrthoView,
@@ -410,6 +455,68 @@ export class SkeletonToolController {
     }
   }
 
+  static getKeyboardControls(): Partial<KeyboardShortcutHandlerMap> {
+    return {
+      // Delete active node
+      DELETE_ACTIVE_NODE_PLANE: {
+        onPressed: () => {
+          Store.dispatch(deleteNodeAsUserAction(Store.getState()));
+        },
+      },
+      CREATE_TREE_PLANE: {
+        onPressed: () => {
+          Store.dispatch(createTreeAction());
+        },
+      },
+      MOVE_ALONG_DIRECTION: {
+        onPressed: () => moveAlongDirection(),
+      },
+      MOVE_ALONG_DIRECTION_REVERSED: {
+        onPressed: () => moveAlongDirection(true),
+      },
+      // Branches
+      CREATE_BRANCH_POINT_PLANE: {
+        onPressed: () => {
+          Store.dispatch(createBranchPointAction());
+        },
+      },
+      DELETE_BRANCH_POINT_PLANE: {
+        onPressed: () => {
+          Store.dispatch(requestDeleteBranchPointAction());
+        },
+      },
+      RECENTER_ACTIVE_NODE_PLANE: {
+        onPressed: () => {
+          api.tracing.centerNode();
+          api.tracing.centerTDView();
+        },
+      },
+      // navigate nodes
+      NEXT_NODE_BACKWARD_PLANE: {
+        onPressed: () => toPrecedingNode(),
+      },
+      NEXT_NODE_FORWARD_PLANE: {
+        onPressed: () => toSubsequentNode(),
+      },
+      MOVE_NODE_LEFT: {
+        onPressedWithRepeat: () => moveNode(-1, 0),
+        delayed: true,
+      },
+      MOVE_NODE_RIGHT: {
+        onPressedWithRepeat: () => moveNode(1, 0),
+        delayed: true,
+      },
+      MOVE_NODE_UP: {
+        onPressedWithRepeat: () => moveNode(0, -1),
+        delayed: true,
+      },
+      MOVE_NODE_DOWN: {
+        onPressedWithRepeat: () => moveNode(0, 1),
+        delayed: true,
+      },
+    };
+  }
+
   static getActionDescriptors(
     _activeTool: AnnotationTool,
     userConfiguration: UserConfiguration,
@@ -469,8 +576,111 @@ export class SkeletonToolController {
 
   static onToolDeselected() {}
 }
-export class DrawToolController {
-  static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): any {
+
+class VolumeToolController extends ToolController {
+  static getKeyboardControls(): Partial<KeyboardShortcutHandlerMap> {
+    return {
+      CREATE_NEW_CELL: {
+        onPressed: () => {
+          const volumeTracing = getActiveSegmentationTracing(Store.getState());
+
+          if (volumeTracing == null || volumeTracing.tracingId == null) {
+            return;
+          }
+
+          if (volumeTracing.largestSegmentId != null) {
+            Store.dispatch(
+              createCellAction(volumeTracing.activeCellId, volumeTracing.largestSegmentId),
+            );
+          } else {
+            showToastWarningForLargestSegmentIdMissing(volumeTracing);
+          }
+        },
+      },
+      INTERPOLATE_SEGMENTATION: {
+        onPressed: () => {
+          Store.dispatch(interpolateSegmentationLayerAction());
+        },
+      },
+      COPY_SEGMENT_ID: {
+        onPressed: (event: KeyboardEvent) => {
+          const segmentationLayer = Model.getVisibleSegmentationLayer();
+          const { additionalCoordinates } = Store.getState().flycam;
+
+          if (!segmentationLayer) {
+            return;
+          }
+
+          const { mousePosition } = Store.getState().temporaryConfiguration;
+
+          if (mousePosition) {
+            const [x, y] = mousePosition;
+            const globalMousePositionRounded = calculateGlobalPos(Store.getState(), {
+              x,
+              y,
+            }).rounded;
+            const { cube } = segmentationLayer;
+            const mapping = event.altKey ? cube.getMapping() : null;
+            const hoveredId = cube.getDataValue(
+              globalMousePositionRounded,
+              additionalCoordinates,
+              mapping,
+              getActiveMagIndexForLayer(Store.getState(), segmentationLayer.name),
+            );
+            navigator.clipboard
+              .writeText(String(hoveredId))
+              .then(() => Toast.success(`Segment id ${hoveredId} copied to clipboard.`));
+          } else {
+            Toast.warning("No segment under cursor.");
+          }
+        },
+      },
+      BRUSH_PRESET_SMALL: {
+        onPressed: () => {
+          let brushPresets = Store.getState().userConfiguration.presetBrushSizes;
+          if (brushPresets == null) {
+            const maximumBrushSize = getMaximumBrushSize(Store.getState());
+            brushPresets = getDefaultBrushSizes(maximumBrushSize, userSettings.brushSize.minimum);
+            Store.dispatch(updateUserSettingAction("presetBrushSizes", brushPresets));
+          }
+          Store.dispatch(updateUserSettingAction("brushSize", brushPresets.small));
+        },
+      },
+      BRUSH_PRESET_MEDIUM: {
+        onPressed: () => {
+          let brushPresets = Store.getState().userConfiguration.presetBrushSizes;
+          if (brushPresets == null) {
+            const maximumBrushSize = getMaximumBrushSize(Store.getState());
+            brushPresets = getDefaultBrushSizes(maximumBrushSize, userSettings.brushSize.minimum);
+            Store.dispatch(updateUserSettingAction("presetBrushSizes", brushPresets));
+          }
+          Store.dispatch(updateUserSettingAction("brushSize", brushPresets.medium));
+        },
+      },
+      BRUSH_PRESET_LARGE: {
+        onPressed: () => {
+          let brushPresets = Store.getState().userConfiguration.presetBrushSizes;
+          if (brushPresets == null) {
+            const maximumBrushSize = getMaximumBrushSize(Store.getState());
+            brushPresets = getDefaultBrushSizes(maximumBrushSize, userSettings.brushSize.minimum);
+            Store.dispatch(updateUserSettingAction("presetBrushSizes", brushPresets));
+          }
+          Store.dispatch(updateUserSettingAction("brushSize", brushPresets.large));
+        },
+      },
+      DECREASE_BRUSH_SIZE: {
+        onPressedWithRepeat: () => changeBrushSizeIfBrushIsActiveBy(-1),
+        delayed: true,
+      },
+      INCREASE_BRUSH_SIZE: {
+        onPressedWithRepeat: () => changeBrushSizeIfBrushIsActiveBy(1),
+        delayed: true,
+      },
+    };
+  }
+}
+export class DrawToolController extends VolumeToolController {
+  static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): MouseBindingMap {
     return {
       leftDownMove: (_delta: Point2, pos: Point2) => {
         handleMoveForDrawOrErase(pos);
@@ -579,8 +789,8 @@ export class DrawToolController {
 
   static onToolDeselected() {}
 }
-export class EraseToolController {
-  static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): any {
+export class EraseToolController extends VolumeToolController {
+  static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): MouseBindingMap {
     return {
       leftDownMove: (_delta: Point2, pos: Point2) => {
         handleMoveForDrawOrErase(pos);
@@ -631,8 +841,8 @@ export class EraseToolController {
   static onToolDeselected() {}
 }
 
-export class VoxelPipetteToolController {
-  static getPlaneMouseControls(_planeId: OrthoView): any {
+export class VoxelPipetteToolController extends ToolController {
+  static getPlaneMouseControls(_planeId: OrthoView): MouseBindingMap {
     return {
       mouseMove: (
         _delta: Point2,
@@ -679,8 +889,8 @@ export class VoxelPipetteToolController {
     };
   }
 }
-export class FillCellToolController {
-  static getPlaneMouseControls(_planeId: OrthoView): any {
+export class FillCellToolController extends ToolController {
+  static getPlaneMouseControls(_planeId: OrthoView): MouseBindingMap {
     return {
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent) => {
         const shouldPickCell = event.shiftKey && !(event.ctrlKey || event.metaKey);
@@ -711,8 +921,8 @@ export class FillCellToolController {
   static onToolDeselected() {}
 }
 
-export class BoundingBoxToolController {
-  static getPlaneMouseControls(planeId: OrthoView, planeView: PlaneView): any {
+export class BoundingBoxToolController extends ToolController {
+  static getPlaneMouseControls(planeId: OrthoView, planeView: PlaneView): MouseBindingMap {
     let primarySelectedEdge: SelectedEdge | null | undefined = null;
     let secondarySelectedEdge: SelectedEdge | null | undefined = null;
     // Accumulator for fractional movement that gets lost to rounding
@@ -781,6 +991,30 @@ export class BoundingBoxToolController {
     };
   }
 
+  static getKeyboardControls(): Partial<KeyboardShortcutHandlerMap> {
+    const handleBBoxMoveModifierPressed = (event: KeyboardEvent) => {
+      const { viewModeData, temporaryConfiguration } = Store.getState();
+      const { mousePosition } = temporaryConfiguration;
+      if (mousePosition == null) return;
+      highlightAndSetCursorOnHoveredBoundingBox(
+        { x: mousePosition[0], y: mousePosition[1] },
+        viewModeData.plane.activeViewport,
+        event,
+      );
+    };
+    return {
+      CREATE_BOUNDING_BOX: {
+        onPressed: () => {
+          Store.dispatch(addUserBoundingBoxAction());
+        },
+      },
+      TOGGLE_CURSOR_STATE_FOR_MOVING: {
+        onPressed: handleBBoxMoveModifierPressed,
+        onReleased: handleBBoxMoveModifierPressed,
+      },
+    };
+  }
+
   static getActionDescriptors(
     _activeTool: AnnotationTool,
     _userConfiguration: UserConfiguration,
@@ -805,8 +1039,8 @@ export class BoundingBoxToolController {
   }
 }
 
-export class QuickSelectToolController {
-  static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): any {
+export class QuickSelectToolController extends VolumeToolController {
+  static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): MouseBindingMap {
     let startPos: Vector3 | null = null;
     let currentPos: Vector3 | null = null;
     let isDragging = false;
@@ -950,10 +1184,10 @@ function getDoubleClickGuard() {
   return doubleClickGuard;
 }
 
-export class LineMeasurementToolController {
+export class LineMeasurementToolController extends ToolController {
   static initialPlane: OrthoView = OrthoViews.PLANE_XY;
   static isMeasuring = false;
-  static getPlaneMouseControls(): any {
+  static getPlaneMouseControls(): MouseBindingMap {
     const doubleClickGuard = getDoubleClickGuard();
     const SceneController = getSceneController();
     const { lineMeasurementGeometry } = SceneController;
@@ -1058,10 +1292,10 @@ export class LineMeasurementToolController {
   }
 }
 
-export class AreaMeasurementToolController {
+export class AreaMeasurementToolController extends ToolController {
   static initialPlane: OrthoView = OrthoViews.PLANE_XY;
   static isMeasuring = false;
-  static getPlaneMouseControls(): any {
+  static getPlaneMouseControls(): MouseBindingMap {
     const SceneController = getSceneController();
     const { areaMeasurementGeometry } = SceneController;
     const doubleClickGuard = getDoubleClickGuard();
@@ -1136,11 +1370,28 @@ export class AreaMeasurementToolController {
   }
 }
 
-export class ProofreadToolController {
-  static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): any {
+export class ProofreadToolController extends ToolController {
+  static getPlaneMouseControls(_planeId: OrthoView, planeView: PlaneView): MouseBindingMap {
     return {
       leftClick: (pos: Point2, plane: OrthoView, event: MouseEvent, isTouch: boolean) => {
         this.onLeftClick(planeView, pos, plane, event, isTouch);
+      },
+    };
+  }
+
+  static getKeyboardControls(): Partial<KeyboardShortcutHandlerMap> {
+    return {
+      TOGGLE_MULTICUT_MODE: {
+        onPressed: () => {
+          const state = Store.getState();
+          // Do not trigger in case proofreading is active as this is colliding with the default shortcut for multi split mode activation.
+          // This is currently the only allowed shortcut collision manually resolved here. c.f.:  acceptedCollisions in keyboard_shortcut_utils.tsx.
+          const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
+          if (isProofreadingActive) {
+            const isMultiSplitActive = state.userConfiguration.isMultiSplitActive;
+            Store.dispatch(updateUserSettingAction("isMultiSplitActive", !isMultiSplitActive));
+          }
+        },
       },
     };
   }
@@ -1240,6 +1491,7 @@ export class ProofreadToolController {
 
   static onToolDeselected() {}
 }
+
 const toolToToolController = {
   [AnnotationTool.MOVE.id]: MoveToolController,
   [AnnotationTool.SKELETON.id]: SkeletonToolController,
@@ -1258,3 +1510,10 @@ const toolToToolController = {
 export function getToolControllerForAnnotationTool(activeTool: AnnotationTool) {
   return toolToToolController[activeTool.id];
 }
+
+export const AllToolKeyboardControls = Object.fromEntries(
+  Object.entries(toolToToolController).map(([id, controller]) => [
+    id,
+    controller.getKeyboardControls(),
+  ]),
+) as Record<AnnotationToolId, Partial<KeyboardShortcutHandlerMap>>;

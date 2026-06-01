@@ -273,7 +273,7 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
     }
 
   // Add http error code in case of Failure or Empty (wrapping Empty in a Failure)
-  def ~>[T](errorCode: => T): Fox[A] =
+  def ~>(errorCode: Int): Fox[A] =
     new Fox(futureBox.map(_ ~> errorCode))
 
   def orElse[B >: A](fox: => Fox[B]): Fox[B] =
@@ -321,6 +321,9 @@ class Fox[+A](val futureBox: Future[Box[A]])(implicit ec: ExecutionContext) {
         case scala.util.Failure(e) => f(Failure(e.toString, Full(e), Empty))
       }
     }
+
+  def andThen[U](pf: PartialFunction[Try[Box[A]], U])(implicit ec: ExecutionContext): Fox[A] =
+    Fox.fromFutureBox(futureBox.andThen(pf))
 
   /*
    * Returns new Fox[Box[A]] that is always successful, such that the original’s box is shifted “inwards”.

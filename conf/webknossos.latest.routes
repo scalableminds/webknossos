@@ -54,6 +54,8 @@ POST          /auth/createUserInOrganization/:organizationId                    
 # Configurations
 GET           /user/userConfiguration                                                           controllers.ConfigurationController.read()
 PUT           /user/userConfiguration                                                           controllers.ConfigurationController.update()
+GET           /user/keyboardShortcutsConfig                                                     controllers.ConfigurationController.readKeyboardShortcutsConfig()
+PUT           /user/keyboardShortcutsConfig                                                     controllers.ConfigurationController.updateKeyboardShortcutsConfig()
 POST          /datasetConfigurations/:datasetId                                                 controllers.ConfigurationController.readDatasetViewConfiguration(datasetId: ObjectId, sharingToken: Option[String])
 PUT           /datasetConfigurations/:datasetId                                                 controllers.ConfigurationController.updateDatasetViewConfiguration(datasetId: ObjectId)
 GET           /datasetConfigurations/default/:datasetId                                         controllers.ConfigurationController.readDatasetAdminViewConfiguration(datasetId: ObjectId)
@@ -87,7 +89,6 @@ GET           /teams/:id/projectProgressReport                                  
 POST          /datasets/:datasetId/createExplorational                                          controllers.AnnotationController.createExplorational(datasetId: ObjectId)
 GET           /datasets/:datasetId/sandbox/:typ                                                 controllers.AnnotationController.getSandbox(datasetId: ObjectId, typ: String, sharingToken: Option[String])
 GET           /datasets                                                                         controllers.DatasetController.list(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationId: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[ObjectId], folderId: Option[ObjectId], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
-POST          /datasets                                                                         controllers.DatasetController.create(typ: String)
 POST          /datasets/exploreRemote                                                           controllers.DatasetController.exploreRemoteDataset()
 POST          /datasets/exploreAndAddRemote                                                     controllers.DatasetController.exploreAndAddRemoteDataset()
 POST          /datasets/addVirtualDataset/:name                                                 controllers.DatasetController.addVirtualDataset(name: String)
@@ -95,6 +96,7 @@ GET           /datasets/disambiguate/:datasetName/toNew                         
 GET           /datasets/disambiguate/:organizationId/:datasetName/toId                          controllers.DatasetController.getDatasetIdFromNameAndOrganization(datasetName: String, organizationId: String, sharingToken: Option[String])
 GET           /datasets/pathsToDelete                                                           controllers.PathDeletionController.listPathsToDelete(key: String)
 POST          /datasets/pathsToDelete/markAsDeleted                                             controllers.PathDeletionController.markAsDeleted(key: String)
+GET           /datasets/findByImportURL                                                         controllers.DatasetController.findByImportURL(importURL: String)
 GET           /datasets/:datasetId/health                                                       controllers.DatasetController.health(datasetId: ObjectId, sharingToken: Option[String])
 PATCH         /datasets/:datasetId                                                              controllers.DatasetController.update(datasetId: ObjectId)
 PATCH         /datasets/:datasetId/updatePartial                                                controllers.DatasetController.updatePartial(datasetId: ObjectId)
@@ -121,6 +123,8 @@ POST          /datasets/:datasetId/compose/addLayer                             
 POST          /datasets/:datasetId/compose/addMag                                               controllers.DatasetController.composeAddMag(datasetId: ObjectId)
 POST          /datasets/:datasetId/compose/addAttachment                                        controllers.DatasetController.composeAddAttachment(datasetId: ObjectId)
 POST          /datasets/reserveUploadToPaths                                                    controllers.DatasetController.reserveUploadToPaths()
+POST          /datasets/:datasetId/writeMirror                                                  controllers.DatasetController.writeMirror(datasetId: ObjectId)
+POST          /datasets/writeAllMirrors                                                         controllers.DatasetController.writeAllMirrors()
 
 # Folders
 GET           /folders/root                                                                     controllers.FolderController.getRoot()
@@ -182,8 +186,10 @@ GET           /annotations/:id/info                                             
 DELETE        /annotations/:id                                                                  controllers.AnnotationController.cancelWithoutType(id: ObjectId)
 POST          /annotations/:id/merge/:mergedTyp/:mergedId                                       controllers.AnnotationController.mergeWithoutType(id: ObjectId, mergedTyp: String, mergedId: ObjectId)
 GET           /annotations/:id/download                                                         controllers.AnnotationIOController.downloadWithoutType(id: ObjectId, version: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
-POST          /annotations/:id/acquireMutex                                                     controllers.AnnotationController.tryAcquiringAnnotationMutex(id: ObjectId)
-DELETE        /annotations/:id/mutex                                                            controllers.AnnotationController.releaseMutex(id: ObjectId)
+POST          /annotations/:id/acquireMutex                                                     controllers.AnnotationController.tryAcquiringAnnotationMutex(id: ObjectId, sessionId: String)
+POST          /annotations/:id/releaseMutex                                                     controllers.AnnotationController.releaseMutex(id: ObjectId)
+GET           /annotations/:id/reservedIds                                                      controllers.AnnotationController.reservedIds(id: ObjectId, tracingId: String, domain: String)
+POST          /annotations/:id/reserveIds                                                       controllers.AnnotationController.reserveIds(id: ObjectId)
 
 GET           /annotations/:typ/:id/info                                                        controllers.AnnotationController.info(typ: String, id: ObjectId, timestamp: Option[Long])
 DELETE        /annotations/:typ/:id                                                             controllers.AnnotationController.cancel(typ: String, id: ObjectId)
@@ -195,7 +201,7 @@ GET           /annotations/source/:accessTokenOrId                              
 GET           /annotations/readable                                                             controllers.AnnotationController.listExplorationals(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET           /annotations/:typ/:id/sharedTeams                                                 controllers.AnnotationController.getSharedTeams(typ: String, id: ObjectId)
 PATCH         /annotations/:typ/:id/sharedTeams                                                 controllers.AnnotationController.updateSharedTeams(typ: String, id: ObjectId)
-PATCH         /annotations/:typ/:id/othersMayEdit                                               controllers.AnnotationController.updateOthersMayEdit(typ: String, id: ObjectId, othersMayEdit: Boolean)
+PATCH         /annotations/:typ/:id/collaborationMode                                           controllers.AnnotationController.updateCollaborationMode(typ: String, id: ObjectId, collaborationMode: String)
 
 # Annotation Private Links
 GET           /zarrPrivateLinks                                                                 controllers.AnnotationPrivateLinkController.list()

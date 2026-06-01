@@ -5,6 +5,7 @@ import { enableBatching } from "redux-batched-actions";
 import createSagaMiddleware, { type Saga } from "redux-saga";
 import type {
   AdditionalAxis,
+  AnnotationCollaborationMode,
   AnnotationLayerDescriptor,
   APIAnnotationType,
   APIAnnotationVisibility,
@@ -67,6 +68,7 @@ import UserReducer from "viewer/model/reducers/user_reducer";
 import ViewModeReducer from "viewer/model/reducers/view_mode_reducer";
 import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
 import type { UpdateAction } from "viewer/model/sagas/volume/update_actions";
+import type { KeyboardConfiguration } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import type { Toolkit } from "./model/accessors/tool_accessor";
 import { eventEmitterMiddleware } from "./model/helpers/event_emitter_middleware";
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
@@ -133,7 +135,7 @@ export type Annotation = {
   readonly annotationType: APIAnnotationType;
   readonly owner: APIUserBase | null | undefined;
   readonly contributors: APIUserBase[];
-  readonly othersMayEdit: boolean;
+  readonly collaborationMode: AnnotationCollaborationMode;
   readonly isLockedByOwner: boolean;
   readonly isUpdatingCurrentlyAllowed: boolean;
 };
@@ -239,6 +241,7 @@ export type VolumeTracing = TracingBase & {
   //    per session (which is also quite far fetched), we are in the
   //    realm of 1.5 MB of RAM.
   readonly segmentJournal: Array<SegmentJournalEntry>;
+  readonly idReservations: Record<"SegmentGroup" | "Segment", { id: number; used: boolean }[]>;
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";
@@ -448,6 +451,7 @@ export type ProgressInfo = {
 export type AnnotationMutexInformation = {
   readonly hasAnnotationMutex: boolean;
   readonly blockedByUser: APIUserCompact | null | undefined;
+  readonly blockedBySessionId: string | null | undefined;
 };
 
 // RebaseRelevantAnnotationState holds the data required to rebase the
@@ -459,7 +463,7 @@ export type AnnotationMutexInformation = {
 // it must be updated to match that version.
 // Moreover, after successfully saving, it should also be updated.
 //
-// Mini example of a shared annotation with liveCollab enabled:
+// Mini example of a shared annotation with collaborationMode==Concurrent:
 // - user A adds a new node to tree 1 and saves.
 //   Meanwhile user B already added a node to another tree and already stored this on the server.
 // - user A rebases by resetting the store state to the info stored in RebaseRelevantAnnotationState.
@@ -481,7 +485,7 @@ export type RebaseRelevantAnnotationState = {
 };
 
 // Additionally, the proofreading sagas need knowledge of the mapping info last stored in the backend,
-// before applying their own mapping changes. This info is e.g. needed to properly auto update the agglomerate skeletons
+// before applying their own mapping changes. This info is e.g. needed to properly auto update the agglomerate trees
 // as part of the post processing of a proofreading interaction.
 // This info is also stored in ProofreadingPostProcessingInfo.
 
@@ -498,6 +502,7 @@ export type ProofreadingPostProcessingInfo = {
 };
 export type SaveState = {
   readonly isBusy: boolean;
+  readonly isSavingDisabled: boolean; // true when the user explicitly disabled saving in the WK menu dropdown
   readonly queue: Array<SaveQueueEntry>;
   readonly lastSaveTimestamp: number;
   readonly progressInfo: ProgressInfo;
@@ -575,6 +580,7 @@ type UiInformation = {
   readonly globalProgress: number; // 0 to 1
   readonly showDropzoneModal: boolean;
   readonly showVersionRestore: boolean;
+  readonly isRestoringVersion: boolean;
   readonly showDownloadModal: boolean;
   readonly showPythonClientModal: boolean;
   readonly showShareModal: boolean;
@@ -582,6 +588,7 @@ type UiInformation = {
   readonly showZarrPrivateLinksModal: boolean;
   readonly showDuplicateAnnotationModal: boolean;
   readonly showAddScriptModal: boolean;
+  readonly showKeyboardShortcutConfigModal: boolean;
   readonly aIJobDrawerState: StartAiJobDrawerState;
   readonly showRenderAnimationModal: boolean;
   readonly activeTool: AnnotationTool;
@@ -666,6 +673,7 @@ export type StoreDataset = APIDataset & {
 export type WebknossosState = {
   readonly datasetConfiguration: DatasetConfiguration;
   readonly userConfiguration: UserConfiguration;
+  readonly keyboardConfiguration: KeyboardConfiguration;
   readonly temporaryConfiguration: TemporaryConfiguration;
   readonly dataset: StoreDataset;
   readonly annotation: StoreAnnotation;

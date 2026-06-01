@@ -18,6 +18,8 @@ import zip from "lodash-es/zip";
 import messages from "messages";
 import {
   type AdditionalCoordinate,
+  type AnnotationCollaborationMode,
+  type AnnotationIdDomain,
   type AnnotationLayerDescriptor,
   AnnotationLayerEnum,
   type AnnotationViewConfiguration,
@@ -81,9 +83,9 @@ import {
 } from "types/api_types";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import type { DatasourceConfiguration } from "types/schemas/datasource.types";
-import type { ArbitraryObject } from "types/type_utils";
+import type { ArbitraryObject, EmptyObject } from "types/type_utils";
 import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "viewer/constants";
-import { AnnotationStateFilterEnum } from "viewer/constants";
+import Constants, { AnnotationStateFilterEnum } from "viewer/constants";
 import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import {
   getDataOrTracingStoreUrl,
@@ -106,6 +108,7 @@ import type {
   UserConfiguration,
   VolumeTracing,
 } from "viewer/store";
+import type { KeyboardShortcutsMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import { assertResponseLimit } from "./api/api_utils";
 import { getDatasetIdFromNameAndOrganization } from "./api/disambiguate_legacy_routes";
 import { getOrganization } from "./api/organization";
@@ -542,13 +545,13 @@ export function editLockedState(
   );
 }
 
-export function setOthersMayEditForAnnotation(
+export function setCollaborationModeForAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
-  othersMayEdit: boolean,
+  collaborationMode: AnnotationCollaborationMode,
 ): Promise<void> {
   return Request.receiveJSON(
-    `/api/annotations/${annotationType}/${annotationId}/othersMayEdit?othersMayEdit=${othersMayEdit}`,
+    `/api/annotations/${annotationType}/${annotationId}/collaborationMode?collaborationMode=${collaborationMode}`,
     {
       method: "PATCH",
     },
@@ -732,20 +735,33 @@ export async function getTracingsForAnnotation(
 
 export async function acquireAnnotationMutex(
   annotationId: string,
-): Promise<{ canEdit: boolean; blockedByUser: APIUserCompact | undefined | null }> {
-  const { canEdit, blockedByUser } = await Request.receiveJSON(
-    `/api/annotations/${annotationId}/acquireMutex`,
+  sessionId: string,
+): Promise<{
+  canEdit: boolean;
+  // If the mutex could not be rejected, the following two properties contain
+  // which user (and which session id) is responsible. The current user might
+  // be blocking the mutex in another session (then, the session id will be
+  // different from the current one).
+  blockedByUser: APIUserCompact | undefined | null;
+  blockedBySessionId: string | undefined | null;
+}> {
+  const { canEdit, blockedByUser, blockedBySessionId } = await Request.receiveJSON(
+    `/api/annotations/${annotationId}/acquireMutex?${new URLSearchParams({ sessionId })}`,
     {
       method: "POST",
     },
   );
-  return { canEdit, blockedByUser };
+  return { canEdit, blockedByUser, blockedBySessionId };
 }
 
 export async function releaseAnnotationMutex(annotationId: string): Promise<void> {
-  await Request.receiveJSON(`/api/annotations/${annotationId}/mutex`, {
-    method: "DELETE",
+  await Request.receiveJSON(`/api/annotations/${annotationId}/releaseMutex`, {
+    method: "POST",
   });
+}
+
+export function releaseAnnotationMutexWithBeacon(annotationId: string): boolean {
+  return navigator.sendBeacon(`/api/annotations/${annotationId}/releaseMutex`);
 }
 
 export async function getTracingForAnnotationType(
@@ -1009,6 +1025,59 @@ export async function downloadAnnotation(
 
   const downloadUrl = `/api/annotations/${annotationType}/${annotationId}/download?${params}`;
   await downloadWithFilename(downloadUrl);
+}
+
+export async function getIdReservationsForAnnotation(
+  annotationId: string,
+  tracingId: string,
+  domain: AnnotationIdDomain,
+) {
+  const params = new URLSearchParams({ tracingId, domain });
+
+  const ids: number[] = await Request.receiveJSON(
+    `/api/annotations/${annotationId}/reservedIds?${params}`,
+  );
+  return ids;
+}
+
+export async function reserveIdsForAnnotation(
+  annotationId: string,
+  tracingId: string,
+  domain: AnnotationIdDomain,
+  numberOfIdsToReserve: number,
+  idsToRelease: number[] = [],
+): Promise<number[]> {
+  /*
+   * Will reserve new ids for the specified domain.
+   */
+  if (numberOfIdsToReserve <= 0) {
+    // Otherwise, the backend cannot reliably use the largest id
+    // in a domain as a starting point to generate new ids.
+    // For example:
+    // User 1 has reservations for ids 1 and 2.
+    // User 2 has reservations for ids 3 and 4 and releases
+    // these (without reserving new ones).
+    // Then, the known maximum is 2 (instead of 4).
+    throw new Error("Must reserve at least 1 id");
+  }
+  if (numberOfIdsToReserve > Constants.IDEAL_ID_BUFFER_SIZE) {
+    throw new Error(
+      `Tried to request too many ids. numberOfIdsToReserve (${numberOfIdsToReserve} > ${Constants.IDEAL_ID_BUFFER_SIZE})`,
+    );
+  }
+  const ids: number[] = await Request.sendJSONReceiveJSON(
+    `/api/annotations/${annotationId}/reserveIds`,
+    {
+      data: {
+        domain,
+        tracingId,
+        numberOfIdsToReserve,
+        idsToRelease,
+      },
+      method: "POST",
+    },
+  );
+  return ids;
 }
 
 // ### Datasets
@@ -1366,22 +1435,33 @@ export async function exploreRemoteDataset(
   return { dataSource, report };
 }
 
+export async function findDatasetByImportUrl(importUrl: string): Promise<APIDataset | null> {
+  return await Request.receiveJSON(
+    `/api/datasets/findByImportURL?importURL=${encodeURIComponent(importUrl)}`,
+  );
+}
+
 type StoreRemoteDatasetArgs = {
   dataStoreName: string;
   dataSource: APIDataSource;
   folderId?: string | null;
+  importUrl?: string | null;
 };
 
 export async function storeRemoteDataset(
   dataStoreName: string,
   datasetName: string,
   dataSource: APIDataSource,
+  importUrl: string | null | undefined,
   folderId: string | null,
 ): Promise<NewDatasetReply> {
   const payload: StoreRemoteDatasetArgs = {
     dataSource,
-    dataStoreName: dataStoreName,
+    dataStoreName,
   };
+  if (importUrl) {
+    payload["importUrl"] = importUrl;
+  }
   if (folderId) {
     payload["folderId"] = folderId;
   }
@@ -1658,6 +1738,17 @@ export function updateUserConfiguration(
   });
 }
 
+export function getKeyboardShortcutsConfig(): Promise<Partial<KeyboardShortcutsMap> | EmptyObject> {
+  return Request.receiveJSON("/api/user/keyboardShortcutsConfig");
+}
+
+export function updateKeyboardShortcutsConfig(shortcuts: KeyboardShortcutsMap): Promise<void> {
+  return Request.sendJSONReceiveJSON("/api/user/keyboardShortcutsConfig", {
+    method: "PUT",
+    data: shortcuts,
+  });
+}
+
 export async function getTimeTrackingForUserSummedPerAnnotation(
   userId: string,
   startDate: dayjs.Dayjs,
@@ -1913,7 +2004,7 @@ export function getBucketPositionsForAdHocMesh(
   });
 }
 
-export function getAgglomerateSkeleton(
+export function getAgglomerateTreeAsSkeletonTracing(
   dataStoreUrl: string,
   dataset: APIDataset,
   layerName: string,
@@ -1922,7 +2013,7 @@ export function getAgglomerateSkeleton(
 ): Promise<ArrayBuffer> {
   return doWithToken((token) =>
     Request.receiveArraybuffer(
-      `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates/${mappingId}/skeleton/${agglomerateId}?token=${token}`, // The webworker code cannot do proper error handling and always expects an array buffer from the server.
+      `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates/${mappingId}/tree/${agglomerateId}?token=${token}`, // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
       {
@@ -2009,7 +2100,7 @@ export async function getAgglomeratesForSegmentsFromTracingstore<T extends numbe
   return new Map(keyValues);
 }
 
-export function getEditableAgglomerateSkeleton(
+export function getEditableAgglomerateTreeAsSkeletonTracing(
   tracingStoreUrl: string,
   tracingId: string,
   agglomerateId: number,
@@ -2018,7 +2109,7 @@ export function getEditableAgglomerateSkeleton(
   return doWithToken((token) => {
     const params = new URLSearchParams({ token, version: version.toString() });
     return Request.receiveArraybuffer(
-      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateSkeleton/${agglomerateId}?${params}`,
+      `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomerateTree/${agglomerateId}?${params}`,
       // The webworker code cannot do proper error handling and always expects an array buffer from the server.
       // However, the server might send an error json instead of an array buffer. Therefore, don't use the webworker code.
       {

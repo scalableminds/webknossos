@@ -41,6 +41,16 @@ export function getSomeTracing(
   return maybeSomeTracing;
 }
 
+export function hasTracing(annotation: StoreAnnotation): boolean {
+  // This function ignores ReadOnlyTracings. These only exist when essentially
+  // no annotation and no tracing exists. It does NOT mean that the active
+  // annotation is editable (could still be read-only due to permissions).
+  // This is an implementation of the null-pattern, but should be refactored away.
+  // Also see https://github.com/scalableminds/webknossos/issues/9609.
+  const maybeTracing = maybeGetSomeTracing(annotation);
+  return maybeTracing != null && maybeTracing.type !== "readonly";
+}
+
 export function getTracingType(annotation: StoreAnnotation): TracingType {
   if (annotation.skeleton != null && annotation.volumes.length > 0) {
     return TracingTypeEnum.hybrid;
@@ -81,6 +91,24 @@ export function selectTracing(
 
   if (tracing == null) {
     throw new Error(`${tracingType} object with id ${tracingId} not found`);
+  }
+
+  return tracing;
+}
+
+export function getTracingById(
+  state: WebknossosState,
+  tracingId: string,
+): SkeletonTracing | VolumeTracing | EditableMapping {
+  const allTracings = compact([
+    state.annotation.skeleton,
+    ...state.annotation.volumes,
+    ...state.annotation.mappings,
+  ]);
+  const tracing = allTracings.find((t) => t.tracingId === tracingId);
+
+  if (tracing == null) {
+    throw new Error(`Could not find tracing with id ${tracingId}.`);
   }
 
   return tracing;

@@ -17,7 +17,6 @@ import type {
   VolumeUserState,
 } from "types/api_types";
 import type { BoundingBoxMinMaxType } from "types/bounding_box";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import type { Vector3 } from "viewer/constants";
 import type { AnnotationTool, AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { Toolkits } from "viewer/model/accessors/tool_accessor";
@@ -137,7 +136,7 @@ export function convertServerAnnotationToFrontendAnnotation(
     owner,
     contributors,
     organization,
-    othersMayEdit,
+    collaborationMode,
     isLockedByOwner,
     annotationLayers,
   } = annotation;
@@ -145,11 +144,12 @@ export function convertServerAnnotationToFrontendAnnotation(
     ...annotation.restrictions,
     ...annotation.settings,
   };
-  // If othersMayEdit is true and liveCollab is disabled, updating is only allowed in case the user has the mutex.
-  // The mutex fetching is done by the respective saga.
-  const isUpdatingCurrentlyAllowed = annotation.othersMayEdit
-    ? WkDevFlags.liveCollab
-    : annotation.restrictions.allowUpdate;
+
+  const isUpdatingCurrentlyAllowed =
+    // If the collab mode is exclusive, the user may only edit once a mutex was acquired.
+    // the mutex saga will update isUpdatingCurrentlyAllowed then.
+    annotation.restrictions.allowUpdate && annotation.collaborationMode !== "Exclusive";
+
   return {
     annotationId,
     restrictions,
@@ -166,7 +166,7 @@ export function convertServerAnnotationToFrontendAnnotation(
     tracingStore,
     owner,
     contributors,
-    othersMayEdit,
+    collaborationMode,
     annotationLayers,
     isUpdatingCurrentlyAllowed,
   };
@@ -182,18 +182,11 @@ export function convertServerAdditionalAxesToFrontEnd(
 }
 
 function isToolAvailable(
-  state: WebknossosState,
   disabledToolInfo: Record<AnnotationToolId, DisabledInfo>,
   tool: AnnotationTool,
 ) {
   const { isDisabled } = disabledToolInfo[tool.id];
-  if (isDisabled) {
-    return false;
-  }
-  if (!state.annotation.isUpdatingCurrentlyAllowed) {
-    return Toolkits.READ_ONLY_TOOLS.includes(tool);
-  }
-  return true;
+  return !isDisabled;
 }
 
 export function getNextTool(state: WebknossosState): AnnotationTool | null {
@@ -209,7 +202,7 @@ export function getNextTool(state: WebknossosState): AnnotationTool | null {
   ) {
     const newTool = tools[newToolIndex % tools.length];
 
-    if (isToolAvailable(state, disabledToolInfo, newTool)) {
+    if (isToolAvailable(disabledToolInfo, newTool)) {
       return newTool;
     }
   }
@@ -230,7 +223,7 @@ export function getPreviousTool(state: WebknossosState): AnnotationTool | null {
   ) {
     const newTool = tools[(tools.length + newToolIndex) % tools.length];
 
-    if (isToolAvailable(state, disabledToolInfo, newTool)) {
+    if (isToolAvailable(disabledToolInfo, newTool)) {
       return newTool;
     }
   }
@@ -244,7 +237,7 @@ export function setToolReducer(state: WebknossosState, tool: AnnotationTool) {
   }
 
   const disabledToolInfo = getDisabledInfoForTools(state);
-  if (!isToolAvailable(state, disabledToolInfo, tool)) {
+  if (!isToolAvailable(disabledToolInfo, tool)) {
     console.log(`Cannot switch to ${tool.readableName} because it's not available.`);
     return state;
   }

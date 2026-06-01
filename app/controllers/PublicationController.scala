@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
@@ -25,7 +26,7 @@ class PublicationController @Inject()(publicationService: PublicationService,
   def read(publicationId: ObjectId): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       for {
-        publication <- publicationDAO.findOne(publicationId) ?~> "publication.notFound" ~> NOT_FOUND
+        publication <- publicationDAO.findOne(publicationId) ?~> Msg.publicationNotFound ~> NOT_FOUND
         js <- publicationService.publicWrites(publication)
       } yield Ok(js)
     }
@@ -33,7 +34,7 @@ class PublicationController @Inject()(publicationService: PublicationService,
   def listPublications: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     {
       for {
-        publications <- publicationDAO.findAll ?~> "publication.notFound" ~> NOT_FOUND
+        publications <- publicationDAO.findAll ?~> Msg.publicationNotFound ~> NOT_FOUND
         jsResult <- Fox.serialCombined(publications)(publicationService.publicWrites)
       } yield Ok(Json.toJson(jsResult))
     }

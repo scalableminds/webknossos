@@ -4,6 +4,32 @@ The most important shortcuts are always shown in the status bar at the bottom of
 These shortcut hints depend on the active tool and also change when modifiers are pressed to allow easy exploration of available functionality.
 
 A complete listing of all available keyboard & mouse shortcuts for WEBKNOSSOS can be found below.
+All shortcuts shown here are the **default bindings**. Keyboard-only shortcuts can be customized per user account (see [Customizing Shortcuts](#customizing-shortcuts) below).
+
+## Customizing Shortcuts
+
+All keyboard shortcuts that do not involve mouse buttons can be freely customized per user account.
+Open the shortcut configuration via the **navbar menu → "Keyboard Shortcuts"**.
+
+From there you can:
+
+- **View** all current keyboard bindings grouped by category.
+- **Edit** any shortcut by clicking the pencil icon next to it and recording a new key combination.
+- **Add** additional alternative bindings for any action (useful if you want two different keys or key combinations to trigger the same action).
+- **Remove** bindings you never use.
+- **Reset** individual shortcuts or all shortcuts to their defaults at any time.
+- **Multi-stroke sequences**: Shortcuts can consist of more than one consecutive keystroke. For example, a two-stroke binding like ++ctrl+k++ followed by ++b++ is recorded just like any other shortcut — press and release the first chord, then the second. The recorder captures the full sequence automatically.
+
+Shortcut changes are saved to your user account and persist across devices and browsers.
+
+!!! info "Key labels for special symbol keys (++plus++, ++bracket-right++, …)"
+    Correctly labeling shortcuts that use punctuation or symbol keys (e.g. `+`, `#`, `[`) requires the browser to know your keyboard layout.
+
+    **Chrome and Edge** expose this information via the [Keyboard Layout API](https://developer.mozilla.org/en-US/docs/Web/API/Keyboard_API){target=_blank} and always show the correct character label immediately.
+
+    **Firefox, Safari, and other browsers** do not support this API. WEBKNOSSOS works around this limitation by learning your layout at runtime: The first time you press a symbol key **without any modifier** (no ++shift++, ++ctrl++, etc.), the correct label is detected and stored for your session and future sessions in your browser. Until a key has been pressed at least once this way, it falls back to the US layout label. Regardless of a key being recorded, the shortcut should always be available.
+
+    **If you switch your operating-system keyboard layout** mid-session, the stored labels become stale. Pressing any symbol key unmodified again will clear the old mapping and pick up the new layout automatically.
 
 ## General
 
@@ -138,7 +164,7 @@ If Multi Cut Tool is activated, the following shortcuts are available:
 | Key Binding                     | Operation                                                |
 |---------------------------------|----------------------------------------------------------|
 | Left Click                      | Activate Segment of Agglomerate for Proofreading Actions |
-| ++shift++ + Middle Click        | Import Agglomerate Skeleton of hovered agglomerate       |
+| ++shift++ + Middle Click        | Import Agglomerate Tree of hovered agglomerate       |
 | ++shift++ + Left Click          | Merge with Active Segment                                |
 | ++ctrl++ / ++cmd++ + Left Click | Split from Active Segment                                |
 

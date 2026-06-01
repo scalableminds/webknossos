@@ -100,7 +100,7 @@ export function renderTreeNode(
 
   const maybeProofreadingIcon =
     tree.type === TreeTypeEnum.AGGLOMERATE ? (
-      <FastTooltip title="Agglomerate Skeleton">
+      <FastTooltip title="Agglomerate Tree">
         <Icon component={ProofreadingIcon} />
       </FastTooltip>
     ) : null;
@@ -112,7 +112,7 @@ export function renderTreeNode(
       onContextMenu={(evt) =>
         onOpenContextMenu(createMenuForTree(tree, props, hideContextMenu), evt)
       }
-      style={{ wordBreak: "break-word" }}
+      style={{ wordBreak: "break-word", width: "100%" }}
     >
       <ColoredDotIcon colorRGBA={[...tree.color, 1.0]} />
       <span style={{ whiteSpace: "nowrap" }}>
@@ -137,7 +137,7 @@ export function renderTreeNode(
 
 const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void): MenuProps => {
   const isEditingDisabled = !props.allowUpdate;
-  const isAgglomerateSkeleton = tree.type === TreeTypeEnum.AGGLOMERATE;
+  const isAgglomerateTree = tree.type === TreeTypeEnum.AGGLOMERATE;
 
   return {
     items: [
@@ -191,9 +191,9 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
         label: "Delete Tree",
       },
       {
-        key: "measureSkeleton",
+        key: "measureTree",
         onClick: () => {
-          handleMeasureSkeletonLength(tree.treeId, tree.name);
+          handleMeasureTreeLength(tree.treeId, tree.name);
           hideContextMenu();
         },
         title: "Measure Tree Length",
@@ -222,9 +222,9 @@ const createMenuForTree = (tree: Tree, props: Props, hideContextMenu: () => void
         icon: <Icon component={HideSkeletonEdgesIcon} aria-label="Hide Tree Edges Icon" />,
         label: "Hide/Show Edges of This Tree",
       },
-      isAgglomerateSkeleton
+      isAgglomerateTree
         ? {
-            key: "convertToNormalSkeleton",
+            key: "convertToNormalTree",
             onClick: () => {
               setTreeType(tree.treeId, TreeTypeEnum.DEFAULT);
               hideContextMenu();
@@ -261,7 +261,7 @@ export function renderGroupNode(
           evt,
         )
       }
-      style={{ wordBreak: "break-word" }}
+      style={{ wordBreak: "break-word", width: "100%" }}
     >
       <FolderOutlined />
       <EditableTextLabel
@@ -288,22 +288,8 @@ const createMenuForTreeGroup = (
   const hasSubgroup = anySatisfyDeep(node.children, (child) => child.type === GroupTypeEnum.GROUP);
   const labelForActiveItems = getLabelForActiveItems();
 
-  function createGroup(groupId: number) {
-    const newTreeGroups = cloneDeep(props.treeGroups);
-
-    const newGroupId = getMaximumGroupId(newTreeGroups) + 1;
-    const newGroup = makeBasicGroupObject(newGroupId, `Group ${newGroupId}`);
-
-    if (groupId === MISSING_GROUP_ID) {
-      newTreeGroups.push(newGroup);
-    } else {
-      callDeep(newTreeGroups, groupId, (item) => {
-        item.children.push(newGroup);
-      });
-    }
-
-    setUpdateTreeGroups(newTreeGroups);
-    selectGroupById(props.deselectAllTrees, newGroupId);
+  function createGroupInMenu(groupId: number) {
+    createGroup(props.treeGroups, groupId, props.deselectAllTrees);
   }
 
   function shuffleTreeGroupColors(groupId: number) {
@@ -407,7 +393,7 @@ const createMenuForTreeGroup = (
       {
         key: "create",
         onClick: () => {
-          createGroup(id);
+          createGroupInMenu(id);
           hideContextMenu();
         },
         disabled: isEditingDisabled,
@@ -542,7 +528,28 @@ export function setExpandedGroups(expandedTreeGroups: Set<string>) {
   Store.dispatch(setExpandedTreeGroupsByKeysAction(expandedTreeGroups));
 }
 
-function handleMeasureSkeletonLength(treeId: number, treeName: string) {
+export function createGroup(
+  treeGroups: TreeGroup[],
+  parentGroupId: number,
+  deselectAllTrees: () => void,
+) {
+  const newTreeGroups = cloneDeep(treeGroups);
+  const newGroupId = getMaximumGroupId(newTreeGroups) + 1;
+  const newGroup = makeBasicGroupObject(newGroupId, `Group ${newGroupId}`);
+
+  if (parentGroupId === MISSING_GROUP_ID) {
+    newTreeGroups.push(newGroup);
+  } else {
+    callDeep(newTreeGroups, parentGroupId, (item) => {
+      item.children.push(newGroup);
+    });
+  }
+
+  setUpdateTreeGroups(newTreeGroups);
+  selectGroupById(deselectAllTrees, newGroupId);
+}
+
+function handleMeasureTreeLength(treeId: number, treeName: string) {
   const dataSourceUnit = Store.getState().dataset.dataSource.scale.unit;
   const [lengthInUnit, lengthInVx] = api.tracing.measureTreeLength(treeId);
 

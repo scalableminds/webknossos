@@ -1,5 +1,6 @@
 package com.scalableminds.util.objectid
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.tools.TextUtils.parseCommaSeparated
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import play.api.libs.json._
@@ -14,8 +15,8 @@ case class ObjectId(id: String) {
 
 object ObjectId extends FoxImplicits {
   def generate: ObjectId = fromBsonId(BSONObjectID.generate())
-  def fromString(input: String)(implicit ec: ExecutionContext): Fox[ObjectId] =
-    fromStringSync(input).toFox ?~> s"The passed resource id ‘$input’ is invalid"
+  def fromString(literal: String)(implicit ec: ExecutionContext): Fox[ObjectId] =
+    fromStringSync(literal).toFox ?~> Msg.ObjectId.invalid(literal)
   def fromCommaSeparated(idsStrOpt: Option[String])(implicit ec: ExecutionContext): Fox[List[ObjectId]] =
     parseCommaSeparated(idsStrOpt)(fromString)
   private def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
@@ -39,7 +40,7 @@ object ObjectId extends FoxImplicits {
         val parsedOpt = fromStringSync(idString)
         parsedOpt match {
           case Some(parsed) => JsSuccess(parsed)
-          case None         => JsError(f"bsonid.invalid: $idString")
+          case None         => JsError(Msg.ObjectId.invalid(idString))
         }
       }
 
@@ -49,7 +50,8 @@ object ObjectId extends FoxImplicits {
   implicit def pathBinder: PathBindable[ObjectId] =
     new PathBindable[ObjectId] {
       override def bind(key: String, value: String): Either[String, ObjectId] =
-        fromStringWithPrefixSync(value).toRight(s"Cannot parse parameter $key as ObjectId: $value")
+        fromStringWithPrefixSync(value).toRight(
+          s"Cannot parse URI path parameter $key with value “$value” as ObjectId.")
 
       override def unbind(key: String, value: ObjectId): String = value.id
     }
@@ -58,7 +60,7 @@ object ObjectId extends FoxImplicits {
     new QueryStringBindable[ObjectId] {
       override def bind(key: String, params: Map[String, Seq[String]]): Option[Either[String, ObjectId]] =
         params.get(key).flatMap(_.headOption).map { value =>
-          fromStringSync(value).toRight(s"Cannot parse parameter $key as ObjectId: $value")
+          fromStringSync(value).toRight(s"Cannot parse URI query parameter $key with value “$value” as ObjectId.")
         }
 
       override def unbind(key: String, value: ObjectId): String = value.id

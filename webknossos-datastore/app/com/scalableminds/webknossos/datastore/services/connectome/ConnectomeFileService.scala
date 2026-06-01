@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services.connectome
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Box.tryo
@@ -13,7 +14,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 }
 import com.scalableminds.webknossos.datastore.services.connectome.SynapticPartnerDirection.SynapticPartnerDirection
 import com.typesafe.scalalogging.LazyLogging
-import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{Json, OFormat}
 
 import javax.inject.Inject
@@ -111,19 +111,16 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
 
   def listConnectomeFiles(dataSourceId: DataSourceId, dataLayer: DataLayer)(
       implicit ec: ExecutionContext,
-      tc: TokenContext,
-      m: MessagesProvider): Fox[Seq[ConnectomeFileNameWithMappingName]] = {
+      tc: TokenContext): Fox[Seq[ConnectomeFileNameWithMappingName]] = {
     val connectomeFileNames = dataLayer.attachments.map(_.connectomes).getOrElse(Seq.empty).map(_.name)
 
     Fox.fromFuture(
       Fox
         .serialSequence(connectomeFileNames) { connectomeFileName =>
           for {
-            connectomeFileKey <- lookUpConnectomeFileKey(dataSourceId, dataLayer, connectomeFileName) ?~> Messages(
-              "connectome.file.lookup.failed",
-              connectomeFileName)
-            mappingName <- mappingNameForConnectomeFile(connectomeFileKey) ?~> Messages(
-              "connectome.file.readMappingName.failed",
+            connectomeFileKey <- lookUpConnectomeFileKey(dataSourceId, dataLayer, connectomeFileName) ?~> Msg.ConnectomeFile
+              .lookUpFailed(connectomeFileName)
+            mappingName <- mappingNameForConnectomeFile(connectomeFileKey) ?~> Msg.ConnectomeFile.readMappingNameFailed(
               connectomeFileName)
           } yield ConnectomeFileNameWithMappingName(connectomeFileName, mappingName)
         }

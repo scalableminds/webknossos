@@ -23,7 +23,7 @@ import {
   getVolumeTracingById,
   hasEditableMapping,
 } from "viewer/model/accessors/volumetracing_accessor";
-import { setOthersMayEditForAnnotationAction } from "viewer/model/actions/annotation_actions";
+import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import {
@@ -191,8 +191,8 @@ export class BackendMock {
     return mapping;
   };
 
-  acquireAnnotationMutex = async (_annotationId: string) => {
-    return { canEdit: true, blockedByUser: null };
+  acquireAnnotationMutex = async (_annotationId: string, _sessionId: string) => {
+    return { canEdit: true, blockedByUser: null, blockedBySessionId: null };
   };
   releaseAnnotationMutex = async (_annotationId: string) => {};
 
@@ -217,7 +217,9 @@ export class BackendMock {
     payload: RequestOptionsWithData<Array<SaveQueueEntry>>,
   ): Promise<void> => {
     if (payload.data[0].version !== this.agglomerateMapping.currentVersion + 1) {
-      throw new Error("Version mismatch");
+      throw new Error(
+        `Version mismatch. Newest version is ${this.agglomerateMapping.currentVersion}, but current payload contains version=${payload.data[0].version}`,
+      );
     }
     // Store the received request.
     this.receivedDataPerSaveRequest.push(payload.data);
@@ -317,9 +319,9 @@ export class BackendMock {
      * forcing the client that is tested to pull in the newer version before
      * saving can finish.
      */
-    // The injected version has already been reached, directly inject!
     const currentVersion = this.updateActionLog.at(-1)?.version || 1;
     if (currentVersion === targetVersion - 1) {
+      // The injected version has already been reached, directly inject!
       this.injectVersion(updateActions, targetVersion);
     } else if (currentVersion > targetVersion - 1) {
       throw new Error(
@@ -354,7 +356,16 @@ export class BackendMock {
     });
   }
 
-  getEditableAgglomerateSkeleton = async (
+  injectMultipleVersions(
+    updateActionBatches: UpdateActionWithoutIsolationRequirement[][],
+    startingVersion: number,
+  ) {
+    updateActionBatches.forEach((actions, index) => {
+      this.injectVersion(actions, startingVersion + index);
+    });
+  }
+
+  getEditableAgglomerateTreeAsSkeletonTracing = async (
     _tracingStoreUrl: string,
     tracingId: string,
     agglomerateId: number,
@@ -372,16 +383,16 @@ export class BackendMock {
       );
     }
     const segmentId = someSegmentOfAgglomerate[0];
-    const agglomerateSkeletonAsServerTracing = createSkeletonTracingFromAdjacency(
+    const agglomerateTreeAsServerTracing = createSkeletonTracingFromAdjacency(
       adjacencyList,
       segmentId,
       agglomerateId,
       tracingId,
-      "agglomerateSkeleton",
+      "agglomerateTree",
       version,
     );
 
-    return encodeServerTracing(agglomerateSkeletonAsServerTracing, "skeleton");
+    return encodeServerTracing(agglomerateTreeAsServerTracing, "skeleton");
   };
 }
 
@@ -433,8 +444,8 @@ export function mockInitialBucketAndAgglomerateData(
   mocks.getPositionForSegmentInAgglomerate.mockImplementation(
     backendMock.getPositionForSegmentInAgglomerate,
   );
-  mocks.getEditableAgglomerateSkeleton.mockImplementation(
-    backendMock.getEditableAgglomerateSkeleton,
+  mocks.getEditableAgglomerateTreeAsSkeletonTracing.mockImplementation(
+    backendMock.getEditableAgglomerateTreeAsSkeletonTracing,
   );
 
   return backendMock;
@@ -557,7 +568,7 @@ export function* performCutFromAllNeighbours(
   yield makeMappingEditableForTest();
   // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
   yield* expectMapping(tracingId, initialMapping);
-  yield put(setOthersMayEditForAnnotationAction(true));
+  yield put(setCollaborationModeAction("Concurrent"));
 
   // Execute the actual merge and wait for the finished mapping.
   yield put(
@@ -574,6 +585,7 @@ export function* performCutFromAllNeighbours(
 export function* simulatePartitionedSplitAgglomeratesViaMeshes(
   context: WebknossosTestContext,
   loadMeshes: boolean,
+  injectVersionFn?: () => void,
 ): Saga<void> {
   const { tracingId } = yield* select((state) => state.annotation.volumes[0]);
   const expectedInitialMapping = new Map([
@@ -610,7 +622,10 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
     (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
   );
   expect(mapping1).toEqual(expectedInitialMapping);
-  yield put(setOthersMayEditForAnnotationAction(true));
+  if (injectVersionFn != null) {
+    injectVersionFn();
+  }
+  yield put(setCollaborationModeAction("Concurrent"));
 
   //Activate Multi-split tool
   yield put(updateUserSettingAction("isMultiSplitActive", true));

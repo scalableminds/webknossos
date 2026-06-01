@@ -4,7 +4,7 @@ import {
   acquireAnnotationMutex,
   getDataset,
   getEdgesForAgglomerateMinCut,
-  getEditableAgglomerateSkeleton,
+  getEditableAgglomerateTreeAsSkeletonTracing,
   getNeighborsForAgglomerateNode,
   getPositionForSegmentInAgglomerate,
   getUpdateActionLog,
@@ -14,6 +14,7 @@ import {
 } from "admin/rest_api";
 import app from "app";
 import { __setFeatures } from "features";
+import update from "immutability-helper";
 import { V3 } from "libs/mjs";
 import Request, { type RequestOptions } from "libs/request";
 import { sleep } from "libs/utils";
@@ -32,7 +33,9 @@ import {
   annotationProto as MULTI_VOLUME_ANNOTATION_PROTO,
   tracings as MULTI_VOLUME_TRACINGS,
 } from "test/fixtures/multivolume_server_objects";
+import { tracing as volumeTracing } from "test/fixtures/volumetracing_server_objects";
 import type {
+  AnnotationCollaborationMode,
   APIAnnotation,
   APIDataset,
   APIMeshFileInfo,
@@ -107,7 +110,9 @@ export interface WebknossosTestContext extends BaseTestContext {
     getUpdateActionLog: Mock<typeof getUpdateActionLog>;
     sendSaveRequestWithToken: Mock<typeof sendSaveRequestWithToken>;
     getPositionForSegmentInAgglomerate: Mock<typeof getPositionForSegmentInAgglomerate>;
-    getEditableAgglomerateSkeleton: Mock<typeof getEditableAgglomerateSkeleton>;
+    getEditableAgglomerateTreeAsSkeletonTracing: Mock<
+      typeof getEditableAgglomerateTreeAsSkeletonTracing
+    >;
     parseProtoTracing: Mock<typeof parseProtoTracing>;
   };
   setSlowCompression: (enabled: boolean) => void;
@@ -202,7 +207,7 @@ vi.mock("admin/rest_api.ts", async () => {
       _mappingId: string,
       segmentIds: Array<NumberLike>,
     ) => {
-      return getAgglomeratesForSegmentsImpl(segmentIds);
+      return getAgglomeratesForSegmentsImpl(segmentIds, 0);
     },
   );
 
@@ -243,7 +248,11 @@ vi.mock("admin/rest_api.ts", async () => {
         throw new Error("No test has mocked the return value yet here.");
       },
     ),
-    acquireAnnotationMutex: vi.fn(() => ({ canEdit: true, blockedByUser: null })),
+    acquireAnnotationMutex: vi.fn(() => ({
+      canEdit: true,
+      blockedByUser: null,
+      blockedBySessionId: null,
+    })),
     releaseAnnotationMutex: vi.fn(() => {}),
     getNeighborsForAgglomerateNode: vi.fn(
       (_tracingStoreUrl: string, _tracingId: string, _segmentInfo: ArbitraryObject) => {
@@ -262,7 +271,7 @@ vi.mock("admin/rest_api.ts", async () => {
         throw new Error("No test has mocked the return value yet here.");
       },
     ),
-    getEditableAgglomerateSkeleton: vi.fn(
+    getEditableAgglomerateTreeAsSkeletonTracing: vi.fn(
       (
         _tracingStoreUrl: string,
         _tracingId: string,
@@ -570,7 +579,9 @@ export async function setupWebknossosForTesting(
     getUpdateActionLog: vi.mocked(getUpdateActionLog),
     sendSaveRequestWithToken: vi.mocked(sendSaveRequestWithToken),
     getPositionForSegmentInAgglomerate: vi.mocked(getPositionForSegmentInAgglomerate),
-    getEditableAgglomerateSkeleton: vi.mocked(getEditableAgglomerateSkeleton),
+    getEditableAgglomerateTreeAsSkeletonTracing: vi.mocked(
+      getEditableAgglomerateTreeAsSkeletonTracing,
+    ),
     parseProtoTracing: vi.mocked(parseProtoTracing),
   };
   testContext.setSlowCompression = setSlowCompression;
@@ -663,4 +674,44 @@ export async function setupWebknossosForTesting(
       throw new Error(error.message);
     }
   }
+}
+
+export async function setupWebknossosForTestingWithRestrictions(
+  context: WebknossosTestContext,
+  collaborationMode: AnnotationCollaborationMode | null,
+  allowUpdate: boolean,
+  makeProofread: boolean = false,
+  tracingTestMode: "hybrid" | "multiVolume" = "hybrid",
+) {
+  await setupWebknossosForTesting(
+    context,
+    tracingTestMode,
+    ({ tracings, annotationProto, dataset, annotation }) => {
+      const annotationWithUpdatingAllowedTrue = update(annotation, {
+        restrictions: { allowUpdate: { $set: allowUpdate }, allowSave: { $set: allowUpdate } },
+        collaborationMode: { $set: collaborationMode ?? "OwnerOnly" },
+      });
+      return {
+        tracings: makeProofread ? makeProofreadAnnotation(tracings) : tracings,
+        annotationProto,
+        dataset,
+        annotation: annotationWithUpdatingAllowedTrue,
+      };
+    },
+  );
+}
+
+function makeProofreadAnnotation(
+  tracings: (ServerSkeletonTracing | ServerVolumeTracing)[],
+): (ServerSkeletonTracing | ServerVolumeTracing)[] {
+  return tracings.map((tracing) => {
+    if (tracing.typ === "Volume" && tracing.id === volumeTracing.id) {
+      return update(tracing, {
+        hasEditableMapping: { $set: true },
+        mappingName: { $set: "volumeTracingId" },
+        mappingIsLocked: { $set: true },
+      });
+    }
+    return tracing;
+  });
 }

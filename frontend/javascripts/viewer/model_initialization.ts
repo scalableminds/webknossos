@@ -9,6 +9,7 @@ import {
   getDatasetViewConfiguration,
   getEditableMappingInfo,
   getEmptySandboxAnnotationInformation,
+  getKeyboardShortcutsConfig,
   getSharingTokenFromUrlParameters,
   getTracingsForAnnotation,
   getUnversionedAnnotationInformation,
@@ -21,6 +22,7 @@ import { location } from "libs/window";
 import cloneDeep from "lodash-es/cloneDeep";
 import extend from "lodash-es/extend";
 import first from "lodash-es/first";
+import isEmpty from "lodash-es/isEmpty";
 import isEqual from "lodash-es/isEqual";
 import merge from "lodash-es/merge";
 import messages from "messages";
@@ -88,6 +90,7 @@ import {
   initializeGpuSetupAction,
   initializeSettingsAction,
   setControlModeAction,
+  setKeyboardShortcutsConfigAction,
   setMappingAction,
   setMappingEnabledAction,
   setViewModeAction,
@@ -96,7 +99,7 @@ import {
 } from "viewer/model/actions/settings_actions";
 import {
   initializeSkeletonTracingAction,
-  loadAgglomerateSkeletonFromIdAction,
+  loadAgglomerateTreeFromIdAction,
   setActiveNodeAction,
   setShowSkeletonsAction,
 } from "viewer/model/actions/skeletontracing_actions";
@@ -120,6 +123,13 @@ import type {
   UserConfiguration,
 } from "viewer/store";
 import Store from "viewer/store";
+import { initializeKeyboardLayoutMap } from "viewer/view/keyboard_shortcuts/keyboard_layout_utils";
+import { getAllDefaultKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
+import {
+  sanitizeKeyboardShortcuts,
+  validateShortcutMapText,
+} from "viewer/view/keyboard_shortcuts/keyboard_shortcut_persistence";
+import type { KeyboardShortcutsMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import { getUserStateForTracing } from "./model/accessors/annotation_accessor";
 import { doAllLayersHaveTheSameRotation } from "./model/accessors/dataset_layer_transformation_accessor";
 import {
@@ -214,11 +224,8 @@ export async function initialize(
     datasetId = initialCommandType.datasetId;
   }
 
-  const [apiDataset, initialUserSettings, serverTracings] = await fetchParallel(
-    annotation,
-    datasetId,
-    version,
-  );
+  const [apiDataset, initialUserSettings, serverTracings, keyboardShortcutsConfig] =
+    await fetchParallel(annotation, datasetId, version);
   assertUsableDataset(apiDataset as StoreDataset, initialCommandType);
   maybeFixDatasetNameInURL(apiDataset, initialCommandType);
 
@@ -243,6 +250,24 @@ export async function initialize(
     annotationSpecificDatasetSettings,
     initialDatasetSettings,
   );
+
+  // Load keyboard shortcuts from backend. Schema errors (malformed values) are
+  // warned about but don't discard the whole config — sanitizeKeyboardShortcuts
+  // keeps each valid entry and falls back to the default for malformed ones.
+  // Unknown keys (from newer clients) are dropped; missing keys (from older
+  // saved configs) are filled in with defaults.
+  const { valid, parsed, errors } = validateShortcutMapText(
+    JSON.stringify(keyboardShortcutsConfig),
+  );
+  if (!valid && !isEmpty(keyboardShortcutsConfig)) {
+    Toast.warning(messages["users.failed_parsing_keyboard_shortcuts_config"]);
+    console.warn("Found errors while parsing user's keyboard shortcut configurations:", errors);
+  }
+  const shortcuts: KeyboardShortcutsMap =
+    parsed != null ? sanitizeKeyboardShortcuts(parsed) : getAllDefaultKeyboardShortcuts();
+  Store.dispatch(setKeyboardShortcutsConfigAction(shortcuts));
+  initializeKeyboardLayoutMap();
+
   let initializationInformation = null;
 
   // There is no need to reinstantiate the DataLayers if the dataset didn't change.
@@ -315,11 +340,12 @@ async function fetchParallel(
   annotation: APIAnnotation | null | undefined,
   datasetId: string,
   version: number | undefined | null,
-): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>]> {
+): Promise<[APIDataset, UserConfiguration, Array<ServerTracing>, Partial<KeyboardShortcutsMap>]> {
   return Promise.all([
     getDataset(datasetId, getSharingTokenFromUrlParameters()),
     getUserConfiguration(), // Fetch the actual tracing from the datastore, if there is an skeletonAnnotation
     annotation ? getTracingsForAnnotation(annotation, version) : [],
+    getKeyboardShortcutsConfig(),
   ]);
 }
 
@@ -370,7 +396,7 @@ function initializeAnnotation(
   editableMappings: Array<ServerEditableMapping>,
 ) {
   // This method is not called for the View mode
-  const { dataset } = Store.getState();
+  const { dataset, save: saveState } = Store.getState();
   let annotation = _annotation;
   const { allowedModes, preferredMode } = determineAllowedModes(annotation.settings);
 
@@ -396,7 +422,10 @@ function initializeAnnotation(
         ...annotation,
         restrictions: {
           ...annotation.restrictions,
-          allowSave: annotation.restrictions.allowUpdate,
+          // If saving was disabled at some point, we don't want this to ever be reset.
+          // For example, when switching between versions in the version restore view,
+          // api.tracing.restart is called which calls Model.fetch here.
+          allowSave: annotation.restrictions.allowUpdate && !saveState.isSavingDisabled,
         },
       };
     }
@@ -904,18 +933,18 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
         const { annotation } = Store.getState();
 
         if (annotation.skeleton == null) {
-          Toast.error(messages["tracing.agglomerate_skeleton.no_skeleton_tracing"]);
+          Toast.error(messages["tracing.agglomerate_tree.no_skeleton_tracing"]);
           continue;
         }
 
         if (mappingType !== "HDF5") {
-          Toast.error(messages["tracing.agglomerate_skeleton.no_agglomerate_file_active"]);
+          Toast.error(messages["tracing.agglomerate_tree.no_agglomerate_file_active"]);
           continue;
         }
 
         for (const agglomerateId of agglomerateIdsToImport) {
           Store.dispatch(
-            loadAgglomerateSkeletonFromIdAction(effectiveLayerName, mappingName, agglomerateId),
+            loadAgglomerateTreeFromIdAction(effectiveLayerName, mappingName, agglomerateId),
           );
         }
       }

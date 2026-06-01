@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.explore
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
@@ -28,7 +29,7 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
       uriFragment <- tryo(remotePath.toRemoteUriUnsafe.getFragment.drop(1)).toFox ?~> "URI has no matching fragment part"
       spec <- JsonHelper.parseAs[JsObject](uriFragment).toFox ?~> "Did not find JSON object in URI"
       layerSpecs <- JsonHelper.as[JsArray](spec \ "layers").toFox
-      _ <- Fox.fromBool(credentialId.isEmpty) ~> "Neuroglancer URI Explorer does not support credentials"
+      _ <- Fox.fromBool(credentialId.isEmpty) ?~> "Neuroglancer URI Explorer does not support credentials"
       exploredLayers = layerSpecs.value.map(exploreNeuroglancerLayer).toList
       layerLists <- Fox.combined(exploredLayers)
       layers = layerLists.flatten
@@ -44,7 +45,7 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
       layerType = new URI(source.value).getScheme
       name <- JsonHelper.as[JsString](obj \ "name").toFox
       upath <- UPath.fromString(source.value.substring(f"$layerType://".length)).toFox
-      remotePath <- dataVaultService.vaultPathFor(upath) ?~> "dataVault.setup.failed"
+      remotePath <- dataVaultService.vaultPathFor(upath) ?~> Msg.DataVault.setupFailed
       viewConfiguration = getViewConfig(obj)
       layer <- exploreLayer(layerType, remotePath, name.value)
       layerWithViewConfiguration <- assignViewConfiguration(layer, viewConfiguration)

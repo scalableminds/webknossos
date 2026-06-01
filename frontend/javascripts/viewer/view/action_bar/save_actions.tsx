@@ -32,14 +32,7 @@ function ReadOnlyActions({
   const dispatch = useDispatch();
   return (
     <Space.Compact>
-      <ButtonComponent
-        key="read-only-button"
-        danger
-        disabled
-        style={{
-          backgroundColor: "var(--ant-color-warning)",
-        }}
-      >
+      <ButtonComponent key="read-only-button" className="read-only-button" danger disabled>
         Read only
       </ButtonComponent>
       <ButtonWithAuthentication

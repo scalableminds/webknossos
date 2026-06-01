@@ -191,8 +191,8 @@ export class BackendMock {
     return mapping;
   };
 
-  acquireAnnotationMutex = async (_annotationId: string) => {
-    return { canEdit: true, blockedByUser: null };
+  acquireAnnotationMutex = async (_annotationId: string, _sessionId: string) => {
+    return { canEdit: true, blockedByUser: null, blockedBySessionId: null };
   };
   releaseAnnotationMutex = async (_annotationId: string) => {};
 

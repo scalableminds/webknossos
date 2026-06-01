@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(164);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(165);
 COMMIT TRANSACTION;
 
 
@@ -80,6 +80,7 @@ CREATE TABLE webknossos.annotation_contributors(
 CREATE TABLE webknossos.annotation_mutexes(
   _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$') PRIMARY KEY,
   _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
+  sessionId TEXT NOT NULL,
   expiry TIMESTAMP NOT NULL
 );
 

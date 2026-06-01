@@ -59,7 +59,6 @@ import DatasetSettingsDeleteTab from "dashboard/dataset/dataset_settings_delete_
 import DatasetSettingsMetadataTab from "dashboard/dataset/dataset_settings_metadata_tab";
 import DatasetSettingsSharingTab from "dashboard/dataset/dataset_settings_sharing_tab";
 import DatasetSettingsViewConfigTab from "dashboard/dataset/dataset_settings_viewconfig_tab";
-import { useWkSelector } from "libs/react_hooks";
 import { PageNotFoundView } from "./page_not_found_view";
 import {
   AnnotationsRouteWrapper,
@@ -84,12 +83,10 @@ const AsyncWorkflowListView = loadable<EmptyObject>(
 );
 
 function RootLayout() {
-  const isAuthenticated = useWkSelector((state) => state.activeUser != null);
-
   return (
     <Layout>
       <CommandPalette />
-      <Navbar isAuthenticated={isAuthenticated} />
+      <Navbar />
       <Content>
         <ErrorBoundary>
           <Outlet />

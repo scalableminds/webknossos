@@ -29,7 +29,7 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
       uriFragment <- tryo(remoteUri.getFragment.drop(1)).toFox ?~> "URI has no matching fragment part"
       spec <- JsonHelper.parseAs[JsObject](uriFragment).toFox ?~> "Did not find JSON object in URI"
       layerSpecs <- JsonHelper.as[JsArray](spec \ "layers").toFox
-      _ <- Fox.fromBool(credentialId.isEmpty) ~> "Neuroglancer URI Explorer does not support credentials"
+      _ <- Fox.fromBool(credentialId.isEmpty) ?~> "Neuroglancer URI Explorer does not support credentials"
       exploredLayers = layerSpecs.value.map(exploreNeuroglancerLayer).toList
       layerLists <- Fox.combined(exploredLayers)
       layers = layerLists.flatten

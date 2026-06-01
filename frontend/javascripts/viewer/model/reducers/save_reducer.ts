@@ -189,8 +189,9 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
         return state;
       }
 
-      return updateKey2(state, "annotation", "restrictions", {
-        allowSave: false,
+      return update(state, {
+        annotation: { restrictions: { allowSave: { $set: false } } },
+        save: { isSavingDisabled: { $set: true } },
       });
     }
 
@@ -202,9 +203,10 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
     }
 
     case "SET_USER_HOLDING_MUTEX": {
-      const { blockedByUser } = action;
+      const { blockedByUser, blockedBySessionId } = action;
       return updateKey2(state, "save", "mutexState", {
         blockedByUser,
+        blockedBySessionId: blockedBySessionId ?? null,
       });
     }
 

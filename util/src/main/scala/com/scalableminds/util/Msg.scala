@@ -616,6 +616,8 @@ object Msg {
     def notFound(id: ObjectId): String = s"Script “$id” could not be found or accessed."
     def nameInvalidChars(name: String): String =
       s"Script name “$name” is invalid. Please use only letters, digits, dots, space, underscores, hyphens."
+    def nameTooShort: String = "Script name must be at least two characters long."
+    def nameTooLong: String = "Script name must be at most 50 characters long."
     val updateOnlyOwner: String = "You do not have permission to update this script. Please ask the script owner."
     val deleteOnlyOwner: String = "You do not have permission to delete this script. Please ask the script owner."
     val deleteFailed: String = "Could not delete script."

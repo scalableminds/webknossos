@@ -10,36 +10,44 @@ import models.user.UserService
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Reads._
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
 import com.scalableminds.util.objectid.ObjectId
+import views.html.helper.script
 
 import scala.concurrent.ExecutionContext
+
+case class ScriptCreationParameters(
+    name: String,
+    gist: String,
+    owner: ObjectId
+)
+object ScriptCreationParameters {
+  implicit val jsonFormat: OFormat[ScriptCreationParameters] = Json.format[ScriptCreationParameters]
+}
 
 class ScriptController @Inject()(scriptDAO: ScriptDAO,
                                  taskDAO: TaskDAO,
                                  scriptService: ScriptService,
                                  userService: UserService,
-                                 sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+                                 sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
-  private val scriptPublicReads =
-    ((__ \ "name").read[String](minLength[String](2) or maxLength[String](50)) and
-      (__ \ "gist").read[String] and
-      (__ \ "owner").read[ObjectId])(Script.fromForm _)
-
-  def create: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
-    withJsonBodyUsing(scriptPublicReads) { script =>
+  def create: Action[ScriptCreationParameters] = sil.SecuredAction.async(validateJson[ScriptCreationParameters]) {
+    implicit request =>
       for {
         isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(request.identity, request.identity._organization)
         _ <- Fox.fromBool(isTeamManagerOrAdmin) ?~> Msg.notAllowed ~> FORBIDDEN
-        _ <- Fox.fromBool(script._owner == request.identity._id) ?~> Msg.notAllowed ~> FORBIDDEN
-        _ <- scriptService.assertValidScriptName(script.name)
+        _ <- Fox.fromBool(request.body.owner == request.identity._id) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- scriptService.assertValidScriptName(request.body.name)
+        script = Script(_id = ObjectId.generate,
+                        _owner = request.body.owner,
+                        name = request.body.name,
+                        gist = request.body.gist)
         _ <- scriptDAO.insertOne(script)
         js <- scriptService.publicWrites(script) ?~> Msg.Script.publicWritesFailed
       } yield Ok(js)
-    }
   }
 
   def get(scriptId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>

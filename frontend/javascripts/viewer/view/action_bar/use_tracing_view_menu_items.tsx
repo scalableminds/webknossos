@@ -4,6 +4,7 @@ import {
   DownloadOutlined,
   FolderOpenOutlined,
   HistoryOutlined,
+  LaptopOutlined,
   LinkOutlined,
   LockOutlined,
   SettingOutlined,
@@ -27,6 +28,7 @@ import { disableSavingAction } from "viewer/model/actions/save_actions";
 import {
   setDownloadModalVisibilityAction,
   setDuplicateAnnotationModalVisibilityAction,
+  setKeyboardShortcutConfigModalVisibilityAction,
   setMergeModalVisibilityAction,
   setShareModalVisibilityAction,
   setUserScriptsModalVisibilityAction,
@@ -74,6 +76,10 @@ const handleUserScriptsOpen = () => {
 
 const handleZarrLinksOpen = () => {
   Store.dispatch(setZarrLinksModalVisibilityAction(true));
+};
+
+const handleShowKeyboardShortcutConfigModal = () => {
+  Store.dispatch(setKeyboardShortcutConfigModalVisibilityAction(true));
 };
 
 const handleDuplicateOpen = () => {
@@ -216,6 +222,13 @@ export const useTracingViewMenuItems = (
         label: "Restore Older Version",
       });
     }
+
+    menuItems.push({
+      key: "Keyboard Shortcuts",
+      onClick: handleShowKeyboardShortcutConfigModal,
+      icon: <LaptopOutlined />,
+      label: "Keyboard Shortcuts",
+    });
 
     if (layoutMenu != null) menuItems.push(layoutMenu);
 

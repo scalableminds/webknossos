@@ -2695,6 +2695,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@rwh/keystrokes@github:scalableminds/Keystrokes#dist/keystrokes":
+  version: 1.5.6
+  resolution: "@rwh/keystrokes@https://github.com/scalableminds/Keystrokes.git#commit=1cabebec7b88c37a8a014b6d7cae171b29aad0c5"
+  checksum: 10c0/6e46d0b8514c5e3e17bbd8ae44cf5098374c131a3137cd1117b670307d995e647ac8dd2d7b4eadec76dc34da2d0d8cae341b5330a0e3fc56b591b9ea255bd685
+  languageName: node
+  linkType: hard
+
 "@scalableminds/prop-types@npm:^15.8.1":
   version: 15.8.1
   resolution: "@scalableminds/prop-types@npm:15.8.1"
@@ -13166,6 +13173,7 @@ __metadata:
     "@dnd-kit/sortable": "npm:^8.0.0"
     "@github/webauthn-json": "npm:^2.1.1"
     "@redux-saga/testing-utils": "npm:^1.1.5"
+    "@rwh/keystrokes": "github:scalableminds/Keystrokes#dist/keystrokes"
     "@scalableminds/prop-types": "npm:^15.8.1"
     "@shaderfrog/glsl-parser": "npm:^0.3.0"
     "@svgr/plugin-svgo": "npm:^8.1.0"

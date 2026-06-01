@@ -13,6 +13,7 @@ import Constants, {
 } from "viewer/constants";
 import { AnnotationTool, Toolkit } from "viewer/model/accessors/tool_accessor";
 import type { WebknossosState } from "viewer/store";
+import { getAllDefaultKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 
 const defaultViewportRect = {
   top: 0,
@@ -117,6 +118,10 @@ const defaultState: WebknossosState = {
       [AnnotationTool.LINE_MEASUREMENT.id]: 0,
       [AnnotationTool.VOXEL_PIPETTE.id]: 0,
     },
+  },
+  keyboardConfiguration: {
+    shortcutsConfig: getAllDefaultKeyboardShortcuts(),
+    unmodifiedLayoutMap: new Map(),
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,
@@ -272,6 +277,7 @@ const defaultState: WebknossosState = {
     showAddScriptModal: false,
     showMergeAnnotationModal: false,
     showZarrPrivateLinksModal: false,
+    showKeyboardShortcutConfigModal: false,
     showPythonClientModal: false,
     showDuplicateAnnotationModal: false,
     aIJobDrawerState: "invisible",

@@ -2,15 +2,18 @@ import {
   CameraOutlined,
   DownloadOutlined,
   DownOutlined,
+  LaptopOutlined,
   ShareAltOutlined,
   VideoCameraOutlined,
 } from "@ant-design/icons";
 import { ConfigProvider, Dropdown, type MenuProps } from "antd";
 import type { MenuItemType, SubMenuType } from "antd/lib/menu/interface";
 import { useWkSelector } from "libs/react_hooks";
+import { useCallback } from "react";
 import { useDispatch } from "react-redux";
 import { getAntdTheme, getThemeFromUser } from "theme";
 import {
+  setKeyboardShortcutConfigModalVisibilityAction,
   setPythonClientModalVisibilityAction,
   setRenderAnimationModalVisibilityAction,
   setShareModalVisibilityAction,
@@ -19,6 +22,7 @@ import Store from "viewer/store";
 import ShareViewDatasetModalView from "viewer/view/action_bar/share_view_dataset_modal_view";
 import ButtonComponent from "viewer/view/components/button_component";
 import { downloadScreenshot } from "viewer/view/rendering_utils";
+import KeyboardShortcutConfigModal from "../keyboard_shortcuts/keyboard_shortcut_config_modal";
 import CreateAnimationModal from "./create_animation_modal";
 import DownloadModalView from "./download_modal/download_modal_view";
 
@@ -49,6 +53,13 @@ const shareModalMenuItem: MenuItemType = {
   label: "Share",
 };
 
+const keyboardShortcutsConfigMenuItem: MenuItemType = {
+  key: "Keyboard Shortcuts",
+  onClick: () => Store.dispatch(setKeyboardShortcutConfigModalVisibilityAction(true)),
+  icon: <LaptopOutlined />,
+  label: "Keyboard Shortcuts",
+};
+
 const pythonClientMenuItem: MenuItemType = {
   key: "python-client-button",
   onClick: () => Store.dispatch(setPythonClientModalVisibilityAction(true)),
@@ -60,6 +71,7 @@ export const viewDatasetMenu = [
   shareModalMenuItem,
   screenshotMenuItem,
   renderAnimationMenuItem,
+  keyboardShortcutsConfigMenuItem,
   pythonClientMenuItem,
 ];
 
@@ -67,27 +79,45 @@ export default function ViewDatasetActionsView(props: Props) {
   const dispatch = useDispatch();
   const activeUser = useWkSelector((state) => state.activeUser);
   const isShareModalOpen = useWkSelector((state) => state.uiInformation.showShareModal);
+  const showKeyboardShortcutConfigModal = useWkSelector(
+    (state) => state.uiInformation.showKeyboardShortcutConfigModal,
+  );
   const isPythonClientModalOpen = useWkSelector(
     (state) => state.uiInformation.showPythonClientModal,
   );
   const isRenderAnimationModalOpen = useWkSelector(
     (state) => state.uiInformation.showRenderAnimationModal,
   );
+  const handleCloseShareDatasetModal = useCallback(() => {
+    dispatch(setShareModalVisibilityAction(false));
+  }, [dispatch]);
+  const handleCloseKeyboardShortcutsConfigModal = useCallback(() => {
+    dispatch(setKeyboardShortcutConfigModalVisibilityAction(false));
+  }, [dispatch]);
+  const handleClosePythonClientModal = useCallback(() => {
+    dispatch(setPythonClientModalVisibilityAction(false));
+  }, [dispatch]);
 
   const shareDatasetModal = (
-    <ShareViewDatasetModalView
-      isOpen={isShareModalOpen}
-      onOk={() => dispatch(setShareModalVisibilityAction(false))}
+    <ShareViewDatasetModalView isOpen={isShareModalOpen} onOk={handleCloseShareDatasetModal} />
+  );
+
+  const keyboardShortcutsConfigModal = (
+    <KeyboardShortcutConfigModal
+      isOpen={showKeyboardShortcutConfigModal}
+      onClose={handleCloseKeyboardShortcutsConfigModal}
     />
   );
+
   const pythonClientModal = (
     <DownloadModalView
       isAnnotation={false}
       initialTab="export"
       isOpen={isPythonClientModalOpen}
-      onClose={() => dispatch(setPythonClientModalVisibilityAction(false))}
+      onClose={handleClosePythonClientModal}
     />
   );
+
   const overlayMenu: MenuProps = { items: [...viewDatasetMenu, props.layoutMenu] };
 
   const renderAnimationModal = (
@@ -103,8 +133,9 @@ export default function ViewDatasetActionsView(props: Props) {
     <div>
       <ConfigProvider theme={getAntdTheme(userTheme)}>
         {shareDatasetModal}
-        {pythonClientModal}
         {renderAnimationModal}
+        {keyboardShortcutsConfigModal}
+        {pythonClientModal}
       </ConfigProvider>
       <Dropdown menu={overlayMenu} trigger={["click"]}>
         <ButtonComponent

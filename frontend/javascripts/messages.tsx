@@ -495,6 +495,8 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Do you really want to change the email to '<%- newEmail %>' ? The corresponding user will be logged out and unsaved changes might be lost.",
   ),
   "users.change_email_confirmation": "The email has been changed",
+  "users.failed_parsing_keyboard_shortcuts_config":
+    "The keyboard shortcut information could not be parsed properly. Falling back to default keyboard shortcuts.",
   "mapping.too_big":
     "The mapping contains too many values, currently only up to 2^24 values are supported.",
   "mapping.unsupported_layer": "Mappings can only be enabled for segmentation layers.",

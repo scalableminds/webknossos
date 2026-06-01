@@ -1,13 +1,12 @@
 import app from "app";
 import BrainSpinner, { BrainSpinnerWithError, CoverWithLogin } from "components/brain_spinner";
 import { fetchGistContent } from "libs/gist";
-import { InputKeyboardNoLoop } from "libs/input";
+import { InputKeyboard } from "libs/input";
 import Toast from "libs/toast";
 import { getUrlParamValue, hasUrlParam, isNoEditableElementFocused } from "libs/utils";
 import window, { document } from "libs/window";
 import { type WithBlockerProps, withBlocker } from "libs/with_blocker_hoc";
 import { type RouteComponentProps, withRouter } from "libs/with_router_hoc";
-import extend from "lodash-es/extend";
 import messages from "messages";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
@@ -21,7 +20,6 @@ import { initializeSceneController } from "viewer/controller/scene_controller";
 import UrlManager from "viewer/controller/url_manager";
 import ArbitraryController from "viewer/controller/viewmodes/arbitrary_controller";
 import PlaneController from "viewer/controller/viewmodes/plane_controller";
-import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { wkInitializedAction } from "viewer/model/actions/actions";
 import {
   exitingAnnotationAction,
@@ -31,11 +29,22 @@ import {
 } from "viewer/model/actions/save_actions";
 import { setViewModeAction, updateLayerSettingAction } from "viewer/model/actions/settings_actions";
 import { setIsInAnnotationViewAction } from "viewer/model/actions/ui_actions";
+import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { HANDLED_ERROR } from "viewer/model_initialization";
 import { Model } from "viewer/singletons";
 import type { TraceOrViewCommand, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
+import { AnnotationTool } from "./model/accessors/tool_accessor";
+import {
+  toggleAllTreesAction,
+  toggleInactiveTreesAction,
+} from "./model/actions/skeletontracing_actions";
 import type DataLayer from "./model/data_layer";
+import type {
+  KeyboardShortcutHandlerMap,
+  KeyboardShortcutsMap,
+} from "./view/keyboard_shortcuts/keyboard_shortcut_types";
+import { buildKeyBindingsFromConfig } from "./view/keyboard_shortcuts/keyboard_shortcut_utils";
 
 export type ControllerStatus = "loading" | "loaded" | "failedLoading";
 type OwnProps = {
@@ -57,13 +66,17 @@ type State = {
   organizationToSwitchTo: APIOrganization | null | undefined;
 };
 
+type ControllerKeyboardHandlerIdMap = Partial<KeyboardShortcutHandlerMap>;
+
 class Controller extends PureComponent<PropsWithRouter, State> {
-  keyboardNoLoop?: InputKeyboardNoLoop;
+  keyboard?: InputKeyboard;
   _isMounted: boolean = false;
+  unsubscribeFromPreventScrollingViaSpaceBar: () => void = () => {};
   state: State = {
     gotUnhandledError: false,
     organizationToSwitchTo: null,
   };
+  unsubscribeKeyboardListener: ReturnType<typeof listenToStoreProperty> = () => {};
 
   // Main controller, responsible for setting modes and everything
   // that has to be controlled in any mode.
@@ -91,7 +104,9 @@ class Controller extends PureComponent<PropsWithRouter, State> {
 
   componentWillUnmount() {
     this._isMounted = false;
-    this.keyboardNoLoop?.destroy();
+    this.unsubscribeKeyboardListener();
+    this.keyboard?.destroy();
+    this.unsubscribeFromPreventScrollingViaSpaceBar();
     Store.dispatch(setIsInAnnotationViewAction(false));
     this.props.setBlocking({
       shouldBlock: false,
@@ -224,27 +239,80 @@ class Controller extends PureComponent<PropsWithRouter, State> {
     );
   }
 
-  initKeyboard() {
-    // avoid scrolling while pressing space
-    document.addEventListener("keydown", (event: KeyboardEvent) => {
-      if (
-        // 32 → Spacebar, 18 → Alt key, 37–40 → Arrow keys
-        (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
-        isNoEditableElementFocused()
-      ) {
-        event.preventDefault();
-      }
-    });
-    const { controlMode } = Store.getState().temporaryConfiguration;
-    const keyboardControls = {};
+  getKeyboardShortcutsHandlerMap(): ControllerKeyboardHandlerIdMap {
+    // getKeyboardShortcutsHandlerMap is a function and not a const to ensure each time the map is used,
+    // a new instance of toggleSegmentationOpacity is created and thus "leastRecentlyUsedSegmentationLayer"
+    // not being shared between key binding maps.
+    let leastRecentlyUsedSegmentationLayer: DataLayer | null = null;
+    function toggleSegmentationOpacity() {
+      let segmentationLayer = Model.getVisibleSegmentationLayer();
 
-    if (controlMode !== ControlModeEnum.VIEW) {
-      extend(keyboardControls, {
-        // Set Mode, outcomment for release
-        "shift + 1": () => Store.dispatch(setViewModeAction(constants.MODE_PLANE_TRACING)),
-        "shift + 2": () => Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY)),
-        "shift + 3": () => Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY_PLANE)),
-        m: () => {
+      if (segmentationLayer != null) {
+        // If there is a visible segmentation layer, disable and remember it.
+        leastRecentlyUsedSegmentationLayer = segmentationLayer;
+      } else if (leastRecentlyUsedSegmentationLayer != null) {
+        // If no segmentation layer is visible, use the least recently toggled
+        // layer (note that toggling the layer via the switch-button won't update
+        // the local variable here).
+        segmentationLayer = leastRecentlyUsedSegmentationLayer;
+      } else {
+        // As a fallback, simply use some segmentation layer
+        segmentationLayer = Model.getSomeSegmentationLayer();
+      }
+
+      if (segmentationLayer == null) {
+        return;
+      }
+
+      const segmentationLayerName = segmentationLayer.name;
+      const isSegmentationDisabled =
+        Store.getState().datasetConfiguration.layers[segmentationLayerName].isDisabled;
+      Store.dispatch(
+        updateLayerSettingAction(segmentationLayerName, "isDisabled", !isSegmentationDisabled),
+      );
+    }
+
+    const isInViewMode =
+      Store.getState().temporaryConfiguration.controlMode === ControlModeEnum.VIEW;
+
+    const editRelatedHandlers: Partial<KeyboardShortcutHandlerMap> = {
+      SAVE: {
+        onPressed: (event: KeyboardEvent) => {
+          event.preventDefault();
+          event.stopPropagation();
+          Model.forceSave();
+        },
+      },
+      // Undo
+      UNDO: {
+        onPressed: (event: KeyboardEvent) => {
+          event.preventDefault();
+          event.stopPropagation();
+          Store.dispatch(undoAction());
+        },
+      },
+      REDO: {
+        onPressed: (event: KeyboardEvent) => {
+          event.preventDefault();
+          event.stopPropagation();
+          Store.dispatch(redoAction());
+        },
+      },
+    };
+
+    const keyboardShortcutsHandlerMapForController: ControllerKeyboardHandlerIdMap = {
+      SWITCH_VIEWMODE_PLANE: {
+        onPressed: () => {
+          Store.dispatch(setViewModeAction(constants.MODE_PLANE_TRACING));
+        },
+      },
+      SWITCH_VIEWMODE_FLIGHT: {
+        onPressed: () => {
+          Store.dispatch(setViewModeAction(constants.MODE_ARBITRARY));
+        },
+      },
+      CYCLE_VIEWMODE: {
+        onPressed: () => {
           // rotate allowed modes
           const state = Store.getState();
           const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
@@ -257,67 +325,56 @@ class Controller extends PureComponent<PropsWithRouter, State> {
           const index = (allowedModes.indexOf(currentViewMode) + 1) % allowedModes.length;
           Store.dispatch(setViewModeAction(allowedModes[index]));
         },
-        "super + s": (event: KeyboardEvent) => {
-          event.preventDefault();
-          event.stopPropagation();
-          Model.forceSave();
-        },
-        "ctrl + s": (event: KeyboardEvent) => {
-          event.preventDefault();
-          event.stopPropagation();
-          Model.forceSave();
-        },
-        // Undo
-        "super + z": (event: KeyboardEvent) => {
-          event.preventDefault();
-          event.stopPropagation();
-          Store.dispatch(undoAction());
-        },
-        "ctrl + z": () => Store.dispatch(undoAction()),
-        // Redo
-        "super + y": (event: KeyboardEvent) => {
-          event.preventDefault();
-          event.stopPropagation();
-          Store.dispatch(redoAction());
-        },
-        "ctrl + y": () => Store.dispatch(redoAction()),
-      });
-    }
-
-    let leastRecentlyUsedSegmentationLayer: DataLayer | null = null;
-
-    extend(keyboardControls, {
-      // In the long run this should probably live in a user script
-      "3": function toggleSegmentationOpacity() {
-        let segmentationLayer = Model.getVisibleSegmentationLayer();
-
-        if (segmentationLayer != null) {
-          // If there is a visible segmentation layer, disable and remember it.
-          leastRecentlyUsedSegmentationLayer = segmentationLayer;
-        } else if (leastRecentlyUsedSegmentationLayer != null) {
-          // If no segmentation layer is visible, use the least recently toggled
-          // layer (note that toggling the layer via the switch-button won't update
-          // the local variable here).
-          segmentationLayer = leastRecentlyUsedSegmentationLayer;
-        } else {
-          // As a fallback, simply use some segmentation layer
-          segmentationLayer = Model.getSomeSegmentationLayer();
-        }
-
-        if (segmentationLayer == null) {
-          return;
-        }
-
-        const segmentationLayerName = segmentationLayer.name;
-        const isSegmentationDisabled =
-          Store.getState().datasetConfiguration.layers[segmentationLayerName].isDisabled;
-        Store.dispatch(
-          updateLayerSettingAction(segmentationLayerName, "isDisabled", !isSegmentationDisabled),
-        );
       },
-    });
+      TOGGLE_ALL_TREES: {
+        onPressed: () => {
+          Store.dispatch(toggleAllTreesAction());
+        },
+      },
+      TOGGLE_INACTIVE_TREES: {
+        onPressed: () => {
+          Store.dispatch(toggleInactiveTreesAction());
+        },
+      },
+      TOGGLE_SEGMENTATION: {
+        onPressed: toggleSegmentationOpacity,
+      },
+      ...(isInViewMode ? {} : editRelatedHandlers),
+    };
+    return keyboardShortcutsHandlerMapForController;
+  }
 
-    this.keyboardNoLoop = new InputKeyboardNoLoop(keyboardControls);
+  initKeyboard() {
+    // avoid scrolling while pressing space
+    const globalKeydownHandler = (event: KeyboardEvent) => {
+      if (
+        // 32 → Spacebar, 18 → Alt key, 37–40 → Arrow keys
+        (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
+        isNoEditableElementFocused()
+      ) {
+        event.preventDefault();
+      }
+    };
+    document.addEventListener("keydown", globalKeydownHandler);
+    this.unsubscribeFromPreventScrollingViaSpaceBar = () =>
+      document.removeEventListener("keydown", globalKeydownHandler);
+    this.unsubscribeKeyboardListener = listenToStoreProperty(
+      (state) => state.keyboardConfiguration.shortcutsConfig,
+      (keyboardShortcutsConfig) => this.reloadKeyboardShortcuts(keyboardShortcutsConfig),
+      true,
+    );
+  }
+
+  reloadKeyboardShortcuts(keyboardShortcutsConfig: KeyboardShortcutsMap) {
+    if (this.keyboard) {
+      this.keyboard.destroy();
+    }
+    const keyboardControls = buildKeyBindingsFromConfig(
+      keyboardShortcutsConfig,
+      this.getKeyboardShortcutsHandlerMap(),
+    );
+
+    this.keyboard = new InputKeyboard(keyboardControls);
   }
 
   render() {

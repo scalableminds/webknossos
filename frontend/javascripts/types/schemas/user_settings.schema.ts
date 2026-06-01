@@ -1,5 +1,10 @@
 import { baseDatasetViewConfiguration } from "types/schemas/dataset_view_configuration.schema";
-import { FillModeEnum, OverwriteModeEnum, TDViewDisplayModeEnum } from "viewer/constants";
+import {
+  FillModeEnum,
+  OverwriteModeEnum,
+  TDViewCameraModeEnum,
+  TDViewDisplayModeEnum,
+} from "viewer/constants";
 import { getMaximumBrushSize } from "viewer/model/accessors/volumetracing_accessor";
 
 export const userSettings = {
@@ -101,6 +106,10 @@ export const userSettings = {
   },
   tdViewDisplayLayerBorders: {
     type: "boolean",
+  },
+  tdViewCameraMode: {
+    type: "string",
+    enum: Object.values(TDViewCameraModeEnum),
   },
   hideTreeRemovalWarning: {
     type: "boolean",

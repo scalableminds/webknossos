@@ -19,8 +19,8 @@ import {
 import type { SwitchChangeEventHandler } from "antd/lib/switch";
 import { connect } from "react-redux";
 import type { Dispatch } from "redux";
-import type { TDViewDisplayMode } from "viewer/constants";
-import { TDViewDisplayModeEnum } from "viewer/constants";
+import type { TDViewCameraMode, TDViewDisplayMode } from "viewer/constants";
+import { TDViewCameraModeEnum, TDViewDisplayModeEnum } from "viewer/constants";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { api } from "viewer/singletons";
 import type { WebknossosState } from "viewer/store";
@@ -29,18 +29,22 @@ type Props = {
   tdViewDisplayPlanes: TDViewDisplayMode;
   tdViewDisplayDatasetBorders: boolean;
   tdViewDisplayLayerBorders: boolean;
+  tdViewCameraMode: TDViewCameraMode;
   onChangeTdViewDisplayPlanes: (arg0: RadioChangeEvent) => void;
   onChangeTdViewDisplayDatasetBorders: SwitchChangeEventHandler;
   onChangeTdViewDisplayLayerBorders: SwitchChangeEventHandler;
+  onChangeTdViewCameraMode: (arg0: RadioChangeEvent) => void;
 };
 
 function TDViewControls({
   tdViewDisplayPlanes,
   tdViewDisplayDatasetBorders,
   tdViewDisplayLayerBorders,
+  tdViewCameraMode,
   onChangeTdViewDisplayPlanes,
   onChangeTdViewDisplayDatasetBorders,
   onChangeTdViewDisplayLayerBorders,
+  onChangeTdViewCameraMode,
 }: Props) {
   const settingsMenu: MenuProps = {
     style: {
@@ -74,6 +78,30 @@ function TDViewControls({
                   <Radio.Button value={TDViewDisplayModeEnum.DATA}>
                     <BorderOuterOutlined />
                   </Radio.Button>
+                </Tooltip>
+              </Radio.Group>
+            </Col>
+          </Row>
+        ),
+      },
+      {
+        key: "tdViewCameraMode",
+        label: (
+          <Row>
+            <Col span={14}>
+              <label className="setting-label">Camera Mode</label>
+            </Col>
+            <Col span={10}>
+              <Radio.Group
+                value={tdViewCameraMode}
+                onChange={onChangeTdViewCameraMode}
+                size="small"
+              >
+                <Tooltip title="Perspective Camera">
+                  <Radio.Button value={TDViewCameraModeEnum.PERSPECTIVE}>3D</Radio.Button>
+                </Tooltip>
+                <Tooltip title="Orthographic Camera">
+                  <Radio.Button value={TDViewCameraModeEnum.ORTHOGRAPHIC}>Ortho</Radio.Button>
                 </Tooltip>
               </Radio.Group>
             </Col>
@@ -146,6 +174,7 @@ function mapStateToProps(state: WebknossosState) {
     tdViewDisplayPlanes: state.userConfiguration.tdViewDisplayPlanes,
     tdViewDisplayDatasetBorders: state.userConfiguration.tdViewDisplayDatasetBorders,
     tdViewDisplayLayerBorders: state.userConfiguration.tdViewDisplayLayerBorders,
+    tdViewCameraMode: state.userConfiguration.tdViewCameraMode,
   };
 }
 
@@ -162,6 +191,11 @@ function mapDispatchToProps(dispatch: Dispatch<any>) {
 
     onChangeTdViewDisplayLayerBorders(tdViewDisplayLayerBorders: boolean) {
       dispatch(updateUserSettingAction("tdViewDisplayLayerBorders", tdViewDisplayLayerBorders));
+    },
+
+    onChangeTdViewCameraMode(evt: RadioChangeEvent) {
+      const tdViewCameraMode: TDViewCameraModeEnum = evt.target.value;
+      dispatch(updateUserSettingAction("tdViewCameraMode", tdViewCameraMode));
     },
   };
 }

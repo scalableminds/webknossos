@@ -246,6 +246,13 @@ export enum TDViewDisplayModeEnum {
   DATA = "DATA",
 }
 export type TDViewDisplayMode = keyof typeof TDViewDisplayModeEnum;
+export enum TDViewCameraModeEnum {
+  ORTHOGRAPHIC = "ORTHOGRAPHIC",
+  PERSPECTIVE = "PERSPECTIVE",
+}
+export type TDViewCameraMode = keyof typeof TDViewCameraModeEnum;
+// Vertical field of view (in degrees) used by the perspective camera of the 3D viewport.
+export const TD_VIEW_PERSPECTIVE_FOV = 45;
 export enum MappingStatusEnum {
   DISABLED = "DISABLED",
   ACTIVATING = "ACTIVATING",

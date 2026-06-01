@@ -83,7 +83,7 @@ import {
 } from "types/api_types";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import type { DatasourceConfiguration } from "types/schemas/datasource.types";
-import type { ArbitraryObject } from "types/type_utils";
+import type { ArbitraryObject, EmptyObject } from "types/type_utils";
 import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "viewer/constants";
 import Constants, { AnnotationStateFilterEnum } from "viewer/constants";
 import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
@@ -108,6 +108,7 @@ import type {
   UserConfiguration,
   VolumeTracing,
 } from "viewer/store";
+import type { KeyboardShortcutsMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import { assertResponseLimit } from "./api/api_utils";
 import { getDatasetIdFromNameAndOrganization } from "./api/disambiguate_legacy_routes";
 import { getOrganization } from "./api/organization";
@@ -1734,6 +1735,17 @@ export function updateUserConfiguration(
   return Request.sendJSONReceiveJSON("/api/user/userConfiguration", {
     method: "PUT",
     data: userConfiguration,
+  });
+}
+
+export function getKeyboardShortcutsConfig(): Promise<Partial<KeyboardShortcutsMap> | EmptyObject> {
+  return Request.receiveJSON("/api/user/keyboardShortcutsConfig");
+}
+
+export function updateKeyboardShortcutsConfig(shortcuts: KeyboardShortcutsMap): Promise<void> {
+  return Request.sendJSONReceiveJSON("/api/user/keyboardShortcutsConfig", {
+    method: "PUT",
+    data: shortcuts,
   });
 }
 

@@ -1,5 +1,6 @@
 package models.dataset
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
@@ -38,7 +39,6 @@ import models.dataset.DatasetCreationType.DatasetCreationType
 
 import javax.inject.Inject
 import models.organization.OrganizationDAO
-import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import slick.dbio.DBIO
 import slick.jdbc.GetResult
@@ -72,6 +72,7 @@ case class Dataset(_id: ObjectId,
                    metadata: JsArray = JsArray.empty,
                    tags: List[String] = List.empty,
                    creationType: Option[DatasetCreationType] = None,
+                   importURL: Option[String] = None,
                    created: Instant = Instant.now,
                    isDeleted: Boolean = false)
 
@@ -101,8 +102,7 @@ object DatasetCompactInfo {
 
 trait DatasetDAOLike {
   def findOneByIdOrNameAndOrganization(datasetIdOpt: Option[ObjectId], datasetName: String, organizationId: String)(
-      implicit ctx: DBAccessContext,
-      m: MessagesProvider): Fox[Dataset]
+      implicit ctx: DBAccessContext): Fox[Dataset]
 }
 
 class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDAO, organizationDAO: OrganizationDAO)(
@@ -159,6 +159,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         metadata,
         parseArrayLiteral(r.tags).sorted,
         creationType,
+        r.importurl,
         Instant.fromSql(r.created),
         r.isdeleted
       )
@@ -440,6 +441,19 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       parsed <- parseFirst(r, s"$organizationId/$directoryName")
     } yield parsed
 
+  def findOneByImportURL(importURL: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
+    for {
+      accessQuery <- readAccessQuery
+      r <- run(q"""SELECT $columns
+                   FROM $existingCollectionName
+                   WHERE _organization = $organizationId
+                   AND importURL = $importURL
+                   AND $accessQuery
+                   ORDER BY created ASC, _id ASC
+                   LIMIT 1""".as[DatasetsRow])
+      parsed <- parseFirst(r, importURL)
+    } yield parsed
+
   def findOneByDataSourceId(dataSourceId: DataSourceId)(implicit ctx: DBAccessContext): Fox[Dataset] =
     findOneByDirectoryNameAndOrganization(dataSourceId.directoryName, dataSourceId.organizationId)
 
@@ -488,10 +502,9 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     } yield parsed
 
   def findOneByIdOrNameAndOrganization(datasetIdOpt: Option[ObjectId], datasetName: String, organizationId: String)(
-      implicit ctx: DBAccessContext,
-      m: MessagesProvider): Fox[Dataset] =
+      implicit ctx: DBAccessContext): Fox[Dataset] =
     datasetIdOpt match {
-      case Some(datasetId) => findOne(datasetId) ?~> Messages("dataset.notFound", datasetId)
+      case Some(datasetId) => findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId)
       case None =>
         (for {
           fromDirectoryNameBox <- findOneByNameAndOrganization(datasetName, organizationId).shiftBox
@@ -499,7 +512,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
             case Full(fromDirectoryName) => Fox.successful(fromDirectoryName)
             case _                       => findOneByNameAndOrganizationIfUnique(datasetName, organizationId)
           }
-        } yield orFromName) ?~> Messages("dataset.notFound", datasetName)
+        } yield orFromName) ?~> Msg.Dataset.notFound(datasetName)
     }
 
   def findAllByDirectoryNamesAndOrganization(directoryNames: List[String], organizationId: String)(
@@ -655,7 +668,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      description, directoryName, isPublic, isUsable, isVirtual,
                      name, voxelSizeFactor, voxelSizeUnit, status,
                      sharingToken, sortingKey, metadata, tags, creationType,
-                     created, isDeleted
+                     importURL, created, isDeleted
                    )
                    VALUES(
                      ${d._id}, ${d._dataStore}, ${d._organization}, ${d._publication},
@@ -664,7 +677,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      ${d.description}, ${d.directoryName}, ${d.isPublic}, ${d.isUsable}, ${d.isVirtual},
                      ${d.name}, ${d.voxelSize.map(_.factor)}, ${d.voxelSize.map(_.unit)}, ${d.status.take(1024)},
                      ${d.sharingToken}, ${d.sortingKey}, ${d.metadata}, ${d.tags}, ${d.creationType},
-                     ${d.created}, ${d.isDeleted}
+                     ${d.importURL}, ${d.created}, ${d.isDeleted}
                    )""".asUpdate)
     } yield ()
   }
@@ -1201,7 +1214,7 @@ class DatasetLayerAttachmentsDAO @Inject()(sqlClient: SqlClient)(implicit ec: Ex
   private def parseAttachmentRow(row: DatasetLayerAttachmentsRow, useRealPaths: Boolean): Fox[LayerAttachment] =
     for {
       dataFormat <- LayerAttachmentDataformat.fromString(row.dataformat).toFox ?~> "Could not parse data format"
-      realPathWithFallback = if (useRealPaths) row.realpath.getOrElse(row.path) else (row.path)
+      realPathWithFallback = if (useRealPaths) row.realpath.getOrElse(row.path) else row.path
       path <- UPath.fromString(realPathWithFallback).toFox
     } yield LayerAttachment(row.name, path, dataFormat)
 

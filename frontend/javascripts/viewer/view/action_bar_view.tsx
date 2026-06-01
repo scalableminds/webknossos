@@ -380,7 +380,7 @@ class ActionBarView extends PureComponent<Props, State> {
         dataset.dataStore.jobsSupportedByAvailableWorkers.includes(
           APIJobCommand.INFER_MITOCHONDRIA,
         ) ||
-        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.INFER_NUCLEI) ||
+        dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.INFER_INSTANCES) ||
         dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.ALIGN_SECTIONS);
       return jobsEnabled;
     };

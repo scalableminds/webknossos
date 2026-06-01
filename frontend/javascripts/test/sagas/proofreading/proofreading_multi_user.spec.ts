@@ -1044,6 +1044,7 @@ describe("Proofreading (Multi User)", () => {
       context.mocks.acquireAnnotationMutex.mockImplementation(async () => ({
         canEdit: false,
         blockedByUser: blockingUser,
+        blockedBySessionId: null,
       }));
       // Execute the actual merge and wait for the finished mapping.
       yield put(
@@ -1057,6 +1058,7 @@ describe("Proofreading (Multi User)", () => {
       context.mocks.acquireAnnotationMutex.mockImplementation(async () => ({
         canEdit: true,
         blockedByUser: null,
+        blockedBySessionId: null,
       }));
       // Wait till not busy anymore to check that no dead lock happens.
       yield take(

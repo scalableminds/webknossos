@@ -304,8 +304,12 @@ instead. Only enable this option if you understand its effect. All layers will n
   ),
   "annotation.acquiringMutexFailed.noUser":
     "This annotation is currently being edited by someone else. To avoid conflicts, you can only view it at the moment.",
+  "annotation.acquiringMutexFailed.sameUserDifferentSession":
+    "This annotation is already open in another browser tab. To avoid conflicts, you can only view it here. Please close the other tab or switch to it to continue editing.",
   "annotation.acquiringMutexSucceeded":
     "This annotation is not being edited anymore and available for editing. Reload the page to see its newest version and to edit it.",
+  "annotation.reloadToEditWithMutex":
+    "Please reload the page to see its newest version and to edit it.",
   "annotation.unlock.success":
     "The annotation was successfully unlocked. Reloading this annotation ...",
   "annotation.lock.success":
@@ -432,7 +436,7 @@ instead. Only enable this option if you understand its effect. All layers will n
   "auth.reset_token_not_supplied":
     "There was no token found in the URL. Check your E-Mails to get the correct URL.",
   "auth.reset_email_notification":
-    "An email with instructions to reset your password has been send to you.",
+    "If an account exists for this email, you will receive an email with instructions to reset your password shortly.",
   "auth.reset_pw_confirmation": "Your password was successfully changed",
   "auth.account_created":
     "Your account has been created. An administrator is going to unlock you soon.",

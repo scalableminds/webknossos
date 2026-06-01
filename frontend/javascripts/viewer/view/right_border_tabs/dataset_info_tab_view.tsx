@@ -26,7 +26,7 @@ import type { Dispatch } from "redux";
 import type { APIDataset, APIUser } from "types/api_types";
 import type { EmptyObject } from "types/type_utils";
 import { WkDevFlags } from "viewer/api/wk_dev";
-import { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
+import constants, { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
 import {
   getSkeletonStats,
   getStats,
@@ -53,6 +53,12 @@ import { ensureHasNewestVersionAction } from "viewer/model/actions/save_actions"
 import type { StoreAnnotation, Task, WebknossosState } from "viewer/store";
 import { KeyboardKeyIcon } from "../components/keyboard_key_icon";
 import { MarkdownModal } from "../components/markdown_modal";
+import type { KeyboardShortcutId } from "../keyboard_shortcuts/keyboard_shortcut_constants";
+import type {
+  KeyboardShortcutsMap,
+  UnmodifiedLayoutMap,
+} from "../keyboard_shortcuts/keyboard_shortcut_types";
+import { keySequenceToUiElements } from "../keyboard_shortcuts/keyboard_shortcut_utils";
 
 type StateProps = {
   annotation: StoreAnnotation;
@@ -61,7 +67,10 @@ type StateProps = {
   activeUser: APIUser | null | undefined;
   activeMagInfo: ReturnType<typeof getActiveMagInfo>;
   isDatasetViewMode: boolean;
+  isPlaneMode: boolean;
   mayEditAnnotation: boolean;
+  keyboardShortcutsConfig: KeyboardShortcutsMap;
+  unmodifiedLayoutMap: UnmodifiedLayoutMap;
 };
 type DispatchProps = {
   setAnnotationName: (arg0: string) => void;
@@ -73,73 +82,101 @@ type State = {
   isMarkdownModalOpen: boolean;
 };
 
-const shortcuts = [
-  {
-    key: "1",
-    keybinding: [
-      <KeyboardKeyIcon label="I" key="zoom-1" className="keyboard-key-icon" />,
-      "/",
-      <KeyboardKeyIcon label="O" key="zoom-2" className="keyboard-key-icon" />,
-      "or",
-      <KeyboardKeyIcon label="ALT" key="zoom-3" className="keyboard-key-icon" />,
-      "+",
-      <Icon
-        component={IconMousewheel}
-        key="zoom-4"
-        className="keyboard-mouse-icon"
-        aria-label="Mouse Wheel"
-        title="Mouse Wheel"
-        style={{ color: "var(--ant-color-primary)" }}
-      />,
-    ],
-    action: "Zoom in/out",
-  },
-  {
-    key: "2",
-    keybinding: [
-      <Icon
-        component={IconMousewheel}
-        key="move-1"
-        className="keyboard-mouse-icon"
-        aria-label="Mouse Wheel"
-        title="Mouse Wheel"
-        style={{ color: "var(--ant-color-primary)" }}
-      />,
-      "or",
-      <KeyboardKeyIcon label="D" key="move-2" className="keyboard-key-icon" />,
-      "/",
-      <KeyboardKeyIcon label="F" key="move-3" className="keyboard-key-icon" />,
-    ],
-    action: "Move Along 3rd Axis",
-  },
-  {
-    key: "3",
-    keybinding: [
-      <ThemedIcon
-        name="icon-mouse-left"
-        key="move"
-        className="keyboard-mouse-icon"
-        aria-label="Left Mouse Button Drag"
-        style={{ color: "var(--ant-color-primary)" }}
-      />,
-    ],
-    action: "Move",
-  },
-  {
-    key: "4",
-    keybinding: [
-      <ThemedIcon
-        name="icon-mouse-right"
-        key="rotate"
-        className="keyboard-mouse-icon"
-        aria-label="Right Mouse Button Drag"
-        style={{ color: "var(--ant-color-primary)" }}
-      />,
-      "in 3D View",
-    ],
-    action: "Rotate 3D View",
-  },
-];
+type ShortcutInfo = {
+  key: string;
+  keybinding: React.ReactNode[];
+  action: string;
+};
+
+const getShortcuts = (
+  keyboardShortcutsConfig: KeyboardShortcutsMap,
+  unmodifiedLayoutMap: UnmodifiedLayoutMap,
+  isInPlaneMode: boolean,
+): ShortcutInfo[] => {
+  const toUiElement = (keyboardShortcutId: KeyboardShortcutId) =>
+    (keyboardShortcutsConfig[keyboardShortcutId] ?? []).flatMap((keySeq, comboIndex) => {
+      const capitalizedKeySeq = keySeq.map((keys) => keys.map((key) => key.toUpperCase()));
+      return keySequenceToUiElements(
+        capitalizedKeySeq,
+        true,
+        `${keyboardShortcutId}-${comboIndex}-`,
+        unmodifiedLayoutMap,
+      );
+    });
+  return [
+    {
+      key: "1",
+      keybinding: [
+        isInPlaneMode ? toUiElement("ZOOM_IN_PLANE") : toUiElement("ZOOM_IN_FLIGHT"),
+        "/",
+        isInPlaneMode ? toUiElement("ZOOM_OUT_PLANE") : toUiElement("ZOOM_OUT_FLIGHT"),
+
+        "or",
+        <KeyboardKeyIcon label="ALT" key="zoom-3" className="keyboard-key-icon" />,
+        "+",
+
+        <Icon
+          component={IconMousewheel}
+          key="zoom-4"
+          className="keyboard-mouse-icon"
+          aria-label="Mouse Wheel"
+          title="Mouse Wheel"
+          style={{ color: "var(--ant-color-primary)" }}
+        />,
+      ],
+      action: "Zoom in/out",
+    },
+    {
+      key: "2",
+      keybinding: [
+        <Icon
+          component={IconMousewheel}
+          key="move-1"
+          className="keyboard-mouse-icon"
+          aria-label="Mouse Wheel"
+          title="Mouse Wheel"
+          style={{ color: "var(--ant-color-primary)" }}
+        />,
+        "or",
+        isInPlaneMode
+          ? toUiElement("MOVE_ONE_BACKWARD_DIRECTION_AWARE")
+          : toUiElement("MOVE_BACKWARD_WITHOUT_RECORDING"),
+        "/",
+        isInPlaneMode
+          ? toUiElement("MOVE_ONE_FORWARD_DIRECTION_AWARE")
+          : toUiElement("MOVE_FORWARD_WITHOUT_RECORDING"),
+      ],
+      action: "Move Along 3rd Axis",
+    },
+    {
+      key: "3",
+      keybinding: [
+        <ThemedIcon
+          name="icon-mouse-left"
+          key="move"
+          className="keyboard-mouse-icon"
+          aria-label="Left Mouse Button Drag"
+          style={{ color: "var(--ant-color-primary)" }}
+        />,
+      ],
+      action: "Move",
+    },
+    {
+      key: "4",
+      keybinding: [
+        <ThemedIcon
+          name="icon-mouse-right"
+          key="rotate"
+          className="keyboard-mouse-icon"
+          aria-label="Right Mouse Button Drag"
+          style={{ color: "var(--ant-color-primary)" }}
+        />,
+        "in 3D View",
+      ],
+      action: "Rotate 3D View",
+    },
+  ];
+};
 
 export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
   const extentInVoxel = getDatasetExtentAsString(dataset, true);
@@ -317,7 +354,9 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
   }
 
   getKeyboardShortcuts() {
-    return this.props.isDatasetViewMode ? (
+    const { isDatasetViewMode, keyboardShortcutsConfig, unmodifiedLayoutMap, isPlaneMode } =
+      this.props;
+    return isDatasetViewMode ? (
       <div className="info-tab-block">
         <Typography.Title level={5}>Keyboard Shortcuts</Typography.Title>
         <p>
@@ -331,22 +370,24 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
           </a>
           .
         </p>
-        <table className="shortcut-table">
+        <table className="shortcut-table-info-tab">
           <tbody>
-            {shortcuts.map((shortcut) => (
-              <tr key={shortcut.key}>
-                <td
-                  style={{
-                    width: 170,
-                  }}
-                >
-                  <Space size={4} align="center">
-                    {shortcut.keybinding}
-                  </Space>
-                </td>
-                <td>{shortcut.action}</td>
-              </tr>
-            ))}
+            {getShortcuts(keyboardShortcutsConfig, unmodifiedLayoutMap, isPlaneMode).map(
+              (shortcut) => (
+                <tr key={shortcut.key}>
+                  <td
+                    style={{
+                      width: 170,
+                    }}
+                  >
+                    <Space size={4} align="center">
+                      {shortcut.keybinding}
+                    </Space>
+                  </td>
+                  <td>{shortcut.action}</td>
+                </tr>
+              ),
+            )}
           </tbody>
         </table>
       </div>
@@ -354,16 +395,13 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
   }
 
   getDatasetName() {
-    const { name: datasetName, description: datasetDescription } = this.props.dataset;
-    const { activeUser } = this.props;
+    const { activeUser, dataset, isDatasetViewMode } = this.props;
+    const { name: datasetName, description: datasetDescription } = dataset;
 
     const getEditSettingsIcon = () =>
       mayUserEditDataset(activeUser, this.props.dataset) ? (
         <FastTooltip title="Edit dataset settings">
-          <Link
-            to={`/datasets/${getReadableURLPart(this.props.dataset)}/edit`}
-            style={{ paddingLeft: 3 }}
-          >
+          <Link to={`/datasets/${getReadableURLPart(dataset)}/edit`} style={{ paddingLeft: 3 }}>
             <Typography.Text type="secondary">
               <SettingOutlined />
             </Typography.Text>
@@ -371,7 +409,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
         </FastTooltip>
       ) : null;
 
-    if (this.props.isDatasetViewMode) {
+    if (isDatasetViewMode) {
       return (
         <div className="info-tab-block">
           <div
@@ -401,7 +439,7 @@ class DatasetInfoTabView extends React.PureComponent<Props, State> {
       <div className="info-tab-block">
         <p className="sidebar-label">Dataset {getEditSettingsIcon()}</p>
         <Link
-          to={getViewDatasetURL(this.props.dataset)}
+          to={getViewDatasetURL(dataset)}
           title={`Click to view dataset ${datasetName} without annotation`}
           style={{
             wordWrap: "break-word",
@@ -683,6 +721,9 @@ const mapStateToProps = (state: WebknossosState): StateProps => ({
   task: state.task,
   activeUser: state.activeUser,
   isDatasetViewMode: state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
+  isPlaneMode: constants.MODES_PLANE.includes(state.temporaryConfiguration.viewMode),
+  keyboardShortcutsConfig: state.keyboardConfiguration.shortcutsConfig,
+  unmodifiedLayoutMap: state.keyboardConfiguration.unmodifiedLayoutMap,
   activeMagInfo: getActiveMagInfo(state),
   mayEditAnnotation: mayEditAnnotationProperties(state),
 });

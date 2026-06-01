@@ -33,7 +33,8 @@ import DisableGenericDnd from "components/disable_generic_dnd";
 import { CheckTermsOfServices } from "components/terms_of_services_check";
 import { RouterProvider } from "react-router-dom";
 import router from "router/router";
-import GlobalThemeProvider, { getThemeFromUser } from "theme";
+import { getThemeFromUser } from "theme";
+import GlobalThemeProvider from "theme_provider";
 import HelpButton from "viewer/view/help/help_button";
 
 // Suppress warning emitted by Olvy because it tries to eagerly initialize

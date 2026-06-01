@@ -4,7 +4,7 @@ import { useWkSelector } from "libs/react_hooks";
 import { localeCompareBy } from "libs/utils";
 import messages from "messages";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { ControlModeEnum, MappingStatusEnum } from "viewer/constants";
 import { isAnnotationOwner, mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import {
@@ -22,7 +22,7 @@ import {
   setMappingAction,
   setMappingEnabledAction,
 } from "viewer/model/actions/settings_actions";
-import type { MappingType, WebknossosState } from "viewer/store";
+import type { MappingType } from "viewer/store";
 import SwitchSetting from "./components/switch_setting";
 
 type Props = {
@@ -50,33 +50,27 @@ function MappingSettingsView({ layerName }: Props) {
   // isMappingEnabled derived from the store.
   const [shouldMappingBeEnabled, setShouldMappingBeEnabled] = useState(false);
 
-  const activeMappingInfo = useSelector((state: WebknossosState) =>
+  const activeMappingInfo = useWkSelector((state) =>
     getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
   );
-  const segmentationLayer = useSelector((state: WebknossosState) =>
+  const segmentationLayer = useWkSelector((state) =>
     getSegmentationLayerByName(state.dataset, layerName),
   );
-  const editableMapping = useSelector((state: WebknossosState) =>
+  const editableMapping = useWkSelector((state) =>
     getEditableMappingForVolumeTracingId(state, segmentationLayer.tracingId),
   );
-  const isMergerModeEnabled = useSelector(
-    (state: WebknossosState) => state.temporaryConfiguration.isMergerModeEnabled,
+  const isMergerModeEnabled = useWkSelector(
+    (state) => state.temporaryConfiguration.isMergerModeEnabled,
   );
 
   const isViewMode = useWkSelector(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
-  const allowUpdate = useSelector(mayEditAnnotation);
-  const isEditableMappingActive = useSelector((state: WebknossosState) =>
-    hasEditableMapping(state, layerName),
-  );
-  const isMappingLockedState = useSelector((state: WebknossosState) =>
-    isMappingLocked(state, layerName),
-  );
-  const isAnnotationLockedByOwner = useSelector(
-    (state: WebknossosState) => state.annotation.isLockedByOwner,
-  );
-  const isOwner = useSelector((state: WebknossosState) => isAnnotationOwner(state));
+  const allowUpdate = useWkSelector(mayEditAnnotation);
+  const isEditableMappingActive = useWkSelector((state) => hasEditableMapping(state, layerName));
+  const isMappingLockedState = useWkSelector((state) => isMappingLocked(state, layerName));
+  const isAnnotationLockedByOwner = useWkSelector((state) => state.annotation.isLockedByOwner);
+  const isOwner = useWkSelector((state) => isAnnotationOwner(state));
 
   const { hideUnmappedIds, mappingStatus, mapping, mappingName, mappingType } = activeMappingInfo;
   const isMappingEnabled = mappingStatus === MappingStatusEnum.ENABLED;

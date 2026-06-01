@@ -5,7 +5,7 @@
     "noImplicitAny": true,
     "removeComments": true,
     "sourceMap": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "outDir": "build",
     "jsx": "react-jsx",
     "strict": true,

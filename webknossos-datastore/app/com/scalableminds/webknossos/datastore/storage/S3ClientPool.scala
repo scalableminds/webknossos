@@ -83,7 +83,7 @@ class S3ClientPool(ws: WSClient) {
         builder.overrideConfiguration(
           ClientOverrideConfiguration
             .builder()
-            .retryStrategy(StandardRetryStrategy.builder().maxAttempts(7).build())
+            .retryStrategy(StandardRetryStrategy.builder().maxAttempts(10).build())
             .build())
       else builder
     customEndpointOpt match {

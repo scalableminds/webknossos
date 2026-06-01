@@ -13,7 +13,7 @@ import { connect } from "react-redux";
 import type { Dispatch } from "redux";
 import { getAntdTheme } from "theme";
 import type { BorderTabType, OrthoView } from "viewer/constants";
-import { BorderTabs, OrthoViews } from "viewer/constants";
+import { BorderTabs, FlightViews, OrthoViews } from "viewer/constants";
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { setBorderOpenStatusAction } from "viewer/model/actions/ui_actions";
 import { setViewportAction } from "viewer/model/actions/view_mode_actions";

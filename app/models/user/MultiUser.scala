@@ -218,7 +218,7 @@ class UserKeyboardShortcutsConfigsDAO @Inject()(sqlClient: SqlClient)(implicit e
           .as[String])
     } yield rows.headOption.flatMap(r => JsonHelper.parseAs[JsObject](r).toOption).getOrElse(Json.obj())
 
-  def updateForUser(multiUserId: ObjectId, shortcutsConfig: JsObject): Fox[Unit] =
+  def updateForMultiUser(multiUserId: ObjectId, shortcutsConfig: JsObject): Fox[Unit] =
     for {
       _ <- run(q"""INSERT INTO webknossos.multiUser_keyboardShortcutsConfigs(_multiUser, shortcutsConfig)
                    VALUES($multiUserId, $shortcutsConfig)

@@ -52,7 +52,7 @@ class ConfigurationController @Inject()(
           .validate[JsObject]
           .asOpt
           .toFox ?~> Msg.User.Configuration.invalidKeyboardShortcutsConfig
-        _ <- userKeyboardShortcutsConfigsDAO.updateForUser(request.identity._multiUser, shortcuts)
+        _ <- userKeyboardShortcutsConfigsDAO.updateForMultiUser(request.identity._multiUser, shortcuts)
       } yield JsonOk(Msg.User.Configuration.updatedKeyboardShortcutsConfig)
   }
 

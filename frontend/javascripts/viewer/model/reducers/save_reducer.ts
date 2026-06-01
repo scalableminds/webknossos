@@ -202,9 +202,10 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
     }
 
     case "SET_USER_HOLDING_MUTEX": {
-      const { blockedByUser } = action;
+      const { blockedByUser, blockedBySessionId } = action;
       return updateKey2(state, "save", "mutexState", {
         blockedByUser,
+        blockedBySessionId: blockedBySessionId ?? null,
       });
     }
 

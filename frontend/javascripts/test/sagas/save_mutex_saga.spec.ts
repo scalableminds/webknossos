@@ -215,6 +215,7 @@ describe("Save Mutex Saga", () => {
     context.mocks.acquireAnnotationMutex.mockImplementation(async () => ({
       canEdit: false,
       blockedByUser: blockingUser,
+      blockedBySessionId: null,
     }));
     const task = startSaga(function* task() {
       yield put(setCollaborationModeAction("Exclusive"));
@@ -278,6 +279,7 @@ describe("Save Mutex Saga", () => {
     context.mocks.acquireAnnotationMutex.mockImplementation(async () => ({
       canEdit: false,
       blockedByUser: blockingUser,
+      blockedBySessionId: null,
     }));
     const task = startSaga(function* task() {
       const hasMutex = yield* select((state) => state.save.mutexState.hasAnnotationMutex);
@@ -302,6 +304,7 @@ describe("Save Mutex Saga", () => {
       context.mocks.acquireAnnotationMutex.mockImplementation(async () => ({
         canEdit: true,
         blockedByUser: null,
+        blockedBySessionId: null,
       }));
       yield take("SET_IS_MUTEX_ACQUIRED");
       // Check if mutex was successfully received.
@@ -470,6 +473,7 @@ describe("Save Mutex Saga", () => {
       context.mocks.acquireAnnotationMutex.mockImplementation(async () => ({
         canEdit: true,
         blockedByUser: null,
+        blockedBySessionId: null,
       }));
       yield take("SET_IS_MUTEX_ACQUIRED");
       hasAnnotationMutex = true;
@@ -556,6 +560,7 @@ describe("Save Mutex Saga should crash", () => {
       context.mocks.acquireAnnotationMutex.mockImplementation(async () => ({
         canEdit: false,
         blockedByUser: blockingUser,
+        blockedBySessionId: null,
       }));
       yield take("SET_IS_MUTEX_ACQUIRED");
       yield sleep(100);

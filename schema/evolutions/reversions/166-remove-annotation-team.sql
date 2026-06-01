@@ -49,7 +49,8 @@ WHERE a.typ = 'Orphan';
 
 ALTER TABLE webknossos.annotations
   ALTER COLUMN _team SET NOT NULL,
-  ADD CONSTRAINT _team_objectId CHECK (_team ~ '^[0-9a-f]{24}$');
+  ADD CONSTRAINT _team_objectId CHECK (_team ~ '^[0-9a-f]{24}$'),
+  ADD CONSTRAINT annotations__team_fkey FOREIGN KEY (_team) REFERENCES webknossos.teams(_id);
 
 CREATE VIEW webknossos.annotations_ AS SELECT * FROM webknossos.annotations WHERE NOT isDeleted;
 

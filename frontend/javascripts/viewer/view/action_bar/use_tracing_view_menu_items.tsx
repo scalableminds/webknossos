@@ -43,7 +43,6 @@ import {
   screenshotMenuItem,
 } from "viewer/view/action_bar/view_dataset_actions_view";
 
-// These handlers are moved from TracingActionsView.tsx
 const handleRestore = async () => {
   await Model.ensureSavedState();
   Store.dispatch(setVersionRestoreVisibilityAction(true));

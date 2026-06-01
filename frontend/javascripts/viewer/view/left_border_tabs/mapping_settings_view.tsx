@@ -6,7 +6,7 @@ import messages from "messages";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import { ControlModeEnum, MappingStatusEnum } from "viewer/constants";
-import { isAnnotationOwner } from "viewer/model/accessors/annotation_accessor";
+import { isAnnotationOwner, mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import {
   getMappingInfo,
   getSegmentationLayerByName,
@@ -66,7 +66,7 @@ function MappingSettingsView({ layerName }: Props) {
   const isViewMode = useWkSelector(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
-  const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
+  const allowUpdate = useWkSelector(mayEditAnnotation);
   const isEditableMappingActive = useWkSelector((state) => hasEditableMapping(state, layerName));
   const isMappingLockedState = useWkSelector((state) => isMappingLocked(state, layerName));
   const isAnnotationLockedByOwner = useWkSelector((state) => state.annotation.isLockedByOwner);

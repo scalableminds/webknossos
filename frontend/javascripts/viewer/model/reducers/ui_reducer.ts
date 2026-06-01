@@ -38,6 +38,11 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
         showVersionRestore: action.active,
       });
     }
+    case "SET_IS_RESTORING_VERSION": {
+      return updateKey(state, "uiInformation", {
+        isRestoringVersion: action.isRestoring,
+      });
+    }
 
     case "SET_STORED_LAYOUTS": {
       const { storedLayouts } = action;

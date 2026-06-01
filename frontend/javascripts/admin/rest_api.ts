@@ -735,20 +735,33 @@ export async function getTracingsForAnnotation(
 
 export async function acquireAnnotationMutex(
   annotationId: string,
-): Promise<{ canEdit: boolean; blockedByUser: APIUserCompact | undefined | null }> {
-  const { canEdit, blockedByUser } = await Request.receiveJSON(
-    `/api/annotations/${annotationId}/acquireMutex`,
+  sessionId: string,
+): Promise<{
+  canEdit: boolean;
+  // If the mutex could not be rejected, the following two properties contain
+  // which user (and which session id) is responsible. The current user might
+  // be blocking the mutex in another session (then, the session id will be
+  // different from the current one).
+  blockedByUser: APIUserCompact | undefined | null;
+  blockedBySessionId: string | undefined | null;
+}> {
+  const { canEdit, blockedByUser, blockedBySessionId } = await Request.receiveJSON(
+    `/api/annotations/${annotationId}/acquireMutex?${new URLSearchParams({ sessionId })}`,
     {
       method: "POST",
     },
   );
-  return { canEdit, blockedByUser };
+  return { canEdit, blockedByUser, blockedBySessionId };
 }
 
 export async function releaseAnnotationMutex(annotationId: string): Promise<void> {
-  await Request.receiveJSON(`/api/annotations/${annotationId}/mutex`, {
-    method: "DELETE",
+  await Request.receiveJSON(`/api/annotations/${annotationId}/releaseMutex`, {
+    method: "POST",
   });
+}
+
+export function releaseAnnotationMutexWithBeacon(annotationId: string): boolean {
+  return navigator.sendBeacon(`/api/annotations/${annotationId}/releaseMutex`);
 }
 
 export async function getTracingForAnnotationType(

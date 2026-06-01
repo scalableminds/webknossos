@@ -19,6 +19,7 @@ import WebKnossosController from "viewer/controller";
 import MergerModeController from "viewer/controller/merger_mode_controller";
 import { destroySceneController } from "viewer/controller/scene_controller_provider";
 import UrlManager from "viewer/controller/url_manager";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { is2dDataset } from "viewer/model/accessors/dataset_accessor";
 import { AnnotationTool, MeasurementTools } from "viewer/model/accessors/tool_accessor";
 import { cancelSagaAction, resetStoreAction } from "viewer/model/actions/actions";
@@ -436,7 +437,7 @@ function mapStateToProps(state: WebknossosState) {
   return {
     viewMode: state.temporaryConfiguration.viewMode,
     autoSaveLayouts: state.userConfiguration.autoSaveLayouts,
-    isUpdateTracingAllowed: state.annotation.isUpdatingCurrentlyAllowed,
+    isUpdateTracingAllowed: mayEditAnnotation(state),
     showVersionRestore: state.uiInformation.showVersionRestore,
     storedLayouts: state.uiInformation.storedLayouts,
     datasetId: state.dataset.id,

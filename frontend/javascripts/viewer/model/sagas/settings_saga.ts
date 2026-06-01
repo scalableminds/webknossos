@@ -15,6 +15,7 @@ import {
   SETTINGS_RETRY_DELAY,
 } from "viewer/model/sagas/saving/save_saga_constants";
 import type { DatasetConfiguration, DatasetLayerConfiguration } from "viewer/store";
+import { mayEditAnnotation } from "../accessors/annotation_accessor";
 import { Toolkit } from "../accessors/tool_accessor";
 import { ensureWkInitialized } from "./ready_sagas";
 
@@ -126,7 +127,7 @@ function* ensureValidToolkit(): Saga<void> {
   const isViewMode = yield* select(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
-  const isReadOnly = yield* select((state) => !state.annotation.isUpdatingCurrentlyAllowed);
+  const isReadOnly = yield* select((state) => !mayEditAnnotation(state));
 
   if (isViewMode || isReadOnly) {
     yield* put(updateUserSettingAction("activeToolkit", Toolkit.ALL_TOOLS));

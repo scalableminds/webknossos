@@ -4,12 +4,11 @@ import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Empty, Failure, Fox, FoxImplicits, Full}
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.schema.Tables.AnnotationMutexesRow
 import com.typesafe.scalalogging.LazyLogging
 import models.user.{UserDAO, UserService}
-import com.scalableminds.util.tools.Full
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.{JsObject, Json}
 import utils.WkConf
@@ -19,9 +18,9 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
-case class AnnotationMutex(annotationId: ObjectId, userId: ObjectId, expiry: Instant)
+case class AnnotationMutex(annotationId: ObjectId, userId: ObjectId, sessionId: String, expiry: Instant)
 
-case class MutexResult(canEdit: Boolean, blockedByUser: Option[ObjectId])
+case class MutexResult(canEdit: Boolean, blockedByUser: Option[ObjectId], blockedBySessionId: Option[String])
 
 class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
                                        val actorSystem: ActorSystem,
@@ -42,31 +41,36 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
 
   private val defaultExpiryTime = wkConf.WebKnossos.Annotation.Mutex.expiryTime
 
-  def tryAcquiringAnnotationMutex(annotationId: ObjectId, userId: ObjectId): Fox[MutexResult] =
+  def tryAcquiringAnnotationMutex(annotationId: ObjectId, userId: ObjectId, sessionId: String): Fox[MutexResult] =
     this.synchronized {
       for {
         mutexBox <- annotationMutexDAO.findOne(annotationId).shiftBox
         result <- mutexBox match {
           case Full(mutex) =>
-            if (mutex.userId == userId)
+            if (mutex.userId == userId && mutex.sessionId == sessionId)
               refresh(mutex)
             else
-              Fox.successful(MutexResult(canEdit = false, blockedByUser = Some(mutex.userId)))
-          case _ =>
-            acquire(annotationId, userId)
+              Fox.successful(
+                MutexResult(canEdit = false,
+                            blockedByUser = Some(mutex.userId),
+                            blockedBySessionId = Some(mutex.sessionId)))
+          case Empty =>
+            acquire(annotationId, userId, sessionId)
+          case f: Failure =>
+            f.toFox
         }
       } yield result
     }
 
-  private def acquire(annotationId: ObjectId, userId: ObjectId): Fox[MutexResult] =
+  private def acquire(annotationId: ObjectId, userId: ObjectId, sessionId: String): Fox[MutexResult] =
     for {
-      _ <- annotationMutexDAO.upsertOne(AnnotationMutex(annotationId, userId, Instant.in(defaultExpiryTime)))
-    } yield MutexResult(canEdit = true, None)
+      _ <- annotationMutexDAO.upsertOne(AnnotationMutex(annotationId, userId, sessionId, Instant.in(defaultExpiryTime)))
+    } yield MutexResult(canEdit = true, None, None)
 
   private def refresh(mutex: AnnotationMutex): Fox[MutexResult] =
     for {
       _ <- annotationMutexDAO.upsertOne(mutex.copy(expiry = Instant.in(defaultExpiryTime)))
-    } yield MutexResult(canEdit = true, None)
+    } yield MutexResult(canEdit = true, None, None)
 
   def release(annotationId: ObjectId, userId: ObjectId): Fox[Unit] =
     annotationMutexDAO.deleteForUser(annotationId, userId)
@@ -78,7 +82,8 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
     } yield
       Json.obj(
         "canEdit" -> mutexResult.canEdit,
-        "blockedByUser" -> userJsonOpt
+        "blockedByUser" -> userJsonOpt,
+        "blockedBySessionId" -> mutexResult.blockedBySessionId
       )
 
 }
@@ -90,12 +95,13 @@ class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionC
     AnnotationMutex(
       ObjectId(r._Annotation),
       ObjectId(r._User),
+      r.sessionid,
       Instant.fromSql(r.expiry)
     )
 
   def findOne(annotationId: ObjectId): Fox[AnnotationMutex] =
     for {
-      rows <- run(q"""SELECT _annotation, _user, expiry
+      rows <- run(q"""SELECT _annotation, _user, sessionId, expiry
             FROM webknossos.annotation_mutexes
             WHERE _annotation = $annotationId
             AND expiry > NOW()""".as[AnnotationMutexesRow])
@@ -105,11 +111,12 @@ class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionC
 
   def upsertOne(annotationMutex: AnnotationMutex): Fox[Unit] =
     for {
-      _ <- run(q"""INSERT INTO webknossos.annotation_mutexes(_annotation, _user, expiry)
-                   VALUES(${annotationMutex.annotationId}, ${annotationMutex.userId}, ${annotationMutex.expiry})
+      _ <- run(q"""INSERT INTO webknossos.annotation_mutexes(_annotation, _user, sessionId, expiry)
+                   VALUES(${annotationMutex.annotationId}, ${annotationMutex.userId}, ${annotationMutex.sessionId}, ${annotationMutex.expiry})
                    ON CONFLICT (_annotation)
                      DO UPDATE SET
                        _user = ${annotationMutex.userId},
+                       sessionId = ${annotationMutex.sessionId},
                        expiry = ${annotationMutex.expiry}
                    """.asUpdate)
     } yield ()

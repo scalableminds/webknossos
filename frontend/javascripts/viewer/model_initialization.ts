@@ -396,7 +396,7 @@ function initializeAnnotation(
   editableMappings: Array<ServerEditableMapping>,
 ) {
   // This method is not called for the View mode
-  const { dataset } = Store.getState();
+  const { dataset, save: saveState } = Store.getState();
   let annotation = _annotation;
   const { allowedModes, preferredMode } = determineAllowedModes(annotation.settings);
 
@@ -422,7 +422,10 @@ function initializeAnnotation(
         ...annotation,
         restrictions: {
           ...annotation.restrictions,
-          allowSave: annotation.restrictions.allowUpdate,
+          // If saving was disabled at some point, we don't want this to ever be reset.
+          // For example, when switching between versions in the version restore view,
+          // api.tracing.restart is called which calls Model.fetch here.
+          allowSave: annotation.restrictions.allowUpdate && !saveState.isSavingDisabled,
         },
       };
     }

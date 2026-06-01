@@ -1,7 +1,7 @@
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import ErrorHandling from "libs/error_handling";
 import { diffArrays, diffNumberArrays } from "libs/utils";
-import type { Edge } from "./types/tree_types";
+import type { Edge, MutableEdge } from "./types/tree_types";
 
 type EdgeMap = DiffableMap<number, Edge[]>;
 
@@ -196,7 +196,7 @@ export function diffEdgeCollections(
   for (const changedNodeIndex of mapDiff.changed) {
     // For each changedNodeIndex there is at least one outgoing edge which was added or removed.
     // So, check for each outgoing edge whether it only exists in A or B
-    let outgoingEdgesDiff;
+    let outgoingEdgesDiff: { onlyA: Readonly<MutableEdge[]>; onlyB: Readonly<MutableEdge[]> };
     if (useDeepEqualityCheck) {
       // In case of a deep equality check, we diff by outgoing edges.
       // The edges are then recreated based on the returned diff.

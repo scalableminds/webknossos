@@ -328,7 +328,7 @@ class UserService @Inject()(conf: WkConf,
 
   def isTeamManagerOrAdminOf(user: User, organizationId: String, taskIdOpt: Option[ObjectId]): Fox[Boolean] =
     taskIdOpt match {
-      case None => Fox.successful(user.isAdmin)
+      case None => Fox.successful(user.isAdminOf(organizationId))
       case Some(taskId) =>
         (for {
           task <- taskDAO.findOne(taskId)(GlobalAccessContext)

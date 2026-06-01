@@ -265,20 +265,20 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
         OR (
           ${prefix}visibility = ${AnnotationVisibility.Internal}
           AND (
-            (SELECT _organization FROM webknossos.datasets_ WHERE _id = ${prefix}_dataset)
+            (SELECT _organization FROM webknossos.users_ WHERE _id = ${prefix}_user)
             IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId)
-            OR ${prefix}_user = $requestingUserId
-            OR (
-              (SELECT _organization FROM webknossos.datasets_ WHERE _id = ${prefix}_dataset)
-              IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin)
-            )
           )
         )"""
 
   override protected def deleteAccessQ(requestingUserId: ObjectId) =
     q"""(_user = $requestingUserId
-       OR (SELECT _organization FROM webknossos.datasets_ WHERE _id = _dataset)
-        IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))"""
+       OR (SELECT _organization FROM webknossos.users_ WHERE _id = _user)
+          IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin)
+       OR (
+         _task IS NOT NULL
+         AND (SELECT p._team FROM webknossos.projects p JOIN webknossos.tasks t ON t._project = p._id WHERE t._id = _task)
+           IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $requestingUserId AND isTeamManager)
+       ))"""
 
   override protected def updateAccessQ(requestingUserId: ObjectId): SqlToken =
     deleteAccessQ(requestingUserId)

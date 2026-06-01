@@ -6,7 +6,7 @@ import messages from "messages";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { ControlModeEnum, MappingStatusEnum } from "viewer/constants";
-import { isAnnotationOwner } from "viewer/model/accessors/annotation_accessor";
+import { isAnnotationOwner, mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import {
   getMappingInfo,
   getSegmentationLayerByName,
@@ -66,9 +66,7 @@ function MappingSettingsView({ layerName }: Props) {
   const isViewMode = useWkSelector(
     (state) => state.temporaryConfiguration.controlMode === ControlModeEnum.VIEW,
   );
-  const allowUpdate = useSelector(
-    (state: WebknossosState) => state.annotation.isUpdatingCurrentlyAllowed,
-  );
+  const allowUpdate = useSelector(mayEditAnnotation);
   const isEditableMappingActive = useSelector((state: WebknossosState) =>
     hasEditableMapping(state, layerName),
   );

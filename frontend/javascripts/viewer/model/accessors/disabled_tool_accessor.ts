@@ -25,6 +25,7 @@ import {
   Toolkits,
   VolumeTools,
   VolumeToolsWithProofreading,
+  WRITE_TOOLS,
 } from "./tool_accessor";
 
 export type DisabledInfo = {
@@ -33,6 +34,7 @@ export type DisabledInfo = {
 };
 
 const DISABLED_EXPLANATION = {
+  NO_UPDATE_ALLOWED: "Editing is disabled currently.",
   ZOOM_IN_TO_USE_TOOL:
     "Please zoom in further to use this tool. If you want to edit volume data on this zoom level, create an annotation with restricted magnifications from the extended annotation menu in the dashboard.",
   ZOOM_INVALID_FOR_TRACING:
@@ -85,6 +87,7 @@ type Params = {
   isUneditableMappingLocked: boolean;
   activeOrganization: APIOrganization | null;
   activeUser: APIUser | null | undefined;
+  isUpdatingCurrentlyAllowed: boolean;
 };
 
 class DisableRule {
@@ -240,8 +243,13 @@ const areaMeasurementRotationRule = new DisableRule(
   ({ isFlycamRotated }) => (isFlycamRotated ? DISABLED_EXPLANATION.ROTATION_ACTIVE : null),
 );
 
+const requiresAllowUpdateRule = new DisableRule(WRITE_TOOLS, ({ isUpdatingCurrentlyAllowed }) =>
+  !isUpdatingCurrentlyAllowed ? DISABLED_EXPLANATION.NO_UPDATE_ALLOWED : null,
+);
+
 const rules = [
   // Sorted roughly by descending user-effort to enable a tool.
+  requiresAllowUpdateRule,
   proofreadRule,
   // Volume tool rules
   noVisibleSegmentationTracingRule,
@@ -335,6 +343,7 @@ const _getDisabledInfoForTools = (
     isUneditableMappingLocked,
     activeOrganization: state.activeOrganization,
     activeUser: state.activeUser,
+    isUpdatingCurrentlyAllowed: annotation.isUpdatingCurrentlyAllowed,
   };
 
   const result = {} as Record<AnnotationToolId, DisabledInfo>;

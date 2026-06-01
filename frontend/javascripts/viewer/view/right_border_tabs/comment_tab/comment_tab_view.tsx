@@ -35,7 +35,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import AutoSizer from "react-virtualized-auto-sizer";
 import type { Comparator } from "types/type_utils";
-import { isAnnotationOwner } from "viewer/model/accessors/annotation_accessor";
+import { isAnnotationOwner, mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { getActiveNode, getSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import {
   createCommentAction,
@@ -129,7 +129,7 @@ function CommentTabView(props: Props) {
 
   const dispatch = useDispatch();
 
-  const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
+  const allowUpdate = useWkSelector(mayEditAnnotation);
   const keyboardDelay = useWkSelector((state) => state.userConfiguration.keyboardDelay);
 
   const isAnnotationLockedByUser = useWkSelector((state) => state.annotation.isLockedByOwner);

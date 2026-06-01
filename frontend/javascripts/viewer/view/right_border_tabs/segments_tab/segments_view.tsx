@@ -52,6 +52,7 @@ import type { APIMeshFileInfo } from "types/api_types";
 import { type AdditionalCoordinate, APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { EMPTY_OBJECT } from "viewer/constants";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import {
   getMagInfoOfVisibleSegmentationLayer,
   getMappingInfo,
@@ -189,8 +190,7 @@ const mapStateToProps = (state: WebknossosState) => {
     selectedIds: getCleanedSelectedSegmentsOrGroup(state),
     visibleSegmentationLayer,
     activeVolumeTracing,
-    allowUpdate:
-      state.annotation.isUpdatingCurrentlyAllowed && !isVisibleButUneditableSegmentationLayerActive,
+    allowUpdate: mayEditAnnotation(state) && !isVisibleButUneditableSegmentationLayerActive,
     organization: state.dataset.owningOrganization,
     datasetName: state.dataset.name,
     availableMeshFiles:

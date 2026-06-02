@@ -319,7 +319,7 @@ jobs:
         with:
           step: start
           token: ${{ secrets.GITHUB_TOKEN }}
-          env: ${{ github.ref_name }}
+          env: dev
       - name: Trigger autodeployment hook
         if: steps.autodeploy.outputs.enabled == 'true'
         run: |

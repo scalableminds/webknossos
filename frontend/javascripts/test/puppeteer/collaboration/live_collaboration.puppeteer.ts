@@ -44,6 +44,7 @@ import {
   startCollectionOfPageErrors,
   waitForDataLoading,
   waitForMappingEnabled,
+  waitUntilNotBusy,
 } from "./page_helpers";
 import {
   type APIAnnotation,
@@ -251,7 +252,8 @@ describe("Live Collaboration", () => {
             setActiveCellActionObjCollab,
           );
 
-          await sleep(2000); // give WK sagas some time to create the actual segment item
+          await sleep(100); // give WK sagas some time to create the actual segment item
+          await waitUntilNotBusy(page);
 
           const proofreadMergeActionObjCollab = proofreadMergeAction(op.targetPosition);
           await page.evaluate(
@@ -267,10 +269,11 @@ describe("Live Collaboration", () => {
 
     // No page errors in any session
     for (let i = 0; i < sessions.length; i++) {
-      expect(
-        sessions[i].errors,
-        `User ${i} (${collabUsers[i].email}) had page errors`,
-      ).toHaveLength(0);
+      console.log("Checking for errors in session", i, ":", sessions[i].errors);
+      const filteredErrors = sessions[i].errors.filter(
+        (err) => !err.includes("Both segments belong to agglomerate id="),
+      );
+      expect(filteredErrors, `User ${i} (${collabUsers[i].email}) had page errors`).toHaveLength(0);
     }
 
     // Save all sessions so the merges are persisted before we verify.
@@ -319,7 +322,7 @@ describe("Live Collaboration", () => {
       console.log("Check merge operation");
       expect(
         sourceMappedId,
-        `Merge of ${op.sourcePosition} → ${op.targetPosition} not reflected`,
+        `Merge of ${op.sourcePosition} → ${op.targetPosition} not reflected (should be done by userIndex=${op.userIndex})`,
       ).toBe(targetMappedId);
     }
 

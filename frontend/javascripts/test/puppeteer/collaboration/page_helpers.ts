@@ -12,6 +12,7 @@ import { HEADLESS, PAGE_HEIGHT, PAGE_WIDTH } from "../screenshot_test_config";
 import { BASE_URL, NETWORK_THROTTLE } from "./config";
 
 const LOG_DIR = path.join(__dirname, "logs");
+fs.rmSync(LOG_DIR, { recursive: true, force: true });
 let sessionCounter = 0;
 
 async function waitForTracingViewLoad(page: Page): Promise<void> {
@@ -47,10 +48,8 @@ async function waitForTracingViewLoad(page: Page): Promise<void> {
 export async function getNewPage(authToken: string): Promise<{ page: Page; browser: Browser }> {
   const sessionId = ++sessionCounter;
   fs.mkdirSync(LOG_DIR, { recursive: true });
-  const logStream = fs.createWriteStream(
-    path.join(LOG_DIR, `session_${sessionId}_${Date.now()}.log`),
-  );
-  const log = (line: string) => logStream.write(`${new Date().toISOString()} ${line}\n`);
+  const logFile = path.join(LOG_DIR, `session_${sessionId}_${Date.now()}.log`);
+  const log = (line: string) => fs.appendFileSync(logFile, `${new Date().toISOString()} ${line}\n`);
 
   // Each page gets its own browser process so Chrome doesn't throttle background tabs.
   const browser = await chromium.launch({
@@ -75,11 +74,16 @@ export async function getNewPage(authToken: string): Promise<{ page: Page; brows
       ...NETWORK_THROTTLE,
     });
   }
-  page.on("console", (msg) => log(`[console.${msg.type()}] ${msg.text()}`));
+  page.on("console", async (msg) => {
+    const args = await Promise.all(
+      msg.args().map((arg) => arg.jsonValue().catch(() => arg.toString())),
+    );
+    const text = args.map((a) => (typeof a === "object" ? JSON.stringify(a) : String(a))).join(" ");
+    log(`[console.${msg.type()}] ${text}`);
+  });
   page.on("pageerror", (err) => log(`[pageerror] ${err.message}\n${err.stack ?? ""}`));
   // One page per browser — close the browser automatically when the page closes.
   page.on("close", () => {
-    logStream.end();
     browser.close().catch(() => {});
   });
   return { page, browser };
@@ -136,6 +140,21 @@ export async function waitForMappingEnabled(page: Page): Promise<void> {
     enabled = await page.evaluate(() =>
       window.webknossos.apiReady().then((api) => api.data.isMappingEnabled()),
     );
+  }
+}
+
+export async function waitUntilNotBusy(page: Page): Promise<void> {
+  const startTime = Date.now();
+  while (
+    await page.evaluate(
+      () => window.webknossos.DEV.store.getState().uiInformation.busyBlockingInfo.isBusy,
+    )
+  ) {
+    await sleep(1_000);
+  }
+  const totalWait = Date.now() - startTime;
+  if (totalWait > 1_000) {
+    console.log(`Waited ${totalWait}ms for busy state to clear`);
   }
 }
 

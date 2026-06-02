@@ -16,9 +16,9 @@ import {
 } from "viewer/model/sagas/saving/save_saga_constants";
 import type { DatasetConfiguration, DatasetLayerConfiguration } from "viewer/store";
 import { mayEditAnnotation } from "../accessors/annotation_accessor";
+import { getDatasetLayerNamesIncludingFallbackLayers } from "../accessors/dataset_accessor";
 import { Toolkit } from "../accessors/tool_accessor";
 import { ensureWkInitialized } from "./ready_sagas";
-import { getDatasetLayerNamesIncludingFallbackLayers } from "../accessors/dataset_accessor";
 
 function* pushUserSettingsAsync(): Saga<void> {
   const activeUser = yield* select((state) => state.activeUser);

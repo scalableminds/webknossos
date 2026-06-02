@@ -1,6 +1,6 @@
 import { InfoCircleOutlined } from "@ant-design/icons";
 import { getEditableTeams, updateUser } from "admin/rest_api";
-import { App, Checkbox, Col, Modal, Radio, type RadioChangeEvent, Row } from "antd";
+import { Alert, App, Checkbox, Col, Modal, Radio, type RadioChangeEvent, Row } from "antd";
 import { DividerWithSubtitle } from "dashboard/dataset/helper_components";
 import { useFetch } from "libs/react_helpers";
 import has from "lodash-es/has";
@@ -242,10 +242,21 @@ export function PermissionsAndTeamsComponent({
     </>
   );
 
+  const noTeamMembershipWarning =
+    selectedPermission === PERMISSIONS.member && Object.keys(selectedTeams).length === 0 ? (
+      <Alert
+        type="warning"
+        showIcon
+        message="Users with the organization permissions “Member” and zero team permissions will only be able to view public datasets."
+        style={{ marginTop: 12 }}
+      />
+    ) : null;
+
   return (
     <>
       {permissionEditingSection}
       {teamsRoleComponents}
+      {noTeamMembershipWarning}
     </>
   );
 }

@@ -189,6 +189,7 @@ CREATE TABLE webknossos.dataset_layer_attachments(
   type webknossos.LAYER_ATTACHMENT_TYPE NOT NULL,
   dataFormat webknossos.LAYER_ATTACHMENT_DATAFORMAT NOT NULL,
   uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
+  uploadIsPending BOOLEAN NOT NULL DEFAULT FALSE,
   PRIMARY KEY(_dataset, layerName, name, type)
 );
 
@@ -209,6 +210,7 @@ CREATE TABLE webknossos.dataset_mags(
   channelIndex INT,
   credentialId TEXT,
   uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
+  uploadIsPending BOOLEAN NOT NULL DEFAULT FALSE,
   PRIMARY KEY (_dataset, dataLayerName, mag)
 );
 

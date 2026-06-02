@@ -1,6 +1,7 @@
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import "admin/datastore_health_check";
 import { getActiveUser } from "admin/rest_api";
 import { message } from "antd";
 import ErrorBoundary from "components/error_boundary";

@@ -21,7 +21,7 @@ CREATE TABLE webknossos.releaseInformation (
   schemaVersion BIGINT NOT NULL
 );
 
-INSERT INTO webknossos.releaseInformation(schemaVersion) values(166);
+INSERT INTO webknossos.releaseInformation(schemaVersion) values(167);
 COMMIT TRANSACTION;
 
 
@@ -190,6 +190,7 @@ CREATE TABLE webknossos.dataset_layer_attachments(
   type webknossos.LAYER_ATTACHMENT_TYPE NOT NULL,
   dataFormat webknossos.LAYER_ATTACHMENT_DATAFORMAT NOT NULL,
   uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
+  uploadIsPending BOOLEAN NOT NULL DEFAULT FALSE,
   PRIMARY KEY(_dataset, layerName, name, type)
 );
 
@@ -210,6 +211,7 @@ CREATE TABLE webknossos.dataset_mags(
   channelIndex INT,
   credentialId TEXT,
   uploadToPathIsPending BOOLEAN NOT NULL DEFAULT FALSE,
+  uploadIsPending BOOLEAN NOT NULL DEFAULT FALSE,
   PRIMARY KEY (_dataset, dataLayerName, mag)
 );
 

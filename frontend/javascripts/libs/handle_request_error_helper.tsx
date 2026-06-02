@@ -3,7 +3,9 @@ import type { ServerErrorMessage } from "types/api_types";
 import Toast, { showToastOnce } from "./toast";
 
 let _pingFn: (str: string) => void = () => {
-  console.warn("pingMentionedDataStores was called before registerPingFn — datastore health check skipped");
+  console.warn(
+    "pingMentionedDataStores was called before registerPingFn — datastore health check skipped",
+  );
 };
 
 export function registerPingFn(fn: (str: string) => void): void {

@@ -798,12 +798,12 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       parsed <- Fox.runOptional(rows.headOption)(s => JsonHelper.parseAs[JsObject](s).toFox)
     } yield parsed
 
-  def updateViewConfiguration(annotation: ObjectId, user: ObjectId, viewConfiguration: JsObject)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateViewConfiguration(annotation: ObjectId, user: ObjectId, viewConfiguration: JsObject): Fox[Unit] =
     for {
-      _ <- assertUpdateAccess(annotation)
-      _ <- run(
-        q"UPDATE webknossos.user_annotationLayerConfigurations SET viewConfiguration = $viewConfiguration WHERE _annotation = $annotation AND _user = $user".asUpdate)
+      _ <- run(q"""INSERT INTO webknossos.user_annotationLayerConfigurations (_annotation, _user, viewConfiguration)
+           VALUES($annotation, $user, $viewConfiguration)
+           ON CONFLICT (_annotation, _user) DO UPDATE SET
+           viewConfiguration = $viewConfiguration""".asUpdate) ?~> Msg.Annotation.Edit.viewConfigurationFailed
     } yield ()
 
   def addContributor(id: ObjectId, userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =

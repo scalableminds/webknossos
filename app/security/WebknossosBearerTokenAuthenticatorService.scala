@@ -14,6 +14,7 @@ import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.user.{User, UserService}
 import TokenType.TokenType
+import com.scalableminds.util.Msg
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import utils.WkConf
@@ -75,9 +76,9 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
 
   def userForToken(tokenValue: String): Fox[User] =
     for {
-      tokenAuthenticator <- repository.findOneByValue(tokenValue) ?~> "auth.invalidToken"
-      _ <- Fox.fromBool(tokenAuthenticator.isValid) ?~> "auth.invalidToken"
-      idValidated <- ObjectId.fromString(tokenAuthenticator.loginInfo.providerKey) ?~> "auth.invalidToken"
+      tokenAuthenticator <- repository.findOneByValue(tokenValue) ?~> Msg.User.Token.invalid
+      _ <- Fox.fromBool(tokenAuthenticator.isValid) ?~> Msg.User.Token.invalid
+      idValidated <- ObjectId.fromString(tokenAuthenticator.loginInfo.providerKey) ?~> Msg.User.Token.invalid
       user <- userService.findOneCached(idValidated)(GlobalAccessContext)
     } yield user
 

@@ -1,5 +1,6 @@
 package models.organization
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Empty, Failure, Fox, FoxImplicits, Full}
@@ -66,7 +67,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
         case Full(existingTransaction) =>
           val milliCreditsToSpend = -existingTransaction.milliCreditDelta
           for {
-            _ <- Fox.assertTrue(hasEnoughCredits(existingTransaction._organization, milliCreditsToSpend)) ?~> "job.notEnoughCredits"
+            _ <- Fox.assertTrue(hasEnoughCredits(existingTransaction._organization, milliCreditsToSpend)) ?~> Msg.Job.Credits.notEnoughCredits
             newTransaction = CreditTransaction(
               ObjectId.generate,
               existingTransaction._organization,

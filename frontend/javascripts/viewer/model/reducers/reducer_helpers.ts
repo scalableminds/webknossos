@@ -182,18 +182,11 @@ export function convertServerAdditionalAxesToFrontEnd(
 }
 
 function isToolAvailable(
-  state: WebknossosState,
   disabledToolInfo: Record<AnnotationToolId, DisabledInfo>,
   tool: AnnotationTool,
 ) {
   const { isDisabled } = disabledToolInfo[tool.id];
-  if (isDisabled) {
-    return false;
-  }
-  if (!state.annotation.isUpdatingCurrentlyAllowed) {
-    return Toolkits.READ_ONLY_TOOLS.includes(tool);
-  }
-  return true;
+  return !isDisabled;
 }
 
 export function getNextTool(state: WebknossosState): AnnotationTool | null {
@@ -209,7 +202,7 @@ export function getNextTool(state: WebknossosState): AnnotationTool | null {
   ) {
     const newTool = tools[newToolIndex % tools.length];
 
-    if (isToolAvailable(state, disabledToolInfo, newTool)) {
+    if (isToolAvailable(disabledToolInfo, newTool)) {
       return newTool;
     }
   }
@@ -230,7 +223,7 @@ export function getPreviousTool(state: WebknossosState): AnnotationTool | null {
   ) {
     const newTool = tools[(tools.length + newToolIndex) % tools.length];
 
-    if (isToolAvailable(state, disabledToolInfo, newTool)) {
+    if (isToolAvailable(disabledToolInfo, newTool)) {
       return newTool;
     }
   }
@@ -244,7 +237,7 @@ export function setToolReducer(state: WebknossosState, tool: AnnotationTool) {
   }
 
   const disabledToolInfo = getDisabledInfoForTools(state);
-  if (!isToolAvailable(state, disabledToolInfo, tool)) {
+  if (!isToolAvailable(disabledToolInfo, tool)) {
     console.log(`Cannot switch to ${tool.readableName} because it's not available.`);
     return state;
   }

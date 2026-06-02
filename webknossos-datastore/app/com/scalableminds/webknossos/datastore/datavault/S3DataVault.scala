@@ -2,15 +2,13 @@ package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Box, Empty, Fox, FoxImplicits, Full, Failure => BoxFailure}
 import com.scalableminds.webknossos.datastore.storage.{
   CredentializedUPath,
   LegacyDataVaultCredential,
   S3AccessKeyCredential,
   S3ClientPool
 }
-import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Empty, Full, Failure => BoxFailure}
 import com.scalableminds.webknossos.datastore.helpers.{S3UriUtils, UPath}
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.lang3.builder.HashCodeBuilder
@@ -103,7 +101,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] =
     for {
-      objectKey <- S3UriUtils.objectKeyFromUri(path.toRemoteUriUnsafe).toFox
+      objectKey <- S3UriUtils.objectKeyFromVaultPath(path).toFox
       request = range match {
         case r: StartEndExclusiveByteRange => getRangeRequest(bucketName, objectKey, r)
         case r: SuffixLengthByteRange      => getSuffixRangeRequest(bucketName, objectKey, r)
@@ -127,10 +125,11 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
 
   override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
     for {
-      prefixKey <- S3UriUtils.objectKeyFromUri(path.toRemoteUriUnsafe).toFox
+      prefixKey <- S3UriUtils.objectKeyFromVaultPath(path).toFox
       s3SubPrefixKeys <- getObjectSummaries(bucketName, prefixKey, maxItems)
-      vaultPaths <- tryo(s3SubPrefixKeys.map(key =>
-        new VaultPath(UPath.fromStringUnsafe(s"${uri.getScheme}://$bucketName/$key"), this))).toFox
+      vaultPaths <- Fox.serialCombined(s3SubPrefixKeys) { key =>
+        UPath.fromString(s"${uri.getScheme}://$bucketName/$key").map(new VaultPath(_, this)).toFox
+      }
     } yield vaultPaths
 
   private def getObjectSummaries(bucketName: String, keyPrefix: String, maxItems: Int)(
@@ -165,7 +164,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
     }
 
     for {
-      rawPrefix <- S3UriUtils.objectKeyFromUri(path.toRemoteUriUnsafe).toFox
+      rawPrefix <- S3UriUtils.objectKeyFromVaultPath(path).toFox
       // add a trailing slash only if it's missing
       prefixKey = if (rawPrefix.endsWith("/")) rawPrefix else rawPrefix + "/"
       client <- clientFox
@@ -189,13 +188,15 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
 
 object S3DataVault {
   def create(credentializedUpath: CredentializedUPath, s3ClientPool: S3ClientPool)(
-      implicit ec: ExecutionContext): S3DataVault = {
+      implicit ec: ExecutionContext): Box[S3DataVault] = {
     val credential = credentializedUpath.credential.flatMap {
       case f: S3AccessKeyCredential     => Some(f)
       case f: LegacyDataVaultCredential => Some(f.toS3AccessKey)
       case _                            => None
     }
-    new S3DataVault(credential, credentializedUpath.upath.toRemoteUriUnsafe, s3ClientPool, ec)
+    for {
+      remoteUri <- credentializedUpath.upath.toRemoteUri
+    } yield new S3DataVault(credential, remoteUri, s3ClientPool, ec)
   }
 
 }

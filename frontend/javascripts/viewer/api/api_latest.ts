@@ -6,7 +6,7 @@ import {
   sendAnalyticsEvent,
 } from "admin/rest_api";
 import PriorityQueue from "js-priority-queue";
-import { InputKeyboardNoLoop } from "libs/input";
+import { InputKeyboard, type KeyboardNoLoopHandler } from "libs/input";
 import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
 import Request from "libs/request";
 import type { ToastStyle } from "libs/toast";
@@ -52,6 +52,7 @@ import {
 } from "viewer/controller/combinations/skeleton_handlers";
 import UrlManager from "viewer/controller/url_manager";
 import type { WebKnossosModel } from "viewer/model";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import {
   getLayerBoundingBox,
   getLayerByName,
@@ -189,6 +190,12 @@ import type {
   WebknossosState,
 } from "viewer/store";
 import Store from "viewer/store";
+import {
+  captureScreenshots,
+  downloadScreenshot,
+  downloadScreenshotsAsZip,
+  type ScreenshotBlob,
+} from "viewer/view/rendering_utils";
 import {
   callDeep,
   createGroupToSegmentsMap,
@@ -1491,6 +1498,16 @@ class TracingApi {
     Store.dispatch(setPositionAction(position));
   }
 
+  /**
+   * Sets the current camera rotation.
+   *
+   * @example
+   * api.tracing.setCameraRotation([180, 0, 90])
+   */
+  setCameraRotation(rotation: Vector3) {
+    Store.dispatch(setRotationAction(rotation));
+  }
+
   //  VOLUMETRACING API
 
   /**
@@ -2257,7 +2274,7 @@ class DataApi {
     optAdditionalCoordinates?: AdditionalCoordinate[] | null,
   ) {
     const state = Store.getState();
-    const allowUpdate = state.annotation.isUpdatingCurrentlyAllowed;
+    const allowUpdate = mayEditAnnotation(state);
     const additionalCoordinates =
       optAdditionalCoordinates === undefined
         ? state.flycam.additionalCoordinates
@@ -2845,6 +2862,38 @@ class DataApi {
       }
     }
   }
+
+  /**
+   * Takes a screenshot of the current viewport(s) and immediately downloads each image as a PNG.
+   * In plane mode, one file per visible viewport is downloaded. Use `captureScreenshots` +
+   * `downloadScreenshotsAsZip` instead when calling in a loop to avoid repeated save dialogs.
+   */
+  downloadScreenshot() {
+    return downloadScreenshot();
+  }
+
+  /**
+   * Renders the current viewport(s) and returns the images as an array of `{ name, blob }` objects
+   * without triggering any download. Suitable for collecting frames in a loop.
+   *
+   * @param prefix - Optional string prepended to each filename (e.g. a zero-padded frame index).
+   *   Resulting names follow the pattern `<prefix>__<dataset>__<x>_<y>_<z>__<plane>.png`, which
+   *   makes the files sort correctly when passed to `downloadScreenshotsAsZip`.
+   */
+  captureScreenshots(prefix?: string): Promise<ScreenshotBlob[]> {
+    return captureScreenshots(prefix);
+  }
+
+  /**
+   * Packages an array of `{ name, blob }` entries (as returned by `captureScreenshots`) into a
+   * single ZIP archive and downloads it once.
+   *
+   * @param screenshots - The collected screenshot blobs to include.
+   * @param zipName - Base name for the downloaded file (without `.zip`). Defaults to `"screenshots"`.
+   */
+  downloadScreenshotsAsZip(screenshots: ScreenshotBlob[], zipName?: string): Promise<void> {
+    return downloadScreenshotsAsZip(screenshots, zipName);
+  }
 }
 /**
  * All user configuration related API methods.
@@ -3020,8 +3069,8 @@ class UtilsApi {
   /**
    * Sets a custom handler function for a keyboard shortcut.
    */
-  registerKeyHandler(key: string, handler: () => void): UnregisterHandler {
-    const keyboard = new InputKeyboardNoLoop({
+  registerKeyHandler(key: string, handler: KeyboardNoLoopHandler): UnregisterHandler {
+    const keyboard = new InputKeyboard({
       [key]: handler,
     });
     return {

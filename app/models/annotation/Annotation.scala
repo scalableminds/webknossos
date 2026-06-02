@@ -1,5 +1,6 @@
 package models.annotation
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
@@ -32,7 +33,6 @@ case class Annotation(
     _id: ObjectId,
     _dataset: ObjectId,
     _task: Option[ObjectId] = None,
-    _team: ObjectId,
     _user: ObjectId,
     annotationLayers: List[AnnotationLayer],
     description: String = AnnotationDefaults.defaultDescription,
@@ -64,12 +64,12 @@ case class Annotation(
 
   def skeletonTracingId(implicit ec: ExecutionContext): Fox[Option[String]] =
     for {
-      _ <- Fox.fromBool(annotationLayers.count(_.typ == AnnotationLayerType.Skeleton) <= 1) ?~> "annotation.multiLayers.skeleton.notImplemented"
+      _ <- Fox.fromBool(annotationLayers.count(_.typ == AnnotationLayerType.Skeleton) <= 1) ?~> Msg.Annotation.multiLayersSkeletonNotImplemented
     } yield annotationLayers.find(_.typ == AnnotationLayerType.Skeleton).map(_.tracingId)
 
   def volumeTracingId(implicit ec: ExecutionContext): Fox[Option[String]] =
     for {
-      _ <- Fox.fromBool(annotationLayers.count(_.typ == AnnotationLayerType.Volume) <= 1) ?~> "annotation.multiLayers.volume.notImplemented"
+      _ <- Fox.fromBool(annotationLayers.count(_.typ == AnnotationLayerType.Volume) <= 1) ?~> Msg.Annotation.multiLayersVolumeNotImplemented
     } yield annotationLayers.find(_.typ == AnnotationLayerType.Volume).map(_.tracingId)
 
   def volumeAnnotationLayers: List[AnnotationLayer] = annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
@@ -209,7 +209,6 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
         ObjectId(r._Id),
         ObjectId(r._Dataset),
         r._Task.map(ObjectId(_)),
-        ObjectId(r._Team),
         ObjectId(r._User),
         annotationLayers,
         r.description,
@@ -266,21 +265,20 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
         OR (
           ${prefix}visibility = ${AnnotationVisibility.Internal}
           AND (
-            (SELECT _organization FROM webknossos.teams WHERE webknossos.teams._id = ${prefix}_team)
+            (SELECT _organization FROM webknossos.users_ WHERE _id = ${prefix}_user)
             IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId)
-          )
-          OR ${prefix}_team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $requestingUserId AND isTeamManager)
-          OR ${prefix}_user = $requestingUserId
-          OR (
-            (SELECT _organization FROM webknossos.teams WHERE webknossos.teams._id = ${prefix}_team)
-            IN (SELECT _organization FROM webknossos.users_ where _id = $requestingUserId AND isAdmin)
           )
         )"""
 
   override protected def deleteAccessQ(requestingUserId: ObjectId) =
-    q"""(_team IN (SELECT _team FROM webknossos.user_team_roles WHERE isTeamManager AND _user = $requestingUserId) OR _user = $requestingUserId
-       OR (SELECT _organization FROM webknossos.teams WHERE webknossos.teams._id = _team)
-        IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))"""
+    q"""(_user = $requestingUserId
+       OR (SELECT _organization FROM webknossos.users_ WHERE _id = _user)
+          IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin)
+       OR (
+         _task IS NOT NULL
+         AND (SELECT p._team FROM webknossos.projects p JOIN webknossos.tasks t ON t._project = p._id WHERE t._id = _task)
+           IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $requestingUserId AND isTeamManager)
+       ))"""
 
   override protected def updateAccessQ(requestingUserId: ObjectId): SqlToken =
     deleteAccessQ(requestingUserId)
@@ -517,12 +515,6 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     } yield parsed
   }
 
-  def countForTeam(teamId: ObjectId): Fox[Int] =
-    for {
-      countList <- run(q"SELECT COUNT(*) FROM $existingCollectionName WHERE _team = $teamId".as[Int])
-      count <- countList.headOption.toFox
-    } yield count
-
   // Does not use access query (because they dont support prefixes). Use only after separate access check!
   def findAllFinishedForProject(projectId: ObjectId): Fox[List[Annotation]] =
     for {
@@ -596,7 +588,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     for {
       accessQuery <- readAccessQuery
       excludeTeamsQ = if (excludedTeamIds.isEmpty) q"TRUE"
-      else q"(NOT t._id IN ${SqlToken.tupleFromList(excludedTeamIds)})"
+      else q"(NOT p._team IN ${SqlToken.tupleFromList(excludedTeamIds)})"
       countList <- run(q"""SELECT COUNT(*)
                            FROM (
                              SELECT a._id
@@ -608,7 +600,8 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                                AND state = ${AnnotationState.Active}
                                AND $accessQuery
                              ) a
-                             JOIN webknossos.teams t ON a._team = t._id
+                             JOIN webknossos.tasks_ t ON a._task = t._id
+                             JOIN webknossos.projects_ p ON t._project = p._id
                              WHERE $excludeTeamsQ
                            ) q
                          """.as[Int])
@@ -650,9 +643,9 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
 
   def insertOne(a: Annotation): Fox[Unit] = {
     val insertAnnotationQuery = q"""
-        INSERT INTO webknossos.annotations(_id, _dataset, _task, _team, _user, description, visibility,
+        INSERT INTO webknossos.annotations(_id, _dataset, _task, _user, description, visibility,
                                            name, viewConfiguration, state, tags, tracingTime, typ, collaborationMode, created, modified, isDeleted)
-        VALUES(${a._id}, ${a._dataset}, ${a._task}, ${a._team},
+        VALUES(${a._id}, ${a._dataset}, ${a._task},
          ${a._user}, ${a.description}, ${a.visibility}, ${a.name},
          ${a.viewConfiguration},
          ${a.state},
@@ -672,7 +665,6 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
              UPDATE webknossos.annotations
              SET
                _dataset = ${a._dataset},
-               _team = ${a._team},
                _user = ${a._user},
                description = ${a.description},
                visibility = ${a.visibility},

@@ -46,6 +46,13 @@ vi.mock("libs/user_local_storage", () => ({
   },
 }));
 
+vi.stubGlobal("sessionStorage", {
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+});
+
 const REQUEST_ID = "dummyRequestId";
 vi.mock("libs/uid_generator", () => ({
   getUid: () => REQUEST_ID,

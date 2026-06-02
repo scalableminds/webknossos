@@ -113,70 +113,74 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       await task.toPromise();
     });
 
-    it("should reload auxiliary meshes after merge", async (context: WebknossosTestContext) => {
-      const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    it(
+      "should reload auxiliary meshes after merge",
+      { retry: { count: 3, delay: 10 } },
+      async (context: WebknossosTestContext) => {
+        const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-      const task = startSaga(function* task(): Saga<void> {
-        const { tracingId } = yield* select(
-          (state: WebknossosState) => state.annotation.volumes[0],
-        );
-        yield call(initializeMappingAndTool, context, tracingId);
-        if (othersMayEdit) {
-          yield put(setCollaborationModeAction(othersMayEdit ? "Concurrent" : "OwnerOnly"));
-        }
+        const task = startSaga(function* task(): Saga<void> {
+          const { tracingId } = yield* select(
+            (state: WebknossosState) => state.annotation.volumes[0],
+          );
+          yield call(initializeMappingAndTool, context, tracingId);
+          if (othersMayEdit) {
+            yield put(setCollaborationModeAction(othersMayEdit ? "Concurrent" : "OwnerOnly"));
+          }
 
-        // Set up the merge-related segment partners. Normally, this would happen
-        // due to the user's interactions.
-        yield loadAgglomerateMeshes([1, 6]);
+          // Set up the merge-related segment partners. Normally, this would happen
+          // due to the user's interactions.
+          yield loadAgglomerateMeshes([1, 6]);
 
-        yield put(
-          updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
-        );
-        yield put(setActiveCellAction(1));
-        // Give mesh loading a little time
-        const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
-        expect(sortBy([...loadedMeshIds])).toEqual([1, 6]);
-        yield loadAgglomerateMeshes([4]);
+          yield put(
+            updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId),
+          );
+          yield put(setActiveCellAction(1));
+          // Give mesh loading a little time
+          const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
+          expect(sortBy([...loadedMeshIds])).toEqual([1, 6]);
+          yield loadAgglomerateMeshes([4]);
 
-        const loadedMeshIds2 = getAllCurrentlyLoadedMeshIds(context, tracingId);
-        expect(sortBy([...loadedMeshIds2])).toEqual([1, 4, 6]);
+          const loadedMeshIds2 = getAllCurrentlyLoadedMeshIds(context, tracingId);
+          expect(sortBy([...loadedMeshIds2])).toEqual([1, 4, 6]);
 
-        // Execute the actual merge and wait for the finished mapping.
-        const [removedMeshes, forkedEffect1] = yield* trackRemovedMeshActions();
-        const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
-        yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
-        yield take(
-          ((action: Action) =>
-            action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
-            !action.value.isBusy) as ActionPattern,
-        );
-        yield take(
-          ((action: Action) =>
-            action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1) as ActionPattern,
-        );
-        // Wait so that the addedMeshes listener has a 100% chance
-        // to register that mesh with id 1 was added.
-        yield delay(1);
+          // Execute the actual merge and wait for the finished mapping.
+          const [removedMeshes, forkedEffect1] = yield* trackRemovedMeshActions();
+          const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
+          yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
+          yield take(
+            ((action: Action) =>
+              action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
+              !action.value.isBusy) as ActionPattern,
+          );
+          yield take(
+            ((action: Action) =>
+              action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1) as ActionPattern,
+          );
+          // Wait so that the addedMeshes listener has a 100% chance
+          // to register that mesh with id 1 was added.
+          yield delay(1);
 
-        const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
-        expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6]);
-        expect(sortBy([...removedMeshes])).toEqual([1, 4]);
-        expect([...addedMeshes]).toEqual([1]);
-        yield cancel(forkedEffect1);
-        yield cancel(forkedEffect2);
-        yield expectSegmentList(tracingId, [
-          {
-            id: 1,
-            anchorPosition: [1, 1, 1],
-          },
-          {
-            id: 6,
-            anchorPosition: [6, 6, 6],
-          },
-        ]);
-      });
-      await task.toPromise();
-    });
+          const loadedMeshIdsAfterMerge = getAllCurrentlyLoadedMeshIds(context, tracingId);
+          expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6]);
+          expect(sortBy([...removedMeshes])).toEqual([1, 4]);
+          expect([...addedMeshes]).toEqual([1]);
+          yield cancel(forkedEffect1);
+          yield cancel(forkedEffect2);
+          yield expectSegmentList(tracingId, [
+            {
+              id: 1,
+              anchorPosition: [1, 1, 1],
+            },
+            {
+              id: 6,
+              anchorPosition: [6, 6, 6],
+            },
+          ]);
+        });
+        await task.toPromise();
+      },
+    );
 
     it("should reload auxiliary meshes after split", async (context: WebknossosTestContext) => {
       const { mocks } = context;

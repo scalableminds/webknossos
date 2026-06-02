@@ -230,6 +230,44 @@ describe("Save Mutex Saga", () => {
     await task.toPromise();
   });
 
+  it<WebknossosTestContext>("After the first mutex acquisition was unsuccessfull, editing should remain disabled even when the second mutex acquisition succeeds.", async (context: WebknossosTestContext) => {
+    await setupWebknossosForTesting(context, "hybrid");
+    // Mock fails on the first attempt so we can observe what happens when it later succeeds.
+    context.mocks.acquireAnnotationMutex.mockImplementation(async () => ({
+      canEdit: false,
+      blockedByUser: blockingUser,
+      blockedBySessionId: null,
+    }));
+    const task = startSaga(function* task() {
+      yield put(setCollaborationModeAction("Exclusive"));
+      // Wait for the initial (failed) acquisition.
+      yield take("SET_USER_HOLDING_MUTEX");
+      yield assertMutexStoreProperties({
+        hasAnnotationMutex: false,
+        blockingUser: blockingUser,
+        isUpdatingCurrentlyAllowed: false,
+      });
+      // Let the next acquisition succeed.
+      context.mocks.acquireAnnotationMutex.mockImplementation(async () => ({
+        canEdit: true,
+        blockedByUser: null,
+        blockedBySessionId: null,
+      }));
+      // SET_IS_MUTEX_ACQUIRED fires when hasAnnotationMutex changes (false → true).
+      yield take("SET_IS_MUTEX_ACQUIRED");
+      // Editing must remain disabled — the user has to refresh the page.
+      // setIsUpdatingAnnotationCurrentlyAllowedAction is only dispatched when
+      // isInitialRequest || !canEdit; on subsequent successful refreshes both are false,
+      // so the false set by the initial failure is never restored.
+      yield assertMutexStoreProperties({
+        hasAnnotationMutex: true,
+        blockingUser: null,
+        isUpdatingCurrentlyAllowed: false,
+      });
+    });
+    await task.toPromise();
+  });
+
   it<WebknossosTestContext>("An annotation where othersMayEdit is turned on should try to acquire the annotation mutex and not allow editing if mutex is not returned as can edit.", async (context: WebknossosTestContext) => {
     await setupWebknossosForTesting(context, "hybrid");
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();

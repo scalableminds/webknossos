@@ -4,7 +4,7 @@ do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 168 
 
 CREATE TABLE webknossos.user_annotationLayerConfigurations(
   _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
-  _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_dataset ~ '^[0-9a-f]{24}$') NOT NULL,
+  _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$') NOT NULL,
   viewConfiguration JSONB NOT NULL,
   PRIMARY KEY (_user, _annotation),
   CONSTRAINT viewConfigurationIsJsonObject CHECK(jsonb_typeof(viewConfiguration) = 'object')

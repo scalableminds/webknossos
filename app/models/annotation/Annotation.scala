@@ -782,27 +782,28 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       _ <- run(q"UPDATE webknossos.annotations SET collaborationMode = $collaborationMode WHERE _id = $id".asUpdate)
     } yield ()
 
-  def getViewConfiguration(_annotation: ObjectId, requestingUserId: ObjectId, annotationOwnerId: ObjectId)(
+  def getViewConfiguration(annotation: ObjectId, requestingUserId: ObjectId, annotationOwnerId: ObjectId)(
       implicit ctx: DBAccessContext): Fox[Option[JsObject]] =
     for {
-      _ <- assertUpdateAccess(_annotation)
+      _ <- assertUpdateAccess(annotation)
       // Single scan: fetch both the requesting user's row and the owner's fallback row, preferring
       // the requesting user's config via ORDER BY.  In PostgreSQL a boolean expression evaluates to
       // true (1) / false (0), so DESC puts the requesting-user row first.
       rows <- run(q"""SELECT viewConfiguration
                       FROM webknossos.user_annotationLayerConfigurations
-                      WHERE _annotation = $_annotation
+                      WHERE _annotation = $annotation
                         AND (_user = $requestingUserId OR _user = $annotationOwnerId)
                       ORDER BY (_user = $requestingUserId) DESC
                       LIMIT 1""".as[String])
       parsed <- Fox.runOptional(rows.headOption)(s => JsonHelper.parseAs[JsObject](s).toFox)
     } yield parsed
 
-  def updateViewConfiguration(_annotation: ObjectId, _user: ObjectId, viewConfiguration: JsObject)(
+  def updateViewConfiguration(annotation: ObjectId, user: ObjectId, viewConfiguration: JsObject)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- assertUpdateAccess(_annotation)
-      _ <- run(q"UPDATE webknossos.user_annotationLayerConfigurations SET viewConfiguration = $viewConfiguration WHERE _annotation = $_annotation AND _user = $_user".asUpdate)
+      _ <- assertUpdateAccess(annotation)
+      _ <- run(
+        q"UPDATE webknossos.user_annotationLayerConfigurations SET viewConfiguration = $viewConfiguration WHERE _annotation = $annotation AND _user = $user".asUpdate)
     } yield ()
 
   def addContributor(id: ObjectId, userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =

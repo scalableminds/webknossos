@@ -1274,7 +1274,7 @@ export function createResumableUpload(
 
     const resumable = new ResumableUpload({
       testChunks: true,
-      target: `${datastoreUrl}/data/datasets`,
+      target: `${datastoreUrl}/data/datasets/upload/dataset`,
       query: function () {
         return {
           token: activeToken,
@@ -1321,25 +1321,32 @@ export function createResumableUpload(
     return resumable;
   });
 }
-type ReserveUploadInformation = {
+
+type ResumableUploadInfo = {
   uploadId: string;
-  name: string;
-  directoryName: string;
-  newDatasetId: string;
-  organization: string;
   totalFileCount: number;
   filePaths: Array<string>;
-  initialTeams: Array<string>;
+  totalFileSizeInBytes: number;
+};
+type DatasetUploadInfo = {
+  resumableUploadInfo: ResumableUploadInfo;
+  datasetName: string;
+  organizationId: string;
+  layersToLink: Array<null>; // Always set as empty by frontend, only used by libs
+  initialTeamIds: Array<string>;
   folderId: string | null;
+  needsConversion: boolean;
+  voxelSizeFactor: Vector3 | undefined;
+  voxelSizeUnit: string | undefined;
 };
 
 export function reserveDatasetUpload(
   datastoreHost: string,
-  reserveUploadInformation: ReserveUploadInformation,
+  datasetUploadInfo: DatasetUploadInfo,
 ): Promise<void> {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(`/data/datasets/reserveUpload?token=${token}`, {
-      data: reserveUploadInformation,
+    Request.sendJSONReceiveJSON(`/data/datasets/upload/dataset/reserveUpload?token=${token}`, {
+      data: datasetUploadInfo,
       host: datastoreHost,
     }),
   );
@@ -1360,7 +1367,7 @@ export function getUnfinishedUploads(
 ): Promise<UnfinishedUpload[]> {
   return doWithToken(async (token) => {
     const unfinishedUploads = (await Request.receiveJSON(
-      `/data/datasets/getUnfinishedUploads?token=${token}&organizationName=${organizationName}`,
+      `/data/datasets/upload/dataset/unfinishedUploads?token=${token}&organizationName=${organizationName}`,
       {
         host: datastoreHost,
       },
@@ -1373,29 +1380,34 @@ type NewDatasetReply = {
   newDatasetId: string;
 };
 
+type FinishUploadReply = {
+  datasetId: string;
+};
+
 export function finishDatasetUpload(
   datastoreHost: string,
-  uploadInformation: ArbitraryObject,
-): Promise<NewDatasetReply> {
+  uploadId: string,
+): Promise<FinishUploadReply> {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(`/data/datasets/finishUpload?token=${token}`, {
-      data: uploadInformation,
-      host: datastoreHost,
-    }),
+    Request.receiveJSON(
+      `/data/datasets/upload/dataset/finishUpload?uploadId=${uploadId}&token=${token}`,
+      {
+        host: datastoreHost,
+        method: "POST",
+      },
+    ),
   );
 }
 
-export function cancelDatasetUpload(
-  datastoreHost: string,
-  cancelUploadInformation: {
-    uploadId: string;
-  },
-): Promise<void> {
+export function cancelDatasetUpload(datastoreHost: string, uploadId: string): Promise<void> {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(`/data/datasets/cancelUpload?token=${token}`, {
-      data: cancelUploadInformation,
-      host: datastoreHost,
-    }),
+    Request.receiveJSON(
+      `/data/datasets/upload/dataset/cancelUpload?uploadId=${uploadId}&token=${token}`,
+      {
+        host: datastoreHost,
+        method: "POST",
+      },
+    ),
   );
 }
 

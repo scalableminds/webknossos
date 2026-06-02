@@ -1,14 +1,44 @@
 # Note: keep this in sync with the reported version numbers in the com.scalableminds.util.mvc.ApiVersioning trait
+# Version log in webknossos.versioned.routes
+
+->  /v14/ datastore.latest.Routes
+
+# Dataset upload
+GET           /v13/datasets                                                                                                                              @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.testChunkV13(resumableChunkNumber: Int, resumableIdentifier: String)
+POST          /v13/datasets                                                                                                                              @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.uploadChunkV13()
+POST          /v13/datasets/reserveUpload                                                                                                                @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.reserveDatasetUploadV13()
+GET           /v13/datasets/unfinishedUploads                                                                                                            @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.getUnfinishedUploadsV13(organizationName: String)
+POST          /v13/datasets/finishUpload                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.finishUploadV13()
 
 ->  /v13/ datastore.latest.Routes
+
+# Dataset upload
+GET           /v12/datasets                                                                                                                              @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.testChunkV13(resumableChunkNumber: Int, resumableIdentifier: String)
+POST          /v12/datasets                                                                                                                              @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.uploadChunkV13()
+POST          /v12/datasets/reserveUpload                                                                                                                @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.reserveDatasetUploadV13()
+GET           /v12/datasets/unfinishedUploads                                                                                                            @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.getUnfinishedUploadsV13(organizationName: String)
+POST          /v12/datasets/finishUpload                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.finishUploadV13()
+
 ->  /v12/ datastore.latest.Routes
 
+# Dataset upload
+GET           /v11/datasets                                                                                                                              @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.testChunkV13(resumableChunkNumber: Int, resumableIdentifier: String)
+POST          /v11/datasets                                                                                                                              @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.uploadChunkV13()
+GET           /v11/datasets/unfinishedUploads                                                                                                            @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.getUnfinishedUploadsV13(organizationName: String)
+POST          /v11/datasets/finishUpload                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.finishUploadV13()
+# Dataset upload (v11 and older is separate!)
 POST          /v11/datasets/reserveUpload                                                                                                                @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.reserveUploadV11()
 
 ->  /v11/ datastore.latest.Routes
 
 POST          /v10/datasets/reserveManualUpload                                                                                                          @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.reserveManualUploadV10()
 
+# Dataset upload
+GET           /v10/datasets                                                                                                                              @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.testChunkV13(resumableChunkNumber: Int, resumableIdentifier: String)
+POST          /v10/datasets                                                                                                                              @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.uploadChunkV13()
+GET           /v10/datasets/unfinishedUploads                                                                                                            @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.getUnfinishedUploadsV13(organizationName: String)
+POST          /v10/datasets/finishUpload                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.finishUploadV13()
+# Dataset upload (v11 and older is separate!)
 POST          /v10/datasets/reserveUpload                                                                                                                @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.reserveUploadV11()
 
 ->  /v10/ datastore.latest.Routes
@@ -56,6 +86,12 @@ GET           /v9/zarr3_experimental/:organizationId/:datasetDirectoryName/:data
 
 POST          /v9/datasets/reserveManualUpload                                                                                                           @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.reserveManualUploadV10()
 
+# Dataset upload
+GET           /v9/datasets                                                                                                                               @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.testChunkV13(resumableChunkNumber: Int, resumableIdentifier: String)
+POST          /v9/datasets                                                                                                                               @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.uploadChunkV13()
+GET           /v9/datasets/unfinishedUploads                                                                                                             @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.getUnfinishedUploadsV13(organizationName: String)
+POST          /v9/datasets/finishUpload                                                                                                                  @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.finishUploadV13()
+# Dataset upload (v11 and older is separate!)
 POST          /v9/datasets/reserveUpload                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.reserveUploadV11()
 
 ->  /v9/  datastore.latest.Routes
@@ -104,6 +140,12 @@ GET           /v8/zarr3_experimental/:organizationId/:datasetDirectoryName/:data
 
 POST          /v8/datasets/reserveManualUpload                                                                                                           @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.reserveManualUploadV10()
 
+# Dataset upload
+GET           /v8/datasets                                                                                                                               @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.testChunkV13(resumableChunkNumber: Int, resumableIdentifier: String)
+POST          /v8/datasets                                                                                                                               @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.uploadChunkV13()
+GET           /v8/datasets/unfinishedUploads                                                                                                             @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.getUnfinishedUploadsV13(organizationName: String)
+POST          /v8/datasets/finishUpload                                                                                                                  @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.finishUploadV13()
+# Dataset upload (v11 and older is separate!)
 POST          /v8/datasets/reserveUpload                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.reserveUploadV11()
 
 ->  /v8/  datastore.latest.Routes
@@ -151,6 +193,12 @@ GET           /v7/zarr3_experimental/:organizationId/:datasetDirectoryName/:data
 
 POST          /v7/datasets/reserveManualUpload                                                                                                           @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.reserveManualUploadV10()
 
+# Dataset upload
+GET           /v7/datasets                                                                                                                               @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.testChunkV13(resumableChunkNumber: Int, resumableIdentifier: String)
+POST          /v7/datasets                                                                                                                               @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.uploadChunkV13()
+GET           /v7/datasets/unfinishedUploads                                                                                                             @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.getUnfinishedUploadsV13(organizationName: String)
+POST          /v7/datasets/finishUpload                                                                                                                  @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.finishUploadV13()
+# Dataset upload (v11 and older is separate!)
 POST          /v7/datasets/reserveUpload                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.reserveUploadV11()
 
 ->  /v7/  datastore.latest.Routes
@@ -198,6 +246,12 @@ GET           /v6/zarr3_experimental/:organizationId/:datasetDirectoryName/:data
 
 POST          /v6/datasets/reserveManualUpload                                                                                                           @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.reserveManualUploadV10()
 
+# Dataset upload
+GET           /v6/datasets                                                                                                                               @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.testChunkV13(resumableChunkNumber: Int, resumableIdentifier: String)
+POST          /v6/datasets                                                                                                                               @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.uploadChunkV13()
+GET           /v6/datasets/unfinishedUploads                                                                                                             @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.getUnfinishedUploadsV13(organizationName: String)
+POST          /v6/datasets/finishUpload                                                                                                                  @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.finishUploadV13()
+# Dataset upload (v11 and older is separate!)
 POST          /v6/datasets/reserveUpload                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.reserveUploadV11()
 
 ->  /v6/  datastore.latest.Routes
@@ -243,7 +297,17 @@ GET           /v5/zarr3_experimental/:organizationId/:datasetDirectoryName/:data
 
 POST          /v5/datasets/reserveManualUpload                                                                                                           @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.reserveManualUploadV10()
 
+# Dataset upload
+GET           /v5/datasets                                                                                                                               @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.testChunkV13(resumableChunkNumber: Int, resumableIdentifier: String)
+POST          /v5/datasets                                                                                                                               @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.uploadChunkV13()
+GET           /v5/datasets/unfinishedUploads                                                                                                             @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.getUnfinishedUploadsV13(organizationName: String)
+POST          /v5/datasets/finishUpload                                                                                                                  @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.finishUploadV13()
+# Dataset upload (v11 and older is separate!)
 POST          /v5/datasets/reserveUpload                                                                                                                 @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.reserveUploadV11()
 
 ->  /v5/  datastore.latest.Routes
 ->  /     datastore.latest.Routes
+
+# Dataset upload without version number: Old libs clients perform the chunk requests without version number.
+GET           /datasets                                                                                                                                  @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.testChunkV13(resumableChunkNumber: Int, resumableIdentifier: String)
+POST          /datasets                                                                                                                                  @com.scalableminds.webknossos.datastore.controllers.DSLegacyApiController.uploadChunkV13()

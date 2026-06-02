@@ -2,7 +2,7 @@ package com.scalableminds.webknossos.datastore.datavault
 
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, Full}
 import com.scalableminds.webknossos.datastore.storage.{
   DataVaultCredential,
   HttpBasicAuthCredential,
@@ -32,9 +32,9 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
 
   override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] = {
-    val uri = path.toRemoteUriUnsafe
+      tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] =
     for {
+      uri <- path.toRemoteUri.toFox
       response <- range match {
         case r: StartEndExclusiveByteRange => getWithRange(uri, r)
         case r: SuffixLengthByteRange      => getWithSuffixRange(uri, r)
@@ -47,8 +47,6 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
       } else if (response.status == 404) Fox.empty
       else Fox.failure(s"Https read failed for uri $uri: ${response.status} ${response.statusText}")
     } yield result
-
-  }
 
   override def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] =
     // HTTP file listing is currently not supported.
@@ -162,6 +160,6 @@ object HttpsDataVault {
     * @param dataStoreHost The host of the local data store that this vault is accessing. This is used to determine if a user token should be applied in requests.
     * @return
     */
-  def create(credentializedUpath: CredentializedUPath, ws: WSClient, dataStoreHost: String): HttpsDataVault =
-    new HttpsDataVault(credentializedUpath.credential, ws, dataStoreHost)
+  def create(credentializedUpath: CredentializedUPath, ws: WSClient, dataStoreHost: String): Box[HttpsDataVault] =
+    Full(new HttpsDataVault(credentializedUpath.credential, ws, dataStoreHost))
 }

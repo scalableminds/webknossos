@@ -506,10 +506,10 @@ object Msg {
         "Dataset name is invalid. Please use a name that does not start with a dot."
     }
     object Upload {
-      def finishFailed(datasetId: ObjectId): String =
-        s"Could not finalize upload for dataset “$datasetId”."
-      def noSuchUpload(uploadId: String): String =
-        s"Could not find running upload with upload id “$uploadId”."
+      def finishFailed(datasetId: ObjectId, domain: String): String =
+        s"Could not finalize upload for $domain “$datasetId”."
+      def noSuchUpload(uploadId: String, domain: String): String =
+        s"Could not find running $domain upload with upload id “$uploadId”."
       val allChunksUploadedCheckFailed: String =
         "Could not verify that all chunks have been uploaded."
       val couldNotLoadUnfinishedUploads: String = "Could not load unfinished uploads of user."
@@ -535,9 +535,20 @@ object Msg {
       val setUploaderForbidden: String = "No permission to set uploader for this dataset."
       val validationFailed: String = "Could not validate dataset information for upload."
       val magUploadOnlyVirtual: String = "Adding mags to existing datasets is only allowed for virtual datasets."
-      val uploadToPathsNoMatchingPrefix: String =
-        "Could not determine a configured path prefix that matches the request."
       val magAlreadyPending: String = "This mag is already pending."
+      val magNotPending: String = "This mag is not marked as pending."
+      val attachmentNotPending: String = "This attachment is not marked as pending."
+      val magPathNotSet: String = "Mag path is required in upload."
+      val reserveAttachmentUploadNotVirtual: String =
+        "Attachment upload to existing dataset is only supported for virtual datasets."
+      val reserveMagUploadNotVirtual: String =
+        "Mag upload to existing dataset is only supported for virtual datasets."
+      object ToPaths {
+        val noMatchingPrefix = "Could not determine a configured path prefix that matches the request."
+        val magAlreadyPending: String = "Conflict with existing pending mag. Pass overwritePending to overwrite."
+        val magNotPending: String = "This mag is not marked as pending upload to path."
+        val attachmentNotPending: String = "This attachment is not marked as pending (upload to path)."
+      }
     }
     object Chunk {
       val decompressFailed: String = "Could not decompress data chunk."
@@ -685,6 +696,7 @@ object Msg {
     val needsInvite: String =
       "Registration without invite is not enabled for this WEBKNOSSOS instance."
     val invalidInviteToken: String = "This invite token is invalid."
+    val inviteTeamMembershipsFailed: String = "Could not retrieve team memberships for invite."
     val invalidFirstName: String = "Please check your first name for any special characters."
     val invalidLastName: String = "Please check your last name for any special characters."
     object Token {

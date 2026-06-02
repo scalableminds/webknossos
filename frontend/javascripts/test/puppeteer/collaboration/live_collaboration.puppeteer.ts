@@ -25,7 +25,6 @@ import {
   getTeams,
   setCollaborationModeForAnnotation,
   updateDatasetTeams,
-  updateNovelUserExperienceInfos,
 } from "../../../admin/rest_api";
 import {
   DATASET_NAME,

@@ -198,12 +198,11 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     log() {
       for {
         assignee <- userService.findOneCached(userId)
-        teams <- userService.teamIdsFor(userId)
         task <- taskDAO.findOne(id)
         project <- projectDAO.findOne(task._project)
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, assignee)) ?~> Msg.notAllowed
-        (_, initializingAnnotationId) <- taskDAO.assignOneTo(id, userId, teams) ?~> Msg.Task.unavailable
+        (_, initializingAnnotationId) <- taskDAO.assignOneTo(id, userId) ?~> Msg.Task.unavailable
         insertedAnnotationBox <- annotationService.createAnnotationFor(assignee, id, initializingAnnotationId).shiftBox
         _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
         _ <- insertedAnnotationBox.toFox

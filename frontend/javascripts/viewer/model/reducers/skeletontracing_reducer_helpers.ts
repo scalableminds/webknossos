@@ -164,10 +164,10 @@ export function createNode(
     bitDepth: state.datasetConfiguration.fourBit ? 4 : 8,
     interpolation: state.datasetConfiguration.interpolation,
   };
-  // Create a new edge
   if (activeNode == null) {
     return [node, tree.edges];
   }
+  // Create a new edge
   const newEdge = {
     source: activeNode.id,
     target: nextNewId,

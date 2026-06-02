@@ -103,23 +103,6 @@ class AnnotationService @Inject()(
 
   val DefaultAnnotationListLimit = 1000
 
-  private def selectSuitableTeam(user: User, dataset: Dataset): Fox[ObjectId] =
-    (for {
-      userTeamIds <- userService.teamIdsFor(user._id)
-      datasetAllowedTeamIds <- teamService.allowedTeamIdsForDataset(dataset, cumulative = true) ?~> Msg.Dataset.allowedTeamsNotFound
-    } yield {
-      val selectedTeamOpt = datasetAllowedTeamIds.intersect(userTeamIds).headOption
-      selectedTeamOpt match {
-        case Some(selectedTeam) => Fox.successful(selectedTeam)
-        case None =>
-          for {
-            isTeamManagerOrAdminOfOrg <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
-            _ <- Fox.fromBool(isTeamManagerOrAdminOfOrg || dataset.isPublic || user.isDatasetManager)
-            organizationTeamId <- organizationDAO.findOrganizationTeamId(user._organization)
-          } yield organizationTeamId
-      }
-    }).flatten
-
   private def createVolumeTracing(
       dataSource: UsableDataSource,
       datasetOrganizationId: String,
@@ -307,8 +290,7 @@ class AnnotationService @Inject()(
     val datasetId = dataset._id
     for {
       annotationLayers <- createLayersForExplorational(dataset, newAnnotationId, annotationLayerParameters) ?~> Msg.Annotation.createTracingsFailed
-      teamId <- selectSuitableTeam(user, dataset) ?~> Msg.Annotation.createForbidden
-      annotation = Annotation(newAnnotationId, datasetId, None, teamId, user._id, annotationLayers)
+      annotation = Annotation(newAnnotationId, datasetId, None, user._id, annotationLayers)
       _ <- annotationDAO.insertOne(annotation)
     } yield annotation
   }
@@ -476,7 +458,6 @@ class AnnotationService @Inject()(
       annotationBase = Annotation(ObjectId.generate,
                                   datasetId,
                                   Some(task._id),
-                                  project._team,
                                   userId,
                                   annotationLayers,
                                   description.getOrElse(""),
@@ -497,19 +478,15 @@ class AnnotationService @Inject()(
                  annotationType: AnnotationType,
                  name: Option[String],
                  description: String,
-                 newAnnotationId: ObjectId): Fox[Annotation] =
-    for {
-      teamId <- selectSuitableTeam(user, dataset)
-      annotation = Annotation(newAnnotationId,
-                              dataset._id,
-                              None,
-                              teamId,
-                              user._id,
-                              annotationLayers.toList,
-                              description,
-                              name = name.getOrElse(""),
-                              typ = annotationType)
-    } yield annotation
+                 newAnnotationId: ObjectId): Annotation =
+    Annotation(newAnnotationId,
+               dataset._id,
+               None,
+               user._id,
+               annotationLayers.toList,
+               description,
+               name = name.getOrElse(""),
+               typ = annotationType)
 
   def updateTeamsForSharedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(
       implicit ctx: DBAccessContext): Fox[Unit] =

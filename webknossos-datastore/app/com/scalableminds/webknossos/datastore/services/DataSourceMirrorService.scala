@@ -73,7 +73,8 @@ class DataSourceMirrorService @Inject()(
       case Some(explicitPath) =>
         val defaultMagPath = layerDir.resolve(mag.mag.toMagLiteral(allowScalar = true))
         for {
-          _ <- tryo(Files.createSymbolicLink(defaultMagPath, explicitPath.toLocalPathUnsafe)).toFox
+          explicitPathLocal <- explicitPath.toLocalPath.toFox
+          _ <- tryo(Files.createSymbolicLink(defaultMagPath, explicitPathLocal)).toFox
         } yield mag.copy(path = Some(UPath.fromLocalPath(defaultMagPath)))
     }
 
@@ -109,7 +110,8 @@ class DataSourceMirrorService @Inject()(
     val defaultAttachmentPath = attachmentTypeDir.resolve(attachment.name + suffix)
     for {
       _ <- tryo(Files.createDirectories(attachmentTypeDir)).toFox
-      _ <- tryo(Files.createSymbolicLink(defaultAttachmentPath, attachment.path.toLocalPathUnsafe)).toFox
+      localAttachmentPath <- attachment.localPath.toFox
+      _ <- tryo(Files.createSymbolicLink(defaultAttachmentPath, localAttachmentPath)).toFox
     } yield attachment.copy(path = UPath.fromLocalPath(defaultAttachmentPath))
   }
 

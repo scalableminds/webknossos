@@ -4,7 +4,7 @@ import com.aayushatharva.brotli4j.Brotli4jLoader
 import com.aayushatharva.brotli4j.decoder.BrotliInputStream
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.io.ZipIO
-import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
+import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, JsonHelper}
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.helpers.UPath
@@ -73,8 +73,8 @@ class VaultPath(upath: UPath, dataVault: DataVault) extends LazyLogging with Fox
   def /(key: String): VaultPath =
     new VaultPath(upath / key, dataVault)
 
-  def toRemoteUriUnsafe: URI =
-    upath.toRemoteUriUnsafe
+  def toRemoteUri: Box[URI] =
+    upath.toRemoteUri
 
   def toUPath: UPath = upath
 

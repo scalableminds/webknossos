@@ -28,7 +28,10 @@ import Constants, {
 } from "viewer/constants";
 import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
-import { isAnnotationEditableByNonOwners } from "viewer/model/accessors/annotation_accessor";
+import {
+  isAnnotationEditableByNonOwners,
+  mayEditAnnotation,
+} from "viewer/model/accessors/annotation_accessor";
 import {
   getLayerByName,
   getMagInfo,
@@ -527,7 +530,7 @@ function* handleTreeProofreadingAction(action: Action): Saga<void> {
     return;
   }
 
-  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
+  const allowUpdate = yield* select(mayEditAnnotation);
   if (!allowUpdate) return;
 
   // Reserve the mutex early to be able to synchronize the agglomerate trees with the newest backend state,
@@ -1249,10 +1252,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
     return;
   }
 
-  const allowUpdate = yield* select(
-    (state) =>
-      state.annotation.restrictions.allowUpdate && state.annotation.isUpdatingCurrentlyAllowed,
-  );
+  const allowUpdate = yield* select((state) => mayEditAnnotation(state));
   if (!allowUpdate) return;
 
   const preparation = yield* call(prepareSplitOrMerge, false);
@@ -1517,7 +1517,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
   // This action does not depend on the active agglomerate. Instead, it
   // only depends on the rightclicked agglomerate.
 
-  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
+  const allowUpdate = yield* select(mayEditAnnotation);
   if (!allowUpdate) return;
 
   const preparation = yield* call(prepareSplitOrMerge, false);

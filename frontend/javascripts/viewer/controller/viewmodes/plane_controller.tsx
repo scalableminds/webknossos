@@ -4,6 +4,7 @@ import {
   type MouseBindingMap,
   type MouseEventHandler,
 } from "libs/input";
+import Toast from "libs/toast";
 import { isNoEditableElementFocused, waitForElementWithId } from "libs/utils";
 import { document } from "libs/window";
 import union from "lodash-es/union";
@@ -13,6 +14,11 @@ import { userSettings } from "types/schemas/user_settings.schema";
 import type { OrthoView, OrthoViewMap } from "viewer/constants";
 import { OrthoViews, OrthoViewValuesWithoutTDView } from "viewer/constants";
 import { moveU, moveV, moveW, zoom } from "viewer/controller/combinations/move_handlers";
+import {
+  moveAlongDirection,
+  toPrecedingNode,
+  toSubsequentNode,
+} from "viewer/controller/combinations/skeleton_handlers";
 import {
   AllToolKeyboardControls,
   AreaMeasurementToolController,
@@ -31,8 +37,13 @@ import getSceneController, {
   getSceneControllerOrNull,
 } from "viewer/controller/scene_controller_provider";
 import TDController from "viewer/controller/td_controller";
-import { getMoveOffset, getPosition } from "viewer/model/accessors/flycam_accessor";
+import {
+  getActiveMagIndexForLayer,
+  getMoveOffset,
+  getPosition,
+} from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
+import { calculateGlobalPos } from "viewer/model/accessors/view_mode_accessor";
 import { getMaximumBrushSize } from "viewer/model/accessors/volumetracing_accessor";
 import {
   pitchFlycamAction,
@@ -51,6 +62,7 @@ import Dimensions from "viewer/model/dimensions";
 import dimensions, { type DimensionIndices } from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { BrushPresets, StoreAnnotation, WebknossosState } from "viewer/store";
+import { api, Model } from "viewer/singletons";
 import Store from "viewer/store";
 import { getDefaultBrushSizes } from "viewer/view/action_bar/tools/brush_presets";
 import type {
@@ -402,6 +414,59 @@ class PlaneController extends PureComponent<Props> {
       },
       SWITCH_TO_AREA_MEASUREMENT_TOOL: {
         onPressed: () => activateTool(AnnotationTool.AREA_MEASUREMENT),
+      },
+      // Skeleton navigation — globally available regardless of active tool
+      MOVE_ALONG_DIRECTION: {
+        onPressed: () => moveAlongDirection(),
+      },
+      MOVE_ALONG_DIRECTION_REVERSED: {
+        onPressed: () => moveAlongDirection(true),
+      },
+      RECENTER_ACTIVE_NODE_PLANE: {
+        onPressed: () => {
+          api.tracing.centerNode();
+          api.tracing.centerTDView();
+        },
+      },
+      NEXT_NODE_BACKWARD_PLANE: {
+        onPressed: () => toPrecedingNode(),
+      },
+      NEXT_NODE_FORWARD_PLANE: {
+        onPressed: () => toSubsequentNode(),
+      },
+      // Segment info — globally available regardless of active tool
+      COPY_SEGMENT_ID: {
+        onPressed: (event: KeyboardEvent) => {
+          const segmentationLayer = Model.getVisibleSegmentationLayer();
+          const { additionalCoordinates } = Store.getState().flycam;
+
+          if (!segmentationLayer) {
+            return;
+          }
+
+          const { mousePosition } = Store.getState().temporaryConfiguration;
+
+          if (mousePosition) {
+            const [x, y] = mousePosition;
+            const globalMousePositionRounded = calculateGlobalPos(Store.getState(), {
+              x,
+              y,
+            }).rounded;
+            const { cube } = segmentationLayer;
+            const mapping = event.altKey ? cube.getMapping() : null;
+            const hoveredId = cube.getDataValue(
+              globalMousePositionRounded,
+              additionalCoordinates,
+              mapping,
+              getActiveMagIndexForLayer(Store.getState(), segmentationLayer.name),
+            );
+            navigator.clipboard
+              .writeText(String(hoveredId))
+              .then(() => Toast.success(`Segment id ${hoveredId} copied to clipboard.`));
+          } else {
+            Toast.warning("No segment under cursor.");
+          }
+        },
       },
     };
   }

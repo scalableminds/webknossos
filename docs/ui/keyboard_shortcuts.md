@@ -64,7 +64,7 @@ Shortcut changes are saved to your user account and persist across devices and b
 
 ### Orthogonal Mode
 
-Note that skeleton-specific mouse actions are usually only available when the skeleton tool is active.
+Note that skeleton-specific mouse actions and some keyboard shortcuts are only available when the skeleton tool is active.
 
 | Key Binding                                                                                                                      | Operation                                      |
 |----------------------------------------------------------------------------------------------------------------------------------|------------------------------------------------|
@@ -74,20 +74,28 @@ Note that skeleton-specific mouse actions are usually only available when the sk
 | ++shift++ + ++up++ / ++down++ / ++left++ / ++right++<br>++alt++ + ++left++ / ++right++                                           | Rotate Planes                                  |
 | ++ctrl++ / ++cmd++ + ++shift++ + ++up++ / ++down++ / ++left++ / ++right++<br>++ctrl++ / ++cmd++ + ++alt++ + ++left++ / ++right++ | Rotate Planes by 90°                           |
 | Right-Click Drag (3D View)                                                                                                       | Rotate 3D View                                 |
-| Left Click                                                                                                                       | Create New Node                                |
-| Left Click                                                                                                                       | Select Node (Mark as Active Node) under cursor |
-| Left Drag                                                                                                                        | Move node under cursor                         |
-| Right Click (on node)                                                                                                            | Bring up the context-menu with further actions |
-| ++shift++ + ++alt++ + Left Click                                                                                                 | Merge Two Nodes and Combine Trees              |
-| ++shift++ + ++ctrl++ / ++cmd++ + Left Click                                                                                      | Delete Edge / Split Trees                      |
-| ++c++                                                                                                                            | Create New Tree                                |
-| ++ctrl++ / ++cmd++ + ++period++                                                                                                  | Navigate to the next Node (Mark as Active)     |
-| ++ctrl++ / ++cmd++ + ++comma++                                                                                                   | Navigate to previous Node (Mark as Active)     |
-| ++ctrl++ / ++cmd++ + Left Click or ++ctrl++ / ++cmd++ + Arrow Keys                                                               | Move the Active Node                           |
-| ++del++                                                                                                                          | Delete Node / Split Trees                      |
-| ++b++                                                                                                                            | Mark Node as New Branchpoint                   |
-| ++j++                                                                                                                            | Jump To Last Branchpoint                       |
-| ++s++                                                                                                                            | Center Camera on Active Node                   |
+| Left Click                                                                                                                       | Create New Node (Skeleton tool)                |
+| Left Click                                                                                                                       | Select Node (Mark as Active Node) under cursor (Skeleton tool) |
+| Left Drag                                                                                                                        | Move node under cursor (Skeleton tool)         |
+| Right Click (on node)                                                                                                            | Bring up the context-menu with further actions (Skeleton tool) |
+| ++shift++ + ++alt++ + Left Click                                                                                                 | Merge Two Nodes and Combine Trees (Skeleton tool) |
+| ++shift++ + ++ctrl++ / ++cmd++ + Left Click                                                                                      | Delete Edge / Split Trees (Skeleton tool)      |
+| ++c++                                                                                                                            | Create New Tree (Skeleton tool)                |
+| ++ctrl++ / ++cmd++ + Left Click or ++ctrl++ / ++cmd++ + Arrow Keys                                                               | Move the Active Node (Skeleton tool)           |
+| ++del++                                                                                                                          | Delete Node / Split Trees (Skeleton tool)      |
+| ++b++                                                                                                                            | Mark Node as New Branchpoint (Skeleton tool)   |
+| ++j++                                                                                                                            | Jump To Last Branchpoint (Skeleton tool)       |
+
+The following keyboard shortcuts are available in plane mode regardless of the active tool:
+
+| Key Binding                                                     | Operation                              |
+|-----------------------------------------------------------------|----------------------------------------|
+| ++e++                                                           | Move along annotation direction        |
+| ++r++                                                           | Move backward along annotation direction |
+| ++s++                                                           | Center Camera on Active Node           |
+| ++ctrl++ / ++cmd++ + ++period++                                 | Navigate to the next Node (Mark as Active) |
+| ++ctrl++ / ++cmd++ + ++comma++                                  | Navigate to previous Node (Mark as Active) |
+| ++ctrl++ / ++cmd++ + ++i++                                      | Copy Segment ID under Cursor           |
 
 
 Note that you can enable *Classic Controls* which will behave slightly different and more explicit for the mouse actions:

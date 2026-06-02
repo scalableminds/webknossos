@@ -42,7 +42,7 @@ export type KeyboardShortcutId =
   | "NEXT_NODE_BACKWARD_FLIGHT"
   | "ROTATE_VIEW_180"
   | "DOWNLOAD_SCREENSHOT_FLIGHT"
-  // Plane mode — navigation & general
+  // Plane mode — navigation
   | "MOVE_LEFT"
   | "MOVE_RIGHT"
   | "MOVE_UP"
@@ -63,10 +63,17 @@ export type KeyboardShortcutId =
   | "ZOOM_OUT_PLANE"
   | "INCREASE_MOVE_VALUE_PLANE"
   | "DECREASE_MOVE_VALUE_PLANE"
+  | "MOVE_ALONG_DIRECTION"
+  | "MOVE_ALONG_DIRECTION_REVERSED"
+  | "RECENTER_ACTIVE_NODE_PLANE"
+  | "NEXT_NODE_FORWARD_PLANE"
+  | "NEXT_NODE_BACKWARD_PLANE"
+  // Plane mode — general
   | "DOWNLOAD_SCREENSHOT_PLANE"
+  | "COPY_SEGMENT_ID"
+  // Plane mode — tool switching
   | "CYCLE_TOOLS"
   | "CYCLE_TOOLS_BACKWARDS"
-  // Plane mode — tool switching
   | "SWITCH_TO_MOVE_TOOL"
   | "SWITCH_TO_SKELETON_TOOL"
   | "SWITCH_TO_BRUSH_TOOL"
@@ -85,13 +92,8 @@ export type KeyboardShortcutId =
   | "TOGGLE_INACTIVE_TREES"
   | "DELETE_ACTIVE_NODE_PLANE"
   | "CREATE_TREE_PLANE"
-  | "MOVE_ALONG_DIRECTION"
-  | "MOVE_ALONG_DIRECTION_REVERSED"
   | "CREATE_BRANCH_POINT_PLANE"
   | "DELETE_BRANCH_POINT_PLANE"
-  | "RECENTER_ACTIVE_NODE_PLANE"
-  | "NEXT_NODE_FORWARD_PLANE"
-  | "NEXT_NODE_BACKWARD_PLANE"
   | "MOVE_NODE_LEFT"
   | "MOVE_NODE_RIGHT"
   | "MOVE_NODE_UP"
@@ -99,7 +101,6 @@ export type KeyboardShortcutId =
   // Plane mode — volume tool
   | "CREATE_NEW_CELL"
   | "INTERPOLATE_SEGMENTATION"
-  | "COPY_SEGMENT_ID"
   | "BRUSH_PRESET_SMALL"
   | "BRUSH_PRESET_MEDIUM"
   | "BRUSH_PRESET_LARGE"
@@ -367,20 +368,50 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
     [[["g"]]],
     "PLANE_NAVIGATION",
   ),
+  MOVE_ALONG_DIRECTION: new KeyboardShortcutMetaInfo(
+    "Move along annotation direction",
+    [[["e"]]],
+    "PLANE_NAVIGATION",
+  ),
+  MOVE_ALONG_DIRECTION_REVERSED: new KeyboardShortcutMetaInfo(
+    "Move backward annotation direction",
+    [[["r"]]],
+    "PLANE_NAVIGATION",
+  ),
+  RECENTER_ACTIVE_NODE_PLANE: new KeyboardShortcutMetaInfo(
+    "Recenter active node",
+    [[["s"]]],
+    "PLANE_NAVIGATION",
+  ),
+  NEXT_NODE_BACKWARD_PLANE: new KeyboardShortcutMetaInfo(
+    "Activate Previous Node",
+    [[["Control", ","]]],
+    "PLANE_NAVIGATION",
+  ),
+  NEXT_NODE_FORWARD_PLANE: new KeyboardShortcutMetaInfo(
+    "Activate Next Node",
+    [[["Control", "."]]],
+    "PLANE_NAVIGATION",
+  ),
   DOWNLOAD_SCREENSHOT_PLANE: new KeyboardShortcutMetaInfo(
     "Download Screenshot(s) of Viewport(s)",
     [[["q"]]],
-    "PLANE_NAVIGATION",
+    "PLANE_GENERAL",
+  ),
+  COPY_SEGMENT_ID: new KeyboardShortcutMetaInfo(
+    "Copy segment id under cursor",
+    [[["Control", "i"]]],
+    "PLANE_GENERAL",
   ),
   CYCLE_TOOLS: new KeyboardShortcutMetaInfo(
     "Cycle Through Tools (Move / Skeleton / Brush/ ...)",
     [[["w"]]],
-    "PLANE_NAVIGATION",
+    "PLANE_TOOL_SWITCHING",
   ),
   CYCLE_TOOLS_BACKWARDS: new KeyboardShortcutMetaInfo(
     "Cycle Backwards Through Tools (Move / Proofread / Bounding Box / ...)",
     [[["Shift", "w"]]],
-    "PLANE_NAVIGATION",
+    "PLANE_TOOL_SWITCHING",
   ),
   SWITCH_TO_MOVE_TOOL: new KeyboardShortcutMetaInfo(
     "Move Tool",
@@ -459,16 +490,6 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
     [[["c"]]],
     "PLANE_SKELETON_TOOL",
   ),
-  MOVE_ALONG_DIRECTION: new KeyboardShortcutMetaInfo(
-    "Move along annotation direction",
-    [[["e"]]],
-    "PLANE_SKELETON_TOOL",
-  ),
-  MOVE_ALONG_DIRECTION_REVERSED: new KeyboardShortcutMetaInfo(
-    "Move backward annotation direction",
-    [[["r"]]],
-    "PLANE_SKELETON_TOOL",
-  ),
   CREATE_BRANCH_POINT_PLANE: new KeyboardShortcutMetaInfo(
     "Create branch point",
     [[["b"]]],
@@ -477,21 +498,6 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
   DELETE_BRANCH_POINT_PLANE: new KeyboardShortcutMetaInfo(
     "Delete branch point",
     [[["j"]]],
-    "PLANE_SKELETON_TOOL",
-  ),
-  RECENTER_ACTIVE_NODE_PLANE: new KeyboardShortcutMetaInfo(
-    "Recenter active node",
-    [[["s"]]],
-    "PLANE_SKELETON_TOOL",
-  ),
-  NEXT_NODE_BACKWARD_PLANE: new KeyboardShortcutMetaInfo(
-    "Activate Previous Node",
-    [[["Control", ","]]],
-    "PLANE_SKELETON_TOOL",
-  ),
-  NEXT_NODE_FORWARD_PLANE: new KeyboardShortcutMetaInfo(
-    "Activate Next Node",
-    [[["Control", "."]]],
     "PLANE_SKELETON_TOOL",
   ),
   MOVE_NODE_LEFT: new KeyboardShortcutMetaInfo(
@@ -520,11 +526,6 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
   INTERPOLATE_SEGMENTATION: new KeyboardShortcutMetaInfo(
     "Interpolate annotation between latest drawn sections",
     [[["v"]]],
-    "PLANE_VOLUME_TOOL",
-  ),
-  COPY_SEGMENT_ID: new KeyboardShortcutMetaInfo(
-    "Copy segment id under cursor",
-    [[["Control", "i"]]],
     "PLANE_VOLUME_TOOL",
   ),
   BRUSH_PRESET_SMALL: new KeyboardShortcutMetaInfo(

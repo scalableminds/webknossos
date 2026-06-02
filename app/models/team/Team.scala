@@ -7,7 +7,6 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.schema.Tables._
 
 import javax.inject.Inject
-import models.annotation.AnnotationDAO
 import models.dataset.Dataset
 import models.organization.{Organization, OrganizationDAO}
 import models.project.ProjectDAO
@@ -29,7 +28,6 @@ case class Team(
 )
 
 class TeamService @Inject()(organizationDAO: OrganizationDAO,
-                            annotationDAO: AnnotationDAO,
                             teamDAO: TeamDAO,
                             projectDAO: ProjectDAO,
                             taskTypeDAO: TaskTypeDAO)(implicit ec: ExecutionContext)
@@ -53,8 +51,6 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.fromBool(projectCount == 0) ?~> Msg.Team.inUseByProjects(projectCount)
       taskTypeCount <- taskTypeDAO.countForTeam(teamId)
       _ <- Fox.fromBool(taskTypeCount == 0) ?~> Msg.Team.inUseByTaskTypes(taskTypeCount)
-      annotationCount <- annotationDAO.countForTeam(teamId)
-      _ <- Fox.fromBool(annotationCount == 0) ?~> Msg.Team.inUseByAnnotations(annotationCount)
     } yield ()
 
   def allowedTeamsForFolder(folderId: ObjectId, cumulative: Boolean, requestingUser: Option[User] = None)(

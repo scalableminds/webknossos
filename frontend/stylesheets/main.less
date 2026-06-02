@@ -20,12 +20,16 @@
 
 @font-face {
   font-family: "Nunito";
-  src: local("Nunito"), url("Nunito-VariableFont_wght.ttf") format("truetype");
+  src:
+    local("Nunito"),
+    url("Nunito-VariableFont_wght.ttf") format("truetype");
 }
 
 @font-face {
   font-family: "Nunito";
-  src: local("Nunito"), url("Nunito-Italic-VariableFont_wght.ttf") format("truetype");
+  src:
+    local("Nunito"),
+    url("Nunito-Italic-VariableFont_wght.ttf") format("truetype");
   font-style: italic;
 }
 
@@ -42,20 +46,17 @@ body {
 }
 
 /** Ensures the main layout header stays at the top within the main container section. */
-#main-container>section>.ant-layout-header {
+#main-container > section > .ant-layout-header {
   top: 0;
 }
 
 /** Highlights the header and menu with an error color when a save operation fails. */
 .save-error {
-
   .ant-layout-header,
   .ant-menu {
     background-color: var(--ant-color-error) !important;
   }
 }
-
-
 
 /** Navbar related styles for logo, avatar and organization switching elements. */
 .ant-layout-header {
@@ -102,7 +103,6 @@ body {
     color: var(--color-blue-zircon);
   }
 }
-
 
 /** Utility class for inline-block display. */
 .inline-block {
@@ -174,7 +174,9 @@ body {
     background: #f6ff2e9c;
   }
 
-  100% {}
+  100% {
+    // Keep to not have the background color at 100%.
+  }
 }
 
 // Brain loading spinner
@@ -207,7 +209,7 @@ body {
   align-items: center;
 }
 
-.brain-loading-content>* {
+.brain-loading-content > * {
   margin: 1em 0;
 }
 
@@ -328,8 +330,6 @@ body {
   }
 }
 
-
-
 /** Stylized box for displaying cross-links (e.g. between datasets). */
 .crosslink-box {
   padding: 20px;
@@ -339,17 +339,13 @@ body {
   border-radius: 3px;
 }
 
-
 /** Removes borders from nested input and button elements. */
 .no-borders {
-
   input,
   button {
     border: transparent;
   }
 }
-
-
 
 /** Ensures the React modal portal has a high enough z-index. */
 .ReactModalPortal {
@@ -417,14 +413,13 @@ body {
   }
 }
 
-
 /** Fixed width for the project and annotation type dropdown. */
 .project-and-annotation-type-dropdown {
   width: 200px;
 }
 
 /** Limits the height of the organization switch dropdown menu. */
-.organization-switch-menu>ul {
+.organization-switch-menu > ul {
   max-height: calc(100vh - var(--navbar-height) - 200px) !important;
 }
 
@@ -464,11 +459,11 @@ body {
 
 /** Margin adjustments for checkboxes in the registration form. */
 .registration-form-checkboxes {
-  >div:first-of-type {
+  > div:first-of-type {
     margin-bottom: 0px;
   }
 
-  >div:last-of-type {
+  > div:last-of-type {
     margin-bottom: 15px;
   }
 }

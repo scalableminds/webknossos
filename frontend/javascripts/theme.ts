@@ -1,21 +1,18 @@
-import { App, ConfigProvider, type ThemeConfig, theme } from "antd";
+import { type ThemeConfig, theme } from "antd";
 import type { AliasToken, OverrideToken } from "antd/lib/theme/interface";
-import { useWkSelector } from "libs/react_hooks";
-import { ToastContextMountRoot } from "libs/toast";
 import window from "libs/window";
 import clone from "lodash-es/clone";
 import merge from "lodash-es/merge";
-import type React from "react";
-import { useEffect } from "react";
 import type { APIUser } from "types/api_types";
-import type { Theme } from "viewer/store";
+
+export type Theme = "light" | "dark";
 
 export const ColorWKBlue = "#5660ff"; // WK ~blue/purple
 const ColorWKLinkHover = "#a8b4ff"; // slightly brighter WK Blue
 const ColorWKDarkGrey = "#1f1f1f";
 export const ColorWKBlueZircon = "#59f8e8"; // WK Cyan
-const ColorWhite = "white";
-const ColorBlack = "black";
+export const ColorWhite = "white";
+export const ColorBlack = "black";
 const ColorDarkBg = "#383d48";
 
 // Ant Design Customizations
@@ -115,43 +112,4 @@ export function getAntdTheme(userTheme: Theme) {
     // Disable inheriting from the parent theme, in case we are nesting dark and light mode components
     inherit: false,
   };
-}
-
-export default function GlobalThemeProvider({
-  children,
-  isMainProvider = true,
-}: {
-  children?: React.ReactNode;
-  isMainProvider?: boolean;
-}) {
-  const activeUser = useWkSelector((state) => state.activeUser);
-  const userTheme = getThemeFromUser(activeUser);
-  const antdTheme = getAntdTheme(userTheme);
-  const isDarkMode = userTheme === "dark";
-
-  useEffect(() => {
-    // body is outside of the ReactDOM, so we have to manually update it
-    if (isDarkMode) {
-      document.body.style.backgroundColor = ColorBlack;
-    } else {
-      document.body.style.backgroundColor = ColorWhite;
-    }
-  }, [isDarkMode]);
-
-  return (
-    <ConfigProvider theme={{ ...antdTheme, cssVar: { key: "antd-app-theme" } }}>
-      <App>
-        <div
-          className={isDarkMode ? "dark-theme" : undefined}
-          style={{
-            background: "var(--ant-color-bg-base)",
-            height: isMainProvider ? "calc(100vh - var(--navbar-height))" : "auto",
-          }}
-        >
-          {isMainProvider && <ToastContextMountRoot />}
-          {children}
-        </div>
-      </App>
-    </ConfigProvider>
-  );
 }

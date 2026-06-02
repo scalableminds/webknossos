@@ -643,27 +643,31 @@ describe("Proofreading (with mesh actions)", () => {
     //  [1337, 1],
     //  [1338, 1]]
     // Contains two circles now but only one is split by the min-cut request.
-    backendMock.planMultipleVersionInjections(7, [
-      ...mergeSegment1And4,
-      // The following update action is not imported from a fixture,
-      // because such a "double-merge" is not really provokable from the UI
-      // currently. There is the fixture `mergeSegment1337And5`, but it
-      // also contains a createSegment action which does not make sense
-      // in the already-merged state.
-      // Therefore, we use a handcoded update action here.
-      [
-        {
-          name: "mergeAgglomerate",
-          value: {
-            actionTracingId: VOLUME_TRACING_ID,
-            segmentId1: 5,
-            segmentId2: 1337,
-            agglomerateId1: 1,
-            agglomerateId2: 1,
-          },
-        },
-      ],
-    ]);
+    const injectFn = () =>
+      backendMock.injectMultipleVersions(
+        [
+          ...mergeSegment1And4,
+          // The following update action is not imported from a fixture,
+          // because such a "double-merge" is not really provokable from the UI
+          // currently. There is the fixture `mergeSegment1337And5`, but it
+          // also contains a createSegment action which does not make sense
+          // in the already-merged state.
+          // Therefore, we use a handcoded update action here.
+          [
+            {
+              name: "mergeAgglomerate",
+              value: {
+                actionTracingId: VOLUME_TRACING_ID,
+                segmentId1: 5,
+                segmentId2: 1337,
+                agglomerateId1: 1,
+                agglomerateId2: 1,
+              },
+            },
+          ],
+        ],
+        7,
+      );
 
     mockEdgesForPartitionedAgglomerateMinCut(mocks, 6);
 
@@ -671,7 +675,7 @@ describe("Proofreading (with mesh actions)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task(): Saga<void> {
-      yield simulatePartitionedSplitAgglomeratesViaMeshes(context, false);
+      yield simulatePartitionedSplitAgglomeratesViaMeshes(context, false, injectFn);
 
       const receivedUpdateActions = getFlattenedUpdateActions(context);
       expect(receivedUpdateActions.slice(-2)).toEqual([

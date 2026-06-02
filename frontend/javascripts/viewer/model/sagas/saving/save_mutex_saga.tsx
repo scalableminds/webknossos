@@ -289,16 +289,16 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
    * race).
    */
   const annotationId = yield* select((storeState) => storeState.annotation.annotationId);
-  const activeUser = yield* select((state) => state.activeUser);
   mutexLogicState.isInitialRequest = true;
 
   // We can simply use an infinite loop here, because the saga will be cancelled by
   // reactToOthersMayEditChanges when collaborationMode changes.
   while (true) {
-    const blockedByUser = yield* select((state) => state.save.mutexState.blockedByUser);
-    if (blockedByUser == null || blockedByUser.id !== activeUser?.id) {
-      // If the annotation is currently not blocked by the active user,
-      // we immediately disallow updating the annotation.
+    if (mutexLogicState.isInitialRequest) {
+      // If the annotation was just opened, we immediately disallow updating the
+      // annotation to prevent the user from editing before having the mutex.
+      // After the initial request, we always refresh the existing mutex
+      // which is why editing should be allowed (at least, until the mutex is lost).
       yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
     }
     try {

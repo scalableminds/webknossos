@@ -4,11 +4,12 @@ import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.tools.Fox
 
 import javax.inject.Inject
 import models.dataset.{DatasetDAO, DatasetService}
 import models.configuration.DatasetConfigurationService
-import models.user.UserService
+import models.user.{UserKeyboardShortcutsConfigsDAO, UserService}
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{URLSharing, WkEnv}
@@ -20,6 +21,7 @@ class ConfigurationController @Inject()(
     datasetService: DatasetService,
     datasetDAO: DatasetDAO,
     datasetConfigurationService: DatasetConfigurationService,
+    userKeyboardShortcutsConfigsDAO: UserKeyboardShortcutsConfigsDAO,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
@@ -33,6 +35,25 @@ class ConfigurationController @Inject()(
       configuration <- request.body.asOpt[JsObject].toFox ?~> Msg.User.Configuration.invalid
       _ <- userService.updateUserConfiguration(request.identity, configuration)
     } yield JsonOk(Msg.User.Configuration.updateSuccess)
+  }
+
+  def readKeyboardShortcutsConfig: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+    for {
+      shortcuts <- request.identity
+        .map(u => userKeyboardShortcutsConfigsDAO.findOneForUser(u._multiUser))
+        .getOrElse(Fox.successful(Json.obj()))
+    } yield addNoCacheHeaderFallback(Ok(shortcuts))
+  }
+
+  def updateKeyboardShortcutsConfig(): Action[JsValue] = sil.SecuredAction.async(parse.json(maxLength = 204800)) {
+    implicit request =>
+      for {
+        shortcuts <- request.body
+          .validate[JsObject]
+          .asOpt
+          .toFox ?~> Msg.User.Configuration.invalidKeyboardShortcutsConfig
+        _ <- userKeyboardShortcutsConfigsDAO.updateForMultiUser(request.identity._multiUser, shortcuts)
+      } yield JsonOk(Msg.User.Configuration.updatedKeyboardShortcutsConfig)
   }
 
   def readDatasetViewConfiguration(datasetId: ObjectId, sharingToken: Option[String]): Action[List[String]] =

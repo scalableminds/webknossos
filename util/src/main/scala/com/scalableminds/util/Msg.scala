@@ -208,8 +208,8 @@ object Msg {
         "Mag restrictions are too tight, resulting annotation has no magnifications."
       val mergeLargestSegmentIdUnset: String =
         "Cannot merge volume annotation: largest segment id is not set."
-      val magsDoNotMatch: String =
-        "Cannot merge volume annotation: mag sets do not match."
+      val magsDoNotMatch: String = "Cannot merge volume annotation: Mag sets of volume annotations do not match."
+      val importVersionMismatch: String = "Cannot merge volume annotation: Version mismatch."
       val noEditableMapping: String =
         "This volume tracing does not have an editable mapping (is not a “proofreading” annotation layer)."
       object SegmentIndex {
@@ -413,6 +413,7 @@ object Msg {
     val allowedTeamsNotFound: String = "Could not find allowed teams for dataset."
     val voxelSizeFailedToFetch: String = "Could not fetch voxel size for annotation."
     val additionalCoordinatesDiffer: String = "Additional coordinates differ in merged units."
+    val findByImportURLFailed = "Failed to look up whether a dataset with the import url already exists."
     object Compose {
       val failed: String = "Could not compose dataset."
       val addAttachmentFailed: String = "Could not add attachment to composed dataset."
@@ -706,6 +707,8 @@ object Msg {
       val updateSuccessForDataset: String = "Dataset configuration was successfully updated."
       val invalid: String = "Could not parse configuration."
       val invalidForDataset: String = "Could not parse dataset configuration."
+      val invalidKeyboardShortcutsConfig = "Keyboard shortcuts configuration is invalid."
+      val updatedKeyboardShortcutsConfig = "Keyboard shortcuts configuration was updated."
     }
     object Email {
       val taken: String =

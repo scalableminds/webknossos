@@ -48,15 +48,19 @@ import scala.concurrent.ExecutionContext
 case class DatasetUpdateParameters(
     description: Option[Option[String]] = Some(None),
     name: Option[Option[String]] = Some(None),
-    sortingKey: Option[Instant],
-    isPublic: Option[Boolean],
-    tags: Option[List[String]],
-    metadata: Option[JsArray],
-    folderId: Option[ObjectId],
-    dataSource: Option[UsableDataSource],
-    layerRenamings: Option[Seq[LayerRenaming]],
-    attachmentRenamings: Option[Seq[AttachmentRenaming]]
+    sortingKey: Option[Instant] = None,
+    isPublic: Option[Boolean] = None,
+    tags: Option[List[String]] = None,
+    metadata: Option[JsArray] = None,
+    folderId: Option[ObjectId] = None,
+    dataSource: Option[UsableDataSource] = None,
+    layerRenamings: Option[Seq[LayerRenaming]] = None,
+    attachmentRenamings: Option[Seq[AttachmentRenaming]] = None
 )
+object DatasetUpdateParameters extends TristateOptionJsonHelper {
+  implicit val jsonFormat: OFormat[DatasetUpdateParameters] =
+    Json.configured(tristateOptionParsing).format[DatasetUpdateParameters]
+}
 
 case class LayerRenaming(oldName: String, newName: String)
 object LayerRenaming {
@@ -69,11 +73,6 @@ case class AttachmentRenaming(
     newName: String)
 object AttachmentRenaming {
   implicit val jsonFormat: OFormat[AttachmentRenaming] = Json.format[AttachmentRenaming]
-}
-
-object DatasetUpdateParameters extends TristateOptionJsonHelper {
-  implicit val jsonFormat: OFormat[DatasetUpdateParameters] =
-    Json.configured(tristateOptionParsing).format[DatasetUpdateParameters]
 }
 
 case class ReserveDatasetUploadToPathsRequest(
@@ -152,7 +151,12 @@ object SegmentAnythingMaskParameters {
   implicit val jsonFormat: Format[SegmentAnythingMaskParameters] = Json.format[SegmentAnythingMaskParameters]
 }
 
-case class DataSourceRegistrationInfo(dataSource: UsableDataSource, folderId: Option[ObjectId], dataStoreName: String)
+case class DataSourceRegistrationInfo(
+    dataSource: UsableDataSource,
+    folderId: Option[ObjectId],
+    dataStoreName: String,
+    importUrl: Option[String]
+)
 
 object DataSourceRegistrationInfo {
   implicit val jsonFormat: OFormat[DataSourceRegistrationInfo] = Json.format[DataSourceRegistrationInfo]
@@ -255,7 +259,8 @@ class DatasetController @Inject()(userService: UserService,
           folderIdOpt,
           request.identity,
           isVirtual = true,
-          creationType = DatasetCreationType.ExploreAndAdd
+          creationType = DatasetCreationType.ExploreAndAdd,
+          importURLOpt = None
         ) ?~> Msg.Dataset.Explore.autoAddFailed
       } yield Ok(Json.toJson(newDataset._id))
     }
@@ -276,7 +281,8 @@ class DatasetController @Inject()(userService: UserService,
           request.body.folderId,
           user,
           isVirtual = true,
-          creationType = DatasetCreationType.ExploreAndAdd
+          creationType = DatasetCreationType.ExploreAndAdd,
+          importURLOpt = request.body.importUrl,
         )
         _ = datasetService.trackNewDataset(dataset,
                                            user,
@@ -454,6 +460,19 @@ class DatasetController @Inject()(userService: UserService,
       }
     }
 
+  def findByImportURL(importURL: String): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        datasetBox <- datasetDAO.findOneByImportURL(importURL, request.identity._organization).shiftBox
+        js <- datasetBox match {
+          case Full(dataset) => datasetService.publicWrites(dataset, Some(request.identity))
+          case Empty         => Fox.successful(Json.toJson(None))
+          case failure: Failure =>
+            Fox.failure(Msg.Dataset.findByImportURLFailed, failure)
+        }
+      } yield Ok(js)
+    }
+
   def health(datasetId: ObjectId, sharingToken: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken)
@@ -588,7 +607,7 @@ class DatasetController @Inject()(userService: UserService,
                          "directoryName" -> dataset.directoryName)))
           case Empty =>
             for {
-              user <- request.identity.toFox ~> Unauthorized
+              user <- request.identity.toFox ~> UNAUTHORIZED
               dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)(GlobalAccessContext)
               // Just checking if the user can switch to an organization to access the dataset.
               _ <- authenticationService.getOrganizationToSwitchTo(user, Some(dataset._id), None, None)

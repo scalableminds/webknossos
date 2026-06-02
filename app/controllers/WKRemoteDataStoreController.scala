@@ -93,7 +93,8 @@ class WKRemoteDataStoreController @Inject()(
             uploadInfo.folderId,
             user,
             isVirtual = uploadInfo.isVirtual.getOrElse(true),
-            creationType = DatasetCreationType.Upload
+            creationType = DatasetCreationType.Upload,
+            importURLOpt = None,
           ) ?~> Msg.Dataset.Upload.createFailed
           _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeamIds, user)(AuthorizedAccessContext(user))
           additionalInfo = DatasetUploadAdditionalInfo(dataset._id, dataset.directoryName)

@@ -9,6 +9,7 @@ import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import type { FillMode, LabeledVoxelsMap, OrthoView, Vector2, Vector3 } from "viewer/constants";
 import Constants, { FillModeEnum, Unicode } from "viewer/constants";
 import getSceneController from "viewer/controller/scene_controller_provider";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { getDatasetBoundingBox, getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import { getDisabledInfoForTools } from "viewer/model/accessors/disabled_tool_accessor";
 import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
@@ -149,7 +150,7 @@ function* getBoundingBoxForFloodFill(
 }
 
 function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
-  const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
+  const allowUpdate = yield* select(mayEditAnnotation);
   const disabledInfosForTools = yield* select(getDisabledInfoForTools);
 
   if (!allowUpdate || disabledInfosForTools[AnnotationTool.FILL_CELL.id].isDisabled) {

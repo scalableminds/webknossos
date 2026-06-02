@@ -230,7 +230,7 @@ describe("Save Mutex Saga", () => {
     await task.toPromise();
   });
 
-  it<WebknossosTestContext>("After the first mutex acquisition was unsuccessfull, editing should remain disabled even when the second mutex acquisition succeeds.", async (context: WebknossosTestContext) => {
+  it<WebknossosTestContext>("After the first mutex acquisition was unsuccessful, editing should remain disabled even when the second mutex acquisition succeeds.", async (context: WebknossosTestContext) => {
     await setupWebknossosForTesting(context, "hybrid");
     // Mock fails on the first attempt so we can observe what happens when it later succeeds.
     context.mocks.acquireAnnotationMutex.mockImplementation(async () => ({

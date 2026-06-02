@@ -18,6 +18,7 @@ import type { DatasetConfiguration, DatasetLayerConfiguration } from "viewer/sto
 import { mayEditAnnotation } from "../accessors/annotation_accessor";
 import { Toolkit } from "../accessors/tool_accessor";
 import { ensureWkInitialized } from "./ready_sagas";
+import { getDatasetLayerNamesIncludingFallbackLayers } from "../accessors/dataset_accessor";
 
 function* pushUserSettingsAsync(): Saga<void> {
   const activeUser = yield* select((state) => state.activeUser);
@@ -35,11 +36,13 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
   const activeUser = yield* select((state) => state.activeUser);
   if (activeUser == null) return;
   const dataset = yield* select((state) => state.dataset);
+  const layerNamesOnlyExistingInDataset = getDatasetLayerNamesIncludingFallbackLayers(dataset);
   const datasetConfiguration = yield* select((state) => state.datasetConfiguration);
 
   const maybeMaskedDatasetConfiguration = yield* prepareDatasetSettingsForSaving(
     datasetConfiguration,
     originalDatasetSettings,
+    layerNamesOnlyExistingInDataset,
   );
 
   try {
@@ -68,6 +71,7 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
 function* prepareDatasetSettingsForSaving(
   datasetConfiguration: DatasetConfiguration,
   originalDatasetSettings: DatasetConfiguration,
+  layerNamesOnlyExistingInDataset: string[],
 ) {
   /**
    * If an annotation is open, we don't want to change the visibility settings for
@@ -91,10 +95,12 @@ function* prepareDatasetSettingsForSaving(
 
   const newLayers: Record<string, DatasetLayerConfiguration> = {};
   for (const layerName of Object.keys(datasetConfiguration.layers)) {
-    newLayers[layerName] = {
-      ...datasetConfiguration.layers[layerName],
-      isDisabled: originalDatasetSettings.layers[layerName].isDisabled,
-    };
+    if (layerNamesOnlyExistingInDataset.includes(layerName)) {
+      newLayers[layerName] = {
+        ...datasetConfiguration.layers[layerName],
+        isDisabled: originalDatasetSettings.layers[layerName].isDisabled,
+      };
+    }
   }
 
   const maskedDatasetConfiguration = {

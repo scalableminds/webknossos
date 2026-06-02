@@ -769,3 +769,9 @@ export function getDatasetIdOrNameFromReadableURLPart(datasetNameAndId: string) 
     ? { datasetId: datasetIdOrName, datasetName: null }
     : { datasetId: null, datasetName: datasetNameAndId };
 }
+
+export function getDatasetLayerNamesIncludingFallbackLayers(dataset: APIDataset) {
+  return dataset.dataSource.dataLayers
+    .filter((layer) => !("tracingId" in layer) || layer.fallbackLayer != null)
+    .map((layer) => ("tracingId" in layer ? (layer.fallbackLayer ?? layer.name) : layer.name));
+}

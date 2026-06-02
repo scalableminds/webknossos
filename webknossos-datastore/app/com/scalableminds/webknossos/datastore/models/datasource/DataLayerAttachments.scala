@@ -145,8 +145,8 @@ case class LayerAttachment(name: String,
                            path: UPath,
                            dataFormat: LayerAttachmentDataformat.LayerAttachmentDataformat,
                            credentialId: Option[String] = None) {
-  // Warning: throws! Use inside of tryo
-  def localPathUnsafe: Path = path.toLocalPathUnsafe
+  // Returns Failure for attachments with remote paths.
+  def localPath: Box[Path] = path.toLocalPath
 
   def resolvedPath(dataBaseDir: Path, dataSourceId: DataSourceId): UPath = {
     val datasetPath = UPath.fromLocalPath(dataBaseDir) / dataSourceId.organizationId / dataSourceId.directoryName

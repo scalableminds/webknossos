@@ -210,6 +210,26 @@ describe("Save Mutex Saga", () => {
     await task.toPromise();
   });
 
+  it<WebknossosTestContext>("After the first successful mutex acquisition, editing should remain allowed during subsequent refreshes (regression test).", async (context: WebknossosTestContext) => {
+    await setupWebknossosForTestingWithRestrictions(context, "Exclusive", true);
+    // After setup, the initial mutex acquisition has already completed.
+    expect(Store.getState().annotation.isUpdatingCurrentlyAllowed).toBe(true);
+    const task = startSaga(function* task() {
+      // SET_USER_HOLDING_MUTEX is dispatched on every loop iteration of tryAcquireMutexContinuously.
+      // The initial dispatch happened during setup, so this take waits for the second iteration.
+      yield take("SET_USER_HOLDING_MUTEX");
+      // Before the fix, isUpdatingCurrentlyAllowed was incorrectly set to false at the start of
+      // every non-initial loop iteration and never restored (setIsUpdatingAnnotationCurrentlyAllowedAction
+      // is only called when isInitialRequest || !canEdit, both false when we already hold the mutex).
+      yield assertMutexStoreProperties({
+        hasAnnotationMutex: true,
+        blockingUser: null,
+        isUpdatingCurrentlyAllowed: true,
+      });
+    });
+    await task.toPromise();
+  });
+
   it<WebknossosTestContext>("An annotation where othersMayEdit is turned on should try to acquire the annotation mutex and not allow editing if mutex is not returned as can edit.", async (context: WebknossosTestContext) => {
     await setupWebknossosForTesting(context, "hybrid");
     expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();

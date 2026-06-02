@@ -15,9 +15,15 @@ import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.uploading.{
+  AttachmentUploadAdditionalInfo,
+  AttachmentUploadInfo,
+  DatasetUploadAdditionalInfo,
+  DatasetUploadInfo,
+  MagUploadAdditionalInfo,
+  MagUploadInfo,
+  ReportAttachmentUploadParameters,
   ReportDatasetUploadParameters,
-  ReserveAdditionalInformation,
-  ReserveUploadInformation
+  ReportMagUploadParameters
 }
 import com.scalableminds.webknossos.datastore.storage.DataVaultCredential
 import com.typesafe.scalalogging.LazyLogging
@@ -90,19 +96,30 @@ class DSRemoteWebknossosClient @Inject()(
 
   def getUnfinishedUploadsForUser(organizationName: String)(implicit tc: TokenContext): Fox[List[UnfinishedUpload]] =
     for {
-      unfinishedUploads <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/getUnfinishedUploadsForUser")
+      unfinishedUploads <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/getUnfinishedDatasetUploadsForUser")
         .addQueryParam("key", dataStoreKey)
         .addQueryParam("organizationName", organizationName)
         .withTokenFromContext
         .getWithJsonResponse[List[UnfinishedUpload]]
     } yield unfinishedUploads
 
-  def reportUpload(datasetId: ObjectId, parameters: ReportDatasetUploadParameters)(implicit tc: TokenContext): Fox[_] =
+  def reportDatasetUpload(datasetId: ObjectId, parameters: ReportDatasetUploadParameters)(
+      implicit tc: TokenContext): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
       .addQueryParam("key", dataStoreKey)
       .addQueryParam("datasetId", datasetId)
       .withTokenFromContext
       .postJson[ReportDatasetUploadParameters](parameters)
+
+  def reportMagUpload(parameters: ReportMagUploadParameters): Fox[_] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportMagUpload")
+      .addQueryParam("key", dataStoreKey)
+      .postJson[ReportMagUploadParameters](parameters)
+
+  def reportAttachmentUpload(parameters: ReportAttachmentUploadParameters): Fox[_] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportAttachmentUpload")
+      .addQueryParam("key", dataStoreKey)
+      .postJson[ReportAttachmentUploadParameters](parameters)
 
   def reportDataSources(dataSources: List[DataSource], organizationId: Option[String]): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources")
@@ -117,14 +134,24 @@ class DSRemoteWebknossosClient @Inject()(
       .silent
       .putJson(dataSourcePaths)
 
-  def reserveDataSourceUpload(info: ReserveUploadInformation)(
-      implicit tc: TokenContext): Fox[ReserveAdditionalInformation] =
-    for {
-      reserveUploadInfo <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveUpload")
-        .addQueryParam("key", dataStoreKey)
-        .withTokenFromContext
-        .postJsonWithJsonResponse[ReserveUploadInformation, ReserveAdditionalInformation](info)
-    } yield reserveUploadInfo
+  def reserveDatasetUpload(info: DatasetUploadInfo)(implicit tc: TokenContext): Fox[DatasetUploadAdditionalInfo] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveDatasetUpload")
+      .addQueryParam("key", dataStoreKey)
+      .withTokenFromContext
+      .postJsonWithJsonResponse[DatasetUploadInfo, DatasetUploadAdditionalInfo](info)
+
+  def reserveMagUpload(info: MagUploadInfo)(implicit tc: TokenContext): Fox[MagUploadAdditionalInfo] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveMagUpload")
+      .addQueryParam("key", dataStoreKey)
+      .withTokenFromContext
+      .postJsonWithJsonResponse[MagUploadInfo, MagUploadAdditionalInfo](info)
+
+  def reserveAttachmentUpload(info: AttachmentUploadInfo)(
+      implicit tc: TokenContext): Fox[AttachmentUploadAdditionalInfo] =
+    rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveAttachmentUpload")
+      .addQueryParam("key", dataStoreKey)
+      .withTokenFromContext
+      .postJsonWithJsonResponse[AttachmentUploadInfo, AttachmentUploadAdditionalInfo](info)
 
   def updateDataSource(dataSource: DataSource, datasetId: ObjectId)(implicit tc: TokenContext): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/${datasetId.toString}")

@@ -1,3 +1,4 @@
+import { range } from "lodash-es";
 import fs from "node:fs";
 import path from "node:path";
 import type { Vector3 } from "viewer/constants";
@@ -34,7 +35,7 @@ loadEnvFile(path.join(process.cwd(), ".env"));
 // Config
 // ---------------------------------------------------------------------------
 
-export const N_COLLAB_USERS = 6;
+export const N_COLLAB_USERS = 4;
 
 export const MbpsFactor = (1000 * 1024) / 8;
 // Set to null to disable network throttling.
@@ -72,60 +73,81 @@ export const MERGE_TARGET_POSITION: [number, number, number] = [2826, 4318, 1770
 // Additional per-user merge/split operations performed during the parallel phase.
 // Each entry describes what one collaborating user should do.
 export const PARALLEL_USER_OPERATIONS: Array<{
+  userIndex: number;
   sourceAgglomerateId: number;
   sourcePosition: [number, number, number];
   targetPosition: [number, number, number];
 }> = [
   {
+    userIndex: 0,
     sourceAgglomerateId: 8465,
     sourcePosition: [1462, 1535, 1536],
     targetPosition: [1431, 1585, 1536],
   },
   {
+    userIndex: 1,
     sourceAgglomerateId: 8465,
     sourcePosition: [1462, 1535, 1536],
     targetPosition: [2668, 4656, 1770],
   },
   {
+    userIndex: 2,
     sourceAgglomerateId: 8465,
     sourcePosition: [1462, 1535, 1536],
     targetPosition: [3064, 4655, 1770],
   },
   {
+    userIndex: 3,
     sourceAgglomerateId: 8465,
     sourcePosition: [1462, 1535, 1536],
     targetPosition: [3092, 4614, 1770],
   },
   {
+    userIndex: 0,
     sourceAgglomerateId: 8465,
     sourcePosition: [1462, 1535, 1536],
     targetPosition: [3092, 4614, 1770],
   },
   {
+    userIndex: 1,
     sourceAgglomerateId: 8465,
     sourcePosition: [1462, 1535, 1536],
     targetPosition: [3145, 4618, 1770],
   },
   {
+    userIndex: 2,
     sourceAgglomerateId: 8465,
     sourcePosition: [1462, 1535, 1536],
     targetPosition: [3145, 4618, 1770],
   },
   {
+    userIndex: 3,
     sourceAgglomerateId: 8465,
     sourcePosition: [1462, 1535, 1536],
     targetPosition: [3231, 4601, 1770],
   },
   {
+    userIndex: 0,
     sourceAgglomerateId: 8465,
     sourcePosition: [1462, 1535, 1536],
     targetPosition: [3296, 4573, 1770],
   },
   {
+    userIndex: 1,
     sourceAgglomerateId: 8465,
     sourcePosition: [1462, 1535, 1536],
     targetPosition: [3315, 4512, 1770],
   },
+  ...range(0, 50).map((idx) => ({
+    userIndex: idx % N_COLLAB_USERS,
+    sourceAgglomerateId: 8465,
+    sourcePosition: [1462, 1535, 1536] as Vector3,
+    targetPosition: [
+      3315 + (idx + 1) * 10,
+      4512 + (idx + 1) * 10,
+      1770 + (idx + 1) * 10,
+    ] as Vector3,
+  })),
 ];
 
 // ---------------------------------------------------------------------------

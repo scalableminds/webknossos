@@ -8,7 +8,7 @@ import {
   updateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
 import { setHideUnregisteredSegmentsAction } from "viewer/model/actions/volumetracing_actions";
-import { PAGE_HEIGHT, PAGE_WIDTH } from "../screenshot_test_config";
+import { HEADLESS, PAGE_HEIGHT, PAGE_WIDTH } from "../screenshot_test_config";
 import { BASE_URL, NETWORK_THROTTLE } from "./config";
 
 const LOG_DIR = path.join(__dirname, "logs");
@@ -62,7 +62,7 @@ export async function getNewPage(authToken: string): Promise<{ page: Page; brows
       "--use-angle=gl-egl",
       `--window-size=${PAGE_WIDTH},${PAGE_HEIGHT}`,
     ],
-    headless: true,
+    headless: HEADLESS,
     executablePath: "/usr/bin/google-chrome",
   });
   const page = await browser.newPage();

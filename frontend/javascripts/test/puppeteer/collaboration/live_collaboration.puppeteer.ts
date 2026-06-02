@@ -25,6 +25,7 @@ import {
   getTeams,
   setCollaborationModeForAnnotation,
   updateDatasetTeams,
+  updateNovelUserExperienceInfos,
 } from "../../../admin/rest_api";
 import {
   DATASET_NAME,
@@ -234,33 +235,33 @@ describe("Live Collaboration", () => {
 
     // All users perform their merge operations concurrently
     await Promise.all(
-      sessions.map(async ({ page }, i) => {
-        const op = PARALLEL_USER_OPERATIONS[i % PARALLEL_USER_OPERATIONS.length];
-        if (op == null) return;
+      sessions.map(async ({ page }, userIndex) => {
+        const ops = PARALLEL_USER_OPERATIONS.filter((op) => op.userIndex === userIndex);
+        for (const op of ops) {
+          await page.evaluate(
+            (action) => window.webknossos.DEV.store.dispatch(action),
+            setPositionAction(op.sourcePosition),
+          );
+          const setActiveCellActionObjCollab = setActiveCellAction(
+            op.sourceAgglomerateId,
+            op.sourcePosition,
+          );
+          await page.evaluate(
+            (action) => window.webknossos.DEV.store.dispatch(action),
+            setActiveCellActionObjCollab,
+          );
 
-        await page.evaluate(
-          (action) => window.webknossos.DEV.store.dispatch(action),
-          setPositionAction(op.sourcePosition),
-        );
-        const setActiveCellActionObjCollab = setActiveCellAction(
-          op.sourceAgglomerateId,
-          op.sourcePosition,
-        );
-        await page.evaluate(
-          (action) => window.webknossos.DEV.store.dispatch(action),
-          setActiveCellActionObjCollab,
-        );
+          await sleep(2000); // give WK sagas some time to create the actual segment item
 
-        await sleep(2000); // give WK sagas some time to create the actual segment item
+          const proofreadMergeActionObjCollab = proofreadMergeAction(op.targetPosition);
+          await page.evaluate(
+            (action) => window.webknossos.DEV.store.dispatch(action),
+            proofreadMergeActionObjCollab,
+          );
 
-        const proofreadMergeActionObjCollab = proofreadMergeAction(op.targetPosition);
-        await page.evaluate(
-          (action) => window.webknossos.DEV.store.dispatch(action),
-          proofreadMergeActionObjCollab,
-        );
-
-        // TODO: replace with a proper completion signal (see note in admin test)
-        await sleep(3_000);
+          // TODO: replace with a proper completion signal (see note in admin test)
+          await sleep(3_000);
+        }
       }),
     );
 
@@ -292,7 +293,7 @@ describe("Live Collaboration", () => {
       window.webknossos.apiReady().then((api) => api.data.getVolumeTracingLayerIds()[0]),
     );
 
-    for (const op of PARALLEL_USER_OPERATIONS.slice(0, N_COLLAB_USERS)) {
+    for (const op of PARALLEL_USER_OPERATIONS) {
       const [sourceMappedId, targetMappedId] = (await adminVerifyPage.evaluate(
         async ({
           layerName,
@@ -323,6 +324,8 @@ describe("Live Collaboration", () => {
     }
 
     await adminVerifyPage.close();
+
+    // await sleep(3000_000);
 
     await Promise.all(sessions.map(({ page }) => page.close()));
   }, 300_000);

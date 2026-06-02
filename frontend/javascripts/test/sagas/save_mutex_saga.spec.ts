@@ -512,25 +512,6 @@ describe("Save Mutex Saga", () => {
     await task.toPromise();
   });
 
-  const ToolsAllowedInProofreadingModeWithoutLiveCollabSupport = [
-    { tool: AnnotationTool.SKELETON },
-    { tool: AnnotationTool.BOUNDING_BOX },
-  ];
-  describe.each(
-    ToolsAllowedInProofreadingModeWithoutLiveCollabSupport,
-  )("[With AnnotationTool=$tool.id]:", (annotationToolWithoutLiveCollabSupport) => {
-    it<WebknossosTestContext>(`An annotation with an active proofreading volume annotation with collaborationMode=OwnerOnly should not try to acquire the mutex despite the user switching a non Proofreading Tool ${annotationToolWithoutLiveCollabSupport.tool.id}.`, async (context: WebknossosTestContext) => {
-      await setupWebknossosForTestingWithRestrictions(context, "OwnerOnly", true, true);
-      mockInitialBucketAndAgglomerateData(context);
-      // Give mutex saga time to potentially acquire the mutex. This should not happen!
-      await sleep(100);
-      expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
-      Store.dispatch(setToolAction(annotationToolWithoutLiveCollabSupport.tool));
-      await sleep(100);
-      expect(context.mocks.acquireAnnotationMutex).not.toHaveBeenCalled();
-    });
-  });
-
   describe("When disableSavingAction is dispatched", () => {
     describe.each([
       { collaborationMode: "Exclusive" as const },

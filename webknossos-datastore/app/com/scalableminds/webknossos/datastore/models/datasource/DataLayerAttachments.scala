@@ -61,6 +61,16 @@ case class DataLayerAttachments(
       case LayerAttachmentType.cumsum       => cumsum.find(_.name == name)
     }
 
+  def getByTypeAndNameAlwaysReturnSingletons(attachmentType: LayerAttachmentType,
+                                             name: String): Option[LayerAttachment] =
+    attachmentType match {
+      case LayerAttachmentType.mesh         => meshes.find(_.name == name)
+      case LayerAttachmentType.agglomerate  => agglomerates.find(_.name == name)
+      case LayerAttachmentType.segmentIndex => segmentIndex
+      case LayerAttachmentType.connectome   => connectomes.find(_.name == name)
+      case LayerAttachmentType.cumsum       => cumsum
+    }
+
   def mapped(attachmentMapping: LayerAttachment => LayerAttachment): DataLayerAttachments =
     DataLayerAttachments(
       meshes = meshes.map(attachmentMapping(_)),
@@ -145,8 +155,8 @@ case class LayerAttachment(name: String,
                            path: UPath,
                            dataFormat: LayerAttachmentDataformat.LayerAttachmentDataformat,
                            credentialId: Option[String] = None) {
-  // Warning: throws! Use inside of tryo
-  def localPathUnsafe: Path = path.toLocalPathUnsafe
+  // Returns Failure for attachments with remote paths.
+  def localPath: Box[Path] = path.toLocalPath
 
   def resolvedPath(dataBaseDir: Path, dataSourceId: DataSourceId): UPath = {
     val datasetPath = UPath.fromLocalPath(dataBaseDir) / dataSourceId.organizationId / dataSourceId.directoryName
@@ -158,6 +168,8 @@ case class LayerAttachment(name: String,
 
   def relativizedIn(dataSourcePath: UPath): LayerAttachment =
     this.copy(path = this.path.relativizedIn(dataSourcePath))
+
+  def withoutCredential: LayerAttachment = this.copy(credentialId = None)
 }
 
 object LayerAttachment {

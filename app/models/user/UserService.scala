@@ -158,19 +158,14 @@ class UserService @Inject()(conf: WkConf,
     } yield ()
 
   def initialTeamMemberships(organizationId: String, inviteIdOpt: Option[ObjectId]): Fox[Seq[TeamMembership]] =
-    for {
-      organizationTeamId <- organizationDAO.findOrganizationTeamId(organizationId)
-      inviteTeamMemberships <- inviteIdOpt match {
-        case Some(inviteId) => inviteDAO.findTeamMembershipsFor(inviteId) ?~> "failed to get invite team memberships"
-        case None           => Fox.successful(Seq.empty)
-      }
-      // If not already present in the invite, add the organization team.
-      organizationTeamMembership = if (inviteTeamMemberships.exists(_.teamId == organizationTeamId))
-        Seq.empty
-      else
-        Seq(TeamMembership(organizationTeamId, isTeamManager = false))
-      uniqueTeamMemberships = inviteTeamMemberships ++ organizationTeamMembership
-    } yield uniqueTeamMemberships
+    inviteIdOpt match {
+      case Some(inviteId) =>
+        inviteDAO.findTeamMembershipsFor(inviteId) ?~> Msg.User.inviteTeamMembershipsFailed
+      case None =>
+        for {
+          organizationTeamId <- organizationDAO.findOrganizationTeamId(organizationId)
+        } yield Seq(TeamMembership(organizationTeamId, isTeamManager = false))
+    }
 
   def joinOrganization(originalUser: User,
                        organizationId: String,

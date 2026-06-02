@@ -10,7 +10,7 @@ import javax.inject.Inject
 import models.dataset.{DatasetDAO, DatasetService}
 import models.configuration.DatasetConfigurationService
 import models.user.{UserKeyboardShortcutsConfigsDAO, UserService}
-import play.api.libs.json.{JsObject, JsValue, Json}
+import play.api.libs.json.{JsObject, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{URLSharing, WkEnv}
 

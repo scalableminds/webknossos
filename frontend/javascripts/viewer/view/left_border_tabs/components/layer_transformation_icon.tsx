@@ -1,10 +1,8 @@
-import Icon, { DragOutlined } from "@ant-design/icons";
+import Icon from "@ant-design/icons";
 import AffineTransformationIcon from "@images/icons/icon-affine-transformation.svg?react";
 import NoTransformationIcon from "@images/icons/icon-no-transformation.svg?react";
 import TpsTransformationIcon from "@images/icons/icon-tps-transformation.svg?react";
-import { Popover } from "antd";
 import { useWkSelector } from "libs/react_hooks";
-import { useState } from "react";
 import { useDispatch } from "react-redux";
 import type { APIDataLayer, APISkeletonLayer } from "types/api_types";
 import { IdentityTransform } from "viewer/constants";
@@ -19,7 +17,6 @@ import { setPositionAction, setZoomStepAction } from "viewer/model/actions/flyca
 import { updateDatasetSettingAction } from "viewer/model/actions/settings_actions";
 import { Store } from "viewer/singletons";
 import ButtonComponent from "viewer/view/components/button_component";
-import { LayerTransformSettingsContent } from "./layer_transform_settings_popover";
 
 export default function LayerTransformationIcons({
   layer,
@@ -27,7 +24,6 @@ export default function LayerTransformationIcons({
   layer: APIDataLayer | APISkeletonLayer;
 }) {
   const dispatch = useDispatch();
-  const [popoverOpen, setPopoverOpen] = useState(false);
   const transform = useWkSelector((state) =>
     getTransformsForLayerOrNull(
       state.dataset,
@@ -39,10 +35,9 @@ export default function LayerTransformationIcons({
   const hasLayerTransformsConfigured = useWkSelector(
     (state) => getTransformsForLayerOrNull(state.dataset, layer, null) != null,
   );
-
   const showIcon = useWkSelector((state) => hasDatasetTransforms(state.dataset));
 
-  if (!canLayerHaveTransforms) {
+  if (!canLayerHaveTransforms || !showIcon) {
     return null;
   }
 
@@ -92,45 +87,25 @@ export default function LayerTransformationIcons({
   };
 
   return (
-    <>
-      {showIcon && (
-        <ButtonComponent
-          variant="text"
-          color="default"
-          size="small"
-          onClick={toggleLayerTransforms}
-          disabled={isDisabled}
-          title={
-            isRenderedNatively
-              ? `This layer is shown natively (i.e., without any transformations).${isDisabled ? "" : " Click to render this layer with its configured transforms."}`
-              : `This layer is rendered with ${
-                  typeToLabel[transform.type]
-                } transformation.${isDisabled ? "" : " Click to render this layer without any transforms."}`
-          }
-          icon={
-            <Icon
-              component={typeToImage[isRenderedNatively ? "none" : transform.type]}
-              aria-label="Transformed Layer Icon"
-            />
-          }
+    <ButtonComponent
+      variant="text"
+      color="default"
+      size="small"
+      onClick={toggleLayerTransforms}
+      disabled={isDisabled}
+      title={
+        isRenderedNatively
+          ? `This layer is shown natively (i.e., without any transformations).${isDisabled ? "" : " Click to render this layer with its configured transforms. Use the ··· menu to edit transforms."}`
+          : `This layer is rendered with ${
+              typeToLabel[transform.type]
+            } transformation.${isDisabled ? "" : " Click to render this layer without any transforms. Use the ··· menu to edit transforms."}`
+      }
+      icon={
+        <Icon
+          component={typeToImage[isRenderedNatively ? "none" : transform.type]}
+          aria-label="Transformed Layer Icon"
         />
-      )}
-      <Popover
-        open={popoverOpen}
-        onOpenChange={setPopoverOpen}
-        trigger="click"
-        placement="left"
-        title="Layer Transforms"
-        content={<LayerTransformSettingsContent layer={layer} isVisible={popoverOpen} />}
-      >
-        <ButtonComponent
-          variant="text"
-          color="default"
-          size="small"
-          icon={<DragOutlined />}
-          title="Edit layer transforms"
-        />
-      </Popover>
-    </>
+      }
+    />
   );
 }

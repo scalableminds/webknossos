@@ -427,11 +427,21 @@ function isScaleOnly(transformation?: AffineTransformation) {
   if (!transformation) {
     return false;
   }
-  const threeMatrix = new Matrix4()
-    .fromArray(nestedToFlatMatrix(transformation.matrix))
-    .transpose();
-  threeMatrix.decompose(translation, quaternion, scale);
-  return translation.length() <= EPSILON && quaternion.angleTo(IDENTITY_QUATERNION) < EPSILON;
+  // decompose() cannot handle negative scales (det < 0 causes improper rotation extraction),
+  // so inspect the matrix directly: a pure scale matrix is diagonal with no translation.
+  const m = transformation.matrix;
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      if (i !== j && Math.abs(m[i][j]) > EPSILON) return false;
+    }
+    if (Math.abs(m[i][3]) > EPSILON) return false; // Checks projection component to be 0.
+  }
+  return (
+    Math.abs(m[3][0]) <= EPSILON && // checks for translation
+    Math.abs(m[3][1]) <= EPSILON && // checks for translation
+    Math.abs(m[3][2]) <= EPSILON && // checks for translation
+    Math.abs(m[3][3] - 1) <= EPSILON // checks w component
+  );
 }
 
 function hasValidTransformationCount(dataLayers: Array<APIDataLayer>): boolean {

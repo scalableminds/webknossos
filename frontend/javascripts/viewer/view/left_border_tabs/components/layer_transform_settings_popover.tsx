@@ -1,11 +1,18 @@
-import Icon, { ReloadOutlined } from "@ant-design/icons";
+import Icon, { CloseOutlined, ReloadOutlined } from "@ant-design/icons";
 import SkeletonIcon from "@images/icons/icon-skeleton.svg?react";
 import { getDataset, updateDatasetPartial } from "admin/rest_api";
-import { Button, Divider, InputNumber, Slider, Tooltip, Typography } from "antd";
+import { Button, Divider, InputNumber, Popover, Slider, Tooltip } from "antd";
 import { LandmarkPositionStore } from "libs/landmark_position_store";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  type CSSProperties,
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { useDispatch } from "react-redux";
 import type { APIDataLayer, APISkeletonLayer } from "types/api_types";
 import { getDatasetBoundingBox } from "viewer/model/accessors/dataset_accessor";
@@ -20,7 +27,23 @@ import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
 import { setNodePositionAction } from "viewer/model/actions/skeletontracing_actions";
 import { LandmarkTransformModal } from "viewer/view/left_border_tabs/modals/landmark_transform_modal";
 
-const { Text, Title } = Typography;
+function SectionLabel({ children, style }: { children: ReactNode; style?: CSSProperties }) {
+  return (
+    <div
+      style={{
+        fontSize: 11,
+        fontWeight: 600,
+        textTransform: "uppercase",
+        letterSpacing: "0.5px",
+        color: "var(--ant-color-text-secondary)",
+        marginBottom: 4,
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 
 function AxisSliderRow({
   label,
@@ -206,11 +229,9 @@ export function LayerTransformSettingsContent({
 
   if (!isCompatible) {
     return (
-      <div style={{ maxWidth: 240 }}>
-        <Text type="secondary">
-          The transform format of this layer is not editable here. Clear the layer&apos;s transforms
-          in the dataset settings to use this editor.
-        </Text>
+      <div style={{ maxWidth: 240, color: "var(--ant-color-text-secondary)" }}>
+        The transform format of this layer is not editable here. Clear the layer&apos;s transforms
+        in the dataset settings to use this editor.
       </div>
     );
   }
@@ -237,10 +258,19 @@ export function LayerTransformSettingsContent({
 
   return (
     <div style={{ width: 250 }}>
-      <Title level={5} style={{ marginTop: 0, marginBottom: 8 }}>
-        Scaling
-      </Title>
-
+      <SectionLabel>Scaling</SectionLabel>
+      <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+        {(["X", "Y", "Z"] as const).map((axis, i) => (
+          <Button
+            key={axis}
+            size="small"
+            style={{ flex: 1 }}
+            onClick={() => updateScale(i as 0 | 1 | 2, -scale[i])}
+          >
+            Flip {axis}
+          </Button>
+        ))}
+      </div>
       {/* Negative scale mirrors the layer along that axis and is intentionally allowed. */}
       {(["X", "Y", "Z"] as const).map((axis, i) => (
         <AxisSliderRow
@@ -255,9 +285,7 @@ export function LayerTransformSettingsContent({
           resetDisabled={isFetchingStored}
         />
       ))}
-      <Title level={5} style={{ marginTop: 12, marginBottom: 8 }}>
-        Rotation
-      </Title>
+      <SectionLabel style={{ marginTop: 10 }}>Rotation</SectionLabel>
       {(["X", "Y", "Z"] as const).map((axis, i) => (
         <AxisSliderRow
           key={axis}
@@ -271,9 +299,7 @@ export function LayerTransformSettingsContent({
           resetDisabled={isFetchingStored}
         />
       ))}
-      <Title level={5} style={{ marginTop: 12, marginBottom: 8 }}>
-        Translation
-      </Title>
+      <SectionLabel style={{ marginTop: 10 }}>Translation</SectionLabel>
       {(["X", "Y", "Z"] as const).map((axis, i) => (
         <AxisSliderRow
           key={axis}
@@ -343,5 +369,35 @@ export function LayerTransformSettingsContent({
         )}
       </div>
     </div>
+  );
+}
+
+export function LayerTransformSettingsPopover({
+  layer,
+  open,
+  onClose,
+}: {
+  layer: APIDataLayer | APISkeletonLayer;
+  open: boolean;
+  onClose: () => void;
+}) {
+  const title = (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <span>Layer Transforms</span>
+      <CloseOutlined
+        style={{ cursor: "pointer", fontSize: 12, color: "var(--ant-color-text-secondary)" }}
+        onClick={onClose}
+      />
+    </div>
+  );
+  return (
+    <Popover
+      open={open}
+      placement="left"
+      title={title}
+      content={<LayerTransformSettingsContent layer={layer} isVisible={open} />}
+    >
+      <span />
+    </Popover>
   );
 }

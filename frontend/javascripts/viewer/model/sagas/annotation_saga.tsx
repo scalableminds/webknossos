@@ -44,24 +44,24 @@ function* pushAnnotationDescriptionUpdateAction(action: SetAnnotationDescription
 function* pushAnnotationUpdateAsync(action: Action) {
   const annotation = yield* select((state) => state.annotation);
   const mayEdit = yield* select((state) => mayEditAnnotationProperties(state));
-  if (!mayEdit) {
-    return;
-  }
 
-  // Persist the visibility of each layer within the annotation-specific
-  // viewConfiguration.
-  const { layers } = yield* select((state) => state.datasetConfiguration);
-  const viewConfiguration = {
-    layers: mapValues(layers, (layer) => ({
-      isDisabled: layer.isDisabled,
-    })),
-  };
   // The extra type annotation is needed here for flow
-  const editObject: Partial<EditableAnnotation> = {
-    name: annotation.name,
-    visibility: annotation.visibility,
-    viewConfiguration,
-  };
+  const editObject: Partial<EditableAnnotation> = {};
+  if (mayEdit) {
+    editObject["name"] = annotation.name;
+    editObject["visibility"] = annotation.visibility;
+  }
+  if (annotation.isUpdatingCurrentlyAllowed) {
+    // Persist the visibility of each layer within the annotation-specific
+    // viewConfiguration.
+    const { layers } = yield* select((state) => state.datasetConfiguration);
+    const viewConfiguration = {
+      layers: mapValues(layers, (layer) => ({
+        isDisabled: layer.isDisabled,
+      })),
+    };
+    editObject["viewConfiguration"] = viewConfiguration;
+  }
   try {
     yield* retry(
       SETTINGS_MAX_RETRY_COUNT,

@@ -6,6 +6,7 @@ import { hasUrlParam } from "libs/utils";
 import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
 import { all, call, debounce, delay, put, retry, take, takeLatest } from "typed-redux-saga";
+import Constants from "viewer/constants";
 import constants, { MappingStatusEnum } from "viewer/constants";
 import { getMappingInfo, is2dDataset } from "viewer/model/accessors/dataset_accessor";
 import type { Action } from "viewer/model/actions/actions";
@@ -31,7 +32,6 @@ import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { ensureWkInitialized } from "./ready_sagas";
 import { acquireAnnotationMutexMaybe } from "./saving/save_mutex_saga";
 import { updateAnnotationLayerName, updateMetadataOfAnnotation } from "./volume/update_actions";
-import Constants from "viewer/constants";
 
 function* pushAnnotationDescriptionUpdateAction(action: SetAnnotationDescriptionAction) {
   const mayEdit = yield* select((state) => mayEditAnnotationProperties(state));

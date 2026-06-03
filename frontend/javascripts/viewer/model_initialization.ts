@@ -39,6 +39,7 @@ import type {
   ServerTracing,
   ServerVolumeTracing,
 } from "types/api_types";
+import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import type { Mutable } from "types/type_utils";
 import constants, { ControlModeEnum, type Vector3 } from "viewer/constants";
 import type {
@@ -141,7 +142,6 @@ import {
   convertServerAdditionalAxesToFrontEnd,
   convertServerAnnotationToFrontendAnnotation,
 } from "./model/reducers/reducer_helpers";
-import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;

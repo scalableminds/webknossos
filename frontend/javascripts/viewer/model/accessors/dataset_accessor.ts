@@ -770,8 +770,20 @@ export function getDatasetIdOrNameFromReadableURLPart(datasetNameAndId: string) 
     : { datasetId: null, datasetName: datasetNameAndId };
 }
 
-export function getDatasetLayerNamesIncludingFallbackLayers(dataset: APIDataset) {
-  return dataset.dataSource.dataLayers
-    .filter((layer) => !("tracingId" in layer) || layer.fallbackLayer != null)
-    .map((layer) => ("tracingId" in layer ? (layer.fallbackLayer ?? layer.name) : layer.name));
+// This helper function creates a map from layer name to the fallback layer name or just name in case of a color layer.
+// Volume tracing layers without a fallback layer are filtered out.
+export function getDatasetLayerNamesPresentInDatasetMappingToName(
+  dataset: APIDataset,
+): Map<string, string> {
+  const layerWithFallbackOrColor = dataset.dataSource.dataLayers.filter(
+    (layer) => !("tracingId" in layer) || layer.fallbackLayer != null,
+  );
+  const namePairs = layerWithFallbackOrColor.map(
+    (layer) =>
+      [layer.name, "tracingId" in layer ? (layer.fallbackLayer ?? layer.name) : layer.name] as [
+        string,
+        string,
+      ],
+  );
+  return new Map(namePairs);
 }

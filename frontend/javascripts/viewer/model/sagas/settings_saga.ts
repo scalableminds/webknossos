@@ -16,7 +16,7 @@ import {
 } from "viewer/model/sagas/saving/save_saga_constants";
 import type { DatasetConfiguration, DatasetLayerConfiguration } from "viewer/store";
 import { mayEditAnnotation } from "../accessors/annotation_accessor";
-import { getDatasetLayerNamesIncludingFallbackLayers } from "../accessors/dataset_accessor";
+import { getDatasetLayerNamesPresentInDatasetMappingToName } from "../accessors/dataset_accessor";
 import { Toolkit } from "../accessors/tool_accessor";
 import { ensureWkInitialized } from "./ready_sagas";
 
@@ -36,13 +36,14 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
   const activeUser = yield* select((state) => state.activeUser);
   if (activeUser == null) return;
   const dataset = yield* select((state) => state.dataset);
-  const layerNamesOnlyExistingInDataset = getDatasetLayerNamesIncludingFallbackLayers(dataset);
+  const layerNamesOfDatasetToFallbackNameMaybe =
+    getDatasetLayerNamesPresentInDatasetMappingToName(dataset);
   const datasetConfiguration = yield* select((state) => state.datasetConfiguration);
 
   const maybeMaskedDatasetConfiguration = yield* prepareDatasetSettingsForSaving(
     datasetConfiguration,
     originalDatasetSettings,
-    layerNamesOnlyExistingInDataset,
+    layerNamesOfDatasetToFallbackNameMaybe,
   );
 
   try {
@@ -71,7 +72,7 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
 function* prepareDatasetSettingsForSaving(
   datasetConfiguration: DatasetConfiguration,
   originalDatasetSettings: DatasetConfiguration,
-  layerNamesOnlyExistingInDataset: string[],
+  layerNamesOfDatasetToFallbackNameMaybe: Map<string, string>,
 ) {
   /**
    * If an annotation is open, we don't want to change the visibility settings for
@@ -95,8 +96,9 @@ function* prepareDatasetSettingsForSaving(
 
   const newLayers: Record<string, DatasetLayerConfiguration> = {};
   for (const layerName of Object.keys(datasetConfiguration.layers)) {
-    if (layerNamesOnlyExistingInDataset.includes(layerName)) {
-      newLayers[layerName] = {
+    const layerNameOfDataset = layerNamesOfDatasetToFallbackNameMaybe.get(layerName);
+    if (layerNameOfDataset) {
+      newLayers[layerNameOfDataset] = {
         ...datasetConfiguration.layers[layerName],
         isDisabled: originalDatasetSettings.layers[layerName].isDisabled,
       };

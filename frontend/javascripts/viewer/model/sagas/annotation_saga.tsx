@@ -5,7 +5,7 @@ import Toast from "libs/toast";
 import { hasUrlParam } from "libs/utils";
 import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
-import { all, call, debounce, delay, put, retry, take, takeLatest } from "typed-redux-saga";
+import { call, debounce, delay, put, retry, take, takeLatest } from "typed-redux-saga";
 import Constants from "viewer/constants";
 import constants, { MappingStatusEnum } from "viewer/constants";
 import { getMappingInfo, is2dDataset } from "viewer/model/accessors/dataset_accessor";
@@ -41,13 +41,16 @@ function* pushAnnotationDescriptionUpdateAction(action: SetAnnotationDescription
   yield* put(pushSaveQueueTransaction([updateMetadataOfAnnotation(action.description)]));
 }
 
-// TODO: defer this in case not changes visibility
 function* pushAnnotationUpdateAsync(action: Action) {
   const annotation = yield* select((state) => state.annotation);
   if (!annotation.annotationId) {
     return; // Do not update in case no annotation exists (our implemented null pattern leads to -> annotationId = "").
   }
   const mayEdit = yield* select((state) => mayEditAnnotationProperties(state));
+
+  if (!mayEdit && !annotation.restrictions.allowUpdate) {
+    return;
+  }
 
   // The extra type annotation is needed here for flow
   const editObject: Partial<EditableAnnotation> = {};
@@ -200,14 +203,8 @@ function* watchAnnotationAsync(): Saga<void> {
   );
   yield* takeLatest("SET_ANNOTATION_DESCRIPTION", pushAnnotationDescriptionUpdateAction);
   // Debounce pushing view config changes.
-  yield* all([
-    debounce(
-      Constants.SETTING_SAVE_DEBOUNCE_MS,
-      "UPDATE_DATASET_SETTING",
-      pushAnnotationUpdateAsync,
-    ),
-    debounce(Constants.SETTING_SAVE_DEBOUNCE_MS, "UPDATE_LAYER_SETTING", pushAnnotationUpdateAsync),
-  ]);
+  yield* debounce(Constants.SETTING_SAVE_DEBOUNCE_MS, "UPDATE_DATASET_SETTING", pushAnnotationUpdateAsync);
+  yield* debounce(Constants.SETTING_SAVE_DEBOUNCE_MS, "UPDATE_LAYER_SETTING", pushAnnotationUpdateAsync);
   yield* takeLatest("EDIT_ANNOTATION_LAYER", pushAnnotationLayerUpdateAsync);
 }
 

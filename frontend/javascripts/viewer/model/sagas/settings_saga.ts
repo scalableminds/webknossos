@@ -98,7 +98,6 @@ function* prepareDatasetSettingsForSaving(
   for (const layerName of Object.keys(datasetConfiguration.layers)) {
     const layerNameOfDataset = layerNamesOfDatasetToFallbackNameMaybe.get(layerName);
     if (layerNameOfDataset) {
-      newLayersWithNamingAdjusted[layerNameOfDataset] = datasetConfiguration.layers[layerName];
       newLayersWithNamingAdjusted[layerNameOfDataset] = {
         ...datasetConfiguration.layers[layerName],
         isDisabled: originalDatasetSettings.layers[layerName].isDisabled,

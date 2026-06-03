@@ -780,7 +780,6 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
   def getViewConfiguration(annotation: ObjectId, requestingUserId: ObjectId, annotationOwnerId: ObjectId)(
       implicit ctx: DBAccessContext): Fox[Option[JsObject]] =
     for {
-      _ <- assertUpdateAccess(annotation)
       // Single scan: fetch both the requesting user's row and the owner's fallback row, preferring
       // the requesting user's config via ORDER BY.  In PostgreSQL a boolean expression evaluates to
       // true (1) / false (0), so DESC puts the requesting-user row first.

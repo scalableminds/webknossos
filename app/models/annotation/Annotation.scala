@@ -38,7 +38,6 @@ case class Annotation(
     description: String = AnnotationDefaults.defaultDescription,
     visibility: AnnotationVisibility.Value = AnnotationVisibility.Internal,
     name: String = AnnotationDefaults.defaultName,
-    viewConfiguration: Option[JsObject] = None,
     state: AnnotationState.Value = AnnotationState.Active,
     isLockedByOwner: Boolean = false,
     tags: Set[String] = Set.empty,
@@ -200,7 +199,6 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     for {
       state <- AnnotationState.fromString(r.state).toFox
       typ <- AnnotationType.fromString(r.typ).toFox
-      viewConfigurationOpt = None // Should be filled in a later step.
       visibility <- AnnotationVisibility.fromString(r.visibility).toFox
       collaborationMode <- CollaborationMode.fromString(r.collaborationmode).toFox
       annotationLayers <- annotationLayerDAO.findAnnotationLayersFor(ObjectId(r._Id))
@@ -214,7 +212,6 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
         r.description,
         visibility,
         r.name,
-        viewConfigurationOpt,
         state,
         r.islockedbyowner,
         parseArrayLiteral(r.tags).toSet,
@@ -644,10 +641,9 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
   def insertOne(a: Annotation): Fox[Unit] = {
     val insertAnnotationQuery = q"""
         INSERT INTO webknossos.annotations(_id, _dataset, _task, _user, description, visibility,
-                                           name, viewConfiguration, state, tags, tracingTime, typ, collaborationMode, created, modified, isDeleted)
+                                           name, state, tags, tracingTime, typ, collaborationMode, created, modified, isDeleted)
         VALUES(${a._id}, ${a._dataset}, ${a._task},
          ${a._user}, ${a.description}, ${a.visibility}, ${a.name},
-         ${a.viewConfiguration},
          ${a.state},
          ${a.tags}, ${a.tracingTime}, ${a.typ},
          ${a.collaborationMode},
@@ -669,7 +665,6 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                description = ${a.description},
                visibility = ${a.visibility},
                name = ${a.name},
-               viewConfiguration = ${a.viewConfiguration},
                state = ${a.state},
                tags = ${a.tags.toList},
                tracingTime = ${a.tracingTime},
@@ -790,7 +785,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       // the requesting user's config via ORDER BY.  In PostgreSQL a boolean expression evaluates to
       // true (1) / false (0), so DESC puts the requesting-user row first.
       rows <- run(q"""SELECT viewConfiguration
-                      FROM webknossos.user_annotationLayerConfigurations
+                      FROM webknossos.user_annotationViewConfigurations
                       WHERE _annotation = $annotation
                         AND (_user = $requestingUserId OR _user = $annotationOwnerId)
                       ORDER BY (_user = $requestingUserId) DESC
@@ -800,7 +795,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
 
   def updateViewConfiguration(annotation: ObjectId, user: ObjectId, viewConfiguration: JsObject): Fox[Unit] =
     for {
-      _ <- run(q"""INSERT INTO webknossos.user_annotationLayerConfigurations (_annotation, _user, viewConfiguration)
+      _ <- run(q"""INSERT INTO webknossos.user_annotationViewConfigurations (_annotation, _user, viewConfiguration)
            VALUES($annotation, $user, $viewConfiguration)
            ON CONFLICT (_annotation, _user) DO UPDATE SET
            viewConfiguration = $viewConfiguration""".asUpdate) ?~> Msg.Annotation.Edit.viewConfigurationFailed

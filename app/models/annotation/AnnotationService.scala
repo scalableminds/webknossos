@@ -746,7 +746,7 @@ class AnnotationService @Inject()(
         "id" -> annotation.id,
         "name" -> annotation.name,
         "description" -> annotation.description,
-        "viewConfiguration" -> userSpecificViewConfiguration.flatten.orElse(annotation.viewConfiguration),
+        "viewConfiguration" -> Json.toJson(userSpecificViewConfiguration.flatten),
         "typ" -> annotation.typ,
         "task" -> taskJson,
         "stats" -> Json.obj(), // included for legacy parsers

@@ -16,6 +16,8 @@ import models.organization.OrganizationDAO
 import models.team._
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Full}
+import models.project.ProjectDAO
+import models.task.TaskDAO
 import org.apache.pekko.actor.ActorSystem
 import play.api.libs.json._
 import play.silhouette.api.LoginInfo
@@ -37,6 +39,8 @@ class UserService @Inject()(conf: WkConf,
                             userDatasetLayerConfigurationDAO: UserDatasetLayerConfigurationDAO,
                             organizationDAO: OrganizationDAO,
                             teamDAO: TeamDAO,
+                            taskDAO: TaskDAO,
+                            projectDAO: ProjectDAO,
                             teamMembershipService: TeamMembershipService,
                             datasetDAO: DatasetDAO,
                             tokenDAO: TokenDAO,
@@ -316,6 +320,18 @@ class UserService @Inject()(conf: WkConf,
       otherUserTeamIds <- teamIdsFor(otherUser._id)
       teamManagerTeamIds <- teamManagerTeamIdsFor(possibleAdmin._id)
     } yield otherUserTeamIds.intersect(teamManagerTeamIds).nonEmpty || possibleAdmin.isAdminOf(otherUser)
+
+  def isTeamManagerOrAdminOf(user: User, organizationId: String, taskIdOpt: Option[ObjectId]): Fox[Boolean] =
+    taskIdOpt match {
+      case None => Fox.successful(user.isAdminOf(organizationId))
+      case Some(taskId) =>
+        (for {
+          task <- taskDAO.findOne(taskId)(GlobalAccessContext)
+          project <- projectDAO.findOne(task._project)(GlobalAccessContext)
+          teamManagerTeamIds <- teamManagerTeamIdsFor(user._id)
+        } yield
+          (teamManagerTeamIds.contains(project._team) || user.isAdminOf(organizationId))) ?~> Msg.Team.adminNotAllowed
+    }
 
   def isTeamManagerOrAdminOf(user: User, _team: ObjectId): Fox[Boolean] =
     (for {

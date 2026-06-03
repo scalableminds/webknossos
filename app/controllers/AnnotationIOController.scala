@@ -141,13 +141,13 @@ class AnnotationIOController @Inject()(
                                                                                       usableDataSource,
                                                                                       dataset._id)
           mergedSkeletonLayers <- mergeAndSaveSkeletonLayers(skeletonTracings, tracingStoreClient)
-          annotation <- annotationService.createFrom(request.identity,
-                                                     dataset,
-                                                     mergedSkeletonLayers ::: mergedVolumeLayers,
-                                                     AnnotationType.Explorational,
-                                                     name,
-                                                     description,
-                                                     newAnnotationId)
+          annotation = annotationService.createFrom(request.identity,
+                                                    dataset,
+                                                    mergedSkeletonLayers ::: mergedVolumeLayers,
+                                                    AnnotationType.Explorational,
+                                                    name,
+                                                    description,
+                                                    newAnnotationId)
           annotationProto = AnnotationProto(
             description = annotation.description,
             version = 0L,

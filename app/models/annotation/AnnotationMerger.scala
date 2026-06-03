@@ -29,7 +29,6 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
       toTemporaryStore = false,
       issuingUser._id,
       annotationB._dataset,
-      annotationB._team,
       AnnotationType.Explorational,
       List(annotationA, annotationB),
       Seq.empty
@@ -40,7 +39,6 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
       toTemporaryStore: Boolean,
       userId: ObjectId,
       datasetId: ObjectId,
-      teamId: ObjectId,
       typ: AnnotationType,
       annotations: List[Annotation],
       additionalBoundingBoxes: Seq[NamedBoundingBox]
@@ -61,7 +59,6 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
           newId,
           datasetId,
           None,
-          teamId,
           userId,
           mergedAnnotationLayers,
           typ = typ

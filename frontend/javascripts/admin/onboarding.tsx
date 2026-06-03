@@ -233,7 +233,7 @@ export function InviteUsersModal({
     [currentUserCount, maxUserCountPerOrganization],
   );
 
-  const defaultTeam = useMemo(() => teams.find((t) => t.name === "Default"), [teams]);
+  const defaultTeam = useMemo(() => teams.find((t) => t.isOrganizationTeam), [teams]);
 
   const setDefaultTeam = useCallback(() => {
     if (defaultTeam != null) {

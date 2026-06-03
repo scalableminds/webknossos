@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
@@ -66,7 +67,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       implicit tc: TokenContext,
       ec: ExecutionContext): Fox[(Seq[Box[Array[Byte]]], ElementClass.Value)] =
     for {
-      tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
+      tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound
       dataRequests = bucketPositions.map { position =>
         WebknossosDataRequest(
           position = position * mag * DataLayer.bucketLength,
@@ -96,7 +97,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       additionalCoordinates: Option[Seq[AdditionalCoordinate]],
       annotationVersion: Option[Long])(segmentId: Long, mag: Vec3Int)(implicit ec: ExecutionContext, tc: TokenContext) =
     for {
-      tracing <- annotationService.findVolume(annotationId, tracingId) ?~> "tracing.notFound"
+      tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound
       fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracing)
       allBucketPositions: Set[Vec3IntProto] <- volumeSegmentIndexService.getSegmentToBucketIndex(
         tracing,

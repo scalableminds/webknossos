@@ -18,6 +18,7 @@ import {
   getUnmappedSegmentIdForPosition,
   handleFloodFillFromGlobalPosition,
 } from "viewer/controller/combinations/volume_handlers";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import {
   getMappingInfo,
   getVisibleSegmentationLayer,
@@ -99,7 +100,7 @@ export function useNoNodeContextMenuOptions(
     visibleSegmentationLayer != null ? visibleSegmentationLayer.name : null,
   );
 
-  const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
+  const allowUpdate = useWkSelector(mayEditAnnotation);
 
   const maybeUnmappedSegmentId =
     globalPosition != null ? getUnmappedSegmentIdForPosition(globalPosition) : null;

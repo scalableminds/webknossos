@@ -201,11 +201,12 @@ describe("Save Saga", () => {
     expectValueDeepEqual(expect, saga.next([]), take("PUSH_SAVE_QUEUE_TRANSACTION"));
     saga.next(); // race
 
+    saga.next({
+      forcePush: saveNowAction(),
+    }); // select gate check
     expectValueDeepEqual(
       expect,
-      saga.next({
-        forcePush: saveNowAction(),
-      }),
+      saga.next(true), // gate check: savingAllowed = true
       put(setSaveBusyAction(true)),
     );
 
@@ -263,7 +264,8 @@ describe("Save Saga", () => {
 
     saga.next({
       forcePush: saveNowAction(),
-    });
+    }); // select gate check
+    saga.next(true); // gate check: savingAllowed = true → setSaveBusyAction
 
     const synchronizeAnnotationWithBackendCallEffect = saga.next(); // calling synchronizeAnnotationWithBackend
     const enforceEmptySaveQueue = true;
@@ -427,7 +429,8 @@ describe("Save Saga", () => {
 
     saga.next({
       forcePush: saveNowAction(),
-    }); // put setSaveBusyAction
+    }); // select gate check
+    saga.next(true); // gate check: savingAllowed = true → setSaveBusyAction
 
     const synchronizeAnnotationWithBackendCallEffect = saga.next(); // calling synchronizeAnnotationWithBackend
     const enforceEmptySaveQueue = true;
@@ -482,7 +485,8 @@ describe("Save Saga", () => {
 
     saga.next({
       timeout: "a placeholder",
-    }); // put setSaveBusyAction
+    }); // select gate check
+    saga.next(true); // gate check: savingAllowed = true → setSaveBusyAction
 
     const synchronizeAnnotationWithBackendCallEffect = saga.next({ shouldRetryOnConflict: false }); // calling synchronizeAnnotationWithBackend
     const enforceEmptySaveQueue = false;

@@ -9,6 +9,7 @@ import Icon, {
   ExpandAltOutlined,
   EyeInvisibleOutlined,
   EyeOutlined,
+  FolderAddOutlined,
   FolderOutlined,
   LoadingOutlined,
   PlusOutlined,
@@ -51,6 +52,7 @@ import type { APIMeshFileInfo } from "types/api_types";
 import { type AdditionalCoordinate, APIJobCommand } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
 import { EMPTY_OBJECT } from "viewer/constants";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import {
   getMagInfoOfVisibleSegmentationLayer,
   getMappingInfo,
@@ -188,8 +190,7 @@ const mapStateToProps = (state: WebknossosState) => {
     selectedIds: getCleanedSelectedSegmentsOrGroup(state),
     visibleSegmentationLayer,
     activeVolumeTracing,
-    allowUpdate:
-      state.annotation.isUpdatingCurrentlyAllowed && !isVisibleButUneditableSegmentationLayerActive,
+    allowUpdate: mayEditAnnotation(state) && !isVisibleButUneditableSegmentationLayerActive,
     organization: state.dataset.owningOrganization,
     datasetName: state.dataset.name,
     availableMeshFiles:
@@ -1492,7 +1493,7 @@ class SegmentsView extends React.Component<Props, State> {
       const displayableName = name?.trim() || "<Unnamed Group>";
 
       return (
-        <Space onContextMenu={onOpenContextMenu} size={4}>
+        <Space onContextMenu={onOpenContextMenu} size={4} style={{ width: "100%" }}>
           <FolderOutlined />
           <EditableTextLabel
             value={displayableName}
@@ -1564,6 +1565,18 @@ class SegmentsView extends React.Component<Props, State> {
                       color="default"
                     />
                   </AdvancedSearchPopover>
+                  <ButtonComponent
+                    onClick={() => this.createGroup(MISSING_GROUP_ID)}
+                    title={
+                      !this.props.allowUpdate
+                        ? "Cannot create group in read-only mode"
+                        : "Create new Group"
+                    }
+                    disabled={!this.props.allowUpdate}
+                    icon={<FolderAddOutlined />}
+                    variant="text"
+                    color="default"
+                  />
                   {this.getMeshesHeader()}
                 </Space>
                 <Divider size="small" />

@@ -13,6 +13,7 @@ import Constants, {
 } from "viewer/constants";
 import { AnnotationTool, Toolkit } from "viewer/model/accessors/tool_accessor";
 import type { WebknossosState } from "viewer/store";
+import { getAllDefaultKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 
 const defaultViewportRect = {
   top: 0,
@@ -120,6 +121,10 @@ const defaultState: WebknossosState = {
       [AnnotationTool.VOXEL_PIPETTE.id]: 0,
     },
   },
+  keyboardConfiguration: {
+    shortcutsConfig: getAllDefaultKeyboardShortcuts(),
+    unmodifiedLayoutMap: new Map(),
+  },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,
     histogramData: {},
@@ -206,12 +211,13 @@ const defaultState: WebknossosState = {
   save: {
     queue: [],
     isBusy: false,
+    isSavingDisabled: false,
     lastSaveTimestamp: 0,
     progressInfo: {
       processedActionCount: 0,
       totalActionCount: 0,
     },
-    mutexState: { hasAnnotationMutex: false, blockedByUser: null },
+    mutexState: { hasAnnotationMutex: false, blockedByUser: null, blockedBySessionId: null },
     rebaseRelevantServerAnnotationState: {
       annotationDescription: "",
       annotationVersion: 1,
@@ -268,10 +274,12 @@ const defaultState: WebknossosState = {
     activeUserBoundingBoxId: null,
     showDropzoneModal: false,
     showVersionRestore: false,
+    isRestoringVersion: false,
     showDownloadModal: false,
     showAddScriptModal: false,
     showMergeAnnotationModal: false,
     showZarrPrivateLinksModal: false,
+    showKeyboardShortcutConfigModal: false,
     showPythonClientModal: false,
     showDuplicateAnnotationModal: false,
     aIJobDrawerState: "invisible",

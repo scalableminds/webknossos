@@ -1,5 +1,6 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.io.ZipIO
@@ -41,7 +42,6 @@ import models.task._
 import models.user._
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
-import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData, Result}
@@ -141,13 +141,13 @@ class AnnotationIOController @Inject()(
                                                                                       usableDataSource,
                                                                                       dataset._id)
           mergedSkeletonLayers <- mergeAndSaveSkeletonLayers(skeletonTracings, tracingStoreClient)
-          annotation <- annotationService.createFrom(request.identity,
-                                                     dataset,
-                                                     mergedSkeletonLayers ::: mergedVolumeLayers,
-                                                     AnnotationType.Explorational,
-                                                     name,
-                                                     description,
-                                                     newAnnotationId)
+          annotation = annotationService.createFrom(request.identity,
+                                                    dataset,
+                                                    mergedSkeletonLayers ::: mergedVolumeLayers,
+                                                    AnnotationType.Explorational,
+                                                    name,
+                                                    description,
+                                                    newAnnotationId)
           annotationProto = AnnotationProto(
             description = annotation.description,
             version = 0L,
@@ -160,7 +160,7 @@ class AnnotationIOController @Inject()(
         } yield
           JsonOk(
             Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
-            Messages("nml.file.uploadSuccess")
+            Msg.Nml.uploadSuccess
           )
       }
   }
@@ -263,32 +263,25 @@ class AnnotationIOController @Inject()(
                           AnnotationLayerStatistics.unknown))
     }
 
-  private def findDatasetForUploadedAnnotations(
-      skeletonTracings: List[SkeletonTracing],
-      volumeTracings: List[UploadedVolumeLayer],
-      datasetIds: List[ObjectId],
-      wkUrl: String)(implicit mp: MessagesProvider, ctx: DBAccessContext): Fox[Dataset] =
+  private def findDatasetForUploadedAnnotations(skeletonTracings: List[SkeletonTracing],
+                                                volumeTracings: List[UploadedVolumeLayer],
+                                                datasetIds: List[ObjectId],
+                                                wkUrl: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
     for {
-      datasetId <- SequenceUtils.findUniqueElement(datasetIds).toFox ?~> "nml.file.differentDatasets"
-      organizationIdOpt <- assertAllOnSameOrganization(skeletonTracings, volumeTracings) ?~> "nml.file.differentDatasets"
+      datasetId <- SequenceUtils.findUniqueElement(datasetIds).toFox ?~> Msg.Nml.differentDatasets
+      organizationIdOpt <- assertAllOnSameOrganization(skeletonTracings, volumeTracings) ?~> Msg.Nml.differentDatasets
       organizationIdOpt <- Fox.runOptional(organizationIdOpt) {
         organizationDAO.findOne(_)(GlobalAccessContext).map(_._id)
       } ?~> (if (wkUrl.nonEmpty && conf.Http.uri != wkUrl) {
-               Messages("organization.notFound.wrongHost", organizationIdOpt.getOrElse(""), wkUrl, conf.Http.uri)
-             } else { Messages("organization.notFound", organizationIdOpt.getOrElse("")) }) ~>
-        NOT_FOUND
+               Msg.Organization.notFoundWrongHost(organizationIdOpt.getOrElse(""), wkUrl, conf.Http.uri)
+             } else Msg.Organization.notFound(organizationIdOpt.getOrElse(""))) ~> NOT_FOUND
       organizationId <- Fox.fillOption(organizationIdOpt) {
         organizationDAO.findOrganizationIdForDataset(datasetId)(GlobalAccessContext)
-      } ?~> Messages("dataset.noAccess", datasetId) ~> FORBIDDEN
+      } ?~> Msg.Dataset.notFound(datasetId) ~> FORBIDDEN
       dataset <- datasetDAO.findOne(datasetId) ?~> (if (wkUrl.nonEmpty && conf.Http.uri != wkUrl) {
-                                                      Messages("dataset.noAccess.wrongHost",
-                                                               datasetId,
-                                                               wkUrl,
-                                                               conf.Http.uri)
-                                                    } else {
-                                                      Messages("dataset.noAccess", datasetId)
-                                                    }) ~> FORBIDDEN
-      _ <- Fox.fromBool(organizationId == dataset._organization) ?~> Messages("dataset.noAccess", datasetId) ~> FORBIDDEN
+                                                      Msg.Dataset.notFoundWrongHost(datasetId, wkUrl, conf.Http.uri)
+                                                    } else Msg.Dataset.notFound(datasetId)) ~> FORBIDDEN
+      _ <- Fox.fromBool(organizationId == dataset._organization) ?~> Msg.Dataset.notFound(datasetId) ~> FORBIDDEN
     } yield dataset
 
   private def nameForUploaded(fileNames: Seq[String]) =
@@ -309,12 +302,11 @@ class AnnotationIOController @Inject()(
   private def wkUrlsForNMLs(wkUrls: Seq[Option[String]]) =
     if (wkUrls.toSet.size == 1) wkUrls.headOption.flatten.getOrElse("") else ""
 
-  private def returnError(zipParseResult: NmlResults.MultiNmlParseResult)(
-      implicit messagesProvider: MessagesProvider): Fox[Nothing] =
+  private def returnError(zipParseResult: NmlResults.MultiNmlParseResult): Fox[Nothing] =
     if (zipParseResult.containsFailure) {
       val errors = zipParseResult.parseResults.flatMap {
         case result: NmlResults.NmlParseFailure =>
-          Some("error" -> Messages("nml.file.invalid", result.fileName, result.error))
+          Some("error" -> Msg.Nml.parseFailed(result.fileName, result.error))
         case _ => None
       }
       Fox.paramFailure("NML upload failed", Empty, Empty, Json.toJson(errors.map(m => Json.obj(m._1 -> m._2))))
@@ -336,7 +328,7 @@ class AnnotationIOController @Inject()(
                                                  dataset: Dataset,
                                                  dataSource: UsableDataSource): Fox[List[List[UploadedVolumeLayer]]] =
     for {
-      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)(GlobalAccessContext) ?~> "dataStore.notFoundForDataset"
+      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)(GlobalAccessContext) ?~> Msg.DataStore.notFoundForDataset
       remoteDataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
       allAdapted <- Fox.serialCombined(volumeLayersGrouped) { volumeLayers =>
         Fox.serialCombined(volumeLayers) { volumeLayer =>
@@ -420,7 +412,7 @@ class AnnotationIOController @Inject()(
               request.identity,
               version,
               skipVolumeData.getOrElse(false),
-              volumeDataZipFormatParsed.getOrElse(VolumeDataZipFormat.wkw)) ?~> "annotation.download.failed"
+              volumeDataZipFormatParsed.getOrElse(VolumeDataZipFormat.wkw)) ?~> Msg.Annotation.Download.failed
         }
       } yield result
     }
@@ -431,7 +423,7 @@ class AnnotationIOController @Inject()(
                           volumeDataZipFormat: Option[String]): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       for {
-        annotation <- provider.provideAnnotation(id, request.identity) ?~> "annotation.notFound" ~> NOT_FOUND
+        annotation <- provider.provideAnnotation(id, request.identity) ?~> Msg.Annotation.notFound ~> NOT_FOUND
         result <- Fox.fromFuture(
           download(annotation.typ.toString, id, version, skipVolumeData, volumeDataZipFormat)(request))
       } yield result
@@ -443,7 +435,7 @@ class AnnotationIOController @Inject()(
       requestingUser: Option[User],
       version: Option[Long],
       skipVolumeData: Boolean,
-      volumeDataZipFormat: VolumeDataZipFormat)(implicit ctx: DBAccessContext, mp: MessagesProvider): Fox[Result] = {
+      volumeDataZipFormat: VolumeDataZipFormat)(implicit ctx: DBAccessContext): Fox[Result] = {
 
     // Note: volumeVersion cannot currently be supplied per layer, see https://github.com/scalableminds/webknossos/issues/5925
 
@@ -494,14 +486,14 @@ class AnnotationIOController @Inject()(
                                                 skipVolumeData,
                                                 volumeDataZipFormat,
                                                 dataset.voxelSize)
-        } ?~> "annotation.download.fetchVolumeLayer.failed"
+        } ?~> Msg.Annotation.Download.fetchVolumeLayerFailed
         fetchedSkeletonLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.skeletonAnnotationLayers) {
           skeletonAnnotationLayer =>
             tracingStoreClient.getSkeletonTracing(annotation._id, skeletonAnnotationLayer, version)
-        } ?~> "annotation.download.fetchSkeletonLayer.failed"
-        annotationOwner <- userService.findOneCached(annotation._user)(GlobalAccessContext) ?~> "annotation.download.findUser.failed"
+        } ?~> Msg.Annotation.Download.fetchSkeletonLayerFailed
+        annotationOwner <- userService.findOneCached(annotation._user)(GlobalAccessContext) ?~> Msg.Annotation.Download.findUserFailed
         ownerMultiUser <- multiUserDAO.findOne(annotationOwner._multiUser)(GlobalAccessContext)
-        taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne(_)(GlobalAccessContext)) ?~> "task.notFound"
+        taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne(_)(GlobalAccessContext)) ?~> Msg.Task.notFound
         annotationProto <- tracingStoreClient.getAnnotationProto(annotation._id, version)
         nmlStream = nmlWriter.toNmlStream(
           name,
@@ -523,7 +515,7 @@ class AnnotationIOController @Inject()(
         )
         temporaryFile = tempFileService.create()
         zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(temporaryFile.toString))))
-        _ <- zipper.addFileFromNamedStream(nmlStream, suffix = ".nml") ?~> "annotation.download.zipNml.failed"
+        _ <- zipper.addFileFromNamedStream(nmlStream, suffix = ".nml") ?~> Msg.Annotation.Download.zipNmlFailed
         _ = fetchedVolumeLayers.zipWithIndex.map {
           case (volumeLayer, index) =>
             volumeLayer.volumeDataOpt.foreach { volumeData =>
@@ -545,9 +537,9 @@ class AnnotationIOController @Inject()(
                                   name: String,
                                   organizationId: String): Fox[Path] =
       if (annotation.tracingType == TracingType.skeleton)
-        skeletonToTemporaryFile(dataset, annotation, organizationId) ?~> "annotation.download.skeletonToFile.failed"
+        skeletonToTemporaryFile(dataset, annotation, organizationId) ?~> Msg.Annotation.Download.skeletonToFileFailed
       else
-        volumeOrHybridToTemporaryFile(dataset, annotation, name, organizationId) ?~> "annotation.download.hybridToFile.failed"
+        volumeOrHybridToTemporaryFile(dataset, annotation, name, organizationId) ?~> Msg.Annotation.Download.hybridToFileFailed
 
     def exportExtensionForAnnotation(annotation: Annotation): String =
       if (annotation.tracingType == TracingType.skeleton)
@@ -563,15 +555,17 @@ class AnnotationIOController @Inject()(
 
     for {
       annotation <- provider.provideAnnotation(typ, annotationId, requestingUser) ~> NOT_FOUND
-      restrictions <- provider.restrictionsFor(typ, annotationId) ?~> "annotation.restrictions.unavailable"
-      name <- provider.nameFor(annotation) ?~> "annotation.name.impossible"
+      restrictions <- provider.restrictionsFor(typ, annotationId) ?~> Msg.Annotation.Restrictions.notFound
+      name <- provider.nameFor(annotation) ?~> Msg.Annotation.nameNotAvailable
       fileExtension = exportExtensionForAnnotation(annotation)
       fileName = URLEncoder.encode(name + fileExtension, "UTF-8").replace("+", "%20")
       mimeType = exportMimeTypeForAnnotation(annotation)
-      _ <- restrictions.allowDownload(requestingUser) ?~> "annotation.download.notAllowed" ~> FORBIDDEN
-      dataset <- datasetDAO.findOne(annotation._dataset)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation" ~> NOT_FOUND
-      organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> "organization.notFound" ~> NOT_FOUND
-      temporaryFile <- annotationToTemporaryFile(dataset, annotation, name, organization._id) ?~> "annotation.writeTemporaryFile.failed"
+      _ <- restrictions.allowDownload(requestingUser) ?~> Msg.Annotation.Download.notAllowed ~> FORBIDDEN
+      dataset <- datasetDAO.findOne(annotation._dataset)(GlobalAccessContext) ?~> Msg.Dataset
+        .notFoundForAnnotation(annotation._dataset, annotation._id) ~> NOT_FOUND
+      organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization.notFound(
+        dataset._organization) ~> NOT_FOUND
+      temporaryFile <- annotationToTemporaryFile(dataset, annotation, name, organization._id) ?~> Msg.Annotation.Download.writeToFileFailed
     } yield {
       Ok.sendPath(temporaryFile, inline = false)
         .as(mimeType)
@@ -580,12 +574,11 @@ class AnnotationIOController @Inject()(
   }
 
   private def downloadProject(projectId: ObjectId, requestingUserOpt: Option[User], skipVolumeData: Boolean)(
-      implicit ctx: DBAccessContext,
-      m: MessagesProvider) =
+      implicit ctx: DBAccessContext) =
     for {
-      requestingUser <- requestingUserOpt.toFox ?~> Messages("notAllowed") ~> FORBIDDEN
-      project <- projectDAO.findOne(projectId) ?~> Messages("project.notFound", projectId) ~> NOT_FOUND
-      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(requestingUser, project._team)) ?~> "notAllowed" ~> FORBIDDEN
+      requestingUser <- requestingUserOpt.toFox ?~> Msg.notAllowed ~> FORBIDDEN
+      project <- projectDAO.findOne(projectId) ?~> Msg.Project.notFound(projectId) ~> NOT_FOUND
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(requestingUser, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN
       annotations <- annotationDAO.findAllFinishedForProject(projectId)
       zipTempFilePath <- annotationService.zipAnnotations(annotations,
                                                           project.name,
@@ -598,8 +591,7 @@ class AnnotationIOController @Inject()(
     }
 
   private def downloadTask(taskId: ObjectId, requestingUserOpt: Option[User], skipVolumeData: Boolean)(
-      implicit ctx: DBAccessContext,
-      m: MessagesProvider) = {
+      implicit ctx: DBAccessContext) = {
     def createTaskZip(task: Task): Fox[Path] = annotationService.annotationsFor(task._id).flatMap { annotations =>
       val finished = annotations.filter(_.state == Finished)
       annotationService
@@ -607,10 +599,10 @@ class AnnotationIOController @Inject()(
     }
 
     for {
-      requestingUser <- requestingUserOpt.toFox ?~> Messages("notAllowed") ~> FORBIDDEN
-      task <- taskDAO.findOne(taskId) ?~> Messages("task.notFound") ~> NOT_FOUND
-      project <- projectDAO.findOne(task._project) ?~> Messages("project.notFound") ~> NOT_FOUND
-      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(requestingUser, project._team)) ?~> Messages("notAllowed") ~> FORBIDDEN
+      requestingUser <- requestingUserOpt.toFox ?~> Msg.notAllowed ~> FORBIDDEN
+      task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound(taskId) ~> NOT_FOUND
+      project <- projectDAO.findOne(task._project) ?~> Msg.Project.notFound(task._project) ~> NOT_FOUND
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(requestingUser, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN
       zipTempFilePath <- createTaskZip(task)
     } yield {
       Ok.sendPath(zipTempFilePath,
@@ -620,8 +612,7 @@ class AnnotationIOController @Inject()(
   }
 
   private def downloadTaskType(taskTypeId: ObjectId, requestingUserOpt: Option[User], skipVolumeData: Boolean)(
-      implicit ctx: DBAccessContext,
-      m: MessagesProvider) = {
+      implicit ctx: DBAccessContext) = {
     def createTaskTypeZip(taskType: TaskType) =
       for {
         tasks <- taskDAO.findAllByTaskType(taskType._id)
@@ -634,9 +625,9 @@ class AnnotationIOController @Inject()(
       } yield zip
 
     for {
-      requestingUser <- requestingUserOpt.toFox ?~> Messages("notAllowed") ~> FORBIDDEN
-      taskType <- taskTypeDAO.findOne(taskTypeId) ?~> "taskType.notFound" ~> NOT_FOUND
-      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(requestingUser, taskType._team)) ?~> "notAllowed" ~> FORBIDDEN
+      requestingUser <- requestingUserOpt.toFox ?~> Msg.notAllowed ~> FORBIDDEN
+      taskType <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound(taskTypeId) ~> NOT_FOUND
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(requestingUser, taskType._team)) ?~> Msg.notAllowed ~> FORBIDDEN
       zipTempFilePath <- createTaskTypeZip(taskType)
     } yield {
       Ok.sendPath(zipTempFilePath,

@@ -1,5 +1,6 @@
 package models.storage
 
+import com.scalableminds.util.Msg
 import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
@@ -14,8 +15,8 @@ import models.dataset.{
   DataStore,
   DataStoreDAO,
   Dataset,
-  DatasetLayerAttachmentsDAO,
-  DatasetMagsDAO,
+  DatasetLayerAttachmentDAO,
+  DatasetMagDAO,
   StorageRelevantDataLayerAttachment,
   WKRemoteDataStoreClient
 }
@@ -34,8 +35,8 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
                                    val lifecycle: ApplicationLifecycle,
                                    organizationDAO: OrganizationDAO,
                                    dataStoreDAO: DataStoreDAO,
-                                   datasetMagDAO: DatasetMagsDAO,
-                                   datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
+                                   datasetMagDAO: DatasetMagDAO,
+                                   datasetLayerAttachmentsDAO: DatasetLayerAttachmentDAO,
                                    rpc: RPC,
                                    config: WkConf)(implicit val ec: ExecutionContext)
     extends LazyLogging
@@ -211,7 +212,7 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
   def refreshStorageReportForDataset(dataset: Dataset): Fox[Unit] =
     for {
       _ <- Fox.successful(())
-      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> "datastore.notFound"
+      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> Msg.DataStore.notFound
       _ <- if (dataStore.reportUsedStorageEnabled) {
         for {
           organization <- organizationDAO.findOne(dataset._organization)

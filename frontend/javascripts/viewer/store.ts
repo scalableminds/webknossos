@@ -68,6 +68,7 @@ import UserReducer from "viewer/model/reducers/user_reducer";
 import ViewModeReducer from "viewer/model/reducers/view_mode_reducer";
 import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
 import type { UpdateAction } from "viewer/model/sagas/volume/update_actions";
+import type { KeyboardConfiguration } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import type { Toolkit } from "./model/accessors/tool_accessor";
 import { eventEmitterMiddleware } from "./model/helpers/event_emitter_middleware";
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
@@ -461,6 +462,7 @@ export type ProgressInfo = {
 export type AnnotationMutexInformation = {
   readonly hasAnnotationMutex: boolean;
   readonly blockedByUser: APIUserCompact | null | undefined;
+  readonly blockedBySessionId: string | null | undefined;
 };
 
 // RebaseRelevantAnnotationState holds the data required to rebase the
@@ -511,6 +513,7 @@ export type ProofreadingPostProcessingInfo = {
 };
 export type SaveState = {
   readonly isBusy: boolean;
+  readonly isSavingDisabled: boolean; // true when the user explicitly disabled saving in the WK menu dropdown
   readonly queue: Array<SaveQueueEntry>;
   readonly lastSaveTimestamp: number;
   readonly progressInfo: ProgressInfo;
@@ -588,6 +591,7 @@ type UiInformation = {
   readonly globalProgress: number; // 0 to 1
   readonly showDropzoneModal: boolean;
   readonly showVersionRestore: boolean;
+  readonly isRestoringVersion: boolean;
   readonly showDownloadModal: boolean;
   readonly showPythonClientModal: boolean;
   readonly showShareModal: boolean;
@@ -595,6 +599,7 @@ type UiInformation = {
   readonly showZarrPrivateLinksModal: boolean;
   readonly showDuplicateAnnotationModal: boolean;
   readonly showAddScriptModal: boolean;
+  readonly showKeyboardShortcutConfigModal: boolean;
   readonly aIJobDrawerState: StartAiJobDrawerState;
   readonly showRenderAnimationModal: boolean;
   readonly activeTool: AnnotationTool;
@@ -679,6 +684,7 @@ export type StoreDataset = APIDataset & {
 export type WebknossosState = {
   readonly datasetConfiguration: DatasetConfiguration;
   readonly userConfiguration: UserConfiguration;
+  readonly keyboardConfiguration: KeyboardConfiguration;
   readonly temporaryConfiguration: TemporaryConfiguration;
   readonly dataset: StoreDataset;
   readonly annotation: StoreAnnotation;

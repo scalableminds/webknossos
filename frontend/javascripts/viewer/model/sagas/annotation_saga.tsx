@@ -3,10 +3,9 @@ import { editAnnotation } from "admin/rest_api";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { hasUrlParam } from "libs/utils";
-import mapValues from "lodash-es/mapValues";
 import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
-import { call, delay, put, retry, take, takeLatest } from "typed-redux-saga";
+import { all, call, debounce, delay, put, retry, take, takeLatest } from "typed-redux-saga";
 import constants, { MappingStatusEnum } from "viewer/constants";
 import { getMappingInfo, is2dDataset } from "viewer/model/accessors/dataset_accessor";
 import type { Action } from "viewer/model/actions/actions";
@@ -32,6 +31,7 @@ import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { ensureWkInitialized } from "./ready_sagas";
 import { acquireAnnotationMutexMaybe } from "./saving/save_mutex_saga";
 import { updateAnnotationLayerName, updateMetadataOfAnnotation } from "./volume/update_actions";
+import Constants from "viewer/constants";
 
 function* pushAnnotationDescriptionUpdateAction(action: SetAnnotationDescriptionAction) {
   const mayEdit = yield* select((state) => mayEditAnnotationProperties(state));
@@ -41,8 +41,12 @@ function* pushAnnotationDescriptionUpdateAction(action: SetAnnotationDescription
   yield* put(pushSaveQueueTransaction([updateMetadataOfAnnotation(action.description)]));
 }
 
+// TODO: defer this in case not changes visibility
 function* pushAnnotationUpdateAsync(action: Action) {
   const annotation = yield* select((state) => state.annotation);
+  if (!annotation.annotationId) {
+    return; // Do not update in case no annotation exists (our implemented null pattern leads to -> annotationId = "").
+  }
   const mayEdit = yield* select((state) => mayEditAnnotationProperties(state));
 
   // The extra type annotation is needed here for flow
@@ -51,15 +55,9 @@ function* pushAnnotationUpdateAsync(action: Action) {
     editObject["name"] = annotation.name;
     editObject["visibility"] = annotation.visibility;
   }
-  if (annotation.isUpdatingCurrentlyAllowed) {
-    // Persist the visibility of each layer within the annotation-specific
-    // viewConfiguration.
-    const { layers } = yield* select((state) => state.datasetConfiguration);
-    const viewConfiguration = {
-      layers: mapValues(layers, (layer) => ({
-        isDisabled: layer.isDisabled,
-      })),
-    };
+  if (annotation.restrictions.allowUpdate) {
+    // If the user can theoretically edit the annotation, store a user specific view configuration.
+    const viewConfiguration = yield* select((state) => state.datasetConfiguration);
     editObject["viewConfiguration"] = viewConfiguration;
   }
   try {
@@ -201,12 +199,15 @@ function* watchAnnotationAsync(): Saga<void> {
     pushAnnotationUpdateAsync,
   );
   yield* takeLatest("SET_ANNOTATION_DESCRIPTION", pushAnnotationDescriptionUpdateAction);
-  yield* takeLatest(
-    ((action: Action) =>
-      action.type === "UPDATE_LAYER_SETTING" &&
-      action.propertyName === "isDisabled") as ActionPattern,
-    pushAnnotationUpdateAsync,
-  );
+  // Debounce pushing view config changes.
+  yield* all([
+    debounce(
+      Constants.SETTING_SAVE_DEBOUNCE_MS,
+      "UPDATE_DATASET_SETTING",
+      pushAnnotationUpdateAsync,
+    ),
+    debounce(Constants.SETTING_SAVE_DEBOUNCE_MS, "UPDATE_LAYER_SETTING", pushAnnotationUpdateAsync),
+  ]);
   yield* takeLatest("EDIT_ANNOTATION_LAYER", pushAnnotationLayerUpdateAsync);
 }
 

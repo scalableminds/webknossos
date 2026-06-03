@@ -32,7 +32,7 @@ function* pushUserSettingsAsync(): Saga<void> {
   );
 }
 
-function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration): Saga<void> {
+function* pushDatasetSettingsAsync(): Saga<void> {
   const activeUser = yield* select((state) => state.activeUser);
   if (activeUser == null) return;
   const dataset = yield* select((state) => state.dataset);
@@ -42,7 +42,6 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
 
   const maybeMaskedDatasetConfiguration = yield* prepareDatasetSettingsForSaving(
     datasetConfiguration,
-    originalDatasetSettings,
     layerNamesOfDatasetToFallbackNameMaybe,
   );
 
@@ -71,15 +70,16 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
 
 function* prepareDatasetSettingsForSaving(
   datasetConfiguration: DatasetConfiguration,
-  originalDatasetSettings: DatasetConfiguration,
   layerNamesOfDatasetToFallbackNameMaybe: Map<string, string>,
 ) {
   /**
-   * If an annotation is open, we don't want to change the visibility settings for
-   * the data layers within the dataset configuration. Instead, the visibilities
-   * are stored separately within the annotation (see annotation_saga.ts).
+   * If an annotation is open, we do want to also track view config changes done to
+   * volume annotation layers with fallback and apply these changes to the view config
+   * of the fallback layer as well. Moreover, the plain view config is stored per
+   * annotation per user (see annotation_saga.ts).
    * Therefore, we restore the layer visibilities to their original value before
    * sending them to the back-end.
+   * TODOM: think about the comments below. Likely outdated :thinking:
    * This is not very elegant, but currently the workaround to achieve that creating
    * a new annotation with a fresh volume layer does not hide the original segmentation
    * layer by default when opening the corresponding dataset again.
@@ -94,20 +94,17 @@ function* prepareDatasetSettingsForSaving(
     return datasetConfiguration;
   }
 
-  const newLayers: Record<string, DatasetLayerConfiguration> = {};
+  const newLayersWithNamingAdjusted: Record<string, DatasetLayerConfiguration> = {};
   for (const layerName of Object.keys(datasetConfiguration.layers)) {
     const layerNameOfDataset = layerNamesOfDatasetToFallbackNameMaybe.get(layerName);
     if (layerNameOfDataset) {
-      newLayers[layerNameOfDataset] = {
-        ...datasetConfiguration.layers[layerName],
-        isDisabled: originalDatasetSettings.layers[layerName].isDisabled,
-      };
+      newLayersWithNamingAdjusted[layerNameOfDataset] = datasetConfiguration.layers[layerName];
     }
   }
 
   const maskedDatasetConfiguration = {
     ...datasetConfiguration,
-    layers: newLayers,
+    layers: newLayersWithNamingAdjusted,
   };
   return maskedDatasetConfiguration;
 }
@@ -154,16 +151,14 @@ export default function* watchPushSettingsAsync(): Saga<void> {
     throw new Error("Unexpected action. Satisfy typescript.");
   }
 
-  const { originalDatasetSettings } = action;
-
   yield* all([
     debounce(Constants.SETTING_SAVE_DEBOUNCE_MS, "UPDATE_USER_SETTING", pushUserSettingsAsync),
-    debounce(Constants.SETTING_SAVE_DEBOUNCE_MS, "UPDATE_DATASET_SETTING", () =>
-      pushDatasetSettingsAsync(originalDatasetSettings),
+    debounce(
+      Constants.SETTING_SAVE_DEBOUNCE_MS,
+      "UPDATE_DATASET_SETTING",
+      pushDatasetSettingsAsync,
     ),
-    debounce(Constants.SETTING_SAVE_DEBOUNCE_MS, "UPDATE_LAYER_SETTING", () =>
-      pushDatasetSettingsAsync(originalDatasetSettings),
-    ),
+    debounce(Constants.SETTING_SAVE_DEBOUNCE_MS, "UPDATE_LAYER_SETTING", pushDatasetSettingsAsync),
     takeEvery("UPDATE_USER_SETTING", showUserSettingToast),
     call(ensureValidToolkit),
   ]);

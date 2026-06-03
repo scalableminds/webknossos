@@ -141,6 +141,7 @@ import {
   convertServerAdditionalAxesToFrontEnd,
   convertServerAnnotationToFrontendAnnotation,
 } from "./model/reducers/reducer_helpers";
+import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 
 export const HANDLED_ERROR = "error_was_handled";
 type DataLayerCollection = Record<string, DataLayer>;
@@ -238,6 +239,10 @@ export async function initialize(
     serverVolumeTracingIds,
     getSharingTokenFromUrlParameters(),
   );
+  if (annotation?.viewConfiguration) {
+    const isPartial = true;
+    enforceValidatedDatasetViewConfiguration(annotation?.viewConfiguration, dataset, isPartial);
+  }
   const annotationSpecificDatasetSettings = applyAnnotationSpecificViewConfiguration(
     annotation,
     dataset,
@@ -1068,15 +1073,10 @@ function applyAnnotationSpecificViewConfiguration(
   }
 
   if (annotation.viewConfiguration) {
-    // The annotation already contains a viewConfiguration. Merge that into the
+    // The annotation already contains a user specific viewConfiguration. Merge that into the
     // dataset settings.
-    for (const layerName of Object.keys(annotation.viewConfiguration.layers)) {
-      merge(
-        initialDatasetSettings.layers[layerName],
-        annotation.viewConfiguration.layers[layerName],
-      );
-    }
-    return initialDatasetSettings;
+    const mergedSettings = merge(initialDatasetSettings, annotation.viewConfiguration);
+    return mergedSettings;
   }
 
   // The annotation does not contain a viewConfiguration (mainly happens when the

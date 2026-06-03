@@ -623,6 +623,8 @@ export function duplicateAnnotation(
   });
 }
 
+// Note: The returned annotation object contains viewConfiguration. An arbitrary object which should be schema checked before used.
+// Currently, the only location where this is needed is during initialization.
 export async function getUnversionedAnnotationInformation(
   annotationId: string,
   options: RequestOptions = {},

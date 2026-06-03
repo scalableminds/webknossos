@@ -203,8 +203,16 @@ function* watchAnnotationAsync(): Saga<void> {
   );
   yield* takeLatest("SET_ANNOTATION_DESCRIPTION", pushAnnotationDescriptionUpdateAction);
   // Debounce pushing view config changes.
-  yield* debounce(Constants.SETTING_SAVE_DEBOUNCE_MS, "UPDATE_DATASET_SETTING", pushAnnotationUpdateAsync);
-  yield* debounce(Constants.SETTING_SAVE_DEBOUNCE_MS, "UPDATE_LAYER_SETTING", pushAnnotationUpdateAsync);
+  yield* debounce(
+    Constants.SETTING_SAVE_DEBOUNCE_MS,
+    "UPDATE_DATASET_SETTING",
+    pushAnnotationUpdateAsync,
+  );
+  yield* debounce(
+    Constants.SETTING_SAVE_DEBOUNCE_MS,
+    "UPDATE_LAYER_SETTING",
+    pushAnnotationUpdateAsync,
+  );
   yield* takeLatest("EDIT_ANNOTATION_LAYER", pushAnnotationLayerUpdateAsync);
 }
 

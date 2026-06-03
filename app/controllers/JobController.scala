@@ -289,9 +289,9 @@ class JobController @Inject()(jobDAO: JobDAO,
           axisOrder = FullAxisOrder.fromAxisOrderAndAdditionalAxes(rank,
                                                                    AxisOrder.cAdditionalxyz(rank),
                                                                    additionalAxesOpt)
-          threeDBBox <- BoundingBox.fromLiteral(bbox).toFox ~> Msg.Job.invalidBoundingBox
+          threeDBBox <- BoundingBox.fromLiteral(bbox).toFox ?~> Msg.Job.invalidBoundingBox
           parsedAdditionalCoordinatesOpt <- Fox.runOptional(additionalCoordinates)(coords =>
-            JsonHelper.parseAs[Seq[AdditionalCoordinate]](coords).toFox) ~> Msg.Zarr.invalidAdditionalCoordinates
+            JsonHelper.parseAs[Seq[AdditionalCoordinate]](coords).toFox) ?~> Msg.Zarr.invalidAdditionalCoordinates
           parsedAdditionalCoordinates = parsedAdditionalCoordinatesOpt.getOrElse(Seq.empty)
           additionalAxesOfNdBBox = additionalAxesOpt.map(additionalAxes =>
             additionalAxes.map(_.intersectWithAdditionalCoordinates(parsedAdditionalCoordinates)))

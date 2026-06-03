@@ -55,7 +55,7 @@ import java.nio.file.Path
 import java.util.zip.Deflater
 import scala.concurrent.ExecutionContext
 
-class AnnotationIOController @Inject()(
+class AnnotationIOController @Inject() (
     nmlWriter: NmlWriter,
     annotationDAO: AnnotationDAO,
     projectDAO: ProjectDAO,
@@ -75,7 +75,8 @@ class AnnotationIOController @Inject()(
     sil: Silhouette[WkEnv],
     dataStoreDAO: DataStoreDAO,
     provider: AnnotationInformationProvider,
-    annotationUploadService: AnnotationUploadService)(implicit ec: ExecutionContext, val materializer: Materializer)
+    annotationUploadService: AnnotationUploadService
+)(implicit ec: ExecutionContext, val materializer: Materializer)
     extends Controller
     with FoxImplicits
     with ProtoGeometryImplicits
@@ -112,11 +113,14 @@ class AnnotationIOController @Inject()(
         for {
           parsedFiles <- annotationUploadService.extractFromFiles(
             attachedFiles,
-            SharedParsingParameters(useZipName = true, overwritingDatasetId, userOrganizationId))
-          parsedFilesWrapped = annotationUploadService.wrapOrPrefixGroups(parsedFiles.parseResults,
-                                                                          shouldCreateGroupForEachFile)
+            SharedParsingParameters(useZipName = true, overwritingDatasetId, userOrganizationId)
+          )
+          parsedFilesWrapped = annotationUploadService.wrapOrPrefixGroups(
+            parsedFiles.parseResults,
+            shouldCreateGroupForEachFile
+          )
           parseResultsFiltered: List[NmlParseResult] = parsedFilesWrapped.filter(_.succeeded)
-          _ <- Fox.fromBool(parseResultsFiltered.nonEmpty) `orElse` returnError(parsedFiles)
+          _ <- Fox.fromBool(parseResultsFiltered.nonEmpty).orElse(returnError(parsedFiles))
           parseSuccesses <- Fox.serialCombined(parseResultsFiltered)(r => r.toSuccessBox.toFox)
           name = nameForUploaded(parseResultsFiltered.map(_.fileName))
           description = overwritingDescription.getOrElse(descriptionForNMLs(parseResultsFiltered.map(_.description)))
@@ -126,28 +130,34 @@ class AnnotationIOController @Inject()(
           // This is what determines the merging strategy for volume layers
           volumeLayersGroupedRaw = parseSuccesses.map(_.volumeLayers).filter(_.nonEmpty)
           datasetIds = parseSuccesses.map(_.datasetId)
-          dataset <- findDatasetForUploadedAnnotations(skeletonTracings,
-                                                       volumeLayersGroupedRaw.flatten,
-                                                       datasetIds,
-                                                       wkUrl)
+          dataset <- findDatasetForUploadedAnnotations(
+            skeletonTracings,
+            volumeLayersGroupedRaw.flatten,
+            datasetIds,
+            wkUrl
+          )
           usableDataSource <- datasetService.usableDataSourceFor(dataset)
           volumeLayersGrouped <- adaptVolumeTracingsToFallbackLayer(volumeLayersGroupedRaw, dataset, usableDataSource)
           tracingStoreClient <- tracingStoreService.clientFor(dataset)
           newAnnotationId = ObjectId.generate
-          (mergedVolumeLayers, earliestAccessibleVersion) <- mergeAndSaveVolumeLayers(newAnnotationId,
-                                                                                      volumeLayersGrouped,
-                                                                                      tracingStoreClient,
-                                                                                      parsedFiles.otherFiles,
-                                                                                      usableDataSource,
-                                                                                      dataset._id)
+          (mergedVolumeLayers, earliestAccessibleVersion) <- mergeAndSaveVolumeLayers(
+            newAnnotationId,
+            volumeLayersGrouped,
+            tracingStoreClient,
+            parsedFiles.otherFiles,
+            usableDataSource,
+            dataset._id
+          )
           mergedSkeletonLayers <- mergeAndSaveSkeletonLayers(skeletonTracings, tracingStoreClient)
-          annotation <- annotationService.createFrom(request.identity,
-                                                     dataset,
-                                                     mergedSkeletonLayers ::: mergedVolumeLayers,
-                                                     AnnotationType.Explorational,
-                                                     name,
-                                                     description,
-                                                     newAnnotationId)
+          annotation = annotationService.createFrom(
+            request.identity,
+            dataset,
+            mergedSkeletonLayers ::: mergedVolumeLayers,
+            AnnotationType.Explorational,
+            name,
+            description,
+            newAnnotationId
+          )
           annotationProto = AnnotationProto(
             description = annotation.description,
             version = 0L,
@@ -157,11 +167,10 @@ class AnnotationIOController @Inject()(
           _ <- tracingStoreClient.saveAnnotationProto(annotation._id, annotationProto)
           _ <- annotationDAO.insertOne(annotation)
           _ = analyticsService.track(UploadAnnotationEvent(request.identity, annotation))
-        } yield
-          JsonOk(
-            Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
-            Msg.Nml.uploadSuccess
-          )
+        } yield JsonOk(
+          Json.obj("annotation" -> Json.obj("typ" -> annotation.typ, "id" -> annotation.id)),
+          Msg.Nml.uploadSuccess
+        )
       }
   }
 
@@ -170,20 +179,23 @@ class AnnotationIOController @Inject()(
     withFallbackLayer.length > withFallbackLayer.distinctBy(_.tracing.fallbackLayer).length
   }
 
-  private def mergeAndSaveVolumeLayers(newAnnotationId: ObjectId,
-                                       volumeLayersGrouped: Seq[List[UploadedVolumeLayer]],
-                                       client: WKRemoteTracingStoreClient,
-                                       otherFiles: Map[String, File],
-                                       dataSource: UsableDataSource,
-                                       datasetId: ObjectId): Fox[(List[AnnotationLayer], Long)] =
+  private def mergeAndSaveVolumeLayers(
+      newAnnotationId: ObjectId,
+      volumeLayersGrouped: Seq[List[UploadedVolumeLayer]],
+      client: WKRemoteTracingStoreClient,
+      otherFiles: Map[String, File],
+      dataSource: UsableDataSource,
+      datasetId: ObjectId
+  ): Fox[(List[AnnotationLayer], Long)] =
     if (volumeLayersGrouped.isEmpty)
       Fox.successful(List(), 0L)
     else if (volumeLayersGrouped.exists(layersHaveDuplicateFallbackLayer(_)))
       Fox.failure("Cannot save annotation with multiple volume layers that have the same fallback segmentation layer.")
     else if (volumeLayersGrouped.length > 1 && volumeLayersGrouped.exists(_.length > 1))
       Fox.failure("Cannot merge multiple annotations that each have multiple volume layers.")
-    else if (volumeLayersGrouped.length > 1 && volumeLayersGrouped.exists(
-               _.exists(_.editedMappingEdgesLocation.isDefined))) {
+    else if (
+      volumeLayersGrouped.length > 1 && volumeLayersGrouped.exists(_.exists(_.editedMappingEdgesLocation.isDefined))
+    ) {
       Fox.failure("Cannot merge multiple annotations with editable mapping (proofreading) edges.")
     } else if (volumeLayersGrouped.length == 1) { // Just one annotation was uploaded, keep its layers separate
       var layerUpdatesStartVersionMutable = 1L
@@ -203,8 +215,9 @@ class AnnotationIOController @Inject()(
               )
               // The next layer’s update actions then need to start after this one
               _ = layerUpdatesStartVersionMutable = layerUpdatesStartVersionMutable + numberOfSavedVersions
-              mappingName = if (uploadedVolumeLayer.editedMappingEdgesLocation.isDefined) Some(newTracingId)
-              else uploadedVolumeLayer.tracing.mappingName
+              mappingName =
+                if (uploadedVolumeLayer.editedMappingEdgesLocation.isDefined) Some(newTracingId)
+                else uploadedVolumeLayer.tracing.mappingName
               _ <- client.saveVolumeTracing(
                 newAnnotationId,
                 newTracingId,
@@ -213,13 +226,12 @@ class AnnotationIOController @Inject()(
                 dataSource = dataSource,
                 datasetId = datasetId
               )
-            } yield
-              AnnotationLayer(
-                newTracingId,
-                AnnotationLayerType.Volume,
-                uploadedVolumeLayer.name.getOrElse(AnnotationLayer.defaultVolumeLayerName + idx.toString),
-                AnnotationLayerStatistics.unknown
-              )
+            } yield AnnotationLayer(
+              newTracingId,
+              AnnotationLayerType.Volume,
+              uploadedVolumeLayer.name.getOrElse(AnnotationLayer.defaultVolumeLayerName + idx.toString),
+              AnnotationLayerStatistics.unknown
+            )
         }
       } yield (annotationLayers, layerUpdatesStartVersionMutable)
     } else { // Multiple annotations with volume layers (but at most one each) were uploaded, they have no editable mappings. Merge those volume layers into one
@@ -234,19 +246,23 @@ class AnnotationIOController @Inject()(
           datasetId,
           uploadedVolumeLayersFlat.map(v => v.getDataZipFrom(otherFiles))
         )
-      } yield
-        (List(
-           AnnotationLayer(
-             newTracingId,
-             AnnotationLayerType.Volume,
-             AnnotationLayer.defaultVolumeLayerName,
-             AnnotationLayerStatistics.unknown
-           )),
-         0L)
+      } yield (
+        List(
+          AnnotationLayer(
+            newTracingId,
+            AnnotationLayerType.Volume,
+            AnnotationLayer.defaultVolumeLayerName,
+            AnnotationLayerStatistics.unknown
+          )
+        ),
+        0L
+      )
     }
 
-  private def mergeAndSaveSkeletonLayers(skeletonTracings: List[SkeletonTracing],
-                                         tracingStoreClient: WKRemoteTracingStoreClient): Fox[List[AnnotationLayer]] =
+  private def mergeAndSaveSkeletonLayers(
+      skeletonTracings: List[SkeletonTracing],
+      tracingStoreClient: WKRemoteTracingStoreClient
+  ): Fox[List[AnnotationLayer]] =
     if (skeletonTracings.isEmpty)
       Fox.successful(List())
     else {
@@ -254,19 +270,24 @@ class AnnotationIOController @Inject()(
       for {
         _ <- tracingStoreClient.mergeSkeletonTracingsByContents(
           newTracingId,
-          SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t)))))
-      } yield
-        List(
-          AnnotationLayer(newTracingId,
-                          AnnotationLayerType.Skeleton,
-                          AnnotationLayer.defaultSkeletonLayerName,
-                          AnnotationLayerStatistics.unknown))
+          SkeletonTracings(skeletonTracings.map(t => SkeletonTracingOpt(Some(t))))
+        )
+      } yield List(
+        AnnotationLayer(
+          newTracingId,
+          AnnotationLayerType.Skeleton,
+          AnnotationLayer.defaultSkeletonLayerName,
+          AnnotationLayerStatistics.unknown
+        )
+      )
     }
 
-  private def findDatasetForUploadedAnnotations(skeletonTracings: List[SkeletonTracing],
-                                                volumeTracings: List[UploadedVolumeLayer],
-                                                datasetIds: List[ObjectId],
-                                                wkUrl: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
+  private def findDatasetForUploadedAnnotations(
+      skeletonTracings: List[SkeletonTracing],
+      volumeTracings: List[UploadedVolumeLayer],
+      datasetIds: List[ObjectId],
+      wkUrl: String
+  )(implicit ctx: DBAccessContext): Fox[Dataset] =
     for {
       datasetId <- SequenceUtils.findUniqueElement(datasetIds).toFox ?~> Msg.Nml.differentDatasets
       organizationIdOpt <- assertAllOnSameOrganization(skeletonTracings, volumeTracings) ?~> Msg.Nml.differentDatasets
@@ -315,8 +336,10 @@ class AnnotationIOController @Inject()(
       Fox.paramFailure("NML upload failed", Empty, Empty, None)
     }
 
-  private def assertAllOnSameOrganization(skeletons: List[SkeletonTracing],
-                                          volumes: List[UploadedVolumeLayer]): Fox[Option[String]] = {
+  private def assertAllOnSameOrganization(
+      skeletons: List[SkeletonTracing],
+      volumes: List[UploadedVolumeLayer]
+  ): Fox[Option[String]] = {
     // Note that organizationIds are optional. Tracings with no organization attribute are ignored here
     val organizationIds = skeletons.flatMap(_.organizationId) ::: volumes.flatMap(_.tracing.organizationId)
     for {
@@ -324,29 +347,37 @@ class AnnotationIOController @Inject()(
     } yield organizationIds.headOption
   }
 
-  private def adaptVolumeTracingsToFallbackLayer(volumeLayersGrouped: List[List[UploadedVolumeLayer]],
-                                                 dataset: Dataset,
-                                                 dataSource: UsableDataSource): Fox[List[List[UploadedVolumeLayer]]] =
+  private def adaptVolumeTracingsToFallbackLayer(
+      volumeLayersGrouped: List[List[UploadedVolumeLayer]],
+      dataset: Dataset,
+      dataSource: UsableDataSource
+  ): Fox[List[List[UploadedVolumeLayer]]] =
     for {
-      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)(GlobalAccessContext) ?~> Msg.DataStore.notFoundForDataset
+      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)(
+        GlobalAccessContext
+      ) ?~> Msg.DataStore.notFoundForDataset
       remoteDataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
       allAdapted <- Fox.serialCombined(volumeLayersGrouped) { volumeLayers =>
         Fox.serialCombined(volumeLayers) { volumeLayer =>
           for {
-            adaptedTracing <- adaptPropertiesToFallbackLayer(volumeLayer.tracing,
-                                                             dataSource,
-                                                             dataset,
-                                                             remoteDataStoreClient)
+            adaptedTracing <- adaptPropertiesToFallbackLayer(
+              volumeLayer.tracing,
+              dataSource,
+              dataset,
+              remoteDataStoreClient
+            )
             adaptedAnnotationLayer = volumeLayer.copy(tracing = adaptedTracing)
           } yield adaptedAnnotationLayer
         }
       }
     } yield allAdapted
 
-  private def adaptPropertiesToFallbackLayer(volumeTracing: VolumeTracing,
-                                             dataSource: UsableDataSource,
-                                             dataset: Dataset,
-                                             remoteDataStoreClient: WKRemoteDataStoreClient): Fox[VolumeTracing] = {
+  private def adaptPropertiesToFallbackLayer(
+      volumeTracing: VolumeTracing,
+      dataSource: UsableDataSource,
+      dataset: Dataset,
+      remoteDataStoreClient: WKRemoteDataStoreClient
+  ): Fox[VolumeTracing] = {
     val fallbackLayerOpt = dataSource.dataLayers.flatMap {
       case layer: StaticSegmentationLayer if volumeTracing.fallbackLayer contains layer.name => Some(layer)
       case _                                                                                 => None
@@ -357,29 +388,31 @@ class AnnotationIOController @Inject()(
       else volumeTracing.boundingBox
 
     for {
-      tracingCanHaveSegmentIndex <- canHaveSegmentIndex(dataset._id,
-                                                        fallbackLayerOpt.map(_.name),
-                                                        remoteDataStoreClient)
+      tracingCanHaveSegmentIndex <- canHaveSegmentIndex(
+        dataset._id,
+        fallbackLayerOpt.map(_.name),
+        remoteDataStoreClient
+      )
       elementClassProto <- fallbackLayerOpt
         .map(layer => ElementClass.toProto(layer.elementClass))
         .getOrElse(ElementClass.toProto(VolumeTracingDefaults.elementClass))
         .toFox
-    } yield
-      volumeTracing.copy(
-        boundingBox = bbox,
-        elementClass = elementClassProto,
-        fallbackLayer = fallbackLayerOpt.map(_.name),
-        largestSegmentId = combineLargestSegmentIdsByPrecedence(volumeTracing.largestSegmentId,
-                                                                fallbackLayerOpt.map(_.largestSegmentId)),
-        mags = VolumeTracingMags.magsForVolumeTracing(dataSource, fallbackLayerOpt).map(vec3IntToProto),
-        hasSegmentIndex = Some(tracingCanHaveSegmentIndex)
-      )
+    } yield volumeTracing.copy(
+      boundingBox = bbox,
+      elementClass = elementClassProto,
+      fallbackLayer = fallbackLayerOpt.map(_.name),
+      largestSegmentId =
+        combineLargestSegmentIdsByPrecedence(volumeTracing.largestSegmentId, fallbackLayerOpt.map(_.largestSegmentId)),
+      mags = VolumeTracingMags.magsForVolumeTracing(dataSource, fallbackLayerOpt).map(vec3IntToProto),
+      hasSegmentIndex = Some(tracingCanHaveSegmentIndex)
+    )
   }
 
   private def canHaveSegmentIndex(
       datasetId: ObjectId,
       fallbackLayerName: Option[String],
-      remoteDataStoreClient: WKRemoteDataStoreClient)(implicit ec: ExecutionContext): Fox[Boolean] =
+      remoteDataStoreClient: WKRemoteDataStoreClient
+  )(implicit ec: ExecutionContext): Fox[Boolean] =
     fallbackLayerName match {
       case Some(layerName) =>
         remoteDataStoreClient.hasSegmentIndexFile(datasetId, layerName)
@@ -388,11 +421,13 @@ class AnnotationIOController @Inject()(
     }
 
   // NML or Zip file containing skeleton and/or volume data of this annotation. In case of Compound annotations, multiple such annotations wrapped in another zip
-  def download(typ: String,
-               id: ObjectId,
-               version: Option[Long],
-               skipVolumeData: Option[Boolean],
-               volumeDataZipFormat: Option[String]): Action[AnyContent] =
+  def download(
+      typ: String,
+      id: ObjectId,
+      version: Option[Long],
+      skipVolumeData: Option[Boolean],
+      volumeDataZipFormat: Option[String]
+  ): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       logger.trace(s"Requested download for annotation: $typ/$id")
       for {
@@ -400,9 +435,9 @@ class AnnotationIOController @Inject()(
         volumeDataZipFormatParsed = volumeDataZipFormat.flatMap(VolumeDataZipFormat.fromString)
         _ = request.identity.foreach(user => analyticsService.track(DownloadAnnotationEvent(user, id.toString, typ)))
         result <- identifier.annotationType match {
-          case AnnotationType.View            => Fox.failure("Cannot download View annotation")
-          case AnnotationType.CompoundProject => downloadProject(id, request.identity, skipVolumeData.getOrElse(false))
-          case AnnotationType.CompoundTask    => downloadTask(id, request.identity, skipVolumeData.getOrElse(false))
+          case AnnotationType.View             => Fox.failure("Cannot download View annotation")
+          case AnnotationType.CompoundProject  => downloadProject(id, request.identity, skipVolumeData.getOrElse(false))
+          case AnnotationType.CompoundTask     => downloadTask(id, request.identity, skipVolumeData.getOrElse(false))
           case AnnotationType.CompoundTaskType =>
             downloadTaskType(id, request.identity, skipVolumeData.getOrElse(false))
           case _ =>
@@ -412,20 +447,24 @@ class AnnotationIOController @Inject()(
               request.identity,
               version,
               skipVolumeData.getOrElse(false),
-              volumeDataZipFormatParsed.getOrElse(VolumeDataZipFormat.wkw)) ?~> Msg.Annotation.Download.failed
+              volumeDataZipFormatParsed.getOrElse(VolumeDataZipFormat.wkw)
+            ) ?~> Msg.Annotation.Download.failed
         }
       } yield result
     }
 
-  def downloadWithoutType(id: ObjectId,
-                          version: Option[Long],
-                          skipVolumeData: Option[Boolean],
-                          volumeDataZipFormat: Option[String]): Action[AnyContent] =
+  def downloadWithoutType(
+      id: ObjectId,
+      version: Option[Long],
+      skipVolumeData: Option[Boolean],
+      volumeDataZipFormat: Option[String]
+  ): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       for {
         annotation <- provider.provideAnnotation(id, request.identity) ?~> Msg.Annotation.notFound ~> NOT_FOUND
         result <- Fox.fromFuture(
-          download(annotation.typ.toString, id, version, skipVolumeData, volumeDataZipFormat)(request))
+          download(annotation.typ.toString, id, version, skipVolumeData, volumeDataZipFormat)(request)
+        )
       } yield result
     }
 
@@ -435,7 +474,8 @@ class AnnotationIOController @Inject()(
       requestingUser: Option[User],
       version: Option[Long],
       skipVolumeData: Boolean,
-      volumeDataZipFormat: VolumeDataZipFormat)(implicit ctx: DBAccessContext): Fox[Result] = {
+      volumeDataZipFormat: VolumeDataZipFormat
+  )(implicit ctx: DBAccessContext): Fox[Result] = {
 
     // Note: volumeVersion cannot currently be supplied per layer, see https://github.com/scalableminds/webknossos/issues/5925
 
@@ -443,7 +483,8 @@ class AnnotationIOController @Inject()(
       for {
         tracingStoreClient <- tracingStoreService.clientFor(dataset)
         fetchedAnnotationLayers <- Fox.serialCombined(annotation.skeletonAnnotationLayers)(
-          tracingStoreClient.getSkeletonTracing(annotation._id, _, version))
+          tracingStoreClient.getSkeletonTracing(annotation._id, _, version)
+        )
         annotationProto <- tracingStoreClient.getAnnotationProto(annotation._id, version)
         annotationOwner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
         ownerMultiUser <- multiUserDAO.findOne(annotationOwner._multiUser)(GlobalAccessContext)
@@ -472,26 +513,32 @@ class AnnotationIOController @Inject()(
         _ = temporaryFileStream.close()
       } yield nmlTemporaryFile
 
-    def volumeOrHybridToTemporaryFile(dataset: Dataset,
-                                      annotation: Annotation,
-                                      name: String,
-                                      organizationId: String): Fox[Path] =
+    def volumeOrHybridToTemporaryFile(
+        dataset: Dataset,
+        annotation: Annotation,
+        name: String,
+        organizationId: String
+    ): Fox[Path] =
       for {
         tracingStoreClient <- tracingStoreService.clientFor(dataset)
         fetchedVolumeLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.volumeAnnotationLayers) {
           volumeAnnotationLayer =>
-            tracingStoreClient.getVolumeTracing(annotation._id,
-                                                volumeAnnotationLayer,
-                                                version,
-                                                skipVolumeData,
-                                                volumeDataZipFormat,
-                                                dataset.voxelSize)
+            tracingStoreClient.getVolumeTracing(
+              annotation._id,
+              volumeAnnotationLayer,
+              version,
+              skipVolumeData,
+              volumeDataZipFormat,
+              dataset.voxelSize
+            )
         } ?~> Msg.Annotation.Download.fetchVolumeLayerFailed
         fetchedSkeletonLayers: List[FetchedAnnotationLayer] <- Fox.serialCombined(annotation.skeletonAnnotationLayers) {
           skeletonAnnotationLayer =>
             tracingStoreClient.getSkeletonTracing(annotation._id, skeletonAnnotationLayer, version)
         } ?~> Msg.Annotation.Download.fetchSkeletonLayerFailed
-        annotationOwner <- userService.findOneCached(annotation._user)(GlobalAccessContext) ?~> Msg.Annotation.Download.findUserFailed
+        annotationOwner <- userService.findOneCached(annotation._user)(
+          GlobalAccessContext
+        ) ?~> Msg.Annotation.Download.findUserFailed
         ownerMultiUser <- multiUserDAO.findOne(annotationOwner._multiUser)(GlobalAccessContext)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne(_)(GlobalAccessContext)) ?~> Msg.Task.notFound
         annotationProto <- tracingStoreClient.getAnnotationProto(annotation._id, version)
@@ -516,30 +563,36 @@ class AnnotationIOController @Inject()(
         temporaryFile = tempFileService.create()
         zipper = ZipIO.startZip(new BufferedOutputStream(new FileOutputStream(new File(temporaryFile.toString))))
         _ <- zipper.addFileFromNamedStream(nmlStream, suffix = ".nml") ?~> Msg.Annotation.Download.zipNmlFailed
-        _ = fetchedVolumeLayers.zipWithIndex.map {
-          case (volumeLayer, index) =>
-            volumeLayer.volumeDataOpt.foreach { volumeData =>
-              val dataZipName = volumeLayer.volumeDataZipName(index, fetchedVolumeLayers.length == 1)
-              zipper.stream.setLevel(Deflater.BEST_SPEED)
-              zipper.addFileFromBytes(dataZipName, volumeData)
-            }
-            volumeLayer.editedMappingEdgesOpt.foreach { editedEdgesData =>
-              val editedEdgesZipName = volumeLayer.editedMappingEdgesZipName(index, fetchedVolumeLayers.length == 1)
-              zipper.stream.setLevel(Deflater.BEST_SPEED)
-              zipper.addFileFromBytes(editedEdgesZipName, editedEdgesData)
-            }
+        _ = fetchedVolumeLayers.zipWithIndex.map { case (volumeLayer, index) =>
+          volumeLayer.volumeDataOpt.foreach { volumeData =>
+            val dataZipName = volumeLayer.volumeDataZipName(index, fetchedVolumeLayers.length == 1)
+            zipper.stream.setLevel(Deflater.BEST_SPEED)
+            zipper.addFileFromBytes(dataZipName, volumeData)
+          }
+          volumeLayer.editedMappingEdgesOpt.foreach { editedEdgesData =>
+            val editedEdgesZipName = volumeLayer.editedMappingEdgesZipName(index, fetchedVolumeLayers.length == 1)
+            zipper.stream.setLevel(Deflater.BEST_SPEED)
+            zipper.addFileFromBytes(editedEdgesZipName, editedEdgesData)
+          }
         }
         _ = zipper.close()
       } yield temporaryFile
 
-    def annotationToTemporaryFile(dataset: Dataset,
-                                  annotation: Annotation,
-                                  name: String,
-                                  organizationId: String): Fox[Path] =
+    def annotationToTemporaryFile(
+        dataset: Dataset,
+        annotation: Annotation,
+        name: String,
+        organizationId: String
+    ): Fox[Path] =
       if (annotation.tracingType == TracingType.skeleton)
         skeletonToTemporaryFile(dataset, annotation, organizationId) ?~> Msg.Annotation.Download.skeletonToFileFailed
       else
-        volumeOrHybridToTemporaryFile(dataset, annotation, name, organizationId) ?~> Msg.Annotation.Download.hybridToFileFailed
+        volumeOrHybridToTemporaryFile(
+          dataset,
+          annotation,
+          name,
+          organizationId
+        ) ?~> Msg.Annotation.Download.hybridToFileFailed
 
     def exportExtensionForAnnotation(annotation: Annotation): String =
       if (annotation.tracingType == TracingType.skeleton)
@@ -564,75 +617,97 @@ class AnnotationIOController @Inject()(
       dataset <- datasetDAO.findOne(annotation._dataset)(GlobalAccessContext) ?~> Msg.Dataset
         .notFoundForAnnotation(annotation._dataset, annotation._id) ~> NOT_FOUND
       organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization.notFound(
-        dataset._organization) ~> NOT_FOUND
-      temporaryFile <- annotationToTemporaryFile(dataset, annotation, name, organization._id) ?~> Msg.Annotation.Download.writeToFileFailed
-    } yield {
-      Ok.sendPath(temporaryFile, inline = false)
-        .as(mimeType)
-        .withHeaders(CONTENT_DISPOSITION -> s"""attachment; filename="$fileName"""")
-    }
+        dataset._organization
+      ) ~> NOT_FOUND
+      temporaryFile <- annotationToTemporaryFile(
+        dataset,
+        annotation,
+        name,
+        organization._id
+      ) ?~> Msg.Annotation.Download.writeToFileFailed
+    } yield Ok
+      .sendPath(temporaryFile, inline = false)
+      .as(mimeType)
+      .withHeaders(CONTENT_DISPOSITION -> s"""attachment; filename="$fileName"""")
   }
 
-  private def downloadProject(projectId: ObjectId, requestingUserOpt: Option[User], skipVolumeData: Boolean)(
-      implicit ctx: DBAccessContext) =
+  private def downloadProject(projectId: ObjectId, requestingUserOpt: Option[User], skipVolumeData: Boolean)(implicit
+      ctx: DBAccessContext
+  ) =
     for {
       requestingUser <- requestingUserOpt.toFox ?~> Msg.notAllowed ~> FORBIDDEN
       project <- projectDAO.findOne(projectId) ?~> Msg.Project.notFound(projectId) ~> NOT_FOUND
-      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(requestingUser, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN
+      _ <- Fox.assertTrue(
+        userService.isTeamManagerOrAdminOf(requestingUser, project._team)
+      ) ?~> Msg.notAllowed ~> FORBIDDEN
       annotations <- annotationDAO.findAllFinishedForProject(projectId)
-      zipTempFilePath <- annotationService.zipAnnotations(annotations,
-                                                          project.name,
-                                                          skipVolumeData,
-                                                          volumeDataZipFormatForCompoundAnnotations)
-    } yield {
-      Ok.sendPath(zipTempFilePath,
-                  inline = false,
-                  fileName = _ => Some(TextUtils.normalize(project.name + "_nmls.zip")))
-    }
+      zipTempFilePath <- annotationService.zipAnnotations(
+        annotations,
+        project.name,
+        skipVolumeData,
+        volumeDataZipFormatForCompoundAnnotations
+      )
+    } yield Ok.sendPath(
+      zipTempFilePath,
+      inline = false,
+      fileName = _ => Some(TextUtils.normalize(project.name + "_nmls.zip"))
+    )
 
-  private def downloadTask(taskId: ObjectId, requestingUserOpt: Option[User], skipVolumeData: Boolean)(
-      implicit ctx: DBAccessContext) = {
+  private def downloadTask(taskId: ObjectId, requestingUserOpt: Option[User], skipVolumeData: Boolean)(implicit
+      ctx: DBAccessContext
+  ) = {
     def createTaskZip(task: Task): Fox[Path] = annotationService.annotationsFor(task._id).flatMap { annotations =>
       val finished = annotations.filter(_.state == Finished)
-      annotationService
-        .zipAnnotations(finished, task._id.toString, skipVolumeData, volumeDataZipFormatForCompoundAnnotations)
+      annotationService.zipAnnotations(
+        finished,
+        task._id.toString,
+        skipVolumeData,
+        volumeDataZipFormatForCompoundAnnotations
+      )
     }
 
     for {
       requestingUser <- requestingUserOpt.toFox ?~> Msg.notAllowed ~> FORBIDDEN
       task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound(taskId) ~> NOT_FOUND
       project <- projectDAO.findOne(task._project) ?~> Msg.Project.notFound(task._project) ~> NOT_FOUND
-      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(requestingUser, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN
+      _ <- Fox.assertTrue(
+        userService.isTeamManagerOrAdminOf(requestingUser, project._team)
+      ) ?~> Msg.notAllowed ~> FORBIDDEN
       zipTempFilePath <- createTaskZip(task)
-    } yield {
-      Ok.sendPath(zipTempFilePath,
-                  inline = false,
-                  fileName = _ => Some(TextUtils.normalize(task._id.toString + "_nmls.zip")))
-    }
+    } yield Ok.sendPath(
+      zipTempFilePath,
+      inline = false,
+      fileName = _ => Some(TextUtils.normalize(task._id.toString + "_nmls.zip"))
+    )
   }
 
-  private def downloadTaskType(taskTypeId: ObjectId, requestingUserOpt: Option[User], skipVolumeData: Boolean)(
-      implicit ctx: DBAccessContext) = {
+  private def downloadTaskType(taskTypeId: ObjectId, requestingUserOpt: Option[User], skipVolumeData: Boolean)(implicit
+      ctx: DBAccessContext
+  ) = {
     def createTaskTypeZip(taskType: TaskType) =
       for {
         tasks <- taskDAO.findAllByTaskType(taskType._id)
         annotations <- Fox.serialCombined(tasks)(task => annotationService.annotationsFor(task._id)).map(_.flatten)
         finishedAnnotations = annotations.filter(_.state == Finished)
-        zip <- annotationService.zipAnnotations(finishedAnnotations,
-                                                taskType.summary,
-                                                skipVolumeData,
-                                                volumeDataZipFormatForCompoundAnnotations)
+        zip <- annotationService.zipAnnotations(
+          finishedAnnotations,
+          taskType.summary,
+          skipVolumeData,
+          volumeDataZipFormatForCompoundAnnotations
+        )
       } yield zip
 
     for {
       requestingUser <- requestingUserOpt.toFox ?~> Msg.notAllowed ~> FORBIDDEN
       taskType <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound(taskTypeId) ~> NOT_FOUND
-      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(requestingUser, taskType._team)) ?~> Msg.notAllowed ~> FORBIDDEN
+      _ <- Fox.assertTrue(
+        userService.isTeamManagerOrAdminOf(requestingUser, taskType._team)
+      ) ?~> Msg.notAllowed ~> FORBIDDEN
       zipTempFilePath <- createTaskTypeZip(taskType)
-    } yield {
-      Ok.sendPath(zipTempFilePath,
-                  inline = false,
-                  fileName = _ => Some(TextUtils.normalize(taskType.summary + "_nmls.zip")))
-    }
+    } yield Ok.sendPath(
+      zipTempFilePath,
+      inline = false,
+      fileName = _ => Some(TextUtils.normalize(taskType.summary + "_nmls.zip"))
+    )
   }
 }

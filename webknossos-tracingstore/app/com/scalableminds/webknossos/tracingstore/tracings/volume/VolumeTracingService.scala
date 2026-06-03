@@ -325,7 +325,7 @@ class VolumeTracingService @Inject() (
       )
       _ <- Fox.serialCombined(bucketStreamBeforeRevert) { case (bucketPosition, dataBeforeRevert, version) =>
         if (version > sourceVersion) {
-          loadBucket(volumeLayer, bucketPosition, Some(sourceVersion)).shiftBox.map {
+          loadBucket(volumeLayer, bucketPosition, Some(sourceVersion)).shiftBox.flatMap {
             case Full(dataAfterRevert) =>
               for {
                 _ <- saveBucket(volumeLayer, bucketPosition, dataAfterRevert, newVersion)
@@ -1021,14 +1021,14 @@ class VolumeTracingService @Inject() (
       currentVersion: Int
   )(implicit tc: TokenContext): Fox[Long] =
     if (currentVersion != tracing.version)
-      Fox.failure("version.mismatch")
+      Fox.failure(Msg.Annotation.Volume.importVersionMismatch)
     else {
       val magSet = magSetFromZipfile(zipFile)
       val magsDoMatch =
         magSet.isEmpty || magSet == VolumeTracingMags.resolveLegacyMagList(tracing.mags).map(vec3IntFromProto).toSet
 
       if (!magsDoMatch)
-        Fox.failure("annotation.volume.magssDoNotMatch")
+        Fox.failure(Msg.Annotation.Volume.magsDoNotMatch)
       else {
         val volumeLayer = volumeTracingLayer(annotationId, tracingId, tracing)
         for {
@@ -1070,7 +1070,7 @@ class VolumeTracingService @Inject() (
                     bucketBytes,
                     previousBucketBytesBox,
                     editableMappingTracingId(tracing, tracingId)
-                  ) ?~> "failed to update segment index"
+                  ) ?~> Msg.Annotation.Volume.SegmentIndex.updateFailed
                 } yield ()
               }
             } yield ()

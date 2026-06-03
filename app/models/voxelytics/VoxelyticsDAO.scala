@@ -915,14 +915,13 @@ class VoxelyticsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
     val values: Seq[SqlToken] = events.map { ev =>
       val runningTimestamp = if (ev.state == VoxelyticsRunState.RUNNING) {
         Some(ev.timestamp)
-      } else         None
-      val notRunningTimestamp = if (
-        ev.state == VoxelyticsRunState.COMPLETE || ev.state == VoxelyticsRunState.CANCELLED || ev.state == VoxelyticsRunState.FAILED
-      ) {
-        Some(ev.timestamp)
-      } else {
-        None
-      }
+      } else None
+      val notRunningTimestamp =
+        if (
+          ev.state == VoxelyticsRunState.COMPLETE || ev.state == VoxelyticsRunState.CANCELLED || ev.state == VoxelyticsRunState.FAILED
+        ) {
+          Some(ev.timestamp)
+        } else None
 
       SqlToken.tupleFromValues(
         runId,

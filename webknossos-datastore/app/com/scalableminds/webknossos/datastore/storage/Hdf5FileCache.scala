@@ -11,7 +11,6 @@ import ch.systemsx.cisd.hdf5.{
 }
 import com.scalableminds.util.Msg
 import com.scalableminds.util.cache.LRUConcurrentCache
-import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachment
@@ -64,7 +63,7 @@ class Hdf5FileCache(val maxEntries: Int) extends LRUConcurrentCache[String, Cach
 
   def getCachedHdf5File(attachment: LayerAttachment)(loadFn: Path => CachedHdf5File): Box[CachedHdf5File] =
     for {
-      localPath <- tryo(attachment.localPathUnsafe)
+      localPath <- attachment.localPath
     } yield getCachedHdf5File(localPath)(loadFn)
 
   def getCachedHdf5File(filePath: Path)(loadFn: Path => CachedHdf5File): CachedHdf5File = {
@@ -105,7 +104,7 @@ class Hdf5FileCache(val maxEntries: Int) extends LRUConcurrentCache[String, Cach
 
   def withCachedHdf5[T](attachment: LayerAttachment)(block: CachedHdf5File => T): Box[T] =
     for {
-      localAttachmentPath <- tryo(attachment.localPathUnsafe)
+      localAttachmentPath <- attachment.localPath
       result <- withCachedHdf5(localAttachmentPath)(block)
     } yield result
 

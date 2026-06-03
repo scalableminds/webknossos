@@ -39,7 +39,7 @@ jobs:
       - name: Check for cyclic dependencies in frontend
         run: yarn check-cyclic-dependencies
       - name: Run frontend tests
-        run: yarn run vitest run --config vitest_spec.config.ts --coverage.enabled true
+        run: yarn run vitest run --config vitest_spec.config.ts --coverage.enabled true --silent=passed-only
       - name:
           Download Coverage Artifacts
           # Can not use actions/download-artifact@v4 because it does not support downloading artifacts from other GA runs
@@ -318,7 +318,7 @@ jobs:
         with:
           step: start
           token: ${{ secrets.GITHUB_TOKEN }}
-          env: ${{ github.ref_name }}
+          env: dev
       - name: Trigger autodeployment hook
         if: steps.autodeploy.outputs.enabled == 'true'
         run: |
@@ -338,6 +338,7 @@ jobs:
           env: ${{ steps.gh_deployment.outputs.env }}
           deployment_id: ${{ steps.gh_deployment.outputs.deployment_id }}
           env_url: ${{ steps.autodeploy.outputs.env_url }}
+          override: false
       - name: Slack Notification
         if: github.ref == 'refs/heads/master'
         run: .github/slack-notification.sh

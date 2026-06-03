@@ -66,7 +66,10 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService, annotati
         } else {
           (for {
             user <- userOption.toFox
-            isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, annotation._team)
+            owner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
+            isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user,
+                                                                             owner._organization,
+                                                                             annotation._task)
           } yield annotation._user == user._id || isTeamManagerOrAdminOfTeam).orElse(Fox.successful(false))
         }
 
@@ -98,7 +101,8 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService, annotati
       override def allowFinish(userOption: Option[User]): Fox[Boolean] =
         (for {
           user <- userOption.toFox
-          isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, annotation._team)
+          owner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
+          isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, owner._organization, annotation._task)
         } yield {
           (annotation._user == user._id || isTeamManagerOrAdminOfTeam) && !(annotation.state == Finished) && !annotation.isLockedByOwner
         }).orElse(Fox.successful(false))
@@ -107,7 +111,8 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService, annotati
       override def allowFinishSoft(userOption: Option[User]): Fox[Boolean] =
         (for {
           user <- userOption.toFox
-          isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, annotation._team)
+          owner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
+          isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, owner._organization, annotation._task)
         } yield {
           (annotation._user == user._id || isTeamManagerOrAdminOfTeam) && !annotation.isLockedByOwner
         }).orElse(Fox.successful(false))

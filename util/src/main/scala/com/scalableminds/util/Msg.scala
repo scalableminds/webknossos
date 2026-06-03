@@ -665,6 +665,8 @@ object Msg {
     def notFound(id: ObjectId): String = s"Task type “$id” could not be found or accessed."
     def summaryTaken(summary: String): String =
       s"A task type with summary “$summary” already exists. Please choose a different name."
+    val summaryTooShort: String = "Task type summary must be at least two characters long."
+    val summaryTooLong: String = "Task type summary must be at most 50 characters long."
     val editSuccess: String = "Task type was successfully updated."
     def deleteSuccess(summary: String): String = s"Task type “$summary” was successfully deleted."
     def deleteFailed(summary: String): String = s"Could not delete task type “$summary”."

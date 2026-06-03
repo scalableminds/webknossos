@@ -36,14 +36,19 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-case class ReserveIdRequest(
+case class ReserveIdParameters(
     domain: AnnotationIdDomain,
     tracingId: String,
     numberOfIdsToReserve: Int,
     idsToRelease: Seq[Long]
 )
-object ReserveIdRequest {
-  implicit val jsonFormat: OFormat[ReserveIdRequest] = Json.format[ReserveIdRequest]
+object ReserveIdParameters {
+  implicit val jsonFormat: OFormat[ReserveIdParameters] = Json.format[ReserveIdParameters]
+}
+
+case class FinishAllParameters(annotations: Seq[ObjectId])
+object FinishAllParameters {
+  implicit val jsonFormat: OFormat[FinishAllParameters] = Json.format[FinishAllParameters]
 }
 
 class AnnotationController @Inject()(
@@ -255,22 +260,16 @@ class AnnotationController @Inject()(
       }
   }
 
-  def finishAll(typ: String, timestamp: Long): Action[JsValue] = sil.SecuredAction.async(parse.json) {
-    implicit request =>
+  def finishAll(typ: String, timestamp: Long): Action[FinishAllParameters] =
+    sil.SecuredAction.async(validateJson[FinishAllParameters]) { implicit request =>
       log() {
-        withJsonAs[JsArray](request.body \ "annotations") { annotationIds =>
-          val results = Fox.serialCombined(annotationIds.value.toList) { jsValue =>
-            jsValue
-              .asOpt[String]
-              .toFox
-              .flatMap(id => finishAnnotation(typ, ObjectId(id), request.identity, Instant(timestamp)))
+        for {
+          _ <- Fox.serialCombined(request.body.annotations) { annotationId =>
+            finishAnnotation(typ, annotationId, request.identity, Instant(timestamp))
           }
-          results.map { _ =>
-            JsonOk(Msg.Annotation.allFinished)
-          }
-        }
+        } yield JsonOk(Msg.Annotation.allFinished)
       }
-  }
+    }
 
   def editAnnotation(typ: String, id: ObjectId): Action[JsValue] = sil.SecuredAction.async(parse.json) {
     implicit request =>
@@ -393,19 +392,17 @@ class AnnotationController @Inject()(
     } yield Ok(Json.toJson(json))
   }
 
-  def updateSharedTeams(typ: String, id: ObjectId): Action[JsValue] = sil.SecuredAction.async(parse.json) {
-    implicit request =>
-      withJsonBodyAs[List[String]] { teams =>
-        for {
-          annotation <- provider.provideAnnotation(typ, id, request.identity)
-          _ <- Fox.fromBool(
-            annotation._user == request.identity._id && annotation.visibility != AnnotationVisibility.Private) ?~> Msg.notAllowed ~> FORBIDDEN
-          teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.fromString)
-          _ <- Fox.serialCombined(teamIdsValidated)(teamDAO.findOne(_)) ?~> Msg.Annotation.Edit.accessingTeamFailed
-          _ <- annotationService.updateTeamsForSharedAnnotation(annotation._id, teamIdsValidated)
-        } yield Ok(Json.toJson(teamIdsValidated))
-      }
-  }
+  def updateSharedTeams(typ: String, id: ObjectId): Action[List[String]] =
+    sil.SecuredAction.async(validateJson[List[String]]) { implicit request =>
+      for {
+        annotation <- provider.provideAnnotation(typ, id, request.identity)
+        _ <- Fox.fromBool(
+          annotation._user == request.identity._id && annotation.visibility != AnnotationVisibility.Private) ?~> Msg.notAllowed ~> FORBIDDEN
+        teamIdsValidated <- Fox.serialCombined(request.body)(ObjectId.fromString)
+        _ <- Fox.serialCombined(teamIdsValidated)(teamDAO.findOne(_)) ?~> Msg.Annotation.Edit.accessingTeamFailed
+        _ <- annotationService.updateTeamsForSharedAnnotation(annotation._id, teamIdsValidated)
+      } yield Ok(Json.toJson(teamIdsValidated))
+    }
 
   def updateCollaborationMode(typ: String, id: ObjectId, collaborationMode: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
@@ -505,8 +502,8 @@ class AnnotationController @Inject()(
       }
   }
 
-  def reserveIds(id: ObjectId): Action[ReserveIdRequest] =
-    sil.SecuredAction.async(validateJson[ReserveIdRequest]) { implicit request =>
+  def reserveIds(id: ObjectId): Action[ReserveIdParameters] =
+    sil.SecuredAction.async(validateJson[ReserveIdParameters]) { implicit request =>
       logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
         for {
           annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND

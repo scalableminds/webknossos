@@ -23,16 +23,9 @@ trait Controller extends InjectedController with ExtendedController with UserAwa
       })
     )
 
-  def withJsonBodyAs[A](
-      f: A => Fox[Result])(implicit rds: Reads[A], request: Request[JsValue], ec: ExecutionContext): Fox[Result] =
-    withJsonBodyUsing(rds)(f)
-
   def withJsonBodyUsing[A](reads: Reads[A])(f: A => Fox[Result])(implicit request: Request[JsValue],
                                                                  ec: ExecutionContext): Fox[Result] =
     withJsonUsing(request.body, reads)(f)
-
-  def withJsonAs[A](json: JsReadable)(f: A => Fox[Result])(implicit rds: Reads[A], ec: ExecutionContext): Fox[Result] =
-    withJsonUsing(json, rds)(f)
 
   private def withJsonUsing[A](json: JsReadable, reads: Reads[A])(f: A => Fox[Result])(
       implicit ec: ExecutionContext): Fox[Result] =

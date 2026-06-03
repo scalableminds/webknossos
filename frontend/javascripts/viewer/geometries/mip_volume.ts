@@ -20,8 +20,6 @@ import { scaleGlobalPositionWithMagnification } from "viewer/model/helpers/posit
 import { Store } from "viewer/singletons";
 import type { DatasetLayerConfiguration, MipLayerConfig } from "viewer/store";
 
-const MOCK_SIZE = 32;
-const MAX_VOXELS = 100 * 1024 * 1024;
 const MAX_LAYERS = 4;
 
 export type SupportedMipElementClass = "uint8" | "uint16" | "uint32" | "float";
@@ -31,39 +29,22 @@ type MipTextureConfig = {
   // Factor by which raw intensityRange values are divided to obtain the [0,1] (or float) range
   // that texture(uVolume, ...).r actually returns at runtime.
   normalizationFactor: number;
-  createInitialBuffer: (n: number) => Uint8Array | Uint16Array | Float32Array;
 };
 
 function getMipTextureConfig(elementClass: SupportedMipElementClass): MipTextureConfig {
   switch (elementClass) {
     case "uint8":
-      return {
-        textureType: UnsignedByteType,
-        normalizationFactor: 255,
-        createInitialBuffer: (n) => new Uint8Array(n),
-      };
+      return { textureType: UnsignedByteType, normalizationFactor: 255 };
     case "uint16":
       // WebGL2 has no GL_R16 (normalized 16-bit red) — only OpenGL core does.
       // Convert Uint16Array → Float32 at load time so we can use GL_R32F.
-      return {
-        textureType: FloatType,
-        normalizationFactor: 65535,
-        createInitialBuffer: (n) => new Float32Array(n),
-      };
+      return { textureType: FloatType, normalizationFactor: 65535 };
     case "uint32":
       // No normalized R32 format in WebGL2 — convert to float at load time
-      return {
-        textureType: FloatType,
-        normalizationFactor: 4294967295,
-        createInitialBuffer: (n) => new Float32Array(n),
-      };
+      return { textureType: FloatType, normalizationFactor: 4294967295 };
     case "float":
       // Raw float — no normalization; uMin/uMax uniforms stay in data units
-      return {
-        textureType: FloatType,
-        normalizationFactor: 1,
-        createInitialBuffer: (n) => new Float32Array(n),
-      };
+      return { textureType: FloatType, normalizationFactor: 1 };
   }
 }
 
@@ -79,35 +60,6 @@ export function assertSupportedElementClass(elementClass: ElementClass): Support
   throw new Error(
     `MipVolume: unsupported element class "${elementClass}". Supported: uint8, uint16, uint32, float.`,
   );
-}
-
-// Legacy type for the debug addMipVolume() function
-type MockedCrossSource = { type: "mocked cross" };
-type DataSource = {
-  type: "data";
-  layerName: string;
-  mag1Bbox: BoundingBoxMinMaxType;
-  zoomStep?: number;
-};
-export type MipDatasource = MockedCrossSource | DataSource;
-
-function createCrossData(size: number): Uint8Array {
-  const data = new Uint8Array(new ArrayBuffer(size ** 3));
-  const lo = size / 2 - 1;
-  const hi = size / 2;
-  for (let z = 0; z < size; z++) {
-    for (let y = 0; y < size; y++) {
-      for (let x = 0; x < size; x++) {
-        const onXBar = y >= lo && y <= hi && z >= lo && z <= hi;
-        const onYBar = x >= lo && x <= hi && z >= lo && z <= hi;
-        const onZBar = x >= lo && x <= hi && y >= lo && y <= hi;
-        if (onXBar || onYBar || onZBar) {
-          data[z * size * size + y * size + x] = 255;
-        }
-      }
-    }
-  }
-  return data;
 }
 
 function createPlaceholderTexture(): Data3DTexture {
@@ -535,31 +487,6 @@ export class MipVolume {
     }
     this.layers.splice(index, 1);
     this.rebuildUniforms();
-  }
-
-  // Dev helper: adds a mock 3D cross into slot 0 (no layer settings subscription)
-  addMockLayer(): void {
-    if (this.layers.length >= MAX_LAYERS) return;
-    const data = createCrossData(MOCK_SIZE);
-    // @ts-expect-error — typed array variant
-    const tex = new Data3DTexture(data, MOCK_SIZE, MOCK_SIZE, MOCK_SIZE);
-    tex.format = RedFormat;
-    tex.type = UnsignedByteType;
-    tex.needsUpdate = true;
-    const idx = this.layers.length;
-    this.layers.push({
-      layerName: "mock",
-      texture: tex,
-      unsubscribe: () => {},
-      normalizationFactor: 255,
-      displayMin: 0,
-      displayMax: 1,
-      isInverted: 0,
-      alpha: 1,
-      color: new ThreeVector3(1, 1, 1),
-    });
-    (this.material.uniforms.uVolumes.value as Data3DTexture[])[idx] = tex;
-    this.material.uniforms.uNumLayers.value = this.layers.length;
   }
 
   // CPU ray march matching the GLSL fragment shader logic.

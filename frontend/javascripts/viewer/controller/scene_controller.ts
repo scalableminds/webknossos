@@ -40,7 +40,7 @@ import {
   LineMeasurementGeometry,
   QuickSelectGeometry,
 } from "viewer/geometries/helper_geometries";
-import { type MipDatasource, MipVolume } from "viewer/geometries/mip_volume";
+import { MipVolume } from "viewer/geometries/mip_volume";
 import Plane from "viewer/geometries/plane";
 import Skeleton from "viewer/geometries/skeleton";
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
@@ -72,9 +72,7 @@ import {
 } from "viewer/model/accessors/tracing_accessor";
 import { getPlaneScalingFactor } from "viewer/model/accessors/view_mode_accessor";
 import { sceneControllerInitializedAction } from "viewer/model/actions/actions";
-import {
-  scheduleMipLoadAction,
-} from "viewer/model/actions/annotation_actions";
+import { scheduleMipLoadAction } from "viewer/model/actions/annotation_actions";
 import Dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { Transform } from "viewer/model/helpers/transformation_helpers";
@@ -350,34 +348,6 @@ class SceneController {
 
   getSplitBoundaryMesh() {
     return this.splitBoundaryMesh;
-  }
-
-  addMipVolume(datasource: MipDatasource = { type: "mocked cross" }): void {
-    let mag1Bbox: { min: [number, number, number]; max: [number, number, number] };
-    if (datasource.type === "mocked cross") {
-      const MOCK_SIZE = 32;
-      mag1Bbox = { min: [0, 0, 0], max: [MOCK_SIZE, MOCK_SIZE, MOCK_SIZE] };
-    } else {
-      mag1Bbox = datasource.mag1Bbox;
-    }
-    const mipVolume = new MipVolume(mag1Bbox);
-    this.rootNode.add(mipVolume.mesh);
-    if (datasource.type === "mocked cross") {
-      mipVolume.addMockLayer();
-    } else {
-      const config = {
-        layerName: datasource.layerName,
-        zoomStep: datasource.zoomStep ?? 0,
-        isLoading: false,
-      };
-      mipVolume.addLayer(config);
-      // Dev helper: no bbox in store, so manually trigger a load via a dummy bbox
-      // (this path is only used from the browser console for testing)
-      console.warn(
-        "addMipVolume dev helper: data download is managed by the MIP saga. " +
-          "For full functionality, use the regular bounding-box MIP flow.",
-      );
-    }
   }
 
   private updateMipVolumes(entries: MipEnabledBbox[]): void {

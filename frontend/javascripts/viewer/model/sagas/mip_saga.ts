@@ -1,10 +1,8 @@
-import { buffers, channel, type Channel } from "redux-saga";
-import { cancel, cancelled, fork, put, take, takeEvery } from "typed-redux-saga";
 import type { Task } from "redux-saga";
+import { buffers, type Channel, channel } from "redux-saga";
+import { cancel, cancelled, fork, put, take, takeEvery } from "typed-redux-saga";
 import getSceneController from "viewer/controller/scene_controller_provider";
-import {
-  resolveMipLayerSource,
-} from "viewer/geometries/mip_volume";
+import { resolveMipLayerSource } from "viewer/geometries/mip_volume";
 import {
   type RemoveMipForBboxAction,
   type RemoveMipLayerForBboxAction,
@@ -60,10 +58,7 @@ function* runMipDownload(
     yield* put(setMipForBboxAction(bboxId, { ...config, isLoading: false }));
   } catch (err: unknown) {
     if (!(yield* cancelled())) {
-      console.error(
-        `MIP: failed to load layer "${config.layerName}" for bbox ${bboxId}:`,
-        err,
-      );
+      console.error(`MIP: failed to load layer "${config.layerName}" for bbox ${bboxId}:`, err);
       yield* put(setMipForBboxAction(bboxId, { ...config, isLoading: false }));
     }
   } finally {

@@ -61,8 +61,8 @@ import { setViewportAction } from "viewer/model/actions/view_mode_actions";
 import Dimensions from "viewer/model/dimensions";
 import dimensions, { type DimensionIndices } from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
-import type { BrushPresets, StoreAnnotation, WebknossosState } from "viewer/store";
 import { api, Model } from "viewer/singletons";
+import type { BrushPresets, StoreAnnotation, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import { getDefaultBrushSizes } from "viewer/view/action_bar/tools/brush_presets";
 import type {

@@ -26,6 +26,7 @@ function* runMipDownload(
   config: MipLayerConfig,
 ): Saga<void> {
   let acquiredWorkerFlag = false;
+  const abortController = new AbortController();
   try {
     // Acquire a worker flag; blocks until a slot in the download pool is free
     yield* take(workerFlagChannel);
@@ -45,6 +46,8 @@ function* runMipDownload(
       config.layerName,
       mag1Bbox,
       actualZoomStep,
+      null,
+      abortController.signal,
     );
     // getDataForBoundingBox returns TypedArray (which includes BigInt64Array) but MIP only
     // supports the four element classes checked by assertSupportedElementClass
@@ -62,6 +65,9 @@ function* runMipDownload(
       yield* put(setMipForBboxAction(bboxId, { ...config, isLoading: false }));
     }
   } finally {
+    if (yield* cancelled()) {
+      abortController.abort();
+    }
     if (acquiredWorkerFlag) {
       // Release the worker flag so the next queued download can start
       workerFlagChannel.put(true);

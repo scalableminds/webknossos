@@ -1991,6 +1991,7 @@ class DataApi {
     mag1Bbox: BoundingBoxMinMaxType,
     _zoomStep: number | null | undefined = null,
     additionalCoordinates: AdditionalCoordinate[] | null = null,
+    signal?: AbortSignal,
   ) {
     const layer = getLayerByName(Store.getState().dataset, layerName);
     const magInfo = getMagInfo(layer.mags);
@@ -2016,9 +2017,21 @@ class DataApi {
       );
     }
 
-    const buckets = await Promise.all(
-      bucketAddresses.map((addr) => this.getLoadedBucket(layerName, addr)),
-    );
+    // Fetch in batches so the signal can cancel between batches without waiting
+    // for all remaining buckets to finish. Note: the signal is not forwarded to
+    // the individual fetch calls because other parts of the app may share those
+    // buckets and we don't want to abort their requests.
+    const BUCKET_BATCH_SIZE = 10;
+    const buckets = [];
+    for (let i = 0; i < bucketAddresses.length; i += BUCKET_BATCH_SIZE) {
+      signal?.throwIfAborted();
+      const batch = bucketAddresses.slice(i, i + BUCKET_BATCH_SIZE);
+      const batchResults = await Promise.all(
+        batch.map((addr) => this.getLoadedBucket(layerName, addr)),
+      );
+      buckets.push(...batchResults);
+    }
+
     const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
     return this.cutOutCuboid(buckets, mag1Bbox, elementClass, mags, zoomStep);
   }

@@ -20,16 +20,16 @@ import { ensureSceneControllerInitialized } from "./ready_sagas";
 const DOWNLOAD_CONCURRENCY = 4;
 
 function* runMipDownload(
-  tokenChannel: Channel<true>,
+  workerFlagChannel: Channel<true>,
   bboxId: number,
   bbox: UserBoundingBox,
   config: MipLayerConfig,
 ): Saga<void> {
-  let acquiredToken = false;
+  let acquiredWorkerFlag = false;
   try {
-    // Wait for a free slot in the download pool
-    yield* take(tokenChannel);
-    acquiredToken = true;
+    // Acquire a worker flag; blocks until a slot in the download pool is free
+    yield* take(workerFlagChannel);
+    acquiredWorkerFlag = true;
 
     yield* put(setMipForBboxAction(bboxId, { ...config, isLoading: true }));
 
@@ -62,9 +62,9 @@ function* runMipDownload(
       yield* put(setMipForBboxAction(bboxId, { ...config, isLoading: false }));
     }
   } finally {
-    if (acquiredToken) {
-      // Release the pool slot so the next queued download can start
-      tokenChannel.put(true);
+    if (acquiredWorkerFlag) {
+      // Release the worker flag so the next queued download can start
+      workerFlagChannel.put(true);
     }
   }
 }
@@ -76,11 +76,11 @@ function taskKey(bboxId: number, layerName: string): string {
 export default function* mipSaga(): Saga<void> {
   yield* ensureSceneControllerInitialized();
 
-  // Token channel acts as a counting semaphore: DOWNLOAD_CONCURRENCY tokens available.
-  // A download task takes one token before fetching and releases it when done or cancelled.
-  const tokenChannel = channel<true>(buffers.fixed(DOWNLOAD_CONCURRENCY));
+  // workerFlagChannel acts as a counting semaphore: DOWNLOAD_CONCURRENCY flags available.
+  // A download task takes one flag before fetching and releases it when done or cancelled.
+  const workerFlagChannel = channel<true>(buffers.fixed(DOWNLOAD_CONCURRENCY));
   for (let i = 0; i < DOWNLOAD_CONCURRENCY; i++) {
-    tokenChannel.put(true);
+    workerFlagChannel.put(true);
   }
 
   // Maps taskKey → forked saga task, so we can cancel in-flight downloads on demand.
@@ -98,7 +98,7 @@ export default function* mipSaga(): Saga<void> {
     }
     const task = yield* fork(
       runMipDownload,
-      tokenChannel,
+      workerFlagChannel,
       action.bboxId,
       action.bbox,
       action.config,

@@ -41,6 +41,7 @@ import {
   openAnnotationPage,
   setupPageForProofreading,
   startCollectionOfPageErrors,
+  trackAnnotationUpdateRequests,
   waitForDataLoading,
   waitForMappingEnabled,
   waitUntilNotBusy,
@@ -203,13 +204,21 @@ describe("Live Collaboration", () => {
   }, 120_000);
 
   it("collaborators merge/split in parallel, all save successfully, no errors", async () => {
-    const sessions: Array<{ page: Page; errors: string[] }> = [];
+    const sessions: Array<{
+      page: Page;
+      errors: string[];
+      getUpdateRequests: ReturnType<typeof trackAnnotationUpdateRequests>;
+    }> = [];
 
     for (const { authToken } of collabUsers) {
       console.log("Open page with token=", authToken);
       const { page, browser } = await getNewPage(authToken);
       browsers.push(browser);
-      sessions.push({ page, errors: startCollectionOfPageErrors(page) });
+      sessions.push({
+        page,
+        errors: startCollectionOfPageErrors(page),
+        getUpdateRequests: trackAnnotationUpdateRequests(page, annotation.id),
+      });
     }
 
     // Open the annotation and activate the mapping in all sessions in parallel
@@ -235,7 +244,7 @@ describe("Live Collaboration", () => {
 
     // All users perform their merge operations concurrently
     await Promise.all(
-      sessions.map(async ({ page }, userIndex) => {
+      sessions.map(async ({ page, getUpdateRequests }, userIndex) => {
         const ops = PARALLEL_USER_OPERATIONS.filter((op) => op.userIndex === userIndex);
         for (const op of ops) {
           await page.evaluate(
@@ -254,14 +263,28 @@ describe("Live Collaboration", () => {
           await sleep(100); // give WK sagas some time to create the actual segment item
           await waitUntilNotBusy(page);
 
+          const mergeDispatchTime = Date.now();
           const proofreadMergeActionObjCollab = proofreadMergeAction(op.targetPosition);
           await page.evaluate(
             (action) => window.webknossos.DEV.store.dispatch(action),
             proofreadMergeActionObjCollab,
           );
 
-          // TODO: replace with a proper completion signal (see note in admin test)
-          await sleep(3_000);
+          // Wait for the merge saga to finish, then save to flush the update requests.
+          await sleep(1_000);
+          await page.evaluate(() => window.webknossos.apiReady().then((api) => api.tracing.save()));
+
+          const label = `[user ${userIndex}] merge ${JSON.stringify(op.sourcePosition)} → ${JSON.stringify(op.targetPosition)}`;
+          const sent = getUpdateRequests(mergeDispatchTime);
+          if (sent.length === 0) {
+            console.log(`${label}: no update requests were sent (nothing to save?)`);
+          } else {
+            for (const r of sent) {
+              console.log(
+                `${label} update request at ${new Date(r.timestamp).toISOString()}:\n${r.body}`,
+              );
+            }
+          }
         }
       }),
     );
@@ -274,13 +297,6 @@ describe("Live Collaboration", () => {
       );
       expect(filteredErrors, `User ${i} (${collabUsers[i].email}) had page errors`).toHaveLength(0);
     }
-
-    // Save all sessions so the merges are persisted before we verify.
-    await Promise.all(
-      sessions.map(({ page }) =>
-        page.evaluate(() => window.webknossos.apiReady().then((api) => api.tracing.save())),
-      ),
-    );
 
     // Open a fresh admin page, reload the annotation, and verify all merges.
     const { page: adminVerifyPage, browser: adminVerifyBrowser } = await getNewPage(WK_AUTH_TOKEN!);

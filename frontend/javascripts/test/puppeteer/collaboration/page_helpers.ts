@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import zlib from "node:zlib";
 import { sleep } from "libs/utils";
 import type { Browser, Page } from "playwright-core";
 import { chromium } from "playwright-core";
@@ -141,6 +142,36 @@ export async function waitForMappingEnabled(page: Page): Promise<void> {
       window.webknossos.apiReady().then((api) => api.data.isMappingEnabled()),
     );
   }
+}
+
+function decodeRequestBody(buffer: Buffer | null): string {
+  if (buffer == null) return "<empty>";
+  try {
+    // The save saga gzip-compresses the payload in production (magic bytes 1f 8b).
+    const isGzip = buffer[0] === 0x1f && buffer[1] === 0x8b;
+    const decoded = isGzip ? zlib.gunzipSync(buffer) : buffer;
+    return JSON.stringify(JSON.parse(decoded.toString("utf-8")), null, 2);
+  } catch {
+    return `<binary ${buffer.byteLength}B: ${buffer.subarray(0, 64).toString("hex")}>`;
+  }
+}
+
+export type UpdateRequestEntry = { timestamp: number; body: string };
+
+export function trackAnnotationUpdateRequests(
+  page: Page,
+  annotationId: string,
+): (sinceMs: number) => UpdateRequestEntry[] {
+  const captured: UpdateRequestEntry[] = [];
+  page.on("request", (req) => {
+    if (
+      req.method() === "POST" &&
+      req.url().includes(`/tracings/annotation/${annotationId}/update`)
+    ) {
+      captured.push({ timestamp: Date.now(), body: decodeRequestBody(req.postDataBuffer()) });
+    }
+  });
+  return (sinceMs: number) => captured.filter((r) => r.timestamp >= sinceMs);
 }
 
 export async function waitUntilNotBusy(page: Page): Promise<void> {

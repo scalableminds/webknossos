@@ -34,7 +34,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
 }
 import com.scalableminds.webknossos.datastore.services.RealPathInfo
 import com.scalableminds.webknossos.schema.Tables._
-import controllers.DatasetUpdateParameters
+import controllers.DatasetUpdatePartialParameters
 import models.dataset.DatasetCreationType.DatasetCreationType
 
 import javax.inject.Inject
@@ -578,7 +578,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                    AND $accessQuery""".asUpdate)
     } yield ()
 
-  def updatePartial(datasetId: ObjectId, params: DatasetUpdateParameters)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def updatePartial(datasetId: ObjectId, params: DatasetUpdatePartialParameters)(implicit ctx: DBAccessContext): Fox[Unit] = {
     val setQueries = List(
       params.description.map(d => q"description = $d"),
       params.name.map(v => q"name = $v"),
@@ -611,7 +611,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                    tags: List[String],
                    metadata: JsArray,
                    folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val updateParameters = new DatasetUpdateParameters(
+    val updateParameters = new DatasetUpdatePartialParameters(
       description = Some(description),
       name = Some(name),
       sortingKey = Some(sortingKey),

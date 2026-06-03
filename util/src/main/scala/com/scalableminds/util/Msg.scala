@@ -613,6 +613,7 @@ object Msg {
     val deleteSuccess: String = s"Project was successfully deleted."
     def nameTaken(name: String): String =
       s"A project named “$name” already exists. Please choose a different name."
+    def nameTooShort: String = "Project name must be at least three characters long."
     def nameInvalidChars(name: String): String =
       s"Project name “$name” contains invalid characters. Please use only letters and numbers."
     val createFailed: String = "Could not create project."
@@ -689,7 +690,6 @@ object Msg {
     val noUserWithThisEmail: String = "There is no user registered with this email."
     val invalidCredentials: String = "Incorrect email or password. Please try again."
     val createFailed: String = "Could not create user."
-    val idNotFound: String = "Could not find a user id in the request."
     val lastAdmin: String =
       "This user is the last remaining admin in your organization. Cannot remove admin privileges from this account."
     val lastOwner: String =

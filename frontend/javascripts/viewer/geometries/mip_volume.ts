@@ -17,14 +17,14 @@ import type { BoundingBoxMinMaxType } from "types/bounding_box";
 import { getLayerByName, getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { scaleGlobalPositionWithMagnification } from "viewer/model/helpers/position_converter";
-import { api, Store } from "viewer/singletons";
+import { Store } from "viewer/singletons";
 import type { DatasetLayerConfiguration, MipLayerConfig } from "viewer/store";
 
 const MOCK_SIZE = 32;
 const MAX_VOXELS = 100 * 1024 * 1024;
 const MAX_LAYERS = 4;
 
-type SupportedMipElementClass = "uint8" | "uint16" | "uint32" | "float";
+export type SupportedMipElementClass = "uint8" | "uint16" | "uint32" | "float";
 
 type MipTextureConfig = {
   textureType: typeof UnsignedByteType | typeof FloatType;
@@ -67,7 +67,7 @@ function getMipTextureConfig(elementClass: SupportedMipElementClass): MipTexture
   }
 }
 
-function assertSupportedElementClass(elementClass: ElementClass): SupportedMipElementClass {
+export function assertSupportedElementClass(elementClass: ElementClass): SupportedMipElementClass {
   if (
     elementClass === "uint8" ||
     elementClass === "uint16" ||
@@ -118,7 +118,9 @@ function createPlaceholderTexture(): Data3DTexture {
   return tex;
 }
 
-function resolveDataSource(
+// Resolves the actual zoom step, texture dimensions, and element class for a layer.
+// Called by the MIP saga before downloading so it knows what to request.
+export function resolveMipLayerSource(
   layerName: string,
   mag1Bbox: BoundingBoxMinMaxType,
   zoomStep?: number,
@@ -436,7 +438,9 @@ export class MipVolume {
     return this.layers.length;
   }
 
-  async addLayer(config: MipLayerConfig): Promise<void> {
+  // Registers a new layer slot with a placeholder texture and subscribes to display settings.
+  // The actual data must be supplied separately via receiveLayerData once downloaded.
+  addLayer(config: MipLayerConfig): void {
     if (this.layers.length >= MAX_LAYERS) {
       console.warn("MipVolume: max layers reached, ignoring addLayer for", config.layerName);
       return;
@@ -446,19 +450,11 @@ export class MipVolume {
     }
 
     const index = this.layers.length;
-    const { elementClass, textureDims, actualZoomStep } = resolveDataSource(
-      config.layerName,
-      this.mag1Bbox,
-      config.zoomStep,
+    const texConfig = getMipTextureConfig(
+      assertSupportedElementClass(
+        getLayerByName(Store.getState().dataset, config.layerName).elementClass,
+      ),
     );
-    const texConfig = getMipTextureConfig(elementClass);
-    const [tw, th, td] = textureDims;
-    const totalVoxels = tw * th * td;
-    if (totalVoxels > MAX_VOXELS) {
-      throw new Error(
-        `MipVolume: ${tw}×${th}×${td} = ${totalVoxels} voxels exceeds the ${MAX_VOXELS}-voxel limit`,
-      );
-    }
 
     const layerState: LayerState = {
       layerName: config.layerName,
@@ -482,12 +478,21 @@ export class MipVolume {
       },
       true,
     );
+  }
 
-    const rawData = await api.data.getDataForBoundingBox(
-      config.layerName,
-      this.mag1Bbox,
-      actualZoomStep,
-    );
+  // Called by the MIP saga once the raw voxel data has been downloaded.
+  // Converts the typed array to a Data3DTexture and uploads it to the GPU.
+  receiveLayerData(
+    layerName: string,
+    rawData: Uint8Array | Uint16Array | Uint32Array | Float32Array,
+    dims: [number, number, number],
+    elementClass: SupportedMipElementClass,
+  ): void {
+    const index = this.layers.findIndex((l) => l.layerName === layerName);
+    if (index === -1) return; // layer was removed while loading
+    const layerState = this.layers[index];
+    const texConfig = getMipTextureConfig(elementClass);
+    const [tw, th, td] = dims;
 
     let textureData: Uint8Array | Float32Array;
     if (elementClass === "uint32") {
@@ -513,6 +518,9 @@ export class MipVolume {
     realTexture.type = texConfig.textureType;
     realTexture.needsUpdate = true;
 
+    if (layerState.texture !== this.placeholderTexture) {
+      layerState.texture.dispose();
+    }
     layerState.texture = realTexture;
     (this.material.uniforms.uVolumes.value as Data3DTexture[])[index] = realTexture;
   }

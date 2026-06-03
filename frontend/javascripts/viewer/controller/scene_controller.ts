@@ -72,7 +72,9 @@ import {
 } from "viewer/model/accessors/tracing_accessor";
 import { getPlaneScalingFactor } from "viewer/model/accessors/view_mode_accessor";
 import { sceneControllerInitializedAction } from "viewer/model/actions/actions";
-import { setMipForBboxAction } from "viewer/model/actions/annotation_actions";
+import {
+  scheduleMipLoadAction,
+} from "viewer/model/actions/annotation_actions";
 import Dimensions from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { Transform } from "viewer/model/helpers/transformation_helpers";
@@ -350,7 +352,7 @@ class SceneController {
     return this.splitBoundaryMesh;
   }
 
-  async addMipVolume(datasource: MipDatasource = { type: "mocked cross" }): Promise<void> {
+  addMipVolume(datasource: MipDatasource = { type: "mocked cross" }): void {
     let mag1Bbox: { min: [number, number, number]; max: [number, number, number] };
     if (datasource.type === "mocked cross") {
       const MOCK_SIZE = 32;
@@ -363,11 +365,18 @@ class SceneController {
     if (datasource.type === "mocked cross") {
       mipVolume.addMockLayer();
     } else {
-      await mipVolume.addLayer({
+      const config = {
         layerName: datasource.layerName,
         zoomStep: datasource.zoomStep ?? 0,
         isLoading: false,
-      });
+      };
+      mipVolume.addLayer(config);
+      // Dev helper: no bbox in store, so manually trigger a load via a dummy bbox
+      // (this path is only used from the browser console for testing)
+      console.warn(
+        "addMipVolume dev helper: data download is managed by the MIP saga. " +
+          "For full functionality, use the regular bounding-box MIP flow.",
+      );
     }
   }
 
@@ -416,13 +425,8 @@ class SceneController {
       const oldLayerNames = new Set(oldConfigs.map((c) => c.layerName));
       for (const config of configs) {
         if (!oldLayerNames.has(config.layerName) && !volume.hasLayer(config.layerName)) {
-          Store.dispatch(setMipForBboxAction(bbox.id, { ...config, isLoading: true }));
-          volume
-            .addLayer(config)
-            .then(() =>
-              Store.dispatch(setMipForBboxAction(bbox.id, { ...config, isLoading: false })),
-            )
-            .catch(console.error);
+          volume.addLayer(config);
+          Store.dispatch(scheduleMipLoadAction(bbox.id, bbox, config));
         }
       }
 
@@ -446,6 +450,12 @@ class SceneController {
       if (pos != null) return pos;
     }
     return null;
+  }
+
+  getMipVolumeEntry(
+    bboxId: number,
+  ): { volume: MipVolume; configs: MipLayerConfig[]; bbox: UserBoundingBox } | undefined {
+    return this.mipVolumes.get(bboxId);
   }
 
   addSkeleton(

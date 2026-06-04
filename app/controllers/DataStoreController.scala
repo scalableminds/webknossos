@@ -53,8 +53,8 @@ class DataStoreController @Inject()(
           publicUrl = request.body.publicUrl,
           key = request.body.key,
           isScratch = request.body.isScratch.getOrElse(false),
-          allowsUpload = request.body.allowsUpload.getOrElse(false),
-          allowsUploadToPaths = request.body.allowsUploadToPaths.getOrElse(false)
+          allowsUpload = request.body.allowsUpload.getOrElse(true),
+          allowsUploadToPaths = request.body.allowsUploadToPaths.getOrElse(true)
         )
         _ <- dataStoreDAO.insertOne(dataStore) ?~> Msg.DataStore.createFailed
         js <- dataStoreService.publicWrites(dataStore)

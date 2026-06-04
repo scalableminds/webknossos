@@ -161,7 +161,7 @@ class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userSer
   def validateProjectName(name: String): Fox[Unit] =
     for {
       _ <- Fox.fromBool(name.length >= 3) ?~> Msg.Project.nameTooShort
-      _ <- Fox.fromBool(name.matches("^[A-Za-z0-9\\-_\\. ß]+$")) ?~> Msg.Project.nameInvalidChars(name)
+      _ <- Fox.fromBool(name.matches("^[a-zA-Z0-9_-]*$")) ?~> Msg.Project.nameInvalidChars(name)
     } yield ()
 
   def deleteOne(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[Boolean] =

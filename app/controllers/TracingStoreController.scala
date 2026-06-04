@@ -20,7 +20,7 @@ object TracingStoreParameters {
 class TracingStoreController @Inject()(
     tracingStoreService: TracingStoreService,
     tracingStoreDAO: TracingStoreDAO,
-    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, playBodyParasers: PlayBodyParsers)
+    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 

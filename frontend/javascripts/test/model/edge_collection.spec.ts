@@ -359,7 +359,9 @@ describe("EdgeCollection", () => {
       source: 0,
       target: 1,
     };
-    const edgeCollection = new EdgeCollection().addEdges([edgeA, edgeB, duplicateEdgeA]).addEdges([edgeA, edgeB, duplicateEdgeA]);
+    const edgeCollection = new EdgeCollection()
+      .addEdges([edgeA, edgeB, duplicateEdgeA])
+      .addEdges([edgeA, edgeB, duplicateEdgeA]);
     expect(edgeCollection.size()).toBe(2);
     expect(edgeCollection.outMap.getOrThrow(0)).toEqual([edgeA]);
     expect(edgeCollection.outMap.getOrThrow(2)).toEqual([edgeB]);

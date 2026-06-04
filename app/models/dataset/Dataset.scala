@@ -33,7 +33,18 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   DataLayerAttachments => AttachmentWrapper
 }
 import com.scalableminds.webknossos.datastore.services.RealPathInfo
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{
+  DatasetLayerAdditionalaxesRow,
+  DatasetLayerAttachmentsRow,
+  DatasetLayerCoordinatetransformationsRow,
+  DatasetLayersRow,
+  DatasetMags,
+  DatasetMagsRow,
+  GetResultDatasetMagsRow,
+  Datasets,
+  DatasetsRow,
+  GetResultDatasetsRow
+}
 import controllers.DatasetUpdateParameters
 import models.dataset.DatasetCreationType.DatasetCreationType
 

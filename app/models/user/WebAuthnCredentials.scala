@@ -5,7 +5,11 @@ import com.fasterxml.jackson.annotation._
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{JsonHelper, Fox, FoxImplicits}
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{
+  Webauthncredentials,
+  WebauthncredentialsRow,
+  GetResultWebauthncredentialsRow
+}
 import com.webauthn4j.converter.AttestedCredentialDataConverter
 import com.webauthn4j.converter.util.ObjectConverter
 import com.webauthn4j.credential.{CredentialRecordImpl => WebAuthnCredentialRecord}

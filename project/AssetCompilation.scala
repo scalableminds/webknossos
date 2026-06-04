@@ -101,13 +101,19 @@ object AssetCompilation {
     Def task {
       val streamsValue = streams.value
       val baseDirectoryValue = baseDirectory.value
-      val dependencyClasspathValue = (Compile / dependencyClasspath).value
+      // Classpath of the standalone slick code generator subproject (see build.sbt). It carries our
+      // ContentStableSourceCodeGenerator plus slick-codegen and the postgres driver.
+      val codegenClasspathValue = (LocalProject("slickCodegen") / Compile / fullClasspath).value
       val runnerValue = (Compile / runner).value
       val sourceManagedValue = sourceManaged.value
 
-      val schemaPath = baseDirectoryValue / "schema" / "postgres" / "schema.sql"
-      val slickTablesOutPath = sourceManagedValue / "schema" / "com" / "scalableminds" / "webknossos" / "schema" / "Tables.scala"
+      val schemaPath = baseDirectoryValue / "schema" / "schema.sql"
+      val schemaOutDir = sourceManagedValue / "schema"
+      val slickTablesOutPath = schemaOutDir / "com" / "scalableminds" / "webknossos" / "schema" / "Tables.scala"
 
+      // The generator reads the live DB; schema.sql mtime is our proxy for "schema changed". This only
+      // gates whether we connect to the DB at all - the generator itself rewrites only the table files
+      // whose content actually changed, so re-running it when nothing changed costs no recompiles.
       val shouldUpdate = !slickTablesOutPath.exists || slickTablesOutPath.lastModified < schemaPath.lastModified
 
       if (shouldUpdate) {
@@ -125,11 +131,11 @@ object AssetCompilation {
         )
 
         runnerValue.run(
-          "slick.codegen.SourceCodeGenerator",
-          dependencyClasspathValue.files,
+          "com.scalableminds.codegen.SchemaCodeGenerator",
+          codegenClasspathValue.files,
           Array(
             "file://" + (baseDirectoryValue / "conf" / "slick.conf").toString + "#slick",
-            (sourceManagedValue / "schema").toString
+            schemaOutDir.toString
           ),
           streamsValue.log
         )
@@ -138,7 +144,9 @@ object AssetCompilation {
         streamsValue.log.info("Slick SQL schema already up to date.")
       }
 
-      Seq((slickTablesOutPath))
+      // Return every generated source so sbt tracks the full set (one file per table plus the container).
+      val schemaPackageDir = schemaOutDir / "com" / "scalableminds" / "webknossos" / "schema"
+      Option(schemaPackageDir.listFiles).getOrElse(Array.empty[File]).filter(_.getName.endsWith(".scala")).toSeq
     }
 
   val settings = Seq(

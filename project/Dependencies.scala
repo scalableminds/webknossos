@@ -45,6 +45,16 @@ object Dependencies {
     filters,
   )
 
+  // Dependencies for the standalone slick code generator subproject (see tools/slick-codegen and
+  // project/AssetCompilation.scala). Kept isolated so slick-codegen does not leak into app modules.
+  val slickCodegenDependencies: Seq[ModuleID] = Seq(
+    "com.typesafe.slick" %% "slick" % slickVersion,
+    "com.typesafe.slick" %% "slick-codegen" % slickVersion,
+    // slick's default connection pool, required to open the db connection from slick.conf
+    "com.typesafe.slick" %% "slick-hikaricp" % slickVersion,
+    "org.postgresql" % "postgresql" % "42.7.10",
+  )
+
   val webknossosDatastoreDependencies: Seq[ModuleID] = Seq(
     // Protocol buffer GRPC calls. Communication to FossilDB. import scalapb.grpc
     "com.thesamet.scalapb" %% "scalapb-runtime-grpc" % scalapbVersion,

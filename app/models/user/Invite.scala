@@ -5,7 +5,7 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{Invites, InvitesRow, GetResultInvitesRow}
 import com.typesafe.scalalogging.LazyLogging
 import mail.{DefaultMails, Send}
 

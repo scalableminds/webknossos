@@ -11,14 +11,14 @@ To streamline your workflow, program your tablet and pen buttons to match the WE
 
 Tablet buttons:
 
-- Left: Brush (ctrl + K, B)
-- Middle left: Eraser (ctrl + K, E)
-- Middle right: Quick-select (ctrl + K, Q)
-- Right: Create new segment (C)
+- Left: Brush (++ctrl++ + ++k++ , ++b++)
+- Middle left: Eraser (++ctrl++ + ++k++ , ++e++)
+- Middle right: Quick-select (++ctrl++ + ++k++ , ++q++)
+- Right: Create new segment (++c++)
 
 Pen buttons:
 
-- Lower button: Move (ALT)
+- Lower button: Move (++alt++)
 
 You can find the full list for keyboard shortcuts in the [documentation](../ui/keyboard_shortcuts.md).
 
@@ -30,7 +30,7 @@ Now, let’s dive into the annotation process! In this example, we begin by quic
 
 If the annotation isn’t precise enough, we can easily switch to the eraser tool (middle left button) and erase a corner. Selecting the brush tool is as simple as pressing the left button, allowing us to add small surfaces to the annotation.
 When ready, pressing the right button creates a new segment, and we can repeat the process for other cells.
-For increased flexibility, you can additionally use your laptop’s keyboard shortcuts (e.g. “I” and “O” for zooming in and out).
+For increased flexibility, you can additionally use your laptop’s keyboard shortcuts (e.g. ++i++ and ++o++ for zooming in and out).
 
 ## iPad and Apple Pencil
 Accessing your WEBKNOSSOS data from any internet-connected device with a browser, including iPads and Android tablets, allows you to conveniently showcase or explore large datasets anywhere. Whether you want to share your findings with scientists post-conference or analyze data during your train commute, all you need is a browser. No installation of any additional software is required. The user-friendly interface supports intuitive finger gestures and complementary buttons for smooth navigation.

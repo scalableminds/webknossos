@@ -5,7 +5,7 @@ A typical skeleton annotation consists of one or more trees.
 Trees can be nested and organized in so-called `Tree Groups`.
 Tree groups can have a name and are used to structure and label your annotation even further.
 Trees can be dragged and dropped between tree groups.
-This action can be applied to multiple trees by selecting them with Ctrl + Left Mouse (on Mac OS Cmd + Left Mouse).
+This action can be applied to multiple trees by selecting them with ++ctrl++ + Left Mouse (on Mac OS ++cmd++ + Left Mouse).
 
 There are two ways to create a group:
 

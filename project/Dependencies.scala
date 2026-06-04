@@ -10,7 +10,8 @@ object Dependencies {
       // "SciJava Public" at "https://maven.scijava.org/content/repositories/public/",
       "OSGeo" at "https://repo.osgeo.org/repository/release/",
       "Atlassian Releases" at "https://packages.atlassian.com/maven-public/",
-      "Senbox (for Zarr)" at "https://nexus.senbox.net/nexus/content/groups/public/"
+      "Senbox (for Zarr)" at "https://nexus.senbox.net/nexus/content/groups/public/",
+      "webknossos-maven" at "https://static.webknossos.org/maven/",  // cisd/jhdf5, cisd/base
     )
 
   private val silhouetteVersion = "10.0.4"

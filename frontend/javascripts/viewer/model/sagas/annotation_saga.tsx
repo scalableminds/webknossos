@@ -5,7 +5,7 @@ import Toast from "libs/toast";
 import { hasUrlParam } from "libs/utils";
 import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
-import { call, debounce, delay, put, retry, take, takeLatest } from "typed-redux-saga";
+import { call, delay, put, retry, take, takeLatest } from "typed-redux-saga";
 import Constants from "viewer/constants";
 import constants, { MappingStatusEnum } from "viewer/constants";
 import { getMappingInfo, is2dDataset } from "viewer/model/accessors/dataset_accessor";
@@ -87,6 +87,12 @@ function* pushAnnotationUpdateAsync(action: Action) {
     }
     console.error(error);
   }
+}
+
+// Delaying in case of view config changes. For direct changes to the annotation properties, we want an immediate update via pushAnnotationUpdateAsync.
+function* pushAnnotationUpdateAsyncDelayed(action: Action) {
+  yield* delay(Constants.SETTING_SAVE_DEBOUNCE_MS);
+  yield* call(pushAnnotationUpdateAsync, action);
 }
 
 function* pushAnnotationLayerUpdateAsync(action: EditAnnotationLayerAction): Saga<void> {
@@ -203,15 +209,9 @@ function* watchAnnotationAsync(): Saga<void> {
   );
   yield* takeLatest("SET_ANNOTATION_DESCRIPTION", pushAnnotationDescriptionUpdateAction);
   // Debounce pushing view config changes.
-  yield* debounce(
-    Constants.SETTING_SAVE_DEBOUNCE_MS,
-    "UPDATE_DATASET_SETTING",
-    pushAnnotationUpdateAsync,
-  );
-  yield* debounce(
-    Constants.SETTING_SAVE_DEBOUNCE_MS,
-    "UPDATE_LAYER_SETTING",
-    pushAnnotationUpdateAsync,
+  yield* takeLatest(
+    ["UPDATE_DATASET_SETTING", "UPDATE_LAYER_SETTING"],
+    pushAnnotationUpdateAsyncDelayed,
   );
   yield* takeLatest("EDIT_ANNOTATION_LAYER", pushAnnotationLayerUpdateAsync);
 }

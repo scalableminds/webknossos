@@ -16,7 +16,7 @@ import {
 } from "viewer/model/sagas/saving/save_saga_constants";
 import type { DatasetConfiguration, DatasetLayerConfiguration } from "viewer/store";
 import { mayEditAnnotation } from "../accessors/annotation_accessor";
-import { getDatasetLayerNamesPresentInDatasetMappingToName } from "../accessors/dataset_accessor";
+import { getMappingFromLayerNameToBaseDatasetLayerName } from "../accessors/dataset_accessor";
 import { Toolkit } from "../accessors/tool_accessor";
 import { ensureWkInitialized } from "./ready_sagas";
 
@@ -37,7 +37,7 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
   if (activeUser == null) return;
   const dataset = yield* select((state) => state.dataset);
   const layerNamesOfDatasetToFallbackNameMaybe =
-    getDatasetLayerNamesPresentInDatasetMappingToName(dataset);
+    getMappingFromLayerNameToBaseDatasetLayerName(dataset);
   const datasetConfiguration = yield* select((state) => state.datasetConfiguration);
 
   const maybeMaskedDatasetConfiguration = yield* prepareDatasetSettingsForSaving(

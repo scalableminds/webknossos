@@ -2017,20 +2017,21 @@ class DataApi {
       );
     }
 
-    // Fetch in batches so the signal can cancel between batches without waiting
-    // for all remaining buckets to finish. Note: the signal is not forwarded to
-    // the individual fetch calls because other parts of the app may share those
-    // buckets and we don't want to abort their requests.
-    const BUCKET_BATCH_SIZE = 10;
-    const buckets = [];
-    for (let i = 0; i < bucketAddresses.length; i += BUCKET_BATCH_SIZE) {
-      signal?.throwIfAborted();
-      const batch = bucketAddresses.slice(i, i + BUCKET_BATCH_SIZE);
-      const batchResults = await Promise.all(
-        batch.map((addr) => this.getLoadedBucket(layerName, addr)),
-      );
-      buckets.push(...batchResults);
-    }
+    // Fetch buckets via a worker pool so a slow request never blocks a free slot.
+    // Note: the signal is not forwarded to individual fetches because other parts
+    // of the app may share those buckets and we don't want to abort their requests.
+    const BUCKET_POOL_SIZE = 10;
+    const buckets = new Array(bucketAddresses.length);
+    let nextIndex = 0;
+    const worker = async () => {
+      while (nextIndex < bucketAddresses.length) {
+        signal?.throwIfAborted();
+        // Claim the next index before any await so no two workers pick the same one.
+        const i = nextIndex++;
+        buckets[i] = await this.getLoadedBucket(layerName, bucketAddresses[i]);
+      }
+    };
+    await Promise.all(Array.from({ length: BUCKET_POOL_SIZE }, worker));
 
     const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
     return this.cutOutCuboid(buckets, mag1Bbox, elementClass, mags, zoomStep);

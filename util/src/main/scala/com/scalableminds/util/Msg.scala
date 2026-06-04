@@ -155,7 +155,7 @@ object Msg {
       val success: String = "Successfully updated the annotation."
       val accessingTeamFailed: String = "Could not access a team during annotation shared team update."
       val notAllowed: String = "You do not have permission to edit this annotation."
-      val viewConfigurationFailed: String = "Failed to update the view configuration for this annotation."
+      val viewConfigurationFailed: String = "Could not update the view configuration for this annotation."
     }
     object ApplyUpdate {
       val updateGroupVersionsNotSortedDesc: String =

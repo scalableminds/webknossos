@@ -777,9 +777,9 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       _ <- run(q"UPDATE webknossos.annotations SET collaborationMode = $collaborationMode WHERE _id = $id".asUpdate)
     } yield ()
 
-  def getViewConfiguration(annotation: ObjectId,
-                           requestingUserId: ObjectId,
-                           annotationOwnerId: ObjectId): Fox[Option[JsObject]] =
+  def getViewConfigurationForUserWithFallback(annotation: ObjectId,
+                                              requestingUserId: ObjectId,
+                                              annotationOwnerId: ObjectId): Fox[Option[JsObject]] =
     for {
       // Single scan: fetch both the requesting user's row and the owner's fallback row, preferring
       // the requesting user's config via ORDER BY.  In PostgreSQL a boolean expression evaluates to

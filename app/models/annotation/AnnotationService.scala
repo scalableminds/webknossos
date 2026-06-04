@@ -729,7 +729,7 @@ class AnnotationService @Inject()(
         restrictionsOpt.getOrElse(annotationRestrictionDefaults.defaultsFor(annotation)),
         requestingUser)
       userSpecificViewConfiguration <- Fox.runOptional(requestingUser)(user =>
-        annotationDAO.getViewConfiguration(annotation._id, user._id, annotation._user))
+        annotationDAO.getViewConfigurationForUserWithFallback(annotation._id, user._id, annotation._user))
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> Msg.DataStore.notFound
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
       teams <- teamDAO.findSharedTeamsForAnnotation(annotation._id)

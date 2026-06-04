@@ -1,4 +1,5 @@
 import app from "app";
+import debounce from "lodash-es/debounce";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
 import { rgbToInt } from "libs/utils";
@@ -902,7 +903,11 @@ class SceneController {
         (showSkeletons) => this.setSkeletonGroupVisibility(showSkeletons),
         true,
       ),
-      listenToStoreProperty(getMipEnabledBboxes, (entries) => this.updateMipVolumes(entries), true),
+      listenToStoreProperty(
+        getMipEnabledBboxes,
+        debounce((entries) => this.updateMipVolumes(entries), 300),
+        true,
+      ),
       listenToStoreProperty(
         (state) => state.userConfiguration.mipRaymarchingSteps,
         (numSteps) => {

@@ -57,7 +57,7 @@ To get the sharing link of an annotation, follow the same steps as for changing 
 
 ### Sharing Link Format
 
-By default, WEBKNOSSOS shortens the web links for ease of use. You can switch to full-length links in the link-sharing UI.
+By default, WEBKNOSSOS shortens the web links for ease of use. Use the `Shorten this link` toggle next to the link field in the Share dialog to switch between shortened and full-length links.
 
 As mentioned above, the sharing link encodes certain properties, like the current position, rotation, zoom, active mapping, and visible meshes.
 Anyone who opens a link will have the same WEBKNOSSOS experience that was captured when copying the link.

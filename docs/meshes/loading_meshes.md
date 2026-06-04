@@ -3,6 +3,8 @@ Regardless of the method, meshes can be loaded by right-clicking on any segment 
 
 Alternatively, the `Segments` tab in the right-hand side panel allows you to load the mesh for any segment or whole group of segments listed there. Select the corresponding option from the overflow menu next to each list entry.
 
+Note that the segmentation layer must be visible to load or compute meshes; otherwise the corresponding actions are disabled.
+
 ![Mesh can be loaded from the context-sensitive right-click menu](../images/mesh_options.jpeg)
 /// caption
 Meshes can be loaded from the context-sensitive right-click menu

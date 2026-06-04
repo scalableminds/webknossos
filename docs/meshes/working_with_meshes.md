@@ -2,7 +2,7 @@
 
 Any meshes listed in the `Segments` tab can be downloaded as an industry-standard STL file for further rendering/animation, e.g., in Blender ([Read more in this blog series](https://medium.com/scalableminds/how-to-make-great-videos-for-biomedical-microscopy-data-51218ffa2421)). Hover over the list entry for the desired mesh to reveal a shortcut menu for downloading, reloading, and unloading/removing meshes.
 
-Mesh visibility can also be triggered from the `Segments` tab.
+Mesh visibility can also be toggled from the `Segments` tab using the visibility checkbox next to each segment entry.
 
 Shift + Click on any mesh in the 3D viewport will navigate WEBKNOSSOS to that position.
 CTRL + Click on any mesh will unload that mesh.

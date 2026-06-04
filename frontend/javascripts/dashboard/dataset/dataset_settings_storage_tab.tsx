@@ -142,6 +142,7 @@ const DatasetSettingsStorageTabWithDataset = ({ dataset }: { dataset: APIDataset
           <SettingsCard
             title="Data Store Server"
             tooltip="TODO"
+            style={{ height: "100%" }}
             content={
               <Tag color={stringToColor(dataset.dataStore.name)} variant="outlined">
                 {dataset.dataStore.name}
@@ -153,6 +154,7 @@ const DatasetSettingsStorageTabWithDataset = ({ dataset }: { dataset: APIDataset
           <SettingsCard
             title="Directory Name"
             tooltip="TODO"
+            style={{ height: "100%" }}
             content={
               <>
                 <Text code copyable>
@@ -172,6 +174,7 @@ const DatasetSettingsStorageTabWithDataset = ({ dataset }: { dataset: APIDataset
           <SettingsCard
             title="Creation Type"
             tooltip="TODO"
+            style={{ height: "100%" }}
             content={
               dataset.creationType != null ? (
                 <Text code>{dataset.creationType}</Text>

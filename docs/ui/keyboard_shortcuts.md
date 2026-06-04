@@ -165,7 +165,7 @@ If Multi Cut Tool is activated, the following shortcuts are available:
 | ++ctrl++ / ++cmd++ + Left Click             | Add Segment to Partition One for Multi Cut  |
 | ++ctrl++ / ++cmd++ + ++shift++ + Left Click | Add Segment to Partition Two for Multi Cut  |
 
-#### Orthogonal Viewport
+### Orthogonal Viewport
 
 | Key Binding                     | Operation                                                |
 |---------------------------------|----------------------------------------------------------|
@@ -174,7 +174,7 @@ If Multi Cut Tool is activated, the following shortcuts are available:
 | ++shift++ + Left Click          | Merge with Active Segment                                |
 | ++ctrl++ / ++cmd++ + Left Click | Split from Active Segment                                |
 
-#### 3D Viewport
+### 3D Viewport
 
 | Key Binding                     | Operation                                                |
 |---------------------------------|----------------------------------------------------------|

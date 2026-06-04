@@ -3,10 +3,23 @@ On webknossos.org, users can either sign up for a WEBKNOSSOS account by themselv
 
 As an admin or team manager, you can invite users to join your WEBKNOSSOS organization by clicking the `Invite Users` button at the top of the `Users` list available from the `Admin` menu in the navbar. This will open a popup where you can enter a list of email addresses, which will receive a custom invitation link. Users that click on this link are automatically assigned to your organization, and will not need manual activation.
 
+During the invitation process, you can already assign the new users' teams and permissions, so they are ready to work as soon as they accept.
+
 ![Send an invite link to new users](../images/users_invite.jpeg)
 /// caption
 Send an invite link to new users
 ///
+
+## Activating New Users
+On most WEBKNOSSOS instances — including webknossos.org — new users join by accepting an email invitation (see above) and are activated automatically. No separate activation step is required.
+
+Manual activation is only relevant on instances where this default behavior has been disabled and users self-register instead. In that case, self-signup accounts arrive deactivated and an admin or team manager has to activate them:
+
+1. Go to `Admin > Users`. By default, the list only shows activated users, so switch the `Status` column filter to `Deactivated` to find the pending accounts.
+2. Click `Activate User` in the user's row.
+3. You will be prompted to configure the user's teams and permissions. If you skip this step, the user can initially only see datasets belonging to the `Default` team.
+
+To revoke a user's access, **deactivate** them from the same `Admin > Users` list (there is no hard-delete for users). A deactivated user can no longer log in but is retained for record-keeping, and can be reactivated later.
 
 ## Adding Users to Teams
 Teams help organize users into logical groups for better collaboration and access control. By assigning users to specific teams, you can manage dataset permissions, coordinate tasks, and streamline project workflows more efficiently.

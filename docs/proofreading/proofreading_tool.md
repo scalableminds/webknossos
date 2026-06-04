@@ -5,10 +5,10 @@ The proofreading tool lets you fix merge and split errors in segmentations gener
 Watch this video to get started with the proofreading tools:
 ![youtube-video](https://www.youtube.com/embed/h_paTLAIIwY)
 
-To use the proofreading tool, enable an [ID mapping for your segmentation](./segmentation_mappings.md) so WEBKNOSSOS can load the supervoxel graph. Once detected, you can activate the proofreading tool from the toolbar (proofreading tool icon), or with the keyboard shortcut ++ctrl+k++ then ++o++:
+To use the proofreading tool, enable an [ID mapping for your segmentation](./segmentation_mappings.md) so WEBKNOSSOS can load the supervoxel graph. Once detected, you can activate the proofreading tool from the toolbar (clipboard-like icon), or with the keyboard shortcut ++ctrl+k++ then ++o++:
 
 1. Select an ID mapping for a segmentation layer from the left-hand side panel
-2. From the toolbar, switch to the proofreading tool (proofreading tool icon)
+2. From the toolbar, switch to the proofreading tool (clipboard-like icon)
 3. [Optional] Press ++shift++ + middle-click on any segment to load and display its supervoxel graph as an agglomerate tree
 4. Proceed to fix split and merge errors:
 
@@ -79,7 +79,7 @@ Agglomerate trees can be converted to normal skeleton trees via right-click in t
 
 ## Proofreading Toolbar Controls
 
-When the proofreading tool is active (and editable mappings are enabled), additional controls are available in the toolbar:
+When the proofreading tool is active (and an [editable mappings](./segmentation_mappings.md#editable-and-locked-mappings) are enabled), additional controls are available in the toolbar:
 
 - **Clear proofreading by-products**: Removes auxiliary meshes that were loaded during proofreading. Use this once you have finished correcting a segment pair.
 - **Automatic mesh loading**: When enabled, WEBKNOSSOS automatically loads a 3D mesh for each segment involved in a merge or split operation.

@@ -43,7 +43,7 @@ You can also add more training data from other annotations by clicking the `+` b
 
 ### Credit Information
 
-This section provides an overview of your available credits in your organization and the estimated cost for the training. Cost varies depending on the size of your dataset and the type of model you want to train.
+This section provides an overview of your available credits in your organization and the estimated cost for the training. Cost varies depending on the size of your dataset and the type of model you want to train. Read more about how credits work in the [Credits](./jobs.md#credits) section.
 
 ## Launching the Training
 

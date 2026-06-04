@@ -39,7 +39,7 @@ Before starting a run on the full layer, we advise starting a test run on a smal
 
 ## Credit Information
 
-This section provides an overview of your available credits in your organization and the estimated cost for the analysis. Cost varies depending on the size of your dataset and the type of model you want to run.
+This section provides an overview of your available credits in your organization and the estimated cost for the analysis. Cost varies depending on the size of your dataset and the type of model you want to run. Read more about how credits work in the [Credits](./jobs.md#credits) section.
 
 ---
 

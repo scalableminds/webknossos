@@ -9,3 +9,12 @@ This feature works well with automated machine-learning segmentation workflows. 
 Mapping files are automatically detected when placed in an `agglomerates` folder inside the [segmentation folder](../data/wkw.md#wkw-folder-structure). All available mappings can be activated from the dropdown of each `Segmentation` layer. You can switch between mappings at any time, and WEBKNOSSOS updates the rendered result accordingly.
 
 Mapping files are stored as HDF5 files. [Read the section on data formats for more information on the file formats](../data/concepts.md#id-mapping-files).
+
+## Editable and Locked Mappings
+
+The mappings described above are read-only: activating one lets you browse a precomputed agglomeration without changing it. [Proofreading](./proofreading_tool.md) builds on this with two related concepts:
+
+- **Editable mapping:** When you start proofreading a segmentation, WEBKNOSSOS turns the active agglomerate mapping into an *editable* copy of the underlying supervoxel graph. Your merge and split operations are applied to this editable mapping and are stored together with your annotation — they do not modify the original dataset, so different annotations can proofread the same base segmentation independently.
+- **Locked mapping:** As soon as you modify a volume layer that has an active mapping — whether by proofreading or simply by brushing — that mapping becomes *locked* to the annotation. A locked mapping can no longer be changed or disabled, which guarantees that the stored annotation always refers to a consistent agglomeration. This can only be reverted by restoring an older version of the annotation.
+
+Because of this, an editable mapping is mutually exclusive with some other features: while one is active, regular volume annotation is disabled, and [Merger Mode](./merger_mode.md) cannot be enabled. Conversely, if a mapping that does not support proofreading actions has already been locked to an annotation (for example, because the layer was brushed earlier), the proofreading tool is unavailable for that annotation.

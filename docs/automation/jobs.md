@@ -34,3 +34,13 @@ Overview of the Jobs page
 ///
 
 We constantly monitor job executions. In rare cases, jobs can fail, and we aim to re-run them as quickly as possible. In case you run into any trouble, please [contact us](mailto:hello@webknossos.org).
+
+## Credits
+
+Compute-intensive AI jobs — [AI segmentation/inference](./ai_segmentation.md), [AI model training](./ai_training.md), and [alignment](./alignment.md) — are paid for with WEBKNOSSOS credits. The cost of a job depends on the size of the processed data (and the job type), so it scales with the bounding box and magnification you select.
+
+- **Estimating the cost:** Each AI job dialog includes a `Credit Information` step that shows your organization's available credits and the estimated cost for the configured job *before* you start it. We recommend a test run on a small bounding box first.
+- **Free monthly credits:** Every organization receives a free credit allotment each month to trial AI jobs. Unused credits expire at the end of the month.
+- **Checking your balance and history:** Your current balance is shown as `AI Credits` on the `Organization` page. The `Credit Activity` page (under your organization settings) lists all credit purchases, spending, and refunds for your organization. (Admin users only)
+- **Refunds:** If a job fails, the credits it consumed are refunded automatically.
+- **Buying more credits:** Only the organization owner can purchase additional credits. To buy more, [contact us](mailto:sales@webknossos.org).

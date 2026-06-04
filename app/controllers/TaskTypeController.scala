@@ -83,6 +83,7 @@ class TaskTypeController @Inject()(
         _ <- Fox.fromBool(request.body.settings.magRestrictions == existing.settings.magRestrictions) ?~> Msg.TaskType.magRestrictionsImmutable
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, existing._team)) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, request.body.teamId)) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- taskTypeService.assertValidTaskTypeSummary(request.body.summary)
         updated = existing.copy(
           summary = request.body.summary,
           _team = request.body.teamId,

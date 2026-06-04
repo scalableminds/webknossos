@@ -3,7 +3,7 @@
 Beyond the mouse and keyboard WEBKNOSSOS is great for annotating datasets with alternative input devices such as pens, styluses, or the Apple pencil. These input devices can significantly boost your annotation speed and improve the detail of your annotations.
 
 ## Using Wacom/Pen tablets
-Using pen tablet can significantly boost your annotation productivity, especially if you set it up correctly with WEBKNOSSOS.
+Using a pen tablet can significantly boost your annotation productivity, especially if you set it up correctly with WEBKNOSSOS.
 
 ![youtube-video](https://www.youtube.com/embed/qCrqswDwmi8)
 

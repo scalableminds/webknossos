@@ -17,7 +17,7 @@ Before you can start training, prepare your ground truth annotation. Here is a s
 For a detailed tutorial and general annotations guidelines, please see [here](../tutorials/trainingdata_annotation.md).
 
 ## Configuring the Training
-To start a training, click on the `AI Analysis` button in the toolbar and select `Train AI model` from the dropdown menu.
+To start a training, click on the `AI Analysis` button in the toolbar and select `Train new AI model` from the dropdown menu.
 This will open a dialog where you can configure and start your training job.
 ### Select AI Training Task
 

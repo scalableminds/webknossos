@@ -5,7 +5,7 @@ Sharing works for both skeletons and volume annotations.
 
 ## Annotation Permissions
 
-There are three options to control who can see an annotation if they know the annotation URL:
+There are three permission levels to control who can see an annotation if they know the annotation URL, plus an additional team sharing option:
 
 1. `Private`: Only you and your team manager have access to the annotation.
 2. `Internal`: All members of your organization have access to the annotation. Default option.

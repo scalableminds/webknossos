@@ -9,8 +9,8 @@ Watch this tutorial to get some insights into the segmentation process: ![youtub
 You can launch the AI analysis dialog using the `AI Analysis` button in the toolbar at the top. This will open a dropdown menu with three options:
 
 - **Run AI model:** Run pre-trained or custom AI models on your dataset.
-- **Train AI model:** Train your own AI models on your WEBKNOSSOS annotations to match your specific needs. Read more about [training](./ai_training.md).
-- **AI Alignment:** Align datasets. Read more about [image alignment](./alignment.md).
+- **Train new AI model:** Train your own AI models on your WEBKNOSSOS annotations to match your specific needs. Read more about [training](./ai_training.md).
+- **Run AI Alignment:** Align datasets. Read more about [image alignment](./alignment.md).
 
 
 ## Pre-trained Models

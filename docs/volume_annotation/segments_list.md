@@ -15,5 +15,5 @@ The following functionality is available for each segment:
 
 ![youtube-video](https://www.youtube.com/embed/BJ7lblTSVKY)
 
-Working with groups allows you to perform batch actions of a whole group of segment (e.g. changing the color, loading meshes, ...)
+Working with groups allows you to perform batch actions on a whole group of segments (e.g. changing the color, loading meshes, ...)
 ![youtube-video](https://www.youtube.com/embed/lz-3kFWQ2H8)

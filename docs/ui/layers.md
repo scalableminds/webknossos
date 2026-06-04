@@ -44,7 +44,7 @@ The skeleton annotation layer contains any trees that you add to your dataset. Y
 - `Clipping Distance`: The distance between 3D structures and the camera used for hiding ("clipping") structures. Use it to reduce the number of visible nodes in the viewports and declutter your screen.
 - `Override Node Radius`: When toggled, globally overrides all individual node sizes. This allows to uniformly adjust the size of all nodes simultaneously. Used together with the `Particle Size` setting.
 - `Auto-center Nodes`: Per default, each time you place a node in a skeleton annotation, the WEBKNOSSOS viewport will center on this node. Disable, if you do not want the viewport to move/reposition while clicking nodes.
-- `Highlight Commented Nodes`: When active, nodes that have a comment associated with them will be rendered with a slight board around them. This is useful for quickly identifying (important) nodes.
+- `Highlight Commented Nodes`: When active, nodes that have a comment associated with them will be rendered with a slight border around them. This is useful for quickly identifying (important) nodes.
 
 ## Settings Tab
 
@@ -68,14 +68,14 @@ Note, not all control/viewport settings are available in every annotation mode.
 - `Mouse Rotation`: Increases / Decreases the movement speed when using the mouse to rotate within the datasets. A low value rotates the camera slower for more precise movements. A high value rotates the camera quicker for greater agility.
 - `Keyboard Rotation`: Increases / Decreases the movement speed when using the arrow keys on the keyboard to rotate within the datasets. A low value rotates the camera slower for more precise movements. A high value rotates the camera quicker for greater agility.
 - `Crosshair Size`: Controls the size of the crosshair in flight mode.
-- `Sphere Radius`: In flight mode, the data is projected on the inside of a sphere with the camera located at the center of the sphere. This option influences the radius of said sphere flattening / rounding the projected viewport. A high value will cause less curvature showing the detail with more detail and less distortion. A low value will show more data along the edges of the viewport.
-- `Logo in Screenshots`: Enable or disabled the WEBKNOSSOS watermark when [taking screenshots](./toolbar.md).
+- `Sphere Radius`: In flight mode, the data is projected on the inside of a sphere with the camera located at the center of the sphere. This option influences the radius of said sphere flattening / rounding the projected viewport. A high value will cause less curvature, showing the data with more detail and less distortion. A low value will show more data along the edges of the viewport.
+- `Logo in Screenshots`: Enable or disable the WEBKNOSSOS watermark when [taking screenshots](./toolbar.md).
 
 ### Data Rendering
 
-- `Hardware Utilization`: Adjusts the quality level used for rendering data. Changing this setting influences how many data is downloaded from the server as well as how much pressure is put on the user's graphics card. Tune this value to your network connection and hardware power. After changing the setting, the page has to be refreshed.
+- `Hardware Utilization`: Adjusts the quality level used for rendering data. Changing this setting influences how much data is downloaded from the server as well as how much pressure is put on the user's graphics card. Tune this value to your network connection and hardware power. After changing the setting, the page has to be refreshed.
 - `Loading Strategy`: You can choose between two different loading strategies. When using "best quality first" it will take a bit longer until you see data, because the highest quality is loaded. Alternatively, "Progressive quality" can be chosen which will improve the quality progressively while loading. As a result, initial data will be visible faster, but it will take more time until the best quality is shown.
-- `Blend Mode`: You can switch between three modes for blending color layers. The default `Additive` mode simply sums up all color values of all visible color layers. The `Cover` mode renders all color layers on top of each other. Thus the top most color layer covers the color layers below. The `Cover (black as transparent)` mode behaves like `Cover`, but treats black voxels as transparent. The two `Cover`blend modes are especially useful for datasets using multi modality layers. Here is an example for such a dataset published by Bosch et al. [^1]:
+- `Blend Mode`: You can switch between three modes for blending color layers. The default `Additive` mode simply sums up all color values of all visible color layers. The `Cover` mode renders all color layers on top of each other. Thus the top most color layer covers the color layers below. The `Cover (black as transparent)` mode behaves like `Cover`, but treats black voxels as transparent. The two `Cover` blend modes are especially useful for datasets using multi modality layers. Here is an example for such a dataset published by Bosch et al. [^1]:
 
 |Additive Blend Mode        | &nbsp;&nbsp;&nbsp;&nbsp;Cover Blend Mode &nbsp; &nbsp;|
 |:-------------------------:|:-------------------------:|
@@ -88,4 +88,4 @@ Note, not all control/viewport settings are available in every annotation mode.
 This video explains how to work with blend modes and order layer (especially relevant when working with fluorescence microscopy data):
 ![youtube-video](https://www.youtube.com/embed/_nSw4nywhLU)
 
-[1] Bosch, C., Ackels, T., Pacureanu, A. et al. Functional and multiscale 3D structural investigation of brain tissue through correlative in vivo physiology, synchrotron microtomography and volume electron microscopy. Nat Commun 13, 2923 (2022). https://doi.org/10.1038/s41467-022-30199-6
+[^1]: Bosch, C., Ackels, T., Pacureanu, A. et al. Functional and multiscale 3D structural investigation of brain tissue through correlative in vivo physiology, synchrotron microtomography and volume electron microscopy. Nat Commun 13, 2923 (2022). https://doi.org/10.1038/s41467-022-30199-6

@@ -12,6 +12,6 @@ CTRL + Click on any mesh will unload that mesh.
 The segments tab contains a list of all segments in the dataset. You can load, hide, and remove meshes for each segment here.
 ///
 
-Additionally, hiding, removing, reloading a mesh or jumping to its hovered position can be done with the context menu in the 3d viewport via right-click on a hovered mesh.
+Additionally, hiding, removing, reloading a mesh or jumping to its hovered position can be done with the context menu in the 3D viewport via right-click on a hovered mesh.
 
 You can also include meshes in [WEBKNOSSOS animations](../automation/animations.md).

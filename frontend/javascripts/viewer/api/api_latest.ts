@@ -2017,9 +2017,12 @@ class DataApi {
       );
     }
 
-    // Fetch buckets via a worker pool so a slow request never blocks a free slot.
-    // Note: the signal is not forwarded to individual fetches because other parts
-    // of the app may share those buckets and we don't want to abort their requests.
+    // Fetch buckets via a worker pool so that
+    // - in case of cancellation, we don't need to await all bucket requests
+    // - a slow request never blocks a free slot (which would happen when fetching
+    //   batch-by-batch).
+    // Note: the abort signal is not forwarded to individual fetches because other parts
+    // of the app may need those same buckets and we don't want to abort their requests.
     const BUCKET_POOL_SIZE = 10;
     const buckets = new Array(bucketAddresses.length);
     let nextIndex = 0;
@@ -2774,7 +2777,24 @@ class DataApi {
    */
   _createTransformsFromSpecs(specs: Array<TransformSpec>) {
     // biome-ignore format: don't format array
-    const makeTranslation = (x: number, y: number, z: number): Matrix4x4 => [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1];
+    const makeTranslation = (x: number, y: number, z: number): Matrix4x4 => [
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      x,
+      y,
+      z,
+      1,
+    ];
     const makeScale = (scale: Vector3, anchor: Vector3) =>
       M4x4.mul(
         M4x4.scale(scale, makeTranslation(anchor[0], anchor[1], anchor[2])),
@@ -2786,9 +2806,22 @@ class DataApi {
           makeTranslation(pos[0], pos[1], pos[2]),
           // biome-ignore format: don't format array
           [
-            Math.cos(thetaInRad), Math.sin(thetaInRad), 0, 0,
-            -Math.sin(thetaInRad), Math.cos(thetaInRad), 0, 0,
-            0, 0, 1, 0, 0, 0, 0, 1,
+            Math.cos(thetaInRad),
+            Math.sin(thetaInRad),
+            0,
+            0,
+            -Math.sin(thetaInRad),
+            Math.cos(thetaInRad),
+            0,
+            0,
+            0,
+            0,
+            1,
+            0,
+            0,
+            0,
+            0,
+            1,
           ],
         ),
         makeTranslation(-pos[0], -pos[1], -pos[2]),

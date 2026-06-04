@@ -460,12 +460,15 @@ class PlaneController extends PureComponent<Props> {
               mapping,
               getActiveMagIndexForLayer(Store.getState(), segmentationLayer.name),
             );
-            navigator.clipboard
-              .writeText(String(hoveredId))
-              .then(() => Toast.success(`Segment id ${hoveredId} copied to clipboard.`));
-          } else {
-            Toast.warning("No segment under cursor.");
+            if (hoveredId !== 0) {
+              navigator.clipboard
+                .writeText(String(hoveredId))
+                .then(() => Toast.success(`Segment id ${hoveredId} copied to clipboard.`));
+              return;
+            }
           }
+
+          Toast.warning("No segment under cursor.");
         },
       },
     };

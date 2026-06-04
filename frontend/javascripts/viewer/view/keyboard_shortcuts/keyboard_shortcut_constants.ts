@@ -374,7 +374,7 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
     "PLANE_NAVIGATION",
   ),
   MOVE_ALONG_DIRECTION_REVERSED: new KeyboardShortcutMetaInfo(
-    "Move backward annotation direction",
+    "Move backward along annotation direction",
     [[["r"]]],
     "PLANE_NAVIGATION",
   ),

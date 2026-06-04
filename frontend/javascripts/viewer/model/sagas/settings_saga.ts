@@ -2,7 +2,7 @@ import { updateDatasetConfiguration, updateUserConfiguration } from "admin/rest_
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
-import { all, call, debounce, put, retry, takeEvery } from "typed-redux-saga";
+import { all, call, debounce, delay, put, retry, takeEvery, takeLatest } from "typed-redux-saga";
 import Constants, { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
 import {
   type SetViewModeAction,
@@ -33,6 +33,7 @@ function* pushUserSettingsAsync(): Saga<void> {
 }
 
 function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration): Saga<void> {
+  yield* delay(Constants.SETTING_SAVE_DEBOUNCE_MS);
   const activeUser = yield* select((state) => state.activeUser);
   if (activeUser == null) return;
   const dataset = yield* select((state) => state.dataset);
@@ -158,10 +159,7 @@ export default function* watchPushSettingsAsync(): Saga<void> {
 
   yield* all([
     debounce(Constants.SETTING_SAVE_DEBOUNCE_MS, "UPDATE_USER_SETTING", pushUserSettingsAsync),
-    debounce(Constants.SETTING_SAVE_DEBOUNCE_MS, "UPDATE_DATASET_SETTING", () =>
-      pushDatasetSettingsAsync(originalDatasetSettings),
-    ),
-    debounce(Constants.SETTING_SAVE_DEBOUNCE_MS, "UPDATE_LAYER_SETTING", () =>
+    takeLatest(["UPDATE_DATASET_SETTING", "UPDATE_LAYER_SETTING"], () =>
       pushDatasetSettingsAsync(originalDatasetSettings),
     ),
     takeEvery("UPDATE_USER_SETTING", showUserSettingToast),

@@ -4,8 +4,8 @@ Any meshes listed in the `Segments` tab can be downloaded as an industry-standar
 
 Mesh visibility can also be toggled from the `Segments` tab using the visibility checkbox next to each segment entry.
 
-Shift + Click on any mesh in the 3D viewport will navigate WEBKNOSSOS to that position.
-CTRL + Click on any mesh will unload that mesh.
+++shift++ + Click on any mesh in the 3D viewport will navigate WEBKNOSSOS to that position.
+++ctrl++ + Click on any mesh will unload that mesh.
 
 ![Segments Tab](../images/segments_tab2.jpeg)
 /// caption

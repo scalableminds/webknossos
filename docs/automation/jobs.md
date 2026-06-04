@@ -8,7 +8,7 @@ Example workflows:
 
 - [AI segmentation](./ai_segmentation.md), e.g. running AI model for nuclei segmentation and mitochondria detection  
 - [converting datasets on upload](../data/upload_ui.md)
-- [mesh file (pre)-computation](../meshes/precomputed_meshes.md)
+- [mesh file (pre)-computation](../meshes/loading_meshes.md)
 - [applying a merger mode annotation](../proofreading/merger_mode.md)
 - automatic inference of a segmentation layer's large segment ID
 - [dataset & annotation export as Tiff files](../data/export_ui.md)

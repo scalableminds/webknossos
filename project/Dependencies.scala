@@ -53,6 +53,8 @@ object Dependencies {
     // slick's default connection pool, required to open the db connection from slick.conf
     "com.typesafe.slick" %% "slick-hikaricp" % slickVersion,
     "org.postgresql" % "postgresql" % "42.7.10",
+    // SLF4J backend so slick/HikariCP logging is emitted (otherwise SLF4J falls back to NOP and warns)
+    "org.slf4j" % "slf4j-simple" % "2.0.13",
   )
 
   val webknossosDatastoreDependencies: Seq[ModuleID] = Seq(

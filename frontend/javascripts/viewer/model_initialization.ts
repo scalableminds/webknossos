@@ -1056,18 +1056,6 @@ function applyAnnotationSpecificViewConfiguration(
    */
 
   const initialDatasetSettings: Mutable<DatasetConfiguration> = cloneDeep(originalDatasetSettings);
-
-  if (originalDatasetSettings.nativelyRenderedLayerName) {
-    const isNativelyRenderedNamePresent = getIsNativelyRenderedNamePresent(
-      dataset,
-      originalDatasetSettings.nativelyRenderedLayerName,
-      annotation,
-    );
-    if (!isNativelyRenderedNamePresent) {
-      initialDatasetSettings.nativelyRenderedLayerName = null;
-    }
-  }
-
   if (!annotation) {
     return initialDatasetSettings;
   }
@@ -1075,8 +1063,24 @@ function applyAnnotationSpecificViewConfiguration(
   if (annotation.viewConfiguration) {
     // The annotation already contains a user specific viewConfiguration. Merge that into the
     // dataset settings.
-    const mergedSettings = merge(initialDatasetSettings, annotation.viewConfiguration);
-    return mergedSettings;
+    merge(initialDatasetSettings, annotation.viewConfiguration);
+  }
+
+  // Ensure configured nativelyRenderedLayerName is actually present in the dataset.
+  if (initialDatasetSettings.nativelyRenderedLayerName) {
+    const isNativelyRenderedNamePresent = getIsNativelyRenderedNamePresent(
+      dataset,
+      initialDatasetSettings.nativelyRenderedLayerName,
+      annotation,
+    );
+    if (!isNativelyRenderedNamePresent) {
+      initialDatasetSettings.nativelyRenderedLayerName = null;
+    }
+  }
+
+  if (annotation.viewConfiguration) {
+    // If the annotation had a view configuration it is now applied and nativelyRenderedLayerName has a correct value.
+    return initialDatasetSettings;
   }
 
   // The annotation does not contain a viewConfiguration (mainly happens when the

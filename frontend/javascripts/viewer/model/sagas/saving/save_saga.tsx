@@ -202,6 +202,12 @@ function* fetchNewestMissingUpdateActions(): Saga<APIUpdateActionBatch[]> {
     return state.annotation.version;
   });
 
+  if (window.ARTIFICAL_DELAY) {
+    console.log("Waiting for", window.ARTIFICAL_DELAY, "seconds.")
+    yield* delay(window.ARTIFICAL_DELAY);
+    console.log("Done waiting. About to request updates beginning from v=", versionOnClient + 1)
+  }
+
   // Fetch all update actions that belong to a version that is newer than
   // versionOnClient. If there are none, the array will be empty.
   // The order is ascending in the version number ([v_n, v_(n+1), ...]).
@@ -214,6 +220,7 @@ function* fetchNewestMissingUpdateActions(): Saga<APIUpdateActionBatch[]> {
     false,
     true,
   );
+  console.log("received:", newerActions);
   return newerActions;
 }
 

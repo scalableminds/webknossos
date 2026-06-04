@@ -54,6 +54,7 @@ import {
   type APIScript,
   type APIScriptCreator,
   type APIScriptUpdater,
+  type APIStorageDetailEntry,
   type APITaskType,
   type APITeam,
   type APITimeInterval,
@@ -1506,6 +1507,10 @@ export function updateDatasetTeams(
     method: "PATCH",
     data: newTeams,
   });
+}
+
+export function getDatasetUsedStorageDetails(datasetId: string): Promise<APIStorageDetailEntry[]> {
+  return Request.receiveJSON(`/api/datasets/${datasetId}/usedStorageDetails`);
 }
 
 export async function triggerDatasetCheck(

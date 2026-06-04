@@ -764,7 +764,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         "tags" -> dataset.tags,
         "folderId" -> dataset._folder,
         "usedStorageBytes" -> usedStorageBytes,
-        "isVirtual" -> dataset.isVirtual
+        "isVirtual" -> dataset.isVirtual,
+        "creationType" -> dataset.creationType,
+        // TODO fill with real value
+        "datasourcePropertiesPath" -> "binaryData/sample_organization/dsA-69f1aa5adb00000e10945d56/datasource-properties.json",
+        // TODO fill with real value
+        "mirrorPath" -> "binaryData/sample_organization/.mirror/dsA-69ea196bfa0f00a81043626d"
       )
     }
 }

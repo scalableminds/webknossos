@@ -225,6 +225,17 @@ type MutableAPIDatasetBase = MutableAPIDataSourceId & {
   isEditable: boolean;
   isPublic: boolean;
   directoryName: string;
+  isVirtual: boolean;
+  creationType?:
+    | "Upload"
+    | "DiskScan"
+    | "UploadToPaths"
+    | "ExploreAndAdd"
+    | "Compose"
+    | "DuplicateToOrga"
+    | null;
+  datasourcePropertiesPath?: string | null;
+  mirrorPath?: string | null;
   logoUrl: string | null | undefined;
   lastUsedByUser: number;
   sortingKey: number;
@@ -1368,4 +1379,12 @@ export type RenderAnimationOptions = {
 
 export type ServerErrorMessage = {
   error: string;
+};
+
+export type APIStorageDetailEntry = {
+  layerName: string;
+  name: string;
+  attachmentType: string | null;
+  usedStorageBytes: number;
+  lastUpdated: string;
 };

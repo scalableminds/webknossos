@@ -125,6 +125,7 @@ POST          /datasets/:datasetId/compose/addAttachment                        
 POST          /datasets/reserveUploadToPaths                                                    controllers.DatasetController.reserveUploadToPaths()
 POST          /datasets/:datasetId/writeMirror                                                  controllers.DatasetController.writeMirror(datasetId: ObjectId)
 POST          /datasets/writeAllMirrors                                                         controllers.DatasetController.writeAllMirrors()
+GET           /datasets/:datasetId/usedStorageDetails                                           controllers.DatasetController.usedStorageDetails(datasetId: ObjectId)
 
 # Folders
 GET           /folders/root                                                                     controllers.FolderController.getRoot()

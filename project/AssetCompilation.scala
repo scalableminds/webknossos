@@ -132,6 +132,7 @@ object AssetCompilation {
           "Updating Slick SQL schema from local database..."
         )
 
+        val startNanos = System.nanoTime()
         val runResult = runnerValue.run(
           "com.scalableminds.codegen.SchemaCodeGenerator",
           codegenClasspathValue.files,
@@ -141,6 +142,7 @@ object AssetCompilation {
           ),
           streamsValue.log
         )
+        streamsValue.log.info(f"Slick codegen took ${(System.nanoTime() - startNanos) / 1.0e9}%.1fs")
         runResult.failed.foreach(e => streamsValue.log.error("Slick code generation failed: " + e.getMessage))
         // Mark this schema.sql state as generated so we do not re-run until schema.sql changes again.
         if (runResult.isSuccess) IO.touch(stampFile)

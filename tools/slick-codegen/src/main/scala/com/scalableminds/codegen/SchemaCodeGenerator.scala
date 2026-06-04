@@ -1,5 +1,6 @@
 package com.scalableminds.codegen
 
+import org.slf4j.LoggerFactory
 import slick.basic.DatabaseConfig
 import slick.codegen.SourceCodeGenerator
 import slick.jdbc.JdbcProfile
@@ -26,9 +27,14 @@ import scala.concurrent.duration.Duration
   */
 class ContentStableSourceCodeGenerator(model: slickModel.Model) extends SourceCodeGenerator(model) {
 
+  private val logger = LoggerFactory.getLogger(classOf[ContentStableSourceCodeGenerator])
+
   /** Absolute paths of every file this run intends to produce (whether or not it was actually
     * rewritten). Used afterwards to prune files of tables that no longer exist. */
   private val intendedFiles = scala.collection.mutable.Set[String]()
+
+  /** Names of the files actually rewritten this run (content differed from disk). */
+  private val updatedFiles = scala.collection.mutable.Buffer[String]()
 
   // Mirrors slick's OutputHelpers.writeStringToFile, but skips the write when the on-disk content is
   // already identical, so unchanged table files keep their timestamp and do not trigger recompiles.
@@ -47,6 +53,7 @@ class ContentStableSourceCodeGenerator(model: slickModel.Model) extends SourceCo
       } else None
 
     if (!existing.contains(normalized)) {
+      updatedFiles += fileName
       file.setWritable(true)
       val writer = new BufferedWriter(new FileWriter(file.getAbsoluteFile))
       try writer.write(normalized)
@@ -54,15 +61,23 @@ class ContentStableSourceCodeGenerator(model: slickModel.Model) extends SourceCo
     }
   }
 
-  /** Generate the multi-file model and delete generated files for tables that no longer exist. */
+  /** Generate the multi-file model, delete generated files for tables that no longer exist, and log how
+    * many files were actually updated. */
   def writeToMultipleFilesAndPrune(profile: String, folder: String, pkg: String, container: String): Unit = {
     writeToMultipleFiles(profile, folder, pkg, container)
     val folderPath = folder + "/" + pkg.replace(".", "/") + "/"
-    Option(new File(folderPath).listFiles()).getOrElse(Array.empty[File]).foreach { file =>
-      if (file.getName.endsWith(".scala") && !intendedFiles.contains(file.getCanonicalPath)) {
-        file.delete()
-        ()
-      }
+    val pruned = Option(new File(folderPath).listFiles()).getOrElse(Array.empty[File]).count { file =>
+      val isStale = file.getName.endsWith(".scala") && !intendedFiles.contains(file.getCanonicalPath)
+      if (isStale) file.delete() else false
+    }
+
+    val unchanged = intendedFiles.size - updatedFiles.size
+    if (updatedFiles.isEmpty && pruned == 0) {
+      logger.info(s"Slick codegen: all ${intendedFiles.size} generated files already up to date.")
+    } else {
+      logger.info(
+        s"Slick codegen: updated ${updatedFiles.size} of ${intendedFiles.size} generated files " +
+          s"($unchanged unchanged, $pruned pruned): ${updatedFiles.sorted.mkString(", ")}")
     }
   }
 }
@@ -86,10 +101,17 @@ object SchemaCodeGenerator {
     val profileName = if (dc.profileIsObject) dc.profileName else "new " + dc.profileName
 
     try {
-      val model = Await.result(
+      val rawModel = Await.result(
         dc.db.run(dc.profile.createModel(None, ignoreInvalidDefaults = true).withPinnedSession),
         Duration.Inf
       )
+      // Strip foreign keys from the model before generating. Slick derives both the foreignKey(...)
+      // definitions and each per-table trait's self-type (self: TablesRoot with FooTable with BarTable =>)
+      // from them, and that self-type is a compile-time dependency from one generated table file to
+      // another. We query via plain SQL rather than slick's lifted FK constraints, so dropping them makes
+      // every XxxTable trait depend only on TablesRoot - keeping incremental recompilation scoped to the
+      // single table that actually changed instead of cascading across foreign-key-related tables.
+      val model = rawModel.copy(tables = rawModel.tables.map(_.copy(foreignKeys = Seq.empty)))
       val codegen = new ContentStableSourceCodeGenerator(model)
       codegen.writeToMultipleFilesAndPrune(profileName, outputDir, pkg, "Tables")
     } finally dc.db.close()

@@ -17,3 +17,12 @@ The following functionality is available for each segment:
 
 Working with groups allows you to perform batch actions on a whole group of segments (e.g. changing the color, loading meshes, ...)
 ![youtube-video](https://www.youtube.com/embed/lz-3kFWQ2H8)
+
+## Segment Groups
+
+Segments can be organized into groups and nested subgroups to label related segments and apply batch actions to all of them at once. There are two ways to create a group:
+
+- To create a new top-level group, click the `Create new Group` button (the folder icon with a plus) at the top of the `Segments` tab.
+- To create a subgroup, right-click an existing group and select `Create new group` from the context menu. The new group is created inside the group you clicked.
+
+Drag and drop segments onto a group to organize them. Right-click a group to delete it or to run batch actions (such as changing the color or loading meshes) on all of its segments at once.

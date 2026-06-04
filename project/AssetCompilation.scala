@@ -110,11 +110,13 @@ object AssetCompilation {
       val schemaPath = baseDirectoryValue / "schema" / "schema.sql"
       val schemaOutDir = sourceManagedValue / "schema"
       val slickTablesOutPath = schemaOutDir / "com" / "scalableminds" / "webknossos" / "schema" / "Tables.scala"
+      // Records the last successful generation.
+      val stampFile = sourceManagedValue / "slick-schema-codegen.stamp"
 
       // The generator reads the live DB; schema.sql mtime is our proxy for "schema changed". This only
-      // gates whether we connect to the DB at all - the generator itself rewrites only the table files
+      // gates whether we connect to the DB at all, the generator itself rewrites only the table files
       // whose content actually changed, so re-running it when nothing changed costs no recompiles.
-      val shouldUpdate = !slickTablesOutPath.exists || slickTablesOutPath.lastModified < schemaPath.lastModified
+      val shouldUpdate = !slickTablesOutPath.exists || !stampFile.exists || stampFile.lastModified < schemaPath.lastModified
 
       if (shouldUpdate) {
         streamsValue.log.info(
@@ -130,7 +132,7 @@ object AssetCompilation {
           "Updating Slick SQL schema from local database..."
         )
 
-        runnerValue.run(
+        val runResult = runnerValue.run(
           "com.scalableminds.codegen.SchemaCodeGenerator",
           codegenClasspathValue.files,
           Array(
@@ -139,6 +141,9 @@ object AssetCompilation {
           ),
           streamsValue.log
         )
+        runResult.failed.foreach(e => streamsValue.log.error("Slick code generation failed: " + e.getMessage))
+        // Mark this schema.sql state as generated so we do not re-run until schema.sql changes again.
+        if (runResult.isSuccess) IO.touch(stampFile)
 
       } else {
         streamsValue.log.info("Slick SQL schema already up to date.")

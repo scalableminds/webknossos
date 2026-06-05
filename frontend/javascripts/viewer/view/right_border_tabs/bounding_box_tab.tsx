@@ -63,7 +63,6 @@ export default function BoundingBoxTab() {
   const dataset = useWkSelector((state) => state.dataset);
   const activeBoundingBoxId = useWkSelector((state) => state.uiInformation.activeUserBoundingBoxId);
   const { userBoundingBoxes } = getSomeTracing(annotation);
-  const hasMipEnabled = useWkSelector((state) => Object.keys(state.mipBboxSettings).length > 0);
   const mipRaymarchingSteps = useWkSelector((state) => state.userConfiguration.mipRaymarchingSteps);
   const mipDepthWrite = useWkSelector((state) => state.userConfiguration.mipDepthWrite);
   const [contextMenuPosition, setContextMenuPosition] = useState<[number, number] | null>(null);
@@ -337,9 +336,8 @@ export default function BoundingBoxTab() {
           onClick={deleteSelectedBoundingBoxes}
           icon={<DeleteOutlined />}
         />
-        {hasMipEnabled && (
-          <Popover
-            title="MIP Settings"
+        <Popover
+            title="Maximum Intensity Projection (MIP) Settings"
             trigger="click"
             content={
               <div style={{ width: 260 }}>
@@ -369,11 +367,10 @@ export default function BoundingBoxTab() {
             <ButtonComponent
               variant="text"
               color="default"
-              title="MIP rendering settings"
+              title="Maximum Intensity Projection (MIP) rendering settings"
               icon={<MipIcon />}
             />
           </Popover>
-        )}
       </Space>
       <Divider size="small" />
       <ContextMenuContainer

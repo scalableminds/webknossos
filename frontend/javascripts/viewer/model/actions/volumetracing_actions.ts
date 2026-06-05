@@ -259,7 +259,7 @@ export const clickSegmentAction = (
 
 export const updateProofreadingMarkerPositionAction = (
   position: Vector3 | undefined,
-  layerName?: string,
+  layerName: string,
 ) =>
   ({
     type: "UPDATE_PROOFREADING_MARKER_POSITION",

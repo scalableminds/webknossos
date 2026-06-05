@@ -106,7 +106,6 @@ export function serverVolumeToClientVolumeTracing(
     hasSegmentIndex: tracing.hasSegmentIndex || false,
     additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
     hideUnregisteredSegments: tracing.hideUnregisteredSegments ?? false,
-    proofreadingMarkerPosition: undefined,
     segmentJournal: [],
     idReservations: { SegmentGroup: [], Segment: [] },
   };
@@ -260,13 +259,19 @@ function VolumeTracingReducer(
     }
 
     case "UPDATE_PROOFREADING_MARKER_POSITION": {
-      const volumeTracing = getVolumeTracingFromAction(state, action);
-      if (volumeTracing) {
-        return updateVolumeTracing(state, volumeTracing.tracingId, {
-          proofreadingMarkerPosition: action.position,
-        });
+      const layerName = action.layerName;
+      if (layerName == null) {
+        return state;
       }
-      return state;
+      return update(state, {
+        localSegmentationData: {
+          [layerName]: {
+            proofreadingMarkerPosition: {
+              $set: action.position,
+            },
+          },
+        },
+      });
     }
 
     case "SET_EXPANDED_SEGMENT_GROUPS": {

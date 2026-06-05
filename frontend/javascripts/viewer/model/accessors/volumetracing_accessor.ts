@@ -520,10 +520,7 @@ export function getProofreadingMarkerPosition(state: WebknossosState): Vector3 |
   const layer = getVisibleSegmentationLayer(state);
   if (layer == null) return null;
 
-  const volumeTracing = getVolumeTracingByLayerName(state.annotation, layer.name);
-  if (volumeTracing == null) return null;
-
-  return volumeTracing.proofreadingMarkerPosition;
+  return state.localSegmentationData[layer.name]?.proofreadingMarkerPosition;
 }
 
 /*

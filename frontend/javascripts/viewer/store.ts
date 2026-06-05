@@ -209,11 +209,6 @@ export type VolumeTracing = TracingBase & {
   readonly segmentGroups: Array<SegmentGroup>;
   readonly largestSegmentId: number | null;
   readonly activeCellId: number;
-  // The position of the "proofreading marker" (a cross) is stored separately.
-  // In earlier versions, the anchor position of the current segment was simply used.
-  // However, the anchor position can be updated by another user (in collab mode) which
-  // leads to unexpected jumping of the marker.
-  readonly proofreadingMarkerPosition: Vector3 | undefined;
   readonly activeUnmappedSegmentId?: number | null; // not persisted
   // lastLabelActions[0] is the most recent one
   readonly lastLabelActions: Array<LabelAction>;
@@ -659,6 +654,16 @@ export type LocalSegmentationData = {
   readonly connectomeData: ConnectomeData;
   readonly hideUnregisteredSegments: boolean;
   readonly minCutPartitions: MinCutPartitions;
+  // The position of the "proofreading marker" (a cross) is stored separately.
+  // In earlier versions, the anchor position of the current segment was simply used.
+  // However, the anchor position can be updated by another user (in collab mode) which
+  // leads to unexpected jumping of the marker.
+  // Note, that it is intentional that the marker position is stored here (in the
+  // user-local, per-layer state) instead of within the VolumeTracing. The VolumeTracing
+  // objects are stashed and restored from RebaseRelevantAnnotationState during rebasing
+  // (see save_saga.tsx). Storing the marker position there would reset it to the position
+  // of the last synced version on every rewinding rebase (see #9559).
+  readonly proofreadingMarkerPosition: Vector3 | undefined;
 };
 
 export type StoreDataset = APIDataset & {

@@ -1,4 +1,5 @@
 import Icon, { CloseOutlined, ReloadOutlined } from "@ant-design/icons";
+import FlipIcon from "@images/icons/icon-flip.svg?react";
 import SkeletonIcon from "@images/icons/icon-skeleton.svg?react";
 import { getDataset, updateDatasetPartial } from "admin/rest_api";
 import { Button, Divider, InputNumber, Popover, Slider, Tooltip } from "antd";
@@ -16,7 +17,6 @@ import {
 import { useDispatch } from "react-redux";
 import type { APIDataLayer, APISkeletonLayer } from "types/api_types";
 import { getDatasetBoundingBox } from "viewer/model/accessors/dataset_accessor";
-import FlipIcon from "@images/icons/icon-flip.svg?react";
 import {
   buildLiveTransforms,
   DEFAULT_SRT,

@@ -64,6 +64,8 @@ vi.mock("libs/request", async (importOriginal) => {
   return await importOriginal();
 });
 
+const DEBUG_SAVE_REQUESTS = false;
+
 // ---------------------------------------------------------------------------
 // Shared state
 // ---------------------------------------------------------------------------
@@ -270,19 +272,23 @@ describe("Live Collaboration", () => {
             proofreadMergeActionObjCollab,
           );
 
-          // Wait for the merge saga to finish, then save to flush the update requests.
-          await sleep(1_000);
-          await page.evaluate(() => window.webknossos.apiReady().then((api) => api.tracing.save()));
+          if (DEBUG_SAVE_REQUESTS) {
+            // Wait for the merge saga to finish, then save to flush the update requests.
+            await sleep(1_000);
+            await page.evaluate(() =>
+              window.webknossos.apiReady().then((api) => api.tracing.save()),
+            );
 
-          const label = `[user ${userIndex}] merge ${JSON.stringify(op.sourcePosition)} → ${JSON.stringify(op.targetPosition)}`;
-          const sent = getUpdateRequests(mergeDispatchTime);
-          if (sent.length === 0) {
-            console.log(`${label}: no update requests were sent (nothing to save?)`);
-          } else {
-            for (const r of sent) {
-              console.log(
-                `${label} update request at ${new Date(r.timestamp).toISOString()}:\n${r.body}`,
-              );
+            const label = `[user ${userIndex}] merge ${JSON.stringify(op.sourcePosition)} → ${JSON.stringify(op.targetPosition)}`;
+            const sent = getUpdateRequests(mergeDispatchTime);
+            if (sent.length === 0) {
+              console.log(`${label}: no update requests were sent (nothing to save?)`);
+            } else {
+              for (const r of sent) {
+                console.log(
+                  `${label} update request at ${new Date(r.timestamp).toISOString()}:\n${r.body}`,
+                );
+              }
             }
           }
         }

@@ -179,7 +179,6 @@ describe.each(
           agglomerateId: 4,
         },
       };
-      console.log("injectVersion")
       backendMock.injectVersion([foreignSplitAction], 4);
 
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);

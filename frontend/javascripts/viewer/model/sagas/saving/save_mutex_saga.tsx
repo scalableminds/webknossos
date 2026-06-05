@@ -307,7 +307,6 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
       yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
     }
     try {
-      console.log("requesting mutex")
       const {
         canEdit,
         blockedByUser: blockedByUser,
@@ -319,7 +318,6 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
         annotationId,
         TAB_SESSION_ID,
         );
-      console.log("mutex saga got canEdit=", canEdit)
       if (mutexLogicState.isInitialRequest || !canEdit) {
         // Only change isUpdatingAnnotationCurrentlyAllowed directly after
         // the initial request OR when we disable editing.

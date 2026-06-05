@@ -342,10 +342,12 @@ describe("Live Collaboration", () => {
 
     // No page errors in any session
     for (let i = 0; i < sessions.length; i++) {
-      console.log("Checking for errors in session", i, ":", sessions[i].errors);
       const filteredErrors = sessions[i].errors.filter(
         (err) => !err.includes("Both segments belong to agglomerate id="),
       );
+      if (filteredErrors.length > 0) {
+        console.log("Found errors in session", i, ":", sessions[i].errors);
+      }
       expect(filteredErrors, `User ${i} (${collabUsers[i].email}) had page errors`).toHaveLength(0);
     }
 

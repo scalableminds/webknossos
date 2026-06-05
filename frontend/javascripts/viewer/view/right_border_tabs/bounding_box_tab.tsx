@@ -1,10 +1,10 @@
 import {
   AppstoreAddOutlined,
   DeleteOutlined,
-  FireOutlined,
   PlusOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
+import MipIcon from "@images/icons/icon-MIP.svg?react";
 import {
   Divider,
   Empty,
@@ -370,7 +370,7 @@ export default function BoundingBoxTab() {
               variant="text"
               color="default"
               title="MIP rendering settings"
-              icon={<FireOutlined />}
+              icon={<MipIcon />}
             />
           </Popover>
         )}

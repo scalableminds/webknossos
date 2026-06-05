@@ -3,11 +3,11 @@ import {
   DeleteOutlined,
   DownloadOutlined,
   EllipsisOutlined,
-  FireOutlined,
   InfoCircleOutlined,
   LoadingOutlined,
   ScanOutlined,
 } from "@ant-design/icons";
+import MipIcon from "@images/icons/icon-MIP.svg?react";
 import { Dropdown, Flex, Input, type MenuProps, Switch } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { formatBytes } from "libs/format_utils";
@@ -245,7 +245,7 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
     const renderAsMipItem: NonNullable<MenuProps["items"]>[number] = {
       key: "renderAsMip",
       label: "Render as MIP",
-      icon: <FireOutlined />,
+      icon: <MipIcon />,
       disabled: availableColorLayers.length === 0,
       onTitleClick: buildAutoSelectHandler(availableColorLayers),
       children: availableColorLayers.map((layer) => {
@@ -283,7 +283,7 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
         ? {
             key: "mipLayers",
             label: "Active MIP layers",
-            icon: <FireOutlined />,
+            icon: <MipIcon />,
             children: [
               ...mipLayers.map((l) => ({
                 key: `removeMipLayer-${l.layerName}`,
@@ -419,7 +419,7 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
                 isMipLoading ? (
                   <LoadingOutlined style={{ color: "#1677ff" }} />
                 ) : (
-                  <FireOutlined style={{ color: "#1677ff" }} />
+                  <MipIcon style={{ color: "#1677ff" }} />
                 )
               }
               onClick={(e) => e.stopPropagation()}

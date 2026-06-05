@@ -34,6 +34,8 @@ class UploadController @Inject()(
     slackNotificationService: DSSlackNotificationService)(implicit bodyParsers: PlayBodyParsers, ec: ExecutionContext)
     extends Controller {
 
+  override def allowRemoteOrigin: Boolean = true
+
   def reserveDatasetUpload(): Action[DatasetUploadInfo] =
     Action.async(validateJson[DatasetUploadInfo]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(

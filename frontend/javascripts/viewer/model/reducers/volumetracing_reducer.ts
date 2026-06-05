@@ -264,7 +264,7 @@ function VolumeTracingReducer(
         return state;
       }
       return update(state, {
-        localSegmentationData: {
+        localSegmentationStateByLayer: {
           [layerName]: {
             proofreadingMarkerPosition: {
               $set: action.position,
@@ -328,7 +328,7 @@ function VolumeTracingReducer(
         }
 
         return update(state, {
-          localSegmentationData: {
+          localSegmentationStateByLayer: {
             [layerName]: {
               hideUnregisteredSegments: {
                 $set: action.value,

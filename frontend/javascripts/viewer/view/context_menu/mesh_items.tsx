@@ -34,7 +34,7 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
 
   const currentMeshFile = useWkSelector((state) =>
     visibleSegmentationLayer != null
-      ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
+      ? state.localSegmentationStateByLayer[visibleSegmentationLayer.name].currentMeshFile
       : null,
   );
   const meshFileMappingName = currentMeshFile?.mappingName;
@@ -57,8 +57,8 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
   const minCutPartitions = useWkSelector((state) => {
     if (volumeTracing == null) return undefined;
     const layerId = volumeTracing.tracingId;
-    return layerId in state.localSegmentationData
-      ? state.localSegmentationData[layerId].minCutPartitions
+    return layerId in state.localSegmentationStateByLayer
+      ? state.localSegmentationStateByLayer[layerId].minCutPartitions
       : undefined;
   });
 

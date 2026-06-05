@@ -21,7 +21,7 @@ function DatasetReducer(state: WebknossosState, action: Action): WebknossosState
       return {
         ...state,
         dataset,
-        localSegmentationData: createDictWithKeysAndValue(segmentationLayerNames, () => ({
+        localSegmentationStateByLayer: createDictWithKeysAndValue(segmentationLayerNames, () => ({
           meshes: {},
           availableMeshFiles: null,
           currentMeshFile: null,

@@ -76,8 +76,8 @@ export function useMultiCutToolOptions(
     if (volumeTracing == null) return undefined;
 
     const layerId = volumeTracing.tracingId;
-    return layerId in state.localSegmentationData
-      ? state.localSegmentationData[layerId].minCutPartitions
+    return layerId in state.localSegmentationStateByLayer
+      ? state.localSegmentationStateByLayer[layerId].minCutPartitions
       : undefined;
   });
   const dispatch = useDispatch();

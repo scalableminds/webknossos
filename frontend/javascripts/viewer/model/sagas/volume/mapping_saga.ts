@@ -617,7 +617,7 @@ function* adaptActiveSegmentToProofreadingMarker(layerName: string) {
   }
 
   const proofreadingMarkerPosition = yield* select(
-    (state) => state.localSegmentationData[layerName]?.proofreadingMarkerPosition,
+    (state) => state.localSegmentationStateByLayer[layerName]?.proofreadingMarkerPosition,
   );
   if (proofreadingMarkerPosition) {
     const agglomerateId = yield* call(getSegmentIdForPositionAsync, proofreadingMarkerPosition);

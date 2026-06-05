@@ -288,7 +288,7 @@ export function getSegmentUpdateInfo(
     return {
       type: "UPDATE_LOCAL_SEGMENTATION_DATA",
       layerName: layer.name,
-      segments: state.localSegmentationData[layer.name].segments,
+      segments: state.localSegmentationStateByLayer[layer.name].segments,
       segmentGroups: [],
     };
   }
@@ -368,7 +368,7 @@ export function updateSegments(
   const { segments } =
     updateInfo.type === "UPDATE_VOLUME_TRACING"
       ? updateInfo.volumeTracing
-      : state.localSegmentationData[updateInfo.layerName];
+      : state.localSegmentationStateByLayer[updateInfo.layerName];
 
   const newSegmentMap = mapFn(segments);
 
@@ -378,8 +378,8 @@ export function updateSegments(
     });
   }
 
-  // Update localSegmentationData
-  return updateKey2(state, "localSegmentationData", updateInfo.layerName, {
+  // Update localSegmentationStateByLayer
+  return updateKey2(state, "localSegmentationStateByLayer", updateInfo.layerName, {
     segments: newSegmentMap,
   });
 }

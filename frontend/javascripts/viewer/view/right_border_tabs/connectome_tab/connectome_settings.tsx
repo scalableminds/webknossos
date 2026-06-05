@@ -36,7 +36,7 @@ const mapStateToProps = (state: WebknossosState, ownProps: OwnProps): StateProps
   const { segmentationLayer } = ownProps;
   const connectomeData =
     segmentationLayer != null
-      ? state.localSegmentationData[segmentationLayer.name].connectomeData
+      ? state.localSegmentationStateByLayer[segmentationLayer.name].connectomeData
       : null;
   return {
     dataset: state.dataset,

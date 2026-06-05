@@ -237,7 +237,7 @@ function* showToastIfSegmentOfOtherAgglomerateWasSelected(
   if (!layerName) {
     return;
   }
-  const layerData = yield* select((state) => state.localSegmentationData[layerName]);
+  const layerData = yield* select((state) => state.localSegmentationStateByLayer[layerName]);
   if (!layerData || !layerData.minCutPartitions) {
     return;
   }
@@ -319,7 +319,7 @@ function* loadCoarseMesh(
   yield* call(dispatchMaybeFetchMeshFilesAsync, Store.dispatch, layer, dataset, false);
 
   const currentMeshFile = yield* select(
-    (state) => state.localSegmentationData[layerName].currentMeshFile,
+    (state) => state.localSegmentationStateByLayer[layerName].currentMeshFile,
   );
 
   const meshInfo = yield* select((state) =>
@@ -965,7 +965,8 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
     return;
   }
   const partitions = yield* select(
-    (state) => state.localSegmentationData[preparation.volumeTracing.tracingId].minCutPartitions,
+    (state) =>
+      state.localSegmentationStateByLayer[preparation.volumeTracing.tracingId].minCutPartitions,
   );
   let agglomerateId = partitions.agglomerateId;
   if (partitions[1].length <= 0 || partitions[2].length <= 0) {
@@ -1232,7 +1233,7 @@ function* clearProofreadingByproducts() {
   );
   const meshInfos =
     (yield* select(
-      (state) => state.localSegmentationData[layerName]?.meshes?.[additionalCoordinateKey],
+      (state) => state.localSegmentationStateByLayer[layerName]?.meshes?.[additionalCoordinateKey],
     )) || {};
   const meshRemoveActions = Object.values(meshInfos).map((meshInfo) => {
     return removeMeshAction(layerName, meshInfo.segmentId);

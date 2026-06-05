@@ -393,7 +393,7 @@ export function getSegmentsForLayer(state: WebknossosState, layerName: string): 
     return getVolumeTracingById(state.annotation, layer.tracingId).segments;
   }
 
-  return state.localSegmentationData[layer.name].segments;
+  return state.localSegmentationStateByLayer[layer.name].segments;
 }
 
 const EMPTY_SEGMENT_GROUPS: SegmentGroup[] = [];
@@ -413,7 +413,7 @@ export function getVisibleSegments(state: WebknossosState): {
   }
 
   // There aren't any segment groups for view-only layers
-  const { segments } = state.localSegmentationData[layer.name];
+  const { segments } = state.localSegmentationStateByLayer[layer.name];
   return { segments, segmentGroups: EMPTY_SEGMENT_GROUPS };
 }
 
@@ -439,7 +439,7 @@ export function getHideUnregisteredSegmentsForLayer(
     return getVolumeTracingById(state.annotation, layer.tracingId).hideUnregisteredSegments;
   }
 
-  return state.localSegmentationData[layer.name].hideUnregisteredSegments;
+  return state.localSegmentationStateByLayer[layer.name].hideUnregisteredSegments;
 }
 
 const EMPTY_SEGMENT_JOURNAL: SegmentJournalEntry[] = [];
@@ -476,7 +476,7 @@ function _getSelectedIds(state: WebknossosState): {
       maybeUpdateStoreAction: maybeSetSelectedSegmentsOrGroupsAction,
     };
   }
-  const segmentationLayerData = state.localSegmentationData[visibleSegmentationLayer.name];
+  const segmentationLayerData = state.localSegmentationStateByLayer[visibleSegmentationLayer.name];
   const { segments, group } = segmentationLayerData.selectedIds;
   if (segments.length === 0 && group == null) {
     return {
@@ -520,7 +520,7 @@ export function getProofreadingMarkerPosition(state: WebknossosState): Vector3 |
   const layer = getVisibleSegmentationLayer(state);
   if (layer == null) return null;
 
-  return state.localSegmentationData[layer.name]?.proofreadingMarkerPosition;
+  return state.localSegmentationStateByLayer[layer.name]?.proofreadingMarkerPosition;
 }
 
 /*
@@ -735,9 +735,9 @@ function getMeshOpacity(
 ): number | undefined {
   const additionalCoords = state.flycam.additionalCoordinates;
   const additionalCoordinateKey = getAdditionalCoordinatesAsString(additionalCoords);
-  const localSegmentationData = state.localSegmentationData[layerName];
-  if (localSegmentationData?.meshes == null) return undefined;
-  const meshData = localSegmentationData.meshes[additionalCoordinateKey];
+  const localSegmentationState = state.localSegmentationStateByLayer[layerName];
+  if (localSegmentationState?.meshes == null) return undefined;
+  const meshData = localSegmentationState.meshes[additionalCoordinateKey];
   if (meshData == null || meshData[segmentId] == null) return undefined;
   return meshData[segmentId].opacity;
 }
@@ -749,9 +749,9 @@ export function isMeshLoaded(
 ): boolean {
   const additionalCoords = state.flycam.additionalCoordinates;
   const additionalCoordinateKey = getAdditionalCoordinatesAsString(additionalCoords);
-  const localSegmentationData = state.localSegmentationData[layerName];
-  if (localSegmentationData?.meshes == null) return false;
-  const meshData = localSegmentationData.meshes[additionalCoordinateKey];
+  const localSegmentationState = state.localSegmentationStateByLayer[layerName];
+  if (localSegmentationState?.meshes == null) return false;
+  const meshData = localSegmentationState.meshes[additionalCoordinateKey];
   if (meshData == null || meshData[segmentId] == null) return false;
   return meshData[segmentId] != null;
 }
@@ -760,9 +760,9 @@ export function getAllLoadedMeshes(state: WebknossosState, layerName: string): S
   const loadedMeshIds = new Set<number>();
   const additionalCoords = state.flycam.additionalCoordinates;
   const additionalCoordinateKey = getAdditionalCoordinatesAsString(additionalCoords);
-  const localSegmentationData = state.localSegmentationData[layerName];
-  if (localSegmentationData?.meshes == null) return loadedMeshIds;
-  const meshData = localSegmentationData.meshes[additionalCoordinateKey];
+  const localSegmentationState = state.localSegmentationStateByLayer[layerName];
+  if (localSegmentationState?.meshes == null) return loadedMeshIds;
+  const meshData = localSegmentationState.meshes[additionalCoordinateKey];
   if (meshData == null) return loadedMeshIds;
   Object.values(meshData).forEach((meshInfo) => {
     loadedMeshIds.add(meshInfo.segmentId);
@@ -856,7 +856,7 @@ export function hasConnectomeFile(state: WebknossosState) {
   }
 
   const { currentConnectomeFile } =
-    state.localSegmentationData[segmentationLayer.name].connectomeData;
+    state.localSegmentationStateByLayer[segmentationLayer.name].connectomeData;
 
   if (currentConnectomeFile == null) {
     return CONNECTOME_STATES.NO_CONNECTOME_FILE;
@@ -914,7 +914,7 @@ export function getMeshesForAdditionalCoordinates(
   layerName: string,
 ) {
   const addCoordKey = getAdditionalCoordinatesAsString(additionalCoordinates);
-  const meshRecords = state.localSegmentationData[layerName].meshes;
+  const meshRecords = state.localSegmentationStateByLayer[layerName].meshes;
   if (meshRecords?.[addCoordKey] != null) {
     return meshRecords[addCoordKey];
   }

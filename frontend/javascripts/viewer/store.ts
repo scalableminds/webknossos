@@ -203,7 +203,7 @@ export type SegmentJournalEntry = {
 
 export type VolumeTracing = TracingBase & {
   readonly type: "volume";
-  // Note that there are also SegmentMaps in `state.localSegmentationData`
+  // Note that there are also SegmentMaps in `state.localSegmentationStateByLayer`
   // for non-annotation volume layers.
   readonly segments: SegmentMap;
   readonly segmentGroups: Array<SegmentGroup>;
@@ -636,7 +636,7 @@ export type MinCutPartitions = { 1: number[]; 2: number[]; agglomerateId: number
 export type LocalMeshesInfo =
   | Record<string, Record<number, MeshInformation> | undefined>
   | undefined;
-export type LocalSegmentationData = {
+export type LocalSegmentationState = {
   // For meshes, the string represents additional coordinates, number is the segment ID.
   // The undefined types were added to enforce null checks when using this structure.
   readonly meshes: LocalMeshesInfo;
@@ -692,9 +692,9 @@ export type WebknossosState = {
   readonly activeUser: APIUser | null | undefined;
   readonly activeOrganization: APIOrganization | null;
   readonly uiInformation: UiInformation;
-  readonly localSegmentationData: Record<
+  readonly localSegmentationStateByLayer: Record<
     string, // layerName
-    LocalSegmentationData
+    LocalSegmentationState
   >;
 };
 const sagaMiddleware = createSagaMiddleware();

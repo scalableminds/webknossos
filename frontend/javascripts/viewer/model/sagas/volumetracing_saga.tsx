@@ -503,7 +503,7 @@ function* updateClickedSegments(action: ClickSegmentAction | SetActiveCellAction
   if (layerName == null) return;
   const clickedSegmentId = segmentId;
   const selectedSegmentsOrGroup = yield* select(
-    (state) => state.localSegmentationData[layerName]?.selectedIds,
+    (state) => state.localSegmentationStateByLayer[layerName]?.selectedIds,
   );
   const numberOfSelectedSegments = selectedSegmentsOrGroup.segments.length;
   if (numberOfSelectedSegments < 2) {

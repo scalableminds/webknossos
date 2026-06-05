@@ -401,7 +401,8 @@ class PlaneView {
             return null;
           }
           return storeState.uiInformation.activeTool === AnnotationTool.PROOFREAD
-            ? storeState.localSegmentationData[segmentationTracing.tracingId].minCutPartitions
+            ? storeState.localSegmentationStateByLayer[segmentationTracing.tracingId]
+                .minCutPartitions
             : null;
         },
         (minCutPartitions) =>

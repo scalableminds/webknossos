@@ -66,7 +66,7 @@ const mapStateToProps = (state: WebknossosState): StateProps => {
   const segmentationLayer = getVisibleOrLastSegmentationLayer(state);
   const connectomeData =
     segmentationLayer != null
-      ? state.localSegmentationData[segmentationLayer.name].connectomeData
+      ? state.localSegmentationStateByLayer[segmentationLayer.name].connectomeData
       : null;
   const mappingInfo =
     segmentationLayer != null
@@ -306,7 +306,7 @@ class ConnectomeView extends React.Component<Props, State> {
     Store.dispatch(initializeConnectomeTracingAction(segmentationLayer.name));
     this.skeletonId = getSceneController().addSkeleton(
       (state) =>
-        state.localSegmentationData[segmentationLayer.name].connectomeData.skeleton ?? null,
+        state.localSegmentationStateByLayer[segmentationLayer.name].connectomeData.skeleton ?? null,
       false,
     );
   }
@@ -471,7 +471,8 @@ class ConnectomeView extends React.Component<Props, State> {
     }
 
     const layerName = segmentationLayer.name;
-    const skeleton = Store.getState().localSegmentationData[layerName].connectomeData.skeleton;
+    const skeleton =
+      Store.getState().localSegmentationStateByLayer[layerName].connectomeData.skeleton;
     if (skeleton == null) return;
     const { trees } = skeleton;
 
@@ -600,7 +601,8 @@ class ConnectomeView extends React.Component<Props, State> {
       }
     }
 
-    const skeleton = Store.getState().localSegmentationData[layerName].connectomeData.skeleton;
+    const skeleton =
+      Store.getState().localSegmentationStateByLayer[layerName].connectomeData.skeleton;
     if (skeleton == null) return;
     const { trees } = skeleton;
 

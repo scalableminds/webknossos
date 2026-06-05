@@ -6,6 +6,6 @@ export default defineConfig({
   test: {
     ...config.test,
     setupFiles: [], // this explicitly ignores global_mocks.ts which is specified in vitest.config.ts
-    include: ["./frontend/javascripts/test/puppeteer/**/*.puppeteer.ts"],
+    include: ["./frontend/javascripts/test/browser/**/*.browser_spec.ts"],
   },
 });

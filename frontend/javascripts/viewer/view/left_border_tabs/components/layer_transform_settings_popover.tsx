@@ -127,6 +127,9 @@ export function LayerTransformSettingsContent({
     const dataLayer = state.dataset.dataSource.dataLayers.find((l) => l.name === layer.name);
     return dataLayer?.coordinateTransformations ?? null;
   });
+  const isNativelyRendered = useWkSelector(
+    (state) => state.datasetConfiguration.nativelyRenderedLayerName === layer.name,
+  );
 
   const isCompatible = useMemo(() => isLiveTransformCompatible(transforms), [transforms]);
 
@@ -236,6 +239,16 @@ export function LayerTransformSettingsContent({
     );
   }
 
+  if (isNativelyRendered) {
+    return (
+      <div style={{ maxWidth: 240, color: "var(--ant-color-text-secondary)" }}>
+        This layer is currently rendered natively (without its transforms applied). Editing is
+        disabled to avoid confusion. To edit the transforms, disable native rendering for this layer
+        first.
+      </div>
+    );
+  }
+
   const { scale, rotation, translation } = srtFromStore;
 
   const updateScale = (axis: 0 | 1 | 2, v: number) => {
@@ -258,6 +271,34 @@ export function LayerTransformSettingsContent({
 
   return (
     <div style={{ width: 250 }}>
+      <SectionLabel style={{ marginTop: 10 }}>Translation</SectionLabel>
+      {(["X", "Y", "Z"] as const).map((axis, i) => (
+        <AxisSliderRow
+          key={axis}
+          label={axis}
+          value={translation[i]}
+          storedValue={storedSRT.translation[i]}
+          min={-translationSettingLimits[i]}
+          max={translationSettingLimits[i]}
+          step={1}
+          onChange={(v) => updateTranslation(i as 0 | 1 | 2, v)}
+          resetDisabled={isFetchingStored}
+        />
+      ))}
+      <SectionLabel style={{ marginTop: 10 }}>Rotation</SectionLabel>
+      {(["X", "Y", "Z"] as const).map((axis, i) => (
+        <AxisSliderRow
+          key={axis}
+          label={axis}
+          value={rotation[i]}
+          storedValue={storedSRT.rotation[i]}
+          min={0}
+          max={359.9}
+          step={0.1}
+          onChange={(v) => updateRotation(i as 0 | 1 | 2, v)}
+          resetDisabled={isFetchingStored}
+        />
+      ))}
       <SectionLabel>Scaling</SectionLabel>
       <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
         {(["X", "Y", "Z"] as const).map((axis, i) => (
@@ -282,34 +323,6 @@ export function LayerTransformSettingsContent({
           max={10}
           step={0.1}
           onChange={(v) => updateScale(i as 0 | 1 | 2, v)}
-          resetDisabled={isFetchingStored}
-        />
-      ))}
-      <SectionLabel style={{ marginTop: 10 }}>Rotation</SectionLabel>
-      {(["X", "Y", "Z"] as const).map((axis, i) => (
-        <AxisSliderRow
-          key={axis}
-          label={axis}
-          value={rotation[i]}
-          storedValue={storedSRT.rotation[i]}
-          min={0}
-          max={359.9}
-          step={0.1}
-          onChange={(v) => updateRotation(i as 0 | 1 | 2, v)}
-          resetDisabled={isFetchingStored}
-        />
-      ))}
-      <SectionLabel style={{ marginTop: 10 }}>Translation</SectionLabel>
-      {(["X", "Y", "Z"] as const).map((axis, i) => (
-        <AxisSliderRow
-          key={axis}
-          label={axis}
-          value={translation[i]}
-          storedValue={storedSRT.translation[i]}
-          min={-translationSettingLimits[i]}
-          max={translationSettingLimits[i]}
-          step={1}
-          onChange={(v) => updateTranslation(i as 0 | 1 | 2, v)}
           resetDisabled={isFetchingStored}
         />
       ))}

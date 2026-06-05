@@ -289,15 +289,6 @@ describe("Live Collaboration", () => {
       }),
     );
 
-    // No page errors in any session
-    for (let i = 0; i < sessions.length; i++) {
-      console.log("Checking for errors in session", i, ":", sessions[i].errors);
-      const filteredErrors = sessions[i].errors.filter(
-        (err) => !err.includes("Both segments belong to agglomerate id="),
-      );
-      expect(filteredErrors, `User ${i} (${collabUsers[i].email}) had page errors`).toHaveLength(0);
-    }
-
     // Open a fresh admin page, reload the annotation, and verify all merges.
     const { page: adminVerifyPage, browser: adminVerifyBrowser } = await getNewPage(WK_AUTH_TOKEN!);
     browsers.push(adminVerifyBrowser);
@@ -324,8 +315,8 @@ describe("Live Collaboration", () => {
         }) => {
           const api = await (window as any).webknossos.apiReady();
           return Promise.all([
-            api.data.getMappedDataValue(layerName, sourcePos),
-            api.data.getMappedDataValue(layerName, targetPos),
+            api.data.getMappedDataValue(layerName, sourcePos, 2), // todop: use an appropriate zoom step without hardcoding
+            api.data.getMappedDataValue(layerName, targetPos, 2),
           ]);
         },
         {
@@ -342,6 +333,15 @@ describe("Live Collaboration", () => {
     }
 
     await adminVerifyPage.close();
+
+    // No page errors in any session
+    for (let i = 0; i < sessions.length; i++) {
+      console.log("Checking for errors in session", i, ":", sessions[i].errors);
+      const filteredErrors = sessions[i].errors.filter(
+        (err) => !err.includes("Both segments belong to agglomerate id="),
+      );
+      expect(filteredErrors, `User ${i} (${collabUsers[i].email}) had page errors`).toHaveLength(0);
+    }
 
     // await sleep(3000_000);
 

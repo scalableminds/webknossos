@@ -422,10 +422,14 @@ export function mockInitialBucketAndAgglomerateData(
   context: WebknossosTestContext,
   additionalEdges: Vector2[] = [],
   initialState: WebknossosState | undefined = undefined,
+  options?: { grantMutex?: boolean },
 ) {
   const { mocks } = context;
 
   const backendMock = new BackendMock(initialBucketOverrides, additionalEdges, initialState);
+  if (options?.grantMutex === false) {
+    backendMock.canGrantMutex = false;
+  }
 
   vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
     createBucketResponseFunction(

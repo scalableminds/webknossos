@@ -30,7 +30,6 @@ import {
 } from "./proofreading_fixtures";
 import { loadAgglomerateTree1 } from "./proofreading_interaction_update_action_fixtures";
 import {
-  type BackendMock,
   expectSegmentList,
   getPositionForSegmentId,
   initializeMappingAndTool,
@@ -40,13 +39,8 @@ import {
 
 describe.each(
   AnnotationCollaborationModes,
-  // ["Exclusive"]
 )("Proofreading (Poll only) with collaborationMode=%s", (collabMode: AnnotationCollaborationMode) => {
-  function* initializePollOnlyAnnotation(
-    context: WebknossosTestContext,
-    tracingId: string,
-    backendMock: BackendMock,
-  ) {
+  function* initializePollOnlyAnnotation(context: WebknossosTestContext, tracingId: string) {
     yield call(initializeMappingAndTool, context, tracingId);
 
     const mapping0 = yield* select(
@@ -55,10 +49,10 @@ describe.each(
     );
     expect(mapping0).toEqual(initialMapping);
 
-    yield makeAnnotationPollOnly(context, backendMock);
+    yield makeAnnotationPollOnly(context);
   }
 
-  function* makeAnnotationPollOnly(context: WebknossosTestContext, backendMock: BackendMock) {
+  function* makeAnnotationPollOnly(context: WebknossosTestContext) {
     const { api } = context;
     // Set collab mode to concurrent to be able to save the updates about initializing the mapping.
     yield put(setCollaborationModeAction("Concurrent"));
@@ -77,7 +71,6 @@ describe.each(
     yield put(setActiveUserAction(differentUser));
     yield put(setCollaborationModeAction(collabMode));
     yield put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
-    backendMock.canGrantMutex = false;
   }
 
   beforeEach<WebknossosTestContext>(async (context) => {
@@ -90,13 +83,13 @@ describe.each(
   });
 
   it("should update the mapping when the server has a new update action with a merge operation", async (context: WebknossosTestContext) => {
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), { grantMutex: false });
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* () {
-      yield initializePollOnlyAnnotation(context, tracingId, backendMock);
+      yield initializePollOnlyAnnotation(context, tracingId);
 
       const foreignMergeAction = {
         name: "mergeAgglomerate" as const,
@@ -146,8 +139,8 @@ describe.each(
         [4, 1338],
       ],
       Store.getState(),
+      { grantMutex: false },
     );
-    backendMock.canGrantMutex = false;
     // Initial Mapping
     // 1-2-3
     // 5-4-1338-1337-7-6
@@ -175,7 +168,7 @@ describe.each(
         ]),
       );
 
-      yield* makeAnnotationPollOnly(context, backendMock);
+      yield* makeAnnotationPollOnly(context);
 
       const foreignSplitAction = {
         name: "splitAgglomerate" as const,
@@ -270,13 +263,13 @@ describe.each(
 
   it("should update the mapping when the server has a new update action with a split operation", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), { grantMutex: false });
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* () {
-      yield initializePollOnlyAnnotation(context, tracingId, backendMock);
+      yield initializePollOnlyAnnotation(context, tracingId);
 
       const foreignSplitAction = {
         name: "splitAgglomerate" as const,
@@ -321,7 +314,7 @@ describe.each(
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* () {
-      yield initializePollOnlyAnnotation(context, tracingId, backendMock);
+      yield initializePollOnlyAnnotation(context, tracingId);
 
       const foreignSplitAction1 = {
         name: "splitAgglomerate" as const,
@@ -386,13 +379,13 @@ describe.each(
 
   it("should update the mapping correctly when the server has a new update action with a merge and split operation with segments unknown to the client", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), { grantMutex: false });
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* () {
-      yield initializePollOnlyAnnotation(context, tracingId, backendMock);
+      yield initializePollOnlyAnnotation(context, tracingId);
 
       const foreignMergeAction = {
         name: "mergeAgglomerate" as const,
@@ -456,14 +449,14 @@ describe.each(
 
   it("should not perform a rebase when there are no local changes", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), { grantMutex: false });
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* () {
       const rebaseActionChannel = yield actionChannel(["PREPARE_REBASING", "FINISHED_REBASING"]);
-      yield initializePollOnlyAnnotation(context, tracingId, backendMock);
+      yield initializePollOnlyAnnotation(context, tracingId);
 
       const foreignMergeAction = {
         name: "mergeAgglomerate" as const,
@@ -509,13 +502,13 @@ describe.each(
 
   it("should poll updates for a simple merge", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), { grantMutex: false });
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* () {
-      yield initializePollOnlyAnnotation(context, tracingId, backendMock);
+      yield initializePollOnlyAnnotation(context, tracingId);
 
       const foreignMergeAction = {
         name: "mergeAgglomerate" as const,
@@ -557,7 +550,7 @@ describe.each(
   });
 
   it("should simply forward received update actions like agglomerate tree update actions without putting these changes to its own save queue or sending them to the backend", async (context: WebknossosTestContext) => {
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), { grantMutex: false });
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -571,7 +564,7 @@ describe.each(
       yield put(setActiveCellAction(1));
       yield makeMappingEditableForTest();
 
-      yield* makeAnnotationPollOnly(context, backendMock);
+      yield* makeAnnotationPollOnly(context);
 
       // Store current annotation version, calculate expected version after injecting updates and inject the agglomerate tree loading.
       const receivedAmountOfUpdateRequests = context.receivedDataPerSaveRequest.length;

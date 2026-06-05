@@ -16,6 +16,7 @@ import {
 import { useDispatch } from "react-redux";
 import type { APIDataLayer, APISkeletonLayer } from "types/api_types";
 import { getDatasetBoundingBox } from "viewer/model/accessors/dataset_accessor";
+import FlipIcon from "@images/icons/icon-flip.svg?react";
 import {
   buildLiveTransforms,
   DEFAULT_SRT,
@@ -54,6 +55,7 @@ function AxisSliderRow({
   step,
   onChange,
   resetDisabled,
+  onFlip,
 }: {
   label: string;
   value: number;
@@ -63,6 +65,7 @@ function AxisSliderRow({
   step: number;
   onChange: (v: number) => void;
   resetDisabled: boolean;
+  onFlip?: () => void;
 }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
@@ -86,6 +89,17 @@ function AxisSliderRow({
         size="small"
         style={{ width: 62 }}
       />
+      {onFlip != null && (
+        <Tooltip title="Flip axis">
+          <Button
+            type="text"
+            size="small"
+            icon={<FlipIcon />}
+            onClick={onFlip}
+            style={{ flexShrink: 0, padding: "0 4px" }}
+          />
+        </Tooltip>
+      )}
       <Tooltip title="Reset to stored default">
         <Button
           type="text"
@@ -300,18 +314,6 @@ export function LayerTransformSettingsContent({
         />
       ))}
       <SectionLabel>Scaling</SectionLabel>
-      <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
-        {(["X", "Y", "Z"] as const).map((axis, i) => (
-          <Button
-            key={axis}
-            size="small"
-            style={{ flex: 1 }}
-            onClick={() => updateScale(i as 0 | 1 | 2, -scale[i])}
-          >
-            Flip {axis}
-          </Button>
-        ))}
-      </div>
       {/* Negative scale mirrors the layer along that axis and is intentionally allowed. */}
       {(["X", "Y", "Z"] as const).map((axis, i) => (
         <AxisSliderRow
@@ -324,6 +326,7 @@ export function LayerTransformSettingsContent({
           step={0.1}
           onChange={(v) => updateScale(i as 0 | 1 | 2, v)}
           resetDisabled={isFetchingStored}
+          onFlip={() => updateScale(i as 0 | 1 | 2, -scale[i])}
         />
       ))}
       <Divider />

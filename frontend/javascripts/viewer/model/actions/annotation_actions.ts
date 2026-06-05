@@ -164,10 +164,10 @@ export const setAnnotationDescriptionAction = (description: string) =>
   }) as const;
 
 export const setIsUpdatingAnnotationCurrentlyAllowedAction = (currentlyAllowUpdate: boolean) =>
-({
-  type: "SET_ANNOTATION_ALLOW_UPDATE",
-  currentlyAllowUpdate,
-}) as const;
+  ({
+    type: "SET_ANNOTATION_ALLOW_UPDATE",
+    currentlyAllowUpdate,
+  }) as const;
 
 // Strictly speaking this is no annotation action but a tracing action, as the boundingBox is saved with
 // the tracing, hence no ANNOTATION in the action type.

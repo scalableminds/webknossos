@@ -83,7 +83,9 @@ describe.each(
   });
 
   it("should update the mapping when the server has a new update action with a merge operation", async (context: WebknossosTestContext) => {
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), { grantMutex: false });
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), {
+      grantMutex: false,
+    });
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -262,7 +264,9 @@ describe.each(
 
   it("should update the mapping when the server has a new update action with a split operation", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), { grantMutex: false });
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), {
+      grantMutex: false,
+    });
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -378,7 +382,9 @@ describe.each(
 
   it("should update the mapping correctly when the server has a new update action with a merge and split operation with segments unknown to the client", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), { grantMutex: false });
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), {
+      grantMutex: false,
+    });
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -448,7 +454,9 @@ describe.each(
 
   it("should not perform a rebase when there are no local changes", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), { grantMutex: false });
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), {
+      grantMutex: false,
+    });
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -501,7 +509,9 @@ describe.each(
 
   it("should poll updates for a simple merge", async (context: WebknossosTestContext) => {
     const { api } = context;
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), { grantMutex: false });
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), {
+      grantMutex: false,
+    });
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];
@@ -549,7 +559,9 @@ describe.each(
   });
 
   it("should simply forward received update actions like agglomerate tree update actions without putting these changes to its own save queue or sending them to the backend", async (context: WebknossosTestContext) => {
-    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), { grantMutex: false });
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState(), {
+      grantMutex: false,
+    });
 
     const { annotation } = Store.getState();
     const { tracingId } = annotation.volumes[0];

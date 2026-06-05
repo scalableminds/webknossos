@@ -317,7 +317,7 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
         acquireAnnotationMutex,
         annotationId,
         TAB_SESSION_ID,
-        );
+      );
       if (mutexLogicState.isInitialRequest || !canEdit) {
         // Only change isUpdatingAnnotationCurrentlyAllowed directly after
         // the initial request OR when we disable editing.

@@ -337,40 +337,40 @@ export default function BoundingBoxTab() {
           icon={<DeleteOutlined />}
         />
         <Popover
-            title="Maximum Intensity Projection (MIP) Settings"
-            trigger="click"
-            content={
-              <div style={{ width: 260 }}>
-                <div style={{ marginBottom: 4 }}>Ray marching steps</div>
-                <Flex gap="small" align="center">
-                  <Slider
-                    style={{ flex: 1 }}
-                    min={16}
-                    max={512}
-                    step={16}
-                    value={mipRaymarchingSteps}
-                    onChange={(v) => dispatch(updateUserSettingAction("mipRaymarchingSteps", v))}
-                  />
-                  <span style={{ width: 30, textAlign: "right" }}>{mipRaymarchingSteps}</span>
-                </Flex>
-                <Flex gap="small" align="center" style={{ marginTop: 8 }}>
-                  <Switch
-                    size="small"
-                    checked={mipDepthWrite}
-                    onChange={(v) => dispatch(updateUserSettingAction("mipDepthWrite", v))}
-                  />
-                  <span>Depth-correct rendering</span>
-                </Flex>
-              </div>
-            }
-          >
-            <ButtonComponent
-              variant="text"
-              color="default"
-              title="Maximum Intensity Projection (MIP) rendering settings"
-              icon={<MipIcon />}
-            />
-          </Popover>
+          title="Maximum Intensity Projection (MIP) Settings"
+          trigger="click"
+          content={
+            <div style={{ width: 260 }}>
+              <div style={{ marginBottom: 4 }}>Ray marching steps</div>
+              <Flex gap="small" align="center">
+                <Slider
+                  style={{ flex: 1 }}
+                  min={16}
+                  max={512}
+                  step={16}
+                  value={mipRaymarchingSteps}
+                  onChange={(v) => dispatch(updateUserSettingAction("mipRaymarchingSteps", v))}
+                />
+                <span style={{ width: 30, textAlign: "right" }}>{mipRaymarchingSteps}</span>
+              </Flex>
+              <Flex gap="small" align="center" style={{ marginTop: 8 }}>
+                <Switch
+                  size="small"
+                  checked={mipDepthWrite}
+                  onChange={(v) => dispatch(updateUserSettingAction("mipDepthWrite", v))}
+                />
+                <span>Depth-correct rendering</span>
+              </Flex>
+            </div>
+          }
+        >
+          <ButtonComponent
+            variant="text"
+            color="default"
+            title="Maximum Intensity Projection (MIP) rendering settings"
+            icon={<MipIcon />}
+          />
+        </Popover>
       </Space>
       <Divider size="small" />
       <ContextMenuContainer

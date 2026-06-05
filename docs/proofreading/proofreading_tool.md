@@ -79,7 +79,7 @@ Agglomerate trees can be converted to normal skeleton trees via right-click in t
 
 ## Proofreading Toolbar Controls
 
-When the proofreading tool is active (and an [editable mappings](./segmentation_mappings.md#editable-and-locked-mappings) are enabled), additional controls are available in the toolbar:
+When the proofreading tool is active (and an [editable mapping](./segmentation_mappings.md#editable-and-locked-mappings) is enabled), additional controls are available in the toolbar:
 
 - **Clear proofreading by-products**: Removes auxiliary meshes that were loaded during proofreading. Use this once you have finished correcting a segment pair.
 - **Automatic mesh loading**: When enabled, WEBKNOSSOS automatically loads a 3D mesh for each segment involved in a merge or split operation.

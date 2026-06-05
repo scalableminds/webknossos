@@ -153,7 +153,7 @@ The following publications used WEBKNOSSOS for exploring large 3D electron-micro
   Volume electron microscopy reveals age-related circuit remodeling in the auditory brainstem.  
   [Frontiers in Cellular Neuroscience (2022). DOI: 10.3389/fncel.2022.1070438](https://doi.org/10.3389/fncel.2022.1070438)
 
-* Yong Fan, Chenhui Huang, Juan Chen, Yanyan Chen, Yan Wang, Zhiguang Yan , Weina Yu, Haibo Wu, Ying Yang, Leitong Nie, Sijia Huang, Fangfang Wang, Haoyu Wang, Yunfeng Hua, Qifeng Lyu, Yanping Kuang & Ming Lei.  
+* Yong Fan, Chenhui Huang, Juan Chen, Yanyan Chen, Yan Wang, Zhiguang Yan, Weina Yu, Haibo Wu, Ying Yang, Leitong Nie, Sijia Huang, Fangfang Wang, Haoyu Wang, Yunfeng Hua, Qifeng Lyu, Yanping Kuang & Ming Lei.  
   Mutations in CCIN cause teratozoospermia and male infertility.  
   [Science Bulletin (2022). DOI: 10.1016/j.scib.2022.09.026](https://doi.org/10.1016/j.scib.2022.09.026)
 

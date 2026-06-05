@@ -164,6 +164,7 @@ function needsPollAnnotationUpdates(state: WebknossosState): "yes" | "no" | "lat
     // Therefore, other users may edit the annotation at the same time.
     // We must not poll for updates, because we cannot incorporate all possible update actions
     // while having local changes.
+    console.log("no because state.save.isSavingDisabled");
     return "no";
   }
 
@@ -185,11 +186,13 @@ function needsPollAnnotationUpdates(state: WebknossosState): "yes" | "no" | "lat
     // The worst case is that the users gets a 409 error during saving (thus, losing 30 seconds of work).
     // We can improve this in the future by always polling once all update actions are supported in rebasing
     // (see #9052)
+  console.log("no because mayEditInNonConcurrentMode. isUpdatingCurrentlyAllowed=", isUpdatingCurrentlyAllowed)
     return "no";
   }
 
   // If there are no tracings, we don't need need to poll for updates
   if (!hasTracing(state.annotation)) {
+    console.log("no because no tracing")
     return "no";
   }
   // In all other cases, poll
@@ -522,6 +525,7 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
       ensureHasNewestVersion: take(channel),
     });
     const needsCheckForUpdatesOnServer = yield* select(needsPollAnnotationUpdates);
+    console.log("needsPollAnnotationUpdates: ", needsCheckForUpdatesOnServer)
     if (needsCheckForUpdatesOnServer === "no") {
       // We don't need to poll for the newest version (because we can safely assume that
       // we already know about it).

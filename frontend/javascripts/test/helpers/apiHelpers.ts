@@ -559,6 +559,12 @@ export async function setupWebknossosForTesting(
   /*
    * This will execute model.fetch(...) and initialize the store with the tracing, etc.
    */
+  // Reset to the default so stale implementations from previous tests don't affect saga startup.
+  vi.mocked(acquireAnnotationMutex).mockResolvedValue({
+    canEdit: true,
+    blockedByUser: null,
+    blockedBySessionId: null,
+  });
   Store.dispatch(restartSagaAction());
   Store.dispatch(resetStoreAction());
   Store.dispatch(setActiveUserAction(dummyUser));

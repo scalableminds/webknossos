@@ -191,8 +191,10 @@ export class BackendMock {
     return mapping;
   };
 
+  canGrantMutex: boolean = true;
+
   acquireAnnotationMutex = async (_annotationId: string, _sessionId: string) => {
-    return { canEdit: true, blockedByUser: null, blockedBySessionId: null };
+    return { canEdit: this.canGrantMutex, blockedByUser: null, blockedBySessionId: null };
   };
   releaseAnnotationMutex = async (_annotationId: string) => {};
 

@@ -30,6 +30,7 @@ import {
 } from "./proofreading_fixtures";
 import { loadAgglomerateTree1 } from "./proofreading_interaction_update_action_fixtures";
 import {
+  type BackendMock,
   expectSegmentList,
   getPositionForSegmentId,
   initializeMappingAndTool,
@@ -39,8 +40,13 @@ import {
 
 describe.each(
   AnnotationCollaborationModes,
+  // ["Exclusive"]
 )("Proofreading (Poll only) with collaborationMode=%s", (collabMode: AnnotationCollaborationMode) => {
-  function* initializePollOnlyAnnotation(context: WebknossosTestContext, tracingId: string) {
+  function* initializePollOnlyAnnotation(
+    context: WebknossosTestContext,
+    tracingId: string,
+    backendMock: BackendMock,
+  ) {
     yield call(initializeMappingAndTool, context, tracingId);
 
     const mapping0 = yield* select(
@@ -49,10 +55,10 @@ describe.each(
     );
     expect(mapping0).toEqual(initialMapping);
 
-    yield makeAnnotationPollOnly(context);
+    yield makeAnnotationPollOnly(context, backendMock);
   }
 
-  function* makeAnnotationPollOnly(context: WebknossosTestContext) {
+  function* makeAnnotationPollOnly(context: WebknossosTestContext, backendMock: BackendMock) {
     const { api } = context;
     // Set collab mode to concurrent to be able to save the updates about initializing the mapping.
     yield put(setCollaborationModeAction("Concurrent"));
@@ -71,6 +77,7 @@ describe.each(
     yield put(setActiveUserAction(differentUser));
     yield put(setCollaborationModeAction(collabMode));
     yield put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
+    backendMock.canGrantMutex = false;
   }
 
   beforeEach<WebknossosTestContext>(async (context) => {
@@ -89,7 +96,7 @@ describe.each(
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* () {
-      yield initializePollOnlyAnnotation(context, tracingId);
+      yield initializePollOnlyAnnotation(context, tracingId, backendMock);
 
       const foreignMergeAction = {
         name: "mergeAgglomerate" as const,
@@ -140,6 +147,7 @@ describe.each(
       ],
       Store.getState(),
     );
+    backendMock.canGrantMutex = false;
     // Initial Mapping
     // 1-2-3
     // 5-4-1338-1337-7-6
@@ -167,7 +175,7 @@ describe.each(
         ]),
       );
 
-      yield* makeAnnotationPollOnly(context);
+      yield* makeAnnotationPollOnly(context, backendMock);
 
       const foreignSplitAction = {
         name: "splitAgglomerate" as const,
@@ -178,6 +186,7 @@ describe.each(
           agglomerateId: 4,
         },
       };
+      console.log("injectVersion")
       backendMock.injectVersion([foreignSplitAction], 4);
 
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
@@ -267,7 +276,7 @@ describe.each(
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* () {
-      yield initializePollOnlyAnnotation(context, tracingId);
+      yield initializePollOnlyAnnotation(context, tracingId, backendMock);
 
       const foreignSplitAction = {
         name: "splitAgglomerate" as const,
@@ -312,7 +321,7 @@ describe.each(
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* () {
-      yield initializePollOnlyAnnotation(context, tracingId);
+      yield initializePollOnlyAnnotation(context, tracingId, backendMock);
 
       const foreignSplitAction1 = {
         name: "splitAgglomerate" as const,
@@ -383,7 +392,7 @@ describe.each(
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* () {
-      yield initializePollOnlyAnnotation(context, tracingId);
+      yield initializePollOnlyAnnotation(context, tracingId, backendMock);
 
       const foreignMergeAction = {
         name: "mergeAgglomerate" as const,
@@ -454,7 +463,7 @@ describe.each(
 
     const task = startSaga(function* () {
       const rebaseActionChannel = yield actionChannel(["PREPARE_REBASING", "FINISHED_REBASING"]);
-      yield initializePollOnlyAnnotation(context, tracingId);
+      yield initializePollOnlyAnnotation(context, tracingId, backendMock);
 
       const foreignMergeAction = {
         name: "mergeAgglomerate" as const,
@@ -506,7 +515,7 @@ describe.each(
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* () {
-      yield initializePollOnlyAnnotation(context, tracingId);
+      yield initializePollOnlyAnnotation(context, tracingId, backendMock);
 
       const foreignMergeAction = {
         name: "mergeAgglomerate" as const,
@@ -562,7 +571,7 @@ describe.each(
       yield put(setActiveCellAction(1));
       yield makeMappingEditableForTest();
 
-      yield* makeAnnotationPollOnly(context);
+      yield* makeAnnotationPollOnly(context, backendMock);
 
       // Store current annotation version, calculate expected version after injecting updates and inject the agglomerate tree loading.
       const receivedAmountOfUpdateRequests = context.receivedDataPerSaveRequest.length;

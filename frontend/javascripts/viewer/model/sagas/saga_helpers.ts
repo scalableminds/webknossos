@@ -2,18 +2,7 @@ import type { ActionPattern } from "@redux-saga/types";
 import { Modal } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
-import {
-  call,
-  cancel,
-  delay,
-  FixedTask,
-  fork,
-  put,
-  race,
-  spawn,
-  take,
-  takeEvery,
-} from "typed-redux-saga";
+import { call, delay, fork, put, race, spawn, take, takeEvery } from "typed-redux-saga";
 import { MappingStatusEnum, type SagaIdentifier } from "viewer/constants";
 import { type Action, escalateErrorAction } from "viewer/model/actions/actions";
 import { setBusyBlockingInfoAction } from "viewer/model/actions/ui_actions";

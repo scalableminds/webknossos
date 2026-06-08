@@ -16,7 +16,7 @@ import { uniq } from "lodash-es";
 import isEqual from "lodash-es/isEqual";
 import uniqBy from "lodash-es/uniqBy";
 import messages from "messages";
-import { all, call, put, spawn, takeEvery } from "typed-redux-saga";
+import { all, call, put, takeEvery } from "typed-redux-saga";
 import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_types";
 import Constants, {
   MappingStatusEnum,
@@ -129,7 +129,11 @@ import {
 import type { Action } from "../../../actions/actions";
 import type { Tree } from "../../../types/tree_types";
 import { ensureWkInitialized } from "../../ready_sagas";
-import { takeEveryUnlessBusy, takeWithBatchActionSupport } from "../../saga_helpers";
+import {
+  spawnUntilCanceled,
+  takeEveryUnlessBusy,
+  takeWithBatchActionSupport,
+} from "../../saga_helpers";
 import { subscribeToAnnotationMutex } from "../../saving/save_mutex_saga";
 import {
   syncAgglomerateTreesAfterMergeAction,
@@ -868,7 +872,7 @@ function* handleTreeProofreadingAction(action: Action): Saga<void> {
 
     // Refreshing the meshes might take a while and won't block the saga
     // here.
-    yield* spawn(refreshAffectedMeshes, volumeTracingId, refreshInfos);
+    yield* spawnUntilCanceled(refreshAffectedMeshes, volumeTracingId, refreshInfos);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -1125,7 +1129,7 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
 
     // Refreshing the meshes might take a while and won't block the saga
     // here.
-    yield* spawn(refreshAffectedMeshes, volumeTracingId, refreshInfos);
+    yield* spawnUntilCanceled(refreshAffectedMeshes, volumeTracingId, refreshInfos);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -1498,7 +1502,7 @@ function* handleProofreadMergeOrMinCut(action: Action) {
 
     // Refreshing the meshes might take a while and won't block the saga
     // here.
-    yield* spawn(refreshAffectedMeshes, volumeTracingId, refreshInfos);
+    yield* spawnUntilCanceled(refreshAffectedMeshes, volumeTracingId, refreshInfos);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -1655,7 +1659,7 @@ function* handleProofreadCutFromNeighbors(action: Action) {
 
     // Refreshing the meshes might take a while and won't block the saga
     // here.
-    yield* spawn(refreshAffectedMeshes, volumeTracingId, refreshInfos);
+    yield* spawnUntilCanceled(refreshAffectedMeshes, volumeTracingId, refreshInfos);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -1931,7 +1935,7 @@ export function* refreshAffectedMeshes(
     nodePosition: Vector3;
   }>,
 ) {
-  // ATTENTION: This saga should usually be called with `spawn` to avoid that the user
+  // ATTENTION: This saga should usually be called with `spawnUntilCanceled` to avoid that the user
   // is blocked (via takeEveryUnlessBusy) while the meshes are refreshed.
 
   // Segmentations with more than 3 dimensions are currently not compatible

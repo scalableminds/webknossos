@@ -71,6 +71,7 @@ import { Model, Store } from "viewer/singletons";
 import type { NumberLike, StoreAnnotation, WebknossosState } from "viewer/store";
 import {
   enforceExecutionAsBusyBlockingUnlessAllowed,
+  spawnUntilCanceled,
   takeEveryWithBatchActionSupport,
   waitFor,
 } from "../saga_helpers";
@@ -932,7 +933,7 @@ function* resolveApplyingUpdateArtifacts(artifactInfos: ApplyingUpdateArtifacts)
     return;
   }
   yield* call(removeOutdatedMeshes, artifactInfos.meshIdsToRemovePerLayer);
-  yield* spawn(reloadMeshes, artifactInfos.meshIdsToLoadPerLayer);
+  yield* spawnUntilCanceled(reloadMeshes, artifactInfos.meshIdsToLoadPerLayer);
 }
 
 function* removeOutdatedMeshes(

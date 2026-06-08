@@ -6,8 +6,9 @@ import slick.codegen.SourceCodeGenerator
 import slick.jdbc.JdbcProfile
 import slick.{model => slickModel}
 
-import java.io.{BufferedWriter, File, FileWriter}
+import java.io.{BufferedWriter, File, FileOutputStream, FileWriter, OutputStreamWriter}
 import java.net.URI
+import java.nio.charset.StandardCharsets
 import scala.concurrent.Await
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
@@ -46,7 +47,9 @@ class ContentStableSourceCodeGenerator(model: slickModel.Model) extends SourceCo
     if (!existing.contains(normalized)) {
       updatedFiles += fileName
       file.setWritable(true)
-      val writer = new BufferedWriter(new FileWriter(file.getAbsoluteFile))
+      val writer = new BufferedWriter(
+        new OutputStreamWriter(new FileOutputStream(file.getAbsoluteFile), StandardCharsets.UTF_8)
+      )
       try writer.write(normalized)
       finally writer.close()
     }

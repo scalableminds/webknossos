@@ -183,7 +183,7 @@ export function formatScaleForClipboard(
     return "";
   }
   const [scaleRounded] = getRoundedScaleValues(scale, roundToDigits);
-  return scaleRounded.join(",");
+  return scaleRounded.join(",") + " " + scale.unit;
 }
 
 function toOptionalFixed(num: number, decimalPrecision: number): string {

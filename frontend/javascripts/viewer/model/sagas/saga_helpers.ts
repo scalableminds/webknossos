@@ -2,7 +2,18 @@ import type { ActionPattern } from "@redux-saga/types";
 import { Modal } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
-import { call, cancel, delay, fork, put, race, spawn, take, takeEvery } from "typed-redux-saga";
+import {
+  call,
+  cancel,
+  delay,
+  FixedTask,
+  fork,
+  put,
+  race,
+  spawn,
+  take,
+  takeEvery,
+} from "typed-redux-saga";
 import { MappingStatusEnum, type SagaIdentifier } from "viewer/constants";
 import { type Action, escalateErrorAction } from "viewer/model/actions/actions";
 import { setBusyBlockingInfoAction } from "viewer/model/actions/ui_actions";
@@ -210,14 +221,19 @@ export function* spawnUntilCanceled<Fn extends (...args: any[]) => Saga<unknown>
    * that you need spawn. In general, we want to avoid spawn because it can cause
    * lingering sagas that never get teared down.
    */
+  let watchForCancelTask: FixedTask<unknown> | null = null;
   const task = yield* spawn(function* () {
     try {
       yield* call(sagaFn, ...params);
     } catch (error) {
       yield put(escalateErrorAction(error));
+    } finally {
+      if (watchForCancelTask != null) {
+        yield* cancel(watchForCancelTask);
+      }
     }
   });
-  yield* spawn(function* (): Saga<void> {
+  watchForCancelTask = yield* spawn(function* (): Saga<void> {
     yield* race({
       restart: take("RESTART_SAGA"),
       doCancel: take("CANCEL_SAGA"),

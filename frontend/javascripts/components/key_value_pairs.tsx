@@ -2,6 +2,8 @@ import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import type { JsonPrimitive } from "admin/api/jobs";
 import { AutoComplete, Button, Flex, Form, Input } from "antd";
 import useDidMount from "beautiful-react-hooks/useDidMount";
+import importWithRetry, { DynamicImportError } from "libs/import_with_retry";
+import Toast from "libs/toast";
 import { useId, useState } from "react";
 
 export type KeyValuePairs = Record<string, JsonPrimitive>;
@@ -50,9 +52,24 @@ export function KeyValuePairsInput({
   const [configKeyOptions, setConfigKeyOptions] = useState<{ value: string }[]>([]);
 
   useDidMount(() => {
-    import("viewer/view/ai_jobs/workflow_config_keys").then(({ WORKFLOW_CONFIG_KEYS }) => {
-      setConfigKeyOptions(WORKFLOW_CONFIG_KEYS.map((k) => ({ value: k })));
-    });
+    importWithRetry(() => import("viewer/view/ai_jobs/workflow_config_keys"), {
+      showErrorToast: false,
+    })
+      .then(({ WORKFLOW_CONFIG_KEYS }) => {
+        setConfigKeyOptions(WORKFLOW_CONFIG_KEYS.map((k) => ({ value: k })));
+      })
+      .catch((error) => {
+        if (!(error instanceof DynamicImportError)) return;
+        if (error.reason === "new-version") {
+          Toast.info(
+            "Workflow key autocompletion is unavailable. A new WEBKNOSSOS version was released – please reload.",
+          );
+        } else {
+          Toast.warning(
+            "Workflow key autocompletion could not be loaded due to a network problem.",
+          );
+        }
+      });
   });
 
   function addEntry() {

@@ -1,6 +1,7 @@
 import logoScreenshot from "@images/logo-screenshot.svg";
 import { BlobReader, BlobWriter, ZipWriter } from "@zip.js/zip.js";
 import { saveAs } from "file-saver";
+import importWithRetry from "libs/import_with_retry";
 import { convertBufferToImage } from "libs/utils";
 import {
   type OrthographicCamera,
@@ -166,16 +167,22 @@ export async function captureScreenshots(prefix?: string): Promise<ScreenshotBlo
         : null;
     const canvas =
       inputCatcherElement != null
-        ? await import("html2canvas").then((html2canvas) =>
-            html2canvas.default(inputCatcherElement as HTMLElement, {
-              backgroundColor: null,
-              // Since the viewports do not honor devicePixelRation yet, always use a scale of 1
-              // as otherwise the two images would not fit together on a HiDPI screen.
-              // Can be removed once https://github.com/scalableminds/webknossos/issues/5116 is fixed.
-              scale: 1,
-              ignoreElements: (element) => element.id === "TDViewControls",
-            }),
-          )
+        ? await importWithRetry(() => import("html2canvas"))
+            .then((html2canvas) =>
+              html2canvas.default(inputCatcherElement as HTMLElement, {
+                backgroundColor: null,
+                // Since the viewports do not honor devicePixelRation yet, always use a scale of 1
+                // as otherwise the two images would not fit together on a HiDPI screen.
+                // Can be removed once https://github.com/scalableminds/webknossos/issues/5116 is fixed.
+                scale: 1,
+                ignoreElements: (element) => element.id === "TDViewControls",
+              }),
+            )
+            .catch((error) => {
+              // Still create the screenshot, but without the HTML overlay (e.g., the scalebar).
+              console.error("Could not render HTML overlay for screenshot.", error);
+              return null;
+            })
         : null;
 
     const blob = await convertBufferToImage(

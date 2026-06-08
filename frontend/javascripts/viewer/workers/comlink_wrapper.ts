@@ -24,7 +24,11 @@ export function createWorker<TExposed extends UseCreateWorkerToUseMe<AnyFn> | An
     // Instead, we dynamically import the worker and return its default export.
     return async (...params: Parameters<UnwrapExposedWorkerFn<TExposed>>) => {
       const pathToWorkerWithoutExtension = pathToWorker.replace(/\.worker\.ts$/, "");
-      // This import statement requires a file extension for proper static analysis by Vite during build step.
+      // In the browser, workers are loaded via import.meta.glob with eager: true (see below),
+      // which Vite resolves statically at build time — no runtime dynamic import() occurs there.
+      // This import() is only reached in Vitest/Node where wrap is null and web workers don't
+      // exist, so importWithRetry's "stale chunk URL after deployment" protection does not apply.
+      // biome-ignore lint/plugin/no-bare-dynamic-import: browser workers are eagerly bundled; this import() is Vitest/Node-only
       const workerModule = await import(`./${pathToWorkerWithoutExtension}.worker.ts`);
       return workerModule.default(...params);
     };

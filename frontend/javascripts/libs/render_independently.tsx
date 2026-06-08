@@ -1,3 +1,4 @@
+import importWithRetry from "libs/import_with_retry";
 import { document } from "libs/window";
 import type React from "react";
 import { createRoot } from "react-dom/client";
@@ -11,33 +12,37 @@ export default function renderIndependently(
 ): Promise<void> {
   return new Promise((resolve) => {
     // Avoid circular imports
-    import("viewer/throttled_store").then((_Store) => {
-      const Store = _Store.default;
-      const div = document.createElement("div");
-      const react_root = createRoot(div);
+    importWithRetry(() => import("viewer/throttled_store"))
+      .then((_Store) => {
+        const Store = _Store.default;
+        const div = document.createElement("div");
+        const react_root = createRoot(div);
 
-      if (!document.body) {
-        resolve();
-        return;
-      }
-
-      document.body.appendChild(div);
-
-      function destroy() {
-        react_root.unmount();
-
-        if (div.parentNode) {
-          div.parentNode.removeChild(div);
+        if (!document.body) {
+          resolve();
+          return;
         }
 
-        resolve();
-      }
+        document.body.appendChild(div);
 
-      react_root.render(
-        <Provider store={Store}>
-          <GlobalThemeProvider isMainProvider={false}>{getComponent(destroy)}</GlobalThemeProvider>
-        </Provider>,
-      );
-    });
+        function destroy() {
+          react_root.unmount();
+
+          if (div.parentNode) {
+            div.parentNode.removeChild(div);
+          }
+
+          resolve();
+        }
+
+        react_root.render(
+          <Provider store={Store}>
+            <GlobalThemeProvider isMainProvider={false}>
+              {getComponent(destroy)}
+            </GlobalThemeProvider>
+          </Provider>,
+        );
+      }) // Resolve the promise even if the import failed (the user was already notified by importWithRetry).
+      .catch(() => resolve());
   });
 }

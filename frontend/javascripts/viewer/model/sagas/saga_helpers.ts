@@ -4,7 +4,7 @@ import Toast from "libs/toast";
 import messages from "messages";
 import { call, cancel, delay, fork, put, race, spawn, take, takeEvery } from "typed-redux-saga";
 import { MappingStatusEnum, type SagaIdentifier } from "viewer/constants";
-import type { Action } from "viewer/model/actions/actions";
+import { escalateErrorAction, type Action } from "viewer/model/actions/actions";
 import { setBusyBlockingInfoAction } from "viewer/model/actions/ui_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
@@ -204,8 +204,19 @@ export function* spawnUntilCanceled<Fn extends (...args: any[]) => Saga<unknown>
    * Spawns the given saga with the given parameters in a non-blocking manner.
    * The saga is automatically canceled if a RESTART_SAGA or CANCEL_SAGA action
    * was dispatched.
+   * If the spawned saga errors for some reason, that error will be escalated
+   * so that WK as a whole will crash.
+   * Always prefer spawnUntilCanceled over spawn unless you are very confident
+   * that you need spawn. In general, we want to avoid spawn because it can cause
+   * lingering sagas that never get teared down.
    */
-  const task = yield* spawn(sagaFn, ...params);
+  const task = yield* spawn(function* () {
+    try {
+      yield* call(sagaFn, ...params);
+    } catch (error) {
+      yield put(escalateErrorAction(error));
+    }
+  });
   yield* spawn(function* (): Saga<void> {
     yield* race({
       restart: take("RESTART_SAGA"),

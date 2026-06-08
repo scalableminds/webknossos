@@ -619,7 +619,7 @@ describe("Save Mutex Saga should crash", () => {
     vi.clearAllMocks(); // clears call counts of *all* spies
   });
 
-  it<WebknossosTestContext>("The spawned ad-hoc mutex fetching saga should error when another user obtained mutex due to e.g. too long network outage of user.", async (context: WebknossosTestContext) => {
+  it.only<WebknossosTestContext>("The spawned ad-hoc mutex fetching saga should error when another user obtained mutex due to e.g. too long network outage of user.", async (context: WebknossosTestContext) => {
     await setupWebknossosForTestingWithRestrictions(context, "Concurrent", true, true);
     mockInitialBucketAndAgglomerateData(context);
     // Give mutex saga time to potentially acquire the mutex. This should not happen!

@@ -35,7 +35,7 @@ If you have more than one mesh file precomputed, e.g. based on different magnifi
 
 ### Generating Precomputed Mesh Files
 
-Instead of computing individual meshes on demand, you can pre-compute and save meshes for all segments in a dataset at once.
+Instead of computing individual meshes on demand, you can precompute and save meshes for all segments in a dataset at once.
 
 Start mesh generation by clicking the plus (+) button at the top of the `Segments` tab. A popover lets you choose the mesh quality and kick off the generation job. We recommend the medium quality (default) for a good balance between visual fidelity, compute time, and GPU resource usage. You can run the job multiple times at different quality levels to produce several mesh files to choose from.
 

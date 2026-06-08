@@ -35,13 +35,18 @@ export default class EdgeCollection implements NotEnumerableByObject {
   addEdges(edges: Edge[], mutate: boolean = false): EdgeCollection {
     const newOutgoingEdges = mutate ? this.outMap : this.outMap.clone();
     const newIngoingEdges = mutate ? this.inMap : this.inMap.clone();
-    const newEdgeCount = this.edgeCount + edges.length;
+    let newEdgeCount = this.edgeCount;
 
     for (const edge of edges) {
       const outgoingEdges = newOutgoingEdges.getNullable(edge.source) || [];
+      if (outgoingEdges.find((existingEdge) => existingEdge.target === edge.target)) {
+        // Edge already exists. Don't add it again.
+        continue;
+      }
       const ingoingEdges = newIngoingEdges.getNullable(edge.target) || [];
       newOutgoingEdges.mutableSet(edge.source, outgoingEdges.concat(edge));
       newIngoingEdges.mutableSet(edge.target, ingoingEdges.concat(edge));
+      newEdgeCount++;
     }
 
     if (mutate) {
@@ -59,6 +64,11 @@ export default class EdgeCollection implements NotEnumerableByObject {
     const newEdgeCount = this.edgeCount + 1;
     const outgoingEdges = this.outMap.getNullable(edge.source) || [];
     const ingoingEdges = this.inMap.getNullable(edge.target) || [];
+
+    if (outgoingEdges.find((existingEdge) => existingEdge.target === edge.target)) {
+      // Edge already exists. Don't add it again.
+      return this;
+    }
 
     if (mutate) {
       this.outMap.mutableSet(edge.source, outgoingEdges.concat(edge));

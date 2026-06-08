@@ -6,11 +6,9 @@ object Dependencies {
   val dependencyResolvers: Seq[MavenRepository] =
     Seq(
       Resolver.typesafeRepo("releases"),
-      "Unidata UCAR" at "https://artifacts.unidata.ucar.edu/content/repositories/unidata-releases/",
-      // "SciJava Public" at "https://maven.scijava.org/content/repositories/public/",
-      "OSGeo" at "https://repo.osgeo.org/repository/release/",
-      "Atlassian Releases" at "https://packages.atlassian.com/maven-public/",
-      "Senbox (for Zarr)" at "https://nexus.senbox.net/nexus/content/groups/public/"
+      "Unidata UCAR" at "https://artifacts.unidata.ucar.edu/content/repositories/unidata-releases/", // ucar deps
+      "SciJava Public" at "https://maven.scijava.org/content/repositories/public/", // cisd deps
+      "webknossos-maven" at "https://static.webknossos.org/maven/",  // backup to fetch cisd deps in case SciJava is down
     )
 
   private val silhouetteVersion = "10.0.4"

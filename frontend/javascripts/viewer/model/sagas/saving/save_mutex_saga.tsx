@@ -17,6 +17,7 @@ import {
   put,
   race,
   retry,
+  spawn,
   take,
   takeEvery,
 } from "typed-redux-saga";
@@ -207,6 +208,20 @@ export function* subscribeToAnnotationMutex(callerId: string): Saga<() => Saga<v
   }
 }
 
+function* spawnUntilCanceled<Fn extends (...args: any[]) => Saga<unknown>>(
+  sagaFn: Fn,
+  ...params: Parameters<Fn>
+): Saga<void> {
+  const task = yield* spawn(sagaFn, ...params);
+  yield* spawn(function* (): Saga<void> {
+    yield* race({
+      restart: take("RESTART_SAGA"),
+      doCancel: take("CANCEL_SAGA"),
+    });
+    yield* cancel(task);
+  });
+}
+
 // Needed for tests
 export function* clearAllSubscriptions() {
   const state = getMutexLogicState();
@@ -234,31 +249,35 @@ function* cancelMutexSagaIfRunning(
 }
 
 function* ensureCorrectMutexAcquiringSagaIsRunning(mutexLogicState: MutexLogicState): Saga<void> {
-  // Restarts the correct mutex saga (not-blocking by using fork)
-  const isSavingDisabled = yield* select((state) => state.save.isSavingDisabled);
-  if (isSavingDisabled) {
-    // Cancellation of running mutex sagas when saving is disabled is handled
-    // by watchForDisableSaving.
-    return;
-  }
-  const newFetchingStrategy = yield* call(getCurrentMutexFetchingStrategy);
-  const oldFetchingStrategy = mutexLogicState.fetchingStrategy;
-  const didStrategyChange = newFetchingStrategy !== oldFetchingStrategy;
-  if (didStrategyChange) {
-    yield* call(cancelMutexSagaIfRunning, mutexLogicState, MutexFetchingStrategy.Continuously);
-    yield* call(cancelMutexSagaIfRunning, mutexLogicState, MutexFetchingStrategy.AdHoc);
-  }
-  const othersMayEdit = yield* select((state) => isAnnotationEditableByNonOwners(state.annotation));
-  if (!othersMayEdit) {
-    return;
-  }
-  const hasNoRunningMutexAcquiringSaga =
-    mutexLogicState.runningContinuousMutexAcquiringSaga == null &&
-    mutexLogicState.runningAdHocMutexAcquiringSaga == null;
-  if (didStrategyChange || hasNoRunningMutexAcquiringSaga) {
-    mutexLogicState.fetchingStrategy = newFetchingStrategy;
-    yield* call(startSagaWithAppropriateMutexFetchingStrategy, mutexLogicState);
-  }
+  // Restarts the correct mutex saga (non-blocking)
+  yield spawnUntilCanceled(function* () {
+    const isSavingDisabled = yield* select((state) => state.save.isSavingDisabled);
+    if (isSavingDisabled) {
+      // Cancellation of running mutex sagas when saving is disabled is handled
+      // by watchForDisableSaving.
+      return;
+    }
+    const newFetchingStrategy = yield* call(getCurrentMutexFetchingStrategy);
+    const oldFetchingStrategy = mutexLogicState.fetchingStrategy;
+    const didStrategyChange = newFetchingStrategy !== oldFetchingStrategy;
+    if (didStrategyChange) {
+      yield* call(cancelMutexSagaIfRunning, mutexLogicState, MutexFetchingStrategy.Continuously);
+      yield* call(cancelMutexSagaIfRunning, mutexLogicState, MutexFetchingStrategy.AdHoc);
+    }
+    const othersMayEdit = yield* select((state) =>
+      isAnnotationEditableByNonOwners(state.annotation),
+    );
+    if (!othersMayEdit) {
+      return;
+    }
+    const hasNoRunningMutexAcquiringSaga =
+      mutexLogicState.runningContinuousMutexAcquiringSaga == null &&
+      mutexLogicState.runningAdHocMutexAcquiringSaga == null;
+    if (didStrategyChange || hasNoRunningMutexAcquiringSaga) {
+      mutexLogicState.fetchingStrategy = newFetchingStrategy;
+      yield* call(startSagaWithAppropriateMutexFetchingStrategy, mutexLogicState);
+    }
+  });
 }
 
 function* startSagaWithAppropriateMutexFetchingStrategy(

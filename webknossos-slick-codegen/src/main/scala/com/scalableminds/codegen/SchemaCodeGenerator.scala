@@ -6,7 +6,7 @@ import slick.codegen.SourceCodeGenerator
 import slick.jdbc.JdbcProfile
 import slick.{model => slickModel}
 
-import java.io.{BufferedWriter, File, FileOutputStream, FileWriter, OutputStreamWriter}
+import java.io.{BufferedWriter, File, FileOutputStream, OutputStreamWriter}
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import scala.concurrent.Await

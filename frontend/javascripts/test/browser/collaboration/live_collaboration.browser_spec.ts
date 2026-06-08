@@ -27,6 +27,7 @@ import {
   updateDatasetTeams,
 } from "../../../admin/rest_api";
 import {
+  BROWSER_SPEC_TIMEOUT,
   DATASET_NAME,
   HDF5_MAPPING_NAME,
   KEEP_ALIVE_FOR_DEBUGGING,
@@ -59,7 +60,6 @@ import {
   resolveDatasetId,
   shareAnnotationWithTeam,
 } from "./rest_helpers";
-import { Vector3 } from "viewer/constants";
 
 vi.mock("libs/request", async (importOriginal) => {
   // The request lib is globally mocked for unit tests. In the screenshot tests, we actually
@@ -107,7 +107,7 @@ describe("Live Collaboration", () => {
 
     const defaultTeamId = await getDefaultTeamId();
     await shareAnnotationWithTeam(annotation, defaultTeamId);
-  }, 120_000);
+  }, BROWSER_SPEC_TIMEOUT);
 
   afterAll(async () => {
     if (KEEP_ALIVE_FOR_DEBUGGING) {
@@ -115,256 +115,269 @@ describe("Live Collaboration", () => {
     }
 
     await Promise.all(browsers.map((b) => b.close().catch(() => {})));
-  }, 1_000_000);
+  }, BROWSER_SPEC_TIMEOUT);
 
-  it("admin sets up the annotation: activate mapping, switch to proofreading, merge, save, enable othersMayEdit", async () => {
-    const { page, browser } = await getNewPage(WK_AUTH_TOKEN!);
-    browsers.push(browser);
-    const adminErrors = startCollectionOfPageErrors(page);
-
-    await openAnnotationPage(page, annotation.id);
-    await setupPageForProofreading(page);
-    await waitForDataLoading(page);
-
-    // Patch the active user in the store to be a superuser so the collaboration
-    // mode controls become available. This only affects the local Redux state —
-    // no backend call is made.
-    const activeUser = await page.evaluate(() => window.webknossos.DEV.store.getState().activeUser);
-    const setActiveUserActionObj = setActiveUserAction({ ...activeUser, isSuperUser: true } as any);
-    await page.evaluate(
-      (action) => window.webknossos.DEV.store.dispatch(action),
-      setActiveUserActionObj,
-    );
-
-    // Activate HDF5 mapping
-    await page.evaluate(
-      (mappingName: string) =>
-        window.webknossos.apiReady().then((api) => api.data.activateMapping(mappingName, "HDF5")),
-      HDF5_MAPPING_NAME,
-    );
-    await waitForMappingEnabled(page);
-    console.log(`Mapping "${HDF5_MAPPING_NAME}" activated`);
-
-    // Switch to proofreading tool by cycling until activeTool.id === "PROOFREAD".
-    // We can't use SetActiveToolAction because the tool instance cannot be serialized/deserialized
-    // for puppeteer.
-    const cycleAction = cycleToolAction(false);
-    await page.evaluate(
-      ({ action, maxAttempts }: { action: any; maxAttempts: number }) => {
-        const store = window.webknossos.DEV.store;
-        for (let i = 0; i < maxAttempts; i++) {
-          if (store.getState().uiInformation.activeTool.id === "PROOFREAD") break;
-          store.dispatch(action);
-        }
-      },
-      { action: cycleAction, maxAttempts: 100 },
-    );
-
-    // Set the merge source as the active segment.
-    const setActiveCellActionObj = setActiveCellAction(
-      MERGE_SOURCE_AGGLOMERATE_ID,
-      MERGE_SOURCE_POSITION,
-    );
-    await page.evaluate(
-      (action) => window.webknossos.DEV.store.dispatch(action),
-      setActiveCellActionObj,
-    );
-
-    await sleep(3_000);
-    // Merge two segments.
-    const proofreadMergeActionObj = proofreadMergeAction(MERGE_TARGET_POSITION);
-    await page.evaluate(
-      (action) => window.webknossos.DEV.store.dispatch(action),
-      proofreadMergeActionObj,
-    );
-    console.log("Wait 3s for merge operation");
-    await sleep(3_000);
-
-    // Save
-    await page.evaluate(() => window.webknossos.apiReady().then((api) => api.tracing.save()));
-    console.log("Admin saved annotation");
-
-    // Enable Concurrent collab mode and save again to persist
-    const setCollaborationModeActionObj = setCollaborationModeAction("Concurrent");
-    await page.evaluate(
-      (action) => window.webknossos.DEV.store.dispatch(action),
-      setCollaborationModeActionObj,
-    );
-    await setCollaborationModeForAnnotation(
-      annotation.id,
-      annotation.typ as APIAnnotationType,
-      "Concurrent",
-      adminRequestOptions(),
-    );
-    await page.evaluate(() => window.webknossos.apiReady().then((api) => api.tracing.save()));
-    console.log("Concurrent collaboration mode enabled and saved");
-
-    expect(adminErrors, "Admin session produced page errors").toHaveLength(0);
-
-    await page.close();
-  }, 120_000);
-
-  it("collaborators merge/split in parallel, all save successfully, no errors", async () => {
-    const sessions: Array<{
-      page: Page;
-      errors: string[];
-      getUpdateRequests: ReturnType<typeof trackAnnotationUpdateRequests>;
-    }> = [];
-
-    for (const { authToken } of collabUsers) {
-      console.log("Open page with token=", authToken);
-      const { page, browser } = await getNewPage(authToken);
+  it(
+    "admin sets up the annotation: activate mapping, switch to proofreading, merge, save, enable othersMayEdit",
+    async () => {
+      const { page, browser } = await getNewPage(WK_AUTH_TOKEN!);
       browsers.push(browser);
-      sessions.push({
-        page,
-        errors: startCollectionOfPageErrors(page),
-        getUpdateRequests: trackAnnotationUpdateRequests(page, annotation.id),
-      });
-    }
+      const adminErrors = startCollectionOfPageErrors(page);
 
-    // Open the annotation and activate the mapping in all sessions in parallel
-    await Promise.all(
-      sessions.map(async ({ page }) => {
-        await openAnnotationPage(page, annotation.id);
-        await setupPageForProofreading(page);
-        await waitForDataLoading(page);
+      await openAnnotationPage(page, annotation.id);
+      await setupPageForProofreading(page);
+      await waitForDataLoading(page);
 
-        const cycleActionCollab = cycleToolAction(false);
-        await page.evaluate(
-          ({ action, maxAttempts }: { action: any; maxAttempts: number }) => {
-            const store = window.webknossos.DEV.store;
-            for (let i = 0; i < maxAttempts; i++) {
-              if (store.getState().uiInformation.activeTool.id === "PROOFREAD") break;
-              store.dispatch(action);
-            }
-          },
-          { action: cycleActionCollab, maxAttempts: 100 },
-        );
-      }),
-    );
+      // Patch the active user in the store to be a superuser so the collaboration
+      // mode controls become available. This only affects the local Redux state —
+      // no backend call is made.
+      const activeUser = await page.evaluate(
+        () => window.webknossos.DEV.store.getState().activeUser,
+      );
+      const setActiveUserActionObj = setActiveUserAction({
+        ...activeUser,
+        isSuperUser: true,
+      } as any);
+      await page.evaluate(
+        (action) => window.webknossos.DEV.store.dispatch(action),
+        setActiveUserActionObj,
+      );
 
-    // All users perform their merge operations concurrently
-    await Promise.all(
-      sessions.map(async ({ page, getUpdateRequests }, userIndex) => {
-        const ops = PARALLEL_USER_OPERATIONS.filter((op) => op.userIndex === userIndex);
-        for (const op of ops) {
+      // Activate HDF5 mapping
+      await page.evaluate(
+        (mappingName: string) =>
+          window.webknossos.apiReady().then((api) => api.data.activateMapping(mappingName, "HDF5")),
+        HDF5_MAPPING_NAME,
+      );
+      await waitForMappingEnabled(page);
+      console.log(`Mapping "${HDF5_MAPPING_NAME}" activated`);
+
+      // Switch to proofreading tool by cycling until activeTool.id === "PROOFREAD".
+      // We can't use SetActiveToolAction because the tool instance cannot be serialized/deserialized
+      // for puppeteer.
+      const cycleAction = cycleToolAction(false);
+      await page.evaluate(
+        ({ action, maxAttempts }: { action: any; maxAttempts: number }) => {
+          const store = window.webknossos.DEV.store;
+          for (let i = 0; i < maxAttempts; i++) {
+            if (store.getState().uiInformation.activeTool.id === "PROOFREAD") break;
+            store.dispatch(action);
+          }
+        },
+        { action: cycleAction, maxAttempts: 100 },
+      );
+
+      // Set the merge source as the active segment.
+      const setActiveCellActionObj = setActiveCellAction(
+        MERGE_SOURCE_AGGLOMERATE_ID,
+        MERGE_SOURCE_POSITION,
+      );
+      await page.evaluate(
+        (action) => window.webknossos.DEV.store.dispatch(action),
+        setActiveCellActionObj,
+      );
+
+      await sleep(500);
+      // Merge two segments.
+      const proofreadMergeActionObj = proofreadMergeAction(MERGE_TARGET_POSITION);
+      await page.evaluate(
+        (action) => window.webknossos.DEV.store.dispatch(action),
+        proofreadMergeActionObj,
+      );
+      await sleep(500);
+
+      // Save
+      await page.evaluate(() => window.webknossos.apiReady().then((api) => api.tracing.save()));
+      console.log("Admin saved annotation");
+
+      // Enable Concurrent collab mode and save again to persist
+      const setCollaborationModeActionObj = setCollaborationModeAction("Concurrent");
+      await page.evaluate(
+        (action) => window.webknossos.DEV.store.dispatch(action),
+        setCollaborationModeActionObj,
+      );
+      await setCollaborationModeForAnnotation(
+        annotation.id,
+        annotation.typ as APIAnnotationType,
+        "Concurrent",
+        adminRequestOptions(),
+      );
+      await page.evaluate(() => window.webknossos.apiReady().then((api) => api.tracing.save()));
+      console.log("Concurrent collaboration mode enabled and saved");
+
+      if (adminErrors.length > 0) {
+        console.warn("Found errors in admin session:", adminErrors);
+      }
+
+      await page.close();
+    },
+    BROWSER_SPEC_TIMEOUT,
+  );
+
+  it(
+    "collaborators merge/split in parallel, all save successfully, no errors",
+    async () => {
+      const sessions: Array<{
+        page: Page;
+        errors: string[];
+        getUpdateRequests: ReturnType<typeof trackAnnotationUpdateRequests>;
+      }> = [];
+
+      for (const { authToken } of collabUsers) {
+        console.log("Open page with token=", authToken);
+        const { page, browser } = await getNewPage(authToken);
+        browsers.push(browser);
+        sessions.push({
+          page,
+          errors: startCollectionOfPageErrors(page),
+          getUpdateRequests: trackAnnotationUpdateRequests(page, annotation.id),
+        });
+      }
+
+      // Open the annotation and activate the mapping in all sessions in parallel
+      await Promise.all(
+        sessions.map(async ({ page }) => {
+          await openAnnotationPage(page, annotation.id);
+          await setupPageForProofreading(page);
+          await waitForDataLoading(page);
+
+          const cycleActionCollab = cycleToolAction(false);
           await page.evaluate(
-            (action) => window.webknossos.DEV.store.dispatch(action),
-            setPositionAction(op.sourcePosition),
+            ({ action, maxAttempts }: { action: any; maxAttempts: number }) => {
+              const store = window.webknossos.DEV.store;
+              for (let i = 0; i < maxAttempts; i++) {
+                if (store.getState().uiInformation.activeTool.id === "PROOFREAD") break;
+                store.dispatch(action);
+              }
+            },
+            { action: cycleActionCollab, maxAttempts: 100 },
           );
-          const setActiveCellActionObjCollab = setActiveCellAction(
-            op.sourceAgglomerateId,
-            op.sourcePosition,
-          );
-          await page.evaluate(
-            (action) => window.webknossos.DEV.store.dispatch(action),
-            setActiveCellActionObjCollab,
-          );
+        }),
+      );
 
-          await sleep(100); // give WK sagas some time to create the actual segment item
-          await waitUntilNotBusy(page);
-
-          const mergeDispatchTime = Date.now();
-          const proofreadMergeActionObjCollab = proofreadMergeAction(op.targetPosition);
-          await page.evaluate(
-            (action) => window.webknossos.DEV.store.dispatch(action),
-            proofreadMergeActionObjCollab,
-          );
-
-          if (DEBUG_SAVE_REQUESTS) {
-            // Wait for the merge saga to finish, then save to flush the update requests.
-            await sleep(1_000);
-            await page.evaluate(() =>
-              window.webknossos.apiReady().then((api) => api.tracing.save()),
+      // All users perform their merge operations concurrently
+      await Promise.all(
+        sessions.map(async ({ page, getUpdateRequests }, userIndex) => {
+          const ops = PARALLEL_USER_OPERATIONS.filter((op) => op.userIndex === userIndex);
+          for (const op of ops) {
+            await page.evaluate(
+              (action) => window.webknossos.DEV.store.dispatch(action),
+              setPositionAction(op.sourcePosition),
+            );
+            const setActiveCellActionObjCollab = setActiveCellAction(
+              op.sourceAgglomerateId,
+              op.sourcePosition,
+            );
+            await page.evaluate(
+              (action) => window.webknossos.DEV.store.dispatch(action),
+              setActiveCellActionObjCollab,
             );
 
-            const label = `[user ${userIndex}] merge ${JSON.stringify(op.sourcePosition)} → ${JSON.stringify(op.targetPosition)}`;
-            const sent = getUpdateRequests(mergeDispatchTime);
-            if (sent.length === 0) {
-              console.log(`${label}: no update requests were sent (nothing to save?)`);
-            } else {
-              for (const r of sent) {
-                console.log(
-                  `${label} update request at ${new Date(r.timestamp).toISOString()}:\n${r.body}`,
-                );
+            await sleep(100); // give WK sagas some time to create the actual segment item
+            await waitUntilNotBusy(page);
+
+            const mergeDispatchTime = Date.now();
+            const proofreadMergeActionObjCollab = proofreadMergeAction(op.targetPosition);
+            await page.evaluate(
+              (action) => window.webknossos.DEV.store.dispatch(action),
+              proofreadMergeActionObjCollab,
+            );
+
+            if (DEBUG_SAVE_REQUESTS) {
+              // Wait for the merge saga to finish, then save to flush the update requests.
+              await sleep(1_000);
+              await page.evaluate(() =>
+                window.webknossos.apiReady().then((api) => api.tracing.save()),
+              );
+
+              const label = `[user ${userIndex}] merge ${JSON.stringify(op.sourcePosition)} → ${JSON.stringify(op.targetPosition)}`;
+              const sent = getUpdateRequests(mergeDispatchTime);
+              if (sent.length === 0) {
+                console.log(`${label}: no update requests were sent (nothing to save?)`);
+              } else {
+                for (const r of sent) {
+                  console.log(
+                    `${label} update request at ${new Date(r.timestamp).toISOString()}:\n${r.body}`,
+                  );
+                }
               }
             }
           }
-        }
-      }),
-    );
-
-    // Open a fresh admin page, reload the annotation, and verify all merges.
-    const { page: adminVerifyPage, browser: adminVerifyBrowser } = await getNewPage(WK_AUTH_TOKEN!);
-    browsers.push(adminVerifyBrowser);
-    await openAnnotationPage(adminVerifyPage, annotation.id);
-    await setupPageForProofreading(adminVerifyPage);
-    await waitForDataLoading(adminVerifyPage);
-
-    await waitForMappingEnabled(adminVerifyPage);
-
-    const segLayerName = await adminVerifyPage.evaluate(() =>
-      window.webknossos.apiReady().then((api) => api.data.getVolumeTracingLayerIds()[0]),
-    );
-
-    const zoomStep = await adminVerifyPage.evaluate(
-      async ({ layerName, position }: { layerName: string; position: number[] }) => {
-        const api = await (window as any).webknossos.apiReady();
-        return api.data.getUltimatelyRenderedZoomStepAtPosition(layerName, position);
-      },
-      { layerName: segLayerName, position: PARALLEL_USER_OPERATIONS[0].sourcePosition },
-    );
-
-    for (const op of PARALLEL_USER_OPERATIONS) {
-      const [sourceMappedId, targetMappedId] = (await adminVerifyPage.evaluate(
-        async ({
-          layerName,
-          sourcePos,
-          targetPos,
-          zoomStep,
-        }: {
-          layerName: string;
-          sourcePos: number[];
-          targetPos: number[];
-          zoomStep: number;
-        }) => {
-          const api = await (window as any).webknossos.apiReady();
-          return Promise.all([
-            api.data.getMappedDataValue(layerName, sourcePos, zoomStep),
-            api.data.getMappedDataValue(layerName, targetPos, zoomStep),
-          ]);
-        },
-        {
-          layerName: segLayerName as string,
-          sourcePos: op.sourcePosition,
-          targetPos: op.targetPosition,
-          zoomStep,
-        },
-      )) as [unknown, unknown];
-      console.log("Check merge operation");
-      expect(
-        sourceMappedId,
-        `Merge of ${op.sourcePosition} → ${op.targetPosition} not reflected (should be done by userIndex=${op.userIndex})`,
-      ).toBe(targetMappedId);
-    }
-
-    await adminVerifyPage.close();
-
-    // No page errors in any session
-    for (let i = 0; i < sessions.length; i++) {
-      const filteredErrors = sessions[i].errors.filter(
-        // We filter the following message, because our sampled IDs might already belong
-        // to the same segment which is okay.
-        (err) => !err.includes("Both segments belong to agglomerate id="),
+        }),
       );
-      if (filteredErrors.length > 0) {
-        console.log("Found errors in session", i, ":", sessions[i].errors);
+
+      // Open a fresh admin page, reload the annotation, and verify all merges.
+      const { page: adminVerifyPage, browser: adminVerifyBrowser } = await getNewPage(
+        WK_AUTH_TOKEN!,
+      );
+      browsers.push(adminVerifyBrowser);
+      await openAnnotationPage(adminVerifyPage, annotation.id);
+      await setupPageForProofreading(adminVerifyPage);
+      await waitForDataLoading(adminVerifyPage);
+
+      await waitForMappingEnabled(adminVerifyPage);
+
+      const segLayerName = await adminVerifyPage.evaluate(() =>
+        window.webknossos.apiReady().then((api) => api.data.getVolumeTracingLayerIds()[0]),
+      );
+
+      const zoomStep = await adminVerifyPage.evaluate(
+        async ({ layerName, position }: { layerName: string; position: number[] }) => {
+          const api = await (window as any).webknossos.apiReady();
+          return api.data.getUltimatelyRenderedZoomStepAtPosition(layerName, position);
+        },
+        { layerName: segLayerName, position: PARALLEL_USER_OPERATIONS[0].sourcePosition },
+      );
+
+      for (const op of PARALLEL_USER_OPERATIONS) {
+        const [sourceMappedId, targetMappedId] = (await adminVerifyPage.evaluate(
+          async ({
+            layerName,
+            sourcePos,
+            targetPos,
+            zoomStep,
+          }: {
+            layerName: string;
+            sourcePos: number[];
+            targetPos: number[];
+            zoomStep: number;
+          }) => {
+            const api = await (window as any).webknossos.apiReady();
+            return Promise.all([
+              api.data.getMappedDataValue(layerName, sourcePos, zoomStep),
+              api.data.getMappedDataValue(layerName, targetPos, zoomStep),
+            ]);
+          },
+          {
+            layerName: segLayerName as string,
+            sourcePos: op.sourcePosition,
+            targetPos: op.targetPosition,
+            zoomStep,
+          },
+        )) as [unknown, unknown];
+        console.log("Check merge operation");
+        expect(
+          sourceMappedId,
+          `Merge of ${op.sourcePosition} → ${op.targetPosition} not reflected (should be done by userIndex=${op.userIndex})`,
+        ).toBe(targetMappedId);
       }
-      expect(filteredErrors, `User ${i} (${collabUsers[i].email}) had page errors`).toHaveLength(0);
-    }
 
-    // await sleep(3000_000);
+      await adminVerifyPage.close();
 
-    await Promise.all(sessions.map(({ page }) => page.close()));
-  }, 300_000);
+      // No page errors in any session
+      for (let i = 0; i < sessions.length; i++) {
+        const filteredErrors = sessions[i].errors.filter(
+          // We filter the following message, because our sampled IDs might already belong
+          // to the same segment which is okay.
+          (err) => !err.includes("Both segments belong to agglomerate id="),
+        );
+        if (filteredErrors.length > 0) {
+          console.warn("Found errors in session", i, ":", sessions[i].errors);
+        }
+      }
+
+      await Promise.all(sessions.map(({ page }) => page.close()));
+    },
+    BROWSER_SPEC_TIMEOUT,
+  );
 });

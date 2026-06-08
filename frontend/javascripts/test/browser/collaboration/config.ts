@@ -52,6 +52,9 @@ export const NETWORK_THROTTLE: {
   : null;
 export const KEEP_ALIVE_FOR_DEBUGGING = false;
 export const KEEP_ALIVE_WAITING_DURATION = 1_000_000;
+export const BROWSER_SPEC_TIMEOUT = KEEP_ALIVE_FOR_DEBUGGING
+  ? KEEP_ALIVE_WAITING_DURATION
+  : 5 * 60 * 1000;
 
 export const ORG_NAME = "sample_organization";
 

@@ -40,7 +40,7 @@ Instead of computing individual meshes on demand, you can precompute and save me
 Start mesh generation by clicking the plus (+) button at the top of the `Segments` tab. A popover lets you choose the mesh quality and kick off the generation job. We recommend the medium quality (default) for a good balance between visual fidelity, compute time, and GPU resource usage. You can run the job multiple times at different quality levels to produce several mesh files to choose from.
 
 !!! info
-    Pre-computed meshes are exclusive to webknossos.org. Contact [sales](mailto:sales@webknossos.org) for access to the integrated WEBKNOSSOS worker for meshing or the [Voxelytics software](https://voxelytics.com) for standalone meshing from the command line.
+    Precomputing meshes is exclusive to webknossos.org. Contact [sales](mailto:sales@webknossos.org) for access to the integrated WEBKNOSSOS worker for meshing or the [Voxelytics software](https://voxelytics.com) for standalone meshing from the command line.
 
 [Check the `Processing Jobs` page](../automation/jobs.md) from the `Analysis` menu at the top of the screen to track progress or cancel the operation. The finished mesh file will be available on page reload.
 

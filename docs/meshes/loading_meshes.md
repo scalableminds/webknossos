@@ -26,7 +26,7 @@ Note that ad-hoc mesh computation can take a significant amount of time for larg
 
 Precomputed meshes have already been computed for all segments in the dataset and load almost instantly, even for large meshes.
 
-A dataset can have multiple precomputed mesh files, for example one per magnification level. Lower magnifications produce coarser meshes that load faster, while higher magnifications yield finer detail at the cost of longer load times. To switch between mesh files, click the settings (gear) icon at the top of the `Segments` tab and select the desired file from the dropdown. The reload button next to the dropdown refreshes the list if new mesh files have been added.
+A dataset can have multiple precomputed mesh files, for example one per magnification level. Coarser magnifications produce coarser meshes that load faster, while finer magnifications yield more detail at the cost of longer load times. To switch between mesh files, click the settings (gear) icon at the top of the `Segments` tab and select the desired file from the dropdown. The reload button next to the dropdown refreshes the list if new mesh files have been added.
 
 ![If you have more than one mesh file precomputed, e.g. based on different magnifications, they can be selected from a dropdown.](../images/segments_tab.jpeg)
 /// caption

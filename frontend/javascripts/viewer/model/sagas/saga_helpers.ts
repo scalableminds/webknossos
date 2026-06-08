@@ -4,7 +4,7 @@ import Toast from "libs/toast";
 import messages from "messages";
 import { call, cancel, delay, fork, put, race, spawn, take, takeEvery } from "typed-redux-saga";
 import { MappingStatusEnum, type SagaIdentifier } from "viewer/constants";
-import { escalateErrorAction, type Action } from "viewer/model/actions/actions";
+import { type Action, escalateErrorAction } from "viewer/model/actions/actions";
 import { setBusyBlockingInfoAction } from "viewer/model/actions/ui_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";

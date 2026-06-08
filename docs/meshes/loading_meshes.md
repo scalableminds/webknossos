@@ -26,7 +26,7 @@ Note that ad-hoc mesh computation can take a significant amount of time for larg
 
 Precomputed meshes have already been computed for all segments in the dataset and load almost instantly, even for large meshes.
 
-A dataset can have multiple precomputed mesh files, for example one per magnification level. Lower magnifications produce coarser meshes that load faster, while higher magnifications yield finer detail at the cost of longer load times. To switch between mesh files, click the settings (gear) icon at the top of the `Segments` tab and select the desired file from the dropdown. The reload button next to the dropdown refreshes the list if new mesh files have been added.
+A dataset can have multiple precomputed mesh files, for example one per magnification level. Coarser magnifications produce coarser meshes that load faster, while finer magnifications yield more detail at the cost of longer load times. To switch between mesh files, click the settings (gear) icon at the top of the `Segments` tab and select the desired file from the dropdown. The reload button next to the dropdown refreshes the list if new mesh files have been added.
 
 ![If you have more than one mesh file precomputed, e.g. based on different magnifications, they can be selected from a dropdown.](../images/segments_tab.jpeg)
 /// caption
@@ -35,12 +35,12 @@ If you have more than one mesh file precomputed, e.g. based on different magnifi
 
 ### Generating Precomputed Mesh Files
 
-Instead of computing individual meshes on demand, you can pre-compute and save meshes for all segments in a dataset at once.
+Instead of computing individual meshes on demand, you can precompute and save meshes for all segments in a dataset at once.
 
 Start mesh generation by clicking the plus (+) button at the top of the `Segments` tab. A popover lets you choose the mesh quality and kick off the generation job. We recommend the medium quality (default) for a good balance between visual fidelity, compute time, and GPU resource usage. You can run the job multiple times at different quality levels to produce several mesh files to choose from.
 
 !!! info
-    Pre-computed meshes are exclusive to webknossos.org. Contact [sales](mailto:sales@webknossos.org) for access to the integrated WEBKNOSSOS worker for meshing or the [Voxelytics software](https://voxelytics.com) for standalone meshing from the command line.
+    Precomputing meshes is exclusive to webknossos.org. Contact [sales](mailto:sales@webknossos.org) for access to the integrated WEBKNOSSOS worker for meshing or the [Voxelytics software](https://voxelytics.com) for standalone meshing from the command line.
 
 [Check the `Processing Jobs` page](../automation/jobs.md) from the `Analysis` menu at the top of the screen to track progress or cancel the operation. The finished mesh file will be available on page reload.
 

@@ -75,6 +75,13 @@ export async function getNewPage(authToken: string): Promise<{ page: Page; brows
       ...NETWORK_THROTTLE,
     });
   }
+  await page.route("**/api.airbrake.io/**", async (route) => {
+    // We swallow requests to airbrake to circumvent this error:
+    // Request header field x-auth-token is not allowed by Access-Control-Allow-Headers in preflight response.
+    const body = route.request().postData();
+    log(`[airbrake] swallowed request to ${route.request().url()} — payload: ${body ?? "<empty>"}`);
+    await route.fulfill({ status: 200, body: "{}" });
+  });
   page.on("console", async (msg) => {
     const args = await Promise.all(
       msg.args().map((arg) => arg.jsonValue().catch(() => arg.toString())),

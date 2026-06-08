@@ -355,7 +355,6 @@ describe("Live Collaboration", () => {
             zoomStep,
           },
         )) as [unknown, unknown];
-        console.log("Check merge operation");
         expect(
           sourceMappedId,
           `Merge of ${op.sourcePosition} → ${op.targetPosition} not reflected (should be done by userIndex=${op.userIndex})`,

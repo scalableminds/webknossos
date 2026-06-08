@@ -2791,7 +2791,8 @@ class DataApi {
           [
             Math.cos(thetaInRad), Math.sin(thetaInRad), 0, 0,
             -Math.sin(thetaInRad), Math.cos(thetaInRad), 0, 0,
-            0, 0, 1, 0, 0, 0, 0, 1,          ],
+            0, 0, 1, 0, 0, 0, 0, 1,
+          ],
         ),
         makeTranslation(-pos[0], -pos[1], -pos[2]),
       );

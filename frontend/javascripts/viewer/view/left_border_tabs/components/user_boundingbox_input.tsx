@@ -19,6 +19,7 @@ import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { Vector3, Vector6 } from "viewer/constants";
 import {
+  getByteCountFromLayer,
   getColorLayers,
   getMagInfoByLayer,
   getVisibleSegmentationLayer,
@@ -59,28 +60,6 @@ type UserBoundingBoxInputProps = {
 
 const FORMAT_TOOLTIP = "Format: minX, minY, minZ, width, height, depth";
 
-function getBytesPerElement(elementClass: string): number {
-  switch (elementClass) {
-    case "uint8":
-    case "int8":
-      return 1;
-    case "uint16":
-    case "int16":
-      return 2;
-    case "uint24":
-      return 3;
-    case "uint32":
-    case "int32":
-    case "float":
-      return 4;
-    case "uint64":
-    case "int64":
-    case "double":
-      return 8;
-    default:
-      return 1;
-  }
-}
 
 export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
   const {
@@ -214,7 +193,7 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
       const [, , , bboxW, bboxH, bboxD] = propValue;
       for (const layer of layers) {
         const mags = magInfoByLayer[layer.name]?.getMagsWithIndices() ?? [];
-        const bytesPerVoxel = getBytesPerElement(layer.elementClass);
+        const bytesPerVoxel = getByteCountFromLayer(layer);
         let bestZoomStep: number | null = null;
         let bestSize = -1;
         let fallbackZoomStep: number | null = null;
@@ -250,7 +229,7 @@ export default function UserBoundingBoxInput(props: UserBoundingBoxInputProps) {
       onTitleClick: buildAutoSelectHandler(availableColorLayers),
       children: availableColorLayers.map((layer) => {
         const mags = magInfoByLayer[layer.name]?.getMagsWithIndices() ?? [];
-        const bytesPerVoxel = getBytesPerElement(layer.elementClass);
+        const bytesPerVoxel = getByteCountFromLayer(layer);
         const [, , , bboxW, bboxH, bboxD] = propValue;
         return {
           key: `mip-${layer.name}`,

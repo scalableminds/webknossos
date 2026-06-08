@@ -1,0 +1,21 @@
+language js
+
+// Forbid bare dynamic import() calls. Use importWithRetry(() => import(...))
+// instead so that failed chunk loads are retried and the user is informed
+// gracefully (instead of silently crashing).
+// See frontend/javascripts/libs/import_with_retry.tsx and
+// https://github.com/scalableminds/webknossos/issues/9540
+`import($_)` as $import_call where {
+  // Allow imports passed directly into importWithRetry or loadable.
+  // loadable() is allowed because it calls importWithRetry internally.
+  // Both generic and non-generic call forms must be listed because GritQL
+  // treats `loadable(...)` and `loadable<T>(...)` as distinct AST patterns.
+  not { $import_call <: within `importWithRetry($__)` },
+  not { $import_call <: within `loadable($__)` },
+  not { $import_call <: within `loadable<$_>($__)` },
+  register_diagnostic(
+    span = $import_call,
+    message = "Use `importWithRetry(() => import(...))` instead of a bare `import()` call. See libs/import_with_retry.tsx.",
+    severity = "error"
+  )
+}

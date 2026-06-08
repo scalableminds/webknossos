@@ -45,7 +45,7 @@ object Dependencies {
     filters,
   )
 
-  // Dependencies for the standalone slick code generator subproject (see tools/slick-codegen and
+  // Dependencies for the standalone slick code generator subproject (see webknossos-slick-codegen and
   // project/AssetCompilation.scala). Kept isolated so slick-codegen does not leak into app modules.
   val slickCodegenDependencies: Seq[ModuleID] = Seq(
     "com.typesafe.slick" %% "slick" % slickVersion,

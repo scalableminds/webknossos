@@ -62,7 +62,7 @@ lazy val util = (project in file("util")).settings(
 
 // Standalone slick code generator. Not part of the app; its compiled classpath is used by the
 // slick schema generation task to produce one Tables source file per table (see AssetCompilation).
-lazy val slickCodegen = (project in file("tools/slick-codegen")).settings(
+lazy val slickCodegen = (project in file("webknossos-slick-codegen")).settings(
   commonSettings,
   libraryDependencies ++= Dependencies.slickCodegenDependencies,
   dependencyOverrides ++= Dependencies.dependencyOverrides

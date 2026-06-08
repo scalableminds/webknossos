@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 166 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
+do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 168 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
 -- Remove oblique from allowedModes arrays and clear preferredMode where it was oblique
 UPDATE webknossos.taskTypes
@@ -31,6 +31,6 @@ ALTER TABLE webknossos.taskTypes
 DROP TYPE webknossos.TASKTYPE_MODES;
 ALTER TYPE webknossos.TASKTYPE_MODES_new RENAME TO TASKTYPE_MODES;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 167;
+UPDATE webknossos.releaseInformation SET schemaVersion = 169;
 
 COMMIT TRANSACTION;

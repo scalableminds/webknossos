@@ -221,24 +221,15 @@ export function* spawnUntilCanceled<Fn extends (...args: any[]) => Saga<unknown>
    * that you need spawn. In general, we want to avoid spawn because it can cause
    * lingering sagas that never get teared down.
    */
-  let watchForCancelTask: FixedTask<unknown> | null = null;
-  const task = yield* spawn(function* () {
+  yield* spawn(function* (): Saga<void> {
     try {
-      yield* call(sagaFn, ...params);
+      yield* race({
+        completed: call(sagaFn, ...params),
+        canceled: take(["RESTART_SAGA", "CANCEL_SAGA"]),
+      });
     } catch (error) {
-      yield put(escalateErrorAction(error));
-    } finally {
-      if (watchForCancelTask != null) {
-        yield* cancel(watchForCancelTask);
-      }
+      yield* put(escalateErrorAction(error));
     }
-  });
-  watchForCancelTask = yield* spawn(function* (): Saga<void> {
-    yield* race({
-      restart: take("RESTART_SAGA"),
-      doCancel: take("CANCEL_SAGA"),
-    });
-    yield* cancel(task);
   });
 }
 

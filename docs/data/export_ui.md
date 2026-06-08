@@ -3,8 +3,7 @@
 The WEBKNOSSOS UI comes with a fully featured `Download` panel offering a wide variety of download export options:
 
 - Export cutouts of the data as OME-TIFF or TIFF stack (uses [long-running jobs](../automation/jobs.md) for export)
-- Download skeleton annotations as [NML files](../data/concepts.md#nml-files)
-- Download volume annotations as Zarr (default) or WKW files; an NML file describing the annotation is always included. WKW is unavailable for n-dimensional volume annotations.
+- Download the complete annotation, including all metadata, skeletons (as [NML files](../data/concepts.md#nml-files)), and volume layers (as Zarr, by default). You can customize this to skip volume layers entirely, or download them as WKW files (not available for n-dimensional volume annotations).
 - Instructions for using the WEBKNOSSOS Python [library for download](../data/export_python.md)
 
 To access the download panel:

@@ -404,7 +404,7 @@ export interface ScreenshotTestContext extends TestContext {
   browser: Browser;
 }
 
-export async function launchBrowser(sessionName?: string): Promise<Browser> {
+export async function launchPuppeteerBrowser(sessionName?: string): Promise<Browser> {
   let browser: Browser;
 
   if (USE_LOCAL_CHROME) {
@@ -449,7 +449,7 @@ export async function launchBrowser(sessionName?: string): Promise<Browser> {
 }
 
 export async function setupBeforeEach(context: ScreenshotTestContext) {
-  context.browser = await launchBrowser(context.task.name);
+  context.browser = await launchPuppeteerBrowser(context.task.name);
 }
 
 export async function setupAfterEach(context: ScreenshotTestContext) {

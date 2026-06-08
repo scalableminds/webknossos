@@ -14,6 +14,7 @@ import { BASE_URL, NETWORK_THROTTLE } from "./config";
 
 const LOG_DIR = path.join(__dirname, "logs");
 fs.rmSync(LOG_DIR, { recursive: true, force: true });
+fs.mkdirSync(LOG_DIR, { recursive: true });
 let sessionCounter = 0;
 
 async function waitForTracingViewLoad(page: Page): Promise<void> {
@@ -48,7 +49,6 @@ async function waitForTracingViewLoad(page: Page): Promise<void> {
 
 export async function getNewPage(authToken: string): Promise<{ page: Page; browser: Browser }> {
   const sessionId = ++sessionCounter;
-  fs.mkdirSync(LOG_DIR, { recursive: true });
   const logFile = path.join(LOG_DIR, `session_${sessionId}_${Date.now()}.log`);
   const log = (line: string) => fs.appendFileSync(logFile, `${new Date().toISOString()} ${line}\n`);
 

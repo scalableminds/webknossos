@@ -185,7 +185,6 @@ function* addMissingSegmentsToLoadedMappings(
         Array.from(mappingWithMissingIds as NumberLikeMap),
       ),
     );
-    console.log("addMissingSegmentsToLoadedMappings > setMappingAction");
     yield* put(
       setMappingAction(
         volumeTracingId,

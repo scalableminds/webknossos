@@ -1013,9 +1013,10 @@ async function applyLayerState(stateByLayer: UrlStateByLayer) {
 function migrateUserConfiguration(userConfiguration: UserConfiguration): UserConfiguration {
   // clippingDistanceArbitrary was renamed to clippingDistanceFlight. Carry over the stored
   // value so users don't silently lose their saved setting after the upgrade.
-  const { clippingDistanceArbitrary, clippingDistanceFlight, ...raw} = userConfiguration as Record<string, unknown>;
+  const { clippingDistanceArbitrary, clippingDistanceFlight, ...remainingConfig } =
+    userConfiguration as UserConfiguration & { clippingDistanceArbitrary?: number };
   if (clippingDistanceArbitrary != null && clippingDistanceFlight == null) {
-    return { ...userConfiguration, clippingDistanceFlight: clippingDistanceArbitrary as number };
+    return { ...remainingConfig, clippingDistanceFlight: clippingDistanceArbitrary as number };
   }
   return userConfiguration;
 }

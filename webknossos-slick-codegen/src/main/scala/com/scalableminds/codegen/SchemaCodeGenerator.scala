@@ -14,6 +14,7 @@ import scala.concurrent.duration.Duration
 
 /**
   * Generates Slick classes that mirror the SQL tables of the currently active schema.
+  * Differs from parent  Slick.SourceCodeGenerator by not updating unchanged tables.
   **/
 class ContentStableSourceCodeGenerator(model: slickModel.Model) extends SourceCodeGenerator(model) {
 

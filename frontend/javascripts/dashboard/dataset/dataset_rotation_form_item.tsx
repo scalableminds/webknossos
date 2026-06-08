@@ -17,8 +17,8 @@ import type { AffineTransformation, APIDataLayer } from "types/api_types";
 import {
   AXIS_TO_TRANSFORM_INDEX,
   EXPECTED_TRANSFORMATION_LENGTH,
-  fromCenterToOrigin,
-  fromOriginToCenter,
+  fromCenterToOriginAsAffine,
+  fromOriginToCenterAsAffine,
   getRotationMatrixAroundAxis,
   IDENTITY_TRANSFORM,
   type RotationAndMirroringSettings,
@@ -109,11 +109,11 @@ const AxisRotationFormItem: React.FC<AxisRotationFormItemProps> = ({
         let transformations = layer.coordinateTransformations;
         if (transformations == null || transformations.length !== EXPECTED_TRANSFORMATION_LENGTH) {
           transformations = [
-            fromCenterToOrigin(datasetBoundingBox),
+            fromCenterToOriginAsAffine(datasetBoundingBox),
             IDENTITY_TRANSFORM,
             IDENTITY_TRANSFORM,
             IDENTITY_TRANSFORM,
-            fromOriginToCenter(datasetBoundingBox),
+            fromOriginToCenterAsAffine(datasetBoundingBox),
           ];
         }
         transformations[AXIS_TO_TRANSFORM_INDEX[axis]] = rotationMatrix;
@@ -235,10 +235,10 @@ export function getRotationalTransformation(
   },
 ): AffineTransformation[] {
   return [
-    fromCenterToOrigin(datasetBoundingBox),
+    fromCenterToOriginAsAffine(datasetBoundingBox),
     getRotationMatrixAroundAxis("x", rotationValues["x"]),
     getRotationMatrixAroundAxis("y", rotationValues["y"]),
     getRotationMatrixAroundAxis("z", rotationValues["z"]),
-    fromOriginToCenter(datasetBoundingBox),
+    fromOriginToCenterAsAffine(datasetBoundingBox),
   ];
 }

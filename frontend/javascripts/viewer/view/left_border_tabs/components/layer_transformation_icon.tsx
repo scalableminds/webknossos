@@ -37,9 +37,11 @@ export default function LayerTransformationIcon({
   );
 
   const showIcon = useWkSelector((state) => hasDatasetTransforms(state.dataset));
-  if (!showIcon) {
+
+  if (!canLayerHaveTransforms || !showIcon) {
     return null;
   }
+
   const isRenderedNatively = transform == null || transform === IdentityTransform;
 
   const typeToLabel = {
@@ -94,10 +96,10 @@ export default function LayerTransformationIcon({
       disabled={isDisabled}
       title={
         isRenderedNatively
-          ? `This layer is shown natively (i.e., without any transformations).${isDisabled ? "" : " Click to render this layer with its configured transforms."}`
+          ? `This layer is shown natively (i.e., without any transformations).${isDisabled ? "" : " Click to render this layer with its configured transforms. Use the ··· menu to edit transforms."}`
           : `This layer is rendered with ${
               typeToLabel[transform.type]
-            } transformation.${isDisabled ? "" : " Click to render this layer without any transforms."}`
+            } transformation.${isDisabled ? "" : " Click to render this layer without any transforms. Use the ··· menu to edit transforms."}`
       }
       icon={
         <Icon

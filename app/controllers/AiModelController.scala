@@ -62,7 +62,6 @@ case class RunInferenceParameters(datasetId: ObjectId,
                                   maskAnnotationLayerName: Option[String],
                                   newDatasetName: String,
                                   workflowYaml: Option[String],
-                                  invertColorLayer: Option[Boolean],
                                   seedGeneratorDistanceThreshold: Option[Double],
                                   doSplitMergerEvaluation: Option[Boolean],
                                   evalUseSparseTracing: Option[Boolean],
@@ -294,7 +293,6 @@ class AiModelController @Inject()(
           "model_organization_id" -> Some(aiModel).filterNot(_.isPretrained).flatMap(_._organization),
           "dataset_directory_name" -> dataset.directoryName,
           "new_dataset_name" -> request.body.newDatasetName,
-          "invert_color_layer" -> request.body.invertColorLayer,
           "seed_generator_distance_threshold" -> request.body.seedGeneratorDistanceThreshold,
           "custom_configuration" -> request.body.customConfiguration
         )
@@ -357,7 +355,6 @@ class AiModelController @Inject()(
           "annotation_id" -> request.body.annotationId,
           "dataset_directory_name" -> dataset.directoryName,
           "new_dataset_name" -> request.body.newDatasetName,
-          "invert_color_layer" -> request.body.invertColorLayer,
           "do_split_merger_evaluation" -> doSplitMergerEvaluation,
           "eval_use_sparse_tracing" -> request.body.evalUseSparseTracing,
           "eval_max_edge_length" -> request.body.evalMaxEdgeLength,

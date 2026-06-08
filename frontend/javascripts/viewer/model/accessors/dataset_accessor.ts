@@ -716,17 +716,6 @@ export function getMappingInfoForSupportedLayer(state: WebknossosState): ActiveM
   );
 }
 
-export function getEffectiveIntensityRange(
-  dataset: APIDataset,
-  layerName: string,
-  datasetConfiguration: DatasetConfiguration,
-): readonly [number, number] {
-  const defaultIntensityRange = getDefaultValueRangeOfLayer(dataset, layerName);
-  const layerConfiguration = datasetConfiguration.layers[layerName];
-
-  return layerConfiguration.intensityRange || defaultIntensityRange;
-}
-
 /** Returns whether the segment index is available for the given layer. Requires `hasSegmentIndex` to be loaded first — dispatch `ensureSegmentIndexIsLoadedAction` before calling this. */
 export function getMaybeSegmentIndexAvailability(
   dataset: APIDataset,

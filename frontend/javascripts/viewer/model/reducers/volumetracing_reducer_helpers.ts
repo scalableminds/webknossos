@@ -268,7 +268,7 @@ type SegmentUpdateInfo =
       readonly segmentGroups: TreeGroup[];
     }
   | {
-      readonly type: "UPDATE_LOCAL_SEGMENTATION_DATA";
+      readonly type: "UPDATE_LOCAL_SEGMENTATION_STATE";
       readonly layerName: string;
       readonly segments: SegmentMap;
       readonly segmentGroups: [];
@@ -300,7 +300,7 @@ export function getSegmentUpdateInfo(
     };
   } else {
     return {
-      type: "UPDATE_LOCAL_SEGMENTATION_DATA",
+      type: "UPDATE_LOCAL_SEGMENTATION_STATE",
       layerName: layer.name,
       segments: state.localSegmentationStateByLayer[layer.name].segments,
       segmentGroups: [],

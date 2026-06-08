@@ -103,7 +103,7 @@ object AssetCompilation {
       val baseDirectoryValue = baseDirectory.value
       // Classpath of the standalone slick code generator subproject (see build.sbt). It carries our
       // ContentStableSourceCodeGenerator plus slick-codegen and the postgres driver.
-      val codegenClasspathValue = (LocalProject("slickCodegen") / Compile / fullClasspath).value
+      val codegenClasspathValue = (LocalProject("webknossosSlickCodegen") / Compile / fullClasspath).value
       val runnerValue = (Compile / runner).value
       val sourceManagedValue = sourceManaged.value
 

@@ -13,18 +13,8 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 
 /**
-  * Slick code generator that emits one file per table (plus a `Tables.scala` container and a
-  * `TablesRoot.scala` root trait) instead of a single monolithic `Tables.scala`, and only rewrites
-  * a file when its content actually changed.
-  *
-  * Together these keep incremental Scala recompiles scoped to the tables that changed: when a single
-  * table is altered, only that table's file changes on disk, so Zinc recompiles just that file and its
-  * dependents instead of the whole generated model and everything importing it.
-  *
-  * The generated API is source-compatible with the previous monolith: `object Tables` still mixes in
-  * every per-table trait, so `import com.scalableminds.webknossos.schema.Tables._` keeps resolving all
-  * Row classes, TableQuery vals and GetResult implicits.
-  */
+  * Generates Slick classes that mirror the SQL tables of the currently active schema.
+  **/
 class ContentStableSourceCodeGenerator(model: slickModel.Model) extends SourceCodeGenerator(model) {
 
   private val logger = LoggerFactory.getLogger(classOf[ContentStableSourceCodeGenerator])
@@ -33,7 +23,7 @@ class ContentStableSourceCodeGenerator(model: slickModel.Model) extends SourceCo
     * rewritten). Used afterwards to prune files of tables that no longer exist. */
   private val intendedFiles = scala.collection.mutable.Set[String]()
 
-  /** Names of the files actually rewritten this run (content differed from disk). */
+  /** Names of the files actually rewritten in this run (content differed from disk). */
   private val updatedFiles = scala.collection.mutable.Buffer[String]()
 
   // Mirrors slick's OutputHelpers.writeStringToFile, but skips the write when the on-disk content is
@@ -61,8 +51,7 @@ class ContentStableSourceCodeGenerator(model: slickModel.Model) extends SourceCo
     }
   }
 
-  /** Generate the multi-file model, delete generated files for tables that no longer exist, and log how
-    * many files were actually updated. */
+  /** Generate the multi-file model, delete generated files for tables that no longer exist. */
   def writeToMultipleFilesAndPrune(profile: String, folder: String, pkg: String, container: String): Unit = {
     writeToMultipleFiles(profile, folder, pkg, container)
     val folderPath = folder + "/" + pkg.replace(".", "/") + "/"
@@ -105,13 +94,10 @@ object SchemaCodeGenerator {
         dc.db.run(dc.profile.createModel(None, ignoreInvalidDefaults = true).withPinnedSession),
         Duration.Inf
       )
-      // Strip foreign keys from the model before generating. Slick derives both the foreignKey(...)
-      // definitions and each per-table trait's self-type (self: TablesRoot with FooTable with BarTable =>)
-      // from them, and that self-type is a compile-time dependency from one generated table file to
-      // another. We query via plain SQL rather than slick's lifted FK constraints, so dropping them makes
-      // every XxxTable trait depend only on TablesRoot - keeping incremental recompilation scoped to the
-      // single table that actually changed instead of cascading across foreign-key-related tables.
+
+      // Strip foreign keys from the model before generating. We never use them in scala and this reduces dependencies and thus recompilation
       val model = rawModel.copy(tables = rawModel.tables.map(_.copy(foreignKeys = Seq.empty)))
+
       val codegen = new ContentStableSourceCodeGenerator(model)
       codegen.writeToMultipleFilesAndPrune(profileName, outputDir, pkg, "Tables")
     } finally dc.db.close()

@@ -1,4 +1,5 @@
 import features from "features";
+import { copyToClipboard } from "libs/clipboard";
 import type { ModifierKeys, MouseBindingMap } from "libs/input";
 import { V3 } from "libs/mjs";
 import Toast from "libs/toast";
@@ -627,9 +628,7 @@ class VolumeToolController extends ToolController {
               mapping,
               getActiveMagIndexForLayer(Store.getState(), segmentationLayer.name),
             );
-            navigator.clipboard
-              .writeText(String(hoveredId))
-              .then(() => Toast.success(`Segment id ${hoveredId} copied to clipboard.`));
+            copyToClipboard(String(hoveredId), "segment id", true);
           } else {
             Toast.warning("No segment under cursor.");
           }

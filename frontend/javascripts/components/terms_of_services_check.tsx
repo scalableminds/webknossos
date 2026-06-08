@@ -17,7 +17,7 @@ import { switchTo } from "navbar";
 import type React from "react";
 import { useEffect, useState } from "react";
 import type { APIUser } from "types/api_types";
-import { formatDateInLocalTimeZone } from "./formatted_date";
+import FormattedDate from "./formatted_date";
 
 const SNOOZE_DURATION_IN_DAYS = 3;
 const LAST_TERMS_OF_SERVICE_WARNING_KEY = "lastTermsOfServiceWarning";
@@ -180,11 +180,14 @@ function AcceptTermsOfServiceModal({
 }
 
 function getDeadlineExplanation(acceptanceInfo: AcceptanceInfo) {
-  return acceptanceInfo.acceptanceDeadlinePassed
-    ? null
-    : `If the terms are not accepted until ${formatDateInLocalTimeZone(
-        acceptanceInfo.acceptanceDeadline,
-      )}, WEBKNOSSOS cannot be used until the terms are accepted.`;
+  if (acceptanceInfo.acceptanceDeadlinePassed) return null;
+  return (
+    <>
+      If the terms are not accepted until{" "}
+      <FormattedDate timestamp={acceptanceInfo.acceptanceDeadline} />, WEBKNOSSOS cannot be used
+      until the terms are accepted.
+    </>
+  );
 }
 
 function TermsOfServiceAcceptanceMissingModal({

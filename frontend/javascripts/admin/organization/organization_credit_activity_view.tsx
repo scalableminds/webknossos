@@ -5,7 +5,7 @@ import { getCreditTransactions } from "admin/api/organization";
 import { getJobTypeName } from "admin/job/job_list_view";
 import { Button, DatePicker, Space, Spin, Table, Typography } from "antd";
 import type { RangePickerProps } from "antd/es/date-picker";
-import FastTooltip from "components/fast_tooltip";
+import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import dayjs from "dayjs";
 import { formatMilliCreditsString } from "libs/format_utils";
@@ -166,24 +166,9 @@ export function OrganizationCreditActivityView() {
             title="Date"
             key="createdAt"
             width={170}
-            render={(transaction: APICreditTransaction) => {
-              const utcTimestamp = dayjs.utc(transaction.createdAt);
-              const localTimestamp = utcTimestamp.local();
-              return (
-                <FastTooltip
-                  title={`The displayed time refers to your local timezone. In UTC, the time is: ${utcTimestamp.format(
-                    "YYYY-MM-DD HH:mm",
-                  )}`}
-                >
-                  <div>
-                    <div>{localTimestamp.format("YYYY-MM-DD")}</div>
-                    <Typography.Text type="secondary">
-                      {localTimestamp.format("HH:mm")}
-                    </Typography.Text>
-                  </div>
-                </FastTooltip>
-              );
-            }}
+            render={(transaction: APICreditTransaction) => (
+              <FormattedDate timestamp={transaction.createdAt} />
+            )}
             sorter={(left: APICreditTransaction, right: APICreditTransaction) =>
               left.createdAt - right.createdAt
             }

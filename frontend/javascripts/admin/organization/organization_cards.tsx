@@ -5,7 +5,7 @@ import {
   RobotOutlined,
 } from "@ant-design/icons";
 import { Alert, Button, Card, Col, Row, Space } from "antd";
-import { formatDateInLocalTimeZone } from "components/formatted_date";
+import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";
 import { useWkSelector } from "libs/react_hooks";
 import type { APIOrganization } from "types/api_types";
@@ -169,7 +169,7 @@ export function PlanExpirationCard({ organization }: { organization: APIOrganiza
       <Row gutter={24}>
         <Col flex="auto">
           Your current plan is paid until{" "}
-          {formatDateInLocalTimeZone(organization.paidUntil, "YYYY-MM-DD")}
+          <FormattedDate timestamp={organization.paidUntil} dateOnly />
         </Col>
         <Col span={6}>
           <Button

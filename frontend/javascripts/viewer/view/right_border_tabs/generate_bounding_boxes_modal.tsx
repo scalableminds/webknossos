@@ -87,6 +87,11 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
 
   const [avoidExistingBoxes, setAvoidExistingBoxes] = useState(true);
 
+  // Optionally restrict the sampling space to an existing bounding box. When null, boxes are
+  // sampled across the entire dataset.
+  const [restrictToBoxId, setRestrictToBoxId] = useState<number | null>(null);
+  const restrictToBox = existingBoundingBoxes.find((bb) => bb.id === restrictToBoxId) ?? null;
+
   const handleTrainingTypeChange = (value: string) => {
     setTrainingType(value);
     const { count, size } = getDefaults(value);
@@ -135,22 +140,30 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
     setTimeout(() => {
       try {
         const mag = selectedMag;
-        const datasetBbox = getDatasetBoundingBox(dataset);
-        const { min, max } = datasetBbox;
+        // Restrict sampling to a selected bounding box if one is chosen, otherwise the whole dataset.
+        const samplingBbox = restrictToBox
+          ? new BoundingBox(restrictToBox.boundingBox)
+          : getDatasetBoundingBox(dataset);
+        const { min, max } = samplingBbox;
 
         const placementMax: Vector3 = V3.sub(max, sizeInMag1);
 
         if (placementMax[0] < min[0] || placementMax[1] < min[1] || placementMax[2] < min[2]) {
           Toast.warning(
-            "The selected box size does not fit into the dataset at the chosen magnification.",
+            restrictToBox
+              ? "The selected box size does not fit into the selected bounding box at the chosen magnification."
+              : "The selected box size does not fit into the dataset at the chosen magnification.",
           );
           return;
         }
 
         const MAX_RETRIES = 500;
-        // Optionally seed with existing boxes so new ones don't overlap them.
+        // Optionally seed with existing boxes so new ones don't overlap them. The bounding box used
+        // to restrict the sampling space is excluded so it doesn't block all placements.
         const placedBoxes: BoundingBox[] = avoidExistingBoxes
-          ? existingBoundingBoxes.map((bb) => new BoundingBox(bb.boundingBox))
+          ? existingBoundingBoxes
+              .filter((bb) => bb.id !== restrictToBoxId)
+              .map((bb) => new BoundingBox(bb.boundingBox))
           : [];
 
         // Sample a position by choosing uniformly from the discrete set of mag-aligned
@@ -265,6 +278,21 @@ function GenerateBoundingBoxesModalInner({ isOpen, onClose, magnification, jobTy
             options={availableMags.map((mag, index) => ({
               value: index,
               label: `${mag[0]}-${mag[1]}-${mag[2]}`,
+            }))}
+          />
+        </Form.Item>
+        <Form.Item
+          label="Restrict to bounding box"
+          extra="Limit the sampling space to an existing bounding box. By default, boxes are placed across the entire dataset."
+        >
+          <Select
+            value={restrictToBoxId}
+            onChange={setRestrictToBoxId}
+            allowClear
+            placeholder="Entire dataset"
+            options={existingBoundingBoxes.map((bb) => ({
+              value: bb.id,
+              label: bb.name || `Bounding box ${bb.id}`,
             }))}
           />
         </Form.Item>

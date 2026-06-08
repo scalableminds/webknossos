@@ -17,9 +17,10 @@ import {
 import {
   removeSegmentAction,
   setActiveCellAction,
+  updateProofreadingMarkerPositionAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
-import type { Saga } from "viewer/model/sagas/effect_generators";
+import { type Saga, select } from "viewer/model/sagas/effect_generators";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
 import { VERSION_POLL_INTERVAL_COLLAB } from "viewer/model/sagas/saving/save_saga";
 import { Store } from "viewer/singletons";
@@ -172,6 +173,159 @@ describe("Proofreading (Multi User)", () => {
         name: "Segment 1",
         anchorPosition: getPositionForSegmentId(1),
       });
+    });
+
+    await task.toPromise();
+  });
+
+  it("should preserve the proofreading marker position across a rebase (regression test for #9559)", async (context: WebknossosTestContext) => {
+    /*
+      The proofreading marker position is user-local, per-layer state and is therefore
+      stored in localSegmentationStateByLayer instead of within the VolumeTracing. This
+      ensures it is not reset when PREPARE_REBASING wholesale-replaces annotation.volumes
+      with the last-synced server snapshot (rebaseRelevantServerAnnotationState.volumes).
+
+      Why a single "set marker -> rebase -> assert marker" is enough to reproduce the bug:
+      changing the marker position is local-only state and does NOT create an update action
+      (it is not save-relevant), so it never bumps the annotation version. Consequently, a
+      subsequent api.tracing.save() does not trigger a new snapshotAnnotationStateForNextRebase
+      that would capture the marker (see save_queue_draining_saga, which only snapshots after
+      the save queue drains). The rebase snapshot therefore still holds the marker value from
+      before it was set, i.e. undefined. On master (where the marker lived in the VolumeTracing)
+      the rebase resets the marker to that snapshot value — verified to fail on master with
+      "expected undefined to deeply equal [42, 43, 44]". With the marker in
+      localSegmentationStateByLayer the rebase leaves it untouched.
+
+      Note: a separate, unrelated save-relevant change (a segment rename) plus a diverging
+      backend version is still required to actually trigger a rebase.
+     */
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    // A position intentionally unrelated to any segment's anchor position so that we can be
+    // sure the asserted value is the one the user placed (and not, e.g., accidentally derived
+    // from the active segment).
+    const markerPosition: Vector3 = [42, 43, 44];
+
+    const task = startSaga(function* task() {
+      // Capture rebasing actions so we can assert that a rebase actually happened.
+      // Otherwise the test could pass vacuously (a marker trivially "survives" when no
+      // rebase ever occurs).
+      const rebaseActionChannel = yield actionChannel(["PREPARE_REBASING", "FINISHED_REBASING"]);
+
+      // Establish an editable mapping and flush, so the annotation is fully synced with the
+      // backend before we place the marker (this gives us a reliable version to inject after).
+      yield* prepareEditableMapping(context, tracingId, 1, getPositionForSegmentId(1));
+      yield call(waitUntilNotBusy);
+      yield call(() => api.tracing.save());
+
+      const syncedVersion = yield* select((state) => state.annotation.version);
+
+      // Place the proofreading marker. This is local-only and creates no update action.
+      yield put(updateProofreadingMarkerPositionAction(markerPosition, tracingId));
+
+      const markerBeforeRebase = yield* select(
+        (state) => state.localSegmentationStateByLayer[tracingId].proofreadingMarkerPosition,
+      );
+      expect(markerBeforeRebase).toEqual(markerPosition);
+
+      // An unrelated, save-relevant local change plus a diverging backend version forces a
+      // rebase on the next save.
+      yield put(updateSegmentAction(1, { name: "Renamed Segment 1" }, tracingId));
+      backendMock.planMultipleVersionInjections(syncedVersion + 1, mergeSegment5And6);
+
+      yield call(waitUntilNotBusy);
+      yield call(() => api.tracing.save());
+
+      // Assert that a rebase was actually triggered, so the test is meaningful.
+      const rebasingActions = yield flush(rebaseActionChannel);
+      expect(rebasingActions.some((action: Action) => action.type === "PREPARE_REBASING")).toBe(
+        true,
+      );
+
+      // The actual regression assertion: the marker position must survive the rebase
+      // (on master it would be reset to undefined).
+      const markerAfterRebase = yield* select(
+        (state) => state.localSegmentationStateByLayer[tracingId].proofreadingMarkerPosition,
+      );
+      expect(markerAfterRebase).toEqual(markerPosition);
+    });
+
+    await task.toPromise();
+  });
+
+  it("should preserve activeUnmappedSegmentId across a rebase (regression test for #9559)", async (context: WebknossosTestContext) => {
+    /*
+      activeUnmappedSegmentId (the currently highlighted/selected supervoxel, used e.g. as the
+      source for split/cut operations) is user-local, per-layer state and therefore lives in
+      localSegmentationStateByLayer instead of within the VolumeTracing. This ensures it is not
+      reset when PREPARE_REBASING wholesale-replaces annotation.volumes with the last-synced
+      server snapshot (rebaseRelevantServerAnnotationState.volumes).
+
+      As with the proofreading-marker test, a single "set value -> rebase -> assert value" is
+      enough: selecting a supervoxel only sets activeUnmappedSegmentId and (here) keeps the
+      active cell id unchanged, so it creates no update action and never bumps the annotation
+      version. The subsequent api.tracing.save() therefore does not snapshot it, and the rebase
+      snapshot still holds the value from before it was set (null). On master (where it lived in
+      the VolumeTracing) the rebase resets it to null; here the value survives.
+
+      Note: keeping the active *cell* id unchanged (it stays 1, which is already synced) is
+      important. Otherwise the rebase would replay an updateActiveSegmentId update action that
+      re-runs setActiveCellReducer with activeUnmappedSegmentId omitted, which would reset the
+      value on its own and no longer isolate the PREPARE_REBASING behavior we want to guard.
+      A separate, unrelated segment edit is used to trigger the rebase.
+     */
+    const { api } = context;
+    const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+
+    const { annotation } = Store.getState();
+    const { tracingId } = annotation.volumes[0];
+
+    const activeUnmappedSegmentId = 12345;
+
+    const task = startSaga(function* task() {
+      const rebaseActionChannel = yield actionChannel(["PREPARE_REBASING", "FINISHED_REBASING"]);
+
+      // Establish an editable mapping and an active cell (id 1), then flush so the annotation
+      // is fully synced before we select the supervoxel.
+      yield* prepareEditableMapping(context, tracingId, 1, getPositionForSegmentId(1));
+      yield call(waitUntilNotBusy);
+      yield call(() => api.tracing.save());
+
+      const syncedVersion = yield* select((state) => state.annotation.version);
+
+      // Select a supervoxel. The active cell id stays 1 (already synced), so this emits no
+      // updateActiveSegmentId update action.
+      yield put(setActiveCellAction(1, undefined, undefined, activeUnmappedSegmentId));
+
+      const activeUnmappedSegmentIdBeforeRebase = yield* select(
+        (state) => state.localSegmentationStateByLayer[tracingId].activeUnmappedSegmentId,
+      );
+      expect(activeUnmappedSegmentIdBeforeRebase).toBe(activeUnmappedSegmentId);
+
+      // An unrelated, save-relevant local change plus a diverging backend version forces a
+      // rebase on the next save.
+      yield put(updateSegmentAction(1, { name: "Renamed Segment 1" }, tracingId));
+      backendMock.planMultipleVersionInjections(syncedVersion + 1, mergeSegment5And6);
+
+      yield call(waitUntilNotBusy);
+      yield call(() => api.tracing.save());
+
+      // Assert that a rebase was actually triggered, so the test is meaningful.
+      const rebasingActions = yield flush(rebaseActionChannel);
+      expect(rebasingActions.some((action: Action) => action.type === "PREPARE_REBASING")).toBe(
+        true,
+      );
+
+      // The actual regression assertion: activeUnmappedSegmentId must survive the rebase
+      // (on master it would be reset to null).
+      const activeUnmappedSegmentIdAfterRebase = yield* select(
+        (state) => state.localSegmentationStateByLayer[tracingId].activeUnmappedSegmentId,
+      );
+      expect(activeUnmappedSegmentIdAfterRebase).toBe(activeUnmappedSegmentId);
     });
 
     await task.toPromise();

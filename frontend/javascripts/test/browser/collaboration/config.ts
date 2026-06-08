@@ -38,7 +38,6 @@ loadEnvFile(path.join(process.cwd(), ".env"));
 export const N_COLLAB_USERS = 4;
 
 export const MbpsFactor = (1000 * 1024) / 8;
-// Set to null to disable network throttling.
 export const ENABLE_THROTTLING = false;
 export const NETWORK_THROTTLE: {
   downloadThroughput: number;
@@ -51,17 +50,11 @@ export const NETWORK_THROTTLE: {
       latency: 250,
     }
   : null;
+export const KEEP_ALIVE_FOR_DEBUGGING = false;
+export const KEEP_ALIVE_WAITING_DURATION = 1_000_000;
 
 export const ORG_NAME = "sample_organization";
 
-// Localhost
-// export const DATASET_NAME = "l4_v2_sample";
-// export const HDF5_MAPPING_NAME = "agglomerate_view_5";
-// export const MERGE_SOURCE_AGGLOMERATE_ID = 8465;
-// export const MERGE_SOURCE_POSITION = [1462, 1535, 1536] as Vector3;
-// export const MERGE_TARGET_POSITION: [number, number, number] = [1429, 1578, 1536];
-
-// DEV Instance
 export const DATASET_NAME = "l4dense_motta_et_al_dev";
 export const HDF5_MAPPING_NAME = "agglomerate_view_30";
 export const MERGE_SOURCE_AGGLOMERATE_ID = 3681595;

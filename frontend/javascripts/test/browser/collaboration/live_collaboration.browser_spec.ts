@@ -29,6 +29,8 @@ import {
 import {
   DATASET_NAME,
   HDF5_MAPPING_NAME,
+  KEEP_ALIVE_FOR_DEBUGGING,
+  KEEP_ALIVE_WAITING_DURATION,
   MERGE_SOURCE_AGGLOMERATE_ID,
   MERGE_SOURCE_POSITION,
   MERGE_TARGET_POSITION,
@@ -57,6 +59,7 @@ import {
   resolveDatasetId,
   shareAnnotationWithTeam,
 } from "./rest_helpers";
+import { Vector3 } from "viewer/constants";
 
 vi.mock("libs/request", async (importOriginal) => {
   // The request lib is globally mocked for unit tests. In the screenshot tests, we actually
@@ -80,7 +83,6 @@ const collabUsers: Array<{ id: string; email: string; authToken: string }> = [];
 
 describe("Live Collaboration", () => {
   beforeAll(async () => {
-    console.log("beforeAll");
     const datasetId = await resolveDatasetId(DATASET_NAME);
     console.log(`Dataset "${DATASET_NAME}" → id=${datasetId}`);
 
@@ -108,10 +110,11 @@ describe("Live Collaboration", () => {
   }, 120_000);
 
   afterAll(async () => {
-    // await sleep(1_000_000);
+    if (KEEP_ALIVE_FOR_DEBUGGING) {
+      await sleep(KEEP_ALIVE_WAITING_DURATION);
+    }
 
     await Promise.all(browsers.map((b) => b.close().catch(() => {})));
-    // TODO: optionally delete the annotation and the test users created above
   }, 1_000_000);
 
   it("admin sets up the annotation: activate mapping, switch to proofreading, merge, save, enable othersMayEdit", async () => {
@@ -167,7 +170,6 @@ describe("Live Collaboration", () => {
       setActiveCellActionObj,
     );
 
-    console.log("about to merge stuff");
     await sleep(3_000);
     // Merge two segments.
     const proofreadMergeActionObj = proofreadMergeAction(MERGE_TARGET_POSITION);
@@ -175,9 +177,6 @@ describe("Live Collaboration", () => {
       (action) => window.webknossos.DEV.store.dispatch(action),
       proofreadMergeActionObj,
     );
-    // TODO: replace the sleep with a proper completion signal once the
-    //       proofreading saga exposes one (e.g. poll
-    //       api.tracing.hasUnsavedChanges() or watch the by-product trees).
     console.log("Wait 3s for merge operation");
     await sleep(3_000);
 
@@ -308,27 +307,38 @@ describe("Live Collaboration", () => {
       window.webknossos.apiReady().then((api) => api.data.getVolumeTracingLayerIds()[0]),
     );
 
+    const zoomStep = await adminVerifyPage.evaluate(
+      async ({ layerName, position }: { layerName: string; position: number[] }) => {
+        const api = await (window as any).webknossos.apiReady();
+        return api.data.getUltimatelyRenderedZoomStepAtPosition(layerName, position);
+      },
+      { layerName: segLayerName, position: PARALLEL_USER_OPERATIONS[0].sourcePosition },
+    );
+
     for (const op of PARALLEL_USER_OPERATIONS) {
       const [sourceMappedId, targetMappedId] = (await adminVerifyPage.evaluate(
         async ({
           layerName,
           sourcePos,
           targetPos,
+          zoomStep,
         }: {
           layerName: string;
           sourcePos: number[];
           targetPos: number[];
+          zoomStep: number;
         }) => {
           const api = await (window as any).webknossos.apiReady();
           return Promise.all([
-            api.data.getMappedDataValue(layerName, sourcePos, 2), // todop: use an appropriate zoom step without hardcoding
-            api.data.getMappedDataValue(layerName, targetPos, 2),
+            api.data.getMappedDataValue(layerName, sourcePos, zoomStep),
+            api.data.getMappedDataValue(layerName, targetPos, zoomStep),
           ]);
         },
         {
           layerName: segLayerName as string,
           sourcePos: op.sourcePosition,
           targetPos: op.targetPosition,
+          zoomStep,
         },
       )) as [unknown, unknown];
       console.log("Check merge operation");

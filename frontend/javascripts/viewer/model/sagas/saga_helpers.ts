@@ -2,8 +2,7 @@ import type { ActionPattern } from "@redux-saga/types";
 import { Modal } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
-import { race } from "redux-saga/effects";
-import { call, delay, fork, put, take, takeEvery } from "typed-redux-saga";
+import { call, cancel, delay, fork, put, race, spawn, take, takeEvery } from "typed-redux-saga";
 import { MappingStatusEnum, type SagaIdentifier } from "viewer/constants";
 import type { Action } from "viewer/model/actions/actions";
 import { setBusyBlockingInfoAction } from "viewer/model/actions/ui_actions";
@@ -197,6 +196,25 @@ export function* takeWithBatchActionSupport(actionType: Action["type"]) {
   ]);
 }
 
+export function* spawnUntilCanceled<Fn extends (...args: any[]) => Saga<unknown>>(
+  sagaFn: Fn,
+  ...params: Parameters<Fn>
+): Saga<void> {
+  /*
+   * Spawns the given saga with the given parameters in a non-blocking manner.
+   * The saga is automatically canceled if a RESTART_SAGA or CANCEL_SAGA action
+   * was dispatched.
+   */
+  const task = yield* spawn(sagaFn, ...params);
+  yield* spawn(function* (): Saga<void> {
+    yield* race({
+      restart: take("RESTART_SAGA"),
+      doCancel: take("CANCEL_SAGA"),
+    });
+    yield* cancel(task);
+  });
+}
+
 export function* takeEveryWithBatchActionSupport(
   actionType: Action["type"],
   saga: (...args: any[]) => any,
@@ -239,7 +257,7 @@ export function* waitFor(
       // In tests the assumption from above is not necessarily true.
       // Few actions are dispatched and we usually check for the expected
       // states quickly. So, we do the proper approach:
-      yield race([take("*"), delay(200)]);
+      yield* race([take("*"), delay(200)]);
     }
     if (yield select(selector)) return;
     yield delay(throttleMs);

@@ -17,7 +17,6 @@ import {
   put,
   race,
   retry,
-  spawn,
   take,
   takeEvery,
 } from "typed-redux-saga";
@@ -32,11 +31,11 @@ import {
   setIsMutexAcquiredAction,
   setUserHoldingMutexAction,
   subscribeToAnnotationMutexAction,
-  type UnsubscribeFromAnnotationMutexAction,
   unsubscribeFromAnnotationMutexAction,
 } from "viewer/model/actions/save_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
+import { spawnUntilCanceled } from "viewer/model/sagas/saga_helpers";
 import { ensureWkInitialized } from "../ready_sagas";
 
 // Also refer to application.conf where annotation.mutex.expiryTime is defined
@@ -206,20 +205,6 @@ export function* subscribeToAnnotationMutex(callerId: string): Saga<() => Saga<v
     }
     yield* take("SET_IS_MUTEX_ACQUIRED");
   }
-}
-
-function* spawnUntilCanceled<Fn extends (...args: any[]) => Saga<unknown>>(
-  sagaFn: Fn,
-  ...params: Parameters<Fn>
-): Saga<void> {
-  const task = yield* spawn(sagaFn, ...params);
-  yield* spawn(function* (): Saga<void> {
-    yield* race({
-      restart: take("RESTART_SAGA"),
-      doCancel: take("CANCEL_SAGA"),
-    });
-    yield* cancel(task);
-  });
 }
 
 // Needed for tests

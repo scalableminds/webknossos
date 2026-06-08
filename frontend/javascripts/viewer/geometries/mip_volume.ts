@@ -547,9 +547,9 @@ export class MipVolume {
       const p = normOrigin.clone().addScaledVector(normDir, t);
       for (const { data, width, height, depth } of images) {
         if (data == null || width === 0) continue;
-        const xi = Math.min(Math.floor((p.x + 0.5) * width), width - 1);
-        const yi = Math.min(Math.floor((p.y + 0.5) * height), height - 1);
-        const zi = Math.min(Math.floor((p.z + 0.5) * depth), depth - 1);
+        const xi = Math.max(0, Math.min(Math.floor((p.x + 0.5) * width), width - 1));
+        const yi = Math.max(0, Math.min(Math.floor((p.y + 0.5) * height), height - 1));
+        const zi = Math.max(0, Math.min(Math.floor((p.z + 0.5) * depth), depth - 1));
         const val = data[xi + yi * width + zi * width * height];
         if (val > maxVal) {
           maxVal = val;

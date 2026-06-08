@@ -37,6 +37,7 @@ import type { ColumnsType } from "antd/lib/table";
 import { AsyncButton, AsyncIconButton } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";
+import { copyToClipboard } from "libs/clipboard";
 import { makeComponentLazy } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -149,9 +150,8 @@ export function useZarrLinkMenu(maybeAccessToken: string | null) {
     ? `${dataStoreURL}/data/annotations/zarr/${maybeAccessToken}`
     : `${dataStoreURL}/data/zarr/${dataset.id}`;
 
-  const copyTokenToClipboard = async ({ key: layerName }: { key: string }) => {
-    await navigator.clipboard.writeText(`${baseUrl}/${layerName}`);
-    Toast.success("URL copied to clipboard");
+  const copyTokenToClipboard = ({ key: layerName }: { key: string }) => {
+    copyToClipboard(`${baseUrl}/${layerName}`, "URL");
   };
 
   const copyLayerUrlMenu: MenuProps = {

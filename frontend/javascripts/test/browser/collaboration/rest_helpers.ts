@@ -117,22 +117,16 @@ export async function activateUser(userId: string): Promise<void> {
 }
 
 export async function resolveDatasetId(datasetName: string): Promise<string> {
-  console.log("fetch");
-
   const res = await fetch(
     urljoin(BASE_URL, `/api/datasets/disambiguate/${ORG_NAME}/${datasetName}/toId`),
     { headers: adminHeaders() },
   );
-  console.log("fetch");
-
   if (!res.ok) {
-    console.log("could not resolve" + `${res.status} ${await res.text()}`);
     throw new Error(
       `Could not resolve dataset "${datasetName}": ${res.status} ${await res.text()}`,
     );
   }
   const { id } = await res.json();
-  console.log(id);
   return id;
 }
 

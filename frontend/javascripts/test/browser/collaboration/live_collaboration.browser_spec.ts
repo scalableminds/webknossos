@@ -343,6 +343,8 @@ describe("Live Collaboration", () => {
     // No page errors in any session
     for (let i = 0; i < sessions.length; i++) {
       const filteredErrors = sessions[i].errors.filter(
+        // We filter the following message, because our sampled IDs might already belong
+        // to the same segment which is okay.
         (err) => !err.includes("Both segments belong to agglomerate id="),
       );
       if (filteredErrors.length > 0) {

@@ -23,6 +23,7 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val pingInterval: FiniteDuration = get[FiniteDuration]("datastore.webKnossos.pingInterval")
     }
     val baseDirectory: Path = Path.of(get[String]("datastore.baseDirectory")).toAbsolutePath
+    val additionalDirectories: List[Config] = getList[Config]("datastore.additionalDirectories")
     val localDirectoryWhitelist: List[String] = getList[String]("datastore.localDirectoryWhitelist")
     val writeVirtualDatasetsMirror: Boolean = get[Boolean]("datastore.writeVirtualDatasetsMirror")
     object WatchFileSystem {

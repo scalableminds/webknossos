@@ -148,7 +148,6 @@ export async function createHybridAnnotation(datasetId: string): Promise<APIAnno
 
 export async function getDefaultTeamId(): Promise<string> {
   const teams = await apiGet<APITeam[]>("/api/teams");
-  // TODO: adjust the team name if "default" has a different name on this instance
   const defaultTeam = teams.find((t) => t.name.toLowerCase() === "default") ?? teams[0];
   if (!defaultTeam) throw new Error("No teams found on this instance.");
   return defaultTeam.id;

@@ -143,9 +143,12 @@ object AssetCompilation {
           streamsValue.log
         )
         streamsValue.log.info(f"Slick codegen took ${(System.nanoTime() - startNanos) / 1.0e9}%.1fs")
-        runResult.failed.foreach(e => streamsValue.log.error("Slick code generation failed: " + e.getMessage))
+
+        // Fail this task if the subprocess failed.
+        runResult.get
+
         // Mark this schema.sql state as generated so we do not re-run until schema.sql changes again.
-        if (runResult.isSuccess) IO.touch(stampFile)
+        IO.touch(stampFile)
 
       } else {
         streamsValue.log.info("Slick SQL schema already up to date.")

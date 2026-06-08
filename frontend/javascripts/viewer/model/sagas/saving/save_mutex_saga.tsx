@@ -294,16 +294,16 @@ function* tryAcquireMutexContinuously(mutexLogicState: MutexLogicState): Saga<ne
    * race).
    */
   const annotationId = yield* select((storeState) => storeState.annotation.annotationId);
-  const activeUser = yield* select((state) => state.activeUser);
   mutexLogicState.isInitialRequest = true;
 
   // We can simply use an infinite loop here, because the saga will be cancelled by
   // reactToOthersMayEditChanges when collaborationMode changes.
   while (true) {
-    const blockedByUser = yield* select((state) => state.save.mutexState.blockedByUser);
-    if (blockedByUser == null || blockedByUser.id !== activeUser?.id) {
-      // If the annotation is currently not blocked by the active user,
-      // we immediately disallow updating the annotation.
+    if (mutexLogicState.isInitialRequest) {
+      // If the annotation was just opened, we immediately disallow updating the
+      // annotation to prevent the user from editing before having the mutex.
+      // After the initial request, we always refresh the existing mutex
+      // which is why editing should be allowed (at least, until the mutex is lost).
       yield* put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
     }
     try {
@@ -624,7 +624,7 @@ function* watchForAnnotationExit(): Saga<void> {
     if (!hasMutex) return;
 
     const annotationId = yield* select((state) => state.annotation.annotationId);
-    const sent = releaseAnnotationMutexWithBeacon(annotationId);
+    const sent = releaseAnnotationMutexWithBeacon(annotationId, TAB_SESSION_ID);
     console.log(
       `[Mutex] Releasing mutex for annotation ${annotationId} on exit via sendBeacon (queued: ${sent}).`,
     );
@@ -644,7 +644,7 @@ function* releaseMutex() {
   // In case another user got the mutex in meantime, releasing this users mutex still yield a successful request.
   while (!successfullyReleaseMutex) {
     try {
-      yield call(releaseAnnotationMutex, annotationId);
+      yield call(releaseAnnotationMutex, annotationId, TAB_SESSION_ID);
       successfullyReleaseMutex = true;
     } catch (error) {
       console.error("Could not release mutex", error);

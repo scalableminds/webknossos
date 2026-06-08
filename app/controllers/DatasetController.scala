@@ -118,7 +118,8 @@ case class ReserveAttachmentUploadToPathRequest(
     attachmentName: String,
     attachmentType: LayerAttachmentType.Value,
     attachmentDataformat: LayerAttachmentDataformat.Value,
-    pathPrefix: Option[UPath]
+    pathPrefix: Option[UPath],
+    overwritePending: Option[Boolean] = None
 )
 
 object ReserveAttachmentUploadToPathRequest {
@@ -171,14 +172,14 @@ class DatasetController @Inject()(userService: UserService,
                                   wKRemoteSegmentAnythingClient: WKRemoteSegmentAnythingClient,
                                   teamService: TeamService,
                                   datasetDAO: DatasetDAO,
-                                  datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
+                                  datasetLayerAttachmentsDAO: DatasetLayerAttachmentDAO,
                                   datasetUploadToPathsService: UploadToPathsService,
                                   folderService: FolderService,
                                   thumbnailService: ThumbnailService,
                                   thumbnailCachingService: ThumbnailCachingService,
                                   usedStorageService: UsedStorageService,
                                   conf: WkConf,
-                                  datasetMagsDAO: DatasetMagsDAO,
+                                  datasetMagsDAO: DatasetMagDAO,
                                   slackNotificationService: SlackNotificationService,
                                   authenticationService: AccessibleBySwitchingService,
                                   analyticsService: AnalyticsService,
@@ -750,8 +751,9 @@ class DatasetController @Inject()(userService: UserService,
   def finishMagUploadToPath(datasetId: ObjectId): Action[ReserveMagUploadToPathRequest] =
     sil.SecuredAction.async(validateJson[ReserveMagUploadToPathRequest]) { implicit request =>
       for {
-        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
+        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- datasetMagsDAO.findOneWithPendingUploadToPath(datasetId, request.body.layerName, request.body.mag) ?~> Msg.Dataset.Upload.ToPaths.magNotPending
         _ <- datasetMagsDAO.finishUploadToPath(datasetId, request.body.layerName, request.body.mag)
         dataStoreClient <- datasetService.clientFor(dataset)
         _ <- Fox.runIf(!dataset.isVirtual) {
@@ -760,6 +762,7 @@ class DatasetController @Inject()(userService: UserService,
             _ <- dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource)
           } yield ()
         }
+        _ <- usedStorageService.refreshStorageReportForDataset(dataset)
         _ <- datasetService.scanRealpathsIfVirtual(dataset)
         _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
         _ <- datasetService.writeMirrorForVirtual(dataset)(GlobalAccessContext)
@@ -779,12 +782,17 @@ class DatasetController @Inject()(userService: UserService,
   def finishAttachmentUploadToPath(datasetId: ObjectId): Action[ReserveAttachmentUploadToPathRequest] =
     sil.SecuredAction.async(validateJson[ReserveAttachmentUploadToPathRequest]) { implicit request =>
       for {
-        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
-        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
+        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> "notAllowed" ~> FORBIDDEN
+        _ <- datasetLayerAttachmentsDAO.findOneWithPendingUploadToPath(
+          datasetId,
+          request.body.layerName,
+          request.body.attachmentType,
+          request.body.attachmentName) ?~> Msg.Dataset.Upload.ToPaths.attachmentNotPending
         _ <- datasetLayerAttachmentsDAO.finishUploadToPath(datasetId,
                                                            request.body.layerName,
-                                                           request.body.attachmentName,
-                                                           request.body.attachmentType)
+                                                           request.body.attachmentType,
+                                                           request.body.attachmentName)
         dataStoreClient <- datasetService.clientFor(dataset)
         _ <- Fox.runIf(!dataset.isVirtual) {
           for {
@@ -792,6 +800,7 @@ class DatasetController @Inject()(userService: UserService,
             _ <- dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource)
           } yield ()
         }
+        _ <- usedStorageService.refreshStorageReportForDataset(dataset)
         _ <- datasetService.scanRealpathsIfVirtual(dataset)
         _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
         _ <- datasetService.writeMirrorForVirtual(dataset)(GlobalAccessContext)

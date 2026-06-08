@@ -45,7 +45,6 @@ class TaskTypeInformationHandler @Inject()(
                                                   toTemporaryStore = true,
                                                   user._id,
                                                   datasetId,
-                                                  taskType._team,
                                                   AnnotationType.CompoundTaskType,
                                                   finishedAnnotations,
                                                   taskBoundingBoxes) ?~> Msg.Annotation.Merge.failedCompound

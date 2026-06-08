@@ -6,6 +6,7 @@ import {
   isInMaintenance as isInMaintenanceAPICall,
   pingHealthEndpoint,
 } from "admin/rest_api";
+import { registerPingFn } from "libs/handle_request_error_helper";
 import Toast from "libs/toast";
 import memoize from "lodash-es/memoize";
 import throttle from "lodash-es/throttle";
@@ -114,3 +115,5 @@ const extractUrls = (str: string): Array<string> => {
 export const pingMentionedDataStores = (str: string): void => {
   extractUrls(str).map(pingDataStoreIfAppropriate);
 };
+
+registerPingFn(pingMentionedDataStores);

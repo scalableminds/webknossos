@@ -39,10 +39,13 @@ export class DynamicImportError extends Error {
 
 async function isNewerVersionDeployed(): Promise<boolean> {
   try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000);
     // Deliberately not using getBuildInfo() from admin/rest_api here to keep
     // the import graph of this module minimal (it is imported by modules which
     // are loaded very early).
-    const response = await fetch("/api/buildinfo");
+    const response = await fetch("/api/buildinfo", { signal: controller.signal });
+    clearTimeout(timeoutId);
     const { webknossos } = await response.json();
     return (
       ErrorHandling.commitHash != null &&

@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.tracingstore.TSChunkCacheService
 import com.scalableminds.webknossos.tracingstore.annotation.UpdateAction
 import com.scalableminds.webknossos.tracingstore.files.TsTempFileService
-import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore}
+import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreConversions, TracingDataStore}
 import com.typesafe.scalalogging.LazyLogging
 import jakarta.inject.Inject
 import play.api.libs.json.Json
@@ -32,7 +32,7 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService,
                                          editableMappingService: EditableMappingService)
     extends LazyLogging
     with FoxImplicits
-    with KeyValueStoreImplicits {
+    with KeyValueStoreConversions {
 
   // 10000 edges per chunk (an edge is two Longs in edges and one bool in edgeIsAddition)
   private val ChunkSize: Int = 10000
@@ -157,7 +157,7 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService,
         case (updateGroup: Seq[UpdateAction], updateGroupIndex) =>
           tracingDataStore.annotationUpdates.put(annotationId.toString,
                                                  startVersion + updateGroupIndex,
-                                                 Json.toJson(updateGroup))
+                                                 jsonToBytes(Json.toJson(updateGroup)))
       }
       numberOfSavedVersions = updatesGrouped.length
     } yield numberOfSavedVersions

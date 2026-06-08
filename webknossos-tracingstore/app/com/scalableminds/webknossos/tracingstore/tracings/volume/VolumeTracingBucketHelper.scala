@@ -174,7 +174,7 @@ trait BucketKeys extends WKWDataFormatHelper with AdditionalCoordinateKey {
 }
 
 trait VolumeTracingBucketHelper
-    extends KeyValueStoreImplicits
+    extends KeyValueStoreConversions
     with FoxImplicits
     with VolumeBucketCompression
     with BucketKeys
@@ -264,7 +264,7 @@ trait VolumeTracingBucketHelper
   ): Box[Seq[Box[Array[Byte]]]] = tryo {
     if ((expectedBucketCount - datastoreMissingBucketIndices.size) * bytesPerBucket != flatDataFromDataStore.length) {
       throw new IllegalStateException(
-        s"bucket data array from datastore does not have expected length to be split into ${expectedBucketCount - datastoreMissingBucketIndices.length} buckets."
+        s"bucket data array from datastore does not have expected length to be split into ${expectedBucketCount - datastoreMissingBucketIndices.size} buckets."
       )
     }
     var currentPosition = 0
@@ -435,7 +435,7 @@ class VersionedBucketIterator(
     version: Option[Long] = None,
     additionalAxes: Option[Seq[AdditionalAxis]]
 ) extends Iterator[(BucketPosition, Array[Byte], Long)]
-    with KeyValueStoreImplicits
+    with KeyValueStoreConversions
     with VolumeBucketCompression
     with BucketKeys
     with FoxImplicits

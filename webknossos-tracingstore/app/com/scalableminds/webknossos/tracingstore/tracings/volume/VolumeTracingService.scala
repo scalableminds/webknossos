@@ -91,7 +91,7 @@ class VolumeTracingService @Inject() (
     if (toTemporaryStore)
       temporaryTracingService.saveVolume(tracingId, tracing)
     else
-      tracingDataStore.volumes.put(tracingId, version, tracing)
+      tracingDataStore.volumes.put(tracingId, version, tracing.toByteArray)
 
   private def updateSegmentIndex(
       volumeLayer: VolumeTracingLayer,

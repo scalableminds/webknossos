@@ -18,22 +18,23 @@ import scalapb.{GeneratedMessage, GeneratedMessageCompanion}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
-trait KeyValueStoreImplicits {
+trait KeyValueStoreConversions {
 
-  implicit def stringToByteArray(s: String): Array[Byte] = s.toCharArray.toIndexedSeq.map((c: Char) => c.toByte).toArray
+  protected def stringToBytes(s: String): Array[Byte] = s.toCharArray.toIndexedSeq.map((c: Char) => c.toByte).toArray
 
   def wrapInBox[T](x: T): Box[T] = Full(x)
 
-  implicit def toJsonBytes[T](o: T)(implicit w: Writes[T]): Array[Byte] = w.writes(o).toString.getBytes("UTF-8")
+  protected  def jsonToBytes[T](o: T)(implicit w: Writes[T]): Array[Byte] = w.writes(o).toString.getBytes("UTF-8")
 
-  implicit def fromJsonBytes[T](a: Array[Byte])(implicit r: Reads[T]): Box[T] =
+  protected  def jsonFromBytes[T](a: Array[Byte])(implicit r: Reads[T]): Box[T] =
     JsonHelper.parseAs[T](a)
 
-  implicit def toProtoBytes[T <: GeneratedMessage](o: T): Array[Byte] = o.toByteArray
+  protected  def toProtoBytes[T <: GeneratedMessage](o: T): Array[Byte] = o.toByteArray
 
-  implicit def fromProtoBytes[T <: GeneratedMessage](a: Array[Byte])(implicit
+  protected  def fromProtoBytes[T <: GeneratedMessage](a: Array[Byte])(implicit
       companion: GeneratedMessageCompanion[T]
   ): Box[T] = tryo(companion.parseFrom(a))
+
 }
 
 case class VersionedKey(key: String, version: Long)
@@ -118,8 +119,7 @@ class FossilDBClient(
     if (mayBeEmpty.getOrElse(false) && errorMessage.contains("No such element")) Fox.empty
     else Fox.fromBool(success) ?~> errorMessage.getOrElse("")
 
-  def get[T](key: String, version: Option[Long] = None, mayBeEmpty: Option[Boolean] = None)(implicit
-      fromByteArray: Array[Byte] => Box[T]
+  def get[T](key: String, version: Option[Long] = None, mayBeEmpty: Option[Boolean] = None)(fromByteArray: Array[Byte] => Box[T]
   ): Fox[VersionedKeyValuePair[T]] =
     for {
       reply <- wrapException(stub.get(GetRequest(collection, key, version, mayBeEmpty)))
@@ -151,7 +151,7 @@ class FossilDBClient(
       prefix: Option[String],
       version: Option[Long] = None,
       limit: Option[Int] = None
-  )(implicit fromByteArray: Array[Byte] => Box[T]): List[VersionedKeyValuePair[T]] = {
+  )(fromByteArray: Array[Byte] => Box[T]): List[VersionedKeyValuePair[T]] = {
     def flatCombineTuples[A, B, C](keys: List[A], versions: List[B], values: List[Box[C]]) = {
       val boxTuples: List[Box[(A, B, C)]] = keys.zip(versions).zip(values).map {
         case ((k, v), Full(value)) => Full(k, v, value)
@@ -170,17 +170,16 @@ class FossilDBClient(
     }
   }
 
-  def getMultipleKeysByList[T](keys: Seq[String], version: Option[Long], batchSize: Int = 1000)(implicit
+  def getMultipleKeysByList[T](keys: Seq[String], version: Option[Long], batchSize: Int = 1000)(
       fromByteArray: Array[Byte] => Box[T]
   ): Fox[Seq[Box[VersionedKeyValuePair[T]]]] =
     for {
       batchedResults <- Fox.serialCombined(keys.grouped(batchSize))(keyBatch =>
-        getMultipleKeysByListImpl(keyBatch, version)
+        getMultipleKeysByListImpl(keyBatch, version)(fromByteArray)
       )
     } yield batchedResults.flatten
 
-  private def getMultipleKeysByListImpl[T](keys: Seq[String], version: Option[Long])(implicit
-      fromByteArray: Array[Byte] => Box[T]
+  private def getMultipleKeysByListImpl[T](keys: Seq[String], version: Option[Long])(fromByteArray: Array[Byte] => Box[T]
   ): Fox[Seq[Box[VersionedKeyValuePair[T]]]] =
     for {
       reply: GetMultipleKeysByListReply <- Fox.fromFuture(
@@ -207,7 +206,7 @@ class FossilDBClient(
       key: String,
       newestVersion: Option[Long] = None,
       oldestVersion: Option[Long] = None
-  )(implicit fromByteArray: Array[Byte] => Box[T]): Fox[List[(Long, T)]] =
+  )(fromByteArray: Array[Byte] => Box[T]): Fox[List[(Long, T)]] =
     (for {
       reply <- wrapException(
         stub.getMultipleVersions(GetMultipleVersionsRequest(collection, key, newestVersion, oldestVersion))

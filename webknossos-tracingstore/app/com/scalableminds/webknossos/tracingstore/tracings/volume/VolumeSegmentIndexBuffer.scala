@@ -10,7 +10,7 @@ import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBClient,
-  KeyValueStoreImplicits,
+  KeyValueStoreConversions,
   RemoteFallbackLayer,
   TemporaryTracingService
 }
@@ -46,7 +46,7 @@ class VolumeSegmentIndexBuffer(
     tc: TokenContext,
     isReadOnly: Boolean = false,
     toTemporaryStore: Boolean = false)
-    extends KeyValueStoreImplicits
+    extends KeyValueStoreConversions
     with SegmentIndexKeyHelper
     with ProtoGeometryImplicits
     with FoxImplicits

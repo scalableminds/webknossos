@@ -33,7 +33,7 @@ import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotifi
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume._
 import com.scalableminds.webknossos.tracingstore.tracings.{
-  KeyValueStoreImplicits,
+  KeyValueStoreConversions,
   TemporaryMergedVolumeStatsStore,
   TracingSelector
 }
@@ -70,7 +70,7 @@ class VolumeTracingController @Inject()(
     extends Controller
     with ProtoGeometryImplicits
     with MissingBucketHeaders
-    with KeyValueStoreImplicits {
+    with KeyValueStoreConversions {
 
   implicit val tracingsCompanion: VolumeTracings.type = VolumeTracings
 

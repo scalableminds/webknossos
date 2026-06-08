@@ -3,7 +3,7 @@ package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 import com.scalableminds.util.tools.FoxImplicits
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBClient,
-  KeyValueStoreImplicits,
+  KeyValueStoreConversions,
   VersionedKeyValuePair
 }
 import com.typesafe.scalalogging.LazyLogging
@@ -12,7 +12,7 @@ import scala.annotation.tailrec
 
 class VersionedFossilDbIterator(prefix: String, fossilDbClient: FossilDBClient, version: Option[Long] = None)
     extends Iterator[VersionedKeyValuePair[Array[Byte]]]
-    with KeyValueStoreImplicits
+    with KeyValueStoreConversions
     with LazyLogging
     with FoxImplicits {
   private val batchSize = 64

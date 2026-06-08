@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   UpdateBucketVolumeAction,
   VolumeTracingService
 }
-import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore, TracingId}
+import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreConversions, TracingDataStore, TracingId}
 import com.scalableminds.webknossos.tracingstore.{
   AnnotationUpdatesReport,
   TSRemoteWebknossosClient,
@@ -29,7 +29,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
                                              tracingDataStore: TracingDataStore,
                                              remoteWebknossosClient: TSRemoteWebknossosClient,
                                              annotationService: TSAnnotationService)
-    extends KeyValueStoreImplicits
+    extends KeyValueStoreConversions
     with LazyLogging {
 
   private val transactionGroupExpiry: FiniteDuration = 24 hours
@@ -225,7 +225,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
       updateActionsProcessed <- Fox.successful(preprocessActionsForStorage(updateActionGroup))
       _ <- Fox.fromBool(updateActionsProcessed.length <= 1000000) ?~> "Annotation update transactions with more than 1M update actions are not currently supported"
       updateActionsJson = Json.toJson(updateActionsProcessed)
-      _ <- tracingDataStore.annotationUpdates.put(annotationId.toString, updateActionGroup.version, updateActionsJson)
+      _ <- tracingDataStore.annotationUpdates.put(annotationId.toString, updateActionGroup.version, jsonToBytes(updateActionsJson))
       bucketMutatingActions = findBucketMutatingActions(updateActionGroup)
       actionsGrouped: Map[String, List[BucketMutatingVolumeUpdateAction]] = bucketMutatingActions.groupBy(
         _.actionTracingId)

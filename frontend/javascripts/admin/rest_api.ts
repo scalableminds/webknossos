@@ -754,7 +754,10 @@ export async function acquireAnnotationMutex(
   return { canEdit, blockedByUser, blockedBySessionId };
 }
 
-export async function releaseAnnotationMutex(annotationId: string, sessionId: string): Promise<void> {
+export async function releaseAnnotationMutex(
+  annotationId: string,
+  sessionId: string,
+): Promise<void> {
   await Request.receiveJSON(
     `/api/annotations/${annotationId}/releaseMutex?${new URLSearchParams({ sessionId })}`,
     {

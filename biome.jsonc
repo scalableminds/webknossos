@@ -1,6 +1,5 @@
 {
   "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
-  "plugins": ["./biome-plugins/no-bare-dynamic-import.grit"],
   "files": {
     "includes": [
       "**/*.ts",

@@ -1,0 +1,12 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  // Extends the base biome.jsonc and adds GritQL plugins.
+  // Used by `check-frontend` (CI) and the IDE (see .vscode/settings.json).
+  // `fix-frontend` uses the base biome.jsonc directly (no plugins) to stay fast.
+  "extends": ["./biome.jsonc"],
+  "plugins": [
+    "./biome-plugins/no-bare-dynamic-import.grit",
+    "./biome-plugins/no-untyped-select-import.grit",
+    "./biome-plugins/no-untyped-use-selector-import.grit"
+  ]
+}

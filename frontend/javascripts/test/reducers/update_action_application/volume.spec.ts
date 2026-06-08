@@ -256,32 +256,14 @@ describe("Update Action Application for VolumeTracing", () => {
           seenActionTypes.add(action.name);
         }
 
-        let reappliedNewState = transformStateAsReadOnly(state2WithoutActiveBoundingBox, (state) =>
-          applyActions(state, [
-            applyVolumeUpdateActionsFromServerAction(updateActions),
-            setActiveUserBoundingBoxId(null),
-          ]),
+        const reappliedNewState = transformStateAsReadOnly(
+          state2WithoutActiveBoundingBox,
+          (state) =>
+            applyActions(state, [
+              applyVolumeUpdateActionsFromServerAction(updateActions),
+              setActiveUserBoundingBoxId(null),
+            ]),
         );
-
-        // fixing activeUnmappedSegmentId mismatch as the frontend supports a createCellAction,
-        // which sets activeUnmappedSegmentId to null but the matching annotation update action equivalent
-        // "updateActiveSegmentId" sets activeUnmappedSegmentId to undefined.
-        if (
-          reappliedNewState.annotation.volumes[0].activeUnmappedSegmentId == null &&
-          state3.annotation.volumes[0].activeUnmappedSegmentId == null
-        ) {
-          reappliedNewState = update(reappliedNewState, {
-            annotation: {
-              volumes: {
-                [0]: {
-                  activeUnmappedSegmentId: {
-                    $set: state3.annotation.volumes[0].activeUnmappedSegmentId,
-                  },
-                },
-              },
-            },
-          });
-        }
 
         expect(reappliedNewState.annotation.volumes[0]).toEqual(state3.annotation.volumes[0]);
       });

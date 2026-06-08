@@ -9,6 +9,7 @@ import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
   getActiveCellId,
   getActiveSegmentationTracing,
+  getActiveUnmappedSegmentId,
   getSegmentsForLayer,
 } from "viewer/model/accessors/volumetracing_accessor";
 import {
@@ -47,7 +48,9 @@ export function useMeshItems(contextInfo: ContextMenuInfo): MenuItemType[] {
   );
   const isMultiSplitActive = useWkSelector((state) => state.userConfiguration.isMultiSplitActive);
 
-  const activeUnmappedSegmentId = volumeTracing?.activeUnmappedSegmentId;
+  const activeUnmappedSegmentId = useWkSelector((state) =>
+    getActiveUnmappedSegmentId(state, volumeTracing),
+  );
   const activeCellId = volumeTracing ? getActiveCellId(volumeTracing) : 0;
 
   const segments = useWkSelector((state) =>

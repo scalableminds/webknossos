@@ -2,7 +2,6 @@ import update from "immutability-helper";
 import DiffableMap from "libs/diffable_map";
 import { colorObjectToRGBArray, mapEntriesToMap, point3ToVector3, replaceOrAdd } from "libs/utils";
 import type { APIUserBase, ServerVolumeTracing } from "types/api_types";
-import { ContourModeEnum } from "viewer/constants";
 import {
   getLayerByName,
   getMappingInfo,
@@ -39,6 +38,7 @@ import {
   setSegmentGroups,
   toggleSegmentGroupReducer,
   updateDirectionReducer,
+  updateLocalSegmentationState,
   updateSegments,
   updateVolumeTracing,
   type VolumeTracingReducerAction,
@@ -91,9 +91,6 @@ export function serverVolumeToClientVolumeTracing(
     ),
     segmentGroups,
     activeCellId: userState?.activeSegmentId ?? tracing.activeSegmentId ?? 0,
-    lastLabelActions: [],
-    contourTracingMode: ContourModeEnum.DRAW,
-    contourList: [],
     largestSegmentId,
     tracingId: tracing.id,
     boundingBox: convertServerBoundingBoxToFrontend(tracing.boundingBox),
@@ -102,12 +99,9 @@ export function serverVolumeToClientVolumeTracing(
     mappingName: tracing.mappingName,
     hasEditableMapping: tracing.hasEditableMapping,
     mappingIsLocked: tracing.mappingIsLocked,
-    volumeBucketDataHasChanged: tracing.volumeBucketDataHasChanged,
     hasSegmentIndex: tracing.hasSegmentIndex || false,
     additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
-    hideUnregisteredSegments: tracing.hideUnregisteredSegments ?? false,
     segmentJournal: [],
-    idReservations: { SegmentGroup: [], Segment: [] },
   };
   return volumeTracing;
 }
@@ -179,6 +173,21 @@ function VolumeTracingReducer(
           },
           readOnly: {
             $set: null,
+          },
+        },
+        // The server provides initial values for some of the local-only
+        // fields. The entry for the tracing layer was already created by
+        // SET_DATASET (its layer name is the tracingId).
+        localSegmentationStateByLayer: {
+          [volumeTracing.tracingId]: {
+            hideUnregisteredSegments: {
+              $set: action.tracing.hideUnregisteredSegments ?? false,
+            },
+            volumeBucketDataHasChanged: {
+              // Note that this value can be undefined for older annotations
+              // (also see LoadMeshMenuItemLabel which depends on this).
+              $set: action.tracing.volumeBucketDataHasChanged,
+            },
           },
         },
       });
@@ -260,17 +269,8 @@ function VolumeTracingReducer(
 
     case "UPDATE_PROOFREADING_MARKER_POSITION": {
       const layerName = action.layerName;
-      if (layerName == null) {
-        return state;
-      }
-      return update(state, {
-        localSegmentationStateByLayer: {
-          [layerName]: {
-            proofreadingMarkerPosition: {
-              $set: action.position,
-            },
-          },
-        },
+      return updateLocalSegmentationState(state, layerName, {
+        proofreadingMarkerPosition: action.position,
       });
     }
 
@@ -315,28 +315,14 @@ function VolumeTracingReducer(
     }
 
     case "SET_HIDE_UNREGISTERED_SEGMENTS": {
-      const volumeTracing = getVolumeTracingFromAction(state, action);
-      if (volumeTracing) {
-        return updateVolumeTracing(state, volumeTracing.tracingId, {
-          hideUnregisteredSegments: action.value,
-        });
-      } else {
-        const visibleSegmentationLayer = getVisibleSegmentationLayer(state);
-        const layerName = action.layerName ?? visibleSegmentationLayer?.name;
-        if (layerName == null) {
-          return state;
-        }
-
-        return update(state, {
-          localSegmentationStateByLayer: {
-            [layerName]: {
-              hideUnregisteredSegments: {
-                $set: action.value,
-              },
-            },
-          },
-        });
+      const layerName = action.layerName ?? getVisibleSegmentationLayer(state)?.name;
+      if (layerName == null) {
+        return state;
       }
+
+      return updateLocalSegmentationState(state, layerName, {
+        hideUnregisteredSegments: action.value,
+      });
     }
 
     case "CLICK_SEGMENT": {
@@ -344,7 +330,7 @@ function VolumeTracingReducer(
     }
 
     case "SET_VOLUME_BUCKET_DATA_HAS_CHANGED": {
-      return updateVolumeTracing(state, action.tracingId, {
+      return updateLocalSegmentationState(state, action.tracingId, {
         volumeBucketDataHasChanged: true,
       });
     }
@@ -470,13 +456,10 @@ function VolumeTracingReducer(
     }
 
     case "SET_ID_RESERVATIONS": {
-      const volumeTracing = getVolumeTracingFromAction(state, action);
-      if (!volumeTracing) {
-        return state;
-      }
-      return updateVolumeTracing(state, action.tracingId, {
+      const { idReservations } = state.localSegmentationStateByLayer[action.tracingId];
+      return updateLocalSegmentationState(state, action.tracingId, {
         idReservations: {
-          ...volumeTracing.idReservations,
+          ...idReservations,
           [action.domain]: action.reservations,
         },
       });

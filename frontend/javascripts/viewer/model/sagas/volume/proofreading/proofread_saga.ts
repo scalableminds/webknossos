@@ -49,6 +49,7 @@ import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
   getActiveSegmentationTracing,
   getActiveSegmentationTracingLayer,
+  getActiveUnmappedSegmentId,
   getEditableMappingForVolumeTracingId,
   getMeshInfoForSegment,
   getSegmentsForLayer,
@@ -217,9 +218,11 @@ function* clearActiveSegmentIfTdViewportIsActive(): Saga<void> {
   const activeViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
   const activeTool = yield* select((state) => state.uiInformation.activeTool);
   const activeVolumeTracing = yield* select(getActiveSegmentationTracing);
+  const activeUnmappedSegmentId = yield* select((state) =>
+    getActiveUnmappedSegmentId(state, activeVolumeTracing),
+  );
   const hasHighlightedSuperVoxel =
-    activeVolumeTracing?.activeCellId != null &&
-    activeVolumeTracing?.activeUnmappedSegmentId != null;
+    activeVolumeTracing?.activeCellId != null && activeUnmappedSegmentId != null;
   if (
     hasHighlightedSuperVoxel &&
     activeTool === AnnotationTool.PROOFREAD &&
@@ -2201,7 +2204,10 @@ function* gatherInfoForOperation(
   preparation: Preparation,
 ): Saga<GatheredInfos | null> {
   const { volumeTracing } = preparation;
-  const { tracingId: volumeTracingId, activeCellId, activeUnmappedSegmentId } = volumeTracing;
+  const { tracingId: volumeTracingId, activeCellId } = volumeTracing;
+  const activeUnmappedSegmentId = yield* select((state) =>
+    getActiveUnmappedSegmentId(state, volumeTracing),
+  );
   if (activeCellId === 0) {
     console.warn("[Proofreading] Cannot execute operation because active segment id is 0");
     return null;

@@ -1,6 +1,6 @@
 import DiffableMap from "libs/diffable_map";
 import { deepIterate } from "libs/utils";
-import { MappingStatusEnum } from "viewer/constants";
+import { ContourModeEnum, MappingStatusEnum } from "viewer/constants";
 import { getSegmentationLayers } from "viewer/model/accessors/dataset_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import { updateKey2 } from "viewer/model/helpers/deep_update";
@@ -40,6 +40,12 @@ function DatasetReducer(state: WebknossosState, action: Action): WebknossosState
           hideUnregisteredSegments: false,
           minCutPartitions: { 1: [], 2: [], agglomerateId: null },
           proofreadingMarkerPosition: undefined,
+          activeUnmappedSegmentId: null,
+          lastLabelActions: [],
+          contourTracingMode: ContourModeEnum.DRAW,
+          contourList: [],
+          volumeBucketDataHasChanged: undefined,
+          idReservations: { SegmentGroup: [], Segment: [] },
         })),
         temporaryConfiguration: {
           ...state.temporaryConfiguration,

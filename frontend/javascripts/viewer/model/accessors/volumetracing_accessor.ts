@@ -222,9 +222,21 @@ export function getActiveCellId(volumeTracing: VolumeTracing): number {
   return activeCellId;
 }
 
-export function getContourTracingMode(volumeTracing: VolumeTracing): ContourMode {
-  const { contourTracingMode } = volumeTracing;
-  return contourTracingMode;
+export function getActiveUnmappedSegmentId(
+  state: WebknossosState,
+  volumeTracing: VolumeTracing | null | undefined,
+): number | null | undefined {
+  if (volumeTracing == null) {
+    return null;
+  }
+  return state.localSegmentationStateByLayer[volumeTracing.tracingId]?.activeUnmappedSegmentId;
+}
+
+export function getContourTracingMode(
+  state: WebknossosState,
+  volumeTracing: VolumeTracing,
+): ContourMode {
+  return state.localSegmentationStateByLayer[volumeTracing.tracingId]?.contourTracingMode;
 }
 
 const MAG_THRESHOLDS_FOR_ZOOM: Partial<Record<AnnotationToolId, number>> = {
@@ -435,11 +447,7 @@ export function getHideUnregisteredSegmentsForLayer(
 ): boolean {
   const layer = getSegmentationLayerByName(state.dataset, layerName);
 
-  if (layer.tracingId != null) {
-    return getVolumeTracingById(state.annotation, layer.tracingId).hideUnregisteredSegments;
-  }
-
-  return state.localSegmentationStateByLayer[layer.name].hideUnregisteredSegments;
+  return state.localSegmentationStateByLayer[layer.name]?.hideUnregisteredSegments;
 }
 
 const EMPTY_SEGMENT_JOURNAL: SegmentJournalEntry[] = [];
@@ -698,8 +706,11 @@ export function getEditableMappingForVolumeTracingId(
   return state.annotation.mappings.find((mapping) => mapping.tracingId === tracingId);
 }
 
-export function getLastLabelAction(volumeTracing: VolumeTracing): LabelAction | undefined {
-  return volumeTracing.lastLabelActions[0];
+export function getLastLabelAction(
+  state: WebknossosState,
+  volumeTracing: VolumeTracing,
+): LabelAction | undefined {
+  return state.localSegmentationStateByLayer[volumeTracing.tracingId]?.lastLabelActions[0];
 }
 
 export function getLabelActionFromPreviousSlice(
@@ -714,7 +725,7 @@ export function getLabelActionFromPreviousSlice(
   const adapt = (vec: Vector3) => V3.roundElementToMag(vec, mag, dim);
   const position = adapt(getFlooredPosition(state.flycam));
 
-  return volumeTracing.lastLabelActions.find(
+  return state.localSegmentationStateByLayer[volumeTracing.tracingId]?.lastLabelActions.find(
     (el) => Math.floor(adapt(el.centroid)[dim]) !== position[dim],
   );
 }

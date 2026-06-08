@@ -1,5 +1,6 @@
 import { WarningOutlined } from "@ant-design/icons";
 import FastTooltip from "components/fast_tooltip";
+import { useWkSelector } from "libs/react_hooks";
 import type { APIMeshFileInfo } from "types/api_types";
 import type { VolumeTracing } from "viewer/store";
 
@@ -9,8 +10,13 @@ type Props = {
 };
 
 export function LoadMeshMenuItemLabel({ currentMeshFile, volumeTracing }: Props) {
+  const volumeBucketDataHasChanged = useWkSelector((state) =>
+    volumeTracing != null
+      ? state.localSegmentationStateByLayer[volumeTracing.tracingId].volumeBucketDataHasChanged
+      : undefined,
+  );
   const showWarning =
-    volumeTracing?.volumeBucketDataHasChanged ??
+    volumeBucketDataHasChanged ??
     // For older annotations, volumeBucketDataHasChanged can be undefined.
     // In that case, we still want to show a warning if no proofreading was
     // done, but the mapping is still locked (i.e., the user brushed).

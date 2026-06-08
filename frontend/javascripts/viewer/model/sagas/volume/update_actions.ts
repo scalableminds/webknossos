@@ -625,6 +625,7 @@ function LEGACY_updateVolumeTracingAction(
   editPositionAdditionalCoordinates: AdditionalCoordinate[] | null,
   rotation: Vector3,
   zoomLevel: number,
+  hideUnregisteredSegments: boolean,
 ) {
   return {
     name: "updateVolumeTracing",
@@ -635,7 +636,7 @@ function LEGACY_updateVolumeTracingAction(
       editPositionAdditionalCoordinates,
       editRotation: rotation,
       largestSegmentId: tracing.largestSegmentId,
-      hideUnregisteredSegments: tracing.hideUnregisteredSegments,
+      hideUnregisteredSegments,
       zoomLevel,
     },
   } as const;

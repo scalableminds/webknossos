@@ -154,7 +154,6 @@ export const VolumeTracingSaveRelevantActions: Action["type"][] = [
   "SET_MAPPING_IS_LOCKED",
   "TOGGLE_SEGMENT_GROUP",
   "TOGGLE_ALL_SEGMENTS",
-  "SET_HIDE_UNREGISTERED_SEGMENTS",
 ];
 
 export const initializeVolumeTracingAction = (tracing: ServerVolumeTracing) =>

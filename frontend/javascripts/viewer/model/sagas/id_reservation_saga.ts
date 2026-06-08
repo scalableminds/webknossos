@@ -4,7 +4,7 @@ import without from "lodash-es/without";
 import { actionChannel, call, fork, put } from "typed-redux-saga";
 import Constants from "viewer/constants";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
-import type { VolumeTracing } from "viewer/store";
+import type { LocalSegmentationState, VolumeTracing } from "viewer/store";
 import { getTracingById } from "../accessors/tracing_accessor";
 import type { GetNewIdAction } from "../actions/actions";
 import {
@@ -42,7 +42,11 @@ export default function* idReservationSaga(): Saga<void> {
   }
 }
 
-function getUsableReservations(tracing: VolumeTracing, domain: "SegmentGroup") {
+function getUsableReservations(
+  tracing: VolumeTracing,
+  idReservations: LocalSegmentationState["idReservations"],
+  domain: "SegmentGroup",
+) {
   /*
    * ID reservations are guaranteed to each user and don't expire as long as the id
    * is not used. However, the invalidation of used ids is not communicated to the
@@ -54,7 +58,7 @@ function getUsableReservations(tracing: VolumeTracing, domain: "SegmentGroup") {
    * we can simply compare the maximum known ID against the current reservations and
    * clean up by that.
    */
-  const unfilteredReservations = tracing.idReservations[domain];
+  const unfilteredReservations = idReservations[domain];
   const existingIdSet = getGroupIdSet(tracing.segmentGroups);
 
   return unfilteredReservations.filter(({ used, id }) => !used && !existingIdSet.has(id));
@@ -75,7 +79,10 @@ function* replenishmentLoop(domain: "SegmentGroup"): Saga<void> {
       continue;
     }
 
-    const usableReservations = getUsableReservations(tracing, domain);
+    const idReservations = yield* select(
+      (state) => state.localSegmentationStateByLayer[action.tracingId].idReservations,
+    );
+    const usableReservations = getUsableReservations(tracing, idReservations, domain);
     if (usableReservations.length < IDEAL_ID_BUFFER_SIZE / 2) {
       // This will block until new reservations were fetched.
       try {
@@ -102,10 +109,13 @@ function* handleReservationRequest(action: GetNewIdAction): Saga<void> {
     return;
   }
 
-  const usableReservations = getUsableReservations(tracing, domain);
+  const idReservations = yield* select(
+    (state) => state.localSegmentationStateByLayer[tracingId].idReservations,
+  );
+  const usableReservations = getUsableReservations(tracing, idReservations, domain);
 
   if (usableReservations.length > 0) {
-    const allReservations = tracing.idReservations[domain];
+    const allReservations = idReservations[domain];
     // Mark the first usable reservation as used, preserving all other entries (including
     // already-used ones) so they can be included in idsToRelease in the next replenishment.
     yield* put(
@@ -162,8 +172,11 @@ function* fetchNewReservations(tracingId: string, domain: "SegmentGroup"): Saga<
     return;
   }
 
-  const unfilteredReservations = tracing.idReservations[domain];
-  const usableReservations = getUsableReservations(tracing, domain);
+  const idReservations = yield* select(
+    (state) => state.localSegmentationStateByLayer[tracingId].idReservations,
+  );
+  const unfilteredReservations = idReservations[domain];
+  const usableReservations = getUsableReservations(tracing, idReservations, domain);
   const numberOfIdsToReserve = Math.max(1, IDEAL_ID_BUFFER_SIZE - usableReservations.length);
 
   const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
@@ -203,10 +216,15 @@ function* fetchNewReservations(tracingId: string, domain: "SegmentGroup"): Saga<
   // Re-read fresh state: the async call above may have suspended this saga long enough for
   // another request to mark some reservations as used in the meantime.
   const freshTracing = yield* select((state) => getTracingById(state, tracingId));
+  const freshIdReservations = yield* select(
+    (state) => state.localSegmentationStateByLayer[tracingId].idReservations,
+  );
   const freshUnfilteredReservations =
-    freshTracing.type === "volume" ? freshTracing.idReservations[domain] : [];
+    freshTracing.type === "volume" ? freshIdReservations[domain] : [];
   const freshUsableReservations =
-    freshTracing.type === "volume" ? getUsableReservations(freshTracing, domain) : [];
+    freshTracing.type === "volume"
+      ? getUsableReservations(freshTracing, freshIdReservations, domain)
+      : [];
   // Preserve IDs that were marked used during the async call (not already sent in releasedIds),
   // so they can be included in idsToRelease on the next replenishment.
   const usedDuringCall = freshUnfilteredReservations.filter(

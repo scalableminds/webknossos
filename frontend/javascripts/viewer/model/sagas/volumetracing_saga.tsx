@@ -24,6 +24,7 @@ import { getGlobalMousePositionFloating } from "viewer/model/accessors/view_mode
 import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracing,
+  getContourTracingMode,
   getMaximumBrushSize,
   getRenderableMagForSegmentationTracing,
   getRequestedOrVisibleSegmentationLayer,
@@ -161,7 +162,9 @@ export function* editVolumeLayerAsync(): Saga<never> {
     }
 
     const volumeTracing = yield* select(enforceActiveVolumeTracing);
-    const contourTracingMode = volumeTracing.contourTracingMode;
+    const contourTracingMode = yield* select((state) =>
+      getContourTracingMode(state, volumeTracing),
+    );
     const overwriteMode = yield* select((state) => state.userConfiguration.overwriteMode);
     const isDrawing = contourTracingMode === ContourModeEnum.DRAW;
     const activeTool = yield* select((state) => state.uiInformation.activeTool);
@@ -529,13 +532,13 @@ function* maintainContourGeometry(): Saga<void> {
       continue;
     }
 
-    const contourList = volumeTracing.contourList;
+    const { contourList, contourTracingMode } = yield* select(
+      (state) => state.localSegmentationStateByLayer[volumeTracing.tracingId],
+    );
     // Update meshes according to the new contourList
     contour.reset();
     contour.color =
-      volumeTracing.contourTracingMode === ContourModeEnum.DELETE
-        ? CONTOUR_COLOR_DELETE
-        : CONTOUR_COLOR_NORMAL;
+      contourTracingMode === ContourModeEnum.DELETE ? CONTOUR_COLOR_DELETE : CONTOUR_COLOR_NORMAL;
     contourList.forEach((p) => {
       contour.addEdgePoint(p);
     });

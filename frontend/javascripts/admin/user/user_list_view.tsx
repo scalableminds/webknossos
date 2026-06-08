@@ -403,6 +403,15 @@ function UserListView() {
             sorter={localeCompareBy<APIUser>((user) => user.email)}
           />
           <Column
+            title="Teams - Role"
+            dataIndex="teams"
+            key="teams_"
+            width={250}
+            render={(_teams: APITeamMembership[], user: APIUser) =>
+              renderTeamRolesAndPermissionsForUser(user)
+            }
+          />
+          <Column
             title="Experiences"
             dataIndex="experiences"
             key="experiences"
@@ -436,15 +445,6 @@ function UserListView() {
                 ))}
               </Space>
             )}
-          />
-          <Column
-            title="Teams - Role"
-            dataIndex="teams"
-            key="teams_"
-            width={250}
-            render={(_teams: APITeamMembership[], user: APIUser) =>
-              renderTeamRolesAndPermissionsForUser(user)
-            }
           />
           <Column
             title="Status"

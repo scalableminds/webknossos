@@ -2,8 +2,9 @@ package com.scalableminds.webknossos.datastore.storage
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.cache.AlfuCache
+import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, Full}
+import com.scalableminds.util.tools.{Box, Failure, Fox, FoxImplicits, Full, Empty}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.datavault.{
   DataVault,
@@ -32,6 +33,7 @@ class DataVaultService @Inject()(ws: WSClient,
                                  managedS3Service: ManagedS3Service,
                                  s3ClientPoolHolder: S3ClientPoolHolder)
     extends LazyLogging
+    with Formatter
     with FoxImplicits {
 
   private val vaultCache: AlfuCache[CredentializedUPath, DataVault] =
@@ -82,12 +84,19 @@ class DataVaultService @Inject()(ws: WSClient,
   def resolveMagPath(magLocator: MagLocator, localDatasetDir: Path, layerDir: Path): UPath =
     magLocator.path match {
       case Some(magLocatorPath) =>
-        if (magLocatorPath.isAbsolute) {
-          magLocatorPath
-        } else {
-          // relative local path, resolve in dataset dir
-          UPath.fromLocalPath(localDatasetDir.resolve(magLocatorPath.toLocalPathUnsafe).normalize)
+        magLocatorPath.toLocalPath match {
+          case Full(localPath) =>
+            if (localPath.isAbsolute) {
+              // absolute local path, keep unchanged
+              magLocatorPath
+            } else {
+              // relative local path, resolve in dataset dir
+              UPath.fromLocalPath(localDatasetDir.resolve(localPath).normalize)
+            }
+          case _ => // remote path, keep unchanged
+            magLocatorPath
         }
+
       case _ =>
         val localDirWithScalarMag = layerDir.resolve(magLocator.mag.toMagLiteral(allowScalar = true))
         val localDirWithVec3Mag = layerDir.resolve(magLocator.mag.toMagLiteral(allowScalar = false))
@@ -131,10 +140,12 @@ class DataVaultService @Inject()(ws: WSClient,
       !managedS3Service.pathIsInManagedS3(path)
 
   private def pathIsDataSourceLocal(path: UPath): Boolean =
-    path.isLocal && {
-      val workingDir = Path.of(".").toAbsolutePath.normalize
-      val inWorkingDir = workingDir.resolve(path.toLocalPathUnsafe).toAbsolutePath.normalize
-      !path.isAbsolute && inWorkingDir.startsWith(workingDir)
+    path.toLocalPath match {
+      case Full(localPath) =>
+        val workingDir = Path.of(".").toAbsolutePath.normalize
+        val inWorkingDir = workingDir.resolve(localPath).toAbsolutePath.normalize
+        !localPath.isAbsolute && inWorkingDir.startsWith(workingDir)
+      case _ => false
     }
 
   private def pathIsInLocalDirectoryWhitelist(path: UPath): Boolean =
@@ -143,31 +154,31 @@ class DataVaultService @Inject()(ws: WSClient,
 
   def vaultPathFor(credentializedUpath: CredentializedUPath)(implicit ec: ExecutionContext): Fox[VaultPath] =
     for {
-      vault <- vaultCache.getOrLoad(credentializedUpath, createVault) ?~> Msg.DataVault.setupFailed
+      vault <- vaultCache.getOrLoad(credentializedUpath, createVault(_).toFox) ?~> Msg.DataVault.setupFailed
     } yield new VaultPath(credentializedUpath.upath, vault)
 
   private def removeVaultFromCache(credentializedUpath: CredentializedUPath)(implicit ec: ExecutionContext): Fox[Unit] =
     Fox.successful(vaultCache.remove(credentializedUpath))
 
-  private def createVault(credentializedUpath: CredentializedUPath)(implicit ec: ExecutionContext): Fox[DataVault] = {
+  private def createVault(credentializedUpath: CredentializedUPath)(implicit ec: ExecutionContext): Box[DataVault] = {
     val scheme = credentializedUpath.upath.getScheme
-    try {
-      val fs: DataVault = scheme match {
-        case Some(PathSchemes.schemeGS) => GoogleCloudDataVault.create(credentializedUpath)
-        case Some(PathSchemes.schemeS3) => S3DataVault.create(credentializedUpath, s3ClientPoolHolder.s3ClientPool)
-        case Some(PathSchemes.schemeHttps) | Some(PathSchemes.schemeHttp) =>
-          HttpsDataVault.create(credentializedUpath, ws, config.Http.uri)
-        case None => FileSystemDataVault.create
-        case _    => throw new Exception(s"Unknown file system scheme $scheme")
-      }
-      logger.info(s"Created data vault for ${credentializedUpath.upath.toString}")
-      Fox.successful(fs)
-    } catch {
-      case e: Exception =>
-        val msg = s"Creating data vault errored for ${credentializedUpath.upath.toString}:"
-        logger.error(msg, e)
-        Fox.failure(msg, Full(e))
+    val vaultBox = scheme match {
+      case Some(PathSchemes.schemeGS) => GoogleCloudDataVault.create(credentializedUpath)
+      case Some(PathSchemes.schemeS3) => S3DataVault.create(credentializedUpath, s3ClientPoolHolder.s3ClientPool)
+      case Some(PathSchemes.schemeHttps) | Some(PathSchemes.schemeHttp) =>
+        HttpsDataVault.create(credentializedUpath, ws, config.Http.uri)
+      case None => Full(FileSystemDataVault.create)
+      case _    => Failure(s"Unknown file system scheme $scheme")
     }
+    vaultBox match {
+      case Full(_) => logger.info(s"Created data vault for ${credentializedUpath.upath.toString}.")
+      case f: Failure =>
+        logger.warn(s"Failed to create DataVault for ${credentializedUpath.upath.toString}: ${formatFailureChain(f)}")
+      case Empty =>
+        logger.warn(s"Failed to create DataVault for ${credentializedUpath.upath.toString}.")
+    }
+
+    vaultBox
   }
 
 }

@@ -49,12 +49,12 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig,
         UPath.fromString(path).toFox.map(upath => PathPair(path, upath))
       }
       pathPairsWithAbsoluteUpath = pathPairs.map(pathPair => {
-        if (pathPair.upath.getScheme.isEmpty || pathPair.upath.isLocal) {
-          pathPair.copy(
-            upath = UPath.fromLocalPath(
-              organizationDirectory.resolve(pathPair.upath.toLocalPathUnsafe).normalize().toAbsolutePath))
-        } else
-          pathPair
+        pathPair.upath.toLocalPath match {
+          case Full(localPath) =>
+            pathPair.copy(
+              upath = UPath.fromLocalPath(organizationDirectory.resolve(localPath).normalize().toAbsolutePath))
+          case _ => pathPair
+        }
       })
       // Check to only measure remote paths that are part of a vault that is configured.
       (pathPairsToMeasure, _absoluteUpathsToSkip) = pathPairsWithAbsoluteUpath.partition(path =>

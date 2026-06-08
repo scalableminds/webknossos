@@ -301,6 +301,38 @@ function SettingsReducer(state: WebknossosState, action: Action): WebknossosStat
       return updateActiveMapping(state, { mappingName }, layerName);
     }
 
+    case "SET_KEYBOARD_SHORTCUTS_CONFIG": {
+      return {
+        ...state,
+        keyboardConfiguration: {
+          ...state.keyboardConfiguration,
+          shortcutsConfig: action.shortcuts,
+        },
+      };
+    }
+
+    case "SET_KEYBOARD_LAYOUT_MAP": {
+      return {
+        ...state,
+        keyboardConfiguration: {
+          ...state.keyboardConfiguration,
+          unmodifiedLayoutMap: action.map,
+        },
+      };
+    }
+
+    case "SET_KEYBOARD_LAYOUT_MAP_ENTRY": {
+      const copy = new Map(state.keyboardConfiguration.unmodifiedLayoutMap.entries());
+      const copyWithNewEntry = copy.set(action.code, action.key);
+      return {
+        ...state,
+        keyboardConfiguration: {
+          ...state.keyboardConfiguration,
+          unmodifiedLayoutMap: copyWithNewEntry,
+        },
+      };
+    }
+
     default: // pass;
   }
 

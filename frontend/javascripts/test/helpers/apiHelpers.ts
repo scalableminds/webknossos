@@ -207,7 +207,7 @@ vi.mock("admin/rest_api.ts", async () => {
       _mappingId: string,
       segmentIds: Array<NumberLike>,
     ) => {
-      return getAgglomeratesForSegmentsImpl(segmentIds);
+      return getAgglomeratesForSegmentsImpl(segmentIds, 0);
     },
   );
 
@@ -248,7 +248,11 @@ vi.mock("admin/rest_api.ts", async () => {
         throw new Error("No test has mocked the return value yet here.");
       },
     ),
-    acquireAnnotationMutex: vi.fn(() => ({ canEdit: true, blockedByUser: null })),
+    acquireAnnotationMutex: vi.fn(() => ({
+      canEdit: true,
+      blockedByUser: null,
+      blockedBySessionId: null,
+    })),
     releaseAnnotationMutex: vi.fn(() => {}),
     getNeighborsForAgglomerateNode: vi.fn(
       (_tracingStoreUrl: string, _tracingId: string, _segmentInfo: ArbitraryObject) => {

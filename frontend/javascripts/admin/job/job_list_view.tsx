@@ -148,7 +148,7 @@ export function getJobTypeName(command: APIJobCommand): string {
     [APIJobCommand.COMPUTE_MESH_FILE]: "Compute Mesh",
     [APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE]: "Compute Segment Index",
     [APIJobCommand.FIND_LARGEST_SEGMENT_ID]: "Find Largest Segment ID",
-    [APIJobCommand.INFER_NUCLEI]: "AI Nuclei Inference",
+    [APIJobCommand.DEPRECATED_INFER_NUCLEI]: "AI Nuclei Inference",
     [APIJobCommand.INFER_NEURONS]: "AI Neuron Inference",
     [APIJobCommand.INFER_MITOCHONDRIA]: "AI Mitochondria Inference",
     [APIJobCommand.INFER_INSTANCES]: "AI Instance Segmentation",
@@ -257,7 +257,11 @@ function JobListView() {
           <Link to={linkToDataset}>{job.args.datasetName}</Link>{" "}
         </span>
       );
-    } else if (job.command === APIJobCommand.INFER_NUCLEI && linkToDataset != null && layerName) {
+    } else if (
+      job.command === APIJobCommand.DEPRECATED_INFER_NUCLEI &&
+      linkToDataset != null &&
+      layerName
+    ) {
       return (
         <span>
           Nuclei inferral for layer {layerName} of{" "}
@@ -434,7 +438,7 @@ function JobListView() {
     } else if (job.command === APIJobCommand.FIND_LARGEST_SEGMENT_ID) {
       return <span>{job.returnValue}</span>;
     } else if (
-      job.command === APIJobCommand.INFER_NUCLEI ||
+      job.command === APIJobCommand.DEPRECATED_INFER_NUCLEI ||
       job.command === APIJobCommand.INFER_NEURONS ||
       job.command === APIJobCommand.MATERIALIZE_VOLUME_ANNOTATION ||
       job.command === APIJobCommand.COMPUTE_MESH_FILE ||

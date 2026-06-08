@@ -23,6 +23,7 @@ import { useNavigate } from "react-router-dom";
 import { getSystemColorTheme, getThemeFromUser } from "theme";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { ViewModeValues } from "viewer/constants";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import { AnnotationTool, Toolkits } from "viewer/model/accessors/tool_accessor";
 import { setViewModeAction, updateUserSettingAction } from "viewer/model/actions/settings_actions";
@@ -107,7 +108,7 @@ export const CommandPalette = () => {
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
 
   const restrictions = useWkSelector((state) => state.annotation.restrictions);
-  const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
+  const allowUpdate = useWkSelector(mayEditAnnotation);
   const task = useWkSelector((state) => state.task);
   const annotationType = useWkSelector((state) => state.annotation.annotationType);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);

@@ -347,7 +347,7 @@ function _ShareModalView(props: Props) {
 
   const handleConcurrentEditingCheckboxChange = async (event: CheckboxChangeEvent) => {
     const value = event.target.checked;
-    if (value && (!hasEditableMapping(Store.getState()) || isCurrentUserSuperUser)) {
+    if (value && (!hasEditableMapping(Store.getState()) || !isCurrentUserSuperUser)) {
       Toast.warning(
         "Concurrent editing is currently only supported for proofreading annotations. Please select a mapping and perform one proofreading action. Afterwards, you may select the Concurrent mode.",
       );

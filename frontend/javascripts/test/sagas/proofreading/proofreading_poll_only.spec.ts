@@ -12,10 +12,7 @@ import {
   setCollaborationModeAction,
   setIsUpdatingAnnotationCurrentlyAllowedAction,
 } from "viewer/model/actions/annotation_actions";
-import {
-  disableSavingAction,
-  dispatchEnsureHasNewestVersionAsync,
-} from "viewer/model/actions/save_actions";
+import { dispatchEnsureHasNewestVersionAsync } from "viewer/model/actions/save_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import {
   setActiveCellAction,
@@ -73,7 +70,6 @@ describe.each(
     };
     yield put(setActiveUserAction(differentUser));
     yield put(setCollaborationModeAction(collabMode));
-    yield put(disableSavingAction());
     yield put(setIsUpdatingAnnotationCurrentlyAllowedAction(false));
   }
 

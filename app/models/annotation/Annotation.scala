@@ -272,7 +272,18 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
             (SELECT _organization FROM webknossos.users_ WHERE _id = ${prefix}_user)
             IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId)
           )
-        )"""
+        )
+        OR (
+          ${prefix}visibility = ${AnnotationVisibility.Private}
+          AND (
+            ${prefix}_user = $requestingUserId
+            OR (
+              (SELECT _organization FROM webknossos.users_ WHERE _id = ${prefix}_user)
+              IN (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin)
+            )
+          )
+        )
+        """
 
   override protected def deleteAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""(_user = $requestingUserId

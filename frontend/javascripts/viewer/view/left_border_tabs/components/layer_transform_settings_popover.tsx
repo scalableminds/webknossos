@@ -56,6 +56,7 @@ function AxisSliderRow({
   onChange,
   resetDisabled,
   onFlip,
+  isFlipped,
 }: {
   label: string;
   value: number;
@@ -66,6 +67,7 @@ function AxisSliderRow({
   onChange: (v: number) => void;
   resetDisabled: boolean;
   onFlip?: () => void;
+  isFlipped?: boolean;
 }) {
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
@@ -78,6 +80,22 @@ function AxisSliderRow({
         onChange={onChange}
         style={{ flex: 1 }}
       />
+      <div style={{ width: 28, flexShrink: 0 }}>
+        {onFlip != null && (
+          <Tooltip title={isFlipped ? "Axis is flipped – click to unflip" : "Flip axis"}>
+            <Button
+              type="text"
+              size="small"
+              icon={<FlipIcon />}
+              onClick={onFlip}
+              style={{
+                padding: "0 4px",
+                color: isFlipped ? "var(--ant-color-primary)" : undefined,
+              }}
+            />
+          </Tooltip>
+        )}
+      </div>
       <InputNumber
         min={min}
         max={max}
@@ -89,17 +107,6 @@ function AxisSliderRow({
         size="small"
         style={{ width: 62 }}
       />
-      {onFlip != null && (
-        <Tooltip title="Flip axis">
-          <Button
-            type="text"
-            size="small"
-            icon={<FlipIcon />}
-            onClick={onFlip}
-            style={{ flexShrink: 0, padding: "0 4px" }}
-          />
-        </Tooltip>
-      )}
       <Tooltip title="Reset to stored default">
         <Button
           type="text"
@@ -311,22 +318,22 @@ export function LayerTransformSettingsContent({
           step={0.1}
           onChange={(v) => updateRotation(i as 0 | 1 | 2, v)}
           resetDisabled={isFetchingStored}
+          onFlip={() => updateScale(i as 0 | 1 | 2, -scale[i])}
+          isFlipped={scale[i] < 0}
         />
       ))}
       <SectionLabel>Scaling</SectionLabel>
-      {/* Negative scale mirrors the layer along that axis and is intentionally allowed. */}
       {(["X", "Y", "Z"] as const).map((axis, i) => (
         <AxisSliderRow
           key={axis}
           label={axis}
-          value={scale[i]}
-          storedValue={storedSRT.scale[i]}
-          min={-10}
+          value={Math.abs(scale[i])}
+          storedValue={Math.abs(storedSRT.scale[i])}
+          min={0}
           max={10}
           step={0.1}
-          onChange={(v) => updateScale(i as 0 | 1 | 2, v)}
+          onChange={(v) => updateScale(i as 0 | 1 | 2, v * (scale[i] < 0 ? -1 : 1))}
           resetDisabled={isFetchingStored}
-          onFlip={() => updateScale(i as 0 | 1 | 2, -scale[i])}
         />
       ))}
       <Divider />

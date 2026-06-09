@@ -6,7 +6,7 @@ import { Alert, Button, Dropdown, Modal, Popover, Space } from "antd";
 import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
 import { NewVolumeLayerSelection } from "dashboard/advanced_dataset/create_explorative_modal";
 import { useWkSelector } from "libs/react_hooks";
-import { isUserAdminOrDatasetManager } from "libs/utils";
+import { isUserAdminOrManager } from "libs/utils";
 import { ArbitraryVectorInput } from "libs/vector_input";
 import type React from "react";
 import { Fragment, PureComponent, useState } from "react";
@@ -372,7 +372,7 @@ class ActionBarView extends PureComponent<Props, State> {
   render() {
     const { dataset, is2d, showVersionRestore, controlMode, layoutProps, viewMode, activeUser } =
       this.props;
-    const isAdminOrDatasetManager = isUserAdminOrDatasetManager(activeUser);
+    const isAdminOrManager = isUserAdminOrManager(activeUser);
     const isViewMode = controlMode === ControlModeEnum.VIEW;
     const getIsAIAnalysisEnabled = () => {
       const jobsEnabled =
@@ -422,7 +422,7 @@ class ActionBarView extends PureComponent<Props, State> {
           {showVersionRestore ? VersionRestoreWarning : null}
           <DatasetPositionAndRotationView />
           <AdditionalCoordinatesInputView />
-          {getIsAIAnalysisEnabled() && isAdminOrDatasetManager
+          {getIsAIAnalysisEnabled() && isAdminOrManager
             ? this.renderStartAIJobButton(shouldDisableAIJobButton, tooltip)
             : null}
           {isViewMode ? this.renderStartTracingButton() : null}

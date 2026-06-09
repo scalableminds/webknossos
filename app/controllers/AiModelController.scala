@@ -121,7 +121,6 @@ class AiModelController @Inject()(
 
   def aiModelVoxelSize(aiModelId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(request.identity)
       aiModel <- aiModelDAO.findOne(aiModelId) ?~> Msg.AiModel.notFound ~> NOT_FOUND
       dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)
       voxelSize <- aiModelService.findModelVoxelSize(aiModel, dataStore)

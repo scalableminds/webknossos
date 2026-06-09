@@ -15,6 +15,7 @@ import { Button, Card, Col, List, Modal, Row, Space, Tag, Tooltip } from "antd";
 import classNames from "classnames";
 import { AsyncButton, AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
+import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import TransferTaskModal from "dashboard/transfer_task_modal";
 import { handleGenericError } from "libs/error_handling";
@@ -423,7 +424,9 @@ class DashboardTaskListView extends PureComponent<Props, State> {
 
     const TaskCardTitle = ({ task }: { task: APITaskWithAnnotation }) => (
       <Space>
-        {task.projectName} (<FormattedDate timestamp={task.created} />)
+        <span>
+          {task.projectName} (<FormattedDate timestamp={task.created} />)
+        </span>
         {getSkeletonDescriptor(task.annotation) == null ? null : (
           <Tag color="green" variant="outlined">
             skeleton
@@ -447,7 +450,7 @@ class DashboardTaskListView extends PureComponent<Props, State> {
         <Card key={task.id}>
           <Row gutter={16}>
             <Col span={7}>
-              <b>Task ID:</b> {task.id}
+              <b>Task ID:</b> <FormattedId id={task.id} />
             </Col>
             <Col span={7}>
               <b>Project:</b> {task.projectName}
@@ -472,7 +475,7 @@ class DashboardTaskListView extends PureComponent<Props, State> {
                   marginBottom: 14,
                 }}
               >
-                <b>Task ID:</b> {task.id}
+                <b>Task ID:</b> <FormattedId id={task.id} />
                 <br />
                 <b>Task Type:</b> {task.type.summary}
               </p>

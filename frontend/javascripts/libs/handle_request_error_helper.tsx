@@ -2,6 +2,16 @@ import { Button } from "antd";
 import type { ServerErrorMessage } from "types/api_types";
 import Toast, { showToastOnce } from "./toast";
 
+let _pingFn: (str: string) => void = () => {
+  console.warn(
+    "pingMentionedDataStores was called before registerPingFn — datastore health check skipped",
+  );
+};
+
+export function registerPingFn(fn: (str: string) => void): void {
+  _pingFn = fn;
+}
+
 export const handleError = async (
   requestedUrl: string,
   showErrorToast: boolean,
@@ -9,10 +19,8 @@ export const handleError = async (
   error: Response | Error,
 ): Promise<void> => {
   if (doInvestigate) {
-    // Avoid circular imports via dynamic import
-    const { pingMentionedDataStores } = await import("admin/datastore_health_check");
     // Check whether this request failed due to a problematic datastore
-    pingMentionedDataStores(requestedUrl);
+    _pingFn(requestedUrl);
     if (error instanceof Response) {
       // Handle 401 Unauthorized errors and ensure an understandable error toast is shown.
       // This might happen e.g. after a user logged out everywhere.
@@ -50,7 +58,7 @@ export const handleError = async (
             }
             // Check whether the error chain mentions an url which belongs
             // to a datastore. Then, ping the datastore
-            pingMentionedDataStores(text);
+            _pingFn(text);
 
             /* eslint-disable-next-line prefer-promise-reject-errors */
             return Promise.reject({ ...json, url: requestedUrl });

@@ -18,6 +18,7 @@ import {
   Tooltip,
 } from "antd";
 import { FormItemWithInfo } from "dashboard/dataset/helper_components";
+import { copyToClipboard } from "libs/clipboard";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { BoundingBoxInput, Vector3Input } from "libs/vector_input";
@@ -52,8 +53,7 @@ function copyDatasetID(datasetId: string | null | undefined) {
   if (!datasetId) {
     return;
   }
-  navigator.clipboard.writeText(datasetId);
-  Toast.success("Dataset ID copied.");
+  copyToClipboard(datasetId, "dataset ID");
 }
 
 const LEFT_COLUMN_ITEMS_WIDTH = 408;

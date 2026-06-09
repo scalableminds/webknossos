@@ -194,7 +194,7 @@ const DatasetSettingsStorageTabWithDataset = ({ dataset }: { dataset: APIDataset
               ) : (
                 <>
                   <Text code copyable>
-                    {dataset.datasourcePropertiesPath ?? "datasource-properties.json"}
+                    {dataset.rootPath ?? "datasource-properties.json"}
                   </Text>
                   {" on data store server "}
                   <Tag color={stringToColor(dataset.dataStore.name)} variant="outlined">

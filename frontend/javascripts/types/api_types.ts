@@ -234,7 +234,8 @@ type MutableAPIDatasetBase = MutableAPIDataSourceId & {
     | "Compose"
     | "DuplicateToOrga"
     | null;
-  datasourcePropertiesPath?: string | null;
+  rootPath?: string | null;
+  rootRealPath?: string | null;
   mirrorPath?: string | null;
   logoUrl: string | null | undefined;
   lastUsedByUser: number;

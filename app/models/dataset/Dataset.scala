@@ -73,7 +73,8 @@ case class Dataset(_id: ObjectId,
                    tags: List[String] = List.empty,
                    creationType: Option[DatasetCreationType] = None,
                    importURL: Option[String] = None,
-                   datasourcePropertiesPath: Option[String] = None,
+                   rootPath: Option[String] = None,
+                   rootRealPath: Option[String] = None,
                    mirrorPath: Option[String] = None,
                    created: Instant = Instant.now,
                    isDeleted: Boolean = false)
@@ -162,7 +163,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
         parseArrayLiteral(r.tags).sorted,
         creationType,
         r.importurl,
-        r.datasourcepropertiespath,
+        r.rootpath,
+        r.rootrealpath,
         r.mirrorpath,
         Instant.fromSql(r.created),
         r.isdeleted
@@ -680,7 +682,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      description, directoryName, isPublic, isUsable, isVirtual,
                      name, voxelSizeFactor, voxelSizeUnit, status,
                      sharingToken, sortingKey, metadata, tags, creationType,
-                     importURL, datasourcePropertiesPath, mirrorPath, created, isDeleted
+                     importURL, rootPath, rootRealPath, mirrorPath, created, isDeleted
                    )
                    VALUES(
                      ${d._id}, ${d._dataStore}, ${d._organization}, ${d._publication},
@@ -689,7 +691,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      ${d.description}, ${d.directoryName}, ${d.isPublic}, ${d.isUsable}, ${d.isVirtual},
                      ${d.name}, ${d.voxelSize.map(_.factor)}, ${d.voxelSize.map(_.unit)}, ${d.status.take(1024)},
                      ${d.sharingToken}, ${d.sortingKey}, ${d.metadata}, ${d.tags}, ${d.creationType},
-                     ${d.importURL}, ${d.datasourcePropertiesPath}, ${d.mirrorPath}, ${d.created}, ${d.isDeleted}
+                     ${d.importURL}, ${d.rootPath}, ${d.rootRealPath}, ${d.mirrorPath}, ${d.created}, ${d.isDeleted}
                    )""".asUpdate)
     } yield ()
   }

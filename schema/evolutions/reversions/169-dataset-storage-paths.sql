@@ -4,7 +4,8 @@ do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 169 
 
 DROP VIEW webknossos.datasets_;
 
-ALTER TABLE webknossos.datasets DROP COLUMN datasourcePropertiesPath;
+ALTER TABLE webknossos.datasets DROP COLUMN rootPath;
+ALTER TABLE webknossos.datasets DROP COLUMN rootRealPath;
 ALTER TABLE webknossos.datasets DROP COLUMN mirrorPath;
 
 CREATE VIEW webknossos.datasets_ AS SELECT * FROM webknossos.datasets WHERE NOT isDeleted;

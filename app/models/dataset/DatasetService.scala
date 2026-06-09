@@ -769,7 +769,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         "usedStorageBytes" -> usedStorageBytes,
         "isVirtual" -> dataset.isVirtual,
         "creationType" -> dataset.creationType,
-        "datasourcePropertiesPath" -> dataset.datasourcePropertiesPath,
+        "rootPath" -> dataset.rootPath,
+        "rootRealPath" -> dataset.rootRealPath,
         "mirrorPath" -> dataset.mirrorPath
       )
     }

@@ -1,8 +1,6 @@
 import features from "features";
-import { copyToClipboard } from "libs/clipboard";
 import type { ModifierKeys, MouseBindingMap } from "libs/input";
 import { V3 } from "libs/mjs";
-import Toast from "libs/toast";
 import { clamp } from "libs/utils";
 import { document } from "libs/window";
 import { Color } from "three";
@@ -44,10 +42,7 @@ import {
   handleOpenContextMenu,
   handleSelectNode,
   maybeGetNodeIdFromPosition,
-  moveAlongDirection,
   moveNode,
-  toPrecedingNode,
-  toSubsequentNode,
 } from "viewer/controller/combinations/skeleton_handlers";
 import {
   changeBrushSizeIfBrushIsActiveBy,
@@ -61,7 +56,6 @@ import {
   handlePickCell,
 } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
-import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accessor";
 import {
   AnnotationTool,
   type AnnotationToolId,
@@ -108,7 +102,7 @@ import {
   hideBrushAction,
   interpolateSegmentationLayerAction,
 } from "viewer/model/actions/volumetracing_actions";
-import { api, Model } from "viewer/singletons";
+import { api } from "viewer/singletons";
 import Store, { type UserConfiguration } from "viewer/store";
 import { getDefaultBrushSizes } from "viewer/view/action_bar/tools/brush_presets";
 import type ArbitraryView from "viewer/view/arbitrary_view";
@@ -469,12 +463,6 @@ export class SkeletonToolController extends ToolController {
           Store.dispatch(createTreeAction());
         },
       },
-      MOVE_ALONG_DIRECTION: {
-        onPressed: () => moveAlongDirection(),
-      },
-      MOVE_ALONG_DIRECTION_REVERSED: {
-        onPressed: () => moveAlongDirection(true),
-      },
       // Branches
       CREATE_BRANCH_POINT_PLANE: {
         onPressed: () => {
@@ -485,19 +473,6 @@ export class SkeletonToolController extends ToolController {
         onPressed: () => {
           Store.dispatch(requestDeleteBranchPointAction());
         },
-      },
-      RECENTER_ACTIVE_NODE_PLANE: {
-        onPressed: () => {
-          api.tracing.centerNode();
-          api.tracing.centerTDView();
-        },
-      },
-      // navigate nodes
-      NEXT_NODE_BACKWARD_PLANE: {
-        onPressed: () => toPrecedingNode(),
-      },
-      NEXT_NODE_FORWARD_PLANE: {
-        onPressed: () => toSubsequentNode(),
       },
       MOVE_NODE_LEFT: {
         onPressedWithRepeat: () => moveNode(-1, 0),
@@ -601,37 +576,6 @@ class VolumeToolController extends ToolController {
       INTERPOLATE_SEGMENTATION: {
         onPressed: () => {
           Store.dispatch(interpolateSegmentationLayerAction());
-        },
-      },
-      COPY_SEGMENT_ID: {
-        onPressed: (event: KeyboardEvent) => {
-          const segmentationLayer = Model.getVisibleSegmentationLayer();
-          const { additionalCoordinates } = Store.getState().flycam;
-
-          if (!segmentationLayer) {
-            return;
-          }
-
-          const { mousePosition } = Store.getState().temporaryConfiguration;
-
-          if (mousePosition) {
-            const [x, y] = mousePosition;
-            const globalMousePositionRounded = calculateGlobalPos(Store.getState(), {
-              x,
-              y,
-            }).rounded;
-            const { cube } = segmentationLayer;
-            const mapping = event.altKey ? cube.getMapping() : null;
-            const hoveredId = cube.getDataValue(
-              globalMousePositionRounded,
-              additionalCoordinates,
-              mapping,
-              getActiveMagIndexForLayer(Store.getState(), segmentationLayer.name),
-            );
-            copyToClipboard(String(hoveredId), "segment id", true);
-          } else {
-            Toast.warning("No segment under cursor.");
-          }
         },
       },
       BRUSH_PRESET_SMALL: {

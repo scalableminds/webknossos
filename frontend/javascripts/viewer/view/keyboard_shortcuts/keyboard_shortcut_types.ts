@@ -8,6 +8,7 @@ export type KeyboardShortcutDomain =
   | "GENERAL_COMMENT_TAB"
   | "FLIGHT_NAVIGATION"
   | "FLIGHT_EDITING"
+  | "PLANE_GENERAL"
   | "PLANE_NAVIGATION"
   | "PLANE_TOOL_SWITCHING"
   | "PLANE_SKELETON_TOOL"
@@ -86,6 +87,7 @@ export class KeyboardShortcutMetaInfo {
       case "FLIGHT_NAVIGATION":
       case "FLIGHT_EDITING":
         return "GENERAL.FLIGHT";
+      case "PLANE_GENERAL":
       case "PLANE_NAVIGATION":
       case "PLANE_TOOL_SWITCHING":
         return "GENERAL.PLANE";
@@ -116,6 +118,7 @@ export const DOMAIN_DISPLAY_NAMES: Record<KeyboardShortcutDomain, string> = {
   GENERAL_COMMENT_TAB: "Comments Tab",
   FLIGHT_NAVIGATION: "Flight Mode Navigation",
   FLIGHT_EDITING: "Flight Mode Editing",
+  PLANE_GENERAL: "General Shortcuts",
   PLANE_NAVIGATION: "Plane Mode Navigation",
   PLANE_TOOL_SWITCHING: "Plane Mode Tool Switching",
   PLANE_SKELETON_TOOL: "Plane Mode Skeleton Tool",

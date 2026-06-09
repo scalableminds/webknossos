@@ -1,6 +1,16 @@
 package com.scalableminds.webknossos.datastore.datareaders.zarr
 
-import com.scalableminds.webknossos.datastore.datareaders.{BloscCompressor, CompressionSetting, Compressor, GzipCompressor, IntCompressionSetting, NullCompressor, StringCompressionSetting, ZlibCompressor, ZstdCompressor}
+import com.scalableminds.webknossos.datastore.datareaders.{
+  BloscCompressor,
+  CompressionSetting,
+  Compressor,
+  GzipCompressor,
+  IntCompressionSetting,
+  NullCompressor,
+  StringCompressionSetting,
+  ZlibCompressor,
+  ZstdCompressor
+}
 
 object ZarrCompressorFactory {
   val nullCompressor = new NullCompressor

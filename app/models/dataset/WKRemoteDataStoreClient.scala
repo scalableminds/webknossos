@@ -17,7 +17,7 @@ import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{PathStorageUsageRequest, PathStorageUsageResponse}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
-import play.api.libs.json.JsObject
+import play.api.libs.json.{JsObject, Json}
 import play.utils.UriEncoding
 
 import scala.concurrent.ExecutionContext
@@ -151,13 +151,11 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
             GetEffectiveVoxelSizeParameters(modelPath))
     )
 
-  def writeMirror(datasetIds: Seq[ObjectId], failOnError: Boolean): Fox[Unit] =
-    for {
-      _ <- rpc(s"${dataStore.url}/data/datasets/writeMirrors")
-        .addQueryParam("failOnError", failOnError)
-        .addQueryParam("token", RpcTokenHolder.webknossosToken)
-        .postJson[Seq[ObjectId]](datasetIds)
-    } yield ()
+  def writeMirror(datasetIds: Seq[ObjectId], failOnError: Boolean): Fox[Seq[(ObjectId, String)]] =
+    rpc(s"${dataStore.url}/data/datasets/writeMirrors")
+      .addQueryParam("failOnError", failOnError)
+      .addQueryParam("token", RpcTokenHolder.webknossosToken)
+      .postJsonWithJsonResponse[Seq[ObjectId], Seq[(ObjectId, String)]](datasetIds)
 
   def scanRealPathsForVirtual(dataSources: Seq[DataSource])(implicit ec: ExecutionContext): Fox[Unit] = {
     val dataSourcesThatCanHaveRealpaths = dataSources.flatMap(_.toUsable).filter(_.allExplicitPaths.exists(_.isLocal))

@@ -661,6 +661,14 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                    WHERE _id = $datasetId""".asUpdate)
     } yield ()
 
+  def updateMirrorPath(datasetId: ObjectId, mirrorPath: String)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(datasetId)
+      _ <- run(q"""UPDATE webknossos.datasets
+                   SET mirrorPath = $mirrorPath
+                   WHERE _id = $datasetId""".asUpdate)
+    } yield ()
+
   def insertOne(d: Dataset): Fox[Unit] = {
     val adminViewConfiguration: Option[JsValue] = d.adminViewConfiguration.map(Json.toJson(_))
     val defaultViewConfiguration: Option[JsValue] = d.defaultViewConfiguration.map(Json.toJson(_))

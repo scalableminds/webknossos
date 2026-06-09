@@ -89,6 +89,7 @@ class DSRemoteWebknossosClient @Inject()(
       .addQueryParam("key", dataStoreKey)
       .patchJson(DataStoreStatus(ok = true, dataStoreUri))
 
+  // Only used for legacy refresh
   def reportDataSource(dataSource: DataSource): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasource")
       .addQueryParam("key", dataStoreKey)

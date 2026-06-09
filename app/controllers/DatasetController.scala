@@ -885,7 +885,10 @@ class DatasetController @Inject()(userService: UserService,
             dataStore <- dataStoreDAO.findOneByName(dataStoreName.trim) ?~> "datastore.notFound"
             client = new WKRemoteDataStoreClient(dataStore, rpc)
             datasetsForDatastore = byDataStore(dataStoreName)
-            _ <- client.writeMirror(datasetsForDatastore.map(_._id), failOnError = false)
+            writtenPaths <- client.writeMirror(datasetsForDatastore.map(_._id), failOnError = false)
+            _ <- Fox.serialCombined(writtenPaths) {
+              case (datasetId, path) => datasetDAO.updateMirrorPath(datasetId, path)(GlobalAccessContext)
+            }
             _ = Instant.logSince(
               before,
               s"Writing mirrors for ${datasetsForDatastore.length} datasets on datastore $dataStoreName (for details see datastore logging)",

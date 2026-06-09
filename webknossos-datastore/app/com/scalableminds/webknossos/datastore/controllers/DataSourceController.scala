@@ -601,9 +601,9 @@ class DataSourceController @Inject()(
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           if (failOnError) {
             for {
-              _ <- Fox.serialCombined(request.body)(writeMirrorForDataset)
+              results <- Fox.serialCombined(request.body)(writeMirrorForDataset)
               _ = logger.info(s"Successfully wrote dataset mirrors where needed for ${request.body.length} datasets.")
-            } yield Ok
+            } yield Ok(Json.toJson(results.flatten))
           } else {
             for {
               resultBoxes <- Fox.serialSequence(request.body)(writeMirrorForDataset)
@@ -611,20 +611,21 @@ class DataSourceController @Inject()(
               failuresFormatted = failures.map(_.toString).mkString(", ")
               _ = logger.info(
                 s"Wrote dataset mirrors where needed for ${request.body.length} datasets (${failures.length} failures: $failuresFormatted)")
-            } yield Ok
+              results = resultBoxes.flatMap(_.toOption.flatten)
+            } yield Ok(Json.toJson(results))
           }
         }
-      } else Fox.successful(Ok)
+      } else Fox.successful(Ok(Json.toJson(Seq.empty[(ObjectId, String)])))
   }
 
-  private def writeMirrorForDataset(datasetId: ObjectId): Fox[Unit] = {
+  private def writeMirrorForDataset(datasetId: ObjectId): Fox[Option[(ObjectId, String)]] = {
     datasetCache.invalidateCache(datasetId)
     for {
       dataSourceBox <- datasetCache.getById(datasetId).shiftBox
-      _ <- Fox.runOptional(dataSourceBox.toOption) { dataSource =>
+      mirrorPathOpt <- Fox.runOptional(dataSourceBox.toOption) { dataSource =>
         dataSourceMirrorService.writeMirror(dataSource, datasetId) ?~> s"Error writing datasource mirror for $datasetId"
       }
-    } yield ()
+    } yield mirrorPathOpt.flatten.map(datasetId -> _)
   }
 
   private def refreshDataSource(datasetId: ObjectId)(implicit tc: TokenContext): Fox[DataSource] =

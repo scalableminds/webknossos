@@ -703,7 +703,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     if (dataset.isVirtual && dataset.isUsable) {
       for {
         client <- clientFor(dataset)
-        _ <- client.writeMirror(Seq(dataset._id), failOnError = true)
+        writtenPaths <- client.writeMirror(Seq(dataset._id), failOnError = true)
+        _ <- Fox.runOptional(writtenPaths.headOption) {
+          case (_, path) => datasetDAO.updateMirrorPath(dataset._id, path)
+        }
       } yield ()
     } else Fox.successful(())
 

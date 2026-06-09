@@ -388,6 +388,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       }
 
       finishUploadCalled = true;
+      resumableUpload.pause();
       this.setState({
         isFinishing: true,
       });

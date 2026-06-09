@@ -45,8 +45,8 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
     for {
       _ <- Fox.successful(logger.info(s"Try acquire mutex inner for user $userId and id $annotationId."))
       mutex <- annotationMutexDAO.tryAcquire(annotationId, userId, sessionId, Instant.in(defaultExpiryTime)) ?~> "Trying to acquire or find current annotation mutex failed."
-      _ <- Fox.successful(
-        logger.info(s"Try acquire mutex inner for user $userId and id $annotationId got userId ${mutex.userId} and sessionId ${mutex.sessionId}."))
+      _ <- Fox.successful(logger.info(
+        s"Try acquire mutex inner for user $userId and id $annotationId got userId ${mutex.userId} and sessionId ${mutex.sessionId}."))
       result = if (mutex.userId == userId && mutex.sessionId == sessionId)
         MutexResult(canEdit = true, None, None)
       else

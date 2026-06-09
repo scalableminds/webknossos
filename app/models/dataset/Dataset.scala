@@ -700,7 +700,9 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                        dataStoreName: String,
                        inboxSourceHash: Int,
                        newDataSource: DataSource,
-                       isUsable: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
+                       isUsable: Boolean,
+                       rootPath: Option[String] = None,
+                       rootRealPath: Option[String] = None)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(newDataSource.id.organizationId)
       defaultViewConfiguration: Option[JsValue] = newDataSource.defaultViewConfiguration.map(Json.toJson(_))
@@ -713,7 +715,9 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      isUsable = $isUsable,
                      voxelSizeFactor = ${newDataSource.voxelSizeOpt.map(_.factor)},
                      voxelSizeUnit = ${newDataSource.voxelSizeOpt.map(_.unit)},
-                     status = ${newDataSource.statusOpt.getOrElse("").take(1024)}
+                     status = ${newDataSource.statusOpt.getOrElse("").take(1024)},
+                     rootPath = $rootPath,
+                     rootRealPath = $rootRealPath
                    WHERE _id = $id""".asUpdate)
       _ <- datasetLayerDAO.updateLayers(id, newDataSource)
     } yield ()

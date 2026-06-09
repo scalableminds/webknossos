@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachmentType,
   UnusableDataSource
 }
-import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataStoreStatus}
+import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataSourceWithPathInfo, DataStoreStatus}
 import com.scalableminds.webknossos.datastore.services.uploading.{
   AttachmentUploadAdditionalInfo,
   AttachmentUploadInfo,
@@ -281,18 +281,18 @@ class WKRemoteDataStoreController @Inject()(
       }
   }
 
-  def updateAll(name: String, key: String, organizationId: Option[String]): Action[List[DataSource]] =
-    Action.async(validateJson[List[DataSource]]) { implicit request =>
+  def updateAll(name: String, key: String, organizationId: Option[String]): Action[List[DataSourceWithPathInfo]] =
+    Action.async(validateJson[List[DataSourceWithPathInfo]]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
-        val dataSources = request.body
+        val dataSourcesWithPathInfo = request.body
         for {
           before <- Instant.nowFox
           selectedOrgaLabel = organizationId.map(id => s"for organization $id").getOrElse("for all organizations")
           _ = logger.info(
             s"Received dataset list from datastore ${dataStore.name} $selectedOrgaLabel: " +
-              s"${dataSources.count(_.isUsable)} active, ${dataSources.count(!_.isUsable)} inactive")
-          existingIds <- datasetService.updateDataSources(dataStore, dataSources)
+              s"${dataSourcesWithPathInfo.count(_.dataSource.isUsable)} active, ${dataSourcesWithPathInfo.count(!_.dataSource.isUsable)} inactive")
+          existingIds <- datasetService.updateDataSources(dataStore, dataSourcesWithPathInfo)
           _ <- datasetService.deactivateUnreportedDataSources(existingIds, dataStore, organizationId)
           _ = if (Instant.since(before) > (30 seconds))
             Instant.logSince(before,
@@ -307,7 +307,7 @@ class WKRemoteDataStoreController @Inject()(
       dataStoreService.validateAccess(name, key) { dataStore =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
-          _ <- datasetService.updateDataSources(dataStore, List(request.body))
+          _ <- datasetService.updateDataSources(dataStore, List(DataSourceWithPathInfo(request.body, None, None)))
         } yield Ok
       }
     }

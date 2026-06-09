@@ -7,10 +7,12 @@ import { getDatasetUsedStorageDetails } from "admin/rest_api";
 import { Col, Collapse, Row, Spin, Table, Tag, Tooltip, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import FastTooltip from "components/fast_tooltip";
+import { ZeroStorageReasonList } from "dashboard/storage_info";
 import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
+import capitalize from "lodash-es/capitalize";
 import groupBy from "lodash-es/groupBy";
 import sumBy from "lodash-es/sumBy";
-import type { APIDataset, APIStorageDetailEntry } from "types/api_types";
+import type { APIDataset, APIStorageDetailEntry, LayerAttachmentType } from "types/api_types";
 import { useDatasetSettingsContext } from "./dataset_settings_context";
 
 const { Text } = Typography;
@@ -26,7 +28,7 @@ export default function DatasetSettingsStorageTab() {
 type StorageEntry = {
   key: string;
   name: string;
-  type: string;
+  type: LayerAttachmentType | "mag";
   usedStorageBytes: number;
 };
 
@@ -37,7 +39,7 @@ const storageColumns: ColumnsType<StorageEntry> = [
       const isMag = record.type === "mag";
       const tooltipTitle = isMag
         ? "Magnification/Image Data"
-        : `${record.type.charAt(0).toUpperCase()}${record.type.slice(1)} Attachment`;
+        : `${capitalize(record.type)} Attachment`;
       const icon = isMag ? <Icon component={IconDownsampling} /> : <PaperClipOutlined />;
       return (
         <span>
@@ -136,13 +138,7 @@ function StorageBreakdownCard({ datasetId }: { datasetId: string }) {
         <>
           Storage used by this dataset within your organization. Parts of the dataset may not count
           to your used storage, and be skipped here because:
-          <ul>
-            <li>The storage hasn't been scanned yet</li>
-            <li>The data is streamed from external sources</li>
-            <li>The data layers are already counted in other (linked) datasets</li>
-            <li>The dataset belongs to another organization</li>
-            <li>The dataset is empty</li>
-          </ul>
+          {ZeroStorageReasonList}
         </>
       }
       content={content}

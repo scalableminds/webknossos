@@ -1382,10 +1382,12 @@ export type ServerErrorMessage = {
   error: string;
 };
 
+export type LayerAttachmentType = "mesh" | "agglomerate" | "segmentIndex" | "connectome" | "cumsum";
+
 export type APIStorageDetailEntry = {
   layerName: string;
   name: string;
-  attachmentType: string | null;
+  attachmentType: LayerAttachmentType | null;
   usedStorageBytes: number;
   lastUpdated: string;
 };

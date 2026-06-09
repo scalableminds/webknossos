@@ -1,5 +1,6 @@
 package models.annotation
 
+import com.scalableminds.util.Msg
 import org.apache.pekko.actor.ActorSystem
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
@@ -43,10 +44,7 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
 
   def tryAcquiringAnnotationMutex(annotationId: ObjectId, userId: ObjectId, sessionId: String): Fox[MutexResult] =
     for {
-      _ <- Fox.successful(logger.info(s"Try acquire mutex inner for user $userId and id $annotationId."))
-      mutex <- annotationMutexDAO.tryAcquire(annotationId, userId, sessionId, Instant.in(defaultExpiryTime)) ?~> "Trying to acquire or find current annotation mutex failed."
-      _ <- Fox.successful(logger.info(
-        s"Try acquire mutex inner for user $userId and id $annotationId got userId ${mutex.userId} and sessionId ${mutex.sessionId}."))
+      mutex <- annotationMutexDAO.tryAcquire(annotationId, userId, sessionId, Instant.in(defaultExpiryTime)) ?~> Msg.Annotation.Mutex.acquireOrGetFailed
       result = if (mutex.userId == userId && mutex.sessionId == sessionId)
         MutexResult(canEdit = true, None, None)
       else
@@ -81,16 +79,22 @@ class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionC
     )
 
   def tryAcquire(annotationId: ObjectId, userId: ObjectId, sessionId: String, expiry: Instant): Fox[AnnotationMutex] = {
-    // Returns the mutex object for the given annotation (either with the requested user & session or an old/existing mutex).
+    // Returns the current mutex holder for this annotation — either the requesting user/session
+    // (if the mutex was successfully acquired) or the existing holder (if acquisition was blocked).
     //
-    // Parallel executions can produce an empty result when both upserts race and one might read
-    // an outdated version in the lower select but an updated one in the insert part.
-    // This is possible due to the default isolation level.
-    // As this rarely happens, we simply retry in this case.
+    // Under READ COMMITTED isolation, two concurrent requests can race: both find nothing in `attempt`
+    // (which might read a more up-to-date version of the table / row)
+    // and also miss each other's freshly committed row in the UNION ALL fallback (which might read an older version of
+    // the table / row), producing an empty result. This is rare, so we simply retry.
     def attempt(remainingAttempts: Int): Fox[AnnotationMutex] =
       for {
-        _ <- Fox.successful(
-          logger.info(s"Trying Upserting Mutex for user $userId with attempt ${4 - remainingAttempts}"))
+        // Tries to acquire the mutex via an upsert on the `_annotation` primary key:
+        //   - If no row exists for this annotation, the INSERT succeeds and this user gets the mutex.
+        //   - If a row exists (ON CONFLICT), the DO UPDATE overwrites it only when the mutex has expired
+        //     or already belongs to this session. RETURNING yields the row if the upsert !succeeded!.
+        //   - If another user holds a valid (non-expired) mutex, the DO UPDATE's WHERE is false, the
+        //     update is skipped, and RETURNING yields nothing. The UNION ALL fallback then selects the
+        //     current owner of the mutex.
         rows <- run(q"""WITH attempt AS (
                           INSERT INTO webknossos.annotation_mutexes(_annotation, _user, sessionId, expiry)
                           VALUES($annotationId, $userId, $sessionId, $expiry)
@@ -116,7 +120,7 @@ class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionC
         result <- rows.headOption match {
           case Some(first)                   => Fox.successful(parse(first))
           case None if remainingAttempts > 1 => attempt(remainingAttempts - 1)
-          case None                          => Fox.failure("Could not find mutex for annotation after retries.")
+          case None                          => Fox.failure(Msg.Annotation.Mutex.upsertingMutexInfoFailedWithMultipleAttempts)
         }
       } yield result
 

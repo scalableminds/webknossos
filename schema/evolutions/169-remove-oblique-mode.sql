@@ -11,7 +11,10 @@ UPDATE webknossos.taskTypes
   SET settings_preferredMode = NULL
   WHERE settings_preferredMode = 'oblique'::webknossos.TASKTYPE_MODES;
 
--- Recreate the enum without oblique and migrate columns to it
+-- Recreate the enum without oblique and migrate columns to it.
+-- The taskTypes_ view depends on the columns being altered, so drop and recreate it.
+DROP VIEW webknossos.taskTypes_;
+
 CREATE TYPE webknossos.TASKTYPE_MODES_new AS ENUM ('orthogonal', 'flight', 'volume');
 
 ALTER TABLE webknossos.taskTypes
@@ -30,6 +33,8 @@ ALTER TABLE webknossos.taskTypes
 
 DROP TYPE webknossos.TASKTYPE_MODES;
 ALTER TYPE webknossos.TASKTYPE_MODES_new RENAME TO TASKTYPE_MODES;
+
+CREATE VIEW webknossos.taskTypes_ AS SELECT * FROM webknossos.taskTypes WHERE NOT isDeleted;
 
 UPDATE webknossos.releaseInformation SET schemaVersion = 169;
 

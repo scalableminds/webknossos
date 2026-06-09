@@ -706,6 +706,11 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
     for {
       organization <- organizationDAO.findOne(newDataSource.id.organizationId)
       defaultViewConfiguration: Option[JsValue] = newDataSource.defaultViewConfiguration.map(Json.toJson(_))
+      pathUpdates = List(
+        rootPath.map(v => q"rootPath = $v"),
+        rootRealPath.map(v => q"rootRealPath = $v"),
+      ).flatten
+      pathUpdatesQuery = if (pathUpdates.nonEmpty) q", ${SqlToken.joinBySeparator(pathUpdates, ", ")}" else q""
       _ <- run(q"""UPDATE webknossos.datasets
                    SET
                      _dataStore = $dataStoreName,
@@ -715,9 +720,7 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      isUsable = $isUsable,
                      voxelSizeFactor = ${newDataSource.voxelSizeOpt.map(_.factor)},
                      voxelSizeUnit = ${newDataSource.voxelSizeOpt.map(_.unit)},
-                     status = ${newDataSource.statusOpt.getOrElse("").take(1024)},
-                     rootPath = $rootPath,
-                     rootRealPath = $rootRealPath
+                     status = ${newDataSource.statusOpt.getOrElse("").take(1024)}$pathUpdatesQuery
                    WHERE _id = $id""".asUpdate)
       _ <- datasetLayerDAO.updateLayers(id, newDataSource)
     } yield ()

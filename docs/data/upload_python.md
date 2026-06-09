@@ -30,4 +30,4 @@ if __name__ == "__main__":
     main()
 ```
 
-Uploading requires authentication with an API token; you can find it in your [user profile settings](../users/password.md#authentication-token). For more examples, refer to the [Python library documentation](https://docs.webknossos.org/webknossos-py).
+Uploading requires authentication with an API token; you can find it in your [user profile settings](../users/password.md#authentication-token). For more examples, refer to the [Python library documentation](https://docs.webknossos.org/webknossos-py/index.html).

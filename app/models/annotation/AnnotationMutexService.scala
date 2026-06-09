@@ -72,8 +72,8 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
       _ <- annotationMutexDAO.upsertOne(mutex.copy(expiry = Instant.in(defaultExpiryTime)))
     } yield MutexResult(canEdit = true, None, None)
 
-  def release(annotationId: ObjectId, userId: ObjectId): Fox[Unit] =
-    annotationMutexDAO.deleteForUser(annotationId, userId)
+  def release(annotationId: ObjectId, userId: ObjectId, sessionId: String): Fox[Unit] =
+    annotationMutexDAO.deleteForUser(annotationId, userId, sessionId)
 
   def publicWrites(mutexResult: MutexResult): Fox[JsObject] =
     for {
@@ -124,10 +124,10 @@ class AnnotationMutexDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionC
   def deleteExpired(): Fox[Int] =
     run(q"DELETE FROM webknossos.annotation_mutexes WHERE expiry < NOW()".asUpdate)
 
-  def deleteForUser(annotationId: ObjectId, userId: ObjectId): Fox[Unit] =
+  def deleteForUser(annotationId: ObjectId, userId: ObjectId, sessionId: String): Fox[Unit] =
     for {
       _ <- run(
-        q"DELETE FROM webknossos.annotation_mutexes WHERE _annotation = $annotationId AND _user = $userId".asUpdate)
+        q"DELETE FROM webknossos.annotation_mutexes WHERE _annotation = $annotationId AND _user = $userId AND sessionid = $sessionId".asUpdate)
     } yield ()
 
   def hasMutex(userId: ObjectId, annotationId: ObjectId): Fox[Boolean] =

@@ -200,11 +200,7 @@ function dumpCurrentSchema(databaseUrl, schemaDir, silent = false) {
 
   if (!silent) console.log(`Dumping database to ${schemaDir}.`);
 
-  let t = Date.now();
   const items = safePsqlSpawn([databaseUrl, "-c", "\\d+ webknossos.*"]).trimEnd();
-  console.error(`[timing] \\d+ psql call: ${Date.now() - t}ms`);
-
-  t = Date.now();
   for (const block of items.split("\n\n")) {
     const [type, identifier] = block
       .split("\n")[0]
@@ -214,24 +210,15 @@ function dumpCurrentSchema(databaseUrl, schemaDir, silent = false) {
     if (!silent) console.log(type, identifier);
     fs.writeFileSync(path.join(schemaDir, `${type}__${identifier}`), block + "\n");
   }
-  console.error(`[timing] \\d+ file write: ${Date.now() - t}ms`);
 
-  t = Date.now();
   const functions = safePsqlSpawn([databaseUrl, "-c", "\\df+ webknossos.*"]);
-  console.error(`[timing] \\df+ psql call: ${Date.now() - t}ms`);
-
-  t = Date.now();
   fs.writeFileSync(path.join(schemaDir, "Functions"), functions);
-  console.error(`[timing] \\df+ file write: ${Date.now() - t}ms`);
 
-  t = Date.now();
   const schemaVersion = safePsqlSpawn([
     databaseUrl,
     "-tAc",
     "SELECT schemaVersion FROM webknossos.releaseInformation;",
   ]);
-  console.error(`[timing] schemaVersion psql call: ${Date.now() - t}ms`);
-
   fs.writeFileSync(path.join(schemaDir, "schemaVersion"), schemaVersion);
 }
 
@@ -245,7 +232,8 @@ function cleanSchemaDump(dumpDir) {
         .replace(/\\r/gm, "  ")
         .split("\n")
         .sort()
-        .join("\n"),
+        .join("\n")
+        .replace(/\n*$/, "\n"),
     );
   }
 }
@@ -255,15 +243,12 @@ function dumpExpectedSchema(sqlFilePaths) {
   const tmpSchemaDir = fs.mkdtempSync("temp-webknossos-schema-");
 
   try {
-    let t = Date.now();
     // Create tmp database
     safePsqlSpawn([PG_CONFIG.urlWithDefaultDatabase, "-c", `CREATE DATABASE ${tmpDbName}`]);
-    console.error(`[timing] CREATE DATABASE: ${Date.now() - t}ms`);
 
     const urlWithDatabase = new URL(PG_CONFIG.urlWithDefaultDatabase);
     urlWithDatabase.pathname = "/" + tmpDbName;
 
-    t = Date.now();
     // Load schema into tmp database
     safePsqlSpawn([
       urlWithDatabase.toString(),
@@ -272,15 +257,12 @@ function dumpExpectedSchema(sqlFilePaths) {
       "-q",
       ...sqlFilePaths.flatMap((filePath) => ["-f", filePath]),
     ]);
-    console.error(`[timing] load schema.sql: ${Date.now() - t}ms`);
 
     // Dump schema into diffable files
     dumpCurrentSchema(urlWithDatabase.toString(), tmpSchemaDir, true);
     return tmpSchemaDir;
   } finally {
-    const t = Date.now();
     safePsqlSpawn([PG_CONFIG.urlWithDefaultDatabase, "-c", `DROP DATABASE ${tmpDbName}`]);
-    console.error(`[timing] DROP DATABASE: ${Date.now() - t}ms`);
   }
 }
 
@@ -290,12 +272,10 @@ function getCachedExpectedSchemaDump() {
   if (fs.existsSync(SCHEMA_DUMP_CACHE_HASH_FILE)) {
     const cachedHash = fs.readFileSync(SCHEMA_DUMP_CACHE_HASH_FILE, { encoding: "utf-8" }).trim();
     if (cachedHash === currentHash) {
-      console.error("[timing] expected schema dump: cache hit");
       return SCHEMA_DUMP_CACHE_DIR;
     }
   }
 
-  console.error("[timing] expected schema dump: cache miss, regenerating");
   const tmpDir = dumpExpectedSchema([schemaPath]);
   cleanSchemaDump(tmpDir);
 
@@ -313,36 +293,23 @@ function getCachedExpectedSchemaDump() {
 }
 
 function checkDbSchema() {
-  const total = Date.now();
   const dbDumpDir = fs.mkdtempSync("temp-webknossos-schema-");
   try {
-    console.error("[timing] --- dumpCurrentSchema (live db) ---");
-    let t = Date.now();
     dumpCurrentSchema(PG_CONFIG.url, dbDumpDir, true);
-    console.error(`[timing] dumpCurrentSchema total: ${Date.now() - t}ms`);
-
-    t = Date.now();
     cleanSchemaDump(dbDumpDir);
-    console.error(`[timing] cleanSchemaDump (live db): ${Date.now() - t}ms`);
 
-    console.error("[timing] --- expected schema dump ---");
-    t = Date.now();
     const schemaDumpDir = getCachedExpectedSchemaDump();
-    console.error(`[timing] getCachedExpectedSchemaDump: ${Date.now() - t}ms`);
 
-    t = Date.now();
     try {
       safeSpawn("diff", ["--strip-trailing-cr", "-r", dbDumpDir, schemaDumpDir]);
     } catch (err) {
       throw new Error(`Database schema is not up-to-date:\n${err.stdout}`);
     }
-    console.error(`[timing] diff: ${Date.now() - t}ms`);
   } finally {
     if (fs.existsSync(dbDumpDir)) {
       fs.rmSync(dbDumpDir, { recursive: true, force: true });
     }
   }
-  console.error(`[timing] checkDbSchema total: ${Date.now() - total}ms`);
   console.log("✨✨ Database schema is up-to-date");
 }
 

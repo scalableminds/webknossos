@@ -1360,7 +1360,9 @@ function* handleProofreadMerge(action: ProofreadMergeAction) {
       ),
     );
 
-    const postProcessResult =  yield* call(() => syncAndUpdatePostProcessingInfo(sourceInfo, targetInfo))
+    const postProcessResult = yield* call(() =>
+      syncAndUpdatePostProcessingInfo(sourceInfo, targetInfo),
+    );
     if (!postProcessResult) return;
     ({ sourceInfo, targetInfo } = postProcessResult);
 
@@ -1462,7 +1464,9 @@ function* handleMinCutAgglomerate(action: MinCutAgglomerateWithPositionAction) {
     "Proofreading Min-Cut",
   );
   try {
-    const postProcessResult = yield* call(() => syncAndUpdatePostProcessingInfo(sourceInfo, targetInfo));
+    const postProcessResult = yield* call(() =>
+      syncAndUpdatePostProcessingInfo(sourceInfo, targetInfo),
+    );
     if (!postProcessResult) return;
     ({ sourceInfo, targetInfo } = postProcessResult);
 

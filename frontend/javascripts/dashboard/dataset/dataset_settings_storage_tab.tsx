@@ -33,7 +33,6 @@ type StorageEntry = {
 const storageColumns: ColumnsType<StorageEntry> = [
   {
     key: "entry",
-    onCell: () => ({ style: { wordBreak: "break-word" } }),
     render: (_: unknown, record: StorageEntry) => {
       const isMag = record.type === "mag";
       const tooltipTitle = isMag
@@ -77,6 +76,7 @@ function StorageBreakdownCard({ datasetId }: { datasetId: string }) {
 
   const collapseItems = sortedLayerNames.map((layerName) => {
     const entries = layerGroups[layerName];
+    // Sort by type (mag vs attachment) first, then by attachment type, then by usedStorageBytes
     const sortedEntries = [...entries].sort((a, b) => {
       const aIsMag = !a.attachmentType;
       const bIsMag = !b.attachmentType;
@@ -251,7 +251,7 @@ const DatasetSettingsStorageTabWithDataset = ({ dataset }: { dataset: APIDataset
           <Col span={24}>
             <SettingsCard
               title="Read-Only Dataset Mirror"
-              tooltip="TODO"
+              tooltip="This dataset is not disk-based but a symlink-based mirror has been written to disk for backwards compatibility at the specified path. Note that this mirror is read-only and changes do not propagate back to WEBKNOSSOS."
               content={
                 <Text code copyable>
                   {dataset.mirrorPath}

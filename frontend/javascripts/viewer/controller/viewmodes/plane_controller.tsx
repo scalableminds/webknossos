@@ -1,3 +1,4 @@
+import { copyToClipboard } from "libs/clipboard";
 import {
   InputKeyboard,
   InputMouse,
@@ -461,9 +462,7 @@ class PlaneController extends PureComponent<Props> {
               getActiveMagIndexForLayer(Store.getState(), segmentationLayer.name),
             );
             if (hoveredId !== 0) {
-              navigator.clipboard
-                .writeText(String(hoveredId))
-                .then(() => Toast.success(`Segment id ${hoveredId} copied to clipboard.`));
+              copyToClipboard(String(hoveredId), "segment id", true);
               return;
             }
           }

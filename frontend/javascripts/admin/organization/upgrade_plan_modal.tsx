@@ -15,7 +15,7 @@ import {
 } from "admin/api/organization";
 import { Button, Col, Divider, InputNumber, Modal, Row, Typography } from "antd";
 import type { GetRef } from "antd/lib";
-import { formatDateInLocalTimeZone } from "components/formatted_date";
+import FormattedDate from "components/formatted_date";
 import dayjs from "dayjs";
 import renderIndependently from "libs/render_independently";
 import Toast from "libs/toast";
@@ -72,9 +72,11 @@ function extendPricingPlan(organization: APIOrganization) {
         </p>
         <p>
           Your current plan is paid until:{" "}
-          {formatDateInLocalTimeZone(organization.paidUntil, "YYYY-MM-DD")}
+          <FormattedDate timestamp={organization.paidUntil} dateOnly />
         </p>
-        <p>Buy extension until: {extendedDate.format("YYYY-MM-DD")}</p>
+        <p>
+          Buy extension until: <FormattedDate timestamp={extendedDate.valueOf()} dateOnly />
+        </p>
         {ModalInformationFooter}
       </div>
     ),

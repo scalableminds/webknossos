@@ -67,7 +67,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "start": "concurrently \"yarn dev\" \"yarn start-backend\" \"yarn start-fossildb\"",
+    "start": "concurrently \"yarn dev\" \"yarn start-backend\" \"yarn start-fossildb\" \"tools/poll-backend.sh\"",
     "start-backend": "sbt -Dsbt.color=always \"run 9001\" -jvm-debug 5005 -J-XX:MaxMetaspaceSize=2048m -J-Xmx8g -Dlogger.file=conf/logback-dev.xml",
     "start-fossildb": "fossildb/run.sh > fossildb/logs",
     "dev-gen-tls": "./tools/gen-ssl-dev-certs.sh",

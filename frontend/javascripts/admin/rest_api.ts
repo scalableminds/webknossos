@@ -754,14 +754,22 @@ export async function acquireAnnotationMutex(
   return { canEdit, blockedByUser, blockedBySessionId };
 }
 
-export async function releaseAnnotationMutex(annotationId: string): Promise<void> {
-  await Request.receiveJSON(`/api/annotations/${annotationId}/releaseMutex`, {
-    method: "POST",
-  });
+export async function releaseAnnotationMutex(
+  annotationId: string,
+  sessionId: string,
+): Promise<void> {
+  await Request.receiveJSON(
+    `/api/annotations/${annotationId}/releaseMutex?${new URLSearchParams({ sessionId })}`,
+    {
+      method: "POST",
+    },
+  );
 }
 
-export function releaseAnnotationMutexWithBeacon(annotationId: string): boolean {
-  return navigator.sendBeacon(`/api/annotations/${annotationId}/releaseMutex`);
+export function releaseAnnotationMutexWithBeacon(annotationId: string, sessionId: string): boolean {
+  return navigator.sendBeacon(
+    `/api/annotations/${annotationId}/releaseMutex?${new URLSearchParams({ sessionId })}`,
+  );
 }
 
 export async function getTracingForAnnotationType(

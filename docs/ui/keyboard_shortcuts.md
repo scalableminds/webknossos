@@ -47,6 +47,8 @@ Shortcut changes are saved to your user account and persist across devices and b
 | ++g++                                              | Decrease the Move Value               |
 | ++q++                                              | Download Screenshot(s) of Viewport(s) |
 | ++period++                                         | Toggle Viewport Maximization          |
+| ++shift++ + ++1++                                  | Switch to Plane (Orthogonal) View Mode |
+| ++shift++ + ++2++                                  | Switch to Flight View Mode            |
 | ++k++ , ++l++                                      | Toggle left/right Sidebars            |
 | ++ctrl++ / ++cmd++ + ++p++                         | Open command palette                  |
 
@@ -136,6 +138,7 @@ Note that you can enable *Classic Controls* which will behave slightly different
 | ++ctrl++ / ++cmd++ + ++shift++ + Left Mouse Drag    | Remove Voxels From Segment                                                                        |
 | ++alt++ + Mouse Move                                | Move                                                                                              |
 | ++c++                                               | Create New Segment                                                                                |
+| ++ctrl++ / ++cmd++ + ++i++                          | Copy Segment ID Under Cursor (add ++alt++ to copy the mapped ID)                                  |
 | ++shift++ + Mousewheel or ++shift++ + ++i++ / ++o++ | Change Brush Size (Brush Mode)                                                                    |
 | ++v++                                               | Interpolate current segment between last labeled and current slice                                |
 

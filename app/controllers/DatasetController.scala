@@ -905,6 +905,7 @@ class DatasetController @Inject()(userService: UserService,
     sil.SecuredAction.async { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+        // While reading these details is not exactly editing, only those who can see the settings page should see this.
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- Fox.fromBool(dataset.isUsable) ?~> Msg.Dataset.notUsable(datasetId)
         magDetails <- organizationDAO.getUsedStorageMagDetailsForDataset(datasetId)

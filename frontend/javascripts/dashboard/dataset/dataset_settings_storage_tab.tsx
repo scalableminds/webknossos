@@ -208,7 +208,7 @@ const DatasetSettingsStorageTabWithDataset = ({ dataset }: { dataset: APIDataset
         <Col span={24}>
           <SettingsCard
             title="Dataset Structure Source"
-            tooltip="The dataset structure is defined either in a file on disk (“disk-based datasets”) or in the WEBKNOSSOS database (“virtual datasetes”). Note that the actual image data for virtual datasets may still be stored on disk."
+            tooltip="The dataset structure is defined either in a file on disk (“disk-based datasets”) or in the WEBKNOSSOS database (“virtual datasets”). Note that the actual image data for virtual datasets may still be stored on disk."
             content={
               dataset.isVirtual ? (
                 <Text>WEBKNOSSOS database</Text>

@@ -53,8 +53,8 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: Exec
   protected def parse(r: AnnotationPrivatelinksRow): Fox[AnnotationPrivateLink] =
     Fox.successful(
       AnnotationPrivateLink(
-        ObjectId(r._Id),
-        ObjectId(r._Annotation),
+        ObjectId(r._id),
+        ObjectId(r._annotation),
         r.accesstoken,
         r.expirationdatetime.map(Instant.fromSql),
         r.isdeleted

@@ -147,12 +147,12 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
       creationType <- Fox.runOptional(r.creationtype)(DatasetCreationType.fromString(_).toFox)
     } yield {
       Dataset(
-        ObjectId(r._Id),
-        r._Datastore.trim,
-        r._Organization.trim,
-        r._Publication.map(ObjectId(_)),
-        r._Uploader.map(ObjectId(_)),
-        ObjectId(r._Folder),
+        ObjectId(r._id),
+        r._datastore.trim,
+        r._organization.trim,
+        r._publication.map(ObjectId(_)),
+        r._uploader.map(ObjectId(_)),
+        ObjectId(r._folder),
         r.inboxsourcehash,
         defaultViewConfigurationOpt,
         adminViewConfigurationOpt,

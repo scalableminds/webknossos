@@ -60,7 +60,7 @@ class PublicationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
   protected def parse(r: PublicationsRow): Fox[Publication] =
     Fox.successful(
       Publication(
-        ObjectId(r._Id),
+        ObjectId(r._id),
         r.publicationdate.map(Instant.fromSql),
         r.imageurl,
         r.title,

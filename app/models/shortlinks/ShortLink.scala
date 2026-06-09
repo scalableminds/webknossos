@@ -24,7 +24,7 @@ class ShortLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
   protected def parse(r: ShortlinksRow): Fox[ShortLink] =
     Fox.successful(
       ShortLink(
-        ObjectId(r._Id),
+        ObjectId(r._id),
         r.key,
         r.longlink
       )

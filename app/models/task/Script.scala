@@ -59,8 +59,8 @@ class ScriptDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def parse(r: ScriptsRow): Fox[Script] =
     Fox.successful(
       Script(
-        ObjectId(r._Id),
-        ObjectId(r._Owner),
+        ObjectId(r._id),
+        ObjectId(r._owner),
         r.name,
         r.gist,
         Instant.fromSql(r.created),

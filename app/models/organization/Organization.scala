@@ -73,7 +73,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       aiPlan <- Fox.runOptional(r.aiplan)(aiPlanLiteral => AiPlan.fromString(aiPlanLiteral).toFox)
     } yield {
       Organization(
-        r._Id,
+        r._id,
         r.additionalinformation,
         r.logourl,
         r.name,
@@ -82,7 +82,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
         r.paiduntil.map(Instant.fromSql),
         r.includedusers,
         r.includedstorage,
-        ObjectId(r._Rootfolder),
+        ObjectId(r._rootfolder),
         r.newusermailinglist,
         r.enableautoverify,
         r.lasttermsofserviceacceptancetime.map(Instant.fromSql),
@@ -356,7 +356,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       includedUsers = if (row.includeduserschanged) Some(row.includedusers) else None
     } yield
       OrganizationPlanUpdate(
-        row._Organization,
+        row._organization,
         row.description,
         pricingPlan,
         aiPlan,

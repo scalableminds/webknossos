@@ -51,9 +51,9 @@ class TimeSpanDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   protected def parse(r: TimespansRow): Fox[TimeSpan] =
     Fox.successful(
       TimeSpan(
-        ObjectId(r._Id),
-        ObjectId(r._User),
-        r._Annotation.map(ObjectId(_)),
+        ObjectId(r._id),
+        ObjectId(r._user),
+        r._annotation.map(ObjectId(_)),
         r.time,
         Instant.fromSql(r.lastupdate),
         r.numberofupdates,

@@ -208,13 +208,13 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       viewconfigurationOpt <- Fox.runOptional(r.viewconfiguration)(JsonHelper.parseAs[JsObject](_).toFox)
       visibility <- AnnotationVisibility.fromString(r.visibility).toFox
       collaborationMode <- CollaborationMode.fromString(r.collaborationmode).toFox
-      annotationLayers <- annotationLayerDAO.findAnnotationLayersFor(ObjectId(r._Id))
+      annotationLayers <- annotationLayerDAO.findAnnotationLayersFor(ObjectId(r._id))
     } yield {
       Annotation(
-        ObjectId(r._Id),
-        ObjectId(r._Dataset),
-        r._Task.map(ObjectId(_)),
-        ObjectId(r._User),
+        ObjectId(r._id),
+        ObjectId(r._dataset),
+        r._task.map(ObjectId(_)),
+        ObjectId(r._user),
         annotationLayers,
         r.description,
         visibility,

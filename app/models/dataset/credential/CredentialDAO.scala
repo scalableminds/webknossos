@@ -32,8 +32,8 @@ class CredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         r.name,
         username,
         password,
-        Some(r._User),
-        Some(r._Organization)
+        Some(r._user),
+        Some(r._organization)
       )
 
   private def parseAsS3AccessKeyCredential(r: CredentialsRow): Fox[S3AccessKeyCredential] =
@@ -45,8 +45,8 @@ class CredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
         r.name,
         keyId,
         key,
-        Some(r._User),
-        Some(r._Organization)
+        Some(r._user),
+        Some(r._organization)
       )
 
   private def parseAsGoogleServiceAccountCredential(r: CredentialsRow): Fox[GoogleServiceAccountCredential] =
@@ -57,8 +57,8 @@ class CredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContex
       GoogleServiceAccountCredential(
         r.name,
         secretJson,
-        Some(r._User),
-        Some(r._Organization)
+        Some(r._user),
+        Some(r._organization)
       )
 
   def insertOne(_id: ObjectId, credential: HttpBasicAuthCredential): Fox[Unit] =

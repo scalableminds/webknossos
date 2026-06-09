@@ -124,8 +124,8 @@ class MaintenanceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
 
   protected def parse(r: MaintenancesRow): Fox[Maintenance] =
     Fox.successful(
-      Maintenance(ObjectId(r._Id),
-                  ObjectId(r._User),
+      Maintenance(ObjectId(r._id),
+                  ObjectId(r._user),
                   Instant.fromSql(r.starttime),
                   Instant.fromSql(r.endtime),
                   r.message,

@@ -29,10 +29,10 @@ class EmailVerificationKeyDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execu
       row: _root_.com.scalableminds.webknossos.schema.Tables.EmailverificationkeysRow): Fox[EmailVerificationKey] =
     Fox.successful(
       EmailVerificationKey(
-        ObjectId(row._Id),
+        ObjectId(row._id),
         row.key,
         row.email,
-        ObjectId(row._Multiuser),
+        ObjectId(row._multiuser),
         row.validuntil.map(Instant.fromSql),
         row.isused
       )

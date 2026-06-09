@@ -79,13 +79,13 @@ class AiInferenceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionConte
       boundingBox <- BoundingBox.fromSQL(parseArrayLiteral(r.boundingbox).map(_.toInt)).toFox
     } yield
       AiInference(
-        ObjectId(r._Id),
-        r._Organization,
-        r._Aimodel.map(ObjectId(_)),
-        r._Newdataset.map(ObjectId(_)),
-        r._Annotation.map(ObjectId(_)),
+        ObjectId(r._id),
+        r._organization,
+        r._aimodel.map(ObjectId(_)),
+        r._newdataset.map(ObjectId(_)),
+        r._annotation.map(ObjectId(_)),
         boundingBox,
-        ObjectId(r._Inferencejob),
+        ObjectId(r._inferencejob),
         r.newsegmentationlayername,
         r.maskannotationlayername,
         Instant.fromSql(r.created),

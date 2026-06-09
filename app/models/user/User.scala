@@ -102,12 +102,12 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       userConfiguration <- JsonHelper.parseAs[JsObject](r.userconfiguration).toFox
     } yield {
       User(
-        ObjectId(r._Id),
-        ObjectId(r._Multiuser),
-        r._Organization,
+        ObjectId(r._id),
+        ObjectId(r._multiuser),
+        r._organization,
         Instant.fromSql(r.lastactivity),
         userConfiguration,
-        LoginInfo(User.default_login_provider_id, r._Id),
+        LoginInfo(User.default_login_provider_id, r._id),
         r.isadmin,
         r.isorganizationowner,
         r.isdatasetmanager,
@@ -524,7 +524,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         q"SELECT _user, _team, isTeamManager FROM webknossos.user_team_roles WHERE _user = $userId"
           .as[UserTeamRolesRow])
       teamMemberships <- Fox.combined(rows.map { r =>
-        ObjectId.fromString(r._Team).map(teamIdValidated => TeamMembership(teamIdValidated, r.isteammanager))
+        ObjectId.fromString(r._team).map(teamIdValidated => TeamMembership(teamIdValidated, r.isteammanager))
       })
     } yield teamMemberships
 

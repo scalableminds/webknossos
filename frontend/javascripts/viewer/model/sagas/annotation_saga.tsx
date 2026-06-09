@@ -27,7 +27,10 @@ import Store from "viewer/store";
 import { determineLayout } from "viewer/view/layouting/default_layout_configs";
 import { is3dViewportMaximized } from "viewer/view/layouting/flex_layout_helper";
 import { getLastActiveLayout, getLayoutConfig } from "viewer/view/layouting/layout_persistence";
-import { mayEditAnnotationProperties } from "../accessors/annotation_accessor";
+import {
+  mayEditAnnotationProperties,
+  mayEditAnnotationViewConfig,
+} from "../accessors/annotation_accessor";
 import { isZoomThresholdExceededForAgglomerateMapping } from "../accessors/volumetracing_accessor";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { ensureWkInitialized } from "./ready_sagas";
@@ -47,8 +50,8 @@ function* pushAnnotationUpdateAsync(action: Action) {
   if (!annotation.annotationId) {
     return; // Do not update in case no annotation exists (our implemented null pattern leads to -> annotationId = "").
   }
-  const { allowUpdate } = annotation.restrictions;
-  const mayEdit = yield* select((state) => mayEditAnnotationProperties(state));
+  const mayEdit = yield* select(mayEditAnnotationProperties);
+  const mayUpdateViewConfig = yield* select(mayEditAnnotationViewConfig);
 
   // The extra type annotation is needed here for flow
   const editObject: Partial<EditableAnnotation> = {};
@@ -56,7 +59,7 @@ function* pushAnnotationUpdateAsync(action: Action) {
     editObject["name"] = annotation.name;
     editObject["visibility"] = annotation.visibility;
   }
-  if (allowUpdate) {
+  if (mayUpdateViewConfig) {
     // If the user can theoretically edit the annotation, store a user specific view configuration.
     const viewConfiguration = yield* select((state) => state.datasetConfiguration);
     editObject["viewConfiguration"] = viewConfiguration;

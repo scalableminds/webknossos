@@ -81,6 +81,12 @@ export function maySendSaveRequest(state: WebknossosState) {
   );
 }
 
+export function mayEditAnnotationViewConfig(state: WebknossosState) {
+  // All users that have the allowance to update the annotation regardless of whether they currently
+  // have the annotations mutex in any collab mode, have their own view config and can thus update it.
+  return state.annotation.restrictions.allowUpdate;
+}
+
 export function isAnnotationOwner(state: WebknossosState) {
   const activeUser = state.activeUser;
   const owner = state.annotation.owner;

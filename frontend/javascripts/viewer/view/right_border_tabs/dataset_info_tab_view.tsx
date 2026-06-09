@@ -14,7 +14,13 @@ import { getOrganization } from "admin/api/organization";
 import { Space, Tag, Typography } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { ThemedIcon } from "components/themed_icon";
-import { formatNumberToVolume, formatScale, formatVoxels } from "libs/format_utils";
+import { copyToClipboard } from "libs/clipboard";
+import {
+  formatNumberToVolume,
+  formatScale,
+  formatScaleForClipboard,
+  formatVoxels,
+} from "libs/format_utils";
 import Markdown from "libs/markdown_adapter";
 import { useWkSelector } from "libs/react_hooks";
 import { mayUserEditDataset, pluralize, safeNumberToStr } from "libs/utils";
@@ -37,6 +43,7 @@ import {
 import {
   getDatasetExtentAsString,
   getDatasetExtentInUnitAsProduct,
+  getDatasetExtentInVoxel,
   getDatasetExtentInVoxelAsProduct,
   getMagnificationUnion,
   getReadableURLPart,
@@ -200,6 +207,11 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
     );
   };
 
+  const copyExtentToClipboard = () => {
+    const { width, height, depth } = getDatasetExtentInVoxel(dataset);
+    copyToClipboard(`${width},${height},${depth}`, "dataset extent", true);
+  };
+
   return (
     <FastTooltip
       dynamicRenderer={renderDSExtentTooltip}
@@ -219,6 +231,7 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
         style={{
           paddingTop: 10,
         }}
+        onClick={copyExtentToClipboard}
       >
         {extentInVoxel}
         <br /> {extentInLength}
@@ -228,6 +241,10 @@ export function DatasetExtentRow({ dataset }: { dataset: APIDataset }) {
 }
 
 export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
+  const copyVoxelSizeToClipboard = () => {
+    copyToClipboard(formatScaleForClipboard(dataset.dataSource.scale), "dataset voxel size", true);
+  };
+
   return (
     <FastTooltip title="Dataset voxel size" placement="left" wrapper="tr">
       <td
@@ -237,7 +254,7 @@ export function VoxelSizeRow({ dataset }: { dataset: APIDataset }) {
       >
         <Icon component={IconVoxelsize} className="info-tab-icon" aria-label="Voxel size" />
       </td>
-      <td>{formatScale(dataset.dataSource.scale)}</td>
+      <td onClick={copyVoxelSizeToClipboard}>{formatScale(dataset.dataSource.scale)}</td>
     </FastTooltip>
   );
 }

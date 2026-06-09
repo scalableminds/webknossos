@@ -237,13 +237,15 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         case Some(foundDataset) => // This only returns None for Datasets that are present on a normal Datastore but also got reported from a scratch Datastore
           updateDataSourceDifferentDataStore(foundDataset, dataSource, dataStore, rootPath, rootRealPath)
         case _ =>
-          createDataset(dataStore,
-                        ObjectId.generate,
-                        dataSource.id.directoryName,
-                        dataSource,
-                        creationType = DatasetCreationType.DiskScan,
-                        rootPath = rootPath,
-                        rootRealPath = rootRealPath).map(ds => Some(ds._id))
+          createDataset(
+            dataStore,
+            ObjectId.generate,
+            dataSource.id.directoryName,
+            dataSource,
+            creationType = DatasetCreationType.DiskScan,
+            rootPath = rootPath,
+            rootRealPath = rootRealPath
+          ).map(ds => Some(ds._id))
       }
     }
   }
@@ -269,12 +271,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         _ <- notifyDatastoreOnUpdate(foundDataset._id)
       } yield foundDataset._id
 
-  private def updateDataSourceDifferentDataStore(foundDataset: Dataset,
-                                                 dataSource: DataSource,
-                                                 dataStore: DataStore,
-                                                 rootPath: Option[String],
-                                                 rootRealPath: Option[String])(
-      implicit ctx: DBAccessContext): Fox[Option[ObjectId]] =
+  private def updateDataSourceDifferentDataStore(
+      foundDataset: Dataset,
+      dataSource: DataSource,
+      dataStore: DataStore,
+      rootPath: Option[String],
+      rootRealPath: Option[String])(implicit ctx: DBAccessContext): Fox[Option[ObjectId]] =
     // The dataset is already present (belonging to the same organization), but reported from a different datastore
     (for {
       originalDataStore <- dataStoreDAO.findOneByName(foundDataset._dataStore)

@@ -193,10 +193,31 @@ const DatasetSettingsStorageTabWithDataset = ({ dataset }: { dataset: APIDataset
                 <Text>WEBKNOSSOS database</Text>
               ) : (
                 <>
-                  <Text code copyable>
-                    {dataset.rootPath ?? "datasource-properties.json"}
-                  </Text>
-                  {" on data store server "}
+                  <Text code>datasource-properties.json</Text>
+                  {" file "}
+                  {dataset.rootPath != null && (
+                    <>
+                      {"in"}
+                      <br />
+                      <Text code copyable>
+                        {dataset.rootPath}
+                      </Text>
+                      {dataset.rootRealPath != null && dataset.rootRealPath !== dataset.rootPath ? (
+                        <>
+                          <br />
+                          {" (realpath "}
+                          <Text code copyable>
+                            {dataset.rootRealPath}
+                          </Text>
+                          {")"}
+                          <br />
+                        </>
+                      ) : (
+                        <br />
+                      )}
+                    </>
+                  )}
+                  {"on data store server "}
                   <Tag color={stringToColor(dataset.dataStore.name)} variant="outlined">
                     {dataset.dataStore.name}
                   </Tag>

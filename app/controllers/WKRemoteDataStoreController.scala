@@ -291,7 +291,8 @@ class WKRemoteDataStoreController @Inject()(
           selectedOrgaLabel = organizationId.map(id => s"for organization $id").getOrElse("for all organizations")
           _ = logger.info(
             s"Received dataset list from datastore ${dataStore.name} $selectedOrgaLabel: " +
-              s"${dataSourcesWithPathInfo.count(_.dataSource.isUsable)} active, ${dataSourcesWithPathInfo.count(!_.dataSource.isUsable)} inactive")
+              s"${dataSourcesWithPathInfo.count(_.dataSource.isUsable)} active, ${dataSourcesWithPathInfo.count(
+                !_.dataSource.isUsable)} inactive")
           existingIds <- datasetService.updateDataSources(dataStore, dataSourcesWithPathInfo)
           _ <- datasetService.deactivateUnreportedDataSources(existingIds, dataStore, organizationId)
           _ = if (Instant.since(before) > (30 seconds))

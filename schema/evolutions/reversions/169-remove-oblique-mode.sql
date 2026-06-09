@@ -19,6 +19,9 @@ ALTER TABLE webknossos.taskTypes
   ALTER COLUMN settings_allowedModes SET DEFAULT '{orthogonal, flight, oblique}';
 
 ALTER TABLE webknossos.taskTypes
+  ALTER COLUMN settings_preferredMode DROP DEFAULT;
+
+ALTER TABLE webknossos.taskTypes
   ALTER COLUMN settings_preferredMode TYPE webknossos.TASKTYPE_MODES_old
   USING settings_preferredMode::text::webknossos.TASKTYPE_MODES_old;
 

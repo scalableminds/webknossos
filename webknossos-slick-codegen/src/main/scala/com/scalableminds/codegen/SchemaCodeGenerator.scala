@@ -21,8 +21,7 @@ class ContentStableSourceCodeGenerator(model: slickModel.Model) extends SourceCo
 
   private val logger = LoggerFactory.getLogger(classOf[ContentStableSourceCodeGenerator])
 
-  // AbstractColumnDef.rawName applies toCamelCase.uncapitalize (not final).
-  // Override via the Column inner class to return the raw DB column name verbatim.
+  // We don’t use snake case in sql colum names, so skip slick’s snake-to-camel conversion.
   override def Table = (t: slickModel.Table) => new SourceCodeTableDef(t) {
     override def Column = (c: slickModel.Column) => new Column(c) {
       override def rawName: String = this.model.name

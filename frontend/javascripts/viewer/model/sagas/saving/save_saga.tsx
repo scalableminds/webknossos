@@ -168,7 +168,7 @@ function needsPollAnnotationUpdates(state: WebknossosState): "yes" | "no" | "lat
   }
 
   // If the current user may edit the annotation while the collab mode is not Concurrent,
-  // we don't need to fetch newer versions (because there shouldn't since nobody else
+  // we don't need to fetch newer versions (because there shouldn't be any since nobody else
   // should be allowed to push a newer version). This is the case when the current user
   // is either the owner or a collaborator with the mutex.
   const { isUpdatingCurrentlyAllowed } = state.annotation;

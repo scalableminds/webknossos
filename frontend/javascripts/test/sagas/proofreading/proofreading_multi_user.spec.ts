@@ -245,6 +245,9 @@ describe("Proofreading (Multi User)", () => {
       expect(rebasingActions.some((action: Action) => action.type === "PREPARE_REBASING")).toBe(
         true,
       );
+      expect(rebasingActions.some((action: Action) => action.type === "FINISHED_REBASING")).toBe(
+        true,
+      );
 
       // The actual regression assertion: the marker position must survive the rebase
       // (on master it would be reset to undefined).
@@ -317,6 +320,9 @@ describe("Proofreading (Multi User)", () => {
       // Assert that a rebase was actually triggered, so the test is meaningful.
       const rebasingActions = yield flush(rebaseActionChannel);
       expect(rebasingActions.some((action: Action) => action.type === "PREPARE_REBASING")).toBe(
+        true,
+      );
+      expect(rebasingActions.some((action: Action) => action.type === "FINISHED_REBASING")).toBe(
         true,
       );
 

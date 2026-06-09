@@ -2,11 +2,14 @@
 const { spawnSync } = require("node:child_process");
 const path = require("node:path");
 const fs = require("node:fs");
+const crypto = require("node:crypto");
 const { Command } = require("commander");
 
 const repoRootPath = path.resolve(path.join(__dirname, "..", ".."));
 const schemaPath = path.join(repoRootPath, "schema", "schema.sql");
 const evolutionsPath = path.join(repoRootPath, "schema", "evolutions");
+const SCHEMA_DUMP_CACHE_DIR = path.join(repoRootPath, "target", "db-schema-dump");
+const SCHEMA_DUMP_CACHE_HASH_FILE = path.join(SCHEMA_DUMP_CACHE_DIR, ".schema-hash");
 
 const PG_CONFIG = (() => {
   let rawUrl = process.env.POSTGRES_URL || "postgres://postgres:postgres@127.0.0.1:5432/webknossos";
@@ -197,7 +200,11 @@ function dumpCurrentSchema(databaseUrl, schemaDir, silent = false) {
 
   if (!silent) console.log(`Dumping database to ${schemaDir}.`);
 
+  let t = Date.now();
   const items = safePsqlSpawn([databaseUrl, "-c", "\\d+ webknossos.*"]).trimEnd();
+  console.error(`[timing] \\d+ psql call: ${Date.now() - t}ms`);
+
+  t = Date.now();
   for (const block of items.split("\n\n")) {
     const [type, identifier] = block
       .split("\n")[0]
@@ -207,15 +214,24 @@ function dumpCurrentSchema(databaseUrl, schemaDir, silent = false) {
     if (!silent) console.log(type, identifier);
     fs.writeFileSync(path.join(schemaDir, `${type}__${identifier}`), block + "\n");
   }
+  console.error(`[timing] \\d+ file write: ${Date.now() - t}ms`);
 
+  t = Date.now();
   const functions = safePsqlSpawn([databaseUrl, "-c", "\\df+ webknossos.*"]);
-  fs.writeFileSync(path.join(schemaDir, "Functions"), functions);
+  console.error(`[timing] \\df+ psql call: ${Date.now() - t}ms`);
 
+  t = Date.now();
+  fs.writeFileSync(path.join(schemaDir, "Functions"), functions);
+  console.error(`[timing] \\df+ file write: ${Date.now() - t}ms`);
+
+  t = Date.now();
   const schemaVersion = safePsqlSpawn([
     databaseUrl,
     "-tAc",
     "SELECT schemaVersion FROM webknossos.releaseInformation;",
   ]);
+  console.error(`[timing] schemaVersion psql call: ${Date.now() - t}ms`);
+
   fs.writeFileSync(path.join(schemaDir, "schemaVersion"), schemaVersion);
 }
 
@@ -239,11 +255,15 @@ function dumpExpectedSchema(sqlFilePaths) {
   const tmpSchemaDir = fs.mkdtempSync("temp-webknossos-schema-");
 
   try {
+    let t = Date.now();
     // Create tmp database
     safePsqlSpawn([PG_CONFIG.urlWithDefaultDatabase, "-c", `CREATE DATABASE ${tmpDbName}`]);
+    console.error(`[timing] CREATE DATABASE: ${Date.now() - t}ms`);
 
     const urlWithDatabase = new URL(PG_CONFIG.urlWithDefaultDatabase);
     urlWithDatabase.pathname = "/" + tmpDbName;
+
+    t = Date.now();
     // Load schema into tmp database
     safePsqlSpawn([
       urlWithDatabase.toString(),
@@ -252,38 +272,77 @@ function dumpExpectedSchema(sqlFilePaths) {
       "-q",
       ...sqlFilePaths.flatMap((filePath) => ["-f", filePath]),
     ]);
+    console.error(`[timing] load schema.sql: ${Date.now() - t}ms`);
 
     // Dump schema into diffable files
     dumpCurrentSchema(urlWithDatabase.toString(), tmpSchemaDir, true);
     return tmpSchemaDir;
   } finally {
+    const t = Date.now();
     safePsqlSpawn([PG_CONFIG.urlWithDefaultDatabase, "-c", `DROP DATABASE ${tmpDbName}`]);
+    console.error(`[timing] DROP DATABASE: ${Date.now() - t}ms`);
   }
 }
 
+function getCachedExpectedSchemaDump() {
+  const currentHash = crypto.createHash("md5").update(fs.readFileSync(schemaPath)).digest("hex");
+
+  if (fs.existsSync(SCHEMA_DUMP_CACHE_HASH_FILE)) {
+    const cachedHash = fs.readFileSync(SCHEMA_DUMP_CACHE_HASH_FILE, { encoding: "utf-8" }).trim();
+    if (cachedHash === currentHash) {
+      console.error("[timing] expected schema dump: cache hit");
+      return SCHEMA_DUMP_CACHE_DIR;
+    }
+  }
+
+  console.error("[timing] expected schema dump: cache miss, regenerating");
+  const tmpDir = dumpExpectedSchema([schemaPath]);
+  cleanSchemaDump(tmpDir);
+
+  if (fs.existsSync(SCHEMA_DUMP_CACHE_DIR)) {
+    fs.rmSync(SCHEMA_DUMP_CACHE_DIR, { recursive: true, force: true });
+  }
+  fs.mkdirSync(SCHEMA_DUMP_CACHE_DIR, { recursive: true });
+  for (const filename of fs.readdirSync(tmpDir)) {
+    fs.copyFileSync(path.join(tmpDir, filename), path.join(SCHEMA_DUMP_CACHE_DIR, filename));
+  }
+  fs.writeFileSync(SCHEMA_DUMP_CACHE_HASH_FILE, currentHash);
+  fs.rmSync(tmpDir, { recursive: true, force: true });
+
+  return SCHEMA_DUMP_CACHE_DIR;
+}
+
 function checkDbSchema() {
+  const total = Date.now();
   const dbDumpDir = fs.mkdtempSync("temp-webknossos-schema-");
-  let schemaDumpDir = null;
   try {
+    console.error("[timing] --- dumpCurrentSchema (live db) ---");
+    let t = Date.now();
     dumpCurrentSchema(PG_CONFIG.url, dbDumpDir, true);
-    schemaDumpDir = dumpExpectedSchema([schemaPath]);
+    console.error(`[timing] dumpCurrentSchema total: ${Date.now() - t}ms`);
 
+    t = Date.now();
     cleanSchemaDump(dbDumpDir);
-    cleanSchemaDump(schemaDumpDir);
+    console.error(`[timing] cleanSchemaDump (live db): ${Date.now() - t}ms`);
 
+    console.error("[timing] --- expected schema dump ---");
+    t = Date.now();
+    const schemaDumpDir = getCachedExpectedSchemaDump();
+    console.error(`[timing] getCachedExpectedSchemaDump: ${Date.now() - t}ms`);
+
+    t = Date.now();
     try {
       safeSpawn("diff", ["--strip-trailing-cr", "-r", dbDumpDir, schemaDumpDir]);
     } catch (err) {
       throw new Error(`Database schema is not up-to-date:\n${err.stdout}`);
     }
+    console.error(`[timing] diff: ${Date.now() - t}ms`);
   } finally {
     if (fs.existsSync(dbDumpDir)) {
       fs.rmSync(dbDumpDir, { recursive: true, force: true });
     }
-    if (fs.existsSync(schemaDumpDir)) {
-      fs.rmSync(schemaDumpDir, { recursive: true, force: true });
-    }
   }
+  console.error(`[timing] checkDbSchema total: ${Date.now() - total}ms`);
   console.log("✨✨ Database schema is up-to-date");
 }
 

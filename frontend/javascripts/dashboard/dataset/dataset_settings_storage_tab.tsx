@@ -6,6 +6,7 @@ import { SettingsTitle } from "admin/account/helpers/settings_title";
 import { getDatasetUsedStorageDetails } from "admin/rest_api";
 import { Col, Collapse, Row, Spin, Table, Tag, Tooltip, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
+import FastTooltip from "components/fast_tooltip";
 import { formatCountToDataAmountUnit, stringToColor } from "libs/format_utils";
 import groupBy from "lodash-es/groupBy";
 import sumBy from "lodash-es/sumBy";
@@ -49,8 +50,11 @@ const storageColumns: ColumnsType<StorageEntry> = [
   {
     key: "storage",
     width: 80,
-    render: (_: unknown, record: StorageEntry) =>
-      formatCountToDataAmountUnit(record.usedStorageBytes, true),
+    render: (_: unknown, record: StorageEntry) => (
+      <FastTooltip title={`${new Intl.NumberFormat().format(record.usedStorageBytes)} bytes`}>
+        {formatCountToDataAmountUnit(record.usedStorageBytes, true)}
+      </FastTooltip>
+    ),
     align: "right" as const,
   },
 ];
@@ -126,7 +130,24 @@ function StorageBreakdownCard({ datasetId }: { datasetId: string }) {
       : "Used Storage";
 
   return (
-    <SettingsCard title={title} tooltip="TODO" content={content} style={{ minHeight: undefined }} />
+    <SettingsCard
+      title={title}
+      tooltip={
+        <>
+          Storage used by this dataset within your organization. Parts of the dataset may not count
+          to your used storage, and be skipped here because:
+          <ul>
+            <li>The storage hasn't been scanned yet</li>
+            <li>The data is streamed from external sources</li>
+            <li>The data layers are already counted in other (linked) datasets</li>
+            <li>The dataset belongs to another organization</li>
+            <li>The dataset is empty</li>
+          </ul>
+        </>
+      }
+      content={content}
+      style={{ minHeight: undefined }}
+    />
   );
 }
 
@@ -141,7 +162,7 @@ const DatasetSettingsStorageTabWithDataset = ({ dataset }: { dataset: APIDataset
         <Col span={8}>
           <SettingsCard
             title="Data Store Server"
-            tooltip="TODO"
+            tooltip="When browsing this dataset, requests go via this server."
             style={{ height: "100%" }}
             content={
               <Tag color={stringToColor(dataset.dataStore.name)} variant="outlined">
@@ -153,7 +174,7 @@ const DatasetSettingsStorageTabWithDataset = ({ dataset }: { dataset: APIDataset
         <Col span={8}>
           <SettingsCard
             title="Directory Name"
-            tooltip="TODO"
+            tooltip="A unique name for the dataset within this organization. Stays fixed even when editing the displayed name. In case the dataset is disk-based, this name is used for its directory."
             style={{ height: "100%" }}
             content={
               <>
@@ -173,7 +194,7 @@ const DatasetSettingsStorageTabWithDataset = ({ dataset }: { dataset: APIDataset
         <Col span={8}>
           <SettingsCard
             title="Creation Type"
-            tooltip="TODO"
+            tooltip="How this dataset was imported to WEBKNOSSOS"
             style={{ height: "100%" }}
             content={
               dataset.creationType != null ? (
@@ -187,7 +208,7 @@ const DatasetSettingsStorageTabWithDataset = ({ dataset }: { dataset: APIDataset
         <Col span={24}>
           <SettingsCard
             title="Dataset Structure Source"
-            tooltip="TODO"
+            tooltip="The dataset structure is defined either in a file on disk (“disk-based datasets”) or in the WEBKNOSSOS database (“virtual datasetes”). Note that the actual image data for virtual datasets may still be stored on disk."
             content={
               dataset.isVirtual ? (
                 <Text>WEBKNOSSOS database</Text>

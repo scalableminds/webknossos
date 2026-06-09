@@ -13,7 +13,7 @@ trait RedisTemporaryStore extends LazyLogging with FoxImplicits {
   protected def address: String
   protected def port: Int
   lazy val authority: String = f"$address:$port"
-  private lazy val r = new RedisClientPool(address, port)
+  private lazy val r = new RedisClientPool(address, port, maxConnections = 100)
 
   def find(id: String): Fox[String] =
     withExceptionHandler(_.get(id)).map(_.toFox).flatten

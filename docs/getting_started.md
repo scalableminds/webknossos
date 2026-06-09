@@ -46,14 +46,14 @@ See the full list of [gestures and keyboard shortcuts](./ui/keyboard_shortcuts.m
 
 | Shortcut                      | Operation                    |
 | ----------------------------- | ---------------------------- |
-| Left Mouse Drag or Arrow Keys | Move In-Plane                |
-| SPACE or Mousewheel           | Move Forward                 |
-| SHIFT + SPACE or Mousewheel   | Move Backward                |
-| I or ALT + Mousewheel         | Zoom In                      |
-| O or ALT + Mousewheel         | Zoom Out                     |
-| Scroll Mousewheel (3D View)   | Zoom In And Out              |
-| Right Click Drag (3D View)    | Rotate 3D View               |
-| . (Dot)                       | Toggle Viewport Maximization |
+| Left Mouse Drag or Arrow Keys      | Move In-Plane                |
+| ++space++ or Mousewheel            | Move Forward                 |
+| ++shift++ + ++space++ or Mousewheel | Move Backward                |
+| ++i++ or ++alt++ + Mousewheel      | Zoom In                      |
+| ++o++ or ++alt++ + Mousewheel      | Zoom Out                     |
+| Scroll Mousewheel (3D View)        | Zoom In And Out              |
+| Right Click Drag (3D View)         | Rotate 3D View               |
+| ++period++                         | Toggle Viewport Maximization |
 
 
 ## Your First Annotation
@@ -70,7 +70,7 @@ The _Brush_ and _Trace_ tools allow to "paint" voxels to create volumetric annot
 For a full rundown on the other annotations tools, such as _Eraser_, _Segment Picker_, _Fill_ please refer to documentation on [skeleton](./skeleton_annotation/tools.md) and [volume](./volume_annotation/tools.md) annotations.
 
 To open a context-sensitive menu with various actions, such as merging two trees or flood-filling a segment, use a right mouse click.
-Use the mouse wheel or press the spacebar keyboard shortcut to move along the 3rd axis.
+Use the mouse wheel or press ++space++ to move along the 3rd axis.
 
 Read the guides about the [annotation UI](./ui/index.md), [skeleton annotation](./skeleton_annotation/index.md), or [volume annotation](./volume_annotation/index.md) for more details.
 

@@ -76,6 +76,7 @@ import {
   getActiveTreeGroup,
   getFlatTreeGroups,
   getNodePosition,
+  getSkeletonTracing,
   getTree,
   getTreeAndNode,
   getTreeAndNodeOrNull,
@@ -1225,7 +1226,10 @@ class TracingApi {
    * api.tracing.centerNode()
    */
   centerNode = (nodeId?: number): void => {
-    const skeletonTracing = assertSkeleton(Store.getState().annotation);
+    const skeletonTracing = getSkeletonTracing(Store.getState().annotation);
+    if (!skeletonTracing) {
+      return;
+    }
     const treeAndNode = getTreeAndNode(skeletonTracing, nodeId);
     if (!treeAndNode) return;
 

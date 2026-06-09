@@ -72,3 +72,4 @@ jobs:
           env: ${{ steps.gh_deployment.outputs.env }}
           deployment_id: ${{ steps.gh_deployment.outputs.deployment_id }}
           env_url: ${{ steps.check_build.outputs.env_url }}
+          override: false

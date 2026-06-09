@@ -5,7 +5,7 @@ Sharing works for both skeletons and volume annotations.
 
 ## Annotation Permissions
 
-There are three options to control who can see an annotation if they know the annotation URL:
+There are three permission levels to control who can see an annotation if they know the annotation URL, plus an additional team sharing option:
 
 1. `Private`: Only you and your team manager have access to the annotation.
 2. `Internal`: All members of your organization have access to the annotation. Default option.
@@ -57,7 +57,7 @@ To get the sharing link of an annotation, follow the same steps as for changing 
 
 ### Sharing Link Format
 
-By default, WEBKNOSSOS shortens the web links for ease of use. You can switch to full-length links in the link-sharing UI.
+By default, WEBKNOSSOS shortens the web links for ease of use. Use the `Shorten this link` toggle next to the link field in the Share dialog to switch between shortened and full-length links.
 
 As mentioned above, the sharing link encodes certain properties, like the current position, rotation, zoom, active mapping, and visible meshes.
 Anyone who opens a link will have the same WEBKNOSSOS experience that was captured when copying the link.

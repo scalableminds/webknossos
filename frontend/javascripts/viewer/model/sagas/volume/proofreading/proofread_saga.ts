@@ -700,23 +700,9 @@ function* handleTreeProofreadingAction(action: Action): Saga<void> {
     yield* call(pushPendingProofreadingOperationInfo, volumeTracingId, sourceInfo, targetInfo);
 
     yield* put(pushSaveQueueTransaction(items));
-    yield* call(syncWithBackend);
-    const proofreadingPostProcessingInfo = yield* call(popPendingProofreadingOperationInfo);
-    if (proofreadingPostProcessingInfo) {
-      sourceInfo = {
-        ...sourceInfo,
-        agglomerateId: proofreadingPostProcessingInfo[0].agglomerateId,
-      };
-      if (proofreadingPostProcessingInfo[1]) {
-        targetInfo = {
-          ...targetInfo,
-          agglomerateId: proofreadingPostProcessingInfo[1].agglomerateId,
-        };
-      }
-    } else {
-      Toast.error(messages["proofreading.post_processing_info_not_found"]);
-      return;
-    }
+    const postProcessResult = yield* call(syncAndUpdatePostProcessingInfo, sourceInfo, targetInfo);
+    if (!postProcessResult) return;
+    ({ sourceInfo, targetInfo } = postProcessResult);
 
     activeMapping = yield* select(
       (store) => store.temporaryConfiguration.activeMappingByLayer[volumeTracing.tracingId],
@@ -1250,10 +1236,10 @@ function* clearProofreadingByproducts() {
 const MISSING_INFORMATION_WARNING =
   "Please use either the data viewports OR the 3D viewport (but not both) for selecting the partners of a proofreading operation.";
 
-function* syncAndUpdatePostProcessingInfo(
-  sourceInfo: IdInfo,
-  targetInfo: IdInfoOpt,
-): Saga<{ sourceInfo: IdInfo; targetInfo: IdInfoOpt } | null> {
+function* syncAndUpdatePostProcessingInfo<
+  T1 extends IdInfo | IdInfoOpt | IdInfoWithoutPosition,
+  T2 extends IdInfo | IdInfoOpt | IdInfoWithoutPosition,
+>(sourceInfo: T1, targetInfo: T2): Saga<{ sourceInfo: T1; targetInfo: T2 } | null> {
   yield* call(syncWithBackend);
   const proofreadingPostProcessingInfo = yield* call(popPendingProofreadingOperationInfo);
   if (!proofreadingPostProcessingInfo) {
@@ -1292,7 +1278,7 @@ function* refreshProofreadingSegmentsAndMeshes(
         // a merge (see idInfos.type). In that case,
         // this element was merged into another element.
         // Therefore, sourceInfo.position is a valid replacement.
-        (targetInfo.position ?? sourceInfo.position),
+        targetInfo.position ?? sourceInfo.position,
     },
   ];
   yield* call(refreshAffectedSegmentItems, volumeTracingId, refreshInfos);
@@ -1347,7 +1333,14 @@ function* handleProofreadMerge(action: ProofreadMergeAction) {
     sourceInfo.unmappedId,
     targetInfo.unmappedId,
   );
-  yield* call(updateMappingWithMerge, volumeTracingId, activeMapping, sourceAgglomerateId, targetAgglomerateId, false);
+  yield* call(
+    updateMappingWithMerge,
+    volumeTracingId,
+    activeMapping,
+    sourceAgglomerateId,
+    targetAgglomerateId,
+    false,
+  );
 
   yield* call(pushPendingProofreadingOperationInfo, volumeTracingId, sourceInfo, targetInfo);
   yield* put(pushSaveQueueTransaction(updateActions));
@@ -1367,7 +1360,7 @@ function* handleProofreadMerge(action: ProofreadMergeAction) {
       ),
     );
 
-    const postProcessResult = yield* call(syncAndUpdatePostProcessingInfo, sourceInfo, targetInfo);
+    const postProcessResult =  yield* call(() => syncAndUpdatePostProcessingInfo(sourceInfo, targetInfo))
     if (!postProcessResult) return;
     ({ sourceInfo, targetInfo } = postProcessResult);
 
@@ -1380,7 +1373,9 @@ function* handleProofreadMerge(action: ProofreadMergeAction) {
       targetInfo.unmappedId,
     );
     if (!newInfo) {
-      Toast.error(`Could not reload the agglomerate information for proofreading operation segments.`);
+      Toast.error(
+        `Could not reload the agglomerate information for proofreading operation segments.`,
+      );
       return;
     }
     activeMapping = newInfo.activeMapping;
@@ -1396,7 +1391,14 @@ function* handleProofreadMerge(action: ProofreadMergeAction) {
       volumeTracingId,
     );
 
-    yield* call(refreshProofreadingSegmentsAndMeshes, volumeTracingId, sourceInfo, targetInfo, sourceAgglomerateId, targetAgglomerateId);
+    yield* call(
+      refreshProofreadingSegmentsAndMeshes,
+      volumeTracingId,
+      sourceInfo,
+      targetInfo,
+      sourceAgglomerateId,
+      targetAgglomerateId,
+    );
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -1460,7 +1462,7 @@ function* handleMinCutAgglomerate(action: MinCutAgglomerateWithPositionAction) {
     "Proofreading Min-Cut",
   );
   try {
-    const postProcessResult = yield* call(syncAndUpdatePostProcessingInfo, sourceInfo, targetInfo);
+    const postProcessResult = yield* call(() => syncAndUpdatePostProcessingInfo(sourceInfo, targetInfo));
     if (!postProcessResult) return;
     ({ sourceInfo, targetInfo } = postProcessResult);
 
@@ -1489,7 +1491,9 @@ function* handleMinCutAgglomerate(action: MinCutAgglomerateWithPositionAction) {
       targetInfo.unmappedId,
     );
     if (!latestInfo) {
-      Toast.error(`Could not reload the agglomerate information for proofreading split segments operation.`);
+      Toast.error(
+        `Could not reload the agglomerate information for proofreading split segments operation.`,
+      );
       return;
     }
     activeMapping = latestInfo.activeMapping;
@@ -1535,14 +1539,23 @@ function* handleMinCutAgglomerate(action: MinCutAgglomerateWithPositionAction) {
       targetInfo.unmappedId,
     );
     if (!newInfo) {
-      Toast.error(`Could not reload the agglomerate information for proofreading operation segments.`);
+      Toast.error(
+        `Could not reload the agglomerate information for proofreading operation segments.`,
+      );
       return;
     }
     activeMapping = newInfo.activeMapping;
     sourceAgglomerateId = newInfo.sourceAgglomerateId;
     targetAgglomerateId = newInfo.targetAgglomerateId;
 
-    yield* call(refreshProofreadingSegmentsAndMeshes, volumeTracingId, sourceInfo, targetInfo, sourceAgglomerateId, targetAgglomerateId);
+    yield* call(
+      refreshProofreadingSegmentsAndMeshes,
+      volumeTracingId,
+      sourceInfo,
+      targetInfo,
+      sourceAgglomerateId,
+      targetAgglomerateId,
+    );
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);
@@ -1910,10 +1923,7 @@ function* getAgglomerateInfos(
     position: Vector3,
   ) => Promise<{ agglomerateId: number; unmappedId: number }>,
   positions: Vector3[],
-): Saga<Array<{
-  agglomerateId: number;
-  unmappedId: number;
-}> | null> {
+): Saga<Array<IdInfoWithoutPosition> | null> {
   try {
     const idInfos = yield* all(positions.map((pos) => call(getMappedAndUnmapped, pos)));
     if (idInfos.find((idInfo) => idInfo.agglomerateId === 0 || idInfo.unmappedId === 0) != null) {
@@ -2227,6 +2237,7 @@ export function* updateMappingWithMerge(
 
 type IdInfo = { agglomerateId: number; unmappedId: number; position: Vector3 };
 type IdInfoOpt = { agglomerateId: number; unmappedId: number; position: Vector3 | undefined };
+type IdInfoWithoutPosition = { agglomerateId: number; unmappedId: number };
 
 type GatheredInfos =
   | {

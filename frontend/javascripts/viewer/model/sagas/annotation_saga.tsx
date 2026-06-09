@@ -3,6 +3,7 @@ import { editAnnotation } from "admin/rest_api";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import { hasUrlParam } from "libs/utils";
+import isEmpty from "lodash-es/isEmpty";
 import messages from "messages";
 import type { ActionPattern } from "redux-saga/effects";
 import { call, delay, put, retry, take, takeLatest } from "typed-redux-saga";
@@ -46,11 +47,8 @@ function* pushAnnotationUpdateAsync(action: Action) {
   if (!annotation.annotationId) {
     return; // Do not update in case no annotation exists (our implemented null pattern leads to -> annotationId = "").
   }
+  const { allowUpdate } = annotation.restrictions;
   const mayEdit = yield* select((state) => mayEditAnnotationProperties(state));
-
-  if (!mayEdit && !annotation.restrictions.allowUpdate) {
-    return;
-  }
 
   // The extra type annotation is needed here for flow
   const editObject: Partial<EditableAnnotation> = {};
@@ -58,11 +56,15 @@ function* pushAnnotationUpdateAsync(action: Action) {
     editObject["name"] = annotation.name;
     editObject["visibility"] = annotation.visibility;
   }
-  if (annotation.restrictions.allowUpdate) {
+  if (allowUpdate) {
     // If the user can theoretically edit the annotation, store a user specific view configuration.
     const viewConfiguration = yield* select((state) => state.datasetConfiguration);
     editObject["viewConfiguration"] = viewConfiguration;
   }
+  if (isEmpty(editObject)) {
+    return;
+  }
+
   try {
     yield* retry(
       SETTINGS_MAX_RETRY_COUNT,

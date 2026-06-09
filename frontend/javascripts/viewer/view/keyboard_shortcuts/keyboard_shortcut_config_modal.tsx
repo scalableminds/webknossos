@@ -153,6 +153,7 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
       FLIGHT_NAVIGATION: [],
       FLIGHT_EDITING: [],
       PLANE_NAVIGATION: [],
+      PLANE_GENERAL: [],
       PLANE_TOOL_SWITCHING: [],
       PLANE_SKELETON_TOOL: [],
       PLANE_VOLUME_TOOL: [],
@@ -385,6 +386,11 @@ export default function KeyboardShortcutConfigModal({ isOpen, onClose }: Shortcu
             columns={keyboardShortcutsColumns}
           />
           <PlaneNavigationMouseShortcutsTable />
+          <KeyboardShortcutDomainTable
+            domainName={"PLANE_GENERAL"}
+            tableData={keyboardShortcutsTableDataMap["PLANE_GENERAL"]}
+            columns={keyboardShortcutsColumns}
+          />
           <PlaneGeneralEditingMouseShortcutsTable />
           <PlaneTdViewportMouseShortcutsTable />
         </>

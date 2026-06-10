@@ -130,7 +130,7 @@ function BrushToolMenu({ adaptedActiveTool }: ToolButtonProps) {
     <ToolRadioButtonWithDropdown
       disabled={isBrushDisabled && isTraceDisabled}
       value={currentTool.id}
-      disabledExplanation={disabledInfosForTools[AnnotationTool.BRUSH.id].explanation}
+      disabledExplanation={disabledInfosForTools[currentTool.id].explanation}
       dropdownItems={[
         {
           key: AnnotationTool.BRUSH.id,

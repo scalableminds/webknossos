@@ -445,9 +445,11 @@ export function getHideUnregisteredSegmentsForLayer(
   state: WebknossosState,
   layerName: string,
 ): boolean {
-  const layer = getSegmentationLayerByName(state.dataset, layerName);
+  return state.localSegmentationStateByLayer[layerName]?.hideUnregisteredSegments;
+}
 
-  return state.localSegmentationStateByLayer[layer.name]?.hideUnregisteredSegments;
+export function getIdReservationsForSegmentationLayer(state: WebknossosState, tracingId: string) {
+  return state.localSegmentationStateByLayer[tracingId].idReservations;
 }
 
 const EMPTY_SEGMENT_JOURNAL: SegmentJournalEntry[] = [];

@@ -19,6 +19,7 @@ import {
 import { getMaximumGroupId } from "../reducers/skeletontracing_reducer_helpers";
 import { getGroupIdSet } from "../reducers/volumetracing_reducer_helpers";
 import { type Saga, select, take } from "./effect_generators";
+import { getIdReservationsForSegmentationLayer } from "../accessors/volumetracing_accessor";
 
 const { IDEAL_ID_BUFFER_SIZE } = Constants;
 
@@ -79,8 +80,8 @@ function* replenishmentLoop(domain: "SegmentGroup"): Saga<void> {
       continue;
     }
 
-    const idReservations = yield* select(
-      (state) => state.localSegmentationStateByLayer[action.tracingId].idReservations,
+    const idReservations = yield* select((state) =>
+      getIdReservationsForSegmentationLayer(state, action.tracingId),
     );
     const usableReservations = getUsableReservations(tracing, idReservations, domain);
     if (usableReservations.length < IDEAL_ID_BUFFER_SIZE / 2) {
@@ -109,8 +110,8 @@ function* handleReservationRequest(action: GetNewIdAction): Saga<void> {
     return;
   }
 
-  const idReservations = yield* select(
-    (state) => state.localSegmentationStateByLayer[tracingId].idReservations,
+  const idReservations = yield* select((state) =>
+    getIdReservationsForSegmentationLayer(state, action.tracingId),
   );
   const usableReservations = getUsableReservations(tracing, idReservations, domain);
 
@@ -172,8 +173,8 @@ function* fetchNewReservations(tracingId: string, domain: "SegmentGroup"): Saga<
     return;
   }
 
-  const idReservations = yield* select(
-    (state) => state.localSegmentationStateByLayer[tracingId].idReservations,
+  const idReservations = yield* select((state) =>
+    getIdReservationsForSegmentationLayer(state, tracingId),
   );
   const unfilteredReservations = idReservations[domain];
   const usableReservations = getUsableReservations(tracing, idReservations, domain);
@@ -216,8 +217,8 @@ function* fetchNewReservations(tracingId: string, domain: "SegmentGroup"): Saga<
   // Re-read fresh state: the async call above may have suspended this saga long enough for
   // another request to mark some reservations as used in the meantime.
   const freshTracing = yield* select((state) => getTracingById(state, tracingId));
-  const freshIdReservations = yield* select(
-    (state) => state.localSegmentationStateByLayer[tracingId].idReservations,
+  const freshIdReservations = yield* select((state) =>
+    getIdReservationsForSegmentationLayer(state, tracingId),
   );
   const freshUnfilteredReservations =
     freshTracing.type === "volume" ? freshIdReservations[domain] : [];

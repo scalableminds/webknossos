@@ -4,6 +4,7 @@ import {
   setupWebknossosForTestingWithRestrictions,
   type WebknossosTestContext,
 } from "test/helpers/apiHelpers";
+import { getIdReservationsForSegmentationLayer } from "viewer/model/accessors/volumetracing_accessor";
 import { dispatchGetNewIdAsync, setIdReservationsAction } from "viewer/model/actions/actions";
 import { setSegmentGroupsAction } from "viewer/model/actions/volumetracing_actions";
 import { hasRootSagaCrashed } from "viewer/model/sagas/root_saga";
@@ -49,8 +50,10 @@ describe("ID reservation saga (concurrent collaboration mode)", () => {
 
       expect(id).toBe(100);
 
-      const reservations =
-        Store.getState().localSegmentationStateByLayer[tracingId].idReservations.SegmentGroup;
+      const reservations = getIdReservationsForSegmentationLayer(
+        Store.getState(),
+        tracingId,
+      ).SegmentGroup;
       expect(reservations).toEqual([
         { id: 100, used: true },
         { id: 101, used: false },
@@ -174,8 +177,10 @@ describe("ID reservation saga (concurrent collaboration mode)", () => {
       );
       expect(id3).toBe(300);
 
-      const reservations =
-        Store.getState().localSegmentationStateByLayer[tracingId].idReservations.SegmentGroup;
+      const reservations = getIdReservationsForSegmentationLayer(
+        Store.getState(),
+        tracingId,
+      ).SegmentGroup;
       expect(reservations).toEqual([
         { id: 201, used: true },
         { id: 300, used: true },
@@ -273,8 +278,10 @@ describe("ID reservation saga (concurrent collaboration mode)", () => {
       expect(id).toBe(100);
       expect(callCount).toBe(3);
 
-      const reservations =
-        Store.getState().localSegmentationStateByLayer[tracingId].idReservations.SegmentGroup;
+      const reservations = getIdReservationsForSegmentationLayer(
+        Store.getState(),
+        tracingId,
+      ).SegmentGroup;
       expect(reservations).toEqual([
         { id: 100, used: true },
         { id: 101, used: false },
@@ -317,8 +324,10 @@ describe("ID reservation saga (concurrent collaboration mode)", () => {
       const id = yield call(() => dispatchGetNewIdAsync(Store.dispatch, tracingId, "SegmentGroup"));
       expect(id).toBe(200);
 
-      const reservations =
-        Store.getState().localSegmentationStateByLayer[tracingId].idReservations.SegmentGroup;
+      const reservations = getIdReservationsForSegmentationLayer(
+        Store.getState(),
+        tracingId,
+      ).SegmentGroup;
       expect(reservations).toEqual([
         { id: 200, used: true },
         { id: 201, used: false },
@@ -403,8 +412,10 @@ describe("ID reservation saga (exclusive collaboration mode)", () => {
       );
       expect(id12).toBe(12);
 
-      let reservations =
-        Store.getState().localSegmentationStateByLayer[tracingId].idReservations.SegmentGroup;
+      let reservations = getIdReservationsForSegmentationLayer(
+        Store.getState(),
+        tracingId,
+      ).SegmentGroup;
       expect(reservations).toEqual([
         // 5 ids were put into the reservations. Two of them are already now.
         { id: 11, used: true },
@@ -419,8 +430,10 @@ describe("ID reservation saga (exclusive collaboration mode)", () => {
       );
       expect(id13).toBe(13);
 
-      reservations =
-        Store.getState().localSegmentationStateByLayer[tracingId].idReservations.SegmentGroup;
+      reservations = getIdReservationsForSegmentationLayer(
+        Store.getState(),
+        tracingId,
+      ).SegmentGroup;
       expect(reservations).toEqual([
         // 11 to 13 were cleaned up now and in total 5 unused ids are available again
         { id: 14, used: false },

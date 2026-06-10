@@ -1,6 +1,5 @@
 import app from "app";
 import showFpsMeter from "libs/fps_meter";
-import importWithRetry from "libs/import_with_retry";
 import { V3 } from "libs/mjs";
 import { roundTo, sleep } from "libs/utils";
 import mean from "lodash-es/mean";
@@ -214,10 +213,8 @@ export default class WkDev {
   }
 
   async benchmarkRotate(n: number = 10) {
-    // Dynamic import to avoid circular imports.
-    const { rotate3DViewTo } = await importWithRetry(
-      () => import("viewer/controller/camera_controller"),
-    );
+    // biome-ignore lint/plugin/no-bare-dynamic-import: benchmark-only; cyclic dep via importWithRetry is not worth it here and a failed import is acceptable.
+    const { rotate3DViewTo } = await import("viewer/controller/camera_controller");
 
     const animateAsPromise = (plane: OrthoView) => {
       return new Promise<void>((resolve) => {

@@ -5,7 +5,7 @@ Shared resources can be accessed through a direct URL or can be featured.
 [Please contact us](mailto:hello@webknossos.org) to feature your dataset on https://webknossos.org.
 
 The easiest way to obtain this sharing link is by clicking the `Share` button in the toolbar at the top of the screen next to the position/coordinate section (_Share icon_).
-The sharing link also encodes additional information, such as your current camera position/rotation, zoom level, any layers that are turned on/off, the selected node, etc ([Details](./annotation_sharing.md#sharing-link-format). In other words, a sharing link typically captures your current WEBKNOSSOS state so that any recipient can take off from the same situation.
+The sharing link also encodes additional information, such as your current camera position/rotation, zoom level, any layers that are turned on/off, the selected node, etc. ([Details](./annotation_sharing.md#sharing-link-format)). In other words, a sharing link typically captures your current WEBKNOSSOS state so that any recipient can take off from the same situation.
 
 Sharing a dataset is useful for multiple scenarios:
 
@@ -34,10 +34,10 @@ To share a dataset privately, follow these steps:
 Copy the private sharing link from the dataset settings.
 ///
 
-To revoke a sharing link in the future, click the `Revoke` button on the right-hand side of the link.
+To invalidate a sharing link in the future, click the `Renew Authorization Token` button on the right-hand side of the link. This generates a new token and makes the old link stop working. (Note that this button is only available for non-public datasets.)
 
 !!!warning
-    Do not enable the `Make dataset publicly accessible` checkbox otherwise, anyone with a link can access this dataset without needing to log in/authenticate.
+    Do not enable the `Make dataset publicly accessible` checkbox; otherwise, anyone with a link can access this dataset without needing to log in/authenticate.
     Public access rights are not required for private sharing.
 
 ## Public Sharing

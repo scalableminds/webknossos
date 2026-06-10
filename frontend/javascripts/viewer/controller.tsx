@@ -83,7 +83,7 @@ class Controller extends PureComponent<PropsWithRouter, State> {
   //
   // We have a matrix of modes like this:
   //
-  //   Annotation Mode \ View mode       Plane       Arbitrary
+  //   Annotation Mode \ View mode       Plane        Flight
   //              Skeleton annotation      X             X
   //                Volume annotation      X             /
   //

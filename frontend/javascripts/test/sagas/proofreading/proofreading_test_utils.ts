@@ -195,7 +195,7 @@ export class BackendMock {
   acquireAnnotationMutex = async (_annotationId: string, _sessionId: string) => {
     return { canEdit: this.canGrantMutex, blockedByUser: null, blockedBySessionId: null };
   };
-  releaseAnnotationMutex = async (_annotationId: string) => {};
+  releaseAnnotationMutex = async (_annotationId: string, _sessionId: string) => {};
 
   private saveQueueEntriesToUpdateActionBatch = (data: Array<SaveQueueEntry>) => {
     return data.map((entry) => ({

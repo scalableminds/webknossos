@@ -624,7 +624,7 @@ function* watchForAnnotationExit(): Saga<void> {
     if (!hasMutex) return;
 
     const annotationId = yield* select((state) => state.annotation.annotationId);
-    const sent = releaseAnnotationMutexWithBeacon(annotationId);
+    const sent = releaseAnnotationMutexWithBeacon(annotationId, TAB_SESSION_ID);
     console.log(
       `[Mutex] Releasing mutex for annotation ${annotationId} on exit via sendBeacon (queued: ${sent}).`,
     );
@@ -644,7 +644,7 @@ function* releaseMutex() {
   // In case another user got the mutex in meantime, releasing this users mutex still yield a successful request.
   while (!successfullyReleaseMutex) {
     try {
-      yield call(releaseAnnotationMutex, annotationId);
+      yield call(releaseAnnotationMutex, annotationId, TAB_SESSION_ID);
       successfullyReleaseMutex = true;
     } catch (error) {
       console.error("Could not release mutex", error);

@@ -126,7 +126,18 @@ export const getSomeMagInfoForDataset = memoizeOne((dataset: APIDataset): MagInf
   }
 });
 
-function _getMaxZoomStep(dataset: APIDataset | null | undefined): number {
+function _getMaxPowerOfTwoInDatasetMags(dataset: APIDataset | null | undefined): number {
+  /*
+   * From all available mags, return the greatest mag-element.
+   * For example:
+   * Input: [
+   *   [[1, 1, 1], [2, 2, 1], [8, 8, 4]],
+   *   [[1, 1, 1], [16, 16, 4]],
+   * ]
+   * Output: 16
+   *
+   * If no mags exist, 1 is returned as a fallback.
+   */
   const minimumZoomStepCount = 1;
 
   if (!dataset) {
@@ -141,7 +152,7 @@ function _getMaxZoomStep(dataset: APIDataset | null | undefined): number {
   return maxZoomstep;
 }
 
-export const getMaxZoomStep = memoizeOne(_getMaxZoomStep);
+export const getMaxPowerOfTwoInDatasetMags = memoizeOne(_getMaxPowerOfTwoInDatasetMags);
 export function getDataLayers(dataset: APIDataset): DataLayerType[] {
   return dataset.dataSource.dataLayers;
 }

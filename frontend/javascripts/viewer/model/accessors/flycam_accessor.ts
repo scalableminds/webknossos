@@ -29,7 +29,7 @@ import {
   getEnabledLayers,
   getLayerByName,
   getMagInfo,
-  getMaxZoomStep,
+  getMaxPowerOfTwoInDatasetMags,
 } from "viewer/model/accessors/dataset_accessor";
 import { getViewportRects } from "viewer/model/accessors/view_mode_accessor";
 import determineBucketsForFlight from "viewer/model/bucket_data_handling/bucket_picker_strategies/flight_bucket_picker";
@@ -387,10 +387,10 @@ function _getActiveMagIndicesForLayers(state: WebknossosState): { [layerName: st
    * given the current zoomStep.
    */
   const magIndices: { [layerName: string]: number } = {};
+  const maxLogZoomStep = Math.log2(getMaxPowerOfTwoInDatasetMags(state.dataset));
 
   for (const layer of getDataLayers(state.dataset)) {
     const maximumZoomSteps = getMaximumZoomForAllMagsFromStore(state, layer.name);
-    const maxLogZoomStep = Math.log2(getMaxZoomStep(state.dataset));
     const magInfo = getMagInfo(getLayerByName(state.dataset, layer.name).mags);
 
     // Linearly search for the mag index, for which the zoomFactor

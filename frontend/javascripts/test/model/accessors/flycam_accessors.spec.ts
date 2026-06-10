@@ -2,7 +2,7 @@ import update from "immutability-helper";
 import type { VoxelSize } from "types/api_types";
 import constants, { Identity4x4, UnitLong, type Vector3 } from "viewer/constants";
 import defaultState from "viewer/default_state";
-import { getMaxZoomStep } from "viewer/model/accessors/dataset_accessor";
+import { getMaxPowerOfTwoInDatasetMags } from "viewer/model/accessors/dataset_accessor";
 import {
   _getDummyFlycamMatrix,
   _getMaximumZoomForAllMags,
@@ -68,7 +68,7 @@ const initialState: WebknossosState = {
 
 describe("Flycam Accessors", () => {
   it("should calculate the max zoom step", () => {
-    expect(getMaxZoomStep(initialState.dataset)).toBe(16);
+    expect(getMaxPowerOfTwoInDatasetMags(initialState.dataset)).toBe(16);
   });
 
   it("should calculate the request log zoom step (1/2)", () => {

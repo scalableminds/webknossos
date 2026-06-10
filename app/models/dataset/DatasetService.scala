@@ -629,8 +629,9 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         } yield ()
       } else {
         for {
-          datastoreBaseDirStr <- datastoreClient.getBaseDirAbsolute
+          datastoreBaseDirStr <- Fox.successful("TODO")
           datastoreBaseDir <- UPath.fromString(datastoreBaseDirStr).toFox
+          // TODO should dataset rootPath if set, no-op otherwise
           datasetDir = datastoreBaseDir / dataset._organization / dataset.directoryName
           datastore <- dataStoreFor(dataset)
           datasetsUsingDataFromThisDir <- findDatasetsUsingDataFromDir(datasetDir, datastore, dataset._id)

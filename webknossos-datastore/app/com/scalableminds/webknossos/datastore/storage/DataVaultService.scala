@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.datastore.storage
 import com.scalableminds.util.Msg
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.mvc.Formatter
-import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Failure, Fox, FoxImplicits, Full, Empty}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.datavault.{
@@ -78,8 +77,9 @@ class DataVaultService @Inject()(ws: WSClient,
       implicit ec: ExecutionContext): Fox[CredentializedUPath] =
     for {
       credentialBox <- credentialFor(magLocator: MagLocator).shiftBox
-      resolvedMagPath <- resolveMagPath(datasetId, layerName, magLocator).toFox
-    } yield CredentializedUPath(resolvedMagPath, credentialBox.toOption)
+      magPath <- magLocator.path.toFox
+      _ <- Fox.fromBool(magPath.isAbsolute) ?~> Msg.Dataset.Mag.pathNotAbsolute
+    } yield CredentializedUPath(magPath, credentialBox.toOption)
 
   def resolveMagPath(magLocator: MagLocator, localDatasetDir: Path, layerDir: Path): UPath =
     magLocator.path match {
@@ -106,13 +106,6 @@ class DataVaultService @Inject()(ws: WSClient,
           UPath.fromLocalPath(localDirWithVec3Mag)
         }
     }
-
-  private def resolveMagPath(dataSourceId: DataSourceId, layerName: String, magLocator: MagLocator): Box[UPath] = tryo {
-    val localDatasetDir =
-      config.Datastore.baseDirectory.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
-    val localLayerDir = localDatasetDir.resolve(layerName)
-    resolveMagPath(magLocator, localDatasetDir, localLayerDir)
-  }
 
   private def credentialFor(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[DataVaultCredential] =
     magLocator.credentialId match {

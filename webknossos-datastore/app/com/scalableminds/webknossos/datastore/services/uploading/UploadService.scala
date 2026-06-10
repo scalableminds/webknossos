@@ -26,7 +26,12 @@ import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentT
 import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.services.uploading.UploadDomain.UploadDomain
-import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, DataSourceService, ManagedS3Service}
+import com.scalableminds.webknossos.datastore.services.{
+  BaseDirService,
+  DSRemoteWebknossosClient,
+  DataSourceService,
+  ManagedS3Service
+}
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
@@ -155,6 +160,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                               attachmentUploadMetadataStore: AttachmentUploadMetadataStore,
                               dataVaultService: DataVaultService,
                               exploreLocalLayerService: ExploreLocalLayerService,
+                              baseDirService: BaseDirService,
                               dataStoreConfig: DataStoreConfig,
                               managedS3Service: ManagedS3Service,
                               val remoteWebknossosClient: DSRemoteWebknossosClient)(implicit ec: ExecutionContext)
@@ -238,7 +244,9 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                                      dataSourceId: DataSourceId,
                                      uploadDomain: UploadDomain): Fox[Unit] =
     for {
-      _ <- dataSourceService.ensureDataDirWritable(dataSourceId)
+      _ <- baseDirService
+        .getOneLocalForOrga(dataSourceId.organizationId, createIfMissing = true, checkWritable = true)
+        .toFox
       uploadId = resumableUploadInfo.uploadId
       _ = logger.info(f"Reserving ${uploadFullName(uploadDomain, uploadId, datasetId, dataSourceId)}...")
       uploadMetadataStore = selectUploadMetadataStore(uploadDomain)

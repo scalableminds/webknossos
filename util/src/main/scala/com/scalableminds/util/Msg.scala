@@ -474,6 +474,7 @@ object Msg {
     }
     object Mag {
       def invalid(literal: String): String = s"Invalid mag “$literal”. Please use “x-y-z”."
+      def pathNotAbsolute: String = "The mag path is ambiguous, must be absolute."
     }
     object List {
       val failed: String = "Could not retrieve list of datasets."
@@ -760,6 +761,7 @@ object Msg {
       def zeroChunks(segmentIds: String, name: String): String =
         s"Zero mesh chunks for segment $segmentIds in mesh file “$name”."
       val loadChunkFailed: String = "Could not load mesh chunk for segment."
+      val pathNotAbsolute = "Path of mesh file is ambiguous, must be absolute."
     }
   }
   object ConnectomeFile {
@@ -769,10 +771,15 @@ object Msg {
     def readEncodingFailed(name: String): String =
       s"Could not read encoding from connectome file “$name”."
     val openFailed: String = "Could not open connectome file for reading."
+    val pathNotAbsolute = "Path of connectome file is ambiguous, must be absolute."
   }
   object AgglomerateFile {
     def getSegmentPositionFailed(fileName: String): String =
       s"Could not read segment position from agglomerate file “$fileName”."
+    val pathNotAbsolute = "Path of agglomerate file is ambiguous, must be absolute."
+  }
+  object SegmentIndexFile {
+    val pathNotAbsolute = "Path of segment index file is ambiguous, must be absolute."
   }
   object Zarr {
     def invalidChunkCoordinates(coordinates: String): String =

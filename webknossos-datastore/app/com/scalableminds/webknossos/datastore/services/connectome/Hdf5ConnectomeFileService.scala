@@ -173,6 +173,7 @@ class Hdf5ConnectomeFileService @Inject()(config: DataStoreConfig) extends FoxIm
     val datasetPath =
       config.Datastore.baseDirectory.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
     val relevantPath = layerNameOpt.map(l => datasetPath.resolve(l)).getOrElse(datasetPath)
+    // TODO migrate this cache to ConnectomeFileKey as key?
     fileHandleCache.clear(key => key.startsWith(relevantPath.toString))
   }
 }

@@ -3,7 +3,6 @@ package com.scalableminds.webknossos.datastore.services.mesh
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.{
@@ -83,12 +82,12 @@ class MeshFileService @Inject()(hdf5MeshFileService: Hdf5MeshFileService,
         case Some(attachments) => attachments.meshes.find(_.name == meshFileName)
         case None              => None
       })
-      resolvedPath <- tryo(attachment.resolvedPath(config.Datastore.baseDirectory, dataSourceId))
+      _ <- Box.fromBool(attachment.path.isAbsolute) ~> Msg.Mesh.File.pathNotAbsolute
     } yield
       MeshFileKey(
         dataSourceId,
         dataLayer.name,
-        attachment.copy(path = resolvedPath)
+        attachment
       )
 
   def listMeshFiles(dataSourceId: DataSourceId, dataLayer: DataLayer)(implicit ec: ExecutionContext,

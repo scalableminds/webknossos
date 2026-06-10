@@ -32,7 +32,6 @@ case class DataServiceDataRequest(
 }
 
 case class DataReadInstruction(
-    baseDir: Path,
     dataSourceId: DataSourceId, // Dummy value in case of volume tracings
     dataLayer: DataLayer,
     bucket: BucketPosition,

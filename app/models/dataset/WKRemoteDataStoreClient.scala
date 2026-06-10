@@ -127,10 +127,11 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
         .delete()
     } yield ()
 
-  lazy val getBaseDirAbsolute: Fox[String] =
-    rpc(s"${dataStore.url}/data/datasets/baseDirAbsolute")
+  def getOneBaseDirForOrgaAbsolute(organizationId: String): Fox[UPath] =
+    rpc(s"${dataStore.url}/data/datasets/getOneBaseDirForOrgaAbsolute")
+      .addQueryParam("organizationId", organizationId)
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
-      .getWithJsonResponse[String]
+      .getWithJsonResponse[UPath]
 
   // Datastore deletes local paths and returns list of paths to be deleted externally.
   // Should not be called directly, go via PathDeletionService

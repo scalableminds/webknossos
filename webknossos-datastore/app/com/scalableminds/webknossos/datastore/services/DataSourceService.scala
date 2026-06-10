@@ -26,6 +26,7 @@ import scala.concurrent.duration._
 class DataSourceService @Inject()(
     config: DataStoreConfig,
     dataVaultService: DataVaultService,
+    baseDirService: BaseDirService,
     val remoteWebknossosClient: DSRemoteWebknossosClient,
     val lifecycle: ApplicationLifecycle,
     @Named("webknossos-datastore") val actorSystem: ActorSystem
@@ -55,17 +56,6 @@ class DataSourceService @Inject()(
       _ = inboxCheckVerboseCounter += 1
       _ = if (inboxCheckVerboseCounter >= 10) inboxCheckVerboseCounter = 0
     } yield ()
-
-  def ensureDataDirWritable(dataSourceId: DataSourceId): Fox[Unit] = {
-    val orgaPath = dataBaseDir.resolve(dataSourceId.organizationId)
-    if (orgaPath.toFile.exists()) {
-      Fox.fromBool(Files.isWritable(orgaPath)) ?~> "Datastore cannot write to organization data directory."
-    } else {
-      tryo {
-        Files.createDirectory(orgaPath)
-      }.map(_ => ()).toFox ?~> "Could not create organization directory on datastore server"
-    }
-  }
 
   def checkInbox(verbose: Boolean, organizationId: Option[String]): Fox[Unit] = {
     val before = Instant.now

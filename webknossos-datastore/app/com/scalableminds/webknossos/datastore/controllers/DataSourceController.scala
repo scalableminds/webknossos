@@ -73,6 +73,7 @@ class DataSourceController @Inject()(
     datasetErrorLoggingService: DSDatasetErrorLoggingService,
     exploreRemoteLayerService: ExploreRemoteLayerService,
     fullMeshService: DSFullMeshService,
+    baseDirService: BaseDirService,
     managedS3Service: ManagedS3Service,
     meshFileService: MeshFileService,
     dataVaultService: DataVaultService,
@@ -85,9 +86,11 @@ class DataSourceController @Inject()(
 
   override def allowRemoteOrigin: Boolean = true
 
-  def baseDirAbsolute: Action[AnyContent] = Action.async { implicit request =>
+  def getOneBaseDirForOrgaAbsolute(organizationId: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
-      Fox.successful(Ok(Json.toJson(dataSourceService.dataBaseDir.toAbsolutePath.toString)))
+      for {
+        orgaBaseDir <- baseDirService.getOneLocalForOrga(organizationId).toFox
+      } yield Ok(Json.toJson(UPath.fromLocalPath(orgaBaseDir)))
     }
   }
 

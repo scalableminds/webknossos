@@ -22,7 +22,6 @@ class BinaryDataServiceHolder @Inject()(config: DataStoreConfig,
                                         agglomerateService: AgglomerateService)(implicit ec: ExecutionContext) {
 
   val binaryDataService: BinaryDataService = new BinaryDataService(
-    config.Datastore.baseDirectory,
     Some(agglomerateService),
     Some(dataVaultService),
     Some(chunkCacheService.sharedChunkContentsCache),

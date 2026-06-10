@@ -39,8 +39,7 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig,
 
   def measureStorageForPaths(paths: List[String], organizationId: String)(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[List[PathStorageReport]] = {
-    val organizationDirectory = config.Datastore.baseDirectory.resolve(organizationId)
+      tc: TokenContext): Fox[List[PathStorageReport]] =
     for {
       // Keep track of original path as its UPath might be normalized and turned into an absolute path.
       // The original path is needed in the returned storage reports to enable the core backend matching with the
@@ -48,17 +47,9 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig,
       pathPairs <- Fox.serialCombined(paths) { path =>
         UPath.fromString(path).toFox.map(upath => PathPair(path, upath))
       }
-      pathPairsWithAbsoluteUpath = pathPairs.map(pathPair => {
-        pathPair.upath.toLocalPath match {
-          case Full(localPath) =>
-            pathPair.copy(
-              upath = UPath.fromLocalPath(organizationDirectory.resolve(localPath).normalize().toAbsolutePath))
-          case _ => pathPair
-        }
-      })
-      // Check to only measure remote paths that are part of a vault that is configured.
-      (pathPairsToMeasure, _absoluteUpathsToSkip) = pathPairsWithAbsoluteUpath.partition(path =>
-        path.upath.isLocal || managedS3Service.pathIsInManagedS3(path.upath))
+      // Skip remote paths not in our managed S3 and local non-absolute paths (those should never occur)
+      pathPairsToMeasure = pathPairs.filter(pair =>
+        (pair.upath.isLocal && pair.upath.isAbsolute) || managedS3Service.pathIsInManagedS3(pair.upath))
       vaultPathsForPathPairsToMeasure <- Fox.serialCombined(pathPairsToMeasure)(pathPair =>
         dataVaultService.vaultPathFor(pathPair.upath))
       usedBytes <- Fox.fromFuture(
@@ -76,5 +67,4 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig,
         s"Failed to measure storage for ${failedPaths.length} paths: ${failedPaths.take(5).mkString(", ")}${if (failedPaths.length > 5) "..."
         else "."}"))
     } yield successfulStorageUsedBoxes
-  }
 }

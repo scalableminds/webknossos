@@ -118,7 +118,7 @@ POST          /datasets/upload/:uploadDomain/finishUpload                       
 POST          /datasets/upload/:uploadDomain/cancelUpload                                                             @com.scalableminds.webknossos.datastore.controllers.UploadController.cancelUpload(uploadDomain: String, uploadId: String)
 
 # DataSource management
-GET           /datasets/baseDirAbsolute                                                                               @com.scalableminds.webknossos.datastore.controllers.DataSourceController.baseDirAbsolute
+GET           /datasets/getOneBaseDirForOrgaAbsolute                                                                  @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getOneBaseDirForOrgaAbsolute(organizationId: String)
 POST          /datasets/measureUsedStorage/:organizationId                                                            @com.scalableminds.webknossos.datastore.controllers.DataSourceController.measureUsedStorage(organizationId: String)
 PUT           /datasets/:datasetId                                                                                    @com.scalableminds.webknossos.datastore.controllers.DataSourceController.updateOnDisk(datasetId: ObjectId)
 DELETE        /datasets/:datasetId/deleteOnDisk                                                                       @com.scalableminds.webknossos.datastore.controllers.DataSourceController.deleteOnDisk(datasetId: ObjectId)

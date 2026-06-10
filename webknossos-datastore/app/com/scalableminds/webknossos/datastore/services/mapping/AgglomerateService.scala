@@ -1,10 +1,10 @@
 package com.scalableminds.webknossos.datastore.services.mapping
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
-import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -61,12 +61,12 @@ class AgglomerateService @Inject()(zarrAgglomerateService: ZarrAgglomerateServic
         case Some(attachments) => attachments.agglomerates.find(_.name == mappingName)
         case None              => None
       })
-      resolvedPath <- tryo(attachment.resolvedPath(config.Datastore.baseDirectory, dataSourceId))
+      _ <- Box.fromBool(attachment.path.isAbsolute) ~> Msg.AgglomerateFile.pathNotAbsolute
     } yield
       AgglomerateFileKey(
         dataSourceId,
         dataLayer.name,
-        attachment.copy(path = resolvedPath)
+        attachment
       )
 
   def applyAgglomerate(request: DataServiceDataRequest)(data: Array[Byte])(implicit ec: ExecutionContext,

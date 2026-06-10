@@ -73,7 +73,7 @@ class VolumeTracingService @Inject()(
 
   /* We want to reuse the bucket loading methods from binaryDataService for the volume tracings, however, it does not
      actually load anything from disk, unlike its “normal” instance in the datastore (only from the volume tracing store) */
-  private val binaryDataService = new BinaryDataService(Path.of(""), None, None, None, datasetErrorLoggingService)
+  private val binaryDataService = new BinaryDataService(None, None, None, datasetErrorLoggingService)
 
   adHocMeshServiceHolder.tracingStoreAdHocMeshConfig = (binaryDataService, 30 seconds, 1)
   val adHocMeshService: AdHocMeshService = adHocMeshServiceHolder.tracingStoreAdHocMeshService

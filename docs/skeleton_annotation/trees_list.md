@@ -5,8 +5,14 @@ A typical skeleton annotation consists of one or more trees.
 Trees can be nested and organized in so-called `Tree Groups`.
 Tree groups can have a name and are used to structure and label your annotation even further.
 Trees can be dragged and dropped between tree groups.
-This action can be applied to multiple trees by selecting them with Ctrl + Left Mouse (on Mac OS Cmd + Left Mouse).
-Right-click on an existing tree group to bring up a menu for creating new (sub-)groups or to delete a group.
+This action can be applied to multiple trees by selecting them with ++ctrl++ + Left Mouse (on macOS ++cmd++ + Left Mouse).
+
+There are two ways to create a group:
+
+- To create a new top-level group, click the `Create new Group` button (the folder icon with a plus) at the top of the `Skeleton` tab.
+- To create a subgroup, right-click an existing tree group and select `Create new group` from the context menu. The new group is created inside the group you clicked.
+
+The same right-click context menu also lets you delete a group.
 Renaming of a group can be done by selecting a group and then entering a new name into the input above the tree hierarchy structure view.
 
 ![Organize your skeleton annotation's trees to remember important structures for later reference](../images/skeleton_tree_list.png)

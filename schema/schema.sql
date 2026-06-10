@@ -38,7 +38,6 @@ CREATE TABLE webknossos.annotations(
   description TEXT NOT NULL DEFAULT '',
   visibility webknossos.ANNOTATION_VISIBILITY NOT NULL DEFAULT 'Internal',
   name TEXT NOT NULL DEFAULT '',
-  viewConfiguration JSONB,
   state webknossos.ANNOTATION_STATE NOT NULL DEFAULT 'Active',
   isLockedByOwner BOOLEAN NOT NULL DEFAULT FALSE,
   tags TEXT[] NOT NULL DEFAULT '{}',
@@ -504,6 +503,14 @@ CREATE TABLE webknossos.user_datasetLayerConfigurations(
   layerName TEXT NOT NULL,
   viewConfiguration JSONB NOT NULL,
   PRIMARY KEY (_user, _dataset, layerName),
+  CONSTRAINT viewConfigurationIsJsonObject CHECK(jsonb_typeof(viewConfiguration) = 'object')
+);
+
+CREATE TABLE webknossos.user_annotationViewConfigurations(
+  _user TEXT CONSTRAINT _user_objectId CHECK (_user ~ '^[0-9a-f]{24}$') NOT NULL,
+  _annotation TEXT CONSTRAINT _annotation_objectId CHECK (_annotation ~ '^[0-9a-f]{24}$') NOT NULL,
+  viewConfiguration JSONB NOT NULL,
+  PRIMARY KEY (_user, _annotation),
   CONSTRAINT viewConfigurationIsJsonObject CHECK(jsonb_typeof(viewConfiguration) = 'object')
 );
 
@@ -979,6 +986,9 @@ ALTER TABLE webknossos.credit_transactions
 ALTER TABLE webknossos.user_datasetLayerConfigurations
   ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE,
   ADD CONSTRAINT dataset_ref FOREIGN KEY(_dataset) REFERENCES webknossos.datasets(_id) ON DELETE CASCADE DEFERRABLE;
+ALTER TABLE webknossos.user_annotationViewConfigurations
+    ADD CONSTRAINT user_ref FOREIGN KEY(_user) REFERENCES webknossos.users(_id) ON DELETE CASCADE DEFERRABLE,
+    ADD CONSTRAINT annotation_ref FOREIGN KEY(_annotation) REFERENCES webknossos.annotations(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.multiUser_keyboardShortcutsConfigs
     ADD CONSTRAINT multiUser_ref FOREIGN KEY(_multiUser) REFERENCES webknossos.multiUsers(_id) ON DELETE CASCADE DEFERRABLE;
 ALTER TABLE webknossos.multiUsers

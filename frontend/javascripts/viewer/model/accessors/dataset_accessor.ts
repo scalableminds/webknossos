@@ -769,3 +769,25 @@ export function getDatasetIdOrNameFromReadableURLPart(datasetNameAndId: string) 
     ? { datasetId: datasetIdOrName, datasetName: null }
     : { datasetId: null, datasetName: datasetNameAndId };
 }
+
+// This helper function creates a map from layer names in the "enriched" dataset (meaning, volume annotation layers were added to the base dataset) to the original name in the base dataset.
+// As a result:
+// - each color layer name will map to itself
+// - each segmentation layer name that does not have a volume tracing will map to itself
+// - volume tracing layers with a fallback layer will map to their original segmentation layer name
+// - volume tracing layers without a fallback layer won't occur in the returned map
+export function getMappingFromLayerNameToBaseDatasetLayerName(
+  dataset: APIDataset,
+): Map<string, string> {
+  const layerWithFallbackOrColor = dataset.dataSource.dataLayers.filter(
+    (layer) => !("tracingId" in layer) || layer.fallbackLayer != null,
+  );
+  const namePairs = layerWithFallbackOrColor.map(
+    (layer) =>
+      [layer.name, "tracingId" in layer ? (layer.fallbackLayer ?? layer.name) : layer.name] as [
+        string,
+        string,
+      ],
+  );
+  return new Map(namePairs);
+}

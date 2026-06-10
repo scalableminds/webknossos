@@ -301,7 +301,7 @@ function checkDbSchema() {
     const schemaDumpDir = getCachedExpectedSchemaDump();
 
     try {
-      safeSpawn("diff", ["--strip-trailing-cr", "-r", dbDumpDir, schemaDumpDir]);
+      safeSpawn("diff", ["--strip-trailing-cr", "-r", "--exclude=.schema-hash", dbDumpDir, schemaDumpDir]);
     } catch (err) {
       throw new Error(`Database schema is not up-to-date:\n${err.stdout}`);
     }

@@ -67,7 +67,7 @@ vi.mock("libs/request", async (importOriginal) => {
   return await importOriginal();
 });
 
-const DEBUG_SAVE_REQUESTS = false;
+const DEBUG_SAVE_REQUESTS = true;
 
 // ---------------------------------------------------------------------------
 // Shared state
@@ -127,6 +127,9 @@ describe("Live Collaboration", () => {
       await openAnnotationPage(page, annotation.id);
       await setupPageForProofreading(page);
       await waitForDataLoading(page);
+
+      // Log redux actions
+      await page.evaluate(() => (window.webknossos.DEV.flags.logActions = true));
 
       // Patch the active user in the store to be a superuser so the collaboration
       // mode controls become available. This only affects the local Redux state —
@@ -240,6 +243,9 @@ describe("Live Collaboration", () => {
           await openAnnotationPage(page, annotation.id);
           await setupPageForProofreading(page);
           await waitForDataLoading(page);
+
+          // Log redux actions
+          await page.evaluate(() => (window.webknossos.DEV.flags.logActions = true));
 
           const cycleActionCollab = cycleToolAction(false);
           await page.evaluate(

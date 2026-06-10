@@ -34,6 +34,9 @@ ALTER TABLE webknossos.taskTypes
   ALTER COLUMN settings_preferredMode TYPE webknossos.TASKTYPE_MODES_new
   USING settings_preferredMode::text::webknossos.TASKTYPE_MODES_new;
 
+ALTER TABLE webknossos.taskTypes
+  ALTER COLUMN settings_preferredMode SET DEFAULT 'orthogonal';
+
 DROP TYPE webknossos.TASKTYPE_MODES;
 ALTER TYPE webknossos.TASKTYPE_MODES_new RENAME TO TASKTYPE_MODES;
 

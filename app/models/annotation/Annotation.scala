@@ -1,6 +1,7 @@
 package models.annotation
 
 import com.scalableminds.util.Msg
+import com.scalableminds.util.Msg.Dataset.Mag
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
@@ -747,25 +748,25 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
 
   def updateDescription(id: ObjectId, description: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- assertUpdateAccess(id)
+      _ <- assertUpdateAccess(id)?~> Msg.Annotation.Edit.noPermissionsToUpdateDescription
       _ <- run(q"UPDATE webknossos.annotations SET description = $description WHERE _id = $id".asUpdate)
     } yield ()
 
   def updateName(id: ObjectId, name: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- assertUpdateAccess(id)
+      _ <- assertUpdateAccess(id) ?~> Msg.Annotation.Edit.noPermissionsToUpdateName
       _ <- run(q"UPDATE webknossos.annotations SET name = $name WHERE _id = $id".asUpdate)
     } yield ()
 
   def updateVisibility(id: ObjectId, visibility: AnnotationVisibility.Value)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- assertUpdateAccess(id)
+      _ <- assertUpdateAccess(id) ?~> Msg.Annotation.Edit.noPermissionsToUpdateVisibility
       _ <- run(q"UPDATE webknossos.annotations_ SET visibility = $visibility WHERE _id = $id".asUpdate)
     } yield ()
 
   def updateTags(id: ObjectId, tags: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- assertUpdateAccess(id)
+      _ <- assertUpdateAccess(id) ?~> Msg.Annotation.Edit.noPermissionsToUpdateTags
       _ <- run(q"UPDATE webknossos.annotations SET tags = $tags WHERE _id = $id".asUpdate)
     } yield ()
 

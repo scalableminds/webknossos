@@ -9,7 +9,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
-import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler, UPath}
+import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, UPath}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
@@ -19,7 +19,6 @@ import com.scalableminds.webknossos.datastore.services.mapping.MappingService
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
 
-import java.io.File
 import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
@@ -34,7 +33,6 @@ class DataSourceService @Inject()(
     @Named("webknossos-datastore") val actorSystem: ActorSystem
 )(implicit val ec: ExecutionContext)
     extends IntervalScheduler
-    with DatasetDeleter
     with LazyLogging
     with DataSourceToDiskWriter
     with FoxImplicits
@@ -46,7 +44,7 @@ class DataSourceService @Inject()(
 
   override protected def tickerInitialDelay: FiniteDuration = config.Datastore.WatchFileSystem.initialDelay
 
-  val dataBaseDir: Path = config.Datastore.baseDirectory
+  private val dataBaseDir: Path = config.Datastore.baseDirectory
 
   private val propertiesFileName = Path.of(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
 
@@ -117,7 +115,7 @@ class DataSourceService @Inject()(
   }
 
   private def scanRealPathsForDataSource(dataSource: DataSource): (DataSourcePathInfo, Seq[Failure]) = {
-    val datasetPath = dataBaseDir.resolve(dataSource.id.organizationId).resolve(dataSource.id.directoryName)
+    val datasetPath: Option[Path] = None // TODO pass rootPath
     dataSource.toUsable match {
       case Some(usableDataSource) =>
         val magResultBoxes = usableDataSource.dataLayers.flatMap { dataLayer =>
@@ -138,25 +136,22 @@ class DataSourceService @Inject()(
     }
   }
 
-  private def getMagPathInfo(datasetPath: Path, layerName: String, mag: MagLocator): Box[RealPathInfo] = {
-    val resolvedMagPath = dataVaultService.resolveMagPath(
-      mag,
-      datasetPath,
-      datasetPath.resolve(layerName)
-    )
-    if (resolvedMagPath.isRemote) {
-      Full(RealPathInfo(resolvedMagPath, resolvedMagPath, hasLocalData = false))
+  private def getMagPathInfo(datasetPathOpt: Option[Path], layerName: String, mag: MagLocator): Box[RealPathInfo] = for {
+    magPath <- Box(mag.path)
+    result <- if (magPath.isRemote) {
+      Full(RealPathInfo(magPath, magPath, hasLocalData = false))
     } else {
       for {
-        magPath <- resolvedMagPath.toLocalPath
-        realMagPath <- tryo(magPath.toRealPath())
+        magPathLocal <- magPath.toLocalPath
+        realMagPath <- tryo(magPathLocal.toRealPath())
+        datasetPath <- Box(datasetPathOpt)
         // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
-        isDatasetLocal = realMagPath.startsWith(datasetPath.toAbsolutePath)
-      } yield RealPathInfo(resolvedMagPath, UPath.fromLocalPath(realMagPath), hasLocalData = isDatasetLocal)
+        isDatasetLocal = realMagPath.startsWith(datasetPath)
+      } yield RealPathInfo(magPath, UPath.fromLocalPath(realMagPath), hasLocalData = isDatasetLocal)
     }
-  }
+  } yield result
 
-  private def getAttachmentPathInfo(datasetPath: Path, attachment: LayerAttachment): Box[RealPathInfo] =
+  private def getAttachmentPathInfo(datasetPathOpt: Option[Path], attachment: LayerAttachment): Box[RealPathInfo] =
     if (attachment.path.isRemote) {
       Full(RealPathInfo(attachment.path, attachment.path, hasLocalData = false))
     } else {
@@ -164,8 +159,9 @@ class DataSourceService @Inject()(
         _ <- Box.fromBool(attachment.path.isAbsolute) ?~ "Attachment path as stored in db must be absolute"
         attachmentPath <- attachment.path.toLocalPath
         realAttachmentPath <- tryo(attachmentPath.toRealPath())
+        datasetPath <- Box(datasetPathOpt)
         // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
-        isDatasetLocal = realAttachmentPath.startsWith(datasetPath.toAbsolutePath)
+        isDatasetLocal = realAttachmentPath.startsWith(datasetPath)
       } yield RealPathInfo(attachment.path, UPath.fromLocalPath(realAttachmentPath), hasLocalData = isDatasetLocal)
     }
 
@@ -235,10 +231,10 @@ class DataSourceService @Inject()(
 
   def dataSourceFromDir(path: Path, organizationId: String, resolvePaths: Boolean): DataSource = {
     val id = DataSourceId(path.getFileName.toString, organizationId)
-    val propertiesFile = path.resolve(propertiesFileName)
+    val propertiesFilePath = path.resolve(propertiesFileName)
 
-    if (new File(propertiesFile.toString).exists()) {
-      JsonHelper.parseFromFileAs[UsableDataSource](propertiesFile, path) match {
+    if (Files.exists(propertiesFilePath)) {
+      JsonHelper.parseFromFileAs[UsableDataSource](propertiesFilePath, path) match {
         case Full(dataSource) =>
           val validationErrors = validateDataSourceGetErrors(dataSource)
           if (validationErrors.isEmpty) {
@@ -261,8 +257,8 @@ class DataSourceService @Inject()(
         case e =>
           UnusableDataSource(id,
                              None,
-                             s"Error: Invalid json format in $propertiesFile: $e",
-                             existingDataSourceProperties = JsonHelper.parseFromFile(propertiesFile, path).toOption)
+                             s"Error: Invalid json format in $propertiesFilePath: $e",
+                             existingDataSourceProperties = JsonHelper.parseFromFile(propertiesFilePath, path).toOption)
       }
     } else {
       UnusableDataSource(id, None, DataSourceStatus.notImportedYet)
@@ -331,12 +327,11 @@ class DataSourceService @Inject()(
     } yield removedEntriesList.sum
 
   def deleteLocalPathsFromDisk(paths: Seq[UPath]): Box[Unit] = {
-    val localPaths = paths.filter(_.isLocal).flatMap(_.toLocalPath).filter(_.toAbsolutePath.startsWith(dataBaseDir))
+    val localBaseDirs = baseDirService.allLocalBaseDirs
+    val localPaths = paths.filter(_.isLocal).flatMap(_.toLocalPath).filter(p => localBaseDirs.exists(p.toAbsolutePath.startsWith(_)))
     for {
       _ <- localPaths.map(PathUtils.deleteDirectoryRecursively).toList.toSingleBox("Failed to delete local paths")
     } yield ()
   }
 
-  def existsOnDisk(dataSourceId: DataSourceId): Boolean =
-    Files.exists(dataBaseDir.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName))
 }

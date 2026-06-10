@@ -35,6 +35,9 @@ class BaseDirService @Inject()(config: DataStoreConfig) extends LazyLogging {
   // TODO document that it always returns absolute
   // wrap with error message here
 
+  // TODO comment: this returns orga-specific and orga-agnostic
+  val allLocalBaseDirs: Seq[Path] = additionalDirectories.flatMap(_.path.toLocalPath)
+
   private def createIfMissing(orgaPath: Path): Box[Unit] =
     tryo {
       Files.createDirectory(orgaPath)
@@ -43,6 +46,7 @@ class BaseDirService @Inject()(config: DataStoreConfig) extends LazyLogging {
   private def checkWritable(orgaPath: Path): Box[Unit] =
     for {
       _ <- Box.fromBool(Files.exists(orgaPath)) ?~! "Datastore cannot write to organization data directory, it does not exist."
+      _ <- Box.fromBool(Files.isDirectory(orgaPath)) ?~! "Datastore cannot write to organization data directory, it exists but is no directory."
       _ <- Box.fromBool(Files.isWritable(orgaPath)) ?~! "Datastore cannot write to organization data directory. No write access."
     } yield ()
 

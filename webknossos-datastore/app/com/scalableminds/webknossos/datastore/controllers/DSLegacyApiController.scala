@@ -4,32 +4,19 @@ import com.scalableminds.util.Msg
 import com.google.inject.Inject
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, Full}
+import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
-import com.scalableminds.webknossos.datastore.models.{
-  RawCuboidRequest,
-  WebknossosAdHocMeshRequest,
-  WebknossosDataRequest
-}
+import com.scalableminds.webknossos.datastore.models.{RawCuboidRequest, WebknossosAdHocMeshRequest, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.{UnusableDataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services.mesh.FullMeshRequest
-import com.scalableminds.webknossos.datastore.services.uploading.{
-  DatasetUploadInfo,
-  LinkedLayerIdentifier,
-  ResumableUploadInfo,
-  UploadDomain
-}
-import com.scalableminds.webknossos.datastore.services.{
-  DSRemoteWebknossosClient,
-  DataSourceService,
-  DataStoreAccessTokenService,
-  DatasetCache,
-  UserAccessRequest
-}
+import com.scalableminds.webknossos.datastore.services.uploading.{DatasetUploadInfo, LinkedLayerIdentifier, ResumableUploadInfo, UploadDomain}
+import com.scalableminds.webknossos.datastore.services.{BaseDirService, DSRemoteWebknossosClient, DataSourceService, DataStoreAccessTokenService, DatasetCache, UserAccessRequest}
 import play.api.libs.Files
 import play.api.libs.json.{JsObject, Json, OFormat}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers, RawBuffer, Result}
 
+import java.nio.file.Path
 import scala.concurrent.{ExecutionContext, Future}
 
 case class LegacyReserveManualUploadInformation(
@@ -114,7 +101,9 @@ class DSLegacyApiController @Inject()(
     meshController: DSMeshController,
     dataSourceController: DataSourceController,
     dataSourceService: DataSourceService,
+    config: DataStoreConfig,
     datasetCache: DatasetCache,
+    baseDirService: BaseDirService,
     uploadController: UploadController
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
@@ -548,10 +537,10 @@ class DSLegacyApiController @Inject()(
   def reloadDatasourceV9(organizationId: String,
                          datasetDirectoryName: String,
                          layerName: Option[String]): Action[AnyContent] = {
-    def loadFromDisk(): Fox[Result] = {
+    def loadFromDisk(orgaDir: Path): Fox[Result] = {
       // Dataset is not present in DB. This can be because reload was called after a dataset was written into the directory
       val dataSource = dataSourceService.dataSourceFromDir(
-        dataSourceService.dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName),
+        orgaDir.resolve(datasetDirectoryName),
         organizationId,
         resolvePaths = true)
       dataSource match {
@@ -569,6 +558,7 @@ class DSLegacyApiController @Inject()(
         for {
           datasetIdOpt: Option[ObjectId] <- Fox.fromFuture(
             remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName).toFutureOption)
+          orgaDir <- baseDirService.getOneLocalForOrga(organizationId).toFox
           result <- datasetIdOpt match {
             case Some(datasetId) =>
               // Dataset is present in DB
@@ -580,11 +570,11 @@ class DSLegacyApiController @Inject()(
                   case Some(_) =>
                     Fox.fromFuture(dataSourceController.reload(organizationId, datasetId, layerName)(request))
                   // Load from disk if the dataset is not usable in the DB
-                  case None => loadFromDisk()
+                  case None => loadFromDisk(orgaDir)
                 }
               } yield r
             case None =>
-              loadFromDisk()
+              loadFromDisk(orgaDir)
           }
         } yield result
       }

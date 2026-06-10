@@ -331,17 +331,7 @@ describe("Live Collaboration", () => {
         // target positions. If the merge was persisted correctly, both positions now resolve to
         // the same agglomerate id, so the two looked-up values must be equal.
         const [sourceMappedId, targetMappedId] = (await adminVerifyPage.evaluate(
-          async ({
-            layerName,
-            sourcePos,
-            targetPos,
-            zoomStep,
-          }: {
-            layerName: string;
-            sourcePos: number[];
-            targetPos: number[];
-            zoomStep: number;
-          }) => {
+          async ({ layerName, sourcePos, targetPos, zoomStep }) => {
             const api = await (window as any).webknossos.apiReady();
             return Promise.all([
               api.data.getMappedDataValue(layerName, sourcePos, zoomStep),

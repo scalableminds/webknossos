@@ -6,6 +6,7 @@ import Constants from "viewer/constants";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import type { LocalSegmentationState, VolumeTracing } from "viewer/store";
 import { getTracingById } from "../accessors/tracing_accessor";
+import { getIdReservationsForSegmentationLayer } from "../accessors/volumetracing_accessor";
 import type { GetNewIdAction } from "../actions/actions";
 import {
   type IdsReplenishedAction,
@@ -19,7 +20,6 @@ import {
 import { getMaximumGroupId } from "../reducers/skeletontracing_reducer_helpers";
 import { getGroupIdSet } from "../reducers/volumetracing_reducer_helpers";
 import { type Saga, select, take } from "./effect_generators";
-import { getIdReservationsForSegmentationLayer } from "../accessors/volumetracing_accessor";
 
 const { IDEAL_ID_BUFFER_SIZE } = Constants;
 

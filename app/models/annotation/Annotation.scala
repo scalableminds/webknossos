@@ -1,7 +1,6 @@
 package models.annotation
 
 import com.scalableminds.util.Msg
-import com.scalableminds.util.Msg.Dataset.Mag
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
@@ -748,7 +747,7 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
 
   def updateDescription(id: ObjectId, description: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- assertUpdateAccess(id)?~> Msg.Annotation.Edit.noPermissionsToUpdateDescription
+      _ <- assertUpdateAccess(id) ?~> Msg.Annotation.Edit.noPermissionsToUpdateDescription
       _ <- run(q"UPDATE webknossos.annotations SET description = $description WHERE _id = $id".asUpdate)
     } yield ()
 

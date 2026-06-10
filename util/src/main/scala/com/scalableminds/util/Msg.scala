@@ -156,10 +156,14 @@ object Msg {
       val accessingTeamFailed: String = "Could not access a team during annotation shared team update."
       val notAllowed: String = "You do not have permission to edit this annotation."
       val viewConfigurationFailed: String = "Could not update the view configuration for this annotation."
-      val noPermissionsToUpdateName: String = "Could not update the name of the annotation due missing update permissions."
-      val noPermissionsToUpdateVisibility: String = "Could not update the visibility of the annotation due missing update permissions."
-      val noPermissionsToUpdateDescription: String = "Could not update the description of the annotation due missing update permissions."
-      val noPermissionsToUpdateTags: String = "Could not update the tags of the annotation due missing update permissions."
+      val noPermissionsToUpdateName: String =
+        "Could not update the name of the annotation due missing update permissions."
+      val noPermissionsToUpdateVisibility: String =
+        "Could not update the visibility of the annotation due missing update permissions."
+      val noPermissionsToUpdateDescription: String =
+        "Could not update the description of the annotation due missing update permissions."
+      val noPermissionsToUpdateTags: String =
+        "Could not update the tags of the annotation due missing update permissions."
     }
     object ApplyUpdate {
       val updateGroupVersionsNotSortedDesc: String =

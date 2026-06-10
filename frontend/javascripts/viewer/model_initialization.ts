@@ -17,7 +17,6 @@ import {
 } from "admin/rest_api";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
-import { point3ToVector3 } from "libs/utils";
 import { location } from "libs/window";
 import cloneDeep from "lodash-es/cloneDeep";
 import extend from "lodash-es/extend";
@@ -288,7 +287,7 @@ export async function initialize(
     );
   }
 
-  // There is no need to initialize the tracing if there is no tracing (View mode).
+  // There is no need to initialize the annotation if there is no annotation (View mode).
   if (annotation != null) {
     const editableMappings = await fetchEditableMappings(
       annotation.tracingStore.url,
@@ -304,7 +303,7 @@ export async function initialize(
       editableMappings,
     );
   } else {
-    // In view only tracings we need to set the view mode too.
+    // In dataset view mode (no annotation) we need to set the view mode too.
     const { allowedModes } = determineAllowedModes();
     const mode = UrlManager.initialState.mode || allowedModes[0];
     Store.dispatch(setViewModeAction(mode));
@@ -459,14 +458,13 @@ function initializeAnnotation(
     Store.dispatch(setVersionNumberAction(version));
   }
 
-  // Initialize 'flight' or 'orthogonal' mode
+  // Initialize 'orthogonal' or 'flight' mode
   if (allowedModes.length === 0) {
-    Toast.error(messages["tracing.no_allowed_mode"]);
-  } else {
-    const maybeUrlViewMode = UrlManager.initialState.mode;
-    const mode = preferredMode || maybeUrlViewMode || allowedModes[0];
-    Store.dispatch(setViewModeAction(mode));
+    Toast.warning(messages["tracing.no_allowed_mode"]);
   }
+  const maybeUrlViewMode = UrlManager.initialState.mode;
+  const mode = preferredMode || maybeUrlViewMode || allowedModes[0] || "orthogonal";
+  Store.dispatch(setViewModeAction(mode));
 }
 
 function setInitialTool() {

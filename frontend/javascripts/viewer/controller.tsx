@@ -415,15 +415,6 @@ class Controller extends PureComponent<PropsWithRouter, State> {
       return cover;
     }
 
-    const { allowedModes } = Store.getState().annotation.restrictions;
-
-    if (!allowedModes.includes(viewMode)) {
-      // Since this mode is not allowed, render nothing. A warning about this will be
-      // triggered in the model. Don't throw an error since the store might change so that
-      // the render function can succeed.
-      return null;
-    }
-
     const isFlight = viewMode === constants.MODE_FLIGHT;
     const isPlane = constants.MODES_PLANE.includes(viewMode);
 

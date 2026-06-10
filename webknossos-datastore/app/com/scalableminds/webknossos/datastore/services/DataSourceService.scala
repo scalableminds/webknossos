@@ -8,13 +8,14 @@ import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.dataformats.{MagLocator, MappingProvider}
+import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.helpers.{DatasetDeleter, IntervalScheduler, UPath}
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools._
+import com.scalableminds.webknossos.datastore.services.mapping.MappingService
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
 
@@ -27,6 +28,7 @@ class DataSourceService @Inject()(
     config: DataStoreConfig,
     dataVaultService: DataVaultService,
     baseDirService: BaseDirService,
+    mappingService: MappingService,
     val remoteWebknossosClient: DSRemoteWebknossosClient,
     val lifecycle: ApplicationLifecycle,
     @Named("webknossos-datastore") val actorSystem: ActorSystem
@@ -217,11 +219,6 @@ class DataSourceService @Inject()(
       logger.warn(s"Empty organization dataset dirs: ${emptyDirs.take(limit).mkString(", ")}$moreLabel")
     }
   }
-
-  def exploreMappings(organizationId: String, datasetDirectoryName: String, dataLayerName: String): Set[String] =
-    MappingProvider
-      .exploreMappings(dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName).resolve(dataLayerName))
-      .getOrElse(Set())
 
   private def scanOrganizationDirForDataSources(path: Path): List[DataSource] = {
     val organization = path.getFileName.toString

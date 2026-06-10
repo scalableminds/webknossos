@@ -9,38 +9,16 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Box, Empty, Failure, Fox, FoxImplicits, Full}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
-import com.scalableminds.webknossos.datastore.explore.{
-  ExploreRemoteDatasetRequest,
-  ExploreRemoteDatasetResponse,
-  ExploreRemoteLayerService
-}
-import com.scalableminds.webknossos.datastore.helpers.{
-  GetMultipleSegmentIndexParameters,
-  GetSegmentIndexParameters,
-  PathSchemes,
-  SegmentIndexData,
-  SegmentStatisticsParameters,
-  SegmentStatisticsParametersMeshBased,
-  UPath
-}
+import com.scalableminds.webknossos.datastore.explore.{ExploreRemoteDatasetRequest, ExploreRemoteDatasetResponse, ExploreRemoteLayerService}
+import com.scalableminds.webknossos.datastore.helpers.{GetMultipleSegmentIndexParameters, GetSegmentIndexParameters, PathSchemes, SegmentIndexData, SegmentStatisticsParameters, SegmentStatisticsParametersMeshBased, UPath}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.connectome.ConnectomeFileService
-import com.scalableminds.webknossos.datastore.services.mesh.{
-  DSFullMeshService,
-  FullMeshRequest,
-  MeshFileService,
-  MeshMappingHelper
-}
+import com.scalableminds.webknossos.datastore.services.mesh.{DSFullMeshService, FullMeshRequest, MeshFileService, MeshMappingHelper}
 import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndexFileService
-import com.scalableminds.webknossos.datastore.services.connectome.{
-  ByAgglomerateIdsRequest,
-  BySynapseIdsRequest,
-  SynapticPartnerDirection
-}
-import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
+import com.scalableminds.webknossos.datastore.services.connectome.{ByAgglomerateIdsRequest, BySynapseIdsRequest, SynapticPartnerDirection}
+import com.scalableminds.webknossos.datastore.services.mapping.{AgglomerateService, MappingService}
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
-
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
@@ -63,6 +41,7 @@ class DataSourceController @Inject()(
     dataSourceService: DataSourceService,
     dataSourceMirrorService: DataSourceMirrorService,
     datasetCache: DatasetCache,
+    mappingService: MappingService,
     dataStoreConfig: DataStoreConfig,
     accessTokenService: DataStoreAccessTokenService,
     val binaryDataServiceHolder: BinaryDataServiceHolder,
@@ -121,10 +100,10 @@ class DataSourceController @Inject()(
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
         dataSource <- datasetCache.getById(datasetId)
-        dataSourceId = dataSource.id // We would ideally want to use datasetId here as well, but mappings are not accessed by datasetId yet.
-        exploredMappings = dataSourceService.exploreMappings(dataSourceId.organizationId,
-                                                             dataSourceId.directoryName,
-                                                             dataLayerName)
+        // TODO should really use dataset rootPath directly. query from wk?
+        orgaDir <- baseDirService.getOneLocalForOrga(dataSource.id.organizationId).toFox
+        datasetDir = orgaDir.resolve(dataSource.id.directoryName).resolve(dataLayerName)
+        exploredMappings = mappingService.exploreMappings(datasetDir)
       } yield addNoCacheHeaderFallback(Ok(Json.toJson(exploredMappings)))
     }
   }

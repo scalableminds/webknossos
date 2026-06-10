@@ -206,7 +206,7 @@ class BinaryDataController @Inject()(
         segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Msg.Dataset.Layer
           .notFound(dataLayerName)
         mappingRequest = DataServiceMappingRequest(Some(dataSource.id), segmentationLayer, mappingName)
-        result <- mappingService.handleMappingRequest(mappingRequest)
+        result <- mappingService.loadMappingBytes(mappingRequest).toFox
       } yield Ok(result)
     }
   }

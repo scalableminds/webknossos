@@ -4,8 +4,7 @@ import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.webknossos.datastore.dataformats.{
   BucketProvider,
   DatasetArrayBucketProvider,
-  MagLocator,
-  MappingProvider
+  MagLocator
 }
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
@@ -178,7 +177,6 @@ trait SegmentationLayer extends DataLayer {
   def mappings: Option[Set[String]]
 
   def category: LayerCategory.Value = LayerCategory.segmentation
-  lazy val mappingProvider: MappingProvider = new MappingProvider(this)
 }
 
 case class StaticColorLayer(name: String,

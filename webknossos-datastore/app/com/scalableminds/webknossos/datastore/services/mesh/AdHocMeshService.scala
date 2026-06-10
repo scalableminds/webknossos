@@ -3,19 +3,13 @@ package com.scalableminds.webknossos.datastore.services.mesh
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Float, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Box, Failure, Fox, FoxImplicits, Full}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, ElementClass, SegmentationLayer}
-import com.scalableminds.webknossos.datastore.models.requests.{
-  Cuboid,
-  DataServiceDataRequest,
-  DataServiceMappingRequest,
-  DataServiceRequestSettings
-}
+import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest, DataServiceMappingRequest, DataServiceRequestSettings}
 import com.scalableminds.webknossos.datastore.services.mcubes.MarchingCubes
 import com.scalableminds.webknossos.datastore.services.BinaryDataService
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Failure}
 import com.scalableminds.webknossos.datastore.services.mapping.MappingService
 import org.apache.pekko.actor.{Actor, ActorRef, ActorSystem, Props}
 import org.apache.pekko.pattern.ask
@@ -104,7 +98,7 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
       request: AdHocMeshRequest,
       dataTypeFunctors: DataTypeFunctors[T, B])(implicit tc: TokenContext): Fox[(Array[Float], List[Int])] = {
 
-    def applyJsonMappingIfNeeded(data: Array[T]): Fox[Array[T]] =
+    def applyJsonMappingIfNeeded(data: Array[T]): Box[Array[T]] =
       request.mapping match {
         case Some(mappingName) =>
           request.mappingType match {
@@ -113,10 +107,10 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
                 DataServiceMappingRequest(request.dataSourceId, request.dataLayer, mappingName),
                 data,
                 dataTypeFunctors.fromLong)
-            case _ => Fox.successful(data)
+            case _ => Full(data)
           }
         case _ =>
-          Fox.successful(data)
+          Full(data)
       }
 
     def applyAgglomerate(data: Array[Byte]): Fox[Array[Byte]] =
@@ -190,7 +184,7 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
       request.dataSourceId,
       request.dataLayer,
       cuboid,
-      DataServiceRequestSettings.default.copy(additionalCoordinates = request.additionalCoordinates,
+      DataServiceRequestSettings(additionalCoordinates = request.additionalCoordinates,
                                               version = request.annotationVersion)
     )
 
@@ -208,8 +202,8 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
       data <- binaryDataService.handleDataRequest(dataRequest)
       agglomerateMappedData <- applyAgglomerate(data) ?~> "failed to apply agglomerate for ad-hoc meshing"
       typedData = convertData(agglomerateMappedData)
-      mappedData <- applyJsonMappingIfNeeded(typedData)
-      mappedSegmentId <- applyJsonMappingIfNeeded(Array(typedSegmentId)).map(_.head)
+      mappedData <- applyJsonMappingIfNeeded(typedData).toFox
+      mappedSegmentId <- applyJsonMappingIfNeeded(Array(typedSegmentId)).map(_.head).toFox
       neighbors = if (request.findNeighbors) { findNeighbors(mappedData, dataDimensions, mappedSegmentId) } else {
         List()
       }

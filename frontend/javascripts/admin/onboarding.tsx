@@ -695,7 +695,7 @@ function OnboardingView() {
             learn more.
           </FeatureCard>
           <FeatureCard header="Contact Us" icon={<CustomerServiceOutlined />}>
-            <a href="mailto:hello@webknossos.org">Get in touch</a> or{" "}
+            <a href="mailto:support@webknossos.org">Get in touch</a> or{" "}
             <a
               href="https://forum.image.sc/tag/webknossos"
               target="_blank"

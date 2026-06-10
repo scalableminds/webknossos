@@ -1,17 +1,10 @@
 import { CloseOutlined, ReloadOutlined } from "@ant-design/icons";
 import FlipIcon from "@images/icons/icon-flip.svg?react";
 import { getDataset, updateDatasetPartial } from "admin/rest_api";
-import { Button, Divider, InputNumber, Popover, Slider, Tooltip } from "antd";
+import { Button, Divider, Flex, InputNumber, Popover, Slider, Tooltip, Typography } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import {
-  type CSSProperties,
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import type { APIDataLayer, APISkeletonLayer } from "types/api_types";
 import { getDatasetBoundingBox } from "viewer/model/accessors/dataset_accessor";
@@ -24,21 +17,11 @@ import {
 } from "viewer/model/accessors/dataset_layer_transformation_accessor";
 import { setLayerTransformsAction } from "viewer/model/actions/dataset_actions";
 
-function SectionLabel({ children, style }: { children: ReactNode; style?: CSSProperties }) {
+function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <div
-      style={{
-        fontSize: 11,
-        fontWeight: 600,
-        textTransform: "uppercase",
-        letterSpacing: "0.5px",
-        color: "var(--ant-color-text-secondary)",
-        marginBottom: 4,
-        ...style,
-      }}
-    >
+    <Typography.Title level={5} style={{ marginBottom: 4 }}>
       {children}
-    </div>
+    </Typography.Title>
   );
 }
 
@@ -66,8 +49,10 @@ function AxisSliderRow({
   isFlipped?: boolean;
 }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
-      <span style={{ width: 12, flexShrink: 0, fontWeight: 500 }}>{label}</span>
+    <Flex align="center" gap={6} style={{ marginBottom: 4 }}>
+      <Typography.Text strong style={{ width: 12, flexShrink: 0 }}>
+        {label}
+      </Typography.Text>
       <Slider
         min={min}
         max={max}
@@ -113,7 +98,7 @@ function AxisSliderRow({
           style={{ flexShrink: 0, padding: "0 4px" }}
         />
       </Tooltip>
-    </div>
+    </Flex>
   );
 }
 
@@ -195,13 +180,18 @@ export function LayerTransformSettingsContent({
     try {
       const backendDataset = await getDataset(dataset.id);
       const backendLayer = backendDataset.dataSource.dataLayers.find((l) => l.name === layer.name);
-      const stored = backendLayer?.coordinateTransformations ?? null;
-      const restoredSRT =
-        stored && isLiveTransformCompatible(stored)
-          ? extractSRTFromTransforms(stored)
-          : DEFAULT_SRT;
+      const backendStored = backendLayer?.coordinateTransformations ?? null;
+      const isValidSRTTransform = backendStored && isLiveTransformCompatible(backendStored);
+      const restoredSRT = isValidSRTTransform
+        ? extractSRTFromTransforms(backendStored)
+        : DEFAULT_SRT;
       setStoredSRT(restoredSRT);
       handleChange(restoredSRT);
+      if (!isValidSRTTransform) {
+        Toast.info(
+          "Restored to default transforms as transforms in the backend are incompatible with the Live Transforms editor.",
+        );
+      }
     } catch (e) {
       console.error("Failed to fetch stored transforms:", e);
       Toast.error("Failed to fetch stored transforms. Please try again.");
@@ -214,6 +204,10 @@ export function LayerTransformSettingsContent({
     setIsSaving(true);
     try {
       const currentTransforms = transforms;
+      const areValidTransforms = currentTransforms && isLiveTransformCompatible(currentTransforms);
+      if (!areValidTransforms) {
+        return;
+      }
       const backendDataset = await getDataset(dataset.id);
       const dataSource = {
         ...backendDataset.dataSource,
@@ -222,11 +216,7 @@ export function LayerTransformSettingsContent({
         ),
       };
       await updateDatasetPartial(dataset.id, { dataSource });
-      setStoredSRT(
-        currentTransforms && isLiveTransformCompatible(currentTransforms)
-          ? extractSRTFromTransforms(currentTransforms)
-          : DEFAULT_SRT,
-      );
+      setStoredSRT(extractSRTFromTransforms(currentTransforms));
       Toast.success("Layer transforms saved for all users.");
     } catch (e) {
       console.error("Failed to save layer transforms:", e);
@@ -238,20 +228,20 @@ export function LayerTransformSettingsContent({
 
   if (!isCompatible) {
     return (
-      <div style={{ maxWidth: 240, color: "var(--ant-color-text-secondary)" }}>
+      <Typography.Text type="secondary" style={{ maxWidth: 240, display: "block" }}>
         The transform format of this layer is not editable here. Clear the layer&apos;s transforms
         in the dataset settings to use this editor.
-      </div>
+      </Typography.Text>
     );
   }
 
   if (isNativelyRendered) {
     return (
-      <div style={{ maxWidth: 240, color: "var(--ant-color-text-secondary)" }}>
+      <Typography.Text type="secondary" style={{ maxWidth: 240, display: "block" }}>
         This layer is currently rendered natively (without its transforms applied). Editing is
         disabled to avoid confusion. To edit the transforms, disable native rendering for this layer
         first.
-      </div>
+      </Typography.Text>
     );
   }
 
@@ -276,8 +266,8 @@ export function LayerTransformSettingsContent({
   };
 
   return (
-    <div style={{ width: 250 }}>
-      <SectionLabel style={{ marginTop: 10 }}>Translation</SectionLabel>
+    <Flex vertical style={{ width: 250 }}>
+      <SectionLabel>Translation</SectionLabel>
       {(["X", "Y", "Z"] as const).map((axis, i) => (
         <AxisSliderRow
           key={axis}
@@ -291,7 +281,7 @@ export function LayerTransformSettingsContent({
           resetDisabled={isFetchingStored}
         />
       ))}
-      <SectionLabel style={{ marginTop: 10 }}>Rotation</SectionLabel>
+      <SectionLabel>Rotation</SectionLabel>
       {(["X", "Y", "Z"] as const).map((axis, i) => (
         <AxisSliderRow
           key={axis}
@@ -314,7 +304,7 @@ export function LayerTransformSettingsContent({
           label={axis}
           value={Math.abs(scale[i])}
           storedValue={Math.abs(storedSRT.scale[i])}
-          min={0}
+          min={0.0001}
           max={10}
           step={0.1}
           onChange={(v) => updateScale(i as 0 | 1 | 2, v * (scale[i] < 0 ? -1 : 1))}
@@ -322,13 +312,7 @@ export function LayerTransformSettingsContent({
         />
       ))}
       <Divider />
-      <div
-        style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 8,
-        }}
-      >
+      <Flex vertical gap={8}>
         <Button
           size="small"
           icon={<ReloadOutlined />}
@@ -348,8 +332,8 @@ export function LayerTransformSettingsContent({
         >
           Store as Default
         </Button>
-      </div>
-    </div>
+      </Flex>
+    </Flex>
   );
 }
 
@@ -363,13 +347,15 @@ export function LayerTransformSettingsPopover({
   onClose: () => void;
 }) {
   const title = (
-    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-      <span>Layer Transforms</span>
+    <Flex justify="space-between" align="center">
+      <span>
+        <Typography.Title level={4}>Layer Transforms</Typography.Title>
+      </span>
       <CloseOutlined
         style={{ cursor: "pointer", fontSize: 12, color: "var(--ant-color-text-secondary)" }}
         onClick={onClose}
       />
-    </div>
+    </Flex>
   );
   return (
     <Popover

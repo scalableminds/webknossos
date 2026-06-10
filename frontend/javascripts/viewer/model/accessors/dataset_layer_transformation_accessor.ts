@@ -421,7 +421,7 @@ function isRotationOnly(transformation?: AffineTransformation) {
     .fromArray(nestedToFlatMatrix(transformation.matrix))
     .transpose();
   threeMatrix.decompose(translation, quaternion, scale);
-  return translation.length() <= EPSILON && scale.distanceToSquared(NON_SCALED_VECTOR) < EPSILON;
+  return translation.length() <= EPSILON && scale.distanceTo(NON_SCALED_VECTOR) < EPSILON;
 }
 
 function isScaleOnly(transformation?: AffineTransformation) {
@@ -577,8 +577,8 @@ export function layerToGlobalTransformedPosition(
 }
 
 // The live SRT transform format uses exactly 7 affine matrices in this order:
-// [0]  dataset center→origin translation, [1] scale, [2] rotX, [3] rotY, [4] rotZ,
-// [5] user translation, [6] origin→center dataset translation.
+// [0]  dataset center → origin translation, [1] scale, [2] rotX, [3] rotY, [4] rotZ,
+// [5] user translation, [6] origin → center dataset translation.
 // They are stored separately to keep the extracted value consistent between reloads.
 // Else e.g. some rotations might be shown differently as euler angles are not deterministic.
 export const LIVE_TRANSFORM_LENGTH = 7;

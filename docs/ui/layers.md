@@ -49,7 +49,7 @@ The skeleton annotation layer contains any trees that you add to your dataset. Y
 
 ### Live Layer Transform Editor
 
-The live transform editor lets you interactively adjust the spatial alignment of any color or segmentation layer without leaving the viewer. Open it via `··· > Edit layer transforms` in the layer header.
+The live transform editor lets you interactively adjust the spatial alignment of any color or segmentation layer without leaving the viewer. Open it via `··· menu -> Edit layer transforms` in the layer header.
 
 The editor exposes three groups of controls, each with a slider, a numeric input, and a per-axis reset button:
 

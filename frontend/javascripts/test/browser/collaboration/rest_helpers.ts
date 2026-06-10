@@ -53,24 +53,22 @@ export async function parseJsonOrVoid<T>(res: Response): Promise<T> {
   return undefined as T;
 }
 
-export async function apiPost<T>(apiPath: string, body: unknown): Promise<T> {
+async function apiSend<T>(method: "POST" | "PATCH", apiPath: string, body: unknown): Promise<T> {
   const res = await fetch(urljoin(BASE_URL, apiPath), {
-    method: "POST",
+    method,
     headers: adminHeaders(),
     body: JSON.stringify(body),
   });
-  if (!res.ok) throw new Error(`POST ${apiPath} failed: ${res.status} ${await res.text()}`);
+  if (!res.ok) throw new Error(`${method} ${apiPath} failed: ${res.status} ${await res.text()}`);
   return parseJsonOrVoid<T>(res);
 }
 
-export async function apiPatch<T>(apiPath: string, body: unknown): Promise<T> {
-  const res = await fetch(urljoin(BASE_URL, apiPath), {
-    method: "PATCH",
-    headers: adminHeaders(),
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) throw new Error(`PATCH ${apiPath} failed: ${res.status} ${await res.text()}`);
-  return parseJsonOrVoid<T>(res);
+export function apiPost<T>(apiPath: string, body: unknown): Promise<T> {
+  return apiSend<T>("POST", apiPath, body);
+}
+
+export function apiPatch<T>(apiPath: string, body: unknown): Promise<T> {
+  return apiSend<T>("PATCH", apiPath, body);
 }
 
 // ---------------------------------------------------------------------------

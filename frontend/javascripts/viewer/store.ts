@@ -208,6 +208,7 @@ export type SegmentJournalEntry = {
 // state that is not synced would be reset to the last synced version on
 // every rewinding rebase (see #9559). Local-only state belongs into
 // `state.localSegmentationStateByLayer` instead.
+// The segmentJournal is an exception to this and reasoned below.
 export type VolumeTracing = TracingBase & {
   readonly type: "volume";
   // Note that there are also SegmentMaps in `state.localSegmentationStateByLayer`

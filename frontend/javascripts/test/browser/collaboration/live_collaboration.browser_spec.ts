@@ -148,7 +148,7 @@ describe("Live Collaboration", () => {
 
       // Switch to proofreading tool by cycling until activeTool.id === "PROOFREAD".
       // We can't use SetActiveToolAction because the tool instance cannot be serialized/deserialized
-      // for puppeteer.
+      // for playwright.
       const cycleAction = cycleToolAction(false);
       await page.evaluate(
         ({ action, maxAttempts }: { action: any; maxAttempts: number }) => {

@@ -21,11 +21,7 @@ import { cycleToolAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
 import { setActiveCellAction } from "viewer/model/actions/volumetracing_actions";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import {
-  getTeams,
-  setCollaborationModeForAnnotation,
-  updateDatasetTeams,
-} from "../../../admin/rest_api";
+import { setCollaborationModeForAnnotation, updateDatasetTeams } from "../../../admin/rest_api";
 import {
   BROWSER_SPEC_TIMEOUT,
   DATASET_NAME,
@@ -97,15 +93,10 @@ describe("Live Collaboration", () => {
       collabUsers.push({ id: user.id, email, authToken });
     }
 
-    const teams = await getTeams(adminRequestOptions());
-    const defaultTeam = teams.find((team) => team.name === "Default");
-    if (defaultTeam == null) {
-      throw new Error("Could not find default team.");
-    }
-    await updateDatasetTeams(datasetId, [defaultTeam.id], adminRequestOptions());
+    const defaultTeamId = await getDefaultTeamId();
+    await updateDatasetTeams(datasetId, [defaultTeamId], adminRequestOptions());
     annotation = await createHybridAnnotation(datasetId);
 
-    const defaultTeamId = await getDefaultTeamId();
     await shareAnnotationWithTeam(annotation, defaultTeamId);
   }, BROWSER_SPEC_TIMEOUT);
 

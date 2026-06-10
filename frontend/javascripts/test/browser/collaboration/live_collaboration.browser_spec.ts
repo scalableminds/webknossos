@@ -319,7 +319,7 @@ describe("Live Collaboration", () => {
       );
 
       const zoomStep = await adminVerifyPage.evaluate(
-        async ({ layerName, position }: { layerName: string; position: number[] }) => {
+        async ({ layerName, position }) => {
           const api = await (window as any).webknossos.apiReady();
           return api.data.getUltimatelyRenderedZoomStepAtPosition(layerName, position);
         },
@@ -327,6 +327,9 @@ describe("Live Collaboration", () => {
       );
 
       for (const op of PARALLEL_USER_OPERATIONS) {
+        // For each merge operation, look up the (mapping-applied) segment id at the source and
+        // target positions. If the merge was persisted correctly, both positions now resolve to
+        // the same agglomerate id, so the two looked-up values must be equal.
         const [sourceMappedId, targetMappedId] = (await adminVerifyPage.evaluate(
           async ({
             layerName,

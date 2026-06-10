@@ -4,7 +4,7 @@ Welcome to the WEBKNOSSOS documentation.
 WEBKNOSSOS is a platform for [exploring large-scale 3D image datasets](./ui/index.md), [creating skeleton annotations](./skeleton_annotation/index.md) and [3D volume segmentations](./volume_annotation/index.md).
 Since it is a web app, you can easily [collaborate](./sharing/index.md), [crowdsource](./tasks_projects/tasks.md) and [publish](https://webknossos.org) your work.
 
-[Contact us](mailto:hello@webknossos.org) or create a [pull request](https://github.com/scalableminds/webknossos/pulls) to suggest improvements to the documentation.
+[Contact us](mailto:support@webknossos.org) or create a [pull request](https://github.com/scalableminds/webknossos/pulls) to suggest improvements to the documentation.
 
 Check out this video to get started!
 ![youtube-video](https://www.youtube.com/embed/iw2C7XB6wP4)
@@ -104,7 +104,7 @@ Feel free to explore more features of WEBKNOSSOS in this documentation.
 - [Task and Project Management](./tasks_projects/index.md)
 - [FAQ](./faq.md)
 
-Please contact us at [hello@webknossos.org](mailto:hello@webknossos.org) or [write a post in the WEBKNOSSOS support forum](https://forum.image.sc/tag/webknossos) if you need help with WEBKNOSSOS.
+Please contact us at [support@webknossos.org](mailto:support@webknossos.org) or [write a post in the WEBKNOSSOS support forum](https://forum.image.sc/tag/webknossos) if you need help with WEBKNOSSOS.
 scalable minds also offers [commercial support, managed hosting, and feature development services](https://webknossos.org/pricing).
 
 [Read the installation tutorial](./open_source/installation.md) if you wish to install the open source version of WEBKNOSSOS on your server.

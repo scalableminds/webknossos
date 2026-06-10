@@ -13,7 +13,6 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.tools.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
-import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachment
 import com.scalableminds.webknossos.datastore.services.ArrayArtifactHashing
 import com.scalableminds.webknossos.datastore.services.mesh.MeshFileUtils
 import com.typesafe.scalalogging.LazyLogging
@@ -57,28 +56,22 @@ object CachedHdf5File {
   }
 }
 
-class Hdf5FileCache(val maxEntries: Int) extends LRUConcurrentCache[String, CachedHdf5File] {
-  override def onElementRemoval(key: String, value: CachedHdf5File): Unit =
+class Hdf5FileCache(val maxEntries: Int) extends LRUConcurrentCache[AttachmentKey, CachedHdf5File] {
+  override def onElementRemoval(key: AttachmentKey, value: CachedHdf5File): Unit =
     value.scheduleForRemoval()
 
-  def getCachedHdf5File(attachment: LayerAttachment)(loadFn: Path => CachedHdf5File): Box[CachedHdf5File] =
-    for {
-      localPath <- attachment.localPath
-    } yield getCachedHdf5File(localPath)(loadFn)
-
-  def getCachedHdf5File(filePath: Path)(loadFn: Path => CachedHdf5File): CachedHdf5File = {
-    val fileKey = filePath.toString
-
+  private def getOrCreateCachedHdf5File(key: AttachmentKey, filePath: Path)(
+      loadFn: Path => CachedHdf5File): CachedHdf5File = {
     def handleUncachedHdf5File() = {
       val hdf5File = loadFn(filePath)
       // We don't need to check the return value of the `tryAccess` call as we just created the hdf5 file handle and use it only to increase the access counter.
       hdf5File.tryAccess()
-      put(fileKey, hdf5File)
+      put(key, hdf5File)
       hdf5File
     }
 
     this.synchronized {
-      get(fileKey) match {
+      get(key) match {
         case Some(hdf5File) =>
           if (hdf5File.tryAccess()) hdf5File else handleUncachedHdf5File()
         case _ => handleUncachedHdf5File()
@@ -86,14 +79,17 @@ class Hdf5FileCache(val maxEntries: Int) extends LRUConcurrentCache[String, Cach
     }
   }
 
-  def withCachedHdf5[T](filePath: Path)(block: CachedHdf5File => T): Box[T] =
+  def getCachedHdf5File(key: AttachmentKey)(loadFn: Path => CachedHdf5File): Box[CachedHdf5File] =
     for {
-      _ <- if (filePath.toFile.exists()) {
-        Full(true)
-      } else {
-        Failure(Msg.Mesh.File.openFailed)
-      }
-      result = Using(this.getCachedHdf5File(filePath)(CachedHdf5File.fromPath)) {
+      localPath <- key.attachment.localPath
+      _ <- Box.fromBool(localPath.toFile.exists()) ?~! Msg.Mesh.File.openFailed
+    } yield getOrCreateCachedHdf5File(key, localPath)(loadFn)
+
+  def withCachedHdf5[T](key: AttachmentKey)(block: CachedHdf5File => T): Box[T] =
+    for {
+      localPath <- key.attachment.localPath
+      _ <- Box.fromBool(localPath.toFile.exists()) ?~! Msg.Mesh.File.openFailed
+      result = Using(getOrCreateCachedHdf5File(key, localPath)(CachedHdf5File.fromPath)) {
         block
       }
       boxedResult <- result match {
@@ -101,11 +97,5 @@ class Hdf5FileCache(val maxEntries: Int) extends LRUConcurrentCache[String, Cach
         case scala.util.Failure(e)      => Failure(e.toString)
       }
     } yield boxedResult
-
-  def withCachedHdf5[T](attachment: LayerAttachment)(block: CachedHdf5File => T): Box[T] =
-    for {
-      localAttachmentPath <- attachment.localPath
-      result <- withCachedHdf5(localAttachmentPath)(block)
-    } yield result
 
 }

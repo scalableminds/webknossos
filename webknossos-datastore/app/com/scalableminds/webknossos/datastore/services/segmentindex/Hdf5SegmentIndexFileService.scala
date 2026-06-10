@@ -3,21 +3,20 @@ package com.scalableminds.webknossos.datastore.services.segmentindex
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class Hdf5SegmentIndexFileService @Inject()(config: DataStoreConfig) extends FoxImplicits with SegmentIndexFileUtils {
+class Hdf5SegmentIndexFileService @Inject()() extends FoxImplicits with SegmentIndexFileUtils {
 
   private lazy val fileHandleCache = new Hdf5FileCache(100)
 
   def readSegmentIndex(segmentIndexFileKey: SegmentIndexFileKey, segmentId: Long)(
       implicit ec: ExecutionContext): Fox[Array[Vec3Int]] =
     for {
-      segmentIndex <- fileHandleCache.getCachedHdf5File(segmentIndexFileKey.attachment)(CachedHdf5File.fromPath).toFox
+      segmentIndex <- fileHandleCache.getCachedHdf5File(segmentIndexFileKey)(CachedHdf5File.fromPath).toFox
       nBuckets = segmentIndex.uint64Reader.getAttr("/", attrKeyNHashBuckets)
 
       bucketIndex = segmentIndex.hashFunction(segmentId) % nBuckets
@@ -59,10 +58,6 @@ class Hdf5SegmentIndexFileService @Inject()(config: DataStoreConfig) extends Fox
       } yield topLefts)
     } yield topLeftOpts
 
-  def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int = {
-    val datasetPath =
-      config.Datastore.baseDirectory.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
-    val relevantPath = layerNameOpt.map(l => datasetPath.resolve(l)).getOrElse(datasetPath)
-    fileHandleCache.clear(key => key.startsWith(relevantPath.toString))
-  }
+  def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int =
+    fileHandleCache.clear(key => key.dataSourceId == dataSourceId && layerNameOpt.forall(_ == key.layerName))
 }

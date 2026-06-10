@@ -4,23 +4,19 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.geometry.Vec3Float
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Fox, FoxImplicits, Full}
-import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.datastore.storage.{CachedHdf5File, Hdf5FileCache}
 import jakarta.inject.Inject
 
 import scala.concurrent.ExecutionContext
 
-class Hdf5MeshFileService @Inject()(config: DataStoreConfig)
-    extends NeuroglancerMeshHelper
-    with MeshFileUtils
-    with FoxImplicits {
+class Hdf5MeshFileService @Inject()() extends NeuroglancerMeshHelper with MeshFileUtils with FoxImplicits {
 
   private lazy val fileHandleCache = new Hdf5FileCache(30)
 
   def mappingNameForMeshFile(meshFileKey: MeshFileKey): Box[Option[String]] = tryo {
     fileHandleCache
-      .withCachedHdf5(meshFileKey.attachment) { cachedMeshFile =>
+      .withCachedHdf5(meshFileKey) { cachedMeshFile =>
         cachedMeshFile.mappingName
       }
       .toOption
@@ -30,7 +26,7 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig)
   }
 
   private def readMeshFileMetadata(meshFileKey: MeshFileKey): Box[(String, Double, Array[Array[Double]])] =
-    fileHandleCache.withCachedHdf5(meshFileKey.attachment) { cachedMeshFile =>
+    fileHandleCache.withCachedHdf5(meshFileKey) { cachedMeshFile =>
       val lodScaleMultiplier = cachedMeshFile.float64Reader.getAttr("/", attrKeyLodScaleMultiplier)
       val transform = cachedMeshFile.float64Reader.getMatrixAttr("/", attrKeyTransform)
       (cachedMeshFile.meshFormat, lodScaleMultiplier, transform)
@@ -41,7 +37,7 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig)
                                               lodScaleMultiplier: Double,
                                               transform: Array[Array[Double]]): List[List[MeshLodInfo]] =
     fileHandleCache
-      .withCachedHdf5(meshFileKey.attachment) { cachedMeshFile: CachedHdf5File =>
+      .withCachedHdf5(meshFileKey) { cachedMeshFile: CachedHdf5File =>
         segmentIds.toList.flatMap(segmentId =>
           listMeshChunksForSegment(cachedMeshFile, segmentId, lodScaleMultiplier, transform))
       }
@@ -100,7 +96,7 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig)
 
   def versionForMeshFile(meshFileKey: MeshFileKey): Long =
     fileHandleCache
-      .withCachedHdf5(meshFileKey.attachment) { cachedMeshFile =>
+      .withCachedHdf5(meshFileKey) { cachedMeshFile =>
         cachedMeshFile.artifactSchemaVersion
       }
       .toOption
@@ -109,7 +105,7 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig)
   def readMeshChunk(meshFileKey: MeshFileKey,
                     meshChunkDataRequests: Seq[MeshChunkDataRequest]): Box[(Array[Byte], String)] =
     for {
-      resultBox <- fileHandleCache.withCachedHdf5(meshFileKey.attachment) { cachedMeshFile =>
+      resultBox <- fileHandleCache.withCachedHdf5(meshFileKey) { cachedMeshFile =>
         readMeshChunkFromCachedMeshFile(cachedMeshFile, meshChunkDataRequests)
       }
       (output, encoding) <- resultBox
@@ -147,11 +143,7 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig)
       wkChunkInfos <- WebknossosSegmentInfo.fromMeshInfosAndMetadata(meshChunksForUnmappedSegments, meshFormat).toFox
     } yield wkChunkInfos
 
-  def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int = {
-    val datasetPath =
-      config.Datastore.baseDirectory.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
-    val relevantPath = layerNameOpt.map(l => datasetPath.resolve(l)).getOrElse(datasetPath)
-    fileHandleCache.clear(key => key.startsWith(relevantPath.toString))
-  }
+  def clearCache(dataSourceId: DataSourceId, layerNameOpt: Option[String]): Int =
+    fileHandleCache.clear(key => key.dataSourceId == dataSourceId && layerNameOpt.forall(_ == key.layerName))
 
 }

@@ -12,6 +12,7 @@ import com.typesafe.scalalogging.LazyLogging
 import scala.collection.mutable
 
 case class AgglomerateFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment)
+    extends AttachmentKey
 
 case class CachedAgglomerateFile(reader: IHDF5Reader,
                                  dataset: HDF5DataSet,

@@ -24,12 +24,13 @@ import com.scalableminds.webknossos.datastore.models.requests.{
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, VoxelPosition}
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
 import com.scalableminds.webknossos.datastore.services.BinaryDataServiceHolder
-import com.scalableminds.webknossos.datastore.storage.AgglomerateFileKey
+import com.scalableminds.webknossos.datastore.storage.{AgglomerateFileKey, AttachmentKey}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
 case class SegmentIndexFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment)
+    extends AttachmentKey
 
 class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5SegmentIndexFileService,
                                         zarrSegmentIndexFileService: ZarrSegmentIndexFileService,

@@ -11,6 +11,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachment,
   LayerAttachmentDataformat
 }
+import com.scalableminds.webknossos.datastore.storage.AttachmentKey
 import com.typesafe.scalalogging.LazyLogging
 import play.api.libs.json.{Json, OFormat}
 
@@ -46,7 +47,7 @@ object MeshChunkDataRequestList {
   implicit val jsonFormat: OFormat[MeshChunkDataRequestList] = Json.format[MeshChunkDataRequestList]
 }
 
-case class MeshFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment)
+case class MeshFileKey(dataSourceId: DataSourceId, layerName: String, attachment: LayerAttachment) extends AttachmentKey
 
 // Sent to wk frontend
 case class MeshFileInfo(

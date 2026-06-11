@@ -38,7 +38,6 @@ case class Annotation(
     description: String = AnnotationDefaults.defaultDescription,
     visibility: AnnotationVisibility.Value = AnnotationVisibility.Internal,
     name: String = AnnotationDefaults.defaultName,
-    viewConfiguration: Option[JsObject] = None,
     state: AnnotationState.Value = AnnotationState.Active,
     isLockedByOwner: Boolean = false,
     tags: Set[String] = Set.empty,
@@ -200,7 +199,6 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
     for {
       state <- AnnotationState.fromString(r.state).toFox
       typ <- AnnotationType.fromString(r.typ).toFox
-      viewconfigurationOpt <- Fox.runOptional(r.viewconfiguration)(JsonHelper.parseAs[JsObject](_).toFox)
       visibility <- AnnotationVisibility.fromString(r.visibility).toFox
       collaborationMode <- CollaborationMode.fromString(r.collaborationmode).toFox
       annotationLayers <- annotationLayerDAO.findAnnotationLayersFor(ObjectId(r._Id))
@@ -214,7 +212,6 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
         r.description,
         visibility,
         r.name,
-        viewconfigurationOpt,
         state,
         r.islockedbyowner,
         parseArrayLiteral(r.tags).toSet,
@@ -655,10 +652,9 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
   def insertOne(a: Annotation): Fox[Unit] = {
     val insertAnnotationQuery = q"""
         INSERT INTO webknossos.annotations(_id, _dataset, _task, _user, description, visibility,
-                                           name, viewConfiguration, state, tags, tracingTime, typ, collaborationMode, created, modified, isDeleted)
+                                           name, state, tags, tracingTime, typ, collaborationMode, created, modified, isDeleted)
         VALUES(${a._id}, ${a._dataset}, ${a._task},
          ${a._user}, ${a.description}, ${a.visibility}, ${a.name},
-         ${a.viewConfiguration},
          ${a.state},
          ${a.tags}, ${a.tracingTime}, ${a.typ},
          ${a.collaborationMode},
@@ -680,7 +676,6 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
                description = ${a.description},
                visibility = ${a.visibility},
                name = ${a.name},
-               viewConfiguration = ${a.viewConfiguration},
                state = ${a.state},
                tags = ${a.tags.toList},
                tracingTime = ${a.tracingTime},
@@ -752,25 +747,25 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
 
   def updateDescription(id: ObjectId, description: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- assertUpdateAccess(id)
+      _ <- assertUpdateAccess(id) ?~> Msg.Annotation.Edit.noPermissionsToUpdateDescription
       _ <- run(q"UPDATE webknossos.annotations SET description = $description WHERE _id = $id".asUpdate)
     } yield ()
 
   def updateName(id: ObjectId, name: String)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- assertUpdateAccess(id)
+      _ <- assertUpdateAccess(id) ?~> Msg.Annotation.Edit.noPermissionsToUpdateName
       _ <- run(q"UPDATE webknossos.annotations SET name = $name WHERE _id = $id".asUpdate)
     } yield ()
 
   def updateVisibility(id: ObjectId, visibility: AnnotationVisibility.Value)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- assertUpdateAccess(id)
+      _ <- assertUpdateAccess(id) ?~> Msg.Annotation.Edit.noPermissionsToUpdateVisibility
       _ <- run(q"UPDATE webknossos.annotations_ SET visibility = $visibility WHERE _id = $id".asUpdate)
     } yield ()
 
   def updateTags(id: ObjectId, tags: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- assertUpdateAccess(id)
+      _ <- assertUpdateAccess(id) ?~> Msg.Annotation.Edit.noPermissionsToUpdateTags
       _ <- run(q"UPDATE webknossos.annotations SET tags = $tags WHERE _id = $id".asUpdate)
     } yield ()
 
@@ -793,11 +788,28 @@ class AnnotationDAO @Inject()(sqlClient: SqlClient, annotationLayerDAO: Annotati
       _ <- run(q"UPDATE webknossos.annotations SET collaborationMode = $collaborationMode WHERE _id = $id".asUpdate)
     } yield ()
 
-  def updateViewConfiguration(id: ObjectId, viewConfiguration: Option[JsObject])(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  def getViewConfigurationForUserWithFallback(annotation: ObjectId,
+                                              requestingUserId: ObjectId,
+                                              annotationOwnerId: ObjectId): Fox[Option[JsObject]] =
     for {
-      _ <- assertUpdateAccess(id)
-      _ <- run(q"UPDATE webknossos.annotations SET viewConfiguration = $viewConfiguration WHERE _id = $id".asUpdate)
+      // Single scan: fetch both the requesting user's row and the owner's fallback row, preferring
+      // the requesting user's config via ORDER BY.  In PostgreSQL a boolean expression evaluates to
+      // true (1) / false (0), so DESC puts the requesting-user row first.
+      rows <- run(q"""SELECT viewConfiguration
+                      FROM webknossos.user_annotationViewConfigurations
+                      WHERE _annotation = $annotation
+                        AND (_user = $requestingUserId OR _user = $annotationOwnerId)
+                      ORDER BY (_user = $requestingUserId) DESC
+                      LIMIT 1""".as[String])
+      parsed <- Fox.runOptional(rows.headOption)(s => JsonHelper.parseAs[JsObject](s).toFox)
+    } yield parsed
+
+  def updateViewConfiguration(annotation: ObjectId, user: ObjectId, viewConfiguration: JsObject): Fox[Unit] =
+    for {
+      _ <- run(q"""INSERT INTO webknossos.user_annotationViewConfigurations (_annotation, _user, viewConfiguration)
+           VALUES($annotation, $user, $viewConfiguration)
+           ON CONFLICT (_annotation, _user) DO UPDATE SET
+           viewConfiguration = $viewConfiguration""".asUpdate) ?~> Msg.Annotation.Edit.viewConfigurationFailed
     } yield ()
 
   def addContributor(id: ObjectId, userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =

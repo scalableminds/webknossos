@@ -817,7 +817,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   <>
                     We are happy to help!
                     <br />
-                    Please <a href="mailto:hello@webknossos.org">contact us</a> if you have any
+                    Please <a href="mailto:support@webknossos.org">contact us</a> if you have any
                     trouble uploading your data or the uploader doesn&apos;t support your format
                     yet.
                   </>

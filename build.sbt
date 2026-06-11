@@ -16,7 +16,7 @@ addCommandAlias(
 // fix jni for scala version 3
 sbtJniCoreScope := Compile
 
-val failOnWarning = if (sys.props.contains("failOnWarning")) Seq("-Xfatal-warnings") else Seq()
+val failOnWarning = if (sys.props.contains("failOnWarning")) Seq("-Werror") else Seq()
 ThisBuild / scalacOptions ++= Seq(
   "-explain", // More detailed compiler output
   "-explain-types", // Explain type errors in detail

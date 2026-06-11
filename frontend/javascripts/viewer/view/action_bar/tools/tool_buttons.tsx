@@ -126,7 +126,7 @@ function BrushToolMenu({ adaptedActiveTool }: ToolButtonProps) {
   const isBrushDisabled = disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled;
   const isTraceDisabled = disabledInfosForTools[AnnotationTool.TRACE.id].isDisabled;
   const isBrushOrTraceActive =
-    adaptedActiveTool === AnnotationTool.BRUSH || adaptedActiveTool === AnnotationTool.TRACE;
+    [AnnotationTool.BRUSH, AnnotationTool.TRACE].includes(adaptedActiveTool)
   const displayTool = isBrushOrTraceActive ? adaptedActiveTool : currentTool;
 
   return (

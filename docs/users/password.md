@@ -93,4 +93,4 @@ If your token has been compromised or you suspect someone else has gained access
 
 #### Organization ID
 
-Certain API integrations need the organization ID which can be found her, in the developer settings.
+Certain API integrations need the organization ID which can be found here, in the developer settings.

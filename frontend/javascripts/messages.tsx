@@ -257,7 +257,7 @@ instead. Only enable this option if you understand its effect. All layers will n
     "Loading an agglomerate tree for a segment only works with agglomerate file mappings.",
   "tracing.agglomerate_tree.no_agglomerate_files_loaded_yet": "Checking for agglomerate files...",
   "tracing.agglomerate_tree.no_agglomerate_file_available":
-    "No agglomerate file mapping is available for this segmentation layer. Please reach out to hello@webknossos.org to get help with generating one.",
+    "No agglomerate file mapping is available for this segmentation layer. Please reach out to support@webknossos.org to get help with generating one.",
   "tracing.agglomerate_tree.no_skeleton_tracing":
     "Loading an agglomerate tree for a segment only works in skeleton or hybrid tracings.",
   "tracing.skeletons_are_hidden_warning":

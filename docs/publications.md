@@ -1,5 +1,5 @@
 # Publications
-The following publications used WEBKNOSSOS for exploring large 3D electron-microscopy (EM) and light-microscopy (LM) datasets as well as collaboratively generating annotations or other tasks. Please [get in touch with us](mailto:hello@webknossos.org) if your publication is missing.
+The following publications used WEBKNOSSOS for exploring large 3D electron-microscopy (EM) and light-microscopy (LM) datasets as well as collaboratively generating annotations or other tasks. Please [get in touch with us](mailto:support@webknossos.org) if your publication is missing.
 
 ## 2025
 * Jakob Reichmann, Anne Schnurpfeil, Sylvia Mittelstädt, Patrick Moller Jensen, Vedrana Andersen Dahl, Anders Bjorholm Dahl, Carina Weide, Eva von Campenhausen, Hector Dejea, Paul Tafforeau, Christopher Werlein, Danny Jonigk, Maximilian Ackermann, Klaus Engel, Julia Gallwas, Alexander Dietz, Mir Fuad Hasanov & Tim Salditt.  
@@ -147,13 +147,13 @@ The following publications used WEBKNOSSOS for exploring large 3D electron-micro
 
 * Yuxin Zhang, Tobias Ackels, Alexandra Pacureanu, Marie-Christine Zdora, Anne Bonnin, Andreas T. Schaefer, Carles Bosch.  
   Sample preparation and warping accuracy for correlative multimodal imaging in the mouse olfactory bulb using 2-photon, synchrotron X-ray and volume electron microscopy.  
-  [Frontiers in Cell and Development al Biology (2022). DOI: 10.3389/fcell.2022.880696](https://doi.org/10.3389/fcell.2022.880696)
+  [Frontiers in Cell and Developmental Biology (2022). DOI: 10.3389/fcell.2022.880696](https://doi.org/10.3389/fcell.2022.880696)
 
 * Daniela Chequer Charan, Yunfeng Hua, Haoyu Wang, Wenqing Huang, Fangfang Wang, Ana Belén Elgoyhen, Kevin M Boergens & Mariano N Di Guilmi.
   Volume electron microscopy reveals age-related circuit remodeling in the auditory brainstem.  
   [Frontiers in Cellular Neuroscience (2022). DOI: 10.3389/fncel.2022.1070438](https://doi.org/10.3389/fncel.2022.1070438)
 
-* Yong Fan, Chenhui Huang, Juan Chen, Yanyan Chen, Yan Wang, Zhiguang Yan , Weina Yu, Haibo Wu, Ying Yang, Leit ong Nie, Sijia Huang, Fangfang Wang, H aoyu Wang, Yunfeng Hua, Qifeng Lyu, Yanping Kuang & Ming Lei.  
+* Yong Fan, Chenhui Huang, Juan Chen, Yanyan Chen, Yan Wang, Zhiguang Yan, Weina Yu, Haibo Wu, Ying Yang, Leitong Nie, Sijia Huang, Fangfang Wang, Haoyu Wang, Yunfeng Hua, Qifeng Lyu, Yanping Kuang & Ming Lei.  
   Mutations in CCIN cause teratozoospermia and male infertility.  
   [Science Bulletin (2022). DOI: 10.1016/j.scib.2022.09.026](https://doi.org/10.1016/j.scib.2022.09.026)
 
@@ -185,7 +185,7 @@ The following publications used WEBKNOSSOS for exploring large 3D electron-micro
 
 ## 2020
 * Rafael Vescovi, Hanyu Li, Jeffery Kinnison, Murat Keceli, Misha Salim, Narayanan Kasthuri, Thomas D. Uram & Nicola Ferrier.  
-  Toward an Automated HPC Pipeline for Processing Large Scale ElectronMicroscopy Data.  
+  Toward an Automated HPC Pipeline for Processing Large Scale Electron Microscopy Data.  
   [IEEE/ACM (2020) DOI: 10.1109/XLOOP51963.2020.00008.](https://ieeexplore.ieee.org/document/9307792)
 
 * Ali Karimi.  
@@ -222,7 +222,7 @@ The following publications used WEBKNOSSOS for exploring large 3D electron-micro
   [**View data**](https://webknossos.org/publication/5ca3afb48f887cf6f2b3b601) in WEBKNOSSOS.
 
 * Florian Drawitsch, Ali Karimi, Kevin M Boergens, Moritz Helmstaedter.  
-  FluoEM, virtual labeling of axons in threedimensional electron microscopy data for
+  FluoEM, virtual labeling of axons in three-dimensional electron microscopy data for
   long-range connectomics.  
   [eLife (2018) DOI:10.7554/eLife.38976.001.](https://elifesciences.org/articles/38976)  
   [**View data**](https://webknossos.org/publication/5c5ab61e96ec36b84da1fd13) in WEBKNOSSOS.

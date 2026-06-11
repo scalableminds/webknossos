@@ -39,6 +39,7 @@ import type {
   ServerTracing,
   ServerVolumeTracing,
 } from "types/api_types";
+import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import type { Mutable } from "types/type_utils";
 import constants, { ControlModeEnum, type Vector3 } from "viewer/constants";
 import type {
@@ -238,6 +239,10 @@ export async function initialize(
     serverVolumeTracingIds,
     getSharingTokenFromUrlParameters(),
   );
+  if (annotation?.viewConfiguration) {
+    const isPartial = true;
+    enforceValidatedDatasetViewConfiguration(annotation?.viewConfiguration, dataset, isPartial);
+  }
   const annotationSpecificDatasetSettings = applyAnnotationSpecificViewConfiguration(
     annotation,
     dataset,
@@ -1051,11 +1056,21 @@ function applyAnnotationSpecificViewConfiguration(
    */
 
   const initialDatasetSettings: Mutable<DatasetConfiguration> = cloneDeep(originalDatasetSettings);
+  if (!annotation) {
+    return initialDatasetSettings;
+  }
 
-  if (originalDatasetSettings.nativelyRenderedLayerName) {
+  if (annotation.viewConfiguration) {
+    // The annotation already contains a user specific viewConfiguration. Merge that into the
+    // dataset settings.
+    merge(initialDatasetSettings, annotation.viewConfiguration);
+  }
+
+  // Ensure configured nativelyRenderedLayerName is actually present in the dataset.
+  if (initialDatasetSettings.nativelyRenderedLayerName) {
     const isNativelyRenderedNamePresent = getIsNativelyRenderedNamePresent(
       dataset,
-      originalDatasetSettings.nativelyRenderedLayerName,
+      initialDatasetSettings.nativelyRenderedLayerName,
       annotation,
     );
     if (!isNativelyRenderedNamePresent) {
@@ -1063,19 +1078,8 @@ function applyAnnotationSpecificViewConfiguration(
     }
   }
 
-  if (!annotation) {
-    return initialDatasetSettings;
-  }
-
   if (annotation.viewConfiguration) {
-    // The annotation already contains a viewConfiguration. Merge that into the
-    // dataset settings.
-    for (const layerName of Object.keys(annotation.viewConfiguration.layers)) {
-      merge(
-        initialDatasetSettings.layers[layerName],
-        annotation.viewConfiguration.layers[layerName],
-      );
-    }
+    // If the annotation had a view configuration it is now applied and nativelyRenderedLayerName has a correct value.
     return initialDatasetSettings;
   }
 

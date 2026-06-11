@@ -11,7 +11,7 @@ import java.nio.file.{Files, Path}
 
 case class AdditionalDirectoryConfig(
     path: UPath,
-    organizationId: String,
+    organizationId: Option[String],
     allowsUpload: Boolean,
     doScan: Boolean,
     uploadPrefix: Option[String]
@@ -28,15 +28,32 @@ class BaseDirService @Inject()(config: DataStoreConfig) extends LazyLogging {
     res
   }
 
-  def getOneLocalForOrga(organizationId: String,
-                         createIfMissing: Boolean = false,
-                         checkWritable: Boolean = false): Box[Path] = ???
+  def oneLocalForOrga(organizationId: String,
+                      requireAllowsUpload: Boolean = false,
+                      createIfMissing: Boolean = false,
+                      checkWritable: Boolean = false): Box[Path] = ???
   // TODO return first local orga-specific, or first local cross-orga RESOLVED with orga id inside
   // TODO document that it always returns absolute
   // wrap with error message here
 
   // TODO comment: this returns orga-specific and orga-agnostic
   val allLocalBaseDirs: Seq[Path] = additionalDirectories.flatMap(_.path.toLocalPath)
+
+  // TODO also return organization ids!
+  def allOrgaSpecificLocalBaseDirs(requireDoScan: Boolean = false): Seq[(String, Path)] = {
+    val all = additionalDirectories.filter(_.organizationId.nonEmpty)
+    val filtered = if (requireDoScan) all.filter(_.doScan) else all
+    // TODO fix filter
+    filtered.flatMap(entry => (entry.path.toLocalPath, entry.organizationId.get))
+  }
+
+  def allLocalBaseDirsForOrga(organizationId: String, requireDoScan: Boolean = false): Seq[Path] = ???
+
+  def allOrgaAgnosticLocalBaseDirs(requireDoScan: Boolean = false): Seq[Path] = {
+    val all = additionalDirectories.filter(_.organizationId.isEmpty)
+    val filtered = if (requireDoScan) all.filter(_.doScan) else all
+    filtered.flatMap(_.path.toLocalPath)
+  }
 
   private def createIfMissing(orgaPath: Path): Box[Unit] =
     tryo {

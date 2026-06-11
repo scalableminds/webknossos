@@ -70,7 +70,7 @@ class DataSourceController @Inject()(
   def getOneBaseDirForOrgaAbsolute(organizationId: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
       for {
-        orgaBaseDir <- baseDirService.getOneLocalForOrga(organizationId).toFox
+        orgaBaseDir <- baseDirService.oneLocalForOrga(organizationId).toFox
       } yield Ok(Json.toJson(UPath.fromLocalPath(orgaBaseDir)))
     }
   }
@@ -103,7 +103,7 @@ class DataSourceController @Inject()(
       for {
         dataSource <- datasetCache.getById(datasetId)
         // TODO should really use dataset rootPath directly. query from wk?
-        orgaDir <- baseDirService.getOneLocalForOrga(dataSource.id.organizationId).toFox
+        orgaDir <- baseDirService.oneLocalForOrga(dataSource.id.organizationId).toFox
         datasetDir = orgaDir.resolve(dataSource.id.directoryName).resolve(dataLayerName)
         exploredMappings = mappingService.exploreMappings(datasetDir)
       } yield addNoCacheHeaderFallback(Ok(Json.toJson(exploredMappings)))
@@ -216,7 +216,7 @@ class DataSourceController @Inject()(
     accessTokenService.validateAccessFromTokenContextForSyncBlock(
       UserAccessRequest.administrateDatasets(organizationId)) {
       for {
-        _ <- baseDirService.getOneLocalForOrga(organizationId, createIfMissing = true, checkWritable = true)
+        _ <- baseDirService.oneLocalForOrga(organizationId, createIfMissing = true, checkWritable = true)
       } yield Ok
     }
   }

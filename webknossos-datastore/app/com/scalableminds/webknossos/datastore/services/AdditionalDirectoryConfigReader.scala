@@ -12,13 +12,12 @@ class AdditionalDirectoryConfigReader(underlyingConfig: Config) extends ConfigRe
     for {
       pathStr <- getOptional[String]("path")
       path <- UPath.fromString(pathStr).toOption
-      organizationId <- getOptional[String]("organizationId")
       allowsUpload <- getOptional[Boolean]("allowsUpload")
       doScan <- getOptional[Boolean]("doScan")
     } yield
       AdditionalDirectoryConfig(
         path.toAbsolute,
-        organizationId,
+        getOptional[String]("organizationId"),
         allowsUpload,
         doScan,
         getOptional[String]("uploadPrefix")

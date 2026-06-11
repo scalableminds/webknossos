@@ -189,11 +189,15 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
   def extractDatasetUploadId(uploadFileId: String): String = uploadFileId.split("/").headOption.getOrElse("")
 
-  private def uploadDirectoryFor(organizationId: String, uploadId: String, uploadDomain: UploadDomain): Path =
-    dataStoreConfig.Datastore.baseDirectory.resolve(organizationId).resolve(uploadingDir).resolve(uploadDomain.toString).resolve(uploadId)
+  private def uploadDirectoryFor(organizationId: String, uploadId: String, uploadDomain: UploadDomain): Box[Path] =
+    for {
+      orgaDir <- baseDirService.oneLocalForOrga(organizationId, requireAllowsUpload=true)
+    } yield orgaDir.resolve(uploadingDir).resolve(uploadDomain.toString).resolve(uploadId)
 
-  private def uploadBackupDirectoryFor(organizationId: String, uploadId: String): Path =
-    dataStoreConfig.Datastore.baseDirectory.resolve(organizationId).resolve(trashDir).resolve(s"uploadBackup__$uploadId")
+  private def uploadBackupDirectoryFor(organizationId: String, uploadId: String): Box[Path] =
+    for {
+      orgaDir <- baseDirService.oneLocalForOrga(organizationId, requireAllowsUpload=true)
+    } yield orgaDir.resolve(trashDir).resolve(s"uploadBackup__$uploadId")
 
   def reserveDatasetUpload(datasetUploadInfo: DatasetUploadInfo,
                            datasetId: ObjectId,
@@ -243,7 +247,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                                      uploadDomain: UploadDomain): Fox[Unit] =
     for {
       _ <- baseDirService
-        .getOneLocalForOrga(dataSourceId.organizationId, createIfMissing = true, checkWritable = true)
+        .oneLocalForOrga(dataSourceId.organizationId, createIfMissing = true, checkWritable = true)
         .toFox
       uploadId = resumableUploadInfo.uploadId
       _ = logger.info(f"Reserving ${uploadFullName(uploadDomain, uploadId, datasetId, dataSourceId)}...")
@@ -287,7 +291,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     val uploadId = extractDatasetUploadId(uploadFileId)
     for {
       dataSourceId <- uploadMetadataStore.findDataSourceId(uploadId)
-      uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId, uploadDomain)
+      uploadDir <- uploadDirectoryFor(dataSourceId.organizationId, uploadId, uploadDomain).toFox
       filePathRaw = uploadFileId.split("/").tail.mkString("/")
       filePath = if (filePathRaw.charAt(0) == '/') filePathRaw.drop(1) else filePathRaw
       _ <- Fox.fromBool(!isOutsideUploadDir(uploadDir, filePath)) ?~> s"Invalid file path: $filePath"
@@ -378,11 +382,12 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       voxelSizeBox <- datasetUploadMetadataStore.findVoxelSize(uploadId).shiftBox
       _ = logger.info(s"Finishing ${uploadFullName(UploadDomain.dataset, uploadId, datasetId, dataSourceId)}...")
       linkedLayerIdentifiers <- datasetUploadMetadataStore.findLinkedLayerIdentifiers(uploadId)
-      uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId, UploadDomain.dataset)
-      _ <- backupRawUploadedData(uploadDir, uploadBackupDirectoryFor(dataSourceId.organizationId, uploadId), datasetId).toFox
+      uploadDir <- uploadDirectoryFor(dataSourceId.organizationId, uploadId, UploadDomain.dataset).toFox
+      uploadBackupDir <- uploadBackupDirectoryFor(dataSourceId.organizationId, uploadId).toFox
+      _ <- backupRawUploadedData(uploadDir, uploadBackupDir, datasetId).toFox
       _ <- checkWithinRequestedFileSize(uploadDir, uploadId, datasetId, UploadDomain.dataset) ?~> Msg.Dataset.Upload.fileSizeCheckFailed
       _ <- checkAllChunksUploaded(uploadId, UploadDomain.dataset) ?~> Msg.Dataset.Upload.allChunksUploadedCheckFailed
-      unpackToDir = unpackToDirFor(dataSourceId, UploadDomain.dataset, uploadId)
+      unpackToDir <- unpackToDirFor(dataSourceId, UploadDomain.dataset, uploadId).toFox
       unpackResult <- unpackOrMoveUploaded(uploadDir, unpackToDir, datasetId, UploadDomain.dataset).shiftBox
       _ <- cleanUpUploaded(uploadId, reason = "Upload complete, data unpacked.", UploadDomain.dataset)
       _ <- cleanUpOnFailure(unpackResult,
@@ -422,9 +427,9 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       dataSourceId <- magUploadMetadataStore.findDataSourceId(uploadId)
       mag <- magUploadMetadataStore.findMag(uploadId)
       layerName <- magUploadMetadataStore.findLayerName(uploadId)
-      uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId, UploadDomain.mag)
-      unpackToDir = unpackToDirFor(dataSourceId, UploadDomain.mag, uploadId)
-        .resolve(mag.mag.toMagLiteral(allowScalar = true))
+      uploadDir <- uploadDirectoryFor(dataSourceId.organizationId, uploadId, UploadDomain.mag).toFox
+      unpackToDir <- unpackToDirFor(dataSourceId, UploadDomain.mag, uploadId).map(_
+        .resolve(mag.mag.toMagLiteral(allowScalar = true))).toFox
       _ <- checkWithinRequestedFileSize(uploadDir, uploadId, datasetId, UploadDomain.mag) ?~> "dataset.upload.fileSizeCheck.failed"
       _ <- checkAllChunksUploaded(uploadId, UploadDomain.mag) ?~> "dataset.upload.allChunksUploadedCheck.failed"
       unpackResult <- unpackOrMoveUploaded(uploadDir, unpackToDir, datasetId, UploadDomain.mag).shiftBox
@@ -452,8 +457,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       attachment <- attachmentUploadMetadataStore.findAttachment(uploadId)
       attachmentType <- attachmentUploadMetadataStore.findAttachmentType(uploadId)
       layerName <- attachmentUploadMetadataStore.findLayerName(uploadId)
-      uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId, UploadDomain.attachment)
-      unpackToDir = unpackToDirFor(dataSourceId, UploadDomain.attachment, uploadId)
+      uploadDir <- uploadDirectoryFor(dataSourceId.organizationId, uploadId, UploadDomain.attachment).toFox
+      unpackToDir <- unpackToDirFor(dataSourceId, UploadDomain.attachment, uploadId).toFox
       _ <- checkWithinRequestedFileSize(uploadDir, uploadId, datasetId, UploadDomain.attachment) ?~> "dataset.upload.fileSizeCheck.failed"
       _ <- checkAllChunksUploaded(uploadId, UploadDomain.attachment) ?~> "dataset.upload.allChunksUploadedCheck.failed"
       unpackResult <- unpackOrMoveUploaded(uploadDir, unpackToDir, datasetId, UploadDomain.attachment).shiftBox
@@ -540,14 +545,14 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         finalUploadedS3Path <- UPath.fromString(s"s3://$endPointHost/$s3UploadBucket/$s3ObjectKey").toFox
       } yield finalUploadedS3Path
     } else {
-      val finalUploadedLocalPath =
-        dataStoreConfig.Datastore.baseDirectory
-          .resolve(dataSourceId.organizationId)
+      for {
+        orgaDir <- baseDirService.oneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload=true).toFox
+      finalUploadedLocalPath =
+        orgaDir
           .resolve(dataSourceId.directoryName)
           .resolve(layerName)
           .resolve(dirName)
-      logger.info(s"finishUpload for $domain ($datasetId): Moving data to final local path $finalUploadedLocalPath...")
-      for {
+      _ = logger.info(s"finishUpload for $domain ($datasetId): Moving data to final local path $finalUploadedLocalPath...")
         _ <- tryo(FileUtils.moveDirectory(unpackedDir.toFile, finalUploadedLocalPath.toFile)).toFox
       } yield UPath.fromLocalPath(finalUploadedLocalPath)
     }
@@ -557,10 +562,10 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                                           datasetId: ObjectId,
                                           dataSourceId: DataSourceId): Fox[Option[UsableDataSource]] =
     if (needsConversion) {
-      logger.info(s"finishUpload for $datasetId: Moving data to input dir for worker conversion...")
-      val forConversionPath =
-        dataStoreConfig.Datastore.baseDirectory.resolve(dataSourceId.organizationId).resolve(forConversionDir).resolve(dataSourceId.directoryName)
       for {
+        orgaDir <- baseDirService.oneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload=true).toFox
+        forConversionPath = orgaDir.resolve(forConversionDir).resolve(dataSourceId.directoryName)
+        _ = logger.info(s"finishUpload for $datasetId: Moving data to input dir for worker conversion...")
         _ <- tryo(FileUtils.moveDirectory(unpackedDir.toFile, forConversionPath.toFile)).toFox
       } yield None
     } else {
@@ -584,10 +589,10 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
             newBasePath <- UPath.fromString(s"s3://$endPointHost/$s3UploadBucket/$s3ObjectKey").toFox
           } yield newBasePath
         } else {
-          val finalUploadedLocalPath =
-            dataStoreConfig.Datastore.baseDirectory.resolve(dataSourceId.organizationId).resolve(dataSourceId.directoryName)
-          logger.info(s"finishUpload for $datasetId: Moving data to final local path $finalUploadedLocalPath...")
           for {
+            orgaDir <- baseDirService.oneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload=true).toFox
+            finalUploadedLocalPath = orgaDir.resolve(dataSourceId.directoryName)
+            _ = logger.info(s"finishUpload for $datasetId: Moving data to final local path $finalUploadedLocalPath...")
             _ <- tryo(FileUtils.moveDirectory(unpackedDir.toFile, finalUploadedLocalPath.toFile)).toFox
           } yield UPath.fromLocalPath(finalUploadedLocalPath)
         }
@@ -747,9 +752,10 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     } yield ()
   }
 
-  private def unpackToDirFor(dataSourceId: DataSourceId, domain: UploadDomain, uploadId: String): Path =
-    dataStoreConfig.Datastore.baseDirectory
-      .resolve(dataSourceId.organizationId)
+  private def unpackToDirFor(dataSourceId: DataSourceId, domain: UploadDomain, uploadId: String): Box[Path] =
+    for {
+      orgaDir <- baseDirService.oneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload=true)
+    } yield orgaDir
       .resolve(uploadingDir)
       .resolve(unpackedDir)
       .resolve(domain.toString)
@@ -938,7 +944,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     val uploadMetadataStore = selectUploadMetadataStore(uploadDomain)
     for {
       dataSourceId <- uploadMetadataStore.findDataSourceId(uploadId)
-      uploadDir = uploadDirectoryFor(dataSourceId.organizationId, uploadId, uploadDomain)
+      uploadDir <- uploadDirectoryFor(dataSourceId.organizationId, uploadId, uploadDomain).toFox
       _ <- Fox.successful(logger.info(s"Cleaning up uploaded $uploadDir. Reason: $reason"))
       _ <- PathUtils.deleteDirectoryRecursively(uploadDir).toFox
       uploadMetadataStore = selectUploadMetadataStore(uploadDomain)
@@ -946,11 +952,15 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     } yield ()
   }
 
-  private def cleanUpOrphanUploads(): Fox[Unit] =
+  private def cleanUpOrphanUploads(): Fox[Unit] = {
+    val organizationDirsDirect = baseDirService.allOrgaSpecificLocalBaseDirs
+    val orgaAgnosticBaseDirs = baseDirService.allOrgaAgnosticLocalBaseDirs()
     for {
-      organizationDirs <- PathUtils.listDirectories(dataStoreConfig.Datastore.baseDirectory, silent = false).toFox
-      _ <- Fox.serialCombined(organizationDirs)(cleanUpOrphanUploadsForOrga)
+      organizationDirsInOrgaAgnostic <- Fox.serialCombined(orgaAgnosticBaseDirs)(PathUtils.listDirectories(_, silent = false).toFox)
+      allOrgaDirs = organizationDirsInOrgaAgnostic.flatten ++ organizationDirsDirect
+      _ <- Fox.serialCombined(allOrgaDirs)(cleanUpOrphanUploadsForOrga)
     } yield ()
+  }
 
   private def cleanUpOrphanUploadsForOrga(organizationDir: Path): Fox[Unit] =
     for {

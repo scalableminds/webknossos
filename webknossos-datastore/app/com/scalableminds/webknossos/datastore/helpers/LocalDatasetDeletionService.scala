@@ -19,7 +19,7 @@ class LocalDatasetDeletionService @Inject()(baseDirService: BaseDirService) exte
 
     if (Files.exists(path)) {
       for {
-        orgaDir <- baseDirService.getOneLocalForOrga(organizationId, createIfMissing = true, checkWritable = true)
+        orgaDir <- baseDirService.oneLocalForOrga(organizationId, createIfMissing = true, checkWritable = true)
         trashPath: Path = orgaDir.resolve(trashDir)
         targetPath = trashPath.resolve(directoryName)
         _ = PathUtils.ensureDirectory(trashPath)

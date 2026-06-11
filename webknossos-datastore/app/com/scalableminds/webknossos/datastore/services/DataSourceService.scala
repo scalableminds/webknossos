@@ -58,6 +58,7 @@ class DataSourceService @Inject()(
     } yield ()
 
   def checkInbox(verbose: Boolean, organizationId: Option[String]): Fox[Unit] = {
+    val allOrgaDirectories: Seq[Path] = ???
     val before = Instant.now
     val selectedOrgaLabel = organizationId.map(id => s"/$id").getOrElse("")
     def orgaFilterFn(organizationId: String): Path => Boolean =
@@ -73,9 +74,9 @@ class DataSourceService @Inject()(
           for {
             _ <- remoteWebknossosClient.reportDataSources(foundDataSources, organizationId)
             _ <- remoteWebknossosClient.reportRealPaths(realPathInfos)
-            _ = logFoundDatasources(before,
+            _ = logFoundDatasources(allOrgaDirectories,
+              before,
                                     verbose,
-                                    selectedOrgaLabel,
                                     foundDataSources,
                                     realPathInfos,
                                     realPathScanFailures)
@@ -165,9 +166,9 @@ class DataSourceService @Inject()(
       } yield RealPathInfo(attachment.path, UPath.fromLocalPath(realAttachmentPath), hasLocalData = isDatasetLocal)
     }
 
-  private def logFoundDatasources(before: Instant,
+  private def logFoundDatasources(scannedOrgaDirectories: Seq[Path],
+                                  before: Instant,
                                   verbose: Boolean,
-                                  selectedOrgaLabel: String,
                                   foundDataSources: Seq[DataSource],
                                   realPathInfosByDataSource: Seq[DataSourcePathInfo],
                                   realPathScanFailures: Seq[Failure]): Unit = {
@@ -176,7 +177,7 @@ class DataSourceService @Inject()(
     val realPathScanSummary =
       s"${countScannedRealPaths(realPathInfosByDataSource)} scanned realpaths.$realPathFailuresSummary"
     val shortForm =
-      s"Finished scanning inbox ($dataBaseDir$selectedOrgaLabel), took ${formatDuration(Instant.since(before))}: ${foundDataSources
+      s"Finished scanning inbox ($scannedOrgaDirectories), took ${formatDuration(Instant.since(before))}: ${foundDataSources
         .count(_.isUsable)} active, ${foundDataSources.count(!_.isUsable)} inactive. $realPathScanSummary"
     val msg = if (verbose) {
       val byOrganization: Map[String, Seq[DataSource]] = foundDataSources.groupBy(_.id.organizationId)

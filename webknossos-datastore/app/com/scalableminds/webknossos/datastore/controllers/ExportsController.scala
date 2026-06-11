@@ -38,7 +38,7 @@ class ExportsController @Inject()(webknossosClient: DSRemoteWebknossosClient,
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.downloadJobExport(jobId)) {
       for {
         exportProperties <- webknossosClient.getJobExportProperties(jobId)
-        orgaDir <- baseDirService.getOneLocalForOrga(exportProperties.organizationId).toFox
+        orgaDir <- baseDirService.oneLocalForOrga(exportProperties.organizationId).toFox
         fullPath = exportProperties.fullPathIn(orgaDir)
         _ <- Fox.fromBool(Files.exists(fullPath)) ?~> Msg.Job.exportFileNotFound
       } yield Ok.sendPath(fullPath, inline = false)

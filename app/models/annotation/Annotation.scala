@@ -330,7 +330,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
   }
 
   // Necessary since a tuple can only have 22 elements
-  implicit def GetResultAnnotationCompactInfo: GetResult[AnnotationCompactInfo] = GetResult { prs =>
+  implicit def GetResultAnnotationCompactInfo: GetResult[AnnotationCompactInfo] = GetResult(using { prs =>
     import prs._
 
     val id = <<[ObjectId]
@@ -364,7 +364,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       organizationId, tracingIds, annotationLayerNames, annotationLayerTypes, annotationLayerStatistics
     )
     // format: on
-  }
+  })
 
   /** Find all annotations which are listable by the user specified in 'forUser'
     *

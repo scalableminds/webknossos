@@ -14,6 +14,7 @@ import slick.jdbc.PostgresProfile.api._
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
+import scala.annotation.nowarn
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
@@ -102,7 +103,8 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       value <- rows.headOption.toFox
     } yield value == 0
 
-  @deprecated("use findOne with string type instead", since = "")
+  @deprecated("use findOne with string type instead")
+  @nowarn("msg=overrides concrete, non-deprecated")
   override def findOne(id: ObjectId)(using ctx: DBAccessContext): Fox[Organization] =
     Fox.failure("Cannot find organization by ObjectId. Use findOne with string type instead")
 

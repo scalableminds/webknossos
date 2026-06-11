@@ -68,7 +68,7 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
       )
     }
 
-  implicit val getCreditTransactions: GetResult[CreditTransaction] = GetResult { prs =>
+  implicit val getCreditTransactions: GetResult[CreditTransaction] = GetResult(using { prs =>
     import prs._
     val transactionId = <<[ObjectId]
     val organizationId = <<[String]
@@ -99,7 +99,7 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
       updatedAt,
       isDeleted
     )
-  }
+  })
 
   // Superusers may read and update transactions of all orgas, but not list them.
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =

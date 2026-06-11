@@ -99,7 +99,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
   }
 
   slackNotificationService.noticeStartup(webknossos.BuildInfo.version)
-  
+
   private def checkPostgresSchema(): Unit = {
     logger.info("Checking database schema...")
 

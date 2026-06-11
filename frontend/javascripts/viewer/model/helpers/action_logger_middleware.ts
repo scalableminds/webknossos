@@ -10,7 +10,7 @@ let actionLog: string[] = [];
 let lastActionName: string | null = null;
 let lastActionCount: number = 0;
 
-const actionBlacklist = [
+export const actionBlacklist = [
   "ADD_TO_CONTOUR_LIST",
   "MOVE_FLYCAM",
   "MOVE_FLYCAM_ABSOLUTE",

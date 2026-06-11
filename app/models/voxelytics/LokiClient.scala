@@ -25,7 +25,9 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyste
     with MimeTypes {
 
   private lazy val conf = wkConf.Voxelytics.Loki
-  private lazy val enabled = wkConf.Features.voxelyticsEnabled && conf.uri.nonEmpty
+  // Loki availability is independent of the voxelytics feature: it is used both for voxelytics worker logs
+  // (those endpoints additionally gate on Features.voxelyticsEnabled) and for frontend redux action logs.
+  private lazy val enabled = conf.uri.nonEmpty
 
   private val POLLING_INTERVAL = 1 second
   private val LOG_TIME_BATCH_INTERVAL = 1 days
@@ -244,6 +246,38 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyste
         _ <- rpc(s"${conf.uri}/loki/api/v1/push").silent
           .addHttpHeader(HeaderNames.CONTENT_TYPE, jsonMimeType)
           .postJson[JsValue](Json.obj("streams" -> streams))
+      } yield ()
+    } else {
+      Fox.successful(())
+    }
+
+  // Pushes frontend redux action log entries to Loki. Each entry is expected to be of the form
+  // {"timestamp": <epochMillis>, "action": {"type": ..., ...properties}}.
+  // All entries are pushed as a single stream with low-cardinality labels; high-cardinality data
+  // (user id, action type, properties) lives in the log line so it does not explode the label index.
+  def bulkInsertActionLog(entries: List[JsObject], organizationId: String, userId: String)(
+      implicit ec: ExecutionContext): Fox[Unit] =
+    if (entries.nonEmpty) {
+      for {
+        _ <- serverStartupFox
+        valueTuples <- Fox.serialCombined(entries)(entry =>
+          for {
+            timestampMillis <- tryo((entry \ "timestamp").as[Long]).toFox
+            action <- tryo((entry \ "action").as[JsObject]).toFox
+            line = Json.stringify(action ++ Json.obj("wk_user" -> userId))
+          } yield (timestampMillis, line))
+        values = valueTuples.sortBy(_._1).map(tuple => Json.arr(Instant(tuple._1).toNanosecondsString, tuple._2))
+        stream = Json.obj(
+          "stream" -> Json.obj(
+            "source" -> "frontend",
+            "wk_url" -> wkConf.Http.uri,
+            "wk_org" -> organizationId
+          ),
+          "values" -> JsArray(values)
+        )
+        _ <- rpc(s"${conf.uri}/loki/api/v1/push").silent
+          .addHttpHeader(HeaderNames.CONTENT_TYPE, jsonMimeType)
+          .postJson[JsValue](Json.obj("streams" -> Json.arr(stream)))
       } yield ()
     } else {
       Fox.successful(())

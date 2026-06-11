@@ -2,6 +2,7 @@ package controllers
 
 import com.scalableminds.util.tools.Fox
 import models.analytics.{AnalyticsEventsIngestJson, AnalyticsService, FrontendAnalyticsEvent}
+import models.voxelytics.LokiClient
 import play.api.libs.json.JsObject
 import play.api.mvc.{Action, PlayBodyParsers}
 import play.silhouette.api.Silhouette
@@ -11,9 +12,10 @@ import utils.WkConf
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class AnalyticsController @Inject()(analyticsService: AnalyticsService, conf: WkConf, sil: Silhouette[WkEnv])(
-    implicit ec: ExecutionContext,
-    bodyParsers: PlayBodyParsers)
+class AnalyticsController @Inject()(analyticsService: AnalyticsService,
+                                    lokiClient: LokiClient,
+                                    conf: WkConf,
+                                    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
   def ingestAnalyticsEvents: Action[AnalyticsEventsIngestJson] = Action.async(validateJson[AnalyticsEventsIngestJson]) {
@@ -33,5 +35,16 @@ class AnalyticsController @Inject()(analyticsService: AnalyticsService, conf: Wk
       }
       Ok
   }
+
+  // Receives a batch of frontend redux actions and forwards them to Loki (if a Loki uri is configured).
+  // SecuredAction since we need the user/organization for labelling; the frontend only sends when logged in.
+  def logReduxActions: Action[List[JsObject]] =
+    sil.SecuredAction.async(validateJson[List[JsObject]]) { implicit request =>
+      for {
+        _ <- lokiClient.bulkInsertActionLog(request.body,
+                                            request.identity._organization.toString,
+                                            request.identity._id.toString)
+      } yield Ok
+    }
 
 }

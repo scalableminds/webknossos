@@ -126,7 +126,7 @@ function BrushToolMenu({ adaptedActiveTool }: ToolButtonProps) {
   const isBrushDisabled = disabledInfosForTools[AnnotationTool.BRUSH.id].isDisabled;
   const isTraceDisabled = disabledInfosForTools[AnnotationTool.TRACE.id].isDisabled;
   const isBrushOrTraceActive =
-    [AnnotationTool.BRUSH, AnnotationTool.TRACE].includes(adaptedActiveTool)
+    adaptedActiveTool === AnnotationTool.BRUSH || adaptedActiveTool === AnnotationTool.TRACE;
   const displayTool = isBrushOrTraceActive ? adaptedActiveTool : currentTool;
 
   return (
@@ -222,7 +222,7 @@ function EraseToolMenu({ adaptedActiveTool }: ToolButtonProps) {
   return (
     <ToolRadioButtonWithDropdown
       disabled={isEraseBrushDisabled && isEraseTraceDisabled}
-      value={isEraseBrushOrEraseTraceActive ? adaptedActiveTool.id : currentTool.id}
+      value={displayTool.id}
       dropdownItems={[
         {
           key: AnnotationTool.ERASE_BRUSH.id,
@@ -456,7 +456,7 @@ function MeasurementToolMenu({ adaptedActiveTool }: ToolButtonProps) {
   return (
     <ToolRadioButtonWithDropdown
       disabled={isAreaMeasurementDisabled && isLineMeasurementDisabled}
-      value={isMeasurementToolActive ? adaptedActiveTool.id : favoriteMeasurementTool.id}
+      value={displayTool.id}
       dropdownItems={[
         {
           key: AnnotationTool.LINE_MEASUREMENT.id,

@@ -18,7 +18,7 @@ WEBKNOSSOS is also a platform for [showcasing datasets](https://webknossos.org) 
 - [Innovative flight mode for fast skeleton annotation](https://www.nature.com/articles/nmeth.4331)
 - User and task management for high-throughput collaboration in the lab or crowdsourcing
 - Easy Sharing. Share your [datasets](./sharing/dataset_sharing.md) and [annotations](./sharing/annotation_sharing.md) securely with others using web links
-- [Fine-grained access permission](./users/access_rights.md) and and user roles for secure collaboration
+- [Fine-grained access permission](./users/access_rights.md) and user roles for secure collaboration
 - [AI Quick Select tool](./volume_annotation/tools.md#quick-select-tool) to speed up segmentation
 - [Standalone datastore component](https://github.com/scalableminds/webknossos/tree/master/webknossos-datastore) for flexible deployments
 - [Supported dataset formats: Zarr, WKW (Optimized), KNOSSOS cubes, Neuroglancer Precomputed, N5, and image stacks](./data/index.md) (some formats will be converted on upload)
@@ -56,5 +56,5 @@ WEBKNOSSOS' impact on data annotation in neuroscience and Connectomics has been 
 
 WEBKNOSSOS is developed by [scalable minds](https://scalableminds.com) in collaboration with the [Max Planck Institute for Brain Research](https://brain.mpg.de/connectomics).
 
-If you need help with WEBKNOSSOS, feel free to contact us at [hello@webknossos.org](mailto:hello@webknossos.org) or [write a post in the community forum](https://forum.image.sc/tag/webknossos).
+If you need help with WEBKNOSSOS, feel free to contact us at [support@webknossos.org](mailto:support@webknossos.org) or [write a post in the community forum](https://forum.image.sc/tag/webknossos).
 scalable minds also offers [commercial support, managed hosting, and image analysis services](https://webknossos.org/pricing).

@@ -1,7 +1,6 @@
 # Projects 
 
 A group of many related Tasks is called a Project. Projects have a priority assigned to them which affects the order of assignment to users. Projects may be paused and resumed to manage the user workloads and priorities. 
-
 ## Creating a Project
 
 To create a project, follow these steps:
@@ -14,6 +13,9 @@ To create a project, follow these steps:
 /// caption
 Create a Project
 ///
+
+To pause or resume a project, open the `Projects` page and click the pause/resume icon in the project's `Actions` column. 
+
 
 ## Project progress and statistics
 

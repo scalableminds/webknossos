@@ -284,13 +284,15 @@ class AnnotationController @Inject()(
           annotationService.updateTeamsForSharedAnnotation(annotation._id, List.empty)
         else Fox.successful(())
         tags = (request.body \ "tags").asOpt[List[String]]
-        viewConfiguration = (request.body \ "viewConfiguration").asOpt[JsObject]
+        viewConfigurationOpt = (request.body \ "viewConfiguration").asOpt[JsObject]
         _ <- Fox.runOptional(name)(annotationDAO.updateName(annotation._id, _)) ?~> Msg.Annotation.Edit.failed
         _ <- Fox
           .runOptional(visibility)(annotationDAO.updateVisibility(annotation._id, _)) ?~> Msg.Annotation.Edit.failed
         _ <- Fox.runOptional(tags)(annotationDAO.updateTags(annotation._id, _)) ?~> Msg.Annotation.Edit.failed
-        _ <- Fox
-          .runOptional(viewConfiguration)(vc => annotationDAO.updateViewConfiguration(annotation._id, Some(vc))) ?~> Msg.Annotation.Edit.failed
+        _ <- Fox.runOptional(viewConfigurationOpt)(
+          vc =>
+            annotationDAO
+              .updateViewConfiguration(annotation._id, request.identity._id, vc)) ?~> Msg.Annotation.Edit.failed
       } yield JsonOk(Msg.Annotation.Edit.success)
   }
 

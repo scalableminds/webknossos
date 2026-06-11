@@ -123,8 +123,6 @@ class EditableMappingUpdater(
         }
       case _: Failure =>
         mappingFox
-      case _ =>
-        mappingFox
     }
 
   def applyOneUpdate(mapping: EditableMappingInfo, update: UpdateAction)(

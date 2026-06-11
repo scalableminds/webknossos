@@ -118,7 +118,7 @@ Note that you can enable *Classic Controls* which will behave slightly different
 | ++shift++ + Arrow                           | Rotation Around Axis                           |
 | ++r++                                       | Rotate View 180°                               |
 | ++b++                                       | Mark Node as New Branchpoint                   |
-| ++j++                                       | Delete Branch Point                            |
+| ++j++                                       | Jump to and Delete Branch Point                |
 | ++s++                                       | Center Active Node                             |
 | ++f++                                       | Forward Without Recording Waypoints            |
 | ++d++                                       | Backward Without Recording Waypoints           |

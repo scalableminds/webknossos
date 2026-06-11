@@ -50,7 +50,7 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
         width,
         height,
         mappingName,
-        _ => getThumbnail(dataset, layerName, width, height, mappingName)(ec, GlobalAccessContext)
+        _ => getThumbnail(dataset, layerName, width, height, mappingName)(using ec, GlobalAccessContext)
       )
     } yield image
   }

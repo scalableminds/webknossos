@@ -329,7 +329,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     } yield
     // Ordering must be preserved (newest versions first). Thus we append, not prepend the (older) extra updates.
     pendingAnnotationUpdates ++ (extraSkeletonUpdates ++ extraEditableMappingUpdates).sortBy(_._1)(
-      Ordering[Long].reverse)
+      using Ordering[Long].reverse)
 
   /*
    * The migration of https://github.com/scalableminds/webknossos/pull/7917 does not guarantee that the skeleton layer

@@ -8,7 +8,7 @@ import play.api.libs.json.{Format, JsResult, JsValue, Json}
 
 object DatasetViewConfiguration {
   type DatasetViewConfiguration = Map[String, JsValue]
-  implicit val jsonFormat: Format[DatasetViewConfiguration] = Format.of[DatasetViewConfiguration]
+  implicit val jsonFormat: Format[DatasetViewConfiguration] = Format.of[Map[String, JsValue]]
 }
 
 trait DataSource {

@@ -25,7 +25,7 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
     with FoxImplicits {
 
   private val scriptPublicReads =
-    ((__ \ "name").read[String](minLength[String](2) or maxLength[String](50)) and
+    ((__ \ "name").read[String](using minLength[String](2) or maxLength[String](50)) and
       (__ \ "gist").read[String] and
       (__ \ "owner").read[ObjectId])(Script.fromForm)
 

@@ -36,7 +36,7 @@ trait Controller extends InjectedController with ExtendedController with UserAwa
 
   private def withJsonUsing[A](json: JsReadable, reads: Reads[A])(f: A => Fox[Result])(
       implicit ec: ExecutionContext): Fox[Result] =
-    json.validate(reads) match {
+    json.validate(using reads) match {
       case JsSuccess(result, _) =>
         f(result)
       case e: JsError =>

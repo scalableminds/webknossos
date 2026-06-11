@@ -18,7 +18,7 @@ object URLSharing {
   def fallbackTokenAccessContext(sharingToken: Option[String])(using ctx: DBAccessContext): DBAccessContext =
     ctx.data match {
       case Some(user: User) => DBAccessContext(Some(UserSharingTokenContainer(user, sharingToken)))
-      case _                => DBAccessContext(sharingToken.map(SharingTokenContainer))
+      case _                => DBAccessContext(sharingToken.map(SharingTokenContainer(_)))
     }
 
 }

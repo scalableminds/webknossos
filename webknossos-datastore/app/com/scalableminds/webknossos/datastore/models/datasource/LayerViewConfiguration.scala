@@ -7,5 +7,5 @@ object LayerViewConfiguration {
 
   def empty: LayerViewConfiguration = Map()
 
-  implicit val jsonFormat: Format[LayerViewConfiguration] = Format.of[LayerViewConfiguration]
+  implicit val jsonFormat: Format[LayerViewConfiguration] = Format.of[Map[String, JsValue]]
 }

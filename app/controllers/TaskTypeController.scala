@@ -28,7 +28,7 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
     with FoxImplicits {
 
   private val taskTypePublicReads =
-    ((__ \ "summary").read[String](minLength[String](2) or maxLength[String](50)) and
+    ((__ \ "summary").read[String](using minLength[String](2) or maxLength[String](50)) and
       (__ \ "description").read[String] and
       (__ \ "teamId").read[ObjectId] and
       (__ \ "settings").read[AnnotationSettings] and

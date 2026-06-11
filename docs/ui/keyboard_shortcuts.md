@@ -68,25 +68,25 @@ Shortcut changes are saved to your user account and persist across devices and b
 
 Note that skeleton-specific mouse actions and some keyboard shortcuts are only available when the skeleton tool is active.
 
-| Key Binding                                                                                                                      | Operation                                                      |
-|----------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------|
-| Left Mouse Drag or Arrow Keys                                                                                                    | Move In-Plane                                                  |
-| ++alt++ + Mouse Move                                                                                                             | Move In-Plane                                                  |
-| ++space++                                                                                                                        | Move Forward                                                   |
-| ++shift++ + ++up++ / ++down++ / ++left++ / ++right++<br>++alt++ + ++left++ / ++right++                                           | Rotate Planes                                                  |
-| ++ctrl++ / ++cmd++ + ++shift++ + ++up++ / ++down++ / ++left++ / ++right++<br>++ctrl++ / ++cmd++ + ++alt++ + ++left++ / ++right++ | Rotate Planes by 90°                                           |
-| Right-Click Drag (3D View)                                                                                                       | Rotate 3D View                                                 |
-| Left Click                                                                                                                       | Create New Node (Skeleton tool)                                |
-| Left Click                                                                                                                       | Select Node (Mark as Active Node) under cursor (Skeleton tool) |
-| Left Drag                                                                                                                        | Move node under cursor (Skeleton tool)                         |
-| Right Click (on node)                                                                                                            | Bring up the context-menu with further actions (Skeleton tool) |
-| ++shift++ + ++alt++ + Left Click                                                                                                 | Merge Two Nodes and Combine Trees (Skeleton tool)              |
-| ++shift++ + ++ctrl++ / ++cmd++ + Left Click                                                                                      | Delete Edge / Split Trees (Skeleton tool)                      |
-| ++c++                                                                                                                            | Create New Tree (Skeleton tool)                                |
-| ++ctrl++ / ++cmd++ + Left Click or ++ctrl++ / ++cmd++ + Arrow Keys                                                               | Move the Active Node (Skeleton tool)                           |
-| ++del++                                                                                                                          | Delete Node / Split Trees (Skeleton tool)                      |
-| ++b++                                                                                                                            | Mark Node as New Branchpoint (Skeleton tool)                   |
-| ++j++                                                                                                                            | Jump to and Delete Branch Point (Skeleton tool)                |
+| Key Binding                                                                                                                      | Operation                                                                |
+|----------------------------------------------------------------------------------------------------------------------------------|--------------------------------------------------------------------------|
+| Left Mouse Drag or Arrow Keys                                                                                                    | Move In-Plane                                                            |
+| ++alt++ + Mouse Move                                                                                                             | Move In-Plane                                                            |
+| ++space++                                                                                                                        | Move Forward                                                             |
+| ++shift++ + ++up++ / ++down++ / ++left++ / ++right++<br>++alt++ + ++left++ / ++right++                                           | Rotate Planes                                                            |
+| ++ctrl++ / ++cmd++ + ++shift++ + ++up++ / ++down++ / ++left++ / ++right++<br>++ctrl++ / ++cmd++ + ++alt++ + ++left++ / ++right++ | Rotate Planes by 90°                                                     |
+| Right-Click Drag (3D View)                                                                                                       | Rotate 3D View                                                           |
+| Left Click                                                                                                                       | Create New Node (Skeleton tool)                                          |
+| Left Click                                                                                                                       | Select Node (Mark as Active Node) under cursor (Skeleton tool)           |
+| Left Drag                                                                                                                        | Move node under cursor (Skeleton tool)                                   |
+| Right Click (on node)                                                                                                            | Bring up the context-menu with further actions (Skeleton tool)           |
+| ++shift++ + ++alt++ + Left Click                                                                                                 | Merge Two Nodes and Combine Trees (Skeleton tool)                        |
+| ++shift++ + ++ctrl++ / ++cmd++ + Left Click                                                                                      | Delete Edge / Split Trees (Skeleton tool)                                |
+| ++c++                                                                                                                            | Create New Tree (Skeleton tool)                                          |
+| ++ctrl++ / ++cmd++ + Left Click or ++ctrl++ / ++cmd++ + Arrow Keys                                                               | Move the Active Node (Skeleton tool)                                     |
+| ++del++                                                                                                                          | Delete Node / Split Trees (Skeleton tool)                                |
+| ++b++                                                                                                                            | Mark Node as New Branchpoint (Skeleton tool)                             |
+| ++j++                                                                                                                            | Jump to Last Branch Point and Remove Branch Point Status (Skeleton tool) |
 
 The following keyboard shortcuts are available in plane mode regardless of the active tool:
 
@@ -108,17 +108,17 @@ Note that you can enable *Classic Controls* which will behave slightly different
 
 ### Flight / Oblique Mode
 
-| Key Binding                                 | Operation                                      |
-|---------------------------------------------|------------------------------------------------|
-| Left Click                                  | Select Node (Mark as Active Node) under cursor |
-| Left Mouse Drag or Arrow Keys               | Rotation                                       |
-| ++space++                                   | Move Forward                                   |
-| ++ctrl++ / ++cmd++ + ++space++              | Move Backward                                  |
-| ++i++ / ++o++                               | Zoom In And Out                                |
-| ++shift++ + Arrow                           | Rotation Around Axis                           |
-| ++r++                                       | Rotate View 180°                               |
-| ++b++                                       | Mark Node as New Branchpoint                   |
-| ++j++                                       | Jump to and Delete Branch Point                |
+| Key Binding                                 | Operation                                                |
+|---------------------------------------------|----------------------------------------------------------|
+| Left Click                                  | Select Node (Mark as Active Node) under cursor           |
+| Left Mouse Drag or Arrow Keys               | Rotation                                                 |
+| ++space++                                   | Move Forward                                             |
+| ++ctrl++ / ++cmd++ + ++space++              | Move Backward                                            |
+| ++i++ / ++o++                               | Zoom In And Out                                          |
+| ++shift++ + Arrow                           | Rotation Around Axis                                     |
+| ++r++                                       | Rotate View 180°                                         |
+| ++b++                                       | Mark Node as New Branchpoint                             |
+| ++j++                                       | Jump to Last Branch Point and Remove Branch Point Status |
 | ++s++                                       | Center Active Node                             |
 | ++f++                                       | Forward Without Recording Waypoints            |
 | ++d++                                       | Backward Without Recording Waypoints           |

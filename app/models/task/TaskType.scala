@@ -104,7 +104,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
        OR _organization = (SELECT _organization from webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))"""
 
   def findOneBySummaryAndOrganization(summary: String, organizationId: String)(
-      implicit ctx: DBAccessContext): Fox[TaskType] =
+      using ctx: DBAccessContext): Fox[TaskType] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns

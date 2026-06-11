@@ -235,7 +235,7 @@ class AnnotationController @Inject()(
     }
 
   private def finishAnnotation(typ: String, id: ObjectId, issuingUser: User, timestamp: Instant)(
-      implicit ctx: DBAccessContext): Fox[(Annotation, String)] =
+      using ctx: DBAccessContext): Fox[(Annotation, String)] =
     for {
       annotation <- provider.provideAnnotation(typ, id, issuingUser) ~> NOT_FOUND
       restrictions <- provider.restrictionsFor(typ, id) ?~> Msg.Annotation.Restrictions.notFound ~> NOT_FOUND

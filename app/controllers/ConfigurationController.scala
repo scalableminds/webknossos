@@ -62,8 +62,7 @@ class ConfigurationController @Inject()(
       for {
         configuration <- request.identity.toFox
           .flatMap(user =>
-            datasetConfigurationService.getDatasetViewConfigurationForUserAndDataset(request.body, user, datasetId)(
-              GlobalAccessContext))
+            datasetConfigurationService.getDatasetViewConfigurationForUserAndDataset(request.body, user, datasetId)(using GlobalAccessContext))
           .orElse(
             datasetConfigurationService.getDatasetViewConfigurationForDataset(request.body, datasetId)(using ctx)
           )

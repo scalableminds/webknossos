@@ -198,7 +198,7 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
     } yield ()
 
   def refundTransaction(transactionId: ObjectId, isCancelled: Boolean = false)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(transactionId)
       transactionToRefund <- findOne(transactionId)

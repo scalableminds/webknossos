@@ -92,7 +92,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     findAllByProjectAndTaskTypeAndIdsAndUser(None, Some(taskTypeId), None, None, None)
 
   def findAllByProject(projectId: ObjectId, limit: Int, pageNumber: Int)(
-      implicit ctx: DBAccessContext): Fox[List[Task]] =
+      using ctx: DBAccessContext): Fox[List[Task]] =
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       r <- run(q"""SELECT $columns
@@ -318,7 +318,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield ()
 
   def incrementTotalInstancesOfAllWithProject(projectId: ObjectId, delta: Long)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     for {
       accessQuery <- readAccessQuery
       _ <- run(

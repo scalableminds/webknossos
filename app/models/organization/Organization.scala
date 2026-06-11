@@ -161,7 +161,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
     } yield r
 
   def updateFields(organizationId: String, name: String, newUserMailingList: String)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(organizationId)
       _ <- run(q"""UPDATE webknossos.organizations
@@ -282,7 +282,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
     } yield parsed
 
   def acceptTermsOfService(organizationId: String, version: Int, timestamp: Instant)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(organizationId)
       _ <- run(q"""UPDATE webknossos.organizations

@@ -236,7 +236,7 @@ class UserController @Inject()(userService: UserService,
     }
 
   private def checkEmailDoesNotExistIfChanged(email: String, oldEmail: String)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     if (oldEmail == email) {
       Fox.successful(())
     } else {
@@ -258,7 +258,7 @@ class UserController @Inject()(userService: UserService,
   private def checkNoActivateBeyondLimit(user: User, isActive: Boolean): Fox[Unit] =
     for {
       _ <- Fox.runIf(user.isDeactivated && isActive)(organizationService
-        .assertUsersCanBeAdded(user._organization)(GlobalAccessContext, ec)) ?~> Msg.Organization.usersUserLimitReached
+        .assertUsersCanBeAdded(user._organization)(using GlobalAccessContext, ec)) ?~> Msg.Organization.usersUserLimitReached
     } yield ()
 
   private def checkNoDeactivateWithRemainingTask(user: User, isActive: Boolean): Fox[Unit] =

@@ -27,7 +27,7 @@ class TaskTypeInformationHandler @Inject()(
     with FoxImplicits {
 
   override def provideAnnotation(taskTypeId: ObjectId, userOpt: Option[User])(
-      implicit ctx: DBAccessContext): Fox[Annotation] =
+      using ctx: DBAccessContext): Fox[Annotation] =
     for {
       taskType <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound(taskTypeId)
       tasks <- taskDAO.findAllByTaskType(taskType._id)

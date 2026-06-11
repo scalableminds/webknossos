@@ -62,7 +62,7 @@ object RealPathInfo {
 }
 
 trait RemoteWebknossosClient {
-  def requestUserAccess(accessRequest: UserAccessRequest)(implicit tc: TokenContext): Fox[UserAccessAnswer]
+  def requestUserAccess(accessRequest: UserAccessRequest)(using tc: TokenContext): Fox[UserAccessAnswer]
 }
 
 class DSRemoteWebknossosClient @Inject() (
@@ -96,7 +96,7 @@ class DSRemoteWebknossosClient @Inject() (
       .addQueryParam("key", dataStoreKey)
       .putJson(dataSource)
 
-  def getUnfinishedUploadsForUser(organizationName: String)(implicit tc: TokenContext): Fox[List[UnfinishedUpload]] =
+  def getUnfinishedUploadsForUser(organizationName: String)(using tc: TokenContext): Fox[List[UnfinishedUpload]] =
     for {
       unfinishedUploads <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/getUnfinishedDatasetUploadsForUser")
         .addQueryParam("key", dataStoreKey)
@@ -105,7 +105,7 @@ class DSRemoteWebknossosClient @Inject() (
         .getWithJsonResponse[List[UnfinishedUpload]]
     } yield unfinishedUploads
 
-  def reportDatasetUpload(datasetId: ObjectId, parameters: ReportDatasetUploadParameters)(implicit
+  def reportDatasetUpload(datasetId: ObjectId, parameters: ReportDatasetUploadParameters)(using
       tc: TokenContext
   ): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
@@ -137,13 +137,13 @@ class DSRemoteWebknossosClient @Inject() (
       .silent
       .putJson(dataSourcePaths)
 
-  def reserveDatasetUpload(info: DatasetUploadInfo)(implicit tc: TokenContext): Fox[DatasetUploadAdditionalInfo] =
+  def reserveDatasetUpload(info: DatasetUploadInfo)(using tc: TokenContext): Fox[DatasetUploadAdditionalInfo] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveDatasetUpload")
       .addQueryParam("key", dataStoreKey)
       .withTokenFromContext
       .postJsonWithJsonResponse[DatasetUploadInfo, DatasetUploadAdditionalInfo](info)
 
-  def reserveMagUpload(info: MagUploadInfo)(implicit tc: TokenContext): Fox[MagUploadAdditionalInfo] =
+  def reserveMagUpload(info: MagUploadInfo)(using tc: TokenContext): Fox[MagUploadAdditionalInfo] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveMagUpload")
       .addQueryParam("key", dataStoreKey)
       .withTokenFromContext
@@ -151,13 +151,13 @@ class DSRemoteWebknossosClient @Inject() (
 
   def reserveAttachmentUpload(
       info: AttachmentUploadInfo
-  )(implicit tc: TokenContext): Fox[AttachmentUploadAdditionalInfo] =
+  )(using tc: TokenContext): Fox[AttachmentUploadAdditionalInfo] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveAttachmentUpload")
       .addQueryParam("key", dataStoreKey)
       .withTokenFromContext
       .postJsonWithJsonResponse[AttachmentUploadInfo, AttachmentUploadAdditionalInfo](info)
 
-  def updateDataSource(dataSource: DataSource, datasetId: ObjectId)(implicit tc: TokenContext): Fox[?] =
+  def updateDataSource(dataSource: DataSource, datasetId: ObjectId)(using tc: TokenContext): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/${datasetId.toString}")
       .addQueryParam("key", dataStoreKey)
       .withTokenFromContext
@@ -174,7 +174,7 @@ class DSRemoteWebknossosClient @Inject() (
       .addQueryParam("key", dataStoreKey)
       .getWithJsonResponse[JobExportProperties]
 
-  override def requestUserAccess(accessRequest: UserAccessRequest)(implicit tc: TokenContext): Fox[UserAccessAnswer] =
+  override def requestUserAccess(accessRequest: UserAccessRequest)(using tc: TokenContext): Fox[UserAccessAnswer] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/validateUserAccess")
       .addQueryParam("key", dataStoreKey)
       .withTokenFromContext
@@ -197,7 +197,7 @@ class DSRemoteWebknossosClient @Inject() (
   private lazy val annotationSourceCache: AlfuCache[(String, Option[String]), AnnotationSource] =
     AlfuCache(timeToLive = 5 seconds, timeToIdle = 5 seconds)
 
-  def getAnnotationSource(accessToken: String)(implicit tc: TokenContext): Fox[AnnotationSource] =
+  def getAnnotationSource(accessToken: String)(using tc: TokenContext): Fox[AnnotationSource] =
     annotationSourceCache.getOrLoad(
       (accessToken, tc.userTokenOpt),
       _ =>

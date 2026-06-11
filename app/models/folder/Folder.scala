@@ -67,7 +67,7 @@ class FolderService @Inject()(teamDAO: TeamDAO,
     )
 
   def updateAllowedTeams(folderId: ObjectId, teams: List[ObjectId], requestingUser: User)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- folderDAO.findOne(folderId) ?~> Msg.Folder.notFound
       includeMemberOnlyTeams = requestingUser.isDatasetManager
@@ -83,7 +83,7 @@ class FolderService @Inject()(teamDAO: TeamDAO,
     Fox.fromBool(!name.contains("/")) ?~> Msg.Folder.nameMustNotContainSlash
 
   def getOrCreateFromPathLiteral(folderPathLiteral: String, organizationId: String)(
-      implicit ctx: DBAccessContext): Fox[ObjectId] =
+      using ctx: DBAccessContext): Fox[ObjectId] =
     for {
       organization <- organizationDAO.findOne(organizationId)
       foldersWithParents: Seq[FolderWithParent] <- folderDAO.findTreeOf(organization._rootFolder)
@@ -117,7 +117,7 @@ class FolderService @Inject()(teamDAO: TeamDAO,
   }
 
   private def createMissingFoldersForPathNames(parentFolderId: ObjectId, remainingPathNames: List[String])(
-      implicit ctx: DBAccessContext): Fox[ObjectId] =
+      using ctx: DBAccessContext): Fox[ObjectId] =
     remainingPathNames match {
       case pathNamesHead :: pathNamesTail =>
         for {

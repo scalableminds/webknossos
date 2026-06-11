@@ -68,7 +68,7 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: Exec
     } yield ()
 
   def updateOne(id: ObjectId, annotationId: ObjectId, expirationDateTime: Option[Instant])(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(q"""UPDATE webknossos.annotation_privateLinks

@@ -63,7 +63,7 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
       layer <- usableDataSource.dataLayers.find(_.name == layerName).toFox ?~> Msg.Dataset.Layer
         .notFound(layerName) ~> NOT_FOUND
       viewConfiguration <- datasetConfigurationService.getDatasetViewConfigurationForDataset(List.empty, dataset._id)(
-        ctx)
+        using ctx)
       (mag1BoundingBox, mag, intensityRangeOpt, colorSettingsOpt, mapping) = selectParameters(viewConfiguration,
                                                                                               usableDataSource,
                                                                                               layerName,

@@ -123,7 +123,7 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
     } yield ()
 
   def updateNovelUserExperienceInfos(multiUserId: ObjectId, novelUserExperienceInfos: JsObject)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(multiUserId)
       _ <- run(q"""UPDATE webknossos.multiusers

@@ -237,7 +237,7 @@ class TaskCreationService @Inject() (
     }
 
   // Used in create (without files). If base annotations were used, this does nothing.
-  def createTaskVolumeTracingBases(paramsList: List[TaskParameters], taskType: TaskType)(implicit
+  def createTaskVolumeTracingBases(paramsList: List[TaskParameters], taskType: TaskType)(using
       ctx: DBAccessContext
   ): Fox[List[Option[(VolumeTracing, Option[File])]]] =
     Fox.serialCombined(paramsList) { params =>
@@ -535,7 +535,7 @@ class TaskCreationService @Inject() (
     }
 
   private def warnIfTeamHasNoAccess(requestedTasks: List[TaskParameters], dataset: Dataset, requestingUser: User)(
-      implicit ctx: DBAccessContext
+      using ctx: DBAccessContext
   ): Fox[List[String]] = {
     val projectNames = requestedTasks.map(_.projectName).distinct
     for {
@@ -609,7 +609,7 @@ class TaskCreationService @Inject() (
       )
     } yield task
 
-  private def taskToJsonWithOtherFox(taskFox: Fox[Task], otherFox: Fox[Unit])(implicit
+  private def taskToJsonWithOtherFox(taskFox: Fox[Task], otherFox: Fox[Unit])(using
       ctx: DBAccessContext
   ): Fox[JsObject] =
     for {

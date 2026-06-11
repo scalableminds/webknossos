@@ -37,13 +37,13 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     actorSystem.actorSelection("/user/mailActor")
 
   def logUserInteractionIfTheyArePotentialContributor(timestamp: Instant, user: User, annotation: Annotation)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     if (user._id == annotation._user || annotation.othersMayEdit) {
       logUserInteraction(Seq(timestamp), user, annotation)
     } else Fox.successful(())
 
   def logUserInteraction(timestamps: Seq[Instant], user: User, annotation: Annotation)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     trackTime(timestamps, user._id, annotation)
 
   def sumTimespansPerInterval[T](groupingF: TimeSpan => T, timeSpansBox: Box[List[TimeSpan]]): Map[T, Duration] =
@@ -58,7 +58,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
 
   @SuppressWarnings(Array("TraversableHead", "TraversableLast")) // Only functions call this which put at least one timestamp in the seq
   private def trackTime(timestamps: Seq[Instant], userId: ObjectId, annotation: Annotation)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     if (timestamps.isEmpty) {
       logger.warn("Timetracking called with empty timestamps list.")
       Fox.successful(())
@@ -132,7 +132,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     }
 
   private def signalOverTime(time: FiniteDuration, annotationOpt: Option[Annotation])(
-      implicit ctx: DBAccessContext): Fox[?] =
+      using ctx: DBAccessContext): Fox[?] =
     for {
       annotation <- annotationOpt.toFox
       user <- userService.findOneCached(annotation._user)(using GlobalAccessContext)
@@ -174,7 +174,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     }
 
   private def flushToDb(timespansToInsert: List[TimeSpan], timespansToUpdate: List[(TimeSpan, Instant)])(
-      implicit ctx: DBAccessContext) = {
+      using ctx: DBAccessContext) = {
     val updateResult = for {
       _ <- Fox.serialCombined(timespansToInsert)(t => timeSpanDAO.insertOne(t))
       _ <- Fox.serialCombined(timespansToUpdate)(t => updateTimeSpanInDb(t._1, t._2))

@@ -353,8 +353,7 @@ class AnnotationIOController @Inject() (
       dataSource: UsableDataSource
   ): Fox[List[List[UploadedVolumeLayer]]] =
     for {
-      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)(
-        GlobalAccessContext
+      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)(using GlobalAccessContext
       ) ?~> Msg.DataStore.notFoundForDataset
       remoteDataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
       allAdapted <- Fox.serialCombined(volumeLayersGrouped) { volumeLayers =>
@@ -536,8 +535,7 @@ class AnnotationIOController @Inject() (
           skeletonAnnotationLayer =>
             tracingStoreClient.getSkeletonTracing(annotation._id, skeletonAnnotationLayer, version)
         } ?~> Msg.Annotation.Download.fetchSkeletonLayerFailed
-        annotationOwner <- userService.findOneCached(annotation._user)(
-          GlobalAccessContext
+        annotationOwner <- userService.findOneCached(annotation._user)(using GlobalAccessContext
         ) ?~> Msg.Annotation.Download.findUserFailed
         ownerMultiUser <- multiUserDAO.findOne(annotationOwner._multiUser)(using GlobalAccessContext)
         taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne(_)(using GlobalAccessContext)) ?~> Msg.Task.notFound

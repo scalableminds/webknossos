@@ -234,7 +234,7 @@ class AnnotationService @Inject()(
   private def createLayersForExplorational(dataset: Dataset,
                                            annotationId: ObjectId,
                                            allAnnotationLayerParameters: List[AnnotationLayerParameters])(
-      implicit ctx: DBAccessContext): Fox[List[AnnotationLayer]] =
+      using ctx: DBAccessContext): Fox[List[AnnotationLayer]] =
     for {
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
       dataSource <- datasetService.usableDataSourceFor(dataset)
@@ -285,7 +285,7 @@ class AnnotationService @Inject()(
     } yield newAnnotationLayers
 
   def createExplorationalFor(user: User, dataset: Dataset, annotationLayerParameters: List[AnnotationLayerParameters])(
-      implicit ctx: DBAccessContext): Fox[Annotation] = {
+      using ctx: DBAccessContext): Fox[Annotation] = {
     val newAnnotationId = ObjectId.generate
     val datasetId = dataset._id
     for {
@@ -297,7 +297,7 @@ class AnnotationService @Inject()(
 
   // WARNING: needs to be repeatable, might be called multiple times for an annotation
   def finish(annotation: Annotation, user: User, restrictions: AnnotationRestrictions)(
-      implicit ctx: DBAccessContext): Fox[String] = {
+      using ctx: DBAccessContext): Fox[String] = {
     def executeFinish: Fox[String] =
       for {
         _ <- annotationDAO.updateModified(annotation._id, Instant.now)
@@ -339,7 +339,7 @@ class AnnotationService @Inject()(
     annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.Task)
 
   def createAnnotationFor(user: User, taskId: ObjectId, initializingAnnotationId: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[Annotation] =
+      using ctx: DBAccessContext): Fox[Annotation] =
     for {
       annotationBaseId <- annotationDAO.findBaseIdForTask(taskId) ?~> "Failed to retrieve annotation base id."
       annotationBase <- annotationDAO.findOne(annotationBaseId) ?~> "Failed to retrieve annotation base."
@@ -489,13 +489,13 @@ class AnnotationService @Inject()(
                typ = annotationType)
 
   def updateTeamsForSharedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     annotationDAO.updateTeamsForSharedAnnotation(annotationId, teams)
 
   def zipAnnotations(annotations: List[Annotation],
                      zipFileName: String,
                      skipVolumeData: Boolean,
-                     volumeDataZipFormat: VolumeDataZipFormat)(implicit
+                     volumeDataZipFormat: VolumeDataZipFormat)(using
                                                                ctx: DBAccessContext): Fox[Path] =
     for {
       downloadAnnotations <- getTracingsScalesAndNamesFor(annotations, skipVolumeData, volumeDataZipFormat)
@@ -681,11 +681,11 @@ class AnnotationService @Inject()(
   }
 
   def transferAnnotationToUser(typ: String, id: ObjectId, userId: ObjectId, issuingUser: User)(
-      implicit ctx: DBAccessContext): Fox[Annotation] =
+      using ctx: DBAccessContext): Fox[Annotation] =
     for {
       annotation <- annotationInformationProvider.provideAnnotation(typ, id, issuingUser) ?~> Msg.Annotation.notFound
       newUser <- userDAO.findOne(userId) ?~> Msg.User.notFound(userId)
-      _ <- datasetDAO.findOne(annotation._dataset)(AuthorizedAccessContext(newUser)) ?~> Msg.Annotation.transfereeNoDatasetAccess
+      _ <- datasetDAO.findOne(annotation._dataset)(using AuthorizedAccessContext(newUser)) ?~> Msg.Annotation.transfereeNoDatasetAccess
       _ <- annotationDAO.updateUser(annotation._id, newUser._id)
       updated <- annotationInformationProvider.provideAnnotation(typ, id, issuingUser)
     } yield updated

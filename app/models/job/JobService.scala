@@ -174,8 +174,7 @@ class JobService @Inject()(wkConf: WkConf,
       for {
         datasetDirectoryName <- commandArgs.get("dataset_directory_name").map(_.as[String]).toFox
         organizationId <- commandArgs.get("organization_id").map(_.as[String]).toFox
-        dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(datasetDirectoryName, organizationId)(
-          GlobalAccessContext)
+        dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(datasetDirectoryName, organizationId)(using GlobalAccessContext)
         _ <- datasetDAO.deleteDataset(dataset._id)
       } yield ()
     } else Fox.successful(())

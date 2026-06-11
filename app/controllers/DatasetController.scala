@@ -354,7 +354,7 @@ class DatasetController @Inject()(userService: UserService,
   }
 
   private def listGrouped(datasets: List[Dataset], requestingUser: Option[User])(
-      implicit ctx: DBAccessContext): Fox[List[JsObject]] =
+      using ctx: DBAccessContext): Fox[List[JsObject]] =
     for {
       requestingUserTeamManagerMemberships <- Fox.runOptional(requestingUser)(user =>
         userService.teamManagerMembershipsFor(user._id))

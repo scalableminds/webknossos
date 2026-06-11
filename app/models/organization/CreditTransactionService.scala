@@ -19,7 +19,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
     creditTransactionDAO.getMilliCreditBalance(organizationId).map(balance => balance >= milliCreditsToSpend)
 
   def reserveCredits(organizationId: String, milliCreditsToSpend: Int, comment: String)(
-      implicit ctx: DBAccessContext): Fox[CreditTransaction] = {
+      using ctx: DBAccessContext): Fox[CreditTransaction] = {
     val pendingCreditTransaction = CreditTransaction(ObjectId.generate,
                                                      organizationId,
                                                      None,
@@ -88,10 +88,10 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
   // This method is explicitly named this way to warn that this method should only be called when starting a job has failed.
   // Else refunding should be done via jobId.
   def refundTransactionWhenStartingJobFailed(creditTransaction: CreditTransaction)(
-      implicit ctx: DBAccessContext): Fox[Unit] = creditTransactionDAO.refundTransaction(creditTransaction._id)
+      using ctx: DBAccessContext): Fox[Unit] = creditTransactionDAO.refundTransaction(creditTransaction._id)
 
   def addJobIdToTransaction(creditTransaction: CreditTransaction, jobId: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     creditTransactionDAO.addJobIdToTransaction(creditTransaction, jobId)
 
   def findTransactionOfJob(jobId: ObjectId)(using ctx: DBAccessContext): Fox[CreditTransaction] =
@@ -121,7 +121,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
 
 class CreditTransactionPublicWritesService @Inject()(jobDAO: JobDAO, jobService: JobService) {
 
-  def publicWrites(transaction: CreditTransaction)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[JsObject] =
+  def publicWrites(transaction: CreditTransaction)(using ctx: DBAccessContext, ec: ExecutionContext): Fox[JsObject] =
     for {
       jobOpt <- Fox.runOptional(transaction._paidJob)(jobDAO.findOne)
       jobJsOpt <- Fox.runOptional(jobOpt)(jobService.publicWrites)

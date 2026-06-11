@@ -40,7 +40,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     )
 
   def publicWrites(organization: Organization, requestingUser: Option[User] = None)(
-      implicit ctx: DBAccessContext): Fox[JsObject] = {
+      using ctx: DBAccessContext): Fox[JsObject] = {
 
     val adminOnlyInfo = if (requestingUser.exists(_.isAdminOf(organization._id))) {
       Json.obj(
@@ -159,7 +159,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     } yield ()
   }
 
-  def assertUsersCanBeAdded(organizationId: String, usersToAddCount: Int = 1)(implicit ctx: DBAccessContext,
+  def assertUsersCanBeAdded(organizationId: String, usersToAddCount: Int = 1)(using ctx: DBAccessContext,
                                                                               ec: ExecutionContext): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(organizationId)
@@ -196,7 +196,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     } yield ()
 
   def assertIsSuperUserOrOrganizationHasAiPlan(organization: Organization, user: User)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     for {
       isSuperUser <- userService.isSuperUser(user._multiUser)
       _ <- Fox.runIf(!isSuperUser)(Fox.fromBool(organization.aiPlan.isDefined)) ?~> Msg.Job.Credits.noAiPlan

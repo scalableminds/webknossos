@@ -367,7 +367,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield parsed
 
   def findOneByOrgaAndMultiUser(organizationId: String, multiUserId: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[User] =
+      using ctx: DBAccessContext): Fox[User] =
     for {
       accessQuery <- readAccessQuery
       resultList <- run(q"""SELECT $columns
@@ -469,7 +469,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield ()
 
   def updateLastActivity(userId: ObjectId, lastActivity: Instant = Instant.now)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(userId)
       _ <- run(q"UPDATE webknossos.users SET lastActivity = $lastActivity WHERE _id = $userId".asUpdate)
@@ -526,7 +526,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     q"INSERT INTO webknossos.user_team_roles(_user, _team, isTeamManager) VALUES($userId, ${teamMembership.teamId}, ${teamMembership.isTeamManager})".asUpdate
 
   def updateTeamMembershipsForUser(userId: ObjectId, teamMemberships: Seq[TeamMembership])(
-      implicit ctx: DBAccessContext): Fox[Unit] = {
+      using ctx: DBAccessContext): Fox[Unit] = {
     val clearQuery = q"DELETE FROM webknossos.user_team_roles WHERE _user = $userId".asUpdate
     val insertQueries = teamMemberships.map(insertTeamMembershipQuery(userId, _))
     for {

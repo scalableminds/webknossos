@@ -54,7 +54,7 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
     } yield ()
 
   def allowedTeamsForFolder(folderId: ObjectId, cumulative: Boolean, requestingUser: Option[User] = None)(
-      implicit ctx: DBAccessContext): Fox[List[Team]] =
+      using ctx: DBAccessContext): Fox[List[Team]] =
     for {
       teamIds <- allowedTeamIdsForFolder(folderId, cumulative)
       teams <- teamDAO.findAllByIds(teamIds)
@@ -62,7 +62,7 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
     } yield teamsFiltered
 
   def allowedTeamsForDataset(dataset: Dataset, cumulative: Boolean, requestingUser: Option[User] = None)(
-      implicit ctx: DBAccessContext): Fox[List[Team]] =
+      using ctx: DBAccessContext): Fox[List[Team]] =
     for {
       teamIds <- allowedTeamIdsForDataset(dataset, cumulative)
       teams <- teamDAO.findAllByIds(teamIds)

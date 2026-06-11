@@ -93,7 +93,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     } yield ()
 
   def getAllUnfinishedDatasetUploadsOfUser(userId: ObjectId, organizationId: String)(
-      implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
+      using ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
     datasetDAO.findAllCompactWithSearch(
       uploaderIdOpt = Some(userId),
       organizationIdOpt = Some(organizationId),
@@ -118,7 +118,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       organization <- organizationDAO.findOne(user._organization)(using GlobalAccessContext) ?~> Msg.Organization.notFound(
         user._organization)
       folderIdWithFallback = folderId.getOrElse(organization._rootFolder)
-      _ <- folderDAO.assertUpdateAccess(folderIdWithFallback)(AuthorizedAccessContext(user)) ?~> Msg.Folder.noWriteAccess
+      _ <- folderDAO.assertUpdateAccess(folderIdWithFallback)(using AuthorizedAccessContext(user)) ?~> Msg.Folder.noWriteAccess
       newDatasetId = ObjectId.generate
       directoryName = generateDirectoryName(datasetName, newDatasetId)
       dataset <- createDataset(
@@ -186,7 +186,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   }
 
   def updateDataSources(dataStore: DataStore, dataSources: List[DataSource])(
-      implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
+      using ctx: DBAccessContext): Fox[List[ObjectId]] = {
 
     val groupedByOrga = dataSources.groupBy(_.id.organizationId).toList
     Fox
@@ -239,7 +239,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   }
 
   private def updateKnownDataSource(foundDataset: Dataset, dataSource: DataSource, dataStore: DataStore)(
-      implicit ctx: DBAccessContext): Fox[ObjectId] =
+      using ctx: DBAccessContext): Fox[ObjectId] =
     if (foundDataset.inboxSourceHash.contains(dataSource.hashCode))
       Fox.successful(foundDataset._id)
     else
@@ -254,7 +254,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       } yield foundDataset._id
 
   private def updateDataSourceDifferentDataStore(foundDataset: Dataset, dataSource: DataSource, dataStore: DataStore)(
-      implicit ctx: DBAccessContext): Fox[Option[ObjectId]] =
+      using ctx: DBAccessContext): Fox[Option[ObjectId]] =
     // The dataset is already present (belonging to the same organization), but reported from a different datastore
     (for {
       originalDataStore <- dataStoreDAO.findOneByName(foundDataset._dataStore)
@@ -721,7 +721,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                    organization: Option[Organization] = None,
                    dataStore: Option[DataStore] = None,
                    requestingUserTeamManagerMemberships: Option[List[TeamMembership]] = None)(
-      implicit ctx: DBAccessContext): Fox[JsObject] =
+      using ctx: DBAccessContext): Fox[JsObject] =
     for {
       organization <- Fox.fillOption(organization) {
         organizationDAO.findOne(dataset._organization) ?~> Msg.Organization.notFound(dataset._organization)

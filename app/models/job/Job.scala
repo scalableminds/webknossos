@@ -153,7 +153,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
        """
 
   def findAllCompact(commandOpt: Option[JobCommand], skipForDeletedDatasets: Boolean)(
-      implicit ctx: DBAccessContext): Fox[Seq[JobCompactInfo]] =
+      using ctx: DBAccessContext): Fox[Seq[JobCompactInfo]] =
     for {
       accessQuery <- accessQueryFromAccessQWithPrefix(listAccessQ, q"j.")
       commandQuery = commandOpt.map(command => q"j.command = $command").getOrElse(q"TRUE")

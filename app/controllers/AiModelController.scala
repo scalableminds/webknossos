@@ -454,7 +454,7 @@ class AiModelController @Inject()(
     } yield existingAiModelId
 
   private def reserveUploadToPathNew(params: ReserveAiModelUploadToPathParameters, user: User)(
-      implicit ctx: DBAccessContext): Fox[ObjectId] = {
+      using ctx: DBAccessContext): Fox[ObjectId] = {
     val newId = ObjectId.generate
     for {
       _ <- aiModelDAO.findOneByName(params.name).reverse ?~> Msg.AiModel.nameTaken(params.name)

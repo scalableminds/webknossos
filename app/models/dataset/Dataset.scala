@@ -104,7 +104,7 @@ object DatasetCompactInfo {
 
 trait DatasetDAOLike {
   def findOneByIdOrNameAndOrganization(datasetIdOpt: Option[ObjectId], datasetName: String, organizationId: String)(
-      implicit ctx: DBAccessContext
+      using ctx: DBAccessContext
   ): Fox[Dataset]
 }
 
@@ -450,7 +450,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       r <- rList.headOption.toFox
     } yield r
 
-  def findOneByDirectoryNameAndOrganization(directoryName: String, organizationId: String)(implicit
+  def findOneByDirectoryNameAndOrganization(directoryName: String, organizationId: String)(using
       ctx: DBAccessContext
   ): Fox[Dataset] =
     for {
@@ -493,7 +493,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
   // Legacy links to Datasets used their name and organizationId as identifier. In #8075 name was changed to directoryName.
   // Thus, interpreting the name as the directory name should work, as changing the directory name is not possible.
   // This way of looking up datasets should only be used for backwards compatibility.
-  def findOneByNameAndOrganization(directoryName: String, organizationId: String)(implicit
+  def findOneByNameAndOrganization(directoryName: String, organizationId: String)(using
       ctx: DBAccessContext
   ): Fox[Dataset] =
     for {
@@ -510,7 +510,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
 
   // Some users use legacy software to create NMLs with dataset names. For some datasets, this differs from dataset directoryName
   // To support uploading these NMLs if the name happens to be unique in the orga, this is used.
-  private def findOneByNameAndOrganizationIfUnique(name: String, organizationId: String)(implicit
+  private def findOneByNameAndOrganizationIfUnique(name: String, organizationId: String)(using
       ctx: DBAccessContext
   ): Fox[Dataset] =
     for {
@@ -529,7 +529,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
     } yield parsed
 
   def findOneByIdOrNameAndOrganization(datasetIdOpt: Option[ObjectId], datasetName: String, organizationId: String)(
-      implicit ctx: DBAccessContext
+      using ctx: DBAccessContext
   ): Fox[Dataset] =
     datasetIdOpt match {
       case Some(datasetId) => findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId)
@@ -543,7 +543,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
         } yield orFromName) ?~> Msg.Dataset.notFound(datasetName)
     }
 
-  def findAllByDirectoryNamesAndOrganization(directoryNames: List[String], organizationId: String)(implicit
+  def findAllByDirectoryNamesAndOrganization(directoryNames: List[String], organizationId: String)(using
       ctx: DBAccessContext
   ): Fox[List[Dataset]] =
     for {
@@ -597,7 +597,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       r <- rList.headOption.toFox
     } yield r
 
-  def updateSharingTokenById(datasetId: ObjectId, sharingToken: Option[String])(implicit
+  def updateSharingTokenById(datasetId: ObjectId, sharingToken: Option[String])(using
       ctx: DBAccessContext
   ): Fox[Unit] =
     for {
@@ -665,7 +665,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       _ <- run(q"UPDATE webknossos.datasets SET tags = $tags WHERE _id = $id".asUpdate)
     } yield ()
 
-  def updateAdminViewConfiguration(datasetId: ObjectId, configuration: DatasetViewConfiguration)(implicit
+  def updateAdminViewConfiguration(datasetId: ObjectId, configuration: DatasetViewConfiguration)(using
       ctx: DBAccessContext
   ): Fox[Unit] =
     for {
@@ -740,7 +740,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       _ <- datasetLayerDAO.updateLayers(id, newDataSource)
     } yield ()
 
-  def updateDatasetStatusByDatasetId(id: ObjectId, newStatus: String, isUsable: Boolean)(implicit
+  def updateDatasetStatusByDatasetId(id: ObjectId, newStatus: String, isUsable: Boolean)(using
       ctx: DBAccessContext
   ): Fox[Unit] =
     for {

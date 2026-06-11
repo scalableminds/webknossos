@@ -74,7 +74,7 @@ class InviteService @Inject()(conf: WkConf,
       )
 
   private def sendInviteMail(recipient: String, sender: User, senderMultiUser: MultiUser, invite: Invite)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(invite._organization)
       _ = logger.info("sending invite mail")

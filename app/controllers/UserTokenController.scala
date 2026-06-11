@@ -90,10 +90,10 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     } else {
       for {
         userBox <- bearerTokenService.userForTokenOpt(token).shiftBox
-        sharingTokenAccessCtx = URLSharing.fallbackTokenAccessContext(token)(DBAccessContext(userBox.toOption))
+        sharingTokenAccessCtx = URLSharing.fallbackTokenAccessContext(token)(using DBAccessContext(userBox.toOption))
         answer <- accessRequest.resourceType match {
           case AccessResourceType.dataset =>
-            handleDataSetAccess(accessRequest.resourceId, accessRequest.mode, userBox)(sharingTokenAccessCtx)
+            handleDataSetAccess(accessRequest.resourceId, accessRequest.mode, userBox)(using sharingTokenAccessCtx)
           case AccessResourceType.tracing =>
             handleTracingAccess(accessRequest.resourceId, accessRequest.mode, userBox, token)
           case AccessResourceType.annotation =>
@@ -107,7 +107,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     }
 
   private def handleDataSetAccess(idOpt: Option[String], mode: AccessMode.Value, userBox: Box[User])(
-      implicit ctx: DBAccessContext): Fox[UserAccessAnswer] = {
+      using ctx: DBAccessContext): Fox[UserAccessAnswer] = {
 
     def tryRead: Fox[UserAccessAnswer] =
       for {
@@ -209,8 +209,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
           .shiftBox
         allowedByToken = annotationAccessByToken.exists(annotation._id == _._annotation)
         restrictions <- annotationInformationProvider.restrictionsFor(AnnotationIdentifier(annotation.typ,
-                                                                                           annotation._id))(
-          GlobalAccessContext) ?~> Msg.Annotation.Restrictions.notFound
+                                                                                           annotation._id))(using GlobalAccessContext) ?~> Msg.Annotation.Restrictions.notFound
         allowedByUser <- checkRestrictions(restrictions) ?~> Msg.Annotation.Restrictions.failedToCheck
         allowed = allowedByToken || allowedByUser
       } yield {
@@ -229,7 +228,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
       for {
         jobIdStr <- jobIdOpt.toFox
         jobId <- ObjectId.fromString(jobIdStr)
-        jobBox <- jobDAO.findOne(jobId)(DBAccessContext(userBox.toOption)).shiftBox
+        jobBox <- jobDAO.findOne(jobId)(using DBAccessContext(userBox.toOption)).shiftBox
         answer = jobBox match {
           case Full(_) => UserAccessAnswer(granted = true)
           case _       => UserAccessAnswer(granted = false, Some(s"No $mode access to job export"))

@@ -48,7 +48,7 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer)
       // called here to ensure updates are applied
       editableMappingInfo <- layer.annotationService.findEditableMappingInfo(layer.annotationId,
                                                                              layer.tracingId,
-                                                                             Some(version))(ec, tc)
+                                                                             Some(version))(using ec, tc)
       dataRequest: WebknossosDataRequest = WebknossosDataRequest(
         position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
         mag = bucket.mag,
@@ -58,13 +58,13 @@ class EditableMappingBucketProvider(layer: EditableMappingLayer)
         version = None,
         additionalCoordinates = readInstruction.bucket.additionalCoordinates
       )
-      unmappedData <- editableMappingService.getFallbackBucketFromDataStore(remoteFallbackLayer, dataRequest)(ec, tc)
+      unmappedData <- editableMappingService.getFallbackBucketFromDataStore(remoteFallbackLayer, dataRequest)(using ec, tc)
       segmentIds <- editableMappingService.collectSegmentIds(unmappedData, layer.elementClass).toFox
       relevantMapping <- editableMappingService.generateCombinedMappingForSegmentIds(segmentIds,
                                                                                      editableMappingInfo,
                                                                                      version,
                                                                                      layer.tracingId,
-                                                                                     remoteFallbackLayer)(tc)
+                                                                                     remoteFallbackLayer)(using tc)
       mappedData <- editableMappingService.mapData(unmappedData, relevantMapping, layer.elementClass).toFox
     } yield mappedData
   }

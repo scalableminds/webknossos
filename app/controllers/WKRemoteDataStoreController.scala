@@ -96,7 +96,7 @@ class WKRemoteDataStoreController @Inject()(
             creationType = DatasetCreationType.Upload,
             importURLOpt = None,
           ) ?~> Msg.Dataset.Upload.createFailed
-          _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeamIds, user)(AuthorizedAccessContext(user))
+          _ <- datasetService.addInitialTeams(dataset, uploadInfo.initialTeamIds, user)(using AuthorizedAccessContext(user))
           additionalInfo = DatasetUploadAdditionalInfo(dataset._id, dataset.directoryName)
         } yield Ok(Json.toJson(additionalInfo))
       }
@@ -108,7 +108,7 @@ class WKRemoteDataStoreController @Inject()(
         // DS write access was asserted already at this point.
         for {
           user <- bearerTokenService.userForToken(token)
-          dataset <- datasetDAO.findOne(request.body.datasetId)(AuthorizedAccessContext(user))
+          dataset <- datasetDAO.findOne(request.body.datasetId)(using AuthorizedAccessContext(user))
           _ <- Fox.fromBool(dataset.isVirtual) ?~> Msg.Dataset.Upload.reserveMagUploadNotVirtual
           (dataSource, dataLayer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.layerName)
           _ <- Fox.fromBool(!dataLayer.mags.exists(_.mag.maxDim == request.body.mag.mag.maxDim)) ?~> s"New mag ${request.body.mag.mag} conflicts with existing mag of the layer."
@@ -132,7 +132,7 @@ class WKRemoteDataStoreController @Inject()(
         // DS write access was asserted already at this point.
         for {
           user <- bearerTokenService.userForToken(token)
-          dataset <- datasetDAO.findOne(request.body.datasetId)(AuthorizedAccessContext(user))
+          dataset <- datasetDAO.findOne(request.body.datasetId)(using AuthorizedAccessContext(user))
           _ <- Fox.fromBool(dataset.isVirtual) ?~> Msg.Dataset.Upload.reserveAttachmentUploadNotVirtual
           (dataSource, dataLayer) <- datasetService.getDataSourceAndLayerFor(dataset, request.body.layerName)
           isSingletonAttachment = LayerAttachmentType.isSingletonAttachment(request.body.attachmentType)
@@ -171,8 +171,7 @@ class WKRemoteDataStoreController @Inject()(
           organization <- organizationDAO.findOne(organizationId)(using GlobalAccessContext) ?~> Msg.Organization.notFound(
             organizationId) ~> NOT_FOUND
           _ <- Fox.fromBool(organization._id == user._organization) ?~> Msg.notAllowed ~> FORBIDDEN
-          datasets <- datasetService.getAllUnfinishedDatasetUploadsOfUser(user._id, user._organization)(
-            GlobalAccessContext) ?~> Msg.Dataset.Upload.couldNotLoadUnfinishedUploads
+          datasets <- datasetService.getAllUnfinishedDatasetUploadsOfUser(user._id, user._organization)(using GlobalAccessContext) ?~> Msg.Dataset.Upload.couldNotLoadUnfinishedUploads
           teamIdsPerDataset <- Fox.combined(datasets.map(dataset => teamDAO.findAllowedTeamIdsForDataset(dataset.id)))
           unfinishedUploads = datasets.zip(teamIdsPerDataset).map {
             case (d, teamIds) =>
@@ -342,8 +341,7 @@ class WKRemoteDataStoreController @Inject()(
         for {
           organization <- organizationDAO.findOne(organizationId)(using GlobalAccessContext) ?~> Msg.Organization.notFound(
             organizationId) ~> NOT_FOUND
-          dataset <- datasetDAO.findOneByNameAndOrganization(datasetDirectoryName, organization._id)(
-            GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetDirectoryName)
+          dataset <- datasetDAO.findOneByNameAndOrganization(datasetDirectoryName, organization._id)(using GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetDirectoryName)
         } yield Ok(Json.toJson(dataset._id))
       }
     }

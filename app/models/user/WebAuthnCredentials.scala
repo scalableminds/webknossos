@@ -113,7 +113,7 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
     } yield parsed
 
   def findByCredentialId(multiUserId: ObjectId, credentialId: Array[Byte])(
-      implicit ctx: DBAccessContext): Fox[WebAuthnCredential] =
+      using ctx: DBAccessContext): Fox[WebAuthnCredential] =
     for {
       accessQuery <- readAccessQuery
       r <- run(

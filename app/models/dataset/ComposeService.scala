@@ -66,7 +66,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
     with FoxImplicits {
 
   def composeDataset(composeRequest: ComposeRequest, user: User)(
-      implicit ctx: DBAccessContext): Fox[(UsableDataSource, ObjectId)] =
+      using ctx: DBAccessContext): Fox[(UsableDataSource, ObjectId)] =
     for {
       _ <- Fox.assertTrue(isComposable(composeRequest)) ?~> "Datasets are not composable, they are not on the same data store"
       dataSource <- createDatasource(composeRequest, composeRequest.newDatasetName, composeRequest.organizationId)
@@ -84,7 +84,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
     } yield (dataSource, dataset._id)
 
   private def getLayerFromComposeLayer(composeLayer: ComposeRequestLayer)(
-      implicit ctx: DBAccessContext): Fox[(StaticLayer, VoxelSize)] =
+      using ctx: DBAccessContext): Fox[(StaticLayer, VoxelSize)] =
     for {
       dataset <- datasetDAO.findOne(composeLayer.sourceDatasetId) ?~> "Dataset not found"
       usableDataSource <- datasetService.usableDataSourceFor(dataset)
@@ -113,7 +113,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
     }
 
   private def createDatasource(composeRequest: ComposeRequest, datasetDirectoryName: String, organizationId: String)(
-      implicit ctx: DBAccessContext): Fox[UsableDataSource] =
+      using ctx: DBAccessContext): Fox[UsableDataSource] =
     for {
       layersAndVoxelSizes <- Fox.serialCombined(composeRequest.layers.toList)(getLayerFromComposeLayer)
       voxelSizesDiffer = layersAndVoxelSizes.map(_._2).distinct.length > 1
@@ -181,7 +181,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
     } yield ()
 
   def addAttachment(targetDatasetId: ObjectId, request: ComposeAddAttachmentRequest)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     for {
       targetDataset <- datasetDAO.findOne(targetDatasetId) ?~> Msg.Dataset.notFound(targetDatasetId)
       _ <- Fox.fromBool(targetDataset.isVirtual) ?~> Msg.Dataset.Compose.inPlaceMustBeVirtual

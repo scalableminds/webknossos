@@ -66,7 +66,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
     }
 
   protected def accessQueryFromAccessQWithPrefix(accessQ: (ObjectId, SqlToken) => SqlToken, prefix: SqlToken)(
-      implicit ctx: DBAccessContext): Fox[SqlToken] =
+      using ctx: DBAccessContext): Fox[SqlToken] =
     if (ctx.globalAccess) Fox.successful(q"TRUE")
     else {
       for {
@@ -101,7 +101,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
     }
 
   private def readAccessFromUserOrToken(userId: ObjectId, tokenOption: Option[String])(
-      implicit ctx: DBAccessContext): SqlToken =
+      using ctx: DBAccessContext): SqlToken =
     tokenOption match {
       case Some(_) => q"((${anonymousReadAccessQ(sharingTokenFromCtx)}) OR (${readAccessQ(userId)}))"
       case _       => q"(${readAccessQ(userId)})"

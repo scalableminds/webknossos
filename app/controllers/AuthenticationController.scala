@@ -266,8 +266,7 @@ class AuthenticationController @Inject() (
                     inviteBox.isDefined || conf.Features.registerToDefaultOrgaEnabled
                   ) ?~> Msg.User.needsInvite
                   organization <- organizationService.findOneByInviteOrDefault(inviteBox.toOption)(using GlobalAccessContext)
-                  _ <- organizationService.assertUsersCanBeAdded(organization._id)(
-                    GlobalAccessContext,
+                  _ <- organizationService.assertUsersCanBeAdded(organization._id)(using GlobalAccessContext,
                     ec
                   ) ?~> Msg.Organization.usersUserLimitReached
                   autoActivate = inviteBox.toOption.map(_.autoActivate).getOrElse(organization.enableAutoVerify)
@@ -343,7 +342,7 @@ class AuthenticationController @Inject() (
             value <- combinedAuthenticatorService.init(authenticator)
             result <- combinedAuthenticatorService.embed(value, Ok)
             _ <- Fox.runIf(conf.WebKnossos.User.EmailVerification.activated)(
-              emailVerificationService.assertEmailVerifiedOrResendVerificationMail(user)(GlobalAccessContext, ec)
+              emailVerificationService.assertEmailVerifiedOrResendVerificationMail(user)(using GlobalAccessContext, ec)
             )
             _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(using GlobalAccessContext)
             _ = userDAO.updateLastActivity(user._id)(using GlobalAccessContext)
@@ -394,8 +393,7 @@ class AuthenticationController @Inject() (
     for {
       organization <- organizationDAO.findOne(organizationId) ?~> Msg.Organization.notFound(organizationId) ~> NOT_FOUND
       _ <- userService.fillSuperUserIdentity(request.identity, organization._id)
-      targetUser <- userDAO.findOneByOrgaAndMultiUser(organization._id, request.identity._multiUser)(
-        GlobalAccessContext
+      targetUser <- userDAO.findOneByOrgaAndMultiUser(organization._id, request.identity._multiUser)(using GlobalAccessContext
       ) ?~> Msg.User.notFound ~> NOT_FOUND
       _ <- Fox.fromBool(!targetUser.isDeactivated) ?~> Msg.User.isDeactivated
       result <- Fox.fromFuture(switchToUser(targetUser._id))
@@ -438,7 +436,7 @@ class AuthenticationController @Inject() (
       requestingMultiUser <- multiUserDAO.findOne(request.identity._multiUser)
       alreadyPayingOrgaForMultiUser <- userDAO.findPayingOrgaIdForMultiUser(requestingMultiUser._id)
       _ <- Fox.runIf(!requestingMultiUser.isSuperUser && alreadyPayingOrgaForMultiUser.isEmpty)(
-        organizationService.assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec)
+        organizationService.assertUsersCanBeAdded(organization._id)(using GlobalAccessContext, ec)
       ) ?~> Msg.Organization.usersUserLimitReached
       teamMemberships <- userService.initialTeamMemberships(organization._id, Some(invite._id))
       _ <- userService.joinOrganization(
@@ -987,7 +985,7 @@ class AuthenticationController @Inject() (
   private def acceptTermsOfServiceForUser(user: User, termsOfServiceVersion: Option[Int]): Fox[Unit] =
     for {
       acceptedVersion <- termsOfServiceVersion.toFox ?~> "Terms of service must be accepted."
-      _ <- organizationService.acceptTermsOfService(user._organization, acceptedVersion)(DBAccessContext(Some(user)))
+      _ <- organizationService.acceptTermsOfService(user._organization, acceptedVersion)(using DBAccessContext(Some(user)))
     } yield ()
 
   case class CreateUserInOrganizationParameters(

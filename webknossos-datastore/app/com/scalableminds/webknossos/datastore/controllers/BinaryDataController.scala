@@ -280,7 +280,7 @@ class BinaryDataController @Inject()(
       dataSourceId: DataSourceId,
       dataLayer: DataLayer,
       dataRequests: DataRequestCollection
-  )(implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
+  )(using tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
     val requests =
       dataRequests.map(r =>
         DataServiceDataRequest(Some(datasetId), Some(dataSourceId), dataLayer, r.cuboid(dataLayer), r.settings))

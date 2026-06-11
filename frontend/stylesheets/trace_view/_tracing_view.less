@@ -309,7 +309,7 @@ img.keyboard-mouse-icon:first-child {
   @dark-fg: #f1f1f1;
   @dark-border: #585868;
 
-  color: rgba(255, 255, 255, 0.67);
+  color: var(--ant-color-text-secondary);
   z-index: 1000;
 
   &.statusbar-footer {
@@ -396,7 +396,10 @@ img.keyboard-mouse-icon:first-child {
     // align-items: center;
     // justify-content: center;
     line-height: 10px;
-    color: @dark-fg;
+    // Match the gray of the other statusbar icons. The footer's
+    // `.ant-btn { color: @dark-fg !important }` rule would otherwise force the
+    // icon (which uses fill: currentColor) to near-white, so override it here.
+    color: var(--ant-color-text-secondary) !important;
     background-color: inherit;
   }
 

@@ -14,9 +14,9 @@ import {
   useCallback,
   useState,
 } from "react";
+import { LayoutEvents, layoutEmitter } from "viewer/view/layouting/layout_persistence";
 
 type Props = {
-  onClick: () => void;
   side: "left" | "right";
   inFooter?: boolean;
 };
@@ -30,9 +30,13 @@ const ICON_MAP: Record<string, ComponentType<SVGProps<SVGSVGElement>>> = {
   "icon-sidebar-show-right": IconSidebarShowRight,
 };
 
-function BorderToggleButton({ onClick, side, inFooter }: Props) {
+function BorderToggleButton({ side, inFooter }: Props) {
   const borderOpenStatus = useWkSelector((state) => state.uiInformation.borderOpenStatus);
   const [lastTouchPosition, setLastTouchPosition] = useState([0, 0]);
+
+  const onClick = useCallback(() => {
+    layoutEmitter.emit(LayoutEvents.toggleBorder, side);
+  }, [side]);
 
   const placement = side === "left" ? "top-end" : "top-start";
   const iconKind = borderOpenStatus[side] ? "hide" : "show";

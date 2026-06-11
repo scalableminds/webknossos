@@ -47,6 +47,7 @@ import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_
 import { getGlobalDataConnectionInfo } from "viewer/model/data_connection_info";
 import { Store } from "viewer/singletons";
 import { NumberInputPopoverSetting } from "./left_border_tabs/components/number_input_popover_setting";
+import BorderToggleButton from "./components/border_toggle_button";
 
 const { Text } = Typography;
 
@@ -454,8 +455,10 @@ function SegmentAndMousePosition() {
 function Statusbar() {
   return (
     <span className="statusbar">
+      <BorderToggleButton side="left" inFooter />
       <ShortcutsInfo />
       <Infos />
+      <BorderToggleButton side="right" inFooter />
     </span>
   );
 }

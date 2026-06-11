@@ -1,1 +1,7 @@
-<?xml version="1.0"?><svg width="100%" height="100%" viewBox="0 0 59 59" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;"><rect id="icon-sidebar-show-left" x="0" y="0" width="58.333" height="58.333" style="fill:none;"></rect><clipPath id="_clip1"><rect x="2.048" y="2.043" width="54.326" height="54.283" rx="5" ry="5"></rect></clipPath><g clip-path="url(#_clip1)"><g id="Ebene-1"><rect id="fill-panel" x="0" y="0" width="20.5" height="59" style="fill:#818181;"></rect></g></g><rect id="rect833-6-3-1-6" x="2.048" y="2.043" width="54.326" height="54.283" rx="5" ry="5" style="fill:none;stroke:#818181;stroke-width:4px;"></rect></svg>
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg width="100%" height="100%" viewBox="0 0 59 59" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" xmlns:serif="http://www.serif.com/" style="fill-rule:evenodd;clip-rule:evenodd;stroke-linejoin:round;stroke-miterlimit:2;">
+    <g transform="matrix(9.43048e-17,1.54011,-5.36684,3.28624e-16,203.336,-4.48196)">
+        <path d="M38.483,28.089L38.483,36.692C38.483,37.352 36.616,37.888 34.317,37.888L9.812,37.888C7.513,37.888 5.646,37.352 5.646,36.692L5.646,28.089C5.646,27.43 7.513,26.894 9.812,26.894L34.317,26.894C36.616,26.894 38.483,27.43 38.483,28.089ZM35.885,28.089C35.885,27.841 35.183,27.639 34.317,27.639L9.812,27.639C8.946,27.639 8.244,27.841 8.244,28.089L8.244,34.066L35.885,34.066L35.885,28.089Z" style="fill:rgb(129,129,129);"/>
+    </g>
+</svg>

@@ -269,7 +269,7 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
     "FLIGHT_EDITING",
   ),
   DELETE_BRANCH_POINT_FLIGHT: new KeyboardShortcutMetaInfo(
-    "Delete branch point",
+    "Jump to and Delete Branch Point",
     [[["j"]]],
     "FLIGHT_EDITING",
   ),
@@ -496,7 +496,7 @@ export const ALL_KEYBOARD_SHORTCUT_META_INFOS: Record<
     "PLANE_SKELETON_TOOL",
   ),
   DELETE_BRANCH_POINT_PLANE: new KeyboardShortcutMetaInfo(
-    "Delete branch point",
+    "Jump to and Delete Branch Point",
     [[["j"]]],
     "PLANE_SKELETON_TOOL",
   ),

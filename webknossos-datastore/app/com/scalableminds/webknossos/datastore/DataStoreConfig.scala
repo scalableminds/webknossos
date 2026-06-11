@@ -5,7 +5,6 @@ import com.scalableminds.util.tools.ConfigReader
 import com.typesafe.config.Config
 import play.api.Configuration
 
-import java.nio.file.Path
 import scala.concurrent.duration._
 
 class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigReader {
@@ -22,8 +21,7 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val uri: String = get[String]("datastore.webKnossos.uri")
       val pingInterval: FiniteDuration = get[FiniteDuration]("datastore.webKnossos.pingInterval")
     }
-    val baseDirectory: Path = Path.of(get[String]("datastore.baseDirectory")).toAbsolutePath
-    val additionalDirectories: List[Config] = getList[Config]("datastore.additionalDirectories")
+    val baseDirectories: List[Config] = getList[Config]("datastore.baseDirectories")
     val localDirectoryWhitelist: List[String] = getList[String]("datastore.localDirectoryWhitelist")
     val writeVirtualDatasetsMirror: Boolean = get[Boolean]("datastore.writeVirtualDatasetsMirror")
     object WatchFileSystem {

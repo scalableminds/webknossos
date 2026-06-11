@@ -19,8 +19,8 @@ case class AdditionalDirectoryConfig(
 
 class BaseDirService @Inject()(config: DataStoreConfig) extends LazyLogging {
 
-  private lazy val additionalDirectories: Seq[AdditionalDirectoryConfig] = {
-    val res = config.Datastore.additionalDirectories.flatMap { dirConfig =>
+  private lazy val baseDirectories: Seq[AdditionalDirectoryConfig] = {
+    val res = config.Datastore.baseDirectories.flatMap { dirConfig =>
       new AdditionalDirectoryConfigReader(dirConfig).getAdditionalDirectory
     }
     logger.info(s"Parsed ${res.length} additional directories from datastore config.")
@@ -32,14 +32,14 @@ class BaseDirService @Inject()(config: DataStoreConfig) extends LazyLogging {
                       createIfMissing: Boolean = false,
                       checkWritable: Boolean = false): Box[Path] = {
     val orgaSpecificPath: Option[Path] =
-      additionalDirectories
+      baseDirectories
         .filter(d => d.organizationId.contains(organizationId))
         .filter(d => !requireAllowsUpload || d.allowsUpload)
         .flatMap(_.path.toLocalPath)
         .headOption
 
     val orgaAgnosticPath: Option[Path] =
-      additionalDirectories
+      baseDirectories
         .filter(d => d.organizationId.contains(organizationId))
         .filter(d => !requireAllowsUpload || d.allowsUpload)
         .flatMap(_.path.toLocalPath)
@@ -54,10 +54,10 @@ class BaseDirService @Inject()(config: DataStoreConfig) extends LazyLogging {
   }
 
   // Returns orga-specific and orga-agnostic mixed!
-  val allLocalBaseDirs: Seq[Path] = additionalDirectories.flatMap(_.path.toLocalPath)
+  val allLocalBaseDirs: Seq[Path] = baseDirectories.flatMap(_.path.toLocalPath)
 
   def allOrgaSpecificLocalBaseDirs(requireDoScan: Boolean = false): Seq[(Path, String)] = {
-    val all = additionalDirectories.filter(_.organizationId.nonEmpty)
+    val all = baseDirectories.filter(_.organizationId.nonEmpty)
     val filtered = if (requireDoScan) all.filter(_.doScan) else all
     filtered.flatMap(entry =>
       for {
@@ -67,13 +67,13 @@ class BaseDirService @Inject()(config: DataStoreConfig) extends LazyLogging {
   }
 
   def allLocalBaseDirsForOrga(organizationId: String, requireDoScan: Boolean = false): Seq[Path] = {
-    val all = additionalDirectories.filter(_.organizationId.contains(organizationId))
+    val all = baseDirectories.filter(_.organizationId.contains(organizationId))
     val filtered = if (requireDoScan) all.filter(_.doScan) else all
     filtered.flatMap(_.path.toLocalPath)
   }
 
   def allOrgaAgnosticLocalBaseDirs(requireDoScan: Boolean = false): Seq[Path] = {
-    val all = additionalDirectories.filter(_.organizationId.isEmpty)
+    val all = baseDirectories.filter(_.organizationId.isEmpty)
     val filtered = if (requireDoScan) all.filter(_.doScan) else all
     filtered.flatMap(_.path.toLocalPath)
   }

@@ -720,7 +720,8 @@ class DatasetDAO @Inject()(sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDA
                      isUsable = $isUsable,
                      voxelSizeFactor = ${newDataSource.voxelSizeOpt.map(_.factor)},
                      voxelSizeUnit = ${newDataSource.voxelSizeOpt.map(_.unit)},
-                     status = ${newDataSource.statusOpt.getOrElse("").take(1024)}$pathUpdatesQuery
+                     status = ${newDataSource.statusOpt.getOrElse("").take(1024)}
+                     $pathUpdatesQuery
                    WHERE _id = $id""".asUpdate)
       _ <- datasetLayerDAO.updateLayers(id, newDataSource)
     } yield ()

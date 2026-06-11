@@ -625,7 +625,7 @@ class DataSourceController @Inject()(
       mirrorPathOpt <- Fox.runOptional(dataSourceBox.toOption) { dataSource =>
         dataSourceMirrorService.writeMirror(dataSource, datasetId) ?~> s"Error writing datasource mirror for $datasetId"
       }
-    } yield mirrorPathOpt.flatten.map(datasetId -> _)
+    } yield mirrorPathOpt.flatten.map((datasetId, _))
   }
 
   private def refreshDataSource(datasetId: ObjectId)(implicit tc: TokenContext): Fox[DataSource] =

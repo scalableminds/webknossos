@@ -15,7 +15,6 @@ import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools._
-import com.scalableminds.webknossos.datastore.services.mapping.MappingService
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
 
@@ -27,7 +26,6 @@ class DataSourceService @Inject()(
     config: DataStoreConfig,
     dataVaultService: DataVaultService,
     baseDirService: BaseDirService,
-    mappingService: MappingService,
     val remoteWebknossosClient: DSRemoteWebknossosClient,
     val lifecycle: ApplicationLifecycle,
     @Named("webknossos-datastore") val actorSystem: ActorSystem
@@ -44,8 +42,6 @@ class DataSourceService @Inject()(
 
   override protected def tickerInitialDelay: FiniteDuration = config.Datastore.WatchFileSystem.initialDelay
 
-  private val dataBaseDir: Path = config.Datastore.baseDirectory
-
   private val propertiesFileName = Path.of(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
 
   private var inboxCheckVerboseCounter = 0
@@ -58,35 +54,52 @@ class DataSourceService @Inject()(
     } yield ()
 
   def checkInbox(verbose: Boolean, organizationId: Option[String]): Fox[Unit] = {
-    val allOrgaDirectories: Seq[Path] = ???
     val before = Instant.now
-    val selectedOrgaLabel = organizationId.map(id => s"/$id").getOrElse("")
-    def orgaFilterFn(organizationId: String): Path => Boolean =
-      (path: Path) => path.getFileName.toString == organizationId
-    val selectedOrgaFilter: Path => Boolean = organizationId.map(id => orgaFilterFn(id)).getOrElse((_: Path) => true)
-    if (verbose) logger.info(s"Scanning inbox ($dataBaseDir$selectedOrgaLabel)...")
     for {
-      _ <- PathUtils.listDirectories(dataBaseDir, silent = false, filters = selectedOrgaFilter) match {
-        case Full(organizationDirs) =>
-          if (verbose && organizationId.isEmpty) logEmptyDirs(organizationDirs)
-          val foundDataSources = organizationDirs.flatMap(scanOrganizationDirForDataSources)
-          val (realPathInfos, realPathScanFailures) = scanRealPaths(foundDataSources)
-          for {
-            _ <- remoteWebknossosClient.reportDataSources(foundDataSources, organizationId)
-            _ <- remoteWebknossosClient.reportRealPaths(realPathInfos)
-            _ = logFoundDatasources(allOrgaDirectories,
-              before,
-                                    verbose,
-                                    foundDataSources,
-                                    realPathInfos,
-                                    realPathScanFailures)
-          } yield ()
-        case e =>
-          val errorMsg = s"Failed to scan inbox. Error during list directories on '$dataBaseDir$selectedOrgaLabel': $e"
-          logger.error(errorMsg)
-          Fox.failure(errorMsg)
-      }
+      allOrgaDirsWithIds: Seq[(Path, String)] <- orgaDirsToScan(organizationId).toFox ?~> "TODO"
+      allOrgaDirsFormatted = allOrgaDirsWithIds.map(_._1).mkString(", ")
+      _ = if (verbose) logger.info(s"Scanning inbox ($allOrgaDirsFormatted)...")
+      _ = if (verbose && organizationId.isEmpty) logEmptyDirs(allOrgaDirsWithIds.map(_._1))
+      foundDataSources = allOrgaDirsWithIds.flatMap(scanOrganizationDirForDataSources)
+      (realPathInfos, realPathScanFailures) = scanRealPaths(foundDataSources)
+      _ <- remoteWebknossosClient.reportDataSources(foundDataSources, organizationId)
+      _ <- remoteWebknossosClient.reportRealPaths(realPathInfos)
+      _ = logFoundDatasources(allOrgaDirsFormatted,
+                              before,
+                              verbose,
+                              foundDataSources,
+                              realPathInfos,
+                              realPathScanFailures)
+      // TODO log and bubble s"Failed to scan inbox. Error during list directories on '$dataBaseDir$selectedOrgaLabel': $e"
     } yield ()
+  }
+
+  private def orgaDirsToScan(selectedOrganizationIdOpt: Option[String]): Box[Seq[(Path, String)]] = {
+    val orgaAgnosticBaseDirs = baseDirService.allOrgaAgnosticLocalBaseDirs(requireDoScan = true)
+    selectedOrganizationIdOpt match {
+      case Some(selectedOrganizationId) =>
+        def orgaFilterFn(organizationId: String): Path => Boolean =
+          (path: Path) => path.getFileName.toString == organizationId
+        val orgaBaseDirsDirect = baseDirService.allLocalBaseDirsForOrga(selectedOrganizationId, requireDoScan = true)
+        for {
+          orgaDirsInAgnostic: Seq[Path] <- orgaAgnosticBaseDirs
+            .map(PathUtils.listDirectories(_, silent = false, filters = orgaFilterFn(selectedOrganizationId)))
+            .toList
+            .toSingleBox("Listdir failed")
+            .map(_.flatten)
+        } yield (orgaBaseDirsDirect ++ orgaDirsInAgnostic).map((_, selectedOrganizationId))
+      case None =>
+        def orgaIdFromOrgaDirPath(path: Path) = path.getFileName.toString
+        val orgaBaseDirsDirectWithIds = baseDirService.allOrgaSpecificLocalBaseDirs(requireDoScan = true)
+        for {
+          orgaDirsInAgnostic: Seq[Path] <- orgaAgnosticBaseDirs
+            .map(PathUtils.listDirectories(_, silent = false))
+            .toList
+            .toSingleBox("Listdir failed")
+            .map(_.flatten)
+          orgaDirsInAgnosticWithIds = orgaDirsInAgnostic.map(orgaDir => (orgaDir, orgaIdFromOrgaDirPath(orgaDir)))
+        } yield orgaBaseDirsDirectWithIds ++ orgaDirsInAgnosticWithIds
+    }
   }
 
   def scanRealPathsForVirtual(dataSources: Seq[DataSource]): Fox[Unit] =
@@ -120,7 +133,7 @@ class DataSourceService @Inject()(
     dataSource.toUsable match {
       case Some(usableDataSource) =>
         val magResultBoxes = usableDataSource.dataLayers.flatMap { dataLayer =>
-          dataLayer.mags.map(mag => getMagPathInfo(datasetPath, dataLayer.name, mag))
+          dataLayer.mags.map(mag => getMagPathInfo(datasetPath, mag))
         }
         val attachmentResultBoxes = usableDataSource.dataLayers.flatMap { dataLayer =>
           dataLayer.attachments
@@ -137,20 +150,21 @@ class DataSourceService @Inject()(
     }
   }
 
-  private def getMagPathInfo(datasetPathOpt: Option[Path], layerName: String, mag: MagLocator): Box[RealPathInfo] = for {
-    magPath <- Box(mag.path)
-    result <- if (magPath.isRemote) {
-      Full(RealPathInfo(magPath, magPath, hasLocalData = false))
-    } else {
-      for {
-        magPathLocal <- magPath.toLocalPath
-        realMagPath <- tryo(magPathLocal.toRealPath())
-        datasetPath <- Box(datasetPathOpt)
-        // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
-        isDatasetLocal = realMagPath.startsWith(datasetPath)
-      } yield RealPathInfo(magPath, UPath.fromLocalPath(realMagPath), hasLocalData = isDatasetLocal)
-    }
-  } yield result
+  private def getMagPathInfo(datasetPathOpt: Option[Path], mag: MagLocator): Box[RealPathInfo] =
+    for {
+      magPath <- Box(mag.path)
+      result <- if (magPath.isRemote) {
+        Full(RealPathInfo(magPath, magPath, hasLocalData = false))
+      } else {
+        for {
+          magPathLocal <- magPath.toLocalPath
+          realMagPath <- tryo(magPathLocal.toRealPath())
+          datasetPath <- Box(datasetPathOpt)
+          // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
+          isDatasetLocal = realMagPath.startsWith(datasetPath)
+        } yield RealPathInfo(magPath, UPath.fromLocalPath(realMagPath), hasLocalData = isDatasetLocal)
+      }
+    } yield result
 
   private def getAttachmentPathInfo(datasetPathOpt: Option[Path], attachment: LayerAttachment): Box[RealPathInfo] =
     if (attachment.path.isRemote) {
@@ -166,7 +180,7 @@ class DataSourceService @Inject()(
       } yield RealPathInfo(attachment.path, UPath.fromLocalPath(realAttachmentPath), hasLocalData = isDatasetLocal)
     }
 
-  private def logFoundDatasources(scannedOrgaDirectories: Seq[Path],
+  private def logFoundDatasources(allOrgaDirsFormatted: String,
                                   before: Instant,
                                   verbose: Boolean,
                                   foundDataSources: Seq[DataSource],
@@ -177,7 +191,7 @@ class DataSourceService @Inject()(
     val realPathScanSummary =
       s"${countScannedRealPaths(realPathInfosByDataSource)} scanned realpaths.$realPathFailuresSummary"
     val shortForm =
-      s"Finished scanning inbox ($scannedOrgaDirectories), took ${formatDuration(Instant.since(before))}: ${foundDataSources
+      s"Finished scanning inbox ($allOrgaDirsFormatted), took ${formatDuration(Instant.since(before))}: ${foundDataSources
         .count(_.isUsable)} active, ${foundDataSources.count(!_.isUsable)} inactive. $realPathScanSummary"
     val msg = if (verbose) {
       val byOrganization: Map[String, Seq[DataSource]] = foundDataSources.groupBy(_.id.organizationId)
@@ -200,7 +214,7 @@ class DataSourceService @Inject()(
   private def countScannedRealPaths(realPathInfosByDataSource: Seq[DataSourcePathInfo]): Int =
     realPathInfosByDataSource.map(pathInfos => pathInfos.attachmentPathInfos.length + pathInfos.magPathInfos.length).sum
 
-  private def logEmptyDirs(paths: List[Path]): Unit = {
+  private def logEmptyDirs(paths: Seq[Path]): Unit = {
 
     val emptyDirs = paths.flatMap { path =>
       PathUtils.listDirectories(path, silent = true) match {
@@ -217,16 +231,16 @@ class DataSourceService @Inject()(
     }
   }
 
-  private def scanOrganizationDirForDataSources(path: Path): List[DataSource] = {
-    val organization = path.getFileName.toString
+  private def scanOrganizationDirForDataSources(orgaDirWithId: (Path, String)): Seq[DataSource] = {
+    val (path, organizationId) = orgaDirWithId
 
     PathUtils.listDirectories(path, silent = true) match {
       case Full(dataSourceDirs) =>
-        val dataSources = dataSourceDirs.map(path => dataSourceFromDir(path, organization, resolvePaths = true))
+        val dataSources = dataSourceDirs.map(path => dataSourceFromDir(path, organizationId, resolvePaths = true))
         dataSources
       case _ =>
-        logger.error(s"Failed to list directories for organization $organization at path $path")
-        Nil
+        logger.error(s"Failed to list directories for organization $organizationId at path $path")
+        Seq.empty
     }
   }
 
@@ -256,10 +270,12 @@ class DataSourceService @Inject()(
                                Some(dataSource.scale),
                                Some(Json.toJson(dataSource)))
         case e =>
-          UnusableDataSource(id,
-                             None,
-                             s"Error: Invalid json format in $propertiesFilePath: $e",
-                             existingDataSourceProperties = JsonHelper.parseFromFile(propertiesFilePath, path).toOption)
+          UnusableDataSource(
+            id,
+            None,
+            s"Error: Invalid json format in $propertiesFilePath: $e",
+            existingDataSourceProperties = JsonHelper.parseFromFile(propertiesFilePath, path).toOption
+          )
       }
     } else {
       UnusableDataSource(id, None, DataSourceStatus.notImportedYet)
@@ -329,7 +345,8 @@ class DataSourceService @Inject()(
 
   def deleteLocalPathsFromDisk(paths: Seq[UPath]): Box[Unit] = {
     val localBaseDirs = baseDirService.allLocalBaseDirs
-    val localPaths = paths.filter(_.isLocal).flatMap(_.toLocalPath).filter(p => localBaseDirs.exists(p.toAbsolutePath.startsWith(_)))
+    val localPaths =
+      paths.filter(_.isLocal).flatMap(_.toLocalPath).filter(p => localBaseDirs.exists(p.toAbsolutePath.startsWith(_)))
     for {
       _ <- localPaths.map(PathUtils.deleteDirectoryRecursively).toList.toSingleBox("Failed to delete local paths")
     } yield ()

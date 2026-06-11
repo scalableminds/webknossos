@@ -9,14 +9,36 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Box, Empty, Failure, Fox, FoxImplicits, Full}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.ListOfLong.ListOfLong
-import com.scalableminds.webknossos.datastore.explore.{ExploreRemoteDatasetRequest, ExploreRemoteDatasetResponse, ExploreRemoteLayerService}
-import com.scalableminds.webknossos.datastore.helpers.{GetMultipleSegmentIndexParameters, GetSegmentIndexParameters, LocalDatasetDeletionService, PathSchemes, SegmentIndexData, SegmentStatisticsParameters, SegmentStatisticsParametersMeshBased, UPath}
+import com.scalableminds.webknossos.datastore.explore.{
+  ExploreRemoteDatasetRequest,
+  ExploreRemoteDatasetResponse,
+  ExploreRemoteLayerService
+}
+import com.scalableminds.webknossos.datastore.helpers.{
+  GetMultipleSegmentIndexParameters,
+  GetSegmentIndexParameters,
+  LocalDatasetDeletionService,
+  PathSchemes,
+  SegmentIndexData,
+  SegmentStatisticsParameters,
+  SegmentStatisticsParametersMeshBased,
+  UPath
+}
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, DataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services._
 import com.scalableminds.webknossos.datastore.services.connectome.ConnectomeFileService
-import com.scalableminds.webknossos.datastore.services.mesh.{DSFullMeshService, FullMeshRequest, MeshFileService, MeshMappingHelper}
+import com.scalableminds.webknossos.datastore.services.mesh.{
+  DSFullMeshService,
+  FullMeshRequest,
+  MeshFileService,
+  MeshMappingHelper
+}
 import com.scalableminds.webknossos.datastore.services.segmentindex.SegmentIndexFileService
-import com.scalableminds.webknossos.datastore.services.connectome.{ByAgglomerateIdsRequest, BySynapseIdsRequest, SynapticPartnerDirection}
+import com.scalableminds.webknossos.datastore.services.connectome.{
+  ByAgglomerateIdsRequest,
+  BySynapseIdsRequest,
+  SynapticPartnerDirection
+}
 import com.scalableminds.webknossos.datastore.services.mapping.{AgglomerateService, MappingService}
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import play.api.libs.json.{Json, OFormat}
@@ -205,7 +227,7 @@ class DataSourceController @Inject()(
     Action.async(validateJson[UsableDataSource]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
-          rootPath <- Fox.successful(Path.of("TODO"))  // TODO
+          rootPath <- Fox.successful(Path.of("TODO")) // TODO
           _ <- dataSourceService.updateDataSourceOnDisk(rootPath, request.body)
           _ = datasetCache.invalidateCache(datasetId)
         } yield Ok
@@ -276,12 +298,13 @@ class DataSourceController @Inject()(
         for {
           dataSource <- dsRemoteWebknossosClient.getDataSource(datasetId) ~> NOT_FOUND
           dataSourceId = dataSource.id
-          _ <- localDatasetDeletionService.deleteOnDisk(
-            datasetId,
-            Path.of("TODO rootPath"), // TODO
-            dataSourceId.organizationId,
-            dataSourceId.directoryName,
-            reason = Some("the user wants to delete the dataset")).toFox ?~> Msg.Dataset.Delete.failed
+          _ <- localDatasetDeletionService
+            .deleteOnDisk(datasetId,
+                          Path.of("TODO rootPath"), // TODO
+                          dataSourceId.organizationId,
+                          dataSourceId.directoryName,
+                          reason = Some("the user wants to delete the dataset"))
+            .toFox ?~> Msg.Dataset.Delete.failed
         } yield Ok
       }
     }

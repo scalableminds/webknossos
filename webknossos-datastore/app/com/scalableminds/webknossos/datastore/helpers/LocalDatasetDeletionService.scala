@@ -9,14 +9,15 @@ import com.typesafe.scalalogging.LazyLogging
 import java.nio.file.{Files, Path}
 import scala.annotation.tailrec
 
-class LocalDatasetDeletionService @Inject()(baseDirService: BaseDirService) extends LazyLogging with DirectoryConstants {
+class LocalDatasetDeletionService @Inject()(baseDirService: BaseDirService)
+    extends LazyLogging
+    with DirectoryConstants {
 
   def deleteOnDisk(datasetId: ObjectId,
                    path: Path,
                    organizationId: String,
                    directoryName: String,
-                   reason: Option[String] = None): Box[Unit] = {
-
+                   reason: Option[String] = None): Box[Unit] =
     if (Files.exists(path)) {
       for {
         orgaDir <- baseDirService.oneLocalForOrga(organizationId, createIfMissing = true, checkWritable = true)
@@ -32,7 +33,6 @@ class LocalDatasetDeletionService @Inject()(baseDirService: BaseDirService) exte
         s"Dataset deletion requested for dataset $datasetId at $path, but it does not exist. Skipping deletion on disk.")
       Full(())
     }
-  }
 
   @tailrec
   private def deleteWithRetry(sourcePath: Path, targetPath: Path, retryCount: Int = 0): Box[Unit] =

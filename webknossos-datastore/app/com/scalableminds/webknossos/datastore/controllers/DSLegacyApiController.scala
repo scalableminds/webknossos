@@ -7,11 +7,27 @@ import com.scalableminds.util.tools.{Fox, Full}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
-import com.scalableminds.webknossos.datastore.models.{RawCuboidRequest, WebknossosAdHocMeshRequest, WebknossosDataRequest}
+import com.scalableminds.webknossos.datastore.models.{
+  RawCuboidRequest,
+  WebknossosAdHocMeshRequest,
+  WebknossosDataRequest
+}
 import com.scalableminds.webknossos.datastore.models.datasource.{UnusableDataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.services.mesh.FullMeshRequest
-import com.scalableminds.webknossos.datastore.services.uploading.{DatasetUploadInfo, LinkedLayerIdentifier, ResumableUploadInfo, UploadDomain}
-import com.scalableminds.webknossos.datastore.services.{BaseDirService, DSRemoteWebknossosClient, DataSourceService, DataStoreAccessTokenService, DatasetCache, UserAccessRequest}
+import com.scalableminds.webknossos.datastore.services.uploading.{
+  DatasetUploadInfo,
+  LinkedLayerIdentifier,
+  ResumableUploadInfo,
+  UploadDomain
+}
+import com.scalableminds.webknossos.datastore.services.{
+  BaseDirService,
+  DSRemoteWebknossosClient,
+  DataSourceService,
+  DataStoreAccessTokenService,
+  DatasetCache,
+  UserAccessRequest
+}
 import play.api.libs.Files
 import play.api.libs.json.{JsObject, Json, OFormat}
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers, RawBuffer, Result}
@@ -539,10 +555,8 @@ class DSLegacyApiController @Inject()(
                          layerName: Option[String]): Action[AnyContent] = {
     def loadFromDisk(orgaDir: Path): Fox[Result] = {
       // Dataset is not present in DB. This can be because reload was called after a dataset was written into the directory
-      val dataSource = dataSourceService.dataSourceFromDir(
-        orgaDir.resolve(datasetDirectoryName),
-        organizationId,
-        resolvePaths = true)
+      val dataSource =
+        dataSourceService.dataSourceFromDir(orgaDir.resolve(datasetDirectoryName), organizationId, resolvePaths = true)
       dataSource match {
         case UsableDataSource(_, _, _, _, _) =>
           for {

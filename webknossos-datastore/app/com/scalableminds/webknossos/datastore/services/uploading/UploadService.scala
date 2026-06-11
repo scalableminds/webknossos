@@ -191,12 +191,12 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
   private def uploadDirectoryFor(organizationId: String, uploadId: String, uploadDomain: UploadDomain): Box[Path] =
     for {
-      orgaDir <- baseDirService.oneLocalForOrga(organizationId, requireAllowsUpload=true)
+      orgaDir <- baseDirService.oneLocalForOrga(organizationId, requireAllowsUpload = true)
     } yield orgaDir.resolve(uploadingDir).resolve(uploadDomain.toString).resolve(uploadId)
 
   private def uploadBackupDirectoryFor(organizationId: String, uploadId: String): Box[Path] =
     for {
-      orgaDir <- baseDirService.oneLocalForOrga(organizationId, requireAllowsUpload=true)
+      orgaDir <- baseDirService.oneLocalForOrga(organizationId, requireAllowsUpload = true)
     } yield orgaDir.resolve(trashDir).resolve(s"uploadBackup__$uploadId")
 
   def reserveDatasetUpload(datasetUploadInfo: DatasetUploadInfo,
@@ -428,8 +428,9 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       mag <- magUploadMetadataStore.findMag(uploadId)
       layerName <- magUploadMetadataStore.findLayerName(uploadId)
       uploadDir <- uploadDirectoryFor(dataSourceId.organizationId, uploadId, UploadDomain.mag).toFox
-      unpackToDir <- unpackToDirFor(dataSourceId, UploadDomain.mag, uploadId).map(_
-        .resolve(mag.mag.toMagLiteral(allowScalar = true))).toFox
+      unpackToDir <- unpackToDirFor(dataSourceId, UploadDomain.mag, uploadId)
+        .map(_.resolve(mag.mag.toMagLiteral(allowScalar = true)))
+        .toFox
       _ <- checkWithinRequestedFileSize(uploadDir, uploadId, datasetId, UploadDomain.mag) ?~> "dataset.upload.fileSizeCheck.failed"
       _ <- checkAllChunksUploaded(uploadId, UploadDomain.mag) ?~> "dataset.upload.allChunksUploadedCheck.failed"
       unpackResult <- unpackOrMoveUploaded(uploadDir, unpackToDir, datasetId, UploadDomain.mag).shiftBox
@@ -546,13 +547,10 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       } yield finalUploadedS3Path
     } else {
       for {
-        orgaDir <- baseDirService.oneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload=true).toFox
-      finalUploadedLocalPath =
-        orgaDir
-          .resolve(dataSourceId.directoryName)
-          .resolve(layerName)
-          .resolve(dirName)
-      _ = logger.info(s"finishUpload for $domain ($datasetId): Moving data to final local path $finalUploadedLocalPath...")
+        orgaDir <- baseDirService.oneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload = true).toFox
+        finalUploadedLocalPath = orgaDir.resolve(dataSourceId.directoryName).resolve(layerName).resolve(dirName)
+        _ = logger.info(
+          s"finishUpload for $domain ($datasetId): Moving data to final local path $finalUploadedLocalPath...")
         _ <- tryo(FileUtils.moveDirectory(unpackedDir.toFile, finalUploadedLocalPath.toFile)).toFox
       } yield UPath.fromLocalPath(finalUploadedLocalPath)
     }
@@ -563,7 +561,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                                           dataSourceId: DataSourceId): Fox[Option[UsableDataSource]] =
     if (needsConversion) {
       for {
-        orgaDir <- baseDirService.oneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload=true).toFox
+        orgaDir <- baseDirService.oneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload = true).toFox
         forConversionPath = orgaDir.resolve(forConversionDir).resolve(dataSourceId.directoryName)
         _ = logger.info(s"finishUpload for $datasetId: Moving data to input dir for worker conversion...")
         _ <- tryo(FileUtils.moveDirectory(unpackedDir.toFile, forConversionPath.toFile)).toFox
@@ -590,7 +588,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
           } yield newBasePath
         } else {
           for {
-            orgaDir <- baseDirService.oneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload=true).toFox
+            orgaDir <- baseDirService.oneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload = true).toFox
             finalUploadedLocalPath = orgaDir.resolve(dataSourceId.directoryName)
             _ = logger.info(s"finishUpload for $datasetId: Moving data to final local path $finalUploadedLocalPath...")
             _ <- tryo(FileUtils.moveDirectory(unpackedDir.toFile, finalUploadedLocalPath.toFile)).toFox
@@ -718,18 +716,18 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         Full(())
       case Empty =>
         localDatasetDeletionService.deleteOnDisk(datasetId,
-          unpackToDir,
-                     dataSourceId.organizationId,
-                     dataSourceId.directoryName,
-                     Some("the upload failed"))
+                                                 unpackToDir,
+                                                 dataSourceId.organizationId,
+                                                 dataSourceId.directoryName,
+                                                 Some("the upload failed"))
         Failure(s"Unknown error $label")
       case Failure(msg, e, _) =>
         logger.warn(s"Error while $label: $msg, $e")
         localDatasetDeletionService.deleteOnDisk(datasetId,
-          unpackToDir,
-                     dataSourceId.organizationId,
-                     dataSourceId.directoryName,
-                     Some("the upload failed"))
+                                                 unpackToDir,
+                                                 dataSourceId.organizationId,
+                                                 dataSourceId.directoryName,
+                                                 Some("the upload failed"))
         remoteWebknossosClient.deleteDataset(datasetId)
         for {
           _ <- result ?~! s"Error while $label"
@@ -754,13 +752,14 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
   private def unpackToDirFor(dataSourceId: DataSourceId, domain: UploadDomain, uploadId: String): Box[Path] =
     for {
-      orgaDir <- baseDirService.oneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload=true)
-    } yield orgaDir
-      .resolve(uploadingDir)
-      .resolve(unpackedDir)
-      .resolve(domain.toString)
-      .resolve(uploadId)
-      .resolve(dataSourceId.directoryName)
+      orgaDir <- baseDirService.oneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload = true)
+    } yield
+      orgaDir
+        .resolve(uploadingDir)
+        .resolve(unpackedDir)
+        .resolve(domain.toString)
+        .resolve(uploadId)
+        .resolve(dataSourceId.directoryName)
 
   private def guessTypeOfUploadedDataSource(dataSourceDir: Path): UploadedDataSourceType.Value =
     if (looksLikeExploredDataSource(dataSourceDir).getOrElse(false)) {
@@ -953,10 +952,11 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
   }
 
   private def cleanUpOrphanUploads(): Fox[Unit] = {
-    val organizationDirsDirect = baseDirService.allOrgaSpecificLocalBaseDirs
+    val organizationDirsDirect = baseDirService.allOrgaSpecificLocalBaseDirs().map(_._1)
     val orgaAgnosticBaseDirs = baseDirService.allOrgaAgnosticLocalBaseDirs()
     for {
-      organizationDirsInOrgaAgnostic <- Fox.serialCombined(orgaAgnosticBaseDirs)(PathUtils.listDirectories(_, silent = false).toFox)
+      organizationDirsInOrgaAgnostic <- Fox.serialCombined(orgaAgnosticBaseDirs)(
+        PathUtils.listDirectories(_, silent = false).toFox)
       allOrgaDirs = organizationDirsInOrgaAgnostic.flatten ++ organizationDirsDirect
       _ <- Fox.serialCombined(allOrgaDirs)(cleanUpOrphanUploadsForOrga)
     } yield ()

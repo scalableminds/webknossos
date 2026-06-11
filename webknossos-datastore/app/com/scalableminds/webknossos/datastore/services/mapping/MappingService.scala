@@ -14,24 +14,24 @@ import java.nio.file.Path
 import javax.inject.Inject
 import scala.reflect.ClassTag
 
-class MappingService @Inject()(config: DataStoreConfig, baseDirService: BaseDirService)
-    extends LazyLogging {
+class MappingService @Inject()(config: DataStoreConfig, baseDirService: BaseDirService) extends LazyLogging {
 
   private lazy val mappingsDir = "mappings"
   private lazy val mappingFileExtension = "json"
 
   private lazy val cache = new ParsedMappingCache(config.Datastore.Cache.Mapping.maxEntries)
 
-  def loadMappingBytes(request: DataServiceMappingRequest): Box[Array[Byte]] = for {
-    dataSourceId <- Box(request.dataSourceId)
-    orgaDir <- baseDirService.oneLocalForOrga(dataSourceId.organizationId)
-    mappingFilePath = orgaDir
-      .resolve(dataSourceId.directoryName)
-      .resolve(request.dataLayer.name)
-      .resolve(mappingsDir)
-      .resolve(s"${request.mapping}.$mappingFileExtension")
-    result <- FileIO.readFileToByteArray(mappingFilePath.toFile)
-  } yield result
+  def loadMappingBytes(request: DataServiceMappingRequest): Box[Array[Byte]] =
+    for {
+      dataSourceId <- Box(request.dataSourceId)
+      orgaDir <- baseDirService.oneLocalForOrga(dataSourceId.organizationId)
+      mappingFilePath = orgaDir
+        .resolve(dataSourceId.directoryName)
+        .resolve(request.dataLayer.name)
+        .resolve(mappingsDir)
+        .resolve(s"${request.mapping}.$mappingFileExtension")
+      result <- FileIO.readFileToByteArray(mappingFilePath.toFile)
+    } yield result
 
   def applyMapping[T: ClassTag](request: DataServiceMappingRequest,
                                 data: Array[T],
@@ -48,14 +48,12 @@ class MappingService @Inject()(config: DataStoreConfig, baseDirService: BaseDirS
     }
   }
 
-  def exploreMappings(layerDir: Path): Set[String] = {
-    PathUtils.listFiles(layerDir.resolve(mappingsDir),
-        silent = true,
-        PathUtils.fileExtensionFilter(mappingFileExtension))
+  def exploreMappings(layerDir: Path): Set[String] =
+    PathUtils
+      .listFiles(layerDir.resolve(mappingsDir), silent = true, PathUtils.fileExtensionFilter(mappingFileExtension))
       .map { paths =>
         paths.map(path => FilenameUtils.removeExtension(path.getFileName.toString))
       }
       .getOrElse(Seq.empty)
       .toSet
-  }
 }

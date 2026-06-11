@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
-import com.scalableminds.util.tools.Box
+import com.scalableminds.util.tools.{Box, Full}
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.UPath
@@ -18,7 +18,6 @@ case class AdditionalDirectoryConfig(
 )
 
 class BaseDirService @Inject()(config: DataStoreConfig) extends LazyLogging {
-  private val baseDir: Path = config.Datastore.baseDirectory
 
   private lazy val additionalDirectories: Seq[AdditionalDirectoryConfig] = {
     val res = config.Datastore.additionalDirectories.flatMap { dirConfig =>
@@ -31,23 +30,47 @@ class BaseDirService @Inject()(config: DataStoreConfig) extends LazyLogging {
   def oneLocalForOrga(organizationId: String,
                       requireAllowsUpload: Boolean = false,
                       createIfMissing: Boolean = false,
-                      checkWritable: Boolean = false): Box[Path] = ???
-  // TODO return first local orga-specific, or first local cross-orga RESOLVED with orga id inside
-  // TODO document that it always returns absolute
-  // wrap with error message here
+                      checkWritable: Boolean = false): Box[Path] = {
+    val orgaSpecificPath: Option[Path] =
+      additionalDirectories
+        .filter(d => d.organizationId.contains(organizationId))
+        .filter(d => !requireAllowsUpload || d.allowsUpload)
+        .flatMap(_.path.toLocalPath)
+        .headOption
 
-  // TODO comment: this returns orga-specific and orga-agnostic
-  val allLocalBaseDirs: Seq[Path] = additionalDirectories.flatMap(_.path.toLocalPath)
+    val orgaAgnosticPath: Option[Path] =
+      additionalDirectories
+        .filter(d => d.organizationId.contains(organizationId))
+        .filter(d => !requireAllowsUpload || d.allowsUpload)
+        .flatMap(_.path.toLocalPath)
+        .headOption
+        .map(_.resolve(organizationId))
 
-  // TODO also return organization ids!
-  def allOrgaSpecificLocalBaseDirs(requireDoScan: Boolean = false): Seq[(String, Path)] = {
-    val all = additionalDirectories.filter(_.organizationId.nonEmpty)
-    val filtered = if (requireDoScan) all.filter(_.doScan) else all
-    // TODO fix filter
-    filtered.flatMap(entry => (entry.path.toLocalPath, entry.organizationId.get))
+    for {
+      selected <- Box(orgaSpecificPath.orElse(orgaAgnosticPath)) ?~! s"No local directory configured for organization $organizationId"
+      _ <- if (createIfMissing) this.createIfMissing(selected) else Full(())
+      _ <- if (checkWritable) this.checkWritable(selected) else Full(())
+    } yield selected
   }
 
-  def allLocalBaseDirsForOrga(organizationId: String, requireDoScan: Boolean = false): Seq[Path] = ???
+  // Returns orga-specific and orga-agnostic mixed!
+  val allLocalBaseDirs: Seq[Path] = additionalDirectories.flatMap(_.path.toLocalPath)
+
+  def allOrgaSpecificLocalBaseDirs(requireDoScan: Boolean = false): Seq[(Path, String)] = {
+    val all = additionalDirectories.filter(_.organizationId.nonEmpty)
+    val filtered = if (requireDoScan) all.filter(_.doScan) else all
+    filtered.flatMap(entry =>
+      for {
+        path <- entry.path.toLocalPath
+        orgId <- Box(entry.organizationId)
+      } yield (path, orgId))
+  }
+
+  def allLocalBaseDirsForOrga(organizationId: String, requireDoScan: Boolean = false): Seq[Path] = {
+    val all = additionalDirectories.filter(_.organizationId.contains(organizationId))
+    val filtered = if (requireDoScan) all.filter(_.doScan) else all
+    filtered.flatMap(_.path.toLocalPath)
+  }
 
   def allOrgaAgnosticLocalBaseDirs(requireDoScan: Boolean = false): Seq[Path] = {
     val all = additionalDirectories.filter(_.organizationId.isEmpty)

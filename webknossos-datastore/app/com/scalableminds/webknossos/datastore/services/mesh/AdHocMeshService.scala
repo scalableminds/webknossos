@@ -6,7 +6,12 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Box, Failure, Fox, FoxImplicits, Full}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, ElementClass, SegmentationLayer}
-import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest, DataServiceMappingRequest, DataServiceRequestSettings}
+import com.scalableminds.webknossos.datastore.models.requests.{
+  Cuboid,
+  DataServiceDataRequest,
+  DataServiceMappingRequest,
+  DataServiceRequestSettings
+}
 import com.scalableminds.webknossos.datastore.services.mcubes.MarchingCubes
 import com.scalableminds.webknossos.datastore.services.BinaryDataService
 import com.typesafe.scalalogging.LazyLogging
@@ -185,7 +190,7 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
       request.dataLayer,
       cuboid,
       DataServiceRequestSettings(additionalCoordinates = request.additionalCoordinates,
-                                              version = request.annotationVersion)
+                                 version = request.annotationVersion)
     )
 
     val dataDimensions = Vec3Int(cuboid.width, cuboid.height, cuboid.depth)

@@ -1,11 +1,7 @@
 package com.scalableminds.webknossos.datastore.models.datasource
 
 import com.scalableminds.util.cache.AlfuCache
-import com.scalableminds.webknossos.datastore.dataformats.{
-  BucketProvider,
-  DatasetArrayBucketProvider,
-  MagLocator
-}
+import com.scalableminds.webknossos.datastore.dataformats.{BucketProvider, DatasetArrayBucketProvider, MagLocator}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.helpers.UPath

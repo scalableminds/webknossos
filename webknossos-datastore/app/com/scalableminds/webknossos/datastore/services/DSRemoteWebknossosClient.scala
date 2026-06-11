@@ -14,7 +14,17 @@ import com.scalableminds.webknossos.datastore.models.UnfinishedUpload
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationSource
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, DataSourceId}
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.services.uploading.{AttachmentUploadAdditionalInfo, AttachmentUploadInfo, DatasetUploadAdditionalInfo, DatasetUploadInfo, MagUploadAdditionalInfo, MagUploadInfo, ReportAttachmentUploadParameters, ReportDatasetUploadParameters, ReportMagUploadParameters}
+import com.scalableminds.webknossos.datastore.services.uploading.{
+  AttachmentUploadAdditionalInfo,
+  AttachmentUploadInfo,
+  DatasetUploadAdditionalInfo,
+  DatasetUploadInfo,
+  MagUploadAdditionalInfo,
+  MagUploadInfo,
+  ReportAttachmentUploadParameters,
+  ReportDatasetUploadParameters,
+  ReportMagUploadParameters
+}
 import com.scalableminds.webknossos.datastore.storage.DataVaultCredential
 import com.typesafe.scalalogging.LazyLogging
 import play.api.inject.ApplicationLifecycle
@@ -112,7 +122,7 @@ class DSRemoteWebknossosClient @Inject()(
       .addQueryParam("key", dataStoreKey)
       .postJson[ReportAttachmentUploadParameters](parameters)
 
-  def reportDataSources(dataSources: List[DataSource], organizationId: Option[String]): Fox[_] =
+  def reportDataSources(dataSources: Seq[DataSource], organizationId: Option[String]): Fox[_] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources")
       .addQueryParam("key", dataStoreKey)
       .addQueryParam("organizationId", organizationId)
@@ -228,7 +238,7 @@ class DSRemoteWebknossosClient @Inject()(
           .addQueryParam("datasetDirectoryName", datasetDirectoryName)
           .getWithJsonResponse[ObjectId] ?~> "Failed to get dataset id from remote webknossos"
     )
-  
+
   def getRootPath(datasetId: ObjectId): Fox[Path] =
     for {
       rootPathStr <- rpc(s"") // TODO build wk side, fill in uri

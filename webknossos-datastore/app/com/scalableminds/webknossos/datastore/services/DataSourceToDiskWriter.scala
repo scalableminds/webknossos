@@ -18,7 +18,7 @@ trait DataSourceToDiskWriter extends DataSourceValidation with FoxImplicits {
   private val logFileName = Path.of("datasource-properties-backups.log")
 
   def updateDataSourceOnDisk(dataSourcePath: Path, dataSource: UsableDataSource)(
-      implicit ec: ExecutionContext): Fox[Unit] = 
+      implicit ec: ExecutionContext): Fox[Unit] =
     for {
       _ <- assertValidDataSource(dataSource).toFox
       propertiesFile = dataSourcePath.resolve(propertiesFileName)

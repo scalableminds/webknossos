@@ -59,7 +59,7 @@ case class DatasetUpdateParameters(
 )
 object DatasetUpdateParameters extends TristateOptionJsonHelper {
   implicit val jsonFormat: OFormat[DatasetUpdateParameters] =
-    Json.configured(tristateOptionParsing).format[DatasetUpdateParameters]
+    Json.configured(using tristateOptionParsing).format[DatasetUpdateParameters]
 }
 
 case class LayerRenaming(oldName: String, newName: String)

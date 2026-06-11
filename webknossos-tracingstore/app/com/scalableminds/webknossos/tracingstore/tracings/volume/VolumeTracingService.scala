@@ -47,7 +47,7 @@ class VolumeTracingService @Inject() (
     val temporaryTracingService: TemporaryTracingService,
     val remoteDatastoreClient: TSRemoteDatastoreClient,
     val remoteWebknossosClient: TSRemoteWebknossosClient
-)(implicit val ec: ExecutionContext)
+)(using ec: ExecutionContext)
     extends VolumeTracingBucketHelper
     with WKWDataFormatHelper
     with FallbackDataHelper

@@ -14,7 +14,7 @@ class VolumeBucketBuffer(version: Long,
                          volumeLayer: VolumeTracingLayer,
                          val volumeDataStore: FossilDBClient,
                          val temporaryTracingService: TemporaryTracingService,
-                         toTemporaryStore: Boolean)(using val tc: TokenContext, val ec: ExecutionContext)
+                         toTemporaryStore: Boolean)(using tc: TokenContext, ec: ExecutionContext)
     extends VolumeTracingBucketHelper
     with ProtoGeometryImplicits {
 

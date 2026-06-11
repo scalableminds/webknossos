@@ -65,7 +65,7 @@ class ConfigurationController @Inject()(
             datasetConfigurationService.getDatasetViewConfigurationForUserAndDataset(request.body, user, datasetId)(
               GlobalAccessContext))
           .orElse(
-            datasetConfigurationService.getDatasetViewConfigurationForDataset(request.body, datasetId)(ctx)
+            datasetConfigurationService.getDatasetViewConfigurationForDataset(request.body, datasetId)(using ctx)
           )
           .getOrElse(Map.empty)
       } yield Ok(Json.toJson(configuration))
@@ -92,7 +92,7 @@ class ConfigurationController @Inject()(
   def updateDatasetAdminViewConfiguration(datasetId: ObjectId): Action[JsValue] =
     sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
       for {
-        dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext)
+        dataset <- datasetDAO.findOne(datasetId)(using GlobalAccessContext)
         _ <- datasetService.isEditableBy(dataset, Some(request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
         jsObject <- request.body.asOpt[JsObject].toFox ?~> Msg.User.Configuration.invalidForDataset
         _ <- datasetConfigurationService.updateAdminViewConfigurationFor(dataset, jsObject.fields.toMap)

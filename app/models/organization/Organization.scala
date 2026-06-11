@@ -103,10 +103,10 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
     } yield value == 0
 
   @deprecated("use findOne with string type instead", since = "")
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Organization] =
+  override def findOne(id: ObjectId)(using ctx: DBAccessContext): Fox[Organization] =
     Fox.failure("Cannot find organization by ObjectId. Use findOne with string type instead")
 
-  def findOne(organizationId: String)(implicit ctx: DBAccessContext): Fox[Organization] =
+  def findOne(organizationId: String)(using ctx: DBAccessContext): Fox[Organization] =
     for {
       accessQuery <- readAccessQuery
       r <- run(
@@ -151,7 +151,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       r <- rList.headOption.toFox
     } yield r
 
-  def findOrganizationIdForDataset(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[String] =
+  def findOrganizationIdForDataset(datasetId: ObjectId)(using ctx: DBAccessContext): Fox[String] =
     for {
       accessQuery <- readAccessQuery
       rList <- run(q"""SELECT o._id FROM webknossos.organizations_ o
@@ -294,7 +294,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
 
   // While organizationId is not a valid ObjectId, we wrap it here to pass it to the generic assertUpdateAccess.
   // There, no properties of the ObjectId are used other than its string content.
-  private def assertUpdateAccess(organizationId: String)(implicit ctx: DBAccessContext): Fox[Unit] =
+  private def assertUpdateAccess(organizationId: String)(using ctx: DBAccessContext): Fox[Unit] =
     assertUpdateAccess(ObjectId(organizationId))
 
   def updatePlan(organizationId: String, planUpdate: OrganizationPlanUpdate): Fox[Unit] =

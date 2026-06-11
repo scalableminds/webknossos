@@ -112,7 +112,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       current = updateTimeSpan(current, timestamps.last)
       lastUserActivities.update(userId, current)
 
-      flushToDb(timeSpansToInsert, timeSpansToUpdate)(ctx)
+      flushToDb(timeSpansToInsert, timeSpansToUpdate)(using ctx)
     }
 
   private def isNotInterrupted(current: Instant, last: TimeSpan) =
@@ -125,7 +125,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     // Log time to annotation
     annotation match {
       case Some(a: ObjectId) =>
-        annotationDAO.logTime(a, duration)(GlobalAccessContext) ?~> "FAILED: AnnotationService.logTime"
+        annotationDAO.logTime(a, duration)(using GlobalAccessContext) ?~> "FAILED: AnnotationService.logTime"
       case _ =>
         Fox.successful(())
       // do nothing, this is not a stored annotation
@@ -135,14 +135,14 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       implicit ctx: DBAccessContext): Fox[?] =
     for {
       annotation <- annotationOpt.toFox
-      user <- userService.findOneCached(annotation._user)(GlobalAccessContext)
-      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
-      task <- annotationService.taskFor(annotation)(GlobalAccessContext)
+      user <- userService.findOneCached(annotation._user)(using GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
+      task <- annotationService.taskFor(annotation)(using GlobalAccessContext)
       project <- projectDAO.findOne(task._project)
       annotationTime <- annotation.tracingTime.toFox ?~> "no annotation.tracingTime"
       timeLimit <- project.expectedTime.toFox ?~> "no project.expectedTime"
-      projectOwner <- userService.findOneCached(project._owner)(GlobalAccessContext)
-      projectOwnerMultiUser <- multiUserDAO.findOne(projectOwner._multiUser)(GlobalAccessContext)
+      projectOwner <- userService.findOneCached(project._owner)(using GlobalAccessContext)
+      projectOwnerMultiUser <- multiUserDAO.findOne(projectOwner._multiUser)(using GlobalAccessContext)
     } yield {
       if (annotationTime >= timeLimit && annotationTime - time.toMillis < timeLimit) {
         Mailer ! Send(
@@ -155,8 +155,8 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     annotation.flatMap(_._task) match {
       case Some(taskId) =>
         for {
-          _ <- taskDAO.logTime(taskId, duration)(GlobalAccessContext) ?~> "FAILED: TaskSQLDAO.logTime"
-          _ <- signalOverTime(duration, annotation)(GlobalAccessContext).shiftBox //signalOverTime is expected to fail in some cases, hence the .shiftBox
+          _ <- taskDAO.logTime(taskId, duration)(using GlobalAccessContext) ?~> "FAILED: TaskSQLDAO.logTime"
+          _ <- signalOverTime(duration, annotation)(using GlobalAccessContext).shiftBox //signalOverTime is expected to fail in some cases, hence the .shiftBox
         } yield {}
       case _ =>
         Fox.successful(())
@@ -165,7 +165,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
   // We intentionally return a Fox[Option] here, since the calling for-comprehension expects an Option[Annotation]. In case
   // None is passed in as "annotation", we want to pass this None on as Fox.successful(None) and not break the for-comprehension
   // by returning Fox.empty.
-  private def getAnnotation(annotation: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Option[Annotation]] =
+  private def getAnnotation(annotation: Option[ObjectId])(using ctx: DBAccessContext): Fox[Option[Annotation]] =
     annotation match {
       case Some(annotationId) =>
         annotationDAO.findOne(annotationId).map(Some(_))
@@ -188,7 +188,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     updateResult
   }
 
-  private def updateTimeSpanInDb(timeSpan: TimeSpan, timestamp: Instant)(implicit ctx: DBAccessContext) = {
+  private def updateTimeSpanInDb(timeSpan: TimeSpan, timestamp: Instant)(using ctx: DBAccessContext) = {
     val duration = timestamp - timeSpan.lastUpdate
     val updated = timeSpan.addTime(duration, timestamp)
 

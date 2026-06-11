@@ -77,7 +77,7 @@ class AnnotationMutexService @Inject()(val lifecycle: ApplicationLifecycle,
 
   def publicWrites(mutexResult: MutexResult): Fox[JsObject] =
     for {
-      userOpt <- Fox.runOptional(mutexResult.blockedByUser)(user => userDAO.findOne(user)(GlobalAccessContext))
+      userOpt <- Fox.runOptional(mutexResult.blockedByUser)(user => userDAO.findOne(user)(using GlobalAccessContext))
       userJsonOpt <- Fox.runOptional(userOpt)(user => userService.compactWrites(user))
     } yield
       Json.obj(

@@ -48,7 +48,7 @@ class InviteService @Inject()(conf: WkConf,
                          autoActivate: Boolean,
                          isAdmin: Boolean,
                          isDatasetManager: Boolean,
-                         teamMemberships: Seq[TeamMembership])(implicit ctx: DBAccessContext): Fox[Unit] =
+                         teamMemberships: Seq[TeamMembership])(using ctx: DBAccessContext): Fox[Unit] =
     for {
       invite <- Fox.fromFuture(generateInvite(sender._organization, autoActivate, isAdmin, isDatasetManager))
       _ <- inviteDAO.insertOne(invite)
@@ -86,7 +86,7 @@ class InviteService @Inject()(conf: WkConf,
   def removeExpiredInvites(): Fox[Unit] =
     inviteDAO.deleteAllExpired()
 
-  def deactivateUsedInvite(invite: Invite)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def deactivateUsedInvite(invite: Invite)(using ctx: DBAccessContext): Fox[Unit] =
     inviteDAO.deleteOne(invite._id)
 
   def findInviteByTokenOpt(tokenValueOpt: Option[String]): Fox[Invite] =

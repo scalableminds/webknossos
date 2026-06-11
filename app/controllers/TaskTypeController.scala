@@ -40,7 +40,7 @@ class TaskTypeController @Inject()(taskTypeDAO: TaskTypeDAO,
       for {
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, taskType._team)) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- taskTypeDAO
-          .findOneBySummaryAndOrganization(taskType.summary, request.identity._organization)(GlobalAccessContext)
+          .findOneBySummaryAndOrganization(taskType.summary, request.identity._organization)(using GlobalAccessContext)
           .reverse ?~> Msg.TaskType.summaryTaken(taskType.summary)
         _ <- taskTypeDAO.insertOne(taskType, request.identity._organization)
         js <- taskTypeService.publicWrites(taskType)

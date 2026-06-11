@@ -47,7 +47,7 @@ class ProjectInformationHandler @Inject()(
                                                   taskBoundingBoxes) ?~> Msg.Annotation.Merge.failedCompound
     } yield mergedAnnotation
 
-  override def restrictionsFor(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =
+  override def restrictionsFor(projectId: ObjectId)(using ctx: DBAccessContext): Fox[AnnotationRestrictions] =
     for {
       project <- projectDAO.findOne(projectId)
     } yield {

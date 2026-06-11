@@ -72,7 +72,7 @@ class TaskCreationService @Inject() (
       dataset: Dataset,
       dataSource: UsableDataSource,
       requestingUserId: ObjectId
-  )(implicit ctx: DBAccessContext): Fox[List[TaskParameters]] =
+  )(using ctx: DBAccessContext): Fox[List[TaskParameters]] =
     Fox.serialCombined(taskParametersList)(params =>
       Fox
         .runOptional(params.baseAnnotation)(
@@ -89,7 +89,7 @@ class TaskCreationService @Inject() (
       dataset: Dataset,
       dataSource: UsableDataSource,
       requestingUserId: ObjectId
-  )(implicit ctx: DBAccessContext): Fox[BaseAnnotation] =
+  )(using ctx: DBAccessContext): Fox[BaseAnnotation] =
     for {
       baseAnnotationIdValidated <- ObjectId.fromString(baseAnnotation.baseId)
       annotation <- resolveBaseAnnotationId(baseAnnotationIdValidated)
@@ -114,7 +114,7 @@ class TaskCreationService @Inject() (
     )
 
   // Used in create (without files) in case of base annotation
-  private def resolveBaseAnnotationId(annotationOrTaskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
+  private def resolveBaseAnnotationId(annotationOrTaskId: ObjectId)(using ctx: DBAccessContext): Fox[Annotation] =
     annotationDAO.findOne(annotationOrTaskId).shiftBox.flatMap {
       case Full(value) => Fox.successful(value)
       case _           => resolveBaseTaskId(annotationOrTaskId)
@@ -124,7 +124,7 @@ class TaskCreationService @Inject() (
   @SuppressWarnings(
     Array("TraversableHead")
   ) // We check if nonCancelledTaskAnnotations are empty before so head always works
-  private def resolveBaseTaskId(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[Annotation] =
+  private def resolveBaseTaskId(taskId: ObjectId)(using ctx: DBAccessContext): Fox[Annotation] =
     (for {
       task <- taskDAO.findOne(taskId)
       annotations <- annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.Task)
@@ -180,7 +180,7 @@ class TaskCreationService @Inject() (
       magRestrictions: MagRestrictions,
       dataSource: UsableDataSource,
       requestingUserId: ObjectId
-  )(implicit ctx: DBAccessContext): Fox[Unit] =
+  )(using ctx: DBAccessContext): Fox[Unit] =
     for {
       volumeTracingOpt <- baseAnnotation.volumeTracingId
       newVolumeTracingId <- params.newVolumeTracingId.toFox
@@ -289,7 +289,7 @@ class TaskCreationService @Inject() (
   private def addVolumeFallbackBoundingBox(volume: UploadedVolumeLayer, datasetId: ObjectId): Fox[UploadedVolumeLayer] =
     if (volume.tracing.boundingBox.isEmpty) {
       for {
-        dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext)
+        dataset <- datasetDAO.findOne(datasetId)(using GlobalAccessContext)
         dataSource <- datasetService.usableDataSourceFor(dataset)
       } yield volume.copy(tracing = volume.tracing.copy(boundingBox = dataSource.boundingBox))
     } else Fox.successful(volume)
@@ -349,7 +349,7 @@ class TaskCreationService @Inject() (
       volumes: List[Box[(UploadedVolumeLayer, Option[File])]],
       fullParams: List[Box[TaskParameters]],
       taskType: TaskType
-  )(implicit ctx: DBAccessContext): Fox[(List[Box[SkeletonTracing]], List[Box[(VolumeTracing, Option[File])]])] =
+  )(using ctx: DBAccessContext): Fox[(List[Box[SkeletonTracing]], List[Box[(VolumeTracing, Option[File])]])] =
     if (taskType.tracingType == TracingType.skeleton) {
       Fox.successful(
         skeletons
@@ -441,7 +441,7 @@ class TaskCreationService @Inject() (
       requestedTasks: List[Box[(TaskParameters, Option[SkeletonTracing], Option[(VolumeTracing, Option[File])])]],
       taskType: TaskType,
       requestingUser: User
-  )(implicit ctx: DBAccessContext): Fox[TaskCreationResult] = {
+  )(using ctx: DBAccessContext): Fox[TaskCreationResult] = {
     val flattenedRequestedTasks = requestedTasks.flatten
     if (flattenedRequestedTasks.isEmpty) {
       // if there is no nonempty task, we directly return all of the errors
@@ -568,7 +568,7 @@ class TaskCreationService @Inject() (
       volumeSaveResult: Box[Unit],
       taskType: TaskType,
       requestingUser: User
-  )(implicit ctx: DBAccessContext): Fox[Task] =
+  )(using ctx: DBAccessContext): Fox[Task] =
     for {
       params <- paramBox.toFox
       _ <- Fox.fromBool(

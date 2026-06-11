@@ -160,7 +160,7 @@ class AiModelController @Inject()(
   def runNeuronTraining: Action[RunNeuronModelTrainingParameters] =
     sil.SecuredAction.async(validateJson[RunNeuronModelTrainingParameters]) { implicit request =>
       for {
-        organization <- organizationDAO.findOne(request.identity._organization)(GlobalAccessContext) ?~> Msg.Organization
+        organization <- organizationDAO.findOne(request.identity._organization)(using GlobalAccessContext) ?~> Msg.Organization
           .notFound(request.identity._organization)
         _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(organization, request.identity)
         trainingAnnotations = request.body.trainingAnnotations
@@ -216,7 +216,7 @@ class AiModelController @Inject()(
   def runInstanceTraining: Action[RunInstanceModelTrainingParameters] =
     sil.SecuredAction.async(validateJson[RunInstanceModelTrainingParameters]) { implicit request =>
       for {
-        organization <- organizationDAO.findOne(request.identity._organization)(GlobalAccessContext) ?~> Msg.Organization
+        organization <- organizationDAO.findOne(request.identity._organization)(using GlobalAccessContext) ?~> Msg.Organization
           .notFound(request.identity._organization)
         _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(organization, request.identity)
         trainingAnnotations = request.body.trainingAnnotations
@@ -442,7 +442,7 @@ class AiModelController @Inject()(
 
   private def reserveUploadToPathForPreliminary(existingAiModelId: ObjectId,
                                                 params: ReserveAiModelUploadToPathParameters,
-                                                user: User)(implicit ctx: DBAccessContext): Fox[ObjectId] =
+                                                user: User)(using ctx: DBAccessContext): Fox[ObjectId] =
     for {
       existingModel <- aiModelDAO.findOne(existingAiModelId)
       _ <- Fox.fromBool(existingModel._organization.contains(user._organization)) ?~> Msg.AiModel.Reserve.wrongOrga ~> FORBIDDEN

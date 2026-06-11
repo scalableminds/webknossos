@@ -42,8 +42,8 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
       assignedUnfinishedJobsFiltered = assignedUnfinishedJobs.filter(j =>
         !jobsToCancel.map(_._id).toSet.contains(j._id))
       assignedUnfinishedJs <- Fox.serialCombined(assignedUnfinishedJobsFiltered)(
-        jobService.parameterWrites(_)(GlobalAccessContext))
-      toCancelJs <- Fox.serialCombined(jobsToCancel)(jobService.parameterWrites(_)(GlobalAccessContext))
+        jobService.parameterWrites(_)(using GlobalAccessContext))
+      toCancelJs <- Fox.serialCombined(jobsToCancel)(jobService.parameterWrites(_)(using GlobalAccessContext))
     } yield Ok(Json.obj("to_run" -> assignedUnfinishedJs, "to_cancel" -> toCancelJs))
   }
 
@@ -81,14 +81,14 @@ class WKRemoteWorkerController @Inject()(jobDAO: JobDAO,
     implicit request =>
       for {
         _ <- workerDAO.findOneByKey(key) ?~> Msg.Job.workerNotFound
-        jobBeforeChange <- jobDAO.findOne(id)(GlobalAccessContext)
+        jobBeforeChange <- jobDAO.findOne(id)(using GlobalAccessContext)
         _ <- jobDAO.updateStatus(id, request.body) ?~> Msg.Job.updateStatusFailed
-        jobAfterChange <- jobDAO.findOne(id)(GlobalAccessContext) ?~> Msg.Job.notFound
+        jobAfterChange <- jobDAO.findOne(id)(using GlobalAccessContext) ?~> Msg.Job.notFound
         _ = jobService.trackStatusChange(jobBeforeChange, jobAfterChange)
         _ <- jobService.cleanUpIfFailed(jobAfterChange) ?~> Msg.Job.cleanupFailed
         _ <- Fox.runIf(request.body.state == JobState.SUCCESS) {
           creditTransactionService
-            .completeTransactionOfJob(jobAfterChange._id)(GlobalAccessContext) ?~> Msg.Job.Credits.failed
+            .completeTransactionOfJob(jobAfterChange._id)(using GlobalAccessContext) ?~> Msg.Job.Credits.failed
         }
         _ <- Fox.runIf(
           jobBeforeChange.state != request.body.state && (request.body.state == JobState.FAILURE || request.body.state == JobState.CANCELLED)) {

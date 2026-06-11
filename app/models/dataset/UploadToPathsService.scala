@@ -91,7 +91,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
       _ <- datasetDAO.updateFolder(newDatasetId, parameters.folderId.getOrElse(organization._rootFolder))(
         GlobalAccessContext)
       _ <- datasetService.addInitialTeams(dataset, parameters.initialTeamIds, requestingUser) // called with user access context. Should be fine now that the folder is set correctly
-      _ <- datasetService.addUploader(dataset, requestingUser._id)(GlobalAccessContext)
+      _ <- datasetService.addUploader(dataset, requestingUser._id)(using GlobalAccessContext)
     } // Note: not returning the one with layersToLink. Those are managed by the server entirely, so the client doesn’t need their paths.
     yield dataSourceWithPaths
 
@@ -336,12 +336,12 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
     } yield ()
 
   private def deletePathsForOldPending(dataset: Dataset, pathOpt: Option[UPath])(
-      implicit ec: ExecutionContext): Fox[_] =
+      implicit ec: ExecutionContext): Fox[Unit] =
     Fox.runOptional(pathOpt) { path =>
       for {
-        client <- datasetService.clientFor(dataset)(GlobalAccessContext)
+        client <- datasetService.clientFor(dataset)(using GlobalAccessContext)
         _ <- pathDeletionService.deletePaths(client, Seq(path))
       } yield ()
-    }
+    }.map(_ => ())
 
 }

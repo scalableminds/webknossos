@@ -124,7 +124,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
       for {
         idStr <- idOpt.toFox
         datasetId <- ObjectId.fromString(idStr)
-        dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId)
+        dataset <- datasetDAO.findOne(datasetId)(using GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId)
         isAllowed <- userBox match {
           case Full(user) => datasetService.isEditableBy(dataset, Some(user))
           case _          => Fox.successful(false)
@@ -137,7 +137,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
         _ <- Fox.fromBool(conf.Features.allowDeleteDatasets) ?~> Msg.Dataset.Delete.notEnabled
         idStr <- idOpt.toFox
         datasetId <- ObjectId.fromString(idStr)
-        dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId)
+        dataset <- datasetDAO.findOne(datasetId)(using GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId)
         isAllowed = userBox match {
           case Full(user) => user._organization == dataset._organization && user.isAdmin
           case _          => false
@@ -172,7 +172,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
     else
       for {
         tracingId <- tracingIdOpt.toFox
-        annotation <- annotationInformationProvider.annotationForTracing(tracingId)(GlobalAccessContext) ?~> Msg.Annotation.notFound
+        annotation <- annotationInformationProvider.annotationForTracing(tracingId)(using GlobalAccessContext) ?~> Msg.Annotation.notFound
         result <- handleAnnotationAccess(Some(annotation._id.toString), mode, userBox, token)
       } yield result
 
@@ -197,7 +197,7 @@ class UserTokenController @Inject()(datasetDAO: DatasetDAO,
         annotationIdStr <- annotationIdOpt.toFox
         annotationId <- ObjectId.fromString(annotationIdStr)
         annotationBox <- annotationInformationProvider
-          .provideAnnotation(annotationId, userBox.toOption)(GlobalAccessContext)
+          .provideAnnotation(annotationId, userBox.toOption)(using GlobalAccessContext)
           .shiftBox
         annotation <- annotationBox match {
           case Full(_) => annotationBox.toFox

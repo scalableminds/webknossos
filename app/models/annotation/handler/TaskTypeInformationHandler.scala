@@ -50,7 +50,7 @@ class TaskTypeInformationHandler @Inject()(
                                                   taskBoundingBoxes) ?~> Msg.Annotation.Merge.failedCompound
     } yield mergedAnnotation
 
-  override def restrictionsFor(taskTypeId: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =
+  override def restrictionsFor(taskTypeId: ObjectId)(using ctx: DBAccessContext): Fox[AnnotationRestrictions] =
     for {
       taskType <- taskTypeDAO.findOne(taskTypeId) ?~> Msg.TaskType.notFound(taskTypeId)
     } yield {

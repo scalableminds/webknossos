@@ -15,7 +15,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
     extends FoxImplicits
     with LazyLogging {
 
-  def hasEnoughCredits(organizationId: String, milliCreditsToSpend: Int)(implicit ctx: DBAccessContext): Fox[Boolean] =
+  def hasEnoughCredits(organizationId: String, milliCreditsToSpend: Int)(using ctx: DBAccessContext): Fox[Boolean] =
     creditTransactionDAO.getMilliCreditBalance(organizationId).map(balance => balance >= milliCreditsToSpend)
 
   def reserveCredits(organizationId: String, milliCreditsToSpend: Int, comment: String)(
@@ -33,7 +33,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
     } yield pendingCreditTransaction
   }
 
-  def completeTransactionOfJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def completeTransactionOfJob(jobId: ObjectId)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       transactionBox <- creditTransactionDAO.findPendingTransactionForJob(jobId).shiftBox
       _ <- transactionBox match {
@@ -47,7 +47,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
 
     } yield ()
 
-  def refundTransactionForJob(jobId: ObjectId, isCancelled: Boolean = false)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def refundTransactionForJob(jobId: ObjectId, isCancelled: Boolean = false)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       transactionBox <- creditTransactionDAO.findPendingTransactionForJob(jobId).shiftBox
       _ <- transactionBox match {
@@ -60,7 +60,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
       }
     } yield ()
 
-  def reserveCreditsForRetry(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def reserveCreditsForRetry(jobId: ObjectId)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       existingTransactionBox <- creditTransactionDAO.findTransactionForJob(jobId).shiftBox
       _ <- existingTransactionBox match {
@@ -94,7 +94,7 @@ class CreditTransactionService @Inject()(creditTransactionDAO: CreditTransaction
       implicit ctx: DBAccessContext): Fox[Unit] =
     creditTransactionDAO.addJobIdToTransaction(creditTransaction, jobId)
 
-  def findTransactionOfJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[CreditTransaction] =
+  def findTransactionOfJob(jobId: ObjectId)(using ctx: DBAccessContext): Fox[CreditTransaction] =
     creditTransactionDAO.findTransactionForJob(jobId)
 
   // For display purposes: pairs each expired free-credit grant with its revocation and replaces

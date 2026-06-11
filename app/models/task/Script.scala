@@ -73,7 +73,7 @@ class ScriptDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    VALUES(${s._id}, ${s._owner}, ${s.name}, ${s.gist}, ${s.created}, ${s.isDeleted})""".asUpdate)
     } yield ()
 
-  def updateOne(s: Script)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateOne(s: Script)(using ctx: DBAccessContext): Fox[Unit] =
     for { //note that s.created is skipped
       _ <- assertUpdateAccess(s._id)
       _ <- run(q"""UPDATE webknossos.scripts

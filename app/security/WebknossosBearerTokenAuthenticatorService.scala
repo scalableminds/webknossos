@@ -79,7 +79,7 @@ class WebknossosBearerTokenAuthenticatorService(settings: BearerTokenAuthenticat
       tokenAuthenticator <- repository.findOneByValue(tokenValue) ?~> Msg.User.Token.invalid
       _ <- Fox.fromBool(tokenAuthenticator.isValid) ?~> Msg.User.Token.invalid
       idValidated <- ObjectId.fromString(tokenAuthenticator.loginInfo.providerKey) ?~> Msg.User.Token.invalid
-      user <- userService.findOneCached(idValidated)(GlobalAccessContext)
+      user <- userService.findOneCached(idValidated)(using GlobalAccessContext)
     } yield user
 
   def userForTokenOpt(tokenOpt: Option[String]): Fox[User] = tokenOpt match {

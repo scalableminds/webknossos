@@ -41,7 +41,7 @@ class UserController @Inject()(userService: UserService,
     log() {
       for {
         userJs <- userService.publicWrites(request.identity, request.identity)
-        _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
+        _ = userDAO.updateLastActivity(request.identity._id)(using GlobalAccessContext)
       } yield Ok(userJs)
     }
   }
@@ -72,7 +72,7 @@ class UserController @Inject()(userService: UserService,
         annotationCount: Option[Int] <- Fox.runIf(includeTotalCount.getOrElse(false))(
           annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Explorational))
         jsonList = annotations.map(annotationService.writeCompactInfo)
-        _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
+        _ = userDAO.updateLastActivity(request.identity._id)(using GlobalAccessContext)
       } yield {
         val result = Ok(Json.toJson(jsonList))
         annotationCount match {
@@ -96,7 +96,7 @@ class UserController @Inject()(userService: UserService,
         annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
           annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Task))
         jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
-        _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
+        _ = userDAO.updateLastActivity(request.identity._id)(using GlobalAccessContext)
       } yield {
         val result = Ok(Json.toJson(jsonList))
         annotationCount match {
@@ -339,7 +339,7 @@ class UserController @Inject()(userService: UserService,
                                           firstName,
                                           lastName)
           teams <- Fox.combined(assignedMemberships.map(t =>
-            teamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> Msg.Team.notFound(t.teamId) ~> NOT_FOUND))
+            teamDAO.findOne(t.teamId)(using GlobalAccessContext) ?~> Msg.Team.notFound(t.teamId) ~> NOT_FOUND))
           oldTeamMemberships <- userService.teamMembershipsFor(user._id)
           teamsWithoutUpdate <- Fox.filterNot(oldTeamMemberships)(t =>
             userService.isTeamManagerOrAdminOf(issuingUser, t.teamId))

@@ -207,7 +207,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
         _ <- annotationService.abortInitializedAnnotationOnFailure(initializingAnnotationId, insertedAnnotationBox)
         _ <- insertedAnnotationBox.toFox
         taskUpdated <- taskDAO.findOne(id)
-        taskJson <- taskService.publicWrites(taskUpdated)(GlobalAccessContext)
+        taskJson <- taskService.publicWrites(taskUpdated)(using GlobalAccessContext)
       } yield Ok(taskJson)
     }
   }
@@ -218,7 +218,7 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
       teamIds <- userService.teamIdsFor(user._id)
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
       task <- taskDAO.peekNextAssignment(user._id, teamIds, isTeamManagerOrAdmin) ?~> Msg.Task.unavailable
-      taskJson <- taskService.publicWrites(task)(GlobalAccessContext)
+      taskJson <- taskService.publicWrites(task)(using GlobalAccessContext)
     } yield Ok(taskJson)
   }
 

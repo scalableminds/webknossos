@@ -86,7 +86,7 @@ class JobController @Inject()(jobDAO: JobDAO,
     for {
       _ <- Fox.successful(())
       jobCountsByState <- jobDAO.countByState
-      workers <- workerDAO.findAll(GlobalAccessContext)
+      workers <- workerDAO.findAll(using GlobalAccessContext)
       workersJson = workers.map(workerService.publicWrites)
       jsStatus = Json.obj(
         "workers" -> workersJson,
@@ -125,7 +125,7 @@ class JobController @Inject()(jobDAO: JobDAO,
       _ <- jobDAO.updateManualState(id, JobState.CANCELLED)
       _ <- Fox.runIf(job.state == JobState.PENDING || job.state == JobState.STARTED) {
         creditTransactionService
-          .refundTransactionForJob(job._id, isCancelled = true)(GlobalAccessContext) ?~> Msg.Job.Credits.refundFailed
+          .refundTransactionForJob(job._id, isCancelled = true)(using GlobalAccessContext) ?~> Msg.Job.Credits.refundFailed
       }
       js <- jobService.publicWrites(job)
     } yield Ok(js)
@@ -149,7 +149,7 @@ class JobController @Inject()(jobDAO: JobDAO,
     sil.SecuredAction.async { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
-        organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization
+        organization <- organizationDAO.findOne(dataset._organization)(using GlobalAccessContext) ?~> Msg.Organization
           .notFound(dataset._organization)
         _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> Msg.Job.ComputeMeshFile.wrongOrga ~> FORBIDDEN
         _ <- datasetService.assertValidLayerNameLax(layerName)
@@ -172,7 +172,7 @@ class JobController @Inject()(jobDAO: JobDAO,
     sil.SecuredAction.async { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
-        organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization
+        organization <- organizationDAO.findOne(dataset._organization)(using GlobalAccessContext) ?~> Msg.Organization
           .notFound(dataset._organization)
         _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> Msg.Job.ComputeSegmentIndex.wrongOrga ~> FORBIDDEN
         _ <- datasetService.assertValidLayerNameLax(layerName)
@@ -197,7 +197,7 @@ class JobController @Inject()(jobDAO: JobDAO,
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
-          organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization
+          organization <- organizationDAO.findOne(dataset._organization)(using GlobalAccessContext) ?~> Msg.Organization
             .notFound(dataset._organization)
           _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> Msg.Job.Inference.wrongOrga ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(newDatasetName)
@@ -233,7 +233,7 @@ class JobController @Inject()(jobDAO: JobDAO,
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
-          organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization
+          organization <- organizationDAO.findOne(dataset._organization)(using GlobalAccessContext) ?~> Msg.Organization
             .notFound(dataset._organization)
           _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> Msg.Job.AlignSections.wrongOrga ~> FORBIDDEN
           _ <- datasetService.assertValidDatasetName(request.body.newDatasetName)
@@ -277,7 +277,7 @@ class JobController @Inject()(jobDAO: JobDAO,
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
-          organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization
+          organization <- organizationDAO.findOne(dataset._organization)(using GlobalAccessContext) ?~> Msg.Organization
             .notFound(dataset._organization)
           _ <- Fox.runOptional(layerName)(datasetService.assertValidLayerNameLax)
           _ <- Fox.runOptional(annotationLayerName)(datasetService.assertValidLayerNameLax)
@@ -333,7 +333,7 @@ class JobController @Inject()(jobDAO: JobDAO,
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
-          organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization
+          organization <- organizationDAO.findOne(dataset._organization)(using GlobalAccessContext) ?~> Msg.Organization
             .notFound(dataset._organization)
           _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> Msg.Job.MaterializeVolumeAnnotation.wrongOrga ~> FORBIDDEN
           _ <- datasetService.assertValidLayerNameLax(fallbackLayerName)
@@ -369,7 +369,7 @@ class JobController @Inject()(jobDAO: JobDAO,
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
-          organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization
+          organization <- organizationDAO.findOne(dataset._organization)(using GlobalAccessContext) ?~> Msg.Organization
             .notFound(dataset._organization)
           _ <- Fox.fromBool(request.identity._organization == organization._id) ?~> Msg.Job.FindLargestSegmentId.wrongOrga ~> FORBIDDEN
           _ <- datasetService.assertValidLayerNameLax(layerName)
@@ -392,7 +392,7 @@ class JobController @Inject()(jobDAO: JobDAO,
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
-          organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization
+          organization <- organizationDAO.findOne(dataset._organization)(using GlobalAccessContext) ?~> Msg.Organization
             .notFound(dataset._organization)
           userOrganization <- organizationDAO.findOne(request.identity._organization)
           animationJobOptions = request.body

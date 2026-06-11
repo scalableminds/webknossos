@@ -20,20 +20,20 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
   protected def updateAccessQ(requestingUserId: ObjectId): SqlToken = readAccessQ(requestingUserId)
   protected def deleteAccessQ(requestingUserId: ObjectId): SqlToken = readAccessQ(requestingUserId)
 
-  protected def readAccessQuery(implicit ctx: DBAccessContext): Fox[SqlToken] =
+  protected def readAccessQuery(using ctx: DBAccessContext): Fox[SqlToken] =
     if (ctx.globalAccess) Fox.successful(q"TRUE")
     else {
       for {
         userIdBox <- userIdFromCtx.shiftBox
       } yield {
         userIdBox match {
-          case Full(userId) => readAccessFromUserOrToken(userId, sharingTokenFromCtx)(ctx)
+          case Full(userId) => readAccessFromUserOrToken(userId, sharingTokenFromCtx)(using ctx)
           case _            => anonymousReadAccessQ(sharingTokenFromCtx)
         }
       }
     }
 
-  def assertUpdateAccess(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def assertUpdateAccess(id: ObjectId)(using ctx: DBAccessContext): Fox[Unit] =
     if (ctx.globalAccess) Fox.successful(())
     else {
       for {
@@ -45,7 +45,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
       } yield ()
     }
 
-  def assertDeleteAccess(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def assertDeleteAccess(id: ObjectId)(using ctx: DBAccessContext): Fox[Unit] =
     if (ctx.globalAccess) Fox.successful(())
     else {
       for {
@@ -57,7 +57,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
       } yield ()
     }
 
-  protected def userIdFromCtx(implicit ctx: DBAccessContext): Fox[ObjectId] =
+  protected def userIdFromCtx(using ctx: DBAccessContext): Fox[ObjectId] =
     ctx.data match {
       case Some(user: User) => Fox.successful(user._id)
       case Some(userSharingTokenContainer: UserSharingTokenContainer) =>
@@ -79,7 +79,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
       }
     }
 
-  protected def accessQueryFromAccessQ(accessQ: ObjectId => SqlToken)(implicit ctx: DBAccessContext): Fox[SqlToken] =
+  protected def accessQueryFromAccessQ(accessQ: ObjectId => SqlToken)(using ctx: DBAccessContext): Fox[SqlToken] =
     if (ctx.globalAccess) Fox.successful(q"TRUE")
     else {
       for {
@@ -92,7 +92,7 @@ abstract class SecuredSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: Execut
       }
     }
 
-  private def sharingTokenFromCtx(implicit ctx: DBAccessContext): Option[String] =
+  private def sharingTokenFromCtx(using ctx: DBAccessContext): Option[String] =
     ctx.data match {
       case Some(sharingTokenContainer: SharingTokenContainer) => Some(sharingTokenContainer.sharingToken)
       case Some(userSharingTokenContainer: UserSharingTokenContainer) =>

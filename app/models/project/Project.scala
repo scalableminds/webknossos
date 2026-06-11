@@ -82,7 +82,7 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   // read operations
 
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[Project]] =
+  override def findAll(using ctx: DBAccessContext): Fox[List[Project]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery ORDER BY created".as[ProjectsRow])
@@ -103,7 +103,7 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def findOneByNameAndOrganization(name: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Project] =
+  def findOneByNameAndOrganization(name: String, organizationId: String)(using ctx: DBAccessContext): Fox[Project] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns FROM $existingCollectionName
@@ -140,7 +140,7 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                          ${p.created}, ${p.isDeleted})""".asUpdate)
     } yield ()
 
-  def updateOne(p: Project)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateOne(p: Project)(using ctx: DBAccessContext): Fox[Unit] =
     for { // note that p.created is immutable, hence skipped here
       _ <- assertUpdateAccess(p._id)
       _ <- run(q"""UPDATE webknossos.projects
@@ -156,7 +156,7 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    WHERE _id = ${p._id}""".asUpdate)
     } yield ()
 
-  def updatePaused(id: ObjectId, isPaused: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updatePaused(id: ObjectId, isPaused: Boolean)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(q"UPDATE webknossos.projects SET paused = $isPaused WHERE _id = $id".asUpdate)
@@ -168,7 +168,7 @@ class ProjectDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       count <- countList.headOption.toFox
     } yield count
 
-  override def deleteOne(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  override def deleteOne(projectId: ObjectId)(using ctx: DBAccessContext): Fox[Unit] =
     deleteOneWithNameSuffix(projectId)
 }
 
@@ -177,7 +177,7 @@ class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userSer
     extends LazyLogging
     with FoxImplicits {
 
-  def deleteOne(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[Boolean] =
+  def deleteOne(projectId: ObjectId)(using ctx: DBAccessContext): Fox[Boolean] =
     for {
       removalSuccessBox <- projectDAO.deleteOne(projectId).shiftBox
       successBool <- removalSuccessBox match {
@@ -192,10 +192,10 @@ class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userSer
       }
     } yield successBool
 
-  def publicWrites(project: Project)(implicit ctx: DBAccessContext): Fox[JsObject] =
+  def publicWrites(project: Project)(using ctx: DBAccessContext): Fox[JsObject] =
     for {
       ownerBox <- userService.findOneCached(project._owner).flatMap(u => userService.compactWrites(u)).shiftBox
-      teamNameBox <- teamDAO.findOne(project._team)(GlobalAccessContext).map(_.name).shiftBox
+      teamNameBox <- teamDAO.findOne(project._team)(using GlobalAccessContext).map(_.name).shiftBox
     } yield {
       Json.obj(
         "name" -> project.name,

@@ -77,7 +77,7 @@ class ProjectController @Inject()(projectService: ProjectService,
     withJsonBodyUsing(Project.projectPublicReads) { project =>
       for {
         _ <- projectDAO
-          .findOneByNameAndOrganization(project.name, request.identity._organization)(GlobalAccessContext)
+          .findOneByNameAndOrganization(project.name, request.identity._organization)(using GlobalAccessContext)
           .reverse ?~> Msg.Project.nameTaken(project.name)
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- projectDAO.insertOne(project, request.identity._organization) ?~> Msg.Project.createFailed
@@ -89,7 +89,7 @@ class ProjectController @Inject()(projectService: ProjectService,
   def update(id: ObjectId): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(Project.projectPublicReads) { updateRequest =>
       for {
-        project <- projectDAO.findOne(id)(GlobalAccessContext) ?~> Msg.Project.notFound(id) ~> NOT_FOUND
+        project <- projectDAO.findOne(id)(using GlobalAccessContext) ?~> Msg.Project.notFound(id) ~> NOT_FOUND
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- projectDAO
           .updateOne(updateRequest.copy(name = project.name, _id = project._id, paused = project.paused)) ?~> Msg.Project.updateFailed
@@ -142,7 +142,7 @@ class ProjectController @Inject()(projectService: ProjectService,
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN
         tasks <- taskDAO.findAllByProject(project._id, limit.getOrElse(Int.MaxValue), pageNumber.getOrElse(0))
         taskCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
-          taskDAO.countAllByProject(project._id)(GlobalAccessContext))
+          taskDAO.countAllByProject(project._id)(using GlobalAccessContext))
         js <- Fox.serialCombined(tasks)(task => taskService.publicWrites(task))
       } yield {
         val result = Ok(Json.toJson(js))

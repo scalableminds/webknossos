@@ -15,7 +15,7 @@ case class UserSharingTokenContainer(user: User, sharingToken: Option[String]) e
 
 object URLSharing {
 
-  def fallbackTokenAccessContext(sharingToken: Option[String])(implicit ctx: DBAccessContext): DBAccessContext =
+  def fallbackTokenAccessContext(sharingToken: Option[String])(using ctx: DBAccessContext): DBAccessContext =
     ctx.data match {
       case Some(user: User) => DBAccessContext(Some(UserSharingTokenContainer(user, sharingToken)))
       case _                => DBAccessContext(sharingToken.map(SharingTokenContainer))

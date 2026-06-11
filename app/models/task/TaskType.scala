@@ -44,7 +44,7 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO) {
 
   def publicWrites(taskType: TaskType): Fox[JsObject] =
     for {
-      team <- teamDAO.findOne(taskType._team)(GlobalAccessContext) ?~> Msg.Team.notFound(taskType._team)
+      team <- teamDAO.findOne(taskType._team)(using GlobalAccessContext) ?~> Msg.Team.notFound(taskType._team)
     } yield
       Json.obj(
         "id" -> taskType._id.toString,
@@ -137,7 +137,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                     """.asUpdate)
     } yield ()
 
-  def updateOne(t: TaskType)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateOne(t: TaskType)(using ctx: DBAccessContext): Fox[Unit] =
     for { // note that t.created is immutable, hence skipped here
       _ <- assertUpdateAccess(t._id)
       _ <- run(q"""UPDATE webknossos.taskTypes
@@ -165,6 +165,6 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       count <- countList.headOption.toFox
     } yield count
 
-  override def deleteOne(taskTypeId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  override def deleteOne(taskTypeId: ObjectId)(using ctx: DBAccessContext): Fox[Unit] =
     deleteOneWithNameSuffix(taskTypeId, nameColumn = "summary")
 }

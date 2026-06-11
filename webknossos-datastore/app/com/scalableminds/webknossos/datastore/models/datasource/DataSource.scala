@@ -4,11 +4,12 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
-import play.api.libs.json.{Format, JsResult, JsValue, Json}
+import play.api.libs.json.{Format, JsObject, JsResult, JsValue, Json, Reads, Writes}
 
 object DatasetViewConfiguration {
   type DatasetViewConfiguration = Map[String, JsValue]
-  implicit val jsonFormat: Format[DatasetViewConfiguration] = Format.of[Map[String, JsValue]]
+  implicit val jsonFormat: Format[DatasetViewConfiguration] =
+    Format(Reads.mapReads[JsValue], Writes(JsObject(_)))
 }
 
 trait DataSource {

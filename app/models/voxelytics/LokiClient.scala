@@ -254,8 +254,9 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyste
   // Pushes frontend redux action log entries to Loki. Each entry is expected to be of the form
   // {"timestamp": <epochMillis>, "action": {"type": ..., ...properties}}.
   // All entries are pushed as a single stream with low-cardinality labels; high-cardinality data
-  // (user id, action type, properties) lives in the log line so it does not explode the label index.
-  def bulkInsertActionLog(entries: List[JsObject], organizationId: String, userId: String)(
+  // (user id, session id, action type, properties) lives in the log line so it does not explode the
+  // label index. wk_user and wk_session are added to every action so logs can be filtered by them.
+  def bulkInsertActionLog(entries: List[JsObject], organizationId: String, userId: String, sessionId: String)(
       implicit ec: ExecutionContext): Fox[Unit] =
     if (entries.nonEmpty) {
       for {
@@ -264,7 +265,7 @@ class LokiClient @Inject()(wkConf: WkConf, rpc: RPC, val actorSystem: ActorSyste
           for {
             timestampMillis <- tryo((entry \ "timestamp").as[Long]).toFox
             action <- tryo((entry \ "action").as[JsObject]).toFox
-            line = Json.stringify(action ++ Json.obj("wk_user" -> userId))
+            line = Json.stringify(action ++ Json.obj("wk_user" -> userId, "wk_session" -> sessionId))
           } yield (timestampMillis, line))
         values = valueTuples.sortBy(_._1).map(tuple => Json.arr(Instant(tuple._1).toNanosecondsString, tuple._2))
         stream = Json.obj(

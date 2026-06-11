@@ -6,6 +6,7 @@
 
 import { sendReduxActionLog } from "admin/rest_api";
 import Date from "libs/date";
+import { TAB_SESSION_ID } from "libs/tab_session_id";
 import { buffers } from "redux-saga";
 import { actionChannel, call, delay, race, take } from "typed-redux-saga";
 import type { Action } from "viewer/model/actions/actions";
@@ -84,7 +85,7 @@ export default function* reduxActionLoggingSaga(): Saga<void> {
       const batch = buffer;
       buffer = [];
       try {
-        yield* call(sendReduxActionLog, batch);
+        yield* call(sendReduxActionLog, TAB_SESSION_ID, batch);
       } catch (_error) {
         // Fire-and-forget: dropping the batch is acceptable and must not disrupt the app.
       }

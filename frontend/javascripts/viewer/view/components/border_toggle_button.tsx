@@ -1,8 +1,6 @@
 import Icon from "@ant-design/icons";
-import IconSidebarHideLeft from "@images/icons/icon-sidebar-hide-left.svg?react";
-import IconSidebarHideRight from "@images/icons/icon-sidebar-hide-right.svg?react";
-import IconSidebarShowLeft from "@images/icons/icon-sidebar-show-left.svg?react";
-import IconSidebarShowRight from "@images/icons/icon-sidebar-show-right.svg?react";
+import IconSidebarLeft from "@images/icons/icon-sidebar-left.svg?react";
+import IconSidebarRight from "@images/icons/icon-sidebar-right.svg?react";
 import { Button } from "antd";
 import FastTooltip from "components/fast_tooltip";
 import { V2 } from "libs/mjs";
@@ -24,10 +22,8 @@ type Props = {
 const DRAG_THRESHOLD = 5;
 const TOOLTIP_STYLE = { height: 24 };
 const ICON_MAP: Record<string, ComponentType<SVGProps<SVGSVGElement>>> = {
-  "icon-sidebar-hide-left": IconSidebarHideLeft,
-  "icon-sidebar-show-left": IconSidebarShowLeft,
-  "icon-sidebar-hide-right": IconSidebarHideRight,
-  "icon-sidebar-show-right": IconSidebarShowRight,
+  "icon-sidebar-left": IconSidebarLeft,
+  "icon-sidebar-right": IconSidebarRight,
 };
 
 function BorderToggleButton({ side, inFooter }: Props) {
@@ -39,14 +35,13 @@ function BorderToggleButton({ side, inFooter }: Props) {
   }, [side]);
 
   const placement = side === "left" ? "top-end" : "top-start";
-  const iconKind = borderOpenStatus[side] ? "hide" : "show";
   const tooltipTitle = `${borderOpenStatus[side] ? "Hide" : "Open"} ${side} sidebar (${
     side === "left" ? "K" : "L"
   })`;
   const className = `${side}-border-button no-hover-highlighting ${
     inFooter === true ? "footer-button" : "flexlayout__tab_toolbar_button"
   }`;
-  const iconName = `icon-sidebar-${iconKind}-${side}`;
+  const iconName = `icon-sidebar-${side}`;
 
   const onClickHandler = useCallback<MouseEventHandler<HTMLButtonElement>>(
     (event) => {

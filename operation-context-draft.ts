@@ -8,7 +8,7 @@ type OperationId = string;
 
 interface OperationOptions {
   id: OperationId;
-  behaviorWhenDisallowed?: "wait" | "ignore" | "raise"; // defaults to "wait"
+  behaviorWhenDisallowed?: "wait" | "ignore" | "raise";
 }
 
 interface OperationContext {
@@ -16,15 +16,20 @@ interface OperationContext {
   execute(saga: () => Generator): Generator;
 }
 
+
 // ─── Actions ──────────────────────────────────────────────────────────────────
 
 const REGISTER_OPERATION = "REGISTER_OPERATION" as const;
 const UNREGISTER_OPERATION = "UNREGISTER_OPERATION" as const;
+const REGISTER_CHILD_OPERATION = "REGISTER_CHILD_OPERATION" as const;
+const UNREGISTER_CHILD_OPERATION = "UNREGISTER_CHILD_OPERATION" as const;
 const PUSH_SAVE_QUEUE = "PUSH_SAVE_QUEUE" as const;
 const ENSURE_NEWEST_VERSION = "ENSURE_NEWEST_VERSION" as const;
 
 const registerOperation = (id: OperationId) => ({ type: REGISTER_OPERATION, id });
 const unregisterOperation = (id: OperationId) => ({ type: UNREGISTER_OPERATION, id });
+const registerChildOperation = (id: OperationId) => ({ type: REGISTER_CHILD_OPERATION, id });
+const unregisterChildOperation = (id: OperationId) => ({ type: UNREGISTER_CHILD_OPERATION, id });
 const pushSaveQueueAction = () => ({ type: PUSH_SAVE_QUEUE });
 const ensureNewestVersionAction = (
   operationContext?: OperationContext,
@@ -34,36 +39,45 @@ const ensureNewestVersionAction = (
 type AppAction =
   | ReturnType<typeof registerOperation>
   | ReturnType<typeof unregisterOperation>
+  | ReturnType<typeof registerChildOperation>
+  | ReturnType<typeof unregisterChildOperation>
   | ReturnType<typeof pushSaveQueueAction>
   | ReturnType<typeof ensureNewestVersionAction>;
 
 // ─── Reducer ──────────────────────────────────────────────────────────────────
 
 interface AppState {
-  runningOperations: OperationId[];
+  activeOperation: OperationId | null;
+  childOperations: OperationId[]; // piggybacking ops currently inside execute()
 }
 
-function reducer(state: AppState = { runningOperations: [] }, action: AppAction): AppState {
+function reducer(
+  state: AppState = { activeOperation: null, childOperations: [] },
+  action: AppAction,
+): AppState {
   switch (action.type) {
     case REGISTER_OPERATION:
-      return { ...state, runningOperations: [...state.runningOperations, action.id] };
+      return { ...state, activeOperation: action.id };
     case UNREGISTER_OPERATION:
-      return {
-        ...state,
-        runningOperations: state.runningOperations.filter((id) => id !== action.id),
-      };
+      // Children cannot outlive their parent — clear them together.
+      return { activeOperation: null, childOperations: [] };
+    case REGISTER_CHILD_OPERATION:
+      return { ...state, childOperations: [...state.childOperations, action.id] };
+    case UNREGISTER_CHILD_OPERATION:
+      return { ...state, childOperations: state.childOperations.filter((id) => id !== action.id) };
     default:
       return state;
   }
 }
 
 // ─── Mutex ────────────────────────────────────────────────────────────────────
-// Module-level set is the actual lock. JS is single-threaded and Redux-Saga is
-// cooperative, so the size-check + add in createOperationContext are atomic —
-// no other saga can interleave between them. The Redux store mirrors this for
-// observability (DevTools, UI).
+// Scalar nullable rather than Set/array — the mutex invariant means only one
+// operation can hold the lock at any moment, so multiplicity is never valid.
+// JS is single-threaded and Redux-Saga is cooperative, so the null-check +
+// assign in createOperationContext are atomic (no other saga can interleave).
+// The Redux store mirrors this for observability (DevTools, UI).
 
-const activeLockIds = new Set<OperationId>();
+let activeLockId: OperationId | null = null;
 
 // ─── Operation Context ────────────────────────────────────────────────────────
 
@@ -79,18 +93,26 @@ function* createOperationContext(
 ): Generator<any, OperationContext | null, any> {
   const behavior = options.behaviorWhenDisallowed ?? "wait";
 
-  // Atomic check-and-set: no yield between size check and add.
-  if (activeLockIds.size === 0) {
-    activeLockIds.add(options.id);
+  // Atomic check-and-assign: no yield between null check and assign.
+  if (activeLockId === null) {
+    activeLockId = options.id;
     yield put(registerOperation(options.id));
 
+    // Closure variable: guards against calling execute() more than once on the
+    // same context, which would run a saga without holding the lock.
+    let consumed = false;
     const context: OperationContext = {
       id: options.id,
       *execute(saga: () => Generator) {
+        if (consumed)
+          throw new Error(
+            `[${options.id}] context already consumed — execute() may only be called once`,
+          );
+        consumed = true;
         try {
           yield* saga();
         } finally {
-          activeLockIds.delete(options.id);
+          activeLockId = null;
           yield put(unregisterOperation(options.id));
         }
       },
@@ -106,7 +128,7 @@ function* createOperationContext(
   }
 
   if (behavior === "raise") {
-    throw new Error(`[${options.id}] cannot start: lock held by [${[...activeLockIds]}]`);
+    throw new Error(`[${options.id}] cannot start: lock held by [${activeLockId}]`);
   }
 
   // "ignore"
@@ -114,15 +136,23 @@ function* createOperationContext(
   return null;
 }
 
-// When an existing context is passed, return a borrowed wrapper whose execute()
-// just runs the saga — no lock acquisition or release — so the outer context
-// keeps ownership of the lock.
-function borrowedContext(existing: OperationContext): OperationContext {
+// Returns a context that runs within an existing (parent) lock.
+// The child is registered in the Redux store for the duration of execute(),
+// which is also single-use to prevent accidental double-execution.
+function borrowedContext(existing: OperationContext, childId: OperationId): OperationContext {
+  let consumed = false;
   return {
     id: existing.id,
     *execute(saga: () => Generator) {
-      console.log(`  [${existing.id}] piggybacking — skipping lock`);
-      yield* saga();
+      if (consumed)
+        throw new Error(`[${childId}] borrowed context already consumed`);
+      consumed = true;
+      yield put(registerChildOperation(childId));
+      try {
+        yield* saga();
+      } finally {
+        yield put(unregisterChildOperation(childId));
+      }
     },
   };
 }
@@ -140,7 +170,7 @@ function* getOrCreateOperationContext(
   existing?: OperationContext | null,
 ): Generator<any, OperationContext | null, any> {
   if (existing != null) {
-    return borrowedContext(existing);
+    return borrowedContext(existing, options.id);
   }
   return yield* createOperationContext(options);
 }
@@ -225,7 +255,6 @@ console.log("Second should wait for the first to complete.\n");
 store.dispatch(pushSaveQueueAction());
 store.dispatch(pushSaveQueueAction());
 
-// Trigger a standalone ensureNewestVersion after both finish to show normal queuing.
 setTimeout(() => {
   console.log("\n=== Scenario 2: standalone ensureNewestVersion (runs after Scenario 1) ===\n");
   store.dispatch(ensureNewestVersionAction());

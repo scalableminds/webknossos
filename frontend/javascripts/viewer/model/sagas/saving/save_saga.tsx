@@ -504,11 +504,10 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     // A hard error was thrown. Terminate this saga.
     return { successful: false, shouldTerminate: true };
   } finally {
-    if (hasLocalUnsavedChanges) {
-      yield* put(finishedRebaseAction()); // isRebasingOrForwarding := false
-    } else {
-      yield* put(finishForwardingUpdateActionsAction()); // isRebasingOrForwarding := false
-    }
+    // isRebasingOrForwarding := false
+    yield* put(
+      hasLocalUnsavedChanges ? finishedRebaseAction() : finishForwardingUpdateActionsAction(),
+    );
   }
 }
 const REBASING_BUSY_BLOCK_REASON = "Syncing Annotation";

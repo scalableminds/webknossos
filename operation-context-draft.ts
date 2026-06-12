@@ -158,10 +158,12 @@ function* handlePushSaveQueue() {
   if (ctx == null) return;
 
   yield* ctx.execute(function* () {
+    console.log("STARTING handlePushSaveQueue");
     yield* doStuff1();
     // Pass our context so the handler can piggyback instead of waiting for the lock.
     yield put(ensureNewestVersionAction(ctx));
     yield* doStuff2();
+    console.log("ENDING handlePushSaveQueue");
   });
 }
 
@@ -173,7 +175,9 @@ function* handleEnsureNewestVersion(action: ReturnType<typeof ensureNewestVersio
   if (ctx == null) return;
 
   yield* ctx.execute(function* () {
+    console.log("STARTING ensureNewestVersionImpl");
     yield* ensureNewestVersionImpl();
+    console.log("ENDING ensureNewestVersionImpl");
   });
 }
 
@@ -187,7 +191,7 @@ function* rootSaga() {
 const sagaMiddleware = createSagaMiddleware();
 const store = createStore(reducer, applyMiddleware(sagaMiddleware));
 
-store.subscribe(() => console.log(`  store: ${JSON.stringify(store.getState())}`));
+// store.subscribe(() => console.log(`  store: ${JSON.stringify(store.getState())}`));
 sagaMiddleware.run(rootSaga);
 
 // ─── Demo ─────────────────────────────────────────────────────────────────────
@@ -200,5 +204,6 @@ store.dispatch(pushSaveQueueAction());
 // Trigger a standalone ensureNewestVersion after both finish to show normal queuing.
 setTimeout(() => {
   console.log("\n=== Scenario 2: standalone ensureNewestVersion (runs after Scenario 1) ===\n");
+  store.dispatch(ensureNewestVersionAction());
   store.dispatch(ensureNewestVersionAction());
 }, 2000);

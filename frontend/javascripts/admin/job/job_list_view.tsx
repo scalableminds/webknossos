@@ -381,26 +381,38 @@ function JobListView() {
           Cancel
         </AsyncLink>
       );
-    } else if ((job.state === "FAILURE" || job.state === "CANCELLED") && isCurrentUserSuperUser) {
-      return (
-        <Tooltip title="Restarts the workflow from the failed task, skipping and reusing artifacts from preceding tasks that were already successful.">
-          <AsyncLink
-            onClick={async () => {
-              try {
-                await retryJob(job.id);
-                await queryClient.invalidateQueries({ queryKey: ["jobs"] });
-                Toast.success("Job is being retried");
-              } catch (e) {
-                console.error("Could not retry job", e);
-                Toast.error("Failed to start retrying the job");
-              }
-            }}
-            icon={<PlayCircleOutlined className="icon-margin-right" />}
-          >
-            Retry
-          </AsyncLink>
-        </Tooltip>
-      );
+    } else if (job.state === "FAILURE" || job.state === "CANCELLED") {
+      // Regular users may retry a job once. Super users may always retry.
+      const canRetry = isCurrentUserSuperUser || job.lastRetry == null;
+      if (canRetry) {
+        return (
+          <Tooltip title="Restarts the workflow from the failed task, skipping and reusing artifacts from preceding tasks that were already successful.">
+            <AsyncLink
+              onClick={async () => {
+                try {
+                  await retryJob(job.id);
+                  await queryClient.invalidateQueries({ queryKey: ["jobs"] });
+                  Toast.success("Job is being retried");
+                } catch (e) {
+                  console.error("Could not retry job", e);
+                  Toast.error("Failed to start retrying the job");
+                }
+              }}
+              icon={<PlayCircleOutlined className="icon-margin-right" />}
+            >
+              Retry
+            </AsyncLink>
+          </Tooltip>
+        );
+      }
+      if (job.state === "FAILURE") {
+        return (
+          <Tooltip title="This job has already been retried once and failed again. This is likely a persistent failure.">
+            <span>Please contact an administrator for help.</span>
+          </Tooltip>
+        );
+      }
+      return null;
     } else if (
       job.command === APIJobCommand.CONVERT_TO_WKW ||
       job.command === APIJobCommand.COMPUTE_SEGMENT_INDEX_FILE ||

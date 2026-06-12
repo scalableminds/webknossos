@@ -131,13 +131,18 @@ class JobController @Inject()(jobDAO: JobDAO,
     } yield Ok(js)
   }
 
+  /*
+   * Users may retry their failed jobs once (a second failure is likely persistent,
+   * so they are asked to contact administrators instead). Super users may always retry.
+   */
   def retry(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> Msg.Job.notEnabled
-      _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
-      job <- jobDAO.findOne(id)
+      job <- jobDAO.findOne(id) ?~> Msg.Job.notFound
+      multiUser <- multiUserDAO.findOne(request.identity._multiUser)
+      _ <- Fox.fromBool(multiUser.isSuperUser || job.lastRetry.isEmpty) ?~> Msg.Job.alreadyRetried ~> FORBIDDEN
       _ <- creditTransactionService.reserveCreditsForRetry(job._id)
-      _ <- jobDAO.retryOne(id)
+      _ <- jobDAO.retryOne(id, retriedBySuperUser = multiUser.isSuperUser)
       js <- jobService.publicWrites(job)
     } yield Ok(js)
   }

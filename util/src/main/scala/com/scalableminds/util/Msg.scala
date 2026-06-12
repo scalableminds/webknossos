@@ -335,6 +335,8 @@ object Msg {
     val updateTeamsFailed: String = "Could not update the folder’s allowed teams."
   }
   object Job {
+    val alreadyRetried: String =
+      "This job has already been retried once and failed again. This is likely a persistent failure. Please contact an administrator for help."
     val cleanupFailed: String = "Could not clean up failed job."
     val notEnabled: String = "Long-running jobs are not enabled for this WEBKNOSSOS instance."
     val edgeLengthExceeded: String = "An edge length of the selected bounding box is too large."

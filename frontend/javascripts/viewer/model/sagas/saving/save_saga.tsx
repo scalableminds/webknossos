@@ -343,7 +343,7 @@ function* applyNewestMissingUpdateActions(
   const mayEdit = yield* select((state) => mayEditAnnotation(state));
   try {
     const { success, artifactInfos } = yield* tryToIncorporateActions(actions, false);
-    // Updates the annotation state used for future rebase operation the current state with the missingUpdateActions applied.
+    // Updates the annotation state used for future rebase operation to the current state with the missingUpdateActions applied.
     yield* put(finishedApplyingMissingUpdatesAction()); // knownServerState := annotation
     if (success) {
       yield* call(updatePendingProofreadingOperationInfoAction);

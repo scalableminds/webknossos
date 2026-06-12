@@ -305,6 +305,7 @@ export default class SegmentMeshController {
       } else {
         lodMeshGroupForLayer.removeNoLODSupportedMesh(meshGroup);
       }
+      this.disposeMeshGroup(meshGroup);
 
       this.removeMeshLODFromMeshGroups(additionalCoordKey, layerName, segmentId, currentLod);
     });
@@ -312,6 +313,18 @@ export default class SegmentMeshController {
       // If options.lod is provided, the parent group should not be removed
       this.removeMeshFromMeshGroups(additionalCoordKey, layerName, segmentId);
     }
+  }
+
+  private disposeMeshGroup(meshGroup: Group): void {
+    // Without explicit disposal, three.js would keep the GPU buffers of the
+    // geometries and materials alive even though the meshes were removed
+    // from the scene graph.
+    meshGroup.traverse((obj) => {
+      if (obj instanceof Mesh) {
+        obj.geometry.dispose();
+        obj.material.dispose();
+      }
+    });
   }
 
   getMeshGeometryInBestLOD(

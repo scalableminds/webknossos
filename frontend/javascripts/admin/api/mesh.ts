@@ -95,6 +95,10 @@ export function getMeshFileChunkData(
         {
           data: batchDescription,
           useWebworkerForArrayBuffer: true,
+          // Failed attempts are retried (see retryAsyncFunction below) and the
+          // callers are responsible for surfacing the final error, so don't
+          // show a toast for each failed attempt.
+          showErrorToast: false,
         },
       );
       const chunkCount = batchDescription.requests.length;

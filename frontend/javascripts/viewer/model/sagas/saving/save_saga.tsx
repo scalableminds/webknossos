@@ -335,7 +335,6 @@ function* updatePendingProofreadingOperationInfoAction() {
 
 function* applyNewestMissingUpdateActions(
   actions: APIUpdateActionBatch[],
-  needsRewindingRebase: boolean,
 ): Saga<ApplyingUpdateResults> {
   if (actions.length === 0) {
     Toast.close(SAVING_CONFLICT_TOAST_KEY);
@@ -343,17 +342,9 @@ function* applyNewestMissingUpdateActions(
   }
   const mayEdit = yield* select((state) => mayEditAnnotation(state));
   try {
-    if (!needsRewindingRebase) {
-      // If no rebasing is currently done, we still need to inform the diffing saga, that the currently replayed
-      // update actions originate from the server and should not be considered during diffing.
-      yield put(startForwardingUpdateActionsAction()); // isRebasingOrForwarding := true
-    }
     const { success, artifactInfos } = yield* tryToIncorporateActions(actions, false);
     // Updates the annotation state used for future rebase operation the current state with the missingUpdateActions applied.
     yield* put(finishedApplyingMissingUpdatesAction()); // knownServerState := annotation
-    if (!needsRewindingRebase) {
-      yield* put(finishForwardingUpdateActionsAction()); // isRebasingOrForwarding := false
-    }
     if (success) {
       yield* call(updatePendingProofreadingOperationInfoAction);
       return { success: true, artifactInfos };
@@ -473,11 +464,15 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
 
   try {
     if (hasRemoteUnseenChanges) {
-      const applyingResult = yield* call(
-        applyNewestMissingUpdateActions,
-        missingUpdateActions,
-        needsRewindingRebase,
-      );
+      if (!needsRewindingRebase) {
+        // If no rebasing is currently done, we still need to inform the diffing saga, that the currently replayed
+        // update actions originate from the server and should not be considered during diffing.
+        yield put(startForwardingUpdateActionsAction()); // isRebasingOrForwarding := true
+      }
+      const applyingResult = yield* call(applyNewestMissingUpdateActions, missingUpdateActions);
+      if (!needsRewindingRebase) {
+        yield* put(finishForwardingUpdateActionsAction()); // isRebasingOrForwarding := false
+      }
       if (!applyingResult.success) {
         return { successful: false, shouldTerminate: false };
       }
@@ -486,7 +481,7 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     if (needsRewindingRebase) {
       // Only if a rewinding rebase was necessary, the pending update actions in the save queue must be reapplied.
       const { success: successful } = yield* call(
-        reapplyUpdateActionsFromSaveQueue, // isRebasingOrForwarding := true (in happy case)
+        reapplyUpdateActionsFromSaveQueue, // isRebasingOrForwarding := false (in happy case)
         missingUpdateActions,
         annotationBeforeRebase,
       );

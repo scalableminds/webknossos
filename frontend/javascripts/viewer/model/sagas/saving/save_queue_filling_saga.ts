@@ -98,7 +98,7 @@ export function* setupSavingForTracingType(
 
   yield* call(ensureWkInitialized);
 
-  const actionBuffer = buffers.expanding<Action>();
+  const tracingActionBuffer = buffers.expanding<Action>();
   const tracingActionChannel = yield* actionChannel(
     tracingType === "skeleton"
       ? [
@@ -108,7 +108,7 @@ export function* setupSavingForTracingType(
           "SET_SKELETON_TRACING",
         ]
       : VolumeTracingSaveRelevantActions,
-    actionBuffer,
+    tracingActionBuffer,
   );
   // During rebasing, the local users updates are replayed and thus the identity of skeleton nodes and edges in the diffable map entries change.
   // But content wise they should be the same. Thus, after rebasing reload the tracing to avoid diffs caused by the diffable map identity mismatches.
@@ -142,7 +142,7 @@ export function* setupSavingForTracingType(
     // Prioritize consumption of tracingActionChannel since we don't want to
     // reply to the ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE action if there
     // are unprocessed user actions.
-    if (!actionBuffer.isEmpty()) {
+    if (!tracingActionBuffer.isEmpty()) {
       yield* take(tracingActionChannel);
     } else {
       // Wait for either a user action or the "ensureAction".

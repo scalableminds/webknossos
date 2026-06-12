@@ -42,7 +42,7 @@ export type UnsubscribeFromAnnotationMutexAction = ReturnType<
 export type SnapshotAnnotationStateForNextRebaseAction = ReturnType<
   typeof snapshotAnnotationStateForNextRebaseAction
 >;
-export type PrepareRebaseAction = ReturnType<typeof prepareRebaseAction>;
+export type RewindForRebaseAction = ReturnType<typeof rewindForRebaseAction>;
 export type FinishedRebaseAction = ReturnType<typeof finishedRebaseAction>;
 export type StartForwardingUpdateActionsAction = ReturnType<
   typeof startForwardingUpdateActionsAction
@@ -82,7 +82,7 @@ export type SaveAction =
   | SubscribeToAnnotationMutexAction
   | UnsubscribeFromAnnotationMutexAction
   | SnapshotAnnotationStateForNextRebaseAction
-  | PrepareRebaseAction
+  | RewindForRebaseAction
   | FinishedRebaseAction
   | StartForwardingUpdateActionsAction
   | FinishForwardingUpdateActionsAction
@@ -273,10 +273,10 @@ export const snapshotAnnotationStateForNextRebaseAction = () =>
     type: "SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE",
   }) as const;
 
-export const prepareRebaseAction = () =>
+export const rewindForRebaseAction = () =>
   ({
     // Sets the annotation in the store to the info stored in RebaseRelevantAnnotationState.
-    type: "PREPARE_REBASING",
+    type: "REWIND_FOR_REBASE",
   }) as const;
 
 export const finishedRebaseAction = () =>

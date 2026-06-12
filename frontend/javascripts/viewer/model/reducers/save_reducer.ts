@@ -210,7 +210,7 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
-    case "PREPARE_REBASING": {
+    case "REWIND_FOR_REBASE": {
       const rebaseInfo = state.save.rebaseRelevantServerAnnotationState;
       return update(state, {
         annotation: {
@@ -238,16 +238,6 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
-    case "FINISHED_REBASING": {
-      return update(state, {
-        save: {
-          rebaseRelevantServerAnnotationState: {
-            isRebasingOrForwarding: { $set: false },
-          },
-        },
-      });
-    }
-
     case "START_FORWARDING_UPDATE_ACTIONS": {
       return update(state, {
         save: {
@@ -258,6 +248,7 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
+    case "FINISHED_REBASING":
     case "FINISH_FORWARDING_UPDATE_ACTIONS": {
       return update(state, {
         save: {

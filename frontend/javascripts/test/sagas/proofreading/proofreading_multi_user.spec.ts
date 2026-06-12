@@ -962,7 +962,7 @@ describe("Proofreading (Multi User)", () => {
     const { tracingId } = annotation.volumes[0];
 
     const task = startSaga(function* task() {
-      const rebaseActionChannel = yield actionChannel(["PREPARE_REBASING", "FINISHED_REBASING"]);
+      const rebaseActionChannel = yield actionChannel(["REWIND_FOR_REBASE", "FINISHED_REBASING"]);
 
       yield* prepareEditableMapping(context, tracingId, 1, getPositionForSegmentId(1));
 

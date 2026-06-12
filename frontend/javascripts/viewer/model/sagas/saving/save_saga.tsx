@@ -50,7 +50,7 @@ import {
   finishedRebaseAction,
   finishForwardingUpdateActionsAction,
   type NotifyAboutUpdatedBucketsAction,
-  prepareRebaseAction,
+  rewindForRebaseAction,
   setPendingProofreadingOperationInfoAction,
   setVersionNumberAction,
   startForwardingUpdateActionsAction,
@@ -346,13 +346,13 @@ function* applyNewestMissingUpdateActions(
     if (!needsRewindingRebase) {
       // If no rebasing is currently done, we still need to inform the diffing saga, that the currently replayed
       // update actions originate from the server and should not be considered during diffing.
-      yield put(startForwardingUpdateActionsAction());
+      yield put(startForwardingUpdateActionsAction()); // isRebasingOrForwarding := true
     }
     const { success, artifactInfos } = yield* tryToIncorporateActions(actions, false);
-    // Updates the annotation state used for future rebase operation the the current state with the missingUpdateActions applied.
-    yield* put(finishedApplyingMissingUpdatesAction());
+    // Updates the annotation state used for future rebase operation the current state with the missingUpdateActions applied.
+    yield* put(finishedApplyingMissingUpdatesAction()); // knownServerState := annotation
     if (!needsRewindingRebase) {
-      yield* put(finishForwardingUpdateActionsAction());
+      yield* put(finishForwardingUpdateActionsAction()); // isRebasingOrForwarding := false
     }
     if (success) {
       yield* call(updatePendingProofreadingOperationInfoAction);
@@ -381,12 +381,6 @@ function* applyNewestMissingUpdateActions(
     key: SAVING_CONFLICT_TOAST_KEY,
   });
   return FailedIncorporateActionsReturnValue;
-}
-
-function* diffTracingsAndPrepareRebase(): Saga<void> {
-  const annotation = yield* select((state) => state.annotation);
-  yield dispatchEnsureTracingsWereDiffedToSaveQueueAction(Store.dispatch, annotation);
-  yield* put(prepareRebaseAction());
 }
 
 function* fulfillAllEnsureHasNewestVersionActions(
@@ -445,26 +439,40 @@ type RebasingSuccessInfo = { successful: boolean; shouldTerminate: boolean };
 function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
   const missingUpdateActions = yield* call(fetchNewestMissingUpdateActions);
-  // saveQueueEntries should not change during performRebasing saga. When collaborationMode==Concurrent, this is enforced via busy blocking.
-  // When concurrent editing is disabled, this code typically runs in read-only mode where the save queue is empty.
+
+  // Ensure tracings were diffed so that the save queue can be inspected afterwards.
+  yield dispatchEnsureTracingsWereDiffedToSaveQueueAction(
+    Store.dispatch,
+    yield* select((state) => state.annotation),
+  );
+  // todop: double-check this comment
+  // saveQueueEntries must not change during performRebasing saga. When collaborationMode==Concurrent, this is enforced via busy blocking.
+  // When concurrent editing is disabled, this code typically (?) runs in read-only mode where the save queue is empty.
   const saveQueueEntries = yield* select((state) => state.save.queue);
-  const hasNewActionsFromBackend = missingUpdateActions.length > 0;
+  const hasLocalUnsavedChanges = saveQueueEntries.length > 0;
+  const hasRemoteUnseenChanges = missingUpdateActions.length > 0;
 
   // Side note: In a scenario where a user has an annotation open that they are not allowed to edit but another user is actively editing,
   // this code will notice that there are missingUpdateActions and apply them. This should not trigger a full "rewinding" rebase
   // and should be ensured because "not allowed to edit" means the save queue would be empty. Thus no needsRewindingRebase = true.
-  const needsRewindingRebase =
-    collaborationMode === "Concurrent" && hasNewActionsFromBackend && saveQueueEntries.length > 0;
+  const needsRewindingRebase = hasRemoteUnseenChanges && hasLocalUnsavedChanges;
+  if (needsRewindingRebase && collaborationMode !== "Concurrent") {
+    ErrorHandling.notify(
+      new Error("Full rebase needed even though collaborationMode is not Concurrent."),
+    );
+    Toast.error("Could not save this annotation. Please refresh the page.");
+    return { successful: false, shouldTerminate: true };
+  }
   const annotationBeforeRebase = yield* select((state) => state.annotation);
   if (needsRewindingRebase) {
     // As a side-effect of this call,
     // the annotation in the store will be set to the info stored in RebaseRelevantAnnotationState
     // (similar to a git stash before doing a git pull & git stash pop).
-    yield* call(diffTracingsAndPrepareRebase);
+    yield* put(rewindForRebaseAction()); // isRebasingOrForwarding := true and sets annotation := known server annotation state
   }
 
   try {
-    if (hasNewActionsFromBackend) {
+    if (hasRemoteUnseenChanges) {
       const applyingResult = yield* call(
         applyNewestMissingUpdateActions,
         missingUpdateActions,
@@ -476,9 +484,9 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
       yield* call(resolveApplyingUpdateArtifacts, applyingResult.artifactInfos);
     }
     if (needsRewindingRebase) {
-      // If no rebasing was necessary, the pending update actions in the save queue must not be reapplied.
+      // Only if a rewinding rebase was necessary, the pending update actions in the save queue must be reapplied.
       const { success: successful } = yield* call(
-        reapplyUpdateActionsFromSaveQueue,
+        reapplyUpdateActionsFromSaveQueue, // isRebasingOrForwarding := true (in happy case)
         missingUpdateActions,
         annotationBeforeRebase,
       );

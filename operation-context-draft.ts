@@ -1,6 +1,6 @@
 import { applyMiddleware, createStore } from "redux";
 import createSagaMiddleware from "redux-saga";
-import { delay, put, take, takeEvery } from "redux-saga/effects";
+import { call, delay, put, take, takeEvery } from "redux-saga/effects";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -8,7 +8,7 @@ type OperationId = string;
 
 interface OperationOptions {
   id: OperationId;
-  behaviorWhenDisallowed: "wait" | "ignore" | "raise";
+  behaviorWhenDisallowed?: "wait" | "ignore" | "raise"; // defaults to "wait"
 }
 
 interface OperationContext {
@@ -26,10 +26,10 @@ const ENSURE_NEWEST_VERSION = "ENSURE_NEWEST_VERSION" as const;
 const registerOperation = (id: OperationId) => ({ type: REGISTER_OPERATION, id });
 const unregisterOperation = (id: OperationId) => ({ type: UNREGISTER_OPERATION, id });
 const pushSaveQueueAction = () => ({ type: PUSH_SAVE_QUEUE });
-const ensureNewestVersionAction = (operationContext?: OperationContext) => ({
-  type: ENSURE_NEWEST_VERSION,
-  operationContext,
-});
+const ensureNewestVersionAction = (
+  operationContext?: OperationContext,
+  onComplete?: () => void,
+) => ({ type: ENSURE_NEWEST_VERSION, operationContext, onComplete });
 
 type AppAction =
   | ReturnType<typeof registerOperation>
@@ -67,9 +67,18 @@ const activeLockIds = new Set<OperationId>();
 
 // ─── Operation Context ────────────────────────────────────────────────────────
 
+// "ignore" is the only behavior that can return null; all others always return a context.
+function* createOperationContext(
+  options: { id: OperationId; behaviorWhenDisallowed: "ignore" },
+): Generator<any, OperationContext | null, any>;
+function* createOperationContext(
+  options: { id: OperationId; behaviorWhenDisallowed?: "wait" | "raise" },
+): Generator<any, OperationContext, any>;
 function* createOperationContext(
   options: OperationOptions,
 ): Generator<any, OperationContext | null, any> {
+  const behavior = options.behaviorWhenDisallowed ?? "wait";
+
   // Atomic check-and-set: no yield between size check and add.
   if (activeLockIds.size === 0) {
     activeLockIds.add(options.id);
@@ -89,14 +98,14 @@ function* createOperationContext(
     return context;
   }
 
-  if (options.behaviorWhenDisallowed === "wait") {
+  if (behavior === "wait") {
     console.log(`  [${options.id}] blocked — waiting for lock`);
     yield take(UNREGISTER_OPERATION);
     // Re-check after waking: another waiter may have grabbed the lock first.
     return yield* createOperationContext(options);
   }
 
-  if (options.behaviorWhenDisallowed === "raise") {
+  if (behavior === "raise") {
     throw new Error(`[${options.id}] cannot start: lock held by [${[...activeLockIds]}]`);
   }
 
@@ -119,6 +128,14 @@ function borrowedContext(existing: OperationContext): OperationContext {
 }
 
 function* getOrCreateOperationContext(
+  options: { id: OperationId; behaviorWhenDisallowed: "ignore" },
+  existing?: OperationContext | null,
+): Generator<any, OperationContext | null, any>;
+function* getOrCreateOperationContext(
+  options: { id: OperationId; behaviorWhenDisallowed?: "wait" | "raise" },
+  existing?: OperationContext | null,
+): Generator<any, OperationContext, any>;
+function* getOrCreateOperationContext(
   options: OperationOptions,
   existing?: OperationContext | null,
 ): Generator<any, OperationContext | null, any> {
@@ -126,6 +143,16 @@ function* getOrCreateOperationContext(
     return borrowedContext(existing);
   }
   return yield* createOperationContext(options);
+}
+
+// ─── Completion Token ─────────────────────────────────────────────────────────
+
+function createCompletionToken(): { promise: Promise<void>; onComplete: () => void } {
+  let onComplete!: () => void;
+  const promise = new Promise<void>((resolve) => {
+    onComplete = resolve;
+  });
+  return { promise, onComplete };
 }
 
 // ─── Simulated Work ───────────────────────────────────────────────────────────
@@ -151,34 +178,31 @@ function* ensureNewestVersionImpl() {
 // ─── Saga Handlers ────────────────────────────────────────────────────────────
 
 function* handlePushSaveQueue() {
-  const ctx: OperationContext | null = yield* createOperationContext({
-    id: "pushSaveQueue",
-    behaviorWhenDisallowed: "wait",
-  });
-  if (ctx == null) return;
+  const ctx = yield* createOperationContext({ id: "pushSaveQueue" });
 
   yield* ctx.execute(function* () {
     console.log("STARTING handlePushSaveQueue");
     yield* doStuff1();
-    // Pass our context so the handler can piggyback instead of waiting for the lock.
-    yield put(ensureNewestVersionAction(ctx));
+    const { promise, onComplete } = createCompletionToken();
+    yield put(ensureNewestVersionAction(ctx, onComplete));
     yield* doStuff2();
+    yield call(() => promise); // wait for ensureNewestVersion to confirm completion
     console.log("ENDING handlePushSaveQueue");
   });
 }
 
 function* handleEnsureNewestVersion(action: ReturnType<typeof ensureNewestVersionAction>) {
-  const ctx: OperationContext | null = yield* getOrCreateOperationContext(
-    { id: "ensureNewestVersion", behaviorWhenDisallowed: "wait" },
+  const ctx = yield* getOrCreateOperationContext(
+    { id: "ensureNewestVersion" },
     action.operationContext,
   );
-  if (ctx == null) return;
 
   yield* ctx.execute(function* () {
     console.log("STARTING ensureNewestVersionImpl");
     yield* ensureNewestVersionImpl();
     console.log("ENDING ensureNewestVersionImpl");
   });
+  action.onComplete?.();
 }
 
 // ─── Root Saga & Store ────────────────────────────────────────────────────────

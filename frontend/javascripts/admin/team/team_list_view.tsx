@@ -119,19 +119,10 @@ function renderTeamRolesForUser(user: APIUser, highlightedTeam: APITeam) {
   ));
 }
 
-function TeamMembersPanel({
-  team,
-  users,
-  isAddingUser,
-  onIsAddingUserChange,
-}: {
-  team: APITeam;
-  users: APIUser[];
-  isAddingUser: boolean;
-  onIsAddingUserChange: (isAddingUser: boolean) => void;
-}) {
+function TeamMembersPanel({ team, users }: { team: APITeam; users: APIUser[] }) {
   const queryClient = useQueryClient();
   const [isUpdating, setIsUpdating] = useState(false);
+  const [isAddingUser, setIsAddingUser] = useState(false);
 
   async function updateTeamMembership(user: APIUser, newTeams: APITeamMembership[]) {
     try {
@@ -184,12 +175,12 @@ function TeamMembersPanel({
       }))}
       optionFilterProp="label"
       onSelect={(userId) => {
-        onIsAddingUserChange(false);
+        setIsAddingUser(false);
         addUser(userId);
       }}
-      onBlur={() => onIsAddingUserChange(false)}
+      onBlur={() => setIsAddingUser(false)}
       onOpenChange={(open) => {
-        if (!open) onIsAddingUserChange(false);
+        if (!open) setIsAddingUser(false);
       }}
     />
   ) : (
@@ -197,7 +188,7 @@ function TeamMembersPanel({
       type="dashed"
       size="small"
       icon={<PlusOutlined />}
-      onClick={() => onIsAddingUserChange(true)}
+      onClick={() => setIsAddingUser(true)}
     >
       Add user
     </Button>
@@ -238,7 +229,6 @@ function TeamListView() {
   const [isLoadingMutation, setIsLoadingMutation] = useState(false);
   const [isTeamCreationModalVisible, setIsTeamCreationModalVisible] = useState(false);
   const [expandedTeamIds, setExpandedTeamIds] = useState<readonly React.Key[]>([]);
-  const [addUserTeamId, setAddUserTeamId] = useState<string | null>(null);
 
   const isLoading = isLoadingTeams || isLoadingUsers || isLoadingMutation;
 
@@ -281,10 +271,9 @@ function TeamListView() {
     return users.filter((user) => user.isActive && filterTeamMembersOf(team, user)).length;
   }
 
-  function openUserEditor(team: APITeam, event: React.MouseEvent) {
+  function expandTeamRow(team: APITeam, event: React.MouseEvent) {
     event.stopPropagation();
     setExpandedTeamIds((teamIds) => (teamIds.includes(team.id) ? teamIds : [...teamIds, team.id]));
-    setAddUserTeamId(team.id);
   }
 
   return (
@@ -311,25 +300,11 @@ function TeamListView() {
             defaultPageSize: 50,
           }}
           expandable={{
-            expandedRowRender: (team) => (
-              <TeamMembersPanel
-                team={team}
-                users={users}
-                isAddingUser={addUserTeamId === team.id}
-                onIsAddingUserChange={(isAddingUser) =>
-                  setAddUserTeamId(isAddingUser ? team.id : null)
-                }
-              />
-            ),
+            expandedRowRender: (team) => <TeamMembersPanel team={team} users={users} />,
             rowExpandable: (_team) => true,
             expandRowByClick: true,
             expandedRowKeys: expandedTeamIds,
-            onExpandedRowsChange: (expandedRows) => {
-              setExpandedTeamIds(expandedRows);
-              if (addUserTeamId != null && !expandedRows.includes(addUserTeamId)) {
-                setAddUserTeamId(null);
-              }
-            },
+            onExpandedRowsChange: setExpandedTeamIds,
           }}
         >
           <Column
@@ -351,11 +326,8 @@ function TeamListView() {
             title="Actions"
             key="actions"
             render={(__, team: APITeam) => (
-              <Space>
-                <LinkButton
-                  onClick={(event) => openUserEditor(team, event)}
-                  icon={<UserOutlined />}
-                >
+              <Space direction="vertical" size={0}>
+                <LinkButton onClick={(event) => expandTeamRow(team, event)} icon={<UserOutlined />}>
                   Manage users
                 </LinkButton>
                 <LinkButton

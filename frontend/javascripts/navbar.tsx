@@ -4,6 +4,7 @@ import Icon, {
   HomeOutlined,
   LoadingOutlined,
   QuestionCircleOutlined,
+  ScheduleOutlined,
   SwapOutlined,
   TeamOutlined,
   UserOutlined,
@@ -188,31 +189,6 @@ export function getAdministrationSubMenu(collapse: boolean, activeUser: APIUser)
     ? [
         { key: "/users", label: <Link to="/users">Users</Link> },
         { key: "/teams", label: <Link to="/teams">Teams</Link> },
-        {
-          key: "/projects",
-          label: (
-            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-              <Link to="/projects">Projects</Link>
-            </PricingEnforcedSpan>
-          ),
-        },
-        {
-          key: "/tasks",
-          label: (
-            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-              <Link to="/tasks">Tasks</Link>
-            </PricingEnforcedSpan>
-          ),
-        },
-        {
-          key: "/taskTypes",
-          label: (
-            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-              <Link to="/taskTypes">Task Types</Link>
-            </PricingEnforcedSpan>
-          ),
-        },
-        { key: "/scripts", label: <Link to="/scripts">Scripts</Link> },
       ]
     : [];
 
@@ -276,24 +252,42 @@ export function getAnalysisSubMenu(collapse: boolean) {
   };
 }
 
-function getStatisticsSubMenu(collapse: boolean): SubMenuType {
+function getTaskManagementSubMenu(collapse: boolean): SubMenuType {
   return {
-    key: "statisticMenu",
+    key: "taskManagementMenu",
     className: collapse ? "hide-on-small-screen" : "",
     label: getCollapsibleMenuTitle(
-      "Statistics",
-      <BarChartOutlined className="icon-margin-right" />,
+      "Task Management",
+      <ScheduleOutlined className="icon-margin-right" />,
       collapse,
     ),
     children: [
       {
-        key: "/timetracking",
+        key: "/projects",
         label: (
           <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-            <Link to="/timetracking">Time Tracking</Link>
+            <Link to="/projects">Annotation Projects</Link>
           </PricingEnforcedSpan>
         ),
       },
+      {
+        key: "/tasks",
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <Link to="/tasks">Tasks</Link>
+          </PricingEnforcedSpan>
+        ),
+      },
+      {
+        key: "/taskTypes",
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <Link to="/taskTypes">Task Types</Link>
+          </PricingEnforcedSpan>
+        ),
+      },
+      { key: "/scripts", label: <Link to="/scripts">Scripts</Link> },
+      { type: "divider" },
       {
         key: "/reports/projectProgress",
         label: (
@@ -307,6 +301,14 @@ function getStatisticsSubMenu(collapse: boolean): SubMenuType {
         label: (
           <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
             <Link to="/reports/availableTasks">Available Task Assignments</Link>
+          </PricingEnforcedSpan>
+        ),
+      },
+      {
+        key: "/timetracking",
+        label: (
+          <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+            <Link to="/timetracking">Time Tracking</Link>
           </PricingEnforcedSpan>
         ),
       },
@@ -895,11 +897,12 @@ function Navbar() {
     menuItems.push(getDashboardSubMenu(collapseAllNavItems));
     menuItems.push(getAnalysisSubMenu(collapseAllNavItems));
 
+    if (isUserAdminOrTeamManager(activeUser)) {
+      menuItems.push(getTaskManagementSubMenu(collapseAllNavItems));
+    }
+
     if (isAdminOrManager && activeUser != null) {
       menuItems.push(getAdministrationSubMenu(collapseAllNavItems, activeUser));
-      if (isUserAdminOrTeamManager(activeUser)) {
-        menuItems.push(getStatisticsSubMenu(collapseAllNavItems));
-      }
     } else {
       menuItems.push(getTimeTrackingMenu(collapseAllNavItems));
     }

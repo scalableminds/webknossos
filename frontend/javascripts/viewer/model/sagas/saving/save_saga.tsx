@@ -419,7 +419,6 @@ function* reapplyUpdateActionsFromSaveQueue(
     const { success: successfullyAppliedSaveQueueUpdates, artifactInfos } =
       yield* tryToIncorporateActions(saveQueueAsServerUpdateActionBatches, true);
     if (successfullyAppliedSaveQueueUpdates) {
-      yield* put(finishedRebaseAction());
       return { success: true, artifactInfos };
     }
   }
@@ -443,11 +442,15 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   const hasLocalUnsavedChanges = saveQueueEntries.length > 0;
   const hasRemoteUnseenChanges = missingUpdateActions.length > 0;
 
+  if (!hasRemoteUnseenChanges) {
+    // Neither a rebase nor a fast-forward is necessary since there are no remote changes to incorporate.
+    return { successful: true, shouldTerminate: false };
+  }
+
   // Side note: In a scenario where a user has an annotation open that they are not allowed to edit but another user is actively editing,
-  // this code will notice that there are missingUpdateActions and apply them. This should not trigger a full "rewinding" rebase
-  // and should be ensured because "not allowed to edit" means the save queue would be empty. Thus no needsRewindingRebase = true.
-  const needsRewindingRebase = hasRemoteUnseenChanges && hasLocalUnsavedChanges;
-  if (needsRewindingRebase && collaborationMode !== "Concurrent") {
+  // this function will notice that there are missingUpdateActions and apply them. This should not trigger a full "rewinding" rebase
+  // and should be ensured because "not allowed to edit" means the save queue would be empty. Thus no hasLocalUnsavedChanges = false.
+  if (hasLocalUnsavedChanges && collaborationMode !== "Concurrent") {
     ErrorHandling.notify(
       new Error("Full rebase needed even though collaborationMode is not Concurrent."),
     );
@@ -455,39 +458,37 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     return { successful: false, shouldTerminate: true };
   }
   const annotationBeforeRebase = yield* select((state) => state.annotation);
-  if (needsRewindingRebase) {
-    // As a side-effect of this call,
-    // the annotation in the store will be set to the info stored in RebaseRelevantAnnotationState
+  if (hasLocalUnsavedChanges) {
+    // As a side-effect of this call, the annotation in the store will be set to the info stored in RebaseRelevantAnnotationState
     // (similar to a git stash before doing a git pull & git stash pop).
+    // Additionally, the diffing saga is disabled temporarily to avoid filling the save queue with
+    // changes that originate from the server.
     yield* put(rewindForRebaseAction()); // isRebasingOrForwarding := true and sets annotation := known server annotation state
+  } else {
+    // If no rebasing is currently done, we still need to inform the diffing saga, that the currently replayed
+    // update actions originate from the server and should not be considered during diffing.
+    yield put(startForwardingUpdateActionsAction()); // isRebasingOrForwarding := true
   }
 
   try {
-    if (hasRemoteUnseenChanges) {
-      if (!needsRewindingRebase) {
-        // If no rebasing is currently done, we still need to inform the diffing saga, that the currently replayed
-        // update actions originate from the server and should not be considered during diffing.
-        yield put(startForwardingUpdateActionsAction()); // isRebasingOrForwarding := true
-      }
-      const applyingResult = yield* call(applyNewestMissingUpdateActions, missingUpdateActions);
-      if (!needsRewindingRebase) {
-        yield* put(finishForwardingUpdateActionsAction()); // isRebasingOrForwarding := false
-      }
-      if (!applyingResult.success) {
-        return { successful: false, shouldTerminate: false };
-      }
-      yield* call(resolveApplyingUpdateArtifacts, applyingResult.artifactInfos);
+    const applyingResult = yield* call(applyNewestMissingUpdateActions, missingUpdateActions);
+    if (!applyingResult.success) {
+      return { successful: false, shouldTerminate: false };
     }
-    if (needsRewindingRebase) {
+    yield* call(resolveApplyingUpdateArtifacts, applyingResult.artifactInfos);
+    if (hasLocalUnsavedChanges) {
       // Only if a rewinding rebase was necessary, the pending update actions in the save queue must be reapplied.
-      const { success: successful } = yield* call(
+      const { success, artifactInfos: _artifactInfos } = yield* call(
         reapplyUpdateActionsFromSaveQueue, // isRebasingOrForwarding := false (in happy case)
         missingUpdateActions,
         annotationBeforeRebase,
       );
-      if (!successful) {
+      if (!success) {
         return { successful: false, shouldTerminate: false };
       }
+      // todop: clarify with Michael. When reapplying own update actions, do we
+      // need to call resolveApplyingUpdateArtifacts like above? This didn't happen before.
+      // yield* call(resolveApplyingUpdateArtifacts, _artifactInfos);
     }
     return { successful: true, shouldTerminate: false };
   } catch (exception) {
@@ -502,6 +503,12 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     );
     // A hard error was thrown. Terminate this saga.
     return { successful: false, shouldTerminate: true };
+  } finally {
+    if (hasLocalUnsavedChanges) {
+      yield* put(finishedRebaseAction()); // isRebasingOrForwarding := false
+    } else {
+      yield* put(finishForwardingUpdateActionsAction()); // isRebasingOrForwarding := false
+    }
   }
 }
 const REBASING_BUSY_BLOCK_REASON = "Syncing Annotation";

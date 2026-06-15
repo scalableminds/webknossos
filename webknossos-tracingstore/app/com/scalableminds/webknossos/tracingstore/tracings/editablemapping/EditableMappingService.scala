@@ -30,7 +30,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{ReversionHelpe
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FallbackDataHelper,
   FossilDBPutBuffer,
-  KeyValueStoreImplicits,
+  KeyValueStoreConversions,
   RemoteFallbackLayer,
   TracingDataStore,
   VersionedKeyValuePair
@@ -101,7 +101,7 @@ class EditableMappingService @Inject()(
     val remoteDatastoreClient: TSRemoteDatastoreClient,
     val remoteWebknossosClient: TSRemoteWebknossosClient
 )(implicit ec: ExecutionContext)
-    extends KeyValueStoreImplicits
+    extends KeyValueStoreConversions
     with FallbackDataHelper
     with FoxImplicits
     with ReversionHelper
@@ -275,7 +275,7 @@ class EditableMappingService @Inject()(
   def getSegmentToAgglomerateChunk(chunkKey: String, version: Option[Long]): Fox[Seq[(Long, Long)]] =
     for {
       keyValuePairBytes: VersionedKeyValuePair[Array[Byte]] <- tracingDataStore.editableMappingsSegmentToAgglomerate
-        .get(chunkKey, version, mayBeEmpty = Some(true))
+        .get(chunkKey, version, mayBeEmpty = Some(true))(wrapInBox)
       valueProto <- if (isRevertedElement(keyValuePairBytes.value)) Fox.empty
       else fromProtoBytes[SegmentToAgglomerateChunkProto](keyValuePairBytes.value).toFox
       asSequence = valueProto.segmentToAgglomerate.map(pair => pair.segmentId -> pair.agglomerateId)
@@ -423,7 +423,7 @@ class EditableMappingService @Inject()(
         _ =>
           for {
             graphBytes: VersionedKeyValuePair[Array[Byte]] <- tracingDataStore.editableMappingsAgglomerateToGraph
-              .get(agglomerateGraphKey(tracingId, agglomerateId), Some(version), mayBeEmpty = Some(true))
+              .get(agglomerateGraphKey(tracingId, agglomerateId), Some(version), mayBeEmpty = Some(true))(wrapInBox)
             graphParsed <- if (isRevertedElement(graphBytes.value)) Fox.empty
             else fromProtoBytes[AgglomerateGraph](graphBytes.value).toFox
           } yield graphParsed
@@ -577,7 +577,7 @@ class EditableMappingService @Inject()(
     for {
       updateGroups <- tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(
         annotationId.toString,
-        newestVersion = version)(fromJsonBytes[List[UpdateAction]])
+        newestVersion = version)(jsonFromBytes[List[UpdateAction]])
       updatesIroned: Seq[UpdateAction] = ironOutReverts(updateGroups)
       editedEdges <- Fox.serialCombined(updatesIroned) {
         case update: SplitAgglomerateUpdateAction if update.actionTracingId == tracingId =>

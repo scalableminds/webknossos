@@ -51,7 +51,7 @@ case class WebAuthnCredential(
 class AttestationStatementEnvelope {
 
   @JsonProperty("fmt")
-  var fmt: String = _
+  var fmt: String = scala.compiletime.uninitialized
 
   @JsonProperty("attestationStatement")
   @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXTERNAL_PROPERTY, property = "fmt")
@@ -65,7 +65,7 @@ class AttestationStatementEnvelope {
       new JsonSubTypes.Type(value = classOf[FIDOU2FAttestationStatement], name = "fido-u2f"),
       new JsonSubTypes.Type(value = classOf[TPMAttestationStatement], name = "tpm")
     ))
-  var attestationStatement: AttestationStatement = _
+  var attestationStatement: AttestationStatement = scala.compiletime.uninitialized
 
   def getFormat: String = fmt
   def getAttestationStatement: AttestationStatement = attestationStatement

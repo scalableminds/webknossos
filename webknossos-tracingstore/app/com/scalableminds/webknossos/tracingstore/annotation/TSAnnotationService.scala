@@ -48,7 +48,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                     temporaryTracingService: TemporaryTracingService,
                                     val remoteDatastoreClient: TSRemoteDatastoreClient,
                                     tracingDataStore: TracingDataStore)
-    extends KeyValueStoreImplicits
+    extends KeyValueStoreConversions
     with FallbackDataHelper
     with ProtoGeometryImplicits
     with AnnotationReversion
@@ -238,7 +238,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     if (toTemporaryStore)
       temporaryTracingService.saveAnnotationProto(annotationId, annotationProto)
     else
-      tracingDataStore.annotations.put(annotationId.toString, version, annotationProto)
+      tracingDataStore.annotations.put(annotationId.toString, version, annotationProto.toByteArray)
 
   def updateActionLog(annotationId: ObjectId, newestVersion: Long, oldestVersion: Long, truncate: Boolean)(
       implicit ec: ExecutionContext): Fox[JsValue] = {
@@ -257,7 +257,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(
           annotationId.toString,
           Some(batchTo),
-          Some(batchFrom))(fromJsonBytes[List[UpdateAction]])
+          Some(batchFrom))(jsonFromBytes[List[UpdateAction]])
       }
       truncatedUpdateActionBatches = if (truncate)
         updateActionBatches.map(batch =>
@@ -324,7 +324,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
         tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(
           annotationId.toString,
           Some(desiredVersion),
-          Some(existingVersion + 1))(fromJsonBytes[List[UpdateAction]])
+          Some(existingVersion + 1))(jsonFromBytes[List[UpdateAction]])
       }
     } yield
     // Ordering must be preserved (newest versions first). Thus we append, not prepend the (older) extra updates.
@@ -347,7 +347,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
             tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(
               annotationId.toString,
               Some(annotation.version),
-              Some(materializedSkeletonVersion + 1))(fromJsonBytes[List[UpdateAction]])
+              Some(materializedSkeletonVersion + 1))(jsonFromBytes[List[UpdateAction]])
           } else Fox.successful(List.empty)
           extraSkeletonUpdates = filterSkeletonUpdates(extraUpdates)
         } yield extraSkeletonUpdates
@@ -384,7 +384,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
               tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(
                 annotationId.toString,
                 Some(annotation.version),
-                Some(materializedEditableMappingVersion + 1))(fromJsonBytes[List[UpdateAction]])
+                Some(materializedEditableMappingVersion + 1))(jsonFromBytes[List[UpdateAction]])
             } else Fox.successful(List.empty)
             extraUpdatesForThisMapping = filterEditableMappingUpdates(extraUpdates, tracingId)
           } yield extraUpdatesForThisMapping
@@ -555,7 +555,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
       implicit ec: ExecutionContext) = {
     // Flush updated tracing objects, but only if they were updated.
     // If they weren’t updated, the older versions that will automatically be fetched are guaranteed identical
-    val allMayHaveUpdates = updates.exists { update: UpdateAction =>
+    val allMayHaveUpdates = updates.exists { (update: UpdateAction) =>
       update match {
         case _: RevertToVersionAnnotationAction => true
         case _: ResetToBaseAnnotationAction     => true
@@ -584,7 +584,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
             if allMayHaveUpdates || tracingIdsWithUpdates.contains(volumeTracingId) =>
           tracingDataStore.editableMappingsInfo.put(volumeTracingId,
                                                     annotationWithTracings.version,
-                                                    editableMappingInfo)
+            editableMappingInfo.toByteArray)
         case _ => Fox.successful(())
       }
     } yield ()
@@ -812,7 +812,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
             .getMultipleVersionsAsVersionValueTuple(
               annotationId.toString,
               oldestVersion = Some(batchRange._1),
-              newestVersion = Some(batchRange._2))(fromJsonBytes[List[UpdateAction]])
+              newestVersion = Some(batchRange._2))(jsonFromBytes[List[UpdateAction]])
           _ <- Fox.serialCombined(updateLists.reverse) { // we reverse (order asc by version) so that addLayer comes before the layer’s updates
             case (version, updateList) =>
               for {
@@ -837,7 +837,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                   case a: UpdateAction =>
                     Fox.successful(a)
                 }
-                _ <- updatesPutBuffer.put(newAnnotationId.toString, version, Json.toJson(updateListAdapted))
+                _ <- updatesPutBuffer.put(newAnnotationId.toString, version, jsonToBytes(Json.toJson(updateListAdapted)))
               } yield ()
           }
         } yield ()
@@ -942,7 +942,7 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
                                        newVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
     for {
       editableMappingInfo <- findEditableMappingInfo(sourceAnnotationId, sourceTracingId, Some(sourceVersion))
-      _ <- tracingDataStore.editableMappingsInfo.put(newTracingId, newVersion, toProtoBytes(editableMappingInfo))
+      _ <- tracingDataStore.editableMappingsInfo.put(newTracingId, newVersion, editableMappingInfo.toByteArray)
       _ <- editableMappingService.duplicateSegmentToAgglomerate(sourceTracingId,
                                                                 newTracingId,
                                                                 sourceVersion,

@@ -89,7 +89,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       // Test whether
       // 1. action to load agglomerate tree is dispatched.
       // 2. the annotation mutex is properly fetched and kept.
-      // 3. The latest changes including the loading of thee agglomerate tree are stored in the backend.
+      // 3. The latest changes including the loading of the agglomerate tree are stored in the backend.
       // Check whether the actions are dispatched via action channels to avoid race condition.
       yield take(loadAgglomerateChannel);
       yield take("SUBSCRIBE_TO_ANNOTATION_MUTEX");

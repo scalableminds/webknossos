@@ -11,9 +11,9 @@ case class Color(r: Double, g: Double, b: Double, a: Double) {
 }
 
 object Color {
-  lazy val RED = Color(1, 0, 0, 1)
+  lazy val RED: Color = Color(1, 0, 0, 1)
 
-  def jet(value: Float) = {
+  def jet(value: Float): Color = {
     val fourValue = value / 64.0
     Color(
       math.min(fourValue - 1.5, -fourValue + 4.5).clamp(0, 1),
@@ -34,9 +34,9 @@ object Color {
 
   implicit object ColorFormat extends Format[Color] {
 
-    def writes(c: Color) = if (c.a == 1) Json.arr(c.r, c.g, c.b) else Json.arr(c.r, c.g, c.b, c.a)
+    def writes(c: Color): JsValue = if (c.a == 1) Json.arr(c.r, c.g, c.b) else Json.arr(c.r, c.g, c.b, c.a)
 
-    def reads(json: JsValue) = json match {
+    def reads(json: JsValue): JsResult[Color] = json match {
       case JsArray(ts) =>
         val c = ts.map(fromJson[Float](_)).flatMap(_.asOpt)
         if (c.size != ts.size)

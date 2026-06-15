@@ -186,7 +186,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
       agglomerateToAffinities <- openZarrArrayCached(agglomerateFileKey, keyAgglomerateToAffinities)
       affinities: MultiArray <- agglomerateToAffinities.readAsMultiArray(offset = edgesOffset, shape = edgeCount.toInt)
       computedEdges <- tryo {
-        (0 until edges.getShape()(0)).map { edgeIdx: Int =>
+        (0 until edges.getShape()(0)).map { (edgeIdx: Int) =>
           AgglomerateEdge(
             source = segmentIds(
               // Note that getInt is fine (even for uint64) because “edges” stores
@@ -200,7 +200,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
         }
       }.toFox
       computedPositions <- tryo {
-        (0 until nodeCount.toInt).map { nodeIdx: Int =>
+        (0 until nodeCount.toInt).map { (nodeIdx: Int) =>
           Vec3IntProto(
             positions.getInt(positions.getIndex.set(Array(nodeIdx, 0))),
             positions.getInt(positions.getIndex.set(Array(nodeIdx, 1))),

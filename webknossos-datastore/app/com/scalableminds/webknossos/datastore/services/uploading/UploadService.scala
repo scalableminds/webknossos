@@ -2,6 +2,9 @@ package com.scalableminds.webknossos.datastore.services.uploading
 
 import com.scalableminds.util.Msg
 import com.google.inject.Inject
+import com.google.inject.name.Named
+import org.apache.pekko.actor.ActorSystem
+import scala.concurrent.duration._
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.io.{PathUtils, ZipIO}
@@ -157,14 +160,15 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                               exploreLocalLayerService: ExploreLocalLayerService,
                               dataStoreConfig: DataStoreConfig,
                               managedS3Service: ManagedS3Service,
-                              val remoteWebknossosClient: DSRemoteWebknossosClient)(implicit ec: ExecutionContext)
+                              val remoteWebknossosClient: DSRemoteWebknossosClient,
+                              @Named("webknossos-datastore") actorSystem: ActorSystem)(implicit ec: ExecutionContext)
     extends DatasetDeleter
     with DirectoryConstants
     with FoxImplicits
     with WKWDataFormatHelper
     with LazyLogging {
 
-  cleanUpOrphanUploads()
+  actorSystem.scheduler.scheduleOnce(10 seconds)(cleanUpOrphanUploads())
 
   private def selectUploadMetadataStore(uploadDomain: UploadDomain) = uploadDomain match {
     case UploadDomain.dataset    => datasetUploadMetadataStore

@@ -103,17 +103,7 @@ function ChatMessageBubble({
 }
 
 export function HelpChat({ isExpanded = false }: { isExpanded?: boolean }) {
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => {
-    const stored = loadMessages();
-    if (stored.length > 0) return stored;
-    return [
-      {
-        role: "assistant",
-        content:
-          'Do you mean nodes/edges (skeleton), voxels/segments (volume), 3D meshes or agglomerates (proofreading)? Below are the common delete actions and how to do them.\n\n---\n\n## General\n\n[Right-click](https://docs.webknossso.org) to open the context menu — most delete actions are available there.\n\n---\n\n## Skeleton (nodes / edges / trees)\n\n**Delete a node:** Right-click the node → "Delete this Node" or press `Del`.\n- *Classic Controls:* select node (`Shift + Left Click`) then press `Del`.\n\n**Delete an edge (split a tree):** Select first node (`Left Click`), right-click second node → "Delete Edge to this Node".\n- *Classic Controls:* select first node with `Shift + Left Click`, then `Shift + Ctrl + Left Click` on the second node to delete the connection.\n\n**Merge trees (create edge):** Select first node, right-click second node → "Create Edge & Merge with this Tree".\n- *Classic:* `Shift + Alt + Left Click`.\n\n**Delete branchpoint:** Use `J` (delete branch point) or the node context menu; mark branchpoint with `B`.\n\n---\n\n## Volume (voxels / segments)\n\n**Remove voxels** using the erase/brush tools:\n- `Ctrl/Cmd + Shift + Left Mouse Drag` to remove voxels from the current segment.\n- *Classic Controls:* `Right Mouse Drag` removes voxels.\n\n**Delete / split segments (proofreading):** See below.\n\n---\n\n## 3D meshes\n\nUse the mesh context menu in the 3D viewport to reload, hide, or remove a mesh (right-click the mesh).\n\n---\n\n## Proofreading / segmentation edits\n\n- **Merge segments:** Left-click to mark the active segment, then right-click the other segment → "Merge With Active Segment".\n- **Split (min-cut):** Left-click to mark active segment, right-click target → "Split from active segment (Min-Cut)".\n- **Multi-split mode:** Press `M` (or click scissor), assign partitions, then `Enter` or right-click → "Split partitions".\n- **Split from all neighbors:** Right-click a segment → "Split from all neighboring segments".\n\n> ⚠️ **Important:** Undo/redo is **not** supported for proofreading operations. To revert, use **Restore Older Version** (Save dropdown).\n\n---\n\nIf something else needs deleting (bounding box, entire tree, project assets, etc.), tell me which object and which view/tool you\'re using and I\'ll give the exact steps. If you think you found a bug while deleting, email [support@webknossos.org](mailto:support@webknossos.org).',
-      },
-    ];
-  });
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(loadMessages);
   const [chatInput, setChatInput] = useState("");
   const [isLoadingChat, setIsLoadingChat] = useState(false);
   const sessionId = useRef(loadSessionId());

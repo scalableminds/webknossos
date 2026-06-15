@@ -1,5 +1,5 @@
-import play.sbt.PlayImport.{filters, _}
-import sbt._
+import play.sbt.PlayImport.{filters, *}
+import sbt.*
 
 object Dependencies {
 
@@ -12,15 +12,15 @@ object Dependencies {
     )
 
   private val silhouetteVersion = "10.0.4"
-  private val brotliVersion = "1.22.0"
-  private val slickVersion = "3.5.2"
-  private val awsVersion = "2.42.41"
+  private val brotliVersion = "1.23.0"
+  private val slickVersion = "3.6.1"
+  private val awsVersion = "2.46.10"
   private val scalapbVersion = scalapb.compiler.Version.scalapbVersion
   private val grpcVersion = scalapb.compiler.Version.grpcJavaVersion
 
   val utilDependencies: Seq[ModuleID] = Seq(
     // Play Web Framework. import play
-    "org.playframework" %% "play" % "3.0.10",
+    "org.playframework" %% "play" % "3.0.11",
     // Play’s JSON serialization. import play.api.libs.json
     "org.playframework" %% "play-json" % "3.0.6",
     // Sending emails. import org.apache.commons.mail
@@ -36,7 +36,7 @@ object Dependencies {
     // Protocol buffers. import scalapb
     "com.thesamet.scalapb" %% "scalapb-runtime" % scalapbVersion,
     // LazyLogging. import com.typesafe.scalalogging
-    "com.typesafe.scala-logging" %% "scala-logging" % "3.9.5",
+    "com.typesafe.scala-logging" %% "scala-logging" % "3.9.6",
     // Asynchronous caching. import com.github.benmanes.caffeine
     caffeine,
     // password hashing with bcrypt. import at.favre.lib.crypto.bcrypt
@@ -74,13 +74,13 @@ object Dependencies {
     // AWS Transfer Manager for multipart uploads. import software.amazon.awssdk.transfer.s3
     "software.amazon.awssdk" % "s3-transfer-manager" % awsVersion,
     // Google cloud storage client. import com.google.cloud.storage, import com.google.auth.oauth2
-    "com.google.cloud" % "google-cloud-storage" % "2.67.0",
+    "com.google.cloud" % "google-cloud-storage" % "2.69.0",
     // Blosc compression. import dev.zarr.bloscjava
-    "com.scalableminds" % "blosc-java" % "0.1-1.21.4",
+    "com.scalableminds" % "blosc-java" % "0.3-1.21.6",
     // Zstd compression. import org.apache.commons.compress
     "org.apache.commons" % "commons-compress" % "1.28.0",
     // Zstd compression native bindings. not imported
-    "com.github.luben" % "zstd-jni" % "1.5.7-7",
+    "com.github.luben" % "zstd-jni" % "1.5.7-11",
     // Brotli compression. import com.aayushatharva.brotli4j
     "com.aayushatharva.brotli4j" % "brotli4j" % brotliVersion,
     // Brotli compression native bindings. not imported
@@ -108,9 +108,9 @@ object Dependencies {
     // End-to-end test specs
     specs2 % Test,
     // Writing XML. import com.sun.xml.txw2
-    "org.glassfish.jaxb" % "txw2" % "4.0.7",
+    "org.glassfish.jaxb" % "txw2" % "4.0.9",
     // Makes txw2 write self-closing tags in xml (which we want). Not imported.
-    "com.fasterxml.woodstox" % "woodstox-core" % "7.1.1",
+    "com.fasterxml.woodstox" % "woodstox-core" % "7.2.1",
     // Json Web Tokens (used for OIDC Auth). import pdi.jwt
     "com.github.jwt-scala" %% "jwt-play-json" % "11.0.4",
     // SQL Queries. import slick
@@ -120,9 +120,9 @@ object Dependencies {
     // SQL Queries class generation. Started with runner as slick.codegen.SourceCodeGenerator
     "com.typesafe.slick" %% "slick-codegen" % slickVersion,
     // SQL Queries postgres specifics. not imported.
-    "org.postgresql" % "postgresql" % "42.7.10",
+    "org.postgresql" % "postgresql" % "42.7.11",
     /// WebAuthn for passkey authentication. import com.webauthn4j
-    "com.webauthn4j" % "webauthn4j-core" % "0.29.7.RELEASE" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
+    "com.webauthn4j" % "webauthn4j-core" % "0.31.7.RELEASE" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
   )
 
   val dependencyOverrides: Seq[ModuleID] = Seq(

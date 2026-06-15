@@ -34,7 +34,7 @@ import {
 import { isZoomThresholdExceededForAgglomerateMapping } from "../accessors/volumetracing_accessor";
 import { pushSaveQueueTransaction } from "../actions/save_actions";
 import { ensureWkInitialized } from "./ready_sagas";
-import { acquireAnnotationMutexMaybe } from "./saving/save_mutex_saga";
+import { annotationMutexSaga } from "./saving/save_mutex_saga";
 import { updateAnnotationLayerName, updateMetadataOfAnnotation } from "./volume/update_actions";
 
 function* pushAnnotationDescriptionUpdateAction(action: SetAnnotationDescriptionAction) {
@@ -224,6 +224,6 @@ function* watchAnnotationAsync(): Saga<void> {
 export default [
   warnAboutSegmentationZoom,
   watchAnnotationAsync,
-  acquireAnnotationMutexMaybe,
+  annotationMutexSaga,
   checkVersionRestoreParam,
 ];

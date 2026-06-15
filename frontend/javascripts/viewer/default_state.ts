@@ -321,5 +321,9 @@ const defaultState: WebknossosState = {
     },
   },
   localSegmentationData: {},
+  operationContext: {
+    activeOperations: [],
+    childOperations: [],
+  },
 };
 export default defaultState;

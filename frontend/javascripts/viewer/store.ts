@@ -72,6 +72,7 @@ import type { KeyboardConfiguration } from "viewer/view/keyboard_shortcuts/keybo
 import type { Toolkit } from "./model/accessors/tool_accessor";
 import { eventEmitterMiddleware } from "./model/helpers/event_emitter_middleware";
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
+import OperationContextReducer from "./model/reducers/operation_context_reducer";
 import OrganizationReducer from "./model/reducers/organization_reducer";
 import ProofreadingReducer from "./model/reducers/proofreading_reducer";
 import type { TreeGroup, TreeMap } from "./model/types/tree_types";
@@ -670,6 +671,11 @@ export type StoreDataset = APIDataset & {
   areLayersPreprocessed: true;
 };
 
+export type OperationContextState = {
+  readonly activeOperations: string[];
+  readonly childOperations: ReadonlyArray<{ readonly id: string; readonly parentId: string }>;
+};
+
 export type WebknossosState = {
   readonly datasetConfiguration: DatasetConfiguration;
   readonly userConfiguration: UserConfiguration;
@@ -691,6 +697,7 @@ export type WebknossosState = {
     string, // layerName
     LocalSegmentationData
   >;
+  readonly operationContext: OperationContextState;
 };
 const sagaMiddleware = createSagaMiddleware();
 export type Reducer = (state: WebknossosState, action: Action) => WebknossosState;
@@ -710,6 +717,7 @@ export const combinedReducer = reduceReducers(
   UiReducer,
   ConnectomeReducer,
   OrganizationReducer,
+  OperationContextReducer,
 ) as Reducer;
 
 const store = createStore<WebknossosState, Action>(

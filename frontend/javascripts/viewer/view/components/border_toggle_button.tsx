@@ -20,7 +20,6 @@ type Props = {
 };
 
 const DRAG_THRESHOLD = 5;
-const TOOLTIP_STYLE = { height: 24 };
 const ICON_MAP: Record<string, ComponentType<SVGProps<SVGSVGElement>>> = {
   "icon-sidebar-left": IconSidebarLeft,
   "icon-sidebar-right": IconSidebarRight,
@@ -56,7 +55,7 @@ function BorderToggleButton({ side, inFooter }: Props) {
   );
 
   return (
-    <FastTooltip title={tooltipTitle} placement={placement} style={TOOLTIP_STYLE}>
+    <FastTooltip title={tooltipTitle} placement={placement} asChild>
       <Button
         className={className}
         size="small"

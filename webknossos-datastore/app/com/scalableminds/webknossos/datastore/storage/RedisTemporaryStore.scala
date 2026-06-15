@@ -4,6 +4,7 @@ import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.typesafe.scalalogging.LazyLogging
 import io.lettuce.core.{ClientOptions, RedisURI, SocketOptions, TimeoutOptions, RedisClient as LettuceClient}
+import io.lettuce.core.codec.StringCodec
 import io.lettuce.core.api.StatefulRedisConnection
 import io.lettuce.core.api.async.RedisAsyncCommands
 import play.api.inject.ApplicationLifecycle
@@ -27,8 +28,9 @@ trait RedisTemporaryStore extends LazyLogging with FoxImplicits {
 
   lazy val authority: String = s"$address:$port"
 
+  private lazy val redisUri: RedisURI = RedisURI.Builder.redis(address, port).withTimeout(commandTimeout).build()
+
   private lazy val redisClient: LettuceClient = {
-    val redisUri = RedisURI.Builder.redis(address, port).withTimeout(commandTimeout).build()
     val client = LettuceClient.create(redisUri)
     client.setOptions(
       ClientOptions.builder()
@@ -40,7 +42,7 @@ trait RedisTemporaryStore extends LazyLogging with FoxImplicits {
   }
 
   private lazy val connection: StatefulRedisConnection[String, String] = {
-    val conn = redisClient.connectAsync()
+    val conn = redisClient.connectAsync(StringCodec.UTF8, redisUri)
       .toCompletableFuture
       .orTimeout(connectionTimeout.toSeconds, TimeUnit.SECONDS)
       .get()

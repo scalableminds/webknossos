@@ -41,6 +41,7 @@ let activeOperations: ActiveOperation[] = [];
 // acquireOperationsMutex() is synchronous and atomically advances the chain tail,
 // so two callers in the same JS tick queue correctly behind each other.
 // The returned promise resolves only when the previous holder calls release().
+// todo: reset this when WK main sagas are reset.
 let operationsMutex: Promise<void> = Promise.resolve();
 
 function acquireOperationsMutex(): Promise<() => void> {

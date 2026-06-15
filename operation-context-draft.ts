@@ -111,8 +111,10 @@ let activeOperations: ActiveOperation[] = [];
 // ─── Operation Context ────────────────────────────────────────────────────────
 
 // Returns true only when every currently-running operation explicitly permits pendingId.
+// The same operation ID is never allowed to run twice in parallel, regardless of predicates.
 function* allRunningAllow(pendingId: OperationId): Generator<any, boolean, any> {
   for (const op of activeOperations) {
+    if (op.id === pendingId) return false;
     if (op.allowAdditionalOperation == null) return false;
     const allowed = yield* op.allowAdditionalOperation(pendingId);
     if (!allowed) return false;

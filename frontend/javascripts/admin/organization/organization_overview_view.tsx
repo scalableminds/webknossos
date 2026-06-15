@@ -44,7 +44,7 @@ export function OrganizationOverviewView() {
     error: usersError,
   } = useQuery({
     queryKey: ["users"],
-    queryFn: getUsers,
+    queryFn: () => getUsers(),
   });
 
   const {

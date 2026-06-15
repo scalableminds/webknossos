@@ -5,7 +5,7 @@ import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.SegmentT
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ReversionHelper
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBClient,
-  KeyValueStoreImplicits,
+  KeyValueStoreConversions,
   VersionedKeyValuePair
 }
 import com.scalableminds.util.tools.Full
@@ -17,7 +17,7 @@ class VersionedAgglomerateToGraphIterator(prefix: String,
                                           version: Option[Long] = None)
     extends Iterator[(String, AgglomerateGraph, Long)]
     with ReversionHelper
-    with KeyValueStoreImplicits {
+    with KeyValueStoreConversions {
   private val batchSize = 64
 
   private var currentStartAfterKey: Option[String] = None
@@ -25,7 +25,7 @@ class VersionedAgglomerateToGraphIterator(prefix: String,
   private var nextGraph: Option[VersionedKeyValuePair[AgglomerateGraph]] = None
 
   private def fetchNext: Iterator[VersionedKeyValuePair[Array[Byte]]] =
-    segmentToAgglomerateDataStore.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize)).iterator
+    segmentToAgglomerateDataStore.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize))(wrapInBox).iterator
 
   private def fetchNextAndSave = {
     currentBatchIterator = fetchNext
@@ -71,7 +71,7 @@ class VersionedSegmentToAgglomerateChunkIterator(prefix: String,
                                                  version: Option[Long] = None)
     extends Iterator[(String, SegmentToAgglomerateChunkProto, Long)]
     with ReversionHelper
-    with KeyValueStoreImplicits {
+    with KeyValueStoreConversions {
   private val batchSize = 64
 
   private var currentStartAfterKey: Option[String] = None
@@ -79,7 +79,7 @@ class VersionedSegmentToAgglomerateChunkIterator(prefix: String,
   private var nextChunk: Option[VersionedKeyValuePair[SegmentToAgglomerateChunkProto]] = None
 
   private def fetchNext: Iterator[VersionedKeyValuePair[Array[Byte]]] =
-    segmentToAgglomerateDataStore.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize)).iterator
+    segmentToAgglomerateDataStore.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize))(wrapInBox).iterator
 
   private def fetchNextAndSave = {
     currentBatchIterator = fetchNext

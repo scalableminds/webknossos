@@ -24,8 +24,8 @@ trait RedisTemporaryStore extends LazyLogging with FoxImplicits {
   def removeAllConditional(pattern: String): Fox[Unit] =
     withExceptionHandler { client =>
       val keysOpt: Option[List[Option[String]]] = client.keys(pattern)
-      keysOpt.foreach { keys: Seq[Option[String]] =>
-        keys.flatMap { key: Option[String] =>
+      keysOpt.foreach { (keys: Seq[Option[String]]) =>
+        keys.flatMap { (key: Option[String]) =>
           key.flatMap(client.del(_))
         }
       }
@@ -34,8 +34,8 @@ trait RedisTemporaryStore extends LazyLogging with FoxImplicits {
   def findAllConditional(pattern: String): Fox[Seq[String]] =
     withExceptionHandler { client =>
       val keysOpt: Option[List[Option[String]]] = client.keys(pattern)
-      keysOpt.map { keys: Seq[Option[String]] =>
-        keys.flatMap { key: Option[String] =>
+      keysOpt.map { (keys: Seq[Option[String]]) =>
+        keys.flatMap { (key: Option[String]) =>
           key.flatMap(client.get(_))
         }
       }.getOrElse(Seq())
@@ -94,11 +94,11 @@ trait RedisTemporaryStore extends LazyLogging with FoxImplicits {
   }
 
   private def withExceptionHandler[B](f: RedisClient => B): Fox[B] =
-    try {
+    try
       r.withClient { client =>
         Fox.successful(f(client))
       }
-    } catch {
+    catch {
       case e: Exception =>
         val msg = "Redis access exception: " + e.getMessage
         logger.error(msg)

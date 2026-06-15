@@ -8,7 +8,9 @@ import com.scalableminds.util.tools.{Box, Failure, Full}
 import org.apache.commons.io.FileUtils
 
 import scala.jdk.CollectionConverters.IteratorHasAsScala
-import scala.reflect.io.Directory
+import java.nio.file.{Files, Paths, SimpleFileVisitor, FileVisitResult}
+import java.nio.file.attribute.BasicFileAttributes
+import org.apache.commons.io.FileUtils
 import scala.util.Random
 
 object PathUtils extends LazyLogging {
@@ -52,11 +54,13 @@ object PathUtils extends LazyLogging {
     else
       None
 
-  private def listDirectoryEntries[A](directory: Path,
-                                      maxDepth: Int,
-                                      dropCount: Int,
-                                      silent: Boolean,
-                                      filters: (Path => Boolean)*)(f: Iterator[Path] => Box[A]): Box[A] =
+  private def listDirectoryEntries[A](
+      directory: Path,
+      maxDepth: Int,
+      dropCount: Int,
+      silent: Boolean,
+      filters: (Path => Boolean)*
+  )(f: Iterator[Path] => Box[A]): Box[A] =
     try {
       val directoryStream = Files.walk(directory, maxDepth, FileVisitOption.FOLLOW_LINKS)
       val r = f(directoryStream.iterator().asScala.drop(dropCount).filter(d => filters.forall(_(d))))
@@ -85,33 +89,39 @@ object PathUtils extends LazyLogging {
     }
 
   def containsFile(directory: Path, maxDepth: Int, silent: Boolean, filters: (Path => Boolean)*): Box[Boolean] =
-    listDirectoryEntries(directory, maxDepth, dropCount = 0, silent, filters :+ fileFilter _: _*)(r => Full(r.nonEmpty))
+    listDirectoryEntries(directory, maxDepth, dropCount = 0, silent, filters :+ fileFilter*)(r => Full(r.nonEmpty))
 
   def listDirectories(directory: Path, silent: Boolean, filters: (Path => Boolean)*): Box[List[Path]] =
-    listDirectoryEntries(directory, 1, 1, silent, filters :+ directoryFilter _: _*)(r => Full(r.toList))
+    listDirectoryEntries(directory, 1, 1, silent, filters :+ directoryFilter*)(r => Full(r.toList))
 
-  def listDirectoriesRecursive(directory: Path,
-                               silent: Boolean,
-                               maxDepth: Int,
-                               filters: (Path => Boolean)*): Box[List[Path]] =
-    listDirectoryEntries(directory, maxDepth, 0, silent, filters :+ directoryFilter _: _*)(r => Full(r.toList))
+  def listDirectoriesRecursive(
+      directory: Path,
+      silent: Boolean,
+      maxDepth: Int,
+      filters: (Path => Boolean)*
+  ): Box[List[Path]] =
+    listDirectoryEntries(directory, maxDepth, 0, silent, filters :+ directoryFilter*)(r => Full(r.toList))
 
   def listFiles(directory: Path, silent: Boolean, filters: (Path => Boolean)*): Box[List[Path]] =
-    listDirectoryEntries(directory, 1, 1, silent, filters :+ fileFilter _: _*)(r => Full(r.toList))
+    listDirectoryEntries(directory, 1, 1, silent, filters :+ fileFilter*)(r => Full(r.toList))
 
-  def listFilesRecursive(directory: Path,
-                         silent: Boolean,
-                         maxDepth: Int,
-                         filters: (Path => Boolean)*): Box[List[Path]] =
-    listDirectoryEntries(directory, maxDepth, 1, silent, filters :+ fileFilter _: _*)(r => Full(r.toList))
+  def listFilesRecursive(
+      directory: Path,
+      silent: Boolean,
+      maxDepth: Int,
+      filters: (Path => Boolean)*
+  ): Box[List[Path]] =
+    listDirectoryEntries(directory, maxDepth, 1, silent, filters :+ fileFilter*)(r => Full(r.toList))
 
   def lazyFileStream[A](directory: Path, silent: Boolean, filters: (Path => Boolean)*)(
-      f: Iterator[Path] => Box[A]): Box[A] =
-    listDirectoryEntries(directory, 1, 1, silent, filters :+ fileFilter _: _*)(f)
+      f: Iterator[Path] => Box[A]
+  ): Box[A] =
+    listDirectoryEntries(directory, 1, 1, silent, filters :+ fileFilter*)(f)
 
   def lazyFileStreamRecursive[A](directory: Path, silent: Boolean, filters: (Path => Boolean)*)(
-      f: Iterator[Path] => Box[A]): Box[A] =
-    listDirectoryEntries(directory, Int.MaxValue, 1, silent, filters :+ fileFilter _: _*)(f)
+      f: Iterator[Path] => Box[A]
+  ): Box[A] =
+    listDirectoryEntries(directory, Int.MaxValue, 1, silent, filters :+ fileFilter*)(f)
 
   def ensureDirectory(path: Path): Path = {
     if (!Files.exists(path) || !Files.isDirectory(path))
@@ -120,9 +130,9 @@ object PathUtils extends LazyLogging {
   }
 
   def ensureDirectoryBox(dir: Path): Box[Path] =
-    try {
+    try
       Full(PathUtils.ensureDirectory(dir))
-    } catch {
+    catch {
       case _: AccessDeniedException => Failure("Could not create directory: Access denied")
     }
 
@@ -149,13 +159,12 @@ object PathUtils extends LazyLogging {
    */
   def cutOffPathAtLastOccurrenceOf(path: Path, cutOffList: List[String]): Path = {
     var lastCutOffIndex = -1
-    path.iterator().asScala.zipWithIndex.foreach {
-      case (subPath, idx) =>
-        cutOffList.foreach(e => {
-          if (subPath.toString.contains(e)) {
-            lastCutOffIndex = idx
-          }
-        })
+    path.iterator().asScala.zipWithIndex.foreach { case (subPath, idx) =>
+      cutOffList.foreach { e =>
+        if (subPath.toString.contains(e)) {
+          lastCutOffIndex = idx
+        }
+      }
     }
     lastCutOffIndex match {
       case -1 => path
@@ -181,14 +190,15 @@ object PathUtils extends LazyLogging {
       Path.of("")
     } else path.getParent
 
-  def deleteDirectoryRecursively(path: Path): Box[Unit] = {
-    val directory = new Directory(new File(path.toString))
-    if (!directory.exists)
+  def deleteDirectoryRecursively(path: Path): Box[Unit] =
+    try {
+      if (Files.exists(path)) {
+        FileUtils.deleteDirectory(path.toFile) // Using Apache Commons IO
+      }
       Full(())
-    else if (directory.deleteRecursively()) {
-      Full(())
-    } else Failure(f"Failed to delete directory $path")
-  }
+    } catch {
+      case ex: Exception => Failure(s"Failed to delete directory $path: ${ex.getMessage}")
+    }
 
   // use when you want to move a directory to a subdir of itself. Otherwise, just go for FileUtils.moveDirectory
   def moveDirectoryViaTemp(source: Path, dst: Path): Box[Unit] = tryo {

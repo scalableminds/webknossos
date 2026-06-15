@@ -478,6 +478,8 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     yield* call(resolveApplyingUpdateArtifacts, applyingResult.artifactInfos);
     if (hasLocalUnsavedChanges) {
       // Only if a rewinding rebase was necessary, the pending update actions in the save queue must be reapplied.
+      // Note that we do not need to call resolveApplyingUpdateArtifacts(_artifactInfos) here
+      // because the proofreading saga is responsible for handling the own updates.
       const { success, artifactInfos: _artifactInfos } = yield* call(
         reapplyUpdateActionsFromSaveQueue, // isRebasingOrForwarding := false (in happy case)
         missingUpdateActions,
@@ -486,9 +488,6 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
       if (!success) {
         return { successful: false, shouldTerminate: false };
       }
-      // todop: clarify with Michael. When reapplying own update actions, do we
-      // need to call resolveApplyingUpdateArtifacts like above? This didn't happen before.
-      // yield* call(resolveApplyingUpdateArtifacts, _artifactInfos);
     }
     return { successful: true, shouldTerminate: false };
   } catch (exception) {

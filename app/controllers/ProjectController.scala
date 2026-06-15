@@ -1,31 +1,47 @@
 package controllers
 import com.scalableminds.util.Msg
-import play.silhouette.api.Silhouette
-import play.silhouette.api.actions.SecuredRequest
 import com.scalableminds.util.accesscontext.GlobalAccessContext
+import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-
-import javax.inject.Inject
 import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.project._
 import models.task._
 import models.user.UserService
-import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.{Action, AnyContent}
+import play.api.libs.json.{Json, OFormat}
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
+import play.silhouette.api.Silhouette
+import play.silhouette.api.actions.SecuredRequest
 import security.WkEnv
-import com.scalableminds.util.objectid.ObjectId
 
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class ProjectController @Inject()(projectService: ProjectService,
-                                  projectDAO: ProjectDAO,
-                                  annotationService: AnnotationService,
-                                  annotationDAO: AnnotationDAO,
-                                  taskDAO: TaskDAO,
-                                  taskTypeDAO: TaskTypeDAO,
-                                  userService: UserService,
-                                  taskService: TaskService,
-                                  sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+case class ProjectParameters(name: String,
+                             team: ObjectId,
+                             priority: Int,
+                             paused: Option[Boolean],
+                             expectedTime: Option[Long],
+                             owner: ObjectId,
+                             isBlacklistedFromReport: Boolean)
+object ProjectParameters {
+  implicit val jsonFormat: OFormat[ProjectParameters] = Json.format[ProjectParameters]
+}
+
+case class TransferActiveTasksParameters(userId: ObjectId)
+object TransferActiveTasksParameters {
+  implicit val jsonFormat: OFormat[TransferActiveTasksParameters] = Json.format[TransferActiveTasksParameters]
+}
+
+class ProjectController @Inject()(
+    projectService: ProjectService,
+    projectDAO: ProjectDAO,
+    annotationService: AnnotationService,
+    annotationDAO: AnnotationDAO,
+    taskDAO: TaskDAO,
+    taskTypeDAO: TaskTypeDAO,
+    userService: UserService,
+    taskService: TaskService,
+    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
@@ -73,30 +89,46 @@ class ProjectController @Inject()(projectService: ProjectService,
     } yield JsonOk(Msg.Project.deleteSuccess)
   }
 
-  def create: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
-    withJsonBodyUsing(Project.projectPublicReads) { project =>
-      for {
-        _ <- projectDAO
-          .findOneByNameAndOrganization(project.name, request.identity._organization)(using GlobalAccessContext)
-          .reverse ?~> Msg.Project.nameTaken(project.name)
-        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN
-        _ <- projectDAO.insertOne(project, request.identity._organization) ?~> Msg.Project.createFailed
-        js <- projectService.publicWrites(project)
-      } yield Ok(js)
-    }
+  def create: Action[ProjectParameters] = sil.SecuredAction.async(validateJson[ProjectParameters]) { implicit request =>
+    for {
+      _ <- projectService.validateProjectName(request.body.name)
+      _ <- projectDAO
+        .findOneByNameAndOrganization(request.body.name, request.identity._organization)(using GlobalAccessContext)
+        .reverse ?~> Msg.Project.nameTaken(request.body.name)
+      _ <- Fox
+        .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, request.body.team)) ?~> Msg.notAllowed ~> FORBIDDEN
+      project = Project(
+        _id = ObjectId.generate,
+        _team = request.body.team,
+        _owner = request.body.owner,
+        name = request.body.name,
+        priority = request.body.priority,
+        paused = request.body.paused.getOrElse(false),
+        expectedTime = request.body.expectedTime,
+        isBlacklistedFromReport = request.body.isBlacklistedFromReport
+      )
+      _ <- projectDAO.insertOne(project, request.identity._organization) ?~> Msg.Project.createFailed
+      js <- projectService.publicWrites(project)
+    } yield Ok(js)
   }
 
-  def update(id: ObjectId): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
-    withJsonBodyUsing(Project.projectPublicReads) { updateRequest =>
+  def update(id: ObjectId): Action[ProjectParameters] = sil.SecuredAction.async(validateJson[ProjectParameters]) {
+    implicit request =>
       for {
-        project <- projectDAO.findOne(id)(using GlobalAccessContext) ?~> Msg.Project.notFound(id) ~> NOT_FOUND
-        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN
-        _ <- projectDAO
-          .updateOne(updateRequest.copy(name = project.name, _id = project._id, paused = project.paused)) ?~> Msg.Project.updateFailed
+        project: Project <- projectDAO.findOne(id)(using GlobalAccessContext) ?~> Msg.Project.notFound(id) ~> NOT_FOUND
+        _ <- Fox
+          .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN
+        updated = project.copy(
+          _team = request.body.team,
+          _owner = request.body.owner,
+          priority = request.body.priority,
+          expectedTime = request.body.expectedTime,
+          isBlacklistedFromReport = request.body.isBlacklistedFromReport
+        )
+        _ <- projectDAO.updateOne(updated) ?~> Msg.Project.updateFailed
         updated <- projectDAO.findOne(id)
         js <- projectService.publicWrites(updated)
       } yield Ok(js)
-    }
   }
 
   def pause(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
@@ -174,21 +206,20 @@ class ProjectController @Inject()(projectService: ProjectService,
     }
   }
 
-  def transferActiveTasks(id: ObjectId): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
-    for {
-      project <- projectDAO.findOne(id) ?~> Msg.Project.notFound(id) ~> NOT_FOUND
-      _ <- Fox
-        .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN
-      newUserId <- (request.body \ "userId").asOpt[String].toFox ?~> Msg.User.idNotFound ~> NOT_FOUND
-      newUserIdValidated <- ObjectId.fromString(newUserId)
-      activeAnnotations <- annotationDAO.findAllActiveForProject(project._id)
-      _ <- Fox.serialCombined(activeAnnotations) { id =>
-        annotationService.transferAnnotationToUser(AnnotationType.Task.toString,
-                                                   id,
-                                                   newUserIdValidated,
-                                                   request.identity)
-      }
-    } yield Ok
+  def transferActiveTasks(id: ObjectId): Action[TransferActiveTasksParameters] =
+    sil.SecuredAction.async(validateJson[TransferActiveTasksParameters]) { implicit request =>
+      for {
+        project <- projectDAO.findOne(id) ?~> Msg.Project.notFound(id) ~> NOT_FOUND
+        _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- userService.findOneCached(request.body.userId) ?~> Msg.User.notFound(request.body.userId)
+        activeAnnotations <- annotationDAO.findAllActiveForProject(project._id)
+        _ <- Fox.serialCombined(activeAnnotations) { id =>
+          annotationService.transferAnnotationToUser(AnnotationType.Task.toString,
+                                                     id,
+                                                     request.body.userId,
+                                                     request.identity)
+        }
+      } yield Ok
 
-  }
+    }
 }

@@ -781,7 +781,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       _ <- run(q"UPDATE webknossos.annotations_ SET visibility = $visibility WHERE _id = $id".asUpdate)
     } yield ()
 
-  def updateTags(id: ObjectId, tags: List[String])(using ctx: DBAccessContext): Fox[Unit] =
+  def updateTags(id: ObjectId, tags: Seq[String])(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id) ?~> Msg.Annotation.Edit.noPermissionsToUpdateTags
       _ <- run(q"UPDATE webknossos.annotations SET tags = $tags WHERE _id = $id".asUpdate)
@@ -799,7 +799,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       _ <- run(q"UPDATE webknossos.annotations SET _user = $userId WHERE _id = $id".asUpdate)
     } yield ()
 
-  def updateCollaborationMode(id: ObjectId, collaborationMode: CollaborationMode)(implicit
+  def updateCollaborationMode(id: ObjectId, collaborationMode: CollaborationMode)(using
       ctx: DBAccessContext
   ): Fox[Unit] =
     for {
@@ -839,7 +839,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
                    ON CONFLICT DO NOTHING""".asUpdate)
     } yield ()
 
-  def updateTeamsForSharedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(implicit
+  def updateTeamsForSharedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(using
       ctx: DBAccessContext
   ): Fox[Unit] = {
     val clearQuery = q"DELETE FROM webknossos.annotation_sharedTeams WHERE _annotation = $annotationId".asUpdate

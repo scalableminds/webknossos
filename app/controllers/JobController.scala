@@ -9,7 +9,6 @@ import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, 
 import models.job._
 import models.organization.{CreditTransactionDAO, CreditTransactionService, OrganizationDAO, PricingPlan}
 import models.user.{MultiUserDAO, UserService}
-import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{WkEnv, WkSilhouetteEnvironment}
 import telemetry.SlackNotificationService
@@ -23,6 +22,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, FullAxisOrder, NDBoundingBox}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
+import play.api.libs.json.{JsObject, JsValue, Json, OFormat}
 
 object MovieResolutionSetting extends ExtendedEnumeration {
   val SD, HD = Value

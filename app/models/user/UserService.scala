@@ -211,7 +211,7 @@ class UserService @Inject()(conf: WkConf,
              isDatasetManager: Boolean,
              teamMemberships: List[TeamMembership],
              experiences: Map[String, Int],
-             lastTaskTypeId: Option[String])(using ctx: DBAccessContext): Fox[User] = {
+             lastTaskTypeId: Option[ObjectId])(using ctx: DBAccessContext): Fox[User] = {
 
     if (user.isDeactivated && activated) {
       logger.info(s"Activating user ${user._id}. Access context: ${ctx.toStringAnonymous}")
@@ -279,7 +279,7 @@ class UserService @Inject()(conf: WkConf,
                                                                                    datasetConfiguration)
     } yield ()
 
-  def updateLastTaskTypeId(user: User, lastTaskTypeId: Option[String])(using ctx: DBAccessContext): Fox[Unit] =
+  def updateLastTaskTypeId(user: User, lastTaskTypeId: Option[ObjectId])(using ctx: DBAccessContext): Fox[Unit] =
     userDAO.updateLastTaskTypeId(user._id, lastTaskTypeId).map { result =>
       removeUserFromCache(user._id)
       result

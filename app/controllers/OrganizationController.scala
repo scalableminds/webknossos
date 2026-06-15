@@ -18,8 +18,7 @@ import models.organization.{
   PricingPlan
 }
 import models.user.{InviteDAO, MultiUserDAO, UserDAO, UserService}
-import play.api.libs.functional.syntax._
-import play.api.libs.json.{JsNull, JsValue, Json, OFormat, __}
+import play.api.libs.json.{JsNull, Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import utils.WkConf
 
@@ -27,6 +26,11 @@ import scala.concurrent.duration._
 import security.{WkEnv, WkSilhouetteEnvironment}
 
 import scala.concurrent.ExecutionContext
+
+case class OrganizationParameters(name: String, newUserMailingList: String)
+object OrganizationParameters {
+  implicit val jsonFormat: OFormat[OrganizationParameters] = Json.format[OrganizationParameters]
+}
 
 class OrganizationController @Inject()(
     organizationDAO: OrganizationDAO,
@@ -155,19 +159,16 @@ class OrganizationController @Inject()(
     } yield Ok
   }
 
-  def update(organizationId: String): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
-    withJsonBodyUsing(organizationUpdateReads) {
-      case (name, newUserMailingList) =>
-        for {
-          organization <- organizationDAO.findOne(organizationId) ?~> Msg.Organization
-            .notFound(organizationId) ~> NOT_FOUND
-          _ <- Fox.fromBool(request.identity.isAdminOf(organization._id)) ?~> Msg.notAllowed ~> FORBIDDEN
-          _ <- organizationDAO.updateFields(organization._id, name, newUserMailingList)
-          updated <- organizationDAO.findOne(organization._id)
-          organizationJson <- organizationService.publicWrites(updated, Some(request.identity))
-        } yield Ok(organizationJson)
+  def update(organizationId: String): Action[OrganizationParameters] =
+    sil.SecuredAction.async(validateJson[OrganizationParameters]) { implicit request =>
+      for {
+        organization <- organizationDAO.findOne(organizationId) ?~> Msg.Organization.notFound(organizationId) ~> NOT_FOUND
+        _ <- Fox.fromBool(request.identity.isAdminOf(organization._id)) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- organizationDAO.updateFields(organization._id, request.body.name, request.body.newUserMailingList)
+        updated <- organizationDAO.findOne(organization._id)
+        organizationJson <- organizationService.publicWrites(updated, Some(request.identity))
+      } yield Ok(organizationJson)
     }
-  }
 
   def delete(organizationId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
@@ -197,10 +198,6 @@ class OrganizationController @Inject()(
                                              teamMemberships = teamMemberships)
       } yield Ok(user._id.toString)
     }
-
-  private val organizationUpdateReads =
-    ((__ \ "name").read[String] and
-      (__ \ "newUserMailingList").read[String]).tupled
 
   def sendExtendPricingPlanEmail(): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {

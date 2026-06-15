@@ -109,25 +109,25 @@ export default function FastTooltip({
     return ROOT_TOOLTIP_IDS.DEFAULT;
   };
 
+  const tooltipProps = {
+    "data-tooltip-id": getId(),
+    "data-tooltip-content": title,
+    "data-tooltip-place": placement || "top",
+    "data-tooltip-html": html,
+    "data-unique-key": uniqueKeyForDynamic,
+    "data-tooltip-variant": variant,
+  };
+
   if (asChild && React.isValidElement(children)) {
-    return React.cloneElement(children as React.ReactElement<Record<string, unknown>>, {
-      "data-tooltip-id": getId(),
-      "data-tooltip-content": title,
-      "data-tooltip-place": placement || "top",
-      "data-tooltip-html": html,
-      "data-unique-key": uniqueKeyForDynamic,
-      "data-tooltip-variant": variant,
-    });
+    return React.cloneElement(
+      children as React.ReactElement<Record<string, unknown>>,
+      tooltipProps,
+    );
   }
 
   return (
     <Tag
-      data-tooltip-id={getId()}
-      data-tooltip-content={title}
-      data-tooltip-place={placement || "top"}
-      data-tooltip-html={html}
-      data-unique-key={uniqueKeyForDynamic}
-      data-tooltip-variant={variant}
+      {...tooltipProps}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       className={className}

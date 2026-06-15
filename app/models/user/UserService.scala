@@ -412,7 +412,7 @@ class UserService @Inject()(conf: WkConf,
           .filter(valueAndIndex => tryo(valueAndIndex._1.toInt).isDefined)
           .map(valueAndIndex =>
             (parseArrayLiteral(userCompactInfo.experienceDomainsAsArrayLiteral)(valueAndIndex._2),
-             Json.toJsFieldJsValueWrapper(valueAndIndex._1.toInt))): _*)
+             Json.toJsFieldJsValueWrapper(valueAndIndex._1.toInt)))*)
       novelUserExperienceInfos <- JsonHelper.parseAs[JsObject](userCompactInfo.novelUserExperienceInfos).toFox
     } yield {
       Json.obj(

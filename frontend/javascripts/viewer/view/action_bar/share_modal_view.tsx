@@ -38,6 +38,7 @@ import FastTooltip from "components/fast_tooltip";
 import { PricingEnforcedBlur } from "components/pricing_enforcers";
 import { DividerWithSubtitle } from "dashboard/dataset/helper_components";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
+import { copyToClipboard } from "libs/clipboard";
 import { makeComponentLazy } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -136,9 +137,8 @@ export function getUrl(sharingToken: string, includeToken: boolean) {
   return url;
 }
 
-async function copyUrlToClipboard(url: string) {
-  await navigator.clipboard.writeText(url);
-  Toast.success("URL copied to clipboard.");
+function copyUrlToClipboard(url: string) {
+  copyToClipboard(url, "URL");
 }
 
 export function ShareButton(props: { dataset: APIDataset; style?: Record<string, any> }) {

@@ -145,6 +145,9 @@ object Msg {
     object Mutex {
       val acquireFailed: String = "Could not acquire annotation editing mutex."
       val releaseFailed: String = "Could not release annotation editing mutex."
+      val acquireOrGetFailed: String = "Trying to acquire or find current annotation mutex failed."
+      val upsertingMutexInfoFailedWithMultipleAttempts: String =
+        "Could not find mutex for annotation after multiple retries."
     }
     object CollaborationMode {
       val onlyExplorationalOrTask: String =
@@ -155,6 +158,15 @@ object Msg {
       val success: String = "Successfully updated the annotation."
       val accessingTeamFailed: String = "Could not access a team during annotation shared team update."
       val notAllowed: String = "You do not have permission to edit this annotation."
+      val viewConfigurationFailed: String = "Could not update the view configuration for this annotation."
+      val noPermissionsToUpdateName: String =
+        "Could not update the name of the annotation due missing update permissions."
+      val noPermissionsToUpdateVisibility: String =
+        "Could not update the visibility of the annotation due missing update permissions."
+      val noPermissionsToUpdateDescription: String =
+        "Could not update the description of the annotation due missing update permissions."
+      val noPermissionsToUpdateTags: String =
+        "Could not update the tags of the annotation due missing update permissions."
     }
     object ApplyUpdate {
       val updateGroupVersionsNotSortedDesc: String =

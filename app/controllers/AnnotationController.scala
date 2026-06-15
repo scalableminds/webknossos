@@ -297,7 +297,7 @@ class AnnotationController @Inject()(
         _ <- Fox.runOptional(request.body.visibility)(annotationDAO.updateVisibility(annotation._id, _)) ?~> Msg.Annotation.Edit.failed
         _ <- Fox.runOptional(request.body.tags)(annotationDAO.updateTags(annotation._id, _)) ?~> Msg.Annotation.Edit.failed
         _ <- Fox.runOptional(request.body.viewConfiguration)(vc =>
-          annotationDAO.updateViewConfiguration(annotation._id, Some(vc))) ?~> Msg.Annotation.Edit.failed
+          annotationDAO.updateViewConfiguration(annotation._id, request.identity._id, vc)) ?~> Msg.Annotation.Edit.failed
       } yield JsonOk(Msg.Annotation.Edit.success)
     }
 
@@ -484,11 +484,11 @@ class AnnotationController @Inject()(
       }
     }
 
-  def releaseMutex(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def releaseMutex(id: ObjectId, sessionId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
       for {
-        _ <- annotationMutexService.release(id, request.identity._id) ?~> Msg.Annotation.Mutex.releaseFailed
-        _ = logger.info(s"User ${request.identity._id} released mutex for $id.")
+        _ <- annotationMutexService.release(id, request.identity._id, sessionId) ?~> Msg.Annotation.Mutex.releaseFailed
+        _ = logger.info(s"User ${request.identity._id} with session id $sessionId released mutex for $id.")
       } yield Ok
     }
   }

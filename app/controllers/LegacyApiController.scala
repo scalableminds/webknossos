@@ -315,7 +315,7 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
       }
     } else Fox.successful(result)
 
-  private def logVersioned(request: SecuredRequest[WkEnv, _]): Unit =
+  private def logVersioned(request: SecuredRequest[WkEnv, ?]): Unit =
     logVersioned(request.identity, request.uri)
 
   private def logVersioned(user: User, uri: String): Unit =

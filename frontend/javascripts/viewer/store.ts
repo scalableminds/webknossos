@@ -672,7 +672,7 @@ export type StoreDataset = APIDataset & {
 };
 
 export type OperationContextState = {
-  readonly activeOperations: string[];
+  readonly activeOperations: ReadonlyArray<{ readonly id: string; readonly description?: string }>;
   readonly childOperations: ReadonlyArray<{ readonly id: string; readonly parentId: string }>;
 };
 

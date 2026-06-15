@@ -12,6 +12,7 @@ import type { WebknossosState } from "viewer/store";
 
 export interface OperationOptions {
   id: OperationId;
+  description?: string; // human-readable label stored in Redux (e.g. "Min-cut is being computed.")
   behaviorWhenDisallowed?: "wait" | "ignore" | "raise"; // defaults to "wait"
   // If provided, called when `pendingId` wants to start while this operation is
   // running. Return true to allow concurrent execution. Absent means: never allow
@@ -28,6 +29,7 @@ export interface OperationContext {
 // Tracks a running operation alongside its concurrency predicate.
 interface ActiveOperation {
   id: OperationId;
+  description?: string;
   allowAdditionalOperation?: (pendingId: OperationId, state: WebknossosState) => boolean;
 }
 
@@ -96,13 +98,14 @@ export function* createOperationContext(
   if (canStart) {
     activeOperations.push({
       id: options.id,
+      description: options.description,
       allowAdditionalOperation: options.allowAdditionalOperation,
     });
   }
   release();
 
   if (canStart) {
-    yield put(registerOperationAction(options.id));
+    yield put(registerOperationAction(options.id, options.description));
 
     // Closure variable: guards against calling execute() more than once on the
     // same context, which would run a saga without holding the lock.

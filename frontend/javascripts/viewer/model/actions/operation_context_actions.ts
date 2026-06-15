@@ -3,6 +3,7 @@ export type OperationId = string;
 export type RegisterOperationAction = {
   type: "REGISTER_OPERATION";
   id: OperationId;
+  description?: string;
 };
 export type UnregisterOperationAction = {
   type: "UNREGISTER_OPERATION";
@@ -24,9 +25,13 @@ export type OperationContextAction =
   | RegisterChildOperationAction
   | UnregisterChildOperationAction;
 
-export const registerOperationAction = (id: OperationId): RegisterOperationAction => ({
+export const registerOperationAction = (
+  id: OperationId,
+  description?: string,
+): RegisterOperationAction => ({
   type: "REGISTER_OPERATION",
   id,
+  description,
 });
 
 export const unregisterOperationAction = (id: OperationId): UnregisterOperationAction => ({

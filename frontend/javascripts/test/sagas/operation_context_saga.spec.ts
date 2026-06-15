@@ -25,14 +25,18 @@ function makeTestStore() {
           return {
             operationContext: {
               ...state.operationContext,
-              activeOperations: [...state.operationContext.activeOperations, action.id],
+              activeOperations: [
+                ...state.operationContext.activeOperations,
+                { id: action.id, description: action.description },
+              ],
             },
           };
         case "UNREGISTER_OPERATION":
           return {
             operationContext: {
               activeOperations: state.operationContext.activeOperations.filter(
-                (id: string) => id !== action.id,
+                // todop
+                (op: any) => op.id !== action.id,
               ),
               childOperations: state.operationContext.childOperations.filter(
                 (c: any) => c.parentId !== action.id,
@@ -185,7 +189,9 @@ describe("operation_context_saga", () => {
     await Promise.all([t1.toPromise(), t2.toPromise()]);
 
     // The predicate received state with save already registered
-    expect(stateSeenByPredicate?.operationContext?.activeOperations).toContain("save");
+    expect(
+      stateSeenByPredicate?.operationContext?.activeOperations.map((op: any) => op.id),
+    ).toContain("save");
   });
 
   it("behaviorWhenDisallowed: ignore returns null when blocked", async () => {
@@ -259,10 +265,14 @@ describe("operation_context_saga", () => {
 
   it("activeOperations in store tracks operation lifecycle", async () => {
     const { store, sagaMiddleware } = makeTestStore();
-    const snapshots: string[][] = [];
+    // todop: any
+    const snapshots: any[][] = [];
 
     function* op() {
-      const ctx = yield* createOperationContext({ id: "tracked-op" });
+      const ctx = yield* createOperationContext({
+        id: "tracked-op",
+        description: "Tracking test",
+      });
       snapshots.push([...store.getState().operationContext.activeOperations]);
       yield* ctx.execute(function* () {
         snapshots.push([...store.getState().operationContext.activeOperations]);
@@ -273,8 +283,8 @@ describe("operation_context_saga", () => {
 
     await sagaMiddleware.run(op).toPromise();
 
-    expect(snapshots[0]).toEqual(["tracked-op"]); // after createOperationContext, before execute
-    expect(snapshots[1]).toEqual(["tracked-op"]); // during execute
+    expect(snapshots[0]).toEqual([{ id: "tracked-op", description: "Tracking test" }]);
+    expect(snapshots[1]).toEqual([{ id: "tracked-op", description: "Tracking test" }]);
     expect(snapshots[2]).toEqual([]); // after execute completes
   });
 

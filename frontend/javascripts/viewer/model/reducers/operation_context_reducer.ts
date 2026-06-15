@@ -8,7 +8,10 @@ function OperationContextReducer(state: WebknossosState, action: Action): Webkno
         ...state,
         operationContext: {
           ...state.operationContext,
-          activeOperations: [...state.operationContext.activeOperations, action.id],
+          activeOperations: [
+            ...state.operationContext.activeOperations,
+            { id: action.id, description: action.description },
+          ],
         },
       };
     case "UNREGISTER_OPERATION":
@@ -16,7 +19,7 @@ function OperationContextReducer(state: WebknossosState, action: Action): Webkno
         ...state,
         operationContext: {
           activeOperations: state.operationContext.activeOperations.filter(
-            (id) => id !== action.id,
+            (op) => op.id !== action.id,
           ),
           // Children cannot outlive their parent operation.
           childOperations: state.operationContext.childOperations.filter(

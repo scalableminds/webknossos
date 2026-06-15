@@ -1,7 +1,7 @@
 import DiffableMap, { diffDiffableMaps } from "libs/diffable_map";
 import ErrorHandling from "libs/error_handling";
 import { diffArrays, diffNumberArrays } from "libs/utils";
-import type { Edge } from "./types/tree_types";
+import type { Edge, MutableEdge } from "./types/tree_types";
 
 type EdgeMap = DiffableMap<number, Edge[]>;
 
@@ -35,13 +35,18 @@ export default class EdgeCollection implements NotEnumerableByObject {
   addEdges(edges: Edge[], mutate: boolean = false): EdgeCollection {
     const newOutgoingEdges = mutate ? this.outMap : this.outMap.clone();
     const newIngoingEdges = mutate ? this.inMap : this.inMap.clone();
-    const newEdgeCount = this.edgeCount + edges.length;
+    let newEdgeCount = this.edgeCount;
 
     for (const edge of edges) {
       const outgoingEdges = newOutgoingEdges.getNullable(edge.source) || [];
+      if (outgoingEdges.find((existingEdge) => existingEdge.target === edge.target)) {
+        // Edge already exists. Don't add it again.
+        continue;
+      }
       const ingoingEdges = newIngoingEdges.getNullable(edge.target) || [];
       newOutgoingEdges.mutableSet(edge.source, outgoingEdges.concat(edge));
       newIngoingEdges.mutableSet(edge.target, ingoingEdges.concat(edge));
+      newEdgeCount++;
     }
 
     if (mutate) {
@@ -59,6 +64,11 @@ export default class EdgeCollection implements NotEnumerableByObject {
     const newEdgeCount = this.edgeCount + 1;
     const outgoingEdges = this.outMap.getNullable(edge.source) || [];
     const ingoingEdges = this.inMap.getNullable(edge.target) || [];
+
+    if (outgoingEdges.find((existingEdge) => existingEdge.target === edge.target)) {
+      // Edge already exists. Don't add it again.
+      return this;
+    }
 
     if (mutate) {
       this.outMap.mutableSet(edge.source, outgoingEdges.concat(edge));
@@ -196,7 +206,7 @@ export function diffEdgeCollections(
   for (const changedNodeIndex of mapDiff.changed) {
     // For each changedNodeIndex there is at least one outgoing edge which was added or removed.
     // So, check for each outgoing edge whether it only exists in A or B
-    let outgoingEdgesDiff;
+    let outgoingEdgesDiff: { onlyA: Readonly<MutableEdge[]>; onlyB: Readonly<MutableEdge[]> };
     if (useDeepEqualityCheck) {
       // In case of a deep equality check, we diff by outgoing edges.
       // The edges are then recreated based on the returned diff.

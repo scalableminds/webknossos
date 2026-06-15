@@ -70,7 +70,7 @@ case class Vec3Double(x: Double, y: Double, z: Double) {
 
   def isStrictlyPositive: Boolean = x > 0 && y > 0 && z > 0
 
-  override def toString = s"($x, $y, $z)"
+  override def toString: String = s"($x, $y, $z)"
 
   def toUriLiteral: String = s"$x,$y,$z"
 }

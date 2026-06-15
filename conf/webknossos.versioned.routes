@@ -4,6 +4,7 @@
 # Note: keep this in sync with the reported version numbers in the com.scalableminds.util.mvc.ApiVersioning trait
 
 # version log
+ # changed in v14: Dataset upload routes and parameters have been refactored, introduced upload domain
  # changed in v13: Attachments not mentioned in the dataSource passed to updatePartial will now be deleted.
  # changed in v12: Dataset upload now expects layersToLink in new format with datasetId instead of orgaId+directoryName
  # changed in v11: Datasets reserveManualUpload flow via WK side. Note: older versions of the route are *not* supported for security reasons.
@@ -16,6 +17,8 @@
  # new in v4: project queried by id, not name (changed route parameters)
  # new in v3: annotation info and finish request now take timestamp
  # new in v2: annotation json contains visibility enum instead of booleans
+
+->       /v14/                                                                webknossos.latest.Routes
 
 ->       /v13/                                                                webknossos.latest.Routes
 

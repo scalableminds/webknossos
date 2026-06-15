@@ -1,11 +1,10 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.tools.Fox
-
 import models.team._
 import models.user.UserDAO
-import play.api.i18n.Messages
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent}
 import security.WkEnv
@@ -31,26 +30,26 @@ class TeamController @Inject()(teamDAO: TeamDAO, userDAO: UserDAO, teamService: 
 
   def delete(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- Fox.fromBool(request.identity.isAdmin) ?~> "user.noAdmin" ~> FORBIDDEN
-      team <- teamDAO.findOne(id) ?~> "team.notFound" ~> NOT_FOUND
-      _ <- Fox.fromBool(!team.isOrganizationTeam) ?~> "team.delete.organizationTeam" ~> FORBIDDEN
-      _ <- teamService.assertNoReferences(id) ?~> "team.delete.inUse" ~> FORBIDDEN
+      _ <- Fox.fromBool(request.identity.isAdmin) ?~> Msg.Team.deleteOnlyAdmin ~> FORBIDDEN
+      team <- teamDAO.findOne(id) ?~> Msg.Team.notFound(id) ~> NOT_FOUND
+      _ <- Fox.fromBool(!team.isOrganizationTeam) ?~> Msg.Team.deleteOrganizationTeam ~> FORBIDDEN
+      _ <- teamService.assertNoReferences(id) ?~> Msg.Team.deleteInUse ~> FORBIDDEN
       _ <- teamDAO.deleteOne(id)
       _ <- userDAO.removeTeamFromAllUsers(id)
       _ <- teamDAO.removeTeamFromAllDatasetsAndFolders(id)
-    } yield JsonOk(Messages("team.deleted"))
+    } yield JsonOk(Msg.Team.deleteSuccess)
   }
 
   def create: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
     withJsonBodyUsing(teamNameReads) { teamName =>
       for {
+        _ <- Fox.fromBool(request.identity.isAdmin) ?~> Msg.Team.createOnlyAdmin ~> FORBIDDEN
         existingTeamCount <- teamDAO.countByNameAndOrganization(teamName, request.identity._organization)
-        _ <- Fox.fromBool(existingTeamCount == 0) ?~> "team.nameInUse"
-        _ <- Fox.fromBool(request.identity.isAdmin) ?~> "user.noAdmin" ~> FORBIDDEN
+        _ <- Fox.fromBool(existingTeamCount == 0) ?~> Msg.Team.nameTaken(teamName)
         team = Team(ObjectId.generate, request.identity._organization, teamName)
         _ <- teamDAO.insertOne(team)
         js <- teamService.publicWrites(team)
-      } yield JsonOk(js, Messages("team.created"))
+      } yield JsonOk(js, Msg.Team.createSuccess)
     }
   }
 }

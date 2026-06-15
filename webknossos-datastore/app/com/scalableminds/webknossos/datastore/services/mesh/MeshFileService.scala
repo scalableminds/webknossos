@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.tools.Box.tryo
@@ -12,7 +13,6 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachmentDataformat
 }
 import com.typesafe.scalalogging.LazyLogging
-import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{Json, OFormat}
 
 import javax.inject.Inject
@@ -92,24 +92,21 @@ class MeshFileService @Inject()(hdf5MeshFileService: Hdf5MeshFileService,
       )
 
   def listMeshFiles(dataSourceId: DataSourceId, dataLayer: DataLayer)(implicit ec: ExecutionContext,
-                                                                      tc: TokenContext,
-                                                                      m: MessagesProvider): Fox[Seq[MeshFileInfo]] = {
+                                                                      tc: TokenContext): Fox[Seq[MeshFileInfo]] = {
     val meshFileNames = dataLayer.attachments.map(_.meshes).getOrElse(Seq.empty).map(_.name)
 
     Fox.fromFuture(
       Fox
         .serialSequence(meshFileNames) { meshFileName =>
           for {
-            meshFileKey <- lookUpMeshFileKey(dataSourceId, dataLayer, meshFileName) ?~> Messages(
-              "mesh.file.lookup.failed",
+            meshFileKey <- lookUpMeshFileKey(dataSourceId, dataLayer, meshFileName) ?~> Msg.Mesh.File.lookUpFailed(
               meshFileName)
-            formatVersion <- versionForMeshFile(meshFileKey) ?~> Messages("mesh.file.readVersion.failed", meshFileName)
-            mappingName <- mappingNameForMeshFile(meshFileKey) ?~> Messages("mesh.file.readMappingName.failed",
-                                                                            meshFileName)
+            formatVersion <- versionForMeshFile(meshFileKey) ?~> Msg.Mesh.File.readVersionFailed(meshFileName)
+            mappingName <- mappingNameForMeshFile(meshFileKey) ?~> Msg.Mesh.File.readMappingNameFailed(meshFileName)
           } yield MeshFileInfo(meshFileName, mappingName, formatVersion)
         }
         // Only return successes, we don’t want a malformed file breaking the list request.
-        .map { boxes: Seq[Box[MeshFileInfo]] =>
+        .map { (boxes: Seq[Box[MeshFileInfo]]) =>
           boxes.filter(_.isEmpty).foreach { emptyBox =>
             logger.warn(s"Failed to list a mesh file for $dataSourceId: $emptyBox")
           }
@@ -151,8 +148,7 @@ class MeshFileService @Inject()(hdf5MeshFileService: Hdf5MeshFileService,
 
   def listMeshChunksForSegmentsMerged(meshFileKey: MeshFileKey, segmentIds: Seq[Long])(
       implicit ec: ExecutionContext,
-      tc: TokenContext,
-      m: MessagesProvider): Fox[WebknossosSegmentInfo] =
+      tc: TokenContext): Fox[WebknossosSegmentInfo] =
     meshFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
         zarrMeshFileService.listMeshChunksForMultipleSegments(meshFileKey, segmentIds)

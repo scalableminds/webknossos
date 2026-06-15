@@ -1,5 +1,6 @@
 package models.annotation
 
+import com.scalableminds.util.Msg
 import java.io.File
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.ZipIO
@@ -51,7 +52,7 @@ class WKRemoteTracingStoreClient(
                          version: Option[Long]): Fox[FetchedAnnotationLayer] = {
     logger.info(s"Called to get SkeletonTracing $annotationId/${annotationLayer.tracingId}." + baseInfo)
     for {
-      _ <- Fox.fromBool(annotationLayer.typ == AnnotationLayerType.Skeleton) ?~> "annotation.download.fetch.notSkeleton"
+      _ <- Fox.fromBool(annotationLayer.typ == AnnotationLayerType.Skeleton) ?~> Msg.Annotation.Download.fetchNotSkeleton
       skeletonTracing <- rpc(s"${tracingStore.url}/tracings/skeleton/${annotationLayer.tracingId}")
         .addQueryParam("token", RpcTokenHolder.webknossosToken)
         .addQueryParam("annotationId", annotationId)
@@ -233,7 +234,7 @@ class WKRemoteTracingStoreClient(
   // They don’t hurt but create unneeded traffic. So we’ll strip them here.
   private def thinOutVolumeTracings(tracings: VolumeTracings): VolumeTracings =
     tracings.copy(
-      tracings = tracings.tracings.map { tracingOpt: VolumeTracingOpt =>
+      tracings = tracings.tracings.map { (tracingOpt: VolumeTracingOpt) =>
         tracingOpt.copy(
           tracing = tracingOpt.tracing.map(
             _.copy(
@@ -287,7 +288,7 @@ class WKRemoteTracingStoreClient(
           .addQueryParam("startVersion", startVersion)
           .postFileWithJsonResponse[Long](zipfile)
       case (None, None) => Fox.successful(0L)
-      case _            => Fox.failure("annotation.upload.editableMappingIncompleteInformation")
+      case _            => Fox.failure(Msg.Annotation.uploadEditableMappingIncompleteInformation)
     }
 
   def getVolumeTracing(annotationId: ObjectId,
@@ -298,7 +299,7 @@ class WKRemoteTracingStoreClient(
                        voxelSize: Option[VoxelSize])(implicit ec: ExecutionContext): Fox[FetchedAnnotationLayer] = {
     logger.info(s"Called to get VolumeTracing $annotationId/${annotationLayer.tracingId}." + baseInfo)
     for {
-      _ <- Fox.fromBool(annotationLayer.typ == AnnotationLayerType.Volume) ?~> "annotation.download.fetch.notSkeleton"
+      _ <- Fox.fromBool(annotationLayer.typ == AnnotationLayerType.Volume) ?~> Msg.Annotation.Download.fetchNotVolume
       tracingId = annotationLayer.tracingId
       tracing <- rpc(s"${tracingStore.url}/tracings/volume/$tracingId")
         .addQueryParam("token", RpcTokenHolder.webknossosToken)

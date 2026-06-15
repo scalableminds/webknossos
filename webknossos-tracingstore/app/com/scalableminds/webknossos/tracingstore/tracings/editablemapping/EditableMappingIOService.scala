@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.io.{NamedFunctionStream, ZipIO}
@@ -13,7 +14,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.DataSourceId
 import com.scalableminds.webknossos.tracingstore.TSChunkCacheService
 import com.scalableminds.webknossos.tracingstore.annotation.UpdateAction
 import com.scalableminds.webknossos.tracingstore.files.TsTempFileService
-import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore}
+import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreConversions, TracingDataStore}
 import com.typesafe.scalalogging.LazyLogging
 import jakarta.inject.Inject
 import play.api.libs.json.Json
@@ -31,7 +32,7 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService,
                                          editableMappingService: EditableMappingService)
     extends LazyLogging
     with FoxImplicits
-    with KeyValueStoreImplicits {
+    with KeyValueStoreConversions {
 
   // 10000 edges per chunk (an edge is two Longs in edges and one bool in edgeIsAddition)
   private val ChunkSize: Int = 10000
@@ -105,7 +106,7 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService,
     } yield tempFilePath
 
   private def edgeIsAdditionToZarrChunks(editedEdges: Seq[(Long, Long, Boolean)]): Iterator[Array[Byte]] =
-    editedEdges.grouped(ChunkSize).map { edgeTupleChunk: Seq[(Long, Long, Boolean)] =>
+    editedEdges.grouped(ChunkSize).map { (edgeTupleChunk: Seq[(Long, Long, Boolean)]) =>
       val bytes = ByteBuffer.allocate(ChunkSize)
       edgeTupleChunk.foreach {
         case (_, _, isAddedEdge) =>
@@ -116,7 +117,7 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService,
     }
 
   private def editedEdgesToZarrChunks(editedEdges: Seq[(Long, Long, Boolean)]): Iterator[Array[Byte]] =
-    editedEdges.grouped(ChunkSize).map { edgeTupleChunk: Seq[(Long, Long, Boolean)] =>
+    editedEdges.grouped(ChunkSize).map { (edgeTupleChunk: Seq[(Long, Long, Boolean)]) =>
       val bytes = ByteBuffer.allocate(2 * ChunkSize * 8)
       edgeTupleChunk.foreach {
         case (src, dst, _) =>
@@ -156,7 +157,7 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService,
         case (updateGroup: Seq[UpdateAction], updateGroupIndex) =>
           tracingDataStore.annotationUpdates.put(annotationId.toString,
                                                  startVersion + updateGroupIndex,
-                                                 Json.toJson(updateGroup))
+                                                 jsonToBytes(Json.toJson(updateGroup)))
       }
       numberOfSavedVersions = updatesGrouped.length
     } yield numberOfSavedVersions
@@ -189,7 +190,7 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService,
                                                  None,
                                                  chunkCacheService.sharedChunkContentsCache)
       numEdges <- editedEdgesZarrArray.datasetShape.flatMap(_.headOption).toFox
-      _ <- Fox.fromBool(numEdges.toInt.toLong == numEdges) ?~> "editableMappingFromZip.numEdges.exceedsInt"
+      _ <- Fox.fromBool(numEdges.toInt.toLong == numEdges) ?~> Msg.Annotation.EditableMapping.numEdgesExceedsInt
       editedEdges <- editedEdgesZarrArray.readAsMultiArray(offset = Array(0L, 0L), shape = Array(numEdges.toInt, 2))
       edgeIsAddition <- edgeIsAdditionZarrArray.readAsMultiArray(offset = 0L, shape = numEdges.toInt)
     } yield (editedEdges, edgeIsAddition)

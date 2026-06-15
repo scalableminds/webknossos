@@ -4,9 +4,10 @@ import { useCallback, useMemo } from "react";
 import { useDispatch } from "react-redux";
 import { getAntdTheme, getThemeFromUser } from "theme";
 import Constants from "viewer/constants";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import {
   setDownloadModalVisibilityAction,
-  setDuplicateAnnotationModalVisibilityAction,
+  setKeyboardShortcutConfigModalVisibilityAction,
   setMergeModalVisibilityAction,
   setRenderAnimationModalVisibilityAction,
   setShareModalVisibilityAction,
@@ -17,6 +18,7 @@ import DownloadModalView from "viewer/view/action_bar/download_modal/download_mo
 import MergeModalView from "viewer/view/action_bar/merge_modal_view";
 import ShareModalView from "viewer/view/action_bar/share_modal_view";
 import UserScriptsModalView from "viewer/view/action_bar/user_scripts_modal_view";
+import KeyboardShortcutConfigModal from "../keyboard_shortcuts/keyboard_shortcut_config_modal";
 import CreateAnimationModal from "./create_animation_modal";
 import { PrivateLinksModal } from "./private_links_view";
 import { DuplicateAnnotationModal } from "./tools/duplicate_annotation_modal";
@@ -25,6 +27,7 @@ function TracingModals() {
   const dispatch = useDispatch();
 
   const annotationType = useWkSelector((state) => state.annotation.annotationType);
+  const mayEdit = useWkSelector((state) => mayEditAnnotation(state));
   const { annotationId, owner: annotationOwner } = useWkSelector((state) => state.annotation);
   const restrictions = useWkSelector((state) => state.annotation.restrictions);
   const activeUser = useWkSelector((state) => state.activeUser);
@@ -39,6 +42,9 @@ function TracingModals() {
   const showAddScriptModal = useWkSelector((state) => state.uiInformation.showAddScriptModal);
   const showZarrPrivateLinksModal = useWkSelector(
     (state) => state.uiInformation.showZarrPrivateLinksModal,
+  );
+  const showKeyboardShortcutConfigModal = useWkSelector(
+    (state) => state.uiInformation.showKeyboardShortcutConfigModal,
   );
   const showDuplicateAnnotationModal = useWkSelector(
     (state) => state.uiInformation.showDuplicateAnnotationModal,
@@ -65,12 +71,12 @@ function TracingModals() {
     dispatch(setZarrLinksModalVisibilityAction(false));
   }, [dispatch]);
 
-  const handleDuplicateClose = useCallback(() => {
-    dispatch(setDuplicateAnnotationModalVisibilityAction(false));
-  }, [dispatch]);
-
   const handleRenderAnimationClose = useCallback(() => {
     dispatch(setRenderAnimationModalVisibilityAction(false));
+  }, [dispatch]);
+
+  const handleKeyboardShortcutConfigClose = useCallback(() => {
+    dispatch(setKeyboardShortcutConfigModalVisibilityAction(false));
   }, [dispatch]);
 
   const modals = useMemo(() => {
@@ -121,6 +127,14 @@ function TracingModals() {
       />,
     );
 
+    modalList.push(
+      <KeyboardShortcutConfigModal
+        key="keyboard-shortcut-modal"
+        isOpen={showKeyboardShortcutConfigModal}
+        onClose={handleKeyboardShortcutConfigClose}
+      />,
+    );
+
     if (restrictions.allowDownload) {
       modalList.push(
         <DownloadModalView
@@ -132,7 +146,7 @@ function TracingModals() {
       );
     }
 
-    if (restrictions.allowSave && isSkeletonMode && activeUser != null) {
+    if (mayEdit && isSkeletonMode && activeUser != null) {
       modalList.push(
         <MergeModalView
           key="merge-modal"
@@ -151,18 +165,21 @@ function TracingModals() {
     showShareModal,
     showAddScriptModal,
     showRenderAnimationModal,
+    showKeyboardShortcutConfigModal,
     showDuplicateAnnotationModal,
     viewMode,
     annotationId,
     annotationType,
     restrictions,
+    mayEdit,
     handleShareClose,
     handleDownloadClose,
     handleMergeClose,
     handleUserScriptsClose,
     handleZarrLinksClose,
-    handleDuplicateClose,
     handleRenderAnimationClose,
+    handleKeyboardShortcutConfigClose,
+    annotationOwner?.id,
   ]);
 
   const userTheme = getThemeFromUser(activeUser);

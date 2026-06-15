@@ -6,5 +6,5 @@ object VoxelyticsRunState extends ExtendedEnumeration {
   type VoxelyticsRunState = Value
   val SKIPPED, PENDING, RUNNING, COMPLETE, FAILED, CANCELLED, STALE = Value
 
-  def nonWaitingStates = List(RUNNING, COMPLETE, FAILED, CANCELLED, STALE)
+  def nonWaitingStates: List[Value] = List(RUNNING, COMPLETE, FAILED, CANCELLED, STALE)
 }

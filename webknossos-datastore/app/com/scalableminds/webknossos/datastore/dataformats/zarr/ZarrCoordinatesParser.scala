@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.dataformats.zarr
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
@@ -17,11 +18,11 @@ object ZarrCoordinatesParser extends FoxImplicits {
       split <- tryo(coordinates.split('.')).toFox
       ints <- Fox.serialCombined(split)(intLiteral => tryo(Integer.parseInt(intLiteral)).toFox)
       channelCoordinate <- ints.headOption.toFox
-      _ <- Fox.fromBool(channelCoordinate == 0) ?~> "zarr.invalidFirstChunkCoord"
-      _ <- Fox.fromBool(ints.length >= 4) ?~> "zarr.notEnoughCoordinates"
+      _ <- Fox.fromBool(channelCoordinate == 0) ?~> Msg.Zarr.invalidFirstChunkCoord
+      _ <- Fox.fromBool(ints.length >= 4) ?~> Msg.Zarr.notEnoughCoordinates
       (x, y, z) = (ints(ints.length - 3), ints(ints.length - 2), ints.last)
       reorderedAdditionalAxes = reorderedAdditionalAxesOpt.getOrElse(List.empty)
-      _ <- Fox.fromBool(reorderedAdditionalAxes.length == ints.length - 4) ?~> "zarr.invalidAdditionalCoordinates"
+      _ <- Fox.fromBool(reorderedAdditionalAxes.length == ints.length - 4) ?~> Msg.Zarr.invalidAdditionalCoordinates
       requestContainsAdditionalCoordinates = ints.length > 4
       additionalCoordinates = if (requestContainsAdditionalCoordinates)
         Some(ints.slice(1, ints.length - 3).zipWithIndex.map {

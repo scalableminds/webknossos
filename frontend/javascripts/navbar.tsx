@@ -2,6 +2,7 @@ import Icon, {
   BarChartOutlined,
   ExperimentOutlined,
   HomeOutlined,
+  LoadingOutlined,
   QuestionCircleOutlined,
   SwapOutlined,
   TeamOutlined,
@@ -28,6 +29,7 @@ import {
   Layout,
   Menu,
   Popover,
+  Spin,
   type SubMenuProps,
   Tag,
   Tooltip,
@@ -39,6 +41,7 @@ import { PricingEnforcedSpan } from "components/pricing_enforcers";
 import features from "features";
 import { useFetch, useInterval } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
+import { TAB_SESSION_ID as SESSION_ID } from "libs/tab_session_id";
 import Toast from "libs/toast";
 import {
   filterWithSearchQueryAND,
@@ -59,8 +62,10 @@ import {
   isAnnotationEditableByNonOwners,
   isAnnotationFromDifferentOrganization as isAnnotationFromDifferentOrganizationAccessor,
   isAnnotationOwner as isAnnotationOwnerAccessor,
+  mayEditAnnotation,
 } from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
+import { retryMutexAcquisitionNowAction } from "viewer/model/actions/save_actions";
 import { logoutUserAction, setActiveUserAction } from "viewer/model/actions/user_actions";
 import { Store } from "viewer/singletons";
 import { HelpModal } from "viewer/view/help/help_modal";
@@ -392,7 +397,7 @@ function getHelpSubMenu(
     helpSubMenuItems.push({
       key: "contact",
       label: (
-        <a target="_blank" href="mailto:hello@webknossos.org" rel="noopener noreferrer">
+        <a target="_blank" href="mailto:support@webknossos.org" rel="noopener noreferrer">
           Email Us
         </a>
       ),
@@ -708,43 +713,70 @@ async function getVersion() {
 
 function AnnotationLockedByUserTag({
   blockedByUser,
+  blockedBySessionId,
   activeUser,
 }: {
   blockedByUser: APIUserCompact | null | undefined;
+  blockedBySessionId: string | null | undefined;
   activeUser: APIUser;
 }) {
-  let content;
+  const dispatch = useDispatch();
+  const [isRetrying, setIsRetrying] = useState(false);
+
+  const handleOnClick = () => {
+    if (blockedByUser == null) {
+      location.reload();
+    } else {
+      dispatch(retryMutexAcquisitionNowAction());
+      setIsRetrying(true);
+      setTimeout(() => setIsRetrying(false), 1000);
+    }
+  };
+
+  const retryTooltipSuffix = " Click to retry acquiring the lock immediately.";
+  let tooltipTitle: string;
+  let tagLabel: React.ReactNode;
+
   if (blockedByUser == null) {
-    content = (
-      <Tooltip title={messages["annotation.acquiringMutexFailed.noUser"]}>
-        <Tag color="warning" variant="outlined">
-          Locked by unknown user.
+    tooltipTitle = messages["annotation.reloadToEditWithMutex"];
+    tagLabel = "Please reload the page.";
+  } else if (blockedByUser.id === activeUser.id && blockedBySessionId === SESSION_ID) {
+    tooltipTitle = messages["annotation.acquiringMutexSucceeded"];
+    tagLabel = "Locked by you. Reload to edit.";
+    return (
+      <Tooltip title={tooltipTitle}>
+        <Tag color="success" variant="outlined">
+          {tagLabel}
         </Tag>
       </Tooltip>
     );
   } else if (blockedByUser.id === activeUser.id) {
-    content = (
-      <Tooltip title={messages["annotation.acquiringMutexSucceeded"]}>
-        <Tag color="success" variant="outlined">
-          Locked by you. Reload to edit.
-        </Tag>
-      </Tooltip>
-    );
+    tooltipTitle =
+      messages["annotation.acquiringMutexFailed.sameUserDifferentSession"] + retryTooltipSuffix;
+    tagLabel = "Locked by you in another tab.";
   } else {
     const blockingUserName = `${blockedByUser.firstName} ${blockedByUser.lastName}`;
-    content = (
-      <Tooltip
-        title={messages["annotation.acquiringMutexFailed"]({
-          userName: blockingUserName,
-        })}
-      >
-        <Tag color="warning" variant="outlined">
-          Locked by {blockingUserName}
-        </Tag>
-      </Tooltip>
-    );
+    tooltipTitle =
+      messages["annotation.acquiringMutexFailed"]({ userName: blockingUserName }) +
+      retryTooltipSuffix;
+    tagLabel = `Locked by ${blockingUserName}`;
   }
-  return content;
+
+  return (
+    <Tooltip title={tooltipTitle}>
+      <Tag color="warning" variant="outlined" style={{ cursor: "pointer" }} onClick={handleOnClick}>
+        {isRetrying ? (
+          <Spin
+            indicator={
+              <LoadingOutlined spin style={{ color: "var(--ant-color-warning)", marginRight: 4 }} />
+            }
+            size="small"
+          />
+        ) : null}
+        {tagLabel}
+      </Tag>
+    </Tooltip>
+  );
 }
 
 function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwner: boolean }) {
@@ -763,25 +795,51 @@ function AnnotationLockedByOwnerTag(props: { annotationOwnerName: string; isOwne
   );
 }
 
-function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
-  const dispatch = useDispatch();
-  const activeUser = useWkSelector((state) => state.activeUser);
-  const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
-  const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
+function AnnotationLockedTag(): React.ReactElement | null {
+  const isSavingDisabled = useWkSelector((state) => state.save.isSavingDisabled);
   const othersMayEdit = useWkSelector((state) => isAnnotationEditableByNonOwners(state.annotation));
-  const blockedByUser = useWkSelector((state) => state.save.mutexState.blockedByUser);
-
-  const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
+  const allowUpdate = useWkSelector(mayEditAnnotation);
   const isLockedByOwner = useWkSelector((state) => state.annotation.isLockedByOwner);
+  const isAnnotationFromDifferentOrganization = useWkSelector((state) =>
+    isAnnotationFromDifferentOrganizationAccessor(state),
+  );
+  const blockedByUser = useWkSelector((state) => state.save.mutexState.blockedByUser);
+  const blockedBySessionId = useWkSelector((state) => state.save.mutexState.blockedBySessionId);
+  const activeUser = useWkSelector((state) => state.activeUser);
   const annotationOwnerName = useWkSelector((state) =>
     formatUserName(state.activeUser, state.annotation.owner),
   );
   const isAnnotationOwner = useWkSelector((state) => isAnnotationOwnerAccessor(state));
-  const isAnnotationFromDifferentOrganization = useWkSelector((state) =>
-    isAnnotationFromDifferentOrganizationAccessor(state),
-  );
-  const navbarHeight = useWkSelector((state) => state.uiInformation.navbarHeight);
 
+  if (isSavingDisabled || activeUser == null) return null;
+
+  if (othersMayEdit && !allowUpdate && !isLockedByOwner && !isAnnotationFromDifferentOrganization) {
+    return (
+      <AnnotationLockedByUserTag
+        key="locked-by-user-tag"
+        blockedByUser={blockedByUser}
+        blockedBySessionId={blockedBySessionId}
+        activeUser={activeUser}
+      />
+    );
+  } else if (isLockedByOwner) {
+    return (
+      <AnnotationLockedByOwnerTag
+        key="locked-by-owner-tag"
+        annotationOwnerName={annotationOwnerName}
+        isOwner={isAnnotationOwner}
+      />
+    );
+  }
+  return null;
+}
+
+function Navbar() {
+  const dispatch = useDispatch();
+  const activeUser = useWkSelector((state) => state.activeUser);
+  const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
+  const hasOrganizations = useWkSelector((state) => state.uiInformation.hasOrganizations);
+  const navbarHeight = useWkSelector((state) => state.uiInformation.navbarHeight);
   const historyLocation = useLocation();
 
   const handleLogout = async (event: React.SyntheticEvent) => {
@@ -807,9 +865,8 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
     isHelpMenuOpen,
   );
 
-  const _isAuthenticated = isAuthenticated && activeUser != null;
-
-  const isAdminOrManager = activeUser != null ? isUserAdminOrManager(activeUser) : false;
+  const isAuthenticated = activeUser != null;
+  const isAdminOrManager = isUserAdminOrManager(activeUser);
   const collapseAllNavItems = isInAnnotationView;
   const hideNavbarLogin = features().hideNavbarLogin || !hasOrganizations;
   const menuItems: ItemType[] = [
@@ -833,7 +890,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
   ];
   const trailingNavItems = [];
 
-  if (_isAuthenticated) {
+  if (isAuthenticated) {
     const loggedInUser: APIUser = activeUser;
     menuItems.push(getDashboardSubMenu(collapseAllNavItems));
     menuItems.push(getAnalysisSubMenu(collapseAllNavItems));
@@ -847,29 +904,8 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
       menuItems.push(getTimeTrackingMenu(collapseAllNavItems));
     }
 
-    if (
-      othersMayEdit &&
-      !allowUpdate &&
-      !isLockedByOwner &&
-      !isAnnotationFromDifferentOrganization
-    ) {
-      trailingNavItems.push(
-        <AnnotationLockedByUserTag
-          key="locked-by-user-tag"
-          blockedByUser={blockedByUser}
-          activeUser={activeUser}
-        />,
-      );
-    }
-    if (isLockedByOwner) {
-      trailingNavItems.push(
-        <AnnotationLockedByOwnerTag
-          key="locked-by-owner-tag"
-          annotationOwnerName={annotationOwnerName}
-          isOwner={isAnnotationOwner}
-        />,
-      );
-    }
+    trailingNavItems.push(<AnnotationLockedTag key="annotation-locked-tag" />);
+
     trailingNavItems.push(
       <LoggedInAvatar
         key="logged-in-avatar"
@@ -880,7 +916,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
     );
   }
 
-  if (!(_isAuthenticated || hideNavbarLogin)) {
+  if (!(isAuthenticated || hideNavbarLogin)) {
     trailingNavItems.push(<AnonymousAvatar key="anonymous-avatar" />);
   }
 
@@ -888,7 +924,7 @@ function Navbar({ isAuthenticated }: { isAuthenticated: boolean }) {
     getHelpSubMenu(
       version,
       polledVersion,
-      _isAuthenticated,
+      isAuthenticated,
       isAdminOrManager,
       collapseAllNavItems,
       () => setIsHelpModalOpen(true),

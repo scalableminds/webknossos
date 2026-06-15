@@ -1,6 +1,6 @@
 import { CopyOutlined } from "@ant-design/icons";
 import { Space, Typography } from "antd";
-import Toast from "libs/toast";
+import { copyToClipboard } from "libs/clipboard";
 import FastTooltip from "./fast_tooltip";
 
 export default function FormattedId({ id }: { id: string }) {
@@ -8,20 +8,14 @@ export default function FormattedId({ id }: { id: string }) {
 
   return (
     <FastTooltip title={`Click to copy full ID ${id}`}>
-      <div
-        onClick={() => {
-          navigator.clipboard.writeText(id);
-          Toast.success("Copied ID to clipboard.");
-        }}
-        style={{ cursor: "pointer" }}
-      >
+      <span onClick={() => copyToClipboard(id, "ID", true)} style={{ cursor: "pointer" }}>
         <Typography.Text type="secondary">
           <Space size="small">
             {`${_shortId}`}
             <CopyOutlined />
           </Space>
         </Typography.Text>
-      </div>
+      </span>
     </FastTooltip>
   );
 }

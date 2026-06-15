@@ -1,22 +1,34 @@
 import sbt._
 
 ThisBuild / version := "wk"
-ThisBuild / scalaVersion := "2.13.18"
-ThisBuild / scapegoatVersion := "3.3.1"
+ThisBuild / scalaVersion := "3.8.3"
+ThisBuild / scalafixDependencies += "io.github.dedis" %% "scapegoat-scalafix" % "1.1.4"
+inThisBuild(
+  List(
+    semanticdbEnabled := false,
+    semanticdbVersion := scalafixSemanticdb.revision
+  )
+)
+addCommandAlias(
+  "fix",
+  "set ThisBuild / semanticdbEnabled := true; scalafix; set ThisBuild / semanticdbEnabled := false"
+)
+// fix jni for scala version 3
+sbtJniCoreScope := Compile
 
-val failOnWarning = if (sys.props.contains("failOnWarning")) Seq("-Xfatal-warnings") else Seq()
+// failOnWarning is temporarily disabled after scala3 upgrade. See https://github.com/scalableminds/webknossos/issues/9606
+val failOnWarning = Seq() // if (sys.props.contains("failOnWarning")) Seq("-Xfatal-warnings") else Seq()
 ThisBuild / scalacOptions ++= Seq(
-  "-release:11",
+  "-explain", // More detailed compiler output
+  "-explain-types", // Explain type errors in detail
+  "-release:17",
   "-feature",
   "-deprecation",
   "-language:implicitConversions",
   "-language:postfixOps",
-  "-Xlint:unused",
-  "-Xlint:deprecation",
-  "-Xmaxerrs:500",
-  s"-Wconf:src=target/.*:s",
-  s"-Wconf:src=webknossos-datastore/target/.*:s",
-  s"-Wconf:src=webknossos-tracingstore/target/.*:s"
+  "-Wconf:src=target/.*:s",
+  "-Wconf:src=webknossos-datastore/target/.*:s",
+  "-Wconf:src=webknossos-tracingstore/target/.*:s"
 ) ++ failOnWarning
 ThisBuild / javacOptions ++= Seq(
   "-Xlint:unchecked",
@@ -36,15 +48,8 @@ Compile / console / scalacOptions -= "-Xlint:unused"
 
 lazy val commonSettings = Seq(
   resolvers ++= Dependencies.dependencyResolvers,
-  // Fallback for cisd artifacts (jhdf5 + base) in case maven.scijava.org is unavailable
-  resolvers += "local-maven-cisd" at ((ThisBuild / baseDirectory).value / "lib" / "local-maven").toURI.toString,
   Compile / doc / sources := Seq.empty,
-  Compile / packageDoc / publishArtifact := false,
-  scapegoatIgnoredFiles := Seq(".*/Tables.scala",
-                               ".*/Routes.scala",
-                               ".*/.*mail.*template\\.scala",
-                               ".*/src_managed/.*"),
-  scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods"),
+  Compile / packageDoc / publishArtifact := false
 )
 
 lazy val protocolBufferSettings = Seq(
@@ -53,15 +58,6 @@ lazy val protocolBufferSettings = Seq(
     scalapb.gen() -> (Compile / sourceManaged).value / "proto"
   )
 )
-
-lazy val copyMessagesFilesSetting = {
-  lazy val copyMessages = taskKey[Unit]("Copy messages file to data- and tracing stores")
-  copyMessages := {
-    val messagesFile = baseDirectory.value / ".." / "conf" / "messages"
-    val targetPath = (baseDirectory.value / "conf" / "messages").toPath
-    java.nio.file.Files.copy(messagesFile.toPath, targetPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING)
-  }
-}
 
 lazy val util = (project in file("util")).settings(
   commonSettings,
@@ -96,8 +92,7 @@ lazy val webknossosDatastore = (project in file("webknossos-datastore"))
       }
       ((libs +++ subs +++ targets) ** "*.jar").classpath
     },
-    routesImport += "com.scalableminds.util.objectid.ObjectId",
-    copyMessagesFilesSetting
+    routesImport += "com.scalableminds.util.objectid.ObjectId"
   )
 
 lazy val webknossosTracingstore = (project in file("webknossos-tracingstore"))
@@ -111,8 +106,7 @@ lazy val webknossosTracingstore = (project in file("webknossos-tracingstore"))
     generateReverseRouter := false,
     BuildInfoSettings.webknossosTracingstoreBuildInfoSettings,
     libraryDependencies ++= Dependencies.webknossosTracingstoreDependencies,
-    dependencyOverrides ++= Dependencies.dependencyOverrides,
-    copyMessagesFilesSetting,
+    dependencyOverrides ++= Dependencies.dependencyOverrides
   )
 
 lazy val webknossos = (project in file("."))

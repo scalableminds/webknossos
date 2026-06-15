@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.BoundingBox
@@ -29,7 +30,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.Editab
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import com.scalableminds.util.tools.{Empty, Failure, Full}
-import play.api.i18n.Messages
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
@@ -52,7 +52,7 @@ class TSAnnotationController @Inject()(
     skeletonTracingService: SkeletonTracingService,
     volumeTracingService: VolumeTracingService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
-    with KeyValueStoreImplicits {
+    with KeyValueStoreConversions {
 
   def save(annotationId: ObjectId, toTemporaryStore: Boolean = false): Action[AnnotationProto] =
     Action.async(validateProto[AnnotationProto]) { implicit request =>
@@ -132,13 +132,14 @@ class TSAnnotationController @Inject()(
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
             for {
               datasetBoundingBoxParsed <- Fox.runOptional(datasetBoundingBox)(b => BoundingBox.fromLiteral(b).toFox)
-              annotationProto <- annotationService.duplicate(annotationId,
-                                                             newAnnotationId,
-                                                             ownerId,
-                                                             requestingUserId,
-                                                             version,
-                                                             isFromTask,
-                                                             datasetBoundingBoxParsed) ?~> "annotation.duplicate.failed"
+              annotationProto <- annotationService.duplicate(
+                annotationId,
+                newAnnotationId,
+                ownerId,
+                requestingUserId,
+                version,
+                isFromTask,
+                datasetBoundingBoxParsed) ?~> Msg.Annotation.duplicateFailed
             } yield Ok(annotationProto.toByteArray).as(protobufMimeType)
           }
         }
@@ -267,8 +268,7 @@ class TSAnnotationController @Inject()(
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
             _ <- Fox.fromBool(request.body.annotationIds.length == request.body.ownerIds.length) ?~> "annotationIds and ownerIds must have the same length"
-            annotations: Seq[AnnotationProto] <- annotationService.getMultiple(request.body.annotationIds) ?~> Messages(
-              "annotation.notFound")
+            annotations: Seq[AnnotationProto] <- annotationService.getMultiple(request.body.annotationIds) ?~> Msg.Annotation.notFound
             skeletonLayers = annotations.flatMap(_.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Skeleton))
             volumeLayers = annotations.flatMap(_.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Volume))
             newSkeletonId = TracingId.generate
@@ -302,12 +302,13 @@ class TSAnnotationController @Inject()(
               case Empty               => Fox.successful((None, 0L))
               case f: Failure          => f.toFox
             }
-            mergedVolumeStats <- volumeTracingService.mergeVolumeData(firstVolumeAnnotationId,
-                                                                      volumeLayers.map(_.tracingId),
-                                                                      volumeTracings,
-                                                                      newVolumeId,
-                                                                      newVersion = newTargetVersion,
-                                                                      toTemporaryStore) ?~> "mergeVolumeData.failed"
+            mergedVolumeStats <- volumeTracingService.mergeVolumeData(
+              firstVolumeAnnotationId,
+              volumeLayers.map(_.tracingId),
+              volumeTracings,
+              newVolumeId,
+              newVersion = newTargetVersion,
+              toTemporaryStore) ?~> Msg.Annotation.Merge.mergeVolumeDataFailed
             mergedVolumeOpt <- Fox.runIf(volumeTracings.nonEmpty)(
               volumeTracingService
                 .merge(volumeTracings,
@@ -315,7 +316,7 @@ class TSAnnotationController @Inject()(
                        newMappingName,
                        newVersion = newTargetVersion,
                        additionalBoundingBoxes = request.body.additionalBoundingBoxes)
-                .toFox) ?~> "mergeVolume.failed"
+                .toFox) ?~> Msg.Annotation.Merge.mergeVolumeFailed
             _ <- Fox.runOptional(mergedVolumeOpt)(
               volumeTracingService.saveVolume(newVolumeId, version = newTargetVersion, _, toTemporaryStore))
             skeletonTracingsAdaptedNested: Seq[Seq[SkeletonTracing]] <- Fox.serialCombined(

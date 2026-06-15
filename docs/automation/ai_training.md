@@ -17,7 +17,7 @@ Before you can start training, prepare your ground truth annotation. Here is a s
 For a detailed tutorial and general annotations guidelines, please see [here](../tutorials/trainingdata_annotation.md).
 
 ## Configuring the Training
-To start a training, click on the `AI Analysis` button in the toolbar and select `Train AI model` from the dropdown menu.
+To start a training, click on the `AI Analysis` button in the toolbar and select `Train new AI model` from the dropdown menu.
 This will open a dialog where you can configure and start your training job.
 ### Select AI Training Task
 
@@ -43,7 +43,7 @@ You can also add more training data from other annotations by clicking the `+` b
 
 ### Credit Information
 
-This section provides an overview of your available credits in your organization and the estimated cost for the training. Cost varies depending on the size of your dataset and the type of model you want to train.
+This section provides an overview of your available credits in your organization and the estimated cost for the training. Cost varies depending on the size of your dataset and the type of model you want to train. Read more about how credits work in the [Credits](./jobs.md#credits) section.
 
 ## Launching the Training
 

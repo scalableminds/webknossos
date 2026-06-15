@@ -13,9 +13,9 @@ import play.api.mvc.{Action, AnyContent}
 
 import scala.concurrent.ExecutionContext
 
-class Application @Inject()(redisClient: DataStoreRedisStore, applicationHealthService: ApplicationHealthService)(
-    implicit ec: ExecutionContext)
-    extends Controller {
+class Application @Inject() (redisClient: DataStoreRedisStore, applicationHealthService: ApplicationHealthService)(
+    implicit ec: ExecutionContext
+) extends Controller {
 
   override def allowRemoteOrigin: Boolean = true
 
@@ -26,30 +26,33 @@ class Application @Inject()(redisClient: DataStoreRedisStore, applicationHealthS
         _ <- redisClient.checkHealth
         afterRedis = Instant.now
         _ <- Fox.fromBool(applicationHealthService.getRecentProblem().isEmpty) ?~> "Java Internal Errors detected"
-        _ <- testNativeBucketScanner.toFox ?~> "NativeBucketScanner error"
+        scanner <- tryo(new NativeBucketScanner()).toFox ?~> "NativeBucketScanner constructor error"
+        _ <- testNativeBucketScanner(scanner).toFox ?~> "NativeBucketScanner call error"
         _ = logger.info(
-          s"Answering ok for Datastore health check, took ${formatDuration(afterRedis - before)} (Redis at ${redisClient.authority} ${formatDuration(
-            afterRedis - before)})")
+          s"Answering ok for Datastore health check, took ${formatDuration(afterRedis - before)} (Redis at ${redisClient.authority} ${formatDuration(afterRedis - before)})"
+        )
       } yield Ok("Ok")
     }
   }
 
   // Test that the NativeBucketScanner works.
   // The result is stored in a val because we expect that this continues to work if it works on startup.
-  private lazy val testNativeBucketScanner = tryo {
+  private def testNativeBucketScanner(scanner: NativeBucketScanner) = tryo {
     val elementClass = ElementClass.uint16
     // little endian uint16 representation of 2, 4, 500, 500
     val array = Array[Byte](2, 0, 4, 0, 244.toByte, 1, 244.toByte, 1)
-    val scanner = new NativeBucketScanner()
-    val segmentIds = scanner.collectSegmentIds(array,
-                                               ElementClass.bytesPerElement(elementClass),
-                                               ElementClass.isSigned(elementClass),
-                                               skipZeroes = false)
+    val segmentIds = scanner.collectSegmentIds(
+      array,
+      ElementClass.bytesPerElement(elementClass),
+      ElementClass.isSigned(elementClass),
+      skipZeroes = false
+    )
     val expected = Array[Long](2, 4, 500)
     if (!segmentIds.sorted.sameElements(expected)) {
       throw new IllegalStateException(
         s"NativeBucketScanner did not scan segment ids of test array correctly. Expected ${expected
-          .mkString(",")}, got ${segmentIds.mkString(",")}")
+            .mkString(",")}, got ${segmentIds.mkString(",")}"
+      )
     }
   }
 

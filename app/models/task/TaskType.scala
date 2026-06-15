@@ -1,5 +1,6 @@
 package models.task
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
@@ -15,6 +16,7 @@ import utils.sql.{EnumerationArrayValue, SQLDAO, SqlClient}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import utils.sql.SqlToken
 
 case class TaskType(
     _id: ObjectId,
@@ -42,7 +44,7 @@ class TaskTypeService @Inject()(teamDAO: TeamDAO) {
 
   def publicWrites(taskType: TaskType): Fox[JsObject] =
     for {
-      team <- teamDAO.findOne(taskType._team)(GlobalAccessContext) ?~> "team.notFound"
+      team <- teamDAO.findOne(taskType._team)(GlobalAccessContext) ?~> Msg.Team.notFound(taskType._team)
     } yield
       Json.obj(
         "id" -> taskType._id.toString,
@@ -93,11 +95,11 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.isdeleted
       )
 
-  override protected def readAccessQ(requestingUserId: ObjectId) =
+  override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""(_team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $requestingUserId)
        OR _organization = (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))"""
 
-  override protected def updateAccessQ(requestingUserId: ObjectId) =
+  override protected def updateAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""(_team IN (SELECT _team FROM webknossos.user_team_roles WHERE isTeamManager AND _user = $requestingUserId)
        OR _organization = (SELECT _organization from webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))"""
 

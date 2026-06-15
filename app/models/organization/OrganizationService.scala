@@ -1,5 +1,6 @@
 package models.organization
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
@@ -13,7 +14,6 @@ import models.dataset.{DataStore, DataStoreDAO}
 import models.folder.{Folder, FolderDAO, FolderService}
 import models.team.{Team, TeamDAO}
 import models.user.{Invite, MultiUserDAO, User, UserDAO, UserService}
-import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsArray, JsObject, Json}
 import utils.WkConf
 
@@ -78,22 +78,22 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     for {
       usedStorageBytes <- organizationDAO.getUsedStorage(organization._id)
       _ <- Fox.runOptional(organization.includedStorageBytes)(includedStorage =>
-        Fox.fromBool(usedStorageBytes + additionalRequestedStorage.getOrElse(0L) <= includedStorage)) ?~> "organization.storageExceeded"
+        Fox.fromBool(usedStorageBytes + additionalRequestedStorage.getOrElse(0L) <= includedStorage)) ?~> Msg.Organization.storageExceeded
     } yield ()
 
   def findOneByInviteOrDefault(inviteOpt: Option[Invite])(implicit ctx: DBAccessContext): Fox[Organization] =
     inviteOpt match {
-      case Some(invite) => organizationDAO.findOne(invite._organization) ?~> "organization.notFound.byInvite"
+      case Some(invite) => organizationDAO.findOne(invite._organization) ?~> Msg.Organization.notFoundByInvite
       case None =>
         for {
           allOrganizations <- organizationDAO.findAll(GlobalAccessContext)
-          _ <- Fox.fromBool(allOrganizations.length == 1) ?~> "organization.ambiguous"
+          _ <- Fox.fromBool(allOrganizations.length == 1) ?~> Msg.Organization.ambiguous
           defaultOrganization <- allOrganizations.headOption.toFox
         } yield defaultOrganization
     }
 
   def assertMayCreateOrganization(requestingUser: Option[User]): Fox[Unit] = {
-    val activatedInConfig = Fox.fromBool(conf.Features.isWkorgInstance) ?~> "allowOrganizationCreation.notEnabled"
+    val activatedInConfig = Fox.fromBool(conf.Features.isWkorgInstance) ?~> Msg.Organization.organizationCreationNotEnabled
     val userIsSuperUser = requestingUser.toFox.flatMap(
       user =>
         multiUserDAO
@@ -111,18 +111,18 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
   def assertNoOrganizationsPresent: Fox[Unit] =
     for {
       organizations <- organizationDAO.findAll(GlobalAccessContext)
-      _ <- Fox.fromBool(organizations.isEmpty) ?~> "organizationsNotEmpty"
+      _ <- Fox.fromBool(organizations.isEmpty) ?~> Msg.Organization.notEmpty
     } yield ()
 
   def createOrganization(organizationIdOpt: Option[String], organizationName: String): Fox[Organization] =
     for {
-      normalizedName <- TextUtils.normalizeStrong(organizationName).toFox ?~> "organization.id.invalid"
+      normalizedName <- TextUtils.normalizeStrong(organizationName).toFox ?~> Msg.Organization.idInvalid
       organizationId = organizationIdOpt
         .flatMap(TextUtils.normalizeStrong)
         .getOrElse(normalizedName)
         .replaceAll(" ", "_")
       existingOrganization <- organizationDAO.findOne(organizationId)(GlobalAccessContext).shiftBox
-      _ <- Fox.fromBool(existingOrganization.isEmpty) ?~> "organization.id.alreadyInUse"
+      _ <- Fox.fromBool(existingOrganization.isEmpty) ?~> Msg.Organization.idTaken
       initialPricingParameters = if (conf.Features.isWkorgInstance) (PricingPlan.Personal, Some(1), Some(50000000000L))
       else (PricingPlan.Custom, None, None)
       organizationRootFolder = Folder(ObjectId.generate, folderService.defaultRootName, JsArray.empty)
@@ -140,7 +140,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         organizationRootFolder._id
       )
       organizationTeam = Team(ObjectId.generate, organization._id, "Default", isOrganizationTeam = true)
-      _ <- folderDAO.insertAsRoot(organizationRootFolder)
+      _ <- folderDAO.insertAsRoot(organizationRootFolder) ?~> Msg.Organization.folderCreateFailed
       _ <- organizationDAO.insertOne(organization)
       _ <- teamDAO.insertOne(organizationTeam)
     } yield organization
@@ -180,14 +180,12 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
   def newUserMailRecipient(organization: Organization): Fox[String] =
     fallbackOnOwnerEmail(organization.newUserMailingList, organization)
 
-  def acceptTermsOfService(organizationId: String, version: Int)(implicit ctx: DBAccessContext,
-                                                                 m: MessagesProvider): Fox[Unit] =
+  def acceptTermsOfService(organizationId: String, version: Int)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- Fox.fromBool(conf.WebKnossos.TermsOfService.enabled) ?~> "termsOfService.notEnabled"
+      _ <- Fox.fromBool(conf.WebKnossos.TermsOfService.enabled) ?~> Msg.Organization.TermsOfService.notEnabled
       requiredVersion = conf.WebKnossos.TermsOfService.version
-      _ <- Fox.fromBool(version == requiredVersion) ?~> Messages("termsOfService.versionMismatch",
-                                                                 requiredVersion,
-                                                                 version)
+      _ <- Fox.fromBool(version == requiredVersion) ?~> Msg.Organization.TermsOfService
+        .versionMismatch(requiredVersion, version)
       _ <- organizationDAO.acceptTermsOfService(organizationId, version, Instant.now)
     } yield ()
 
@@ -201,7 +199,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       isSuperUser <- userService.isSuperUser(user._multiUser)
-      _ <- Fox.runIf(!isSuperUser)(Fox.fromBool(organization.aiPlan.isDefined)) ?~> "job.creditTransaction.noAiPlan"
+      _ <- Fox.runIf(!isSuperUser)(Fox.fromBool(organization.aiPlan.isDefined)) ?~> Msg.Job.Credits.noAiPlan
     } yield ()
 
 }

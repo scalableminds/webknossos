@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.models.annotation
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationLayerProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
@@ -45,7 +46,7 @@ object AnnotationLayer extends FoxImplicits {
         AnnotationLayer(_, AnnotationLayerType.Volume, defaultVolumeLayerName, AnnotationLayerStatistics.unknown))
     ).flatten
     for {
-      _ <- Fox.fromBool(!assertNonEmpty || annotationLayers.nonEmpty) ?~> "annotation.needsEitherSkeletonOrVolume"
+      _ <- Fox.fromBool(!assertNonEmpty || annotationLayers.nonEmpty) ?~> Msg.Annotation.needsEitherSkeletonOrVolume
     } yield annotationLayers
   }
 }
@@ -100,7 +101,7 @@ object FetchedAnnotationLayer {
       baseMappingNameOpt: Option[String] = None)(implicit ec: ExecutionContext): Fox[FetchedAnnotationLayer] =
     for {
       _ <- Fox.fromBool(
-        (annotationLayer.typ == AnnotationLayerType.Skeleton && tracing.isLeft) || annotationLayer.typ == AnnotationLayerType.Volume && tracing.isRight) ?~> "annotation.download.fetch.typeMismatch"
+        (annotationLayer.typ == AnnotationLayerType.Skeleton && tracing.isLeft) || annotationLayer.typ == AnnotationLayerType.Volume && tracing.isRight) ?~> Msg.Annotation.Download.fetchTypeMismatch
     } yield {
       FetchedAnnotationLayer(
         annotationLayer.tracingId,
@@ -121,14 +122,14 @@ object FetchedAnnotationLayer {
       volumeTracingOpt: Option[VolumeTracing],
       assertNonEmpty: Boolean = true)(implicit ec: ExecutionContext): Fox[List[FetchedAnnotationLayer]] =
     for {
-      _ <- Fox.fromBool(skeletonTracingIdOpt.isDefined == skeletonTracingOpt.isDefined) ?~> "annotation.mismatchingSkeletonIdsAndTracings"
-      _ <- Fox.fromBool(volumeTracingIdOpt.isDefined == volumeTracingOpt.isDefined) ?~> "annotation.mismatchingVolumeIdsAndTracings"
+      _ <- Fox.fromBool(skeletonTracingIdOpt.isDefined == skeletonTracingOpt.isDefined) ?~> Msg.Annotation.mismatchingSkeletonIdsAndTracings
+      _ <- Fox.fromBool(volumeTracingIdOpt.isDefined == volumeTracingOpt.isDefined) ?~> Msg.Annotation.mismatchingVolumeIdsAndTracings
       annotationLayers: List[FetchedAnnotationLayer] = List(
         skeletonTracingIdOpt.map(
           FetchedAnnotationLayer(_, AnnotationLayer.defaultSkeletonLayerName, Left(skeletonTracingOpt.get))),
         volumeTracingIdOpt.map(
           FetchedAnnotationLayer(_, AnnotationLayer.defaultVolumeLayerName, Right(volumeTracingOpt.get)))
       ).flatten
-      _ <- Fox.fromBool(!assertNonEmpty || annotationLayers.nonEmpty) ?~> "annotation.needsEitherSkeletonOrVolume"
+      _ <- Fox.fromBool(!assertNonEmpty || annotationLayers.nonEmpty) ?~> Msg.Annotation.needsEitherSkeletonOrVolume
     } yield annotationLayers
 }

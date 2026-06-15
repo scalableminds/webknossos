@@ -1,5 +1,6 @@
 package models.annotation
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.io.{NamedStream, ZipIO}
@@ -43,7 +44,6 @@ import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import com.scalableminds.util.tools.{Box, Full}
 import org.apache.pekko.actor.ActorSystem
 import org.apache.pekko.stream.Materializer
-import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsNull, JsObject, JsValue, Json}
 import utils.WkConf
 
@@ -103,23 +103,6 @@ class AnnotationService @Inject()(
 
   val DefaultAnnotationListLimit = 1000
 
-  private def selectSuitableTeam(user: User, dataset: Dataset): Fox[ObjectId] =
-    (for {
-      userTeamIds <- userService.teamIdsFor(user._id)
-      datasetAllowedTeamIds <- teamService.allowedTeamIdsForDataset(dataset, cumulative = true) ?~> "allowedTeams.notFound"
-    } yield {
-      val selectedTeamOpt = datasetAllowedTeamIds.intersect(userTeamIds).headOption
-      selectedTeamOpt match {
-        case Some(selectedTeam) => Fox.successful(selectedTeam)
-        case None =>
-          for {
-            isTeamManagerOrAdminOfOrg <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
-            _ <- Fox.fromBool(isTeamManagerOrAdminOfOrg || dataset.isPublic || user.isDatasetManager)
-            organizationTeamId <- organizationDAO.findOrganizationTeamId(user._organization)
-          } yield organizationTeamId
-      }
-    }).flatten
-
   private def createVolumeTracing(
       dataSource: UsableDataSource,
       datasetOrganizationId: String,
@@ -137,7 +120,7 @@ class AnnotationService @Inject()(
     val additionalAxes =
       fallbackLayer.map(_.additionalAxes).getOrElse(dataSource.additionalAxesUnion)
     for {
-      _ <- Fox.fromBool(magsRestricted.nonEmpty) ?~> "annotation.volume.magRestrictionsTooTight"
+      _ <- Fox.fromBool(magsRestricted.nonEmpty) ?~> Msg.Annotation.Volume.magRestrictionsTooTight
       remoteDatastoreClient = new WKRemoteDataStoreClient(datasetDataStore, rpc)
       fallbackLayerHasSegmentIndex <- fallbackLayer match {
         case Some(layer) =>
@@ -169,13 +152,12 @@ class AnnotationService @Inject()(
       )
   }
 
-  def createTracingForExplorational(dataset: Dataset,
-                                    params: AnnotationLayerParameters,
-                                    existingAnnotationId: Option[ObjectId],
-                                    existingAnnotationLayers: List[AnnotationLayer],
-                                    previousVersion: Option[Long])(
-      implicit ctx: DBAccessContext,
-      mp: MessagesProvider): Fox[Either[SkeletonTracing, VolumeTracing]] = {
+  def createTracingForExplorational(
+      dataset: Dataset,
+      params: AnnotationLayerParameters,
+      existingAnnotationId: Option[ObjectId],
+      existingAnnotationLayers: List[AnnotationLayer],
+      previousVersion: Option[Long])(implicit ctx: DBAccessContext): Fox[Either[SkeletonTracing, VolumeTracing]] = {
 
     def getAutoFallbackLayerName(dataSource: UsableDataSource): Option[String] =
       dataSource.dataLayers.find {
@@ -193,16 +175,14 @@ class AnnotationService @Inject()(
           }
           .headOption
           .toFox
-        _ <- Fox.fromBool(
-          ElementClass
-            .largestSegmentIdIsInRange(fallbackLayer.largestSegmentId, fallbackLayer.elementClass)) ?~> Messages(
-          "annotation.volume.largestSegmentIdExceedsRange",
-          fallbackLayer.largestSegmentId,
-          fallbackLayer.elementClass)
+        _ <- Fox.fromBool(ElementClass.largestSegmentIdIsInRange(fallbackLayer.largestSegmentId,
+                                                                 fallbackLayer.elementClass)) ?~> Msg.Annotation.Volume
+          .largestSegmentIdExceedsRange(fallbackLayer.largestSegmentId.getOrElse(-1),
+                                        fallbackLayer.elementClass.toString)
       } yield fallbackLayer
 
     for {
-      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> "dataStore.notFoundForDataset"
+      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> Msg.DataStore.notFoundForDataset
       usableDataSource <- datasetService.usableDataSourceFor(dataset)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
 
@@ -254,8 +234,7 @@ class AnnotationService @Inject()(
   private def createLayersForExplorational(dataset: Dataset,
                                            annotationId: ObjectId,
                                            allAnnotationLayerParameters: List[AnnotationLayerParameters])(
-      implicit ctx: DBAccessContext,
-      mp: MessagesProvider): Fox[List[AnnotationLayer]] =
+      implicit ctx: DBAccessContext): Fox[List[AnnotationLayer]] =
     for {
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
       dataSource <- datasetService.usableDataSourceFor(dataset)
@@ -306,14 +285,12 @@ class AnnotationService @Inject()(
     } yield newAnnotationLayers
 
   def createExplorationalFor(user: User, dataset: Dataset, annotationLayerParameters: List[AnnotationLayerParameters])(
-      implicit ctx: DBAccessContext,
-      m: MessagesProvider): Fox[Annotation] = {
+      implicit ctx: DBAccessContext): Fox[Annotation] = {
     val newAnnotationId = ObjectId.generate
     val datasetId = dataset._id
     for {
-      annotationLayers <- createLayersForExplorational(dataset, newAnnotationId, annotationLayerParameters) ?~> "annotation.createTracings.failed"
-      teamId <- selectSuitableTeam(user, dataset) ?~> "annotation.create.forbidden"
-      annotation = Annotation(newAnnotationId, datasetId, None, teamId, user._id, annotationLayers)
+      annotationLayers <- createLayersForExplorational(dataset, newAnnotationId, annotationLayerParameters) ?~> Msg.Annotation.createTracingsFailed
+      annotation = Annotation(newAnnotationId, datasetId, None, user._id, annotationLayers)
       _ <- annotationDAO.insertOne(annotation)
     } yield annotation
   }
@@ -328,9 +305,9 @@ class AnnotationService @Inject()(
         _ <- Fox.runOptional(annotation._task)(taskService.clearCompoundCache)
       } yield {
         if (annotation._task.isEmpty)
-          "annotation.finished"
+          Msg.Annotation.finished
         else
-          "task.finished"
+          Msg.Task.finished
       }
 
     (for {
@@ -344,16 +321,16 @@ class AnnotationService @Inject()(
         } else if (annotation.state == Finished) {
           logger.info(
             s"Silently not finishing annotation ${annotation._id.toString} for it is already finished. Access context: ${ctx.toStringAnonymous}")
-          Fox.successful("annotation.finished")
+          Fox.successful(Msg.Annotation.finished)
         } else {
           logger.info(
             s"Not finishing annotation ${annotation._id.toString} for its state is ${annotation.state.toString}. Access context: ${ctx.toStringAnonymous}")
-          Fox.failure("annotation.notActive")
+          Fox.failure(Msg.Annotation.notActive)
         }
       } else {
         logger.info(
           s"Not finishing annotation ${annotation._id.toString} due to missing permissions. Access context: ${ctx.toStringAnonymous}")
-        Fox.failure("annotation.notPossible")
+        Fox.failure(Msg.Annotation.finishNotAllowed)
       }
     }).flatten
   }
@@ -362,14 +339,14 @@ class AnnotationService @Inject()(
     annotationDAO.findAllByTaskIdAndType(taskId, AnnotationType.Task)
 
   def createAnnotationFor(user: User, taskId: ObjectId, initializingAnnotationId: ObjectId)(
-      implicit m: MessagesProvider,
-      ctx: DBAccessContext): Fox[Annotation] =
+      implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
       annotationBaseId <- annotationDAO.findBaseIdForTask(taskId) ?~> "Failed to retrieve annotation base id."
       annotationBase <- annotationDAO.findOne(annotationBaseId) ?~> "Failed to retrieve annotation base."
-      datasetName <- datasetDAO.getNameById(annotationBase._dataset)(GlobalAccessContext) ?~> "dataset.notFoundForAnnotation"
-      dataset <- datasetDAO.findOne(annotationBase._dataset) ?~> Messages("dataset.noAccess", datasetName)
-      _ <- Fox.fromBool(dataset.isUsable) ?~> Messages("dataset.notImported", dataset.name)
+      datasetName <- datasetDAO.getNameById(annotationBase._dataset)(GlobalAccessContext) ?~> Msg.Dataset
+        .notFoundForAnnotation(annotationBase._dataset, annotationBase._id)
+      dataset <- datasetDAO.findOne(annotationBase._dataset) ?~> Msg.Dataset.notFound(annotationBase._dataset)
+      _ <- Fox.fromBool(dataset.isUsable) ?~> Msg.Dataset.notUsable(dataset._id)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
       _ = logger.info(
         f"task assignment. creating annotation $initializingAnnotationId from base $annotationBaseId for task $taskId")
@@ -420,15 +397,14 @@ class AnnotationService @Inject()(
     )
   }
 
-  def createVolumeTracingBase(
-      datasetId: ObjectId,
-      boundingBox: Option[BoundingBox],
-      startPosition: Vec3Int,
-      startRotation: Vec3Double,
-      volumeShowFallbackLayer: Boolean,
-      magRestrictions: MagRestrictions)(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[VolumeTracing] =
+  def createVolumeTracingBase(datasetId: ObjectId,
+                              boundingBox: Option[BoundingBox],
+                              startPosition: Vec3Int,
+                              startRotation: Vec3Double,
+                              volumeShowFallbackLayer: Boolean,
+                              magRestrictions: MagRestrictions)(implicit ctx: DBAccessContext): Fox[VolumeTracing] =
     for {
-      dataset <- datasetDAO.findOne(datasetId) ?~> Messages("dataset.notFound", datasetId)
+      dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId)
       dataSource <- datasetService.usableDataSourceFor(dataset)
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)
       fallbackLayer = if (volumeShowFallbackLayer) {
@@ -437,7 +413,7 @@ class AnnotationService @Inject()(
           case _                              => None
         }.headOption
       } else None
-      _ <- Fox.fromBool(fallbackLayer.forall(_.largestSegmentId.exists(_ >= 0L))) ?~> "annotation.volume.invalidLargestSegmentId"
+      _ <- Fox.fromBool(fallbackLayer.forall(_.largestSegmentId.exists(_ >= 0L))) ?~> Msg.Annotation.Volume.invalidLargestSegmentId
 
       volumeTracing <- createVolumeTracing(
         dataSource,
@@ -476,13 +452,12 @@ class AnnotationService @Inject()(
       task <- taskFox
       skeletonIdOpt <- skeletonTracingIdBox.toFox
       volumeIdOpt <- volumeTracingIdBox.toFox
-      _ <- Fox.fromBool(skeletonIdOpt.isDefined || volumeIdOpt.isDefined) ?~> "annotation.needsAtleastOne"
+      _ <- Fox.fromBool(skeletonIdOpt.isDefined || volumeIdOpt.isDefined) ?~> Msg.Annotation.needsEitherSkeletonOrVolume
       project <- projectDAO.findOne(task._project)
       annotationLayers <- AnnotationLayer.layersFromIds(skeletonIdOpt, volumeIdOpt)
       annotationBase = Annotation(ObjectId.generate,
                                   datasetId,
                                   Some(task._id),
-                                  project._team,
                                   userId,
                                   annotationLayers,
                                   description.getOrElse(""),
@@ -503,19 +478,15 @@ class AnnotationService @Inject()(
                  annotationType: AnnotationType,
                  name: Option[String],
                  description: String,
-                 newAnnotationId: ObjectId): Fox[Annotation] =
-    for {
-      teamId <- selectSuitableTeam(user, dataset)
-      annotation = Annotation(newAnnotationId,
-                              dataset._id,
-                              None,
-                              teamId,
-                              user._id,
-                              annotationLayers.toList,
-                              description,
-                              name = name.getOrElse(""),
-                              typ = annotationType)
-    } yield annotation
+                 newAnnotationId: ObjectId): Annotation =
+    Annotation(newAnnotationId,
+               dataset._id,
+               None,
+               user._id,
+               annotationLayers.toList,
+               description,
+               name = name.getOrElse(""),
+               typ = annotationType)
 
   def updateTeamsForSharedAnnotation(annotationId: ObjectId, teams: List[ObjectId])(
       implicit ctx: DBAccessContext): Fox[Unit] =
@@ -580,9 +551,9 @@ class AnnotationService @Inject()(
 
     def getSingleDownloadAnnotation(annotation: Annotation, voxelSizeOpt: Option[VoxelSize]) =
       for {
-        user <- userService.findOneCached(annotation._user) ?~> "user.notFound"
+        user <- userService.findOneCached(annotation._user) ?~> Msg.User.notFound
         multiUser <- multiUserDAO.findOne(user._multiUser)
-        taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne) ?~> "task.notFound"
+        taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne) ?~> Msg.Task.notFound
         name <- savedTracingInformationHandler.nameForAnnotation(annotation)
         dataset <- datasetDAO.findOne(annotation._dataset)
         organizationId <- organizationDAO.findOrganizationIdForAnnotation(annotation._id)
@@ -710,30 +681,29 @@ class AnnotationService @Inject()(
   }
 
   def transferAnnotationToUser(typ: String, id: ObjectId, userId: ObjectId, issuingUser: User)(
-      implicit ctx: DBAccessContext,
-      mp: MessagesProvider): Fox[Annotation] =
+      implicit ctx: DBAccessContext): Fox[Annotation] =
     for {
-      annotation <- annotationInformationProvider.provideAnnotation(typ, id, issuingUser) ?~> "annotation.notFound"
-      newUser <- userDAO.findOne(userId) ?~> "user.notFound"
-      _ <- datasetDAO.findOne(annotation._dataset)(AuthorizedAccessContext(newUser)) ?~> "annotation.transferee.noDatasetAccess"
+      annotation <- annotationInformationProvider.provideAnnotation(typ, id, issuingUser) ?~> Msg.Annotation.notFound
+      newUser <- userDAO.findOne(userId) ?~> Msg.User.notFound(userId)
+      _ <- datasetDAO.findOne(annotation._dataset)(AuthorizedAccessContext(newUser)) ?~> Msg.Annotation.transfereeNoDatasetAccess
       _ <- annotationDAO.updateUser(annotation._id, newUser._id)
       updated <- annotationInformationProvider.provideAnnotation(typ, id, issuingUser)
     } yield updated
 
   def resetToBase(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      _ <- Fox.fromBool(annotation.typ == AnnotationType.Task) ?~> "annotation.revert.tasksOnly"
+      _ <- Fox.fromBool(annotation.typ == AnnotationType.Task) ?~> Msg.Annotation.Reset.tasksOnly
       dataset <- datasetDAO.findOne(annotation._dataset)
       tracingStoreClient <- tracingStoreService.clientFor(dataset)
-      _ <- tracingStoreClient.resetToBase(annotation._id) ?~> "annotation.revert.failed"
+      _ <- tracingStoreClient.resetToBase(annotation._id) ?~> Msg.Annotation.Reset.failed
     } yield ()
 
   private def settingsFor(annotation: Annotation)(implicit ctx: DBAccessContext) =
     if (annotation.typ == AnnotationType.Task || annotation.typ == AnnotationType.TracingBase)
       for {
         taskId <- annotation._task.toFox
-        task: Task <- taskDAO.findOne(taskId) ?~> "task.notFound"
-        taskType <- taskTypeDAO.findOne(task._taskType) ?~> "taskType.notFound"
+        task: Task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound(taskId)
+        taskType <- taskTypeDAO.findOne(task._taskType) ?~> Msg.TaskType.notFound(task._taskType)
       } yield {
         taskType.settings
       } else
@@ -747,8 +717,10 @@ class AnnotationService @Inject()(
                    restrictionsOpt: Option[AnnotationRestrictions] = None): Fox[JsObject] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
-      dataset <- datasetDAO.findOne(annotation._dataset) ?~> "dataset.notFoundForAnnotation"
-      organization <- organizationDAO.findOne(dataset._organization) ?~> "organization.notFound"
+      dataset <- datasetDAO.findOne(annotation._dataset) ?~> Msg.Dataset.notFoundForAnnotation(annotation._dataset,
+                                                                                               annotation._id)
+      organization <- organizationDAO.findOne(dataset._organization) ?~> Msg.Organization.notFound(
+        dataset._organization)
       taskFox = annotation._task.toFox.flatMap(taskId => taskDAO.findOne(taskId))
       taskJson <- Fox.fromFuture(taskFox.flatMap(t => taskService.publicWrites(t)).getOrElse(JsNull))
       userJson <- userJsonForAnnotation(annotation._user)
@@ -756,7 +728,9 @@ class AnnotationService @Inject()(
       restrictionsJs <- AnnotationRestrictions.writeAsJson(
         restrictionsOpt.getOrElse(annotationRestrictionDefaults.defaultsFor(annotation)),
         requestingUser)
-      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> "datastore.notFound"
+      userSpecificViewConfiguration <- Fox.runOptional(requestingUser)(user =>
+        annotationDAO.getViewConfigurationForUserWithFallback(annotation._id, user._id, annotation._user))
+      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> Msg.DataStore.notFound
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
       teams <- teamDAO.findSharedTeamsForAnnotation(annotation._id)
       teamsJson <- Fox.serialCombined(teams)(teamService.publicWrites(_))
@@ -772,7 +746,7 @@ class AnnotationService @Inject()(
         "id" -> annotation.id,
         "name" -> annotation.name,
         "description" -> annotation.description,
-        "viewConfiguration" -> annotation.viewConfiguration,
+        "viewConfiguration" -> Json.toJson(userSpecificViewConfiguration.flatten),
         "typ" -> annotation.typ,
         "task" -> taskJson,
         "stats" -> Json.obj(), // included for legacy parsers
@@ -799,7 +773,8 @@ class AnnotationService @Inject()(
   def writesWithDataset(annotation: Annotation): Fox[JsObject] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
-      dataset <- datasetDAO.findOne(annotation._dataset) ?~> "dataset.notFoundForAnnotation"
+      dataset <- datasetDAO.findOne(annotation._dataset) ?~> Msg.Dataset.notFoundForAnnotation(annotation._dataset,
+                                                                                               annotation._id)
       tracingStore <- tracingStoreDAO.findFirst
       tracingStoreJs <- tracingStoreService.publicWrites(tracingStore)
       datasetJs <- datasetService.publicWrites(dataset, None)
@@ -817,9 +792,11 @@ class AnnotationService @Inject()(
   def writesAsAnnotationSource(annotation: Annotation, accessViaPrivateLink: Boolean): Fox[JsValue] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
-      dataset <- datasetDAO.findOne(annotation._dataset) ?~> "dataset.notFoundForAnnotation"
-      organization <- organizationDAO.findOne(dataset._organization) ?~> "organization.notFound"
-      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> "datastore.notFound"
+      dataset <- datasetDAO.findOne(annotation._dataset) ?~> Msg.Dataset.notFoundForAnnotation(annotation._dataset,
+                                                                                               annotation._id)
+      organization <- organizationDAO.findOne(dataset._organization) ?~> Msg.Organization.notFound(
+        dataset._organization)
+      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> Msg.DataStore.notFound
       tracingStore <- tracingStoreDAO.findFirst
       annotationSource = AnnotationSource(
         id = annotation._id,
@@ -839,7 +816,7 @@ class AnnotationService @Inject()(
       Fox.successful(None)
     } else {
       for {
-        user <- Fox.fillOption(userOpt)(userService.findOneCached(userId)(GlobalAccessContext)) ?~> "user.notFound"
+        user <- Fox.fillOption(userOpt)(userService.findOneCached(userId)(GlobalAccessContext)) ?~> Msg.User.notFound
         userJson <- userService.compactWrites(user)
       } yield Some(userJson)
     }

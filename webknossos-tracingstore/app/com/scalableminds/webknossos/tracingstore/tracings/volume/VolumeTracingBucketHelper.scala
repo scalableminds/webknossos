@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
@@ -40,19 +41,22 @@ trait VolumeBucketCompression extends LazyLogging {
       data
     }
 
-  protected def decompressIfNeeded(data: Array[Byte],
-                                   expectedUncompressedBucketSize: Int,
-                                   debugInfo: String): Array[Byte] = {
+  protected def decompressIfNeeded(
+      data: Array[Byte],
+      expectedUncompressedBucketSize: Int,
+      debugInfo: String
+  ): Array[Byte] = {
     val isAlreadyDecompressed = data.length == expectedUncompressedBucketSize
     if (isAlreadyDecompressed) {
       data
     } else {
-      try {
+      try
         decompressor.decompress(data, expectedUncompressedBucketSize)
-      } catch {
+      catch {
         case e: Exception =>
           logger.error(
-            s"Failed to LZ4-decompress volume bucket ($debugInfo, compressed size: ${data.length}, expected uncompressed size $expectedUncompressedBucketSize): $e")
+            s"Failed to LZ4-decompress volume bucket ($debugInfo, compressed size: ${data.length}, expected uncompressed size $expectedUncompressedBucketSize): $e"
+          )
           throw e
       }
     }
@@ -61,9 +65,11 @@ trait VolumeBucketCompression extends LazyLogging {
 }
 
 trait AdditionalCoordinateKey {
-  protected def additionalCoordinatesKeyPart(additionalCoordinates: Seq[AdditionalCoordinate],
-                                             additionalAxes: Seq[AdditionalAxis],
-                                             prefix: String = ""): String = {
+  protected def additionalCoordinatesKeyPart(
+      additionalCoordinates: Seq[AdditionalCoordinate],
+      additionalAxes: Seq[AdditionalAxis],
+      prefix: String = ""
+  ): String = {
     // Bucket key additional coordinates need to be ordered to be found later.
     val valueMap = additionalCoordinates.map(a => a.name -> a.value).toMap
     val sortedValues = additionalAxes.sortBy(_.index).map(a => valueMap(a.name))
@@ -76,14 +82,14 @@ trait AdditionalCoordinateKey {
 }
 
 trait BucketKeys extends WKWDataFormatHelper with AdditionalCoordinateKey {
-  protected def buildBucketKey(volumeTracingId: String,
-                               bucket: BucketPosition,
-                               additionalAxes: Option[Seq[AdditionalAxis]]): String =
+  protected def buildBucketKey(
+      volumeTracingId: String,
+      bucket: BucketPosition,
+      additionalAxes: Option[Seq[AdditionalAxis]]
+  ): String =
     (bucket.additionalCoordinates, additionalAxes, bucket.hasAdditionalCoordinates) match {
       case (Some(additionalCoordinates), Some(axes), true) =>
-        s"$volumeTracingId/${bucket.mag.toMagLiteral(allowScalar = true)}/[${additionalCoordinatesKeyPart(
-          additionalCoordinates,
-          axes)}][${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
+        s"$volumeTracingId/${bucket.mag.toMagLiteral(allowScalar = true)}/[${additionalCoordinatesKeyPart(additionalCoordinates, axes)}][${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
       case _ =>
         s"$volumeTracingId/${bucket.mag.toMagLiteral(allowScalar = true)}/[${bucket.bucketX},${bucket.bucketY},${bucket.bucketZ}]"
     }
@@ -91,8 +97,10 @@ trait BucketKeys extends WKWDataFormatHelper with AdditionalCoordinateKey {
   protected def buildKeyPrefix(volumeTracingId: String): String =
     s"$volumeTracingId/"
 
-  protected def parseBucketKey(key: String,
-                               additionalAxes: Option[Seq[AdditionalAxis]]): Option[(String, BucketPosition)] =
+  protected def parseBucketKey(
+      key: String,
+      additionalAxes: Option[Seq[AdditionalAxis]]
+  ): Option[(String, BucketPosition)] =
     additionalAxes match {
       case Some(value) if value.nonEmpty => parseBucketKeyWithAdditionalAxes(key, value)
       case _                             => parseBucketKeyXYZ(key)
@@ -110,7 +118,8 @@ trait BucketKeys extends WKWDataFormatHelper with AdditionalCoordinateKey {
 
   private def parseBucketKeyWithAdditionalAxes(
       key: String,
-      additionalAxes: Seq[AdditionalAxis]): Option[(String, BucketPosition)] = {
+      additionalAxes: Seq[AdditionalAxis]
+  ): Option[(String, BucketPosition)] = {
     val additionalCoordinateCapture = Array.fill(additionalAxes.length)("(\\d+)").mkString(",")
     val keyRx = s"([0-9a-z-]+)/(\\d+|\\d+-\\d+-\\d+)/\\[$additionalCoordinateCapture]\\[(\\d+),(\\d+),(\\d+)]".r
     val matchOpt = keyRx.findFirstMatchIn(key)
@@ -124,24 +133,29 @@ trait BucketKeys extends WKWDataFormatHelper with AdditionalCoordinateKey {
 
         val additionalAxesIndexSorted = additionalAxes.sortBy(_.index)
         val additionalCoordinates: Seq[AdditionalCoordinate] =
-          (3 until additionalAxes.length + 3).zipWithIndex.map(
-            groupIndexAndAxisIndex =>
-              AdditionalCoordinate(additionalAxesIndexSorted(groupIndexAndAxisIndex._2).name,
-                                   aMatch.group(groupIndexAndAxisIndex._1).toInt))
+          (3 until additionalAxes.length + 3).zipWithIndex.map(groupIndexAndAxisIndex =>
+            AdditionalCoordinate(
+              additionalAxesIndexSorted(groupIndexAndAxisIndex._2).name,
+              aMatch.group(groupIndexAndAxisIndex._1).toInt
+            )
+          )
 
         getBucketPosition(xStr, yStr, zStr, magStr, Some(additionalCoordinates)).map(bucketPosition =>
-          (name, bucketPosition))
+          (name, bucketPosition)
+        )
 
       case _ =>
         None
     }
   }
 
-  private def getBucketPosition(xStr: String,
-                                yStr: String,
-                                zStr: String,
-                                magStr: String,
-                                additionalCoordinates: Option[Seq[AdditionalCoordinate]]): Option[BucketPosition] = {
+  private def getBucketPosition(
+      xStr: String,
+      yStr: String,
+      zStr: String,
+      magStr: String,
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]]
+  ): Option[BucketPosition] = {
     val magnOpt = Vec3Int.fromMagLiteral(magStr, allowScalar = true)
     magnOpt.map { mag =>
       val x = xStr.toInt
@@ -160,7 +174,7 @@ trait BucketKeys extends WKWDataFormatHelper with AdditionalCoordinateKey {
 }
 
 trait VolumeTracingBucketHelper
-    extends KeyValueStoreImplicits
+    extends KeyValueStoreConversions
     with FoxImplicits
     with VolumeBucketCompression
     with BucketKeys
@@ -170,20 +184,23 @@ trait VolumeTracingBucketHelper
   def volumeDataStore: FossilDBClient
   def temporaryTracingService: TemporaryTracingService
 
-  def loadBuckets(volumeLayer: VolumeTracingLayer,
-                  bucketPositions: Seq[BucketPosition],
-                  version: Option[Long]): Fox[Seq[Box[Array[Byte]]]] = {
+  def loadBuckets(
+      volumeLayer: VolumeTracingLayer,
+      bucketPositions: Seq[BucketPosition],
+      version: Option[Long]
+  ): Fox[Seq[Box[Array[Byte]]]] = {
     val bucketKeys = bucketPositions.map(buildBucketKey(volumeLayer.name, _, volumeLayer.additionalAxes))
 
     for {
-      bucketKeyValueBoxesFromFossil <- if (volumeLayer.isTemporaryTracing) {
-        Fox.successful(temporaryTracingService.getVolumeBuckets(bucketKeys).map(Box(_)))
-      } else {
-        volumeDataStore.getMultipleKeysByList(bucketKeys, version).map(_.map(_.map(_.value)))
-      }
+      bucketKeyValueBoxesFromFossil <-
+        if (volumeLayer.isTemporaryTracing) {
+          Fox.successful(temporaryTracingService.getVolumeBuckets(bucketKeys).map(Box(_)))
+        } else {
+          volumeDataStore.getMultipleKeysByList(bucketKeys, version)(wrapInBox).map(_.map(_.map(_.value)))
+        }
       bucketBoxesWithFallback <- addFallbackBucketData(volumeLayer, bucketPositions, bucketKeyValueBoxesFromFossil)
       bucketBoxesUnpacked = bucketBoxesWithFallback.map { bucketBox =>
-        bucketBox.flatMap { volumeBucket: Array[Byte] =>
+        bucketBox.flatMap { (volumeBucket: Array[Byte]) =>
           if (isRevertedElement(volumeBucket)) Empty
           else {
             tryo(decompressIfNeeded(volumeBucket, volumeLayer.expectedUncompressedBucketSize, ""))
@@ -193,9 +210,11 @@ trait VolumeTracingBucketHelper
     } yield bucketBoxesUnpacked
   }
 
-  private def addFallbackBucketData(volumeLayer: VolumeTracingLayer,
-                                    bucketPositions: Seq[BucketPosition],
-                                    bucketBoxesFromFossil: Seq[Box[Array[Byte]]]): Fox[Seq[Box[Array[Byte]]]] =
+  private def addFallbackBucketData(
+      volumeLayer: VolumeTracingLayer,
+      bucketPositions: Seq[BucketPosition],
+      bucketBoxesFromFossil: Seq[Box[Array[Byte]]]
+  ): Fox[Seq[Box[Array[Byte]]]] =
     if (!volumeLayer.includeFallbackDataIfAvailable || volumeLayer.tracing.fallbackLayer.isEmpty) {
       Fox.successful(bucketBoxesFromFossil)
     } else {
@@ -207,7 +226,8 @@ trait VolumeTracingBucketHelper
         dataRequests = indicesWhereEmpty.map { idx =>
           val bucketPosition = bucketPositions(idx)
           WebknossosDataRequest(
-            position = Vec3Int(bucketPosition.topLeft.mag1X, bucketPosition.topLeft.mag1Y, bucketPosition.topLeft.mag1Z),
+            position =
+              Vec3Int(bucketPosition.topLeft.mag1X, bucketPosition.topLeft.mag1Y, bucketPosition.topLeft.mag1Z),
             mag = bucketPosition.mag,
             cubeSize = DataLayer.bucketLength,
             fourBit = None,
@@ -222,8 +242,11 @@ trait VolumeTracingBucketHelper
           dataRequests.length,
           flatDataFromDataStore,
           datastoreMissingBucketIndices.toSet,
-          volumeLayer.expectedUncompressedBucketSize).toFox ?~> "fallbackData.split.failed"
-        _ <- Fox.fromBool(bucketBoxesFromDataStore.length == indicesWhereEmpty.length) ?~> "length mismatch"
+          volumeLayer.expectedUncompressedBucketSize
+        ).toFox ?~> Msg.Annotation.Volume.fallbackDataSplitFailed
+        _ <- Fox.fromBool(
+          bucketBoxesFromDataStore.length == indicesWhereEmpty.length
+        ) ?~> Msg.Annotation.Volume.fallbackDataLengthMismatch
         bucketBoxesFromDataStoreIterator = bucketBoxesFromDataStore.iterator
         bucketBoxesFilled = bucketBoxesFromFossil.map {
           case Full(bucketFromFossil) => Full(bucketFromFossil)
@@ -233,37 +256,41 @@ trait VolumeTracingBucketHelper
       } yield bucketBoxesFilled
     }
 
-  private def splitIntoBuckets(expectedBucketCount: Int,
-                               flatDataFromDataStore: Array[Byte],
-                               datastoreMissingBucketIndices: Set[Int],
-                               bytesPerBucket: Int): Box[Seq[Box[Array[Byte]]]] = tryo {
+  private def splitIntoBuckets(
+      expectedBucketCount: Int,
+      flatDataFromDataStore: Array[Byte],
+      datastoreMissingBucketIndices: Set[Int],
+      bytesPerBucket: Int
+  ): Box[Seq[Box[Array[Byte]]]] = tryo {
     if ((expectedBucketCount - datastoreMissingBucketIndices.size) * bytesPerBucket != flatDataFromDataStore.length) {
       throw new IllegalStateException(
-        s"bucket data array from datastore does not have expected length to be split into ${expectedBucketCount - datastoreMissingBucketIndices.length} buckets.")
+        s"bucket data array from datastore does not have expected length to be split into ${expectedBucketCount - datastoreMissingBucketIndices.size} buckets."
+      )
     }
     var currentPosition = 0
     val bucketsMutable = ListBuffer[Box[Array[Byte]]]()
-    for (currentBucketIdx <- 0 until expectedBucketCount) {
+    for (currentBucketIdx <- 0 until expectedBucketCount)
       if (datastoreMissingBucketIndices.contains(currentBucketIdx)) {
         bucketsMutable.append(Empty)
       } else {
         bucketsMutable.append(Full(flatDataFromDataStore.slice(currentPosition, currentPosition + bytesPerBucket)))
         currentPosition += bytesPerBucket
       }
-    }
     bucketsMutable.toList
   }
 
-  def loadBucket(volumeLayer: VolumeTracingLayer,
-                 bucket: BucketPosition,
-                 version: Option[Long] = None): Fox[Array[Byte]] = {
+  def loadBucket(
+      volumeLayer: VolumeTracingLayer,
+      bucket: BucketPosition,
+      version: Option[Long] = None
+  ): Fox[Array[Byte]] = {
     val bucketKey = buildBucketKey(volumeLayer.name, bucket, volumeLayer.additionalAxes)
 
     val dataFox =
       if (volumeLayer.isTemporaryTracing)
         temporaryTracingService.getVolumeBucket(bucketKey).map(VersionedKeyValuePair(VersionedKey(bucketKey, 0), _))
       else
-        volumeDataStore.get(bucketKey, version, mayBeEmpty = Some(true))
+        volumeDataStore.get(bucketKey, version, mayBeEmpty = Some(true))(wrapInBox)
 
     val unpackedDataFox: Fox[Array[Byte]] = dataFox.flatMap { versionedVolumeBucket =>
       if (isRevertedElement(versionedVolumeBucket)) Fox.empty
@@ -271,7 +298,8 @@ trait VolumeTracingBucketHelper
         val debugInfo =
           s"key: $bucketKey, ${versionedVolumeBucket.value.length} bytes, version ${versionedVolumeBucket.version}"
         Fox.successful(
-          decompressIfNeeded(versionedVolumeBucket.value, volumeLayer.expectedUncompressedBucketSize, debugInfo))
+          decompressIfNeeded(versionedVolumeBucket.value, volumeLayer.expectedUncompressedBucketSize, debugInfo)
+        )
       }
     }
     unpackedDataFox.shiftBox.flatMap {
@@ -305,29 +333,35 @@ trait VolumeTracingBucketHelper
 
   }
 
-  protected def saveBucket(volumeLayer: VolumeTracingLayer,
-                           bucket: BucketPosition,
-                           data: Array[Byte],
-                           version: Long,
-                           toTemporaryStore: Boolean = false,
-                           fossilPutBuffer: Option[FossilDBPutBuffer] = None): Fox[Unit] =
-    saveBucket(volumeLayer.tracingId,
-               volumeLayer.expectedUncompressedBucketSize,
-               bucket,
-               data,
-               version,
-               toTemporaryStore,
-               volumeLayer.additionalAxes,
-               fossilPutBuffer)
+  protected def saveBucket(
+      volumeLayer: VolumeTracingLayer,
+      bucket: BucketPosition,
+      data: Array[Byte],
+      version: Long,
+      toTemporaryStore: Boolean = false,
+      fossilPutBuffer: Option[FossilDBPutBuffer] = None
+  ): Fox[Unit] =
+    saveBucket(
+      volumeLayer.tracingId,
+      volumeLayer.expectedUncompressedBucketSize,
+      bucket,
+      data,
+      version,
+      toTemporaryStore,
+      volumeLayer.additionalAxes,
+      fossilPutBuffer
+    )
 
-  protected def saveBucket(tracingId: String,
-                           expectedUncompressedBucketSize: Int,
-                           bucket: BucketPosition,
-                           data: Array[Byte],
-                           version: Long,
-                           toTemporaryStore: Boolean,
-                           additionalAxes: Option[Seq[AdditionalAxis]],
-                           fossilPutBuffer: Option[FossilDBPutBuffer]): Fox[Unit] = {
+  protected def saveBucket(
+      tracingId: String,
+      expectedUncompressedBucketSize: Int,
+      bucket: BucketPosition,
+      data: Array[Byte],
+      version: Long,
+      toTemporaryStore: Boolean,
+      additionalAxes: Option[Seq[AdditionalAxis]],
+      fossilPutBuffer: Option[FossilDBPutBuffer]
+  ): Fox[Unit] = {
     val bucketKey = buildBucketKey(tracingId, bucket, additionalAxes)
     val compressedBucket = compressVolumeBucket(data, expectedUncompressedBucketSize)
     if (toTemporaryStore) {
@@ -340,16 +374,19 @@ trait VolumeTracingBucketHelper
     }
   }
 
-  protected def saveBuckets(volumeLayer: VolumeTracingLayer,
-                            bucketPositions: Seq[BucketPosition],
-                            bucketBytes: Seq[Array[Byte]],
-                            version: Long,
-                            toTemporaryStore: Boolean = false): Fox[Unit] = {
+  protected def saveBuckets(
+      volumeLayer: VolumeTracingLayer,
+      bucketPositions: Seq[BucketPosition],
+      bucketBytes: Seq[Array[Byte]],
+      version: Long,
+      toTemporaryStore: Boolean = false
+  ): Fox[Unit] = {
     val bucketKeys =
       bucketPositions.map(buildBucketKey(volumeLayer.tracingId, _, volumeLayer.additionalAxes))
     val compressedBuckets =
       bucketBytes.map(singleBucketBytes =>
-        compressVolumeBucket(singleBucketBytes, volumeLayer.expectedUncompressedBucketSize))
+        compressVolumeBucket(singleBucketBytes, volumeLayer.expectedUncompressedBucketSize)
+      )
     if (toTemporaryStore) {
       temporaryTracingService.saveVolumeBuckets(bucketKeys.zip(compressedBuckets))
     } else {
@@ -359,40 +396,46 @@ trait VolumeTracingBucketHelper
 
   def bucketStream(volumeLayer: VolumeTracingLayer, version: Option[Long]): Iterator[(BucketPosition, Array[Byte])] = {
     val keyPrefix = buildKeyPrefix(volumeLayer.name)
-    new BucketIterator(keyPrefix,
-                       volumeDataStore,
-                       volumeLayer.expectedUncompressedBucketSize,
-                       version,
-                       volumeLayer.additionalAxes)
+    new BucketIterator(
+      keyPrefix,
+      volumeDataStore,
+      volumeLayer.expectedUncompressedBucketSize,
+      version,
+      volumeLayer.additionalAxes
+    )
   }
 
-  def bucketStreamWithVersion(volumeLayer: VolumeTracingLayer,
-                              version: Option[Long]): Iterator[(BucketPosition, Array[Byte], Long)] = {
+  def bucketStreamWithVersion(
+      volumeLayer: VolumeTracingLayer,
+      version: Option[Long]
+  ): Iterator[(BucketPosition, Array[Byte], Long)] = {
     val keyPrefix = buildKeyPrefix(volumeLayer.name)
-    new VersionedBucketIterator(keyPrefix,
-                                volumeDataStore,
-                                volumeLayer.expectedUncompressedBucketSize,
-                                version,
-                                volumeLayer.additionalAxes)
+    new VersionedBucketIterator(
+      keyPrefix,
+      volumeDataStore,
+      volumeLayer.expectedUncompressedBucketSize,
+      version,
+      volumeLayer.additionalAxes
+    )
   }
 
   def bucketStreamFromTemporaryStore(volumeLayer: VolumeTracingLayer): Iterator[(BucketPosition, Array[Byte])] = {
     val keyPrefix = buildKeyPrefix(volumeLayer.name)
     val keyValuePairs = temporaryTracingService.getAllVolumeBucketsWithPrefix(keyPrefix)
-    keyValuePairs.flatMap {
-      case (bucketKey, data) =>
-        parseBucketKey(bucketKey, volumeLayer.additionalAxes).map(tuple => (tuple._2, data))
+    keyValuePairs.flatMap { case (bucketKey, data) =>
+      parseBucketKey(bucketKey, volumeLayer.additionalAxes).map(tuple => (tuple._2, data))
     }.iterator
   }
 }
 
-class VersionedBucketIterator(prefix: String,
-                              volumeDataStore: FossilDBClient,
-                              expectedUncompressedBucketSize: Int,
-                              version: Option[Long] = None,
-                              additionalAxes: Option[Seq[AdditionalAxis]])
-    extends Iterator[(BucketPosition, Array[Byte], Long)]
-    with KeyValueStoreImplicits
+class VersionedBucketIterator(
+    prefix: String,
+    volumeDataStore: FossilDBClient,
+    expectedUncompressedBucketSize: Int,
+    version: Option[Long] = None,
+    additionalAxes: Option[Seq[AdditionalAxis]]
+) extends Iterator[(BucketPosition, Array[Byte], Long)]
+    with KeyValueStoreConversions
     with VolumeBucketCompression
     with BucketKeys
     with FoxImplicits
@@ -404,7 +447,7 @@ class VersionedBucketIterator(prefix: String,
   private var nextBucket: Option[VersionedKeyValuePair[Array[Byte]]] = None
 
   private def fetchNext =
-    volumeDataStore.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize)).iterator
+    volumeDataStore.getMultipleKeys(currentStartAfterKey, Some(prefix), version, Some(batchSize))(wrapInBox).iterator
 
   private def fetchNextAndSave = {
     currentBatchIterator = fetchNext
@@ -439,23 +482,23 @@ class VersionedBucketIterator(prefix: String,
       case None         => getNextNonRevertedBucket.getOrElse(throw new NoSuchElementException())
     }
     nextBucket = None
-    parseBucketKey(nextRes.key, additionalAxes)
-      .map(key => {
-        val debugInfo = s"key: ${nextRes.key}, ${nextRes.value.length} bytes, version ${nextRes.version}"
-        (key._2, decompressIfNeeded(nextRes.value, expectedUncompressedBucketSize, debugInfo), nextRes.version)
-      })
-      .getOrElse(
-        throw new IllegalStateException(s"parseBucketKey returned None for key ${nextRes.key} despite prior filtering"))
+    parseBucketKey(nextRes.key, additionalAxes).map { key =>
+      val debugInfo = s"key: ${nextRes.key}, ${nextRes.value.length} bytes, version ${nextRes.version}"
+      (key._2, decompressIfNeeded(nextRes.value, expectedUncompressedBucketSize, debugInfo), nextRes.version)
+    }.getOrElse(
+      throw new IllegalStateException(s"parseBucketKey returned None for key ${nextRes.key} despite prior filtering")
+    )
   }
 
 }
 
-class BucketIterator(prefix: String,
-                     volumeDataStore: FossilDBClient,
-                     expectedUncompressedBucketSize: Int,
-                     version: Option[Long] = None,
-                     additionalAxes: Option[Seq[AdditionalAxis]])
-    extends Iterator[(BucketPosition, Array[Byte])] {
+class BucketIterator(
+    prefix: String,
+    volumeDataStore: FossilDBClient,
+    expectedUncompressedBucketSize: Int,
+    version: Option[Long] = None,
+    additionalAxes: Option[Seq[AdditionalAxis]]
+) extends Iterator[(BucketPosition, Array[Byte])] {
   private val versionedBucketIterator =
     new VersionedBucketIterator(prefix, volumeDataStore, expectedUncompressedBucketSize, version, additionalAxes)
 

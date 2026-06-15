@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.datareaders
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.datavault.{ByteRange, VaultPath}
@@ -22,9 +23,9 @@ class ChunkReader(header: DatasetHeader) extends FoxImplicits {
       chunkShape: Array[Int] = chunkBytesAndShapeBox.toOption.flatMap(_._2).getOrElse(chunkShapeFromMetadata)
       typed <- chunkBytesAndShapeBox.map(_._1) match {
         case Full(chunkBytes) if useSkipTypingShortcut =>
-          shortcutChunkTyper.wrapAndType(chunkBytes, chunkShape).toFox ?~> "chunk.shortcutWrapAndType.failed"
+          shortcutChunkTyper.wrapAndType(chunkBytes, chunkShape).toFox ?~> Msg.Dataset.Chunk.shortcutWrapAndTypeFailed
         case Full(chunkBytes) =>
-          chunkTyper.wrapAndType(chunkBytes, chunkShape).toFox ?~> "chunk.wrapAndType.failed"
+          chunkTyper.wrapAndType(chunkBytes, chunkShape).toFox ?~> Msg.Dataset.Chunk.wrapAndTypeFailed
         case Empty =>
           createFromFillValue(chunkShape, useSkipTypingShortcut)
         case f: Failure =>
@@ -35,9 +36,9 @@ class ChunkReader(header: DatasetHeader) extends FoxImplicits {
   def createFromFillValue(chunkShape: Array[Int], useSkipTypingShortcut: Boolean)(
       implicit ec: ExecutionContext): Fox[MultiArray] =
     if (useSkipTypingShortcut)
-      shortcutChunkTyper.createFromFillValueCached(chunkShape) ?~> "chunk.shortcutCreateFromFillValue.failed"
+      shortcutChunkTyper.createFromFillValueCached(chunkShape) ?~> Msg.Dataset.Chunk.shortcutCreateFromFillValueFailed
     else
-      chunkTyper.createFromFillValueCached(chunkShape) ?~> "chunk.createFromFillValue.failed"
+      chunkTyper.createFromFillValueCached(chunkShape) ?~> Msg.Dataset.Chunk.createFromFillValueFailed
 
   // Returns bytes (optional, Fox.empty may later be replaced with fill value)
   // and chunk shape (optional, only for data formats where each chunk reports its own shape, e.g. N5)
@@ -46,6 +47,6 @@ class ChunkReader(header: DatasetHeader) extends FoxImplicits {
       tc: TokenContext): Fox[(Array[Byte], Option[Array[Int]])] =
     for {
       bytes <- path.readBytes(range)
-      decompressed <- tryo(header.compressorImpl.decompress(bytes)).toFox ?~> "chunk.decompress.failed"
+      decompressed <- tryo(header.compressorImpl.decompress(bytes)).toFox ?~> Msg.Dataset.Chunk.decompressFailed
     } yield (decompressed, None)
 }

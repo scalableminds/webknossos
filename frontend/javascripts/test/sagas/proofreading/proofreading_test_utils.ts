@@ -117,6 +117,7 @@ export class BackendMock {
     public overrides: BucketOverride[],
     additionalEdges: Vector2[] = [],
     private initialState: WebknossosState | undefined = undefined,
+    public canGrantMutex: boolean = true,
   ) {
     this.agglomerateMapping = new AgglomerateMapping(
       edgesForInitialMapping.concat(additionalEdges),
@@ -192,9 +193,9 @@ export class BackendMock {
   };
 
   acquireAnnotationMutex = async (_annotationId: string, _sessionId: string) => {
-    return { canEdit: true, blockedByUser: null, blockedBySessionId: null };
+    return { canEdit: this.canGrantMutex, blockedByUser: null, blockedBySessionId: null };
   };
-  releaseAnnotationMutex = async (_annotationId: string) => {};
+  releaseAnnotationMutex = async (_annotationId: string, _sessionId: string) => {};
 
   private saveQueueEntriesToUpdateActionBatch = (data: Array<SaveQueueEntry>) => {
     return data.map((entry) => ({
@@ -420,10 +421,16 @@ export function mockInitialBucketAndAgglomerateData(
   context: WebknossosTestContext,
   additionalEdges: Vector2[] = [],
   initialState: WebknossosState | undefined = undefined,
+  options?: { grantMutex?: boolean },
 ) {
   const { mocks } = context;
 
-  const backendMock = new BackendMock(initialBucketOverrides, additionalEdges, initialState);
+  const backendMock = new BackendMock(
+    initialBucketOverrides,
+    additionalEdges,
+    initialState,
+    options?.grantMutex ?? true,
+  );
 
   vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
     createBucketResponseFunction(

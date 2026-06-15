@@ -728,6 +728,8 @@ class AnnotationService @Inject()(
       restrictionsJs <- AnnotationRestrictions.writeAsJson(
         restrictionsOpt.getOrElse(annotationRestrictionDefaults.defaultsFor(annotation)),
         requestingUser)
+      userSpecificViewConfiguration <- Fox.runOptional(requestingUser)(user =>
+        annotationDAO.getViewConfigurationForUserWithFallback(annotation._id, user._id, annotation._user))
       dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim) ?~> Msg.DataStore.notFound
       dataStoreJs <- dataStoreService.publicWrites(dataStore)
       teams <- teamDAO.findSharedTeamsForAnnotation(annotation._id)
@@ -744,7 +746,7 @@ class AnnotationService @Inject()(
         "id" -> annotation.id,
         "name" -> annotation.name,
         "description" -> annotation.description,
-        "viewConfiguration" -> annotation.viewConfiguration,
+        "viewConfiguration" -> Json.toJson(userSpecificViewConfiguration.flatten),
         "typ" -> annotation.typ,
         "task" -> taskJson,
         "stats" -> Json.obj(), // included for legacy parsers

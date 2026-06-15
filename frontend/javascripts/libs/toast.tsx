@@ -24,7 +24,7 @@ type ToastConfig = {
 type NotificationAPI = ReturnType<typeof notification.useNotification>[0];
 
 export function ToastContextMountRoot() {
-  const [toastAPI, contextHolder] = notification.useNotification();
+  const [toastAPI, contextHolder] = notification.useNotification({ stack: false });
   useEffect(() => {
     Toast.notificationAPI = toastAPI;
   }, [toastAPI]);

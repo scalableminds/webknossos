@@ -505,10 +505,14 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
         const othersMayEdit = yield* select((state) =>
           isAnnotationEditableByNonOwners(state.annotation),
         );
-        if (!othersMayEdit) {
-          return;
-        }
-        if (mutexLogicState.fetchingStrategy === MutexFetchingStrategy.AdHoc) {
+        const isSavingDisabled = yield* select((state) => state.save.isSavingDisabled);
+        if (
+          !othersMayEdit ||
+          !isSavingDisabled ||
+          mutexLogicState.fetchingStrategy === MutexFetchingStrategy.AdHoc
+        ) {
+          Toast.close(MUTEX_NOT_ACQUIRED_KEY);
+          Toast.close(MUTEX_ACQUIRED_KEY);
           return;
         }
         if (isMutexAcquired) {

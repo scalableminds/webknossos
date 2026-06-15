@@ -191,7 +191,7 @@ DELETE        /annotations/:id                                                  
 POST          /annotations/:id/merge/:mergedTyp/:mergedId                                       controllers.AnnotationController.mergeWithoutType(id: ObjectId, mergedTyp: String, mergedId: ObjectId)
 GET           /annotations/:id/download                                                         controllers.AnnotationIOController.downloadWithoutType(id: ObjectId, version: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
 POST          /annotations/:id/acquireMutex                                                     controllers.AnnotationController.tryAcquiringAnnotationMutex(id: ObjectId, sessionId: String)
-POST          /annotations/:id/releaseMutex                                                     controllers.AnnotationController.releaseMutex(id: ObjectId)
+POST          /annotations/:id/releaseMutex                                                     controllers.AnnotationController.releaseMutex(id: ObjectId, sessionId: String)
 GET           /annotations/:id/reservedIds                                                      controllers.AnnotationController.reservedIds(id: ObjectId, tracingId: String, domain: String)
 POST          /annotations/:id/reserveIds                                                       controllers.AnnotationController.reserveIds(id: ObjectId)
 
@@ -276,7 +276,7 @@ POST          /pricing/requestStorage                                           
 POST          /pricing/requestCredits                                                           controllers.OrganizationController.sendOrderCreditsEmail(requestedCredits: Int)
 POST          /pricing/requestAiAddon                                                           controllers.OrganizationController.sendUpgradeAiAddonEmail()
 GET           /pricing/status                                                                   controllers.OrganizationController.pricingStatus()
-POST          /pricing/updatePlan                                                               controllers.OrganizationController.updatePlan
+POST          /pricing/updatePlan                                                               controllers.OrganizationController.updatePlan()
 GET           /pricing/planUpdates                                                              controllers.OrganizationController.listPlanUpdates
 GET           /termsOfService                                                                   controllers.OrganizationController.getTermsOfService()
 POST          /termsOfService/accept                                                            controllers.OrganizationController.acceptTermsOfService(version: Int)
@@ -327,7 +327,7 @@ DELETE        /aiModels/:id                                                     
 # CreditTransactions
 POST          /creditTransactions/addCredits                                                    controllers.CreditTransactionController.addCredits(organizationId: String, creditAmount: Int, moneySpent: String, currency: String, comment: Option[String], expiresAt: Option[String])
 PATCH         /creditTransactions/:transactionId                                                controllers.CreditTransactionController.refundCreditTransaction(organizationId: String, transactionId: ObjectId)
-GET           /creditTransactions                                                               controllers.CreditTransactionController.list
+GET           /creditTransactions                                                               controllers.CreditTransactionController.list()
 
 # Publications
 GET           /publications                                                                     controllers.PublicationController.listPublications()

@@ -686,7 +686,7 @@ class ExplorativeAnnotationsView extends PureComponent<Props, State> {
         ),
       },
       {
-        title: "Modification Date",
+        title: "Last Modified",
         dataIndex: "modified",
         width: 200,
         sorter: compareBy<APIAnnotationInfo>((annotation) => annotation.modified),

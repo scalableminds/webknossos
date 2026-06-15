@@ -32,6 +32,7 @@ import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import features from "features";
+import { copyToClipboard } from "libs/clipboard";
 import { handleGenericError } from "libs/error_handling";
 import { formatSeconds, formatTuple } from "libs/format_utils";
 import Persistence from "libs/persistence";
@@ -214,9 +215,7 @@ function TaskListView({ initialFieldValues }: Props) {
         title={`Anonymous Task Links for Task ${anonymousTaskId}`}
         open={isAnonymousTaskLinkModalOpen}
         onOk={() => {
-          navigator.clipboard
-            .writeText(tasksString)
-            .then(() => Toast.success("Links copied to clipboard"));
+          copyToClipboard(tasksString, "links");
           setIsAnonymousTaskLinkModalOpen(false);
         }}
         onCancel={() => setIsAnonymousTaskLinkModalOpen(false)}

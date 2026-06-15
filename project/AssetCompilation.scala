@@ -47,10 +47,10 @@ object AssetCompilation {
 
     Files
       .walk(from.toPath)
-      .forEach(toConsumer(cpSrc => {
+      .forEach(toConsumer { cpSrc =>
         val cpDest = to.toPath.resolve(from.toPath.relativize(cpSrc))
         Files.copy(cpSrc, cpDest)
-      }))
+      })
   }
 
   private def deleteRecursively(file: File): Unit = {

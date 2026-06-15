@@ -15,46 +15,53 @@ import scala.concurrent.ExecutionContext
 
 object Zarr3Array extends LazyLogging with FoxImplicits {
 
-  def open(path: VaultPath,
-           dataSourceId: DataSourceId,
-           layerName: String,
-           axisOrderOpt: Option[AxisOrder],
-           channelIndex: Option[Int],
-           additionalAxes: Option[Seq[AdditionalAxis]],
-           sharedChunkContentsCache: AlfuCache[String, MultiArray])(implicit ec: ExecutionContext,
-                                                                    tc: TokenContext): Fox[Zarr3Array] =
+  def open(
+      path: VaultPath,
+      dataSourceId: DataSourceId,
+      layerName: String,
+      axisOrderOpt: Option[AxisOrder],
+      channelIndex: Option[Int],
+      additionalAxes: Option[Seq[AdditionalAxis]],
+      sharedChunkContentsCache: AlfuCache[String, MultiArray]
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[Zarr3Array] =
     for {
       headerBytes <- (path / Zarr3ArrayHeader.FILENAME_ZARR_JSON)
         .readBytes() ?~> s"Could not read header at ${Zarr3ArrayHeader.FILENAME_ZARR_JSON}"
       header <- JsonHelper.parseAs[Zarr3ArrayHeader](headerBytes).toFox ?~> "Could not parse array header"
       array <- tryo(
-        new Zarr3Array(path,
-                       dataSourceId,
-                       layerName,
-                       header,
-                       axisOrderOpt.getOrElse(AxisOrder.asCxyzFromRank(header.rank)),
-                       channelIndex,
-                       additionalAxes,
-                       sharedChunkContentsCache)).toFox ?~> "Could not open zarr3 array"
+        new Zarr3Array(
+          path,
+          dataSourceId,
+          layerName,
+          header,
+          axisOrderOpt.getOrElse(AxisOrder.asCxyzFromRank(header.rank)),
+          channelIndex,
+          additionalAxes,
+          sharedChunkContentsCache
+        )
+      ).toFox ?~> "Could not open zarr3 array"
     } yield array
 }
 
-class Zarr3Array(vaultPath: VaultPath,
-                 dataSourceId: DataSourceId,
-                 layerName: String,
-                 header: Zarr3ArrayHeader,
-                 axisOrder: AxisOrder,
-                 channelIndex: Option[Int],
-                 additionalAxes: Option[Seq[AdditionalAxis]],
-                 sharedChunkContentsCache: AlfuCache[String, MultiArray])
-    extends DatasetArray(vaultPath,
-                         dataSourceId,
-                         layerName,
-                         header,
-                         axisOrder,
-                         channelIndex,
-                         additionalAxes,
-                         sharedChunkContentsCache)
+class Zarr3Array(
+    vaultPath: VaultPath,
+    dataSourceId: DataSourceId,
+    layerName: String,
+    header: Zarr3ArrayHeader,
+    axisOrder: AxisOrder,
+    channelIndex: Option[Int],
+    additionalAxes: Option[Seq[AdditionalAxis]],
+    sharedChunkContentsCache: AlfuCache[String, MultiArray]
+) extends DatasetArray(
+      vaultPath,
+      dataSourceId,
+      layerName,
+      header,
+      axisOrder,
+      channelIndex,
+      additionalAxes,
+      sharedChunkContentsCache
+    )
     with LazyLogging {
 
   override protected def getChunkFilename(chunkIndex: Array[Int]): String =
@@ -85,9 +92,11 @@ class Zarr3Array(vaultPath: VaultPath,
 
     shardingCodecOpt match {
       case Some(shardingCodec: ShardingCodec) =>
-        (Some(shardingCodec),
-         initializeCodecs(shardingCodec.codecs)._2,
-         initializeCodecs(shardingCodec.index_codecs)._2)
+        (
+          Some(shardingCodec),
+          initializeCodecs(shardingCodec.codecs)._2,
+          initializeCodecs(shardingCodec.index_codecs)._2
+        )
       case None => (None, outerCodecs, Seq())
     }
   }
@@ -102,7 +111,9 @@ class Zarr3Array(vaultPath: VaultPath,
   private def innerChunkShape =
     header.chunkShape // Describes shape (in voxels) of a real chunk, that is a chunk that is stored in a shard
   private def indexShape =
-    shardShape.zip(innerChunkShape).map { case (s, ics) => s / ics } // Describes how many chunks are in a shard, i.e. in the index
+    shardShape.zip(innerChunkShape).map { case (s, ics) =>
+      s / ics
+    } // Describes how many chunks are in a shard, i.e. in the index
 
   private lazy val chunksPerShard = indexShape.product
   private def shardIndexEntryLength = 16
@@ -116,10 +127,11 @@ class Zarr3Array(vaultPath: VaultPath,
       .sum
   }
 
-  private def readAndParseShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext,
-                                                           tc: TokenContext): Fox[Array[(Long, Long)]] =
+  private def readAndParseShardIndex(
+      shardPath: VaultPath
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[(Long, Long)]] =
     for {
-      shardIndexRaw <- readShardIndex(shardPath) ?=> Msg.Zarr.readShardIndexFailed
+      shardIndexRaw <- readShardIndex(shardPath) ?-> Msg.Zarr.readShardIndexFailed
       parsed = parseShardIndex(shardIndexRaw)
     } yield parsed
 
@@ -147,15 +159,16 @@ class Zarr3Array(vaultPath: VaultPath,
           c match {
             case codec: BytesToBytesCodec => codec.decode(bytes)
             case _                        => bytes
-        })
+          }
+        )
       case None => ???
     }
     decodedIndex
       .grouped(shardIndexEntryLength)
-      .map((bytes: Array[Byte]) => {
+      .map((bytes: Array[Byte]) =>
         // BigInt constructor is big endian, sharding index stores values little endian, thus reverse is used.
         (BigInt(bytes.take(8).reverse).toLong, BigInt(bytes.slice(8, 16).reverse).toLong)
-      })
+      )
       .toArray
   }
 
@@ -167,9 +180,9 @@ class Zarr3Array(vaultPath: VaultPath,
       chunkIndex.zip(header.chunkShape).map { case (i, s) => i.toLong * s }
     )
 
-  override protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[(VaultPath, StartEndExclusiveByteRange)] =
+  override protected def getShardedChunkPathAndRange(
+      chunkIndex: Array[Int]
+  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[(VaultPath, StartEndExclusiveByteRange)] =
     for {
       shardCoordinates <- chunkIndexToShardIndex(chunkIndex).headOption.toFox
       shardFilename = getChunkFilename(shardCoordinates)
@@ -177,9 +190,10 @@ class Zarr3Array(vaultPath: VaultPath,
       parsedShardIndex <- parsedShardIndexCache.getOrLoad(shardPath, readAndParseShardIndex)
       chunkIndexInShardIndex = getChunkIndexInShardIndex(chunkIndex, shardCoordinates)
       (chunkOffset, chunkLength) = parsedShardIndex(chunkIndexInShardIndex)
-      _ <- if (chunkOffset == -1 && chunkLength == -1) {
-        Fox.empty // -1 signifies empty/missing chunk
-      } else Fox.successful(())
+      _ <-
+        if (chunkOffset == -1 && chunkLength == -1) {
+          Fox.empty // -1 signifies empty/missing chunk
+        } else Fox.successful(())
       range = ByteRange.startEndExclusive(chunkOffset, chunkOffset + chunkLength)
     } yield (shardPath, range)
 }

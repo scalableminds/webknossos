@@ -284,13 +284,15 @@ class AnnotationController @Inject()(
           annotationService.updateTeamsForSharedAnnotation(annotation._id, List.empty)
         else Fox.successful(())
         tags = (request.body \ "tags").asOpt[List[String]]
-        viewConfiguration = (request.body \ "viewConfiguration").asOpt[JsObject]
+        viewConfigurationOpt = (request.body \ "viewConfiguration").asOpt[JsObject]
         _ <- Fox.runOptional(name)(annotationDAO.updateName(annotation._id, _)) ?~> Msg.Annotation.Edit.failed
         _ <- Fox
           .runOptional(visibility)(annotationDAO.updateVisibility(annotation._id, _)) ?~> Msg.Annotation.Edit.failed
         _ <- Fox.runOptional(tags)(annotationDAO.updateTags(annotation._id, _)) ?~> Msg.Annotation.Edit.failed
-        _ <- Fox
-          .runOptional(viewConfiguration)(vc => annotationDAO.updateViewConfiguration(annotation._id, Some(vc))) ?~> Msg.Annotation.Edit.failed
+        _ <- Fox.runOptional(viewConfigurationOpt)(
+          vc =>
+            annotationDAO
+              .updateViewConfiguration(annotation._id, request.identity._id, vc)) ?~> Msg.Annotation.Edit.failed
       } yield JsonOk(Msg.Annotation.Edit.success)
   }
 
@@ -479,11 +481,11 @@ class AnnotationController @Inject()(
       }
     }
 
-  def releaseMutex(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def releaseMutex(id: ObjectId, sessionId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
       for {
-        _ <- annotationMutexService.release(id, request.identity._id) ?~> Msg.Annotation.Mutex.releaseFailed
-        _ = logger.info(s"User ${request.identity._id} released mutex for $id.")
+        _ <- annotationMutexService.release(id, request.identity._id, sessionId) ?~> Msg.Annotation.Mutex.releaseFailed
+        _ = logger.info(s"User ${request.identity._id} with session id $sessionId released mutex for $id.")
       } yield Ok
     }
   }

@@ -131,7 +131,7 @@ object MultiArrayUtils extends LazyLogging {
     while ({ sourceRangeIterator.hasNext }) setter.set(sourceRangeIterator, targetRangeIterator)
   }
 
-  private def createValueSetter(elementType: Class[_]): MultiArrayUtils.ValueSetter =
+  private def createValueSetter(elementType: Class[?]): MultiArrayUtils.ValueSetter =
     if (elementType eq classOf[Double])(sourceIterator: IndexIterator, targetIterator: IndexIterator) =>
       targetIterator.setDoubleNext(sourceIterator.getDoubleNext)
     else if (elementType eq classOf[Float])(sourceIterator: IndexIterator, targetIterator: IndexIterator) =>

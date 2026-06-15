@@ -293,7 +293,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                            dataSource,
                                            dataSource.isUsable,
                                            rootPath,
-                                           rootRealPath)(GlobalAccessContext)
+                                           rootRealPath)(using GlobalAccessContext)
           _ <- notifyDatastoreOnUpdate(foundDataset._id)
         } yield Some(foundDataset._id)
       } else {
@@ -330,7 +330,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                            dataset._dataStore,
                                            updatedDataSource.hashCode(),
                                            updatedDataSource,
-                                           isUsable = true)(GlobalAccessContext)
+                                           isUsable = true)(using GlobalAccessContext)
           _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
           _ <- pathDeletionService.deletePaths(datastoreClient, pathsToDelete)
         } yield ()

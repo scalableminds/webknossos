@@ -369,7 +369,7 @@ class WKRemoteDataStoreController @Inject()(
                                         name,
                                         request.body.hashCode(),
                                         request.body,
-                                        isUsable = request.body.toUsable.isDefined)(GlobalAccessContext))
+                                        isUsable = request.body.toUsable.isDefined)(using GlobalAccessContext))
         } yield Ok
       }
     }

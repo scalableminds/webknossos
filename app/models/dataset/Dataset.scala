@@ -112,7 +112,7 @@ trait DatasetDAOLike {
 }
 
 class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDAO, organizationDAO: OrganizationDAO)(
-    implicit ec: ExecutionContext
+    using ec: ExecutionContext
 ) extends SQLDAO[Dataset, DatasetsRow, Datasets](sqlClient)
     with DatasetDAOLike {
   protected val collection = Datasets
@@ -737,8 +737,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       newDataSource: DataSource,
       isUsable: Boolean,
       rootPath: Option[String] = None,
-      rootRealPath: Option[String] = None)
-  )(implicit ctx: DBAccessContext): Fox[Unit] =
+      rootRealPath: Option[String] = None)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(newDataSource.id.organizationId)
       defaultViewConfiguration: Option[JsValue] = newDataSource.defaultViewConfiguration.map(Json.toJson(_))

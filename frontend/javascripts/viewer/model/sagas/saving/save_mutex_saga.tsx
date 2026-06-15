@@ -508,7 +508,7 @@ function* watchMutexStateChangesForNotification(mutexLogicState: MutexLogicState
         const isSavingDisabled = yield* select((state) => state.save.isSavingDisabled);
         if (
           !othersMayEdit ||
-          !isSavingDisabled ||
+          isSavingDisabled ||
           mutexLogicState.fetchingStrategy === MutexFetchingStrategy.AdHoc
         ) {
           Toast.close(MUTEX_NOT_ACQUIRED_KEY);

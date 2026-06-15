@@ -1,38 +1,12 @@
 import { Flex, Input, Spin, Typography } from "antd";
 import features from "features";
-import Markdown from "libs/markdown_adapter";
+
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
-import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { ColorWKBlue } from "theme";
 import type { APIUser } from "types/api_types";
-
-const CHAT_MARKDOWN_COMPONENTS = {
-  h1: ({ children }: { children: ReactNode }) => (
-    <strong style={{ display: "block", fontSize: 15, margin: "4px 0 2px" }}>{children}</strong>
-  ),
-  h2: ({ children }: { children: ReactNode }) => (
-    <strong style={{ display: "block", fontSize: 14, margin: "4px 0 2px" }}>{children}</strong>
-  ),
-  h3: ({ children }: { children: ReactNode }) => (
-    <strong style={{ display: "block", margin: "4px 0 2px" }}>{children}</strong>
-  ),
-  h4: ({ children }: { children: ReactNode }) => (
-    <strong style={{ display: "block", margin: "4px 0 2px" }}>{children}</strong>
-  ),
-  h5: ({ children }: { children: ReactNode }) => (
-    <strong style={{ display: "block", margin: "4px 0 2px" }}>{children}</strong>
-  ),
-  h6: ({ children }: { children: ReactNode }) => (
-    <strong style={{ display: "block", margin: "4px 0 2px" }}>{children}</strong>
-  ),
-  ul: ({ children }: { children: ReactNode }) => (
-    <ul style={{ paddingLeft: 16, margin: "2px 0" }}>{children}</ul>
-  ),
-  ol: ({ children }: { children: ReactNode }) => (
-    <ol style={{ paddingLeft: 16, margin: "2px 0" }}>{children}</ol>
-  ),
-};
+import { HelpChatMarkdown } from "./help_chat_markdown";
 
 const STORAGE_MESSAGES_KEY = "wk_help_chat_messages";
 const STORAGE_SESSION_KEY = "wk_help_chat_session_id";
@@ -119,7 +93,7 @@ function ChatMessageBubble({
         {isLoading ? (
           <Spin size="small" />
         ) : message.role === "assistant" ? (
-          <Markdown components={CHAT_MARKDOWN_COMPONENTS}>{message.content}</Markdown>
+          <HelpChatMarkdown text={message.content} />
         ) : (
           message.content
         )}

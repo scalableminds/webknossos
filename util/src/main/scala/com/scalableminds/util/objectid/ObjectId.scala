@@ -3,36 +3,89 @@ package com.scalableminds.util.objectid
 import com.scalableminds.util.Msg
 import com.scalableminds.util.tools.TextUtils.parseCommaSeparated
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import play.api.libs.json._
+import play.api.libs.json.*
 import play.api.mvc.{PathBindable, QueryStringBindable}
-import reactivemongo.api.bson.BSONObjectID
-
 import scala.concurrent.ExecutionContext
+
+// Follows BSON ObjectId spec https://www.mongodb.com/docs/manual/reference/bson-types/#objectid
 
 case class ObjectId(id: String) {
   override def toString: String = id
 }
 
 object ObjectId extends FoxImplicits {
-  def generate: ObjectId = fromBsonId(BSONObjectID.generate())
-  def fromString(literal: String)(implicit ec: ExecutionContext): Fox[ObjectId] =
-    fromStringSync(literal).toFox ?~> Msg.ObjectId.invalid(literal)
-  def fromCommaSeparated(idsStrOpt: Option[String])(implicit ec: ExecutionContext): Fox[List[ObjectId]] =
-    parseCommaSeparated(idsStrOpt)(fromString)
-  private def fromBsonId(bson: BSONObjectID) = ObjectId(bson.stringify)
-  def fromStringSync(input: String): Option[ObjectId] =
-    BSONObjectID.parse(input).map(fromBsonId).toOption
+  private lazy val maxCounterValue = 16777216
+  private lazy val atomicCounter = new java.util.concurrent.atomic.AtomicInteger(scala.util.Random.nextInt(maxCounterValue))
+  private lazy val HEX_CHARS: Array[Char] = "0123456789abcdef".toCharArray
 
-  // Accept human-readable prefix: anything-before-hyphen-<ObjectId>
-  private def fromStringWithPrefixSync(input: String): Option[ObjectId] = {
-    val objectIdCandidate = input.lastIndexOf('-') match {
-      case -1  => input
-      case idx => input.substring(idx + 1)
-    }
-    BSONObjectID.parse(objectIdCandidate).map(fromBsonId).toOption
+  private lazy val processRandom: Array[Byte] = {
+    val bytes = Array.ofDim[Byte](5)
+    scala.util.Random.nextBytes(bytes)
+    bytes
   }
 
-  def dummyId: ObjectId = ObjectId("000000000000000000000000")
+  private def hex2Str(bytes: Array[Byte]): String = {
+    val len = bytes.length
+    val hex = new Array[Char](2 * len)
+    var inputIndex = 0
+    while (inputIndex < len) {
+      val b = bytes(inputIndex)
+      val outputIndex = 2 * inputIndex
+      hex(outputIndex) = HEX_CHARS((b & 0xF0) >>> 4)
+      hex(outputIndex + 1) = HEX_CHARS(b & 0x0F)
+      inputIndex = inputIndex + 1
+    }
+    new String(hex)
+  }
+
+  def generate: ObjectId = {
+    val id = Array.ofDim[Byte](12)
+
+    // n of seconds since epoch. Big endian
+    val timestamp = (System.currentTimeMillis() / 1000L).toInt
+    id(0) = (timestamp >> 24).toByte
+    id(1) = (timestamp >> 16).toByte
+    id(2) = (timestamp >> 8).toByte
+    id(3) = timestamp.toByte
+
+    // 5-byte random value, generated once per process
+    id(4) = processRandom(0)
+    id(5) = processRandom(1)
+    id(6) = processRandom(2)
+    id(7) = processRandom(3)
+    id(8) = processRandom(4)
+
+    // 3 bytes of counter sequence, with randomized start. Big endian
+    val c = (atomicCounter.getAndIncrement + maxCounterValue) % maxCounterValue
+    id(9) = (c >> 16 & 0xFF).toByte
+    id(10) = (c >> 8 & 0xFF).toByte
+    id(11) = (c & 0xFF).toByte
+
+    ObjectId(hex2Str(id))
+  }
+
+  def fromString(literal: String)(implicit ec: ExecutionContext): Fox[ObjectId] =
+    fromStringSync(literal).toFox ?~> Msg.ObjectId.invalid(literal)
+
+  def fromCommaSeparated(idsStrOpt: Option[String])(implicit ec: ExecutionContext): Fox[List[ObjectId]] =
+    parseCommaSeparated(idsStrOpt)(fromString)
+
+  // valid object ids have 24 lowercase hex chars
+  private lazy val objectIdPattern = "^[0-9a-f]{24}$".r
+
+  def fromStringSync(literal: String): Option[ObjectId] =
+    if (objectIdPattern.matches(literal)) Some(ObjectId(literal)) else None
+
+  // Accept human-readable prefix: anything-before-hyphen-<ObjectId>
+  private def fromStringWithPrefixSync(literal: String): Option[ObjectId] = {
+    val objectIdCandidate = literal.lastIndexOf('-') match {
+      case -1  => literal
+      case idx => literal.substring(idx + 1)
+    }
+    fromStringSync(objectIdCandidate)
+  }
+
+  lazy val dummyId: ObjectId = ObjectId("000000000000000000000000")
 
   implicit object ObjectIdFormat extends Format[ObjectId] {
     override def reads(json: JsValue): JsResult[ObjectId] =

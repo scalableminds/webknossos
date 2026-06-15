@@ -1,5 +1,6 @@
 import { useIsMutating, useQueryClient } from "@tanstack/react-query";
 import { type DatasetUpdater, getDatastores, triggerDatasetCheck } from "admin/rest_api";
+import { FolderModal } from "dashboard/folders/folder_modal";
 import { useEffectOnlyOnce, usePrevious, useWkSelector } from "libs/react_hooks";
 import UserLocalStorage from "libs/user_local_storage";
 import last from "lodash-es/last";
@@ -44,7 +45,7 @@ export type DatasetCollectionContextValue = {
   setSearchRecursively: (val: boolean) => void;
   getBreadcrumbs: (dataset: APIDatasetCompactWithoutStatusAndLayerNames) => string[] | null;
   getActiveSubfolders: () => FolderItem[];
-  showCreateFolderPrompt: (parentFolderId: string) => void;
+  showCreateFolderModal: (parentFolderId: string) => void;
   queries: {
     folderHierarchyQuery: ReturnType<typeof useFolderHierarchyQuery>;
     datasetsInFolderQuery: ReturnType<typeof useDatasetsInFolderQuery>;
@@ -152,17 +153,10 @@ export default function DatasetCollectionContextProvider({
   );
   const datasets = (globalSearchQuery ? datasetSearchQuery.data : datasetsInFolderQuery.data) || [];
 
-  const showCreateFolderPrompt = useCallback(
-    (parentFolderId: string) => {
-      const folderName = prompt("Please input a name for the new folder", "New folder");
-      if (!folderName) {
-        // The user hit escape/cancel
-        return;
-      }
-      createFolderMutation.mutateAsync([parentFolderId, folderName]);
-    },
-    [createFolderMutation.mutateAsync],
-  );
+  const [createFolderParentId, setCreateFolderParentId] = useState<string | null>(null);
+  const showCreateFolderModal = useCallback((parentFolderId: string) => {
+    setCreateFolderParentId(parentFolderId);
+  }, []);
 
   function fetchDatasets(): void {
     datasetsInFolderQuery.refetch();
@@ -228,7 +222,7 @@ export default function DatasetCollectionContextProvider({
       selectedFolder,
       setSelectedFolder,
       mostRecentlyUsedActiveFolderId,
-      showCreateFolderPrompt,
+      showCreateFolderModal,
       isChecking,
       getBreadcrumbs,
       getActiveSubfolders,
@@ -276,7 +270,7 @@ export default function DatasetCollectionContextProvider({
       isChecking,
       datasets,
       isLoading,
-      showCreateFolderPrompt,
+      showCreateFolderModal,
       activeFolderId,
       mostRecentlyUsedActiveFolderId,
       folderHierarchyQuery,
@@ -301,7 +295,16 @@ export default function DatasetCollectionContextProvider({
   );
 
   return (
-    <DatasetCollectionContext.Provider value={value}>{children}</DatasetCollectionContext.Provider>
+    <DatasetCollectionContext.Provider value={value}>
+      {children}
+      {createFolderParentId != null && (
+        <FolderModal
+          mode="create"
+          parentFolderId={createFolderParentId}
+          onClose={() => setCreateFolderParentId(null)}
+        />
+      )}
+    </DatasetCollectionContext.Provider>
   );
 }
 

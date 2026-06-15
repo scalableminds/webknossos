@@ -225,7 +225,7 @@ export function generateSettingsForFolder(
   }
 
   function createFolder(): void {
-    context.showCreateFolderPrompt(id);
+    context.showCreateFolderModal(id);
   }
 
   const newFolderText = isSubfolder ? "New Subfolder" : "New Folder";

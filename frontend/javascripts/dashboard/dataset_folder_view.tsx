@@ -11,7 +11,7 @@ import DatasetCollectionContextProvider, {
 import { useDatasetsInFolderQuery, useFolderHierarchyQuery } from "./dataset/queries";
 import DatasetView, { DatasetAddButton, DatasetRefreshButton } from "./dataset_view";
 import { DetailsSidebar } from "./folders/details_sidebar";
-import { EditFolderModal } from "./folders/edit_folder_modal";
+import { FolderModal } from "./folders/folder_modal";
 import { FolderTreeSidebar } from "./folders/folder_tree";
 
 type Props = {
@@ -206,7 +206,8 @@ function DatasetFolderViewInner(props: Props) {
       }}
     >
       {folderIdForEditModal != null && (
-        <EditFolderModal
+        <FolderModal
+          mode="edit"
           onClose={() => setFolderIdForEditModal(null)}
           folderId={folderIdForEditModal}
         />

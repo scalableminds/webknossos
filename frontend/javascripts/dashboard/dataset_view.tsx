@@ -265,7 +265,7 @@ function DatasetView({
               icon={<PlusOutlined />}
               onClick={() =>
                 context.activeFolderId != null &&
-                context.showCreateFolderPrompt(context.activeFolderId)
+                context.showCreateFolderModal(context.activeFolderId)
               }
               requiredPricingPlan={PricingPlanEnum.Team}
             >

@@ -338,6 +338,8 @@ object Msg {
     val updateTeamsFailed: String = "Could not update the folder’s allowed teams."
   }
   object Job {
+    val alreadyRetried: String =
+      "This job has already been retried once and failed again. This is likely a persistent failure. Please contact an administrator for help."
     val cleanupFailed: String = "Could not clean up failed job."
     val notEnabled: String = "Long-running jobs are not enabled for this WEBKNOSSOS instance."
     val edgeLengthExceeded: String = "An edge length of the selected bounding box is too large."
@@ -625,6 +627,7 @@ object Msg {
     val deleteSuccess: String = s"Project was successfully deleted."
     def nameTaken(name: String): String =
       s"A project named “$name” already exists. Please choose a different name."
+    def nameTooShort: String = "Project name must be at least three characters long."
     def nameInvalidChars(name: String): String =
       s"Project name “$name” contains invalid characters. Please use only letters and numbers."
     val createFailed: String = "Could not create project."
@@ -639,6 +642,8 @@ object Msg {
     def notFound(id: ObjectId): String = s"Script “$id” could not be found or accessed."
     def nameInvalidChars(name: String): String =
       s"Script name “$name” is invalid. Please use only letters, digits, dots, space, underscores, hyphens."
+    def nameTooShort: String = "Script name must be at least two characters long."
+    def nameTooLong: String = "Script name must be at most 50 characters long."
     val updateOnlyOwner: String = "You do not have permission to update this script. Please ask the script owner."
     val deleteOnlyOwner: String = "You do not have permission to delete this script. Please ask the script owner."
     val deleteFailed: String = "Could not delete script."
@@ -675,6 +680,8 @@ object Msg {
     def notFound(id: ObjectId): String = s"Task type “$id” could not be found or accessed."
     def summaryTaken(summary: String): String =
       s"A task type with summary “$summary” already exists. Please choose a different name."
+    val summaryTooShort: String = "Task type summary must be at least two characters long."
+    val summaryTooLong: String = "Task type summary must be at most 50 characters long."
     val editSuccess: String = "Task type was successfully updated."
     def deleteSuccess(summary: String): String = s"Task type “$summary” was successfully deleted."
     def deleteFailed(summary: String): String = s"Could not delete task type “$summary”."
@@ -697,7 +704,6 @@ object Msg {
     val noUserWithThisEmail: String = "There is no user registered with this email."
     val invalidCredentials: String = "Incorrect email or password. Please try again."
     val createFailed: String = "Could not create user."
-    val idNotFound: String = "Could not find a user id in the request."
     val lastAdmin: String =
       "This user is the last remaining admin in your organization. Cannot remove admin privileges from this account."
     val lastOwner: String =
@@ -718,10 +724,7 @@ object Msg {
     object Configuration {
       val updateSuccess: String = "Your configuration was successfully updated."
       val updateSuccessForDataset: String = "Dataset configuration was successfully updated."
-      val invalid: String = "Could not parse configuration."
-      val invalidForDataset: String = "Could not parse dataset configuration."
-      val invalidKeyboardShortcutsConfig = "Keyboard shortcuts configuration is invalid."
-      val updatedKeyboardShortcutsConfig = "Keyboard shortcuts configuration was updated."
+      val updatedKeyboardShortcutsConfig = "Keyboard shortcuts configuration was successfully updated."
     }
     object Email {
       val taken: String =

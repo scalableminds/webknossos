@@ -26,6 +26,15 @@ import models.dataset.{DatasetDAO, DatasetService}
 
 import scala.concurrent.ExecutionContext
 
+case class ListTasksParameters(user: Option[ObjectId],
+                               project: Option[ObjectId],
+                               ids: Option[Seq[ObjectId]],
+                               taskType: Option[ObjectId],
+                               random: Option[Boolean])
+object ListTasksParameters {
+  implicit val jsonFormat: Format[ListTasksParameters] = Json.format[ListTasksParameters]
+}
+
 class TaskController @Inject()(taskCreationService: TaskCreationService,
                                annotationService: AnnotationService,
                                projectDAO: ProjectDAO,
@@ -161,21 +170,16 @@ class TaskController @Inject()(taskCreationService: TaskCreationService,
     } yield Ok(Json.toJson(js))
   }
 
-  def listTasks: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
-    for {
-      userIdOpt <- Fox.runOptional((request.body \ "user").asOpt[String])(ObjectId.fromString)
-      projectIdOpt <- Fox.runOptional((request.body \ "project").asOpt[String])(ObjectId.fromString)
-      taskIdsOpt <- Fox.runOptional((request.body \ "ids").asOpt[List[String]])(ids =>
-        Fox.serialCombined(ids)(ObjectId.fromString))
-      taskTypeIdOpt <- Fox.runOptional((request.body \ "taskType").asOpt[String])(ObjectId.fromString)
-      randomizeOpt = (request.body \ "random").asOpt[Boolean]
-      tasks <- taskDAO.findAllByProjectAndTaskTypeAndIdsAndUser(projectIdOpt,
-                                                                taskTypeIdOpt,
-                                                                taskIdsOpt,
-                                                                userIdOpt,
-                                                                randomizeOpt)
-      jsResult <- Fox.serialCombined(tasks)(taskService.publicWrites(_))
-    } yield Ok(Json.toJson(jsResult))
+  def listTasks: Action[ListTasksParameters] = sil.SecuredAction.async(validateJson[ListTasksParameters]) {
+    implicit request =>
+      for {
+        tasks <- taskDAO.findAllByProjectAndTaskTypeAndIdsAndUser(request.body.project,
+                                                                  request.body.taskType,
+                                                                  request.body.ids,
+                                                                  request.body.user,
+                                                                  request.body.random)
+        jsSeq <- Fox.serialCombined(tasks)(taskService.publicWrites(_))
+      } yield Ok(Json.toJson(jsSeq))
   }
 
   def request: Action[AnyContent] = sil.SecuredAction.async { implicit request =>

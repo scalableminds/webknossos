@@ -1,5 +1,6 @@
 package models.project
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
@@ -10,7 +11,6 @@ import models.task.TaskDAO
 import models.team.TeamDAO
 import models.user.{User, UserService}
 import com.scalableminds.util.tools.Full
-import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}
@@ -33,24 +33,6 @@ case class Project(
 ) extends FoxImplicits {
 
   def isDeletableBy(user: User): Boolean = user._id == _owner || user.isAdmin
-
-}
-
-object Project {
-  private val validateProjectName = Reads.pattern("^[a-zA-Z0-9_-]*$".r, "project.name.invalidChars")
-
-  // format: off
-  val projectPublicReads: Reads[Project] =
-    ((__ \ "name").read[String](Reads.minLength[String](3) keepAnd validateProjectName) and
-      (__ \ "team").read[ObjectId] and
-      (__ \ "priority").read[Int] and
-      (__ \ "paused").readNullable[Boolean] and
-      (__ \ "expectedTime").readNullable[Long] and
-      (__ \ "owner").read[ObjectId] and
-      (__ \ "isBlacklistedFromReport").read[Boolean]) (
-      (name, team, priority, paused, expectedTime, owner, isBlacklistedFromReport) =>
-        Project(ObjectId.generate, team, owner, name, priority, paused getOrElse false, expectedTime, isBlacklistedFromReport))
-  // format: on
 
 }
 
@@ -177,6 +159,12 @@ class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userSer
     extends LazyLogging
     with FoxImplicits {
 
+  def validateProjectName(name: String): Fox[Unit] =
+    for {
+      _ <- Fox.fromBool(name.length >= 3) ?~> Msg.Project.nameTooShort
+      _ <- Fox.fromBool(name.matches("^[a-zA-Z0-9_-]*$")) ?~> Msg.Project.nameInvalidChars(name)
+    } yield ()
+
   def deleteOne(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[Boolean] =
     for {
       removalSuccessBox <- projectDAO.deleteOne(projectId).shiftBox
@@ -215,8 +203,6 @@ class ProjectService @Inject()(projectDAO: ProjectDAO, teamDAO: TeamDAO, userSer
       implicit ctx: DBAccessContext): Fox[JsObject] =
     for {
       projectJson <- publicWrites(project)
-    } yield {
-      projectJson ++ Json.obj("pendingInstances" -> JsNumber(pendingInstances), "tracingTime" -> tracingTime)
-    }
+    } yield projectJson ++ Json.obj("pendingInstances" -> JsNumber(pendingInstances), "tracingTime" -> tracingTime)
 
 }

@@ -57,8 +57,8 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
     extends Controller
     with MetadataAssertions {
 
-  def updatePartialV12(datasetId: ObjectId): Action[DatasetUpdateParameters] =
-    sil.SecuredAction.async(validateJson[DatasetUpdateParameters]) { implicit request =>
+  def updatePartialV12(datasetId: ObjectId): Action[DatasetUpdatePartialParameters] =
+    sil.SecuredAction.async(validateJson[DatasetUpdatePartialParameters]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
@@ -114,8 +114,8 @@ class LegacyApiController @Inject()(datasetController: DatasetController,
       } yield adaptedResult
     }
 
-  def updateDatasetV8(organizationId: String, datasetName: String): Action[JsValue] =
-    sil.SecuredAction.async(parse.json) { implicit request =>
+  def updateDatasetV8(organizationId: String, datasetName: String): Action[DatasetUpdateParameters] =
+    sil.SecuredAction.async(validateJson[DatasetUpdateParameters]) { implicit request =>
       for {
         _ <- Fox.successful(logVersioned(request))
         dataset <- datasetDAO.findOneByNameAndOrganization(datasetName, organizationId)

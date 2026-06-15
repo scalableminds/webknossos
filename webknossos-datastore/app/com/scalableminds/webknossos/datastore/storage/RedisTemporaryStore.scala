@@ -40,7 +40,10 @@ trait RedisTemporaryStore extends LazyLogging with FoxImplicits {
   }
 
   private lazy val connection: StatefulRedisConnection[String, String] = {
-    val conn = redisClient.connect()
+    val conn = redisClient.connectAsync()
+      .toCompletableFuture
+      .orTimeout(connectionTimeout.toSeconds, TimeUnit.SECONDS)
+      .get()
     lifecycle.addStopHook { () =>
       Future {
         conn.close()

@@ -22,7 +22,7 @@ class TracingStoreController @Inject()(tracingStoreService: TracingStoreService,
   private val tracingStorePublicReads: Reads[TracingStore] =
     ((__ \ "name").read[String] and
       (__ \ "url").read[String] and
-      (__ \ "publicUrl").read[String])(TracingStore.fromUpdateForm _)
+      (__ \ "publicUrl").read[String])(TracingStore.fromUpdateForm)
 
   def listOne: Action[AnyContent] = sil.UserAwareAction.async {
     for {

@@ -6,11 +6,9 @@ object Dependencies {
   val dependencyResolvers: Seq[MavenRepository] =
     Seq(
       Resolver.typesafeRepo("releases"),
-      "Unidata UCAR" at "https://artifacts.unidata.ucar.edu/content/repositories/unidata-releases/",
-      // "SciJava Public" at "https://maven.scijava.org/content/repositories/public/",
-      "OSGeo" at "https://repo.osgeo.org/repository/release/",
-      "Atlassian Releases" at "https://packages.atlassian.com/maven-public/",
-      "Senbox (for Zarr)" at "https://nexus.senbox.net/nexus/content/groups/public/"
+      "Unidata UCAR" at "https://artifacts.unidata.ucar.edu/content/repositories/unidata-releases/", // ucar deps
+      "SciJava Public" at "https://maven.scijava.org/content/repositories/public/", // cisd deps
+      "webknossos-maven" at "https://static.webknossos.org/maven/",  // backup to fetch cisd deps in case SciJava is down
     )
 
   private val silhouetteVersion = "10.0.4"
@@ -33,7 +31,9 @@ object Dependencies {
     // HashCodeBuilder. import org.apache.commons.lang3
     "org.apache.commons" % "commons-lang3" % "3.20.0",
     // ObjectIds. import reactivemongo.api.bson
-    "org.reactivemongo" %% "reactivemongo-bson-api" % "1.0.10",
+    ("org.reactivemongo" %% "reactivemongo-bson-api" % "1.0.10")
+      .exclude("org.scala-lang", "scala-reflect")
+      .cross(CrossVersion.for3Use2_13),
     // Protocol buffers. import scalapb
     "com.thesamet.scalapb" %% "scalapb-runtime" % scalapbVersion,
     // LazyLogging. import com.typesafe.scalalogging
@@ -73,7 +73,12 @@ object Dependencies {
     // Dependency Injection. import javax.inject.Inject
     guice,
     // Redis database client. import com.redis
-    "net.debasishg" %% "redisclient" % "3.42",
+    ("net.debasishg" %% "redisclient" % "3.42")
+      .cross(CrossVersion.for3Use2_13)
+      .exclude("org.scala-lang.modules", "scala-xml_2.13")
+      .exclude("org.scala-lang.modules", "scala-parser-combinators_2.13")
+      .exclude("org.scala-lang.modules", "scala-collection-compat_2.13")
+      .exclude("com.typesafe.play", "twirl-api_2.13"),
     // Read hdf5 files. import ch.systemsx.cisd.hdf5
     "cisd" % "jhdf5" % "19.04.1",
     // MultiArray (ndarray) handles. import ucar

@@ -9,7 +9,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{
   UpdateBucketVolumeAction,
   VolumeTracingService
 }
-import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreImplicits, TracingDataStore, TracingId}
+import com.scalableminds.webknossos.tracingstore.tracings.{KeyValueStoreConversions, TracingDataStore, TracingId}
 import com.scalableminds.webknossos.tracingstore.{
   AnnotationUpdatesReport,
   TSRemoteWebknossosClient,
@@ -29,7 +29,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
                                              tracingDataStore: TracingDataStore,
                                              remoteWebknossosClient: TSRemoteWebknossosClient,
                                              annotationService: TSAnnotationService)
-    extends KeyValueStoreImplicits
+    extends KeyValueStoreConversions
     with LazyLogging {
 
   private val transactionGroupExpiry: FiniteDuration = 24 hours
@@ -57,13 +57,13 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
                               updateGroup: UpdateActionGroup,
                               expiry: FiniteDuration)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      _ <- Fox.runIf(transactionGroupIndex > 0)(
-        Fox.assertTrue(
-          uncommittedUpdatesStore.contains(transactionGroupKey(
-            annotationId,
-            transactionId,
-            transactionGroupIndex - 1,
-            version))) ?~> s"Incorrect transaction index. Got: $transactionGroupIndex but ${transactionGroupIndex - 1} does not exist" ~> CONFLICT)
+      _ <- Fox.runIf(transactionGroupIndex > 0) {
+        for {
+          transactionIsPresentUncommitted <- uncommittedUpdatesStore.contains(
+            transactionGroupKey(annotationId, transactionId, transactionGroupIndex - 1, version))
+          _ <- Fox.fromBool(transactionIsPresentUncommitted) ?~> s"Incorrect transaction index. Got: $transactionGroupIndex but ${transactionGroupIndex - 1} does not exist" ~> CONFLICT
+        } yield ()
+      }
       _ <- uncommittedUpdatesStore.insert(
         transactionGroupKey(annotationId, transactionId, transactionGroupIndex, version),
         Json.toJson(updateGroup).toString(),
@@ -191,7 +191,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
       _ <- reportUpdates(annotationId, updateGroups)
       currentCommittedVersion: Fox[Long] = annotationService.currentMaterializableVersion(annotationId)
       newVersion <- updateGroups.foldLeft(currentCommittedVersion) { (previousVersion, updateGroup) =>
-        previousVersion.flatMap { prevVersion: Long =>
+        previousVersion.flatMap { (prevVersion: Long) =>
           if (prevVersion + 1 == updateGroup.version) {
             for {
               _ <- handleUpdateGroup(annotationId, updateGroup)
@@ -225,7 +225,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
       updateActionsProcessed <- Fox.successful(preprocessActionsForStorage(updateActionGroup))
       _ <- Fox.fromBool(updateActionsProcessed.length <= 1000000) ?~> "Annotation update transactions with more than 1M update actions are not currently supported"
       updateActionsJson = Json.toJson(updateActionsProcessed)
-      _ <- tracingDataStore.annotationUpdates.put(annotationId.toString, updateActionGroup.version, updateActionsJson)
+      _ <- tracingDataStore.annotationUpdates.put(annotationId.toString, updateActionGroup.version, jsonToBytes(updateActionsJson))
       bucketMutatingActions = findBucketMutatingActions(updateActionGroup)
       actionsGrouped: Map[String, List[BucketMutatingVolumeUpdateAction]] = bucketMutatingActions.groupBy(
         _.actionTracingId)
@@ -269,11 +269,11 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
       implicit ec: ExecutionContext): Fox[Long] = {
     val errorMessage = s"Incorrect version. Expected: ${previousVersion + 1}; Got: ${updateGroup.version}"
     for {
-      _ <- Fox.assertTrue(
-        handledGroupIdStoreContains(annotationId,
-                                    updateGroup.transactionId,
-                                    updateGroup.version,
-                                    updateGroup.transactionGroupIndex)) ?~> errorMessage ~> CONFLICT
+      groupWasHandled <- handledGroupIdStoreContains(annotationId,
+                                                     updateGroup.transactionId,
+                                                     updateGroup.version,
+                                                     updateGroup.transactionGroupIndex)
+      _ <- Fox.fromBool(groupWasHandled) ?~> errorMessage ~> CONFLICT
     } yield updateGroup.version
   }
 

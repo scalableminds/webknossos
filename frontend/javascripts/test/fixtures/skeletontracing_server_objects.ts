@@ -5,12 +5,13 @@ import {
   type ServerSkeletonTracing,
 } from "types/api_types";
 import { ViewModeValues } from "viewer/constants";
+import dummyUser from "./dummy_user";
 
-const TRACING_ID = "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13";
+export const SKELETON_TRACING_ID = "skeletonTracingId-47e37793-d0be-4240-a371-87ce68561a13";
 
 export const tracing: ServerSkeletonTracing = {
   typ: AnnotationLayerEnum.Skeleton,
-  id: TRACING_ID,
+  id: SKELETON_TRACING_ID,
   trees: [
     {
       treeId: 2,
@@ -167,6 +168,7 @@ export const tracing: ServerSkeletonTracing = {
 };
 
 export const annotation: APIAnnotation = {
+  owner: dummyUser,
   description: "",
   datasetId: "66f3c82966010034942e9740",
   state: "Active",
@@ -187,7 +189,7 @@ export const annotation: APIAnnotation = {
   annotationLayers: [
     {
       name: AnnotationLayerEnum.Skeleton,
-      tracingId: TRACING_ID,
+      tracingId: SKELETON_TRACING_ID,
       typ: AnnotationLayerEnum.Skeleton,
       stats: {},
     },
@@ -216,7 +218,7 @@ export const annotation: APIAnnotation = {
   tags: ["ROI2017_wkw", "skeleton"],
   tracingTime: 0,
   contributors: [],
-  othersMayEdit: false,
+  collaborationMode: "OwnerOnly",
   isLockedByOwner: false,
 };
 
@@ -226,7 +228,7 @@ export const annotationProto: APITracingStoreAnnotation = {
   earliestAccessibleVersion: 0,
   annotationLayers: [
     {
-      tracingId: TRACING_ID,
+      tracingId: SKELETON_TRACING_ID,
       name: "skeleton layer name",
       typ: AnnotationLayerEnum.Skeleton,
     },

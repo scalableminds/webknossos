@@ -11,6 +11,7 @@ import {
   UserOutlined,
 } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
+import { useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
 import ChangeUsernameView from "admin/auth/change_username_view";
 import { InviteUsersModal } from "admin/onboarding";
@@ -37,13 +38,13 @@ import {
 import LinkButton from "components/link_button";
 import dayjs from "dayjs";
 import features from "features";
+import { copyToClipboard } from "libs/clipboard";
 import Persistence from "libs/persistence";
-import { useWkSelector } from "libs/react_hooks";
-import Toast from "libs/toast";
+import { useQueryWithErrorHandling, useWkSelector } from "libs/react_hooks";
 import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import { location } from "libs/window";
 import keyBy from "lodash-es/keyBy";
-import React, { type Key, useEffect, useState } from "react";
+import React, { type Key, useState } from "react";
 import { useDispatch } from "react-redux";
 import { Link } from "react-router-dom";
 import type { APITeamMembership, APIUser, ExperienceMap } from "types/api_types";
@@ -70,50 +71,37 @@ const persistence = new Persistence<{
 function UserListView() {
   const { modal } = App.useApp();
   const dispatch = useDispatch();
+  const queryClient = useQueryClient();
 
   const activeUser = useWkSelector((state) => enforceActiveUser(state.activeUser));
   const activeOrganization = useWkSelector((state) =>
     enforceActiveOrganization(state.activeOrganization),
   );
 
-  const [isLoading, setIsLoading] = useState(true);
-  const [users, setUsers] = useState<APIUser[]>([]);
+  const { data: users = [], isFetching: isLoading } = useQueryWithErrorHandling({
+    queryKey: ["editableUsers"],
+    queryFn: getEditableUsers,
+    refetchOnWindowFocus: false,
+  });
+
   const [selectedUserIds, setSelectedUserIds] = useState<Key[]>([]);
   const [isExperienceModalOpen, setIsExperienceModalOpen] = useState(false);
   const [isTeamRoleModalOpen, setIsTeamRoleModalOpen] = useState(false);
-  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
-  const [activationFilter, setActivationFilter] = useState<ActivationFilterType>(["activated"]);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(() => location.hash === "#invite");
+  const [activationFilter, setActivationFilter] = useState<ActivationFilterType>(
+    () => persistence.load().activationFilter || ["activated"],
+  );
+  const [searchQuery, setSearchQuery] = useState(() => persistence.load().searchQuery || "");
   const [singleSelectedUser, setSingleSelectedUser] = useState<APIUser | null | undefined>(null);
   const [userToEdit, setUserToEdit] = useState<APIUser | null>(null);
   const [domainToEdit, setDomainToEdit] = useState<string | null | undefined>(null);
   const [editNameModalOpen, setEditNameModalOpen] = useState(false);
 
-  useEffect(() => {
-    const { searchQuery, activationFilter } = persistence.load();
-    setSearchQuery(searchQuery || "");
-    setActivationFilter(activationFilter || ["activated"]);
-    fetchData();
-
-    if (location.hash === "#invite") {
-      setIsInviteModalOpen(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    persistence.persist({ searchQuery, activationFilter });
-  }, [searchQuery, activationFilter]);
-
-  async function fetchData(): Promise<void> {
-    setIsLoading(true);
-    setUsers(await getEditableUsers());
-    setIsLoading(false);
-  }
-
   async function activateUser(selectedUser: APIUser, isActive: boolean = true) {
     const newUser = await updateUser({ ...selectedUser, isActive });
-    const newUsers = users.map((user) => (selectedUser.id === user.id ? newUser : user));
-    setUsers(newUsers);
+    queryClient.setQueryData(["editableUsers"], (currentUsers: APIUser[]) =>
+      currentUsers.map((user) => (selectedUser.id === user.id ? newUser : user)),
+    );
 
     if (!isActive) {
       // Don't ask the user for the team permissions
@@ -138,7 +126,7 @@ function UserListView() {
   }
 
   function handleUsersChange(updatedUsers: Array<APIUser>): void {
-    setUsers(updatedUsers);
+    queryClient.setQueryData(["editableUsers"], updatedUsers);
     setIsExperienceModalOpen(false);
     setIsTeamRoleModalOpen(false);
   }
@@ -147,17 +135,22 @@ function UserListView() {
     const updatedUsersMap = keyBy(updatedUsers, (u) => u.id);
 
     setIsExperienceModalOpen(false);
-    setUsers((users) => users.map((user) => updatedUsersMap[user.id] || user));
+    queryClient.setQueryData(["editableUsers"], (currentUsers: APIUser[]) =>
+      currentUsers.map((user) => updatedUsersMap[user.id] || user),
+    );
     setSingleSelectedUser(null);
     setSelectedUserIds((singleSelectedUser) => (singleSelectedUser == null ? [] : selectedUserIds));
   }
 
   function handleSearch(event: React.ChangeEvent<HTMLInputElement>): void {
-    setSearchQuery(event.target.value);
+    const newSearchQuery = event.target.value;
+    setSearchQuery(newSearchQuery);
+    persistence.persist({ searchQuery: newSearchQuery, activationFilter });
   }
 
   function handleDismissActivationFilter(): void {
     setActivationFilter([]);
+    persistence.persist({ searchQuery, activationFilter: [] });
   }
 
   function renderNewUsersAlert() {
@@ -339,8 +332,8 @@ function UserListView() {
                 onClose={() => setEditNameModalOpen(false)}
                 user={userToEdit}
                 setEditedUser={(editedUser: APIUser) => {
-                  setUsers((users) =>
-                    users.map((user) => (editedUser.id === user.id ? editedUser : user)),
+                  queryClient.setQueryData(["editableUsers"], (currentUsers: APIUser[]) =>
+                    currentUsers.map((user) => (editedUser.id === user.id ? editedUser : user)),
                   );
                   if (activeUser.id === editedUser.id) {
                     dispatch(setActiveUserAction(editedUser));
@@ -373,10 +366,13 @@ function UserListView() {
           pagination={{
             defaultPageSize: 50,
           }}
-          onChange={(_pagination, filters) =>
+          onChange={(_pagination, filters) => {
             // @ts-expect-error ts-migrate(2322) FIXME: Type 'FilterValue' is not assignable to type '("tr... Remove this comment to see the full error(message)
-            setActivationFilter(filters.isActive != null ? filters.isActive : [])
-          }
+            const newFilter: ActivationFilterType =
+              filters.isActive != null ? filters.isActive : [];
+            setActivationFilter(newFilter);
+            persistence.persist({ searchQuery, activationFilter: newFilter });
+          }}
           onRow={(user) => ({
             onClick: () => onSelectUserRow(user.id),
           })}
@@ -407,6 +403,15 @@ function UserListView() {
             sorter={localeCompareBy<APIUser>((user) => user.email)}
           />
           <Column
+            title="Teams - Role"
+            dataIndex="teams"
+            key="teams_"
+            width={250}
+            render={(_teams: APITeamMembership[], user: APIUser) =>
+              renderTeamRolesAndPermissionsForUser(user)
+            }
+          />
+          <Column
             title="Experiences"
             dataIndex="experiences"
             key="experiences"
@@ -431,25 +436,15 @@ function UserListView() {
                       style={{
                         margin: "0 0 0 5px",
                       }}
-                      onClick={async (evt) => {
+                      onClick={(evt) => {
                         evt.stopPropagation();
-                        await navigator.clipboard.writeText(domain);
-                        Toast.success(`"${domain}" copied to clipboard`);
+                        copyToClipboard(domain, "experience domain", true);
                       }}
                     />
                   </Tag>
                 ))}
               </Space>
             )}
-          />
-          <Column
-            title="Teams - Role"
-            dataIndex="teams"
-            key="teams_"
-            width={250}
-            render={(_teams: APITeamMembership[], user: APIUser) =>
-              renderTeamRolesAndPermissionsForUser(user)
-            }
           />
           <Column
             title="Status"

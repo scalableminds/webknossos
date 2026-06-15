@@ -26,7 +26,10 @@ import {
   pushSaveQueueTransactionIsolated,
   setVersionNumberAction,
 } from "viewer/model/actions/save_actions";
-import { setVersionRestoreVisibilityAction } from "viewer/model/actions/ui_actions";
+import {
+  setIsRestoringVersionAction,
+  setVersionRestoreVisibilityAction,
+} from "viewer/model/actions/ui_actions";
 import {
   revertToVersion,
   type ServerUpdateAction,
@@ -99,7 +102,12 @@ async function handleRestoreVersion(
     const newestVersion = max(versions.map((batch) => batch.version)) || 0;
     Store.dispatch(setVersionNumberAction(newestVersion));
     Store.dispatch(pushSaveQueueTransactionIsolated(revertToVersion(version)));
-    await Model.ensureSavedState();
+    Store.dispatch(setIsRestoringVersionAction(true));
+    try {
+      await Model.ensureSavedState();
+    } finally {
+      Store.dispatch(setIsRestoringVersionAction(false));
+    }
     Store.dispatch(setVersionRestoreVisibilityAction(false));
     const initialAllowUpdate = Store.getState().annotation.restrictions.allowUpdate;
     Store.dispatch(setIsUpdatingAnnotationCurrentlyAllowedAction(initialAllowUpdate));

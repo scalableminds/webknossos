@@ -1,4 +1,8 @@
+import type { MinCutTargetEdge, NeighborInfo } from "admin/rest_api";
 import type { RequestOptionsWithData } from "libs/request";
+import compact from "lodash-es/compact";
+import isEqual from "lodash-es/isEqual";
+import sortBy from "lodash-es/sortBy";
 import { call, put, take } from "redux-saga/effects";
 import { sampleHdf5AgglomerateName } from "test/fixtures/dataset_server_object";
 import { powerOrga } from "test/fixtures/dummy_organization";
@@ -15,25 +19,41 @@ import type { Vector2, Vector3 } from "viewer/constants";
 import { getMappingInfo } from "viewer/model/accessors/dataset_accessor";
 import { getCurrentMag } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import {
+  getVolumeTracingById,
+  hasEditableMapping,
+} from "viewer/model/accessors/volumetracing_accessor";
+import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
-import { setMappingAction } from "viewer/model/actions/settings_actions";
+import {
+  cutAgglomerateFromNeighborsAction,
+  minCutPartitionsAction,
+  proofreadAtPosition,
+  toggleSegmentInPartitionAction,
+} from "viewer/model/actions/proofread_actions";
+import { setMappingAction, updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
 import { setBusyBlockingInfoAction, setToolAction } from "viewer/model/actions/ui_actions";
-import { applyVolumeUpdateActionsFromServerAction } from "viewer/model/actions/volumetracing_actions";
+import {
+  applyVolumeUpdateActionsFromServerAction,
+  setActiveCellAction,
+  updateSegmentAction,
+} from "viewer/model/actions/volumetracing_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
-import { createEditableMapping } from "viewer/model/sagas/volume/proofread_saga";
+import { createEditableMapping } from "viewer/model/sagas/volume/proofreading/proofread_saga";
 import type {
   ApplicableSkeletonServerUpdateAction,
   ApplicableVolumeServerUpdateAction,
   ServerUpdateAction,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
-import type { SaveQueueEntry, WebknossosState } from "viewer/store";
+import { Store } from "viewer/singletons";
+import type { NumberLike, SaveQueueEntry, Segment, WebknossosState } from "viewer/store";
 import { combinedReducer } from "viewer/store";
 import { expect, vi } from "vitest";
-import { edgesForInitialMapping } from "./proofreading_fixtures";
+import { edgesForInitialMapping, initialMapping } from "./proofreading_fixtures";
 import {
   createSkeletonTracingFromAdjacency,
   encodeServerTracing,
@@ -43,12 +63,16 @@ export function* initializeMappingAndTool(
   context: WebknossosTestContext,
   tracingId: string,
 ): Saga<void> {
+  if (yield* select((state) => hasEditableMapping(state, tracingId))) {
+    console.log("Skipping initializeMappingAndTool, because an editable mapping already exists.");
+    return;
+  }
   const { api } = context;
   // Set up organization with power plan (necessary for proofreading)
   // and zoom in so that buckets in mag 1, 1, 1 are loaded.
   yield put(setActiveOrganizationAction(powerOrga));
   yield put(setZoomStepAction(0.3));
-  const currentMag = yield select((state) => getCurrentMag(state, tracingId));
+  const currentMag = yield* select((state) => getCurrentMag(state, tracingId));
   expect(currentMag).toEqual([1, 1, 1]);
 
   // Activate agglomerate mapping and wait for finished mapping initialization
@@ -93,6 +117,7 @@ export class BackendMock {
     public overrides: BucketOverride[],
     additionalEdges: Vector2[] = [],
     private initialState: WebknossosState | undefined = undefined,
+    public canGrantMutex: boolean = true,
   ) {
     this.agglomerateMapping = new AgglomerateMapping(
       edgesForInitialMapping.concat(additionalEdges),
@@ -103,7 +128,9 @@ export class BackendMock {
   getState(requestedVersion: number | null = null): WebknossosState {
     let state = this.initialState;
     if (state == null) {
-      throw new Error("Unexpected getState on BackendMock.");
+      throw new Error(
+        "Unexpected getState on BackendMock. Did you pass Store.getState() to mockInitialBucketAndAgglomerateData?",
+      );
     }
     for (const actionBatch of this.getLocalUpdateActionLog(requestedVersion)) {
       state = combinedReducer(
@@ -128,7 +155,9 @@ export class BackendMock {
   getLocalUpdateActionLog(requestedVersion: number | null = null, until: boolean = true) {
     let state = this.initialState;
     if (state == null) {
-      throw new Error("Unexpected getState on BackendMock.");
+      throw new Error(
+        "Unexpected getState on BackendMock. Did you pass Store.getState() to mockInitialBucketAndAgglomerateData?",
+      );
     }
 
     if (requestedVersion === null) {
@@ -163,10 +192,10 @@ export class BackendMock {
     return mapping;
   };
 
-  acquireAnnotationMutex = async (_annotationId: string) => {
-    return { canEdit: true, blockedByUser: null };
+  acquireAnnotationMutex = async (_annotationId: string, _sessionId: string) => {
+    return { canEdit: this.canGrantMutex, blockedByUser: null, blockedBySessionId: null };
   };
-  releaseAnnotationMutex = async (_annotationId: string) => {};
+  releaseAnnotationMutex = async (_annotationId: string, _sessionId: string) => {};
 
   private saveQueueEntriesToUpdateActionBatch = (data: Array<SaveQueueEntry>) => {
     return data.map((entry) => ({
@@ -189,7 +218,9 @@ export class BackendMock {
     payload: RequestOptionsWithData<Array<SaveQueueEntry>>,
   ): Promise<void> => {
     if (payload.data[0].version !== this.agglomerateMapping.currentVersion + 1) {
-      throw new Error("Version mismatch");
+      throw new Error(
+        `Version mismatch. Newest version is ${this.agglomerateMapping.currentVersion}, but current payload contains version=${payload.data[0].version}`,
+      );
     }
     // Store the received request.
     this.receivedDataPerSaveRequest.push(payload.data);
@@ -274,7 +305,7 @@ export class BackendMock {
     _mappingName: string,
     segmentId: number,
   ): Promise<Vector3> => {
-    return [segmentId, segmentId, segmentId];
+    return getPositionForSegmentId(segmentId);
   };
 
   planVersionInjection(
@@ -289,9 +320,9 @@ export class BackendMock {
      * forcing the client that is tested to pull in the newer version before
      * saving can finish.
      */
-    // The injected version has already been reached, directly inject!
     const currentVersion = this.updateActionLog.at(-1)?.version || 1;
     if (currentVersion === targetVersion - 1) {
+      // The injected version has already been reached, directly inject!
       this.injectVersion(updateActions, targetVersion);
     } else if (currentVersion > targetVersion - 1) {
       throw new Error(
@@ -326,11 +357,21 @@ export class BackendMock {
     });
   }
 
-  getEditableAgglomerateSkeleton = async (
+  injectMultipleVersions(
+    updateActionBatches: UpdateActionWithoutIsolationRequirement[][],
+    startingVersion: number,
+  ) {
+    updateActionBatches.forEach((actions, index) => {
+      this.injectVersion(actions, startingVersion + index);
+    });
+  }
+
+  getEditableAgglomerateTreeAsSkeletonTracing = async (
     _tracingStoreUrl: string,
-    _tracingId: string,
+    tracingId: string,
     agglomerateId: number,
   ): Promise<ArrayBuffer> => {
+    // Does not currently support versioning as this would require a versioned adjacency list.
     const version = this.agglomerateMapping.currentVersion;
     const adjacencyList = this.agglomerateMapping.getAdjacencyList(version);
     const mapping = this.agglomerateMapping.getMap(version).entries().toArray();
@@ -343,43 +384,57 @@ export class BackendMock {
       );
     }
     const segmentId = someSegmentOfAgglomerate[0];
-    const agglomerateSkeletonAsServerTracing = createSkeletonTracingFromAdjacency(
+    const agglomerateTreeAsServerTracing = createSkeletonTracingFromAdjacency(
       adjacencyList,
       segmentId,
-      "agglomerateSkeleton",
+      agglomerateId,
+      tracingId,
+      "agglomerateTree",
       version,
     );
 
-    return encodeServerTracing(agglomerateSkeletonAsServerTracing, "skeleton");
+    return encodeServerTracing(agglomerateTreeAsServerTracing, "skeleton");
   };
+}
+
+const initialBucketOverrides: Array<{ position: Vector3; value: number }> = [
+  { position: [100, 100, 100], value: 1337 },
+  { position: [101, 101, 101], value: 1338 },
+  { position: [1, 1, 1], value: 1 },
+  { position: [2, 2, 2], value: 2 },
+  { position: [3, 3, 3], value: 3 },
+  { position: [4, 4, 4], value: 4 },
+  { position: [5, 5, 5], value: 5 },
+  { position: [6, 6, 6], value: 6 },
+  { position: [7, 7, 7], value: 7 },
+];
+
+export function getPositionForSegmentId(sourceSegmentId: number) {
+  const position = initialBucketOverrides.find((el) => el.value === sourceSegmentId)?.position;
+  if (!position) {
+    throw new Error(`Could not look up position by using ${sourceSegmentId} as id.`);
+  }
+  return position;
 }
 
 export function mockInitialBucketAndAgglomerateData(
   context: WebknossosTestContext,
   additionalEdges: Vector2[] = [],
   initialState: WebknossosState | undefined = undefined,
+  options?: { grantMutex?: boolean },
 ) {
   const { mocks } = context;
 
   const backendMock = new BackendMock(
-    [
-      { position: [100, 100, 100], value: 1337 },
-      { position: [101, 101, 101], value: 1338 },
-      { position: [1, 1, 1], value: 1 },
-      { position: [2, 2, 2], value: 2 },
-      { position: [3, 3, 3], value: 3 },
-      { position: [4, 4, 4], value: 4 },
-      { position: [5, 5, 5], value: 5 },
-      { position: [6, 6, 6], value: 6 },
-      { position: [7, 7, 7], value: 7 },
-    ],
+    initialBucketOverrides,
     additionalEdges,
     initialState,
+    options?.grantMutex ?? true,
   );
 
   vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
     createBucketResponseFunction(
-      { color: "uint8", segmentation: "uint16" },
+      { color: "uint8", segmentation: "uint16", volumeTracingId: "uint16" },
       backendMock.fillValue,
       backendMock.requestDelay,
       backendMock.overrides,
@@ -396,14 +451,14 @@ export function mockInitialBucketAndAgglomerateData(
   mocks.getPositionForSegmentInAgglomerate.mockImplementation(
     backendMock.getPositionForSegmentInAgglomerate,
   );
-  mocks.getEditableAgglomerateSkeleton.mockImplementation(
-    backendMock.getEditableAgglomerateSkeleton,
+  mocks.getEditableAgglomerateTreeAsSkeletonTracing.mockImplementation(
+    backendMock.getEditableAgglomerateTreeAsSkeletonTracing,
   );
 
   return backendMock;
 }
 
-export function* makeMappingEditableHelper(): Saga<void> {
+export function* makeMappingEditableForTest(): Saga<void> {
   // Usually the user creates an editable mapping via the first proofreading action.
   // Therefore the context is busy blocked by the proofreading saga.
   // As we do this manually here, we need to mock that wk is busy.
@@ -420,12 +475,250 @@ export function* makeMappingEditableHelper(): Saga<void> {
   yield delay(10);
 }
 
+export function prepareGetNeighborsForAgglomerateNode(
+  mocks: WebknossosTestContext["mocks"],
+  expectedVersion: number,
+  includeSegmentIdToOne: boolean,
+) {
+  // Prepare getNeighborsForAgglomerateNode mock
+  mocks.getNeighborsForAgglomerateNode.mockImplementation(
+    async (
+      _tracingStoreUrl: string,
+      _tracingId: string,
+      version: number,
+      segmentInfo: {
+        segmentId: NumberLike;
+        mag: Vector3;
+        agglomerateId: NumberLike;
+        editableMappingId: string;
+      },
+    ): Promise<NeighborInfo> => {
+      if (version !== expectedVersion) {
+        throw new Error(
+          `Version mismatch. Expected requested version to be ${expectedVersion} but got ${version}`,
+        );
+      }
+      if (segmentInfo.segmentId === 2) {
+        const neighbors = includeSegmentIdToOne
+          ? [
+              {
+                segmentId: 1,
+                position: [1, 1, 1] as Vector3,
+              },
+              {
+                segmentId: 3,
+                position: [3, 3, 3] as Vector3,
+              },
+            ]
+          : [
+              {
+                segmentId: 3,
+                position: [3, 3, 3] as Vector3,
+              },
+            ];
+        return {
+          segmentId: 2,
+          neighbors,
+        };
+      }
+      return {
+        segmentId: Number.parseInt(segmentInfo.segmentId.toString(), 10),
+        neighbors: [],
+      };
+    },
+  );
+}
+
+export function* loadAgglomerateMeshes(agglomerateIds: number[]): Saga<void> {
+  for (const id of agglomerateIds) {
+    yield put(proofreadAtPosition([id, id, id]));
+    yield take("FINISHED_LOADING_MESH");
+  }
+}
+export function getAllCurrentlyLoadedMeshIds(
+  context: WebknossosTestContext,
+  volumeTracingId: string,
+) {
+  const loadedMeshIds = new Set();
+  const { segmentMeshController } = context;
+  const additionalCoordKey = "";
+  const lodGroupsPerSegmentId =
+    segmentMeshController.meshesGroupsPerSegmentId[additionalCoordKey][volumeTracingId];
+  for (const lodGroup of Object.values(lodGroupsPerSegmentId)) {
+    for (const group of Object.values(lodGroup))
+      if ("segmentId" in group) {
+        loadedMeshIds.add(group.segmentId);
+      }
+  }
+  return loadedMeshIds;
+}
+
+export function* performCutFromAllNeighbours(
+  context: WebknossosTestContext,
+  tracingId: string,
+  loadMeshes: boolean,
+): Saga<void> {
+  yield call(initializeMappingAndTool, context, tracingId);
+  yield* expectMapping(tracingId, initialMapping);
+  if (loadMeshes) {
+    // Load all meshes for all affected agglomerate meshes and one more.
+    yield loadAgglomerateMeshes([4, 6, 1]);
+
+    const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
+    expect(sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
+  }
+  // Set up the merge-related segment partners. Normally, this would happen
+  // due to the user's interactions.
+  yield put(updateSegmentAction(1, { anchorPosition: [2, 2, 2] }, tracingId));
+  yield put(setActiveCellAction(1));
+
+  yield makeMappingEditableForTest();
+  // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
+  yield* expectMapping(tracingId, initialMapping);
+  yield put(setCollaborationModeAction("Concurrent"));
+
+  // Execute the actual merge and wait for the finished mapping.
+  yield put(
+    cutAgglomerateFromNeighborsAction(
+      [2, 2, 2], // unmappedId=2 / mappedId=1 at this position
+    ),
+  );
+  yield take("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");
+  yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Wait till full merge operation is done.
+}
+
+// All usages of this function should have an initial mapping with a agglomerate id 1 = 1-2-3-1337-1338-1.
+// In case this needs to be changed, the updateSegmentAction and setActiveCellAction actions need to be adjusted.
+export function* simulatePartitionedSplitAgglomeratesViaMeshes(
+  context: WebknossosTestContext,
+  loadMeshes: boolean,
+  injectVersionFn?: () => void,
+): Saga<void> {
+  const { tracingId } = yield* select((state) => state.annotation.volumes[0]);
+  const expectedInitialMapping = new Map([
+    [1, 1],
+    [2, 1],
+    [3, 1],
+    [4, 4],
+    [5, 4],
+    [6, 6],
+    [7, 6],
+  ]);
+
+  yield call(initializeMappingAndTool, context, tracingId);
+  const mapping0 = yield* select(
+    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+  );
+  expect(mapping0).toEqual(expectedInitialMapping);
+  if (loadMeshes) {
+    // Load all meshes for all affected agglomerate meshes and one more.
+    yield loadAgglomerateMeshes([4, 6, 1]);
+
+    const loadedMeshIds = getAllCurrentlyLoadedMeshIds(context, tracingId);
+    expect(sortBy([...loadedMeshIds])).toEqual([1, 4, 6]);
+  }
+
+  // Set up the merge-related segment partners. Normally, this would happen
+  // due to the user's interactions.
+  yield put(updateSegmentAction(1, { anchorPosition: getPositionForSegmentId(1) }, tracingId));
+  yield put(setActiveCellAction(1, undefined, null, 1));
+
+  yield makeMappingEditableForTest();
+  // After making the mapping editable, it should not have changed (as no other user did any update actions in between).
+  const mapping1 = yield* select(
+    (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+  );
+  expect(mapping1).toEqual(expectedInitialMapping);
+  if (injectVersionFn != null) {
+    injectVersionFn();
+  }
+  yield put(setCollaborationModeAction("Concurrent"));
+
+  //Activate Multi-split tool
+  yield put(updateUserSettingAction("isMultiSplitActive", true));
+  // Select partition 1
+  yield put(toggleSegmentInPartitionAction(1, 1, 1));
+  yield put(toggleSegmentInPartitionAction(2, 1, 1));
+  // Select partition 2
+  yield put(toggleSegmentInPartitionAction(1337, 2, 1));
+  yield put(toggleSegmentInPartitionAction(1338, 2, 1));
+  // Execute the actual merge and wait for the finished mapping.
+  yield put(minCutPartitionsAction());
+  yield take("FINISH_MAPPING_INITIALIZATION");
+  // Checking optimistic merge is not necessary as no "foreign" update was injected.
+  yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Wait till full merge operation is done.
+}
+
+export const mockEdgesForPartitionedAgglomerateMinCut = (
+  mocks: WebknossosTestContext["mocks"],
+  expectedRequestedVersion: number,
+) =>
+  vi.mocked(mocks.getEdgesForAgglomerateMinCut).mockImplementation(
+    async (
+      _tracingStoreUrl: string,
+      _tracingId: string,
+      version: number,
+      segmentsInfo: {
+        partition1: NumberLike[];
+        partition2: NumberLike[];
+        mag: Vector3;
+        agglomerateId: NumberLike;
+        editableMappingId: string;
+      },
+    ): Promise<Array<MinCutTargetEdge>> => {
+      if (version !== expectedRequestedVersion) {
+        throw new Error(
+          `Unexpected version of min cut request. Expected version ${expectedRequestedVersion} but got ${version}`,
+        );
+      }
+      const { agglomerateId, partition1, partition2 } = segmentsInfo;
+      if (agglomerateId === 1 && isEqual(partition1, [1, 2]) && isEqual(partition2, [1337, 1338])) {
+        return [
+          {
+            position1: getPositionForSegmentId(1),
+            position2: getPositionForSegmentId(1338),
+            segmentId1: 1,
+            segmentId2: 1338,
+          },
+          {
+            position1: getPositionForSegmentId(3),
+            position2: getPositionForSegmentId(1337),
+            segmentId1: 3,
+            segmentId2: 1337,
+          },
+        ];
+      }
+      throw new Error("Unexpected min cut request");
+    },
+  );
+
 export function* expectMapping(
   tracingId: string,
   expectedMapping: Map<number, number>,
 ): Saga<void> {
-  const mapping0 = yield select(
+  const mapping0 = yield* select(
     (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
   );
   expect(mapping0).toEqual(expectedMapping);
+}
+
+export function* expectSegmentList(
+  tracingId: string,
+  expectedSegments: Array<Partial<Segment> & { id: number }>,
+  backendMock?: BackendMock,
+): Saga<void> {
+  const states = compact([Store.getState(), backendMock?.getState()]);
+
+  for (const state of states) {
+    const { segments } = getVolumeTracingById(state.annotation, tracingId);
+    const expectedSegmentIds = expectedSegments.map((s) => s.id);
+    const actualSegmentIds = Array.from(segments.keys() as Generator<number>);
+    expect(actualSegmentIds.sort((a, b) => a - b)).toEqual(
+      expectedSegmentIds.sort((a, b) => a - b),
+    );
+
+    for (const expectedSegment of expectedSegments) {
+      expect(segments.getNullable(expectedSegment.id) as Segment).toMatchObject(expectedSegment);
+    }
+  }
 }

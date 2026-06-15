@@ -6,6 +6,7 @@
 
 import { buffers } from "redux-saga";
 import { actionChannel, call, flush, put, race, take, takeLatest } from "typed-redux-saga";
+import { mayAddToSaveQueue } from "viewer/model/accessors/annotation_accessor";
 import { selectTracing } from "viewer/model/accessors/tracing_accessor";
 import { FlycamActions } from "viewer/model/actions/flycam_actions";
 import {
@@ -55,12 +56,12 @@ export function* setupSavingForAnnotation(
       ...ViewModeSaveRelevantActions,
       ...SkeletonTracingSaveRelevantActions,
     ]);
-    // The allowUpdate setting could have changed in the meantime
-    const allowUpdate = yield* select(
-      (state) =>
-        state.annotation.isUpdatingCurrentlyAllowed && state.annotation.restrictions.allowSave,
-    );
-    if (!allowUpdate) continue;
+    const shouldDiff = yield* select(mayAddToSaveQueue);
+    if (!shouldDiff) {
+      // Note that we completely ignore changes if adding to save queue
+      // is not allowed.
+      continue;
+    }
     const flycam = yield* select((state) => state.flycam);
     const tdCamera = yield* select((state) => state.viewModeData.plane.tdCamera);
 
@@ -130,6 +131,7 @@ export function* setupSavingForTracingType(
 
     // include the first action we already took from the race
     const actionsToProcess = ensureAction ? [ensureAction, ...pendingActions] : pendingActions;
+    ensureAction = undefined;
 
     for (const action of actionsToProcess) {
       (action as EnsureTracingsWereDiffedToSaveQueueAction).callback(tracingId);
@@ -153,21 +155,11 @@ export function* setupSavingForTracingType(
       }
     }
 
-    // The allowUpdate setting could have changed in the meantime.
-    const allowUpdate = yield* select((state) => {
-      return state.annotation.isUpdatingCurrentlyAllowed && state.annotation.restrictions.allowSave;
-    });
-    // Ignore changes while rebasing or forwarding new backend actions as during this time actions
-    // are simply replayed on top of the server's state.
-    // Therefore, these actions were already added to the save queue or originate from the server itself
-    // and should not be added again.
-    const isRebasingOrForwarding = yield* select(
-      (state) => state.save.rebaseRelevantServerAnnotationState.isRebasingOrForwarding,
-    );
-    if (!allowUpdate || isRebasingOrForwarding) {
-      if (ensureAction) {
-        yield* call(resolveEnsureDiffedActions);
-      }
+    const allowSave = yield* select(mayAddToSaveQueue);
+    if (!allowSave) {
+      yield* call(resolveEnsureDiffedActions);
+      // Note that we completely ignore changes if adding to save queue
+      // is not allowed.
       continue;
     }
     const tracing = yield* getTracing();

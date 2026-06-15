@@ -5,6 +5,7 @@ import { enableBatching } from "redux-batched-actions";
 import createSagaMiddleware, { type Saga } from "redux-saga";
 import type {
   AdditionalAxis,
+  AnnotationCollaborationMode,
   AnnotationLayerDescriptor,
   APIAnnotationType,
   APIAnnotationVisibility,
@@ -49,7 +50,7 @@ import type {
 } from "viewer/constants";
 import defaultState from "viewer/default_state";
 import type { TracingStats } from "viewer/model/accessors/annotation_accessor";
-import type { AnnotationTool } from "viewer/model/accessors/tool_accessor";
+import type { AnnotationTool, AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import type { Action } from "viewer/model/actions/actions";
 import actionLoggerMiddleware from "viewer/model/helpers/action_logger_middleware";
 import overwriteActionMiddleware from "viewer/model/helpers/overwrite_action_middleware";
@@ -67,6 +68,7 @@ import UserReducer from "viewer/model/reducers/user_reducer";
 import ViewModeReducer from "viewer/model/reducers/view_mode_reducer";
 import VolumeTracingReducer from "viewer/model/reducers/volumetracing_reducer";
 import type { UpdateAction } from "viewer/model/sagas/volume/update_actions";
+import type { KeyboardConfiguration } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import type { Toolkit } from "./model/accessors/tool_accessor";
 import { eventEmitterMiddleware } from "./model/helpers/event_emitter_middleware";
 import FlycamInfoCacheReducer from "./model/reducers/flycam_info_cache_reducer";
@@ -133,7 +135,7 @@ export type Annotation = {
   readonly annotationType: APIAnnotationType;
   readonly owner: APIUserBase | null | undefined;
   readonly contributors: APIUserBase[];
-  readonly othersMayEdit: boolean;
+  readonly collaborationMode: AnnotationCollaborationMode;
   readonly isLockedByOwner: boolean;
   readonly isUpdatingCurrentlyAllowed: boolean;
 };
@@ -239,6 +241,7 @@ export type VolumeTracing = TracingBase & {
   //    per session (which is also quite far fetched), we are in the
   //    realm of 1.5 MB of RAM.
   readonly segmentJournal: Array<SegmentJournalEntry>;
+  readonly idReservations: Record<"SegmentGroup" | "Segment", { id: number; used: boolean }[]>;
 };
 export type ReadOnlyTracing = TracingBase & {
   readonly type: "readonly";
@@ -375,6 +378,10 @@ export type UserConfiguration = {
   readonly renderWatermark: boolean;
   readonly antialiasRendering: boolean;
   readonly activeToolkit: Toolkit;
+  readonly timestampsForTools: Record<AnnotationToolId, number>;
+  readonly erasePreference: "ERASE_BRUSH" | "ERASE_TRACE";
+  readonly writePreference: "BRUSH" | "TRACE";
+  readonly measurementPreference: "LINE_MEASUREMENT" | "AREA_MEASUREMENT";
 };
 export type RecommendedConfiguration = Partial<
   UserConfiguration &
@@ -444,6 +451,7 @@ export type ProgressInfo = {
 export type AnnotationMutexInformation = {
   readonly hasAnnotationMutex: boolean;
   readonly blockedByUser: APIUserCompact | null | undefined;
+  readonly blockedBySessionId: string | null | undefined;
 };
 
 // RebaseRelevantAnnotationState holds the data required to rebase the
@@ -455,7 +463,7 @@ export type AnnotationMutexInformation = {
 // it must be updated to match that version.
 // Moreover, after successfully saving, it should also be updated.
 //
-// Mini example of a shared annotation with liveCollab enabled:
+// Mini example of a shared annotation with collaborationMode==Concurrent:
 // - user A adds a new node to tree 1 and saves.
 //   Meanwhile user B already added a node to another tree and already stored this on the server.
 // - user A rebases by resetting the store state to the info stored in RebaseRelevantAnnotationState.
@@ -475,13 +483,32 @@ export type RebaseRelevantAnnotationState = {
   readonly volumes: Array<VolumeTracing>;
   readonly isRebasingOrForwarding: boolean;
 };
+
+// Additionally, the proofreading sagas need knowledge of the mapping info last stored in the backend,
+// before applying their own mapping changes. This info is e.g. needed to properly auto update the agglomerate trees
+// as part of the post processing of a proofreading interaction.
+// This info is also stored in ProofreadingPostProcessingInfo.
+
+export type ProofreadingActionMappingInfo = {
+  agglomerateId: number;
+  unmappedId: number;
+  position?: Vector3;
+};
+
+export type ProofreadingPostProcessingInfo = {
+  readonly sourceInfo: Readonly<ProofreadingActionMappingInfo>;
+  readonly targetInfo: Readonly<ProofreadingActionMappingInfo> | null;
+  readonly tracingId: string;
+};
 export type SaveState = {
   readonly isBusy: boolean;
+  readonly isSavingDisabled: boolean; // true when the user explicitly disabled saving in the WK menu dropdown
   readonly queue: Array<SaveQueueEntry>;
   readonly lastSaveTimestamp: number;
   readonly progressInfo: ProgressInfo;
   readonly mutexState: AnnotationMutexInformation;
   readonly rebaseRelevantServerAnnotationState: RebaseRelevantAnnotationState;
+  readonly proofreadingPostProcessingInfo: ProofreadingPostProcessingInfo | undefined | null;
 };
 export type Flycam = {
   readonly zoomStep: number;
@@ -553,12 +580,15 @@ type UiInformation = {
   readonly globalProgress: number; // 0 to 1
   readonly showDropzoneModal: boolean;
   readonly showVersionRestore: boolean;
+  readonly isRestoringVersion: boolean;
   readonly showDownloadModal: boolean;
   readonly showPythonClientModal: boolean;
   readonly showShareModal: boolean;
   readonly showMergeAnnotationModal: boolean;
   readonly showZarrPrivateLinksModal: boolean;
+  readonly showDuplicateAnnotationModal: boolean;
   readonly showAddScriptModal: boolean;
+  readonly showKeyboardShortcutConfigModal: boolean;
   readonly aIJobDrawerState: StartAiJobDrawerState;
   readonly showRenderAnimationModal: boolean;
   readonly activeTool: AnnotationTool;
@@ -608,10 +638,13 @@ type ConnectomeData = {
   readonly skeleton: SkeletonTracing | null | undefined;
 };
 export type MinCutPartitions = { 1: number[]; 2: number[]; agglomerateId: number | null };
+export type LocalMeshesInfo =
+  | Record<string, Record<number, MeshInformation> | undefined>
+  | undefined;
 export type LocalSegmentationData = {
   // For meshes, the string represents additional coordinates, number is the segment ID.
   // The undefined types were added to enforce null checks when using this structure.
-  readonly meshes: Record<string, Record<number, MeshInformation> | undefined> | undefined;
+  readonly meshes: LocalMeshesInfo;
   readonly availableMeshFiles: Array<APIMeshFileInfo> | null | undefined;
   readonly currentMeshFile: APIMeshFileInfo | null | undefined;
   // Note that for a volume tracing, this information should be stored
@@ -640,6 +673,7 @@ export type StoreDataset = APIDataset & {
 export type WebknossosState = {
   readonly datasetConfiguration: DatasetConfiguration;
   readonly userConfiguration: UserConfiguration;
+  readonly keyboardConfiguration: KeyboardConfiguration;
   readonly temporaryConfiguration: TemporaryConfiguration;
   readonly dataset: StoreDataset;
   readonly annotation: StoreAnnotation;

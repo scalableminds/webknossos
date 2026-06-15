@@ -16,7 +16,7 @@ class EmailVerificationController @Inject()(emailVerificationService: EmailVerif
     extends Controller
     with FoxImplicits {
 
-  def verify(key: String): Action[AnyContent] = Action.async { implicit request =>
+  def verify(key: String): Action[AnyContent] = Action.async { _ =>
     for {
       _ <- emailVerificationService.verify(key)(GlobalAccessContext, ec)
     } yield Ok

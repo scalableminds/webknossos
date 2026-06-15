@@ -36,6 +36,7 @@ This tab allows admins to configure email notifications for the organization:
 
 The Credit Activity tab displays a table tracking credit purchases, spending, and refunds for your organization.
 You can review the following details for each transaction:
+
 - **Date:** When the transaction occurred.
 - **Credit Change:** The amount of credits added or deducted.
 - **Details:** A description of the transaction.
@@ -48,6 +49,7 @@ You can also filter the activity list by a specific date range, job type, or use
 
 The Plan Updates tab displays a history of recent changes to your organization's subscription plan.
 The table includes:
+
 - **Changed:** The date the plan was updated.
 - **Description:** A description of the update.
 - **Plan:** The name of the new pricing plan.
@@ -67,7 +69,7 @@ Before proceeding:
 - Deleted organizations cannot be restored unless a prior backup exists.  
 
 ## Switching Organizations
-A WEBKNOSSOS user account can be part of more than one organization, e.g., when your are invited to collaborate on projects of another institute, working as a different WEBKNOSSOS organization.
+A WEBKNOSSOS user account can be part of more than one organization, e.g., when you are invited to collaborate on projects of another institute, working as a different WEBKNOSSOS organization.
 
 If you are part of multiple organizations, you can switch between them from the "User avatar" menu. 
 Click on your user avatar in the top-right corner of the screen and select an entry from the "Switch Organization" menu.

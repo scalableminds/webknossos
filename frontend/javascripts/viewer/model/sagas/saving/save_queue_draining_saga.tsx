@@ -11,17 +11,16 @@ import window, { alert, document, location } from "libs/window";
 import memoizeOne from "memoize-one";
 import messages from "messages";
 import { call, delay, put, race, take } from "typed-redux-saga";
-import { WkDevFlags } from "viewer/api/wk_dev";
 import { ControlModeEnum } from "viewer/constants";
+import { maySendSaveRequest } from "viewer/model/accessors/annotation_accessor";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
-  dispatchEnsureHasAnnotationMutexAsync,
   dispatchEnsureHasNewestVersionAsync,
-  doneSavingAction,
   setLastSaveTimestampAction,
   setSaveBusyAction,
   setVersionNumberAction,
   shiftSaveQueueAction,
+  snapshotAnnotationStateForNextRebaseAction,
 } from "viewer/model/actions/save_actions";
 import compactSaveQueue from "viewer/model/helpers/compaction/compact_save_queue";
 import { globalPositionToBucketPosition } from "viewer/model/helpers/position_converter";
@@ -36,7 +35,12 @@ import {
 } from "viewer/model/sagas/saving/save_saga_constants";
 import { Model, Store } from "viewer/singletons";
 import type { SaveQueueEntry } from "viewer/store";
-import { getCurrentMutexFetchingStrategy, MutexFetchingStrategy } from "./save_mutex_saga";
+import { waitFor } from "../saga_helpers";
+import {
+  getCurrentMutexFetchingStrategy,
+  MutexFetchingStrategy,
+  subscribeToAnnotationMutex,
+} from "./save_mutex_saga";
 
 const MAX_ON_CONFLICT_RETRIES = 10;
 
@@ -71,6 +75,9 @@ export function* pushSaveQueueAsync(): Saga<never> {
       timeout: delay(PUSH_THROTTLE_TIME),
       forcePush: take("SAVE_NOW"),
     });
+
+    yield* waitFor(maySendSaveRequest);
+
     yield* put(setSaveBusyAction(true));
     const enforceEmptySaveQueue = forcePush != null;
     let shouldRetryOnConflict = true;
@@ -97,18 +104,22 @@ export function* pushSaveQueueAsync(): Saga<never> {
 export function* synchronizeAnnotationWithBackend(
   enforceEmptySaveQueue: boolean,
 ): Saga<{ hadConflict: boolean }> {
-  const othersMayEdit = yield* select((state) => state.annotation.othersMayEdit);
-  if (othersMayEdit && WkDevFlags.liveCollab) {
+  let unsubscribeFromAnnotationMutexSaga = null;
+  const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
+  if (collaborationMode === "Concurrent") {
     // Wait until we may save (due to mutex acquisition).
-    yield* call(dispatchEnsureHasAnnotationMutexAsync, Store.dispatch);
+    unsubscribeFromAnnotationMutexSaga = yield* call(
+      subscribeToAnnotationMutex,
+      "Save Queue Draining",
+    );
     // Wait until we have the newest version. This *must* happen after
-    // dispatchEnsureMaySaveNowAsync, because otherwise there would be a
+    // subscribeToAnnotationMutex, because otherwise there would be a
     // race condition where the frontend thinks that it knows about the newest
     // version when in fact somebody else saved a newer version in the meantime.
     yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
   }
   // Send (parts of) the save queue to the server.
-  // There are two main cases:
+  // There are three main cases:
   // 1) forcePush is true
   //    The user explicitly requested to save an annotation.
   //    In this case, batches are sent to the server until the save
@@ -126,9 +137,9 @@ export function* synchronizeAnnotationWithBackend(
   //    would be present here, too (note the risk would be greater, because the
   //    user didn't use the save button which is usually accompanied by a small pause).
   // 3) In a live collab scenario we need to drain the whole save queue to get a state
-  //    where we are sure that server is in sync with the backend and after the saving the
+  //    where we are sure that server is in sync with the backend and after saving the
   //    annotation state can be used as a new rebase-able version (RebaseRelevantAnnotationState).
-  //    TODO: Later iterations of live collaboration might need to change this behaviour here.
+  //    TODO (#4259): Later iterations of live collaboration might need to change this behaviour here.
   //    e.g. continuous skeleton tracing might save too long / endlessly if traced very fast.
   //    See https://github.com/scalableminds/webknossos/pull/8723#discussion_r2419981285
   const currentMutexFetchingStrategy = yield* call(getCurrentMutexFetchingStrategy);
@@ -157,9 +168,12 @@ export function* synchronizeAnnotationWithBackend(
       break;
     }
   }
+  if (saveQueue.length === 0 && unsubscribeFromAnnotationMutexSaga) {
+    yield call(unsubscribeFromAnnotationMutexSaga);
+  }
+  // Update RebaseRelevantAnnotationState information as new updates have been stored on the server.
   if (saveQueue.length === 0) {
-    // Notifying to release the mutex and update RebaseRelevantAnnotationState information.
-    yield* put(doneSavingAction());
+    yield* put(snapshotAnnotationStateForNextRebaseAction());
   }
   yield* put(setSaveBusyAction(false));
   return { hadConflict: false };

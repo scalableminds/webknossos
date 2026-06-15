@@ -3,7 +3,7 @@ import { ConfigProvider, Layout } from "antd";
 import features from "features";
 import type { Action, BorderNode, TabNode, TabSetNode } from "flexlayout-react";
 import { Actions, DockLocation, Layout as FlexLayoutComponent, Model } from "flexlayout-react";
-import { InputKeyboardNoLoop } from "libs/input";
+import { InputKeyboard } from "libs/input";
 import Toast from "libs/toast";
 import cloneDeep from "lodash-es/cloneDeep";
 import messages from "messages";
@@ -14,8 +14,10 @@ import type { Dispatch } from "redux";
 import { getAntdTheme } from "theme";
 import type { BorderTabType, OrthoView } from "viewer/constants";
 import { ArbitraryViews, BorderTabs, OrthoViews } from "viewer/constants";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { setBorderOpenStatusAction } from "viewer/model/actions/ui_actions";
 import { setViewportAction } from "viewer/model/actions/view_mode_actions";
+import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import type { BorderOpenStatus, BusyBlockingInfo, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import InputCatcher from "viewer/view/input_catcher";
@@ -38,6 +40,11 @@ import SkeletonTabView from "viewer/view/right_border_tabs/trees_tab/skeleton_ta
 import Statusbar from "viewer/view/statusbar";
 import TDViewControls from "viewer/view/td_view_controls";
 import BorderToggleButton from "../components/border_toggle_button";
+import type {
+  KeyboardShortcutHandlerMap,
+  KeyboardShortcutsMap,
+} from "../keyboard_shortcuts/keyboard_shortcut_types";
+import { buildKeyBindingsFromConfig } from "../keyboard_shortcuts/keyboard_shortcut_utils";
 import {
   adjustModelToBorderOpenStatus,
   getBorderOpenStatus,
@@ -74,6 +81,7 @@ type BorderOpenStatusKeys = keyof BorderOpenStatus;
 
 class FlexLayoutWrapper extends PureComponent<Props, State> {
   unbindListeners: Array<() => void>;
+  keyboard?: InputKeyboard;
   // This variable stores the border open status that should be active, when no main tab is maximized.
   // It is used to compare with the actual border open status that is stored in the store.
   borderOpenStatusWhenNotMaximized: BorderOpenStatus = {
@@ -116,6 +124,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
 
   componentWillUnmount() {
     this.unbindAllListeners();
+    this.keyboard?.destroy();
   }
 
   addListeners() {
@@ -256,18 +265,35 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
     this.onAction(toggleMaximiseAction);
   };
 
-  attachKeyboardShortcuts() {
-    const keyboardNoLoop = new InputKeyboardNoLoop(
-      {
-        ".": this.toggleMaximize,
-        k: () => this.toggleBorder("left"),
-        l: () => this.toggleBorder("right"),
+  getLayoutKeyboardShortcuts(): Partial<KeyboardShortcutHandlerMap> {
+    return {
+      MAXIMIZE: { onPressed: this.toggleMaximize },
+      TOGGLE_LEFT_BORDER: {
+        onPressed: () => this.toggleBorder("left"),
       },
-      {
-        supportInputElements: false,
+      TOGGLE_RIGHT_BORDER: {
+        onPressed: () => this.toggleBorder("right"),
       },
+    };
+  }
+
+  reloadLayoutKeyboardShortcuts(keyboardShortcutsConfig: KeyboardShortcutsMap) {
+    if (this.keyboard) {
+      this.keyboard.destroy();
+    }
+    const keyboardControls = buildKeyBindingsFromConfig(
+      keyboardShortcutsConfig,
+      this.getLayoutKeyboardShortcuts(),
     );
-    return () => keyboardNoLoop.destroy();
+    this.keyboard = new InputKeyboard(keyboardControls);
+  }
+
+  attachKeyboardShortcuts() {
+    return listenToStoreProperty(
+      (state) => state.keyboardConfiguration.shortcutsConfig,
+      (keyboardShortcutsConfig) => this.reloadLayoutKeyboardShortcuts(keyboardShortcutsConfig),
+      true,
+    );
   }
 
   // Taken from the FlexLayout examples.
@@ -442,7 +468,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
 
     // Workaround so that onLayoutChange is called after the update of flexlayout.
     // Calling the method without a timeout results in incorrect calculation of the viewport positions for the rendering.
-    setTimeout(() => this.props.onLayoutChange(currentLayoutModel, this.props.layoutName), 1);
+    setTimeout(() => this.props.onLayoutChange(currentLayoutModel, this.props.layoutName), 50);
   };
 
   onMaximizeToggle = () => {
@@ -586,7 +612,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
 function mapStateToProps(state: WebknossosState): StateProps {
   return {
     displayScalebars: state.userConfiguration.displayScalebars,
-    isUpdateTracingAllowed: state.annotation.isUpdatingCurrentlyAllowed,
+    isUpdateTracingAllowed: mayEditAnnotation(state),
     busyBlockingInfo: state.uiInformation.busyBlockingInfo,
   };
 }

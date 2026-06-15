@@ -1,4 +1,5 @@
 import logoScreenshot from "@images/logo-screenshot.svg";
+import { BlobReader, BlobWriter, ZipWriter } from "@zip.js/zip.js";
 import { saveAs } from "file-saver";
 import { convertBufferToImage } from "libs/utils";
 import {
@@ -55,6 +56,7 @@ export function renderToTexture(
   // this behavior is not problematic for us.
   withFarClipping?: boolean,
   clearColor?: number,
+  enableAntialiasing: boolean = false,
 ): Uint8Array {
   const SceneController = getSceneController();
   const { renderer, scene: defaultScene } = SceneController;
@@ -98,6 +100,7 @@ export function renderToTexture(
   renderer.setScissorTest(false);
   renderer.setClearColor(clearColor === 0xffffff ? getBackgroundColor() : clearColor, 1);
   const renderTarget = new WebGLRenderTarget(width, height);
+  if (enableAntialiasing) renderTarget.samples = 4;
   const buffer = new Uint8Array(width * height * 4);
 
   if (plane !== ArbitraryViewport) {
@@ -119,23 +122,29 @@ function getScreenshotLogoImage(): Promise<HTMLImageElement> {
   });
 }
 
-export async function downloadScreenshot() {
+export type ScreenshotBlob = { name: string; blob: Blob };
+
+export async function captureScreenshots(prefix?: string): Promise<ScreenshotBlob[]> {
   const { dataset, flycam, temporaryConfiguration, userConfiguration } = Store.getState();
   const { renderWatermark } = userConfiguration;
   const { viewMode } = temporaryConfiguration;
   const datasetName = dataset.name;
   const [x, y, z] = getFlooredPosition(flycam);
-  const baseName = `${datasetName}__${x}_${y}_${z}`;
+  const positionSuffix = `${datasetName}__${x}_${y}_${z}`;
+  const baseName = prefix != null ? `${prefix}__${positionSuffix}` : positionSuffix;
   const planeIds: Array<OrthoView | typeof ArbitraryViewport> =
     viewMode === constants.MODE_PLANE_TRACING ? OrthoViewValues : [ArbitraryViewport];
   const logo = renderWatermark ? await getScreenshotLogoImage() : null;
+
+  const results: ScreenshotBlob[] = [];
 
   for (const planeId of planeIds) {
     const { width, height } = getInputCatcherRect(Store.getState(), planeId);
     if (width === 0 || height === 0) continue;
     const clearColor = planeId !== "arbitraryViewport" ? OrthoViewColors[planeId] : 0xffffff;
 
-    const buffer = renderToTexture(planeId, undefined, undefined, false, clearColor);
+    // Always anti-alias when creating screenshots since it looks better and performance is mostly irrelevant
+    const buffer = renderToTexture(planeId, undefined, undefined, false, clearColor, true);
 
     const inputCatcherElement = document.querySelector(`#inputcatcher_${planeId}`);
     const drawImageIntoCanvasCallback =
@@ -179,10 +188,33 @@ export async function downloadScreenshot() {
     );
     if (blob != null) {
       const planeDescriptor = viewMode === constants.MODE_PLANE_TRACING ? planeId : viewMode;
-      saveAs(blob, `${baseName}__${planeDescriptor}.png`);
+      results.push({ name: `${baseName}__${planeDescriptor}.png`, blob });
     }
   }
+
   if (logo) {
     logo.remove();
   }
+
+  return results;
+}
+
+export async function downloadScreenshot() {
+  const screenshots = await captureScreenshots();
+  for (const { name, blob } of screenshots) {
+    saveAs(blob, name);
+  }
+}
+
+export async function downloadScreenshotsAsZip(
+  screenshots: ScreenshotBlob[],
+  zipName = "screenshots",
+) {
+  const zipBlob = new BlobWriter("application/zip");
+  const zipWriter = new ZipWriter(zipBlob);
+  for (const { name, blob } of screenshots) {
+    await zipWriter.add(name, new BlobReader(blob));
+  }
+  await zipWriter.close();
+  saveAs(await zipBlob.getData(), `${zipName}.zip`);
 }

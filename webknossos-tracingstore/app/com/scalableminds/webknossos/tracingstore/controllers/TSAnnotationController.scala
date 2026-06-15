@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.BoundingBox
@@ -14,7 +15,7 @@ import com.scalableminds.webknossos.datastore.Annotation.{
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.controllers.Controller
-import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayer
+import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationIdDomain, AnnotationLayer}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.TracingStoreAccessTokenService
 import com.scalableminds.webknossos.tracingstore.annotation.{
@@ -29,7 +30,6 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.Editab
 import com.scalableminds.webknossos.tracingstore.tracings.skeleton.SkeletonTracingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import com.scalableminds.util.tools.{Empty, Failure, Full}
-import play.api.i18n.Messages
 import play.api.libs.json.{Json, OFormat}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
@@ -52,7 +52,7 @@ class TSAnnotationController @Inject()(
     skeletonTracingService: SkeletonTracingService,
     volumeTracingService: VolumeTracingService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
-    with KeyValueStoreImplicits {
+    with KeyValueStoreConversions {
 
   def save(annotationId: ObjectId, toTemporaryStore: Boolean = false): Action[AnnotationProto] =
     Action.async(validateProto[AnnotationProto]) { implicit request =>
@@ -69,7 +69,8 @@ class TSAnnotationController @Inject()(
     Action.async(validateJson[List[UpdateActionGroup]]) { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {
-          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeAnnotation(annotationId)) {
+          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeAnnotation(annotationId),
+                                                            useCaching = false) {
             for {
               _ <- annotationTransactionService.handleUpdateGroups(annotationId, request.body)
             } yield Ok
@@ -131,13 +132,14 @@ class TSAnnotationController @Inject()(
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
             for {
               datasetBoundingBoxParsed <- Fox.runOptional(datasetBoundingBox)(b => BoundingBox.fromLiteral(b).toFox)
-              annotationProto <- annotationService.duplicate(annotationId,
-                                                             newAnnotationId,
-                                                             ownerId,
-                                                             requestingUserId,
-                                                             version,
-                                                             isFromTask,
-                                                             datasetBoundingBoxParsed) ?~> "annotation.duplicate.failed"
+              annotationProto <- annotationService.duplicate(
+                annotationId,
+                newAnnotationId,
+                ownerId,
+                requestingUserId,
+                version,
+                isFromTask,
+                datasetBoundingBoxParsed) ?~> Msg.Annotation.duplicateFailed
             } yield Ok(annotationProto.toByteArray).as(protobufMimeType)
           }
         }
@@ -155,6 +157,68 @@ class TSAnnotationController @Inject()(
                                                                          currentVersion,
                                                                          ResetToBaseAnnotationAction())
             } yield Ok
+          }
+        }
+      }
+    }
+
+  def largestIdOrZero(annotationId: ObjectId, tracingId: String, domain: String): Action[AnyContent] =
+    Action.async { implicit request =>
+      log() {
+        logTime(slackNotificationService.noticeSlowRequest) {
+          accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+            val fallbackId: Long = 0
+            for {
+              domainValidated <- AnnotationIdDomain.fromString(domain).toFox
+              largestIdWithFallback: Long <- domainValidated match {
+                case AnnotationIdDomain.Segment =>
+                  for {
+                    volume <- annotationService.findVolume(annotationId, tracingId)
+                    maxSegmentId <- volume.segments.map(_.segmentId).maxOption match {
+                      case Some(fromTracing) => Fox.successful(fromTracing)
+                      case None if volume.fallbackLayer.isDefined =>
+                        Fox.failure(
+                          "Reserving segment ids is not supported for volume annotations with fallback layer.")
+                      case _ => Fox.successful(fallbackId)
+                    }
+                  } yield maxSegmentId
+                case AnnotationIdDomain.SegmentGroup =>
+                  for {
+                    volume <- annotationService.findVolume(annotationId, tracingId)
+                    maxGroupIdWithFallback = GroupUtils.getMaximumSegmentGroupId(volume.segmentGroups).toLong
+                  } yield maxGroupIdWithFallback
+                case AnnotationIdDomain.Node =>
+                  for {
+                    skeleton <- annotationService.findSkeleton(annotationId, tracingId)
+                    maxIdsPerTree: Seq[Long] = skeleton.trees.map(
+                      _.nodes.map(_.id).maxOption.map(_.toLong).getOrElse(fallbackId))
+                  } yield maxIdsPerTree.maxOption.getOrElse(fallbackId)
+                case AnnotationIdDomain.Tree =>
+                  for {
+                    skeleton <- annotationService.findSkeleton(annotationId, tracingId)
+                  } yield skeleton.trees.map(_.treeId).maxOption.map(_.toLong).getOrElse(fallbackId)
+                case AnnotationIdDomain.TreeGroup =>
+                  for {
+                    skeleton <- annotationService.findSkeleton(annotationId, tracingId)
+                    maxGroupIdWithFallback = GroupUtils.getMaximumTreeGroupId(skeleton.treeGroups).toLong
+                  } yield maxGroupIdWithFallback
+                case AnnotationIdDomain.BoundingBox =>
+                  for {
+                    // bounding boxes can appear both in skeleton and volume, so we do not know at this point what kind the tracingId refers to. Try both.
+                    skeletonBox <- annotationService.findSkeleton(annotationId, tracingId).shiftBox
+                    maxBboxId <- skeletonBox match {
+                      case Full(skeleton) =>
+                        Fox.successful(
+                          skeleton.userBoundingBoxes.map(_.id).maxOption.map(_.toLong).getOrElse(fallbackId))
+                      case Empty =>
+                        for {
+                          volume <- annotationService.findVolume(annotationId, tracingId)
+                        } yield volume.userBoundingBoxes.map(_.id).maxOption.map(_.toLong).getOrElse(fallbackId)
+                      case f: Failure => f.toFox
+                    }
+                  } yield maxBboxId
+              }
+            } yield Ok(Json.toJson(largestIdWithFallback))
           }
         }
       }
@@ -204,8 +268,7 @@ class TSAnnotationController @Inject()(
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
             _ <- Fox.fromBool(request.body.annotationIds.length == request.body.ownerIds.length) ?~> "annotationIds and ownerIds must have the same length"
-            annotations: Seq[AnnotationProto] <- annotationService.getMultiple(request.body.annotationIds) ?~> Messages(
-              "annotation.notFound")
+            annotations: Seq[AnnotationProto] <- annotationService.getMultiple(request.body.annotationIds) ?~> Msg.Annotation.notFound
             skeletonLayers = annotations.flatMap(_.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Skeleton))
             volumeLayers = annotations.flatMap(_.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Volume))
             newSkeletonId = TracingId.generate
@@ -239,12 +302,13 @@ class TSAnnotationController @Inject()(
               case Empty               => Fox.successful((None, 0L))
               case f: Failure          => f.toFox
             }
-            mergedVolumeStats <- volumeTracingService.mergeVolumeData(firstVolumeAnnotationId,
-                                                                      volumeLayers.map(_.tracingId),
-                                                                      volumeTracings,
-                                                                      newVolumeId,
-                                                                      newVersion = newTargetVersion,
-                                                                      toTemporaryStore) ?~> "mergeVolumeData.failed"
+            mergedVolumeStats <- volumeTracingService.mergeVolumeData(
+              firstVolumeAnnotationId,
+              volumeLayers.map(_.tracingId),
+              volumeTracings,
+              newVolumeId,
+              newVersion = newTargetVersion,
+              toTemporaryStore) ?~> Msg.Annotation.Merge.mergeVolumeDataFailed
             mergedVolumeOpt <- Fox.runIf(volumeTracings.nonEmpty)(
               volumeTracingService
                 .merge(volumeTracings,
@@ -252,7 +316,7 @@ class TSAnnotationController @Inject()(
                        newMappingName,
                        newVersion = newTargetVersion,
                        additionalBoundingBoxes = request.body.additionalBoundingBoxes)
-                .toFox) ?~> "mergeVolume.failed"
+                .toFox) ?~> Msg.Annotation.Merge.mergeVolumeFailed
             _ <- Fox.runOptional(mergedVolumeOpt)(
               volumeTracingService.saveVolume(newVolumeId, version = newTargetVersion, _, toTemporaryStore))
             skeletonTracingsAdaptedNested: Seq[Seq[SkeletonTracing]] <- Fox.serialCombined(

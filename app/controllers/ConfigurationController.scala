@@ -1,14 +1,15 @@
 package controllers
 
+import com.scalableminds.util.Msg
 import play.silhouette.api.Silhouette
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.objectid.ObjectId
+import com.scalableminds.util.tools.Fox
 
 import javax.inject.Inject
 import models.dataset.{DatasetDAO, DatasetService}
 import models.configuration.DatasetConfigurationService
-import models.user.UserService
-import play.api.i18n.Messages
+import models.user.{UserKeyboardShortcutsConfigsDAO, UserService}
 import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{URLSharing, WkEnv}
@@ -20,6 +21,7 @@ class ConfigurationController @Inject()(
     datasetService: DatasetService,
     datasetDAO: DatasetDAO,
     datasetConfigurationService: DatasetConfigurationService,
+    userKeyboardShortcutsConfigsDAO: UserKeyboardShortcutsConfigsDAO,
     sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
@@ -30,9 +32,28 @@ class ConfigurationController @Inject()(
 
   def update: Action[JsValue] = sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
     for {
-      configuration <- request.body.asOpt[JsObject].toFox ?~> "user.configuration.invalid"
+      configuration <- request.body.asOpt[JsObject].toFox ?~> Msg.User.Configuration.invalid
       _ <- userService.updateUserConfiguration(request.identity, configuration)
-    } yield JsonOk(Messages("user.configuration.updated"))
+    } yield JsonOk(Msg.User.Configuration.updateSuccess)
+  }
+
+  def readKeyboardShortcutsConfig: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
+    for {
+      shortcuts <- request.identity
+        .map(u => userKeyboardShortcutsConfigsDAO.findOneForUser(u._multiUser))
+        .getOrElse(Fox.successful(Json.obj()))
+    } yield addNoCacheHeaderFallback(Ok(shortcuts))
+  }
+
+  def updateKeyboardShortcutsConfig(): Action[JsValue] = sil.SecuredAction.async(parse.json(maxLength = 204800)) {
+    implicit request =>
+      for {
+        shortcuts <- request.body
+          .validate[JsObject]
+          .asOpt
+          .toFox ?~> Msg.User.Configuration.invalidKeyboardShortcutsConfig
+        _ <- userKeyboardShortcutsConfigsDAO.updateForMultiUser(request.identity._multiUser, shortcuts)
+      } yield JsonOk(Msg.User.Configuration.updatedKeyboardShortcutsConfig)
   }
 
   def readDatasetViewConfiguration(datasetId: ObjectId, sharingToken: Option[String]): Action[List[String]] =
@@ -53,12 +74,12 @@ class ConfigurationController @Inject()(
   def updateDatasetViewConfiguration(datasetId: ObjectId): Action[JsValue] =
     sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
       for {
-        jsConfiguration <- request.body.asOpt[JsObject].toFox ?~> "user.configuration.dataset.invalid"
+        jsConfiguration <- request.body.asOpt[JsObject].toFox ?~> Msg.User.Configuration.invalidForDataset
         conf = jsConfiguration.fields.toMap
         datasetConf = conf - "layers"
         layerConf = conf.get("layers")
         _ <- userService.updateDatasetViewConfiguration(request.identity, datasetId, datasetConf, layerConf)
-      } yield JsonOk(Messages("user.configuration.dataset.updated"))
+      } yield JsonOk(Msg.User.Configuration.updateSuccessForDataset)
     }
 
   def readDatasetAdminViewConfiguration(datasetId: ObjectId): Action[AnyContent] =
@@ -72,9 +93,9 @@ class ConfigurationController @Inject()(
     sil.SecuredAction.async(parse.json(maxLength = 20480)) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext)
-        _ <- datasetService.isEditableBy(dataset, Some(request.identity)) ?~> "notAllowed" ~> FORBIDDEN
-        jsObject <- request.body.asOpt[JsObject].toFox ?~> "user.configuration.dataset.invalid"
+        _ <- datasetService.isEditableBy(dataset, Some(request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
+        jsObject <- request.body.asOpt[JsObject].toFox ?~> Msg.User.Configuration.invalidForDataset
         _ <- datasetConfigurationService.updateAdminViewConfigurationFor(dataset, jsObject.fields.toMap)
-      } yield JsonOk(Messages("user.configuration.dataset.updated"))
+      } yield JsonOk(Msg.User.Configuration.updateSuccessForDataset)
     }
 }

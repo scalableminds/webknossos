@@ -12,7 +12,6 @@ import type ApiLoader from "./api_loader";
 // for debugging or one off scripts.
 export const WkDevFlags = {
   logActions: false,
-  liveCollab: false,
   sam: {
     useLocalMask: true,
   },
@@ -253,6 +252,57 @@ export default class WkDev {
         mean(this.benchmarkHistory.ROTATE),
       );
     }
+  }
+
+  waitForCompletedDataLoading(
+    timeout: number | null = null,
+    debounceMs: number = 500,
+  ): Promise<void> {
+    /*
+     * Returns a promise that resolves once all pull queues across all layers
+     * are empty and stay empty for debounceMs milliseconds. For example, useful in
+     * screenshot tests to wait for data loading to truly finish.
+     * If no data is being fetched when this method is called and when no data
+     * is starting to be fetched within debounceMs, the returned promise will
+     * resolve immediately after debounceMs has passed.
+     * Therefore, you may want to call an additional sleep prior to calling this method,
+     * if you want to minimize the risk that data loading hasn't started yet.
+     */
+    const areQueuesEmpty = () => Model.getAllLayers().every((layer) => layer.pullQueue.isEmpty());
+    return new Promise((resolve, reject) => {
+      let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+      let timeoutTimer: ReturnType<typeof setTimeout> | null = null;
+
+      if (timeout != null) {
+        timeoutTimer = setTimeout(() => {
+          if (debounceTimer != null) clearTimeout(debounceTimer);
+          unsubscribe();
+          reject(new Error("Waiting for completed data loading timed out."));
+        }, timeout);
+      }
+
+      const checkAndSettle = () => {
+        if (!areQueuesEmpty()) {
+          // Ignore event.
+          return;
+        }
+        if (debounceTimer != null) clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          // Re-check whether new requests have started during the debounce window.
+          // If so, a new pullqueue:empty event will arrive, so we don't need to
+          // do anything else here.
+          if (areQueuesEmpty()) {
+            unsubscribe();
+            if (timeoutTimer != null) clearTimeout(timeoutTimer);
+            resolve();
+          }
+        }, debounceMs);
+      };
+
+      const unsubscribe = app.vent.on("pullqueue:empty", checkAndSettle);
+      // Check immediately in case all queues are already empty at call time.
+      checkAndSettle();
+    });
   }
 
   async benchmarkSegmentListScroll(n: number = 100) {

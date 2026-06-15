@@ -23,20 +23,23 @@ class SimpleSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
 
   implicit protected def sqlInterpolationWrapper(s: StringContext): SqlInterpolator = sqlInterpolation(s)
 
+  // Concurrent access for Serializable transactions leads to this error, can be solved by retry.
   protected lazy val transactionSerializationError = "could not serialize access"
+  // This error tends to occur only after schema changes (type recreation), e.g. during tests. Can be solved by retry.
+  private lazy val cacheLookupFailedForTypeError = "cache lookup failed for type"
 
   protected def run[R](query: DBIOAction[R, NoStream, Nothing],
                        retryCount: Int = 0,
                        retryIfErrorContains: List[String] = List()): Fox[R] = {
     val stackMarker = new Throwable()
-    val foxFuture = sqlClient.db.run(query.asTry).map { result: Try[R] =>
+    val foxFuture = sqlClient.db.run(query.asTry).map { (result: Try[R]) =>
       result match {
         case Success(res) =>
           Fox.successful(res)
         case Failure(e: Throwable) =>
           val msg = e.getMessage
           if (retryIfErrorContains.exists(msg.contains(_)) && retryCount > 0) {
-            logger.debug(s"Retrying SQL Query ($retryCount remaining) due to $msg")
+            logger.info(s"Retrying SQL Query ($retryCount remaining) due to $msg")
             Thread.sleep(20)
             run(query, retryCount - 1, retryIfErrorContains)
           } else {
@@ -51,8 +54,8 @@ class SimpleSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
 
   private def logError[R](ex: Throwable, stackMarker: Throwable, query: DBIOAction[R, NoStream, Nothing]): Unit = {
     logger.error("SQL Error: " + ex)
-    logger.debug("SQL Error causing query:\n" + querySummary(query).take(8000))
-    logger.debug("SQL Error stack trace: " + TextUtils.stackTraceAsString(stackMarker))
+    logger.info("SQL Error causing query:\n" + querySummary(query).take(8000))
+    logger.info("SQL Error stack trace: " + TextUtils.stackTraceAsString(stackMarker))
   }
 
   private def reportErrorToSlack[R](ex: Throwable, query: DBIOAction[R, NoStream, Nothing]): Unit =
@@ -76,7 +79,7 @@ class SimpleSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
       _ <- run(
         composedQuery.transactionally.withTransactionIsolation(Serializable),
         retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
+        retryIfErrorContains = List(transactionSerializationError, cacheLookupFailedForTypeError)
       )
     } yield ()
   }

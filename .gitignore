@@ -25,7 +25,14 @@ RUNNING_PID
 .metals
 metals.sbt
 __pycache__/
+<<<<<<< Updated upstream
+.jvmopts
 
+||||||| constructed merge base
+
+=======
+.jvmopts
+>>>>>>> Stashed changes
 
 # Webknossos
 backup/
@@ -122,3 +129,6 @@ tools/**/.yarn/*
 public/index.html
 
 tsconfig.tsbuildinfo
+
+.claude
+.jvmopts

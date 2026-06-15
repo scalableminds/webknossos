@@ -1,5 +1,6 @@
 package models.annotation.nml
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.io.NamedFunctionStream
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
@@ -111,8 +112,8 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext)
           _ <- Fox.successful(writeMetaData(annotation, annotationOwnerName, annotationTask))
           skeletonLayers = annotationLayers.filter(_.typ == AnnotationLayerType.Skeleton)
           volumeLayers = annotationLayers.filter(_.typ == AnnotationLayerType.Volume)
-          _ <- Fox.fromBool(skeletonLayers.length <= 1) ?~> "annotation.download.multipleSkeletons"
-          _ <- Fox.fromBool(volumeFilename.isEmpty || volumeLayers.length <= 1) ?~> "annotation.download.volumeNameForMultiple"
+          _ <- Fox.fromBool(skeletonLayers.length <= 1) ?~> Msg.Annotation.Download.multipleSkeletons
+          _ <- Fox.fromBool(volumeFilename.isEmpty || volumeLayers.length <= 1) ?~> Msg.Annotation.Download.volumeNameForMultiple
           parameters <- extractTracingParameters(
             skeletonLayers,
             volumeLayers,
@@ -374,7 +375,7 @@ class NmlWriter @Inject()(implicit ec: ExecutionContext)
     }
 
   private def writeNodesAsXml(nodes: Seq[Node])(implicit writer: XMLStreamWriter): Unit =
-    nodes.toSet.foreach { n: Node => // toSet as workaround for some erroneously duplicate nodes in the db, this was not checked on upload until 2017
+    nodes.toSet.foreach { (n: Node) => // toSet as workaround for some erroneously duplicate nodes in the db, this was not checked on upload until 2017
       Xml.withinElementSync("node") {
         writer.writeAttribute("id", n.id.toString)
         writer.writeAttribute("radius", n.radius.toString)

@@ -31,6 +31,7 @@ For more information about roles, see [Access rights and roles](access_rights.md
 
 Users can customize the appearance of WEBKNOSSOS from the `Profile` tab.
 The theme can be set to:
+
 - **System Default**: Automatically matches your operating system's theme preference.
 - **Light**: Forces a light-mode user interface.
 - **Dark**: Forces a dark-mode user interface.
@@ -92,4 +93,4 @@ If your token has been compromised or you suspect someone else has gained access
 
 #### Organization ID
 
-Certain API integrations need the organization ID which can be found her, in the developer settings.
+Certain API integrations need the organization ID which can be found here, in the developer settings.

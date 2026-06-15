@@ -10,7 +10,7 @@ import type {
   RenderAnimationOptions,
   VoxelSize,
 } from "types/api_types";
-import type { UnitLong, Vector3, Vector6 } from "viewer/constants";
+import type { Vector3, Vector6 } from "viewer/constants";
 import { setActiveOrganizationsCreditBalance } from "viewer/model/actions/organization_actions";
 import { Store } from "viewer/singletons";
 import { assertResponseLimit } from "./api_utils";
@@ -92,19 +92,6 @@ export async function retryJob(jobId: string): Promise<APIJob> {
   return Request.receiveJSON(`/api/jobs/${jobId}/retry`, {
     method: "PATCH",
   });
-}
-
-export async function startConvertToWkwJob(
-  datasetId: string,
-  scale: Vector3,
-  unit: UnitLong,
-): Promise<APIJob> {
-  return Request.receiveJSON(
-    `/api/jobs/run/convertToWkw/${datasetId}?scale=${scale.toString()}&unit=${unit}`,
-    {
-      method: "POST",
-    },
-  );
 }
 
 export async function startFindLargestSegmentIdJob(
@@ -200,6 +187,7 @@ type RunNeuronInferenceParameters = {
   evalMaxEdgeLength?: number;
   evalSparseTubeThresholdNm?: number;
   evalMinMergerPathLengthNm?: number;
+  customConfiguration?: Record<string, JsonPrimitive>;
 };
 
 type RunInstanceInferenceParameters = {
@@ -213,6 +201,7 @@ type RunInstanceInferenceParameters = {
   workflowYaml?: string;
   invertColorLayer?: boolean;
   seedGeneratorDistanceThreshold?: number | null;
+  customConfiguration?: Record<string, JsonPrimitive>;
 };
 
 export function runNeuronModelInference(params: RunNeuronInferenceParameters): Promise<APIJob> {
@@ -323,19 +312,11 @@ export function startAlignSectionsJob(
   layerName: string,
   newDatasetName: string,
   annotationId?: string,
+  customConfiguration?: Record<string, JsonPrimitive>,
 ): Promise<APIJob> {
-  const urlParams = annotationId
-    ? new URLSearchParams({
-        layerName,
-        newDatasetName,
-        annotationId,
-      })
-    : new URLSearchParams({
-        layerName,
-        newDatasetName,
-      });
-  return Request.receiveJSON(`/api/jobs/run/alignSections/${datasetId}?${urlParams.toString()}`, {
+  return Request.sendJSONReceiveJSON(`/api/jobs/run/alignSections/${datasetId}`, {
     method: "POST",
+    data: { layerName, newDatasetName, annotationId, customConfiguration },
   });
 }
 
@@ -343,6 +324,12 @@ export function startAlignSectionsJob(
 export enum APIAiModelCategory {
   EM_NEURONS = "em_neurons",
   EM_NUCLEI = "em_nuclei",
+  EM_SYNAPSES = "em_synapses",
+  EM_NEURON_TYPES = "em_neuron_types",
+  EM_CELL_ORGANELLES = "em_cell_organelles",
+  EM_GENERIC = "em_generic",
+  EM_SOMATA = "em_somata",
+  EM_MITOCHONDRIA = "em_mitochondria",
 }
 
 export type AiModelTrainingAnnotationSpecification = {
@@ -358,6 +345,7 @@ type RunNeuronModelTrainingParameters = {
   aiModelCategory: APIAiModelCategory.EM_NEURONS;
   comment?: string;
   workflowYaml?: string;
+  customConfiguration?: Record<string, JsonPrimitive>;
 };
 
 export function runNeuronTraining(params: RunNeuronModelTrainingParameters) {
@@ -367,13 +355,15 @@ export function runNeuronTraining(params: RunNeuronModelTrainingParameters) {
   });
 }
 
+export type JsonPrimitive = string | number | boolean;
 type RunInstanceModelTrainingParameters = {
   trainingAnnotations: AiModelTrainingAnnotationSpecification[];
   name: string;
-  aiModelCategory: APIAiModelCategory.EM_NUCLEI;
+  aiModelCategory: APIAiModelCategory.EM_GENERIC;
   instanceDiameterNm: number;
   comment?: string;
   workflowYaml?: string;
+  customConfiguration?: Record<string, JsonPrimitive>;
 };
 
 export function runInstanceModelTraining(params: RunInstanceModelTrainingParameters) {

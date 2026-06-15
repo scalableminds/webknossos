@@ -12,6 +12,9 @@ import software.amazon.awssdk.auth.credentials.{
 }
 import software.amazon.awssdk.awscore.util.AwsHostNameUtils
 import software.amazon.awssdk.core.checksums.RequestChecksumCalculation
+import software.amazon.awssdk.core.client.config.ClientOverrideConfiguration
+import software.amazon.awssdk.retries.StandardRetryStrategy
+import software.amazon.awssdk.http.Protocol
 import software.amazon.awssdk.http.nio.netty.NettyNioAsyncHttpClient
 import software.amazon.awssdk.regions.Region
 import software.amazon.awssdk.services.s3.S3AsyncClient
@@ -46,15 +49,22 @@ class S3ClientPool(ws: WSClient) {
          credentialOpt.map(c => SCrypt.sha256Hex(c.secretAccessKey)),
          customEndpointOpt.map(_.toString)),
         _ => {
-          Fox.successful(buildS3Client(credentialsProvider, customEndpointOpt))
+          Fox.successful(buildS3Client(credentialsProvider, customEndpointOpt, isForUpload))
         }
       )
     } yield client
   }
 
+  private def isHetznerEndpoint(customEndpointOpt: Option[URI]): Boolean =
+    customEndpointOpt.exists(_.getHost.endsWith(".your-objectstorage.com"))
+
   private def buildS3Client(credentialsProvider: AwsCredentialsProvider,
-                            customEndpointOpt: Option[URI]): S3AsyncClient = {
-    val basic =
+                            customEndpointOpt: Option[URI],
+                            isForUpload: Boolean): S3AsyncClient = {
+    // HTTP/2 multiplexes bucket fetches over fewer TCP connections, but AWS S3 does not support it.
+    // Hetzner Object Storage (e.g. fsn1.your-objectstorage.com) does support HTTP/2.
+    val protocol = if (isHetznerEndpoint(customEndpointOpt)) Protocol.HTTP2 else Protocol.HTTP1_1
+    val builder =
       S3AsyncClient
         .builder()
         .credentialsProvider(credentialsProvider)
@@ -64,18 +74,27 @@ class S3ClientPool(ws: WSClient) {
         .httpClientBuilder(
           NettyNioAsyncHttpClient
             .builder()
+            .protocol(protocol)
             .maxConcurrency(64)
             .tcpKeepAlive(true)
             .connectionAcquisitionTimeout((2 minutes).toJava))
+    val withRetryStrategy =
+      if (isForUpload)
+        builder.overrideConfiguration(
+          ClientOverrideConfiguration
+            .builder()
+            .retryStrategy(StandardRetryStrategy.builder().maxAttempts(10).build())
+            .build())
+      else builder
     customEndpointOpt match {
       case Some(customEndpoint) =>
-        basic
+        withRetryStrategy
           .forcePathStyle(true)
           .endpointOverride(customEndpoint)
           .region(
             AwsHostNameUtils.parseSigningRegion(customEndpoint.getAuthority, "s3").toScala.getOrElse(Region.US_EAST_1))
           .build()
-      case None => basic.region(Region.US_EAST_1).build()
+      case None => withRetryStrategy.region(Region.US_EAST_1).build()
     }
   }
 

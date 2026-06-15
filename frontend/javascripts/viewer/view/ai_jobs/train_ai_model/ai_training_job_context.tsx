@@ -6,6 +6,7 @@ import {
   runInstanceModelTraining,
   runNeuronTraining,
 } from "admin/rest_api";
+import type { KeyValuePairs } from "components/key_value_pairs";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import compact from "lodash-es/compact";
@@ -84,6 +85,8 @@ interface AiTrainingJobContextType {
   setComments: (comments: string) => void;
   instanceDiameterNm: number;
   setInstanceDiameterNm: (dist: number) => void;
+  customConfiguration: KeyValuePairs;
+  setCustomConfiguration: (config: KeyValuePairs) => void;
 
   selectedAnnotations: AiTrainingAnnotationSelection[];
   setSelectedAnnotations: React.Dispatch<React.SetStateAction<AiTrainingAnnotationSelection[]>>;
@@ -111,6 +114,7 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
   );
   const [comments, setComments] = useState("");
   const [instanceDiameterNm, setInstanceDiameterNm] = useState(1000.0);
+  const [customConfiguration, setCustomConfiguration] = useState<KeyValuePairs>({});
 
   const dispatch = useDispatch();
 
@@ -206,14 +210,16 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
     try {
       if (selectedJobType === APIJobCommand.TRAIN_INSTANCE_MODEL) {
         await runInstanceModelTraining({
-          aiModelCategory: APIAiModelCategory.EM_NUCLEI,
+          aiModelCategory: APIAiModelCategory.EM_GENERIC,
           instanceDiameterNm: instanceDiameterNm,
           ...commonJobArgmuments,
+          customConfiguration,
         });
       } else {
         await runNeuronTraining({
           aiModelCategory: APIAiModelCategory.EM_NEURONS,
           ...commonJobArgmuments,
+          customConfiguration,
         });
       }
       Toast.success("The training has successfully started.");
@@ -222,7 +228,15 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
       console.error(error);
       Toast.error("Failed to start training.");
     }
-  }, [modelName, selectedJobType, selectedAnnotations, comments, instanceDiameterNm, dispatch]);
+  }, [
+    modelName,
+    selectedJobType,
+    selectedAnnotations,
+    comments,
+    instanceDiameterNm,
+    customConfiguration,
+    dispatch,
+  ]);
 
   const value = {
     selectedJobType,
@@ -236,6 +250,8 @@ export const AiTrainingJobContextProvider: React.FC<{ children: React.ReactNode 
     setComments,
     instanceDiameterNm,
     setInstanceDiameterNm,
+    customConfiguration,
+    setCustomConfiguration,
     selectedAnnotations,
     setSelectedAnnotations,
     handleSelectionChange,

@@ -1714,6 +1714,7 @@ exports[`Annotation API (E2E) > createExplorational() and finishAnnotation() 1`]
       "typ": "Skeleton",
     },
   ],
+  "collaborationMode": "OwnerOnly",
   "contributors": [],
   "dataSetName": "confocal-multi_knossos",
   "dataStore": {
@@ -1730,7 +1731,6 @@ exports[`Annotation API (E2E) > createExplorational() and finishAnnotation() 1`]
   "modified": "modified",
   "name": "",
   "organization": "Organization_X",
-  "othersMayEdit": false,
   "owner": {
     "email": "user_a@scalableminds.com",
     "firstName": "user_A",
@@ -1766,7 +1766,6 @@ exports[`Annotation API (E2E) > createExplorational() and finishAnnotation() 1`]
   "settings": {
     "allowedModes": [
       "orthogonal",
-      "oblique",
       "flight",
     ],
     "branchPointsAllowed": true,
@@ -1835,6 +1834,7 @@ exports[`Annotation API (E2E) > editAnnotation() 1`] = `
       "typ": "Skeleton",
     },
   ],
+  "collaborationMode": "OwnerOnly",
   "contributors": [],
   "dataSetName": "2012-06-28_Cortex",
   "dataStore": {
@@ -1851,7 +1851,6 @@ exports[`Annotation API (E2E) > editAnnotation() 1`] = `
   "modified": "modified",
   "name": "new name",
   "organization": "Organization_X",
-  "othersMayEdit": false,
   "owner": {
     "email": "user_a@scalableminds.com",
     "firstName": "user_A",
@@ -1887,7 +1886,6 @@ exports[`Annotation API (E2E) > editAnnotation() 1`] = `
   "settings": {
     "allowedModes": [
       "orthogonal",
-      "oblique",
       "flight",
     ],
     "branchPointsAllowed": true,
@@ -1956,6 +1954,7 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ex
       "typ": "Skeleton",
     },
   ],
+  "collaborationMode": "OwnerOnly",
   "contributors": [],
   "dataSetName": "2012-06-28_Cortex",
   "dataStore": {
@@ -1971,13 +1970,12 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ex
   "isLockedByOwner": false,
   "messages": [
     {
-      "success": "Annotation is archived",
+      "success": "Annotation is archived.",
     },
   ],
   "modified": "modified",
   "name": "",
   "organization": "Organization_X",
-  "othersMayEdit": false,
   "owner": {
     "email": "user_a@scalableminds.com",
     "firstName": "user_A",
@@ -2013,7 +2011,6 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ex
   "settings": {
     "allowedModes": [
       "orthogonal",
-      "oblique",
       "flight",
     ],
     "branchPointsAllowed": true,
@@ -2082,6 +2079,7 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ex
       "typ": "Skeleton",
     },
   ],
+  "collaborationMode": "OwnerOnly",
   "contributors": [],
   "dataSetName": "2012-06-28_Cortex",
   "dataStore": {
@@ -2097,13 +2095,12 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ex
   "isLockedByOwner": false,
   "messages": [
     {
-      "success": "Annotation was reopened",
+      "success": "Annotation was reopened.",
     },
   ],
   "modified": "modified",
   "name": "",
   "organization": "Organization_X",
-  "othersMayEdit": false,
   "owner": {
     "email": "user_a@scalableminds.com",
     "firstName": "user_A",
@@ -2139,7 +2136,6 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ex
   "settings": {
     "allowedModes": [
       "orthogonal",
-      "oblique",
       "flight",
     ],
     "branchPointsAllowed": true,
@@ -2203,6 +2199,7 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ta
       "typ": "Skeleton",
     },
   ],
+  "collaborationMode": "OwnerOnly",
   "contributors": [],
   "dataSetName": "2012-06-28_Cortex",
   "dataStore": {
@@ -2218,13 +2215,12 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ta
   "isLockedByOwner": false,
   "messages": [
     {
-      "success": "Task is finished",
+      "success": "Task is finished.",
     },
   ],
   "modified": "modified",
   "name": "",
   "organization": "Organization_X",
-  "othersMayEdit": false,
   "owner": {
     "email": "user_a@scalableminds.com",
     "firstName": "user_A",
@@ -2376,6 +2372,7 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ta
       "typ": "Skeleton",
     },
   ],
+  "collaborationMode": "OwnerOnly",
   "contributors": [],
   "dataSetName": "2012-06-28_Cortex",
   "dataStore": {
@@ -2391,13 +2388,12 @@ exports[`Annotation API (E2E) > finishAnnotation() and reOpenAnnotation() for ta
   "isLockedByOwner": false,
   "messages": [
     {
-      "success": "Annotation was reopened",
+      "success": "Annotation was reopened.",
     },
   ],
   "modified": "modified",
   "name": "",
   "organization": "Organization_X",
-  "othersMayEdit": false,
   "owner": {
     "email": "user_a@scalableminds.com",
     "firstName": "user_A",
@@ -2554,6 +2550,7 @@ exports[`Annotation API (E2E) > getAnnotationInformation() 1`] = `
       "typ": "Skeleton",
     },
   ],
+  "collaborationMode": "OwnerOnly",
   "contributors": [],
   "dataSetName": "2012-06-28_Cortex",
   "dataStore": {
@@ -2570,7 +2567,6 @@ exports[`Annotation API (E2E) > getAnnotationInformation() 1`] = `
   "modified": 0,
   "name": "",
   "organization": "Organization_X",
-  "othersMayEdit": false,
   "owner": {
     "email": "user_a@scalableminds.com",
     "firstName": "user_A",
@@ -2606,7 +2602,6 @@ exports[`Annotation API (E2E) > getAnnotationInformation() 1`] = `
   "settings": {
     "allowedModes": [
       "orthogonal",
-      "oblique",
       "flight",
     ],
     "branchPointsAllowed": true,
@@ -2675,6 +2670,7 @@ exports[`Annotation API (E2E) > getAnnotationInformation() for public annotation
       "typ": "Skeleton",
     },
   ],
+  "collaborationMode": "Exclusive",
   "contributors": [],
   "dataSetName": "2012-06-28_Cortex",
   "dataStore": {
@@ -2691,7 +2687,6 @@ exports[`Annotation API (E2E) > getAnnotationInformation() for public annotation
   "modified": 0,
   "name": "",
   "organization": "Organization_X",
-  "othersMayEdit": true,
   "owner": {
     "email": "user_a@scalableminds.com",
     "firstName": "user_A",
@@ -2727,7 +2722,6 @@ exports[`Annotation API (E2E) > getAnnotationInformation() for public annotation
   "settings": {
     "allowedModes": [
       "orthogonal",
-      "oblique",
       "flight",
     ],
     "branchPointsAllowed": true,
@@ -2797,6 +2791,7 @@ exports[`Annotation API (E2E) > getReadableAnnotations() 1`] = `
         "typ": "Skeleton",
       },
     ],
+    "collaborationMode": "Exclusive",
     "dataSetName": "2012-06-28_Cortex",
     "description": "",
     "id": "id",
@@ -2804,7 +2799,6 @@ exports[`Annotation API (E2E) > getReadableAnnotations() 1`] = `
     "modified": "modified",
     "name": "",
     "organization": "Organization_X",
-    "othersMayEdit": true,
     "owner": {
       "firstName": "user_A",
       "id": "id",
@@ -2835,6 +2829,7 @@ exports[`Annotation API (E2E) > getReadableAnnotations() 1`] = `
         "typ": "Skeleton",
       },
     ],
+    "collaborationMode": "OwnerOnly",
     "dataSetName": "2012-06-28_Cortex",
     "description": "",
     "id": "id",
@@ -2842,7 +2837,6 @@ exports[`Annotation API (E2E) > getReadableAnnotations() 1`] = `
     "modified": "modified",
     "name": "",
     "organization": "Organization_X",
-    "othersMayEdit": false,
     "owner": {
       "firstName": "user_A",
       "id": "id",
@@ -2873,6 +2867,7 @@ exports[`Annotation API (E2E) > getReadableAnnotations() 1`] = `
         "typ": "Skeleton",
       },
     ],
+    "collaborationMode": "OwnerOnly",
     "dataSetName": "2012-06-28_Cortex",
     "description": "",
     "id": "id",
@@ -2880,7 +2875,6 @@ exports[`Annotation API (E2E) > getReadableAnnotations() 1`] = `
     "modified": "modified",
     "name": "",
     "organization": "Organization_X",
-    "othersMayEdit": false,
     "owner": {
       "firstName": "user_A",
       "id": "id",

@@ -4,8 +4,9 @@ import AdminPage from "admin/admin_page";
 import { getUsersOrganizations } from "admin/api/organization";
 import { getShowTrainingDataLink, JobState } from "admin/job/job_list_view";
 import { getAiModels, updateAiModel } from "admin/rest_api";
-import { App, Button, Col, Flex, Input, Modal, Row, Select, Table, Typography } from "antd";
+import { App, Button, Col, Flex, Input, Modal, Row, Select, Space, Table, Typography } from "antd";
 import FormattedDate from "components/formatted_date";
+import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
@@ -80,6 +81,12 @@ export default function AiModelListView() {
               title: "Name",
               dataIndex: "name",
               key: "name",
+              render: (name: string, model: AiModel) => (
+                <Space orientation="vertical">
+                  {name}
+                  <FormattedId id={model.id} />
+                </Space>
+              ),
             },
             {
               title: "Created at",
@@ -143,11 +150,12 @@ const renderActionsForModel = (
   model: AiModel,
   onChangeSharedOrganizations: () => void,
 ) => {
-  const organizationSharingButton = model.isOwnedByUsersOrganization ? (
-    <LinkButton onClick={onChangeSharedOrganizations} icon={<TeamOutlined />}>
-      Manage Access
-    </LinkButton>
-  ) : null;
+  const organizationSharingButton =
+    model.isOwnedByUsersOrganization && !model.isPretrained ? (
+      <LinkButton onClick={onChangeSharedOrganizations} icon={<TeamOutlined />}>
+        Manage Access
+      </LinkButton>
+    ) : null;
   if (model.trainingJob == null) {
     return organizationSharingButton;
   }

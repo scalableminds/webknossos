@@ -1,4 +1,5 @@
 import Request from "libs/request";
+import { retryAsyncFunction } from "libs/utils";
 import type { APIMeshFileInfo } from "types/api_types";
 import type { Vector3, Vector4 } from "viewer/constants";
 import { doWithToken } from "./token";
@@ -24,6 +25,7 @@ export type MeshSegmentInfo = {
 type ListMeshChunksRequest = {
   meshFileName: string;
   segmentId: number;
+  annotationVersion: number | undefined | null;
 };
 
 export function getMeshFileChunksForSegment(
@@ -41,28 +43,32 @@ export function getMeshFileChunksForSegment(
   // editableMappingTracingId should be the tracing id, not the editable mapping id.
   // If this is set, it is assumed that the request is about an editable mapping.
   editableMappingTracingId: string | null | undefined,
+  annotationVersion: number | undefined | null,
 ): Promise<MeshSegmentInfo> {
-  return doWithToken((token) => {
-    const params = new URLSearchParams();
-    params.append("token", token);
-    if (targetMappingName != null) {
-      params.append("targetMappingName", targetMappingName);
-    }
-    if (editableMappingTracingId != null) {
-      params.append("editableMappingTracingId", editableMappingTracingId);
-    }
-    const payload: ListMeshChunksRequest = {
-      meshFileName: meshFile.name,
-      segmentId,
-    };
-    return Request.sendJSONReceiveJSON(
-      `${dataStoreUrl}/data/datasets/${datasetId}/layers/${layerName}/meshes/chunks?${params}`,
-      {
-        data: payload,
-        showErrorToast: false,
-      },
-    );
-  });
+  return retryAsyncFunction(() =>
+    doWithToken((token) => {
+      const params = new URLSearchParams();
+      params.append("token", token);
+      if (targetMappingName != null) {
+        params.append("targetMappingName", targetMappingName);
+      }
+      if (editableMappingTracingId != null) {
+        params.append("editableMappingTracingId", editableMappingTracingId);
+      }
+      const payload: ListMeshChunksRequest = {
+        meshFileName: meshFile.name,
+        segmentId,
+        annotationVersion,
+      };
+      return Request.sendJSONReceiveJSON(
+        `${dataStoreUrl}/data/datasets/${datasetId}/layers/${layerName}/meshes/chunks?${params}`,
+        {
+          data: payload,
+          showErrorToast: false,
+        },
+      );
+    }),
+  );
 }
 
 type MeshChunkDataRequest = {
@@ -71,7 +77,7 @@ type MeshChunkDataRequest = {
   segmentId: number | null; // Only relevant for neuroglancer precomputed meshes
 };
 
-type MeshChunkDataRequestList = {
+export type MeshChunkDataRequestList = {
   meshFileName: string;
   requests: MeshChunkDataRequest[];
 };
@@ -82,34 +88,36 @@ export function getMeshFileChunkData(
   layerName: string,
   batchDescription: MeshChunkDataRequestList,
 ): Promise<ArrayBuffer[]> {
-  return doWithToken(async (token) => {
-    const dracoDataChunks = await Request.sendJSONReceiveArraybuffer(
-      `${dataStoreUrl}/data/datasets/${datasetId}/layers/${layerName}/meshes/chunks/data?token=${token}`,
-      {
-        data: batchDescription,
-        useWebworkerForArrayBuffer: true,
-      },
-    );
-    const chunkCount = batchDescription.requests.length;
-    const jumpPositionsForChunks = [];
-    let cumsum = 0;
-    for (const req of batchDescription.requests) {
-      jumpPositionsForChunks.push(cumsum);
-      cumsum += req.byteSize;
-    }
-    jumpPositionsForChunks.push(cumsum);
-
-    const dataEntries = [];
-    for (let chunkIdx = 0; chunkIdx < chunkCount; chunkIdx++) {
-      // slice() creates a copy of the data, but working with TypedArray Views would cause
-      // issues when transferring the data to a webworker.
-      const dracoData = dracoDataChunks.slice(
-        jumpPositionsForChunks[chunkIdx],
-        jumpPositionsForChunks[chunkIdx + 1],
+  return retryAsyncFunction(() =>
+    doWithToken(async (token) => {
+      const dracoDataChunks = await Request.sendJSONReceiveArraybuffer(
+        `${dataStoreUrl}/data/datasets/${datasetId}/layers/${layerName}/meshes/chunks/data?token=${token}`,
+        {
+          data: batchDescription,
+          useWebworkerForArrayBuffer: true,
+        },
       );
-      dataEntries.push(dracoData);
-    }
+      const chunkCount = batchDescription.requests.length;
+      const jumpPositionsForChunks = [];
+      let cumsum = 0;
+      for (const req of batchDescription.requests) {
+        jumpPositionsForChunks.push(cumsum);
+        cumsum += req.byteSize;
+      }
+      jumpPositionsForChunks.push(cumsum);
 
-    return dataEntries;
-  });
+      const dataEntries = [];
+      for (let chunkIdx = 0; chunkIdx < chunkCount; chunkIdx++) {
+        // slice() creates a copy of the data, but working with TypedArray Views would cause
+        // issues when transferring the data to a webworker.
+        const dracoData = dracoDataChunks.slice(
+          jumpPositionsForChunks[chunkIdx],
+          jumpPositionsForChunks[chunkIdx + 1],
+        );
+        dataEntries.push(dracoData);
+      }
+
+      return dataEntries;
+    }),
+  );
 }

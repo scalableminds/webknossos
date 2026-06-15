@@ -1,3 +1,4 @@
+import { cloneDeep } from "lodash-es";
 import type { Edge } from "viewer/model/types/tree_types";
 import { describe, expect, it } from "vitest";
 import EdgeCollection, { diffEdgeCollections } from "../../viewer/model/edge_collection";
@@ -61,7 +62,7 @@ describe("EdgeCollection", () => {
     };
     const edgeCollectionA = new EdgeCollection().addEdges([edgeC, edgeD]);
     const edgeCollectionB = new EdgeCollection().addEdges([edgeA, edgeB, edgeC]);
-    const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB);
+    const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB, false);
     expect(onlyA).toEqual([edgeD]);
     expect(onlyB).toEqual([edgeA, edgeB]);
   });
@@ -85,7 +86,7 @@ describe("EdgeCollection", () => {
     };
     const edgeCollectionA = new EdgeCollection().addEdges([edgeA, edgeB, edgeC, edgeD]);
     const edgeCollectionB = new EdgeCollection().addEdges([edgeA, edgeB, edgeC, edgeD]);
-    const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB);
+    const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB, false);
     expect(onlyA).toEqual([]);
     expect(onlyB).toEqual([]);
   });
@@ -143,7 +144,7 @@ describe("EdgeCollection", () => {
     ];
     const edgeCollectionA = new EdgeCollection(5).addEdges(edges);
     const edgeCollectionB = new EdgeCollection(5).addEdges(edges);
-    const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB);
+    const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB, false);
     expect(onlyA).toEqual([]);
     expect(onlyB).toEqual([]);
   });
@@ -165,10 +166,6 @@ describe("EdgeCollection", () => {
       {
         source: 3,
         target: 4,
-      },
-      {
-        source: 0,
-        target: 1,
       },
       {
         source: 1,
@@ -199,11 +196,11 @@ describe("EdgeCollection", () => {
         target: 11,
       },
     ].sort(edgeSort);
-    const edgeCollectionA = new EdgeCollection(5).addEdges(edges.slice(0, 8));
+    const edgeCollectionA = new EdgeCollection(5).addEdges(edges.slice(0, 7));
     const edgeCollectionB = new EdgeCollection(5).addEdges(edges.slice(1));
-    const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB);
+    const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB, false);
     expect(onlyA.sort(edgeSort)).toEqual([edges[0]]);
-    expect(onlyB.sort(edgeSort)).toEqual(edges.slice(8));
+    expect(onlyB.sort(edgeSort)).toEqual(edges.slice(7));
   });
 
   it("addEdge should not mutate the original edge collection", () => {
@@ -225,7 +222,7 @@ describe("EdgeCollection", () => {
     };
     const edgeCollectionA = new EdgeCollection().addEdges([edgeA, edgeB, edgeC]);
     const edgeCollectionB = edgeCollectionA.addEdge(edgeD);
-    const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB);
+    const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB, false);
     expect(onlyA).toEqual([]);
     expect(onlyB).toEqual([edgeD]);
   });
@@ -249,7 +246,145 @@ describe("EdgeCollection", () => {
     };
     const edgeCollectionA = new EdgeCollection().addEdges([edgeA, edgeB, edgeC]);
     const edgeCollectionB = edgeCollectionA.addEdge(edgeD, true);
-    const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB);
+    const { onlyA, onlyB } = diffEdgeCollections(edgeCollectionA, edgeCollectionB, false);
+    expect(onlyA).toEqual([]);
+    expect(onlyB).toEqual([]);
+  });
+
+  it("deepDiffing of property-wise equal collections should result in no diff", () => {
+    const edgeA = {
+      source: 0,
+      target: 1,
+    };
+    const edgeB = {
+      source: 2,
+      target: 1,
+    };
+    const edgeC = {
+      source: 3,
+      target: 2,
+    };
+    const edgeD = {
+      source: 3,
+      target: 4,
+    };
+    const edgeCollectionA = new EdgeCollection().addEdges([edgeA, edgeB, edgeC, edgeD]);
+    // Use clone deep to get different edge object instances.
+    const edgeCollectionB = new EdgeCollection().addEdges(cloneDeep([edgeA, edgeB, edgeC, edgeD]));
+    const shallowDiff = diffEdgeCollections(edgeCollectionA, edgeCollectionB, false);
+    const deepDiff = diffEdgeCollections(edgeCollectionA, edgeCollectionB, true);
+    expect(shallowDiff.onlyA.length).toEqual(4);
+    expect(shallowDiff.onlyB.length).toEqual(4);
+    expect(deepDiff.onlyA).toEqual([]);
+    expect(deepDiff.onlyB).toEqual([]);
+  });
+
+  it("deepDiffing should find diff in collection A", () => {
+    const edgeA = {
+      source: 0,
+      target: 1,
+    };
+    const edgeB = {
+      source: 2,
+      target: 1,
+    };
+    const edgeC = {
+      source: 3,
+      target: 2,
+    };
+    const edgeD = {
+      source: 3,
+      target: 4,
+    };
+    const edgeCollectionA = new EdgeCollection().addEdges([edgeA, edgeB, edgeC, edgeD]);
+    // Use clone deep to get different edge object instances.
+    const edgeCollectionB = new EdgeCollection().addEdges(cloneDeep([edgeA, edgeB]));
+    const deepDiff = diffEdgeCollections(edgeCollectionA, edgeCollectionB, true);
+    expect(deepDiff.onlyA).toEqual([edgeC, edgeD]);
+    expect(deepDiff.onlyB).toEqual([]);
+  });
+
+  it("deepDiffing should find diff in collection B", () => {
+    const edgeA = {
+      source: 0,
+      target: 1,
+    };
+    const edgeB = {
+      source: 2,
+      target: 1,
+    };
+    const edgeC = {
+      source: 3,
+      target: 2,
+    };
+    const edgeD = {
+      source: 3,
+      target: 4,
+    };
+    const edgeCollectionA = new EdgeCollection().addEdges([edgeA]);
+    // Use clone deep to get different edge object instances.
+    const edgeCollectionB = new EdgeCollection().addEdges(cloneDeep([edgeA, edgeB, edgeC, edgeD]));
+    const deepDiff = diffEdgeCollections(edgeCollectionA, edgeCollectionB, true);
+    expect(deepDiff.onlyA).toEqual([]);
+    expect(deepDiff.onlyB).toEqual([edgeB, edgeC, edgeD]);
+  });
+
+  it("addEdge should not add a duplicate edge", () => {
+    const edgeA = {
+      source: 0,
+      target: 1,
+    };
+    const duplicateEdgeA = {
+      source: 0,
+      target: 1,
+    };
+    const edgeCollection = new EdgeCollection().addEdge(edgeA).addEdge(duplicateEdgeA);
+    expect(edgeCollection.size()).toBe(1);
+    expect(edgeCollection.outMap.getOrThrow(0)).toEqual([edgeA]);
+    expect(edgeCollection.inMap.getOrThrow(1)).toEqual([edgeA]);
+    expect(edgeCollection.getEdgesForNode(0)).toEqual([edgeA]);
+    expect(edgeCollection.getEdgesForNode(1)).toEqual([edgeA]);
+  });
+
+  it("addEdges should not add duplicate edges", () => {
+    const edgeA = {
+      source: 0,
+      target: 1,
+    };
+    const edgeB = {
+      source: 2,
+      target: 1,
+    };
+    const duplicateEdgeA = {
+      source: 0,
+      target: 1,
+    };
+    const edgeCollection = new EdgeCollection()
+      .addEdges([edgeA, edgeB, duplicateEdgeA])
+      .addEdges([edgeA, edgeB, duplicateEdgeA]);
+    expect(edgeCollection.size()).toBe(2);
+    expect(edgeCollection.outMap.getOrThrow(0)).toEqual([edgeA]);
+    expect(edgeCollection.outMap.getOrThrow(2)).toEqual([edgeB]);
+    expect(edgeCollection.inMap.getOrThrow(1)).toEqual([edgeA, edgeB]);
+    expect(edgeCollection.getEdgesForNode(1)).toEqual([edgeA, edgeB]);
+  });
+
+  it("a deduplicated collection should not diff against an equivalent collection without duplicates", () => {
+    const edgeA = {
+      source: 0,
+      target: 1,
+    };
+    const edgeB = {
+      source: 2,
+      target: 1,
+    };
+    const duplicateEdgeA = {
+      source: 0,
+      target: 1,
+    };
+    const withDuplicates = new EdgeCollection().addEdges([edgeA, edgeB, duplicateEdgeA]);
+    const withoutDuplicates = new EdgeCollection().addEdges([edgeA, edgeB]);
+    const { onlyA, onlyB } = diffEdgeCollections(withDuplicates, withoutDuplicates, false);
     expect(onlyA).toEqual([]);
     expect(onlyB).toEqual([]);
   });

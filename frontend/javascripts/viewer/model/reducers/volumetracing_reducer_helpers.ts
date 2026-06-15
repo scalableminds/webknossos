@@ -32,7 +32,10 @@ import type {
   WebknossosState,
 } from "viewer/store";
 import {
+  createGroupHelper,
+  findGroup,
   findParentIdForGroupId,
+  MISSING_GROUP_ID,
   mapGroups,
 } from "viewer/view/right_border_tabs/trees_tab/tree_hierarchy_view_helpers";
 import {
@@ -41,6 +44,7 @@ import {
   isInSupportedValueRangeForLayer,
 } from "../accessors/dataset_accessor";
 import { mapGroupsToGenerator } from "../accessors/skeletontracing_accessor";
+import type { SetIdReservationsAction } from "../actions/actions";
 import type {
   FinishMappingInitializationAction,
   SetMappingAction,
@@ -66,7 +70,8 @@ export type VolumeTracingReducerAction =
   | SetMappingAction
   | FinishMappingInitializationAction
   | SetMappingEnabledAction
-  | SetMappingNameAction;
+  | SetMappingNameAction
+  | SetIdReservationsAction;
 
 export function updateVolumeTracing(
   state: WebknossosState,
@@ -219,12 +224,16 @@ export function setMappingNameReducer(
   });
 }
 
+export function getGroupIdSet(segmentGroups: Array<SegmentGroup>) {
+  return new Set(mapGroupsToGenerator(segmentGroups, (group) => group.groupId));
+}
+
 function removeMissingGroupsFromSegments(
   volumeTracing: VolumeTracing,
   segmentGroups: Array<SegmentGroup>,
 ): SegmentMap {
   // Change the groupId of segments for groups that no longer exist
-  const groupIds = new Set(mapGroupsToGenerator(segmentGroups, (group) => group.groupId));
+  const groupIds = getGroupIdSet(segmentGroups);
   const newSegments = volumeTracing.segments.clone();
   let hasChanged = false;
   for (const [segmentId, segment] of volumeTracing.segments.entries()) {
@@ -313,6 +322,36 @@ export function setSegmentGroups(
 
   // Don't update groups for non-tracings
   return state;
+}
+
+export function addSegmentGroupReducer(
+  state: WebknossosState,
+  layerName: string,
+  id: number,
+  name: string | null,
+  parentGroupId: number | null,
+) {
+  const updateInfo = getSegmentUpdateInfo(state, layerName);
+
+  if (updateInfo.type !== "UPDATE_VOLUME_TRACING") {
+    return state;
+  }
+
+  const { segmentGroups } = updateInfo.volumeTracing;
+  // Assert that the id is not already used by an existing group.
+  if (!findGroup(segmentGroups, id) == null) {
+    throw new Error(`Requested creation of group with id ${id} which is already in use.`);
+  }
+
+  const newSegmentGroups = createGroupHelper(
+    segmentGroups,
+    name,
+    id,
+    parentGroupId ?? MISSING_GROUP_ID,
+  );
+  return updateVolumeTracing(state, updateInfo.volumeTracing.tracingId, {
+    segmentGroups: newSegmentGroups,
+  });
 }
 
 export function updateSegments(
@@ -440,13 +479,16 @@ export function handleMergeSegments(state: WebknossosState, action: MergeSegment
   }
   const { volumeTracing } = updateInfo;
   const { segments } = volumeTracing;
+  const isSameAgglomerate = action.sourceAgglomerateId === action.targetAgglomerateId;
   const sourceSegment = segments.getNullable(action.sourceAgglomerateId);
   const targetSegment = segments.getNullable(action.targetAgglomerateId);
 
-  let newState = handleRemoveSegment(
-    state,
-    removeSegmentAction(action.targetAgglomerateId, action.layerName),
-  );
+  // If the agglomerates are equal, do not remove the entry as this would empty the whole segment information.
+  // This can happen in a concurrent editing scenario of the same segment.
+  // Usually the later users client would notice a duplicate merge operation, be we do not want to rely on this here.
+  let newState = isSameAgglomerate
+    ? state
+    : handleRemoveSegment(state, removeSegmentAction(action.targetAgglomerateId, action.layerName));
   const entryIndex = (volumeTracing.segmentJournal.at(-1)?.entryIndex ?? -1) + 1;
 
   newState = updateVolumeTracing(newState, volumeTracing.tracingId, {
@@ -493,7 +535,7 @@ export function getUpdatedSourcePropsAfterMerge(
     return {};
   }
   const props: Writeable<Partial<Segment>> = {};
-  // Handle `name` by concatening names
+  // Handle `name` by concatenating names
   if (targetSegment.name != null && targetSegment.name !== "") {
     // The new segments name should always start with the original
     // source segment's name. Therefore, we use getSegmentName

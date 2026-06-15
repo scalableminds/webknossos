@@ -1,8 +1,7 @@
 import { CodeSandboxOutlined, FileAddOutlined } from "@ant-design/icons";
 import { withAuthentication } from "admin/auth/authentication_modal";
-import { createExplorational, duplicateAnnotation } from "admin/rest_api";
-import { Button, Space, Tooltip } from "antd";
-import { AsyncButton, type AsyncButtonProps } from "components/async_clickables";
+import { createExplorational } from "admin/rest_api";
+import { Button, type ButtonProps, Space, Tooltip } from "antd";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { location } from "libs/window";
@@ -11,18 +10,18 @@ import { useDispatch } from "react-redux";
 import { type APIUser, TracingTypeEnum } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
 import UrlManager from "viewer/controller/url_manager";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getTracingType } from "viewer/model/accessors/tracing_accessor";
 import { setSkeletonTracingAction } from "viewer/model/actions/skeletontracing_actions";
+import { setDuplicateAnnotationModalVisibilityAction } from "viewer/model/actions/ui_actions";
 import { api, Model } from "viewer/singletons";
 import Store from "viewer/store";
 import SaveButton from "viewer/view/action_bar/save_button";
 import ButtonComponent from "viewer/view/components/button_component";
 import UndoRedoActions from "./undo_redo_actions";
 
-const AsyncButtonWithAuthentication = withAuthentication<AsyncButtonProps, typeof AsyncButton>(
-  AsyncButton,
-);
+const ButtonWithAuthentication = withAuthentication<ButtonProps, typeof Button>(Button);
 
 function ReadOnlyActions({
   activeUser,
@@ -31,37 +30,22 @@ function ReadOnlyActions({
   activeUser: APIUser | null | undefined;
   copyAnnotationText: string;
 }) {
-  const annotationId = useWkSelector((state) => state.annotation.annotationId);
-  const annotationType = useWkSelector((state) => state.annotation.annotationType);
-
-  const handleCopyToAccount = useCallback(async () => {
-    // duplicates the annotation in the current user account
-    const newAnnotation = await duplicateAnnotation(annotationId, annotationType);
-    location.href = `/annotations/${newAnnotation.id}`;
-  }, [annotationId, annotationType]);
-
+  const dispatch = useDispatch();
   return (
     <Space.Compact>
-      <ButtonComponent
-        key="read-only-button"
-        danger
-        disabled
-        style={{
-          backgroundColor: "var(--ant-color-warning)",
-        }}
-      >
+      <ButtonComponent key="read-only-button" className="read-only-button" danger disabled>
         Read only
       </ButtonComponent>
-      <AsyncButtonWithAuthentication
+      <ButtonWithAuthentication
         activeUser={activeUser}
         authenticationMessage="Please register or login to copy the tracing to your account."
         key="copy-button"
         icon={<FileAddOutlined />}
-        onClick={handleCopyToAccount}
+        onClick={() => dispatch(setDuplicateAnnotationModalVisibilityAction(true))}
         title={copyAnnotationText}
       >
         <span className="hide-on-small-screen">{copyAnnotationText}</span>
-      </AsyncButtonWithAuthentication>
+      </ButtonWithAuthentication>
     </Space.Compact>
   );
 }
@@ -119,7 +103,7 @@ function SandboxActions({
           <span className="hide-on-small-screen">Sandbox</span>
         </Button>
       </Tooltip>
-      <AsyncButtonWithAuthentication
+      <ButtonWithAuthentication
         activeUser={activeUser}
         authenticationMessage="Please register or login to copy the sandbox tracing to your account."
         key="copy-sandbox-button"
@@ -128,7 +112,7 @@ function SandboxActions({
         title={copyAnnotationText}
       >
         <span className="hide-on-small-screen">Copy To My Account</span>
-      </AsyncButtonWithAuthentication>
+      </ButtonWithAuthentication>
     </Space.Compact>
   );
 }
@@ -136,9 +120,7 @@ function SandboxActions({
 function SaveActions() {
   const restrictions = useWkSelector((state) => state.annotation.restrictions);
   const annotationOwner = useWkSelector((state) => state.annotation.owner);
-  const isUpdatingCurrentlyAllowed = useWkSelector(
-    (state) => state.annotation.isUpdatingCurrentlyAllowed,
-  );
+  const isUpdatingCurrentlyAllowed = useWkSelector(mayEditAnnotation);
   const activeUser = useWkSelector((state) => state.activeUser);
   const hasTracing = useWkSelector(
     (state) => state.annotation.skeleton != null || state.annotation.volumes.length > 0,

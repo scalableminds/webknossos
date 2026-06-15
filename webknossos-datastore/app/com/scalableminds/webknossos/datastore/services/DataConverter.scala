@@ -9,23 +9,24 @@ import scala.reflect.ClassTag
 
 trait DataConverter extends FoxImplicits {
 
-  def putByte(buf: ByteBuffer, lon: Long): ByteBuffer = buf put lon.toByte
-  def putShort(buf: ByteBuffer, lon: Long): ByteBuffer = buf putShort lon.toShort
-  def putInt(buf: ByteBuffer, lon: Long): ByteBuffer = buf putInt lon.toInt
-  def putLong(buf: ByteBuffer, lon: Long): ByteBuffer = buf putLong lon
+  def putByte(buf: ByteBuffer, lon: Long): ByteBuffer = buf.put(lon.toByte)
+  def putShort(buf: ByteBuffer, lon: Long): ByteBuffer = buf.putShort(lon.toShort)
+  def putInt(buf: ByteBuffer, lon: Long): ByteBuffer = buf.putInt(lon.toInt)
+  def putLong(buf: ByteBuffer, lon: Long): ByteBuffer = buf.putLong(lon)
 
   def uByteToLong(uByte: Byte): Long = uByte & 0xffL
   def uShortToLong(uShort: Short): Long = uShort & 0xffffL
   def uIntToLong(uInt: Int): Long = uInt & 0xffffffffL
 
-  def convertData(data: Array[Byte],
-                  elementClass: ElementClass.Value): Array[_ >: Byte with Short with Int with Long with Float] =
+  def convertData(data: Array[Byte], elementClass: ElementClass.Value): Array[? >: Byte & Short & Int & Long & Float] =
     elementClass match {
       case ElementClass.uint8 | ElementClass.int8 =>
         convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
       case ElementClass.uint16 | ElementClass.int16 =>
-        convertDataImpl[Short, ShortBuffer](data,
-                                            DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_), _.toShort))
+        convertDataImpl[Short, ShortBuffer](
+          data,
+          DataTypeFunctors[Short, ShortBuffer](_.asShortBuffer, _.get(_), _.toShort)
+        )
       case ElementClass.uint24 =>
         convertDataImpl[Byte, ByteBuffer](data, DataTypeFunctors[Byte, ByteBuffer](identity, _.get(_), _.toByte))
       case ElementClass.uint32 | ElementClass.int32 =>
@@ -35,11 +36,14 @@ trait DataConverter extends FoxImplicits {
       case ElementClass.float =>
         convertDataImpl[Float, FloatBuffer](
           data,
-          DataTypeFunctors[Float, FloatBuffer](_.asFloatBuffer(), _.get(_), _.toFloat))
+          DataTypeFunctors[Float, FloatBuffer](_.asFloatBuffer(), _.get(_), _.toFloat)
+        )
     }
 
-  private def convertDataImpl[T: ClassTag, B <: Buffer](data: Array[Byte],
-                                                        dataTypeFunctor: DataTypeFunctors[T, B]): Array[T] = {
+  private def convertDataImpl[T: ClassTag, B <: Buffer](
+      data: Array[Byte],
+      dataTypeFunctor: DataTypeFunctors[T, B]
+  ): Array[T] = {
     val srcBuffer = dataTypeFunctor.getTypedBufferFn(ByteBuffer.wrap(data).order(ByteOrder.LITTLE_ENDIAN))
     srcBuffer.rewind()
     val dstArray = Array.ofDim[T](srcBuffer.remaining())
@@ -47,8 +51,10 @@ trait DataConverter extends FoxImplicits {
     dstArray
   }
 
-  def filterZeroes(data: Array[_ >: Byte with Short with Int with Long with Float],
-                   skip: Boolean = false): Array[_ >: Byte with Short with Int with Long with Float] =
+  def filterZeroes(
+      data: Array[? >: Byte & Short & Int & Long & Float],
+      skip: Boolean = false
+  ): Array[? >: Byte & Short & Int & Long & Float] =
     if (skip) data
     else {
       val zeroByte = 0.toByte
@@ -60,12 +66,11 @@ trait DataConverter extends FoxImplicits {
         case d: Array[Short] => d.filter(_ != zeroShort)
         case d: Array[Int]   => d.filter(_ != zeroInt)
         case d: Array[Long]  => d.filter(_ != zeroLong)
-        case d: Array[Float] => d.filter(!_.isNaN).filter(_ != 0f)
+        case d: Array[Float] => d.filter(!_.isNaN).filter(v => math.abs(v) >= 1e-7f)
       }
     }
 
-  def toBytes(typed: Array[_ >: Byte with Short with Int with Long with Float],
-              elementClass: ElementClass.Value): Array[Byte] = {
+  def toBytes(typed: Array[? >: Byte & Short & Int & Long & Float], elementClass: ElementClass.Value): Array[Byte] = {
     val numBytes = ElementClass.bytesPerElement(elementClass)
     val byteBuffer = ByteBuffer.allocate(numBytes * typed.length).order(ByteOrder.LITTLE_ENDIAN)
     typed match {

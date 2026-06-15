@@ -24,6 +24,7 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
     }
     val baseDirectory: Path = Path.of(get[String]("datastore.baseDirectory")).toAbsolutePath
     val localDirectoryWhitelist: List[String] = getList[String]("datastore.localDirectoryWhitelist")
+    val writeVirtualDatasetsMirror: Boolean = get[Boolean]("datastore.writeVirtualDatasetsMirror")
     object WatchFileSystem {
       val enabled: Boolean = get[Boolean]("datastore.watchFileSystem.enabled")
       val interval: FiniteDuration = get[FiniteDuration]("datastore.watchFileSystem.interval")
@@ -42,7 +43,7 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
         val blockSize: Int = get[Int]("datastore.cache.agglomerateFile.blockSize")
         val cumsumMaxReaderRange: Long = get[Long]("datastore.cache.agglomerateFile.cumsumMaxReaderRange")
       }
-      val children = List(Mapping, ImageArrayChunks, AgglomerateFile)
+      val children: List[Object] = List(Mapping, ImageArrayChunks, AgglomerateFile)
     }
     object AdHocMesh {
       val timeout: FiniteDuration = get[FiniteDuration]("datastore.adHocMesh.timeout")
@@ -53,8 +54,8 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val port: Int = get[Int]("datastore.redis.port")
     }
 
-    object AgglomerateSkeleton {
-      val maxEdges: Int = get[Int]("datastore.agglomerateSkeleton.maxEdges")
+    object AgglomerateTree {
+      val maxEdges: Int = get[Int]("datastore.agglomerateTree.maxEdges")
     }
     object AgglomerateGraph {
       val maxEdges: Int = get[Int]("datastore.agglomerateGraph.maxEdges")
@@ -67,12 +68,12 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
       val objectKeyPrefix: String = get[String]("datastore.s3Upload.objectKeyPrefix")
       val credentialName: String = get[String]("datastore.s3Upload.credentialName")
     }
-    val children = List(WebKnossos,
+    val children: List[Object] = List(WebKnossos,
                         WatchFileSystem,
                         Cache,
                         AdHocMesh,
                         Redis,
-                        AgglomerateSkeleton,
+                        AgglomerateTree,
                         AgglomerateGraph,
                         DataVaults,
                         S3Upload)
@@ -83,5 +84,5 @@ class DataStoreConfig @Inject()(configuration: Configuration) extends ConfigRead
     val verboseLoggingEnabled: Boolean = get[Boolean]("slackNotifications.verboseLoggingEnabled")
   }
 
-  val children = List(Http, Datastore, SlackNotifications)
+  val children: List[Object] = List(Http, Datastore, SlackNotifications)
 }

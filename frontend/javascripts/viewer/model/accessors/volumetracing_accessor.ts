@@ -99,6 +99,12 @@ export function getVolumeTracingByLayerName(
   return volumeTracing;
 }
 
+export function getVolumeTracingByNameOrActive(volumeLayerName: string | undefined) {
+  return volumeLayerName
+    ? getVolumeTracingByLayerName(Store.getState().annotation, volumeLayerName)
+    : getActiveSegmentationTracing(Store.getState());
+}
+
 export function hasVolumeTracings(annotation: StoreAnnotation): boolean {
   return annotation.volumes.length > 0;
 }
@@ -739,6 +745,34 @@ function getMeshOpacity(
   return meshData[segmentId].opacity;
 }
 
+export function isMeshLoaded(
+  state: WebknossosState,
+  segmentId: number,
+  layerName: string,
+): boolean {
+  const additionalCoords = state.flycam.additionalCoordinates;
+  const additionalCoordinateKey = getAdditionalCoordinatesAsString(additionalCoords);
+  const localSegmentationData = state.localSegmentationData[layerName];
+  if (localSegmentationData?.meshes == null) return false;
+  const meshData = localSegmentationData.meshes[additionalCoordinateKey];
+  if (meshData == null || meshData[segmentId] == null) return false;
+  return meshData[segmentId] != null;
+}
+
+export function getAllLoadedMeshes(state: WebknossosState, layerName: string): Set<number> {
+  const loadedMeshIds = new Set<number>();
+  const additionalCoords = state.flycam.additionalCoordinates;
+  const additionalCoordinateKey = getAdditionalCoordinatesAsString(additionalCoords);
+  const localSegmentationData = state.localSegmentationData[layerName];
+  if (localSegmentationData?.meshes == null) return loadedMeshIds;
+  const meshData = localSegmentationData.meshes[additionalCoordinateKey];
+  if (meshData == null) return loadedMeshIds;
+  Object.values(meshData).forEach((meshInfo) => {
+    loadedMeshIds.add(meshInfo.segmentId);
+  });
+  return loadedMeshIds;
+}
+
 // Output is in [0,1] for R, G, B, and A
 export function getSegmentColorAsRGBA(
   state: WebknossosState,
@@ -778,23 +812,23 @@ export function getSegmentColorAsHSLA(
 const AGGLOMERATE_STATES = {
   NO_SEGMENTATION: {
     value: false,
-    reason: "A segmentation layer needs to be visible to load an agglomerate skeleton.",
+    reason: "A segmentation layer needs to be visible to load an agglomerate tree.",
   },
   NO_MAPPING: {
     value: false,
-    reason: messages["tracing.agglomerate_skeleton.no_mapping"],
+    reason: messages["tracing.agglomerate_tree.no_mapping"],
   },
   NO_AGGLOMERATE_FILE_ACTIVE: {
     value: false,
-    reason: messages["tracing.agglomerate_skeleton.no_agglomerate_file_active"],
+    reason: messages["tracing.agglomerate_tree.no_agglomerate_file_active"],
   },
   NO_AGGLOMERATE_FILE_AVAILABLE: {
     value: false,
-    reason: messages["tracing.agglomerate_skeleton.no_agglomerate_file_available"],
+    reason: messages["tracing.agglomerate_tree.no_agglomerate_file_available"],
   },
   NO_AGGLOMERATE_FILES_LOADED_YET: {
     value: false,
-    reason: messages["tracing.agglomerate_skeleton.no_agglomerate_files_loaded_yet"],
+    reason: messages["tracing.agglomerate_tree.no_agglomerate_files_loaded_yet"],
   },
   YES: {
     value: true,

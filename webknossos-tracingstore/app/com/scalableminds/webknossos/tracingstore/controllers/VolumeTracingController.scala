@@ -1,6 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
 import com.google.inject.Inject
+import com.scalableminds.util.Msg
 import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
@@ -32,7 +33,7 @@ import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotifi
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume._
 import com.scalableminds.webknossos.tracingstore.tracings.{
-  KeyValueStoreImplicits,
+  KeyValueStoreConversions,
   TemporaryMergedVolumeStatsStore,
   TracingSelector
 }
@@ -42,7 +43,6 @@ import com.scalableminds.webknossos.tracingstore.{
   TracingStoreAccessTokenService,
   TracingStoreConfig
 }
-import play.api.i18n.Messages
 import play.api.libs.Files.TemporaryFile
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, MultipartFormData, PlayBodyParsers}
@@ -70,7 +70,7 @@ class VolumeTracingController @Inject()(
     extends Controller
     with ProtoGeometryImplicits
     with MissingBucketHeaders
-    with KeyValueStoreImplicits {
+    with KeyValueStoreConversions {
 
   implicit val tracingsCompanion: VolumeTracings.type = VolumeTracings
 
@@ -101,7 +101,7 @@ class VolumeTracingController @Inject()(
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readAnnotation(annotationId)) {
           for {
-            tracing <- annotationService.findVolume(annotationId, tracingId, version) ?~> Messages("tracing.notFound")
+            tracing <- annotationService.findVolume(annotationId, tracingId, version) ?~> Msg.Annotation.notFound
           } yield Ok(tracing.toByteArray).as(protobufMimeType)
         }
       }
@@ -129,9 +129,9 @@ class VolumeTracingController @Inject()(
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
             for {
-              initialData <- request.body.asRaw.map(_.asFile).toFox ?~> Messages("zipFile.notFound")
+              initialData <- request.body.asRaw.map(_.asFile).toFox ?~> Msg.Nml.zipFileNotFound
               // The annotation object may not yet exist here. Caller is responsible to save that too.
-              tracing <- annotationService.findVolumeRaw(tracingId) ?~> Messages("tracing.notFound")
+              tracing <- annotationService.findVolumeRaw(tracingId) ?~> Msg.Annotation.notFound
               magRestrictions = MagRestrictions(minMag, maxMag)
               mags <- volumeTracingService.initializeWithData(annotationId,
                                                               tracingId,
@@ -183,9 +183,9 @@ class VolumeTracingController @Inject()(
         logTime(slackNotificationService.noticeSlowRequest) {
           accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
             for {
-              initialData <- request.body.asRaw.map(_.asFile).toFox ?~> Messages("zipFile.notFound")
+              initialData <- request.body.asRaw.map(_.asFile).toFox ?~> Msg.Nml.zipFileNotFound
               // The annotation object may not yet exist here. Caller is responsible to save that too.
-              tracing <- annotationService.findVolumeRaw(tracingId) ?~> Messages("tracing.notFound")
+              tracing <- annotationService.findVolumeRaw(tracingId) ?~> Msg.Annotation.notFound
               mergedVolumeStats <- volumeTracingService.initializeWithDataMultiple(annotationId,
                                                                                    tracingId,
                                                                                    tracing.value,
@@ -210,7 +210,7 @@ class VolumeTracingController @Inject()(
           for {
             mergedVolumeStats <- temporaryMergedVolumeStatsStore
               .pop(newTracingId)
-              .toFox ?~> "mergedVolumeStats.notFound"
+              .toFox ?~> Msg.Annotation.Volume.mergedVolumeStatsNotFound
             mergedTracing <- volumeTracingService
               .merge(tracingsFlat, mergedVolumeStats, None, newVersion = 0L, additionalBoundingBoxes = Seq.empty)
               .toFox
@@ -234,8 +234,7 @@ class VolumeTracingController @Inject()(
             _ <- Fox.fromBool(if (version.isDefined) annotationId.isDefined else true) ?~> "Volume data request with version needs passed annotationId"
             annotationIdFilled <- Fox.fillOption(annotationId)(
               remoteWebknossosClient.getAnnotationIdForTracing(tracingId))
-            tracing <- annotationService.findVolume(annotationIdFilled, tracingId, version) ?~> Messages(
-              "tracing.notFound")
+            tracing <- annotationService.findVolume(annotationIdFilled, tracingId, version) ?~> Msg.Annotation.notFound
             volumeDataZipFormatParsed <- VolumeDataZipFormat.fromString(volumeDataZipFormat).toFox
             voxelSizeFactorParsedOpt <- Fox.runOptional(voxelSizeFactor)(f => Vec3Double.fromUriLiteral(f).toFox)
             voxelSizeUnitParsedOpt <- Fox.runOptional(voxelSizeUnit)(u => LengthUnit.fromString(u).toFox)
@@ -261,13 +260,13 @@ class VolumeTracingController @Inject()(
             requestedVersion <- SequenceUtils
               .findUniqueElement(request.body.map(_.version))
               .toFox ?~> "All data requests must request the same volume version"
-            tracing <- annotationService.findVolume(annotationId, tracingId, requestedVersion) ?~> Messages(
-              "tracing.notFound")
+            tracing <- annotationService.findVolume(annotationId, tracingId, requestedVersion) ?~> Msg.Annotation
+              .notFound
             (data, indices) <- if (tracing.getHasEditableMapping) {
               val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
               editableMappingService.volumeData(mappingLayer, request.body)
             } else volumeTracingService.data(annotationId, tracingId, tracing, request.body)
-          } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+          } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
         }
       }
     }
@@ -278,7 +277,7 @@ class VolumeTracingController @Inject()(
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.writeTracing(tracingId)) {
           for {
             annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-            tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound")
+            tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound
             currentVersion <- request.body.dataParts("currentVersion").headOption.flatMap(_.toIntOpt).toFox
             zipFile <- request.body.files.headOption.map(f => new File(f.ref.path.toString)).toFox
             largestSegmentId <- volumeTracingService.importVolumeData(annotationId,
@@ -303,7 +302,7 @@ class VolumeTracingController @Inject()(
           // consecutive 3D points (i.e., nine floats) form a triangle.
           // There are no shared vertices between triangles.
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-          tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Messages("tracing.notFound")
+          tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound
           (vertices: Array[Float], neighbors: List[Int]) <- if (tracing.getHasEditableMapping) {
             val editableMappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
             editableMappingService.createAdHocMesh(editableMappingLayer, request.body)
@@ -312,7 +311,7 @@ class VolumeTracingController @Inject()(
           // We need four bytes for each float
           val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
           responseBuffer.asFloatBuffer().put(vertices)
-          Ok(responseBuffer.array()).withHeaders(getNeighborIndices(neighbors): _*)
+          Ok(responseBuffer.array()).withHeaders(getNeighborIndices(neighbors)*)
         }
       }
     }
@@ -322,7 +321,7 @@ class VolumeTracingController @Inject()(
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
           annotationId <- remoteWebknossosClient.getAnnotationIdForTracing(tracingId)
-          data: Array[Byte] <- fullMeshService.loadFor(annotationId, tracingId, request.body) ?~> "mesh.loadFull.failed"
+          data: Array[Byte] <- fullMeshService.loadFor(annotationId, tracingId, request.body, version = None) ?~> Msg.Mesh.loadFullFailed
         } yield Ok(data)
       }
     }
@@ -358,7 +357,8 @@ class VolumeTracingController @Inject()(
                                                             segmentId,
                                                             request.body.mag,
                                                             mappingName,
-                                                            request.body.additionalCoordinates)
+                                                            request.body.additionalCoordinates,
+                                                            request.body.annotationVersion)
           }
         } yield Ok(Json.toJson(segmentVolumes))
       }
@@ -377,7 +377,8 @@ class VolumeTracingController @Inject()(
                                                                  segmentId,
                                                                  request.body.mag,
                                                                  mappingName,
-                                                                 request.body.additionalCoordinates)
+                                                                 request.body.additionalCoordinates,
+                                                                 request.body.annotationVersion)
           }
         } yield Ok(Json.toJson(segmentBoundingBoxes))
       }
@@ -397,13 +398,17 @@ class VolumeTracingController @Inject()(
               segmentId = segmentId,
               mappingName = baseMappingName,
               mappingType = baseMappingName.map(_ => "HDF5"),
-              editableMappingTracingId = None,
+              editableMappingTracingId = None, // This param is used only when loading meshes from static meshfiles. Here, the underlying load bucket function will apply the editable mapping if there is one.
+              annotationVersion = None,
               mag = Some(request.body.mag),
               seedPosition = None,
               additionalCoordinates = request.body.additionalCoordinates,
             )
             for {
-              data: Array[Byte] <- fullMeshService.loadFor(annotationId, tracingId, fullMeshRequest) ?~> "mesh.loadFull.failed"
+              data: Array[Byte] <- fullMeshService.loadFor(annotationId,
+                                                           tracingId,
+                                                           fullMeshRequest,
+                                                           request.body.annotationVersion) ?~> Msg.Mesh.loadFullFailed
               surfaceArea <- fullMeshService.surfaceAreaFromStlBytes(data).toFox
             } yield surfaceArea
           }
@@ -428,7 +433,8 @@ class VolumeTracingController @Inject()(
             request.body.mag,
             additionalCoordinates = request.body.additionalCoordinates,
             mappingName = mappingName,
-            editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId)
+            editableMappingTracingId = volumeTracingService.editableMappingTracingId(tracing, tracingId),
+            annotationVersion = request.body.annotationVersion.getOrElse(tracing.version)
           )
           bucketPositionsForCubeSize = bucketPositions.toSeq
             .map(vec3IntFromProto)

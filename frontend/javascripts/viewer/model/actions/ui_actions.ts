@@ -5,6 +5,7 @@ import type { StartAiJobDrawerState } from "viewer/view/ai_jobs/constants";
 
 type SetDropzoneModalVisibilityAction = ReturnType<typeof setDropzoneModalVisibilityAction>;
 type SetVersionRestoreVisibilityAction = ReturnType<typeof setVersionRestoreVisibilityAction>;
+type SetIsRestoringVersionAction = ReturnType<typeof setIsRestoringVersionAction>;
 type SetStoredLayoutsAction = ReturnType<typeof setStoredLayoutsAction>;
 type SetBorderOpenStatusAction = ReturnType<typeof setBorderOpenStatusAction>;
 type SetImportingMeshStateAction = ReturnType<typeof setImportingMeshStateAction>;
@@ -42,11 +43,18 @@ type SetRenderAnimationModalVisibilityAction = ReturnType<
 >;
 type SetUserScriptsModalVisibilityAction = ReturnType<typeof setUserScriptsModalVisibilityAction>;
 type SetZarrLinksModalVisibilityAction = ReturnType<typeof setZarrLinksModalVisibilityAction>;
+type SetKeyboardShortcutConfigModalVisibilityAction = ReturnType<
+  typeof setKeyboardShortcutConfigModalVisibilityAction
+>;
 type SetMergeModalVisibilityAction = ReturnType<typeof setMergeModalVisibilityAction>;
+type SetDuplicateAnnotationModalVisibilityAction = ReturnType<
+  typeof setDuplicateAnnotationModalVisibilityAction
+>;
 
 export type UiAction =
   | SetDropzoneModalVisibilityAction
   | SetVersionRestoreVisibilityAction
+  | SetIsRestoringVersionAction
   | SetImportingMeshStateAction
   | SetBorderOpenStatusAction
   | SetStoredLayoutsAction
@@ -63,6 +71,8 @@ export type UiAction =
   | SetMergeModalVisibilityAction
   | SetUserScriptsModalVisibilityAction
   | SetZarrLinksModalVisibilityAction
+  | SetKeyboardShortcutConfigModalVisibilityAction
+  | SetDuplicateAnnotationModalVisibilityAction
   | SetBusyBlockingInfoAction
   | AllowSagaWhileBusyAction
   | DisallowSagaWhileBusyAction
@@ -90,6 +100,11 @@ export const setVersionRestoreVisibilityAction = (active: boolean) =>
   ({
     type: "SET_VERSION_RESTORE_VISIBILITY",
     active,
+  }) as const;
+export const setIsRestoringVersionAction = (isRestoring: boolean) =>
+  ({
+    type: "SET_IS_RESTORING_VERSION",
+    isRestoring,
   }) as const;
 export const setStoredLayoutsAction = (storedLayouts: Record<string, any>) =>
   ({
@@ -164,6 +179,16 @@ export const setUserScriptsModalVisibilityAction = (visible: boolean) =>
 export const setZarrLinksModalVisibilityAction = (visible: boolean) =>
   ({
     type: "SET_ZARR_LINKS_MODAL_VISIBILITY",
+    visible,
+  }) as const;
+export const setKeyboardShortcutConfigModalVisibilityAction = (visible: boolean) =>
+  ({
+    type: "SET_KEYBOARD_SHORTCUT_CONFIG_MODAL_VISIBILITY",
+    visible,
+  }) as const;
+export const setDuplicateAnnotationModalVisibilityAction = (visible: boolean) =>
+  ({
+    type: "SET_DUPLICATE_ANNOTATION_MODAL_VISIBILITY",
     visible,
   }) as const;
 export const setBusyBlockingInfoAction = (isBusy: boolean, reason?: string) =>

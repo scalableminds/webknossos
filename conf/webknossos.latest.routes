@@ -6,7 +6,7 @@ GET           /health                                                           
 GET           /checkCertificate                                                                 controllers.Application.checkCertificate()
 POST          /analytics/ingest                                                                 controllers.AnalyticsController.ingestAnalyticsEvents
 POST          /analytics/:eventType                                                             controllers.AnalyticsController.trackAnalyticsEvent(eventType)
-POST          /helpEmail                                                                        controllers.Application.helpEmail(message: String, currentUrl: String)
+POST          /helpEmail                                                                        controllers.Application.helpEmail()
 POST          /triggers/initialData                                                             controllers.InitialDataController.triggerInsert()
 
 # Maintenance
@@ -54,6 +54,8 @@ POST          /auth/createUserInOrganization/:organizationId                    
 # Configurations
 GET           /user/userConfiguration                                                           controllers.ConfigurationController.read()
 PUT           /user/userConfiguration                                                           controllers.ConfigurationController.update()
+GET           /user/keyboardShortcutsConfig                                                     controllers.ConfigurationController.readKeyboardShortcutsConfig()
+PUT           /user/keyboardShortcutsConfig                                                     controllers.ConfigurationController.updateKeyboardShortcutsConfig()
 POST          /datasetConfigurations/:datasetId                                                 controllers.ConfigurationController.readDatasetViewConfiguration(datasetId: ObjectId, sharingToken: Option[String])
 PUT           /datasetConfigurations/:datasetId                                                 controllers.ConfigurationController.updateDatasetViewConfiguration(datasetId: ObjectId)
 GET           /datasetConfigurations/default/:datasetId                                         controllers.ConfigurationController.readDatasetAdminViewConfiguration(datasetId: ObjectId)
@@ -87,7 +89,6 @@ GET           /teams/:id/projectProgressReport                                  
 POST          /datasets/:datasetId/createExplorational                                          controllers.AnnotationController.createExplorational(datasetId: ObjectId)
 GET           /datasets/:datasetId/sandbox/:typ                                                 controllers.AnnotationController.getSandbox(datasetId: ObjectId, typ: String, sharingToken: Option[String])
 GET           /datasets                                                                         controllers.DatasetController.list(isActive: Option[Boolean], isUnreported: Option[Boolean], organizationId: Option[String], onlyMyOrganization: Option[Boolean], uploaderId: Option[ObjectId], folderId: Option[ObjectId], includeSubfolders: Option[Boolean], searchQuery: Option[String], limit: Option[Int], compact: Option[Boolean])
-POST          /datasets                                                                         controllers.DatasetController.create(typ: String)
 POST          /datasets/exploreRemote                                                           controllers.DatasetController.exploreRemoteDataset()
 POST          /datasets/exploreAndAddRemote                                                     controllers.DatasetController.exploreAndAddRemoteDataset()
 POST          /datasets/addVirtualDataset/:name                                                 controllers.DatasetController.addVirtualDataset(name: String)
@@ -95,6 +96,7 @@ GET           /datasets/disambiguate/:datasetName/toNew                         
 GET           /datasets/disambiguate/:organizationId/:datasetName/toId                          controllers.DatasetController.getDatasetIdFromNameAndOrganization(datasetName: String, organizationId: String, sharingToken: Option[String])
 GET           /datasets/pathsToDelete                                                           controllers.PathDeletionController.listPathsToDelete(key: String)
 POST          /datasets/pathsToDelete/markAsDeleted                                             controllers.PathDeletionController.markAsDeleted(key: String)
+GET           /datasets/findByImportURL                                                         controllers.DatasetController.findByImportURL(importURL: String)
 GET           /datasets/:datasetId/health                                                       controllers.DatasetController.health(datasetId: ObjectId, sharingToken: Option[String])
 PATCH         /datasets/:datasetId                                                              controllers.DatasetController.update(datasetId: ObjectId)
 PATCH         /datasets/:datasetId/updatePartial                                                controllers.DatasetController.updatePartial(datasetId: ObjectId)
@@ -121,6 +123,8 @@ POST          /datasets/:datasetId/compose/addLayer                             
 POST          /datasets/:datasetId/compose/addMag                                               controllers.DatasetController.composeAddMag(datasetId: ObjectId)
 POST          /datasets/:datasetId/compose/addAttachment                                        controllers.DatasetController.composeAddAttachment(datasetId: ObjectId)
 POST          /datasets/reserveUploadToPaths                                                    controllers.DatasetController.reserveUploadToPaths()
+POST          /datasets/:datasetId/writeMirror                                                  controllers.DatasetController.writeMirror(datasetId: ObjectId)
+POST          /datasets/writeAllMirrors                                                         controllers.DatasetController.writeAllMirrors()
 
 # Folders
 GET           /folders/root                                                                     controllers.FolderController.getRoot()
@@ -139,9 +143,13 @@ PUT           /datastores/:name/datasources/realpaths                           
 GET           /datastores/:name/datasources/:datasetId                                          controllers.WKRemoteDataStoreController.getDataSource(name: String, key: String, datasetId: ObjectId)
 PUT           /datastores/:name/datasources/:datasetId                                          controllers.WKRemoteDataStoreController.updateDataSource(name: String, key: String, datasetId: ObjectId)
 PATCH         /datastores/:name/status                                                          controllers.WKRemoteDataStoreController.statusUpdate(name: String, key: String)
-POST          /datastores/:name/reserveUpload                                                   controllers.WKRemoteDataStoreController.reserveDatasetUpload(name: String, key: String, token: String)
-GET           /datastores/:name/getUnfinishedUploadsForUser                                     controllers.WKRemoteDataStoreController.getUnfinishedUploadsForUser(name: String, key: String, token: String, organizationName: String)
+POST          /datastores/:name/reserveDatasetUpload                                            controllers.WKRemoteDataStoreController.reserveDatasetUpload(name: String, key: String, token: String)
+POST          /datastores/:name/reserveMagUpload                                                controllers.WKRemoteDataStoreController.reserveMagUpload(name: String, key: String, token: String)
+POST          /datastores/:name/reserveAttachmentUpload                                         controllers.WKRemoteDataStoreController.reserveAttachmentUpload(name: String, key: String, token: String)
+GET           /datastores/:name/getUnfinishedDatasetUploadsForUser                              controllers.WKRemoteDataStoreController.getUnfinishedDatasetUploadsForUser(name: String, key: String, token: String, organizationName: String)
 POST          /datastores/:name/reportDatasetUpload                                             controllers.WKRemoteDataStoreController.reportDatasetUpload(name: String, key: String, token: String, datasetId: ObjectId)
+POST          /datastores/:name/reportMagUpload                                                 controllers.WKRemoteDataStoreController.reportMagUpload(name: String, key: String)
+POST          /datastores/:name/reportAttachmentUpload                                          controllers.WKRemoteDataStoreController.reportAttachmentUpload(name: String, key: String)
 POST          /datastores/:name/deleteDataset                                                   controllers.WKRemoteDataStoreController.deleteDataset(name: String, key: String)
 GET           /datastores/:name/findDatasetId                                                   controllers.WKRemoteDataStoreController.findDatasetId(name: String, key: String, datasetDirectoryName: String, organizationId: String)
 GET           /datastores/:name/jobExportProperties                                             controllers.WKRemoteDataStoreController.jobExportProperties(name: String, key: String, jobId: ObjectId)
@@ -182,8 +190,10 @@ GET           /annotations/:id/info                                             
 DELETE        /annotations/:id                                                                  controllers.AnnotationController.cancelWithoutType(id: ObjectId)
 POST          /annotations/:id/merge/:mergedTyp/:mergedId                                       controllers.AnnotationController.mergeWithoutType(id: ObjectId, mergedTyp: String, mergedId: ObjectId)
 GET           /annotations/:id/download                                                         controllers.AnnotationIOController.downloadWithoutType(id: ObjectId, version: Option[Long], skipVolumeData: Option[Boolean], volumeDataZipFormat: Option[String])
-POST          /annotations/:id/acquireMutex                                                     controllers.AnnotationController.tryAcquiringAnnotationMutex(id: ObjectId)
-DELETE        /annotations/:id/mutex                                                            controllers.AnnotationController.releaseMutex(id: ObjectId)
+POST          /annotations/:id/acquireMutex                                                     controllers.AnnotationController.tryAcquiringAnnotationMutex(id: ObjectId, sessionId: String)
+POST          /annotations/:id/releaseMutex                                                     controllers.AnnotationController.releaseMutex(id: ObjectId, sessionId: String)
+GET           /annotations/:id/reservedIds                                                      controllers.AnnotationController.reservedIds(id: ObjectId, tracingId: String, domain: String)
+POST          /annotations/:id/reserveIds                                                       controllers.AnnotationController.reserveIds(id: ObjectId)
 
 GET           /annotations/:typ/:id/info                                                        controllers.AnnotationController.info(typ: String, id: ObjectId, timestamp: Option[Long])
 DELETE        /annotations/:typ/:id                                                             controllers.AnnotationController.cancel(typ: String, id: ObjectId)
@@ -195,7 +205,7 @@ GET           /annotations/source/:accessTokenOrId                              
 GET           /annotations/readable                                                             controllers.AnnotationController.listExplorationals(isFinished: Option[Boolean], limit: Option[Int], pageNumber: Option[Int], includeTotalCount: Option[Boolean])
 GET           /annotations/:typ/:id/sharedTeams                                                 controllers.AnnotationController.getSharedTeams(typ: String, id: ObjectId)
 PATCH         /annotations/:typ/:id/sharedTeams                                                 controllers.AnnotationController.updateSharedTeams(typ: String, id: ObjectId)
-PATCH         /annotations/:typ/:id/othersMayEdit                                               controllers.AnnotationController.updateOthersMayEdit(typ: String, id: ObjectId, othersMayEdit: Boolean)
+PATCH         /annotations/:typ/:id/collaborationMode                                           controllers.AnnotationController.updateCollaborationMode(typ: String, id: ObjectId, collaborationMode: String)
 
 # Annotation Private Links
 GET           /zarrPrivateLinks                                                                 controllers.AnnotationPrivateLinkController.list()
@@ -266,7 +276,7 @@ POST          /pricing/requestStorage                                           
 POST          /pricing/requestCredits                                                           controllers.OrganizationController.sendOrderCreditsEmail(requestedCredits: Int)
 POST          /pricing/requestAiAddon                                                           controllers.OrganizationController.sendUpgradeAiAddonEmail()
 GET           /pricing/status                                                                   controllers.OrganizationController.pricingStatus()
-POST          /pricing/updatePlan                                                               controllers.OrganizationController.updatePlan
+POST          /pricing/updatePlan                                                               controllers.OrganizationController.updatePlan()
 GET           /pricing/planUpdates                                                              controllers.OrganizationController.listPlanUpdates
 GET           /termsOfService                                                                   controllers.OrganizationController.getTermsOfService()
 POST          /termsOfService/accept                                                            controllers.OrganizationController.acceptTermsOfService(version: Int)
@@ -283,12 +293,11 @@ GET           /jobs/request                                                     
 GET           /jobs                                                                             controllers.JobController.list(command: Option[String], skipForDeletedDatasets: Option[Boolean])
 GET           /jobs/status                                                                      controllers.JobController.status()
 GET           /jobs/getCreditCost                                                               controllers.JobController.getJobCreditCost(command: String, boundingBoxInMag: String)
-POST          /jobs/run/convertToWkw/:datasetId                                                 controllers.JobController.runConvertToWkwJob(datasetId: ObjectId, scale: String, unit: Option[String])
 POST          /jobs/run/computeMeshFile/:datasetId                                              controllers.JobController.runComputeMeshFileJob(datasetId: ObjectId, layerName: String, mag: String, agglomerateView: Option[String])
 POST          /jobs/run/computeSegmentIndexFile/:datasetId                                      controllers.JobController.runComputeSegmentIndexFileJob(datasetId: ObjectId, layerName: String)
 POST          /jobs/run/exportTiff/:datasetId                                                   controllers.JobController.runExportTiffJob(datasetId: ObjectId, bbox: String, additionalCoordinates: Option[String], layerName: Option[String], mag: Option[String], annotationLayerName: Option[String], annotationId: Option[ObjectId], asOmeTiff: Boolean)
 POST          /jobs/run/inferMitochondria/:datasetId                                            controllers.JobController.runInferMitochondriaJob(datasetId: ObjectId, layerName: String, bbox: String, newDatasetName: String)
-POST          /jobs/run/alignSections/:datasetId                                                controllers.JobController.runAlignSectionsJob(datasetId: ObjectId, layerName: String, newDatasetName: String, annotationId: Option[ObjectId])
+POST          /jobs/run/alignSections/:datasetId                                                controllers.JobController.runAlignSectionsJob(datasetId: ObjectId)
 POST          /jobs/run/materializeVolumeAnnotation/:datasetId                                  controllers.JobController.runMaterializeVolumeAnnotationJob(datasetId: ObjectId, fallbackLayerName: String, annotationId: ObjectId, annotationType: String, newDatasetName: String, outputSegmentationLayerName: String, mergeSegments: Boolean, volumeLayerName: Option[String], includesEditableMapping: Boolean, boundingBox: Option[String])
 POST          /jobs/run/findLargestSegmentId/:datasetId                                         controllers.JobController.runFindLargestSegmentIdJob(datasetId: ObjectId, layerName: String)
 POST          /jobs/run/renderAnimation/:datasetId                                              controllers.JobController.runRenderAnimationJob(datasetId: ObjectId)
@@ -318,7 +327,7 @@ DELETE        /aiModels/:id                                                     
 # CreditTransactions
 POST          /creditTransactions/addCredits                                                    controllers.CreditTransactionController.addCredits(organizationId: String, creditAmount: Int, moneySpent: String, currency: String, comment: Option[String], expiresAt: Option[String])
 PATCH         /creditTransactions/:transactionId                                                controllers.CreditTransactionController.refundCreditTransaction(organizationId: String, transactionId: ObjectId)
-GET           /creditTransactions                                                               controllers.CreditTransactionController.list
+GET           /creditTransactions                                                               controllers.CreditTransactionController.list()
 
 # Publications
 GET           /publications                                                                     controllers.PublicationController.listPublications()

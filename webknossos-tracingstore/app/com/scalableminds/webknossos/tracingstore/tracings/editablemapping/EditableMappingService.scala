@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.editablemapping
 
+import com.scalableminds.util.Msg
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
@@ -10,14 +11,14 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.AgglomerateGraph
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SegmentToAgglomerateProto.SegmentToAgglomerateChunkProto
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Tree, TreeTypeProto}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, Tree, TreeTypeProto, TreeAgglomerateInfoProto}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
 import com.scalableminds.webknossos.datastore.helpers.{
   NativeBucketScanner,
   NodeDefaults,
   ProtoGeometryImplicits,
-  SkeletonTracingDefaults
+  SkeletonTracingDefaults,
 }
 import com.scalableminds.webknossos.datastore.models.DataRequestCollection.DataRequestCollection
 import com.scalableminds.webknossos.datastore.models._
@@ -29,7 +30,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.volume.{ReversionHelpe
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FallbackDataHelper,
   FossilDBPutBuffer,
-  KeyValueStoreImplicits,
+  KeyValueStoreConversions,
   RemoteFallbackLayer,
   TracingDataStore,
   VersionedKeyValuePair
@@ -100,7 +101,7 @@ class EditableMappingService @Inject()(
     val remoteDatastoreClient: TSRemoteDatastoreClient,
     val remoteWebknossosClient: TSRemoteWebknossosClient
 )(implicit ec: ExecutionContext)
-    extends KeyValueStoreImplicits
+    extends KeyValueStoreConversions
     with FallbackDataHelper
     with FoxImplicits
     with ReversionHelper
@@ -184,7 +185,7 @@ class EditableMappingService @Inject()(
   }
 
   def assertTracingHasEditableMapping(tracing: VolumeTracing)(implicit ec: ExecutionContext): Fox[Unit] =
-    Fox.fromBool(tracing.getHasEditableMapping) ?~> "annotation.volume.noEditableMapping"
+    Fox.fromBool(tracing.getHasEditableMapping) ?~> Msg.Annotation.Volume.noEditableMapping
 
   def findSegmentIdAtPositionIfNeeded(remoteFallbackLayer: RemoteFallbackLayer,
                                       positionOpt: Option[Vec3Int],
@@ -274,7 +275,7 @@ class EditableMappingService @Inject()(
   def getSegmentToAgglomerateChunk(chunkKey: String, version: Option[Long]): Fox[Seq[(Long, Long)]] =
     for {
       keyValuePairBytes: VersionedKeyValuePair[Array[Byte]] <- tracingDataStore.editableMappingsSegmentToAgglomerate
-        .get(chunkKey, version, mayBeEmpty = Some(true))
+        .get(chunkKey, version, mayBeEmpty = Some(true))(wrapInBox)
       valueProto <- if (isRevertedElement(keyValuePairBytes.value)) Fox.empty
       else fromProtoBytes[SegmentToAgglomerateChunkProto](keyValuePairBytes.value).toFox
       asSequence = valueProto.segmentToAgglomerate.map(pair => pair.segmentId -> pair.agglomerateId)
@@ -297,27 +298,26 @@ class EditableMappingService @Inject()(
                                                        remoteFallbackLayer)
     } yield editableMappingForSegmentIds ++ baseMappingSubset
 
-  def getAgglomerateSkeletonWithFallback(tracingId: String,
-                                         version: Long,
-                                         editableMappingInfo: EditableMappingInfo,
-                                         remoteFallbackLayer: RemoteFallbackLayer,
-                                         agglomerateId: Long)(implicit tc: TokenContext): Fox[Array[Byte]] =
+  def getAgglomerateTreeWithFallback(tracingId: String,
+                                     version: Long,
+                                     editableMappingInfo: EditableMappingInfo,
+                                     remoteFallbackLayer: RemoteFallbackLayer,
+                                     agglomerateId: Long)(implicit tc: TokenContext): Fox[Array[Byte]] =
     for {
       agglomerateGraphBox <- getAgglomerateGraphForId(tracingId, version, agglomerateId).shiftBox
+      _ <- Fox.fromBool(agglomerateGraphBox.map(_.segments.nonEmpty).getOrElse(true)) ?~> Msg.Annotation.EditableMapping.getAgglomerateTreeEmpty
       skeletonBytes <- agglomerateGraphBox match {
         case Full(agglomerateGraph) =>
-          Fox.successful(agglomerateGraphToSkeleton(tracingId, agglomerateGraph, agglomerateId))
+          Fox.successful(agglomerateGraphToTree(tracingId, agglomerateGraph, agglomerateId))
         case Empty =>
-          remoteDatastoreClient.getAgglomerateSkeleton(remoteFallbackLayer,
-                                                       editableMappingInfo.baseMappingName,
-                                                       agglomerateId)
+          remoteDatastoreClient.getAgglomerateTree(remoteFallbackLayer,
+                                                   editableMappingInfo.baseMappingName,
+                                                   agglomerateId)
         case f: Failure => f.toFox
       }
     } yield skeletonBytes
 
-  private def agglomerateGraphToSkeleton(tracingId: String,
-                                         graph: AgglomerateGraph,
-                                         agglomerateId: Long): Array[Byte] = {
+  private def agglomerateGraphToTree(tracingId: String, graph: AgglomerateGraph, agglomerateId: Long): Array[Byte] = {
     val nodeIdStartAtOneOffset = 1
     val nodes = graph.positions.zipWithIndex.map {
       case (pos, idx) =>
@@ -327,7 +327,7 @@ class EditableMappingService @Inject()(
         )
     }
     val segmentIdToNodeIdMinusOne: Map[Long, Int] = graph.segments.zipWithIndex.toMap
-    val skeletonEdges = graph.edges.map { e =>
+    val treeEdges = graph.edges.map { e =>
       Edge(source = segmentIdToNodeIdMinusOne(e.source) + nodeIdStartAtOneOffset,
            target = segmentIdToNodeIdMinusOne(e.target) + nodeIdStartAtOneOffset)
     }
@@ -337,9 +337,10 @@ class EditableMappingService @Inject()(
         treeId = math.abs(agglomerateId.toInt), // used only to deterministically select tree color
         createdTimestamp = System.currentTimeMillis(),
         nodes = nodes,
-        edges = skeletonEdges,
+        edges = treeEdges,
         name = s"agglomerate $agglomerateId ($tracingId)",
-        `type` = Some(TreeTypeProto.AGGLOMERATE)
+        `type` = Some(TreeTypeProto.AGGLOMERATE),
+        agglomerateInfo = Some(TreeAgglomerateInfoProto(agglomerateId, Some(tracingId), None)),
       ))
 
     val skeleton = SkeletonTracingDefaults.createInstance.copy(
@@ -409,7 +410,8 @@ class EditableMappingService @Inject()(
       tokenContext = tc,
       mapping = None,
       mappingType = None,
-      findNeighbors = request.findNeighbors
+      findNeighbors = request.findNeighbors,
+      annotationVersion = request.annotationVersion,
     )
     adHocMeshService.requestAdHocMeshViaActor(adHocMeshRequest)
   }
@@ -421,7 +423,7 @@ class EditableMappingService @Inject()(
         _ =>
           for {
             graphBytes: VersionedKeyValuePair[Array[Byte]] <- tracingDataStore.editableMappingsAgglomerateToGraph
-              .get(agglomerateGraphKey(tracingId, agglomerateId), Some(version), mayBeEmpty = Some(true))
+              .get(agglomerateGraphKey(tracingId, agglomerateId), Some(version), mayBeEmpty = Some(true))(wrapInBox)
             graphParsed <- if (isRevertedElement(graphBytes.value)) Fox.empty
             else fromProtoBytes[AgglomerateGraph](graphBytes.value).toFox
           } yield graphParsed
@@ -456,7 +458,7 @@ class EditableMappingService @Inject()(
                                                                tracingId,
                                                                version,
                                                                parameters.agglomerateId,
-                                                               remoteFallbackLayer) ?~> "getAgglomerateGraph.failed"
+                                                               remoteFallbackLayer) ?~> Msg.AgglomerateGraph.failed
       edgesToCut <- minCut(agglomerateGraph, parameters.partition1, parameters.partition2).toFox ?~> "Could not calculate min-cut on agglomerate graph."
       edgesWithPositions = annotateEdgesWithPositions(edgesToCut, agglomerateGraph)
     } yield edgesWithPositions
@@ -575,7 +577,7 @@ class EditableMappingService @Inject()(
     for {
       updateGroups <- tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(
         annotationId.toString,
-        newestVersion = version)(fromJsonBytes[List[UpdateAction]])
+        newestVersion = version)(jsonFromBytes[List[UpdateAction]])
       updatesIroned: Seq[UpdateAction] = ironOutReverts(updateGroups)
       editedEdges <- Fox.serialCombined(updatesIroned) {
         case update: SplitAgglomerateUpdateAction if update.actionTracingId == tracingId =>

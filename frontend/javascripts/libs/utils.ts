@@ -449,8 +449,10 @@ export function isUserAdminOrDatasetManager(user: APIUser | null | undefined): b
   return user != null && (isUserAdmin(user) || isUserDatasetManager(user));
 }
 
-export function isUserAdminOrManager(user: APIUser): boolean {
-  return isUserAdmin(user) || isUserTeamManager(user) || isUserDatasetManager(user);
+export function isUserAdminOrManager(user: APIUser | null | undefined): boolean {
+  return (
+    user != null && (isUserAdmin(user) || isUserTeamManager(user) || isUserDatasetManager(user))
+  );
 }
 
 export function mayUserEditDataset(user: APIUser | null | undefined, dataset: APIDataset): boolean {
@@ -593,6 +595,56 @@ export function diffArrays<T>(
   };
 }
 
+/*
+ * Diffs two number based arrays. The input is not manipulated.
+ * Returns three arrays in the from of { both, onlyA, onlyB }.
+ * both contains the numbers present in both arrays;
+ * onlyA the numbers present only in array a;
+ * onlyB the numbers present only in array b.
+ */
+export function diffNumberArrays(
+  a: number[],
+  b: number[],
+): { both: number[]; onlyA: number[]; onlyB: number[] } {
+  // Create sorted copies to avoid mutating inputs
+  const A = [...a].sort((x, y) => x - y);
+  const B = [...b].sort((x, y) => x - y);
+
+  const both: number[] = [];
+  const onlyA: number[] = [];
+  const onlyB: number[] = [];
+
+  let indexA = 0;
+  let indexB = 0;
+
+  while (indexA < A.length && indexB < B.length) {
+    if (A[indexA] === B[indexB]) {
+      both.push(A[indexA]);
+      indexA++;
+      indexB++;
+    } else if (A[indexA] < B[indexB]) {
+      onlyA.push(A[indexA]);
+      indexA++;
+    } else {
+      onlyB.push(B[indexB]);
+      indexB++;
+    }
+  }
+
+  // Remaining elements
+  while (indexA < A.length) {
+    onlyA.push(A[indexA]);
+    indexA++;
+  }
+
+  while (indexB < B.length) {
+    onlyB.push(B[indexB]);
+    indexB++;
+  }
+
+  return { both, onlyA, onlyB };
+}
+
 export function diffMaps<K, V>(
   stateA: Map<K, V>,
   stateB: Map<K, V>,
@@ -684,10 +736,23 @@ export function millisecondsToHours(ms: number) {
   return ms / oneHourInMilliseconds;
 }
 
-export function isNoElementFocused(): boolean {
-  // checks whether an <input> or <button> element has the focus
-  // when no element is focused <body> gets the focus
-  return document.activeElement === document.body;
+export function isNoEditableElementFocused(): boolean {
+  // Returns true if no "meaningful" element has focus — i.e. either document.body
+  // is active or the active element is not an interactive input element.
+  // This allows keyboard shortcuts to fire even when non-input elements (e.g. the
+  // tree hierarchy panel) have focus, while still suppressing them when the user
+  // is typing in an <input>, <textarea>, <button>, or contentEditable element.
+  const activeElement = document.activeElement;
+  if (activeElement == null || activeElement === document.body) {
+    return true;
+  }
+  const tag = activeElement.tagName?.toUpperCase();
+  return (
+    tag !== "INPUT" &&
+    tag !== "TEXTAREA" &&
+    tag !== "BUTTON" &&
+    !(activeElement as HTMLElement).isContentEditable
+  );
 }
 
 export function isEditableEventTarget(target: EventTarget | null): boolean {

@@ -70,11 +70,11 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   private def parseBboxOpt(bboxLiteral: Option[String]): Option[BoundingBox] =
     bboxLiteral.map(b => parseArrayLiteral(b).map(_.toInt)).flatMap(BoundingBox.fromSQL)
 
-  override protected def readAccessQ(requestingUserId: ObjectId) =
+  override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""((SELECT _team FROM webknossos.projects p WHERE _project = p._id) IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $requestingUserId)
       or ((SELECT _organization FROM webknossos.teams WHERE webknossos.teams._id = (SELECT _team FROM webknossos.projects p WHERE _project = p._id))
         in (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin)))"""
-  override protected def deleteAccessQ(requestingUserId: ObjectId) =
+  override protected def deleteAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""((SELECT _team FROM webknossos.projects p WHERE _project = p._id) IN (SELECT _team FROM webknossos.user_team_roles WHERE isTeamManager AND _user = $requestingUserId)
       or ((SELECT _organization FROM webknossos.teams WHERE webknossos.teams._id = (SELECT _team FROM webknossos.projects p WHERE _project = p._id))
         in (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin)))"""
@@ -157,8 +157,8 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     val insertAnnotationQ = q"""
            WITH task AS (${findNextTaskQ(userId, teamIds, isTeamManagerOrAdmin)})
            ,dataset AS (SELECT _id FROM webknossos.datasets_ LIMIT 1)
-           INSERT INTO webknossos.annotations(_id, _dataset, _task, _team, _user, description, visibility, name, state, tags, tracingTime, typ, created, modified, isDeleted)
-           SELECT $annotationId, dataset._id, task._id, ${teamIds.headOption}, $userId, '',
+           INSERT INTO webknossos.annotations(_id, _dataset, _task, _user, description, visibility, name, state, tags, tracingTime, typ, created, modified, isDeleted)
+           SELECT $annotationId, dataset._id, task._id, $userId, '',
                   ${AnnotationVisibility.Internal}, '', ${AnnotationState.Initializing}, '{}', 0, 'Task', $now, $now, FALSE
            FROM task, dataset""".asUpdate
 
@@ -179,15 +179,15 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         JOIN webknossos.tasks_ t ON a._task = t._id
         WHERE a._id = $annotationId""".as[TasksRow]
 
-  def assignOneTo(taskId: ObjectId, userId: ObjectId, teamIds: List[ObjectId]): Fox[(ObjectId, ObjectId)] = {
+  def assignOneTo(taskId: ObjectId, userId: ObjectId): Fox[(ObjectId, ObjectId)] = {
     val annotationId = ObjectId.generate
     val now = Instant.now
 
     val insertAnnotationQ = q"""
       WITH task AS (${findNextTaskByIdQ(taskId)})
       ,dataset AS (SELECT _id FROM webknossos.datasets_ LIMIT 1)
-      INSERT INTO webknossos.annotations(_id, _dataset, _task, _team, _user, description, visibility, name, state, tags, tracingTime, typ, created, modified, isDeleted)
-      SELECT $annotationId, dataset._id, task._id, ${teamIds.headOption}, $userId, '',
+      INSERT INTO webknossos.annotations(_id, _dataset, _task, _user, description, visibility, name, state, tags, tracingTime, typ, created, modified, isDeleted)
+      SELECT $annotationId, dataset._id, task._id, $userId, '',
              ${AnnotationVisibility.Internal}, '', ${AnnotationState.Initializing}, '{}', 0, 'Task', $now, $now, FALSE
       FROM task, dataset""".asUpdate
 

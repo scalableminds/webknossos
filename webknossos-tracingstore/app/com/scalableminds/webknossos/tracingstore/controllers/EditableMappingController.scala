@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.controllers
 
+import com.scalableminds.util.Msg
 import com.google.inject.Inject
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
@@ -22,7 +23,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
-import com.scalableminds.webknossos.tracingstore.tracings.KeyValueStoreImplicits
+import com.scalableminds.webknossos.tracingstore.tracings.KeyValueStoreConversions
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
@@ -37,7 +38,7 @@ class EditableMappingController @Inject()(
     remoteDatastoreClient: TSRemoteDatastoreClient,
     editableMappingIOService: EditableMappingIOService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
-    with KeyValueStoreImplicits {
+    with KeyValueStoreConversions {
 
   def editableMappingInfo(tracingId: String, annotationId: ObjectId, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
@@ -53,7 +54,7 @@ class EditableMappingController @Inject()(
       }
     }
 
-  def segmentIdsForAgglomerate(tracingId: String, agglomerateId: Long): Action[AnyContent] =
+  def segmentIdsForAgglomerate(tracingId: String, agglomerateId: Long, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
@@ -62,12 +63,12 @@ class EditableMappingController @Inject()(
             tracing <- annotationService.findVolume(annotationId, tracingId)
             _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
             agglomerateGraphBox: Box[AgglomerateGraph] <- editableMappingService
-              .getAgglomerateGraphForId(tracingId, tracing.version, agglomerateId)
+              .getAgglomerateGraphForId(tracingId, version.getOrElse(tracing.version), agglomerateId)
               .shiftBox
             segmentIds <- agglomerateGraphBox match {
               case Full(agglomerateGraph) => Fox.successful(agglomerateGraph.segments)
               case Empty                  => Fox.successful(List.empty)
-              case f: Failure             => f.toFox ?~> "annotation.editableMapping.getAgglomerateGraph.failed"
+              case f: Failure             => f.toFox ?~> Msg.Annotation.EditableMapping.getAgglomerateGraphFailed
             }
             agglomerateIdIsPresent = agglomerateGraphBox.isDefined
           } yield Ok(Json.toJson(EditableMappingSegmentListResult(segmentIds.toList, agglomerateIdIsPresent)))
@@ -90,7 +91,7 @@ class EditableMappingController @Inject()(
               editableMappingInfo,
               annotation.version,
               tracingId,
-              remoteFallbackLayer) ?~> "annotation.editableMapping.getAgglomerateIdsForSegments.failed"
+              remoteFallbackLayer) ?~> Msg.Annotation.EditableMapping.getAgglomerateIdsForSegmentsFailed
             agglomerateIdsSorted = relevantMapping.toSeq.sortBy(_._1).map(_._2)
           } yield Ok(ListOfLong(agglomerateIdsSorted).toByteArray)
         }
@@ -171,7 +172,7 @@ class EditableMappingController @Inject()(
       }
     }
 
-  def agglomerateSkeleton(tracingId: String, agglomerateId: Long, version: Option[Long]): Action[AnyContent] =
+  def agglomerateTree(tracingId: String, agglomerateId: Long, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readTracing(tracingId)) {
         for {
@@ -180,12 +181,12 @@ class EditableMappingController @Inject()(
           _ <- editableMappingService.assertTracingHasEditableMapping(tracing)
           editableMappingInfo <- annotationService.findEditableMappingInfo(annotationId, tracingId, version)
           remoteFallbackLayer <- volumeTracingService.remoteFallbackLayerForVolumeTracing(tracing, annotationId)
-          agglomerateSkeletonBytes <- editableMappingService.getAgglomerateSkeletonWithFallback(tracingId,
-                                                                                                tracing.version,
-                                                                                                editableMappingInfo,
-                                                                                                remoteFallbackLayer,
-                                                                                                agglomerateId)
-        } yield Ok(agglomerateSkeletonBytes)
+          agglomerateTreeBytes <- editableMappingService.getAgglomerateTreeWithFallback(tracingId,
+                                                                                        tracing.version,
+                                                                                        editableMappingInfo,
+                                                                                        remoteFallbackLayer,
+                                                                                        agglomerateId)
+        } yield Ok(agglomerateTreeBytes)
       }
     }
 
@@ -216,7 +217,7 @@ class EditableMappingController @Inject()(
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
-          editedEdgesZip <- request.body.asRaw.map(_.asFile).toFox ?~> "zip.file.notFound"
+          editedEdgesZip <- request.body.asRaw.map(_.asFile).toFox ?~> Msg.zipFileNotFound
           before = Instant.now
           numberOfSavedVersions <- editableMappingIOService.initializeFromUploadedZip(tracingId,
                                                                                       annotationId,

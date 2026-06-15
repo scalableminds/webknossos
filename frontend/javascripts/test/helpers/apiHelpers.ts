@@ -1,9 +1,10 @@
 import type { MeshSegmentInfo } from "admin/api/mesh";
+import type { MeshChunkDataRequestList } from "admin/api/mesh.ts";
 import {
   acquireAnnotationMutex,
   getDataset,
   getEdgesForAgglomerateMinCut,
-  getEditableAgglomerateSkeleton,
+  getEditableAgglomerateTreeAsSkeletonTracing,
   getNeighborsForAgglomerateNode,
   getPositionForSegmentInAgglomerate,
   getUpdateActionLog,
@@ -13,6 +14,8 @@ import {
 } from "admin/rest_api";
 import app from "app";
 import { __setFeatures } from "features";
+import update from "immutability-helper";
+import { V3 } from "libs/mjs";
 import Request, { type RequestOptions } from "libs/request";
 import { sleep } from "libs/utils";
 import cloneDeep from "lodash-es/cloneDeep";
@@ -30,9 +33,12 @@ import {
   annotationProto as MULTI_VOLUME_ANNOTATION_PROTO,
   tracings as MULTI_VOLUME_TRACINGS,
 } from "test/fixtures/multivolume_server_objects";
+import { tracing as volumeTracing } from "test/fixtures/volumetracing_server_objects";
 import type {
+  AnnotationCollaborationMode,
   APIAnnotation,
   APIDataset,
+  APIMeshFileInfo,
   APITracingStoreAnnotation,
   ElementClass,
   ServerSkeletonTracing,
@@ -43,7 +49,7 @@ import type { ArbitraryObject } from "types/type_utils";
 import type { ApiInterface } from "viewer/api/api_latest";
 import WebknossosApi from "viewer/api/api_loader";
 import { setupApi } from "viewer/api/internal_api";
-import Constants, { ControlModeEnum, type Vector2 } from "viewer/constants";
+import Constants, { ControlModeEnum, type Vector2, type Vector3 } from "viewer/constants";
 import { setSceneController } from "viewer/controller/scene_controller_provider";
 import SegmentMeshController from "viewer/controller/segment_mesh_controller";
 import UrlManager from "viewer/controller/url_manager";
@@ -57,6 +63,8 @@ import {
 } from "viewer/model/actions/actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
+import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
+import type { RequestBucketInfo } from "viewer/model/bucket_data_handling/wkstore_adapter";
 import { parseProtoAnnotation, parseProtoTracing } from "viewer/model/helpers/proto_helpers";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
 import rootSaga from "viewer/model/sagas/root_saga";
@@ -64,7 +72,10 @@ import { setModel, setStore } from "viewer/singletons";
 import { type NumberLike, type SaveQueueEntry, default as Store, startSaga } from "viewer/store";
 import { setSlowCompression } from "viewer/workers/slow_byte_array_lz4_compression.worker";
 import { type TestContext as BaseTestContext, type Mock, vi } from "vitest";
-import DATASET, { sampleHdf5AgglomerateName } from "../fixtures/dataset_server_object";
+import DATASET, {
+  sampleHdf5AgglomerateName,
+  sampleMappingFileName,
+} from "../fixtures/dataset_server_object";
 import {
   annotation as SKELETON_ANNOTATION,
   annotationProto as SKELETON_ANNOTATION_PROTO,
@@ -80,10 +91,12 @@ import {
   annotationProto as VOLUME_ANNOTATION_PROTO,
   tracing as VOLUME_TRACING,
 } from "../fixtures/volumetracing_server_objects";
+import { createUnitCubeBufferGeometry } from "./geometry_helpers";
 
 const TOKEN = "secure-token";
 const ANNOTATION_TYPE = "annotationTypeValue";
 const ANNOTATION_ID = "annotationIdValue";
+const MUTEX_GRANTED = { canEdit: true, blockedByUser: null, blockedBySessionId: null };
 
 // Define extended test context
 export interface WebknossosTestContext extends BaseTestContext {
@@ -98,13 +111,16 @@ export interface WebknossosTestContext extends BaseTestContext {
     getUpdateActionLog: Mock<typeof getUpdateActionLog>;
     sendSaveRequestWithToken: Mock<typeof sendSaveRequestWithToken>;
     getPositionForSegmentInAgglomerate: Mock<typeof getPositionForSegmentInAgglomerate>;
-    getEditableAgglomerateSkeleton: Mock<typeof getEditableAgglomerateSkeleton>;
+    getEditableAgglomerateTreeAsSkeletonTracing: Mock<
+      typeof getEditableAgglomerateTreeAsSkeletonTracing
+    >;
     parseProtoTracing: Mock<typeof parseProtoTracing>;
   };
   setSlowCompression: (enabled: boolean) => void;
   api: ApiInterface;
   tearDownPullQueues: () => void;
   receivedDataPerSaveRequest: Array<SaveQueueEntry[]>;
+  segmentMeshController: SegmentMeshController;
 }
 
 export function getFlattenedUpdateActions(context: WebknossosTestContext) {
@@ -144,7 +160,10 @@ vi.mock("libs/request", () => ({
     sendJSONReceiveArraybufferWithHeaders: vi
       .fn()
       .mockImplementation(
-        createBucketResponseFunction({ color: "uint8", segmentation: "uint16" }, 0),
+        createBucketResponseFunction(
+          { color: "uint8", segmentation: "uint16", volumeTracingId: "uint16" },
+          0,
+        ),
       ),
     always: vi.fn().mockReturnValue(Promise.resolve()),
   },
@@ -189,7 +208,7 @@ vi.mock("admin/rest_api.ts", async () => {
       _mappingId: string,
       segmentIds: Array<NumberLike>,
     ) => {
-      return getAgglomeratesForSegmentsImpl(segmentIds);
+      return getAgglomeratesForSegmentsImpl(segmentIds, 0);
     },
   );
 
@@ -230,7 +249,7 @@ vi.mock("admin/rest_api.ts", async () => {
         throw new Error("No test has mocked the return value yet here.");
       },
     ),
-    acquireAnnotationMutex: vi.fn(() => ({ canEdit: true, blockedByUser: null })),
+    acquireAnnotationMutex: vi.fn(() => MUTEX_GRANTED),
     releaseAnnotationMutex: vi.fn(() => {}),
     getNeighborsForAgglomerateNode: vi.fn(
       (_tracingStoreUrl: string, _tracingId: string, _segmentInfo: ArbitraryObject) => {
@@ -249,7 +268,7 @@ vi.mock("admin/rest_api.ts", async () => {
         throw new Error("No test has mocked the return value yet here.");
       },
     ),
-    getEditableAgglomerateSkeleton: vi.fn(
+    getEditableAgglomerateTreeAsSkeletonTracing: vi.fn(
       (
         _tracingStoreUrl: string,
         _tracingId: string,
@@ -258,28 +277,94 @@ vi.mock("admin/rest_api.ts", async () => {
         throw new Error("No test has mocked the return value yet here.");
       },
     ),
+    getMeshfilesForDatasetLayer: vi.fn(
+      async (
+        _dataStoreUrl: string,
+        _dataset: APIDataset,
+        _layerName: string,
+      ): Promise<Array<APIMeshFileInfo>> => {
+        return [
+          {
+            name: sampleMappingFileName,
+            mappingName: null, // Set to null to be usable for proofreading helper meshes.
+            formatVersion: 3,
+          },
+        ];
+      },
+    ),
+  };
+});
+
+// Mocks required to mock precomputed meshes loading
+vi.mock("libs/draco.ts", async () => {
+  return {
+    getDracoLoader: vi.fn(() => ({
+      decodeDracoFileAsync: async () => createUnitCubeBufferGeometry(),
+    })),
+  };
+});
+
+vi.mock("admin/api/mesh", async () => {
+  const actual = await vi.importActual<typeof import("admin/api/mesh.ts")>("admin/api/mesh.ts");
+  const getMeshFileChunksForSegment = vi.fn(
+    async (
+      _dataStoreUrl: string,
+      _datasetId: string,
+      _layerName: string,
+      _meshFile: APIMeshFileInfo,
+      segmentId: number,
+      _targetMappingName: string | null | undefined,
+      _editableMappingTracingId: string | null | undefined,
+    ): Promise<MeshSegmentInfo> => {
+      console.log("Requesting default mesh segment info in mocked test.");
+      await sleep(100);
+      return {
+        meshFormat: "draco",
+        lods: [
+          {
+            chunks: [
+              {
+                position: [0, 0, 0],
+                byteOffset: 0,
+                byteSize: 666,
+                unmappedSegmentId: segmentId,
+              },
+            ],
+            transform: [
+              [1, 0, 0, 0],
+              [0, 1, 0, 0],
+              [0, 0, 1, 0],
+            ], // 4x3 matrix
+          },
+        ],
+        chunkScale: [1, 1, 1],
+      };
+    },
+  );
+
+  const getMeshFileChunkData = vi.fn(
+    async (
+      _dataStoreUrl: string,
+      _datasetId: string,
+      _layerName: string,
+      batchDescription: MeshChunkDataRequestList,
+    ): Promise<ArrayBuffer[]> => {
+      // Return ArrayBuffers for each chunk in the batch
+      // The size doesn't matter for the test since decodeDracoFileAsync is mocked
+      return batchDescription.requests.map((request) => new ArrayBuffer(request.byteSize));
+    },
+  );
+
+  return {
+    ...actual,
+    getMeshFileChunksForSegment,
+    getMeshFileChunkData,
   };
 });
 
 vi.mock("libs/compute_bvh_async", () => ({
   computeBvhAsync: vi.fn().mockResolvedValue(undefined),
 }));
-
-vi.mock("admin/api/mesh", async () => {
-  const actual = await vi.importActual<typeof import("admin/api/mesh.ts")>("admin/api/mesh.ts");
-  const getMeshFileChunksForSegment = async (..._args: any[]): Promise<MeshSegmentInfo> => {
-    return {
-      meshFormat: "draco",
-      lods: [],
-      chunkScale: [1, 1, 1],
-    };
-  };
-
-  return {
-    ...actual,
-    getMeshFileChunksForSegment,
-  };
-});
 
 vi.mock("viewer/model/helpers/proto_helpers", async (importOriginal) => {
   const originalProtoHelperModule = (await importOriginal()) as ArbitraryObject;
@@ -358,7 +443,7 @@ export function createBucketResponseFunction(
   delay = 0,
   overrides: BucketOverride[] = [],
 ) {
-  return async function getBucketData(_url: string, payload: { data: Array<unknown> }) {
+  return async function getBucketData(_url: string, payload: { data: Array<RequestBucketInfo> }) {
     await sleep(delay);
     const requestedURL = new URL(_url);
     // Removing first empty part as the pathname always starts with a /.
@@ -382,14 +467,21 @@ export function createBucketResponseFunction(
     }
 
     for (let bucketIdx = 0; bucketIdx < bucketCount; bucketIdx++) {
-      for (const { position, value } of overrides) {
-        const [x, y, z] = position;
-        const indexInBucket =
-          bucketIdx * Constants.BUCKET_WIDTH ** 3 +
-          z * Constants.BUCKET_WIDTH ** 2 +
-          y * Constants.BUCKET_WIDTH +
-          x;
-        typedArray[indexInBucket] = value;
+      const bucketPosition = payload.data[bucketIdx].position as Vector3;
+      for (const { position: overridePosition, value } of overrides) {
+        const bucketBBox = new BoundingBox({
+          min: bucketPosition,
+          max: V3.add(bucketPosition, Constants.BUCKET_SHAPE),
+        });
+        if (bucketBBox.containsPoint(overridePosition)) {
+          const [x, y, z] = V3.mod(overridePosition, Constants.BUCKET_WIDTH);
+          const indexInBucket =
+            bucketIdx * Constants.BUCKET_WIDTH ** 3 +
+            z * Constants.BUCKET_WIDTH ** 2 +
+            y * Constants.BUCKET_WIDTH +
+            x;
+          typedArray[indexInBucket] = value;
+        }
       }
     }
 
@@ -464,6 +556,8 @@ export async function setupWebknossosForTesting(
   /*
    * This will execute model.fetch(...) and initialize the store with the tracing, etc.
    */
+  // Reset to the default so stale implementations from previous tests don't affect saga startup.
+  vi.mocked(acquireAnnotationMutex).mockResolvedValue(MUTEX_GRANTED);
   Store.dispatch(restartSagaAction());
   Store.dispatch(resetStoreAction());
   Store.dispatch(setActiveUserAction(dummyUser));
@@ -484,7 +578,9 @@ export async function setupWebknossosForTesting(
     getUpdateActionLog: vi.mocked(getUpdateActionLog),
     sendSaveRequestWithToken: vi.mocked(sendSaveRequestWithToken),
     getPositionForSegmentInAgglomerate: vi.mocked(getPositionForSegmentInAgglomerate),
-    getEditableAgglomerateSkeleton: vi.mocked(getEditableAgglomerateSkeleton),
+    getEditableAgglomerateTreeAsSkeletonTracing: vi.mocked(
+      getEditableAgglomerateTreeAsSkeletonTracing,
+    ),
     parseProtoTracing: vi.mocked(parseProtoTracing),
   };
   testContext.setSlowCompression = setSlowCompression;
@@ -536,10 +632,11 @@ export async function setupWebknossosForTesting(
   );
   vi.mocked(parseProtoAnnotation).mockReturnValue(cloneDeep(annotationProto));
 
+  testContext.segmentMeshController = new SegmentMeshController();
   setSceneController({
     // @ts-expect-error
     name: "This is a dummy scene controller so that getSceneController works in the tests.",
-    segmentMeshController: new SegmentMeshController(),
+    segmentMeshController: testContext.segmentMeshController,
   });
 
   __setFeatures({});
@@ -576,4 +673,44 @@ export async function setupWebknossosForTesting(
       throw new Error(error.message);
     }
   }
+}
+
+export async function setupWebknossosForTestingWithRestrictions(
+  context: WebknossosTestContext,
+  collaborationMode: AnnotationCollaborationMode | null,
+  allowUpdate: boolean,
+  makeProofread: boolean = false,
+  tracingTestMode: "hybrid" | "multiVolume" = "hybrid",
+) {
+  await setupWebknossosForTesting(
+    context,
+    tracingTestMode,
+    ({ tracings, annotationProto, dataset, annotation }) => {
+      const annotationWithUpdatingAllowedTrue = update(annotation, {
+        restrictions: { allowUpdate: { $set: allowUpdate }, allowSave: { $set: allowUpdate } },
+        collaborationMode: { $set: collaborationMode ?? "OwnerOnly" },
+      });
+      return {
+        tracings: makeProofread ? makeProofreadAnnotation(tracings) : tracings,
+        annotationProto,
+        dataset,
+        annotation: annotationWithUpdatingAllowedTrue,
+      };
+    },
+  );
+}
+
+function makeProofreadAnnotation(
+  tracings: (ServerSkeletonTracing | ServerVolumeTracing)[],
+): (ServerSkeletonTracing | ServerVolumeTracing)[] {
+  return tracings.map((tracing) => {
+    if (tracing.typ === "Volume" && tracing.id === volumeTracing.id) {
+      return update(tracing, {
+        hasEditableMapping: { $set: true },
+        mappingName: { $set: "volumeTracingId" },
+        mappingIsLocked: { $set: true },
+      });
+    }
+    return tracing;
+  });
 }

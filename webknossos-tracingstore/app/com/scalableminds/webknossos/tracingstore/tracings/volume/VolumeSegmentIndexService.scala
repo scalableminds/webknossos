@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
+import com.scalableminds.util.Msg
 import com.google.inject.Inject
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
@@ -13,7 +14,7 @@ import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBClient,
-  KeyValueStoreImplicits,
+  KeyValueStoreConversions,
   RemoteFallbackLayer,
   TemporaryTracingService,
   TracingDataStore
@@ -40,7 +41,7 @@ object VolumeSegmentIndexService {
 class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore,
                                           remoteDatastoreClient: TSRemoteDatastoreClient,
                                           temporaryTracingService: TemporaryTracingService)
-    extends KeyValueStoreImplicits
+    extends KeyValueStoreConversions
     with ProtoGeometryImplicits
     with VolumeBucketCompression
     with SegmentIndexKeyHelper
@@ -71,21 +72,20 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
       }
       previousBucketBytesWithEmptyFallback <- segmentIndexBuffer
         .bytesWithEmptyFallback(previousBucketBytesBox)
-        .toFox ?~> "volumeSegmentIndex.update.getPreviousBucket.failed"
+        .toFox ?~> Msg.Annotation.Volume.SegmentIndex.updateGetPreviousBucketFailed
       segmentIds: Set[Long] <- collectSegmentIds(bucketBytesDecompressed, volumeLayer.elementClass).toFox
-      previousSegmentIds: Set[Long] <- collectSegmentIds(previousBucketBytesWithEmptyFallback, volumeLayer.elementClass).toFox ?~> "volumeSegmentIndex.update.collectSegmentIds.failed"
+      previousSegmentIds: Set[Long] <- collectSegmentIds(previousBucketBytesWithEmptyFallback, volumeLayer.elementClass).toFox ?~> Msg.Annotation.Volume.SegmentIndex.updateCollectSegmentIdsFailed
       additions = segmentIds.diff(previousSegmentIds)
       removals = previousSegmentIds.diff(segmentIds)
-      _ <- Fox.serialCombined(removals.toList)(
-        segmentId =>
-          // When fallback layer is used we also need to include relevant segments here into the fossildb since otherwise the fallback layer would be used with invalid data
-          removeBucketFromSegmentIndex(segmentIndexBuffer, segmentId, bucketPosition, editableMappingTracingId)) ?~> "volumeSegmentIndex.update.removeBucket.failed"
+      _ <- Fox.serialCombined(removals.toList)(segmentId =>
+        // When fallback layer is used we also need to include relevant segments here into the fossildb since otherwise the fallback layer would be used with invalid data
+        removeBucketFromSegmentIndex(segmentIndexBuffer, segmentId, bucketPosition, editableMappingTracingId)) ?~> Msg.Annotation.Volume.SegmentIndex.updateRemoveBucketFailed
       // When fallback layer is used, copy the entire bucketlist for this segment instead of one bucket
       _ <- Fox.runIf(additions.nonEmpty)(addBucketToSegmentIndex(
         segmentIndexBuffer,
         additions.toList,
         bucketPosition,
-        editableMappingTracingId)) ?~> "volumeSegmentIndex.update.addBucket.failed"
+        editableMappingTracingId)) ?~> Msg.Annotation.Volume.SegmentIndex.updateAddBucketFailed
     } yield ()
 
   private def removeBucketFromSegmentIndex(
@@ -117,7 +117,9 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
         segmentIds,
         bucketPosition.mag,
         editableMappingTracingId,
-        bucketPosition.additionalCoordinates)
+        None, // use newest version
+        bucketPosition.additionalCoordinates
+      )
       _ = previousBucketPositionsBySegment.foreach {
         case (segmentId, previousBucketPositions) =>
           val newBucketPositions = previousBucketPositions + bucketPosition.toVec3IntProto
@@ -147,6 +149,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
                               mag: Vec3Int,
                               mappingName: Option[String],
                               editableMappingTracingId: Option[String],
+                              annotationVersion: Long,
                               additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
       implicit ec: ExecutionContext,
       tc: TokenContext): Fox[Set[Vec3IntProto]] =
@@ -157,7 +160,7 @@ class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore
         elementClass = tracing.elementClass,
         mappingName = mappingName,
         volumeSegmentIndexClient = volumeSegmentIndexClient,
-        version = tracing.version,
+        version = annotationVersion,
         remoteDatastoreClient = remoteDatastoreClient,
         fallbackLayer = fallbackLayer,
         additionalAxes = AdditionalAxis.fromProtosAsOpt(tracing.additionalAxes),

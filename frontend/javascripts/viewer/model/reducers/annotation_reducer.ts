@@ -91,7 +91,7 @@ const maybeAddAdditionalCoordinatesToMeshState = (
       localSegmentationData: {
         [layerName]: {
           meshes: {
-            [additionalCoordKey]: { $set: [] },
+            [additionalCoordKey]: { $set: {} },
           },
         },
       },
@@ -348,6 +348,7 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       );
       if (maybeMeshes == null || maybeMeshes[segmentId] == null) {
         // No meshes exist for the segment id. No need to do anything.
+        console.log("Could not find mesh", segmentId, "which was requested to be removed");
         return state;
       }
       const { [segmentId]: _, ...remainingMeshes } = maybeMeshes as Record<number, MeshInformation>;
@@ -525,9 +526,9 @@ function AnnotationReducer(state: WebknossosState, action: Action): WebknossosSt
       });
     }
 
-    case "SET_OTHERS_MAY_EDIT_FOR_ANNOTATION": {
+    case "SET_COLLABORATION_MODE": {
       return updateKey(state, "annotation", {
-        othersMayEdit: action.othersMayEdit,
+        collaborationMode: action.collaborationMode,
       });
     }
 

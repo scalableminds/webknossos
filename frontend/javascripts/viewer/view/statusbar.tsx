@@ -46,7 +46,6 @@ import { setActiveCellAction } from "viewer/model/actions/volumetracing_actions"
 import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import { getGlobalDataConnectionInfo } from "viewer/model/data_connection_info";
 import { Store } from "viewer/singletons";
-import { CommandPalette } from "./components/command_palette";
 import { NumberInputPopoverSetting } from "./left_border_tabs/components/number_input_popover_setting";
 
 const { Text } = Typography;
@@ -74,8 +73,7 @@ function ZoomShortcut() {
     <span key="zoom" className="shortcut-info-element">
       <Text keyboard>{AltOrOptionKey}</Text>
       +
-      <Icon component={IconStatusbarMouseWheel} aria-label="Mouse Wheel" />
-      Zoom in/out
+      <Icon component={IconStatusbarMouseWheel} aria-label="Mouse Wheel" /> Zoom in/out
     </span>
   );
 }
@@ -129,13 +127,9 @@ function RightClickShortcut({ actionDescriptor }: { actionDescriptor: ActionDesc
 const getMoreShortcutsInfo = () => {
   return (
     <>
-      <CommandPalette
-        label={
-          <div style={{ marginLeft: 25 }}>
-            <Text keyboard>Ctrl + P</Text> Commands
-          </div>
-        }
-      />
+      <div style={{ marginLeft: 25 }}>
+        <Text keyboard>Ctrl + P</Text> Commands
+      </div>
       {moreShortcutsLink}
     </>
   );

@@ -1,6 +1,7 @@
 import {
   CompressOutlined,
   CopyOutlined,
+  ExclamationCircleOutlined,
   GlobalOutlined,
   LockOutlined,
   ShareAltOutlined,
@@ -14,12 +15,14 @@ import {
   getSharingTokenFromUrlParameters,
   getTeamsForSharedAnnotation,
   sendAnalyticsEvent,
-  setOthersMayEditForAnnotation,
+  setCollaborationModeForAnnotation,
   updateTeamsForSharedAnnotation,
 } from "admin/rest_api";
 import {
   Alert,
   Button,
+  Checkbox,
+  type CheckboxChangeEvent,
   Col,
   Input,
   Modal,
@@ -27,12 +30,15 @@ import {
   type RadioChangeEvent,
   Row,
   Space,
+  Tag,
   Tooltip,
 } from "antd";
 import { AsyncButton } from "components/async_clickables";
+import FastTooltip from "components/fast_tooltip";
 import { PricingEnforcedBlur } from "components/pricing_enforcers";
 import { DividerWithSubtitle } from "dashboard/dataset/helper_components";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
+import { copyToClipboard } from "libs/clipboard";
 import { makeComponentLazy } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -40,7 +46,7 @@ import { location } from "libs/window";
 import isEqual from "lodash-es/isEqual";
 import messages from "messages";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useDispatch } from "react-redux";
 import type {
   APIAnnotationType,
@@ -50,11 +56,15 @@ import type {
 } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
 import UrlManager from "viewer/controller/url_manager";
-import { mayEditAnnotationProperties } from "viewer/model/accessors/annotation_accessor";
+import {
+  isAnnotationEditableByNonOwners,
+  mayEditAnnotationProperties,
+} from "viewer/model/accessors/annotation_accessor";
 import { formatUserName } from "viewer/model/accessors/user_accessor";
+import { hasEditableMapping } from "viewer/model/accessors/volumetracing_accessor";
 import {
   setAnnotationVisibilityAction,
-  setOthersMayEditForAnnotationAction,
+  setCollaborationModeAction,
 } from "viewer/model/actions/annotation_actions";
 import { setShareModalVisibilityAction } from "viewer/model/actions/ui_actions";
 import Store from "viewer/store";
@@ -127,9 +137,8 @@ export function getUrl(sharingToken: string, includeToken: boolean) {
   return url;
 }
 
-async function copyUrlToClipboard(url: string) {
-  await navigator.clipboard.writeText(url);
-  Toast.success("URL copied to clipboard.");
+function copyUrlToClipboard(url: string) {
+  copyToClipboard(url, "URL");
 }
 
 export function ShareButton(props: { dataset: APIDataset; style?: Record<string, any> }) {
@@ -187,6 +196,11 @@ export function ShareButton(props: { dataset: APIDataset; style?: Record<string,
   );
 }
 
+const LEFT_COL_STYLE = {
+  lineHeight: "22px",
+  paddingRight: 6,
+};
+
 function _ShareModalView(props: Props) {
   const { isOpen, onOk, annotationType, annotationId } = props;
   const dispatch = useDispatch();
@@ -201,11 +215,22 @@ function _ShareModalView(props: Props) {
   const [isChangingInProgress, setIsChangingInProgress] = useState(false);
   const [sharedTeams, setSharedTeams] = useState<APITeam[]>([]);
   const sharingToken = useDatasetSharingToken(dataset);
+  const isCurrentUserSuperUser = useWkSelector((state) => state.activeUser?.isSuperUser);
 
-  const { othersMayEdit } = annotation;
+  const othersMayEdit = isAnnotationEditableByNonOwners(annotation);
+  const allowConcurrentEditing = annotation.collaborationMode === "Concurrent";
   const [newOthersMayEdit, setNewOthersMayEdit] = useState(othersMayEdit);
+  const [newAllowConcurrentEditing, setNewAllowConcurrentEditing] =
+    useState(allowConcurrentEditing);
+
+  useEffect(() => {
+    // Sync properties in case they changed from the outside.
+    setNewOthersMayEdit(othersMayEdit);
+    setNewAllowConcurrentEditing(allowConcurrentEditing);
+  }, [othersMayEdit, allowConcurrentEditing]);
 
   const hasUpdatePermissions = useWkSelector(mayEditAnnotationProperties);
+  const annotationHasEditableMapping = useWkSelector(hasEditableMapping);
   useEffect(() => setVisibility(annotationVisibility), [annotationVisibility]);
 
   const fetchAndSetSharedTeams = async () => {
@@ -290,24 +315,64 @@ function _ShareModalView(props: Props) {
     }
   };
 
-  const handleOthersMayEditCheckboxChange = async (event: RadioChangeEvent) => {
+  const handleOthersCanEditCheckboxChange = async (event: RadioChangeEvent) => {
     const value = event.target.value;
     if (typeof value !== "boolean") {
       throw new Error("Form element should return boolean value.");
     }
 
+    if (value === newOthersMayEdit || !hasUpdatePermissions) {
+      return;
+    }
+
     setIsChangingInProgress(true);
     setNewOthersMayEdit(value);
-    if (value !== othersMayEdit) {
+    const collaborationMode = !value
+      ? "OwnerOnly"
+      : newAllowConcurrentEditing
+        ? "Concurrent"
+        : "Exclusive";
+    try {
+      await setCollaborationModeForAnnotation(annotationId, annotationType, collaborationMode);
+      dispatch(setCollaborationModeAction(collaborationMode));
+      reportSuccessfulChange(visibility);
+    } catch (e) {
+      console.error("Failed to update the edit option for others.", e);
+      setNewOthersMayEdit(othersMayEdit);
+      reportFailedChange();
+    } finally {
+      setIsChangingInProgress(false);
+    }
+  };
+
+  const handleConcurrentEditingCheckboxChange = async (event: CheckboxChangeEvent) => {
+    const value = event.target.checked;
+    if (value && (!hasEditableMapping(Store.getState()) || !isCurrentUserSuperUser)) {
+      Toast.warning(
+        "Concurrent editing is currently only supported for proofreading annotations. Please select a mapping and perform one proofreading action. Afterwards, you may select the Concurrent mode.",
+      );
+      return;
+    }
+    if (!hasUpdatePermissions) {
+      return;
+    }
+
+    setIsChangingInProgress(true);
+    setNewAllowConcurrentEditing(value);
+
+    if (value !== allowConcurrentEditing) {
+      const collaborationMode = !newOthersMayEdit
+        ? "OwnerOnly"
+        : value
+          ? "Concurrent"
+          : "Exclusive";
       try {
-        await setOthersMayEditForAnnotation(annotationId, annotationType, value);
-        dispatch(setOthersMayEditForAnnotationAction(value));
+        await setCollaborationModeForAnnotation(annotationId, annotationType, collaborationMode);
+        dispatch(setCollaborationModeAction(collaborationMode));
         reportSuccessfulChange(visibility);
       } catch (e) {
-        console.error("Failed to update the edit option for others.", e);
-        // Resetting the others may edit option to the old value as the request failed
-        // so the user still sees the settings currently saved in the backend.
-        setNewOthersMayEdit(newOthersMayEdit);
+        console.error("Failed to update the concurrent editing option.", e);
+        setNewAllowConcurrentEditing(allowConcurrentEditing);
         reportFailedChange();
       } finally {
         setIsChangingInProgress(false);
@@ -344,11 +409,6 @@ function _ShareModalView(props: Props) {
     ) : null;
   };
 
-  const radioStyle = {
-    display: "block",
-    height: "30px",
-    lineHeight: "30px",
-  };
   const iconMap = {
     Public: <GlobalOutlined />,
     Internal: <TeamOutlined />,
@@ -356,6 +416,22 @@ function _ShareModalView(props: Props) {
   };
   const includeToken = !dataset.isPublic && visibility === "Public";
   const longUrl = getUrl(sharingToken, includeToken);
+
+  const concurrentDisabledReason = useMemo(() => {
+    if (!hasUpdatePermissions) {
+      return "You don't have the permissions to change this setting. Ask the owner to change it instead.";
+    }
+    if (!newOthersMayEdit) {
+      return "Can only be enabled when “Everybody who can view” is enabled.";
+    }
+    if (isChangingInProgress) {
+      return "A change of the settings is currently being saved.";
+    }
+    if (!annotationHasEditableMapping) {
+      return "The annotation needs to have at least one saved proofreading action. Enable a mapping and use the proofreading tool for that.";
+    }
+    return null;
+  }, [hasUpdatePermissions, newOthersMayEdit, isChangingInProgress, annotationHasEditableMapping]);
 
   return (
     <Modal
@@ -370,7 +446,8 @@ function _ShareModalView(props: Props) {
         <Col
           span={6}
           style={{
-            lineHeight: "30px",
+            ...LEFT_COL_STYLE,
+            marginTop: 6,
           }}
         >
           Sharing Link
@@ -393,13 +470,8 @@ function _ShareModalView(props: Props) {
         </Space>
       </DividerWithSubtitle>
       {maybeShowWarning()}
-      <Row>
-        <Col
-          span={6}
-          style={{
-            lineHeight: "28px",
-          }}
-        >
+      <Row style={{ marginBottom: 16 }}>
+        <Col span={6} style={LEFT_COL_STYLE}>
           <div>Who can view this annotation?</div>
           <p
             style={{
@@ -418,7 +490,7 @@ function _ShareModalView(props: Props) {
             value={visibility}
             disabled={isChangingInProgress}
           >
-            <Radio style={radioStyle} value="Private" disabled={!hasUpdatePermissions}>
+            <Radio value="Private" disabled={!hasUpdatePermissions}>
               Private
             </Radio>
             <Hint
@@ -429,7 +501,7 @@ function _ShareModalView(props: Props) {
               Only you and your team manager can view this annotation.
             </Hint>
 
-            <Radio style={radioStyle} value="Internal" disabled={!hasUpdatePermissions}>
+            <Radio value="Internal" disabled={!hasUpdatePermissions}>
               Internal
             </Radio>
             <Hint
@@ -442,7 +514,7 @@ function _ShareModalView(props: Props) {
               and copy it to their accounts to edit it.
             </Hint>
 
-            <Radio style={radioStyle} value="Public" disabled={!hasUpdatePermissions}>
+            <Radio value="Public" disabled={!hasUpdatePermissions}>
               Public
             </Radio>
             <Hint
@@ -455,57 +527,46 @@ function _ShareModalView(props: Props) {
           </RadioGroup>
         </Col>
       </Row>
+      <Row>
+        <Col span={6} style={LEFT_COL_STYLE}>
+          For which teams should this annotation be listed?
+        </Col>
+        <Col span={18}>
+          <TeamSelectionComponent
+            mode="multiple"
+            allowNonEditableTeams
+            value={sharedTeams}
+            onChange={handleSharedTeamsChange}
+            disabled={!hasUpdatePermissions || visibility === "Private" || isChangingInProgress}
+          />
+          <Hint
+            style={{
+              margin: "6px 12px",
+            }}
+          >
+            Choose the teams to share your annotation with. Members of these teams can see this
+            annotation in their Annotations tab.
+          </Hint>
+        </Col>
+      </Row>
       <DividerWithSubtitle>
         <Space>
           <ShareAltOutlined />
-          Team Sharing
+          Editing
         </Space>
       </DividerWithSubtitle>
       <PricingEnforcedBlur requiredPricingPlan={PricingPlanEnum.Team}>
-        <Row>
-          <Col
-            span={6}
-            style={{
-              lineHeight: "22px",
-            }}
-          >
-            For which teams should this annotation be listed?
-          </Col>
-          <Col span={18}>
-            <TeamSelectionComponent
-              mode="multiple"
-              allowNonEditableTeams
-              value={sharedTeams}
-              onChange={handleSharedTeamsChange}
-              disabled={!hasUpdatePermissions || visibility === "Private" || isChangingInProgress}
-            />
-            <Hint
-              style={{
-                margin: "6px 12px",
-              }}
-            >
-              Choose the teams to share your annotation with. Members of these teams can see this
-              annotation in their Annotations tab.
-            </Hint>
-          </Col>
-        </Row>
-
-        <Row>
-          <Col
-            span={6}
-            style={{
-              lineHeight: "22px",
-            }}
-          >
-            Are other users allowed to edit this annotation?
+        <Row style={{ marginBottom: 16 }}>
+          <Col span={6} style={LEFT_COL_STYLE}>
+            Who can edit this annotation?
           </Col>
           <Col span={18}>
             <RadioGroup
-              onChange={handleOthersMayEditCheckboxChange}
+              onChange={handleOthersCanEditCheckboxChange}
               value={newOthersMayEdit}
               disabled={isChangingInProgress}
             >
-              <Radio style={radioStyle} value={false} disabled={!hasUpdatePermissions}>
+              <Radio value={false} disabled={!hasUpdatePermissions}>
                 No, keep it read-only
               </Radio>
               <Hint
@@ -513,24 +574,66 @@ function _ShareModalView(props: Props) {
                   marginLeft: 24,
                 }}
               >
-                Only you can edit the content of this annotation.
+                Only the owner can edit the content of this annotation.
               </Hint>
 
-              <Radio style={radioStyle} value disabled={!hasUpdatePermissions}>
-                Yes, allow editing
+              <Radio value={true} disabled={!hasUpdatePermissions}>
+                Everybody who can view
               </Radio>
               <Hint
                 style={{
                   marginLeft: 24,
                 }}
               >
-                All registered users that can view this annotation can edit it. Note that you should
-                coordinate the collaboration, because parallel changes to this annotation will
-                result in a conflict.
+                All users in your organization who may view this annotation can also edit it. Note
+                that you should coordinate the collaboration, because parallel changes to this
+                annotation will result in a conflict.
               </Hint>
             </RadioGroup>
           </Col>
         </Row>
+        {/*
+          Concurrent Editing can only be enabled by super users for now.
+        */}
+        {isCurrentUserSuperUser ? (
+          <Row>
+            <Col span={6} style={LEFT_COL_STYLE}>
+              Can users edit simultaneously?
+            </Col>
+            <Col span={18}>
+              <FastTooltip title={concurrentDisabledReason ?? null}>
+                <Checkbox
+                  checked={newAllowConcurrentEditing}
+                  onChange={handleConcurrentEditingCheckboxChange}
+                  disabled={concurrentDisabledReason != null}
+                >
+                  Yes, allow simultaneous editing
+                  <FastTooltip title="Currently not recommended for production use. Requires at least one saved proofreading action.">
+                    <Tag
+                      style={{ marginLeft: 4 }}
+                      color="warning"
+                      icon={<ExclamationCircleOutlined />}
+                      variant="outlined"
+                    >
+                      Experimental
+                    </Tag>
+                  </FastTooltip>
+                </Checkbox>
+              </FastTooltip>
+              <Hint
+                style={{
+                  marginLeft: 24,
+                }}
+              >
+                When enabled, users can edit the annotation in parallel. This feature is
+                experimental and is currently limited to the proofreading tool (
+                <b>skeleton and brushing will be disabled</b>). When disabled, only one user can
+                edit at the same time. We recommend to coordinate the collaboration with your peers
+                to avoid being blocked.
+              </Hint>
+            </Col>
+          </Row>
+        ) : null}
       </PricingEnforcedBlur>
     </Modal>
   );

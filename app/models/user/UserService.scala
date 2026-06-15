@@ -1,5 +1,6 @@
 package models.user
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.objectid.ObjectId
@@ -15,8 +16,9 @@ import models.organization.OrganizationDAO
 import models.team._
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Full}
+import models.project.ProjectDAO
+import models.task.TaskDAO
 import org.apache.pekko.actor.ActorSystem
-import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json._
 import play.silhouette.api.LoginInfo
 import play.silhouette.api.services.IdentityService
@@ -37,6 +39,8 @@ class UserService @Inject()(conf: WkConf,
                             userDatasetLayerConfigurationDAO: UserDatasetLayerConfigurationDAO,
                             organizationDAO: OrganizationDAO,
                             teamDAO: TeamDAO,
+                            taskDAO: TaskDAO,
+                            projectDAO: ProjectDAO,
                             teamMembershipService: TeamMembershipService,
                             datasetDAO: DatasetDAO,
                             tokenDAO: TokenDAO,
@@ -78,14 +82,14 @@ class UserService @Inject()(conf: WkConf,
   def assertNotInOrgaYet(multiUserId: ObjectId, organizationId: String): Fox[Unit] =
     for {
       userBox <- userDAO.findOneByOrgaAndMultiUser(organizationId, multiUserId)(GlobalAccessContext).shiftBox
-      _ <- Fox.fromBool(userBox.isEmpty) ?~> "organization.alreadyJoined"
+      _ <- Fox.fromBool(userBox.isEmpty) ?~> Msg.Organization.alreadyJoined
     } yield ()
 
   def assertIsSuperUser(user: User)(implicit ctx: DBAccessContext): Fox[Unit] =
     assertIsSuperUser(user._multiUser)
 
   def assertIsSuperUser(multiUserId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
-    Fox.assertTrue(isSuperUser(multiUserId)) ?~> "user.superUserOnly"
+    Fox.assertTrue(isSuperUser(multiUserId)) ?~> Msg.User.superUserOnly
 
   def isSuperUser(multiUserId: ObjectId)(implicit ctx: DBAccessContext): Fox[Boolean] =
     multiUserDAO.findOne(multiUserId).map(_.isSuperUser)
@@ -106,7 +110,7 @@ class UserService @Inject()(conf: WkConf,
              teamMemberships: Seq[TeamMembership]): Fox[User] = {
     implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
     for {
-      _ <- Fox.assertTrue(multiUserDAO.emailNotPresentYet(email)(GlobalAccessContext)) ?~> "user.email.alreadyInUse"
+      _ <- Fox.assertTrue(multiUserDAO.emailNotPresentYet(email)(GlobalAccessContext)) ?~> Msg.User.Email.taken
       multiUserId = ObjectId.generate
       multiUser = MultiUser(
         multiUserId,
@@ -158,19 +162,14 @@ class UserService @Inject()(conf: WkConf,
     } yield ()
 
   def initialTeamMemberships(organizationId: String, inviteIdOpt: Option[ObjectId]): Fox[Seq[TeamMembership]] =
-    for {
-      organizationTeamId <- organizationDAO.findOrganizationTeamId(organizationId)
-      inviteTeamMemberships <- inviteIdOpt match {
-        case Some(inviteId) => inviteDAO.findTeamMembershipsFor(inviteId) ?~> "failed to get invite team memberships"
-        case None           => Fox.successful(Seq.empty)
-      }
-      // If not already present in the invite, add the organization team.
-      organizationTeamMembership = if (inviteTeamMemberships.exists(_.teamId == organizationTeamId))
-        Seq.empty
-      else
-        Seq(TeamMembership(organizationTeamId, isTeamManager = false))
-      uniqueTeamMemberships = inviteTeamMemberships ++ organizationTeamMembership
-    } yield uniqueTeamMemberships
+    inviteIdOpt match {
+      case Some(inviteId) =>
+        inviteDAO.findTeamMembershipsFor(inviteId) ?~> Msg.User.inviteTeamMembershipsFailed
+      case None =>
+        for {
+          organizationTeamId <- organizationDAO.findOrganizationTeamId(organizationId)
+        } yield Seq(TeamMembership(organizationTeamId, isTeamManager = false))
+    }
 
   def joinOrganization(originalUser: User,
                        organizationId: String,
@@ -257,13 +256,12 @@ class UserService @Inject()(conf: WkConf,
       result
     }
 
-  def updateDatasetViewConfiguration(
-      user: User,
-      datasetId: ObjectId,
-      datasetConfiguration: DatasetViewConfiguration,
-      layerConfiguration: Option[JsValue])(implicit ctx: DBAccessContext, m: MessagesProvider): Fox[Unit] =
+  def updateDatasetViewConfiguration(user: User,
+                                     datasetId: ObjectId,
+                                     datasetConfiguration: DatasetViewConfiguration,
+                                     layerConfiguration: Option[JsValue])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
-      dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Messages("dataset.notFound", datasetId)
+      dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId)
       layerMap = layerConfiguration.flatMap(_.asOpt[Map[String, JsValue]]).getOrElse(Map.empty)
       _ <- Fox.serialCombined(layerMap.toList) {
         case (name, config) =>
@@ -300,11 +298,11 @@ class UserService @Inject()(conf: WkConf,
     userExperiencesDAO.findAllExperiencesForUser(_user)
 
   def teamMembershipsFor(_user: ObjectId): Fox[List[TeamMembership]] =
-    userDAO.findTeamMembershipsForUser(_user) ?~> "user.team.memberships.failed"
+    userDAO.findTeamMembershipsForUser(_user) ?~> Msg.User.teamMembershipsFailed
 
   def teamManagerMembershipsFor(_user: ObjectId): Fox[List[TeamMembership]] =
     for {
-      teamMemberships <- teamMembershipsFor(_user) ?~> "user.team.memberships.failed"
+      teamMemberships <- teamMembershipsFor(_user) ?~> Msg.User.teamMembershipsFailed
     } yield teamMemberships.filter(_.isTeamManager)
 
   def teamManagerTeamIdsFor(_user: ObjectId): Fox[List[ObjectId]] =
@@ -323,11 +321,23 @@ class UserService @Inject()(conf: WkConf,
       teamManagerTeamIds <- teamManagerTeamIdsFor(possibleAdmin._id)
     } yield otherUserTeamIds.intersect(teamManagerTeamIds).nonEmpty || possibleAdmin.isAdminOf(otherUser)
 
+  def isTeamManagerOrAdminOf(user: User, organizationId: String, taskIdOpt: Option[ObjectId]): Fox[Boolean] =
+    taskIdOpt match {
+      case None => Fox.successful(user.isAdminOf(organizationId))
+      case Some(taskId) =>
+        (for {
+          task <- taskDAO.findOne(taskId)(GlobalAccessContext)
+          project <- projectDAO.findOne(task._project)(GlobalAccessContext)
+          teamManagerTeamIds <- teamManagerTeamIdsFor(user._id)
+        } yield
+          (teamManagerTeamIds.contains(project._team) || user.isAdminOf(organizationId))) ?~> Msg.Team.adminNotAllowed
+    }
+
   def isTeamManagerOrAdminOf(user: User, _team: ObjectId): Fox[Boolean] =
     (for {
       team <- teamDAO.findOne(_team)(GlobalAccessContext)
       teamManagerTeamIds <- teamManagerTeamIdsFor(user._id)
-    } yield teamManagerTeamIds.contains(_team) || user.isAdminOf(team._organization)) ?~> "team.admin.notAllowed"
+    } yield teamManagerTeamIds.contains(_team) || user.isAdminOf(team._organization)) ?~> Msg.Team.adminNotAllowed
 
   private def isTeamManagerInOrg(user: User,
                                  organizationId: String,
@@ -402,7 +412,7 @@ class UserService @Inject()(conf: WkConf,
           .filter(valueAndIndex => tryo(valueAndIndex._1.toInt).isDefined)
           .map(valueAndIndex =>
             (parseArrayLiteral(userCompactInfo.experienceDomainsAsArrayLiteral)(valueAndIndex._2),
-             Json.toJsFieldJsValueWrapper(valueAndIndex._1.toInt))): _*)
+             Json.toJsFieldJsValueWrapper(valueAndIndex._1.toInt)))*)
       novelUserExperienceInfos <- JsonHelper.parseAs[JsObject](userCompactInfo.novelUserExperienceInfos).toFox
     } yield {
       Json.obj(

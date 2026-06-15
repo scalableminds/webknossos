@@ -6,7 +6,13 @@ import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Failure, Full}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree, TreeTypeProto}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{
+  Edge,
+  SkeletonTracing,
+  Tree,
+  TreeAgglomerateInfoProto,
+  TreeTypeProto
+}
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.ElementClass
@@ -20,46 +26,56 @@ import javax.inject.Inject
 import scala.annotation.tailrec
 import scala.collection.compat.immutable.ArraySeq
 
-class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConverter with AgglomerateFileUtils {
+class Hdf5AgglomerateService @Inject() (config: DataStoreConfig) extends DataConverter with AgglomerateFileUtils {
 
   private val cumsumFileName = "cumsum.json"
 
   private lazy val agglomerateFileCache = new AgglomerateFileCache(
-    config.Datastore.Cache.AgglomerateFile.maxFileHandleEntries)
+    config.Datastore.Cache.AgglomerateFile.maxFileHandleEntries
+  )
 
   def clearCache(predicate: AgglomerateFileKey => Boolean): Int = agglomerateFileCache.clear(predicate)
 
-  private def openHdf5(agglomerateFileKey: AgglomerateFileKey): IHDF5Reader =
-    HDF5FactoryProvider.get.openForReading(agglomerateFileKey.attachment.localPathUnsafe.toFile)
+  private def withHdf5Reader[A](agglomerateFileKey: AgglomerateFileKey)(f: IHDF5Reader => Box[A]): Box[A] =
+    agglomerateFileKey.attachment.localPath.flatMap { localPath =>
+      tryo(HDF5FactoryProvider.get.openForReading(localPath.toFile)).flatMap { reader =>
+        try f(reader)
+        finally reader.close()
+      }
+    }
 
   def largestAgglomerateId(agglomerateFileKey: AgglomerateFileKey): Box[Long] =
-    tryo {
-      val reader = openHdf5(agglomerateFileKey)
-      reader.`object`().getNumberOfElements(keyAgglomerateToSegmentsOffsets) - 1L
+    withHdf5Reader(agglomerateFileKey) { reader =>
+      tryo(reader.`object`().getNumberOfElements(keyAgglomerateToSegmentsOffsets) - 1L)
     }
 
   def applyAgglomerate(agglomerateFileKey: AgglomerateFileKey, request: DataServiceDataRequest)(
-      data: Array[Byte]): Box[Array[Byte]] = tryo {
+      data: Array[Byte]
+  ): Box[Array[Byte]] = {
 
-    def convertToAgglomerate(input: Array[Long],
-                             bytesPerElement: Int,
-                             bufferFunc: (ByteBuffer, Long) => ByteBuffer): Array[Byte] = {
-
-      val cachedAgglomerateFile = agglomerateFileCache.withCache(agglomerateFileKey)(openAsCachedAgglomerateFile)
-
-      val agglomerateIds = cachedAgglomerateFile.cache match {
-        case Left(agglomerateIdCache) =>
-          input.map(el =>
-            agglomerateIdCache.withCache(el, cachedAgglomerateFile.reader, cachedAgglomerateFile.dataset)(readHDF))
-        case Right(boundingBoxCache) =>
-          boundingBoxCache.withCache(request, input, cachedAgglomerateFile.reader)(readHDF)
+    def convertToAgglomerate(
+        input: Array[Long],
+        bytesPerElement: Int,
+        bufferFunc: (ByteBuffer, Long) => ByteBuffer
+    ): Box[Array[Byte]] =
+      for {
+        cachedAgglomerateFile <- agglomerateFileCache.withCache(agglomerateFileKey)(openAsCachedAgglomerateFile)
+        agglomerateIds <- tryo {
+          cachedAgglomerateFile.cache match {
+            case Left(agglomerateIdCache) =>
+              input.map(el =>
+                agglomerateIdCache.withCache(el, cachedAgglomerateFile.reader, cachedAgglomerateFile.dataset)(readHDF)
+              )
+            case Right(boundingBoxCache) =>
+              boundingBoxCache.withCache(request, input, cachedAgglomerateFile.reader)(readHDF)
+          }
+        }
+      } yield {
+        cachedAgglomerateFile.finishAccess()
+        agglomerateIds
+          .foldLeft(ByteBuffer.allocate(bytesPerElement * input.length).order(ByteOrder.LITTLE_ENDIAN))(bufferFunc)
+          .array
       }
-      cachedAgglomerateFile.finishAccess()
-
-      agglomerateIds
-        .foldLeft(ByteBuffer.allocate(bytesPerElement * input.length).order(ByteOrder.LITTLE_ENDIAN))(bufferFunc)
-        .array
-    }
 
     val bytesPerElement = ElementClass.bytesPerElement(request.dataLayer.elementClass)
     /* Every value of the segmentation data needs to be converted to Long to then look up the
@@ -83,162 +99,177 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
         data.foreach(e => longBuffer.put(uIntToLong(e)))
         convertToAgglomerate(longBuffer.array, bytesPerElement, putInt)
       case data: Array[Long] => convertToAgglomerate(data, bytesPerElement, putLong)
-      case _                 => data
+      case _                 => Full(data)
     }
   }
 
   def agglomerateIdsForSegmentIds(agglomerateFileKey: AgglomerateFileKey, segmentIds: Seq[Long]): Box[Seq[Long]] =
-    tryo {
-      val cachedAgglomerateFile = agglomerateFileCache.withCache(agglomerateFileKey)(openAsCachedAgglomerateFile)
-      val agglomerateIds = segmentIds.map { segmentId: Long =>
-        cachedAgglomerateFile.agglomerateIdCache.withCache(segmentId,
-                                                           cachedAgglomerateFile.reader,
-                                                           cachedAgglomerateFile.dataset)(readHDF)
+    for {
+      cachedAgglomerateFile <- agglomerateFileCache.withCache(agglomerateFileKey)(openAsCachedAgglomerateFile)
+      agglomerateIds <- tryo {
+        segmentIds.map { (segmentId: Long) =>
+          cachedAgglomerateFile.agglomerateIdCache.withCache(
+            segmentId,
+            cachedAgglomerateFile.reader,
+            cachedAgglomerateFile.dataset
+          )(readHDF)
+        }
       }
+    } yield {
       cachedAgglomerateFile.finishAccess()
       agglomerateIds
     }
 
-  def generateSkeleton(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Box[SkeletonTracing] =
-    try {
-      val reader = openHdf5(agglomerateFileKey)
-      val positionsRange: Array[Long] =
-        reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegmentsOffsets, 2, agglomerateId)
-      val edgesRange: Array[Long] =
-        reader.uint64().readArrayBlockWithOffset(keyAgglomerateToEdgesOffsets, 2, agglomerateId)
+  def generateTree(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Box[SkeletonTracing] =
+    withHdf5Reader(agglomerateFileKey) { reader =>
+      tryo {
+        val positionsRange: Array[Long] =
+          reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegmentsOffsets, 2, agglomerateId)
+        val edgesRange: Array[Long] =
+          reader.uint64().readArrayBlockWithOffset(keyAgglomerateToEdgesOffsets, 2, agglomerateId)
 
-      val nodeCount = positionsRange(1) - positionsRange(0)
-      val edgeCount = edgesRange(1) - edgesRange(0)
-      val edgeLimit = config.Datastore.AgglomerateSkeleton.maxEdges
-      if (nodeCount > edgeLimit) {
-        throw new Exception(s"Agglomerate has too many nodes ($nodeCount > $edgeLimit)")
-      }
-      if (edgeCount > edgeLimit) {
-        throw new Exception(s"Agglomerate has too many edges ($edgeCount > $edgeLimit)")
-      }
-      val positions: Array[Array[Long]] =
-        if (nodeCount == 0L) {
-          Array.empty[Array[Long]]
-        } else {
-          reader.uint64().readMatrixBlockWithOffset(keyAgglomerateToPositions, nodeCount.toInt, 3, positionsRange(0), 0)
+        val nodeCount = positionsRange(1) - positionsRange(0)
+        val edgeCount = edgesRange(1) - edgesRange(0)
+        val edgeLimit = config.Datastore.AgglomerateTree.maxEdges
+        if (nodeCount > edgeLimit) {
+          throw new Exception(s"Agglomerate has too many nodes ($nodeCount > $edgeLimit)")
         }
-      val edges: Array[Array[Long]] = {
-        if (edgeCount == 0L) {
-          Array.empty[Array[Long]]
-        } else {
-          reader.uint64().readMatrixBlockWithOffset(keyAgglomerateToEdges, edgeCount.toInt, 2, edgesRange(0), 0)
+        if (edgeCount > edgeLimit) {
+          throw new Exception(s"Agglomerate has too many edges ($edgeCount > $edgeLimit)")
         }
-      }
+        val positions: Array[Array[Long]] =
+          if (nodeCount == 0L) {
+            Array.empty[Array[Long]]
+          } else {
+            reader
+              .uint64()
+              .readMatrixBlockWithOffset(keyAgglomerateToPositions, nodeCount.toInt, 3, positionsRange(0), 0)
+          }
+        val edges: Array[Array[Long]] =
+          if (edgeCount == 0L) {
+            Array.empty[Array[Long]]
+          } else {
+            reader.uint64().readMatrixBlockWithOffset(keyAgglomerateToEdges, edgeCount.toInt, 2, edgesRange(0), 0)
+          }
 
-      val nodeIdStartAtOneOffset = 1
+        val nodeIdStartAtOneOffset = 1
 
-      val nodes = positions.zipWithIndex.map {
-        case (pos, idx) =>
+        val nodes = positions.zipWithIndex.map { case (pos, idx) =>
           NodeDefaults.createInstance.copy(
             id = idx + nodeIdStartAtOneOffset,
             position = Vec3IntProto(pos(0).toInt, pos(1).toInt, pos(2).toInt)
           )
+        }
+
+        val treeEdges = edges.map { e =>
+          Edge(source = e(0).toInt + nodeIdStartAtOneOffset, target = e(1).toInt + nodeIdStartAtOneOffset)
+        }
+
+        val trees = Seq(
+          Tree(
+            treeId = math.abs(agglomerateId.toInt), // used only to deterministically select tree color
+            createdTimestamp = System.currentTimeMillis(),
+            // unsafeWrapArray is fine, because the underlying arrays are never mutated
+            nodes = ArraySeq.unsafeWrapArray(nodes),
+            edges = ArraySeq.unsafeWrapArray(treeEdges),
+            name = s"agglomerate $agglomerateId (${agglomerateFileKey.attachment.name})",
+            `type` = Some(TreeTypeProto.AGGLOMERATE),
+            agglomerateInfo =
+              Some(TreeAgglomerateInfoProto(agglomerateId, None, Some(agglomerateFileKey.attachment.name)))
+          )
+        )
+
+        SkeletonTracingDefaults.createInstance.copy(trees = trees)
       }
-
-      val skeletonEdges = edges.map { e =>
-        Edge(source = e(0).toInt + nodeIdStartAtOneOffset, target = e(1).toInt + nodeIdStartAtOneOffset)
-      }
-
-      val trees = Seq(
-        Tree(
-          treeId = math.abs(agglomerateId.toInt), // used only to deterministically select tree color
-          createdTimestamp = System.currentTimeMillis(),
-          // unsafeWrapArray is fine, because the underlying arrays are never mutated
-          nodes = ArraySeq.unsafeWrapArray(nodes),
-          edges = ArraySeq.unsafeWrapArray(skeletonEdges),
-          name = s"agglomerate $agglomerateId (${agglomerateFileKey.attachment.name})",
-          `type` = Some(TreeTypeProto.AGGLOMERATE)
-        ))
-
-      val skeleton = SkeletonTracingDefaults.createInstance.copy(trees = trees)
-      Full(skeleton)
-    } catch {
-      case e: Exception => Failure(e.getMessage)
     }
 
   def generateAgglomerateGraph(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Box[AgglomerateGraph] =
-    tryo {
-      val reader = openHdf5(agglomerateFileKey)
+    withHdf5Reader(agglomerateFileKey) { reader =>
+      tryo {
+        val positionsRange: Array[Long] =
+          reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegmentsOffsets, 2, agglomerateId)
+        val edgesRange: Array[Long] =
+          reader.uint64().readArrayBlockWithOffset(keyAgglomerateToEdgesOffsets, 2, agglomerateId)
 
-      val positionsRange: Array[Long] =
-        reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegmentsOffsets, 2, agglomerateId)
-      val edgesRange: Array[Long] =
-        reader.uint64().readArrayBlockWithOffset(keyAgglomerateToEdgesOffsets, 2, agglomerateId)
+        val nodeCount = positionsRange(1) - positionsRange(0)
+        val edgeCount = edgesRange(1) - edgesRange(0)
+        val edgeLimit = config.Datastore.AgglomerateGraph.maxEdges
+        if (nodeCount > edgeLimit) {
+          throw new Exception(s"Agglomerate has too many nodes ($nodeCount > $edgeLimit)")
+        }
+        if (edgeCount > edgeLimit) {
+          throw new Exception(s"Agglomerate has too many edges ($edgeCount > $edgeLimit)")
+        }
+        val segmentIds: Array[Long] =
+          if (nodeCount == 0L) Array[Long]()
+          else
+            reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegments, nodeCount.toInt, positionsRange(0))
+        val positions: Array[Array[Long]] =
+          if (nodeCount == 0L) Array[Array[Long]]()
+          else
+            reader
+              .uint64()
+              .readMatrixBlockWithOffset(keyAgglomerateToPositions, nodeCount.toInt, 3, positionsRange(0), 0)
+        val edges: Array[Array[Long]] =
+          if (edgeCount == 0L) Array[Array[Long]]()
+          else
+            reader.uint64().readMatrixBlockWithOffset(keyAgglomerateToEdges, edgeCount.toInt, 2, edgesRange(0), 0)
+        val affinities: Array[Float] =
+          if (edgeCount == 0L) Array[Float]()
+          else
+            reader.float32().readArrayBlockWithOffset(keyAgglomerateToAffinities, edgeCount.toInt, edgesRange(0))
 
-      val nodeCount = positionsRange(1) - positionsRange(0)
-      val edgeCount = edgesRange(1) - edgesRange(0)
-      val edgeLimit = config.Datastore.AgglomerateGraph.maxEdges
-      if (nodeCount > edgeLimit) {
-        throw new Exception(s"Agglomerate has too many nodes ($nodeCount > $edgeLimit)")
+        AgglomerateGraph(
+          // unsafeWrapArray is fine, because the underlying arrays are never mutated
+          segments = ArraySeq.unsafeWrapArray(segmentIds),
+          edges = ArraySeq.unsafeWrapArray(
+            edges.map(e => AgglomerateEdge(source = segmentIds(e(0).toInt), target = segmentIds(e(1).toInt)))
+          ),
+          positions =
+            ArraySeq.unsafeWrapArray(positions.map(pos => Vec3IntProto(pos(0).toInt, pos(1).toInt, pos(2).toInt))),
+          affinities = ArraySeq.unsafeWrapArray(affinities)
+        )
       }
-      if (edgeCount > edgeLimit) {
-        throw new Exception(s"Agglomerate has too many edges ($edgeCount > $edgeLimit)")
-      }
-      val segmentIds: Array[Long] =
-        if (nodeCount == 0L) Array[Long]()
-        else
-          reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegments, nodeCount.toInt, positionsRange(0))
-      val positions: Array[Array[Long]] =
-        if (nodeCount == 0L) Array[Array[Long]]()
-        else
-          reader.uint64().readMatrixBlockWithOffset(keyAgglomerateToPositions, nodeCount.toInt, 3, positionsRange(0), 0)
-      val edges: Array[Array[Long]] =
-        if (edgeCount == 0L) Array[Array[Long]]()
-        else
-          reader.uint64().readMatrixBlockWithOffset(keyAgglomerateToEdges, edgeCount.toInt, 2, edgesRange(0), 0)
-      val affinities: Array[Float] =
-        if (edgeCount == 0L) Array[Float]()
-        else
-          reader.float32().readArrayBlockWithOffset(keyAgglomerateToAffinities, edgeCount.toInt, edgesRange(0))
-
-      AgglomerateGraph(
-        // unsafeWrapArray is fine, because the underlying arrays are never mutated
-        segments = ArraySeq.unsafeWrapArray(segmentIds),
-        edges = ArraySeq.unsafeWrapArray(
-          edges.map(e => AgglomerateEdge(source = segmentIds(e(0).toInt), target = segmentIds(e(1).toInt)))),
-        positions =
-          ArraySeq.unsafeWrapArray(positions.map(pos => Vec3IntProto(pos(0).toInt, pos(1).toInt, pos(2).toInt))),
-        affinities = ArraySeq.unsafeWrapArray(affinities)
-      )
     }
 
   def segmentIdsForAgglomerateId(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long): Box[Seq[Long]] =
-    tryo {
-      val reader = openHdf5(agglomerateFileKey)
-      val positionsRange: Array[Long] =
-        reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegmentsOffsets, 2, agglomerateId)
+    withHdf5Reader(agglomerateFileKey) { reader =>
+      tryo {
+        val positionsRange: Array[Long] =
+          reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegmentsOffsets, 2, agglomerateId)
 
-      val segmentCount = positionsRange(1) - positionsRange(0)
-      val segmentIds: Array[Long] =
-        if (segmentCount == 0) Array.empty[Long]
-        else {
-          reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegments, segmentCount.toInt, positionsRange(0))
-        }
-      segmentIds.toSeq
+        val segmentCount = positionsRange(1) - positionsRange(0)
+        val segmentIds: Array[Long] =
+          if (segmentCount == 0) Array.empty[Long]
+          else {
+            reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegments, segmentCount.toInt, positionsRange(0))
+          }
+        segmentIds.toSeq
+      }
     }
 
   def positionForSegmentId(agglomerateFileKey: AgglomerateFileKey, segmentId: Long): Box[Vec3Int] =
-    for {
-      reader: IHDF5Reader <- tryo(openHdf5(agglomerateFileKey))
-      agglomerateIdArr: Array[Long] <- tryo(
-        reader.uint64().readArrayBlockWithOffset(keySegmentToAgglomerate, 1, segmentId))
-      agglomerateId = agglomerateIdArr(0)
-      segmentsRange: Array[Long] <- tryo(
-        reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegmentsOffsets, 2, agglomerateId))
-      segmentIndex <- binarySearchForSegment(segmentsRange(0), segmentsRange(1), segmentId, reader)
-      position <- tryo(reader.uint64().readMatrixBlockWithOffset(keyAgglomerateToPositions, 1, 3, segmentIndex, 0)(0))
-    } yield Vec3Int(position(0).toInt, position(1).toInt, position(2).toInt)
+    withHdf5Reader(agglomerateFileKey) { reader =>
+      for {
+        agglomerateIdArr: Array[Long] <- tryo(
+          reader.uint64().readArrayBlockWithOffset(keySegmentToAgglomerate, 1, segmentId)
+        )
+        agglomerateId = agglomerateIdArr(0)
+        segmentsRange: Array[Long] <- tryo(
+          reader.uint64().readArrayBlockWithOffset(keyAgglomerateToSegmentsOffsets, 2, agglomerateId)
+        )
+        segmentIndex <- binarySearchForSegment(segmentsRange(0), segmentsRange(1), segmentId, reader)
+        position <- tryo(reader.uint64().readMatrixBlockWithOffset(keyAgglomerateToPositions, 1, 3, segmentIndex, 0)(0))
+      } yield Vec3Int(position(0).toInt, position(1).toInt, position(2).toInt)
+    }
 
   @tailrec
-  private def binarySearchForSegment(rangeStart: Long,
-                                     rangeEnd: Long,
-                                     segmentId: Long,
-                                     reader: IHDF5Reader): Box[Long] =
+  private def binarySearchForSegment(
+      rangeStart: Long,
+      rangeEnd: Long,
+      segmentId: Long,
+      reader: IHDF5Reader
+  ): Box[Long] =
     if (rangeStart > rangeEnd) Failure("Could not find segmentId in agglomerate file")
     else {
       val middle = rangeStart + (rangeEnd - rangeStart) / 2
@@ -261,25 +292,27 @@ class Hdf5AgglomerateService @Inject()(config: DataStoreConfig) extends DataConv
   // In this array, the agglomerate id is found by using the segment id as index.
   // There are two ways of how we prevent a file lookup for every input element. When present, we use the cumsum.json to initialize a BoundingBoxCache (see comment there).
   // Otherwise, we read configurable sized blocks from the agglomerate file and save them in a LRU cache.
-  private def openAsCachedAgglomerateFile(agglomerateFileKey: AgglomerateFileKey) = {
-    val cumsumPath =
-      agglomerateFileKey.attachment.localPathUnsafe.getParent.resolve(cumsumFileName)
-
-    val reader = openHdf5(agglomerateFileKey)
-
-    val agglomerateIdCache = new AgglomerateIdCache(config.Datastore.Cache.AgglomerateFile.maxSegmentIdEntries,
-                                                    config.Datastore.Cache.AgglomerateFile.blockSize)
-
-    val defaultCache: Either[AgglomerateIdCache, BoundingBoxCache] =
-      if (Files.exists(cumsumPath)) {
-        Right(CumsumParser.parse(cumsumPath.toFile, config.Datastore.Cache.AgglomerateFile.cumsumMaxReaderRange))
-      } else {
-        Left(agglomerateIdCache)
+  private def openAsCachedAgglomerateFile(agglomerateFileKey: AgglomerateFileKey): Box[CachedAgglomerateFile] =
+    agglomerateFileKey.attachment.localPath.flatMap { localPath =>
+      tryo {
+        val cumsumPath = localPath.getParent.resolve(cumsumFileName)
+        val reader = HDF5FactoryProvider.get.openForReading(localPath.toFile)
+        val agglomerateIdCache = new AgglomerateIdCache(
+          config.Datastore.Cache.AgglomerateFile.maxSegmentIdEntries,
+          config.Datastore.Cache.AgglomerateFile.blockSize
+        )
+        val defaultCache: Either[AgglomerateIdCache, BoundingBoxCache] =
+          if (Files.exists(cumsumPath)) {
+            Right(CumsumParser.parse(cumsumPath.toFile, config.Datastore.Cache.AgglomerateFile.cumsumMaxReaderRange))
+          } else {
+            Left(agglomerateIdCache)
+          }
+        CachedAgglomerateFile(
+          reader,
+          reader.`object`().openDataSet(keySegmentToAgglomerate),
+          agglomerateIdCache,
+          defaultCache
+        )
       }
-
-    CachedAgglomerateFile(reader,
-                          reader.`object`().openDataSet(keySegmentToAgglomerate),
-                          agglomerateIdCache,
-                          defaultCache)
-  }
+    }
 }

@@ -25,7 +25,7 @@ import {
   takeEvery,
   takeLatest,
 } from "typed-redux-saga";
-import type { APIDataLayer, APIMapping } from "types/api_types";
+import type { APIDataLayer, APIDataset, APIMapping } from "types/api_types";
 import { MappingStatusEnum } from "viewer/constants";
 import { getSegmentIdForPositionAsync } from "viewer/controller/combinations/volume_handlers";
 import {
@@ -70,16 +70,19 @@ import { jsHsv2rgb } from "viewer/shaders/utils.glsl";
 import { api, Model } from "viewer/singletons";
 import type {
   ActiveMappingInfo,
+  EditableMapping,
   Mapping,
   MappingType,
   NumberLike,
   NumberLikeMap,
+  StoreAnnotation,
 } from "viewer/store";
 import type { Action } from "../../actions/actions";
 import { setActiveCellAction, updateSegmentAction } from "../../actions/volumetracing_actions";
 import type DataCube from "../../bucket_data_handling/data_cube";
 import { listenToStoreProperty } from "../../helpers/listener_helpers";
 import { ensureWkInitialized } from "../ready_sagas";
+import { waitUntilNotBusy } from "../saga_helpers";
 
 type APIMappings = Record<string, APIMapping>;
 type Container<T> = { value: T };
@@ -351,16 +354,7 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
         console.log("Cancelled updateHdf5");
       }
 
-      isBusy = yield* select((state) => state.uiInformation.busyBlockingInfo.isBusy);
-      if (isBusy) {
-        // Wait until WK is not busy anymore.
-        yield* take(
-          ((action: Action) =>
-            action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
-            !action.value.isBusy) as ActionPattern,
-        );
-      }
-
+      yield call(waitUntilNotBusy);
       console.log("Retrying updateHdf5...");
     }
   }
@@ -508,18 +502,6 @@ function* updateLocalHdf5Mapping(
   layerInfo: APIDataLayer,
   mappingName: string,
 ): Saga<void> {
-  const dataset = yield* select((state) => state.dataset);
-  const annotation = yield* select((state) => state.annotation);
-  // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
-  const mappingLayerName =
-    "fallbackLayer" in layerInfo && layerInfo.fallbackLayer != null
-      ? layerInfo.fallbackLayer
-      : layerName;
-
-  const editableMapping = yield* select((state) =>
-    getEditableMappingForVolumeTracingId(state, layerName),
-  );
-
   const previousMapping = yield* select(
     (store) => store.temporaryConfiguration.activeMappingByLayer[layerName].mapping,
   );
@@ -559,24 +541,13 @@ function* updateLocalHdf5Mapping(
 
   let newEntries;
   try {
-    newEntries =
-      editableMapping != null
-        ? yield* call(
-            getAgglomeratesForSegmentsFromTracingstore,
-            annotation.tracingStore.url,
-            editableMapping.tracingId,
-            Array.from(newSegmentIds),
-            annotation.annotationId,
-            annotation.version,
-          )
-        : yield* call(
-            getAgglomeratesForSegmentsFromDatastore,
-            dataset.dataStore.url,
-            dataset,
-            mappingLayerName,
-            mappingName,
-            Array.from(newSegmentIds),
-          );
+    newEntries = yield* call(
+      getAgglomeratesForSegmentIds,
+      layerName,
+      layerInfo,
+      mappingName,
+      newSegmentIds,
+    );
   } catch (exception) {
     console.error("Could not load agglomerate ids for segments due to", exception);
     Toast.error(
@@ -610,6 +581,62 @@ function* updateLocalHdf5Mapping(
   }
 }
 
+export async function fetchAgglomeratesForSegmentIds(
+  dataset: APIDataset,
+  annotation: StoreAnnotation,
+  editableMapping: EditableMapping | null | undefined,
+  layerName: string,
+  layerInfo: APIDataLayer,
+  mappingName: string,
+  newSegmentIds: Set<NumberLike>,
+): Promise<Mapping> {
+  // If there is a fallbackLayer, request mappings for that instead of the tracing segmentation layer
+  const mappingLayerName =
+    "fallbackLayer" in layerInfo && layerInfo.fallbackLayer != null
+      ? layerInfo.fallbackLayer
+      : layerName;
+
+  return editableMapping != null
+    ? getAgglomeratesForSegmentsFromTracingstore(
+        annotation.tracingStore.url,
+        editableMapping.tracingId,
+        newSegmentIds,
+        annotation.annotationId,
+        annotation.version,
+      )
+    : getAgglomeratesForSegmentsFromDatastore(
+        dataset.dataStore.url,
+        dataset,
+        mappingLayerName,
+        mappingName,
+        newSegmentIds,
+      );
+}
+
+export function* getAgglomeratesForSegmentIds(
+  layerName: string,
+  layerInfo: APIDataLayer,
+  mappingName: string,
+  newSegmentIds: Set<NumberLike>,
+) {
+  const dataset = yield* select((state) => state.dataset);
+  const annotation = yield* select((state) => state.annotation);
+  const editableMapping = yield* select((state) =>
+    getEditableMappingForVolumeTracingId(state, layerName),
+  );
+  return yield* call(() =>
+    fetchAgglomeratesForSegmentIds(
+      dataset,
+      annotation,
+      editableMapping,
+      layerName,
+      layerInfo,
+      mappingName,
+      newSegmentIds,
+    ),
+  );
+}
+
 function* adaptActiveSegmentToProofreadingMarker(layerName: string) {
   const annotation = yield* select((state) => state.annotation);
 
@@ -631,10 +658,14 @@ function* adaptActiveSegmentToProofreadingMarker(layerName: string) {
 
     if (activeSegmentId !== agglomerateId) {
       yield put(setActiveCellAction(agglomerateId, proofreadingMarkerPosition));
-      yield* call(() =>
-        Toast.info(
-          `The active segment id was automatically changed from ${activeSegmentId} to ${agglomerateId}, because the agglomerate id at the proofreading marker changed.`,
-        ),
+      // TODO #9456: Look for a solution that this toast notification does not appear frequently in live collab scenario.
+      // yield* call(() =>
+      //   Toast.info(
+      //     `The active segment id was automatically changed from ${activeSegmentId} to ${agglomerateId}, because the agglomerate id at the proofreading marker changed.`,
+      //   ),
+      // );
+      console.log(
+        `The active segment id was automatically changed from ${activeSegmentId} to ${agglomerateId}, because the agglomerate id at the proofreading marker changed.`,
       );
     }
   }

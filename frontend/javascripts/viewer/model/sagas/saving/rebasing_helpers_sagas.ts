@@ -48,7 +48,7 @@ export function saveQueueEntriesToServerUpdateActionBatches(
   }));
 }
 
-type IdsToReloadPerMappingId = Map<string, number[]>;
+type IdsToReloadPerMappingId = Map<string, Set<number>>;
 type AnchorPositionToUnmappedIdByMappingId = Map<string, Map<string, number>>;
 
 function appendToIdsToReloadMapping(
@@ -57,9 +57,9 @@ function appendToIdsToReloadMapping(
   segmentId2: number,
 ) {
   if (!idsToReloadByMappingId.has(actionTracingId)) {
-    idsToReloadByMappingId.set(actionTracingId, []);
+    idsToReloadByMappingId.set(actionTracingId, new Set());
   }
-  idsToReloadByMappingId.get(actionTracingId)!.push(segmentId2);
+  idsToReloadByMappingId.get(actionTracingId)!.add(segmentId2);
 }
 
 async function appendIdToReloadFromPositionAsync(
@@ -166,7 +166,7 @@ function* addMissingSegmentsToLoadedMappings(
   );
   for (const volumeTracingId of idsToReloadPerMapping.keys()) {
     const idsToReload = idsToReloadPerMapping.get(volumeTracingId);
-    if (idsToReload == null || idsToReload.length === 0) {
+    if (idsToReload == null || idsToReload.size === 0) {
       continue;
     }
     const activeMapping = activeMappingByLayer[volumeTracingId];
@@ -469,5 +469,10 @@ function getUpToDateSegmentIdViaPosition(
   }
 
   const mappingSyncedWithBackend = new NumberLikeMapWrapper(mappingSyncedWithBackendUnwrapped);
-  return mappingSyncedWithBackend.getAsNumber(unmappedId);
+  return (
+    mappingSyncedWithBackend.getAsNumber(unmappedId) ??
+    // This fallback should not happen because addMissingSegmentsToLoadedMappings
+    // is called earlier.
+    originalSegmentId
+  );
 }

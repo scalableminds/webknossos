@@ -6,6 +6,47 @@ See `MIGRATIONS.unreleased.md` for the changes which are not yet part of an offi
 This project adheres to [Calendar Versioning](http://calver.org/) `0Y.0M.MICRO`.
 User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 
+## [26.06.0](https://github.com/scalableminds/webknossos/releases/tag/26.06.0) - 2026-05-27
+[Commits](https://github.com/scalableminds/webknossos/compare/26.05.2...26.06.0)
+
+### Postgres Evolutions
+- [161-reserve-ids.sql](schema/evolutions/161-reserve-ids.sql)
+
+## [26.05.2](https://github.com/scalableminds/webknossos/releases/tag/26.05.2) - 2026-05-07
+[Commits](https://github.com/scalableminds/webknossos/compare/26.05.1...26.05.2)
+
+### Postgres Evolutions
+None.
+
+## [26.05.1](https://github.com/scalableminds/webknossos/releases/tag/26.05.1) - 2026-05-05
+[Commits](https://github.com/scalableminds/webknossos/compare/26.05.0...26.05.1)
+
+- The `datastore.agglomerateSkeleton.maxEdges` configuration in the application.conf was renamed to `datastore.agglomerateTree.maxEdges`.
+
+### Postgres Evolutions
+None.
+
+## [26.05.0](https://github.com/scalableminds/webknossos/releases/tag/26.05.0) - 2026-05-04
+[Commits](https://github.com/scalableminds/webknossos/compare/26.04.1...26.05.0)
+
+### Postgres Evolutions
+- [160-fix-revoking-credit-transactions.sql](schema/evolutions/160-fix-revoking-credit-transactions.sql)
+
+## [26.04.1](https://github.com/scalableminds/webknossos/releases/tag/26.04.1) - 2026-04-23
+[Commits](https://github.com/scalableminds/webknossos/compare/26.04.0...26.04.1)
+
+### Postgres Evolutions
+None.
+
+## [26.04.0](https://github.com/scalableminds/webknossos/releases/tag/26.04.0) - 2026-04-07
+[Commits](https://github.com/scalableminds/webknossos/compare/26.03.0...26.04.0)
+
+### Postgres Evolutions
+- [156-worker-version.sql](schema/evolutions/156-worker-version.sql)
+- [157-aimodel-path.sql](schema/evolutions/157-aimodel-path.sql)
+- [158-move-names-to-multiusers.sql](schema/evolutions/158-move-names-to-multiusers.sql)
+- [159-inference-without-custom-model.sql](schema/evolutions/159-inference-without-custom-model.sql)
+
 ## [26.03.0](https://github.com/scalableminds/webknossos/releases/tag/26.03.0) - 2026-02-23
 [Commits](https://github.com/scalableminds/webknossos/compare/26.01.0...26.03.0)
 

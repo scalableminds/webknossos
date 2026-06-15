@@ -7,7 +7,13 @@ import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.AgglomerateGraph.{AgglomerateEdge, AgglomerateGraph}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
-import com.scalableminds.webknossos.datastore.SkeletonTracing.{Edge, SkeletonTracing, Tree, TreeTypeProto}
+import com.scalableminds.webknossos.datastore.SkeletonTracing.{
+  Edge,
+  SkeletonTracing,
+  Tree,
+  TreeAgglomerateInfoProto,
+  TreeTypeProto
+}
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3Array
 import com.scalableminds.webknossos.datastore.datareaders.{DatasetArray, MultiArrayUtils}
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
@@ -84,8 +90,8 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
     } yield mappedBytes
   }
 
-  def generateSkeleton(agglomerateFileKey: AgglomerateFileKey,
-                       agglomerateId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[SkeletonTracing] =
+  def generateTree(agglomerateFileKey: AgglomerateFileKey,
+                   agglomerateId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[SkeletonTracing] =
     for {
       agglomerateToSegmentsOffsets <- openZarrArrayCached(agglomerateFileKey, keyAgglomerateToSegmentsOffsets)
       agglomerateToEdgesOffsets <- openZarrArrayCached(agglomerateFileKey, keyAgglomerateToEdgesOffsets)
@@ -95,7 +101,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
       edgesRange: MultiArray <- agglomerateToEdgesOffsets.readAsMultiArray(offset = agglomerateId, shape = 2)
       edgesOffset <- tryo(edgesRange.getLong(0)).toFox
       edgeCount <- tryo(edgesRange.getLong(1) - edgesOffset).toFox
-      edgeLimit = config.Datastore.AgglomerateSkeleton.maxEdges
+      edgeLimit = config.Datastore.AgglomerateTree.maxEdges
       _ <- Fox.fromBool(nodeCount <= edgeLimit) ?~> s"Agglomerate has too many nodes ($nodeCount > $edgeLimit)"
       _ <- Fox.fromBool(edgeCount <= edgeLimit) ?~> s"Agglomerate has too many edges ($edgeCount > $edgeLimit)"
       agglomerateToPositions <- openZarrArrayCached(agglomerateFileKey, keyAgglomerateToPositions)
@@ -119,7 +125,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
         }
       }.toFox
 
-      skeletonEdges <- tryo {
+      treeEdges <- tryo {
         (0 until edges.getShape()(0)).map { edgeIdx =>
           Edge(
             source = edges.getInt(edges.getIndex.set(Array(edgeIdx, 0))) + nodeIdStartAtOneOffset,
@@ -134,9 +140,11 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
           createdTimestamp = System.currentTimeMillis(),
           // unsafeWrapArray is fine, because the underlying arrays are never mutated
           nodes = nodes,
-          edges = skeletonEdges,
+          edges = treeEdges,
           name = s"agglomerate $agglomerateId (${agglomerateFileKey.attachment.name})",
-          `type` = Some(TreeTypeProto.AGGLOMERATE)
+          `type` = Some(TreeTypeProto.AGGLOMERATE),
+          agglomerateInfo =
+            Some(TreeAgglomerateInfoProto(agglomerateId, None, Some(agglomerateFileKey.attachment.name)))
         ))
 
       skeleton = SkeletonTracingDefaults.createInstance.copy(trees = trees)
@@ -178,7 +186,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
       agglomerateToAffinities <- openZarrArrayCached(agglomerateFileKey, keyAgglomerateToAffinities)
       affinities: MultiArray <- agglomerateToAffinities.readAsMultiArray(offset = edgesOffset, shape = edgeCount.toInt)
       computedEdges <- tryo {
-        (0 until edges.getShape()(0)).map { edgeIdx: Int =>
+        (0 until edges.getShape()(0)).map { (edgeIdx: Int) =>
           AgglomerateEdge(
             source = segmentIds(
               // Note that getInt is fine (even for uint64) because “edges” stores
@@ -192,7 +200,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
         }
       }.toFox
       computedPositions <- tryo {
-        (0 until nodeCount.toInt).map { nodeIdx: Int =>
+        (0 until nodeCount.toInt).map { (nodeIdx: Int) =>
           Vec3IntProto(
             positions.getInt(positions.getIndex.set(Array(nodeIdx, 0))),
             positions.getInt(positions.getIndex.set(Array(nodeIdx, 1))),

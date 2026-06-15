@@ -189,8 +189,9 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
         return state;
       }
 
-      return updateKey2(state, "annotation", "restrictions", {
-        allowSave: false,
+      return update(state, {
+        annotation: { restrictions: { allowSave: { $set: false } } },
+        save: { isSavingDisabled: { $set: true } },
       });
     }
 
@@ -202,9 +203,10 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
     }
 
     case "SET_USER_HOLDING_MUTEX": {
-      const { blockedByUser } = action;
+      const { blockedByUser, blockedBySessionId } = action;
       return updateKey2(state, "save", "mutexState", {
         blockedByUser,
+        blockedBySessionId: blockedBySessionId ?? null,
       });
     }
 
@@ -282,7 +284,7 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
-    case "DONE_SAVING":
+    case "SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE":
     case "FINISHED_APPLYING_MISSING_UPDATES": {
       return update(state, {
         save: {
@@ -303,6 +305,14 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
               $set: state.annotation.volumes,
             },
           },
+        },
+      });
+    }
+
+    case "SET_PENDING_PROOFREADING_OPERATION_INFO": {
+      return update(state, {
+        save: {
+          proofreadingPostProcessingInfo: { $set: action.proofreadingPostProcessingInfo },
         },
       });
     }

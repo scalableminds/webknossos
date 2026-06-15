@@ -1,10 +1,14 @@
-import { InputKeyboard, InputKeyboardNoLoop, InputMouse, type MouseBindingMap } from "libs/input";
+import { copyToClipboard } from "libs/clipboard";
+import {
+  InputKeyboard,
+  InputMouse,
+  type MouseBindingMap,
+  type MouseEventHandler,
+} from "libs/input";
 import Toast from "libs/toast";
-import { isNoElementFocused, waitForElementWithId } from "libs/utils";
+import { isNoEditableElementFocused, waitForElementWithId } from "libs/utils";
 import { document } from "libs/window";
-import intersection from "lodash-es/intersection";
 import union from "lodash-es/union";
-import type React from "react";
 import { PureComponent } from "react";
 import { connect } from "react-redux";
 import { userSettings } from "types/schemas/user_settings.schema";
@@ -13,11 +17,11 @@ import { OrthoViews, OrthoViewValuesWithoutTDView } from "viewer/constants";
 import { moveU, moveV, moveW, zoom } from "viewer/controller/combinations/move_handlers";
 import {
   moveAlongDirection,
-  moveNode,
   toPrecedingNode,
   toSubsequentNode,
 } from "viewer/controller/combinations/skeleton_handlers";
 import {
+  AllToolKeyboardControls,
   AreaMeasurementToolController,
   BoundingBoxToolController,
   DrawToolController,
@@ -30,7 +34,6 @@ import {
   SkeletonToolController,
   VoxelPipetteToolController,
 } from "viewer/controller/combinations/tool_controls";
-import { changeBrushSizeIfBrushIsActiveBy } from "viewer/controller/combinations/volume_handlers";
 import getSceneController, {
   getSceneControllerOrNull,
 } from "viewer/controller/scene_controller_provider";
@@ -42,11 +45,7 @@ import {
 } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/tool_accessor";
 import { calculateGlobalPos } from "viewer/model/accessors/view_mode_accessor";
-import {
-  getActiveSegmentationTracing,
-  getMaximumBrushSize,
-} from "viewer/model/accessors/volumetracing_accessor";
-import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
+import { getMaximumBrushSize } from "viewer/model/accessors/volumetracing_accessor";
 import {
   pitchFlycamAction,
   rollFlycamAction,
@@ -54,24 +53,12 @@ import {
 } from "viewer/model/actions/flycam_actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import {
-  createBranchPointAction,
-  createTreeAction,
-  requestDeleteBranchPointAction,
-  toggleAllTreesAction,
-  toggleInactiveTreesAction,
-} from "viewer/model/actions/skeletontracing_actions";
-import { deleteNodeAsUserAction } from "viewer/model/actions/skeletontracing_actions_with_effects";
-import {
   cycleToolAction,
   enterAction,
   escapeAction,
   setToolAction,
 } from "viewer/model/actions/ui_actions";
 import { setViewportAction } from "viewer/model/actions/view_mode_actions";
-import {
-  createCellAction,
-  interpolateSegmentationLayerAction,
-} from "viewer/model/actions/volumetracing_actions";
 import Dimensions from "viewer/model/dimensions";
 import dimensions, { type DimensionIndices } from "viewer/model/dimensions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
@@ -79,30 +66,16 @@ import { api, Model } from "viewer/singletons";
 import type { BrushPresets, StoreAnnotation, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 import { getDefaultBrushSizes } from "viewer/view/action_bar/tools/brush_presets";
-import { showToastWarningForLargestSegmentIdMissing } from "viewer/view/largest_segment_id_modal";
+import type {
+  KeyboardShortcutHandlerMap,
+  KeyboardShortcutsMap,
+} from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
+import {
+  buildKeyBindingsFromConfig,
+  buildKeyBindingsFromConfigForTools,
+} from "viewer/view/keyboard_shortcuts/keyboard_shortcut_utils";
 import PlaneView from "viewer/view/plane_view";
 import { downloadScreenshot } from "viewer/view/rendering_utils";
-import { highlightAndSetCursorOnHoveredBoundingBox } from "../combinations/bounding_box_handlers";
-
-function ensureNonConflictingHandlers(
-  skeletonControls: Record<string, any>,
-  volumeControls: Record<string, any>,
-  proofreadControls?: Record<string, any>,
-): void {
-  const conflictingHandlers = intersection(
-    Object.keys(skeletonControls),
-    Object.keys(volumeControls),
-    proofreadControls ? Object.keys(proofreadControls) : [],
-  );
-
-  if (conflictingHandlers.length > 0) {
-    throw new Error(
-      `There are unsolved conflicts between skeleton, volume and proofread controller: ${conflictingHandlers.join(
-        ", ",
-      )}`,
-    );
-  }
-}
 
 const FIXED_ROTATION_STEP = Math.PI / 2;
 
@@ -114,135 +87,11 @@ const cycleToolsBackwards = () => {
   Store.dispatch(cycleToolAction(true));
 };
 
-const setTool = (tool: AnnotationTool) => {
-  Store.dispatch(setToolAction(tool));
-};
-
 type StateProps = {
   annotation: StoreAnnotation;
   activeTool: AnnotationTool;
 };
 type Props = StateProps;
-
-class SkeletonKeybindings {
-  static getKeyboardControls() {
-    return {
-      "1": () => Store.dispatch(toggleAllTreesAction()),
-      "2": () => Store.dispatch(toggleInactiveTreesAction()),
-      // Delete active node
-      delete: () => Store.dispatch(deleteNodeAsUserAction(Store.getState())),
-      backspace: () => Store.dispatch(deleteNodeAsUserAction(Store.getState())),
-      c: () => Store.dispatch(createTreeAction()),
-      e: () => moveAlongDirection(),
-      r: () => moveAlongDirection(true),
-      // Branches
-      b: () => Store.dispatch(createBranchPointAction()),
-      j: () => Store.dispatch(requestDeleteBranchPointAction()),
-      s: () => {
-        api.tracing.centerNode();
-        api.tracing.centerTDView();
-      },
-      // navigate nodes
-      "ctrl + ,": () => toPrecedingNode(),
-      "ctrl + .": () => toSubsequentNode(),
-    };
-  }
-
-  static getLoopedKeyboardControls() {
-    return {
-      "ctrl + left": () => moveNode(-1, 0),
-      "ctrl + right": () => moveNode(1, 0),
-      "ctrl + up": () => moveNode(0, -1),
-      "ctrl + down": () => moveNode(0, 1),
-    };
-  }
-
-  static getExtendedKeyboardControls() {
-    return { s: () => setTool(AnnotationTool.SKELETON) };
-  }
-}
-
-class VolumeKeybindings {
-  static getKeyboardControls() {
-    return {
-      c: () => {
-        const volumeTracing = getActiveSegmentationTracing(Store.getState());
-
-        if (volumeTracing == null || volumeTracing.tracingId == null) {
-          return;
-        }
-
-        if (volumeTracing.largestSegmentId != null) {
-          Store.dispatch(
-            createCellAction(volumeTracing.activeCellId, volumeTracing.largestSegmentId),
-          );
-        } else {
-          showToastWarningForLargestSegmentIdMissing(volumeTracing);
-        }
-      },
-      v: () => {
-        Store.dispatch(interpolateSegmentationLayerAction());
-      },
-    };
-  }
-
-  static getExtendedKeyboardControls() {
-    return {
-      b: () => setTool(AnnotationTool.BRUSH),
-      e: () => setTool(AnnotationTool.ERASE_BRUSH),
-      l: () => setTool(AnnotationTool.TRACE),
-      r: () => setTool(AnnotationTool.ERASE_TRACE),
-      f: () => setTool(AnnotationTool.FILL_CELL),
-      p: () => setTool(AnnotationTool.VOXEL_PIPETTE),
-      q: () => setTool(AnnotationTool.QUICK_SELECT),
-      o: () => setTool(AnnotationTool.PROOFREAD),
-    };
-  }
-}
-
-class BoundingBoxKeybindings {
-  static getKeyboardControls() {
-    return {
-      c: () => Store.dispatch(addUserBoundingBoxAction()),
-      meta: BoundingBoxKeybindings.createKeyDownAndUpHandler(),
-      ctrl: BoundingBoxKeybindings.createKeyDownAndUpHandler(),
-    };
-  }
-
-  static handleUpdateCursor = (event: KeyboardEvent) => {
-    const { viewModeData, temporaryConfiguration } = Store.getState();
-    const { mousePosition } = temporaryConfiguration;
-    if (mousePosition == null) return;
-    highlightAndSetCursorOnHoveredBoundingBox(
-      { x: mousePosition[0], y: mousePosition[1] },
-      viewModeData.plane.activeViewport,
-      event,
-    );
-  };
-
-  static getExtendedKeyboardControls() {
-    return { x: () => setTool(AnnotationTool.BOUNDING_BOX) };
-  }
-
-  static createKeyDownAndUpHandler() {
-    return (event: KeyboardEvent) => BoundingBoxKeybindings.handleUpdateCursor(event);
-  }
-}
-
-class ProofreadingKeybindings {
-  static getKeyboardControls() {
-    return {
-      m: () => {
-        const state = Store.getState();
-        const isProofreadingActive = state.uiInformation.activeTool === AnnotationTool.PROOFREAD;
-        if (isProofreadingActive) {
-          const isMultiSplitActive = state.userConfiguration.isMultiSplitActive;
-          Store.dispatch(updateUserSettingAction("isMultiSplitActive", !isMultiSplitActive));
-        }
-      },
-    };
-  }
-}
 
 function createDelayAwareMoveHandler(
   multiplier: number,
@@ -308,8 +157,6 @@ class PlaneController extends PureComponent<Props> {
   input: {
     mouseControllers: OrthoViewMap<InputMouse>;
     keyboard?: InputKeyboard;
-    keyboardNoLoop?: InputKeyboardNoLoop;
-    keyboardLoopDelayed?: InputKeyboard;
   };
 
   storePropertyUnsubscribers: Array<(...args: Array<any>) => any> = [];
@@ -356,7 +203,7 @@ class PlaneController extends PureComponent<Props> {
 
   getPlaneMouseControls(planeId: OrthoView): MouseBindingMap {
     const moveControls = MoveToolController.getMouseControls(planeId, this.planeView);
-    const skeletonControls = SkeletonToolController.getMouseControls(this.planeView);
+    const skeletonControls = SkeletonToolController.getMouseControls(planeId, this.planeView);
     const drawControls = DrawToolController.getPlaneMouseControls(planeId, this.planeView);
     const eraseControls = EraseToolController.getPlaneMouseControls(planeId, this.planeView);
     const fillCellControls = FillCellToolController.getPlaneMouseControls(planeId);
@@ -376,18 +223,21 @@ class PlaneController extends PureComponent<Props> {
     const lineMeasurementControls = LineMeasurementToolController.getPlaneMouseControls();
     const areaMeasurementControls = AreaMeasurementToolController.getPlaneMouseControls();
 
+    const getMouseControlKeys = (controls: MouseBindingMap) =>
+      Object.keys(controls) as (keyof MouseBindingMap)[];
+
     const allControlKeys = union(
-      Object.keys(moveControls),
-      Object.keys(skeletonControls),
-      Object.keys(drawControls),
-      Object.keys(eraseControls),
-      Object.keys(fillCellControls),
-      Object.keys(voxelPipetteControls),
-      Object.keys(boundingBoxControls),
-      Object.keys(quickSelectControls),
-      Object.keys(proofreadControls),
-      Object.keys(lineMeasurementControls),
-      Object.keys(areaMeasurementControls),
+      getMouseControlKeys(moveControls),
+      getMouseControlKeys(skeletonControls),
+      getMouseControlKeys(drawControls),
+      getMouseControlKeys(eraseControls),
+      getMouseControlKeys(fillCellControls),
+      getMouseControlKeys(voxelPipetteControls),
+      getMouseControlKeys(boundingBoxControls),
+      getMouseControlKeys(quickSelectControls),
+      getMouseControlKeys(proofreadControls),
+      getMouseControlKeys(lineMeasurementControls),
+      getMouseControlKeys(areaMeasurementControls),
     );
 
     const controls: MouseBindingMap = {};
@@ -395,7 +245,6 @@ class PlaneController extends PureComponent<Props> {
     for (const controlKey of allControlKeys) {
       controls[controlKey] = this.createToolDependentMouseHandler({
         [AnnotationTool.MOVE.id]: moveControls[controlKey],
-        // @ts-expect-error ts-migrate(7053) FIXME: Element implicitly has an 'any' type because expre... Remove this comment to see the full error message
         [AnnotationTool.SKELETON.id]: skeletonControls[controlKey],
         [AnnotationTool.BRUSH.id]: drawControls[controlKey],
         [AnnotationTool.TRACE.id]: drawControls[controlKey],
@@ -414,8 +263,7 @@ class PlaneController extends PureComponent<Props> {
     return controls;
   }
 
-  initKeyboard(): void {
-    // avoid scrolling while pressing space
+  getHandlerMap(): Partial<KeyboardShortcutHandlerMap> {
     const axisIndexToRotation = {
       0: pitchFlycamAction,
       1: yawFlycamAction,
@@ -438,91 +286,240 @@ class PlaneController extends PureComponent<Props> {
       const rotationAction = axisIndexToRotation[viewportIndices[dimensionIndex]];
       Store.dispatch(rotationAction(rotationAngle));
     };
+    const activateTool = (tool: AnnotationTool) => {
+      Store.dispatch(setToolAction(tool));
+    };
+    return {
+      // Looped navigation (no delay)
+      MOVE_LEFT: {
+        onPressedWithRepeat: (timeFactor: number) =>
+          moveU(-getMoveOffset(Store.getState(), timeFactor)),
+      },
+      MOVE_RIGHT: {
+        onPressedWithRepeat: (timeFactor: number) =>
+          moveU(getMoveOffset(Store.getState(), timeFactor)),
+      },
+      MOVE_UP: {
+        onPressedWithRepeat: (timeFactor: number) =>
+          moveV(-getMoveOffset(Store.getState(), timeFactor)),
+      },
+      MOVE_DOWN: {
+        onPressedWithRepeat: (timeFactor: number) =>
+          moveV(getMoveOffset(Store.getState(), timeFactor)),
+      },
+      YAW_LEFT: {
+        onPressedWithRepeat: (timeFactor: number) => rotateViewportAware(timeFactor, 1, false),
+      },
+      YAW_RIGHT: {
+        onPressedWithRepeat: (timeFactor: number) => rotateViewportAware(timeFactor, 1, true),
+      },
+      PITCH_UP: {
+        onPressedWithRepeat: (timeFactor: number) => rotateViewportAware(timeFactor, 0, false),
+      },
+      PITCH_DOWN: {
+        onPressedWithRepeat: (timeFactor: number) => rotateViewportAware(timeFactor, 0, true),
+      },
+      ALT_ROLL_LEFT: {
+        onPressedWithRepeat: (timeFactor: number) => rotateViewportAware(timeFactor, 2, false),
+      },
+      ALT_ROLL_RIGHT: {
+        onPressedWithRepeat: (timeFactor: number) => rotateViewportAware(timeFactor, 2, true),
+      },
+      // Looped navigation with delay
+      MOVE_MULTIPLE_FORWARD: {
+        onPressedWithRepeat: createDelayAwareMoveHandler(5, true),
+        delayed: true,
+      },
+      MOVE_MULTIPLE_BACKWARD: {
+        onPressedWithRepeat: createDelayAwareMoveHandler(-5, true),
+        delayed: true,
+      },
+      SHIFT_SPACE: {
+        onPressedWithRepeat: createDelayAwareMoveHandler(-1),
+        delayed: true,
+      },
+      MOVE_ONE_FORWARD: {
+        onPressedWithRepeat: createDelayAwareMoveHandler(1),
+        delayed: true,
+      },
+      MOVE_ONE_FORWARD_DIRECTION_AWARE: {
+        onPressedWithRepeat: createDelayAwareMoveHandler(1, true),
+        delayed: true,
+      },
+      MOVE_ONE_BACKWARD_DIRECTION_AWARE: {
+        onPressedWithRepeat: createDelayAwareMoveHandler(-1, true),
+        delayed: true,
+      },
+      ZOOM_IN_PLANE: {
+        onPressedWithRepeat: () => zoom(1, false),
+        delayed: true,
+      },
+      ZOOM_OUT_PLANE: {
+        onPressedWithRepeat: () => zoom(-1, false),
+        delayed: true,
+      },
+      INCREASE_MOVE_VALUE_PLANE: {
+        onPressedWithRepeat: () => this.changeMoveValue(25),
+        delayed: true,
+      },
+      DECREASE_MOVE_VALUE_PLANE: {
+        onPressedWithRepeat: () => this.changeMoveValue(-25),
+        delayed: true,
+      },
+      // No-loop shortcuts
+      DOWNLOAD_SCREENSHOT_PLANE: {
+        onPressed: () => downloadScreenshot(),
+      },
+      CYCLE_TOOLS: {
+        onPressed: () => cycleTools(),
+      },
+      CYCLE_TOOLS_BACKWARDS: {
+        onPressed: () => cycleToolsBackwards(),
+      },
+      // Tool Activation Shortcuts
+      SWITCH_TO_MOVE_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.MOVE),
+      },
+      SWITCH_TO_SKELETON_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.SKELETON),
+      },
+      SWITCH_TO_BRUSH_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.BRUSH),
+      },
+      SWITCH_TO_BRUSH_ERASE_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.ERASE_BRUSH),
+      },
+      SWITCH_TO_LASSO_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.TRACE),
+      },
+      SWITCH_TO_LASSO_ERASE_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.ERASE_TRACE),
+      },
+      SWITCH_TO_FILL_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.FILL_CELL),
+      },
+      SWITCH_TO_SEGMENT_PICKER_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.VOXEL_PIPETTE),
+      },
+      SWITCH_TO_QUICK_SELECT_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.QUICK_SELECT),
+      },
+      SWITCH_TO_BOUNDING_BOX_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.BOUNDING_BOX),
+      },
+      SWITCH_TO_PROOFREADING_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.PROOFREAD),
+      },
+      SWITCH_TO_LINE_MEASUREMENT_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.LINE_MEASUREMENT),
+      },
+      SWITCH_TO_AREA_MEASUREMENT_TOOL: {
+        onPressed: () => activateTool(AnnotationTool.AREA_MEASUREMENT),
+      },
+      // Skeleton navigation — globally available regardless of active tool
+      MOVE_ALONG_DIRECTION: {
+        onPressed: () => moveAlongDirection(),
+      },
+      MOVE_ALONG_DIRECTION_REVERSED: {
+        onPressed: () => moveAlongDirection(true),
+      },
+      RECENTER_ACTIVE_NODE_PLANE: {
+        onPressed: () => {
+          api.tracing.centerNode();
+          api.tracing.centerTDView();
+        },
+      },
+      NEXT_NODE_BACKWARD_PLANE: {
+        onPressed: () => toPrecedingNode(),
+      },
+      NEXT_NODE_FORWARD_PLANE: {
+        onPressed: () => toSubsequentNode(),
+      },
+      // Segment info — globally available regardless of active tool
+      COPY_SEGMENT_ID: {
+        onPressed: (event: KeyboardEvent) => {
+          const segmentationLayer = Model.getVisibleSegmentationLayer();
+          const { additionalCoordinates } = Store.getState().flycam;
 
+          if (!segmentationLayer) {
+            return;
+          }
+
+          const { mousePosition } = Store.getState().temporaryConfiguration;
+
+          if (mousePosition) {
+            const [x, y] = mousePosition;
+            const globalMousePositionRounded = calculateGlobalPos(Store.getState(), {
+              x,
+              y,
+            }).rounded;
+            const { cube } = segmentationLayer;
+            const mapping = event.altKey ? cube.getMapping() : null;
+            const hoveredId = cube.getDataValue(
+              globalMousePositionRounded,
+              additionalCoordinates,
+              mapping,
+              getActiveMagIndexForLayer(Store.getState(), segmentationLayer.name),
+            );
+            if (hoveredId !== 0) {
+              copyToClipboard(String(hoveredId), "segment id", true);
+              return;
+            }
+          }
+
+          Toast.warning("No segment under cursor.");
+        },
+      },
+    };
+  }
+
+  reloadKeyboardShortcuts(keyboardShortcutsConfig: KeyboardShortcutsMap) {
+    this.input.keyboard?.destroy();
+
+    const controllerBindings = buildKeyBindingsFromConfig(
+      keyboardShortcutsConfig,
+      this.getHandlerMap(),
+    );
+    const toolBindings = buildKeyBindingsFromConfigForTools(
+      keyboardShortcutsConfig,
+      AllToolKeyboardControls,
+    );
+
+    this.input.keyboard = new InputKeyboard({
+      ...controllerBindings,
+      ...toolBindings,
+      // Enter & Escape are constant and not configurable.
+      enter: {
+        onPressed: (event) => {
+          Store.dispatch(enterAction(event));
+        },
+      },
+      esc: {
+        onPressed: () => {
+          Store.dispatch(escapeAction());
+        },
+      },
+    });
+  }
+
+  initKeyboard(): void {
+    // avoid scrolling while pressing space
     document.addEventListener("keydown", (event: KeyboardEvent) => {
       if (
+        // 32 → Spacebar, 18 → Alt key, 37–40 → Arrow keys
         (event.which === 32 || event.which === 18 || (event.which >= 37 && event.which <= 40)) &&
-        isNoElementFocused()
+        isNoEditableElementFocused()
       ) {
         event.preventDefault();
       }
     });
-    this.input.keyboard = new InputKeyboard({
-      // Move
-      left: (timeFactor) => moveU(-getMoveOffset(Store.getState(), timeFactor)),
-      right: (timeFactor) => moveU(getMoveOffset(Store.getState(), timeFactor)),
-      up: (timeFactor) => moveV(-getMoveOffset(Store.getState(), timeFactor)),
-      down: (timeFactor) => moveV(getMoveOffset(Store.getState(), timeFactor)),
-      "shift + left": (timeFactor: number) => rotateViewportAware(timeFactor, 1, false),
-      "shift + right": (timeFactor: number) => rotateViewportAware(timeFactor, 1, true),
-      "shift + up": (timeFactor: number) => rotateViewportAware(timeFactor, 0, false),
-      "shift + down": (timeFactor: number) => rotateViewportAware(timeFactor, 0, true),
-      "alt + left": (timeFactor: number) => rotateViewportAware(timeFactor, 2, false),
-      "alt + right": (timeFactor: number) => rotateViewportAware(timeFactor, 2, true),
-    });
-    const {
-      baseControls: notLoopedKeyboardControls,
-      keyUpControls,
-      extendedControls: extendedNotLoopedKeyboardControls,
-    } = this.getNotLoopedKeyboardControls();
-    const loopedKeyboardControls = this.getLoopedKeyboardControls();
-    ensureNonConflictingHandlers(notLoopedKeyboardControls, loopedKeyboardControls);
-    this.input.keyboardLoopDelayed = new InputKeyboard(
-      {
-        // KeyboardJS is sensitive to ordering (complex combos first)
-        "shift + i": () => changeBrushSizeIfBrushIsActiveBy(-1),
-        "shift + o": () => changeBrushSizeIfBrushIsActiveBy(1),
-        "shift + f": createDelayAwareMoveHandler(5, true),
-        "shift + d": createDelayAwareMoveHandler(-5, true),
-        "shift + space": createDelayAwareMoveHandler(-1),
-        "ctrl + space": createDelayAwareMoveHandler(-1),
-        enter: (_, _isOriginalEvent, event) => Store.dispatch(enterAction(event)),
-        esc: () => Store.dispatch(escapeAction()),
-        space: createDelayAwareMoveHandler(1),
-        f: createDelayAwareMoveHandler(1, true),
-        d: createDelayAwareMoveHandler(-1, true),
-        // Zoom in/out
-        i: () => zoom(1, false),
-        o: () => zoom(-1, false),
-        h: () => this.changeMoveValue(25),
-        g: () => this.changeMoveValue(-25),
-        ...loopedKeyboardControls,
-      },
-      {
-        delay: Store.getState().userConfiguration.keyboardDelay,
-      },
-    );
 
-    const ignoredTimeFactor = 0;
-    const rotateViewportAwareFixedWithoutTiming = (
-      dimensionIndex: DimensionIndices,
-      oppositeDirection: boolean,
-    ) => rotateViewportAware(ignoredTimeFactor, dimensionIndex, oppositeDirection, true);
-    this.input.keyboardNoLoop = new InputKeyboardNoLoop(
-      {
-        ...notLoopedKeyboardControls,
-        // Directly rotate by 90 degrees.
-        "ctrl + shift + left": () => rotateViewportAwareFixedWithoutTiming(1, false),
-        "ctrl + shift + right": () => rotateViewportAwareFixedWithoutTiming(1, true),
-        "ctrl + shift + up": () => rotateViewportAwareFixedWithoutTiming(0, false),
-        "ctrl + shift + down": () => rotateViewportAwareFixedWithoutTiming(0, true),
-        "ctrl + alt + left": () => rotateViewportAwareFixedWithoutTiming(2, false),
-        "ctrl + alt + right": () => rotateViewportAwareFixedWithoutTiming(0, true),
-      },
-      {},
-      extendedNotLoopedKeyboardControls,
-      keyUpControls,
-    );
+    // register refresh keyboard shortcuts listener
     this.storePropertyUnsubscribers.push(
       listenToStoreProperty(
-        (state) => state.userConfiguration.keyboardDelay,
-        (keyboardDelay) => {
-          const { keyboardLoopDelayed } = this.input;
-
-          if (keyboardLoopDelayed != null) {
-            keyboardLoopDelayed.delay = keyboardDelay;
-          }
-        },
+        (state) => state.keyboardConfiguration.shortcutsConfig,
+        (keyboardShortcutsConfig) => this.reloadKeyboardShortcuts(keyboardShortcutsConfig),
+        true,
       ),
     );
   }
@@ -556,117 +553,6 @@ class PlaneController extends PureComponent<Props> {
         break;
     }
     return;
-  }
-
-  getNotLoopedKeyboardControls(): Record<string, any> {
-    const baseControls = {
-      "ctrl + i": (event: React.KeyboardEvent) => {
-        const segmentationLayer = Model.getVisibleSegmentationLayer();
-        const { additionalCoordinates } = Store.getState().flycam;
-
-        if (!segmentationLayer) {
-          return;
-        }
-
-        const { mousePosition } = Store.getState().temporaryConfiguration;
-
-        if (mousePosition) {
-          const [x, y] = mousePosition;
-          const globalMousePositionRounded = calculateGlobalPos(Store.getState(), {
-            x,
-            y,
-          }).rounded;
-          const { cube } = segmentationLayer;
-          const mapping = event.altKey ? cube.getMapping() : null;
-          const hoveredId = cube.getDataValue(
-            globalMousePositionRounded,
-            additionalCoordinates,
-            mapping,
-            getActiveMagIndexForLayer(Store.getState(), segmentationLayer.name),
-          );
-          navigator.clipboard
-            .writeText(String(hoveredId))
-            .then(() => Toast.success(`Segment id ${hoveredId} copied to clipboard.`));
-        } else {
-          Toast.warning("No segment under cursor.");
-        }
-      },
-      q: downloadScreenshot,
-      w: cycleTools,
-      "shift + w": cycleToolsBackwards,
-    };
-
-    let extendedControls = {
-      m: () => setTool(AnnotationTool.MOVE),
-      1: () => this.handleUpdateBrushSize("small"),
-      2: () => this.handleUpdateBrushSize("medium"),
-      3: () => this.handleUpdateBrushSize("large"),
-      ...BoundingBoxKeybindings.getExtendedKeyboardControls(),
-    };
-
-    // TODO: Find a nicer way to express this, while satisfying flow
-    const emptyDefaultHandler = {
-      c: null,
-    };
-    const { c: skeletonCHandler, ...skeletonControls } =
-      this.props.annotation.skeleton != null
-        ? SkeletonKeybindings.getKeyboardControls()
-        : emptyDefaultHandler;
-    const { c: volumeCHandler, ...volumeControls } =
-      this.props.annotation.volumes.length > 0
-        ? VolumeKeybindings.getKeyboardControls()
-        : emptyDefaultHandler;
-    const {
-      c: boundingBoxCHandler,
-      meta: boundingBoxMetaHandler,
-      ctrl: boundingBoxCtrlHandler,
-    } = BoundingBoxKeybindings.getKeyboardControls();
-    const proofreadingControls =
-      this.props.annotation.volumes.length > 0
-        ? ProofreadingKeybindings.getKeyboardControls()
-        : emptyDefaultHandler;
-    ensureNonConflictingHandlers(skeletonControls, volumeControls, proofreadingControls);
-    const extendedSkeletonControls =
-      this.props.annotation.skeleton != null
-        ? SkeletonKeybindings.getExtendedKeyboardControls()
-        : {};
-    const extendedVolumeControls =
-      this.props.annotation.volumes.length > 0 != null
-        ? VolumeKeybindings.getExtendedKeyboardControls()
-        : {};
-    ensureNonConflictingHandlers(extendedSkeletonControls, extendedVolumeControls);
-    const extendedAnnotationControls = { ...extendedSkeletonControls, ...extendedVolumeControls };
-    ensureNonConflictingHandlers(extendedAnnotationControls, extendedControls);
-    extendedControls = { ...extendedControls, ...extendedAnnotationControls };
-
-    return {
-      baseControls: {
-        ...baseControls,
-        ...skeletonControls,
-        ...volumeControls,
-        ...proofreadingControls,
-        c: this.createToolDependentKeyboardHandler(
-          skeletonCHandler,
-          volumeCHandler,
-          boundingBoxCHandler,
-        ),
-        ctrl: this.createToolDependentKeyboardHandler(null, null, boundingBoxCtrlHandler),
-        meta: this.createToolDependentKeyboardHandler(null, null, boundingBoxMetaHandler),
-      },
-      keyUpControls: {
-        ctrl: this.createToolDependentKeyboardHandler(null, null, boundingBoxCtrlHandler),
-        meta: this.createToolDependentKeyboardHandler(null, null, boundingBoxMetaHandler),
-      },
-      extendedControls,
-    };
-  }
-
-  getLoopedKeyboardControls() {
-    // Note that this code needs to be adapted in case the VolumeHandlers also starts to expose
-    // looped keyboard controls. For the hybrid case, these two controls would need t be combined then.
-    return this.props.annotation.skeleton != null
-      ? SkeletonKeybindings.getLoopedKeyboardControls()
-      : {};
   }
 
   init(): void {
@@ -718,75 +604,24 @@ class PlaneController extends PureComponent<Props> {
     // @ts-expect-error ts-migrate(2739) FIXME: Type '{}' is missing the following properties from... Remove this comment to see the full error message
     this.input.mouseControllers = {};
 
-    this.input.keyboard?.destroy();
-    this.input.keyboardNoLoop?.destroy();
-    this.input.keyboardLoopDelayed?.destroy();
-
+    // First unsubscribe from store. Then destroy the keyboard.
     this.unsubscribeStoreListeners();
+    this.input.keyboard?.destroy();
   }
 
-  createToolDependentKeyboardHandler(
-    skeletonHandler: ((...args: Array<any>) => any) | null | undefined,
-    volumeHandler: ((...args: Array<any>) => any) | null | undefined,
-    boundingBoxHandler: ((...args: Array<any>) => any) | null | undefined,
-    viewHandler?: ((...args: Array<any>) => any) | null | undefined,
-  ): (...args: Array<any>) => any {
-    return (...args) => {
+  createToolDependentMouseHandler<T extends MouseEventHandler = MouseEventHandler>(
+    toolToHandlerMap: Record<AnnotationToolId, T | undefined>,
+  ): (...args: Parameters<T>) => void {
+    return (...args: Parameters<T>) => {
       const tool = this.props.activeTool;
-
-      switch (tool) {
-        case AnnotationTool.MOVE: {
-          if (viewHandler != null) {
-            viewHandler(...args);
-          } else if (skeletonHandler != null) {
-            skeletonHandler(...args);
-          }
-
-          return;
-        }
-
-        case AnnotationTool.SKELETON: {
-          if (skeletonHandler != null) {
-            skeletonHandler(...args);
-          } else if (viewHandler != null) {
-            viewHandler(...args);
-          }
-
-          return;
-        }
-
-        case AnnotationTool.BOUNDING_BOX: {
-          if (boundingBoxHandler != null) {
-            boundingBoxHandler(...args);
-          } else if (viewHandler != null) {
-            viewHandler(...args);
-          }
-
-          return;
-        }
-
-        default: {
-          if (volumeHandler != null) {
-            volumeHandler(...args);
-          } else if (viewHandler != null) {
-            viewHandler(...args);
-          }
-        }
-      }
-    };
-  }
-
-  createToolDependentMouseHandler(
-    toolToHandlerMap: Record<AnnotationToolId, (...args: Array<any>) => any>,
-  ): (...args: Array<any>) => any {
-    return (...args) => {
-      const tool = this.props.activeTool;
-      const handler = toolToHandlerMap[tool.id];
-      const fallbackHandler = toolToHandlerMap[AnnotationTool.MOVE.id];
+      const handler = toolToHandlerMap[tool.id] as T | undefined;
+      const fallbackHandler = toolToHandlerMap[AnnotationTool.MOVE.id] as T | undefined;
 
       if (handler != null) {
+        // @ts-expect-error Typescript is too strict to allow spreading the parameters here.
         handler(...args);
       } else if (fallbackHandler != null) {
+        // @ts-expect-error Typescript is too strict to allow spreading the parameters here.
         fallbackHandler(...args);
       }
     };

@@ -13,6 +13,7 @@ import Constants, {
 } from "viewer/constants";
 import { AnnotationTool, Toolkit } from "viewer/model/accessors/tool_accessor";
 import type { WebknossosState } from "viewer/store";
+import { getAllDefaultKeyboardShortcuts } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_constants";
 
 const defaultViewportRect = {
   top: 0,
@@ -99,6 +100,28 @@ const defaultState: WebknossosState = {
     renderWatermark: true,
     antialiasRendering: false,
     activeToolkit: Toolkit.ALL_TOOLS,
+    erasePreference: "ERASE_BRUSH",
+    writePreference: "BRUSH",
+    measurementPreference: "LINE_MEASUREMENT",
+    timestampsForTools: {
+      [AnnotationTool.MOVE.id]: 0,
+      [AnnotationTool.BRUSH.id]: 0,
+      [AnnotationTool.ERASE_BRUSH.id]: 0,
+      [AnnotationTool.TRACE.id]: 0,
+      [AnnotationTool.ERASE_TRACE.id]: 0,
+      [AnnotationTool.SKELETON.id]: 0,
+      [AnnotationTool.BOUNDING_BOX.id]: 0,
+      [AnnotationTool.AREA_MEASUREMENT.id]: 0,
+      [AnnotationTool.QUICK_SELECT.id]: 0,
+      [AnnotationTool.FILL_CELL.id]: 0,
+      [AnnotationTool.PROOFREAD.id]: 0,
+      [AnnotationTool.LINE_MEASUREMENT.id]: 0,
+      [AnnotationTool.VOXEL_PIPETTE.id]: 0,
+    },
+  },
+  keyboardConfiguration: {
+    shortcutsConfig: getAllDefaultKeyboardShortcuts(),
+    unmodifiedLayoutMap: new Map(),
   },
   temporaryConfiguration: {
     viewMode: Constants.MODE_PLANE_TRACING,
@@ -175,7 +198,7 @@ const defaultState: WebknossosState = {
     owner: null,
     isLockedByOwner: false,
     contributors: [],
-    othersMayEdit: false,
+    collaborationMode: "OwnerOnly",
     annotationLayers: [],
     version: 0,
     earliestAccessibleVersion: 0,
@@ -186,12 +209,13 @@ const defaultState: WebknossosState = {
   save: {
     queue: [],
     isBusy: false,
+    isSavingDisabled: false,
     lastSaveTimestamp: 0,
     progressInfo: {
       processedActionCount: 0,
       totalActionCount: 0,
     },
-    mutexState: { hasAnnotationMutex: false, blockedByUser: null },
+    mutexState: { hasAnnotationMutex: false, blockedByUser: null, blockedBySessionId: null },
     rebaseRelevantServerAnnotationState: {
       annotationDescription: "",
       annotationVersion: 1,
@@ -200,6 +224,7 @@ const defaultState: WebknossosState = {
       activeMappingByLayer: {},
       isRebasingOrForwarding: false,
     },
+    proofreadingPostProcessingInfo: null,
   },
   flycam: {
     zoomStep: 1.3,
@@ -247,11 +272,14 @@ const defaultState: WebknossosState = {
     activeUserBoundingBoxId: null,
     showDropzoneModal: false,
     showVersionRestore: false,
+    isRestoringVersion: false,
     showDownloadModal: false,
     showAddScriptModal: false,
     showMergeAnnotationModal: false,
     showZarrPrivateLinksModal: false,
+    showKeyboardShortcutConfigModal: false,
     showPythonClientModal: false,
+    showDuplicateAnnotationModal: false,
     aIJobDrawerState: "invisible",
     showRenderAnimationModal: false,
     showShareModal: false,

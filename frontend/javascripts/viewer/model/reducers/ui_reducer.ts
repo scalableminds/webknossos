@@ -38,6 +38,11 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
         showVersionRestore: action.active,
       });
     }
+    case "SET_IS_RESTORING_VERSION": {
+      return updateKey(state, "uiInformation", {
+        isRestoringVersion: action.isRestoring,
+      });
+    }
 
     case "SET_STORED_LAYOUTS": {
       const { storedLayouts } = action;
@@ -126,6 +131,18 @@ function UiReducer(state: WebknossosState, action: Action): WebknossosState {
     case "SET_ZARR_LINKS_MODAL_VISIBILITY": {
       return updateKey(state, "uiInformation", {
         showZarrPrivateLinksModal: action.visible,
+      });
+    }
+
+    case "SET_KEYBOARD_SHORTCUT_CONFIG_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showKeyboardShortcutConfigModal: action.visible,
+      });
+    }
+
+    case "SET_DUPLICATE_ANNOTATION_MODAL_VISIBILITY": {
+      return updateKey(state, "uiInformation", {
+        showDuplicateAnnotationModal: action.visible,
       });
     }
 

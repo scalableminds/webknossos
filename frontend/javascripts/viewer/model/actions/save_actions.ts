@@ -8,7 +8,7 @@ import type {
   UpdateActionWithIsolationRequirement,
   UpdateActionWithoutIsolationRequirement,
 } from "viewer/model/sagas/volume/update_actions";
-import type { SaveQueueEntry, StoreAnnotation } from "viewer/store";
+import type { ProofreadingPostProcessingInfo, SaveQueueEntry, StoreAnnotation } from "viewer/store";
 export type SaveQueueType = "skeleton" | "volume" | "mapping";
 
 import { areSetsEqual } from "libs/utils";
@@ -32,11 +32,16 @@ type DisableSavingAction = ReturnType<typeof disableSavingAction>;
 export type EnsureTracingsWereDiffedToSaveQueueAction = ReturnType<
   typeof ensureTracingsWereDiffedToSaveQueueAction
 >;
-export type EnsureHasAnnotationMutexAction = ReturnType<typeof ensureHasAnnotationMutexAction>;
 export type EnsureHasNewestVersionAction = ReturnType<typeof ensureHasNewestVersionAction>;
-export type DoneSavingAction = ReturnType<typeof doneSavingAction>;
 export type SetIsMutexAcquiredAction = ReturnType<typeof setIsMutexAcquiredAction>;
 export type SetUserHoldingMutexAction = ReturnType<typeof setUserHoldingMutexAction>;
+export type SubscribeToAnnotationMutexAction = ReturnType<typeof subscribeToAnnotationMutexAction>;
+export type UnsubscribeFromAnnotationMutexAction = ReturnType<
+  typeof unsubscribeFromAnnotationMutexAction
+>;
+export type SnapshotAnnotationStateForNextRebaseAction = ReturnType<
+  typeof snapshotAnnotationStateForNextRebaseAction
+>;
 export type PrepareRebaseAction = ReturnType<typeof prepareRebaseAction>;
 export type FinishedRebaseAction = ReturnType<typeof finishedRebaseAction>;
 export type StartForwardingUpdateActionsAction = ReturnType<
@@ -51,7 +56,12 @@ export type UpdateMappingRebaseInformationAction = ReturnType<
 export type FinishedApplyingMissingUpdatesAction = ReturnType<
   typeof finishedApplyingMissingUpdatesAction
 >;
+export type SetPendingProofreadingOperationInfoAction = ReturnType<
+  typeof setPendingProofreadingOperationInfoAction
+>;
 export type ReplaceSaveQueueAction = ReturnType<typeof replaceSaveQueueAction>;
+export type ExitingAnnotationAction = ReturnType<typeof exitingAnnotationAction>;
+export type RetryMutexAcquisitionNowAction = ReturnType<typeof retryMutexAcquisitionNowAction>;
 
 export type SaveAction =
   | PushSaveQueueTransaction
@@ -66,18 +76,22 @@ export type SaveAction =
   | RedoAction
   | DisableSavingAction
   | EnsureTracingsWereDiffedToSaveQueueAction
-  | EnsureHasAnnotationMutexAction
   | EnsureHasNewestVersionAction
-  | DoneSavingAction
   | SetIsMutexAcquiredAction
   | SetUserHoldingMutexAction
+  | SubscribeToAnnotationMutexAction
+  | UnsubscribeFromAnnotationMutexAction
+  | SnapshotAnnotationStateForNextRebaseAction
   | PrepareRebaseAction
   | FinishedRebaseAction
   | StartForwardingUpdateActionsAction
   | FinishForwardingUpdateActionsAction
   | UpdateMappingRebaseInformationAction
   | FinishedApplyingMissingUpdatesAction
-  | ReplaceSaveQueueAction;
+  | SetPendingProofreadingOperationInfoAction
+  | ReplaceSaveQueueAction
+  | ExitingAnnotationAction
+  | RetryMutexAcquisitionNowAction;
 
 // The following actions can be used to "push" update actions into the local save queue
 // of the Store.
@@ -108,6 +122,11 @@ export const notifyAboutUpdatedBucketsAction = (count: number) =>
 export const saveNowAction = () =>
   ({
     type: "SAVE_NOW",
+  }) as const;
+
+export const exitingAnnotationAction = () =>
+  ({
+    type: "EXITING_ANNOTATION",
   }) as const;
 
 export const shiftSaveQueueAction = (count: number) =>
@@ -203,21 +222,6 @@ export const dispatchEnsureTracingsWereDiffedToSaveQueueAction = async (
   }
 };
 
-export const ensureHasAnnotationMutexAction = (callback: () => void) =>
-  ({
-    type: "ENSURE_HAS_ANNOTATION_MUTEX",
-    callback,
-  }) as const;
-
-export const dispatchEnsureHasAnnotationMutexAsync = async (
-  dispatch: Dispatch<any>,
-): Promise<void> => {
-  const readyDeferred = new Deferred();
-  const action = ensureHasAnnotationMutexAction(() => readyDeferred.resolve(null));
-  dispatch(action);
-  await readyDeferred.promise();
-};
-
 export const ensureHasNewestVersionAction = (callback: () => void) =>
   ({
     type: "ENSURE_HAS_NEWEST_VERSION",
@@ -233,21 +237,40 @@ export const dispatchEnsureHasNewestVersionAsync = async (
   await readyDeferred.promise();
 };
 
-export const doneSavingAction = () =>
-  ({
-    type: "DONE_SAVING",
-  }) as const;
-
 export const setIsMutexAcquiredAction = (isMutexAcquired: boolean) =>
   ({
     type: "SET_IS_MUTEX_ACQUIRED",
     isMutexAcquired,
   }) as const;
 
-export const setUserHoldingMutexAction = (blockedByUser: APIUserCompact | null | undefined) =>
+export const setUserHoldingMutexAction = (
+  blockedByUser: APIUserCompact | null | undefined,
+  blockedBySessionId?: string | null,
+) =>
   ({
     type: "SET_USER_HOLDING_MUTEX",
     blockedByUser,
+    blockedBySessionId,
+  }) as const;
+
+export const subscribeToAnnotationMutexAction = (subscriptionId: number, callerId: string) =>
+  ({
+    type: "SUBSCRIBE_TO_ANNOTATION_MUTEX",
+    subscriptionId,
+    callerId,
+  }) as const;
+
+// TODO #9389: The action is not really needed currently. This might change
+// when the mutex state is moved to the store, though (as suggested in the linked issue).
+export const unsubscribeFromAnnotationMutexAction = (subscriptionId: number) =>
+  ({
+    type: "UNSUBSCRIBE_FROM_ANNOTATION_MUTEX",
+    subscriptionId,
+  }) as const;
+
+export const snapshotAnnotationStateForNextRebaseAction = () =>
+  ({
+    type: "SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE",
   }) as const;
 
 export const prepareRebaseAction = () =>
@@ -285,6 +308,16 @@ export const finishedApplyingMissingUpdatesAction = () =>
   ({
     type: "FINISHED_APPLYING_MISSING_UPDATES",
   }) as const;
+export const setPendingProofreadingOperationInfoAction = (
+  proofreadingPostProcessingInfo: ProofreadingPostProcessingInfo | null | undefined,
+) =>
+  ({
+    type: "SET_PENDING_PROOFREADING_OPERATION_INFO",
+    proofreadingPostProcessingInfo,
+  }) as const;
 
 export const replaceSaveQueueAction = (newSaveQueue: SaveQueueEntry[]) =>
   ({ type: "REPLACE_SAVE_QUEUE", newSaveQueue }) as const;
+
+export const retryMutexAcquisitionNowAction = () =>
+  ({ type: "RETRY_MUTEX_ACQUISITION_NOW" }) as const;

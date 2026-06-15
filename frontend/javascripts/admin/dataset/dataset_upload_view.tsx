@@ -25,7 +25,6 @@ import {
   reserveDatasetUpload,
   sendAnalyticsEvent,
   sendFailedRequestAnalyticsEvent,
-  startConvertToWkwJob,
   type UnfinishedUpload,
 } from "admin/rest_api";
 import {
@@ -50,7 +49,7 @@ import FolderSelection from "dashboard/folders/folder_selection";
 import dayjs from "dayjs";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
-import type { ResumableUploadEvent } from "libs/resumable-upload";
+import type { ResumableUploadEvent } from "libs/resumable_upload/resumable_upload";
 import Toast from "libs/toast";
 import { getFileExtension, isFileExtensionEqualTo, isUserAdminOrDatasetManager } from "libs/utils";
 import { Vector3Input } from "libs/vector_input";
@@ -342,34 +341,39 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       : `${dayjs(Date.now()).format("YYYY-MM-DD_HH-mm")}__${newDatasetName}__${getRandomString()}`;
     const filePaths = formValues.zipFile.map((file) => file.path || "");
     const totalFileSizeInBytes = getFileSize(formValues.zipFile);
-    const reserveUploadInformation = {
+    const resumableUploadInfo = {
       uploadId,
-      name: newDatasetName,
-      directoryName: "<filled by backend>",
-      newDatasetId: "<filled by backend>",
-      organization: activeUser.organization,
       totalFileCount: formValues.zipFile.length,
       filePaths: filePaths,
       totalFileSizeInBytes,
+    };
+    const datasetUploadInfo = {
+      resumableUploadInfo,
+      datasetName: newDatasetName,
+      organizationId: activeUser.organization,
       layersToLink: [],
-      initialTeams: formValues.initialTeams.map((team: APITeam) => team.id),
+      initialTeamIds: formValues.initialTeams.map((team: APITeam) => team.id),
       folderId: formValues.targetFolderId,
       needsConversion: this.state.needsConversion,
+      voxelSizeFactor: this.state.needsConversion ? formValues.voxelSizeFactor : undefined,
+      voxelSizeUnit: this.state.needsConversion ? formValues.voxelSizeUnit : undefined,
     };
     const datastoreUrl = formValues.datastoreUrl;
     await refreshToken();
-    await reserveDatasetUpload(datastoreUrl, reserveUploadInformation);
+    await reserveDatasetUpload(datastoreUrl, datasetUploadInfo);
     const resumableUpload = await createResumableUpload(datastoreUrl, uploadId);
     this.setState({
       uploadId,
       resumableUpload,
       datastoreUrl,
     });
+    let finishUploadCalled = false;
     resumableUpload.addEventListener("complete", (event: ResumableUploadEvent) => {
       if (
         event.detail.type !== "complete" ||
         !event.detail.didUploadCompleteSuccessfully ||
-        this._isCancellingUpload
+        this._isCancellingUpload ||
+        finishUploadCalled
       ) {
         // The upload was not successful, or a cancel was initiated before the complete event
         // fired (e.g. the last in-flight chunk completed while the cancel dialog was open).
@@ -383,54 +387,29 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         throw new Error("Form couldn't be initialized.");
       }
 
-      const uploadInfo = {
-        uploadId,
-        needsConversion: this.state.needsConversion,
-      };
+      finishUploadCalled = true;
+      resumableUpload.pause();
       this.setState({
         isFinishing: true,
       });
-      finishDatasetUpload(datastoreUrl, uploadInfo).then(
-        async ({ newDatasetId }) => {
-          let maybeError;
-
-          if (this.state.needsConversion) {
-            try {
-              const datastore = this.getDatastoreForUrl(datastoreUrl);
-
-              if (!datastore) {
-                throw new Error("Selected datastore does not match available datastores");
-              }
-
-              await startConvertToWkwJob(
-                newDatasetId,
-                formValues.voxelSizeFactor,
-                formValues.voxelSizeUnit,
-              );
-            } catch (error) {
-              maybeError = error;
-            }
-
-            if (maybeError != null) {
-              Toast.error(
-                "The upload was successful, but the conversion for the dataset could not be started. Please try again or contact us if this issue occurs again.",
-              );
-            }
-          }
+      finishDatasetUpload(datastoreUrl, uploadId).then(
+        async ({ datasetId }) => {
+          const { needsConversion } = this.state;
           this.setState({
             isUploading: false,
             isFinishing: false,
+            isRetrying: false,
+            uploadProgress: 0,
             unfinishedUploadToContinue: null,
             uploadId: undefined,
+            needsConversion: false,
           });
 
-          if (maybeError == null) {
-            newestForm.setFieldsValue({
-              name: "",
-              zipFile: [],
-            });
-            this.props.onUploaded(newDatasetId, newDatasetName, this.state.needsConversion);
-          }
+          newestForm.setFieldsValue({
+            name: "",
+            zipFile: [],
+          });
+          this.props.onUploaded(datasetId, newDatasetName, needsConversion);
         },
         (error) => {
           sendFailedRequestAnalyticsEvent("finish_dataset_upload", error, {
@@ -497,9 +476,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
 
     resumableUpload.cancel();
     if (uploadId) {
-      await cancelDatasetUpload(datastoreUrl, {
-        uploadId,
-      });
+      await cancelDatasetUpload(datastoreUrl, uploadId);
     }
     this.setState({
       isUploading: false,
@@ -579,9 +556,6 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       fileNames.push(file.name);
       const fileExtension = getFileExtension(file.name);
       fileExtensions.push(fileExtension);
-      sendAnalyticsEvent("add_files_to_upload", {
-        fileExtension,
-      });
 
       if (fileExtension === "zip") {
         try {
@@ -638,12 +612,9 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
     ) {
       needsConversion = false;
     }
-    Object.entries(countedFileExtensions).map(([fileExtension, count]) =>
-      sendAnalyticsEvent("add_files_to_upload", {
-        fileExtension,
-        count,
-      }),
-    );
+    sendAnalyticsEvent("add_files_to_upload", {
+      fileExtensions: countedFileExtensions,
+    });
     this.handleNeedsConversionInfo(needsConversion);
   };
 
@@ -846,7 +817,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   <>
                     We are happy to help!
                     <br />
-                    Please <a href="mailto:hello@webknossos.org">contact us</a> if you have any
+                    Please <a href="mailto:support@webknossos.org">contact us</a> if you have any
                     trouble uploading your data or the uploader doesn&apos;t support your format
                     yet.
                   </>

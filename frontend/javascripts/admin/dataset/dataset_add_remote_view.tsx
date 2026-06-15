@@ -9,12 +9,10 @@ import DatasetSettingsDataTab, {
 import { DatasetSettingsProvider } from "dashboard/dataset/dataset_settings_provider";
 import { FormItemWithInfo, Hideable } from "dashboard/dataset/helper_components";
 import FolderSelection from "dashboard/folders/folder_selection";
-import { useWkSelector } from "libs/react_hooks";
+import { useEffectOnlyOnce, useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { computeHash } from "libs/utils";
-import messages from "messages";
-import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import type { APIDataStore } from "types/api_types";
 import type {
   DataLayer,
@@ -82,13 +80,12 @@ function DatasetAddRemoteView(props: Props) {
   const [targetFolderId, setTargetFolderId] = useState<string | null>(null);
   const maybeDataLayers = Form.useWatch(["dataSource", "dataLayers"], form);
   const datasourceConfig = Form.useWatch(["dataSource"], form);
-  const navigate = useNavigate();
 
-  useEffect(() => {
+  useEffectOnlyOnce(() => {
     const params = new URLSearchParams(location.search);
     const targetFolderId = params.get("to");
     setTargetFolderId(targetFolderId);
-  }, []);
+  });
 
   const getDefaultDatasetName = (url: string) => {
     if (url === "") return "";
@@ -96,16 +93,6 @@ function DatasetAddRemoteView(props: Props) {
     const defaultName = urlPathElements.filter((el) => el !== "").at(-1);
     const urlHash = computeHash(url);
     return defaultName + "-" + urlHash;
-  };
-
-  const maybeOpenExistingDataset = () => {
-    const maybeDSNameError = form
-      .getFieldError(["dataset", "name"])
-      .filter((error) => error === messages["dataset.name.already_taken"]);
-    if (maybeDSNameError == null) return;
-    navigate(
-      `/datasets/${activeUser?.organization}/${form.getFieldValue(["dataSource", "id", "name"])}`,
-    );
   };
 
   const setEmptyTransformations = (config: DatasourceConfiguration) => {
@@ -161,18 +148,13 @@ function DatasetAddRemoteView(props: Props) {
     if (!showLoadingOverlay) setShowLoadingOverlay(true); // show overlay again, e.g. after credentials were passed
 
     const defaultDatasetName = getDefaultDatasetName(url);
-    form.setFieldValue(["dataSource", "id"], { name: defaultDatasetName, team: "" });
+    form.setFieldValue(["dataset", "name"], defaultDatasetName);
 
     try {
       await form.validateFields();
     } catch (_e) {
       console.warn(_e);
-      if (defaultDatasetUrl != null) {
-        maybeOpenExistingDataset();
-        return;
-      }
     }
-
     if (!hasFormAnyErrors(form)) {
       handleStoreDataset();
     } else {
@@ -186,10 +168,6 @@ function DatasetAddRemoteView(props: Props) {
       await form.validateFields();
     } catch (_e) {
       console.warn(_e);
-      if (defaultDatasetUrl != null) {
-        maybeOpenExistingDataset();
-        return;
-      }
     }
     if (hasFormAnyErrors(form)) {
       setShowLoadingOverlay(false);
@@ -219,6 +197,7 @@ function DatasetAddRemoteView(props: Props) {
           datastoreToUse.name,
           datasetName,
           dataSource,
+          defaultDatasetUrl,
           targetFolderId,
         );
         onAdded(newDatasetId, datasetName);

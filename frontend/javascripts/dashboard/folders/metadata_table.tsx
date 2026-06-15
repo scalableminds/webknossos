@@ -29,7 +29,7 @@ import isEqual from "lodash-es/isEqual";
 import noop from "lodash-es/noop";
 import uniq from "lodash-es/uniq";
 import type React from "react";
-import { useEffect, useState } from "react";
+import { type ReactElement, useEffect, useState } from "react";
 import {
   type APIDataset,
   type APIMetadataEntry,
@@ -485,9 +485,9 @@ export function InnerMetadataTable({
   readOnly,
 }: {
   metadata: APIMetadataWithError[];
-  getKeyInput: (entry: APIMetadataWithError, index: number) => JSX.Element;
-  getValueInput: (entry: APIMetadataWithError, index: number) => JSX.Element;
-  getDeleteEntryButton: (_: APIMetadataWithError, index: number) => JSX.Element;
+  getKeyInput: (entry: APIMetadataWithError, index: number) => ReactElement;
+  getValueInput: (entry: APIMetadataWithError, index: number) => ReactElement;
+  getDeleteEntryButton: (_: APIMetadataWithError, index: number) => ReactElement;
   addNewEntryMenuItems: MenuProps;
   onlyReturnRows?: boolean;
   readOnly?: boolean;

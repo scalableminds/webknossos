@@ -2,6 +2,7 @@ package models.annotation
 
 import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
+
 import javax.inject.Inject
 import models.user.{User, UserService}
 import play.api.libs.json._
@@ -12,7 +13,10 @@ import scala.concurrent._
 class AnnotationRestrictions(implicit ec: ExecutionContext) {
   def allowAccess(user: Option[User]): Fox[Boolean] = Fox.successful(false)
 
+  // Ignores state of annotation mutex. Use allowUpdateWithMutex for updates that should only be allowed with the mutex.
   def allowUpdate(user: Option[User]): Fox[Boolean] = Fox.successful(false)
+
+  def allowUpdateWithMutex(user: Option[User]): Fox[Boolean] = Fox.successful(false)
 
   def allowFinish(user: Option[User]): Fox[Boolean] = Fox.successful(false)
 
@@ -46,7 +50,8 @@ object AnnotationRestrictions extends FoxImplicits {
     }
 }
 
-class AnnotationRestrictionDefaults @Inject()(userService: UserService)(implicit ec: ExecutionContext)
+class AnnotationRestrictionDefaults @Inject()(userService: UserService, annotationMutexDAO: AnnotationMutexDAO)(
+    implicit ec: ExecutionContext)
     extends FoxImplicits {
 
   def defaultsFor(annotation: Annotation): AnnotationRestrictions =
@@ -61,28 +66,43 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService)(implicit
         } else {
           (for {
             user <- userOption.toFox
-            isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, annotation._team)
+            owner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
+            isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user,
+                                                                             owner._organization,
+                                                                             annotation._task)
           } yield annotation._user == user._id || isTeamManagerOrAdminOfTeam).orElse(Fox.successful(false))
         }
 
-      override def allowUpdate(user: Option[User]): Fox[Boolean] =
+      override def allowUpdateWithMutex(userOpt: Option[User]): Fox[Boolean] =
         for {
-          accessAllowed <- allowAccess(user)
+          updateAccessAllowed <- allowUpdate(userOpt)
+          userHasMutex <- userOpt match {
+            case Some(_) if !annotation.othersMayEdit => Fox.successful(false)
+            case Some(u)                              => annotationMutexDAO.hasMutex(u._id, annotation._id)
+            case None                                 => Fox.successful(false)
+          }
+        } yield if (annotation.othersMayEdit) updateAccessAllowed && userHasMutex else updateAccessAllowed
+
+      override def allowUpdate(userOpt: Option[User]): Fox[Boolean] =
+        for {
+          readAccessAllowed <- allowAccess(userOpt)
           annotationOwnerBox <- userService
             .findOneCached(annotation._user)(GlobalAccessContext)
             .shiftBox // sandbox annotations have no owner
+          annotationIsMutable = !(annotation.state == Finished) && !annotation.isLockedByOwner
         } yield
-          user.exists { user =>
-            (annotation._user == user._id || (accessAllowed && annotation.othersMayEdit)) &&
-            !(annotation.state == Finished) &&
-            !annotation.isLockedByOwner &&
-            annotationOwnerBox.exists(_._organization == user._organization)
+          userOpt.exists { user =>
+            if (annotation.othersMayEdit) {
+              val isInSameOrga = annotationOwnerBox.exists(_._organization == user._organization)
+              annotationIsMutable && isInSameOrga && readAccessAllowed
+            } else annotationIsMutable && annotation._user == user._id
           }
 
       override def allowFinish(userOption: Option[User]): Fox[Boolean] =
         (for {
           user <- userOption.toFox
-          isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, annotation._team)
+          owner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
+          isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, owner._organization, annotation._task)
         } yield {
           (annotation._user == user._id || isTeamManagerOrAdminOfTeam) && !(annotation.state == Finished) && !annotation.isLockedByOwner
         }).orElse(Fox.successful(false))
@@ -91,7 +111,8 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService)(implicit
       override def allowFinishSoft(userOption: Option[User]): Fox[Boolean] =
         (for {
           user <- userOption.toFox
-          isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, annotation._team)
+          owner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
+          isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, owner._organization, annotation._task)
         } yield {
           (annotation._user == user._id || isTeamManagerOrAdminOfTeam) && !annotation.isLockedByOwner
         }).orElse(Fox.successful(false))

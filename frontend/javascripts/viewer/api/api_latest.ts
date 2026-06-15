@@ -6,8 +6,9 @@ import {
   sendAnalyticsEvent,
 } from "admin/rest_api";
 import PriorityQueue from "js-priority-queue";
-import { InputKeyboardNoLoop } from "libs/input";
+import { InputKeyboard, type KeyboardNoLoopHandler } from "libs/input";
 import { M4x4, type Matrix4x4, V3 } from "libs/mjs";
+import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Request from "libs/request";
 import type { ToastStyle } from "libs/toast";
 import Toast from "libs/toast";
@@ -42,13 +43,17 @@ import Constants, {
   TDViewDisplayModeEnum,
 } from "viewer/constants";
 import { rotate3DViewTo } from "viewer/controller/camera_controller";
-import { loadAgglomerateSkeletonForSegmentId } from "viewer/controller/combinations/segmentation_handlers";
+import {
+  loadAgglomerateTreeAtPosition,
+  loadAgglomerateTreeFromId,
+} from "viewer/controller/combinations/segmentation_handlers";
 import {
   createSkeletonNode,
   getOptionsForCreateSkeletonNode,
 } from "viewer/controller/combinations/skeleton_handlers";
 import UrlManager from "viewer/controller/url_manager";
 import type { WebKnossosModel } from "viewer/model";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import {
   getLayerBoundingBox,
   getLayerByName,
@@ -71,6 +76,7 @@ import {
   getActiveTreeGroup,
   getFlatTreeGroups,
   getNodePosition,
+  getSkeletonTracing,
   getTree,
   getTreeAndNode,
   getTreeAndNodeOrNull,
@@ -80,7 +86,7 @@ import { AnnotationTool, type AnnotationToolId } from "viewer/model/accessors/to
 import {
   enforceActiveVolumeTracing,
   getActiveCellId,
-  getActiveSegmentationTracing,
+  getEditableMappingForVolumeTracingId,
   getNameOfRequestedOrVisibleSegmentationLayer,
   getRequestedOrDefaultSegmentationTracingLayer,
   getRequestedOrVisibleSegmentationLayer,
@@ -89,11 +95,16 @@ import {
   getSegmentsForLayer,
   getVolumeDescriptors,
   getVolumeTracingById,
-  getVolumeTracingByLayerName,
+  getVolumeTracingByNameOrActive,
   getVolumeTracings,
   hasVolumeTracings,
+  needsLocalHdf5Mapping,
 } from "viewer/model/accessors/volumetracing_accessor";
-import { restartSagaAction, wkInitializedAction } from "viewer/model/actions/actions";
+import {
+  dispatchGetNewIdAsync,
+  restartSagaAction,
+  wkInitializedAction,
+} from "viewer/model/actions/actions";
 import {
   dispatchMaybeFetchMeshFilesAsync,
   refreshMeshesAction,
@@ -139,6 +150,7 @@ import {
 import { setToolAction } from "viewer/model/actions/ui_actions";
 import { centerTDViewAction } from "viewer/model/actions/view_mode_actions";
 import {
+  addSegmentGroupAction,
   type BatchableUpdateSegmentAction,
   batchUpdateGroupsAndSegmentsAction,
   clickSegmentAction,
@@ -164,9 +176,9 @@ import {
   zoomedPositionToZoomedAddress,
 } from "viewer/model/helpers/position_converter";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
-import { getMaximumGroupId } from "viewer/model/reducers/skeletontracing_reducer_helpers";
 import { getHalfViewportExtentsInUnitFromState } from "viewer/model/sagas/saga_selectors";
 import { applyLabeledVoxelMapToAllMissingMags } from "viewer/model/sagas/volume/helpers";
+import { fetchAgglomeratesForSegmentIds } from "viewer/model/sagas/volume/mapping_saga";
 import type { MutableNode, Node, Tree, TreeGroupTypeFlat } from "viewer/model/types/tree_types";
 import { applyVoxelMap } from "viewer/model/volumetracing/volume_annotation_sampling";
 import { api, Model } from "viewer/singletons";
@@ -184,8 +196,13 @@ import type {
 } from "viewer/store";
 import Store from "viewer/store";
 import {
+  captureScreenshots,
+  downloadScreenshot,
+  downloadScreenshotsAsZip,
+  type ScreenshotBlob,
+} from "viewer/view/rendering_utils";
+import {
   callDeep,
-  createGroupHelper,
   createGroupToSegmentsMap,
   MISSING_GROUP_ID,
   mapGroups,
@@ -754,7 +771,11 @@ class TracingApi {
 
     let groupId = MISSING_GROUP_ID;
     try {
-      groupId = api.tracing.createSegmentGroup(`Segments for ${bbName}`, -1, segmentationLayerName);
+      groupId = await api.tracing.createSegmentGroup(
+        `Segments for ${bbName}`,
+        -1,
+        segmentationLayerName,
+      );
     } catch (_e) {
       console.info(
         `Volume tracing could not be found for the currently visible segmentation layer, registering segments for ${bbName} within root group.`,
@@ -845,32 +866,28 @@ class TracingApi {
    * Creates a new segment group and returns its id.
    *
    * @example
-   * api.tracing.createSegmentGroup(
+   * await api.tracing.createSegmentGroup(
    *   "Group name",    // optional
    *   parentGroupId,   // optional. use -1 for the root group
    *   volumeLayerName, // see getSegmentationLayerNames
    * );
    */
-  createSegmentGroup(
+  async createSegmentGroup(
     name: string | null = null,
     parentGroupId: number | null = MISSING_GROUP_ID,
     volumeLayerName?: string,
-  ): number {
-    const volumeTracing = volumeLayerName
-      ? getVolumeTracingByLayerName(Store.getState().annotation, volumeLayerName)
-      : getActiveSegmentationTracing(Store.getState());
+  ): Promise<number> {
+    const volumeTracing = getVolumeTracingByNameOrActive(volumeLayerName);
     if (volumeTracing == null) {
       throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
     }
-    const { segmentGroups } = volumeTracing;
-    const { newSegmentGroups, newGroupId } = createGroupHelper(
-      segmentGroups,
-      name,
-      getMaximumGroupId(segmentGroups) + 1,
-      parentGroupId,
+    const newGroupId = await dispatchGetNewIdAsync(
+      Store.dispatch,
+      volumeTracing.tracingId,
+      "SegmentGroup",
     );
 
-    Store.dispatch(setSegmentGroupsAction(newSegmentGroups, volumeTracing.tracingId));
+    Store.dispatch(addSegmentGroupAction(volumeTracing.tracingId, newGroupId, name, parentGroupId));
 
     return newGroupId;
   }
@@ -886,9 +903,7 @@ class TracingApi {
    * );
    */
   renameSegmentGroup(groupId: number, newName: string, volumeLayerName?: string) {
-    const volumeTracing = volumeLayerName
-      ? getVolumeTracingByLayerName(Store.getState().annotation, volumeLayerName)
-      : getActiveSegmentationTracing(Store.getState());
+    const volumeTracing = getVolumeTracingByNameOrActive(volumeLayerName);
     if (volumeTracing == null) {
       throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
     }
@@ -920,9 +935,7 @@ class TracingApi {
    * );
    */
   deleteSegmentGroup(groupId: number, deleteChildren: boolean = false, volumeLayerName?: string) {
-    const volumeTracing = volumeLayerName
-      ? getVolumeTracingByLayerName(Store.getState().annotation, volumeLayerName)
-      : getActiveSegmentationTracing(Store.getState());
+    const volumeTracing = getVolumeTracingByNameOrActive(volumeLayerName);
     if (volumeTracing == null) {
       throw new Error(`Could not find volume tracing layer with name ${volumeLayerName}`);
     }
@@ -1025,14 +1038,36 @@ class TracingApi {
   }
 
   /**
-   * Loads the agglomerate skeleton for the given segment id. Only possible if
+   * Loads the agglomerate tree for the agglomerate at the given position. Only possible if
    * a segmentation layer is visible for which an agglomerate mapping is enabled.
+   * Should be preferred over using api.tracing.loadAgglomerateSkeletonForSegmentId as this version
+   * yields more reliable results in live collaborative context. A conflicting merge can result in the
+   * agglomerate id at the give position to change. That's why passing the position is safer than
+   * passing the agglomerate id via api.tracing.loadAgglomerateSkeletonForSegmentId as the
+   * agglomerate id lookup is done after applying such an interfering merge.
+   *
+   * @example
+   * api.tracing.loadAgglomerateTreeAtPosition([3, 3, 3]);
+   */
+  loadAgglomerateTreeAtPosition(position: Vector3) {
+    loadAgglomerateTreeAtPosition(position);
+  }
+
+  /**
+   * Loads the agglomerate tree for the given segment id. Only possible if
+   * a segmentation layer is visible for which an agglomerate mapping is enabled.
+   * Please consider using api.tracing.loadAgglomerateTreeAtPosition as it yields
+   * more reliable results in a live collaborative context. A conflicting merge of another
+   * user can make the passed agglomerate id invalid just before loading the agglomerate
+   * tree from the backend. By passing any position of the agglomerate instead its id via using
+   * api.tracing.loadAgglomerateTreeAtPosition WEBKNOSSOS can ensure to use the up-to-date agglomerate
+   * id to request the correct agglomerate tree.
    *
    * @example
    * api.tracing.loadAgglomerateSkeletonForSegmentId(3);
    */
   loadAgglomerateSkeletonForSegmentId(segmentId: number) {
-    loadAgglomerateSkeletonForSegmentId(segmentId);
+    loadAgglomerateTreeFromId(segmentId);
   }
 
   /**
@@ -1191,7 +1226,10 @@ class TracingApi {
    * api.tracing.centerNode()
    */
   centerNode = (nodeId?: number): void => {
-    const skeletonTracing = assertSkeleton(Store.getState().annotation);
+    const skeletonTracing = getSkeletonTracing(Store.getState().annotation);
+    if (!skeletonTracing) {
+      return;
+    }
     const treeAndNode = getTreeAndNode(skeletonTracing, nodeId);
     if (!treeAndNode) return;
 
@@ -1216,26 +1254,6 @@ class TracingApi {
   rotate3DViewToDiagonal = (animate: boolean = true): void => {
     rotate3DViewTo(OrthoViews.TDView, animate);
   };
-
-  getShortestRotation(curRotation: Vector3, newRotation: Vector3): Vector3 {
-    // TODO
-    // interpolating Euler angles does not lead to the shortest rotation
-    // interpolate the Quaternion representation instead
-    // https://theory.org/software/qfa/writeup/node12.html
-    const result = [newRotation[0], newRotation[1], newRotation[2]];
-
-    for (let i = 0; i <= 2; i++) {
-      // a rotation about more than 180° is shorter when rotating the other direction
-      if (newRotation[i] - curRotation[i] > 180) {
-        result[i] = newRotation[i] - 360;
-      } else if (newRotation[i] - curRotation[i] < -180) {
-        result[i] = newRotation[i] + 360;
-      }
-    }
-
-    // @ts-expect-error ts-migrate(2322) FIXME: Type 'number[]' is not assignable to type 'Vector3... Remove this comment to see the full error message
-    return result;
-  }
 
   /**
    * Measures the length of the given tree and returns the length in dataset unit and in voxels.
@@ -1486,6 +1504,16 @@ class TracingApi {
    */
   setCameraPosition(position: Vector3) {
     Store.dispatch(setPositionAction(position));
+  }
+
+  /**
+   * Sets the current camera rotation.
+   *
+   * @example
+   * api.tracing.setCameraRotation([180, 0, 90])
+   */
+  setCameraRotation(rotation: Vector3) {
+    Store.dispatch(setRotationAction(rotation));
   }
 
   //  VOLUMETRACING API
@@ -1907,6 +1935,66 @@ class DataApi {
   }
 
   /**
+   * Returns the mapped (agglomerate) id for the segment at the given position, respecting the
+   * active HDF5 mapping. For layers without a local HDF5 mapping, delegates to getDataValue
+   * with respectMapping enabled. For layers with a local HDF5 mapping (proofread mode or
+   * editable mapping), looks up the id in the local mapping and fetches from the server if
+   * the id is not cached yet.
+   */
+  async getMappedDataValue(
+    layerName: string,
+    position: Vector3,
+    zoomStep: number | null | undefined = null,
+    additionalCoordinates: AdditionalCoordinate[] | null = null,
+  ): Promise<number> {
+    const state = Store.getState();
+
+    if (!needsLocalHdf5Mapping(state, layerName)) {
+      return this.getDataValue(layerName, position, zoomStep, additionalCoordinates, true);
+    }
+
+    const unmappedId = await this.getDataValue(
+      layerName,
+      position,
+      zoomStep,
+      additionalCoordinates,
+    );
+
+    const activeMappingInfo = getMappingInfo(
+      state.temporaryConfiguration.activeMappingByLayer,
+      layerName,
+    );
+
+    if (activeMappingInfo.mapping != null) {
+      const mappedId = new NumberLikeMapWrapper(activeMappingInfo.mapping).getAsNumber(unmappedId);
+      if (mappedId != null) {
+        return mappedId;
+      }
+    }
+
+    const mappingName = activeMappingInfo.mappingName;
+    if (mappingName == null) {
+      throw new Error(`No active mapping for layer ${layerName}`);
+    }
+
+    const fetchedEntries = await fetchAgglomeratesForSegmentIds(
+      state.dataset,
+      state.annotation,
+      getEditableMappingForVolumeTracingId(state, layerName),
+      layerName,
+      getLayerByName(state.dataset, layerName),
+      mappingName,
+      new Set([unmappedId]),
+    );
+
+    const agglomerateId = new NumberLikeMapWrapper(fetchedEntries).getAsNumber(unmappedId);
+    if (agglomerateId == null) {
+      throw new Error(`Could not map id ${unmappedId} at position ${position}`);
+    }
+    return agglomerateId;
+  }
+
+  /**
    * Returns the channel count of a layer. Except for RGB layers (which have three channels),
    * layers always have one channel.
    *
@@ -2254,7 +2342,7 @@ class DataApi {
     optAdditionalCoordinates?: AdditionalCoordinate[] | null,
   ) {
     const state = Store.getState();
-    const allowUpdate = state.annotation.isUpdatingCurrentlyAllowed;
+    const allowUpdate = mayEditAnnotation(state);
     const additionalCoordinates =
       optAdditionalCoordinates === undefined
         ? state.flycam.additionalCoordinates
@@ -2842,6 +2930,38 @@ class DataApi {
       }
     }
   }
+
+  /**
+   * Takes a screenshot of the current viewport(s) and immediately downloads each image as a PNG.
+   * In plane mode, one file per visible viewport is downloaded. Use `captureScreenshots` +
+   * `downloadScreenshotsAsZip` instead when calling in a loop to avoid repeated save dialogs.
+   */
+  downloadScreenshot() {
+    return downloadScreenshot();
+  }
+
+  /**
+   * Renders the current viewport(s) and returns the images as an array of `{ name, blob }` objects
+   * without triggering any download. Suitable for collecting frames in a loop.
+   *
+   * @param prefix - Optional string prepended to each filename (e.g. a zero-padded frame index).
+   *   Resulting names follow the pattern `<prefix>__<dataset>__<x>_<y>_<z>__<plane>.png`, which
+   *   makes the files sort correctly when passed to `downloadScreenshotsAsZip`.
+   */
+  captureScreenshots(prefix?: string): Promise<ScreenshotBlob[]> {
+    return captureScreenshots(prefix);
+  }
+
+  /**
+   * Packages an array of `{ name, blob }` entries (as returned by `captureScreenshots`) into a
+   * single ZIP archive and downloads it once.
+   *
+   * @param screenshots - The collected screenshot blobs to include.
+   * @param zipName - Base name for the downloaded file (without `.zip`). Defaults to `"screenshots"`.
+   */
+  downloadScreenshotsAsZip(screenshots: ScreenshotBlob[], zipName?: string): Promise<void> {
+    return downloadScreenshotsAsZip(screenshots, zipName);
+  }
 }
 /**
  * All user configuration related API methods.
@@ -3017,8 +3137,8 @@ class UtilsApi {
   /**
    * Sets a custom handler function for a keyboard shortcut.
    */
-  registerKeyHandler(key: string, handler: () => void): UnregisterHandler {
-    const keyboard = new InputKeyboardNoLoop({
+  registerKeyHandler(key: string, handler: KeyboardNoLoopHandler): UnregisterHandler {
+    const keyboard = new InputKeyboard({
       [key]: handler,
     });
     return {

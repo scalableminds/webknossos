@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services.mesh
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.cache.AlfuCache
 import com.scalableminds.util.geometry.Vec3Float
@@ -14,12 +15,11 @@ import com.scalableminds.webknossos.datastore.services.{
   VoxelyticsZarrArtifactUtils
 }
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
-import play.api.i18n.{Messages, MessagesProvider}
 import play.api.libs.json.{JsResult, JsValue, Reads}
 import ucar.ma2.{Array => MultiArray}
 
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 case class MeshFileAttributes(
     formatVersion: Long,
@@ -27,7 +27,7 @@ case class MeshFileAttributes(
     lodScaleMultiplier: Double,
     transform: Array[Array[Double]],
     hashFunction: String,
-    nBuckets: Int,
+    nBuckets: Long,
     mappingName: Option[String]
 ) extends ArrayArtifactHashing {
   lazy val applyHashFunction: Long => Long = getHashFunction(hashFunction)
@@ -43,7 +43,7 @@ object MeshFileAttributes extends MeshFileUtils with VoxelyticsZarrArtifactUtils
         lodScaleMultiplier <- (meshFileAttrs \ attrKeyLodScaleMultiplier).validate[Double]
         transform <- (meshFileAttrs \ attrKeyTransform).validate[Array[Array[Double]]]
         hashFunction <- (meshFileAttrs \ attrKeyHashFunction).validate[String]
-        nBuckets <- (meshFileAttrs \ attrKeyNBuckets).validate[Int]
+        nBuckets <- (meshFileAttrs \ attrKeyNBuckets).validate[Long]
         mappingName <- (meshFileAttrs \ attrKeyMappingName).validateOpt[String]
       } yield
         MeshFileAttributes(
@@ -173,16 +173,15 @@ class ZarrMeshFileService @Inject()(chunkCacheService: DSChunkCacheService, data
 
   def listMeshChunksForMultipleSegments(meshFileKey: MeshFileKey, segmentIds: Seq[Long])(
       implicit ec: ExecutionContext,
-      tc: TokenContext,
-      m: MessagesProvider): Fox[WebknossosSegmentInfo] =
+      tc: TokenContext): Fox[WebknossosSegmentInfo] =
     for {
       meshFileAttributes <- readMeshFileAttributes(meshFileKey)
-      meshChunksForUnmappedSegments: List[List[MeshLodInfo]] <- Fox.fromFuture(
-        listMeshChunksForSegmentsNested(meshFileKey, segmentIds, meshFileAttributes))
-      _ <- Fox.fromBool(meshChunksForUnmappedSegments.nonEmpty) ?~> "zero chunks" ?~> Messages(
-        "mesh.file.listChunks.failed",
-        segmentIds.mkString(","),
-        meshFileKey.attachment.name)
+      meshChunksForUnmappedSegments: List[List[MeshLodInfo]] <- listMeshChunksForSegmentsNested(
+        meshFileKey,
+        segmentIds,
+        meshFileAttributes) ?~> Msg.Mesh.File.listChunksFailed(segmentIds.mkString(","), meshFileKey.attachment.name)
+      _ <- Fox.fromBool(meshChunksForUnmappedSegments.nonEmpty) ?~> Msg.Mesh.File
+        .zeroChunks(segmentIds.mkString(","), meshFileKey.attachment.name)
       wkChunkInfos <- WebknossosSegmentInfo
         .fromMeshInfosAndMetadata(meshChunksForUnmappedSegments, meshFileAttributes.meshFormat)
         .toFox
@@ -192,12 +191,14 @@ class ZarrMeshFileService @Inject()(chunkCacheService: DSChunkCacheService, data
                                               segmentIds: Seq[Long],
                                               meshFileAttributes: MeshFileAttributes)(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Future[List[List[MeshLodInfo]]] =
-    for {
-      resultBoxes <- Fox.serialSequence(segmentIds) { segmentId =>
-        listMeshChunksForSegment(meshFileKey, segmentId, meshFileAttributes)
-      }
-    } yield resultBoxes.flatten
+      tc: TokenContext): Fox[List[List[MeshLodInfo]]] = {
+    def lookupOne(segmentId: Long): Fox[Option[List[MeshLodInfo]]] =
+      listMeshChunksForSegment(meshFileKey, segmentId, meshFileAttributes).map(Some(_)).orElse(Fox.successful(None))
+    if (meshFileKey.attachment.path.isRemote)
+      Fox.batchCombined(segmentIds, parallelity = 32)(lookupOne).map(_.flatten)
+    else
+      Fox.serialCombined(segmentIds)(lookupOne).map(_.flatten)
+  }
 
   def readMeshChunk(meshFileKey: MeshFileKey, meshChunkDataRequests: Seq[MeshChunkDataRequest])(
       implicit ec: ExecutionContext,

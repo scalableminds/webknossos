@@ -54,7 +54,8 @@ case class WebknossosAdHocMeshRequest(
     mapping: Option[String] = None,
     mappingType: Option[String] = None,
     additionalCoordinates: Option[Seq[AdditionalCoordinate]] = None,
-    findNeighbors: Boolean = true
+    annotationVersion: Option[Long],
+    findNeighbors: Boolean = true,
 ) {
   def cuboid: Cuboid =
     Cuboid(VoxelPosition(position.x, position.y, position.z, mag), cubeSize.x, cubeSize.y, cubeSize.z)
@@ -91,7 +92,7 @@ case class AdditionalCoordinate(
     name: String,
     value: Int
 ) {
-  override def toString = s"$name=$value"
+  override def toString: String = s"$name=$value"
 }
 
 object AdditionalCoordinate {

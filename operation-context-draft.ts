@@ -1,6 +1,6 @@
 import { applyMiddleware, createStore } from "redux";
 import createSagaMiddleware from "redux-saga";
-import { call, delay, put, take, takeEvery } from "redux-saga/effects";
+import { call, delay, put, select, take, takeEvery } from "redux-saga/effects";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -8,7 +8,11 @@ type OperationId = string;
 
 interface OperationOptions {
   id: OperationId;
-  behaviorWhenDisallowed?: "wait" | "ignore" | "raise";
+  behaviorWhenDisallowed?: "wait" | "ignore" | "raise"; // defaults to "wait"
+  // If provided, called when `pendingId` wants to start while this operation is
+  // running. Return true to allow concurrent execution. Absent means: never allow
+  // additional operations.
+  allowAdditionalOperation?: (pendingId: OperationId) => Generator<any, boolean, any>;
 }
 
 interface OperationContext {
@@ -16,6 +20,11 @@ interface OperationContext {
   execute(saga: () => Generator): Generator;
 }
 
+// Tracks a running operation alongside its concurrency predicate.
+interface ActiveOperation {
+  id: OperationId;
+  allowAdditionalOperation?: (pendingId: OperationId) => Generator<any, boolean, any>;
+}
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
 
@@ -23,79 +32,117 @@ const REGISTER_OPERATION = "REGISTER_OPERATION" as const;
 const UNREGISTER_OPERATION = "UNREGISTER_OPERATION" as const;
 const REGISTER_CHILD_OPERATION = "REGISTER_CHILD_OPERATION" as const;
 const UNREGISTER_CHILD_OPERATION = "UNREGISTER_CHILD_OPERATION" as const;
+const SET_REBASING = "SET_REBASING" as const;
 const PUSH_SAVE_QUEUE = "PUSH_SAVE_QUEUE" as const;
 const ENSURE_NEWEST_VERSION = "ENSURE_NEWEST_VERSION" as const;
+const PERFORM_UNDO = "PERFORM_UNDO" as const;
 
 const registerOperation = (id: OperationId) => ({ type: REGISTER_OPERATION, id });
 const unregisterOperation = (id: OperationId) => ({ type: UNREGISTER_OPERATION, id });
-const registerChildOperation = (id: OperationId) => ({ type: REGISTER_CHILD_OPERATION, id });
+const registerChildOperation = (id: OperationId, parentId: OperationId) => ({
+  type: REGISTER_CHILD_OPERATION,
+  id,
+  parentId,
+});
 const unregisterChildOperation = (id: OperationId) => ({ type: UNREGISTER_CHILD_OPERATION, id });
+const setRebasing = (value: boolean) => ({ type: SET_REBASING, value });
 const pushSaveQueueAction = () => ({ type: PUSH_SAVE_QUEUE });
 const ensureNewestVersionAction = (
   operationContext?: OperationContext,
   onComplete?: () => void,
 ) => ({ type: ENSURE_NEWEST_VERSION, operationContext, onComplete });
+const performUndoAction = () => ({ type: PERFORM_UNDO });
 
 type AppAction =
   | ReturnType<typeof registerOperation>
   | ReturnType<typeof unregisterOperation>
   | ReturnType<typeof registerChildOperation>
   | ReturnType<typeof unregisterChildOperation>
+  | ReturnType<typeof setRebasing>
   | ReturnType<typeof pushSaveQueueAction>
-  | ReturnType<typeof ensureNewestVersionAction>;
+  | ReturnType<typeof ensureNewestVersionAction>
+  | ReturnType<typeof performUndoAction>;
 
 // ─── Reducer ──────────────────────────────────────────────────────────────────
 
 interface AppState {
-  activeOperation: OperationId | null;
-  childOperations: OperationId[]; // piggybacking ops currently inside execute()
+  activeOperations: OperationId[];
+  childOperations: Array<{ id: OperationId; parentId: OperationId }>;
+  isRebasing: boolean;
 }
 
 function reducer(
-  state: AppState = { activeOperation: null, childOperations: [] },
+  state: AppState = { activeOperations: [], childOperations: [], isRebasing: false },
   action: AppAction,
 ): AppState {
   switch (action.type) {
     case REGISTER_OPERATION:
-      return { ...state, activeOperation: action.id };
+      return { ...state, activeOperations: [...state.activeOperations, action.id] };
     case UNREGISTER_OPERATION:
-      // Children cannot outlive their parent — clear them together.
-      return { activeOperation: null, childOperations: [] };
+      return {
+        ...state,
+        activeOperations: state.activeOperations.filter((id) => id !== action.id),
+        // Children of the unregistered operation cannot outlive their parent.
+        childOperations: state.childOperations.filter((c) => c.parentId !== action.id),
+      };
     case REGISTER_CHILD_OPERATION:
-      return { ...state, childOperations: [...state.childOperations, action.id] };
+      return {
+        ...state,
+        childOperations: [...state.childOperations, { id: action.id, parentId: action.parentId }],
+      };
     case UNREGISTER_CHILD_OPERATION:
-      return { ...state, childOperations: state.childOperations.filter((id) => id !== action.id) };
+      return { ...state, childOperations: state.childOperations.filter((c) => c.id !== action.id) };
+    case SET_REBASING:
+      return { ...state, isRebasing: action.value };
     default:
       return state;
   }
 }
 
 // ─── Mutex ────────────────────────────────────────────────────────────────────
-// Scalar nullable rather than Set/array — the mutex invariant means only one
-// operation can hold the lock at any moment, so multiplicity is never valid.
-// JS is single-threaded and Redux-Saga is cooperative, so the null-check +
-// assign in createOperationContext are atomic (no other saga can interleave).
-// The Redux store mirrors this for observability (DevTools, UI).
+// Array rather than scalar to support optional concurrent operations.
+// For the common case (empty array → new op starts), the check-and-push is atomic
+// (no yield between them). When allowAdditionalOperation is used, its predicate may
+// yield select(), which breaks atomicity — an acceptable trade-off for the PoC.
+// The Redux store mirrors this for observability.
 
-let activeLockId: OperationId | null = null;
+let activeOperations: ActiveOperation[] = [];
 
 // ─── Operation Context ────────────────────────────────────────────────────────
 
+// Returns true only when every currently-running operation explicitly permits pendingId.
+function* allRunningAllow(pendingId: OperationId): Generator<any, boolean, any> {
+  for (const op of activeOperations) {
+    if (op.allowAdditionalOperation == null) return false;
+    const allowed = yield* op.allowAdditionalOperation(pendingId);
+    if (!allowed) return false;
+  }
+  return true;
+}
+
+type IgnoreOptions = Omit<OperationOptions, "behaviorWhenDisallowed"> & {
+  behaviorWhenDisallowed: "ignore";
+};
+type NonNullableOptions = Omit<OperationOptions, "behaviorWhenDisallowed"> & {
+  behaviorWhenDisallowed?: "wait" | "raise";
+};
+
 // "ignore" is the only behavior that can return null; all others always return a context.
 function* createOperationContext(
-  options: { id: OperationId; behaviorWhenDisallowed: "ignore" },
+  options: IgnoreOptions,
 ): Generator<any, OperationContext | null, any>;
 function* createOperationContext(
-  options: { id: OperationId; behaviorWhenDisallowed?: "wait" | "raise" },
+  options: NonNullableOptions,
 ): Generator<any, OperationContext, any>;
 function* createOperationContext(
   options: OperationOptions,
 ): Generator<any, OperationContext | null, any> {
   const behavior = options.behaviorWhenDisallowed ?? "wait";
 
-  // Atomic check-and-assign: no yield between null check and assign.
-  if (activeLockId === null) {
-    activeLockId = options.id;
+  const canStart = activeOperations.length === 0 || (yield* allRunningAllow(options.id));
+
+  if (canStart) {
+    activeOperations.push({ id: options.id, allowAdditionalOperation: options.allowAdditionalOperation });
     yield put(registerOperation(options.id));
 
     // Closure variable: guards against calling execute() more than once on the
@@ -112,7 +159,7 @@ function* createOperationContext(
         try {
           yield* saga();
         } finally {
-          activeLockId = null;
+          activeOperations = activeOperations.filter((op) => op.id !== options.id);
           yield put(unregisterOperation(options.id));
         }
       },
@@ -121,18 +168,20 @@ function* createOperationContext(
   }
 
   if (behavior === "wait") {
-    console.log(`  [${options.id}] blocked — waiting for lock`);
+    console.log(`  [${options.id}] blocked — waiting`);
     yield take(UNREGISTER_OPERATION);
     // Re-check after waking: another waiter may have grabbed the lock first.
     return yield* createOperationContext(options);
   }
 
   if (behavior === "raise") {
-    throw new Error(`[${options.id}] cannot start: lock held by [${activeLockId}]`);
+    throw new Error(
+      `[${options.id}] cannot start: active operations: [${activeOperations.map((op) => op.id).join(", ")}]`,
+    );
   }
 
   // "ignore"
-  console.log(`  [${options.id}] ignoring: lock is held`);
+  console.log(`  [${options.id}] ignoring: operations already running`);
   return null;
 }
 
@@ -144,10 +193,9 @@ function borrowedContext(existing: OperationContext, childId: OperationId): Oper
   return {
     id: existing.id,
     *execute(saga: () => Generator) {
-      if (consumed)
-        throw new Error(`[${childId}] borrowed context already consumed`);
+      if (consumed) throw new Error(`[${childId}] borrowed context already consumed`);
       consumed = true;
-      yield put(registerChildOperation(childId));
+      yield put(registerChildOperation(childId, existing.id));
       try {
         yield* saga();
       } finally {
@@ -158,11 +206,11 @@ function borrowedContext(existing: OperationContext, childId: OperationId): Oper
 }
 
 function* getOrCreateOperationContext(
-  options: { id: OperationId; behaviorWhenDisallowed: "ignore" },
+  options: IgnoreOptions,
   existing?: OperationContext | null,
 ): Generator<any, OperationContext | null, any>;
 function* getOrCreateOperationContext(
-  options: { id: OperationId; behaviorWhenDisallowed?: "wait" | "raise" },
+  options: NonNullableOptions,
   existing?: OperationContext | null,
 ): Generator<any, OperationContext, any>;
 function* getOrCreateOperationContext(
@@ -208,16 +256,31 @@ function* ensureNewestVersionImpl() {
 // ─── Saga Handlers ────────────────────────────────────────────────────────────
 
 function* handlePushSaveQueue() {
-  const ctx = yield* createOperationContext({ id: "pushSaveQueue" });
+  const ctx = yield* createOperationContext({
+    id: "pushSaveQueue",
+    // Allow undo to run concurrently, but only while not rebasing.
+    *allowAdditionalOperation(pendingId) {
+      if (pendingId !== "undo") return false;
+      const isRebasing = yield select((state: AppState) => state.isRebasing);
+      return !isRebasing;
+    },
+  });
 
   yield* ctx.execute(function* () {
-    console.log("STARTING handlePushSaveQueue");
-    yield* doStuff1();
+    console.log("  [save] starting — normal phase");
+    yield* doStuff1(); // 300ms, undo allowed here
+
+    console.log("  [save] entering rebasing phase");
+    yield put(setRebasing(true));
+    yield delay(400); // 400ms, undo blocked here
+    yield put(setRebasing(false));
+    console.log("  [save] exiting rebasing phase");
+
     const { promise, onComplete } = createCompletionToken();
     yield put(ensureNewestVersionAction(ctx, onComplete));
-    yield* doStuff2();
-    yield call(() => promise); // wait for ensureNewestVersion to confirm completion
-    console.log("ENDING handlePushSaveQueue");
+    yield* doStuff2(); // 300ms, undo allowed here
+    yield call(() => promise);
+    console.log("  [save] done");
   });
 }
 
@@ -226,13 +289,21 @@ function* handleEnsureNewestVersion(action: ReturnType<typeof ensureNewestVersio
     { id: "ensureNewestVersion" },
     action.operationContext,
   );
-
   yield* ctx.execute(function* () {
-    console.log("STARTING ensureNewestVersionImpl");
+    console.log("    [ensureNewestVersion] start");
     yield* ensureNewestVersionImpl();
-    console.log("ENDING ensureNewestVersionImpl");
+    console.log("    [ensureNewestVersion] done");
   });
   action.onComplete?.();
+}
+
+function* handlePerformUndo() {
+  const ctx = yield* createOperationContext({ id: "undo" });
+  yield* ctx.execute(function* () {
+    console.log("  [undo] start");
+    yield delay(100);
+    console.log("  [undo] done");
+  });
 }
 
 // ─── Root Saga & Store ────────────────────────────────────────────────────────
@@ -240,6 +311,7 @@ function* handleEnsureNewestVersion(action: ReturnType<typeof ensureNewestVersio
 function* rootSaga() {
   yield takeEvery(PUSH_SAVE_QUEUE, handlePushSaveQueue);
   yield takeEvery(ENSURE_NEWEST_VERSION, handleEnsureNewestVersion);
+  yield takeEvery(PERFORM_UNDO, handlePerformUndo);
 }
 
 const sagaMiddleware = createSagaMiddleware();
@@ -249,14 +321,31 @@ const store = createStore(reducer, applyMiddleware(sagaMiddleware));
 sagaMiddleware.run(rootSaga);
 
 // ─── Demo ─────────────────────────────────────────────────────────────────────
+// Each save takes ~1000ms: 300ms normal + 400ms rebasing + 300ms normal.
 
-console.log("\n=== Scenario 1: two pushSaveQueue dispatches in rapid succession ===");
-console.log("Second should wait for the first to complete.\n");
+console.log("\n=== Scenario 1: two pushSaveQueue in rapid succession (second waits) ===\n");
 store.dispatch(pushSaveQueueAction());
 store.dispatch(pushSaveQueueAction());
 
+// Scenario 2 at t=2500ms (after both saves finish ~2000ms).
 setTimeout(() => {
-  console.log("\n=== Scenario 2: standalone ensureNewestVersion (runs after Scenario 1) ===\n");
+  console.log("\n=== Scenario 2: two standalone ensureNewestVersion (second waits) ===\n");
   store.dispatch(ensureNewestVersionAction());
   store.dispatch(ensureNewestVersionAction());
-}, 2000);
+}, 2500);
+
+// Scenario 3a at t=3500ms: undo dispatched 100ms into save → hits the normal phase,
+// allowAdditionalOperation returns true → undo runs concurrently with save.
+setTimeout(() => {
+  console.log("\n=== Scenario 3a: undo during normal phase — should run concurrently ===\n");
+  store.dispatch(pushSaveQueueAction());
+  setTimeout(() => store.dispatch(performUndoAction()), 100);
+}, 3500);
+
+// Scenario 3b at t=5300ms: undo dispatched 400ms into save → hits the rebasing phase,
+// allowAdditionalOperation returns false → undo blocks until rebasing ends at 700ms.
+setTimeout(() => {
+  console.log("\n=== Scenario 3b: undo during rebasing phase — should wait ===\n");
+  store.dispatch(pushSaveQueueAction());
+  setTimeout(() => store.dispatch(performUndoAction()), 400);
+}, 5300);

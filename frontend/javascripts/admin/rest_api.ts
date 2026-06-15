@@ -83,7 +83,7 @@ import {
 } from "types/api_types";
 import { enforceValidatedDatasetViewConfiguration } from "types/schemas/dataset_view_configuration_defaults";
 import type { DatasourceConfiguration } from "types/schemas/datasource.types";
-import type { ArbitraryObject } from "types/type_utils";
+import type { ArbitraryObject, EmptyObject } from "types/type_utils";
 import type { AnnotationTypeFilterEnum, LOG_LEVELS, Vector3 } from "viewer/constants";
 import Constants, { AnnotationStateFilterEnum } from "viewer/constants";
 import type BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
@@ -108,6 +108,7 @@ import type {
   UserConfiguration,
   VolumeTracing,
 } from "viewer/store";
+import type { KeyboardShortcutsMap } from "viewer/view/keyboard_shortcuts/keyboard_shortcut_types";
 import { assertResponseLimit } from "./api/api_utils";
 import { getDatasetIdFromNameAndOrganization } from "./api/disambiguate_legacy_routes";
 import { getOrganization } from "./api/organization";
@@ -169,8 +170,8 @@ export async function logoutUserEverywhere(): Promise<void> {
   await Request.receiveJSON("/api/auth/logoutEverywhere", { method: "POST" });
 }
 
-export async function getUsers(): Promise<Array<APIUser>> {
-  const users = await Request.receiveJSON("/api/users");
+export async function getUsers(options: RequestOptions = {}): Promise<Array<APIUser>> {
+  const users = await Request.receiveJSON("/api/users", options);
   assertResponseLimit(users);
   return users;
 }
@@ -328,10 +329,13 @@ export function updateTaskType(taskTypeId: string, taskType: APITaskType): Promi
 }
 
 // ### Teams
-export async function getTeams(): Promise<Array<APITeam>> {
-  const teams = await Request.receiveJSON("/api/teams", {
-    doNotInvestigate: true,
-  });
+export async function getTeams(options?: RequestOptions): Promise<Array<APITeam>> {
+  const teams = await Request.receiveJSON(
+    "/api/teams",
+    options ?? {
+      doNotInvestigate: true,
+    },
+  );
   assertResponseLimit(teams);
   return teams;
 }
@@ -548,11 +552,13 @@ export function setCollaborationModeForAnnotation(
   annotationId: string,
   annotationType: APIAnnotationType,
   collaborationMode: AnnotationCollaborationMode,
+  options?: RequestOptions,
 ): Promise<void> {
   return Request.receiveJSON(
     `/api/annotations/${annotationType}/${annotationId}/collaborationMode?collaborationMode=${collaborationMode}`,
     {
       method: "PATCH",
+      ...options,
     },
   );
 }
@@ -622,6 +628,8 @@ export function duplicateAnnotation(
   });
 }
 
+// Note: The returned annotation object contains viewConfiguration. An arbitrary object which should be schema checked before used.
+// Currently, the only location where this is needed is during initialization.
 export async function getUnversionedAnnotationInformation(
   annotationId: string,
   options: RequestOptions = {},
@@ -734,20 +742,41 @@ export async function getTracingsForAnnotation(
 
 export async function acquireAnnotationMutex(
   annotationId: string,
-): Promise<{ canEdit: boolean; blockedByUser: APIUserCompact | undefined | null }> {
-  const { canEdit, blockedByUser } = await Request.receiveJSON(
-    `/api/annotations/${annotationId}/acquireMutex`,
+  sessionId: string,
+): Promise<{
+  canEdit: boolean;
+  // If the mutex could not be rejected, the following two properties contain
+  // which user (and which session id) is responsible. The current user might
+  // be blocking the mutex in another session (then, the session id will be
+  // different from the current one).
+  blockedByUser: APIUserCompact | undefined | null;
+  blockedBySessionId: string | undefined | null;
+}> {
+  const { canEdit, blockedByUser, blockedBySessionId } = await Request.receiveJSON(
+    `/api/annotations/${annotationId}/acquireMutex?${new URLSearchParams({ sessionId })}`,
     {
       method: "POST",
     },
   );
-  return { canEdit, blockedByUser };
+  return { canEdit, blockedByUser, blockedBySessionId };
 }
 
-export async function releaseAnnotationMutex(annotationId: string): Promise<void> {
-  await Request.receiveJSON(`/api/annotations/${annotationId}/mutex`, {
-    method: "DELETE",
-  });
+export async function releaseAnnotationMutex(
+  annotationId: string,
+  sessionId: string,
+): Promise<void> {
+  await Request.receiveJSON(
+    `/api/annotations/${annotationId}/releaseMutex?${new URLSearchParams({ sessionId })}`,
+    {
+      method: "POST",
+    },
+  );
+}
+
+export function releaseAnnotationMutexWithBeacon(annotationId: string, sessionId: string): boolean {
+  return navigator.sendBeacon(
+    `/api/annotations/${annotationId}/releaseMutex?${new URLSearchParams({ sessionId })}`,
+  );
 }
 
 export async function getTracingForAnnotationType(
@@ -1160,11 +1189,13 @@ export type DatasetUpdater = {
 
 export function updateDatasetPartial(
   datasetId: string,
-  updater: DatasetUpdater,
+  updater: Partial<DatasetUpdater>,
+  options: RequestOptions = {},
 ): Promise<APIDataset> {
   return Request.sendJSONReceiveJSON(`/api/datasets/${datasetId}/updatePartial`, {
     method: "PATCH",
     data: updater,
+    ...options,
   });
 }
 
@@ -1260,7 +1291,7 @@ export function createResumableUpload(
 
     const resumable = new ResumableUpload({
       testChunks: true,
-      target: `${datastoreUrl}/data/datasets`,
+      target: `${datastoreUrl}/data/datasets/upload/dataset`,
       query: function () {
         return {
           token: activeToken,
@@ -1307,25 +1338,32 @@ export function createResumableUpload(
     return resumable;
   });
 }
-type ReserveUploadInformation = {
+
+type ResumableUploadInfo = {
   uploadId: string;
-  name: string;
-  directoryName: string;
-  newDatasetId: string;
-  organization: string;
   totalFileCount: number;
   filePaths: Array<string>;
-  initialTeams: Array<string>;
+  totalFileSizeInBytes: number;
+};
+type DatasetUploadInfo = {
+  resumableUploadInfo: ResumableUploadInfo;
+  datasetName: string;
+  organizationId: string;
+  layersToLink: Array<null>; // Always set as empty by frontend, only used by libs
+  initialTeamIds: Array<string>;
   folderId: string | null;
+  needsConversion: boolean;
+  voxelSizeFactor: Vector3 | undefined;
+  voxelSizeUnit: string | undefined;
 };
 
 export function reserveDatasetUpload(
   datastoreHost: string,
-  reserveUploadInformation: ReserveUploadInformation,
+  datasetUploadInfo: DatasetUploadInfo,
 ): Promise<void> {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(`/data/datasets/reserveUpload?token=${token}`, {
-      data: reserveUploadInformation,
+    Request.sendJSONReceiveJSON(`/data/datasets/upload/dataset/reserveUpload?token=${token}`, {
+      data: datasetUploadInfo,
       host: datastoreHost,
     }),
   );
@@ -1346,7 +1384,7 @@ export function getUnfinishedUploads(
 ): Promise<UnfinishedUpload[]> {
   return doWithToken(async (token) => {
     const unfinishedUploads = (await Request.receiveJSON(
-      `/data/datasets/getUnfinishedUploads?token=${token}&organizationName=${organizationName}`,
+      `/data/datasets/upload/dataset/unfinishedUploads?token=${token}&organizationName=${organizationName}`,
       {
         host: datastoreHost,
       },
@@ -1359,29 +1397,34 @@ type NewDatasetReply = {
   newDatasetId: string;
 };
 
+type FinishUploadReply = {
+  datasetId: string;
+};
+
 export function finishDatasetUpload(
   datastoreHost: string,
-  uploadInformation: ArbitraryObject,
-): Promise<NewDatasetReply> {
+  uploadId: string,
+): Promise<FinishUploadReply> {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(`/data/datasets/finishUpload?token=${token}`, {
-      data: uploadInformation,
-      host: datastoreHost,
-    }),
+    Request.receiveJSON(
+      `/data/datasets/upload/dataset/finishUpload?uploadId=${uploadId}&token=${token}`,
+      {
+        host: datastoreHost,
+        method: "POST",
+      },
+    ),
   );
 }
 
-export function cancelDatasetUpload(
-  datastoreHost: string,
-  cancelUploadInformation: {
-    uploadId: string;
-  },
-): Promise<void> {
+export function cancelDatasetUpload(datastoreHost: string, uploadId: string): Promise<void> {
   return doWithToken((token) =>
-    Request.sendJSONReceiveJSON(`/data/datasets/cancelUpload?token=${token}`, {
-      data: cancelUploadInformation,
-      host: datastoreHost,
-    }),
+    Request.receiveJSON(
+      `/data/datasets/upload/dataset/cancelUpload?uploadId=${uploadId}&token=${token}`,
+      {
+        host: datastoreHost,
+        method: "POST",
+      },
+    ),
   );
 }
 
@@ -1421,22 +1464,33 @@ export async function exploreRemoteDataset(
   return { dataSource, report };
 }
 
+export async function findDatasetByImportUrl(importUrl: string): Promise<APIDataset | null> {
+  return await Request.receiveJSON(
+    `/api/datasets/findByImportURL?importURL=${encodeURIComponent(importUrl)}`,
+  );
+}
+
 type StoreRemoteDatasetArgs = {
   dataStoreName: string;
   dataSource: APIDataSource;
   folderId?: string | null;
+  importUrl?: string | null;
 };
 
 export async function storeRemoteDataset(
   dataStoreName: string,
   datasetName: string,
   dataSource: APIDataSource,
+  importUrl: string | null | undefined,
   folderId: string | null,
 ): Promise<NewDatasetReply> {
   const payload: StoreRemoteDatasetArgs = {
     dataSource,
-    dataStoreName: dataStoreName,
+    dataStoreName,
   };
+  if (importUrl) {
+    payload["importUrl"] = importUrl;
+  }
   if (folderId) {
     payload["folderId"] = folderId;
   }
@@ -1464,10 +1518,12 @@ export async function isDatasetNameValid(datasetName: string): Promise<string | 
 export function updateDatasetTeams(
   datasetId: string,
   newTeams: Array<string>,
+  options: RequestOptions = {},
 ): Promise<APIDataset> {
   return Request.sendJSONReceiveJSON(`/api/datasets/${datasetId}/teams`, {
     method: "PATCH",
     data: newTeams,
+    ...options,
   });
 }
 
@@ -1710,6 +1766,17 @@ export function updateUserConfiguration(
   return Request.sendJSONReceiveJSON("/api/user/userConfiguration", {
     method: "PUT",
     data: userConfiguration,
+  });
+}
+
+export function getKeyboardShortcutsConfig(): Promise<Partial<KeyboardShortcutsMap> | EmptyObject> {
+  return Request.receiveJSON("/api/user/keyboardShortcutsConfig");
+}
+
+export function updateKeyboardShortcutsConfig(shortcuts: KeyboardShortcutsMap): Promise<void> {
+  return Request.sendJSONReceiveJSON("/api/user/keyboardShortcutsConfig", {
+    method: "PUT",
+    data: shortcuts,
   });
 }
 
@@ -1988,80 +2055,76 @@ export function getAgglomerateTreeAsSkeletonTracing(
   );
 }
 
-export async function getAgglomeratesForSegmentsFromDatastore<T extends number | bigint>(
-  dataStoreUrl: string,
-  dataset: APIDataset,
-  layerName: string,
-  mappingId: string,
-  segmentIds: Array<T>,
+async function _getAgglomeratesForSegmentsHelper<T extends number | bigint>(
+  segmentIds: Set<T>,
+  url: string,
+  extraParams: URLSearchParams,
 ): Promise<Mapping> {
-  if (segmentIds.length === 0) {
+  if (segmentIds.size === 0) {
     return new Map();
   }
-  const segmentIdBuffer = serializeProtoListOfLong<T>(segmentIds);
-  const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
-    const params = new URLSearchParams({ token });
+  const sortedSegmentIdArray = [...segmentIds].sort(<T extends NumberLike>(a: T, b: T) =>
+    Number(a - b),
+  );
+  const segmentIdBuffer = serializeProtoListOfLong<T>(sortedSegmentIdArray);
+  const listArrayBuffer = await doWithToken((token) => {
+    const params = new URLSearchParams(extraParams);
+    params.set("token", token);
     return retryAsyncFunction(() =>
-      Request.receiveArraybuffer(
-        `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments?${params}`,
-        {
-          method: "POST",
-          body: segmentIdBuffer,
-          headers: {
-            "Content-Type": "application/octet-stream",
-          },
-        },
-      ),
+      Request.receiveArraybuffer(`${url}?${params}`, {
+        method: "POST",
+        body: segmentIdBuffer,
+        headers: { "Content-Type": "application/octet-stream" },
+        showErrorToast: false,
+      }),
     );
   });
+
   // Ensure that the values are bigint if the keys are bigint
-  const adaptToType = getAdaptToTypeFunctionFromList(segmentIds);
-  const keyValues = zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
+  const adaptToType = getAdaptToTypeFunctionFromList(sortedSegmentIdArray);
+  const mappedIds = parseProtoListOfLong(listArrayBuffer).map(adaptToType);
+
+  if (sortedSegmentIdArray.length !== mappedIds.length) {
+    throw new Error(
+      "Unexpected mismatch of keys and values while mapping segment ids using tracing store.",
+    );
+  }
+
+  const keyValues = zip(sortedSegmentIdArray, mappedIds);
   // @ts-expect-error
   return new Map(keyValues);
 }
 
-export async function getAgglomeratesForSegmentsFromTracingstore<T extends number | bigint>(
+export function getAgglomeratesForSegmentsFromDatastore<T extends number | bigint>(
+  dataStoreUrl: string,
+  dataset: APIDataset,
+  layerName: string,
+  mappingId: string,
+  segmentIds: Set<T>,
+): Promise<Mapping> {
+  return _getAgglomeratesForSegmentsHelper(
+    segmentIds,
+    `${dataStoreUrl}/data/datasets/${dataset.id}/layers/${layerName}/agglomerates/${mappingId}/agglomeratesForSegments`,
+    new URLSearchParams(),
+  );
+}
+
+export function getAgglomeratesForSegmentsFromTracingstore<T extends number | bigint>(
   tracingStoreUrl: string,
   tracingId: string,
-  segmentIds: Array<T>,
+  segmentIds: Set<T>,
   annotationId: string,
   version: number,
 ): Promise<Mapping> {
-  if (segmentIds.length === 0) {
-    return new Map();
-  }
-  const params = new URLSearchParams({ annotationId });
+  const extraParams = new URLSearchParams({ annotationId });
   if (version != null) {
-    params.set("version", version.toString());
+    extraParams.set("version", version.toString());
   }
-  const segmentIdBuffer = serializeProtoListOfLong<T>(
-    // The tracing store expects the ids to be sorted
-    segmentIds.sort(<T extends NumberLike>(a: T, b: T) => Number(a - b)),
+  return _getAgglomeratesForSegmentsHelper(
+    segmentIds,
+    `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments`,
+    extraParams,
   );
-  const listArrayBuffer: ArrayBuffer = await doWithToken((token) => {
-    params.set("token", token);
-    return retryAsyncFunction(() =>
-      Request.receiveArraybuffer(
-        `${tracingStoreUrl}/tracings/mapping/${tracingId}/agglomeratesForSegments?${params}`,
-        {
-          method: "POST",
-          body: segmentIdBuffer,
-          headers: {
-            "Content-Type": "application/octet-stream",
-          },
-          showErrorToast: false,
-        },
-      ),
-    );
-  });
-
-  // Ensure that the values are bigint if the keys are bigint
-  const adaptToType = getAdaptToTypeFunctionFromList(segmentIds);
-
-  const keyValues = zip(segmentIds, parseProtoListOfLong(listArrayBuffer).map(adaptToType));
-  // @ts-expect-error
-  return new Map(keyValues);
 }
 
 export function getEditableAgglomerateTreeAsSkeletonTracing(

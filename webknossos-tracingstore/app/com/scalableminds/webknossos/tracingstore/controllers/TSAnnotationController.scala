@@ -52,7 +52,7 @@ class TSAnnotationController @Inject()(
     skeletonTracingService: SkeletonTracingService,
     volumeTracingService: VolumeTracingService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
-    with KeyValueStoreImplicits {
+    with KeyValueStoreConversions {
 
   def save(annotationId: ObjectId, toTemporaryStore: Boolean = false): Action[AnnotationProto] =
     Action.async(validateProto[AnnotationProto]) { implicit request =>

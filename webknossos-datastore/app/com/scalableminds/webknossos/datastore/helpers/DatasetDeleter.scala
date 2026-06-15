@@ -14,12 +14,10 @@ trait DatasetDeleter extends LazyLogging with DirectoryConstants with FoxImplici
   def deleteOnDisk(datasetId: ObjectId,
                    organizationId: String,
                    datasetName: String,
-                   isInConversion: Boolean = false,
+                   path: Option[Path] = None,
                    reason: Option[String] = None)(implicit ec: ExecutionContext): Fox[Unit] = {
 
-    val dataSourcePath =
-      if (isInConversion) dataBaseDir.resolve(organizationId).resolve(forConversionDir).resolve(datasetName)
-      else dataBaseDir.resolve(organizationId).resolve(datasetName)
+    val dataSourcePath = path.getOrElse(dataBaseDir.resolve(organizationId).resolve(datasetName))
 
     if (Files.exists(dataSourcePath)) {
       val trashPath: Path = dataBaseDir.resolve(organizationId).resolve(trashDir)

@@ -145,7 +145,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
         <Space size="small">
           <PushpinOutlined rotate={-45} />
           {`Position: ${nodePositionAsString}`}
-          <CopyIconWithTooltip value={nodePositionAsString} title="Copy node position" />
+          <CopyIconWithTooltip value={nodePositionAsString} label="node position" />
         </Space>,
       ),
     );
@@ -157,7 +157,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
         <Space size="small">
           <PushpinOutlined rotate={-45} />
           {`Position: ${positionAsString}`}
-          <CopyIconWithTooltip value={positionAsString} title="Copy position" />
+          <CopyIconWithTooltip value={positionAsString} label="position" />
         </Space>,
       ),
     );
@@ -173,7 +173,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
             {`${distanceToSelection[0]} (${distanceToSelection[1]}) to this
             ${maybeClickedNodeId != null ? "Node" : "Position"}`}
           </FastTooltip>
-          <CopyIconWithTooltip value={distanceToSelection[0]} title="Copy the distance" />
+          <CopyIconWithTooltip value={distanceToSelection[0]} label="distance" />
         </Space>,
       ),
     );
@@ -186,7 +186,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
         <Space size="small">
           <Icon component={IconCell} />
           {`Segment ID: ${clickedSegmentOrMeshId}`}
-          <CopyIconWithTooltip value={clickedSegmentOrMeshId} title="Copy Segment ID" />
+          <CopyIconWithTooltip value={clickedSegmentOrMeshId} label="segment ID" />
         </Space>,
       ),
     );
@@ -206,7 +206,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
           <Space size="small">
             <TagOutlined />
             {`Segment Name: ${segmentNameLabel}`}
-            <CopyIconWithTooltip value={segmentName} title="Copy Segment Name" />
+            <CopyIconWithTooltip value={segmentName} label="segment name" />
           </Space>,
         ),
       );
@@ -220,7 +220,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
         <Space size="small">
           <i>m²</i>
           {`Surface Area: ${segmentSurfaceAreaLabel}`}
-          <CopyIconWithTooltip value={segmentSurfaceAreaLabel} title="Copy surface area" />
+          <CopyIconWithTooltip value={segmentSurfaceAreaLabel} label="surface area" />
         </Space>,
       ),
     );
@@ -231,7 +231,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
         <Space size="small">
           <i>m³</i>
           {`Volume: ${segmentVolumeLabel}`}
-          <CopyIconWithTooltip value={segmentVolumeLabel} title="Copy volume" />
+          <CopyIconWithTooltip value={segmentVolumeLabel} label="segment volume" />
         </Space>,
       ),
     );
@@ -244,7 +244,7 @@ export function useContextMenuInfoRows(contextInfo: ContextMenuInfo, segmentIdAt
           {`Bounding Box: ${boundingBoxInfoLabel}`}
           <CopyIconWithTooltip
             value={boundingBoxInfoLabel}
-            title="Copy BBox top left point and extent"
+            label="Bbox top left point and extent"
           />
         </Space>,
       ),

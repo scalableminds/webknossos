@@ -188,20 +188,22 @@ describe("Dataset API (E2E)", () => {
   it("Dataset upload", async () => {
     const uploadId = "test-dataset-upload-" + Date.now();
 
-    const reserveUpload = await fetch("/data/datasets/reserveUpload", {
+    const reserveUpload = await fetch("/data/datasets/upload/dataset/reserveUpload", {
       method: "POST",
       headers: new Headers({
         "Content-Type": "application/json",
       }),
       body: JSON.stringify({
-        filePaths: ["test-dataset-upload.zip"],
+        resumableUploadInfo: {
+          filePaths: ["test-dataset.zip"],
+          totalFileCount: 1,
+          uploadId: uploadId,
+        },
         folderId: "570b9f4e4bb848d0885ea917",
-        initialTeams: [],
+        initialTeamIds: [],
         layersToLink: [],
-        name: "test-dataset-upload",
-        organization: "Organization_X",
-        totalFileCount: 1,
-        uploadId: uploadId,
+        datasetName: "test-dataset-upload",
+        organizationId: "Organization_X",
       }),
     });
 
@@ -248,7 +250,7 @@ describe("Dataset API (E2E)", () => {
 
     let content_type = `multipart/form-data; boundary=${boundary}`;
 
-    const uploadResult = await fetch("/data/datasets", {
+    const uploadResult = await fetch("/data/datasets/upload/dataset", {
       method: "POST",
       headers: new Headers({
         "Content-Type": content_type,
@@ -260,23 +262,22 @@ describe("Dataset API (E2E)", () => {
       expect.fail("Dataset upload failed");
     }
 
-    const finishResult = await fetch("/data/datasets/finishUpload", {
-      method: "POST",
-      headers: new Headers({
-        "Content-Type": "application/json",
-      }),
-      body: JSON.stringify({
-        uploadId: uploadId,
-        needsConversion: false,
-      }),
-    });
+    const finishResult = await fetch(
+      `/data/datasets/upload/dataset/finishUpload?uploadId=${uploadId}`,
+      {
+        method: "POST",
+        headers: new Headers({
+          "Content-Type": "application/json",
+        }),
+      },
+    );
 
     if (finishResult.status !== 200) {
       expect.fail("Dataset upload failed at finish");
     }
 
-    const { newDatasetId } = await finishResult.json();
-    const result = await fetch(`/api/datasets/${newDatasetId}/health`, {
+    const { datasetId } = await finishResult.json();
+    const result = await fetch(`/api/datasets/${datasetId}/health`, {
       headers: new Headers(),
     });
 

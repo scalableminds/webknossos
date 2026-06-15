@@ -26,7 +26,7 @@ object AnnotationSettings {
     case TracingType.volume =>
       AnnotationSettings(allowedModes = List(TracingMode.orthogonal))
     case TracingType.skeleton | TracingType.hybrid =>
-      AnnotationSettings(allowedModes = List(TracingMode.orthogonal, TracingMode.oblique, TracingMode.flight))
+      AnnotationSettings(allowedModes = List(TracingMode.orthogonal, TracingMode.flight))
   }
 
   implicit val jsonFormat: OFormat[AnnotationSettings] = Json.format[AnnotationSettings]

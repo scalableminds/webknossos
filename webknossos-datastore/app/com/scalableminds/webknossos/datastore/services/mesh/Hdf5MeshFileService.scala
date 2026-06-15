@@ -41,7 +41,7 @@ class Hdf5MeshFileService @Inject()(config: DataStoreConfig)
                                               lodScaleMultiplier: Double,
                                               transform: Array[Array[Double]]): List[List[MeshLodInfo]] =
     fileHandleCache
-      .withCachedHdf5(meshFileKey.attachment) { cachedMeshFile: CachedHdf5File =>
+      .withCachedHdf5(meshFileKey.attachment) { (cachedMeshFile: CachedHdf5File) =>
         segmentIds.toList.flatMap(segmentId =>
           listMeshChunksForSegment(cachedMeshFile, segmentId, lodScaleMultiplier, transform))
       }

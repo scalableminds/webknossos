@@ -45,7 +45,6 @@ class TaskInformationHandler @Inject()(
         toTemporaryStore = true,
         user._id,
         datasetId,
-        project._team,
         AnnotationType.CompoundTask,
         finishedAnnotations,
         taskBoundingBoxes,

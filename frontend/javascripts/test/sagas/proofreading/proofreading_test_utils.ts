@@ -117,6 +117,7 @@ export class BackendMock {
     public overrides: BucketOverride[],
     additionalEdges: Vector2[] = [],
     private initialState: WebknossosState | undefined = undefined,
+    public canGrantMutex: boolean = true,
   ) {
     this.agglomerateMapping = new AgglomerateMapping(
       edgesForInitialMapping.concat(additionalEdges),
@@ -191,10 +192,10 @@ export class BackendMock {
     return mapping;
   };
 
-  acquireAnnotationMutex = async (_annotationId: string) => {
-    return { canEdit: true, blockedByUser: null };
+  acquireAnnotationMutex = async (_annotationId: string, _sessionId: string) => {
+    return { canEdit: this.canGrantMutex, blockedByUser: null, blockedBySessionId: null };
   };
-  releaseAnnotationMutex = async (_annotationId: string) => {};
+  releaseAnnotationMutex = async (_annotationId: string, _sessionId: string) => {};
 
   private saveQueueEntriesToUpdateActionBatch = (data: Array<SaveQueueEntry>) => {
     return data.map((entry) => ({
@@ -217,7 +218,9 @@ export class BackendMock {
     payload: RequestOptionsWithData<Array<SaveQueueEntry>>,
   ): Promise<void> => {
     if (payload.data[0].version !== this.agglomerateMapping.currentVersion + 1) {
-      throw new Error("Version mismatch");
+      throw new Error(
+        `Version mismatch. Newest version is ${this.agglomerateMapping.currentVersion}, but current payload contains version=${payload.data[0].version}`,
+      );
     }
     // Store the received request.
     this.receivedDataPerSaveRequest.push(payload.data);
@@ -317,9 +320,9 @@ export class BackendMock {
      * forcing the client that is tested to pull in the newer version before
      * saving can finish.
      */
-    // The injected version has already been reached, directly inject!
     const currentVersion = this.updateActionLog.at(-1)?.version || 1;
     if (currentVersion === targetVersion - 1) {
+      // The injected version has already been reached, directly inject!
       this.injectVersion(updateActions, targetVersion);
     } else if (currentVersion > targetVersion - 1) {
       throw new Error(
@@ -351,6 +354,15 @@ export class BackendMock {
     // tests expect.
     this.sendSaveRequestWithToken("unused", {
       data: createSaveQueueFromUpdateActions([updateActions], 0, null, false, targetVersion),
+    });
+  }
+
+  injectMultipleVersions(
+    updateActionBatches: UpdateActionWithoutIsolationRequirement[][],
+    startingVersion: number,
+  ) {
+    updateActionBatches.forEach((actions, index) => {
+      this.injectVersion(actions, startingVersion + index);
     });
   }
 
@@ -409,10 +421,16 @@ export function mockInitialBucketAndAgglomerateData(
   context: WebknossosTestContext,
   additionalEdges: Vector2[] = [],
   initialState: WebknossosState | undefined = undefined,
+  options?: { grantMutex?: boolean },
 ) {
   const { mocks } = context;
 
-  const backendMock = new BackendMock(initialBucketOverrides, additionalEdges, initialState);
+  const backendMock = new BackendMock(
+    initialBucketOverrides,
+    additionalEdges,
+    initialState,
+    options?.grantMutex ?? true,
+  );
 
   vi.mocked(mocks.Request).sendJSONReceiveArraybufferWithHeaders.mockImplementation(
     createBucketResponseFunction(
@@ -574,6 +592,7 @@ export function* performCutFromAllNeighbours(
 export function* simulatePartitionedSplitAgglomeratesViaMeshes(
   context: WebknossosTestContext,
   loadMeshes: boolean,
+  injectVersionFn?: () => void,
 ): Saga<void> {
   const { tracingId } = yield* select((state) => state.annotation.volumes[0]);
   const expectedInitialMapping = new Map([
@@ -610,6 +629,9 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
     (state) => getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
   );
   expect(mapping1).toEqual(expectedInitialMapping);
+  if (injectVersionFn != null) {
+    injectVersionFn();
+  }
   yield put(setCollaborationModeAction("Concurrent"));
 
   //Activate Multi-split tool

@@ -56,10 +56,10 @@ class DataSourceService @Inject()(
       _ = if (inboxCheckVerboseCounter >= 10) inboxCheckVerboseCounter = 0
     } yield ()
 
-  def assertDataDirWritable(organizationId: String): Fox[Unit] = {
-    val orgaPath = dataBaseDir.resolve(organizationId)
+  def ensureDataDirWritable(dataSourceId: DataSourceId): Fox[Unit] = {
+    val orgaPath = dataBaseDir.resolve(dataSourceId.organizationId)
     if (orgaPath.toFile.exists()) {
-      Fox.fromBool(Files.isWritable(dataBaseDir.resolve(organizationId))) ?~> "Datastore cannot write to organization data directory."
+      Fox.fromBool(Files.isWritable(orgaPath)) ?~> "Datastore cannot write to organization data directory."
     } else {
       tryo {
         Files.createDirectory(orgaPath)

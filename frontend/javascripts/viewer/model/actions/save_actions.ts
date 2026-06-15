@@ -60,6 +60,8 @@ export type SetPendingProofreadingOperationInfoAction = ReturnType<
   typeof setPendingProofreadingOperationInfoAction
 >;
 export type ReplaceSaveQueueAction = ReturnType<typeof replaceSaveQueueAction>;
+export type ExitingAnnotationAction = ReturnType<typeof exitingAnnotationAction>;
+export type RetryMutexAcquisitionNowAction = ReturnType<typeof retryMutexAcquisitionNowAction>;
 
 export type SaveAction =
   | PushSaveQueueTransaction
@@ -87,7 +89,9 @@ export type SaveAction =
   | UpdateMappingRebaseInformationAction
   | FinishedApplyingMissingUpdatesAction
   | SetPendingProofreadingOperationInfoAction
-  | ReplaceSaveQueueAction;
+  | ReplaceSaveQueueAction
+  | ExitingAnnotationAction
+  | RetryMutexAcquisitionNowAction;
 
 // The following actions can be used to "push" update actions into the local save queue
 // of the Store.
@@ -118,6 +122,11 @@ export const notifyAboutUpdatedBucketsAction = (count: number) =>
 export const saveNowAction = () =>
   ({
     type: "SAVE_NOW",
+  }) as const;
+
+export const exitingAnnotationAction = () =>
+  ({
+    type: "EXITING_ANNOTATION",
   }) as const;
 
 export const shiftSaveQueueAction = (count: number) =>
@@ -234,10 +243,14 @@ export const setIsMutexAcquiredAction = (isMutexAcquired: boolean) =>
     isMutexAcquired,
   }) as const;
 
-export const setUserHoldingMutexAction = (blockedByUser: APIUserCompact | null | undefined) =>
+export const setUserHoldingMutexAction = (
+  blockedByUser: APIUserCompact | null | undefined,
+  blockedBySessionId?: string | null,
+) =>
   ({
     type: "SET_USER_HOLDING_MUTEX",
     blockedByUser,
+    blockedBySessionId,
   }) as const;
 
 export const subscribeToAnnotationMutexAction = (subscriptionId: number, callerId: string) =>
@@ -247,6 +260,8 @@ export const subscribeToAnnotationMutexAction = (subscriptionId: number, callerI
     callerId,
   }) as const;
 
+// TODO #9389: The action is not really needed currently. This might change
+// when the mutex state is moved to the store, though (as suggested in the linked issue).
 export const unsubscribeFromAnnotationMutexAction = (subscriptionId: number) =>
   ({
     type: "UNSUBSCRIBE_FROM_ANNOTATION_MUTEX",
@@ -303,3 +318,6 @@ export const setPendingProofreadingOperationInfoAction = (
 
 export const replaceSaveQueueAction = (newSaveQueue: SaveQueueEntry[]) =>
   ({ type: "REPLACE_SAVE_QUEUE", newSaveQueue }) as const;
+
+export const retryMutexAcquisitionNowAction = () =>
+  ({ type: "RETRY_MUTEX_ACQUISITION_NOW" }) as const;

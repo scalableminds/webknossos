@@ -107,7 +107,7 @@ class ProjectController @Inject()(projectService: ProjectService,
     updatePauseStatus(id, isPaused = false)
   }
 
-  private def updatePauseStatus(id: ObjectId, isPaused: Boolean)(implicit request: SecuredRequest[WkEnv, _]) =
+  private def updatePauseStatus(id: ObjectId, isPaused: Boolean)(implicit request: SecuredRequest[WkEnv, ?]) =
     for {
       project <- projectDAO.findOne(id) ?~> Msg.Project.notFound(id) ~> NOT_FOUND
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN

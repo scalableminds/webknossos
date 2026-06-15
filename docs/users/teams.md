@@ -27,3 +27,11 @@ After creating a team, you can manage its members and permissions through the [U
 /// caption
 Overview page of all teams
 ///
+
+## Managing Teams
+From the `Admin > Teams` page, each team row offers the following actions:
+
+- **Add / Remove Users:** Manage which users belong to the team. (Admins cannot be removed, as they always have access to all teams.) You can also manage team membership and roles from the [Users page](./new_users.md#adding-users-to-teams).
+- **Delete:** Remove a team from your organization.
+
+The default team cannot be deleted, since every organization member is assigned to it. Renaming a team is currently not supported.

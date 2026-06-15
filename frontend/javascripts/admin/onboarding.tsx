@@ -233,7 +233,7 @@ export function InviteUsersModal({
     [currentUserCount, maxUserCountPerOrganization],
   );
 
-  const defaultTeam = useMemo(() => teams.find((t) => t.name === "Default"), [teams]);
+  const defaultTeam = useMemo(() => teams.find((t) => t.isOrganizationTeam), [teams]);
 
   const setDefaultTeam = useCallback(() => {
     if (defaultTeam != null) {
@@ -695,7 +695,7 @@ function OnboardingView() {
             learn more.
           </FeatureCard>
           <FeatureCard header="Contact Us" icon={<CustomerServiceOutlined />}>
-            <a href="mailto:hello@webknossos.org">Get in touch</a> or{" "}
+            <a href="mailto:support@webknossos.org">Get in touch</a> or{" "}
             <a
               href="https://forum.image.sc/tag/webknossos"
               target="_blank"

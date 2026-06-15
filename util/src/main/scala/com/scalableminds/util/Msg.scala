@@ -145,6 +145,9 @@ object Msg {
     object Mutex {
       val acquireFailed: String = "Could not acquire annotation editing mutex."
       val releaseFailed: String = "Could not release annotation editing mutex."
+      val acquireOrGetFailed: String = "Trying to acquire or find current annotation mutex failed."
+      val upsertingMutexInfoFailedWithMultipleAttempts: String =
+        "Could not find mutex for annotation after multiple retries."
     }
     object CollaborationMode {
       val onlyExplorationalOrTask: String =
@@ -155,6 +158,15 @@ object Msg {
       val success: String = "Successfully updated the annotation."
       val accessingTeamFailed: String = "Could not access a team during annotation shared team update."
       val notAllowed: String = "You do not have permission to edit this annotation."
+      val viewConfigurationFailed: String = "Could not update the view configuration for this annotation."
+      val noPermissionsToUpdateName: String =
+        "Could not update the name of the annotation due missing update permissions."
+      val noPermissionsToUpdateVisibility: String =
+        "Could not update the visibility of the annotation due missing update permissions."
+      val noPermissionsToUpdateDescription: String =
+        "Could not update the description of the annotation due missing update permissions."
+      val noPermissionsToUpdateTags: String =
+        "Could not update the tags of the annotation due missing update permissions."
     }
     object ApplyUpdate {
       val updateGroupVersionsNotSortedDesc: String =
@@ -208,8 +220,8 @@ object Msg {
         "Mag restrictions are too tight, resulting annotation has no magnifications."
       val mergeLargestSegmentIdUnset: String =
         "Cannot merge volume annotation: largest segment id is not set."
-      val magsDoNotMatch: String =
-        "Cannot merge volume annotation: mag sets do not match."
+      val magsDoNotMatch: String = "Cannot merge volume annotation: Mag sets of volume annotations do not match."
+      val importVersionMismatch: String = "Cannot merge volume annotation: Version mismatch."
       val noEditableMapping: String =
         "This volume tracing does not have an editable mapping (is not a “proofreading” annotation layer)."
       object SegmentIndex {
@@ -413,6 +425,7 @@ object Msg {
     val allowedTeamsNotFound: String = "Could not find allowed teams for dataset."
     val voxelSizeFailedToFetch: String = "Could not fetch voxel size for annotation."
     val additionalCoordinatesDiffer: String = "Additional coordinates differ in merged units."
+    val findByImportURLFailed = "Failed to look up whether a dataset with the import url already exists."
     object Compose {
       val failed: String = "Could not compose dataset."
       val addAttachmentFailed: String = "Could not add attachment to composed dataset."
@@ -505,10 +518,10 @@ object Msg {
         "Dataset name is invalid. Please use a name that does not start with a dot."
     }
     object Upload {
-      def finishFailed(datasetId: ObjectId): String =
-        s"Could not finalize upload for dataset “$datasetId”."
-      def noSuchUpload(uploadId: String): String =
-        s"Could not find running upload with upload id “$uploadId”."
+      def finishFailed(datasetId: ObjectId, domain: String): String =
+        s"Could not finalize upload for $domain “$datasetId”."
+      def noSuchUpload(uploadId: String, domain: String): String =
+        s"Could not find running $domain upload with upload id “$uploadId”."
       val allChunksUploadedCheckFailed: String =
         "Could not verify that all chunks have been uploaded."
       val couldNotLoadUnfinishedUploads: String = "Could not load unfinished uploads of user."
@@ -534,9 +547,20 @@ object Msg {
       val setUploaderForbidden: String = "No permission to set uploader for this dataset."
       val validationFailed: String = "Could not validate dataset information for upload."
       val magUploadOnlyVirtual: String = "Adding mags to existing datasets is only allowed for virtual datasets."
-      val uploadToPathsNoMatchingPrefix: String =
-        "Could not determine a configured path prefix that matches the request."
       val magAlreadyPending: String = "This mag is already pending."
+      val magNotPending: String = "This mag is not marked as pending."
+      val attachmentNotPending: String = "This attachment is not marked as pending."
+      val magPathNotSet: String = "Mag path is required in upload."
+      val reserveAttachmentUploadNotVirtual: String =
+        "Attachment upload to existing dataset is only supported for virtual datasets."
+      val reserveMagUploadNotVirtual: String =
+        "Mag upload to existing dataset is only supported for virtual datasets."
+      object ToPaths {
+        val noMatchingPrefix = "Could not determine a configured path prefix that matches the request."
+        val magAlreadyPending: String = "Conflict with existing pending mag. Pass overwritePending to overwrite."
+        val magNotPending: String = "This mag is not marked as pending upload to path."
+        val attachmentNotPending: String = "This attachment is not marked as pending (upload to path)."
+      }
     }
     object Chunk {
       val decompressFailed: String = "Could not decompress data chunk."
@@ -545,6 +569,25 @@ object Msg {
         "Could not create chunk from fill value (shortcut path)."
       val shortcutWrapAndTypeFailed: String = "Could not wrap and type chunk data (shortcut path)."
       val wrapAndTypeFailed: String = "Could not wrap and type chunk data."
+    }
+    object Mirror {
+      val writeFailed: String = "Could not write on-disk dataset mirror."
+      val onlyForUsable: String = "Can only write on-disk dataset mirrors for usable datasets."
+      val onlyForVirtual: String = "Can only write on-disk dataset mirrors for virtual (db-based) datasets."
+      val deleteStaleTempMirrorFailed: String = "Could not delete stale temporary on-disk dataset mirror."
+      val deleteExistingMirrorFailed: String = "Could not clean up existing on-disk dataset mirror."
+      val createTempMirrorDirFailed: String = "Could not create temporary directory for on-disk dataset mirror."
+      val createLayerDirFailed: String = "Could not create layer directory for on-disk dataset mirror."
+      val writeMagsFailed: String = "Could not write mags."
+      val writeAttachmentsFailed: String = "Could not write attachments."
+      val writeMirrorLayersFailed: String = "Could not write layer structure in on-disk dataset mirror."
+      val writeMirrorPropertiesFailed: String =
+        "Could not write datasource-properties.json file for on-disk dataset mirror."
+      val writeReadmeFailed: String =
+        "Could not write readme.txt file for on-disk dataset mirror."
+      val moveTempMirrorFailed: String = "Could not finalize temporary on-disk dataset mirror."
+      val createParentDirFailed: String = "Could not create dataset mirror directory."
+      val parentNotWritable: String = "Dataset mirror directory is not writable."
     }
   }
   object Task {
@@ -665,6 +708,7 @@ object Msg {
     val needsInvite: String =
       "Registration without invite is not enabled for this WEBKNOSSOS instance."
     val invalidInviteToken: String = "This invite token is invalid."
+    val inviteTeamMembershipsFailed: String = "Could not retrieve team memberships for invite."
     val invalidFirstName: String = "Please check your first name for any special characters."
     val invalidLastName: String = "Please check your last name for any special characters."
     object Token {
@@ -676,6 +720,8 @@ object Msg {
       val updateSuccessForDataset: String = "Dataset configuration was successfully updated."
       val invalid: String = "Could not parse configuration."
       val invalidForDataset: String = "Could not parse dataset configuration."
+      val invalidKeyboardShortcutsConfig = "Keyboard shortcuts configuration is invalid."
+      val updatedKeyboardShortcutsConfig = "Keyboard shortcuts configuration was updated."
     }
     object Email {
       val taken: String =

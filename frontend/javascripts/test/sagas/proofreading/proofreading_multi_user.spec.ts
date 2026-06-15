@@ -7,7 +7,6 @@ import {
 import { actionChannel, type ActionPattern, call, flush, put, take } from "redux-saga/effects";
 import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import { VOLUME_TRACING_ID } from "test/fixtures/volumetracing_object";
-import { waitUntilNotBusy } from "test/helpers/saga_test_helpers";
 import { delay } from "typed-redux-saga";
 import type { Vector3 } from "viewer/constants";
 import type { Action } from "viewer/model/actions/actions";
@@ -52,6 +51,7 @@ import {
   splitSegment2And3,
   splitSegment7And1337AndMerge1337And5,
 } from "./proofreading_interaction_update_action_fixtures";
+import { waitUntilNotBusy } from "viewer/model/sagas/saga_helpers";
 
 function* prepareEditableMapping(
   context: WebknossosTestContext,
@@ -1044,6 +1044,7 @@ describe("Proofreading (Multi User)", () => {
       context.mocks.acquireAnnotationMutex.mockImplementation(async () => ({
         canEdit: false,
         blockedByUser: blockingUser,
+        blockedBySessionId: null,
       }));
       // Execute the actual merge and wait for the finished mapping.
       yield put(
@@ -1057,6 +1058,7 @@ describe("Proofreading (Multi User)", () => {
       context.mocks.acquireAnnotationMutex.mockImplementation(async () => ({
         canEdit: true,
         blockedByUser: null,
+        blockedBySessionId: null,
       }));
       // Wait till not busy anymore to check that no dead lock happens.
       yield take(

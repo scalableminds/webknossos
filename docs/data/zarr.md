@@ -166,7 +166,7 @@ Read the full example in the WEBKNOSSOS [Python library documentation](https://d
 ## Time-Series and N-Dimensional Datasets
 
 WEBKNOSSOS also supports loading n-dimensional datasets, e.g. 4D = time series of 3D microscopy.
-This feature in currently only supported for Zarr dataset due to their flexbile structure and design for n-dimensional data.
+This feature is currently only supported for Zarr datasets due to their flexible structure and design for n-dimensional data.
 
 ## Performance Considerations
 To get the best streaming performance for Zarr datasets consider the following settings.

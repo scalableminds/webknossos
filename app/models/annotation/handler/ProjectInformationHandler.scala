@@ -42,7 +42,6 @@ class ProjectInformationHandler @Inject()(
                                                   toTemporaryStore = true,
                                                   user._id,
                                                   datasetId,
-                                                  project._team,
                                                   AnnotationType.CompoundProject,
                                                   annotations,
                                                   taskBoundingBoxes,

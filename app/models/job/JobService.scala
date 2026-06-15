@@ -203,6 +203,7 @@ class JobService @Inject()(wkConf: WkConf,
           created = job.created,
           started = job.started,
           ended = job.ended,
+          lastRetry = job.lastRetry,
           costInMilliCredits = creditTransactionBox.toOption.map(t => t.milliCreditDelta * -1) // delta is negative, so cost should be positive.
         )
       )

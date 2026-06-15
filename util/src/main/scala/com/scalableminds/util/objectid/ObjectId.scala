@@ -15,8 +15,7 @@ case class ObjectId(id: String) {
 }
 
 object ObjectId extends FoxImplicits {
-  private lazy val maxCounterValue = 16777216
-  private lazy val atomicCounter = new java.util.concurrent.atomic.AtomicInteger(scala.util.Random.nextInt(maxCounterValue))
+  private lazy val atomicCounter = new java.util.concurrent.atomic.AtomicInteger(scala.util.Random.nextInt(0x1000000))
   private lazy val HEX_CHARS: Array[Char] = "0123456789abcdef".toCharArray
 
   private lazy val processRandomBytes: Array[Byte] = {
@@ -43,7 +42,7 @@ object ObjectId extends FoxImplicits {
     id(8) = processRandomBytes(4)
 
     // 3 bytes (6 hex chars): incrementing counter with randomized start. Big endian
-    val c = (atomicCounter.getAndIncrement + maxCounterValue) % maxCounterValue
+    val c = atomicCounter.getAndIncrement() & 0xFFFFFF
     id(9) = (c >> 16 & 0xFF).toByte
     id(10) = (c >> 8 & 0xFF).toByte
     id(11) = (c & 0xFF).toByte
@@ -57,11 +56,11 @@ object ObjectId extends FoxImplicits {
   def fromCommaSeparated(idsStrOpt: Option[String])(implicit ec: ExecutionContext): Fox[List[ObjectId]] =
     parseCommaSeparated(idsStrOpt)(fromString)
 
-  // valid object ids have 24 lowercase hex chars
-  private lazy val objectIdPattern = "^[0-9a-f]{24}$".r
+  // valid object ids have 24 hex chars
+  private lazy val objectIdPattern = "^[0-9a-fA-F]{24}$".r
 
   def fromStringSync(literal: String): Option[ObjectId] =
-    if (objectIdPattern.matches(literal)) Some(ObjectId(literal)) else None
+    if (objectIdPattern.matches(literal)) Some(ObjectId(literal.toLowerCase)) else None
 
   // Accept human-readable prefix: anything-before-hyphen-<ObjectId>
   private def fromStringWithPrefixSync(literal: String): Option[ObjectId] = {

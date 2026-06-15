@@ -11,8 +11,9 @@ interface OperationOptions {
   behaviorWhenDisallowed?: "wait" | "ignore" | "raise"; // defaults to "wait"
   // If provided, called when `pendingId` wants to start while this operation is
   // running. Return true to allow concurrent execution. Absent means: never allow
-  // additional operations.
-  allowAdditionalOperation?: (pendingId: OperationId) => Generator<any, boolean, any>;
+  // additional operations. Receives the current store state so it can make
+  // state-dependent decisions without yielding (keeping the critical section atomic).
+  allowAdditionalOperation?: (pendingId: OperationId, state: AppState) => boolean;
 }
 
 interface OperationContext {
@@ -23,7 +24,7 @@ interface OperationContext {
 // Tracks a running operation alongside its concurrency predicate.
 interface ActiveOperation {
   id: OperationId;
-  allowAdditionalOperation?: (pendingId: OperationId) => Generator<any, boolean, any>;
+  allowAdditionalOperation?: (pendingId: OperationId, state: AppState) => boolean;
 }
 
 // ─── Actions ──────────────────────────────────────────────────────────────────
@@ -101,23 +102,36 @@ function reducer(
 
 // ─── Mutex ────────────────────────────────────────────────────────────────────
 // Array rather than scalar to support optional concurrent operations.
-// For the common case (empty array → new op starts), the check-and-push is atomic
-// (no yield between them). When allowAdditionalOperation is used, its predicate may
-// yield select(), which breaks atomicity — an acceptable trade-off for the PoC.
 // The Redux store mirrors this for observability.
 
 let activeOperations: ActiveOperation[] = [];
 
+// Promise-chain mutex serializing the check-and-register critical section.
+// acquireOperationsMutex() is synchronous and atomically advances the chain tail,
+// so two callers in the same JS tick queue correctly behind each other.
+// The returned promise resolves only when the previous holder calls release().
+let operationsMutex: Promise<void> = Promise.resolve();
+
+function acquireOperationsMutex(): Promise<() => void> {
+  let release!: () => void;
+  const prev = operationsMutex;
+  operationsMutex = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  return prev.then(() => release);
+}
+
 // ─── Operation Context ────────────────────────────────────────────────────────
 
-// Returns true only when every currently-running operation explicitly permits pendingId.
+// Pure synchronous check — called while holding the mutex, so activeOperations
+// cannot be mutated between this read and the subsequent push.
 // The same operation ID is never allowed to run twice in parallel, regardless of predicates.
-function* allRunningAllow(pendingId: OperationId): Generator<any, boolean, any> {
+function checkCanStart(pendingId: OperationId, state: AppState): boolean {
+  if (activeOperations.length === 0) return true;
   for (const op of activeOperations) {
     if (op.id === pendingId) return false;
     if (op.allowAdditionalOperation == null) return false;
-    const allowed = yield* op.allowAdditionalOperation(pendingId);
-    if (!allowed) return false;
+    if (!op.allowAdditionalOperation(pendingId, state)) return false;
   }
   return true;
 }
@@ -141,10 +155,18 @@ function* createOperationContext(
 ): Generator<any, OperationContext | null, any> {
   const behavior = options.behaviorWhenDisallowed ?? "wait";
 
-  const canStart = activeOperations.length === 0 || (yield* allRunningAllow(options.id));
-
+  // Acquire the mutex, snapshot state, do the atomic check-and-push, then release
+  // before any further yields. This prevents two concurrent callers from both
+  // reading activeOperations and both deciding canStart = true.
+  const release: () => void = yield call(acquireOperationsMutex);
+  const state: AppState = yield select((s: AppState) => s);
+  const canStart = checkCanStart(options.id, state);
   if (canStart) {
     activeOperations.push({ id: options.id, allowAdditionalOperation: options.allowAdditionalOperation });
+  }
+  release();
+
+  if (canStart) {
     yield put(registerOperation(options.id));
 
     // Closure variable: guards against calling execute() more than once on the
@@ -261,10 +283,9 @@ function* handlePushSaveQueue() {
   const ctx = yield* createOperationContext({
     id: "pushSaveQueue",
     // Allow undo to run concurrently, but only while not rebasing.
-    *allowAdditionalOperation(pendingId) {
-      if (pendingId !== "undo") return false;
-      const isRebasing = yield select((state: AppState) => state.isRebasing);
-      return !isRebasing;
+    // State is passed in by the framework — no yield needed.
+    allowAdditionalOperation(pendingId, state) {
+      return pendingId === "undo" && !state.isRebasing;
     },
   });
 

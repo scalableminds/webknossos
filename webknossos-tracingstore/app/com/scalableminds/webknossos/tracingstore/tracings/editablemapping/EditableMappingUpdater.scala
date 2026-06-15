@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.tracingstore.annotation.UpdateAction
 import com.scalableminds.webknossos.tracingstore.tracings.volume.ReversionHelper
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBPutBuffer,
-  KeyValueStoreImplicits,
+  KeyValueStoreConversions,
   RemoteFallbackLayer,
   TracingDataStore
 }
@@ -43,7 +43,7 @@ class EditableMappingUpdater(
     remoteDatastoreClient: TSRemoteDatastoreClient,
     editableMappingService: EditableMappingService,
     tracingDataStore: TracingDataStore
-) extends KeyValueStoreImplicits
+) extends KeyValueStoreConversions
     with ReversionHelper
     with FoxImplicits
     with EditableMappingElementKeys
@@ -82,7 +82,7 @@ class EditableMappingUpdater(
 
   private def flushUpdatedInfoToFossil(updatedEditableMappingInfo: EditableMappingInfo): Fox[Unit] =
     for {
-      _ <- tracingDataStore.editableMappingsInfo.put(tracingId, newVersion, updatedEditableMappingInfo)
+      _ <- tracingDataStore.editableMappingsInfo.put(tracingId, newVersion, updatedEditableMappingInfo.toByteArray)
     } yield ()
 
   private def flushSegmentToAgglomerateChunk(key: String, putBuffer: FossilDBPutBuffer)(
@@ -102,7 +102,7 @@ class EditableMappingUpdater(
   private def flushAgglomerateGraph(key: String, putBuffer: FossilDBPutBuffer)(
       implicit ec: ExecutionContext): Fox[Unit] = {
     val (graph, isToBeReverted) = agglomerateToGraphBuffer(key)
-    val valueToFlush: Array[Byte] = if (isToBeReverted) revertedValue else graph
+    val valueToFlush: Array[Byte] = if (isToBeReverted) revertedValue else graph.toByteArray
     putBuffer.put(key, valueToFlush)
   }
 

@@ -321,13 +321,15 @@ function getTimeTrackingMenu(collapse: boolean): MenuItemType {
     key: "timeStatisticMenu",
 
     label: (
-      <Link to="/timetracking">
-        {getCollapsibleMenuTitle(
-          "Time Tracking",
-          <BarChartOutlined className="icon-margin-right" />,
-          collapse,
-        )}
-      </Link>
+      <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+        <Link to="/timetracking">
+          {getCollapsibleMenuTitle(
+            "Time Tracking",
+            <BarChartOutlined className="icon-margin-right" />,
+            collapse,
+          )}
+        </Link>
+      </PricingEnforcedSpan>
     ),
   };
 }
@@ -868,6 +870,7 @@ function Navbar() {
   );
 
   const isAuthenticated = activeUser != null;
+  const isAdminOrTeamManager = isUserAdminOrTeamManager(activeUser);
   const isAdminOrManager = isUserAdminOrManager(activeUser);
   const collapseAllNavItems = isInAnnotationView;
   const hideNavbarLogin = features().hideNavbarLogin || !hasOrganizations;
@@ -901,7 +904,7 @@ function Navbar() {
       menuItems.push(getTaskManagementSubMenu(collapseAllNavItems));
     }
 
-    if (isAdminOrManager && activeUser != null) {
+    if (isAdminOrTeamManager && activeUser != null) {
       menuItems.push(getAdministrationSubMenu(collapseAllNavItems, activeUser));
     } else {
       menuItems.push(getTimeTrackingMenu(collapseAllNavItems));

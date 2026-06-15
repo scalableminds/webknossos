@@ -3,8 +3,9 @@ package com.scalableminds.util.objectid
 import com.scalableminds.util.Msg
 import com.scalableminds.util.tools.TextUtils.parseCommaSeparated
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import play.api.libs.json.*
+import play.api.libs.json.{Format, JsError, JsResult, JsString, JsSuccess, JsValue}
 import play.api.mvc.{PathBindable, QueryStringBindable}
+
 import scala.concurrent.ExecutionContext
 
 // Follows BSON ObjectId spec https://github.com/mongodb/specifications/blob/master/source/bson-objectid/objectid.md#design-rationale

@@ -145,6 +145,9 @@ object Msg {
     object Mutex {
       val acquireFailed: String = "Could not acquire annotation editing mutex."
       val releaseFailed: String = "Could not release annotation editing mutex."
+      val acquireOrGetFailed: String = "Trying to acquire or find current annotation mutex failed."
+      val upsertingMutexInfoFailedWithMultipleAttempts: String =
+        "Could not find mutex for annotation after multiple retries."
     }
     object CollaborationMode {
       val onlyExplorationalOrTask: String =

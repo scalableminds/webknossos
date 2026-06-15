@@ -2,10 +2,9 @@ import type { ActionPattern } from "@redux-saga/types";
 import { Modal } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
-import { race } from "redux-saga/effects";
-import { call, delay, fork, put, take, takeEvery } from "typed-redux-saga";
+import { call, delay, fork, put, race, spawn, take, takeEvery } from "typed-redux-saga";
 import { MappingStatusEnum, type SagaIdentifier } from "viewer/constants";
-import type { Action } from "viewer/model/actions/actions";
+import { type Action, escalateErrorAction } from "viewer/model/actions/actions";
 import { setBusyBlockingInfoAction } from "viewer/model/actions/ui_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
@@ -197,6 +196,32 @@ export function* takeWithBatchActionSupport(actionType: Action["type"]) {
   ]);
 }
 
+export function* spawnUntilCanceled<Fn extends (...args: any[]) => Saga<unknown>>(
+  sagaFn: Fn,
+  ...params: Parameters<Fn>
+): Saga<void> {
+  /*
+   * Spawns the given saga with the given parameters in a non-blocking manner.
+   * The saga is automatically canceled if a RESTART_SAGA or CANCEL_SAGA action
+   * was dispatched.
+   * If the spawned saga errors for some reason, that error will be escalated
+   * so that WK as a whole will crash.
+   * Always prefer spawnUntilCanceled over spawn unless you are very confident
+   * that you need spawn. In general, we want to avoid spawn because it can cause
+   * lingering sagas that never get teared down.
+   */
+  yield* spawn(function* (): Saga<void> {
+    try {
+      yield* race({
+        completed: call(sagaFn, ...params),
+        canceled: take(["RESTART_SAGA", "CANCEL_SAGA"]),
+      });
+    } catch (error) {
+      yield* put(escalateErrorAction(error));
+    }
+  });
+}
+
 export function* takeEveryWithBatchActionSupport(
   actionType: Action["type"],
   saga: (...args: any[]) => any,
@@ -239,7 +264,7 @@ export function* waitFor(
       // In tests the assumption from above is not necessarily true.
       // Few actions are dispatched and we usually check for the expected
       // states quickly. So, we do the proper approach:
-      yield race([take("*"), delay(200)]);
+      yield* race([take("*"), delay(200)]);
     }
     if (yield select(selector)) return;
     yield delay(throttleMs);

@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
 import { deleteTeam as deleteTeamAPI, getEditableTeams, getEditableUsers } from "admin/rest_api";
 import CreateTeamModal from "admin/team/create_team_modal_view";
-import { App, Button, Flex, Input, Space, Spin, Table, Tag, Tooltip } from "antd";
+import { App, Button, Input, Space, Spin, Table, Tag, Tooltip } from "antd";
 import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";
@@ -14,8 +14,8 @@ import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
 import messages from "messages";
 import type React from "react";
 import { useState } from "react";
-import type { APITeam, APITeamMembership, APIUser } from "types/api_types";
-import { TeamMembersRow } from "./team_member_row";
+import type { APITeam, APIUser } from "types/api_types";
+import { filterTeamMembersOf, TeamMembersRow } from "./team_member_row";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -63,56 +63,6 @@ export function renderTeamRolesAndPermissionsForUser(user: APIUser) {
   ));
 
   return <Space wrap>{tagElements}</Space>;
-}
-
-export function filterTeamMembersOf(team: APITeam, user: APIUser): boolean {
-  return user.teams.some((userTeam: APITeamMembership) => userTeam.id === team.id) || user.isAdmin;
-}
-
-export function renderUsersForTeam(
-  team: APITeam,
-  allUsers: APIUser[],
-  renderAdditionalContent = (_teamMember: APIUser, _team: APITeam): React.ReactNode => {
-    return null;
-  },
-) {
-  const teamMembers = allUsers
-    .filter((user) => filterTeamMembersOf(team, user))
-    .filter((user) => user.isActive);
-  if (teamMembers.length === 0) return messages["team.no_members"];
-
-  return (
-    <Flex vertical gap={4}>
-      {teamMembers.map((teamMember) => (
-        <Flex key={`team_member_${teamMember.id}`} align="center" gap="small">
-          <span>
-            {teamMember.firstName} {teamMember.lastName} ({teamMember.email})
-          </span>
-          {renderTeamRolesForUser(teamMember, team)}
-          {renderAdditionalContent(teamMember, team)}
-        </Flex>
-      ))}
-    </Flex>
-  );
-}
-
-function renderTeamRolesForUser(user: APIUser, highlightedTeam: APITeam) {
-  // used by teams list page
-  // does not include dataset managers and team names
-  const tags = user.isAdmin
-    ? [["Admin - Access to all Teams", "red"]]
-    : user.teams
-        .filter((team) => team.id === highlightedTeam.id)
-        .map((team) => {
-          const roleName = team.isTeamManager ? "Team Manager" : "Member";
-          return [`${roleName}`, stringToColor(roleName)];
-        });
-
-  return tags.map(([text, color]) => (
-    <Tag key={`${text}_${user.id}`} color={color} style={{ marginInlineEnd: 0 }} variant="outlined">
-      {text}
-    </Tag>
-  ));
 }
 
 const persistence = new Persistence<Pick<{ searchQuery: string }, "searchQuery">>(

@@ -7,7 +7,7 @@ import play.api.libs.json.*
 import play.api.mvc.{PathBindable, QueryStringBindable}
 import scala.concurrent.ExecutionContext
 
-// Follows BSON ObjectId spec https://www.mongodb.com/docs/manual/reference/bson-types/#objectid
+// Follows BSON ObjectId spec https://github.com/mongodb/specifications/blob/master/source/bson-objectid/objectid.md#design-rationale
 
 case class ObjectId(id: String) {
   override def toString: String = id

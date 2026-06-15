@@ -782,7 +782,7 @@ function* handleMergeViaTree(action: MergeTreesAction): Saga<void> {
     // Now that the segment items are up-to-date we can sync with the back-end and release the mutex.
     yield* call(syncWithBackend);
     // Refreshing the meshes might take a while and won't block the saga here.
-    yield* spawn(refreshAffectedMeshes, volumeTracingId, refreshInfos);
+    yield* spawnUntilCanceled(refreshAffectedMeshes, volumeTracingId, refreshInfos);
   } finally {
     if (unsubscribeFromAnnotationMutex) {
       yield* call(unsubscribeFromAnnotationMutex);

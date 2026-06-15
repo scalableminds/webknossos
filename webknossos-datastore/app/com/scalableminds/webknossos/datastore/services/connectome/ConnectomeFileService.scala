@@ -126,7 +126,7 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
           } yield ConnectomeFileNameWithMappingName(connectomeFileName, mappingName)
         }
         // Only return successes, we don’t want a malformed file breaking the list request.
-        .map { boxes: Seq[Box[ConnectomeFileNameWithMappingName]] =>
+        .map { (boxes: Seq[Box[ConnectomeFileNameWithMappingName]]) =>
           boxes.filter(_.isEmpty).foreach { emptyBox =>
             logger.warn(s"Failed to list a connectome file for $dataSourceId: $emptyBox")
           }
@@ -172,7 +172,7 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
     agglomerateIds.foreach { agglomerateId =>
       directedSynapseListsMutable(agglomerateId) = DirectedSynapseListMutable.empty
     }
-    agglomeratePairs.zip(synapsesPerPair).foreach { pairWithSynapses: ((Long, Long), Seq[Long]) =>
+    agglomeratePairs.zip(synapsesPerPair).foreach { (pairWithSynapses: ((Long, Long), Seq[Long])) =>
       val srcAgglomerate = pairWithSynapses._1._1
       val dstAgglomerate = pairWithSynapses._1._2
       directedSynapseListsMutable(srcAgglomerate).out ++= pairWithSynapses._2

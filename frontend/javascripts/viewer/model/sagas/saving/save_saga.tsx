@@ -15,7 +15,6 @@ import {
   fork,
   put,
   race,
-  spawn,
   takeEvery,
 } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
@@ -71,6 +70,7 @@ import { Model, Store } from "viewer/singletons";
 import type { NumberLike, StoreAnnotation, WebknossosState } from "viewer/store";
 import {
   enforceExecutionAsBusyBlockingUnlessAllowed,
+  spawnUntilCanceled,
   takeEveryWithBatchActionSupport,
   waitFor,
 } from "../saga_helpers";
@@ -226,8 +226,8 @@ const SAVING_CONFLICT_TOAST_KEY = "save_conflicts_warning";
 // This info can then be used to trigger side effects after saving is done to e.g. reload the newest auxiliary agglomerate meshes.
 
 type ApplyingUpdateArtifacts = {
-  meshIdsToRemovePerLayer: Map<string, Set<number>>;
-  meshIdsToLoadPerLayer: Map<string, Set<number>>;
+  meshIdsToRemovePerLayer: ReadonlyMap<string, ReadonlySet<number>>;
+  meshIdsToLoadPerLayer: ReadonlyMap<string, ReadonlySet<number>>;
 };
 
 type ApplyingUpdateResults = { success: boolean; artifactInfos: ApplyingUpdateArtifacts };
@@ -305,7 +305,7 @@ function* updatePendingProofreadingOperationInfoAction() {
       getAgglomeratesForSegmentsFromTracingstore,
       tracingStoreUrl,
       tracingId,
-      idsToRequest,
+      new Set(idsToRequest),
       annotationId,
       annotationVersion,
     );
@@ -880,7 +880,7 @@ export function* tryToIncorporateActions(
           false,
           // In the very rare case where split actions of two different agglomerate ids were included in the same version
           // we also request those other agglomerate ids in the same request to save requests.
-          agglomerateIdToRefresh.slice(1),
+          new Set(agglomerateIdToRefresh.slice(1)),
         );
 
         if (splitMappingInfo == null) {
@@ -933,7 +933,7 @@ function* resolveApplyingUpdateArtifacts(artifactInfos: ApplyingUpdateArtifacts)
     return;
   }
   yield* call(removeOutdatedMeshes, artifactInfos.meshIdsToRemovePerLayer);
-  yield* spawn(reloadMeshes, artifactInfos.meshIdsToLoadPerLayer);
+  yield* spawnUntilCanceled(reloadMeshes, artifactInfos.meshIdsToLoadPerLayer);
 }
 
 function* removeOutdatedMeshes(

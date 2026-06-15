@@ -221,9 +221,9 @@ class OrganizationController @Inject()(
         multiUser <- multiUserDAO.findOne(request.identity._multiUser)
         requestedPlan <- PricingPlan.fromString(requestedPlan).toFox
         mail = if (requestedPlan == PricingPlan.Team) {
-          defaultMails.upgradePricingPlanToTeamMail _
+          defaultMails.upgradePricingPlanToTeamMail
         } else {
-          defaultMails.upgradePricingPlanToPowerMail _
+          defaultMails.upgradePricingPlanToPowerMail
         }
         _ = Mailer ! Send(mail(multiUser, organization.name))
       } yield Ok

@@ -44,9 +44,11 @@ object TracingStoreInfo {
   implicit val jsonFormat: OFormat[TracingStoreInfo] = Json.format[TracingStoreInfo]
 }
 
-case class DataSourcePathInfo(dataSourceId: DataSourceId,
-                              magPathInfos: Seq[RealPathInfo],
-                              attachmentPathInfos: Seq[RealPathInfo]) {
+case class DataSourcePathInfo(
+    dataSourceId: DataSourceId,
+    magPathInfos: Seq[RealPathInfo],
+    attachmentPathInfos: Seq[RealPathInfo]
+) {
   def nonEmpty: Boolean = magPathInfos.nonEmpty || attachmentPathInfos.nonEmpty
 }
 
@@ -64,7 +66,7 @@ trait RemoteWebknossosClient {
   def requestUserAccess(accessRequest: UserAccessRequest)(implicit tc: TokenContext): Fox[UserAccessAnswer]
 }
 
-class DSRemoteWebknossosClient @Inject()(
+class DSRemoteWebknossosClient @Inject() (
     rpc: RPC,
     config: DataStoreConfig,
     val lifecycle: ApplicationLifecycle,
@@ -85,12 +87,12 @@ class DSRemoteWebknossosClient @Inject()(
 
   def tick(): Fox[Unit] = reportStatus().map(_ => ())
 
-  private def reportStatus(): Fox[_] =
+  private def reportStatus(): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/status")
       .addQueryParam("key", dataStoreKey)
       .patchJson(DataStoreStatus(ok = true, dataStoreUri))
 
-  def reportDataSource(dataSource: DataSource): Fox[_] =
+  def reportDataSource(dataSource: DataSource): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasource")
       .addQueryParam("key", dataStoreKey)
       .putJson(dataSource)
@@ -104,32 +106,33 @@ class DSRemoteWebknossosClient @Inject()(
         .getWithJsonResponse[List[UnfinishedUpload]]
     } yield unfinishedUploads
 
-  def reportDatasetUpload(datasetId: ObjectId, parameters: ReportDatasetUploadParameters)(
-      implicit tc: TokenContext): Fox[_] =
+  def reportDatasetUpload(datasetId: ObjectId, parameters: ReportDatasetUploadParameters)(implicit
+      tc: TokenContext
+  ): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportDatasetUpload")
       .addQueryParam("key", dataStoreKey)
       .addQueryParam("datasetId", datasetId)
       .withTokenFromContext
       .postJson[ReportDatasetUploadParameters](parameters)
 
-  def reportMagUpload(parameters: ReportMagUploadParameters): Fox[_] =
+  def reportMagUpload(parameters: ReportMagUploadParameters): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportMagUpload")
       .addQueryParam("key", dataStoreKey)
       .postJson[ReportMagUploadParameters](parameters)
 
-  def reportAttachmentUpload(parameters: ReportAttachmentUploadParameters): Fox[_] =
+  def reportAttachmentUpload(parameters: ReportAttachmentUploadParameters): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/reportAttachmentUpload")
       .addQueryParam("key", dataStoreKey)
       .postJson[ReportAttachmentUploadParameters](parameters)
 
-  def reportDataSources(dataSources: Seq[DataSource], organizationId: Option[String]): Fox[_] =
+  def reportDataSources(dataSources: Seq[DataSource], organizationId: Option[String]): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources")
       .addQueryParam("key", dataStoreKey)
       .addQueryParam("organizationId", organizationId)
       .silent
       .putJson(dataSources)
 
-  def reportRealPaths(dataSourcePaths: Seq[DataSourcePathInfo]): Fox[_] =
+  def reportRealPaths(dataSourcePaths: Seq[DataSourcePathInfo]): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/realpaths")
       .addQueryParam("key", dataStoreKey)
       .silent
@@ -147,20 +150,21 @@ class DSRemoteWebknossosClient @Inject()(
       .withTokenFromContext
       .postJsonWithJsonResponse[MagUploadInfo, MagUploadAdditionalInfo](info)
 
-  def reserveAttachmentUpload(info: AttachmentUploadInfo)(
-      implicit tc: TokenContext): Fox[AttachmentUploadAdditionalInfo] =
+  def reserveAttachmentUpload(
+      info: AttachmentUploadInfo
+  )(implicit tc: TokenContext): Fox[AttachmentUploadAdditionalInfo] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/reserveAttachmentUpload")
       .addQueryParam("key", dataStoreKey)
       .withTokenFromContext
       .postJsonWithJsonResponse[AttachmentUploadInfo, AttachmentUploadAdditionalInfo](info)
 
-  def updateDataSource(dataSource: DataSource, datasetId: ObjectId)(implicit tc: TokenContext): Fox[_] =
+  def updateDataSource(dataSource: DataSource, datasetId: ObjectId)(implicit tc: TokenContext): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/${datasetId.toString}")
       .addQueryParam("key", dataStoreKey)
       .withTokenFromContext
       .putJson(dataSource)
 
-  def deleteDataset(datasetId: ObjectId): Fox[_] =
+  def deleteDataset(datasetId: ObjectId): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/deleteDataset")
       .addQueryParam("key", dataStoreKey)
       .postJson(datasetId)

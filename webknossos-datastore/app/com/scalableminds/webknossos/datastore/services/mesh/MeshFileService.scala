@@ -106,7 +106,7 @@ class MeshFileService @Inject()(hdf5MeshFileService: Hdf5MeshFileService,
           } yield MeshFileInfo(meshFileName, mappingName, formatVersion)
         }
         // Only return successes, we don’t want a malformed file breaking the list request.
-        .map { boxes: Seq[Box[MeshFileInfo]] =>
+        .map { (boxes: Seq[Box[MeshFileInfo]]) =>
           boxes.filter(_.isEmpty).foreach { emptyBox =>
             logger.warn(s"Failed to list a mesh file for $dataSourceId: $emptyBox")
           }

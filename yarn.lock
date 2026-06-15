@@ -10097,6 +10097,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"playwright-core@npm:^1.60.0":
+  version: 1.60.0
+  resolution: "playwright-core@npm:1.60.0"
+  bin:
+    playwright-core: cli.js
+  checksum: 10c0/99ccd43923b6e9355e0723b7fe221e6326efd4687f8dafff951313662aea11db51f542a9c2122c704c445fb9baae1c9ec9fa6f895126bbddd9fe92313f6942c9
+  languageName: node
+  linkType: hard
+
 "pngjs@npm:^3.0.0, pngjs@npm:^3.3.3":
   version: 3.4.0
   resolution: "pngjs@npm:3.4.0"
@@ -13187,6 +13196,7 @@ __metadata:
     pako: "npm:^2.1.0"
     pg: "npm:^7.4.1"
     pixelmatch: "npm:^5.2.0"
+    playwright-core: "npm:^1.60.0"
     pngjs: "npm:^3.3.3"
     pretty-bytes: "npm:^5.1.0"
     process: "npm:^0.11.10"

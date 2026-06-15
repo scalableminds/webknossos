@@ -86,7 +86,7 @@ class AnalyticsService @Inject()(rpc: RPC,
 
   override protected def tickerInterval: FiniteDuration = 24 hours
 
-  override protected def tick(): Fox[_] =
+  override protected def tick(): Fox[?] =
     for {
       oldestUser <- userDAO.findOldestActive
       buildInfoJson <- Fox.fromFuture(buildInfoService.buildInfoJson)

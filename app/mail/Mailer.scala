@@ -42,11 +42,11 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
 
       val multiPartMail: MultiPartEmail = createEmail(mail)
 
-      setAddress(mail.from)(multiPartMail.setFrom _)
-      mail.replyTo.foreach(setAddress(_)(multiPartMail.addReplyTo _))
-      mail.recipients.foreach(setAddress(_)(multiPartMail.addTo _))
-      mail.ccRecipients.foreach(setAddress(_)(multiPartMail.addCc _))
-      mail.bccRecipients.foreach(setAddress(_)(multiPartMail.addBcc _))
+      setAddress(mail.from)(multiPartMail.setFrom)
+      mail.replyTo.foreach(setAddress(_)(multiPartMail.addReplyTo))
+      mail.recipients.foreach(setAddress(_)(multiPartMail.addTo))
+      mail.ccRecipients.foreach(setAddress(_)(multiPartMail.addCc))
+      mail.bccRecipients.foreach(setAddress(_)(multiPartMail.addBcc))
 
       multiPartMail.setSubject(mail.subject)
       mail.headers foreach { case (key, value) => multiPartMail.addHeader(key, value) }
@@ -72,7 +72,7 @@ class Mailer(conf: MailerConfig) extends Actor with LazyLogging {
   /**
     * Extracts an email address from the given string and passes to the enclosed method.
     */
-  private def setAddress(emailAddress: String)(setter: (String, String) => _): Unit =
+  private def setAddress(emailAddress: String)(setter: (String, String) => ?): Unit =
     try {
       val iAddress = new InternetAddress(emailAddress)
       val address = iAddress.getAddress

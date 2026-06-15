@@ -16,7 +16,7 @@ import scala.concurrent.ExecutionContext
 class SkeletonTracingService @Inject()(
     tracingDataStore: TracingDataStore,
     temporaryTracingService: TemporaryTracingService
-) extends KeyValueStoreImplicits
+) extends KeyValueStoreConversions
     with ProtoGeometryImplicits
     with BoundingBoxMerger
     with ColorGenerator
@@ -46,12 +46,12 @@ class SkeletonTracingService @Inject()(
         _ <- Fox.serialCombined(treeIdsToFlush) { treeId =>
           for {
             treeBody <- extractTreeBody(tracing, treeId).toFox
-            _ <- skeletonTreeBodiesPutBuffer.put(f"$tracingId/$treeId", treeBody)
+            _ <- skeletonTreeBodiesPutBuffer.put(f"$tracingId/$treeId", treeBody.toByteArray)
           } yield ()
         }
         _ <- skeletonTreeBodiesPutBuffer.flush()
         skeletonWithoutExtraTreeInfo = stripTreeBodies(tracing)
-        _ <- tracingDataStore.skeletons.put(tracingId, version, skeletonWithoutExtraTreeInfo)
+        _ <- tracingDataStore.skeletons.put(tracingId, version, skeletonWithoutExtraTreeInfo.toByteArray)
       } yield ()
     }
 

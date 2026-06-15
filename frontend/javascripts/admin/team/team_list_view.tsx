@@ -1,15 +1,10 @@
-import { DeleteOutlined, MinusCircleOutlined, PlusOutlined, UserOutlined } from "@ant-design/icons";
+import { DeleteOutlined, PlusOutlined, UserOutlined } from "@ant-design/icons";
 import { PropTypes } from "@scalableminds/prop-types";
 import { useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
-import {
-  deleteTeam as deleteTeamAPI,
-  getEditableTeams,
-  getEditableUsers,
-  updateUser,
-} from "admin/rest_api";
+import { deleteTeam as deleteTeamAPI, getEditableTeams, getEditableUsers } from "admin/rest_api";
 import CreateTeamModal from "admin/team/create_team_modal_view";
-import { App, Button, Flex, Input, Select, Space, Spin, Table, Tag, Tooltip } from "antd";
+import { App, Button, Flex, Input, Space, Spin, Table, Tag, Tooltip } from "antd";
 import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";
@@ -20,6 +15,7 @@ import messages from "messages";
 import type React from "react";
 import { useState } from "react";
 import type { APITeam, APITeamMembership, APIUser } from "types/api_types";
+import { TeamMembersRow } from "./team_member_row";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -119,91 +115,6 @@ function renderTeamRolesForUser(user: APIUser, highlightedTeam: APITeam) {
   ));
 }
 
-function TeamMembersPanel({ team, users }: { team: APITeam; users: APIUser[] }) {
-  const queryClient = useQueryClient();
-  const [isUpdating, setIsUpdating] = useState(false);
-  const [isAddingUser, setIsAddingUser] = useState(false);
-
-  async function updateTeamMembership(user: APIUser, newTeams: APITeamMembership[]) {
-    try {
-      setIsUpdating(true);
-      await updateUser({ ...user, teams: newTeams });
-      await queryClient.invalidateQueries({ queryKey: ["editableUsers"] });
-    } catch (error) {
-      handleGenericError(error as Error);
-    } finally {
-      setIsUpdating(false);
-    }
-  }
-
-  function addUser(userId: string | null) {
-    const user = users.find((u) => u.id === userId);
-    if (user == null) return;
-    const newTeam: APITeamMembership = { id: team.id, name: team.name, isTeamManager: false };
-    updateTeamMembership(user, [...user.teams, newTeam]);
-  }
-
-  function removeUser(user: APIUser) {
-    updateTeamMembership(
-      user,
-      user.teams.filter((userTeam) => userTeam.id !== team.id),
-    );
-  }
-
-  const renderRemoveButton = (user: APIUser, _team: APITeam) => {
-    if (user.isAdmin) return null;
-    return (
-      <Tooltip title={`Remove from ${team.name}`}>
-        <LinkButton size="small" onClick={() => removeUser(user)} icon={<MinusCircleOutlined />} />
-      </Tooltip>
-    );
-  };
-
-  const usersNotInTeam = users.filter((user) => user.isActive && !filterTeamMembersOf(team, user));
-
-  const addUserControl = isAddingUser ? (
-    <Select
-      autoFocus
-      defaultOpen
-      showSearch
-      style={{ width: 350 }}
-      placeholder="Search users"
-      value={null}
-      options={usersNotInTeam.map((user) => ({
-        value: user.id,
-        label: `${user.firstName} ${user.lastName} (${user.email})`,
-      }))}
-      optionFilterProp="label"
-      onSelect={(userId) => {
-        setIsAddingUser(false);
-        addUser(userId);
-      }}
-      onBlur={() => setIsAddingUser(false)}
-      onOpenChange={(open) => {
-        if (!open) setIsAddingUser(false);
-      }}
-    />
-  ) : (
-    <Button
-      type="dashed"
-      size="small"
-      icon={<PlusOutlined />}
-      onClick={() => setIsAddingUser(true)}
-    >
-      Add user
-    </Button>
-  );
-
-  return (
-    <Spin spinning={isUpdating}>
-      <div style={{ marginLeft: 32 }}>
-        {renderUsersForTeam(team, users, renderRemoveButton)}
-        <div style={{ marginTop: 8 }}>{addUserControl}</div>
-      </div>
-    </Spin>
-  );
-}
-
 const persistence = new Persistence<Pick<{ searchQuery: string }, "searchQuery">>(
   {
     searchQuery: PropTypes.string,
@@ -300,7 +211,7 @@ function TeamListView() {
             defaultPageSize: 50,
           }}
           expandable={{
-            expandedRowRender: (team) => <TeamMembersPanel team={team} users={users} />,
+            expandedRowRender: (team) => <TeamMembersRow team={team} users={users} />,
             rowExpandable: (_team) => true,
             expandRowByClick: true,
             expandedRowKeys: expandedTeamIds,
@@ -326,7 +237,7 @@ function TeamListView() {
             title="Actions"
             key="actions"
             render={(__, team: APITeam) => (
-              <Space direction="vertical" size={0}>
+              <Space orientation="vertical" size={0}>
                 <LinkButton onClick={(event) => expandTeamRow(team, event)} icon={<UserOutlined />}>
                   Manage users
                 </LinkButton>

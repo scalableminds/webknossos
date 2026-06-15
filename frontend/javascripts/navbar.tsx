@@ -397,7 +397,7 @@ function getHelpSubMenu(
     helpSubMenuItems.push({
       key: "contact",
       label: (
-        <a target="_blank" href="mailto:hello@webknossos.org" rel="noopener noreferrer">
+        <a target="_blank" href="mailto:support@webknossos.org" rel="noopener noreferrer">
           Email Us
         </a>
       ),

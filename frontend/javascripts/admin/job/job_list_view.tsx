@@ -19,6 +19,7 @@ import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
 import { confirmAsync } from "dashboard/dataset/helper_components";
+import features from "features";
 import { formatMilliCreditsString, formatWkLibsNdBBox } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import { useWkSelector } from "libs/react_hooks";
@@ -406,9 +407,16 @@ function JobListView() {
         );
       }
       if (job.state === "FAILURE") {
+        const failureMessage = features().isWkorgInstance ? (
+          <>
+            Please contact our <a href="mailto:support@webknossos.org">support team</a> for help.
+          </>
+        ) : (
+          "Please contact an administrator for help."
+        );
         return (
           <Tooltip title="This job has already been retried once and failed again. This is likely a persistent failure.">
-            <span>Please contact an administrator for help.</span>
+            <span>{failureMessage}</span>
           </Tooltip>
         );
       }

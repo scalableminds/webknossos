@@ -18,44 +18,30 @@ object ObjectId extends FoxImplicits {
   private lazy val atomicCounter = new java.util.concurrent.atomic.AtomicInteger(scala.util.Random.nextInt(maxCounterValue))
   private lazy val HEX_CHARS: Array[Char] = "0123456789abcdef".toCharArray
 
-  private lazy val processRandom: Array[Byte] = {
+  private lazy val processRandomBytes: Array[Byte] = {
     val bytes = Array.ofDim[Byte](5)
     scala.util.Random.nextBytes(bytes)
     bytes
   }
 
-  private def hex2Str(bytes: Array[Byte]): String = {
-    val len = bytes.length
-    val hex = new Array[Char](2 * len)
-    var inputIndex = 0
-    while (inputIndex < len) {
-      val b = bytes(inputIndex)
-      val outputIndex = 2 * inputIndex
-      hex(outputIndex) = HEX_CHARS((b & 0xF0) >>> 4)
-      hex(outputIndex + 1) = HEX_CHARS(b & 0x0F)
-      inputIndex = inputIndex + 1
-    }
-    new String(hex)
-  }
-
   def generate: ObjectId = {
     val id = Array.ofDim[Byte](12)
 
-    // n of seconds since epoch. Big endian
+    // 4 bytes (8 hex chars): seconds since Unix epoch. Big endian
     val timestamp = (System.currentTimeMillis() / 1000L).toInt
     id(0) = (timestamp >> 24).toByte
     id(1) = (timestamp >> 16).toByte
     id(2) = (timestamp >> 8).toByte
     id(3) = timestamp.toByte
 
-    // 5-byte random value, generated once per process
-    id(4) = processRandom(0)
-    id(5) = processRandom(1)
-    id(6) = processRandom(2)
-    id(7) = processRandom(3)
-    id(8) = processRandom(4)
+    // 5 bytes (10 hex chars): random value, generated once per process
+    id(4) = processRandomBytes(0)
+    id(5) = processRandomBytes(1)
+    id(6) = processRandomBytes(2)
+    id(7) = processRandomBytes(3)
+    id(8) = processRandomBytes(4)
 
-    // 3 bytes of counter sequence, with randomized start. Big endian
+    // 3 bytes (6 hex chars): incrementing counter with randomized start. Big endian
     val c = (atomicCounter.getAndIncrement + maxCounterValue) % maxCounterValue
     id(9) = (c >> 16 & 0xFF).toByte
     id(10) = (c >> 8 & 0xFF).toByte
@@ -118,4 +104,18 @@ object ObjectId extends FoxImplicits {
 
       override def unbind(key: String, value: ObjectId): String = value.id
     }
+
+  private def hex2Str(bytes: Array[Byte]): String = {
+    val len = bytes.length
+    val hex = new Array[Char](2 * len)
+    var inputIndex = 0
+    while (inputIndex < len) {
+      val b = bytes(inputIndex)
+      val outputIndex = 2 * inputIndex
+      hex(outputIndex) = HEX_CHARS((b & 0xF0) >>> 4)
+      hex(outputIndex + 1) = HEX_CHARS(b & 0x0F)
+      inputIndex = inputIndex + 1
+    }
+    new String(hex)
+  }
 }

@@ -1,6 +1,8 @@
+import { noop } from "lodash-es";
 import { applyMiddleware, createStore } from "redux";
 import createSagaMiddleware from "redux-saga";
 import { delay } from "redux-saga/effects";
+import { call } from "typed-redux-saga";
 import {
   _resetOperationContextForTesting,
   borrowedContext,
@@ -86,6 +88,7 @@ describe("operation_context_saga", () => {
     function* op2() {
       const ctx = yield* createOperationContext({ id: "op2" });
       yield* ctx.execute(function* () {
+        yield* call(noop);
         log.push("op2:start");
         log.push("op2:end");
       });
@@ -141,6 +144,7 @@ describe("operation_context_saga", () => {
     function* undoOp() {
       const ctx = yield* createOperationContext({ id: "undo" });
       yield* ctx.execute(function* () {
+        yield* call(noop);
         log.push("undo:start");
         log.push("undo:end");
       });
@@ -343,6 +347,7 @@ describe("operation_context_saga", () => {
         // Borrowed context preserves the parent's ID
         log.push(`id-matches-parent: ${childCtx.id === parentCtx.id}`);
         yield* childCtx.execute(function* () {
+          yield* call(noop);
           log.push("child:ran");
         });
       });
@@ -361,6 +366,7 @@ describe("operation_context_saga", () => {
       const ctx = yield* getOrCreateOperationContext({ id: "standalone" });
       log.push(`id: ${ctx.id}`);
       yield* ctx.execute(function* () {
+        yield* call(noop);
         log.push("ran");
       });
     }

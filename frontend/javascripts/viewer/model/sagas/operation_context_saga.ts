@@ -93,7 +93,10 @@ export function* createOperationContext(
   const state: WebknossosState = yield select((s: WebknossosState) => s);
   const canStart = checkCanStart(options.id, state);
   if (canStart) {
-    activeOperations.push({ id: options.id, allowAdditionalOperation: options.allowAdditionalOperation });
+    activeOperations.push({
+      id: options.id,
+      allowAdditionalOperation: options.allowAdditionalOperation,
+    });
   }
   release();
 
@@ -142,7 +145,10 @@ export function* createOperationContext(
 // Returns a context that runs within an existing (parent) lock.
 // The child is registered in the Redux store for the duration of execute(),
 // which is also single-use to prevent accidental double-execution.
-export function borrowedContext(existing: OperationContext, childId: OperationId): OperationContext {
+export function borrowedContext(
+  existing: OperationContext,
+  childId: OperationId,
+): OperationContext {
   let consumed = false;
   return {
     id: existing.id,

@@ -194,7 +194,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
     val groupedByOrga = dataSourcesWithPathInfo.groupBy(_.dataSource.id.organizationId).toList
     Fox
-      .serialCombined(groupedByOrga) { orgaTuple: (String, List[DataSourceWithPathInfo]) =>
+      .serialCombined(groupedByOrga) { (orgaTuple: (String, List[DataSourceWithPathInfo])) =>
         organizationDAO.findOne(orgaTuple._1).shiftBox.flatMap {
           case Full(organization) if dataStore.onlyAllowedOrganization.exists(_ != organization._id) =>
             logger.info(

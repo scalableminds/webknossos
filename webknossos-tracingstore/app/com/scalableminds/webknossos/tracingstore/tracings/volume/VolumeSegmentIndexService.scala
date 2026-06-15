@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FossilDBClient,
-  KeyValueStoreImplicits,
+  KeyValueStoreConversions,
   RemoteFallbackLayer,
   TemporaryTracingService,
   TracingDataStore
@@ -41,7 +41,7 @@ object VolumeSegmentIndexService {
 class VolumeSegmentIndexService @Inject()(val tracingDataStore: TracingDataStore,
                                           remoteDatastoreClient: TSRemoteDatastoreClient,
                                           temporaryTracingService: TemporaryTracingService)
-    extends KeyValueStoreImplicits
+    extends KeyValueStoreConversions
     with ProtoGeometryImplicits
     with VolumeBucketCompression
     with SegmentIndexKeyHelper

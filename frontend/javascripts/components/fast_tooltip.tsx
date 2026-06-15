@@ -1,6 +1,5 @@
 import { generateRandomId } from "libs/utils";
-import React from "react";
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Tooltip as ReactTooltip } from "react-tooltip";
 
 /*

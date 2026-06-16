@@ -6,23 +6,13 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Box, Empty, EmptyBox, Fox, FoxImplicits, Full, JsonHelper, TextUtils}
 import com.scalableminds.webknossos.datastore.helpers.UPath
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  DataLayerAttachments,
-  DataSource,
-  DataSourceId,
-  DataSourceStatus,
-  StaticColorLayer,
-  StaticLayer,
-  StaticSegmentationLayer,
-  UnusableDataSource,
-  UsableDataSource
-}
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerAttachments, DataSource, DataSourceId, DataSourceStatus, StaticColorLayer, StaticLayer, StaticSegmentationLayer, UnusableDataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataSourceWithRootPathInfo}
 import com.typesafe.scalalogging.LazyLogging
 import models.folder.FolderDAO
 import models.organization.{Organization, OrganizationDAO}
-import models.team._
+import models.team.*
 import models.user.{MultiUserDAO, User, UserService}
 import com.scalableminds.webknossos.datastore.controllers.PathValidationResult
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
@@ -40,8 +30,9 @@ import security.RandomIDGenerator
 import telemetry.SlackNotificationService
 import utils.WkConf
 
+import java.nio.file.Path
 import javax.inject.Inject
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import scala.concurrent.ExecutionContext
 
 class DatasetService @Inject()(organizationDAO: OrganizationDAO,
@@ -652,17 +643,19 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
           _ <- pathDeletionService.deletePaths(datastoreClient, pathsUsedOnlyByThisDataset)
         } yield ()
       } else {
-        for {
-          datastoreBaseDirStr <- Fox.successful("TODO")
-          datastoreBaseDir <- UPath.fromString(datastoreBaseDirStr).toFox
-          // TODO should dataset rootPath if set, no-op otherwise
-          datasetDir = datastoreBaseDir / dataset._organization / dataset.directoryName
-          datastore <- dataStoreFor(dataset)
-          datasetsUsingDataFromThisDir <- findDatasetsUsingDataFromDir(datasetDir, datastore, dataset._id)
-          _ <- Fox.fromBool(datasetsUsingDataFromThisDir.isEmpty) ?~> s"Cannot delete dataset because ${datasetsUsingDataFromThisDir.length} other datasets reference its data: ${datasetsUsingDataFromThisDir
-            .mkString(",")}"
-          _ <- datastoreClient.deleteOnDisk(dataset._id) ?~> Msg.Dataset.Delete.failed
-        } yield ()
+        dataset.rootPath.orElse(dataset.rootRealPath).match {
+          case Some(rootPath) =>
+            for {
+              datastore <- dataStoreFor(dataset)
+              datasetsUsingDataFromThisDir <- findDatasetsUsingDataFromDir(UPath.fromLocalPath(Path.of(rootPath)), datastore, dataset._id)
+              _ <- Fox.fromBool(datasetsUsingDataFromThisDir.isEmpty) ?~> s"Cannot delete dataset because ${datasetsUsingDataFromThisDir.length} other datasets reference its data: ${
+                datasetsUsingDataFromThisDir
+                  .mkString(",")
+              }"
+              _ <- datastoreClient.deleteOnDisk(dataset._id) ?~> Msg.Dataset.Delete.failed
+            } yield ()
+          case None => Fox.successful(())
+        }
       }
       _ <- Fox.runIf(
         conf.Features.jobsEnabled && (dataset.status == DataSourceStatus.notYetUploadedToPaths || dataset.status == DataSourceStatus.notYetUploaded)) {

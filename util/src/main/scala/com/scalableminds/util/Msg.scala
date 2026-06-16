@@ -282,7 +282,7 @@ object Msg {
     val usersUserLimitReached: String =
       "Cannot add new user to this organization because it would exceed the organization’s user limit. Please ask the organization owner to upgrade."
     val notEmpty: String =
-      "There are already organizations present in the database. Please refresh the db schema and try again."
+      "There are already organizations present in the database. To reset initial data, please refresh the database schema and try again."
     object TermsOfService {
       def versionMismatch(requiredVersion: Int, version: Int): String =
         s"Terms of service version mismatch. Current version is $requiredVersion, received acceptance for $version."

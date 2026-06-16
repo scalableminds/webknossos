@@ -39,11 +39,17 @@ object DataStoreStatus {
   implicit val jsonFormat: OFormat[DataStoreStatus] = Json.format[DataStoreStatus]
 }
 
+case class DataSourceWithPathInfo(dataSource: DataSource, rootPath: Option[String], rootRealPath: Option[String])
+object DataSourceWithPathInfo {
+  implicit val jsonFormat: OFormat[DataSourceWithPathInfo] = Json.format[DataSourceWithPathInfo]
+}
+
 case class TracingStoreInfo(name: String, url: String)
 object TracingStoreInfo {
   implicit val jsonFormat: OFormat[TracingStoreInfo] = Json.format[TracingStoreInfo]
 }
 
+// TODO disambiguate names. This is about mag/attachment paths, the other one about rootPath
 case class DataSourcePathInfo(
     dataSourceId: DataSourceId,
     magPathInfos: Seq[RealPathInfo],
@@ -92,6 +98,7 @@ class DSRemoteWebknossosClient @Inject() (
       .addQueryParam("key", dataStoreKey)
       .patchJson(DataStoreStatus(ok = true, dataStoreUri))
 
+  // Only used for legacy refresh
   def reportDataSource(dataSource: DataSource): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasource")
       .addQueryParam("key", dataStoreKey)
@@ -125,12 +132,12 @@ class DSRemoteWebknossosClient @Inject() (
       .addQueryParam("key", dataStoreKey)
       .postJson[ReportAttachmentUploadParameters](parameters)
 
-  def reportDataSources(dataSources: Seq[DataSource], organizationId: Option[String]): Fox[?] =
+  def reportDataSources(dataSourcesWithPathInfo: Seq[DataSourceWithPathInfo], organizationId: Option[String]): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources")
       .addQueryParam("key", dataStoreKey)
       .addQueryParam("organizationId", organizationId)
       .silent
-      .putJson(dataSources)
+      .putJson(dataSourcesWithPathInfo)
 
   def reportRealPaths(dataSourcePaths: Seq[DataSourcePathInfo]): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources/realpaths")

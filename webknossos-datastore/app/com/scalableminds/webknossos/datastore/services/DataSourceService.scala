@@ -60,9 +60,10 @@ class DataSourceService @Inject()(
       allOrgaDirsFormatted = allOrgaDirsWithIds.map(_._1).mkString(", ")
       _ = if (verbose) logger.info(s"Scanning inbox ($allOrgaDirsFormatted)...")
       _ = if (verbose && organizationId.isEmpty) logEmptyDirs(allOrgaDirsWithIds.map(_._1))
-      foundDataSources = allOrgaDirsWithIds.flatMap(scanOrganizationDirForDataSources)
-      (realPathInfos, realPathScanFailures) = scanRealPaths(foundDataSources)
-      _ <- remoteWebknossosClient.reportDataSources(foundDataSources, organizationId)
+      foundDataSourcesWithPathInfo = allOrgaDirsWithIds.flatMap(scanOrganizationDirForDataSources)
+      foundDataSources = foundDataSourcesWithPathInfo.map(_.dataSource)
+      (realPathInfos, realPathScanFailures) = scanRealPaths(foundDataSourcesWithPathInfo)
+      _ <- remoteWebknossosClient.reportDataSources(foundDataSourcesWithPathInfo, organizationId)
       _ <- remoteWebknossosClient.reportRealPaths(realPathInfos)
       _ = logFoundDatasources(allOrgaDirsFormatted,
                               before,
@@ -102,7 +103,7 @@ class DataSourceService @Inject()(
     }
   }
 
-  def scanRealPathsForVirtual(dataSources: Seq[DataSource]): Fox[Unit] =
+  def scanRealPathsForVirtual(dataSources: Seq[DataSourceWithPathInfo]): Fox[Unit] =
     for {
       before <- Instant.nowFox
       (realPathInfos, realPathScanFailures) = scanRealPaths(dataSources)
@@ -121,15 +122,16 @@ class DataSourceService @Inject()(
       logger.warn(s"RealPath scan failures: $realPathScanFailuresFormatted")
     }
 
-  private def scanRealPaths(dataSources: Seq[DataSource]): (Seq[DataSourcePathInfo], Seq[Failure]) = {
+  private def scanRealPaths(dataSources: Seq[DataSourceWithPathInfo]): (Seq[DataSourcePathInfo], Seq[Failure]) = {
     val withFailures = dataSources.map(scanRealPathsForDataSource)
     val pathInfos = withFailures.map(_._1).filter(_.nonEmpty)
     val failures = withFailures.flatMap(_._2)
     (pathInfos, failures)
   }
 
-  private def scanRealPathsForDataSource(dataSource: DataSource): (DataSourcePathInfo, Seq[Failure]) = {
-    val datasetPath: Option[Path] = None // TODO pass rootPath
+  private def scanRealPathsForDataSource(dataSourceWithPathInfo: DataSourceWithPathInfo): (DataSourcePathInfo, Seq[Failure]) = {
+    val datasetPath: Option[Path] = dataSourceWithPathInfo.rootPath.map(Path.of(_))
+    val dataSource = dataSourceWithPathInfo.dataSource
     dataSource.toUsable match {
       case Some(usableDataSource) =>
         val magResultBoxes = usableDataSource.dataLayers.flatMap { dataLayer =>
@@ -231,13 +233,17 @@ class DataSourceService @Inject()(
     }
   }
 
-  private def scanOrganizationDirForDataSources(orgaDirWithId: (Path, String)): Seq[DataSource] = {
+  private def scanOrganizationDirForDataSources(orgaDirWithId: (Path, String)): Seq[DataSourceWithPathInfo] = {
     val (path, organizationId) = orgaDirWithId
 
     PathUtils.listDirectories(path, silent = true) match {
       case Full(dataSourceDirs) =>
-        val dataSources = dataSourceDirs.map(path => dataSourceFromDir(path, organizationId, resolvePaths = true))
-        dataSources
+        dataSourceDirs.map { dirPath =>
+          val realPath = tryo(dirPath.toRealPath()).getOrElse(dirPath)
+          DataSourceWithPathInfo(dataSourceFromDir(dirPath, organizationId, resolvePaths = true),
+                                 Some(dirPath.toString),
+                                 Some(realPath.toString))
+        }
       case _ =>
         logger.error(s"Failed to list directories for organization $organizationId at path $path")
         Seq.empty

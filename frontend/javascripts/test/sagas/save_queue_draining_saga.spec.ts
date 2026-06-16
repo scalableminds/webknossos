@@ -2,6 +2,10 @@ import { sendSaveRequestWithToken } from "admin/rest_api";
 import DiffableMap from "libs/diffable_map";
 import { alert } from "libs/window";
 import { call, put, take } from "redux-saga/effects";
+import {
+  getOrCreateOperationContext,
+  type OperationContext,
+} from "viewer/model/sagas/operation_context_saga";
 import { TIMESTAMP } from "test/global_mocks";
 import { UnitLong } from "viewer/constants";
 import {
@@ -85,6 +89,13 @@ const initialState = {
 };
 const LAST_VERSION = 2;
 const TRACINGSTORE_URL = "test.webknossos.xyz";
+
+const fakeCtx = {
+  id: "save",
+  *execute(sagaFn: () => Generator) {
+    yield* sagaFn();
+  },
+} as unknown as OperationContext;
 
 describe("Save Saga", () => {
   it("should compact multiple updateTracing update actions", () => {
@@ -210,12 +221,18 @@ describe("Save Saga", () => {
       put(setSaveBusyAction(true)),
     );
 
-    const synchronizeAnnotationWithBackendCallEffect = saga.next(); // calling synchronizeAnnotationWithBackend
+    expectValueDeepEqual(
+      expect,
+      saga.next(), // getOrCreateOperationContext
+      call(getOrCreateOperationContext, { id: "save", description: "Saving annotation" }, null),
+    );
+
+    const synchronizeAnnotationWithBackendCallEffect = saga.next(fakeCtx); // calling synchronizeAnnotationWithBackend
     const enforceEmptySaveQueue = true;
     expectValueDeepEqual(
       expect,
       synchronizeAnnotationWithBackendCallEffect,
-      call(synchronizeAnnotationWithBackend, enforceEmptySaveQueue),
+      call(synchronizeAnnotationWithBackend, enforceEmptySaveQueue, fakeCtx),
     );
     const { fn: synchronizeAnnotationWithBackendSagaFn, args } =
       synchronizeAnnotationWithBackendCallEffect.value.payload;
@@ -223,7 +240,7 @@ describe("Save Saga", () => {
     // Start synchronizeAnnotationWithBackend sub saga
     const synchronizeAnnotationWithBackendSaga = synchronizeAnnotationWithBackendSagaFn(...args);
     synchronizeAnnotationWithBackendSaga.next();
-    synchronizeAnnotationWithBackendSaga.next(false); // selecting othersMayEdit = false
+    synchronizeAnnotationWithBackendSaga.next(false); // selecting collaborationMode = false (not Concurrent)
     synchronizeAnnotationWithBackendSaga.next(MutexFetchingStrategy.Continuously); // select mutex fetching strategy
     expectValueDeepEqual(
       expect,
@@ -267,12 +284,18 @@ describe("Save Saga", () => {
     }); // select gate check
     saga.next(true); // gate check: savingAllowed = true → setSaveBusyAction
 
-    const synchronizeAnnotationWithBackendCallEffect = saga.next(); // calling synchronizeAnnotationWithBackend
+    expectValueDeepEqual(
+      expect,
+      saga.next(), // getOrCreateOperationContext
+      call(getOrCreateOperationContext, { id: "save", description: "Saving annotation" }, null),
+    );
+
+    const synchronizeAnnotationWithBackendCallEffect = saga.next(fakeCtx); // calling synchronizeAnnotationWithBackend
     const enforceEmptySaveQueue = true;
     expectValueDeepEqual(
       expect,
       synchronizeAnnotationWithBackendCallEffect,
-      call(synchronizeAnnotationWithBackend, enforceEmptySaveQueue),
+      call(synchronizeAnnotationWithBackend, enforceEmptySaveQueue, fakeCtx),
     );
     const { fn: synchronizeAnnotationWithBackendSagaFn, args } =
       synchronizeAnnotationWithBackendCallEffect.value.payload;
@@ -280,7 +303,7 @@ describe("Save Saga", () => {
     // Start synchronizeAnnotationWithBackend sub saga
     const synchronizeAnnotationWithBackendSaga = synchronizeAnnotationWithBackendSagaFn(...args);
     synchronizeAnnotationWithBackendSaga.next();
-    synchronizeAnnotationWithBackendSaga.next(false); // selecting othersMayEdit = false
+    synchronizeAnnotationWithBackendSaga.next(false); // selecting collaborationMode = false (not Concurrent)
     synchronizeAnnotationWithBackendSaga.next(MutexFetchingStrategy.AdHoc); // select mutex fetching strategy
     expectValueDeepEqual(
       expect,
@@ -432,12 +455,18 @@ describe("Save Saga", () => {
     }); // select gate check
     saga.next(true); // gate check: savingAllowed = true → setSaveBusyAction
 
-    const synchronizeAnnotationWithBackendCallEffect = saga.next(); // calling synchronizeAnnotationWithBackend
+    expectValueDeepEqual(
+      expect,
+      saga.next(), // getOrCreateOperationContext
+      call(getOrCreateOperationContext, { id: "save", description: "Saving annotation" }, null),
+    );
+
+    const synchronizeAnnotationWithBackendCallEffect = saga.next(fakeCtx); // calling synchronizeAnnotationWithBackend
     const enforceEmptySaveQueue = true;
     expectValueDeepEqual(
       expect,
       synchronizeAnnotationWithBackendCallEffect,
-      call(synchronizeAnnotationWithBackend, enforceEmptySaveQueue),
+      call(synchronizeAnnotationWithBackend, enforceEmptySaveQueue, fakeCtx),
     );
     const { fn: synchronizeAnnotationWithBackendSagaFn, args } =
       synchronizeAnnotationWithBackendCallEffect.value.payload;
@@ -445,7 +474,7 @@ describe("Save Saga", () => {
     // Start synchronizeAnnotationWithBackend sub saga
     const synchronizeAnnotationWithBackendSaga = synchronizeAnnotationWithBackendSagaFn(...args);
     synchronizeAnnotationWithBackendSaga.next();
-    synchronizeAnnotationWithBackendSaga.next(false); // selecting othersMayEdit = false
+    synchronizeAnnotationWithBackendSaga.next(false); // selecting collaborationMode = false (not Concurrent)
     synchronizeAnnotationWithBackendSaga.next(MutexFetchingStrategy.Continuously); // select mutex fetching strategy
     expectValueDeepEqual(
       expect,
@@ -488,12 +517,18 @@ describe("Save Saga", () => {
     }); // select gate check
     saga.next(true); // gate check: savingAllowed = true → setSaveBusyAction
 
-    const synchronizeAnnotationWithBackendCallEffect = saga.next({ shouldRetryOnConflict: false }); // calling synchronizeAnnotationWithBackend
+    expectValueDeepEqual(
+      expect,
+      saga.next(), // getOrCreateOperationContext
+      call(getOrCreateOperationContext, { id: "save", description: "Saving annotation" }, null),
+    );
+
+    const synchronizeAnnotationWithBackendCallEffect = saga.next(fakeCtx); // calling synchronizeAnnotationWithBackend
     const enforceEmptySaveQueue = false;
     expectValueDeepEqual(
       expect,
       synchronizeAnnotationWithBackendCallEffect,
-      call(synchronizeAnnotationWithBackend, enforceEmptySaveQueue),
+      call(synchronizeAnnotationWithBackend, enforceEmptySaveQueue, fakeCtx),
     );
     const { fn: synchronizeAnnotationWithBackendSagaFn, args } =
       synchronizeAnnotationWithBackendCallEffect.value.payload;
@@ -501,7 +536,7 @@ describe("Save Saga", () => {
     // Start synchronizeAnnotationWithBackend sub saga
     const synchronizeAnnotationWithBackendSaga = synchronizeAnnotationWithBackendSagaFn(...args);
     synchronizeAnnotationWithBackendSaga.next();
-    synchronizeAnnotationWithBackendSaga.next(false); // selecting othersMayEdit = false
+    synchronizeAnnotationWithBackendSaga.next(false); // selecting collaborationMode = false (not Concurrent)
     synchronizeAnnotationWithBackendSaga.next(MutexFetchingStrategy.Continuously); // select mutex fetching strategy
     synchronizeAnnotationWithBackendSaga.next(saveQueue.length); // select save queue length
     expectValueDeepEqual(

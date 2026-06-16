@@ -35,7 +35,7 @@ function makeTestStore() {
           return {
             operationContext: {
               activeOperations: state.operationContext.activeOperations.filter(
-                // todop
+                // todop: any
                 (op: any) => op.id !== action.id,
               ),
               childOperations: state.operationContext.childOperations.filter(

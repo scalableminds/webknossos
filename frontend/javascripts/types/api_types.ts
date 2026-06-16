@@ -339,7 +339,6 @@ export type NovelUserExperienceInfoType = {
   hasSeenDashboardWelcomeBanner?: boolean;
   hasSeenSegmentAnythingWithDepth?: boolean;
   lastViewedWhatsNewTimestamp?: number;
-  hasDiscardedHelpButton?: boolean;
   latestAcknowledgedMaintenanceInfo?: string;
   suppressManyBucketUpdatesWarning?: boolean;
 };

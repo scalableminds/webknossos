@@ -52,7 +52,7 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
   protected def adaptSkeletonTracing(
       skeletonTracing: SkeletonTracing,
       oldPrecedenceLayerProperties: Option[RedundantTracingProperties]): SkeletonTracing =
-    oldPrecedenceLayerProperties.map { p: RedundantTracingProperties =>
+    oldPrecedenceLayerProperties.map { (p: RedundantTracingProperties) =>
       skeletonTracing.copy(
         editPosition = p.editPosition,
         editRotation = p.editRotation,
@@ -65,7 +65,7 @@ trait AnnotationLayerPrecedence extends FoxImplicits {
 
   protected def adaptVolumeTracing(volumeTracing: VolumeTracing,
                                    oldPrecedenceLayerProperties: Option[RedundantTracingProperties]): VolumeTracing =
-    oldPrecedenceLayerProperties.map { p: RedundantTracingProperties =>
+    oldPrecedenceLayerProperties.map { (p: RedundantTracingProperties) =>
       volumeTracing.copy(
         editPosition = p.editPosition,
         editRotation = p.editRotation,

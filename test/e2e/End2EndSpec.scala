@@ -29,14 +29,16 @@ class End2EndSpec(arguments: Arguments) extends Specification with GuiceFakeAppl
   "my application" should {
 
     "pass the e2e tests" in new WithServer(app = application, port = testPort) {
+      override def running(): Unit = {
 
-      runFrontendBuild()
-      ensureTestDataset()
+        runFrontendBuild()
+        ensureTestDataset()
 
-      val resp: WSResponse = Await.result(ws.url(s"http://localhost:$testPort/api/health").get(), 2 seconds)
-      resp.status === 200
+        val resp: WSResponse = Await.result(ws.url(s"http://localhost:$testPort/api/health").get(), 2 seconds)
+        resp.status === 200
 
-      runWebdriverTests === 0
+        runWebdriverTests === 0
+      }
     }
 
   }

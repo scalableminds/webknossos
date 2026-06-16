@@ -49,7 +49,6 @@ object TracingStoreInfo {
   implicit val jsonFormat: OFormat[TracingStoreInfo] = Json.format[TracingStoreInfo]
 }
 
-// TODO disambiguate names. This is about mag/attachment paths, the other one about rootPath
 case class DataSourcePathInfo(
     dataSourceId: DataSourceId,
     magPathInfos: Seq[RealPathInfo],

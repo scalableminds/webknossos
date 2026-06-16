@@ -1,27 +1,23 @@
 package com.scalableminds.webknossos.datastore.services
 
-import com.scalableminds.util.tools.{Fox, FoxImplicits}
+import com.scalableminds.util.tools.{Box, Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.{PathSchemes, S3UriUtils, UPath}
-import com.scalableminds.webknossos.datastore.storage.{
-  CredentialConfigReader,
-  DataVaultCredential,
-  S3AccessKeyCredential,
-  S3ClientPoolHolder
-}
+import com.scalableminds.webknossos.datastore.storage.{CredentialConfigReader, DataVaultCredential, S3AccessKeyCredential, S3ClientPoolHolder}
 import com.typesafe.scalalogging.LazyLogging
-
-import software.amazon.awssdk.services.s3.S3AsyncClient
 import software.amazon.awssdk.transfer.s3.S3TransferManager
 
 import java.net.URI
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class ManagedS3Service @Inject()(config: DataStoreConfig, s3ClientPoolHolder: S3ClientPoolHolder)(
+class ManagedS3Service @Inject()(config: DataStoreConfig, baseDirService: BaseDirService, s3ClientPoolHolder: S3ClientPoolHolder)(
     implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
+
+  def isS3UploadEnabled(organizationId: String): Boolean =
+    baseDirService.getOneS3ForOrga(organizationId, requireAllowsUpload = true).isDefined
 
   def pathIsInManagedS3(path: UPath): Boolean =
     path.getScheme.contains(PathSchemes.schemeS3) && globalCredentials.exists(c =>
@@ -43,26 +39,43 @@ class ManagedS3Service @Inject()(config: DataStoreConfig, s3ClientPoolHolder: S3
     res
   }
 
-  private lazy val s3UploadCredentialOpt: Option[S3AccessKeyCredential] =
-    globalCredentials.collectFirst {
-      case credential: S3AccessKeyCredential if config.Datastore.S3Upload.credentialName == credential.name =>
-        credential
-    }
+  private def s3UploadCredential(s3UploadBaseDir: UPath): Box[S3AccessKeyCredential] = for {
+    credential <- Box(globalCredentials.collectFirst {
+      case credential: S3AccessKeyCredential if UPath.fromString(credential.name).exists(s3UploadBaseDir.startsWith)=>
+      credential
+    })
+  } yield credential
 
-  lazy val s3UploadBucketOpt: Option[String] =
-    // by convention, the credentialName is the S3 URI so we can extract the bucket from it.
-    S3UriUtils.hostBucketFromUri(new URI(config.Datastore.S3Upload.credentialName))
+  def s3UploadBucket(organizationId: String): Box[String] =
+    for {
+      s3UploadUPath <- baseDirService.getOneS3ForOrga(organizationId, requireAllowsUpload = true)
+      s3UploadUri <- s3UploadUPath.toRemoteUri
+      hostBucket <- Box(S3UriUtils.hostBucketFromUri(s3UploadUri))
+    } yield hostBucket
 
-  private lazy val s3UploadEndpoint: URI =
-    endpointForCredentialName(config.Datastore.S3Upload.credentialName)
+  def s3UploadOrgaObjectKeyPrefix(organizationId: String): Box[String] = for {
+    s3UploadUPath <- baseDirService.getOneS3ForOrga(organizationId, requireAllowsUpload = true)
+    s3UploadUri <- s3UploadUPath.toRemoteUri
+    rootObjectKey <- S3UriUtils.objectKeyFromUri(s3UploadUri)
+  } yield rootObjectKey
 
-  private def endpointForCredentialName(credentialName: String) = {
-    // by convention, the credentialName is the S3 URI so we can extract the endpoint from it.
-    val credentialUri = new URI(credentialName)
+  def s3UploadEndpointHost(organizationId: String): Box[String] = for {
+    s3UploadBaseDir <- baseDirService.getOneS3ForOrga(organizationId, requireAllowsUpload = true)
+    endpoint <- s3UploadEndpoint(s3UploadBaseDir)
+  } yield endpoint.getHost
+
+  private def s3UploadEndpoint(s3UploadBaseDir: UPath): Box[URI] =
+    for {
+      s3UploadUri <- s3UploadBaseDir.toRemoteUri
+      endpoint = endpointForS3Uri(s3UploadUri)
+    } yield endpoint
+
+  private def endpointForS3Uri(uri: URI) = {
+    // Construct new URI, take just the host
     new URI(
       "https",
       null,
-      credentialUri.getHost,
+      uri.getHost,
       -1,
       null,
       null,
@@ -70,15 +83,19 @@ class ManagedS3Service @Inject()(config: DataStoreConfig, s3ClientPoolHolder: S3
     )
   }
 
-  private lazy val s3UploadClientFox: Fox[S3AsyncClient] = for {
-    s3UploadCredential <- s3UploadCredentialOpt.toFox
-    client <- s3ClientPoolHolder.s3ClientPool.getS3Client(Some(s3UploadCredential),
+  // TODO cache
+  private def transferManagerForEndpoint(s3UploadEndpoint: URI, credential: S3AccessKeyCredential): Fox[S3TransferManager] = for {
+    client <- s3ClientPoolHolder.s3ClientPool.getS3Client(Some(credential),
                                                           s3UploadEndpoint,
                                                           isForUpload = true)
-  } yield client
+    transferManager = S3TransferManager.builder().transferDirectoryMaxConcurrency(30).s3Client(client).build()
+  } yield transferManager
 
-  lazy val s3UploadTransferManagerFox: Fox[S3TransferManager] = for {
-    client <- s3UploadClientFox
-  } yield S3TransferManager.builder().transferDirectoryMaxConcurrency(30).s3Client(client).build()
+  def s3UploadTransferManager(organizationId: String): Fox[S3TransferManager] = for {
+    s3UploadBaseDir <- baseDirService.getOneS3ForOrga(organizationId, requireAllowsUpload = true).toFox
+    endpoint <- s3UploadEndpoint(s3UploadBaseDir).toFox
+    credential <- s3UploadCredential(s3UploadBaseDir).toFox
+    transferManager <- transferManagerForEndpoint(endpoint, credential)
+  } yield transferManager
 
 }

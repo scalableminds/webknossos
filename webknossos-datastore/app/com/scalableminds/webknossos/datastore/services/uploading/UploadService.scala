@@ -4,14 +4,15 @@ import com.scalableminds.util.Msg
 import com.google.inject.Inject
 import com.google.inject.name.Named
 import org.apache.pekko.actor.ActorSystem
-import scala.concurrent.duration._
+
+import scala.concurrent.duration.*
 import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Double
 import com.scalableminds.util.io.{PathUtils, ZipIO}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools._
+import com.scalableminds.util.tools.*
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.dataformats.wkw.WKWDataFormatHelper
@@ -22,30 +23,26 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.NgffMetadata.FILE
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader.FILENAME_DOT_ZARRAY
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader.FILENAME_ZARR_JSON
 import com.scalableminds.webknossos.datastore.explore.ExploreLocalLayerService
-import com.scalableminds.webknossos.datastore.helpers.{LocalDatasetDeletionService, DirectoryConstants, UPath}
+import com.scalableminds.webknossos.datastore.helpers.{DirectoryConstants, LocalDatasetDeletionService, UPath}
 import com.scalableminds.webknossos.datastore.models.LengthUnit.LengthUnit
 import com.scalableminds.webknossos.datastore.models.{UnfinishedUpload, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
 import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON
-import com.scalableminds.webknossos.datastore.models.datasource._
+import com.scalableminds.webknossos.datastore.models.datasource.*
 import com.scalableminds.webknossos.datastore.services.uploading.UploadDomain.UploadDomain
-import com.scalableminds.webknossos.datastore.services.{
-  BaseDirService,
-  DSRemoteWebknossosClient,
-  DataSourceService,
-  ManagedS3Service
-}
+import com.scalableminds.webknossos.datastore.services.{BaseDirService, DSRemoteWebknossosClient, DataSourceService, ManagedS3Service}
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.{Json, OFormat}
+import software.amazon.awssdk.transfer.s3.S3TransferManager
 import software.amazon.awssdk.transfer.s3.model.UploadDirectoryRequest
 
 import java.io.{File, RandomAccessFile}
 import java.net.URI
 import java.nio.file.{Files, Path}
 import scala.concurrent.{ExecutionContext, Future}
-import scala.jdk.FutureConverters._
+import scala.jdk.FutureConverters.*
 
 case class ResumableUploadInfo(
     uploadId: String, // upload id that was also used in chunk upload (this time without file paths)
@@ -538,15 +535,17 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                                                   dataSourceId: DataSourceId,
                                                   dirName: String,
                                                   domain: UploadDomain): Fox[UPath] =
-    if (dataStoreConfig.Datastore.S3Upload.enabled) {
+    if (managedS3Service.isS3UploadEnabled(dataSourceId.organizationId)) {
       for {
-        s3UploadBucket <- managedS3Service.s3UploadBucketOpt.toFox
-        _ = logger.info(s"finishUpload for $domain ($datasetId): Copying data to s3 bucket $s3UploadBucket...")
         beforeS3Upload = Instant.now
-        s3ObjectKey = s"${dataStoreConfig.Datastore.S3Upload.objectKeyPrefix}/${dataSourceId.organizationId}/${dataSourceId.directoryName}/$layerName/$dirName"
-        _ <- uploadDirectoryToS3(unpackedDir, s3UploadBucket, s3ObjectKey)
+        s3UploadBucket <- managedS3Service.s3UploadBucket(dataSourceId.organizationId).toFox
+        _ = logger.info(s"finishUpload for $domain ($datasetId): Copying data to s3 bucket $s3UploadBucket...")
+        s3OrgaObjectKeyPrefix <- managedS3Service.s3UploadOrgaObjectKeyPrefix(dataSourceId.organizationId).toFox
+        s3ObjectKey = s"$s3OrgaObjectKeyPrefix/${dataSourceId.directoryName}/$layerName/$dirName"
+        transferManager <- managedS3Service.s3UploadTransferManager(dataSourceId.organizationId) ?~> "S3 upload is not properly configured, cannot get S3 client"
+        _ <- uploadDirectoryToS3(transferManager, unpackedDir, s3UploadBucket, s3ObjectKey)
         _ = Instant.logSince(beforeS3Upload, s"Forwarding of uploaded mag for $datasetId ($dataSourceId) to S3", logger)
-        endPointHost = new URI(dataStoreConfig.Datastore.S3Upload.credentialName).getHost
+        endPointHost = managedS3Service.s3UploadEndpointHost(dataSourceId.organizationId)
         finalUploadedS3Path <- UPath.fromString(s"s3://$endPointHost/$s3UploadBucket/$s3ObjectKey").toFox
       } yield finalUploadedS3Path
     } else {
@@ -577,13 +576,15 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         usableDataSourceFromDir <- dataSourceFromDir.toUsable.toFox ?~> s"Invalid dataset uploaded: ${dataSourceFromDir.statusOpt
           .getOrElse("")}"
         _ <- deleteFilesNotReferencedInDataSource(unpackedDir, usableDataSourceFromDir)
-        newBasePath <- if (dataStoreConfig.Datastore.S3Upload.enabled) {
+        newBasePath <- if (managedS3Service.isS3UploadEnabled(dataSourceId.organizationId)) {
           for {
-            s3UploadBucket <- managedS3Service.s3UploadBucketOpt.toFox
-            _ = logger.info(s"finishUpload for $datasetId: Copying data to s3 bucket $s3UploadBucket...")
             beforeS3Upload = Instant.now
-            s3ObjectKey = s"${dataStoreConfig.Datastore.S3Upload.objectKeyPrefix}/${dataSourceId.organizationId}/${dataSourceId.directoryName}/"
-            _ <- uploadDirectoryToS3(unpackedDir, s3UploadBucket, s3ObjectKey)
+            s3UploadBucket <- managedS3Service.s3UploadBucket(dataSourceId.organizationId).toFox
+            _ = logger.info(s"finishUpload for $datasetId: Copying data to s3 bucket $s3UploadBucket...")
+            s3OrgaObjectKeyPrefix <- managedS3Service.s3UploadOrgaObjectKeyPrefix(dataSourceId.organizationId).toFox
+            s3ObjectKey = s"$s3OrgaObjectKeyPrefix/${dataSourceId.directoryName}/"
+            transferManager <- managedS3Service.s3UploadTransferManager(dataSourceId.organizationId) ?~> "S3 upload is not properly configured, cannot get S3 client"
+            _ <- uploadDirectoryToS3(transferManager, unpackedDir, s3UploadBucket, s3ObjectKey)
             _ = Instant.logSince(beforeS3Upload,
                                  s"Forwarding of uploaded dataset $datasetId ($dataSourceId) to S3",
                                  logger)
@@ -673,12 +674,12 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     } yield path
 
   private def uploadDirectoryToS3(
+      transferManager: S3TransferManager,
       dataDir: Path,
       bucketName: String,
       prefix: String
   ): Fox[Unit] =
     for {
-      transferManager <- managedS3Service.s3UploadTransferManagerFox ?~> "S3 upload is not properly configured, cannot get S3 client"
       directoryUpload = transferManager.uploadDirectory(
         UploadDirectoryRequest.builder().bucket(bucketName).s3Prefix(prefix).source(dataDir).build()
       )

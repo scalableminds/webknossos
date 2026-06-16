@@ -189,16 +189,6 @@ export function* getOrCreateOperationContext(
   return yield* createOperationContext(options as NonNullableOptions);
 }
 
-// ─── Completion Token ─────────────────────────────────────────────────────────
-
-export function createCompletionToken(): { promise: Promise<void>; onComplete: () => void } {
-  let onComplete!: () => void;
-  const promise = new Promise<void>((resolve) => {
-    onComplete = resolve;
-  });
-  return { promise, onComplete };
-}
-
 // ─── Test utilities ───────────────────────────────────────────────────────────
 
 // Resets module-level state. Only intended for use in tests.

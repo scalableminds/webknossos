@@ -33,7 +33,7 @@ import com.scalableminds.webknossos.tracingstore.slacknotification.TSSlackNotifi
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.EditableMappingService
 import com.scalableminds.webknossos.tracingstore.tracings.volume._
 import com.scalableminds.webknossos.tracingstore.tracings.{
-  KeyValueStoreImplicits,
+  KeyValueStoreConversions,
   TemporaryMergedVolumeStatsStore,
   TracingSelector
 }
@@ -70,7 +70,7 @@ class VolumeTracingController @Inject()(
     extends Controller
     with ProtoGeometryImplicits
     with MissingBucketHeaders
-    with KeyValueStoreImplicits {
+    with KeyValueStoreConversions {
 
   implicit val tracingsCompanion: VolumeTracings.type = VolumeTracings
 
@@ -266,7 +266,7 @@ class VolumeTracingController @Inject()(
               val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
               editableMappingService.volumeData(mappingLayer, request.body)
             } else volumeTracingService.data(annotationId, tracingId, tracing, request.body)
-          } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices): _*)
+          } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
         }
       }
     }
@@ -311,7 +311,7 @@ class VolumeTracingController @Inject()(
           // We need four bytes for each float
           val responseBuffer = ByteBuffer.allocate(vertices.length * 4).order(ByteOrder.LITTLE_ENDIAN)
           responseBuffer.asFloatBuffer().put(vertices)
-          Ok(responseBuffer.array()).withHeaders(getNeighborIndices(neighbors): _*)
+          Ok(responseBuffer.array()).withHeaders(getNeighborIndices(neighbors)*)
         }
       }
     }

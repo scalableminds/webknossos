@@ -3,12 +3,13 @@ package com.scalableminds.webknossos.datastore.storage
 import org.apache.pekko.actor.ActorSystem
 
 import javax.inject.Inject
+import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
-class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
+class TemporaryStore[K, V] @Inject() (system: ActorSystem) {
 
-  lazy val map: scala.collection.mutable.Map[K, V] = scala.collection.mutable.Map()
+  private val map: mutable.Map[K, V] = mutable.Map()
 
   def get(id: K): Option[V] =
     map.synchronized {
@@ -30,7 +31,7 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
       ids.map(map.get)
     }
 
-  def getAllConditionalWithKey(predicate: K => Boolean): scala.collection.Map[K, V] =
+  def getAllConditionalWithKey(predicate: K => Boolean): Map[K, V] =
     map.synchronized {
       map.view.filterKeys(predicate).toMap
     }
@@ -47,7 +48,7 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
 
   def removeAllConditional(predicate: K => Boolean): Unit =
     map.synchronized {
-      map.keySet.filter(predicate).foreach { key: K =>
+      map.keySet.filter(predicate).foreach { (key: K) =>
         map -= key
       }
     }
@@ -66,7 +67,7 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
     to.foreach(system.scheduler.scheduleOnce(_)(removeMultiple(elements.map(_._1))))
   }
 
-  def remove(id: K): map.type =
+  def remove(id: K): mutable.Map[K, V] =
     map.synchronized {
       map -= id
     }
@@ -76,7 +77,7 @@ class TemporaryStore[K, V] @Inject()(system: ActorSystem) {
       map remove id
     }
 
-  private def removeMultiple(ids: Seq[K]): map.type =
+  private def removeMultiple(ids: Seq[K]): mutable.Map[K, V] =
     map.synchronized {
       map --= ids
     }

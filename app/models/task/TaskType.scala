@@ -16,6 +16,7 @@ import utils.sql.{EnumerationArrayValue, SQLDAO, SqlClient}
 
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
+import utils.sql.SqlToken
 
 case class TaskType(
     _id: ObjectId,
@@ -31,15 +32,11 @@ case class TaskType(
 
 class TaskTypeService @Inject()(teamDAO: TeamDAO) {
 
-  def fromForm(
-      summary: String,
-      description: String,
-      team: ObjectId,
-      settings: AnnotationSettings,
-      recommendedConfiguration: Option[JsValue],
-      tracingType: TracingType
-  ): TaskType =
-    TaskType(ObjectId.generate, team, summary, description, settings, recommendedConfiguration, tracingType)
+  def assertValidTaskTypeSummary(taskTypeSummary: String)(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      _ <- Fox.fromBool(taskTypeSummary.length >= 2) ?~> Msg.TaskType.summaryTooShort
+      _ <- Fox.fromBool(taskTypeSummary.length <= 50) ?~> Msg.TaskType.summaryTooLong
+    } yield ()
 
   def publicWrites(taskType: TaskType): Fox[JsObject] =
     for {
@@ -94,11 +91,11 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.isdeleted
       )
 
-  override protected def readAccessQ(requestingUserId: ObjectId) =
+  override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""(_team IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $requestingUserId)
        OR _organization = (SELECT _organization FROM webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))"""
 
-  override protected def updateAccessQ(requestingUserId: ObjectId) =
+  override protected def updateAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""(_team IN (SELECT _team FROM webknossos.user_team_roles WHERE isTeamManager AND _user = $requestingUserId)
        OR _organization = (SELECT _organization from webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))"""
 

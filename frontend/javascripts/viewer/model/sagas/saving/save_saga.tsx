@@ -558,10 +558,29 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
       // Acquire the operation context to block user actions from interfering with rebasing.
       // The proofreading context allows save to run alongside it via allowAdditionalOperation.
       const ctx = yield* getOrCreateOperationContext(
-        { id: "save", description: REBASING_BUSY_BLOCK_REASON },
+        {
+          id: "rebase",
+          description: REBASING_BUSY_BLOCK_REASON,
+          behaviorWhenDisallowed: "ignore",
+        },
         (ensureHasNewestVersion as EnsureHasNewestVersionAction | undefined)?.operationContext ??
           null,
       );
+      if (ctx == null) {
+        // todop: DRY with equal block from above
+        if (ensureHasNewestVersion != null) {
+          // ColoredLogger.logGreen("watchForNewerAnnotationVersion > 4");
+          // The ensureHasNewestVersion action was already dequeued from the channel.
+          // Put it back by dispatching it again.
+          yield* put(ensureHasNewestVersion);
+          // Now, wait in a throttled manner until needsPollAnnotationUpdates becomes "yes".
+          // ColoredLogger.logGreen("watchForNewerAnnotationVersion > 5");
+          yield* waitFor((state) => needsPollAnnotationUpdates(state) === "yes");
+          // ColoredLogger.logGreen("watchForNewerAnnotationVersion > 6");
+        }
+        continue;
+      }
+      // ColoredLogger.logGreen("watchForNewerAnnotationVersion > 8");
       let result!: RebasingSuccessInfo;
       yield* ctx.execute(function* () {
         result = yield* call(performRebasingIfNecessary);

@@ -15,14 +15,14 @@ import scala.concurrent.duration.Duration
 
 /**
   * Generates Slick classes that mirror the SQL tables of the currently active schema.
-  * Differs from parent  Slick.SourceCodeGenerator by not updating unchanged tables.
+  * Differs from parent Slick.SourceCodeGenerator by not updating unchanged tables.
   **/
 class ContentStableSourceCodeGenerator(model: slickModel.Model) extends SourceCodeGenerator(model) {
 
   private val logger = LoggerFactory.getLogger(classOf[ContentStableSourceCodeGenerator])
 
-  /** Absolute paths of every file this run intends to produce (whether or not it was actually
-    * rewritten). Used afterwards to prune files of tables that no longer exist. */
+  /** A set of absolute paths of every file this code generator intends to produce (whether or not
+    * it was actually rewritten). Used afterwards to prune files of tables that no longer exist. */
   private val intendedFiles = scala.collection.mutable.Set[String]()
 
   /** Names of the files actually rewritten in this run (content differed from disk). */

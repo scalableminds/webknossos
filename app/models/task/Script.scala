@@ -40,12 +40,11 @@ class ScriptService @Inject()(userDAO: UserDAO, userService: UserService) {
   }
 
   def assertValidScriptName(scriptName: String)(implicit ec: ExecutionContext): Fox[Unit] =
-    Fox.fromBool(scriptName.matches("^[A-Za-z0-9\\-_\\. ß]+$")) ?~> Msg.Script.nameInvalidChars(scriptName)
-}
-
-object Script {
-  def fromForm(name: String, gist: String, _owner: ObjectId): Script =
-    Script(ObjectId.generate, _owner, name, gist)
+    for {
+      _ <- Fox.fromBool(scriptName.length >= 2) ?~> Msg.Script.nameTooShort
+      _ <- Fox.fromBool(scriptName.length <= 50) ?~> Msg.Script.nameTooLong
+      _ <- Fox.fromBool(scriptName.matches("^[A-Za-z0-9\\-_\\. ß]+$")) ?~> Msg.Script.nameInvalidChars(scriptName)
+    } yield ()
 }
 
 class ScriptDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)

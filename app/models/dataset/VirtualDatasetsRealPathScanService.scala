@@ -24,7 +24,7 @@ class VirtualDatasetsRealPathScanService @Inject()(
 
   override protected def tickerInterval: FiniteDuration = 1 hour
 
-  override protected def tick(): Fox[_] = {
+  override protected def tick(): Fox[?] = {
     logger.info("Scanning realpaths for all virtual datasets...")
     for {
       datasets <- datasetDAO.findAll

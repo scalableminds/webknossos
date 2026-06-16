@@ -36,7 +36,7 @@ function TimeTrackingOverview() {
 
   const { data: allTeams = [], isLoading: isTeamsLoading } = useQueryWithErrorHandling({
     queryKey: ["teams"],
-    queryFn: getTeams,
+    queryFn: () => getTeams(),
   });
 
   const [selectedProjectIds, setSelectedProjectIds] = useState<string[]>([]);

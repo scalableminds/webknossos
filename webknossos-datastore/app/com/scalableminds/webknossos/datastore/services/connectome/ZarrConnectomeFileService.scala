@@ -75,7 +75,7 @@ class ZarrConnectomeFileService @Inject()(dataVaultService: DataVaultService, ch
       direction: SynapticPartnerDirection)(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Long]] =
     for {
       synapseToPartnerAgglomerateArray <- openZarrArray(connectomeFileKey, synapticPartnerKey(direction))
-      agglomerateIds <- Fox.serialCombined(synapseIds) { synapseId: Long =>
+      agglomerateIds <- Fox.serialCombined(synapseIds) { (synapseId: Long) =>
         for {
           agglomerateIdMA <- synapseToPartnerAgglomerateArray.readAsMultiArray(offset = synapseId, shape = 1)
           agglomerateId <- tryo(agglomerateIdMA.getLong(0)).toFox
@@ -88,7 +88,7 @@ class ZarrConnectomeFileService @Inject()(dataVaultService: DataVaultService, ch
       tc: TokenContext): Fox[Seq[Seq[Long]]] =
     for {
       arraySynapsePositions <- openZarrArray(connectomeFileKey, keySynapsePositions)
-      synapsePositions <- Fox.serialCombined(synapseIds) { synapseId: Long =>
+      synapsePositions <- Fox.serialCombined(synapseIds) { (synapseId: Long) =>
         for {
           synapsePositionMA <- arraySynapsePositions.readAsMultiArray(offset = Array(synapseId, 0), shape = Array(1, 3))
           synapsePosition <- tryo(
@@ -103,7 +103,7 @@ class ZarrConnectomeFileService @Inject()(dataVaultService: DataVaultService, ch
     for {
       arraySynapseTypes <- openZarrArray(connectomeFileKey, keySynapseTypes)
       attributes <- readConnectomeFileAttributes(connectomeFileKey)
-      synapseTypes <- Fox.serialCombined(synapseIds) { synapseId: Long =>
+      synapseTypes <- Fox.serialCombined(synapseIds) { (synapseId: Long) =>
         for {
           synapseTypeMA <- arraySynapseTypes.readAsMultiArray(offset = synapseId, shape = 1)
           synapseType <- tryo(synapseTypeMA.getLong(0)).toFox
@@ -121,7 +121,7 @@ class ZarrConnectomeFileService @Inject()(dataVaultService: DataVaultService, ch
       _ <- Fox.fromBool(fromPtr <= toPtr) ?~> s"Agglomerate $agglomerateId not present in agglomerate file"
       agglomeratePairsMA <- cscAgglomeratePairArray.readAsMultiArray(offset = fromPtr, shape = (toPtr - fromPtr).toInt)
       agglomeratePairs <- tryo(agglomeratePairsMA.getStorage.asInstanceOf[Array[Long]]).toFox
-      synapseIdsNested <- Fox.serialCombined(agglomeratePairs.toList) { agglomeratePair: Long =>
+      synapseIdsNested <- Fox.serialCombined(agglomeratePairs.toList) { (agglomeratePair: Long) =>
         for {
           fromTo <- agglomeratePairOffsetsArray.readAsMultiArray(offset = agglomeratePair, shape = 2)
           from <- tryo(fromTo.getLong(0)).toFox ?~> "Could not read start offset from connectome file"

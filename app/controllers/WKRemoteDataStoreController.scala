@@ -15,7 +15,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   LayerAttachmentType,
   UnusableDataSource
 }
-import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataSourceWithPathInfo, DataStoreStatus}
+import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataSourceWithRootPathInfo, DataStoreStatus}
 import com.scalableminds.webknossos.datastore.services.uploading.{
   AttachmentUploadAdditionalInfo,
   AttachmentUploadInfo,
@@ -281,8 +281,8 @@ class WKRemoteDataStoreController @Inject()(
       }
   }
 
-  def updateAll(name: String, key: String, organizationId: Option[String]): Action[List[DataSourceWithPathInfo]] =
-    Action.async(validateJson[List[DataSourceWithPathInfo]]) { implicit request =>
+  def updateAll(name: String, key: String, organizationId: Option[String]): Action[List[DataSourceWithRootPathInfo]] =
+    Action.async(validateJson[List[DataSourceWithRootPathInfo]]) { implicit request =>
       dataStoreService.validateAccess(name, key) { dataStore =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         val dataSourcesWithPathInfo = request.body
@@ -308,7 +308,7 @@ class WKRemoteDataStoreController @Inject()(
       dataStoreService.validateAccess(name, key) { dataStore =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
-          _ <- datasetService.updateDataSources(dataStore, List(DataSourceWithPathInfo(request.body, None, None)))
+          _ <- datasetService.updateDataSources(dataStore, List(DataSourceWithRootPathInfo(request.body, None, None)))
         } yield Ok
       }
     }

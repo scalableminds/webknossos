@@ -5,16 +5,12 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.controllers.{GetEffectiveVoxelSizeParameters, PathValidationResult}
-import com.scalableminds.webknossos.datastore.explore.{
-  ExploreRemoteDatasetRequest,
-  ExploreRemoteDatasetResponse,
-  ExploreRemoteLayerParameters
-}
+import com.scalableminds.webknossos.datastore.explore.{ExploreRemoteDatasetRequest, ExploreRemoteDatasetResponse, ExploreRemoteLayerParameters}
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, UsableDataSource}
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, RawCuboidRequest, VoxelSize}
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.services.{PathStorageUsageRequest, PathStorageUsageResponse}
+import com.scalableminds.webknossos.datastore.services.{DataSourceWithRootPathInfo, PathStorageUsageRequest, PathStorageUsageResponse}
 import com.typesafe.scalalogging.LazyLogging
 import controllers.RpcTokenHolder
 import play.api.libs.json.JsObject
@@ -158,13 +154,13 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
       .postJsonWithJsonResponse[Seq[ObjectId], Seq[(ObjectId, String)]](datasetIds)
 
-  def scanRealPathsForVirtual(dataSources: Seq[DataSource])(implicit ec: ExecutionContext): Fox[Unit] = {
-    val dataSourcesThatCanHaveRealpaths = dataSources.flatMap(_.toUsable).filter(_.allExplicitPaths.exists(_.isLocal))
+  def scanRealPathsForVirtual(dataSourcesWithrootPathInfo: Seq[DataSourceWithRootPathInfo])(implicit ec: ExecutionContext): Fox[Unit] = {
+    val dataSourcesThatCanHaveRealpaths = dataSourcesWithrootPathInfo.filter(_.dataSource.toUsable.exists(_.allExplicitPaths.exists(_.isLocal)))
     if (dataSourcesThatCanHaveRealpaths.nonEmpty) {
       for {
         _ <- rpc(s"${dataStore.url}/data/triggers/scanRealPathsForVirtual")
           .addQueryParam("token", RpcTokenHolder.webknossosToken)
-          .postJson[Seq[DataSource]](dataSourcesThatCanHaveRealpaths)
+          .postJson[Seq[DataSourceWithRootPathInfo]](dataSourcesThatCanHaveRealpaths)
       } yield ()
     } else Fox.successful(())
   }

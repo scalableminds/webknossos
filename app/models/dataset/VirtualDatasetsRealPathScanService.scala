@@ -3,6 +3,7 @@ package models.dataset
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
+import com.scalableminds.webknossos.datastore.services.DataSourceWithRootPathInfo
 import com.typesafe.scalalogging.LazyLogging
 import jakarta.inject.Inject
 import org.apache.pekko.actor.ActorSystem
@@ -42,10 +43,13 @@ class VirtualDatasetsRealPathScanService @Inject()(
         firstDataset <- datasets.headOption.toFox
         // we skip unusable datasets
         dataSourceBoxes <- Fox.fromFuture(
-          Fox.serialSequence(datasets)(datasetService.usableDataSourceFor(_, useRealPaths = false)))
-        dataSources = dataSourceBoxes.flatten
+          Fox.serialSequence(datasets)(d =>
+            datasetService.usableDataSourceFor(d, useRealPaths = false).map(ds =>
+              DataSourceWithRootPathInfo(ds, d.rootPath, d.rootRealPath))))
+        dataSourcesWithRootPathInfo = dataSourceBoxes.flatten
         client <- datasetService.clientFor(firstDataset)
-        _ <- client.scanRealPathsForVirtual(dataSources)
+        _ <- client.scanRealPathsForVirtual(dataSourcesWithRootPathInfo)
       } yield ()
     }
+
 }

@@ -39,9 +39,9 @@ object DataStoreStatus {
   implicit val jsonFormat: OFormat[DataStoreStatus] = Json.format[DataStoreStatus]
 }
 
-case class DataSourceWithPathInfo(dataSource: DataSource, rootPath: Option[String], rootRealPath: Option[String])
-object DataSourceWithPathInfo {
-  implicit val jsonFormat: OFormat[DataSourceWithPathInfo] = Json.format[DataSourceWithPathInfo]
+case class DataSourceWithRootPathInfo(dataSource: DataSource, rootPath: Option[String], rootRealPath: Option[String])
+object DataSourceWithRootPathInfo {
+  implicit val jsonFormat: OFormat[DataSourceWithRootPathInfo] = Json.format[DataSourceWithRootPathInfo]
 }
 
 case class TracingStoreInfo(name: String, url: String)
@@ -132,7 +132,7 @@ class DSRemoteWebknossosClient @Inject() (
       .addQueryParam("key", dataStoreKey)
       .postJson[ReportAttachmentUploadParameters](parameters)
 
-  def reportDataSources(dataSourcesWithPathInfo: Seq[DataSourceWithPathInfo], organizationId: Option[String]): Fox[?] =
+  def reportDataSources(dataSourcesWithPathInfo: Seq[DataSourceWithRootPathInfo], organizationId: Option[String]): Fox[?] =
     rpc(s"$webknossosUri/api/datastores/$dataStoreName/datasources")
       .addQueryParam("key", dataStoreKey)
       .addQueryParam("organizationId", organizationId)

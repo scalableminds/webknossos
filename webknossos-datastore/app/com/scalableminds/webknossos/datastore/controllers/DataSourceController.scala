@@ -108,7 +108,7 @@ class DataSourceController @Inject()(
     }
   }
 
-  def scanRealPathsForVirtual(): Action[Seq[DataSourceWithPathInfo]] = Action.async(validateJson[Seq[DataSourceWithPathInfo]]) {
+  def scanRealPathsForVirtual(): Action[Seq[DataSourceWithRootPathInfo]] = Action.async(validateJson[Seq[DataSourceWithRootPathInfo]]) {
     implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {

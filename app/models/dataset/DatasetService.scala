@@ -18,7 +18,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   UsableDataSource
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataSourceWithPathInfo}
+import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataSourceWithRootPathInfo}
 import com.typesafe.scalalogging.LazyLogging
 import models.folder.FolderDAO
 import models.organization.{Organization, OrganizationDAO}
@@ -189,12 +189,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     } yield dataset
   }
 
-  def updateDataSources(dataStore: DataStore, dataSourcesWithPathInfo: List[DataSourceWithPathInfo])(
+  def updateDataSources(dataStore: DataStore, dataSourcesWithPathInfo: List[DataSourceWithRootPathInfo])(
       implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
 
     val groupedByOrga = dataSourcesWithPathInfo.groupBy(_.dataSource.id.organizationId).toList
     Fox
-      .serialCombined(groupedByOrga) { (orgaTuple: (String, List[DataSourceWithPathInfo])) =>
+      .serialCombined(groupedByOrga) { (orgaTuple: (String, List[DataSourceWithRootPathInfo])) =>
         organizationDAO.findOne(orgaTuple._1).shiftBox.flatMap {
           case Full(organization) if dataStore.onlyAllowedOrganization.exists(_ != organization._id) =>
             logger.info(
@@ -219,13 +219,13 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
   }
 
   private def updateDataSourceFromDataStore(
-      dataStore: DataStore,
-      dataSourceWithPathInfo: DataSourceWithPathInfo,
-      foundDatasetsByDirectoryName: Map[String, List[Dataset]]
+                                             dataStore: DataStore,
+                                             dataSourceWithRootPathInfo: DataSourceWithRootPathInfo,
+                                             foundDatasetsByDirectoryName: Map[String, List[Dataset]]
   )(implicit ctx: DBAccessContext): Fox[Option[ObjectId]] = {
-    val dataSource = dataSourceWithPathInfo.dataSource
-    val rootPath = dataSourceWithPathInfo.rootPath
-    val rootRealPath = dataSourceWithPathInfo.rootRealPath
+    val dataSource = dataSourceWithRootPathInfo.dataSource
+    val rootPath = dataSourceWithRootPathInfo.rootPath
+    val rootRealPath = dataSourceWithRootPathInfo.rootRealPath
     val foundDatasetOpt = foundDatasetsByDirectoryName.get(dataSource.id.directoryName).flatMap(_.headOption)
     val isVirtual = foundDatasetOpt.exists(_.isVirtual)
     if (isVirtual) { // Virtual datasets should not be updated from the datastore, as we do not expect them to exist as data source properties on the datastore.
@@ -740,7 +740,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       for {
         dataSource <- usableDataSourceFor(dataset, useRealPaths = false)
         client <- clientFor(dataset)
-        _ <- client.scanRealPathsForVirtual(Seq(dataSource))
+        _ <- client.scanRealPathsForVirtual(Seq(DataSourceWithRootPathInfo(dataSource, dataset.rootPath, dataset.rootRealPath)))
       } yield ()
     } else Fox.successful(())
 

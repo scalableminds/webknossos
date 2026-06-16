@@ -103,7 +103,7 @@ class DataSourceService @Inject()(
     }
   }
 
-  def scanRealPathsForVirtual(dataSources: Seq[DataSourceWithPathInfo]): Fox[Unit] =
+  def scanRealPathsForVirtual(dataSources: Seq[DataSourceWithRootPathInfo]): Fox[Unit] =
     for {
       before <- Instant.nowFox
       (realPathInfos, realPathScanFailures) = scanRealPaths(dataSources)
@@ -122,16 +122,16 @@ class DataSourceService @Inject()(
       logger.warn(s"RealPath scan failures: $realPathScanFailuresFormatted")
     }
 
-  private def scanRealPaths(dataSources: Seq[DataSourceWithPathInfo]): (Seq[DataSourcePathInfo], Seq[Failure]) = {
+  private def scanRealPaths(dataSources: Seq[DataSourceWithRootPathInfo]): (Seq[DataSourcePathInfo], Seq[Failure]) = {
     val withFailures = dataSources.map(scanRealPathsForDataSource)
     val pathInfos = withFailures.map(_._1).filter(_.nonEmpty)
     val failures = withFailures.flatMap(_._2)
     (pathInfos, failures)
   }
 
-  private def scanRealPathsForDataSource(dataSourceWithPathInfo: DataSourceWithPathInfo): (DataSourcePathInfo, Seq[Failure]) = {
-    val datasetPath: Option[Path] = dataSourceWithPathInfo.rootPath.map(Path.of(_))
-    val dataSource = dataSourceWithPathInfo.dataSource
+  private def scanRealPathsForDataSource(dataSourceWithRootPathInfo: DataSourceWithRootPathInfo): (DataSourcePathInfo, Seq[Failure]) = {
+    val datasetPath: Option[Path] = dataSourceWithRootPathInfo.rootPath.map(Path.of(_))
+    val dataSource = dataSourceWithRootPathInfo.dataSource
     dataSource.toUsable match {
       case Some(usableDataSource) =>
         val magResultBoxes = usableDataSource.dataLayers.flatMap { dataLayer =>
@@ -233,14 +233,14 @@ class DataSourceService @Inject()(
     }
   }
 
-  private def scanOrganizationDirForDataSources(orgaDirWithId: (Path, String)): Seq[DataSourceWithPathInfo] = {
+  private def scanOrganizationDirForDataSources(orgaDirWithId: (Path, String)): Seq[DataSourceWithRootPathInfo] = {
     val (path, organizationId) = orgaDirWithId
 
     PathUtils.listDirectories(path, silent = true) match {
       case Full(dataSourceDirs) =>
         dataSourceDirs.map { dirPath =>
           val realPath = tryo(dirPath.toRealPath()).getOrElse(dirPath)
-          DataSourceWithPathInfo(dataSourceFromDir(dirPath, organizationId, resolvePaths = true),
+          DataSourceWithRootPathInfo(dataSourceFromDir(dirPath, organizationId, resolvePaths = true),
                                  Some(dirPath.toString),
                                  Some(realPath.toString))
         }

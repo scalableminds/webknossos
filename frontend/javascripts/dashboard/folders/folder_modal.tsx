@@ -122,10 +122,8 @@ function CreateFolderModalContent({
 
     if (allowedTeams.length > 0) {
       await context.queries.updateFolderMutation.mutateAsync({
-        id: newFolder.id,
-        name,
+        ...newFolder,
         allowedTeams: allowedTeams.map((t) => t.id),
-        metadata: newFolder.metadata ?? [],
       });
     }
 

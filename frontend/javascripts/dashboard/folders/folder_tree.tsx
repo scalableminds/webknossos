@@ -1,4 +1,10 @@
-import { DeleteOutlined, EditOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  EditOutlined,
+  FolderOpenOutlined,
+  FolderOutlined,
+  PlusOutlined,
+} from "@ant-design/icons";
 import { PricingPlanEnum } from "admin/organization/pricing_plan_utils";
 import { Dropdown, type MenuProps, Modal, Tree } from "antd";
 import type { DataNode, DirectoryTreeProps } from "antd/lib/tree";
@@ -100,10 +106,21 @@ export function FolderTreeSidebar() {
   };
   const titleRender = useCallback(
     (nodeData: FolderItem) => {
-      return <ItemTitle context={context} folder={nodeData} />;
+      return (
+        <ItemTitle
+          context={context}
+          folder={nodeData}
+          isExpanded={expandedKeys.includes(nodeData.key)}
+        />
+      );
     },
-    [context],
+    [context, expandedKeys],
   );
+
+  // When no folder has subfolders, the expand/collapse carets are all no-ops. In that case we
+  // collapse the (otherwise empty) caret column via the folder-tree-flat class so that the
+  // folder icons align to the start of each entry instead of leaving a gap.
+  const isFlatTree = treeData.every((node) => node.children == null || node.children.length === 0);
 
   const onDrop = useCallback(
     ({
@@ -158,6 +175,7 @@ export function FolderTreeSidebar() {
     >
       <div
         ref={dropRef}
+        className={classNames("folder-tree-structure", { "folder-tree-flat": isFlatTree })}
         style={{
           marginRight: 4,
           borderRadius: 2,
@@ -175,6 +193,7 @@ export function FolderTreeSidebar() {
         ) : null}
         <DirectoryTree
           blockNode
+          showIcon={false}
           expandAction="doubleClick"
           selectedKeys={nullableIdToArray(context.activeFolderId)}
           draggable={isDraggingDataset ? false : draggableConfig}
@@ -260,13 +279,19 @@ export function generateSettingsForFolder(
 type ItemTitleProps = {
   context: DatasetCollectionContextValue;
   folder: FolderItem;
+  isExpanded: boolean;
 };
 
 const ItemTitle: React.FC<ItemTitleProps> = (props) => {
-  const { context, folder } = props;
-  const { key: id, title, isEditable } = folder;
+  const { context, folder, isExpanded } = props;
+  const { key: id, title, isEditable, children } = folder;
 
   const menu = generateSettingsForFolder(folder, context);
+  // We render the folder icon ourselves (instead of relying on DirectoryTree's showIcon) so that
+  // it lives inside the drop target and context-menu trigger. This way right-clicking (and
+  // dropping datasets) works on the icon, too, not just on the folder name.
+  const hasSubfolders = children != null && children.length > 0;
+  const FolderIcon = hasSubfolders && isExpanded ? FolderOpenOutlined : FolderOutlined;
 
   return (
     <Dropdown
@@ -280,9 +305,10 @@ const ItemTitle: React.FC<ItemTitleProps> = (props) => {
       trigger={["contextMenu"]}
     >
       {/* this div is needed to make Dropdown and react-dnd work */}
-      <div>
+      <div style={{ flex: 1, minWidth: 0 }}>
         <FolderItemAsDropTarget folderId={id} isEditable={isEditable}>
-          {title}
+          <FolderIcon className="folder-item-icon" />
+          <span className="folder-item-name">{title}</span>
         </FolderItemAsDropTarget>
       </div>
     </Dropdown>

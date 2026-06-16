@@ -46,12 +46,13 @@ body {
 }
 
 /** Ensures the main layout header stays at the top within the main container section. */
-#main-container > section > .ant-layout-header {
+#main-container>section>.ant-layout-header {
   top: 0;
 }
 
 /** Highlights the header and menu with an error color when a save operation fails. */
 .save-error {
+
   .ant-layout-header,
   .ant-menu {
     background-color: var(--ant-color-error) !important;
@@ -209,7 +210,7 @@ body {
   align-items: center;
 }
 
-.brain-loading-content > * {
+.brain-loading-content>* {
   margin: 1em 0;
 }
 
@@ -341,6 +342,7 @@ body {
 
 /** Removes borders from nested input and button elements. */
 .no-borders {
+
   input,
   button {
     border: transparent;
@@ -355,10 +357,25 @@ body {
 
 /** Styling for items in a folder-like listing (e.g. sidebar). */
 .folder-item {
-  padding: 0 4px;
+  // Right padding keeps the (potentially truncated) name from touching the entry's edge.
+  padding: 0 8px 0 4px;
   border-radius: 2px;
-  display: inline-block;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   flex-grow: 1;
+  // Allow the name to shrink and show an ellipsis instead of overflowing.
+  min-width: 0;
+
+  .folder-item-icon {
+    flex: 0 0 auto;
+  }
+
+  .folder-item-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 /** Highlight background color for valid drag-and-drop targets. */
@@ -419,7 +436,7 @@ body {
 }
 
 /** Limits the height of the organization switch dropdown menu. */
-.organization-switch-menu > ul {
+.organization-switch-menu>ul {
   max-height: calc(100vh - var(--navbar-height) - 200px) !important;
 }
 
@@ -459,11 +476,11 @@ body {
 
 /** Margin adjustments for checkboxes in the registration form. */
 .registration-form-checkboxes {
-  > div:first-of-type {
+  >div:first-of-type {
     margin-bottom: 0px;
   }
 
-  > div:last-of-type {
+  >div:last-of-type {
     margin-bottom: 15px;
   }
 }

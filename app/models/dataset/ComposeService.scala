@@ -147,7 +147,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
                                        targetDataset._dataStore,
                                        updatedDataSource.hashCode(),
                                        updatedDataSource,
-                                       isUsable = true)(GlobalAccessContext)
+                                       isUsable = true)(using GlobalAccessContext)
       dataStoreClient <- datasetService.clientFor(targetDataset)
       _ <- dataStoreClient.invalidateDatasetInDSCache(targetDatasetId)
     } yield ()
@@ -175,7 +175,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
                                        targetDataset._dataStore,
                                        updatedDataSource.hashCode(),
                                        updatedDataSource,
-                                       isUsable = true)(GlobalAccessContext)
+                                       isUsable = true)(using GlobalAccessContext)
       dataStoreClient <- datasetService.clientFor(targetDataset)
       _ <- dataStoreClient.invalidateDatasetInDSCache(targetDatasetId)
     } yield ()
@@ -208,7 +208,7 @@ class ComposeService @Inject()(datasetDAO: DatasetDAO, dataStoreDAO: DataStoreDA
                                        targetDataset._dataStore,
                                        updatedDataSource.hashCode(),
                                        updatedDataSource,
-                                       isUsable = true)(GlobalAccessContext)
+                                       isUsable = true)(using GlobalAccessContext)
       dataStoreClient <- datasetService.clientFor(targetDataset)
       _ <- dataStoreClient.invalidateDatasetInDSCache(targetDatasetId)
     } yield ()

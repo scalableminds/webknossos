@@ -113,7 +113,6 @@ class AiModelController @Inject()(
 
   def readAiModelInfo(aiModelId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(request.identity)
       aiModel <- aiModelDAO.findOne(aiModelId) ?~> Msg.AiModel.notFound ~> NOT_FOUND
       jsResult <- aiModelService.publicWrites(aiModel, request.identity)
     } yield Ok(jsResult)
@@ -130,7 +129,6 @@ class AiModelController @Inject()(
   def readAiInferenceInfo(aiInferenceId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     {
       for {
-        _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(request.identity)
         aiInference <- aiInferenceDAO.findOne(aiInferenceId) ?~> Msg.AiInference.notFound ~> NOT_FOUND
         jsResult <- aiInferenceService.publicWrites(aiInference, request.identity)
       } yield Ok(jsResult)
@@ -149,7 +147,6 @@ class AiModelController @Inject()(
   def listAiInferences: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     {
       for {
-        _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(request.identity)
         aiInferences <- aiInferenceDAO.findAll
         jsResults <- Fox.serialCombined(aiInferences)(inference =>
           aiInferenceService.publicWrites(inference, request.identity))
@@ -398,7 +395,6 @@ class AiModelController @Inject()(
           } else sharedOrganizationIds
         }
         for {
-          _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(request.identity)
           aiModel <- aiModelDAO.findOne(aiModelId) ?~> Msg.AiModel.notFound ~> NOT_FOUND
           _ <- Fox.fromBool(aiModel._organization.contains(request.identity._organization)) ?~> Msg.AiModel.notOwned
           _ <- aiModelDAO.updateOne(aiModel.copy(name = request.body.name,
@@ -490,7 +486,6 @@ class AiModelController @Inject()(
   def deleteAiModel(aiModelId: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(request.identity)
         referencesCount <- aiInferenceDAO.countForModel(aiModelId)
         _ <- Fox.fromBool(referencesCount == 0) ?~> Msg.AiModel.Delete.referencedByInferences
         _ <- aiModelDAO.findOne(aiModelId) ?~> Msg.AiModel.notFound ~> NOT_FOUND

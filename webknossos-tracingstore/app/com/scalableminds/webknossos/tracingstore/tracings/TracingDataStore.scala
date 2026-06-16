@@ -16,7 +16,7 @@ class TracingDataStore @Inject()(config: TracingStoreConfig,
                                  val actorSystem: ActorSystem)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
-  val healthClient = new FossilDBClient("healthCheckOnly", config, slackNotificationService)
+  lazy val healthClient = new FossilDBClient("healthCheckOnly", config, slackNotificationService)
 
   actorSystem.scheduler.scheduleOnce(5 seconds)(healthClient.checkHealth(verbose = true))
 

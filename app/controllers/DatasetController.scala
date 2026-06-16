@@ -34,7 +34,6 @@ import models.organization.OrganizationDAO
 import models.storage.UsedStorageService
 import models.team.{TeamDAO, TeamService}
 import models.user.{User, UserDAO, UserService}
-import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import play.silhouette.api.Silhouette
@@ -45,7 +44,7 @@ import utils.{MetadataAssertions, WkConf}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-case class DatasetUpdateParameters(
+case class DatasetUpdatePartialParameters(
     description: Option[Option[String]] = Some(None),
     name: Option[Option[String]] = Some(None),
     sortingKey: Option[Instant] = None,
@@ -57,9 +56,23 @@ case class DatasetUpdateParameters(
     layerRenamings: Option[Seq[LayerRenaming]] = None,
     attachmentRenamings: Option[Seq[AttachmentRenaming]] = None
 )
-object DatasetUpdateParameters extends TristateOptionJsonHelper {
-  implicit val jsonFormat: OFormat[DatasetUpdateParameters] =
-    Json.configured(tristateOptionParsing).format[DatasetUpdateParameters]
+object DatasetUpdatePartialParameters extends TristateOptionJsonHelper {
+  implicit val jsonFormat: OFormat[DatasetUpdatePartialParameters] =
+    Json.configured(tristateOptionParsing).format[DatasetUpdatePartialParameters]
+}
+
+case class DatasetUpdateParameters(
+    description: Option[String],
+    name: Option[String],
+    displayName: Option[String],
+    sortingKey: Option[Instant],
+    isPublic: Boolean,
+    tags: List[String],
+    metadata: Option[JsArray],
+    folderId: Option[ObjectId]
+)
+object DatasetUpdateParameters {
+  implicit val jsonFormat: OFormat[DatasetUpdateParameters] = Json.format[DatasetUpdateParameters]
 }
 
 case class LayerRenaming(oldName: String, newName: String)
@@ -162,6 +175,18 @@ object DataSourceRegistrationInfo {
   implicit val jsonFormat: OFormat[DataSourceRegistrationInfo] = Json.format[DataSourceRegistrationInfo]
 }
 
+case class StorageDetailEntry(
+    layerName: String,
+    name: String,
+    attachmentType: Option[LayerAttachmentType],
+    usedStorageBytes: Long,
+    lastUpdated: Instant,
+)
+
+object StorageDetailEntry {
+  implicit val jsonFormat: OFormat[StorageDetailEntry] = Json.format[StorageDetailEntry]
+}
+
 class DatasetController @Inject()(userService: UserService,
                                   userDAO: UserDAO,
                                   datasetService: DatasetService,
@@ -190,16 +215,6 @@ class DatasetController @Inject()(userService: UserService,
                                   sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with MetadataAssertions {
-
-  private val datasetPublicReads =
-    ((__ \ "description").readNullable[String] and
-      (__ \ "name").readNullable[String] and
-      (__ \ "displayName").readNullable[String] and
-      (__ \ "sortingKey").readNullable[Instant] and
-      (__ \ "isPublic").read[Boolean] and
-      (__ \ "tags").read[List[String]] and
-      (__ \ "metadata").readNullable[JsArray] and
-      (__ \ "folderId").readNullable[ObjectId]).tupled
 
   def removeFromThumbnailCache(datasetId: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { _ =>
@@ -487,8 +502,8 @@ class DatasetController @Inject()(userService: UserService,
       } yield Ok("Ok")
     }
 
-  def updatePartial(datasetId: ObjectId): Action[DatasetUpdateParameters] =
-    sil.SecuredAction.async(validateJson[DatasetUpdateParameters]) { implicit request =>
+  def updatePartial(datasetId: ObjectId): Action[DatasetUpdatePartialParameters] =
+    sil.SecuredAction.async(validateJson[DatasetUpdatePartialParameters]) { implicit request =>
       for {
         dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
         _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
@@ -509,31 +524,28 @@ class DatasetController @Inject()(userService: UserService,
     }
 
   // Note that there exists also updatePartial (which will only expect the changed fields)
-  def update(datasetId: ObjectId): Action[JsValue] =
-    sil.SecuredAction.async(parse.json) { implicit request =>
-      withJsonBodyUsing(datasetPublicReads) {
-        case (description, datasetName, legacyDatasetDisplayName, sortingKey, isPublic, tags, metadata, folderId) =>
-          val name = if (legacyDatasetDisplayName.isDefined) legacyDatasetDisplayName else datasetName
-          for {
-            dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
-            maybeUpdatedMetadata = metadata.getOrElse(dataset.metadata)
-            _ <- assertNoDuplicateMetadataKeys(maybeUpdatedMetadata)
-            _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
-            _ <- datasetDAO.updateFields(
-              dataset._id,
-              description,
-              name,
-              sortingKey.getOrElse(dataset.created),
-              isPublic,
-              tags,
-              maybeUpdatedMetadata,
-              folderId.getOrElse(dataset._folder)
-            )
-            updated <- datasetDAO.findOne(datasetId)
-            _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
-            js <- datasetService.publicWrites(updated, Some(request.identity))
-          } yield Ok(Json.toJson(js))
-      }
+  def update(datasetId: ObjectId): Action[DatasetUpdateParameters] =
+    sil.SecuredAction.async(validateJson[DatasetUpdateParameters]) { implicit request =>
+      val name = if (request.body.displayName.isDefined) request.body.displayName else request.body.name
+      for {
+        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId) ~> NOT_FOUND
+        metadataWithFallback = request.body.metadata.getOrElse(dataset.metadata)
+        _ <- assertNoDuplicateMetadataKeys(metadataWithFallback)
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- datasetDAO.updateFields(
+          dataset._id,
+          request.body.description,
+          name,
+          request.body.sortingKey.getOrElse(dataset.created),
+          request.body.isPublic,
+          request.body.tags,
+          metadataWithFallback,
+          request.body.folderId.getOrElse(dataset._folder)
+        )
+        updated <- datasetDAO.findOne(datasetId)
+        _ = analyticsService.track(ChangeDatasetSettingsEvent(request.identity, updated))
+        js <- datasetService.publicWrites(updated, Some(request.identity))
+      } yield Ok(Json.toJson(js))
     }
 
   def updateTeams(datasetId: ObjectId): Action[List[ObjectId]] =
@@ -873,7 +885,10 @@ class DatasetController @Inject()(userService: UserService,
             dataStore <- dataStoreDAO.findOneByName(dataStoreName.trim) ?~> "datastore.notFound"
             client = new WKRemoteDataStoreClient(dataStore, rpc)
             datasetsForDatastore = byDataStore(dataStoreName)
-            _ <- client.writeMirror(datasetsForDatastore.map(_._id), failOnError = false)
+            writtenPaths <- client.writeMirror(datasetsForDatastore.map(_._id), failOnError = false)
+            _ <- Fox.serialCombined(writtenPaths) {
+              case (datasetId, path) => datasetDAO.updateMirrorPath(datasetId, path)(GlobalAccessContext)
+            }
             _ = Instant.logSince(
               before,
               s"Writing mirrors for ${datasetsForDatastore.length} datasets on datastore $dataStoreName (for details see datastore logging)",
@@ -884,5 +899,27 @@ class DatasetController @Inject()(userService: UserService,
                              s"Writing mirrors for all ${datasets.length} datasets (for details see datastore logging)",
                              logger)
       } yield Ok
+    }
+
+  def usedStorageDetails(datasetId: ObjectId): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+        // While reading these details is not exactly editing, only those who can see the settings page should see this.
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- Fox.fromBool(dataset.isUsable) ?~> Msg.Dataset.notUsable(datasetId)
+        magDetails <- organizationDAO.getUsedStorageMagDetailsForDataset(datasetId)
+        attachmentDetails <- organizationDAO.getUsedStorageAttachmentDetailsForDataset(datasetId)
+        magEntries = magDetails.map {
+          case (layerName, name, usedStorageBytes, lastUpdated) =>
+            StorageDetailEntry(layerName, name, None, usedStorageBytes, lastUpdated)
+        }
+        attachmentEntries <- Fox.combined(attachmentDetails.map {
+          case (layerName, name, typeStr, usedStorageBytes, lastUpdated) =>
+            for {
+              attachmentType <- LayerAttachmentType.fromString(typeStr).toFox
+            } yield StorageDetailEntry(layerName, name, Some(attachmentType), usedStorageBytes, lastUpdated)
+        })
+      } yield Ok(Json.toJson(magEntries ++ attachmentEntries))
     }
 }

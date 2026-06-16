@@ -94,7 +94,7 @@
     "remove-all-snapshots": "rm -rf frontend/javascripts/test/snapshots/",
     "stash-cmake-cache": "[ -f webknossos-jni/target/native/x86_64-linux/build/CMakeCache.txt ] && mv webknossos-jni/target/native/x86_64-linux/build/CMakeCache.txt webknossos-jni/target/native/x86_64-linux/build/CMakeCache.txt.bak || true",
     "stash-pop-cmake-cache": "[ -f webknossos-jni/target/native/x86_64-linux/build/CMakeCache.txt.bak ] && mv webknossos-jni/target/native/x86_64-linux/build/CMakeCache.txt.bak webknossos-jni/target/native/x86_64-linux/build/CMakeCache.txt || true",
-    "refresh-e2e-snapshots": "yarn remove-e2e-snapshots && mkdir -p frontend/javascripts/test/snapshots/type_check && yarn stash-cmake-cache && ./tools/docker-env.sh sbt -v 'testOnly e2e.* -- -Ddatastore.watchFileSystem.enabled=false' && yarn stash-pop-cmake-cache",
+    "refresh-e2e-snapshots": "yarn remove-e2e-snapshots && mkdir -p frontend/javascripts/test/snapshots/type_check && yarn stash-cmake-cache && ./tools/docker-env.sh sbt -v 'testOnly e2e.* -- -Ddatastore.watchFileSystem.enabled=false -DwebKnossos.sampleOrganization.enabled=false' && yarn stash-pop-cmake-cache",
     "refresh-all-snapshots": "yarn remove-all-snapshots && yarn test && yarn refresh-e2e-snapshots",
     "check-untyped-saga-selects": "./tools/check-no-untyped-select-imports.js",
     "check-untyped-use-selector": "./tools/check-no-untyped-use-selector-imports.js",

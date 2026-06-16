@@ -115,6 +115,7 @@ export function* setupSavingForTracingType(
   yield* takeLatest(
     ["FINISHED_REBASING", "FINISH_FORWARDING_UPDATE_ACTIONS"],
     function* resetPrevTracing(_action: FinishedRebaseAction) {
+      // todop: use a channel and consume the action at the right spot in the while(true) loop below
       prevTracing = yield* getTracing();
     },
   );

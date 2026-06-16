@@ -148,7 +148,11 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
           const [removedMeshes, forkedEffect1] = yield* trackRemovedMeshActions();
           const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
           yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
-          yield take(((action: Action) => action.type === "UNREGISTER_OPERATION" && (action as any).id === "proofreading") as ActionPattern); // operation finished
+          yield take(
+            ((action: Action) =>
+              action.type === "UNREGISTER_OPERATION" &&
+              (action as any).id === "proofreading") as ActionPattern,
+          ); // operation finished
           yield take(
             ((action: Action) =>
               action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1) as ActionPattern,
@@ -219,7 +223,11 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         const [addedMeshes, forkedEffect2] = yield* trackAddedMeshActions();
         // Execute the split and wait for the auxiliary meshes being reloaded properly.
         yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
-        yield take(((action: Action) => action.type === "UNREGISTER_OPERATION" && (action as any).id === "proofreading") as ActionPattern); // operation finished
+        yield take(
+          ((action: Action) =>
+            action.type === "UNREGISTER_OPERATION" &&
+            (action as any).id === "proofreading") as ActionPattern,
+        ); // operation finished
         yield take(
           ((action: Action) =>
             action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1339) as ActionPattern,

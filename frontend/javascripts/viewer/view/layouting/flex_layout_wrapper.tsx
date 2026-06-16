@@ -14,8 +14,8 @@ import type { Dispatch } from "redux";
 import { getAntdTheme } from "theme";
 import type { BorderTabType, OrthoView } from "viewer/constants";
 import { ArbitraryViews, BorderTabs, OrthoViews } from "viewer/constants";
-import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { isUserInterfaceBlocked } from "viewer/model/accessors/accessor_helpers";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { setBorderOpenStatusAction } from "viewer/model/actions/ui_actions";
 import { setViewportAction } from "viewer/model/actions/view_mode_actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
@@ -376,21 +376,13 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
       case OrthoViews.PLANE_YZ:
       case OrthoViews.PLANE_XZ: {
         return (
-          <InputCatcher
-            isBlocked={isBlocked}
-            viewportID={id}
-            displayScalebars={displayScalebars}
-          />
+          <InputCatcher isBlocked={isBlocked} viewportID={id} displayScalebars={displayScalebars} />
         );
       }
 
       case OrthoViews.TDView: {
         return (
-          <InputCatcher
-            isBlocked={isBlocked}
-            viewportID={id}
-            displayScalebars={displayScalebars}
-          >
+          <InputCatcher isBlocked={isBlocked} viewportID={id} displayScalebars={displayScalebars}>
             <TDViewControls />
           </InputCatcher>
         );
@@ -398,10 +390,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
 
       case ArbitraryViews.arbitraryViewport: {
         return (
-          <InputCatcher
-            isBlocked={isBlocked}
-            viewportID={ArbitraryViews.arbitraryViewport}
-          >
+          <InputCatcher isBlocked={isBlocked} viewportID={ArbitraryViews.arbitraryViewport}>
             {isUpdateTracingAllowed ? <RecordingSwitch /> : null}
           </InputCatcher>
         );

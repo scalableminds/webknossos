@@ -55,12 +55,12 @@ import {
 import { markVolumeTransactionEnd } from "viewer/model/bucket_data_handling/bucket";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
+import { createOperationContext } from "viewer/model/sagas/operation_context_saga";
 import {
   requestBucketModificationInVolumeTracing,
   takeEveryInOperationContext,
   takeWithBatchActionSupport,
 } from "viewer/model/sagas/saga_helpers";
-import { createOperationContext } from "viewer/model/sagas/operation_context_saga";
 import listenToMinCut from "viewer/model/sagas/volume/min_cut_saga";
 import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_select_saga";
 import { deleteSegmentDataVolumeAction } from "viewer/model/sagas/volume/update_actions";
@@ -591,7 +591,9 @@ function* handleDeleteSegmentData(): Saga<void> {
     });
     yield* ctx.execute(function* () {
       yield* put(
-        pushSaveQueueTransaction([deleteSegmentDataVolumeAction(action.segmentId, action.layerName)]),
+        pushSaveQueueTransaction([
+          deleteSegmentDataVolumeAction(action.segmentId, action.layerName),
+        ]),
       );
       yield* call([Model, Model.ensureSavedState]);
 

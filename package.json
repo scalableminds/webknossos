@@ -105,7 +105,7 @@
     "licenses-backend": "sbt dumpLicenseReport",
     "docs": "node_modules/.bin/documentation build --shallow frontend/javascripts/viewer/api/api_loader.ts frontend/javascripts/viewer/api/api_latest.ts --github --project-name \"WEBKNOSSOS Frontend API\" --format html --output public/assets/docs/frontend-api",
     "@comment docs": "To preview the documentation under docs/, go to your local webknossos-libs repository, cd into its docs directory, ensure the webknossos repo is symlinked there (e.g. `wk-repo -> /<some path>/webknossos`), then run ./generate.sh to start a local documentation server.",
-    "refresh-schema": "./tools/postgres/dbtool.js refresh-schema && touch schema/schema.sql",
+    "refresh-schema": "./tools/postgres/dbtool.js refresh-schema && touch schema/schema.sql && rm -f schema/refreshed* 2>/dev/null; echo \"written by yarn refresh-schema to trigger backend hot-reload\" > schema/\"refreshed.$(date +%s)\"",
     "enable-storage-scan": "./tools/postgres/dbtool.js enable-storage-scan",
     "enable-jobs": "sed -i -e 's/jobsEnabled = false/jobsEnabled = true/g' ./conf/application.conf; sed -i -e 's/voxelyticsEnabled = false/voxelyticsEnabled = true/g' ./conf/application.conf; ./tools/postgres/dbtool.js enable-jobs",
     "disable-jobs": "sed -i -e 's/jobsEnabled = true/jobsEnabled = false/g' ./conf/application.conf; sed -i -e 's/voxelyticsEnabled = true/voxelyticsEnabled = false/g' ./conf/application.conf; ./tools/postgres/dbtool.js disable-jobs",

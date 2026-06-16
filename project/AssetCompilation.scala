@@ -1,6 +1,7 @@
 import java.nio.file.{Files, StandardCopyOption}
 import java.util.function.Consumer
 
+import play.sbt.PlayImport.PlayKeys
 import sbt.Keys._
 import sbt._
 import sys.process.Process
@@ -164,6 +165,8 @@ object AssetCompilation {
     stage := (stage dependsOn assetsGenerationTask).value,
     dist := (dist dependsOn assetsGenerationTask).value,
     Compile / sourceGenerators += slickClassesFromDBSchemaTask,
-    Compile / managedSourceDirectories += sourceManaged.value
+    Compile / managedSourceDirectories += sourceManaged.value,
+    // Trigger hot reload (including schema re-generation) if schema changed
+    PlayKeys.playMonitoredFiles += baseDirectory.value / "schema"
   )
 }

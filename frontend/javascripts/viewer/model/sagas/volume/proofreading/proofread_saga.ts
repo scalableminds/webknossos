@@ -158,9 +158,6 @@ export default function* proofreadRootSaga(): Saga<void> {
   const proofreadingOptions = {
     id: "proofreading",
     description: PROOFREADING_BUSY_REASON,
-    // Allow save to run alongside proofreading (replaces allowSagaWhileBusyAction pattern)
-    // todop: no, this allows saving to kick in at an arbitrary point. we want a suboperation.
-    // allowAdditionalOperation: (pendingId: string) => pendingId === "save",
   };
 
   yield* takeEveryInOperationContext(

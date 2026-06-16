@@ -35,7 +35,7 @@ function makeTestStore() {
           return {
             operationContext: {
               activeOperations: state.operationContext.activeOperations.filter(
-                // todop: any
+                // todop: avoid any
                 (op: any) => op.id !== action.id,
               ),
               childOperations: state.operationContext.childOperations.filter(
@@ -265,7 +265,7 @@ describe("operation_context_saga", () => {
 
   it("activeOperations in store tracks operation lifecycle", async () => {
     const { store, sagaMiddleware } = makeTestStore();
-    // todop: any
+    // todop: avoid any
     const snapshots: any[][] = [];
 
     function* op() {

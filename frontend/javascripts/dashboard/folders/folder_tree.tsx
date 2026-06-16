@@ -22,11 +22,7 @@ const { DirectoryTree } = Tree;
 const isNodeDraggable = (node: DataNode): boolean => (node as FolderItem).isEditable;
 const draggableConfig = { icon: false, nodeDraggable: isNodeDraggable };
 
-export function FolderTreeSidebar({
-  setFolderIdForEditModal,
-}: {
-  setFolderIdForEditModal: (value: string | null) => void;
-}) {
+export function FolderTreeSidebar() {
   const [treeData, setTreeData] = useState<FolderItem[]>([]);
   const context = useDatasetCollectionContext();
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
@@ -104,15 +100,9 @@ export function FolderTreeSidebar({
   };
   const titleRender = useCallback(
     (nodeData: FolderItem) => {
-      return (
-        <ItemTitle
-          context={context}
-          folder={nodeData}
-          setFolderIdForEditModal={setFolderIdForEditModal}
-        />
-      );
+      return <ItemTitle context={context} folder={nodeData} />;
     },
-    [context, setFolderIdForEditModal],
+    [context],
   );
 
   const onDrop = useCallback(
@@ -216,7 +206,6 @@ export function FolderTreeSidebar({
 export function generateSettingsForFolder(
   folder: FolderItem,
   context: DatasetCollectionContextValue,
-  editFolder: () => void,
   isSubfolder: boolean = false,
 ) {
   const { key: id, isEditable } = folder;
@@ -225,7 +214,11 @@ export function generateSettingsForFolder(
   }
 
   function createFolder(): void {
-    context.showCreateFolderModal(id);
+    context.setFolderModalState({ mode: "create", parentFolderId: id });
+  }
+
+  function editFolder(): void {
+    context.setFolderModalState({ mode: "edit", folderId: id });
   }
 
   const newFolderText = isSubfolder ? "New Subfolder" : "New Folder";
@@ -267,18 +260,13 @@ export function generateSettingsForFolder(
 type ItemTitleProps = {
   context: DatasetCollectionContextValue;
   folder: FolderItem;
-  setFolderIdForEditModal: (folderId: string) => void;
 };
 
 const ItemTitle: React.FC<ItemTitleProps> = (props) => {
-  const { context, folder, setFolderIdForEditModal } = props;
+  const { context, folder } = props;
   const { key: id, title, isEditable } = folder;
 
-  function editFolder(): void {
-    setFolderIdForEditModal(id);
-  }
-
-  const menu = generateSettingsForFolder(folder, context, editFolder);
+  const menu = generateSettingsForFolder(folder, context);
 
   return (
     <Dropdown

@@ -23,6 +23,15 @@ import {
   useUpdateFolderMutation,
 } from "./queries";
 
+// Describes which folder modal is currently open (if any). A single one is open at a time,
+// either to create a new folder below a parent or to edit an existing folder. This lives in the
+// context (rather than being prop-drilled) because the triggers are spread across the dataset
+// view, the folder tree and the details sidebar. The modal itself is rendered by
+// DatasetFolderView, so the context never imports the modal component (which would be cyclic).
+export type FolderModalState =
+  | { mode: "edit"; folderId: string }
+  | { mode: "create"; parentFolderId: string };
+
 export type DatasetCollectionContextValue = {
   datasets: Array<APIDatasetCompact>;
   isLoading: boolean;
@@ -44,9 +53,8 @@ export type DatasetCollectionContextValue = {
   setSearchRecursively: (val: boolean) => void;
   getBreadcrumbs: (dataset: APIDatasetCompactWithoutStatusAndLayerNames) => string[] | null;
   getActiveSubfolders: () => FolderItem[];
-  showCreateFolderModal: (parentFolderId: string) => void;
-  createFolderParentId: string | null;
-  closeCreateFolderModal: () => void;
+  folderModalState: FolderModalState | null;
+  setFolderModalState: (state: FolderModalState | null) => void;
   queries: {
     folderHierarchyQuery: ReturnType<typeof useFolderHierarchyQuery>;
     datasetsInFolderQuery: ReturnType<typeof useDatasetsInFolderQuery>;
@@ -94,6 +102,7 @@ export default function DatasetCollectionContextProvider({
 
   const [selectedDatasets, setSelectedDatasets] = useState<APIDatasetCompact[]>([]);
   const [selectedFolder, setSelectedFolder] = useState<FolderItem | null>(null);
+  const [folderModalState, setFolderModalState] = useState<FolderModalState | null>(null);
   const [globalSearchQuery, setGlobalSearchQueryInner] = useState<string | null>(null);
   const setGlobalSearchQuery = useCallback((value: string | null) => {
     // Empty string should be handled as null
@@ -153,14 +162,6 @@ export default function DatasetCollectionContextProvider({
     globalSearchQuery == null ? activeFolderId : null,
   );
   const datasets = (globalSearchQuery ? datasetSearchQuery.data : datasetsInFolderQuery.data) || [];
-
-  const [createFolderParentId, setCreateFolderParentId] = useState<string | null>(null);
-  const showCreateFolderModal = useCallback((parentFolderId: string) => {
-    setCreateFolderParentId(parentFolderId);
-  }, []);
-  const closeCreateFolderModal = useCallback(() => {
-    setCreateFolderParentId(null);
-  }, []);
 
   function fetchDatasets(): void {
     datasetsInFolderQuery.refetch();
@@ -226,12 +227,11 @@ export default function DatasetCollectionContextProvider({
       selectedFolder,
       setSelectedFolder,
       mostRecentlyUsedActiveFolderId,
-      showCreateFolderModal,
-      createFolderParentId,
-      closeCreateFolderModal,
       isChecking,
       getBreadcrumbs,
       getActiveSubfolders,
+      folderModalState,
+      setFolderModalState,
       checkDatasets: async (organizationId: string | undefined) => {
         if (isChecking) {
           console.warn("Ignore second rechecking request, since a recheck is already in progress");
@@ -276,9 +276,6 @@ export default function DatasetCollectionContextProvider({
       isChecking,
       datasets,
       isLoading,
-      showCreateFolderModal,
-      createFolderParentId,
-      closeCreateFolderModal,
       activeFolderId,
       mostRecentlyUsedActiveFolderId,
       folderHierarchyQuery,
@@ -299,6 +296,7 @@ export default function DatasetCollectionContextProvider({
       selectedFolder,
       setGlobalSearchQuery,
       usedStorageInOrga,
+      folderModalState,
     ],
   );
 

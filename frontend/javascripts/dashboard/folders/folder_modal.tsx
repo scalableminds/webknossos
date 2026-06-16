@@ -1,5 +1,8 @@
 import { Form, Input, type InputRef, Modal, Spin } from "antd";
-import { useDatasetCollectionContext } from "dashboard/dataset/dataset_collection_context";
+import {
+  type FolderModalState,
+  useDatasetCollectionContext,
+} from "dashboard/dataset/dataset_collection_context";
 import { FormItemWithInfo } from "dashboard/dataset/helper_components";
 import { useFolderQuery } from "dashboard/dataset/queries";
 import TeamSelectionComponent from "dashboard/dataset/team_selection_component";
@@ -8,9 +11,7 @@ import { useEffect, useRef } from "react";
 
 import type { APITeam } from "types/api_types";
 
-type FolderModalProps =
-  | { mode: "edit"; folderId: string; onClose: () => void }
-  | { mode: "create"; parentFolderId: string; onClose: () => void };
+type FolderModalProps = FolderModalState & { onClose: () => void };
 
 const ACCESS_PERMISSIONS_INFO =
   "Teams which may access this folder. Note that teams that can access a parent folder of this folder, will always be able to also access this folder.";

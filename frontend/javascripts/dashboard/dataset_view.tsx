@@ -67,7 +67,6 @@ type Props = {
   onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
   onSelectFolder: (folder: FolderItem | null) => void;
   selectedDatasets: APIDatasetCompact[];
-  setFolderIdForEditModal: (arg0: string | null) => void;
 };
 export type DatasetFilteringMode = "showAllDatasets" | "onlyShowReported" | "onlyShowUnreported";
 type PersistenceState = {
@@ -103,14 +102,7 @@ const refreshMenuItems: ItemType[] = [
   },
 ];
 
-function DatasetView({
-  user,
-  context,
-  onSelectDataset,
-  selectedDatasets,
-  onSelectFolder,
-  setFolderIdForEditModal,
-}: Props) {
+function DatasetView({ user, context, onSelectDataset, selectedDatasets, onSelectFolder }: Props) {
   const searchQuery = context.globalSearchQuery;
   const setSearchQuery = context.setGlobalSearchQuery;
   const [searchTags, setSearchTags] = useState<string[]>([]);
@@ -190,7 +182,6 @@ function DatasetView({
         updateDataset={context.updateCachedDataset}
         reloadDataset={context.reloadDataset}
         addTagToSearch={addTagToSearch}
-        setFolderIdForEditModal={setFolderIdForEditModal}
       />
     );
   }
@@ -265,7 +256,10 @@ function DatasetView({
               icon={<PlusOutlined />}
               onClick={() =>
                 context.activeFolderId != null &&
-                context.showCreateFolderModal(context.activeFolderId)
+                context.setFolderModalState({
+                  mode: "create",
+                  parentFolderId: context.activeFolderId,
+                })
               }
               requiredPricingPlan={PricingPlanEnum.Team}
             >

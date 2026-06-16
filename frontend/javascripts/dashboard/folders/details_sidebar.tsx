@@ -39,7 +39,6 @@ export function DetailsSidebar({
   // The folder ID to display details for. This can be the active folder selected in the tree view
   // or a selected subfolder in the dataset table.
   folderId,
-  setFolderIdForEditModal,
   displayedFolderEqualsActiveFolder,
 }: {
   selectedDatasets: APIDatasetCompact[];
@@ -47,7 +46,6 @@ export function DetailsSidebar({
   folderId: string | null;
   datasetCount: number;
   searchQuery: string | null;
-  setFolderIdForEditModal: (value: string | null) => void;
   displayedFolderEqualsActiveFolder: boolean;
 }) {
   const context = useDatasetCollectionContext();
@@ -80,7 +78,6 @@ export function DetailsSidebar({
           folderId={folderId}
           folder={folder}
           datasetCount={datasetCount}
-          setFolderIdForEditModal={setFolderIdForEditModal}
           error={error}
           displayedFolderEqualsActiveFolder={displayedFolderEqualsActiveFolder}
         />
@@ -368,17 +365,16 @@ function FolderDetails({
   folderId,
   folder,
   datasetCount,
-  setFolderIdForEditModal,
   error,
   displayedFolderEqualsActiveFolder,
 }: {
   folderId: string | null;
   folder: Folder | undefined;
   datasetCount: number;
-  setFolderIdForEditModal: (id: string | null) => void;
   error: unknown;
   displayedFolderEqualsActiveFolder: boolean;
 }) {
+  const context = useDatasetCollectionContext();
   let message = getMaybeSelectMessage(datasetCount);
   if (!displayedFolderEqualsActiveFolder) {
     message =
@@ -403,7 +399,9 @@ function FolderDetails({
                 color: "var(--ant-color-text-secondary)",
               }}
             >
-              <EditOutlined onClick={() => setFolderIdForEditModal(folder.id)} />
+              <EditOutlined
+                onClick={() => context.setFolderModalState({ mode: "edit", folderId: folder.id })}
+              />
             </span>
             <FolderOpenOutlined style={{ marginRight: 8 }} />
             {folder.name}

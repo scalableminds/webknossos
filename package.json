@@ -86,6 +86,7 @@
     "test-watch": "vitest --config vitest_spec.config.ts watch",
     "test-backend": "sbt \"testOnly backend.*\"",
     "test-e2e": "vitest --config vitest_e2e.config.ts run --fileParallelism=false",
+    "test-e2e-browser": "vitest --config vitest_collaboration.config.ts run",
     "test-screenshot": "vitest --config vitest_screenshot.config.ts run --testTimeout=300000 --hookTimeout=20000",
     "test-wkorg-screenshot": "vitest --config vitest_wkorg_screenshot.config.ts run --testTimeout=300000 --hookTimeout=20000",
     "refresh-screenshots": "tools/refresh-screenshots.sh",

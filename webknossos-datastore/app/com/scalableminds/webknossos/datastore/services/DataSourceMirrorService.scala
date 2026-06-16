@@ -34,7 +34,8 @@ class DataSourceMirrorService @Inject()(
   private def getMirrorDir(dataSource: UsableDataSource) =
     dataBaseDir.resolve(dataSource.id.organizationId).resolve(".mirror").resolve(dataSource.id.directoryName)
 
-  def writeMirror(dataSource: UsableDataSource, datasetId: ObjectId)(implicit ec: ExecutionContext): Fox[Unit] =
+  def writeMirror(dataSource: UsableDataSource, datasetId: ObjectId)(
+      implicit ec: ExecutionContext): Fox[Option[String]] =
     if (dataSource.allExplicitPaths.forall(_.isLocal)) {
       val mirrorDir = getMirrorDir(dataSource)
       val tempMirrorDir = mirrorDir.resolveSibling(mirrorDir.getFileName.toString + ".new")
@@ -53,8 +54,8 @@ class DataSourceMirrorService @Inject()(
           tryo(FileUtils.deleteDirectory(mirrorDir.toFile)).toFox
         } ?~> Msg.Dataset.Mirror.deleteExistingMirrorFailed
         _ <- tryo(Files.move(tempMirrorDir, mirrorDir)).toFox ?~> Msg.Dataset.Mirror.moveTempMirrorFailed
-      } yield ()
-    } else Fox.successful(())
+      } yield Some(mirrorDir.toString)
+    } else Fox.successful(None)
 
   private def writeMirrorLayer(layer: StaticLayer, mirrorDir: Path)(implicit ec: ExecutionContext): Fox[StaticLayer] = {
     val layerDir = mirrorDir.resolve(layer.name)

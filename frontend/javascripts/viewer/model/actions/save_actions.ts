@@ -3,6 +3,7 @@ import Date from "libs/date";
 import { getUid } from "libs/uid_generator";
 import type { Dispatch } from "redux";
 import type { APIUserCompact } from "types/api_types";
+import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
 import type {
   UpdateAction,
   UpdateActionWithIsolationRequirement,
@@ -119,9 +120,10 @@ export const pushSaveQueueTransactionIsolated = (
 export const notifyAboutUpdatedBucketsAction = (count: number) =>
   ({ type: "NOTIFY_ABOUT_UPDATED_BUCKETS", count }) as const;
 
-export const saveNowAction = () =>
+export const saveNowAction = (operationContext?: OperationContext) =>
   ({
     type: "SAVE_NOW",
+    operationContext,
   }) as const;
 
 export const exitingAnnotationAction = () =>

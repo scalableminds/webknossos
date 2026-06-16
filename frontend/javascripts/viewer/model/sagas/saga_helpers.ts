@@ -13,23 +13,30 @@ import {
   setMappingIsLockedAction,
   setVolumeBucketDataHasChangedAction,
 } from "../actions/volumetracing_actions";
-import { createOperationContext, type OperationOptions } from "./operation_context_saga";
+import {
+  getOrCreateOperationContext,
+  type OperationContext,
+  type OperationOptions,
+} from "./operation_context_saga";
 
 export function* takeEveryInOperationContext<P extends ActionPattern>(
   actionDescriptor: P,
-  saga: (action: Action) => Saga<void>,
+  saga: (action: Action, ctx: OperationContext) => Saga<void>,
   options: OperationOptions,
 ): Saga<void> {
-  // todop: add docstring
   function* wrapper(action: Action) {
-    const ctx = yield* createOperationContext({ ...options, behaviorWhenDisallowed: "ignore" });
+    const existingCtx = (action as any).operationContext ?? null;
+    const ctx = yield* getOrCreateOperationContext(
+      { ...options, behaviorWhenDisallowed: "ignore" },
+      existingCtx,
+    );
     if (ctx == null) {
       console.warn(
         `Ignoring ${String((action as any).type)}: operation "${options.id}" already running`,
       );
       return;
     }
-    yield* ctx.execute(() => saga(action));
+    yield* ctx.execute(() => saga(action, ctx));
   }
   yield* takeEvery(actionDescriptor, wrapper);
 }

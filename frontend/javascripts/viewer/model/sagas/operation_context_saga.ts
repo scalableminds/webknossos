@@ -62,8 +62,9 @@ function acquireOperationsMutex(): Promise<() => void> {
 // The same operation ID is never allowed to run twice in parallel, regardless of predicates.
 function checkCanStart(pendingId: OperationId, state: WebknossosState): boolean {
   if (activeOperations.length === 0) return true;
+  // The same operation ID is never allowed to run twice in parallel.
+  if (activeOperations.some((op) => op.id === pendingId)) return false;
   for (const op of activeOperations) {
-    if (op.id === pendingId) return false;
     if (op.allowAdditionalOperation == null) return false;
     if (!op.allowAdditionalOperation(pendingId, state)) return false;
   }

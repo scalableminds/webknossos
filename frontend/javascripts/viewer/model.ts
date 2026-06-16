@@ -22,6 +22,7 @@ import type LayerRenderingManager from "viewer/model/bucket_data_handling/layer_
 import type PullQueue from "viewer/model/bucket_data_handling/pullqueue";
 import type DataLayer from "viewer/model/data_layer";
 import { getTotalSaveQueueLength } from "viewer/model/reducers/save_reducer";
+import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
 import type { TraceOrViewCommand } from "viewer/store";
 import Store from "viewer/store";
 import { initialize } from "./model_initialization";
@@ -297,7 +298,7 @@ export class WebKnossosModel {
     Store.dispatch(saveNowAction());
   };
 
-  ensureSavedState = async () => {
+  ensureSavedState = async (operationContext?: OperationContext) => {
     /* This function will only return once all state is saved
      * even if new updates are pushed to the save queue during saving
      */
@@ -325,7 +326,7 @@ export class WebKnossosModel {
       // Otherwise if an update action is pushed to the save queue during the Utils.sleep,
       // the while loop would continue running until the next save would be triggered.
       if (!Store.getState().save.isBusy) {
-        Store.dispatch(saveNowAction());
+        Store.dispatch(saveNowAction(operationContext));
       }
 
       await sleep(WAIT_AFTER_SAVE_TRIGGER);

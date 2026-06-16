@@ -16,6 +16,7 @@ import { maySendSaveRequest } from "viewer/model/accessors/annotation_accessor";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
   dispatchEnsureHasNewestVersionAsync,
+  type SaveNowAction,
   setLastSaveTimestampAction,
   setSaveBusyAction,
   setVersionNumberAction,
@@ -26,6 +27,10 @@ import compactSaveQueue from "viewer/model/helpers/compaction/compact_save_queue
 import { globalPositionToBucketPosition } from "viewer/model/helpers/position_converter";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
+import {
+  getOrCreateOperationContext,
+  type OperationContext,
+} from "viewer/model/sagas/operation_context_saga";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import {
   MAX_SAVE_RETRY_WAITING_TIME,
@@ -80,24 +85,37 @@ export function* pushSaveQueueAsync(): Saga<never> {
 
     yield* put(setSaveBusyAction(true));
     const enforceEmptySaveQueue = forcePush != null;
-    let shouldRetryOnConflict = true;
-    let retryCount = 0;
-    while (shouldRetryOnConflict) {
-      shouldRetryOnConflict = (yield* call(synchronizeAnnotationWithBackend, enforceEmptySaveQueue))
-        .hadConflict;
-      ++retryCount;
-      if (retryCount > MAX_ON_CONFLICT_RETRIES) {
-        const annotation = yield* select((state) => state.annotation);
-        yield* call(
-          [ErrorHandling, ErrorHandling.notify],
-          new Error("Saving annotation repeatedly failed due to conflict '409' status code"),
-          { annotationVersion: annotation.version, annotationId: annotation.annotationId },
-        );
-        Toast.error(
-          "Saving your changes failed repeatedly due to conflict with other user's changes. Please consider reloading to resolve this. This will lose your latest unsaved changes.",
-        );
+    const operationContext: OperationContext | null =
+      (forcePush as SaveNowAction | undefined)?.operationContext ?? null;
+
+    function* runSaveRetryLoop() {
+      let shouldRetryOnConflict = true;
+      let retryCount = 0;
+      while (shouldRetryOnConflict) {
+        shouldRetryOnConflict = (yield* call(
+          synchronizeAnnotationWithBackend,
+          enforceEmptySaveQueue,
+        )).hadConflict;
+        ++retryCount;
+        if (retryCount > MAX_ON_CONFLICT_RETRIES) {
+          const annotation = yield* select((state) => state.annotation);
+          yield* call(
+            [ErrorHandling, ErrorHandling.notify],
+            new Error("Saving annotation repeatedly failed due to conflict '409' status code"),
+            { annotationVersion: annotation.version, annotationId: annotation.annotationId },
+          );
+          Toast.error(
+            "Saving your changes failed repeatedly due to conflict with other user's changes. Please consider reloading to resolve this. This will lose your latest unsaved changes.",
+          );
+        }
       }
     }
+
+    const saveCtx = yield* getOrCreateOperationContext(
+      { id: "save", description: "Saving annotation" },
+      operationContext,
+    );
+    yield* saveCtx.execute(runSaveRetryLoop);
   }
 }
 

@@ -9,23 +9,9 @@ import jakarta.inject.Inject
 
 import java.nio.file.{Files, Path}
 
-case class AdditionalDirectoryConfig(
-    path: UPath,
-    organizationId: Option[String],
-    allowsUpload: Boolean,
-    doScan: Boolean,
-    uploadPrefix: Option[String]
-)
-
 class BaseDirService @Inject()(config: DataStoreConfig) extends LazyLogging {
 
-  private lazy val baseDirectories: Seq[AdditionalDirectoryConfig] = {
-    val res = config.Datastore.baseDirectories.flatMap { dirConfig =>
-      new AdditionalDirectoryConfigReader(dirConfig).getAdditionalDirectory
-    }
-    logger.info(s"Parsed ${res.length} additional directories from datastore config.")
-    res
-  }
+  private lazy val baseDirectories: Seq[BaseDirConfig] = new BaseDirConfigReader().read(config.Datastore.baseDirectories)
 
   def s3UploadEnabled(organizationId: String): Boolean =
     getOneS3ForOrga(organizationId, requireAllowsUpload = true).isDefined

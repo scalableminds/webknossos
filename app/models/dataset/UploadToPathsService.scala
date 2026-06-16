@@ -9,27 +9,10 @@ import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.helpers.UPath
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentDataformat.LayerAttachmentDataformat
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
-import com.scalableminds.webknossos.datastore.models.datasource.{
-  DataLayerAttachments,
-  DataSourceId,
-  DataSourceStatus,
-  LayerAttachment,
-  LayerAttachmentDataformat,
-  LayerAttachmentType,
-  StaticColorLayer,
-  StaticLayer,
-  StaticSegmentationLayer,
-  UsableDataSource
-}
-import com.scalableminds.webknossos.datastore.services.DataSourceValidation
+import com.scalableminds.webknossos.datastore.models.datasource.{DataLayerAttachments, DataSourceId, DataSourceStatus, LayerAttachment, LayerAttachmentDataformat, LayerAttachmentType, StaticColorLayer, StaticLayer, StaticSegmentationLayer, UsableDataSource}
+import com.scalableminds.webknossos.datastore.services.{BaseDirConfig, BaseDirConfigReader, DataSourceValidation}
 import com.scalableminds.webknossos.datastore.services.uploading.LinkedLayerIdentifier
-import controllers.{
-  PathDeletionService,
-  ReserveAttachmentUploadToPathRequest,
-  ReserveDatasetUploadToPathsForPreliminaryRequest,
-  ReserveDatasetUploadToPathsRequest,
-  ReserveMagUploadToPathRequest
-}
+import controllers.{PathDeletionService, ReserveAttachmentUploadToPathRequest, ReserveDatasetUploadToPathsForPreliminaryRequest, ReserveDatasetUploadToPathsRequest, ReserveMagUploadToPathRequest}
 import models.folder.FolderDAO
 import models.organization.{OrganizationDAO, OrganizationService}
 import models.user.User
@@ -133,10 +116,10 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
   }
 
   private lazy val configuredUploadToPathsPrefixes: Box[Seq[UPath]] = {
+    val datastoreBaseDirConfigs: Seq[BaseDirConfig] = new BaseDirConfigReader().read(conf.Datastore.baseDirectories)
     val fallbackFromBaseFolder = for {
-      datastoreBaseFolder <- Box(conf.Datastore.baseDirectory)
-      fromDatastoreBaseFolder <- UPath.fromString(datastoreBaseFolder)
-    } yield Seq(fromDatastoreBaseFolder.toAbsolute)
+      selected <- Box(datastoreBaseDirConfigs.find(c => c.path.isLocal && c.allowsUpload && c.organizationId.isEmpty))
+    } yield Seq(selected.path.toAbsolute)
     conf.WebKnossos.Datasets.UploadToPaths.prefixes match {
       case None => fallbackFromBaseFolder
       case Some(fromConfigStrs) if fromConfigStrs.isEmpty =>

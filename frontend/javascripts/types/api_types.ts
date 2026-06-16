@@ -878,6 +878,7 @@ export type APIJob = {
   readonly returnValue: string | null | undefined;
   readonly voxelyticsWorkflowHash: string | null | undefined;
   readonly created: number;
+  readonly lastRetry: number | null | undefined;
   readonly costInMilliCredits: number | null | undefined;
 };
 

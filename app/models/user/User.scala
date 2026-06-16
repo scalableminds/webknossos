@@ -487,7 +487,7 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    isAdmin: Boolean,
                    isDatasetManager: Boolean,
                    isDeactivated: Boolean,
-                   lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[Unit] =
+                   lastTaskTypeId: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(userId)
       _ <- run(q"""UPDATE webknossos.users
@@ -498,7 +498,8 @@ class UserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
               WHERE _id = $userId""".asUpdate)
     } yield ()
 
-  def updateLastTaskTypeId(userId: ObjectId, lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateLastTaskTypeId(userId: ObjectId, lastTaskTypeId: Option[ObjectId])(
+      implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(userId)
       _ <- run(q"""UPDATE webknossos.users

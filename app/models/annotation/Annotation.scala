@@ -781,7 +781,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       _ <- run(q"UPDATE webknossos.annotations_ SET visibility = $visibility WHERE _id = $id".asUpdate)
     } yield ()
 
-  def updateTags(id: ObjectId, tags: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateTags(id: ObjectId, tags: Seq[String])(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id) ?~> Msg.Annotation.Edit.noPermissionsToUpdateTags
       _ <- run(q"UPDATE webknossos.annotations SET tags = $tags WHERE _id = $id".asUpdate)

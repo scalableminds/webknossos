@@ -15,7 +15,7 @@ import messages from "messages";
 import type React from "react";
 import { useState } from "react";
 import type { APITeam, APIUser } from "types/api_types";
-import { filterTeamMembersOf, TeamMembersRow } from "./team_member_row";
+import { isUserInTeam, TeamMembersRow } from "./team_member_row";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -129,7 +129,7 @@ function TeamListView() {
   }
 
   function countActiveMembers(team: APITeam) {
-    return users.filter((user) => user.isActive && filterTeamMembersOf(team, user)).length;
+    return users.filter((user) => user.isActive && isUserInTeam(user, team)).length;
   }
 
   function expandTeamRow(team: APITeam, event: React.MouseEvent) {

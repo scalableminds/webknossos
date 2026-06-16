@@ -1,26 +1,19 @@
 import { MinusCircleOutlined, PlusOutlined } from "@ant-design/icons";
 import { useQueryClient } from "@tanstack/react-query";
 import { updateUser } from "admin/rest_api";
-import { Button, Select, Spin, Tag, Tooltip } from "antd";
+import { Button, Select, Tag, Tooltip } from "antd";
 import { Flex } from "antd/lib";
-import LinkButton from "components/link_button";
 import { handleGenericError } from "libs/error_handling";
 import { stringToColor } from "libs/format_utils";
 import messages from "messages";
 import { useState } from "react";
 import type { APITeam, APITeamMembership, APIUser } from "types/api_types";
 
-export function filterTeamMembersOf(team: APITeam, user: APIUser): boolean {
+export function isUserInTeam(user: APIUser, team: APITeam): boolean {
   return user.teams.some((userTeam: APITeamMembership) => userTeam.id === team.id) || user.isAdmin;
 }
 
-function RenderTeamRolesForUser({
-  user,
-  highlightedTeam,
-}: {
-  user: APIUser;
-  highlightedTeam: APITeam;
-}) {
+function TeamRolesForUser({ user, highlightedTeam }: { user: APIUser; highlightedTeam: APITeam }) {
   // used by teams list page
   // does not include dataset managers and team names
   const tags = user.isAdmin
@@ -39,7 +32,7 @@ function RenderTeamRolesForUser({
   ));
 }
 
-function RenderUsersForTeam({
+function TeamMemberList({
   team,
   allUsers,
   renderAdditionalContent = (_teamMember: APIUser, _team: APITeam) => null,
@@ -49,7 +42,7 @@ function RenderUsersForTeam({
   renderAdditionalContent: (_teamMember: APIUser, _team: APITeam) => React.ReactNode;
 }) {
   const teamMembers = allUsers
-    .filter((user) => filterTeamMembersOf(team, user))
+    .filter((user) => isUserInTeam(user, team))
     .filter((user) => user.isActive);
   if (teamMembers.length === 0) return messages["team.no_members"];
 
@@ -60,7 +53,7 @@ function RenderUsersForTeam({
           <span>
             {teamMember.firstName} {teamMember.lastName} ({teamMember.email})
           </span>
-          <RenderTeamRolesForUser user={teamMember} highlightedTeam={team} />
+          <TeamRolesForUser user={teamMember} highlightedTeam={team} />
           {renderAdditionalContent(teamMember, team)}
         </Flex>
       ))}
@@ -70,18 +63,14 @@ function RenderUsersForTeam({
 
 export function TeamMembersRow({ team, users }: { team: APITeam; users: APIUser[] }) {
   const queryClient = useQueryClient();
-  const [isUpdating, setIsUpdating] = useState(false);
   const [isAddingUser, setIsAddingUser] = useState(false);
 
   async function updateTeamMembership(user: APIUser, newTeams: APITeamMembership[]) {
     try {
-      setIsUpdating(true);
       await updateUser({ ...user, teams: newTeams });
       await queryClient.invalidateQueries({ queryKey: ["editableUsers"] });
     } catch (error) {
       handleGenericError(error as Error);
-    } finally {
-      setIsUpdating(false);
     }
   }
 
@@ -102,13 +91,19 @@ export function TeamMembersRow({ team, users }: { team: APITeam; users: APIUser[
   const renderRemoveButton = (user: APIUser, _team: APITeam) => {
     if (user.isAdmin) return null;
     return (
-      <Tooltip title={`Remove from ${team.name}`}>
-        <LinkButton size="small" onClick={() => removeUser(user)} icon={<MinusCircleOutlined />} />
+      <Tooltip title={`Remove ${user.firstName} from ${team.name}`}>
+        <Button
+          variant="text"
+          color="danger"
+          size="small"
+          onClick={() => removeUser(user)}
+          icon={<MinusCircleOutlined />}
+        />
       </Tooltip>
     );
   };
 
-  const usersNotInTeam = users.filter((user) => user.isActive && !filterTeamMembersOf(team, user));
+  const usersNotInTeam = users.filter((user) => user.isActive && !isUserInTeam(user, team));
 
   const addUserControl = isAddingUser ? (
     <Select
@@ -143,15 +138,9 @@ export function TeamMembersRow({ team, users }: { team: APITeam; users: APIUser[
   );
 
   return (
-    <Spin spinning={isUpdating}>
-      <div style={{ marginLeft: 32 }}>
-        <RenderUsersForTeam
-          team={team}
-          allUsers={users}
-          renderAdditionalContent={renderRemoveButton}
-        />
-        <div style={{ marginTop: 8 }}>{addUserControl}</div>
-      </div>
-    </Spin>
+    <div style={{ marginLeft: 32 }}>
+      <TeamMemberList team={team} allUsers={users} renderAdditionalContent={renderRemoveButton} />
+      <div style={{ marginTop: 8 }}>{addUserControl}</div>
+    </div>
   );
 }

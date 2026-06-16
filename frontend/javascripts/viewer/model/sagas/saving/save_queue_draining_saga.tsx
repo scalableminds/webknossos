@@ -88,13 +88,14 @@ export function* pushSaveQueueAsync(): Saga<never> {
     const operationContext: OperationContext | null =
       (forcePush as SaveNowAction | undefined)?.operationContext ?? null;
 
-    function* runSaveRetryLoop() {
+    function* runSaveRetryLoop(ctx: OperationContext) {
       let shouldRetryOnConflict = true;
       let retryCount = 0;
       while (shouldRetryOnConflict) {
         shouldRetryOnConflict = (yield* call(
           synchronizeAnnotationWithBackend,
           enforceEmptySaveQueue,
+          ctx,
         )).hadConflict;
         ++retryCount;
         if (retryCount > MAX_ON_CONFLICT_RETRIES) {
@@ -115,12 +116,13 @@ export function* pushSaveQueueAsync(): Saga<never> {
       { id: "save", description: "Saving annotation" },
       operationContext,
     );
-    yield* saveCtx.execute(runSaveRetryLoop);
+    yield* saveCtx.execute(() => runSaveRetryLoop(saveCtx));
   }
 }
 
 export function* synchronizeAnnotationWithBackend(
   enforceEmptySaveQueue: boolean,
+  operationContext?: OperationContext,
 ): Saga<{ hadConflict: boolean }> {
   let unsubscribeFromAnnotationMutexSaga = null;
   const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
@@ -134,7 +136,7 @@ export function* synchronizeAnnotationWithBackend(
     // subscribeToAnnotationMutex, because otherwise there would be a
     // race condition where the frontend thinks that it knows about the newest
     // version when in fact somebody else saved a newer version in the meantime.
-    yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
+    yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch, operationContext);
   }
   // Send (parts of) the save queue to the server.
   // There are three main cases:

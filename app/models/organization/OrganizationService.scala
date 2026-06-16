@@ -189,12 +189,6 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
       _ <- organizationDAO.acceptTermsOfService(organizationId, version, Instant.now)
     } yield ()
 
-  def assertIsSuperUserOrOrganizationHasAiPlan(user: User)(implicit ctx: DBAccessContext): Fox[Unit] =
-    for {
-      organization <- organizationDAO.findOne(user._organization)
-      _ <- assertIsSuperUserOrOrganizationHasAiPlan(organization, user)
-    } yield ()
-
   def assertIsSuperUserOrOrganizationHasAiPlan(organization: Organization, user: User)(
       implicit ctx: DBAccessContext): Fox[Unit] =
     for {

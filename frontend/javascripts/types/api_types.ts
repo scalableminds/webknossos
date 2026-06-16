@@ -225,6 +225,18 @@ type MutableAPIDatasetBase = MutableAPIDataSourceId & {
   isEditable: boolean;
   isPublic: boolean;
   directoryName: string;
+  isVirtual: boolean;
+  creationType?:
+    | "Upload"
+    | "DiskScan"
+    | "UploadToPaths"
+    | "ExploreAndAdd"
+    | "Compose"
+    | "DuplicateToOrga"
+    | null;
+  rootPath?: string | null;
+  rootRealPath?: string | null;
+  mirrorPath?: string | null;
   logoUrl: string | null | undefined;
   lastUsedByUser: number;
   sortingKey: number;
@@ -1368,4 +1380,14 @@ export type RenderAnimationOptions = {
 
 export type ServerErrorMessage = {
   error: string;
+};
+
+export type LayerAttachmentType = "mesh" | "agglomerate" | "segmentIndex" | "connectome" | "cumsum";
+
+export type APIStorageDetailEntry = {
+  layerName: string;
+  name: string;
+  attachmentType: LayerAttachmentType | null;
+  usedStorageBytes: number;
+  lastUpdated: string;
 };

@@ -140,9 +140,19 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         organizationRootFolder._id
       )
       organizationTeam = Team(ObjectId.generate, organization._id, "Default", isOrganizationTeam = true)
+      // Seed a small, self-explanatory folder/team structure to illustrate the private-vs-shared access model.
+      // Note: allowed teams are additive down the folder path, so the root must stay team-less to keep the
+      // private folder private; teams are only assigned to leaf folders.
+      sharedTeam = Team(ObjectId.generate, organization._id, folderService.defaultSharedTeamName)
+      privateFolder = Folder(ObjectId.generate, folderService.defaultPrivateFolderName, JsArray.empty)
+      sharedFolder = Folder(ObjectId.generate, folderService.defaultSharedFolderName, JsArray.empty)
       _ <- folderDAO.insertAsRoot(organizationRootFolder) ?~> Msg.Organization.folderCreateFailed
       _ <- organizationDAO.insertOne(organization)
       _ <- teamDAO.insertOne(organizationTeam)
+      _ <- teamDAO.insertOne(sharedTeam)
+      _ <- folderDAO.insertAsChild(organizationRootFolder._id, privateFolder)(GlobalAccessContext) ?~> Msg.Organization.folderCreateFailed
+      _ <- folderDAO.insertAsChild(organizationRootFolder._id, sharedFolder)(GlobalAccessContext) ?~> Msg.Organization.folderCreateFailed
+      _ <- teamDAO.updateAllowedTeamsForFolder(sharedFolder._id, List(sharedTeam._id))
     } yield organization
 
   def createOrganizationDirectory(organizationId: String): Fox[Unit] = {

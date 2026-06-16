@@ -7,6 +7,12 @@ import java.net.URI
 
 object S3UriUtils {
 
+  def hostBucketFromUPath(upath: UPath): Box[String] = for {
+    uri <- upath.toRemoteUri
+    _ <- Box.fromBool(uri.getScheme == PathSchemes.schemeS3)
+    bucket <- Box(hostBucketFromUri(uri))
+  } yield bucket
+
   def hostBucketFromUri(uri: URI): Option[String] = {
     val host = uri.getHost
     if (host == null) {
@@ -35,6 +41,12 @@ object S3UriUtils {
   private def isShortStyle(uri: URI): Boolean =
     !uri.getHost.contains(".")
 
+  def objectKeyFromUPath(upath: UPath): Box[String] = for {
+    uri <- upath.toRemoteUri
+    _ <- Box.fromBool(uri.getScheme == PathSchemes.schemeS3)
+    objectKey <- objectKeyFromUri(uri)
+  } yield objectKey
+
   def objectKeyFromUri(uri: URI): Box[String] =
     if (isVirtualHostedStyle(uri)) {
       Full(uri.getPath)
@@ -45,10 +57,20 @@ object S3UriUtils {
     } else Failure(s"Not a valid s3 uri: $uri")
 
   def objectKeyFromVaultPath(vaultPath: VaultPath): Box[String] =
+    objectKeyFromUPath(vaultPath.toUPath)
+
+  def endpointFromUPath(s3UploadBaseDir: UPath): Box[URI] =
     for {
-      uri <- vaultPath.toRemoteUri
-      objectKey <- objectKeyFromUri(uri)
-    } yield objectKey
+      uri <- s3UploadBaseDir.toRemoteUri
+    } yield new URI(
+      "https",
+      null,
+      uri.getHost,
+      -1,
+      null,
+      null,
+      null
+    )
 
   def isNonAmazonHost(uri: URI): Boolean =
     (isPathStyle(uri) && !uri.getHost.endsWith(".amazonaws.com")) || uri.getHost == "localhost"

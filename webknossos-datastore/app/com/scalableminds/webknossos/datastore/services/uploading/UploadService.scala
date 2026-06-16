@@ -23,7 +23,7 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.NgffMetadata.FILE
 import com.scalableminds.webknossos.datastore.datareaders.zarr.ZarrHeader.FILENAME_DOT_ZARRAY
 import com.scalableminds.webknossos.datastore.datareaders.zarr3.Zarr3ArrayHeader.FILENAME_ZARR_JSON
 import com.scalableminds.webknossos.datastore.explore.ExploreLocalLayerService
-import com.scalableminds.webknossos.datastore.helpers.{DirectoryConstants, LocalDatasetDeletionService, UPath}
+import com.scalableminds.webknossos.datastore.helpers.{DirectoryConstants, LocalDatasetDeletionService, S3UriUtils, UPath}
 import com.scalableminds.webknossos.datastore.models.LengthUnit.LengthUnit
 import com.scalableminds.webknossos.datastore.models.{UnfinishedUpload, VoxelSize}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType.LayerAttachmentType
@@ -35,11 +35,9 @@ import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.commons.io.FileUtils
 import play.api.libs.json.{Json, OFormat}
-import software.amazon.awssdk.transfer.s3.S3TransferManager
 import software.amazon.awssdk.transfer.s3.model.UploadDirectoryRequest
 
 import java.io.{File, RandomAccessFile}
-import java.net.URI
 import java.nio.file.{Files, Path}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.jdk.FutureConverters.*
@@ -538,16 +536,12 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     if (managedS3Service.isS3UploadEnabled(dataSourceId.organizationId)) {
       for {
         beforeS3Upload = Instant.now
-        s3UploadBucket <- managedS3Service.s3UploadBucket(dataSourceId.organizationId).toFox
-        _ = logger.info(s"finishUpload for $domain ($datasetId): Copying data to s3 bucket $s3UploadBucket...")
-        s3OrgaObjectKeyPrefix <- managedS3Service.s3UploadOrgaObjectKeyPrefix(dataSourceId.organizationId).toFox
-        s3ObjectKey = s"$s3OrgaObjectKeyPrefix/${dataSourceId.directoryName}/$layerName/$dirName"
-        transferManager <- managedS3Service.s3UploadTransferManager(dataSourceId.organizationId) ?~> "S3 upload is not properly configured, cannot get S3 client"
-        _ <- uploadDirectoryToS3(transferManager, unpackedDir, s3UploadBucket, s3ObjectKey)
+        s3UploadBaseDir <- managedS3Service.s3UploadBaseDir(dataSourceId.organizationId).toFox
+        s3TargetPath = s3UploadBaseDir / dataSourceId.directoryName / layerName / dirName
+        _ = logger.info(s"finishUpload for $domain ($datasetId): Copying data to $s3TargetPath...")
+        _ <- uploadDirectoryToS3(unpackedDir, s3TargetPath)
         _ = Instant.logSince(beforeS3Upload, s"Forwarding of uploaded mag for $datasetId ($dataSourceId) to S3", logger)
-        endPointHost = managedS3Service.s3UploadEndpointHost(dataSourceId.organizationId)
-        finalUploadedS3Path <- UPath.fromString(s"s3://$endPointHost/$s3UploadBucket/$s3ObjectKey").toFox
-      } yield finalUploadedS3Path
+      } yield s3TargetPath
     } else {
       for {
         orgaDir <- baseDirService.oneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload = true).toFox
@@ -579,18 +573,14 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
         newBasePath <- if (managedS3Service.isS3UploadEnabled(dataSourceId.organizationId)) {
           for {
             beforeS3Upload = Instant.now
-            s3UploadBucket <- managedS3Service.s3UploadBucket(dataSourceId.organizationId).toFox
-            _ = logger.info(s"finishUpload for $datasetId: Copying data to s3 bucket $s3UploadBucket...")
-            s3OrgaObjectKeyPrefix <- managedS3Service.s3UploadOrgaObjectKeyPrefix(dataSourceId.organizationId).toFox
-            s3ObjectKey = s"$s3OrgaObjectKeyPrefix/${dataSourceId.directoryName}/"
-            transferManager <- managedS3Service.s3UploadTransferManager(dataSourceId.organizationId) ?~> "S3 upload is not properly configured, cannot get S3 client"
-            _ <- uploadDirectoryToS3(transferManager, unpackedDir, s3UploadBucket, s3ObjectKey)
+            s3UploadBaseDir <- managedS3Service.s3UploadBaseDir(dataSourceId.organizationId).toFox
+            s3TargetPath = s3UploadBaseDir / dataSourceId.directoryName
+            _ = logger.info(s"finishUpload for $datasetId: Copying data to $s3TargetPath...")
+            _ <- uploadDirectoryToS3(unpackedDir, s3TargetPath)
             _ = Instant.logSince(beforeS3Upload,
                                  s"Forwarding of uploaded dataset $datasetId ($dataSourceId) to S3",
                                  logger)
-            endPointHost = new URI(dataStoreConfig.Datastore.S3Upload.credentialName).getHost
-            newBasePath <- UPath.fromString(s"s3://$endPointHost/$s3UploadBucket/$s3ObjectKey").toFox
-          } yield newBasePath
+          } yield s3TargetPath
         } else {
           for {
             orgaDir <- baseDirService.oneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload = true).toFox
@@ -674,19 +664,19 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     } yield path
 
   private def uploadDirectoryToS3(
-      transferManager: S3TransferManager,
       dataDir: Path,
-      bucketName: String,
-      prefix: String
+      targetPath: UPath
   ): Fox[Unit] =
     for {
+      bucketName <- S3UriUtils.hostBucketFromUPath(targetPath).toFox
+      objectKey <- S3UriUtils.objectKeyFromUPath(targetPath).toFox
+      transferManager <- managedS3Service.transferManager(targetPath) ?~> "S3 upload is not properly configured, cannot get S3 client"
       directoryUpload = transferManager.uploadDirectory(
-        UploadDirectoryRequest.builder().bucket(bucketName).s3Prefix(prefix).source(dataDir).build()
+        UploadDirectoryRequest.builder().bucket(bucketName).s3Prefix(objectKey).source(dataDir).build()
       )
       completedUpload <- Fox.fromFuture(directoryUpload.completionFuture().asScala)
       failedTransfers = completedUpload.failedTransfers()
-      _ <- Fox.fromBool(failedTransfers.isEmpty) ?~>
-        s"Some files failed to upload to S3: $failedTransfers"
+      _ <- Fox.fromBool(failedTransfers.isEmpty) ?~> s"Some files failed to upload to S3: $failedTransfers"
     } yield ()
 
   private def findNonReferencedFiles(unpackedDir: Path, dataSource: UsableDataSource): Fox[List[Path]] = {

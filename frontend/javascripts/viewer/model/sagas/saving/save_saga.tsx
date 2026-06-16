@@ -67,7 +67,7 @@ import { select, take } from "viewer/model/sagas/effect_generators";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import { Model, Store } from "viewer/singletons";
 import type { NumberLike, StoreAnnotation, WebknossosState } from "viewer/store";
-import { createOperationContext } from "../operation_context_saga";
+import { getOrCreateOperationContext } from "../operation_context_saga";
 import { spawnUntilCanceled, takeEveryWithBatchActionSupport, waitFor } from "../saga_helpers";
 import {
   refreshAffectedMeshes,
@@ -557,10 +557,11 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
       // todop: adapt comment.
       // Acquire the operation context to block user actions from interfering with rebasing.
       // The proofreading context allows save to run alongside it via allowAdditionalOperation.
-      const ctx = yield* createOperationContext({
-        id: "save",
-        description: REBASING_BUSY_BLOCK_REASON,
-      });
+      const ctx = yield* getOrCreateOperationContext(
+        { id: "save", description: REBASING_BUSY_BLOCK_REASON },
+        (ensureHasNewestVersion as EnsureHasNewestVersionAction | undefined)?.operationContext ??
+          null,
+      );
       let result!: RebasingSuccessInfo;
       yield* ctx.execute(function* () {
         result = yield* call(performRebasingIfNecessary);

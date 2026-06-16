@@ -224,17 +224,22 @@ export const dispatchEnsureTracingsWereDiffedToSaveQueueAction = async (
   }
 };
 
-export const ensureHasNewestVersionAction = (callback: () => void) =>
+export const ensureHasNewestVersionAction = (
+  callback: () => void,
+  operationContext?: OperationContext,
+) =>
   ({
     type: "ENSURE_HAS_NEWEST_VERSION",
     callback,
+    operationContext,
   }) as const;
 
 export const dispatchEnsureHasNewestVersionAsync = async (
   dispatch: Dispatch<any>,
+  operationContext?: OperationContext,
 ): Promise<void> => {
   const readyDeferred = new Deferred();
-  const action = ensureHasNewestVersionAction(() => readyDeferred.resolve(null));
+  const action = ensureHasNewestVersionAction(() => readyDeferred.resolve(null), operationContext);
   dispatch(action);
   await readyDeferred.promise();
 };

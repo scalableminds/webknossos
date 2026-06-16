@@ -123,7 +123,7 @@ import {
 } from "../../../accessors/flycam_accessor";
 import type { Action } from "../../../actions/actions";
 import type { Tree } from "../../../types/tree_types";
-import { borrowedContext, type OperationContext } from "../../operation_context_saga";
+import type { OperationContext } from "../../operation_context_saga";
 import { ensureWkInitialized } from "../../ready_sagas";
 import {
   spawnUntilCanceled,
@@ -280,17 +280,7 @@ function* syncWithBackend(ctx?: OperationContext): Saga<void> {
 }
 
 function* pollNewestBackendVersion(ctx?: OperationContext): Saga<void> {
-  if (ctx != null) {
-    // Pre-authorize "save" as a child operation so that watchForNewerAnnotationVersion
-    // can create its own "save" context via createOperationContext without being
-    // blocked by the proofreading context.
-    const saveCtx = borrowedContext(ctx, "save");
-    yield* saveCtx.execute(function* () {
-      yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
-    });
-  } else {
-    yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
-  }
+  yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch, ctx);
 }
 
 function* subscribeToAnnotationMutexInLiveCollab(proofreadingSagaId: string) {

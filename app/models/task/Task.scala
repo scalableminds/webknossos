@@ -211,7 +211,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def findAllByProjectAndTaskTypeAndIdsAndUser(
       projectIdOpt: Option[ObjectId],
       taskTypeIdOpt: Option[ObjectId],
-      taskIdsOpt: Option[List[ObjectId]],
+      taskIdsOpt: Option[Seq[ObjectId]],
       userIdOpt: Option[ObjectId],
       randomizeOpt: Option[Boolean],
       pageNumber: Int = 0

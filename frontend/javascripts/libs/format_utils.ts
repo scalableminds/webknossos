@@ -362,12 +362,14 @@ export function formatCountToDataAmountUnit(
   decimalPrecision: number = 1,
 ): string {
   const unitDimension = { unit: ByteUnit.B, dimension: 1 };
+  // Byte values are always integers, so don't show decimals for them.
+  const effectiveDecimalPrecision = count < 1000 ? 0 : decimalPrecision;
   return formatNumberInUnit(
     count,
     unitDimension,
     byteFactorToUnit,
     preferShorterDecimals,
-    decimalPrecision,
+    effectiveDecimalPrecision,
   );
 }
 

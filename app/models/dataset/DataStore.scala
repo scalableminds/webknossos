@@ -29,35 +29,7 @@ case class DataStore(
 )
 
 object DataStore {
-  implicit val dataStoreFormat: Format[DataStore] = Json.format[DataStore]
-
-  def fromForm(name: String,
-               url: String,
-               publicUrl: String,
-               key: String,
-               isScratch: Option[Boolean],
-               allowsUpload: Option[Boolean],
-               allowsUploadToPaths: Option[Boolean]): DataStore =
-    DataStore(
-      name,
-      url,
-      publicUrl,
-      key,
-      isScratch.getOrElse(false),
-      isDeleted = false,
-      allowsUpload.getOrElse(true),
-      allowsUploadToPaths.getOrElse(true),
-      reportUsedStorageEnabled = false,
-      None
-    )
-
-  def fromUpdateForm(name: String,
-                     url: String,
-                     publicUrl: String,
-                     isScratch: Option[Boolean],
-                     allowsUpload: Option[Boolean],
-                     allowsUploadToPaths: Option[Boolean]): DataStore =
-    fromForm(name, url, publicUrl, "", isScratch, allowsUpload, allowsUploadToPaths)
+  implicit val jsonFormat: Format[DataStore] = Json.format[DataStore]
 }
 
 class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO, jobService: JobService, conf: WkConf)(

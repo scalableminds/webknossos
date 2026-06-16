@@ -15,6 +15,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType
 import models.organization.AiPlan.AiPlan
 import slick.dbio.DBIO
+import slick.jdbc.GetResult
 import slick.jdbc.PostgresProfile.api._
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
@@ -296,6 +297,30 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
                      lastTermsOfServiceAcceptanceVersion = $version
                    WHERE _id = $organizationId""".asUpdate)
     } yield ()
+
+  def getUsedStorageMagDetailsForDataset(datasetId: ObjectId): Fox[List[(String, String, Long, Instant)]] = {
+    implicit val gr: GetResult[(String, String, Long, Instant)] =
+      GetResult(r => (r.nextString(), r.nextString(), r.nextLong(), GetInstant(r)))
+    for {
+      rows <- run(q"""SELECT layerName,
+                   CONCAT((mag).x::INT, '-', (mag).y::INT, '-', (mag).z::INT),
+                   usedStorageBytes,
+                   lastUpdated
+            FROM webknossos.organization_usedStorage_mags
+            WHERE _dataset = $datasetId""".as[(String, String, Long, Instant)])
+    } yield rows.toList
+  }
+
+  def getUsedStorageAttachmentDetailsForDataset(
+      datasetId: ObjectId): Fox[List[(String, String, String, Long, Instant)]] = {
+    implicit val gr: GetResult[(String, String, String, Long, Instant)] =
+      GetResult(r => (r.nextString(), r.nextString(), r.nextString(), r.nextLong(), GetInstant(r)))
+    for {
+      rows <- run(q"""SELECT layerName, name, type, usedStorageBytes, lastUpdated
+            FROM webknossos.organization_usedStorage_attachments
+            WHERE _dataset = $datasetId""".as[(String, String, String, Long, Instant)])
+    } yield rows.toList
+  }
 
   // While organizationId is not a valid ObjectId, we wrap it here to pass it to the generic assertUpdateAccess.
   // There, no properties of the ObjectId are used other than its string content.

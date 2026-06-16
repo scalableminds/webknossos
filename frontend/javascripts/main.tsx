@@ -1,6 +1,7 @@
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
+import "admin/datastore_health_check";
 import { getActiveUser } from "admin/rest_api";
 import { message } from "antd";
 import ErrorBoundary from "components/error_boundary";
@@ -33,7 +34,8 @@ import DisableGenericDnd from "components/disable_generic_dnd";
 import { CheckTermsOfServices } from "components/terms_of_services_check";
 import { RouterProvider } from "react-router-dom";
 import router from "router/router";
-import GlobalThemeProvider, { getThemeFromUser } from "theme";
+import { getThemeFromUser } from "theme";
+import GlobalThemeProvider from "theme_provider";
 import HelpButton from "viewer/view/help/help_button";
 
 // Suppress warning emitted by Olvy because it tries to eagerly initialize

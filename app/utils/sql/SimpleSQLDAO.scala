@@ -23,13 +23,16 @@ class SimpleSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
 
   implicit protected def sqlInterpolationWrapper(s: StringContext): SqlInterpolator = sqlInterpolation(s)
 
+  // Concurrent access for Serializable transactions leads to this error, can be solved by retry.
   protected lazy val transactionSerializationError = "could not serialize access"
+  // This error tends to occur only after schema changes (type recreation), e.g. during tests. Can be solved by retry.
+  private lazy val cacheLookupFailedForTypeError = "cache lookup failed for type"
 
   protected def run[R](query: DBIOAction[R, NoStream, Nothing],
                        retryCount: Int = 0,
                        retryIfErrorContains: List[String] = List()): Fox[R] = {
     val stackMarker = new Throwable()
-    val foxFuture = sqlClient.db.run(query.asTry).map { result: Try[R] =>
+    val foxFuture = sqlClient.db.run(query.asTry).map { (result: Try[R]) =>
       result match {
         case Success(res) =>
           Fox.successful(res)
@@ -76,7 +79,7 @@ class SimpleSQLDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
       _ <- run(
         composedQuery.transactionally.withTransactionIsolation(Serializable),
         retryCount = 50,
-        retryIfErrorContains = List(transactionSerializationError)
+        retryIfErrorContains = List(transactionSerializationError, cacheLookupFailedForTypeError)
       )
     } yield ()
   }

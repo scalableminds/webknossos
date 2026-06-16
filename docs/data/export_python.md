@@ -41,4 +41,4 @@ with wk.webknossos_context(token="<your_api_token>", url="https://webknossos.org
 
 ## Authentication
 
-The WEBKNOSSOS requires you to authenticate yourself via an API Token to access your data. You can find your API Token in your [user profile settings](../users/password.md#authentication-token).
+WEBKNOSSOS requires you to authenticate yourself via an API Token to access your data. You can find your API Token in your [user profile settings](../users/password.md#authentication-token).

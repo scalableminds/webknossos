@@ -23,6 +23,71 @@ export function mayEditAnnotationProperties(state: WebknossosState) {
   );
 }
 
+export function mayEditAnnotation(state: WebknossosState) {
+  // The following properties can/should be *ignored*:
+  // - isLockedByOwner
+  //   - because isUpdatingCurrentlyAllowed is initialized while respecting
+  //     annotation.restrictions.allowUpdate (which in turn respects isLockedByOwner).
+  // - showVersionRestore
+  //   - because isUpdatingCurrentlyAllowed will be set to false while the version view is open
+  // - annotation.restrictions.allowSave
+  //   - because in sandbox mode, one can edit things but not save them
+  //
+  // isUpdatingCurrentlyAllowed itself is initialized using the backend-provided
+  // allowUpdate value (so, it contains ownership/permission checks).
+  // The frontend updates isUpdatingCurrentlyAllowed when collaboration mode, mutex ownership
+  // and other factors (mainly, opened version restore view) change.
+  return state.annotation.isUpdatingCurrentlyAllowed;
+}
+
+export function mayAddToSaveQueue(state: WebknossosState): boolean {
+  /*
+   * This function is used to answer whether we may diff the current
+   * annotation state with the previous one to fill the save queue
+   * with update actions.
+   */
+  return (
+    // allowSave is initialized with allowUpdate and may be overriden when
+    // saving is disabled (via DISABLE_SAVING action).
+    Boolean(state.annotation.restrictions.allowSave) &&
+    !state.uiInformation.showVersionRestore &&
+    // The mayEditAnnotation accessor should prevent "proper" modifications to the annotation.
+    // However, view-related changes (e.g., camera movement) are still allowed and are
+    // stored in the annotation. Therefore, we still need to check isUpdatingCurrentlyAllowed
+    // to avoid that those changes are tried to be saved.
+    state.annotation.isUpdatingCurrentlyAllowed &&
+    // Ignore changes while rebasing or forwarding new backend actions as during this time actions
+    // are simply replayed on top of the server's state.
+    // Therefore, these actions were already added to the save queue or originate from the server itself
+    // and should not be added again.
+    !state.save.rebaseRelevantServerAnnotationState.isRebasingOrForwarding
+  );
+}
+
+export function maySendSaveRequest(state: WebknossosState) {
+  /*
+   * This function is used to answer whether we may send the current content of the
+   * save queue to the server.
+   * The implementation is currently identical to mayAddToSaveQueue, but the reasoning
+   * is a bit different and also the implementations might diverge in the future.
+   */
+
+  return Boolean(
+    state.annotation.restrictions.allowSave &&
+      (!state.uiInformation.showVersionRestore || state.uiInformation.isRestoringVersion) &&
+      // Ignore changes while rebasing or forwarding as this manipulates the save queue
+      // (and for sending save requests, we also manipulate the save queue).
+      !state.save.rebaseRelevantServerAnnotationState.isRebasingOrForwarding,
+  );
+}
+
+export function mayEditAnnotationViewConfig(state: WebknossosState) {
+  // All users that are allowed to update the annotation have their own view
+  // config and can thus update it. This is independent of the collaboration
+  // mode and annotation mutexes.
+  return state.annotation.restrictions.allowUpdate;
+}
+
 export function isAnnotationOwner(state: WebknossosState) {
   const activeUser = state.activeUser;
   const owner = state.annotation.owner;

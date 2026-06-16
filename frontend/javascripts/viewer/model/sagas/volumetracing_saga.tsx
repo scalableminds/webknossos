@@ -9,6 +9,7 @@ import { ContourModeEnum, OrthoViews, OverwriteModeEnum } from "viewer/constants
 import { getSegmentIdInfoForPosition } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "viewer/geometries/helper_geometries";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import {
   getSupportedValueRangeOfLayer,
   isInSupportedValueRangeForLayer,
@@ -143,7 +144,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
 
   while (true) {
     const startEditingAction = yield* take("START_EDITING");
-    const allowUpdate = yield* select((state) => state.annotation.isUpdatingCurrentlyAllowed);
+    const allowUpdate = yield* select(mayEditAnnotation);
     if (!allowUpdate) {
       continue;
     }

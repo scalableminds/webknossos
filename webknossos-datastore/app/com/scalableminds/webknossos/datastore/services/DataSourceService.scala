@@ -56,10 +56,10 @@ class DataSourceService @Inject()(
       _ = if (inboxCheckVerboseCounter >= 10) inboxCheckVerboseCounter = 0
     } yield ()
 
-  def assertDataDirWritable(organizationId: String): Fox[Unit] = {
-    val orgaPath = dataBaseDir.resolve(organizationId)
+  def ensureDataDirWritable(dataSourceId: DataSourceId): Fox[Unit] = {
+    val orgaPath = dataBaseDir.resolve(dataSourceId.organizationId)
     if (orgaPath.toFile.exists()) {
-      Fox.fromBool(Files.isWritable(dataBaseDir.resolve(organizationId))) ?~> "Datastore cannot write to organization data directory."
+      Fox.fromBool(Files.isWritable(orgaPath)) ?~> "Datastore cannot write to organization data directory."
     } else {
       tryo {
         Files.createDirectory(orgaPath)
@@ -78,10 +78,11 @@ class DataSourceService @Inject()(
       _ <- PathUtils.listDirectories(dataBaseDir, silent = false, filters = selectedOrgaFilter) match {
         case Full(organizationDirs) =>
           if (verbose && organizationId.isEmpty) logEmptyDirs(organizationDirs)
-          val foundDataSources = organizationDirs.flatMap(scanOrganizationDirForDataSources)
+          val foundDataSourcesWithPathInfo = organizationDirs.flatMap(scanOrganizationDirForDataSources)
+          val foundDataSources = foundDataSourcesWithPathInfo.map(_.dataSource)
           val (realPathInfos, realPathScanFailures) = scanRealPaths(foundDataSources)
           for {
-            _ <- remoteWebknossosClient.reportDataSources(foundDataSources, organizationId)
+            _ <- remoteWebknossosClient.reportDataSources(foundDataSourcesWithPathInfo, organizationId)
             _ <- remoteWebknossosClient.reportRealPaths(realPathInfos)
             _ = logFoundDatasources(before,
                                     verbose,
@@ -233,13 +234,17 @@ class DataSourceService @Inject()(
       .exploreMappings(dataBaseDir.resolve(organizationId).resolve(datasetDirectoryName).resolve(dataLayerName))
       .getOrElse(Set())
 
-  private def scanOrganizationDirForDataSources(path: Path): List[DataSource] = {
+  private def scanOrganizationDirForDataSources(path: Path): List[DataSourceWithPathInfo] = {
     val organization = path.getFileName.toString
 
     PathUtils.listDirectories(path, silent = true) match {
       case Full(dataSourceDirs) =>
-        val dataSources = dataSourceDirs.map(path => dataSourceFromDir(path, organization, resolvePaths = true))
-        dataSources
+        dataSourceDirs.map { dirPath =>
+          val realPath = tryo(dirPath.toRealPath()).getOrElse(dirPath)
+          DataSourceWithPathInfo(dataSourceFromDir(dirPath, organization, resolvePaths = true),
+                                 Some(dirPath.toString),
+                                 Some(realPath.toString))
+        }
       case _ =>
         logger.error(s"Failed to list directories for organization $organization at path $path")
         Nil

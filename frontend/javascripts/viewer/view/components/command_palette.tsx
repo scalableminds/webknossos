@@ -7,6 +7,7 @@ import {
 } from "admin/rest_api";
 import type { ItemType } from "antd/lib/menu/interface";
 import DOMPurify from "dompurify";
+import { copyToClipboard } from "libs/clipboard";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
 import { getPhraseFromCamelCaseString, isUserAdminOrManager } from "libs/utils";
@@ -22,6 +23,7 @@ import { useNavigate } from "react-router-dom";
 import { getSystemColorTheme, getThemeFromUser } from "theme";
 import { WkDevFlags } from "viewer/api/wk_dev";
 import { ViewModeValues } from "viewer/constants";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { getViewDatasetURL } from "viewer/model/accessors/dataset_accessor";
 import { AnnotationTool, Toolkits } from "viewer/model/accessors/tool_accessor";
 import { setViewModeAction, updateUserSettingAction } from "viewer/model/actions/settings_actions";
@@ -106,7 +108,7 @@ export const CommandPalette = () => {
   const isInAnnotationView = useWkSelector((state) => state.uiInformation.isInAnnotationView);
 
   const restrictions = useWkSelector((state) => state.annotation.restrictions);
-  const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
+  const allowUpdate = useWkSelector(mayEditAnnotation);
   const task = useWkSelector((state) => state.task);
   const annotationType = useWkSelector((state) => state.annotation.annotationType);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
@@ -266,8 +268,7 @@ export const CommandPalette = () => {
       {
         name: "Copy Organization ID",
         command: async () => {
-          await navigator.clipboard.writeText(activeUser.organization);
-          Toast.success("Organization ID copied to clipboard");
+          await copyToClipboard(activeUser.organization, "organization ID");
         },
         color: commandEntryColor,
       },
@@ -276,8 +277,7 @@ export const CommandPalette = () => {
         command: async () => {
           try {
             const token = await getAuthToken();
-            await navigator.clipboard.writeText(token);
-            Toast.success("Auth token copied to clipboard");
+            await copyToClipboard(token, "auth token");
           } catch (error) {
             Toast.error("Failed to fetch auth token. Please refresh the page to try again.");
             console.error("Failed to fetch auth token:", error);

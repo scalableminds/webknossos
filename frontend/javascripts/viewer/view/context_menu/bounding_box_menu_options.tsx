@@ -6,6 +6,7 @@ import type React from "react";
 import type { MouseEvent } from "react";
 import { useDispatch } from "react-redux";
 import type { Vector3 } from "viewer/constants";
+import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
 import { isRotated } from "viewer/model/accessors/flycam_accessor";
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import { maybeGetSomeTracing } from "viewer/model/accessors/tracing_accessor";
@@ -23,7 +24,7 @@ export function useBoundingBoxMenuOptions(contextInfo: ContextMenuInfo): ItemTyp
     const someTracing = maybeGetSomeTracing(state.annotation);
     return someTracing != null ? someTracing.userBoundingBoxes : [];
   });
-  const allowUpdate = useWkSelector((state) => state.annotation.isUpdatingCurrentlyAllowed);
+  const allowUpdate = useWkSelector(mayEditAnnotation);
   const isFlycamRotated = useWkSelector((state) => isRotated(state.flycam));
 
   const dispatch = useDispatch();

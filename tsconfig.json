@@ -5,14 +5,12 @@
     "noImplicitAny": true,
     "removeComments": true,
     "sourceMap": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "outDir": "build",
     "jsx": "react-jsx",
     "strict": true,
     "target": "esnext",
     "skipLibCheck": true, //reconsider this later
-    "lib": ["dom", "esnext"],
-    "allowSyntheticDefaultImports": true,
     "paths": {
       "@images/*": ["./frontend/assets/images/*"],
       "*": ["./frontend/javascripts/*"],

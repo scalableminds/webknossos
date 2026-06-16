@@ -55,7 +55,7 @@ export function HelpModal(props: HelpModalProps) {
       open={props.isModalOpen}
       mask={props.centeredLayout}
       onCancel={props.onCancel}
-      width={isExpanded ? 640 : 420}
+      width={isExpanded ? 720 : 540}
       footer={null}
       closable={false}
     >

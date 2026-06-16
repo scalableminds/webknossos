@@ -16,6 +16,8 @@ import models.organization.OrganizationDAO
 import models.team._
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.util.tools.{Box, Full}
+import models.project.ProjectDAO
+import models.task.TaskDAO
 import org.apache.pekko.actor.ActorSystem
 import play.api.libs.json._
 import play.silhouette.api.LoginInfo
@@ -37,6 +39,8 @@ class UserService @Inject()(conf: WkConf,
                             userDatasetLayerConfigurationDAO: UserDatasetLayerConfigurationDAO,
                             organizationDAO: OrganizationDAO,
                             teamDAO: TeamDAO,
+                            taskDAO: TaskDAO,
+                            projectDAO: ProjectDAO,
                             teamMembershipService: TeamMembershipService,
                             datasetDAO: DatasetDAO,
                             tokenDAO: TokenDAO,
@@ -158,19 +162,14 @@ class UserService @Inject()(conf: WkConf,
     } yield ()
 
   def initialTeamMemberships(organizationId: String, inviteIdOpt: Option[ObjectId]): Fox[Seq[TeamMembership]] =
-    for {
-      organizationTeamId <- organizationDAO.findOrganizationTeamId(organizationId)
-      inviteTeamMemberships <- inviteIdOpt match {
-        case Some(inviteId) => inviteDAO.findTeamMembershipsFor(inviteId) ?~> "failed to get invite team memberships"
-        case None           => Fox.successful(Seq.empty)
-      }
-      // If not already present in the invite, add the organization team.
-      organizationTeamMembership = if (inviteTeamMemberships.exists(_.teamId == organizationTeamId))
-        Seq.empty
-      else
-        Seq(TeamMembership(organizationTeamId, isTeamManager = false))
-      uniqueTeamMemberships = inviteTeamMemberships ++ organizationTeamMembership
-    } yield uniqueTeamMemberships
+    inviteIdOpt match {
+      case Some(inviteId) =>
+        inviteDAO.findTeamMembershipsFor(inviteId) ?~> Msg.User.inviteTeamMembershipsFailed
+      case None =>
+        for {
+          organizationTeamId <- organizationDAO.findOrganizationTeamId(organizationId)
+        } yield Seq(TeamMembership(organizationTeamId, isTeamManager = false))
+    }
 
   def joinOrganization(originalUser: User,
                        organizationId: String,
@@ -212,7 +211,7 @@ class UserService @Inject()(conf: WkConf,
              isDatasetManager: Boolean,
              teamMemberships: List[TeamMembership],
              experiences: Map[String, Int],
-             lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[User] = {
+             lastTaskTypeId: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[User] = {
 
     if (user.isDeactivated && activated) {
       logger.info(s"Activating user ${user._id}. Access context: ${ctx.toStringAnonymous}")
@@ -280,7 +279,7 @@ class UserService @Inject()(conf: WkConf,
                                                                                    datasetConfiguration)
     } yield ()
 
-  def updateLastTaskTypeId(user: User, lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateLastTaskTypeId(user: User, lastTaskTypeId: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] =
     userDAO.updateLastTaskTypeId(user._id, lastTaskTypeId).map { result =>
       removeUserFromCache(user._id)
       result
@@ -321,6 +320,18 @@ class UserService @Inject()(conf: WkConf,
       otherUserTeamIds <- teamIdsFor(otherUser._id)
       teamManagerTeamIds <- teamManagerTeamIdsFor(possibleAdmin._id)
     } yield otherUserTeamIds.intersect(teamManagerTeamIds).nonEmpty || possibleAdmin.isAdminOf(otherUser)
+
+  def isTeamManagerOrAdminOf(user: User, organizationId: String, taskIdOpt: Option[ObjectId]): Fox[Boolean] =
+    taskIdOpt match {
+      case None => Fox.successful(user.isAdminOf(organizationId))
+      case Some(taskId) =>
+        (for {
+          task <- taskDAO.findOne(taskId)(GlobalAccessContext)
+          project <- projectDAO.findOne(task._project)(GlobalAccessContext)
+          teamManagerTeamIds <- teamManagerTeamIdsFor(user._id)
+        } yield
+          (teamManagerTeamIds.contains(project._team) || user.isAdminOf(organizationId))) ?~> Msg.Team.adminNotAllowed
+    }
 
   def isTeamManagerOrAdminOf(user: User, _team: ObjectId): Fox[Boolean] =
     (for {
@@ -401,7 +412,7 @@ class UserService @Inject()(conf: WkConf,
           .filter(valueAndIndex => tryo(valueAndIndex._1.toInt).isDefined)
           .map(valueAndIndex =>
             (parseArrayLiteral(userCompactInfo.experienceDomainsAsArrayLiteral)(valueAndIndex._2),
-             Json.toJsFieldJsValueWrapper(valueAndIndex._1.toInt))): _*)
+             Json.toJsFieldJsValueWrapper(valueAndIndex._1.toInt)))*)
       novelUserExperienceInfos <- JsonHelper.parseAs[JsObject](userCompactInfo.novelUserExperienceInfos).toFox
     } yield {
       Json.obj(

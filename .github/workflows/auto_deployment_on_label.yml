@@ -18,7 +18,7 @@ jobs:
         with:
           step: deactivate-env
           token: ${{ secrets.GITHUB_TOKEN }}
-          env: ${{ github.head_ref }}
+          env: dev
 
   trigger-autodeployment-on-label:
     runs-on: ubuntu-22.04
@@ -51,7 +51,7 @@ jobs:
         with:
           step: start
           token: ${{ secrets.GITHUB_TOKEN }}
-          env: ${{ github.head_ref }}
+          env: dev
       - name: Trigger autodeployment hook
         if: steps.check_build.outputs.skip != 'true'
         run: |
@@ -72,3 +72,4 @@ jobs:
           env: ${{ steps.gh_deployment.outputs.env }}
           deployment_id: ${{ steps.gh_deployment.outputs.deployment_id }}
           env_url: ${{ steps.check_build.outputs.env_url }}
+          override: false

@@ -132,7 +132,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     }
 
   private def signalOverTime(time: FiniteDuration, annotationOpt: Option[Annotation])(
-      implicit ctx: DBAccessContext): Fox[_] =
+      implicit ctx: DBAccessContext): Fox[?] =
     for {
       annotation <- annotationOpt.toFox
       user <- userService.findOneCached(annotation._user)(GlobalAccessContext)

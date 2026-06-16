@@ -212,6 +212,13 @@ function DatasetFolderViewInner(props: Props) {
           folderId={folderIdForEditModal}
         />
       )}
+      {context.createFolderParentId != null && (
+        <FolderModal
+          mode="create"
+          parentFolderId={context.createFolderParentId}
+          onClose={context.closeCreateFolderModal}
+        />
+      )}
       <div
         style={{
           gridColumn: "1 / 2",

@@ -90,7 +90,6 @@ export function* pushSaveQueueAsync(): Saga<never> {
         allActions.find((a) => a.operationContext != null) ?? allActions.at(-1)!;
     }
 
-    ColoredLogger.logYellow("[Save Queue Draining] forcePush=", bestForcePush);
     yield* waitFor(maySendSaveRequest);
 
     const enforceEmptySaveQueue = bestForcePush != null;

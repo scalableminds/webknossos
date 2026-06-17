@@ -80,7 +80,6 @@ type Props = {
   addTagToSearch: (tag: string) => void;
   onSelectDataset: (dataset: APIDatasetCompact | null, multiSelect?: boolean) => void;
   onSelectFolder: (folder: FolderItem | null) => void;
-  setFolderIdForEditModal: (arg0: string | null) => void;
   selectedDatasets: APIDatasetCompact[];
   context: DatasetCollectionContextValue;
 };
@@ -97,7 +96,6 @@ type ContextMenuProps = {
   datasetCollectionContext: DatasetCollectionContextValue;
   contextMenuPosition: [number, number] | null | undefined;
   hideContextMenu: () => void;
-  editFolder: () => void;
   datasets: APIDatasetCompact[];
   folder: FolderItemWithName | null;
   reloadDataset: Props["reloadDataset"];
@@ -111,7 +109,6 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
     contextMenuPosition,
     hideContextMenu,
     folder,
-    editFolder,
     datasetCollectionContext,
   } = propsWithInputRef;
   let menu: MenuProps = { items: [] };
@@ -126,7 +123,7 @@ function ContextMenuInner(propsWithInputRef: ContextMenuProps) {
         reloadDataset,
       });
     } else if (folder != null) {
-      menu = generateSettingsForFolder(folder, datasetCollectionContext, editFolder, true);
+      menu = generateSettingsForFolder(folder, datasetCollectionContext, true);
     }
   }
 
@@ -547,19 +544,9 @@ class DatasetTable extends PureComponent<Props, State> {
     );
   };
 
-  editFolder(folder: FolderItemWithName) {
-    const { setFolderIdForEditModal } = this.props;
-    setFolderIdForEditModal(folder.key);
-  }
-
   getFolderSettingsActions(folder: FolderItemWithName): React.ReactNode {
     const { context } = this.props;
-    const folderTreeContextMenuItems = generateSettingsForFolder(
-      folder,
-      context,
-      () => this.editFolder(folder),
-      true,
-    );
+    const folderTreeContextMenuItems = generateSettingsForFolder(folder, context, true);
     const settings = folderTreeContextMenuItems.items
       .filter((item) => !item.disabled)
       .map((item) => {
@@ -696,9 +683,6 @@ class DatasetTable extends PureComponent<Props, State> {
           reloadDataset={this.props.reloadDataset}
           contextMenuPosition={contextMenuPosition}
           datasetCollectionContext={context}
-          editFolder={
-            folderForContextMenu != null ? () => this.editFolder(folderForContextMenu) : () => {}
-          }
         />
         <Table
           dataSource={sortedDataSourceRenderers}

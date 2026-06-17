@@ -319,6 +319,9 @@ function* loadCoarseMesh(
   segmentId: number,
   position: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
+  // Opacity of the mesh that this (re)load replaces, so the reloaded mesh keeps
+  // the user's chosen opacity. Falls back to DEFAULT_MESH_OPACITY when undefined.
+  opacity?: number,
 ): Saga<void> {
   const autoRenderMeshInProofreading = yield* select(
     (state) => state.userConfiguration.autoRenderMeshInProofreading,
@@ -359,7 +362,7 @@ function* loadCoarseMesh(
         position,
         additionalCoordinates,
         currentMeshFile.name,
-        undefined,
+        opacity,
         undefined,
       ),
     );
@@ -376,6 +379,7 @@ function* loadCoarseMesh(
         mappingName,
         mappingType,
         preferredQuality,
+        opacity,
       }),
     );
   }
@@ -2108,6 +2112,9 @@ export function* refreshAffectedMeshes(
     oldAgglomerateId?: number;
     newAgglomerateId: number;
     nodePosition: Vector3;
+    // Opacity to apply to the reloaded mesh. If unset, the opacity of the old
+    // mesh (oldAgglomerateId) is captured before its removal (see below).
+    opacity?: number;
   }>,
 ) {
   // ATTENTION: This saga should usually be called with `spawnUntilCanceled` to avoid that the user
@@ -2118,12 +2125,42 @@ export function* refreshAffectedMeshes(
   // adapted.
   const additionalCoordinates = undefined;
 
+  // Capture the opacities of all old meshes up front, i.e. before any of them are removed below,
+  // so that reloaded meshes keep the user-chosen opacity. This must happen before the removal
+  // loop because multiple items can share the same oldAgglomerateId (e.g. a split produces two
+  // pieces from the same original agglomerate); removing one item's old mesh must not prevent
+  // another item from reading the original opacity.
+  const opacityByOldAgglomerateId = yield* select((state) => {
+    const opacities = new Map<number, number>();
+    for (const item of items) {
+      if (item.oldAgglomerateId != null && !opacities.has(item.oldAgglomerateId)) {
+        const opacity = getMeshInfoForSegment(
+          state,
+          additionalCoordinates || null,
+          layerName,
+          Number(item.oldAgglomerateId),
+        )?.opacity;
+        if (opacity != null) {
+          opacities.set(item.oldAgglomerateId, opacity);
+        }
+      }
+    }
+    return opacities;
+  });
+
   // Remember which meshes were removed in this saga
   // and which were fetched again to avoid doing redundant work.
   const removedIds = new Set();
   const newlyLoadedIds = new Set();
   const meshLoadingEffects = [];
   for (const item of items) {
+    // The opacity is either passed in explicitly (e.g. by the rebasing saga, which removes the
+    // old mesh before this saga runs) or taken from the old mesh that was captured above.
+    const opacity =
+      item.opacity ??
+      (item.oldAgglomerateId != null
+        ? opacityByOldAgglomerateId.get(item.oldAgglomerateId)
+        : undefined);
     // Remove old agglomerate mesh(es) and load updated agglomerate mesh(es)
     if (item.oldAgglomerateId && !removedIds.has(item.oldAgglomerateId)) {
       yield* put(removeMeshAction(layerName, Number(item.oldAgglomerateId)));
@@ -2137,6 +2174,7 @@ export function* refreshAffectedMeshes(
           Number(item.newAgglomerateId),
           item.nodePosition,
           additionalCoordinates,
+          opacity,
         );
       });
       newlyLoadedIds.add(item.newAgglomerateId);
@@ -2223,7 +2261,14 @@ export function* splitAgglomerateInMapping(
   syncAgglomerateTrees: boolean,
   additionalSegmentsToRequest: Set<number> = new Set(),
 ): Saga<
-  | { splitMapping: Mapping; oldAgglomerateIds: Set<number>; newAgglomerateIds: Set<number> }
+  | {
+      splitMapping: Mapping;
+      oldAgglomerateIds: Set<number>;
+      newAgglomerateIds: Set<number>;
+      // Maps each newly created agglomerate id to the agglomerate id it was split off from.
+      // Used to let reloaded meshes inherit the opacity of the original agglomerate.
+      newToOldAgglomerateIds: Map<number, number>;
+    }
   | undefined
 > {
   const segmentIdsFromLocalMapping = getSegmentIdsThatMapToAgglomerate(
@@ -2238,7 +2283,12 @@ export function* splitAgglomerateInMapping(
   const unsplitMapping = activeMapping.mapping;
   if (splitSegmentIds.size === 0) {
     return unsplitMapping != null
-      ? { splitMapping: unsplitMapping, newAgglomerateIds: new Set(), oldAgglomerateIds: new Set() }
+      ? {
+          splitMapping: unsplitMapping,
+          newAgglomerateIds: new Set(),
+          oldAgglomerateIds: new Set(),
+          newToOldAgglomerateIds: new Map(),
+        }
       : undefined;
   }
   const mappingAfterSplit = yield* call(
@@ -2262,6 +2312,7 @@ export function* splitAgglomerateInMapping(
     });
   }
   const newAgglomerateIds = new Set<number>();
+  const newToOldAgglomerateIds = new Map<number, number>();
 
   // Create a new mapping which is equal to the old one with the difference that
   // ids from splitSegmentIds are mapped to their new target agglomerate ids.
@@ -2270,7 +2321,12 @@ export function* splitAgglomerateInMapping(
       // @ts-expect-error get() is expected to accept the type that segmentId has.
       const mappedId = mappingAfterSplit.get(segmentId);
       if (mappedId != null) {
-        newAgglomerateIds.add(Number(mappedId));
+        const newId = Number(mappedId);
+        newAgglomerateIds.add(newId);
+        // `agglomerateId` is the id this segment had before the split, i.e. the original agglomerate.
+        if (!newToOldAgglomerateIds.has(newId)) {
+          newToOldAgglomerateIds.set(newId, Number(agglomerateId));
+        }
         return [segmentId, mappedId];
       }
       return [segmentId, agglomerateId];
@@ -2294,7 +2350,12 @@ export function* splitAgglomerateInMapping(
     );
   }
 
-  return { splitMapping: splitMapping as Mapping, oldAgglomerateIds, newAgglomerateIds };
+  return {
+    splitMapping: splitMapping as Mapping,
+    oldAgglomerateIds,
+    newAgglomerateIds,
+    newToOldAgglomerateIds,
+  };
 }
 
 function* mergeAgglomeratesInMapping(

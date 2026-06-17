@@ -30,6 +30,7 @@ import {
 import { hasTracing } from "viewer/model/accessors/tracing_accessor";
 import {
   getAllLoadedMeshes,
+  getMeshInfoForSegment,
   getSegmentsForLayer,
   getVolumeTracingById,
   isMeshLoaded,
@@ -228,6 +229,10 @@ const SAVING_CONFLICT_TOAST_KEY = "save_conflicts_warning";
 type ApplyingUpdateArtifacts = {
   meshIdsToRemovePerLayer: ReadonlyMap<string, ReadonlySet<number>>;
   meshIdsToLoadPerLayer: ReadonlyMap<string, ReadonlySet<number>>;
+  // Maps a to-be-reloaded agglomerate id to the mesh opacity it should inherit so that the
+  // user-chosen opacity is not lost on reload. For a merge, this is the source agglomerate's
+  // opacity; for a split, every split-off agglomerate inherits the original agglomerate's opacity.
+  meshOpacityToLoadPerLayer: ReadonlyMap<string, ReadonlyMap<number, number>>;
 };
 
 type ApplyingUpdateResults = { success: boolean; artifactInfos: ApplyingUpdateArtifacts };
@@ -237,6 +242,7 @@ const FailedIncorporateActionsReturnValue: ApplyingUpdateResults = {
   artifactInfos: {
     meshIdsToRemovePerLayer: new Map(),
     meshIdsToLoadPerLayer: new Map(),
+    meshOpacityToLoadPerLayer: new Map(),
   },
 };
 const SuccessEmptyIncorporateActionsReturnValue: ApplyingUpdateResults = {
@@ -244,6 +250,7 @@ const SuccessEmptyIncorporateActionsReturnValue: ApplyingUpdateResults = {
   artifactInfos: {
     meshIdsToRemovePerLayer: new Map(),
     meshIdsToLoadPerLayer: new Map(),
+    meshOpacityToLoadPerLayer: new Map(),
   },
 };
 
@@ -601,6 +608,16 @@ export function* tryToIncorporateActions(
   // Duplicates are later ignored when refreshing the meshes.
   const meshIdsToRemovePerLayer: Map<string, Set<number>> = new Map();
   const meshIdsToLoadPerLayer: Map<string, Set<number>> = new Map();
+  // Records the opacity that each reloaded mesh should inherit from the agglomerate it originated from.
+  // This must be gathered here while the original meshes (and their opacities) still exist; the meshes
+  // are only removed later in resolveApplyingUpdateArtifacts.
+  const meshOpacityToLoadPerLayer: Map<string, Map<number, number>> = new Map();
+  function recordMeshOpacityToLoad(tracingId: string, agglomerateId: number, opacity: number) {
+    if (!meshOpacityToLoadPerLayer.has(tracingId)) {
+      meshOpacityToLoadPerLayer.set(tracingId, new Map());
+    }
+    meshOpacityToLoadPerLayer.get(tracingId)?.set(agglomerateId, opacity);
+  }
 
   for (const actionBatch of newerActions) {
     const agglomerateIdsToRefreshPerLayer: Map<string, Set<NumberLike>> = new Map();
@@ -755,6 +772,26 @@ export function* tryToIncorporateActions(
           addToMap(meshIdsToLoadPerLayer, actionTracingId, agglomerateId1);
           // Remove refresh entry of agglomerateId2 as it was merged into agglomerateId1.
           meshIdsToLoadPerLayer.get(actionTracingId)?.delete(agglomerateId2);
+          // The merged mesh keeps agglomerateId1 (the source), so it should inherit the source's
+          // opacity. Fall back to the target's opacity in case only the target mesh was loaded.
+          const mergedMeshOpacity = yield* select(
+            (state) =>
+              getMeshInfoForSegment(
+                state,
+                state.flycam.additionalCoordinates,
+                actionTracingId,
+                agglomerateId1,
+              )?.opacity ??
+              getMeshInfoForSegment(
+                state,
+                state.flycam.additionalCoordinates,
+                actionTracingId,
+                agglomerateId2,
+              )?.opacity,
+          );
+          if (mergedMeshOpacity != null) {
+            recordMeshOpacityToLoad(actionTracingId, agglomerateId1, mergedMeshOpacity);
+          }
           break;
         }
         case "splitAgglomerate": {
@@ -890,7 +927,8 @@ export function* tryToIncorporateActions(
           Toast.error(message);
           return FailedIncorporateActionsReturnValue;
         }
-        const { splitMapping, oldAgglomerateIds, newAgglomerateIds } = splitMappingInfo;
+        const { splitMapping, oldAgglomerateIds, newAgglomerateIds, newToOldAgglomerateIds } =
+          splitMappingInfo;
 
         yield* put(
           setMappingAction(
@@ -908,11 +946,34 @@ export function* tryToIncorporateActions(
         const loadedMeshes = yield* select((state) => getAllLoadedMeshes(state, tracingId));
         const loadedMeshesOfSplitAction = loadedMeshes.intersection(oldAgglomerateIds);
         if (loadedMeshesOfSplitAction.size > 0) {
+          // Capture the opacities of the original agglomerates before their meshes are removed,
+          // so each split-off agglomerate can inherit the opacity of the agglomerate it came from.
+          const opacityByOldAgglomerateId = yield* select((state) => {
+            const opacities = new Map<number, number>();
+            for (const oldAggloId of oldAgglomerateIds) {
+              const opacity = getMeshInfoForSegment(
+                state,
+                state.flycam.additionalCoordinates,
+                tracingId,
+                oldAggloId,
+              )?.opacity;
+              if (opacity != null) {
+                opacities.set(oldAggloId, opacity);
+              }
+            }
+            return opacities;
+          });
           oldAgglomerateIds.forEach((aggloId) => {
             addToMap(meshIdsToRemovePerLayer, tracingId, aggloId);
           });
           newAgglomerateIds.forEach((aggloId) => {
             addToMap(meshIdsToLoadPerLayer, tracingId, aggloId);
+            const oldAggloId = newToOldAgglomerateIds.get(aggloId);
+            const opacity =
+              oldAggloId != null ? opacityByOldAgglomerateId.get(oldAggloId) : undefined;
+            if (opacity != null) {
+              recordMeshOpacityToLoad(tracingId, aggloId, opacity);
+            }
           });
         }
       }
@@ -922,7 +983,7 @@ export function* tryToIncorporateActions(
   yield* call(finalize);
   return {
     success: true,
-    artifactInfos: { meshIdsToRemovePerLayer, meshIdsToLoadPerLayer },
+    artifactInfos: { meshIdsToRemovePerLayer, meshIdsToLoadPerLayer, meshOpacityToLoadPerLayer },
   };
 }
 
@@ -932,8 +993,14 @@ function* resolveApplyingUpdateArtifacts(artifactInfos: ApplyingUpdateArtifacts)
   if (!activeVolumeTracingId) {
     return;
   }
+  // The opacities to apply to the reloaded meshes were already gathered while applying the
+  // update actions (see meshOpacityToLoadPerLayer), i.e. before the original meshes are removed below.
   yield* call(removeOutdatedMeshes, artifactInfos.meshIdsToRemovePerLayer);
-  yield* spawnUntilCanceled(reloadMeshes, artifactInfos.meshIdsToLoadPerLayer);
+  yield* spawnUntilCanceled(
+    reloadMeshes,
+    artifactInfos.meshIdsToLoadPerLayer,
+    artifactInfos.meshOpacityToLoadPerLayer,
+  );
 }
 
 function* removeOutdatedMeshes(
@@ -950,6 +1017,7 @@ function* removeOutdatedMeshes(
 // Potentially waits until saving is done. Thus, !must be called with spawn!.
 function* reloadMeshes(
   meshIdsToReloadPerLayer: ApplyingUpdateArtifacts["meshIdsToRemovePerLayer"],
+  meshOpacitiesPerLayer: ApplyingUpdateArtifacts["meshOpacityToLoadPerLayer"],
 ) {
   // First wait in case the ui state is busy until it is no longer to ensure a potential running proofreading saga finished.
   const busyState = yield* select((state) => state.uiInformation.busyBlockingInfo);
@@ -965,7 +1033,9 @@ function* reloadMeshes(
     const refreshList: Array<{
       newAgglomerateId: number;
       nodePosition: Vector3;
+      opacity?: number;
     }> = [];
+    const opacityById = meshOpacitiesPerLayer.get(tracingId);
     const { hasSegmentIndex } = yield* select((state) =>
       getVolumeTracingById(state.annotation, tracingId),
     );
@@ -979,6 +1049,7 @@ function* reloadMeshes(
           newAgglomerateId: agglomerateId,
           // If the annotation has a segment index, the seed position for the mesh generation is ignored. In that case we can simply use [0, 0, 0].
           nodePosition: segment?.anchorPosition ?? [0, 0, 0],
+          opacity: opacityById?.get(agglomerateId),
         });
       }
     }

@@ -229,7 +229,7 @@ class VolumeTracingService @Inject() (
       a: DeleteSegmentDataVolumeAction,
       segmentIndexBuffer: VolumeSegmentIndexBuffer,
       version: Long
-  )(implicit tc: TokenContext): Fox[VolumeTracing] =
+  )(implicit tc: TokenContext): Fox[Unit] =
     for {
       _ <- Fox.successful(())
       volumeLayer = volumeTracingLayer(annotationId, tracingId, volumeTracing)
@@ -285,7 +285,7 @@ class VolumeTracingService @Inject() (
         }
       )
       _ <- segmentIndexBuffer.flush()
-    } yield volumeTracing.copy(volumeBucketDataHasChanged = Some(true))
+    } yield ()
 
   private def assertMagIsValid(tracing: VolumeTracing, mag: Vec3Int): Fox[Unit] =
     if (tracing.mags.nonEmpty) {

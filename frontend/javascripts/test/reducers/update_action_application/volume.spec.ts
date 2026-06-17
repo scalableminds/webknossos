@@ -25,6 +25,7 @@ import {
   setActiveCellAction,
   setLargestSegmentIdAction,
   setSegmentGroupsAction,
+  setVolumeBucketDataHasChangedAction,
   toggleSegmentGroupAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
@@ -106,6 +107,7 @@ const actionNamesHelper: Record<ApplicableVolumeUpdateAction["name"], true> = {
   updateActiveSegmentId: true,
   updateSegmentVisibility: true,
   updateSegmentGroupVisibility: true,
+  updateVolumeBucketDataHasChanged: true,
 };
 const actionNamesList = Object.keys(actionNamesHelper);
 
@@ -181,6 +183,7 @@ describe("Update Action Application for VolumeTracing", () => {
     mergeSegmentItemsAction(3, 2, 30, 20, tracingId),
     removeSegmentAction(3, tracingId),
     setLargestSegmentIdAction(10000),
+    setVolumeBucketDataHasChangedAction(tracingId),
     setSegmentGroupsAction([makeBasicGroupObject(3, "group 3 - renamed")], tracingId),
   ];
 

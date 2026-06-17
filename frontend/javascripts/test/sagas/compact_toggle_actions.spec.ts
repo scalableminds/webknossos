@@ -120,6 +120,7 @@ const createStateWithSegments = (
         segmentGroups,
         segments: new DiffableMap(segments.map((s) => [s.id, s])),
         segmentJournal: [],
+        volumeBucketDataHasChanged: undefined,
       },
     ],
   },

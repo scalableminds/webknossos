@@ -10,6 +10,7 @@ import {
   removeSegmentAction,
   setActiveCellAction,
   setSegmentGroupsAction,
+  setVolumeBucketDataHasChangedAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import type {
@@ -72,6 +73,12 @@ function applySingleAction(
     case "updateLargestSegmentId": {
       const volumeTracing = getVolumeTracingById(state.annotation, actionTracingId);
       return setLargestSegmentIdReducer(state, volumeTracing, ua.value.largestSegmentId);
+    }
+    case "updateVolumeBucketDataHasChanged": {
+      return VolumeTracingReducer(
+        state,
+        setVolumeBucketDataHasChangedAction(actionTracingId, ua.value.volumeBucketDataHasChanged),
+      );
     }
     case "createSegment": {
       const segment = ua.value;

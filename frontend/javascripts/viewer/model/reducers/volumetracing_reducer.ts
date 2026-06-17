@@ -101,6 +101,9 @@ export function serverVolumeToClientVolumeTracing(
     mappingIsLocked: tracing.mappingIsLocked,
     hasSegmentIndex: tracing.hasSegmentIndex || false,
     additionalAxes: convertServerAdditionalAxesToFrontEnd(tracing.additionalAxes),
+    // Note that this value can be undefined for older annotations
+    // (also see LoadMeshMenuItemLabel which depends on this).
+    volumeBucketDataHasChanged: tracing.volumeBucketDataHasChanged,
     segmentJournal: [],
   };
   return volumeTracing;
@@ -175,18 +178,13 @@ function VolumeTracingReducer(
             $set: null,
           },
         },
-        // The server provides initial values for some of the local-only
-        // fields. The entry for the tracing layer was already created by
-        // SET_DATASET (its layer name is the tracingId).
+        // The server provides the initial value for this local-only field. The
+        // entry for the tracing layer was already created by SET_DATASET (its
+        // layer name is the tracingId).
         localSegmentationStateByLayer: {
           [volumeTracing.tracingId]: {
             hideUnregisteredSegments: {
               $set: action.tracing.hideUnregisteredSegments ?? false,
-            },
-            volumeBucketDataHasChanged: {
-              // Note that this value can be undefined for older annotations
-              // (also see LoadMeshMenuItemLabel which depends on this).
-              $set: action.tracing.volumeBucketDataHasChanged,
             },
           },
         },
@@ -330,8 +328,8 @@ function VolumeTracingReducer(
     }
 
     case "SET_VOLUME_BUCKET_DATA_HAS_CHANGED": {
-      return updateLocalSegmentationState(state, action.tracingId, {
-        volumeBucketDataHasChanged: true,
+      return updateVolumeTracing(state, action.tracingId, {
+        volumeBucketDataHasChanged: action.value,
       });
     }
 

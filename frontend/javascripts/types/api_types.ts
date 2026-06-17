@@ -1052,9 +1052,10 @@ export type ServerVolumeTracing = ServerTracingBase & {
   hasEditableMapping?: boolean;
   mappingIsLocked?: boolean;
   hasSegmentIndex?: boolean;
-  // volumeBucketDataHasChanged is automatically set to true by the back-end
-  // once a bucket was mutated. There is no need to send an explicit UpdateAction
-  // for that.
+  // volumeBucketDataHasChanged is set to true once a bucket was mutated. The
+  // frontend tracks this and syncs it via the updateVolumeBucketDataHasChanged
+  // update action (so that it survives rebasing in live collab mode and
+  // collaborators notice it).
   volumeBucketDataHasChanged?: boolean;
   userStates: VolumeUserState[];
   hideUnregisteredSegments?: boolean;

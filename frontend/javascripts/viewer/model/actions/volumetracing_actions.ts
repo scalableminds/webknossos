@@ -154,6 +154,7 @@ export const VolumeTracingSaveRelevantActions: Action["type"][] = [
   "SET_MAPPING_IS_LOCKED",
   "TOGGLE_SEGMENT_GROUP",
   "TOGGLE_ALL_SEGMENTS",
+  "SET_VOLUME_BUCKET_DATA_HAS_CHANGED",
 ];
 
 export const initializeVolumeTracingAction = (tracing: ServerVolumeTracing) =>
@@ -537,10 +538,11 @@ export const cancelQuickSelectAction = () => ({ type: "CANCEL_QUICK_SELECT" }) a
 
 export const confirmQuickSelectAction = () => ({ type: "CONFIRM_QUICK_SELECT" }) as const;
 
-export const setVolumeBucketDataHasChangedAction = (tracingId: string) =>
+export const setVolumeBucketDataHasChangedAction = (tracingId: string, value: boolean = true) =>
   ({
     type: "SET_VOLUME_BUCKET_DATA_HAS_CHANGED",
     tracingId,
+    value,
   }) as const;
 
 export const applyVolumeUpdateActionsFromServerAction = (

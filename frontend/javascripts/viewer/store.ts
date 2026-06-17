@@ -222,6 +222,11 @@ export type VolumeTracing = TracingBase & {
   readonly hasEditableMapping?: boolean;
   readonly mappingIsLocked?: boolean;
   readonly hasSegmentIndex: boolean;
+  // Whether the bucket data of the layer was mutated (e.g., by brushing).
+  // This is synced to the server (via the updateVolumeBucketDataHasChanged update
+  // action) so that collaborators notice the change and so that it survives rebasing.
+  // Can be undefined for older annotations (also see LoadMeshMenuItemLabel).
+  readonly volumeBucketDataHasChanged: boolean | undefined;
   // The segmentJournal keeps track of how segments were edited. Currently,
   // this only includes mergeSegments actions which can be created during
   // proofreading.
@@ -671,9 +676,6 @@ export type LocalSegmentationState = {
   readonly contourTracingMode: ContourMode;
   // Stores points of the currently drawn region in layer-space coordinates.
   readonly contourList: Array<Vector3>;
-  // Whether the bucket data of the layer was mutated (e.g., by brushing).
-  // Can be undefined for older annotations (also see LoadMeshMenuItemLabel).
-  readonly volumeBucketDataHasChanged: boolean | undefined;
   readonly idReservations: Record<"SegmentGroup" | "Segment", { id: number; used: boolean }[]>;
   // The position of the "proofreading marker" (a cross) is stored separately.
   // In earlier versions, the anchor position of the current segment was simply used.

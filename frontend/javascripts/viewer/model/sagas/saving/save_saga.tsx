@@ -4,8 +4,6 @@ import features from "features";
 import ErrorHandling from "libs/error_handling";
 import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Toast from "libs/toast";
-import { sleep } from "libs/utils";
-import compact from "lodash-es/compact";
 import sum from "lodash-es/sum";
 import { buffers, type Channel } from "redux-saga";
 import {
@@ -17,16 +15,19 @@ import {
   fork,
   put,
   race,
-  spawn,
   takeEvery,
 } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
 import { SagaIdentifier, type Vector3 } from "viewer/constants";
-import { isAnnotationEditableByNonOwners } from "viewer/model/accessors/annotation_accessor";
+import {
+  isAnnotationEditableByNonOwners,
+  mayEditAnnotation,
+} from "viewer/model/accessors/annotation_accessor";
 import {
   getSegmentationLayerByName,
   getVisibleSegmentationLayer,
 } from "viewer/model/accessors/dataset_accessor";
+import { hasTracing } from "viewer/model/accessors/tracing_accessor";
 import {
   getAllLoadedMeshes,
   getSegmentsForLayer,
@@ -66,10 +67,12 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import { Model, Store } from "viewer/singletons";
-import type { NumberLike, SkeletonTracing, StoreAnnotation, VolumeTracing } from "viewer/store";
+import type { NumberLike, StoreAnnotation, WebknossosState } from "viewer/store";
 import {
   enforceExecutionAsBusyBlockingUnlessAllowed,
+  spawnUntilCanceled,
   takeEveryWithBatchActionSupport,
+  waitFor,
 } from "../saga_helpers";
 import {
   refreshAffectedMeshes,
@@ -141,50 +144,56 @@ function* getPollInterval(): Saga<number> {
   return VERSION_POLL_INTERVAL_SINGLE_EDITOR;
 }
 
-function* shouldCheckForNewerAnnotationVersions(): Saga<boolean> {
-  const allowSave = yield* select(
-    (state) =>
-      state.annotation.restrictions.allowSave && state.annotation.isUpdatingCurrentlyAllowed,
-  );
-  const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
+function needsPollAnnotationUpdates(state: WebknossosState): "yes" | "no" | "later" {
+  // We usually want to poll for new annotation versions. We merely avoid this
+  // in the following cases:
 
-  const userCanSaveAndNoLiveCollab = allowSave && collaborationMode !== "Concurrent";
-  if (userCanSaveAndNoLiveCollab) {
-    // The active user is currently the only one that is allowed to mutate the annotation.
-    // Since we only acquire the mutex upon page load (because adhoc mutex strategy is only used
-    // for concurrent collab mode), there shouldn't be any unseen updates
-    // between the page load and this check here.
-    // A race condition where
-    //   1) another user saves version X
-    //   2) we load the annotation but only get see version X - 1 (this is the race)
-    //   3) we acquire a mutex
-    // should not occur, because there is a grace period for which the mutex has to be free until it can
-    // be acquired again (see annotation.mutex.expiryTime in application.conf).
-    // The downside of an early return here is that we won't be able to warn the user early
-    // if the user opened the annotation in two tabs and mutated it there.
-    // However,
-    //   a) this scenario is pretty rare and the worst case is that they get a 409 error
-    //      during saving and
-    //   b) checking for newer versions when the active user may update the annotation introduces
-    //      a race condition between this saga and the actual save saga. Synchronizing these sagas
-    //      would be possible, but would add further complexity to the mission critical save saga.
-    return false;
+  // If the version restore view is open, newer versions should not be fetched
+  // as this could mess up the current state.
+  // Similarily, we should not poll for updates when a rebase is in progress.
+  const { isRestoringVersion, showVersionRestore } = state.uiInformation;
+  const isVersionRestoreActive = showVersionRestore && !isRestoringVersion;
+  const { isRebasingOrForwarding } = state.save.rebaseRelevantServerAnnotationState;
+  if (isVersionRestoreActive || isRebasingOrForwarding) {
+    return "later";
   }
 
-  // Check for tracings which could need updating
-  const maybeSkeletonTracing = yield* select((state) => state.annotation.skeleton);
-  const volumeTracings = yield* select((state) => state.annotation.volumes);
-
-  const tracings: Array<SkeletonTracing | VolumeTracing> = compact([
-    ...volumeTracings,
-    maybeSkeletonTracing,
-  ]);
-
-  if (tracings.length === 0) {
-    // If there are not tracings that could need updates, no update fetching is needed.
-    return false;
+  if (state.save.isSavingDisabled) {
+    // When saving is disabled, the user is free to edit the annotation however they like.
+    // If they had a mutex before, that will be released.
+    // Therefore, other users may edit the annotation at the same time.
+    // We must not poll for updates, because we cannot incorporate all possible update actions
+    // while having local changes.
+    return "no";
   }
-  return true;
+
+  // If the current user may edit the annotation while the collab mode is not Concurrent,
+  // we don't need to fetch newer versions (because there shouldn't be any since nobody else
+  // should be allowed to push a newer version). This is the case when the current user
+  // is either the owner or a collaborator with the mutex.
+  const { isUpdatingCurrentlyAllowed } = state.annotation;
+  const { collaborationMode } = state.annotation;
+  const mayEditInNonConcurrentMode =
+    isUpdatingCurrentlyAllowed && collaborationMode !== "Concurrent";
+  if (mayEditInNonConcurrentMode) {
+    // WK should already show the newest version of the annotation.
+    // However, there is a rare chance of two problematic scenarios currently:
+    // - the current user opened the annotation twice (we don't guard against this in OwnerOnly mode, yet)
+    // - there was a race condition where the current user C loads version X, another user U pushes
+    //   version X+1 and U releases the mutex, only then C acquires the mutex. Now, C doesn't know about
+    //   X+1.
+    // The worst case is that the users gets a 409 error during saving (thus, losing 30 seconds of work).
+    // We can improve this in the future by always polling once all update actions are supported in rebasing
+    // (see #9052)
+    return "no";
+  }
+
+  // If there are no tracings, we don't need need to poll for updates
+  if (!hasTracing(state.annotation)) {
+    return "no";
+  }
+  // In all other cases, poll
+  return "yes";
 }
 
 function* fetchNewestMissingUpdateActions(): Saga<APIUpdateActionBatch[]> {
@@ -217,8 +226,8 @@ const SAVING_CONFLICT_TOAST_KEY = "save_conflicts_warning";
 // This info can then be used to trigger side effects after saving is done to e.g. reload the newest auxiliary agglomerate meshes.
 
 type ApplyingUpdateArtifacts = {
-  meshIdsToRemovePerLayer: Map<string, Set<number>>;
-  meshIdsToLoadPerLayer: Map<string, Set<number>>;
+  meshIdsToRemovePerLayer: ReadonlyMap<string, ReadonlySet<number>>;
+  meshIdsToLoadPerLayer: ReadonlyMap<string, ReadonlySet<number>>;
 };
 
 type ApplyingUpdateResults = { success: boolean; artifactInfos: ApplyingUpdateArtifacts };
@@ -296,7 +305,7 @@ function* updatePendingProofreadingOperationInfoAction() {
       getAgglomeratesForSegmentsFromTracingstore,
       tracingStoreUrl,
       tracingId,
-      idsToRequest,
+      new Set(idsToRequest),
       annotationId,
       annotationVersion,
     );
@@ -332,10 +341,7 @@ function* applyNewestMissingUpdateActions(
     Toast.close(SAVING_CONFLICT_TOAST_KEY);
     return SuccessEmptyIncorporateActionsReturnValue;
   }
-  const allowSave = yield* select(
-    (state) =>
-      state.annotation.restrictions.allowSave && state.annotation.isUpdatingCurrentlyAllowed,
-  );
+  const mayEdit = yield* select((state) => mayEditAnnotation(state));
   try {
     if (!needsRewindingRebase) {
       // If no rebasing is currently done, we still need to inform the diffing saga, that the currently replayed
@@ -360,7 +366,7 @@ function* applyNewestMissingUpdateActions(
   const hasPendingUpdates = (yield* select((state) => state.save.queue)).length > 0;
 
   let msg = "";
-  if (!allowSave) {
+  if (!mayEdit) {
     msg =
       "A newer version of this annotation was found on the server. Reload the page to see the newest changes.";
   } else if (hasPendingUpdates) {
@@ -368,7 +374,7 @@ function* applyNewestMissingUpdateActions(
       "A newer version of this annotation was found on the server. Your current changes to this annotation cannot be saved anymore. Please reload.";
   } else {
     msg =
-      "A newer version of this annotation was found on the server. Please reload the page to see the newer version. Otherwise, changes to the annotation cannot be saved anymore.";
+      "A newer version of this annotation was found on the server. Please reload the page to see the newer version. Otherwise, new changes to this annotation cannot be saved anymore.";
   }
   Toast.warning(msg, {
     sticky: true,
@@ -512,14 +518,29 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
     // Use this annotation for rebasing the incoming update actions.
     const interval = yield* call(getPollInterval);
     let { ensureHasNewestVersion } = yield* race({
-      sleep: call(sleep, interval),
+      sleep: delay(interval),
       ensureHasNewestVersion: take(channel),
     });
-    const shouldCheckForUpdatesOnServer = yield* call(shouldCheckForNewerAnnotationVersions);
-    const isVersionRestoreActive = yield* select((state) => state.uiInformation.showVersionRestore);
-    if (!shouldCheckForUpdatesOnServer || isVersionRestoreActive) {
+    const needsCheckForUpdatesOnServer = yield* select(needsPollAnnotationUpdates);
+    if (needsCheckForUpdatesOnServer === "no") {
+      // We don't need to poll for the newest version (because we can safely assume that
+      // we already know about it).
+      yield* call(fulfillAllEnsureHasNewestVersionActions, ensureHasNewestVersion, channel);
+      continue;
+    } else if (needsCheckForUpdatesOnServer === "later") {
+      // We need to postpone the poll operation (because the version restore is open).
+      if (ensureHasNewestVersion != null) {
+        // The ensureHasNewestVersion action was already dequeued from the channel.
+        // Put it back by dispatching it again.
+        yield* put(ensureHasNewestVersion);
+        // Now, wait in a throttled manner until needsPollAnnotationUpdates becomes "yes".
+        yield* waitFor((state) => needsPollAnnotationUpdates(state) === "yes");
+      }
       continue;
     }
+
+    // Now, initiate the actual polling.
+
     // In live collab mode, the user could update the annotation concurrently with rebasing.
     // Therefore, acquire the busy lock to prevent user update actions from interfering with the rebase.
     // In non-live-collab mode (typically read-only polling), skip busy blocking to avoid freezing the UI.
@@ -859,7 +880,7 @@ export function* tryToIncorporateActions(
           false,
           // In the very rare case where split actions of two different agglomerate ids were included in the same version
           // we also request those other agglomerate ids in the same request to save requests.
-          agglomerateIdToRefresh.slice(1),
+          new Set(agglomerateIdToRefresh.slice(1)),
         );
 
         if (splitMappingInfo == null) {
@@ -912,7 +933,7 @@ function* resolveApplyingUpdateArtifacts(artifactInfos: ApplyingUpdateArtifacts)
     return;
   }
   yield* call(removeOutdatedMeshes, artifactInfos.meshIdsToRemovePerLayer);
-  yield* spawn(reloadMeshes, artifactInfos.meshIdsToLoadPerLayer);
+  yield* spawnUntilCanceled(reloadMeshes, artifactInfos.meshIdsToLoadPerLayer);
 }
 
 function* removeOutdatedMeshes(

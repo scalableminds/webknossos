@@ -4,6 +4,7 @@ import com.scalableminds.webknossos.datastore.datareaders.{
   BloscCompressor,
   CompressionSetting,
   Compressor,
+  GzipCompressor,
   IntCompressionSetting,
   NullCompressor,
   StringCompressionSetting,
@@ -25,6 +26,7 @@ object ZarrCompressorFactory {
       case "null"  => nullCompressor
       case "zlib"  => new ZlibCompressor(properties)
       case "blosc" => new BloscCompressor(properties)
+      case "gzip"  => new GzipCompressor(properties)
       case "zstd" => {
         val level = properties.get("level") match {
           case Some(IntCompressionSetting(l)) => l

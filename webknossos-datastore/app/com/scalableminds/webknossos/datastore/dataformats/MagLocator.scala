@@ -12,7 +12,10 @@ case class MagLocator(mag: Vec3Int,
                       credentials: Option[LegacyDataVaultCredential] = None,
                       axisOrder: Option[AxisOrder] = None,
                       channelIndex: Option[Int] = None,
-                      credentialId: Option[String] = None)
+                      credentialId: Option[String] = None) {
+
+  def withoutCredentials: MagLocator = this.copy(credentials = None, credentialId = None)
+}
 
 object MagLocator extends MagFormatHelper {
   implicit val jsonFormat: OFormat[MagLocator] = Json.format[MagLocator]

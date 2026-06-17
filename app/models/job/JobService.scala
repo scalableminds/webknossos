@@ -2,7 +2,7 @@ package models.job
 
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
-import com.scalableminds.util.geometry.{BoundingBox, Vec3Double}
+import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import models.dataset.Dataset
 import com.scalableminds.util.mvc.Formatter
@@ -16,7 +16,6 @@ import models.job.JobCommand.JobCommand
 import models.organization.{CreditTransactionService, OrganizationDAO}
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import com.scalableminds.util.tools.Full
-import com.scalableminds.webknossos.datastore.models.LengthUnit.LengthUnit
 import org.apache.pekko.actor.ActorSystem
 import play.api.libs.json.{JsObject, JsValue, Json}
 import security.WkSilhouetteEnvironment
@@ -204,6 +203,7 @@ class JobService @Inject()(wkConf: WkConf,
           created = job.created,
           started = job.started,
           ended = job.ended,
+          lastRetry = job.lastRetry,
           costInMilliCredits = creditTransactionBox.toOption.map(t => t.milliCreditDelta * -1) // delta is negative, so cost should be positive.
         )
       )
@@ -231,14 +231,10 @@ class JobService @Inject()(wkConf: WkConf,
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
 
-  def submitConvertToWkwJob(dataset: Dataset,
-                            user: User,
-                            voxelSizeFactor: Vec3Double,
-                            voxelSizeUnit: Option[LengthUnit]): Fox[Unit] =
+  def submitConvertToWkwJob(dataset: Dataset, user: User, voxelSize: VoxelSize): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization.notFound(
         dataset._organization)
-      voxelSize = VoxelSize.fromFactorAndUnitWithDefault(voxelSizeFactor, voxelSizeUnit)
       commandArgs = Json.obj(
         "organization_id" -> organization._id,
         "organization_display_name" -> organization.name,

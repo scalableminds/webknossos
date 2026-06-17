@@ -1,8 +1,8 @@
 # Composing Datasets
 
 New datasets can also be composed from combining existing ones.
-This feature allows to combine layers from previously added datasets to create a new dataset.
-During compositions, transforms can optionally be defined in case the datasets are not in the same coordinate system.
+This feature allows you to combine layers from previously added datasets to create a new dataset.
+During composition, transforms can optionally be defined in case the datasets are not in the same coordinate system.
 There are three different ways to compose a new dataset:
 
 1. Combine datasets by selecting from existing datasets. No transforms between these datasets will be added.

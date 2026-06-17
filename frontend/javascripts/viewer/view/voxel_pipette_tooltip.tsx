@@ -1,6 +1,6 @@
 import { CopyOutlined } from "@ant-design/icons";
-import { copyToClipboad } from "admin/voxelytics/utils";
 import { Tooltip } from "antd";
+import { copyToClipboard } from "libs/clipboard";
 import { useFetch } from "libs/react_helpers";
 import { useDebouncedValue, useWkSelector } from "libs/react_hooks";
 import compact from "lodash-es/compact";
@@ -46,7 +46,7 @@ function VoxelValueEntry({
       <Tooltip title="Copy to clipboard">
         <CopyOutlined
           onClick={() => {
-            copyToClipboad(valueString);
+            copyToClipboard(valueString);
           }}
         />
       </Tooltip>

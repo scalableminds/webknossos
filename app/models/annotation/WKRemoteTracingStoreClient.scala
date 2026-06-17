@@ -234,7 +234,7 @@ class WKRemoteTracingStoreClient(
   // They don’t hurt but create unneeded traffic. So we’ll strip them here.
   private def thinOutVolumeTracings(tracings: VolumeTracings): VolumeTracings =
     tracings.copy(
-      tracings = tracings.tracings.map { tracingOpt: VolumeTracingOpt =>
+      tracings = tracings.tracings.map { (tracingOpt: VolumeTracingOpt) =>
         tracingOpt.copy(
           tracing = tracingOpt.tracing.map(
             _.copy(

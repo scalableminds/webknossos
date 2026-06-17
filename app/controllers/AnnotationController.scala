@@ -36,14 +36,32 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-case class ReserveIdRequest(
+case class ReserveIdParameters(
     domain: AnnotationIdDomain,
     tracingId: String,
     numberOfIdsToReserve: Int,
     idsToRelease: Seq[Long]
 )
-object ReserveIdRequest {
-  implicit val jsonFormat: OFormat[ReserveIdRequest] = Json.format[ReserveIdRequest]
+object ReserveIdParameters {
+  implicit val jsonFormat: OFormat[ReserveIdParameters] = Json.format[ReserveIdParameters]
+}
+
+case class FinishAllParameters(annotations: Seq[ObjectId])
+object FinishAllParameters {
+  implicit val jsonFormat: OFormat[FinishAllParameters] = Json.format[FinishAllParameters]
+}
+
+case class EditAnnotationParameters(name: Option[String],
+                                    visibility: Option[AnnotationVisibility.Value],
+                                    tags: Option[Seq[String]],
+                                    viewConfiguration: Option[JsObject])
+object EditAnnotationParameters {
+  implicit val jsonFormat: OFormat[EditAnnotationParameters] = Json.format[EditAnnotationParameters]
+}
+
+case class TransferAnnotationParameters(userId: ObjectId)
+object TransferAnnotationParameters {
+  implicit val jsonFormat: OFormat[TransferAnnotationParameters] = Json.format[TransferAnnotationParameters]
 }
 
 class AnnotationController @Inject()(
@@ -150,7 +168,8 @@ class AnnotationController @Inject()(
   def reset(typ: String, id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity) ?~> Msg.Annotation.notFound ~> NOT_FOUND
-      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, annotation._team))
+      owner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, owner._organization, annotation._task))
       _ <- annotationService.resetToBase(annotation) ?~> Msg.Annotation.Reset.failed
       updated <- provider.provideAnnotation(typ, id, request.identity)
       json <- annotationService.publicWrites(updated, Some(request.identity))
@@ -160,7 +179,8 @@ class AnnotationController @Inject()(
   def reopen(typ: String, id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     def isReopenAllowed(user: User, annotation: Annotation) =
       for {
-        isAdminOrTeamManager <- userService.isTeamManagerOrAdminOf(user, annotation._team)
+        owner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
+        isAdminOrTeamManager <- userService.isTeamManagerOrAdminOf(user, owner._organization, annotation._task)
         _ <- Fox.fromBool(annotation.state == AnnotationState.Finished) ?~> Msg.Annotation.Reopen.notFinished
         _ <- Fox.fromBool(isAdminOrTeamManager || annotation._user == user._id) ?~> Msg.Annotation.Reopen.notAllowed
         _ <- Fox
@@ -222,7 +242,6 @@ class AnnotationController @Inject()(
           dataset._id,
           None,
           ObjectId.dummyId,
-          ObjectId.dummyId,
           List(
             AnnotationLayer(TracingId.dummy,
                             AnnotationLayerType.Skeleton,
@@ -254,44 +273,33 @@ class AnnotationController @Inject()(
       }
   }
 
-  def finishAll(typ: String, timestamp: Long): Action[JsValue] = sil.SecuredAction.async(parse.json) {
-    implicit request =>
+  def finishAll(typ: String, timestamp: Long): Action[FinishAllParameters] =
+    sil.SecuredAction.async(validateJson[FinishAllParameters]) { implicit request =>
       log() {
-        withJsonAs[JsArray](request.body \ "annotations") { annotationIds =>
-          val results = Fox.serialCombined(annotationIds.value.toList) { jsValue =>
-            jsValue
-              .asOpt[String]
-              .toFox
-              .flatMap(id => finishAnnotation(typ, ObjectId(id), request.identity, Instant(timestamp)))
+        for {
+          _ <- Fox.serialCombined(request.body.annotations) { annotationId =>
+            finishAnnotation(typ, annotationId, request.identity, Instant(timestamp))
           }
-          results.map { _ =>
-            JsonOk(Msg.Annotation.allFinished)
-          }
-        }
+        } yield JsonOk(Msg.Annotation.allFinished)
       }
-  }
+    }
 
-  def editAnnotation(typ: String, id: ObjectId): Action[JsValue] = sil.SecuredAction.async(parse.json) {
-    implicit request =>
+  def editAnnotation(typ: String, id: ObjectId): Action[EditAnnotationParameters] =
+    sil.SecuredAction.async(validateJson[EditAnnotationParameters]) { implicit request =>
       for {
         annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
         restrictions <- provider.restrictionsFor(typ, id) ?~> Msg.Annotation.Restrictions.notFound ~> NOT_FOUND
         _ <- restrictions.allowUpdate(request.identity) ?~> Msg.Annotation.Edit.notAllowed ~> FORBIDDEN
-        name = (request.body \ "name").asOpt[String]
-        visibility = (request.body \ "visibility").asOpt[AnnotationVisibility.Value]
-        _ <- if (visibility.contains(AnnotationVisibility.Private))
+        _ <- Fox.runIf(request.body.visibility.contains(AnnotationVisibility.Private)) {
           annotationService.updateTeamsForSharedAnnotation(annotation._id, List.empty)
-        else Fox.successful(())
-        tags = (request.body \ "tags").asOpt[List[String]]
-        viewConfiguration = (request.body \ "viewConfiguration").asOpt[JsObject]
-        _ <- Fox.runOptional(name)(annotationDAO.updateName(annotation._id, _)) ?~> Msg.Annotation.Edit.failed
-        _ <- Fox
-          .runOptional(visibility)(annotationDAO.updateVisibility(annotation._id, _)) ?~> Msg.Annotation.Edit.failed
-        _ <- Fox.runOptional(tags)(annotationDAO.updateTags(annotation._id, _)) ?~> Msg.Annotation.Edit.failed
-        _ <- Fox
-          .runOptional(viewConfiguration)(vc => annotationDAO.updateViewConfiguration(annotation._id, Some(vc))) ?~> Msg.Annotation.Edit.failed
+        }
+        _ <- Fox.runOptional(request.body.name)(annotationDAO.updateName(annotation._id, _)) ?~> Msg.Annotation.Edit.failed
+        _ <- Fox.runOptional(request.body.visibility)(annotationDAO.updateVisibility(annotation._id, _)) ?~> Msg.Annotation.Edit.failed
+        _ <- Fox.runOptional(request.body.tags)(annotationDAO.updateTags(annotation._id, _)) ?~> Msg.Annotation.Edit.failed
+        _ <- Fox.runOptional(request.body.viewConfiguration)(vc =>
+          annotationDAO.updateViewConfiguration(annotation._id, request.identity._id, vc)) ?~> Msg.Annotation.Edit.failed
       } yield JsonOk(Msg.Annotation.Edit.success)
-  }
+    }
 
   def annotationsForTask(taskId: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
@@ -320,7 +328,8 @@ class AnnotationController @Inject()(
 
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
-      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, annotation._team))
+      owner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
+      _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, owner._organization, annotation._task))
       result <- tryToCancel(annotation)
     } yield result
   }
@@ -332,16 +341,16 @@ class AnnotationController @Inject()(
     } yield result
   }
 
-  def transfer(typ: String, id: ObjectId): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
-    for {
-      restrictions <- provider.restrictionsFor(typ, id) ?~> Msg.Annotation.Restrictions.notFound ~> NOT_FOUND
-      _ <- restrictions.allowFinish(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
-      newUserId <- (request.body \ "userId").asOpt[String].toFox
-      newUserIdValidated <- ObjectId.fromString(newUserId)
-      updated <- annotationService.transferAnnotationToUser(typ, id, newUserIdValidated, request.identity)
-      json <- annotationService.publicWrites(updated, Some(request.identity), Some(restrictions))
-    } yield JsonOk(json)
-  }
+  def transfer(typ: String, id: ObjectId): Action[TransferAnnotationParameters] =
+    sil.SecuredAction.async(validateJson[TransferAnnotationParameters]) { implicit request =>
+      for {
+        restrictions <- provider.restrictionsFor(typ, id) ?~> Msg.Annotation.Restrictions.notFound ~> NOT_FOUND
+        _ <- restrictions.allowFinish(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- userService.findOneCached(request.body.userId) ?~> Msg.User.notFound(request.body.userId)
+        updated <- annotationService.transferAnnotationToUser(typ, id, request.body.userId, request.identity)
+        json <- annotationService.publicWrites(updated, Some(request.identity), Some(restrictions))
+      } yield JsonOk(json)
+    }
 
   def duplicate(typ: String, id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
@@ -391,19 +400,17 @@ class AnnotationController @Inject()(
     } yield Ok(Json.toJson(json))
   }
 
-  def updateSharedTeams(typ: String, id: ObjectId): Action[JsValue] = sil.SecuredAction.async(parse.json) {
-    implicit request =>
-      withJsonBodyAs[List[String]] { teams =>
-        for {
-          annotation <- provider.provideAnnotation(typ, id, request.identity)
-          _ <- Fox.fromBool(
-            annotation._user == request.identity._id && annotation.visibility != AnnotationVisibility.Private) ?~> Msg.notAllowed ~> FORBIDDEN
-          teamIdsValidated <- Fox.serialCombined(teams)(ObjectId.fromString)
-          _ <- Fox.serialCombined(teamIdsValidated)(teamDAO.findOne(_)) ?~> Msg.Annotation.Edit.accessingTeamFailed
-          _ <- annotationService.updateTeamsForSharedAnnotation(annotation._id, teamIdsValidated)
-        } yield Ok(Json.toJson(teamIdsValidated))
-      }
-  }
+  def updateSharedTeams(typ: String, id: ObjectId): Action[List[String]] =
+    sil.SecuredAction.async(validateJson[List[String]]) { implicit request =>
+      for {
+        annotation <- provider.provideAnnotation(typ, id, request.identity)
+        _ <- Fox.fromBool(
+          annotation._user == request.identity._id && annotation.visibility != AnnotationVisibility.Private) ?~> Msg.notAllowed ~> FORBIDDEN
+        teamIdsValidated <- Fox.serialCombined(request.body)(ObjectId.fromString)
+        _ <- Fox.serialCombined(teamIdsValidated)(teamDAO.findOne(_)) ?~> Msg.Annotation.Edit.accessingTeamFailed
+        _ <- annotationService.updateTeamsForSharedAnnotation(annotation._id, teamIdsValidated)
+      } yield Ok(Json.toJson(teamIdsValidated))
+    }
 
   def updateCollaborationMode(typ: String, id: ObjectId, collaborationMode: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
@@ -441,17 +448,17 @@ class AnnotationController @Inject()(
         datasetBoundingBox = dataSource.map(_.boundingBox)
       )
       newAnnotationLayers = newAnnotationProto.annotationLayers.map(AnnotationLayer.fromProto)
-      clonedAnnotation <- annotationService.createFrom(user,
-                                                       dataset,
-                                                       newAnnotationLayers,
-                                                       AnnotationType.Explorational,
-                                                       None,
-                                                       annotation.description,
-                                                       newAnnotationId) ?~> Msg.Annotation.createFailed
+      clonedAnnotation = annotationService.createFrom(user,
+                                                      dataset,
+                                                      newAnnotationLayers,
+                                                      AnnotationType.Explorational,
+                                                      None,
+                                                      annotation.description,
+                                                      newAnnotationId)
       _ <- annotationDAO.insertOne(clonedAnnotation)
     } yield clonedAnnotation
 
-  def tryAcquiringAnnotationMutex(id: ObjectId): Action[AnyContent] =
+  def tryAcquiringAnnotationMutex(id: ObjectId, sessionId: String): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
         for {
@@ -460,22 +467,28 @@ class AnnotationController @Inject()(
             annotation.collaborationMode == CollaborationMode.Concurrent || annotation.collaborationMode == CollaborationMode.Exclusive) ?~> Msg.notAllowed ~> FORBIDDEN
           restrictions <- provider.restrictionsFor(AnnotationIdentifier(annotation.typ, id)) ?~> Msg.Annotation.Restrictions.notFound ~> NOT_FOUND
           _ <- restrictions.allowUpdate(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
-          mutexResult <- annotationMutexService.tryAcquiringAnnotationMutex(annotation._id, request.identity._id) ?~> Msg.Annotation.Mutex.acquireFailed
+          mutexResult <- annotationMutexService.tryAcquiringAnnotationMutex(
+            annotation._id,
+            request.identity._id,
+            sessionId) ?~> Msg.Annotation.Mutex.acquireFailed
           _ = if (mutexResult.canEdit)
-            logger.info(s"User ${request.identity._id} acquired mutex for annotation ${annotation._id}.")
+            logger.info(
+              s"User ${request.identity._id} with session id $sessionId acquired mutex for annotation ${annotation._id}.")
           else
             logger.info(
-              s"User ${request.identity._id} tried to acquire mutex for annotation ${annotation._id} but was rejected. ${mutexResult.blockedByUser.map(_.toString).getOrElse("")} is currently having the mutex.")
+              s"User ${request.identity._id} with session id $sessionId tried to acquire mutex for annotation ${annotation._id} but was rejected. ${mutexResult.blockedByUser
+                .map(_.toString)
+                .getOrElse("")} is currently having the mutex.")
           resultJson <- annotationMutexService.publicWrites(mutexResult)
         } yield Ok(resultJson)
       }
     }
 
-  def releaseMutex(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def releaseMutex(id: ObjectId, sessionId: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
       for {
-        _ <- annotationMutexService.release(id, request.identity._id) ?~> Msg.Annotation.Mutex.releaseFailed
-        _ = logger.info(s"User ${request.identity._id} released mutex for $id.")
+        _ <- annotationMutexService.release(id, request.identity._id, sessionId) ?~> Msg.Annotation.Mutex.releaseFailed
+        _ = logger.info(s"User ${request.identity._id} with session id $sessionId released mutex for $id.")
       } yield Ok
     }
   }
@@ -497,8 +510,8 @@ class AnnotationController @Inject()(
       }
   }
 
-  def reserveIds(id: ObjectId): Action[ReserveIdRequest] =
-    sil.SecuredAction.async(validateJson[ReserveIdRequest]) { implicit request =>
+  def reserveIds(id: ObjectId): Action[ReserveIdParameters] =
+    sil.SecuredAction.async(validateJson[ReserveIdParameters]) { implicit request =>
       logTime(slackNotificationService.noticeSlowRequest, durationThreshold = 1 second) {
         for {
           annotation <- provider.provideAnnotation(id, request.identity) ~> NOT_FOUND

@@ -24,7 +24,7 @@ trait UpdateGroupHandling extends LazyLogging {
       splitGroupLists: List[List[(Long, List[UpdateAction])]] = SequenceUtils.splitAndIsolate(
         updateActionGroupsWithVersions.reverse)(actionGroup =>
         actionGroup._2.exists(updateAction => isIsolationSensitiveAction(updateAction)))
-      result = splitGroupLists.flatMap { groupsToConcatenate: List[(Long, List[UpdateAction])] =>
+      result = splitGroupLists.flatMap { (groupsToConcatenate: List[(Long, List[UpdateAction])]) =>
         concatenateUpdateActionGroups(groupsToConcatenate)
       }
     } yield result

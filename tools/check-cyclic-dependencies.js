@@ -15,10 +15,6 @@ const KNOWN_CYCLES =[
   "frontend/javascripts/admin/organization/organization_cards.tsx"
  ],
  [
-  "frontend/javascripts/admin/team/team_list_view.tsx",
-  "frontend/javascripts/admin/team/edit_team_modal_view.tsx"
- ],
- [
   "frontend/javascripts/dashboard/advanced_dataset/dataset_table.tsx",
   "frontend/javascripts/dashboard/folders/folder_tree.tsx"
  ],

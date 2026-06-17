@@ -8,7 +8,6 @@ import models.annotation.{AnnotationDAO, AnnotationService, AnnotationType}
 import models.organization.OrganizationService
 import models.team._
 import models.user._
-import play.api.libs.functional.syntax._
 import play.api.libs.json._
 import play.api.mvc._
 import com.scalableminds.util.objectid.ObjectId
@@ -23,6 +22,28 @@ import security.WkEnv
 import utils.WkConf
 
 import scala.concurrent.ExecutionContext
+
+case class UserUpdateParameters(
+    firstName: Option[String],
+    lastName: Option[String],
+    email: Option[String],
+    password: Option[String],
+    isActive: Option[Boolean],
+    isAdmin: Option[Boolean],
+    isDatasetManager: Option[Boolean],
+    teams: Option[List[TeamMembership]],
+    experiences: Option[Map[String, Int]],
+    lastTaskTypeId: Option[ObjectId]
+)
+object UserUpdateParameters {
+  // No format, only reads, because TeamMembership only has async publicWrites.
+  implicit val jsonReads: Reads[UserUpdateParameters] = Json.reads[UserUpdateParameters]
+}
+
+case class UpdateLastTaskTypeIdParameters(lastTaskTypeId: Option[ObjectId])
+object UpdateLastTaskTypeIdParameters {
+  implicit val jsonFormat: OFormat[UpdateLastTaskTypeIdParameters] = Json.format[UpdateLastTaskTypeIdParameters]
+}
 
 class UserController @Inject()(userService: UserService,
                                userDAO: UserDAO,
@@ -176,18 +197,6 @@ class UserController @Inject()(userService: UserService,
     } yield Ok(Json.toJson(js))
   }
 
-  private val userUpdateReader =
-    ((__ \ "firstName").readNullable[String] and
-      (__ \ "lastName").readNullable[String] and
-      (__ \ "email").readNullable[String] and
-      (__ \ "password").readNullable[String] and
-      (__ \ "isActive").readNullable[Boolean] and
-      (__ \ "isAdmin").readNullable[Boolean] and
-      (__ \ "isDatasetManager").readNullable[Boolean] and
-      (__ \ "teams").readNullable[List[TeamMembership]] and
-      (__ \ "experiences").readNullable[Map[String, Int]] and
-      (__ \ "lastTaskTypeId").readNullable[String]).tupled
-
   private def ensureProperTeamAdministration(user: User, userFullName: String, teams: List[(TeamMembership, Team)]) =
     Fox.combined(teams.map {
       case (TeamMembership(_, true), team) =>
@@ -286,85 +295,68 @@ class UserController @Inject()(userService: UserService,
       } yield ()
     } else Fox.successful(())
 
-  def update(userId: ObjectId): Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
-    val issuingUser = request.identity
-    withJsonBodyUsing(userUpdateReader) {
-      case (firstNameOpt,
-            lastNameOpt,
-            emailOpt,
-            passwordOpt,
-            isActiveOpt,
-            isAdminOpt,
-            isDatasetManagerOpt,
-            assignedMembershipsOpt,
-            experiencesOpt,
-            lastTaskTypeIdOpt) =>
-        for {
-          user <- userDAO.findOne(userId) ?~> Msg.User.notFound(userId) ~> NOT_FOUND
-          multiUser <- multiUserDAO.findOne(user._multiUser)
-          // properties that can be changed by team managers and admins only: experiences, team memberships
-          oldExperience <- userService.experiencesFor(user._id)
-          oldAssignedMemberships <- userService.teamMembershipsFor(user._id)
-          firstName = firstNameOpt.getOrElse(multiUser.firstName)
-          lastName = lastNameOpt.getOrElse(multiUser.lastName)
-          oldEmail = multiUser.email
-          email = emailOpt.getOrElse(oldEmail)
-          isActive = isActiveOpt.getOrElse(!user.isDeactivated)
-          isAdmin = isAdminOpt.getOrElse(user.isAdmin)
-          isDatasetManager = isDatasetManagerOpt.getOrElse(user.isDatasetManager)
-          assignedMemberships = assignedMembershipsOpt.getOrElse(oldAssignedMemberships)
-          experiences = experiencesOpt.getOrElse(oldExperience)
-          lastTaskTypeId = if (lastTaskTypeIdOpt.isEmpty) user.lastTaskTypeId.map(_.id) else lastTaskTypeIdOpt
-          _ <- Fox
-            .runIf(user._id != issuingUser._id)(Fox.assertTrue(userService.isEditableBy(user, request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
-          _ <- checkTeamManagerOnlyUpdates(user,
-                                           experiences,
-                                           oldExperience,
-                                           assignedMemberships,
-                                           oldAssignedMemberships)(issuingUser) ?~> Msg.notAllowed ~> FORBIDDEN
-          _ <- Fox
-            .fromBool(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager)(issuingUser)) ?~> Msg.notAllowed ~> FORBIDDEN
-          _ <- checkPasswordIfEmailChanged(user, passwordOpt, oldEmail, email)(issuingUser)
-          _ <- checkEmailDoesNotExistIfChanged(email, oldEmail)
-          _ <- Fox
-            .fromBool(checkNoSelfDeactivate(user, isActive)(issuingUser)) ?~> Msg.User.noSelfDeactivate ~> FORBIDDEN
-          _ <- checkNoDeactivateWithRemainingTask(user, isActive)
-          _ <- checkNoActivateBeyondLimit(user, isActive)
-          _ <- preventZeroAdmins(user, isAdmin)
-          _ <- preventZeroOwners(user, isActive)
-          _ <- checkNameUpdatePermissions(user,
-                                          issuingUser,
-                                          multiUser.firstName,
-                                          multiUser.lastName,
-                                          firstName,
-                                          lastName)
-          teams <- Fox.combined(assignedMemberships.map(t =>
-            teamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> Msg.Team.notFound(t.teamId) ~> NOT_FOUND))
-          oldTeamMemberships <- userService.teamMembershipsFor(user._id)
-          teamsWithoutUpdate <- Fox.filterNot(oldTeamMemberships)(t =>
-            userService.isTeamManagerOrAdminOf(issuingUser, t.teamId))
-          assignedMembershipWTeams = assignedMemberships.zip(teams)
-          teamsWithUpdate <- Fox.filter(assignedMembershipWTeams)(t =>
-            userService.isTeamManagerOrAdminOf(issuingUser, t._1.teamId))
-          _ <- ensureProperTeamAdministration(user, multiUser.fullName, teamsWithUpdate)
-          trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }
-          updatedTeams = teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate
-          _ <- userService.update(user,
-                                  multiUser,
-                                  firstName.trim,
-                                  lastName.trim,
-                                  email,
-                                  isActive,
-                                  isAdmin,
-                                  isDatasetManager,
-                                  updatedTeams,
-                                  trimmedExperiences,
-                                  lastTaskTypeId)
-          updatedUser <- userDAO.findOne(userId)
-          updatedJs <- userService.publicWrites(updatedUser, request.identity)
-        } yield Ok(updatedJs)
+  def update(userId: ObjectId): Action[UserUpdateParameters] =
+    sil.SecuredAction.async(validateJson[UserUpdateParameters]) { implicit request =>
+      for {
+        user <- userDAO.findOne(userId) ?~> Msg.User.notFound(userId) ~> NOT_FOUND
+        multiUser <- multiUserDAO.findOne(user._multiUser)
+        // properties that can be changed by team managers and admins only: experiences, team memberships
+        oldExperience <- userService.experiencesFor(user._id)
+        oldTeamMemberships <- userService.teamMembershipsFor(user._id)
+        firstName = request.body.firstName.getOrElse(multiUser.firstName)
+        lastName = request.body.lastName.getOrElse(multiUser.lastName)
+        oldEmail = multiUser.email
+        email = request.body.email.getOrElse(oldEmail)
+        isActive = request.body.isActive.getOrElse(!user.isDeactivated)
+        isAdmin = request.body.isAdmin.getOrElse(user.isAdmin)
+        isDatasetManager = request.body.isDatasetManager.getOrElse(user.isDatasetManager)
+        teamMemberships = request.body.teams.getOrElse(oldTeamMemberships)
+        experiences = request.body.experiences.getOrElse(oldExperience)
+        lastTaskTypeId = request.body.lastTaskTypeId.orElse(user.lastTaskTypeId)
+        _ <- Fox.runIf(user._id != request.identity._id)(
+          Fox.assertTrue(userService.isEditableBy(user, request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- checkTeamManagerOnlyUpdates(user, experiences, oldExperience, teamMemberships, oldTeamMemberships)(
+          request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- Fox.fromBool(checkAdminOnlyUpdates(user, isActive, isAdmin, isDatasetManager)(request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- checkPasswordIfEmailChanged(user, request.body.password, oldEmail, email)(request.identity)
+        _ <- checkEmailDoesNotExistIfChanged(email, oldEmail)
+        _ <- Fox.fromBool(checkNoSelfDeactivate(user, isActive)(request.identity)) ?~> Msg.User.noSelfDeactivate ~> FORBIDDEN
+        _ <- checkNoDeactivateWithRemainingTask(user, isActive)
+        _ <- checkNoActivateBeyondLimit(user, isActive)
+        _ <- preventZeroAdmins(user, isAdmin)
+        _ <- preventZeroOwners(user, isActive)
+        _ <- checkNameUpdatePermissions(user,
+                                        request.identity,
+                                        multiUser.firstName,
+                                        multiUser.lastName,
+                                        firstName,
+                                        lastName)
+        teams <- Fox.combined(teamMemberships.map(t =>
+          teamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> Msg.Team.notFound(t.teamId) ~> NOT_FOUND))
+        oldTeamMemberships <- userService.teamMembershipsFor(user._id)
+        teamsWithoutUpdate <- Fox.filterNot(oldTeamMemberships)(t =>
+          userService.isTeamManagerOrAdminOf(request.identity, t.teamId))
+        assignedMembershipWTeams = teamMemberships.zip(teams)
+        teamsWithUpdate <- Fox.filter(assignedMembershipWTeams)(t =>
+          userService.isTeamManagerOrAdminOf(request.identity, t._1.teamId))
+        _ <- ensureProperTeamAdministration(user, multiUser.fullName, teamsWithUpdate)
+        trimmedExperiences = experiences.map { case (key, value) => key.trim -> value }
+        updatedTeams = teamsWithUpdate.map(_._1) ++ teamsWithoutUpdate
+        _ <- userService.update(user,
+                                multiUser,
+                                firstName.trim,
+                                lastName.trim,
+                                email,
+                                isActive,
+                                isAdmin,
+                                isDatasetManager,
+                                updatedTeams,
+                                trimmedExperiences,
+                                lastTaskTypeId)
+        updatedUser <- userDAO.findOne(userId)
+        updatedJs <- userService.publicWrites(updatedUser, request.identity)
+      } yield Ok(updatedJs)
     }
-  }
 
   private def checkNameUpdatePermissions(originalUser: User,
                                          issuingUser: User,
@@ -387,20 +379,17 @@ class UserController @Inject()(userService: UserService,
       }
     }
 
-  def updateLastTaskTypeId(userId: ObjectId): Action[JsValue] = sil.SecuredAction.async(parse.json) {
-    implicit request =>
-      val issuingUser = request.identity
-      withJsonBodyUsing((__ \ "lastTaskTypeId").readNullable[String]) { lastTaskTypeId =>
-        for {
-          user <- userDAO.findOne(userId) ?~> Msg.User.notFound(userId) ~> NOT_FOUND
-          isEditable <- userService.isEditableBy(user, request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
-          _ <- Fox.fromBool(isEditable | user._id == issuingUser._id)
-          _ <- userService.updateLastTaskTypeId(user, lastTaskTypeId)
-          updatedUser <- userDAO.findOne(userId)
-          updatedJs <- userService.publicWrites(updatedUser, request.identity)
-        } yield Ok(updatedJs)
-      }
-  }
+  def updateLastTaskTypeId(userId: ObjectId): Action[UpdateLastTaskTypeIdParameters] =
+    sil.SecuredAction.async(validateJson[UpdateLastTaskTypeIdParameters]) { implicit request =>
+      for {
+        user <- userDAO.findOne(userId) ?~> Msg.User.notFound(userId) ~> NOT_FOUND
+        isEditable <- userService.isEditableBy(user, request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- Fox.fromBool(isEditable | user._id == request.identity._id)
+        _ <- userService.updateLastTaskTypeId(user, request.body.lastTaskTypeId)
+        updatedUser <- userDAO.findOne(userId)
+        updatedJs <- userService.publicWrites(updatedUser, request.identity)
+      } yield Ok(updatedJs)
+    }
 
   def updateNovelUserExperienceInfos(userId: ObjectId): Action[JsObject] =
     sil.SecuredAction.async(validateJson[JsObject]) { implicit request =>

@@ -437,8 +437,8 @@ export function isUserAdmin(user: APIUser): boolean {
   return user.isAdmin;
 }
 
-export function isUserAdminOrTeamManager(user: APIUser): boolean {
-  return isUserAdmin(user) || isUserTeamManager(user);
+export function isUserAdminOrTeamManager(user: APIUser | null | undefined): boolean {
+  return user != null && (isUserAdmin(user) || isUserTeamManager(user));
 }
 
 function isUserDatasetManager(user: APIUser): boolean {
@@ -449,8 +449,10 @@ export function isUserAdminOrDatasetManager(user: APIUser | null | undefined): b
   return user != null && (isUserAdmin(user) || isUserDatasetManager(user));
 }
 
-export function isUserAdminOrManager(user: APIUser): boolean {
-  return isUserAdmin(user) || isUserTeamManager(user) || isUserDatasetManager(user);
+export function isUserAdminOrManager(user: APIUser | null | undefined): boolean {
+  return (
+    user != null && (isUserAdmin(user) || isUserTeamManager(user) || isUserDatasetManager(user))
+  );
 }
 
 export function mayUserEditDataset(user: APIUser | null | undefined, dataset: APIDataset): boolean {

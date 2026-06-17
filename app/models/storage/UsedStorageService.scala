@@ -15,8 +15,8 @@ import models.dataset.{
   DataStore,
   DataStoreDAO,
   Dataset,
-  DatasetLayerAttachmentsDAO,
-  DatasetMagsDAO,
+  DatasetLayerAttachmentDAO,
+  DatasetMagDAO,
   StorageRelevantDataLayerAttachment,
   WKRemoteDataStoreClient
 }
@@ -35,8 +35,8 @@ class UsedStorageService @Inject()(val actorSystem: ActorSystem,
                                    val lifecycle: ApplicationLifecycle,
                                    organizationDAO: OrganizationDAO,
                                    dataStoreDAO: DataStoreDAO,
-                                   datasetMagDAO: DatasetMagsDAO,
-                                   datasetLayerAttachmentsDAO: DatasetLayerAttachmentsDAO,
+                                   datasetMagDAO: DatasetMagDAO,
+                                   datasetLayerAttachmentsDAO: DatasetLayerAttachmentDAO,
                                    rpc: RPC,
                                    config: WkConf)(implicit val ec: ExecutionContext)
     extends LazyLogging

@@ -2,14 +2,14 @@ import type { ActionPattern } from "@redux-saga/types";
 import { Modal } from "antd";
 import Toast from "libs/toast";
 import messages from "messages";
-import { call, fork, put, take, takeEvery } from "typed-redux-saga";
+import { call, delay, fork, put, race, spawn, take, takeEvery } from "typed-redux-saga";
 import { MappingStatusEnum, type SagaIdentifier } from "viewer/constants";
-import type { Action } from "viewer/model/actions/actions";
+import { type Action, escalateErrorAction } from "viewer/model/actions/actions";
 import { setBusyBlockingInfoAction } from "viewer/model/actions/ui_actions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
 import { Store } from "viewer/singletons";
-import type { ActiveMappingInfo, VolumeTracing } from "viewer/store";
+import type { ActiveMappingInfo, VolumeTracing, WebknossosState } from "viewer/store";
 import {
   setMappingIsLockedAction,
   setVolumeBucketDataHasChangedAction,
@@ -48,7 +48,7 @@ export function* takeEveryUnlessBusy<P extends ActionPattern>(
   yield* takeEvery(actionDescriptor, sagaBusyWrapper);
 }
 
-// A little helper function executing a passed saga while setting wks busy state to busy with the passed reason.
+// A little helper function executing a passed saga while setting WK's busy state to busy with the passed reason.
 // Additionally, the saga can be executed while wk is already in a busy state, in case the current saga's identifier is whitelisted.
 // If it is not whitelisted, it will wait until the busy state is available again.
 export function* enforceExecutionAsBusyBlockingUnlessAllowed<T>(
@@ -70,6 +70,19 @@ export function* enforceExecutionAsBusyBlockingUnlessAllowed<T>(
     yield* put(setBusyBlockingInfoAction(false));
   }
   return retVal;
+}
+
+export function* waitUntilNotBusy(): Saga<void> {
+  const isBusy = yield* select((state) => state.uiInformation.busyBlockingInfo.isBusy);
+  if (!isBusy) {
+    return;
+  }
+  while (true) {
+    const setBusyAction = yield take("SET_BUSY_BLOCKING_INFO_ACTION");
+    if (!setBusyAction.value.isBusy) {
+      return;
+    }
+  }
 }
 
 type EnsureMappingIsLockedReturnType = {
@@ -183,6 +196,32 @@ export function* takeWithBatchActionSupport(actionType: Action["type"]) {
   ]);
 }
 
+export function* spawnUntilCanceled<Fn extends (...args: any[]) => Saga<unknown>>(
+  sagaFn: Fn,
+  ...params: Parameters<Fn>
+): Saga<void> {
+  /*
+   * Spawns the given saga with the given parameters in a non-blocking manner.
+   * The saga is automatically canceled if a RESTART_SAGA or CANCEL_SAGA action
+   * was dispatched.
+   * If the spawned saga errors for some reason, that error will be escalated
+   * so that WK as a whole will crash.
+   * Always prefer spawnUntilCanceled over spawn unless you are very confident
+   * that you need spawn. In general, we want to avoid spawn because it can cause
+   * lingering sagas that never get teared down.
+   */
+  yield* spawn(function* (): Saga<void> {
+    try {
+      yield* race({
+        completed: call(sagaFn, ...params),
+        canceled: take(["RESTART_SAGA", "CANCEL_SAGA"]),
+      });
+    } catch (error) {
+      yield* put(escalateErrorAction(error));
+    }
+  });
+}
+
 export function* takeEveryWithBatchActionSupport(
   actionType: Action["type"],
   saga: (...args: any[]) => any,
@@ -201,4 +240,33 @@ export function* takeEveryWithBatchActionSupport(
       }
     }
   });
+}
+
+const DEFAULT_WAIT_FOR_THROTTLE_MS = import.meta.env.MODE !== "test" ? 1000 : 100;
+
+export function* waitFor(
+  selector: (state: WebknossosState) => boolean,
+  throttleMs: number = DEFAULT_WAIT_FOR_THROTTLE_MS,
+): Saga<void> {
+  // Waits for the specified selector to return true.
+  // The selector is checked after each dispatched action (because
+  // each action may have changed the store).
+  // Too avoid performance problems, we wait for throttleMs after each
+  // negative check.
+  if (yield select(selector)) return;
+
+  while (true) {
+    if (import.meta.env.MODE !== "test") {
+      // Actions are dispatched so often that it shouldn't be
+      // necessary to do a race(take("*"), delay(X)) (see else-branch).
+      yield take("*");
+    } else {
+      // In tests the assumption from above is not necessarily true.
+      // Few actions are dispatched and we usually check for the expected
+      // states quickly. So, we do the proper approach:
+      yield* race([take("*"), delay(200)]);
+    }
+    if (yield select(selector)) return;
+    yield delay(throttleMs);
+  }
 }

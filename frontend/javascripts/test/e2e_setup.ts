@@ -56,6 +56,8 @@ const volatileKeys: Array<string | number | symbol> = [
   "tracingId",
   "sortingKey",
   "path",
+  "rootPath",
+  "rootRealPath",
 ];
 
 /**
@@ -119,6 +121,15 @@ window.matchMedia = vi.fn().mockImplementation(() => ({
 }));
 
 global.localStorage = {
+  getItem: vi.fn().mockReturnValue(undefined),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
+  length: 0,
+  key: vi.fn(),
+};
+
+global.sessionStorage = {
   getItem: vi.fn().mockReturnValue(undefined),
   setItem: vi.fn(),
   removeItem: vi.fn(),

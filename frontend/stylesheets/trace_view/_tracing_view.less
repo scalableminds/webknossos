@@ -69,7 +69,7 @@
     padding-left: 10px;
     padding-right: 10px;
 
-    &>.colored-dot {
+    & > .colored-dot {
       display: inline-block;
       width: 10px;
       height: 10px;
@@ -91,7 +91,6 @@
 }
 
 .cell-id-table {
-
   td,
   th {
     padding: 5px;
@@ -178,7 +177,7 @@
     position: static !important;
   }
 
-  >div {
+  > div {
     // Fixes too wide context menu
     width: unset !important;
     // Ensures that the context menu is correctly trapped
@@ -252,7 +251,7 @@
     background-color: var(--ant-blue-2);
   }
 
-  .close-button>i {
+  .close-button > i {
     margin-right: 0px;
   }
 }
@@ -280,7 +279,7 @@ img.keyboard-mouse-icon:first-child {
   margin-left: 0px;
 }
 
-.shortcut-table {
+.shortcut-table-info-tab {
   margin-top: 25px;
   max-width: 500px;
   font-size: 14px;
@@ -309,8 +308,12 @@ img.keyboard-mouse-icon:first-child {
   @dark-bg: #383d48;
   @dark-fg: #f1f1f1;
   @dark-border: #585868;
+  // Basically, redefines var(--ant-color-text-secondary) because
+  // that variable turns black-ish in light mode (in spite of
+  // ConfigProvider around the status bar).
+  @color-text-secondary: rgba(255, 255, 255, 0.67);
 
-  color: rgba(255, 255, 255, 0.67);
+  color: @color-text-secondary;
   z-index: 1000;
 
   &.statusbar-footer {
@@ -348,7 +351,7 @@ img.keyboard-mouse-icon:first-child {
   .ant-input,
   .ant-input-number,
   .ant-radio-button-wrapper,
-  .ant-select>.ant-select-selector {
+  .ant-select > .ant-select-selector {
     color: @dark-fg !important;
 
     &.upgrade-banner-button {
@@ -389,7 +392,11 @@ img.keyboard-mouse-icon:first-child {
     top: 0px;
     bottom: 0px;
     height: auto;
-    color: @dark-fg;
+    line-height: 10px;
+    // Match the gray of the other statusbar icons. The footer's
+    // `.ant-btn { color: @dark-fg !important }` rule would otherwise force the
+    // icon (which uses fill: currentColor) to near-white, so override it here.
+    color: @color-text-secondary !important;
     background-color: inherit;
   }
 
@@ -413,7 +420,6 @@ img.keyboard-mouse-icon:first-child {
     }
 
     .ant-alert-close-icon {
-
       .anticon,
       .anticon-close {
         color: var(--ant-color-text-primary);
@@ -444,7 +450,6 @@ img.keyboard-mouse-icon:first-child {
 }
 
 .no-hover-highlighting {
-
   &:hover,
   &:focus,
   &:active {
@@ -495,4 +500,71 @@ img.keyboard-mouse-icon:first-child {
 #main-tooltip {
   max-width: 250px;
   font-size: 14px;
+}
+
+// css for keyboard shortcut modal
+.keyboard-shortcut-table-modal {
+  margin-bottom: 24px;
+  width: 100%;
+
+  td:nth-child(2) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    width: 100%;
+
+    .keyboard-shortcuts-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      flex: 1;
+      min-width: 0px;
+
+      .single-keyboard-shortcut-container {
+        display: inline-flex;
+        gap: 4px;
+        align-items: center;
+        padding: 2px;
+        white-space: nowrap;
+        border: 1px solid var(--ant-color-border);
+        border-radius: 4px;
+
+        span {
+          display: flex;
+          align-items: center;
+          gap: 4px; /* Adjust spacing as needed */
+        }
+
+        .mouse-icon-large {
+          svg {
+            height: 23px;
+            width: auto;
+          }
+          height: 23px;
+          width: auto;
+        }
+        .mouse-icon-tooltip-wrapper {
+          display: inline-flex;
+          justify-content: center;
+          align-items: center;
+          height: 32px;
+        }
+      }
+    }
+
+    .add-button-container {
+      order: 1;
+      display: flex;
+      justify-content: flex-end;
+      margin-left: auto;
+      min-width: 0;
+    }
+  }
+}
+
+.read-only-button.ant-btn-dangerous:disabled {
+  background-color: var(--ant-color-warning) !important;
+  color: #f5eddf !important;
 }

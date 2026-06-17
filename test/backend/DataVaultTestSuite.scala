@@ -56,7 +56,10 @@ class DataVaultTestSuite extends AsyncWordSpec {
           WsTestClient.withClient { ws =>
             val upath = UPath.fromStringUnsafe("http://storage.googleapis.com/")
             val vaultPath =
-              new VaultPath(upath, HttpsDataVault.create(CredentializedUPath(upath, None), ws, dummyDataStoreHost))
+              new VaultPath(upath,
+                            HttpsDataVault
+                              .create(CredentializedUPath(upath, None), ws, dummyDataStoreHost)
+                              .getOrElse(fail("Failed to create HttpsDataVault")))
             (vaultPath / s"neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey")
               .readBytes(range)(globalExecutionContext, emptyTokenContext)
               .futureBox
@@ -72,7 +75,10 @@ class DataVaultTestSuite extends AsyncWordSpec {
 
       "using Google Cloud Storage Vault" should {
         val upath = UPath.fromStringUnsafe("gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig")
-        val vaultPath = new VaultPath(upath, GoogleCloudDataVault.create(CredentializedUPath(upath, None)))
+        val vaultPath = new VaultPath(upath,
+                                      GoogleCloudDataVault
+                                        .create(CredentializedUPath(upath, None))
+                                        .getOrElse(fail("Failed to create GoogleCloudDataVault")))
         "return correct response (start-end range)" in {
           (vaultPath / dataKey)
             .readBytesEncodingAndRangeHeader(range)(globalExecutionContext, emptyTokenContext)
@@ -120,10 +126,12 @@ class DataVaultTestSuite extends AsyncWordSpec {
             val vaultPath =
               new VaultPath(
                 upath,
-                GoogleCloudDataVault.create(
-                  CredentializedUPath(
-                    upath,
-                    Some(GoogleServiceAccountCredential("name", JsString("secret"), Some("user"), Some("org")))))
+                GoogleCloudDataVault
+                  .create(
+                    CredentializedUPath(
+                      upath,
+                      Some(GoogleServiceAccountCredential("name", JsString("secret"), Some("user"), Some("org")))))
+                  .getOrElse(fail("Failed to create GoogleCloudDataVault"))
               )
             (vaultPath / dataKey)
               .readBytes(ByteRange.startEndExclusive(-10, 10))(globalExecutionContext, emptyTokenContext)
@@ -135,7 +143,10 @@ class DataVaultTestSuite extends AsyncWordSpec {
           val upathGzip =
             UPath.fromStringUnsafe("gs://neuroglancer-public-data/kasthuri2011/image_color_corrected/info")
           val vaultPathGzip =
-            new VaultPath(upathGzip, GoogleCloudDataVault.create(CredentializedUPath(upathGzip, None)))
+            new VaultPath(upathGzip,
+                          GoogleCloudDataVault
+                            .create(CredentializedUPath(upathGzip, None))
+                            .getOrElse(fail("Failed to create GoogleCloudDataVault")))
           for {
             bytesBox <- vaultPathGzip.readBytes()(globalExecutionContext, emptyTokenContext).futureBox
             headerBox <- vaultPathGzip
@@ -156,7 +167,10 @@ class DataVaultTestSuite extends AsyncWordSpec {
           val upathGzip =
             UPath.fromStringUnsafe("gs://neuroglancer-public-data/kasthuri2011/image_color_corrected/info")
           val vaultPathGzip =
-            new VaultPath(upathGzip, GoogleCloudDataVault.create(CredentializedUPath(upathGzip, None)))
+            new VaultPath(upathGzip,
+                          GoogleCloudDataVault
+                            .create(CredentializedUPath(upathGzip, None))
+                            .getOrElse(fail("Failed to create GoogleCloudDataVault")))
           vaultPathGzip
             .readBytes(ByteRange.startEndExclusive(0, 100))(globalExecutionContext, emptyTokenContext)
             .futureBox
@@ -171,7 +185,9 @@ class DataVaultTestSuite extends AsyncWordSpec {
             val clientPool = new S3ClientPool(ws)
             val vaultPath =
               new VaultPath(upath,
-                            S3DataVault.create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext))
+                            S3DataVault
+                              .create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext)
+                              .getOrElse(fail("Failed to create S3DataVault")))
             (vaultPath / "s0/5/5/5").readBytes(range)(globalExecutionContext, emptyTokenContext).futureBox.map {
               case Full(bytes) =>
                 assert(bytes.length == range.length)
@@ -193,7 +209,10 @@ class DataVaultTestSuite extends AsyncWordSpec {
           WsTestClient.withClient { ws =>
             val upath = UPath.fromStringUnsafe("http://storage.googleapis.com/")
             val vaultPath =
-              new VaultPath(upath, HttpsDataVault.create(CredentializedUPath(upath, None), ws, dummyDataStoreHost))
+              new VaultPath(upath,
+                            HttpsDataVault
+                              .create(CredentializedUPath(upath, None), ws, dummyDataStoreHost)
+                              .getOrElse(fail("Failed to create HttpsDataVault")))
             (vaultPath / s"neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey")
               .readBytes()(globalExecutionContext, emptyTokenContext)
               .futureBox
@@ -210,7 +229,10 @@ class DataVaultTestSuite extends AsyncWordSpec {
       "using Google Cloud Storage Vault" should {
         "return correct response" in {
           val upath = UPath.fromStringUnsafe("gs://neuroglancer-fafb-data/fafb_v14/fafb_v14_orig")
-          val vaultPath = new VaultPath(upath, GoogleCloudDataVault.create(CredentializedUPath(upath, None)))
+          val vaultPath = new VaultPath(upath,
+                                        GoogleCloudDataVault
+                                          .create(CredentializedUPath(upath, None))
+                                          .getOrElse(fail("Failed to create GoogleCloudDataVault")))
           (vaultPath / dataKey).readBytes()(globalExecutionContext, emptyTokenContext).futureBox.map {
             case Full(bytes) =>
               assert(bytes.length == dataLength)
@@ -227,7 +249,9 @@ class DataVaultTestSuite extends AsyncWordSpec {
             val clientPool = new S3ClientPool(ws)
             val vaultPath =
               new VaultPath(upath,
-                            S3DataVault.create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext))
+                            S3DataVault
+                              .create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext)
+                              .getOrElse(fail("Failed to create S3DataVault")))
             (vaultPath / "33792-34304_29696-30208_3216-3232")
               .readBytes()(globalExecutionContext, emptyTokenContext)
               .futureBox
@@ -244,7 +268,9 @@ class DataVaultTestSuite extends AsyncWordSpec {
             val upath = UPath.fromStringUnsafe(s"s3://non-existent-bucket${UUID.randomUUID}/non-existent-object")
             WsTestClient.withClient { ws =>
               val clientPool = new S3ClientPool(ws)
-              val s3DataVault = S3DataVault.create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext)
+              val s3DataVault = S3DataVault
+                .create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext)
+                .getOrElse(fail("Failed to create S3DataVault"))
               val vaultPath = new VaultPath(upath, s3DataVault)
               vaultPath.readBytes()(globalExecutionContext, emptyTokenContext).futureBox.map(assertBoxEmpty)
             }
@@ -256,7 +282,9 @@ class DataVaultTestSuite extends AsyncWordSpec {
             val upath = UPath.fromStringUnsafe(s"s3://open-neurodata/non-existent-object${UUID.randomUUID}")
             WsTestClient.withClient { ws =>
               val clientPool = new S3ClientPool(ws)
-              val s3DataVault = S3DataVault.create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext)
+              val s3DataVault = S3DataVault
+                .create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext)
+                .getOrElse(fail("Failed to create S3DataVault"))
               val vaultPath = new VaultPath(upath, s3DataVault)
               vaultPath.readBytes()(globalExecutionContext, emptyTokenContext).futureBox.map(assertBoxEmpty)
             }
@@ -274,12 +302,14 @@ class DataVaultTestSuite extends AsyncWordSpec {
             val clientPool = new S3ClientPool(ws)
             val vaultPath =
               new VaultPath(upath,
-                            S3DataVault.create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext))
+                            S3DataVault
+                              .create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext)
+                              .getOrElse(fail("Failed to create S3DataVault")))
             vaultPath.listDirectory(maxItems = 3)(globalExecutionContext).futureBox.map {
               case Full(result) =>
                 assert(result.length == 3)
-                assert(result.exists(_.toRemoteUriUnsafe == new URI(
-                  "s3://janelia-cosem-datasets/jrc_hela-3/jrc_hela-3.n5/em/fibsem-uint16/s0/")))
+                assert(result.exists(_.toRemoteUri == Full(
+                  new URI("s3://janelia-cosem-datasets/jrc_hela-3/jrc_hela-3.n5/em/fibsem-uint16/s0/"))))
               case _ => fail()
             }
           }
@@ -292,7 +322,9 @@ class DataVaultTestSuite extends AsyncWordSpec {
             WsTestClient.withClient { ws =>
               val clientPool = new S3ClientPool(ws)
               val s3DataVault =
-                S3DataVault.create(CredentializedUPath(nonExistentUpath, None), clientPool)(globalExecutionContext)
+                S3DataVault
+                  .create(CredentializedUPath(nonExistentUpath, None), clientPool)(globalExecutionContext)
+                  .getOrElse(fail("Failed to create S3DataVault"))
               val vaultPath = new VaultPath(nonExistentUpath, s3DataVault)
               vaultPath.listDirectory(maxItems = 5)(globalExecutionContext).futureBox.map(assertBoxFailure)
             }
@@ -321,7 +353,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
 
         "resolve child" in {
           val childPath = somePath / "c"
-          assert(childPath.toRemoteUriUnsafe.toString == s"${someUpath.toString}/c")
+          assert(childPath.toRemoteUri.map(_.toString) == Full(s"${someUpath.toString}/c"))
         }
 
         "get parent" in {
@@ -346,7 +378,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
         val trailingSlashPath = new VaultPath(trailingSlashUpath, new MockDataVault)
         "resolve child" in {
           val childPath = trailingSlashPath / "c"
-          assert(childPath.toRemoteUriUnsafe.toString == s"${trailingSlashUpath.toString}c")
+          assert(childPath.toRemoteUri.map(_.toString) == Full(s"${trailingSlashUpath.toString}c"))
         }
 
         "get parent" in {

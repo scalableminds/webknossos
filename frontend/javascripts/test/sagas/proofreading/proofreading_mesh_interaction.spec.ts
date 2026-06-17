@@ -132,51 +132,55 @@ describe("Proofreading (with mesh actions)", () => {
   }
 
   // Mesh interactions tests
-  it("should merge two agglomerates correctly even when merged segments are not loaded (such an action can be triggered via mesh proofreading)", { timeout: 6000}, async (context: WebknossosTestContext) => {
-    const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
+  it(
+    "should merge two agglomerates correctly even when merged segments are not loaded (such an action can be triggered via mesh proofreading)",
+    { timeout: 6000 },
+    async (context: WebknossosTestContext) => {
+      const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
-    const { annotation } = Store.getState();
-    const { tracingId } = annotation.volumes[0];
+      const { annotation } = Store.getState();
+      const { tracingId } = annotation.volumes[0];
 
-    const task = startSaga(function* task(): Saga<void> {
-      yield simulateMergeAgglomeratesViaMeshes(context);
+      const task = startSaga(function* task(): Saga<void> {
+        yield simulateMergeAgglomeratesViaMeshes(context);
 
-      const finalMapping = yield* select(
-        (state) =>
-          getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
-      );
+        const finalMapping = yield* select(
+          (state) =>
+            getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, tracingId).mapping,
+        );
 
-      expect(finalMapping).toEqual(
-        new Map([
-          [1, 1],
-          [2, 1],
-          [3, 1],
-          [4, 4],
-          [5, 4],
-          [6, 6],
-          [7, 6],
-          // [1337, 1], not loaded due to no rebasing performed as this test has no injected updated actions.
-          // If there would be injected updates (simulating other users' changes) the segment id 1337 would
-          // been looked up for rebasing and thus added to the loaded mapping.
-          // [1338, 1], not loaded
-        ]),
-      );
-      yield call(() => context.api.tracing.save());
+        expect(finalMapping).toEqual(
+          new Map([
+            [1, 1],
+            [2, 1],
+            [3, 1],
+            [4, 4],
+            [5, 4],
+            [6, 6],
+            [7, 6],
+            // [1337, 1], not loaded due to no rebasing performed as this test has no injected updated actions.
+            // If there would be injected updates (simulating other users' changes) the segment id 1337 would
+            // been looked up for rebasing and thus added to the loaded mapping.
+            // [1338, 1], not loaded
+          ]),
+        );
+        yield call(() => context.api.tracing.save());
 
-      yield* expectSegmentList(
-        tracingId,
-        [
-          {
-            id: 1,
-            anchorPosition: [1, 1, 1],
-          },
-        ],
-        _backendMock,
-      );
-    });
+        yield* expectSegmentList(
+          tracingId,
+          [
+            {
+              id: 1,
+              anchorPosition: [1, 1, 1],
+            },
+          ],
+          _backendMock,
+        );
+      });
 
-    await task.toPromise();
-  });
+      await task.toPromise();
+    },
+  );
 
   it("should load unknown unmapped segment ids of mesh merge operation when incorporating interfered update actions.", async (context: WebknossosTestContext) => {
     const backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());

@@ -84,10 +84,9 @@ export function* pushSaveQueueAsync(): Saga<never> {
 
     let bestForcePush: SaveNowAction | undefined;
     if (firstForcePush != null) {
-      const remainingActions = (yield* flush(saveNowChannel));
+      const remainingActions = yield* flush(saveNowChannel);
       const allActions = [firstForcePush, ...remainingActions];
-      bestForcePush =
-        allActions.find((a) => a.operationContext != null) ?? allActions.at(-1)!;
+      bestForcePush = allActions.find((a) => a.operationContext != null) ?? allActions.at(-1)!;
     }
 
     yield* waitFor(maySendSaveRequest);
@@ -131,7 +130,9 @@ export function* pushSaveQueueAsync(): Saga<never> {
     if (saveCtx != null) {
       yield* saveCtx.execute(() => runSaveRetryLoop(saveCtx));
     } else {
-      console.warn("Ignoring request to save because an operation is ongoing. Waiting for new request.")
+      console.warn(
+        "Ignoring request to save because an operation is ongoing. Waiting for new request.",
+      );
     }
   }
 }

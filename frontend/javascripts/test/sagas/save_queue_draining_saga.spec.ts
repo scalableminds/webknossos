@@ -2,10 +2,6 @@ import { sendSaveRequestWithToken } from "admin/rest_api";
 import DiffableMap from "libs/diffable_map";
 import { alert } from "libs/window";
 import { call, put, take } from "redux-saga/effects";
-import {
-  getOrCreateOperationContext,
-  type OperationContext,
-} from "viewer/model/sagas/operation_context_saga";
 import { TIMESTAMP } from "test/global_mocks";
 import { UnitLong } from "viewer/constants";
 import {
@@ -17,6 +13,10 @@ import {
   snapshotAnnotationStateForNextRebaseAction,
 } from "viewer/model/actions/save_actions";
 import compactSaveQueue from "viewer/model/helpers/compaction/compact_save_queue";
+import {
+  getOrCreateOperationContext,
+  type OperationContext,
+} from "viewer/model/sagas/operation_context_saga";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import {
   addVersionNumbers,

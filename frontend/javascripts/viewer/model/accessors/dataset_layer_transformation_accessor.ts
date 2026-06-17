@@ -435,12 +435,12 @@ function isScaleOnly(transformation?: AffineTransformation) {
     for (let j = 0; j < 3; j++) {
       if (i !== j && Math.abs(m[i][j]) > EPSILON) return false;
     }
-    if (Math.abs(m[i][3]) > EPSILON) return false; // Checks projection component to be 0.
+    if (Math.abs(m[i][3]) > EPSILON) return false; // Checks translation component to be 0.
   }
   return (
-    Math.abs(m[3][0]) <= EPSILON && // checks for translation
-    Math.abs(m[3][1]) <= EPSILON && // checks for translation
-    Math.abs(m[3][2]) <= EPSILON && // checks for translation
+    Math.abs(m[3][0]) <= EPSILON && // checks projection component
+    Math.abs(m[3][1]) <= EPSILON && // checks projection component
+    Math.abs(m[3][2]) <= EPSILON && // checks projection component
     Math.abs(m[3][3] - 1) <= EPSILON // checks w component
   );
 }

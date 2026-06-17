@@ -611,7 +611,7 @@ case class MergeSegmentItemsVolumeAction(agglomerateId1: Long, // merged into
     }
 
     val withResultSegment =
-      if (sourceSegmentOpt.isDefined) tracing.segments.map { segment: Segment =>
+      if (sourceSegmentOpt.isDefined) tracing.segments.map { (segment: Segment) =>
         if (segment.segmentId == agglomerateId1) resultSegment else segment
       } else tracing.segments :+ resultSegment
 

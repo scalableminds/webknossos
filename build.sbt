@@ -1,22 +1,34 @@
 import sbt._
 
 ThisBuild / version := "wk"
-ThisBuild / scalaVersion := "2.13.18"
-ThisBuild / scapegoatVersion := "3.3.1"
+ThisBuild / scalaVersion := "3.8.3"
+ThisBuild / scalafixDependencies += "io.github.dedis" %% "scapegoat-scalafix" % "1.1.4"
+inThisBuild(
+  List(
+    semanticdbEnabled := false,
+    semanticdbVersion := scalafixSemanticdb.revision
+  )
+)
+addCommandAlias(
+  "fix",
+  "set ThisBuild / semanticdbEnabled := true; scalafix; set ThisBuild / semanticdbEnabled := false"
+)
+// fix jni for scala version 3
+sbtJniCoreScope := Compile
 
-val failOnWarning = if (sys.props.contains("failOnWarning")) Seq("-Xfatal-warnings") else Seq()
+// failOnWarning is temporarily disabled after scala3 upgrade. See https://github.com/scalableminds/webknossos/issues/9606
+val failOnWarning = Seq() // if (sys.props.contains("failOnWarning")) Seq("-Xfatal-warnings") else Seq()
 ThisBuild / scalacOptions ++= Seq(
-  "-release:11",
+  "-explain", // More detailed compiler output
+  "-explain-types", // Explain type errors in detail
+  "-release:17",
   "-feature",
   "-deprecation",
   "-language:implicitConversions",
   "-language:postfixOps",
-  "-Xlint:unused",
-  "-Xlint:deprecation",
-  "-Xmaxerrs:500",
-  s"-Wconf:src=target/.*:s",
-  s"-Wconf:src=webknossos-datastore/target/.*:s",
-  s"-Wconf:src=webknossos-tracingstore/target/.*:s"
+  "-Wconf:src=target/.*:s",
+  "-Wconf:src=webknossos-datastore/target/.*:s",
+  "-Wconf:src=webknossos-tracingstore/target/.*:s"
 ) ++ failOnWarning
 ThisBuild / javacOptions ++= Seq(
   "-Xlint:unchecked",
@@ -37,12 +49,7 @@ Compile / console / scalacOptions -= "-Xlint:unused"
 lazy val commonSettings = Seq(
   resolvers ++= Dependencies.dependencyResolvers,
   Compile / doc / sources := Seq.empty,
-  Compile / packageDoc / publishArtifact := false,
-  scapegoatIgnoredFiles := Seq(".*/Tables.scala",
-                               ".*/Routes.scala",
-                               ".*/.*mail.*template\\.scala",
-                               ".*/src_managed/.*"),
-  scapegoatDisabledInspections := Seq("FinalModifierOnCaseClass", "UnusedMethodParameter", "UnsafeTraversableMethods"),
+  Compile / packageDoc / publishArtifact := false
 )
 
 lazy val protocolBufferSettings = Seq(

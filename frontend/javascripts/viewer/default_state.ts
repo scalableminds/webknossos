@@ -174,6 +174,7 @@ const defaultState: WebknossosState = {
     owningOrganization: "",
     description: null,
     directoryName: "Loading",
+    isVirtual: false,
     allowedTeams: [],
     allowedTeamsCumulative: [],
     logoUrl: null,

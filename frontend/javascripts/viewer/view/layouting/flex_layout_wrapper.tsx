@@ -557,18 +557,12 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
 
     if (isTopMost && isRightMost) {
       renderValues.buttons.push(
-        <BorderToggleButton
-          side="right"
-          onClick={() => this.toggleBorder("right")}
-          key="right-border-toggle-button-top"
-        />,
+        <BorderToggleButton side="right" key="right-border-toggle-button-top" />,
       );
     }
 
     if (isTopMost && isLeftMost) {
-      renderValues.leading = (
-        <BorderToggleButton side="left" onClick={() => this.toggleBorder("left")} />
-      );
+      renderValues.leading = <BorderToggleButton side="left" />;
     }
   };
 
@@ -599,9 +593,7 @@ class FlexLayoutWrapper extends PureComponent<Props, State> {
         </div>
         <ConfigProvider theme={getAntdTheme("dark")}>
           <Footer className="statusbar-footer">
-            <BorderToggleButton side="left" onClick={() => this.toggleBorder("left")} inFooter />
             <Statusbar />
-            <BorderToggleButton side="right" onClick={() => this.toggleBorder("right")} inFooter />
           </Footer>
         </ConfigProvider>
       </Fragment>

@@ -124,7 +124,7 @@ object BoundingBox {
   def union(bbs: List[BoundingBox]): BoundingBox =
     bbs match {
       case head :: tail =>
-        tail.foldLeft(head)(_ union _)
+        tail.foldLeft(head)(_ `union` _)
       case _ =>
         BoundingBox.empty
     }
@@ -133,7 +133,7 @@ object BoundingBox {
     bbs match {
       case head :: tail =>
         tail.foldLeft[Option[BoundingBox]](Some(head)) { (aOpt, b) =>
-          aOpt.flatMap(_ intersection b)
+          aOpt.flatMap(_ `intersection` b)
         }
       case _ =>
         None

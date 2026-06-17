@@ -28,6 +28,6 @@ const ReactMarkdown = loadable<Props>(
   ({ children }) => <>{children}</>,
 );
 
-export default function Markdown({ children }: Props) {
-  return <ReactMarkdown components={{ a: LinkRenderer }}>{children}</ReactMarkdown>;
+export default function Markdown({ children, components }: Props) {
+  return <ReactMarkdown components={{ ...components, a: LinkRenderer }}>{children}</ReactMarkdown>;
 }

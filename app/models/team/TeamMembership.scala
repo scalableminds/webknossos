@@ -3,10 +3,10 @@ package models.team
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.Fox
+import play.api.libs.functional.syntax.toFunctionalBuilderOps
+import play.api.libs.json.{JsObject, Json, Reads, __}
 
 import javax.inject.Inject
-import play.api.libs.functional.syntax._
-import play.api.libs.json._
 
 case class TeamMembership(teamId: ObjectId, isTeamManager: Boolean)
 object TeamMembership {

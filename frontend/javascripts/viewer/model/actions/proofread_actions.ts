@@ -44,8 +44,8 @@ export const clearProofreadingByProducts = () =>
 
 export const proofreadMergeAction = (
   position: Vector3 | null, // the clicked target position (if data viewports were used)
-  segmentId?: number | null, // the target segment id
-  agglomerateId?: number | null, // the target agglomerate id
+  segmentId?: number | null, // the target segment id (if 3D viewport was used)
+  agglomerateId?: number | null, // the target agglomerate id (if 3D viewport was used)
 ) =>
   // Note that the source ID is derived by the active segment ID and is NOT encoded in this action.
   ({

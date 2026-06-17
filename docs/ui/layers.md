@@ -1,7 +1,7 @@
 # Layers and Settings
 
 The left-hand side panel features both a list of all available data and annotation layers as well as settings menu to fine-tune some parameters of WEBKNOSSOS.
-All settings are automatically saved as part of a user's profile.
+All settings are automatically saved. When viewing a dataset without an annotation, settings are saved as part of your user profile. When viewing an annotation, layer visibility and other display settings are saved per user per annotation, so each collaborator maintains their own independent view.
 
 ## Layers Tab
 

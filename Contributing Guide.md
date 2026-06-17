@@ -6,7 +6,7 @@ Thank you for taking the time to contribute to this project! The following is a 
 
 ## Code of Conduct
 
-WEBKNOSSOS and everyone contributing and collaborating on this project is expected to follow the [WEBKNOSSOS Code of Conduct](CODE_OF_CONDUCT.md). Please report unacceptable behavior to [hello@webknossos.org](mailto:hello@webknossos.org).
+WEBKNOSSOS and everyone contributing and collaborating on this project is expected to follow the [WEBKNOSSOS Code of Conduct](CODE_OF_CONDUCT.md). Please report unacceptable behavior to [support@webknossos.org](mailto:support@webknossos.org).
 
 
 ## How can I help?
@@ -27,7 +27,7 @@ or if you have questions regarding its usage.
 Please leave a message on the [image.sc forum](https://forum.image.sc/tag/webknossos)
 using the `webknossos` tag to enable public communication on those topics.
 If you prefer to share information only with the WEBKNOSSOS team, please write an email
-to [hello@webknossos.org](mailto:hello@webknossos.org). For commercial support please
+to [support@webknossos.org](mailto:support@webknossos.org). For commercial support please
 reach out to [scalable minds](https://scalableminds.com).
 
 

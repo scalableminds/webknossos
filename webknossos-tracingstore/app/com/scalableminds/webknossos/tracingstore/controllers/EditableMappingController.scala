@@ -23,7 +23,7 @@ import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
 }
 import com.scalableminds.webknossos.tracingstore.tracings.volume.VolumeTracingService
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
-import com.scalableminds.webknossos.tracingstore.tracings.KeyValueStoreImplicits
+import com.scalableminds.webknossos.tracingstore.tracings.KeyValueStoreConversions
 import play.api.libs.json.Json
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
@@ -38,7 +38,7 @@ class EditableMappingController @Inject()(
     remoteDatastoreClient: TSRemoteDatastoreClient,
     editableMappingIOService: EditableMappingIOService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
-    with KeyValueStoreImplicits {
+    with KeyValueStoreConversions {
 
   def editableMappingInfo(tracingId: String, annotationId: ObjectId, version: Option[Long]): Action[AnyContent] =
     Action.async { implicit request =>

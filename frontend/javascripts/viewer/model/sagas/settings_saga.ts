@@ -2,7 +2,7 @@ import { updateDatasetConfiguration, updateUserConfiguration } from "admin/rest_
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
 import messages from "messages";
-import { all, call, debounce, put, retry, takeEvery } from "typed-redux-saga";
+import { all, call, debounce, delay, put, retry, takeEvery, takeLatest } from "typed-redux-saga";
 import Constants, { ControlModeEnum, LongUnitToShortUnitMap } from "viewer/constants";
 import {
   type SetViewModeAction,
@@ -16,6 +16,7 @@ import {
 } from "viewer/model/sagas/saving/save_saga_constants";
 import type { DatasetConfiguration, DatasetLayerConfiguration } from "viewer/store";
 import { mayEditAnnotation } from "../accessors/annotation_accessor";
+import { getMappingFromLayerNameToBaseDatasetLayerName } from "../accessors/dataset_accessor";
 import { Toolkit } from "../accessors/tool_accessor";
 import { ensureWkInitialized } from "./ready_sagas";
 
@@ -32,14 +33,18 @@ function* pushUserSettingsAsync(): Saga<void> {
 }
 
 function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration): Saga<void> {
+  yield* delay(Constants.SETTING_SAVE_DEBOUNCE_MS);
   const activeUser = yield* select((state) => state.activeUser);
   if (activeUser == null) return;
   const dataset = yield* select((state) => state.dataset);
+  const layerNamesOfDatasetToFallbackNameMaybe =
+    getMappingFromLayerNameToBaseDatasetLayerName(dataset);
   const datasetConfiguration = yield* select((state) => state.datasetConfiguration);
 
   const maybeMaskedDatasetConfiguration = yield* prepareDatasetSettingsForSaving(
     datasetConfiguration,
     originalDatasetSettings,
+    layerNamesOfDatasetToFallbackNameMaybe,
   );
 
   try {
@@ -68,6 +73,7 @@ function* pushDatasetSettingsAsync(originalDatasetSettings: DatasetConfiguration
 function* prepareDatasetSettingsForSaving(
   datasetConfiguration: DatasetConfiguration,
   originalDatasetSettings: DatasetConfiguration,
+  layerNamesOfDatasetToFallbackNameMaybe: Map<string, string>,
 ) {
   /**
    * If an annotation is open, we don't want to change the visibility settings for
@@ -89,17 +95,20 @@ function* prepareDatasetSettingsForSaving(
     return datasetConfiguration;
   }
 
-  const newLayers: Record<string, DatasetLayerConfiguration> = {};
+  const newLayersWithNamingAdjusted: Record<string, DatasetLayerConfiguration> = {};
   for (const layerName of Object.keys(datasetConfiguration.layers)) {
-    newLayers[layerName] = {
-      ...datasetConfiguration.layers[layerName],
-      isDisabled: originalDatasetSettings.layers[layerName].isDisabled,
-    };
+    const layerNameOfDataset = layerNamesOfDatasetToFallbackNameMaybe.get(layerName);
+    if (layerNameOfDataset) {
+      newLayersWithNamingAdjusted[layerNameOfDataset] = {
+        ...datasetConfiguration.layers[layerName],
+        isDisabled: originalDatasetSettings.layers[layerName].isDisabled,
+      };
+    }
   }
 
   const maskedDatasetConfiguration = {
     ...datasetConfiguration,
-    layers: newLayers,
+    layers: newLayersWithNamingAdjusted,
   };
   return maskedDatasetConfiguration;
 }
@@ -150,10 +159,7 @@ export default function* watchPushSettingsAsync(): Saga<void> {
 
   yield* all([
     debounce(Constants.SETTING_SAVE_DEBOUNCE_MS, "UPDATE_USER_SETTING", pushUserSettingsAsync),
-    debounce(Constants.SETTING_SAVE_DEBOUNCE_MS, "UPDATE_DATASET_SETTING", () =>
-      pushDatasetSettingsAsync(originalDatasetSettings),
-    ),
-    debounce(Constants.SETTING_SAVE_DEBOUNCE_MS, "UPDATE_LAYER_SETTING", () =>
+    takeLatest(["UPDATE_DATASET_SETTING", "UPDATE_LAYER_SETTING"], () =>
       pushDatasetSettingsAsync(originalDatasetSettings),
     ),
     takeEvery("UPDATE_USER_SETTING", showUserSettingToast),

@@ -368,11 +368,13 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
       resumableUpload,
       datastoreUrl,
     });
+    let finishUploadCalled = false;
     resumableUpload.addEventListener("complete", (event: ResumableUploadEvent) => {
       if (
         event.detail.type !== "complete" ||
         !event.detail.didUploadCompleteSuccessfully ||
-        this._isCancellingUpload
+        this._isCancellingUpload ||
+        finishUploadCalled
       ) {
         // The upload was not successful, or a cancel was initiated before the complete event
         // fired (e.g. the last in-flight chunk completed while the cancel dialog was open).
@@ -386,6 +388,8 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
         throw new Error("Form couldn't be initialized.");
       }
 
+      finishUploadCalled = true;
+      resumableUpload.pause();
       this.setState({
         isFinishing: true,
       });
@@ -823,7 +827,7 @@ class DatasetUploadView extends React.Component<PropsWithFormAndRouter, State> {
                   <>
                     We are happy to help!
                     <br />
-                    Please <a href="mailto:hello@webknossos.org">contact us</a> if you have any
+                    Please <a href="mailto:support@webknossos.org">contact us</a> if you have any
                     trouble uploading your data or the uploader doesn&apos;t support your format
                     yet.
                   </>

@@ -131,3 +131,4 @@ public/index.html
 tsconfig.tsbuildinfo
 
 .claude
+.jvmopts

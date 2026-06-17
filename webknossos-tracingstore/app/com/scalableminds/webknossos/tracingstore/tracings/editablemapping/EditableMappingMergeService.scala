@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.tracingstore.annotation.{UpdateAction, Updat
 import com.scalableminds.webknossos.tracingstore.tracings.{
   FallbackDataHelper,
   FossilDBPutBuffer,
-  KeyValueStoreImplicits,
+  KeyValueStoreConversions,
   TracingDataStore
 }
 import play.api.libs.json.Json
@@ -24,7 +24,7 @@ class EditableMappingMergeService @Inject()(val tracingDataStore: TracingDataSto
                                             val remoteDatastoreClient: TSRemoteDatastoreClient,
                                             val remoteWebknossosClient: TSRemoteWebknossosClient,
                                             editableMappingService: EditableMappingService)
-    extends KeyValueStoreImplicits
+    extends KeyValueStoreConversions
     with UpdateGroupHandling
     with FoxImplicits
     with FallbackDataHelper {
@@ -67,10 +67,10 @@ class EditableMappingMergeService @Inject()(val tracingDataStore: TracingDataSto
           var updateVersion = 1L
           val annotationUpdatesPutBuffer = new FossilDBPutBuffer(tracingDataStore.annotationUpdates)
           Fox
-            .serialCombined(linearizedEditableMappingUpdates) { update: UpdateAction =>
+            .serialCombined(linearizedEditableMappingUpdates) { (update: UpdateAction) =>
               for {
                 _ <- annotationUpdatesPutBuffer.put(newAnnotationId.toString,
-                                                    Json.toJson(List(update)),
+                                                    jsonToBytes(Json.toJson(List(update))),
                                                     Some(updateVersion))
                 _ = updateVersion += 1
               } yield ()
@@ -107,7 +107,7 @@ class EditableMappingMergeService @Inject()(val tracingDataStore: TracingDataSto
       updatesByAnnotation <- Fox.serialCombined(annotationIds) { annotationId =>
         for {
           updateGroups <- tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(
-            annotationId.toString)(fromJsonBytes[List[UpdateAction]])
+            annotationId.toString)(jsonFromBytes[List[UpdateAction]])
           updatesIroned: Seq[UpdateAction] = ironOutReverts(updateGroups)
           editableMappingUpdates = updatesIroned.flatMap {
             case a: EditableMappingUpdateAction => Some(a.withActionTracingId(newTracingId))

@@ -452,7 +452,7 @@ Samplecountry
           _ <- userExperiencesDAO.updateExperiencesForUser(user, Map("sampleExp" -> 10))
           _ <- userDAO.insertTeamMembership(user._id,
                                             TeamMembership(organizationTeam._id, isTeamManager = isTeamManager))
-          _ = logger.info("Inserted default user")
+          _ = logger.info(s"Inserted default user $userEmail")
         } yield ()
     }
 

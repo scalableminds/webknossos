@@ -86,20 +86,21 @@ class Startup @Inject()(actorSystem: ActorSystem,
 
   if (conf.Slick.checkSchemaOnStartup) {
     ensurePostgresDatabase()
-    ensurePostgresSchema()
+    Future { checkPostgresSchema() }
   }
 
   initialDataService.insert.futureBox.map {
-    case Full(_) => Instant.logSince(beforeStartup, "Webknossos startup", logger)
+    case Full(_) =>
+      Instant.logSince(beforeStartup, "WEBKNOSSOS startup complete. Start hooks", logger)
     case Failure(msg, _, _) =>
       logger.info("No initial data inserted: " + msg)
-      Instant.logSince(beforeStartup, "Webknossos startup", logger)
+      Instant.logSince(beforeStartup, "WEBKNOSSOS startup complete. Start hooks", logger)
     case _ => ()
   }
 
   slackNotificationService.noticeStartup(webknossos.BuildInfo.version)
 
-  private def ensurePostgresSchema(): Unit = {
+  private def checkPostgresSchema(): Unit = {
     logger.info("Checking database schema...")
 
     val errorMessageBuilder = mutable.ListBuffer[String]()

@@ -55,7 +55,7 @@ case class SqlToken(sql: String, values: List[SqlValue] = List()) {
     new StreamingInvokerAction[Vector[R], R, Effect] {
       def statements: List[String] = List(sql)
 
-      protected[this] def createInvoker(statements: Iterable[String]): StatementInvoker[R] = new StatementInvoker[R] {
+      protected def createInvoker(statements: Iterable[String]): StatementInvoker[R] = new StatementInvoker[R] {
         val getStatement: String = statements.head
 
         protected def setParam(st: PreparedStatement): Unit = {
@@ -68,7 +68,7 @@ case class SqlToken(sql: String, values: List[SqlValue] = List()) {
 
       override def getDumpInfo = DumpInfo(DumpInfo.simpleNameFor(getClass), mainInfo = s"[$debugInfo]")
 
-      protected[this] def createBuilder: mutable.Builder[R, Vector[R]] = Vector.newBuilder[R]
+      protected def createBuilder: mutable.Builder[R, Vector[R]] = Vector.newBuilder[R]
     }
 
   def asUpdate: SqlAction[Int, NoStream, Effect] = as[Int](GetUpdateValue).head
@@ -212,7 +212,7 @@ case class ByteArrayValue(v: Array[Byte]) extends SqlValue {
 case class EnumerationArrayValue(v: List[Enumeration#Value], sqlEnumName: String) extends SqlValue with SqlEscaping {
   override def setParameter(pp: PositionedParameters): Unit = pp.setObject(v.map(_.toString).toArray, Types.ARRAY)
 
-  override def placeholder = s"?::$sqlEnumName[]"
+  override def placeholder: String = s"?::$sqlEnumName[]"
 
   override def debugInfo: String = "{" + v.mkString(",") + "}"
 }
@@ -255,6 +255,6 @@ case class NoneValue() extends SqlValue {
 }
 
 private object GetUpdateValue extends GetResult[Int] {
-  def apply(pr: PositionedResult) =
+  def apply(pr: PositionedResult): Int =
     throw new Exception("Update statements should not return a ResultSet")
 }

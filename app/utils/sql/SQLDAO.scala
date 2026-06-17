@@ -10,7 +10,7 @@ import slick.lifted.{AbstractTable, TableQuery}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SecuredSQLDAO(sqlClient) {
   protected def collection: TableQuery[X]
   override protected def collectionName: SqlToken =
@@ -20,36 +20,33 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClien
   def columns: SqlToken = SqlToken.raw(columnsList.mkString(", "))
   def columnsWithPrefix(prefix: String): SqlToken = SqlToken.raw(columnsList.map(prefix + _).mkString(", "))
 
-  protected def resultConverter: GetResult[X#TableElementType]
+  protected def resultConverter: GetResult[R]
 
-  protected def parse(row: X#TableElementType): Fox[C]
+  protected def parse(row: R): Fox[C]
 
-  protected def parseFirst(rowSeq: Seq[X#TableElementType], queryLabel: ObjectId): Fox[C] =
+  protected def parseFirst(rowSeq: Seq[R], queryLabel: ObjectId): Fox[C] =
     parseFirst(rowSeq, queryLabel.toString)
 
-  protected def parseFirst(rowSeq: Seq[X#TableElementType], queryLabel: String): Fox[C] =
+  protected def parseFirst(rowSeq: Seq[R], queryLabel: String): Fox[C] =
     for {
       firstRow <- rowSeq.headOption.toFox // No error chain here, as this should stay Fox.Empty
       parsed <- parse(firstRow) ?~> s"Parsing failed for row in $collectionName queried by $queryLabel"
     } yield parsed
 
-  protected def parseAll(rowSeq: Seq[X#TableElementType]): Fox[List[C]] =
+  protected def parseAll(rowSeq: Seq[R]): Fox[List[C]] =
     Fox.combined(rowSeq.map(parse)) ?~> s"Parsing failed for a row in $collectionName during list query"
 
   def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[C] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(
-        q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery"
-          .as[X#TableElementType](resultConverter))
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[R](resultConverter))
       parsed <- parseFirst(r, id)
     } yield parsed
 
   def findAll(implicit ctx: DBAccessContext): Fox[List[C]] =
     for {
       accessQuery <- readAccessQuery
-      r <- run(
-        q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[X#TableElementType](resultConverter))
+      r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[R](resultConverter))
       parsed <- parseAll(r)
     } yield parsed
 
@@ -66,7 +63,8 @@ abstract class SQLDAO[C, R, X <: AbstractTable[R]] @Inject()(sqlClient: SqlClien
       collectionToken = collectionName
       nameColumnToken = SqlToken.raw(nameColumn)
       _ <- run(
-        q"UPDATE $collectionToken SET isDeleted = TRUE, $nameColumnToken = CONCAT($nameColumnToken, $deletedSuffix) WHERE _id = $id".asUpdate)
+        q"UPDATE $collectionToken SET isDeleted = TRUE, $nameColumnToken = CONCAT($nameColumnToken, $deletedSuffix) WHERE _id = $id".asUpdate
+      )
     } yield ()
 
 }

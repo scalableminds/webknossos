@@ -112,7 +112,8 @@ export function* pushSaveQueueAsync(): Saga<never> {
       }
     }
 
-    const saveCtx = yield* getOrCreateOperationContext(
+    const saveCtx = yield* call(
+      getOrCreateOperationContext,
       { id: "save", description: "Saving annotation" },
       operationContext,
     );

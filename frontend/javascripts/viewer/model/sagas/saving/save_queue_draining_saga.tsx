@@ -83,41 +83,48 @@ export function* pushSaveQueueAsync(): Saga<never> {
 
     yield* waitFor(maySendSaveRequest);
 
-    yield* put(setSaveBusyAction(true));
     const enforceEmptySaveQueue = forcePush != null;
     const operationContext: OperationContext | null =
       (forcePush as SaveNowAction | undefined)?.operationContext ?? null;
 
     function* runSaveRetryLoop(ctx: OperationContext) {
-      let shouldRetryOnConflict = true;
-      let retryCount = 0;
-      while (shouldRetryOnConflict) {
-        shouldRetryOnConflict = (yield* call(
-          synchronizeAnnotationWithBackend,
-          enforceEmptySaveQueue,
-          ctx,
-        )).hadConflict;
-        ++retryCount;
-        if (retryCount > MAX_ON_CONFLICT_RETRIES) {
-          const annotation = yield* select((state) => state.annotation);
-          yield* call(
-            [ErrorHandling, ErrorHandling.notify],
-            new Error("Saving annotation repeatedly failed due to conflict '409' status code"),
-            { annotationVersion: annotation.version, annotationId: annotation.annotationId },
-          );
-          Toast.error(
-            "Saving your changes failed repeatedly due to conflict with other user's changes. Please consider reloading to resolve this. This will lose your latest unsaved changes.",
-          );
+      yield* put(setSaveBusyAction(true));
+      try {
+        let shouldRetryOnConflict = true;
+        let retryCount = 0;
+        while (shouldRetryOnConflict) {
+          shouldRetryOnConflict = (yield* call(
+            synchronizeAnnotationWithBackend,
+            enforceEmptySaveQueue,
+            ctx,
+          )).hadConflict;
+          ++retryCount;
+          if (retryCount > MAX_ON_CONFLICT_RETRIES) {
+            const annotation = yield* select((state) => state.annotation);
+            yield* call(
+              [ErrorHandling, ErrorHandling.notify],
+              new Error("Saving annotation repeatedly failed due to conflict '409' status code"),
+              { annotationVersion: annotation.version, annotationId: annotation.annotationId },
+            );
+            Toast.error(
+              "Saving your changes failed repeatedly due to conflict with other user's changes. Please consider reloading to resolve this. This will lose your latest unsaved changes.",
+            );
+          }
         }
+      } finally {
+        yield* put(setSaveBusyAction(false));
       }
     }
 
-    const saveCtx = yield* call(
-      getOrCreateOperationContext,
-      { id: "save", description: "Saving annotation" },
+    const saveCtx = yield* getOrCreateOperationContext(
+      { id: "save", description: "Saving annotation", behaviorWhenDisallowed: "ignore" },
       operationContext,
     );
-    yield* saveCtx.execute(() => runSaveRetryLoop(saveCtx));
+    if (saveCtx != null) {
+      yield* saveCtx.execute(() => runSaveRetryLoop(saveCtx));
+    } else {
+      console.warn("Ignoring request to save because an operation is ongoing. Waiting for new request.")
+    }
   }
 }
 
@@ -196,7 +203,6 @@ export function* synchronizeAnnotationWithBackend(
   if (saveQueue.length === 0) {
     yield* put(snapshotAnnotationStateForNextRebaseAction());
   }
-  yield* put(setSaveBusyAction(false));
   return { hadConflict: false };
 }
 

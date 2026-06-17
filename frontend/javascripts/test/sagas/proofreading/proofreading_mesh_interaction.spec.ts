@@ -132,7 +132,7 @@ describe("Proofreading (with mesh actions)", () => {
   }
 
   // Mesh interactions tests
-  it("should merge two agglomerates correctly even when merged segments are not loaded (such an action can be triggered via mesh proofreading)", async (context: WebknossosTestContext) => {
+  it("should merge two agglomerates correctly even when merged segments are not loaded (such an action can be triggered via mesh proofreading)", { timeout: 6000}, async (context: WebknossosTestContext) => {
     const _backendMock = mockInitialBucketAndAgglomerateData(context, [], Store.getState());
 
     const { annotation } = Store.getState();

@@ -317,14 +317,19 @@ export class WebKnossosModel {
     }
 
     while (
-      // Wait while rebasing is in progress.
+      // Wait while saving is in progress... (the remaining check would also work
+      // without the isBusy condition, but that way we avoid repeatedly and uselessly
+      // triggering waitForDifferResponses).
+      Store.getState().save.isBusy ||
+      // ...or rebasing is in progress.
       Store.getState().save.rebaseRelevantServerAnnotationState.isRebasingOrForwarding ||
-      // If no rebasing is in progress enforce diffed state to save queue.
+      // If no saving or rebasing is in progress, enforce diffed state to save queue.
       ((await waitForDifferResponses()) && !this.stateSaved())
     ) {
       // The dispatch of the saveNowAction IN the while loop is deliberate.
       // Otherwise if an update action is pushed to the save queue during the Utils.sleep,
       // the while loop would continue running until the next save would be triggered.
+      // todop: state..save.isBusy could be replaced by checking the ongoing (sub) operations in the store.
       if (!Store.getState().save.isBusy) {
         Store.dispatch(saveNowAction(operationContext));
       }

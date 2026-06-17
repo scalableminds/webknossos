@@ -5,6 +5,7 @@ import useDidMount from "beautiful-react-hooks/useDidMount";
 import importWithRetry, { DynamicImportError } from "libs/import_with_retry";
 import Toast from "libs/toast";
 import { useId, useState } from "react";
+import type { WorkflowConfigKey } from "viewer/view/ai_jobs/workflow_config_keys";
 
 export type KeyValuePairs = Record<string, JsonPrimitive>;
 
@@ -51,25 +52,26 @@ export function KeyValuePairsInput({
   const [entries, setEntries] = useState<KeyValueEntry[]>([]);
   const [configKeyOptions, setConfigKeyOptions] = useState<{ value: string }[]>([]);
 
-  useDidMount(() => {
-    importWithRetry(() => import("viewer/view/ai_jobs/workflow_config_keys"), {
-      showErrorToast: false,
-    })
-      .then(({ WORKFLOW_CONFIG_KEYS }) => {
-        setConfigKeyOptions(WORKFLOW_CONFIG_KEYS.map((k) => ({ value: k })));
-      })
-      .catch((error) => {
-        if (!(error instanceof DynamicImportError)) return;
-        if (error.reason === "new-version") {
-          Toast.info(
-            "Workflow key autocompletion is unavailable. A new WEBKNOSSOS version was released – please reload.",
-          );
-        } else {
-          Toast.warning(
-            "Workflow key autocompletion could not be loaded due to a network problem.",
-          );
-        }
-      });
+  useDidMount(async () => {
+    try {
+      const WORKFLOW_CONFIG_KEYS: WorkflowConfigKey[] = (await importWithRetry(
+        () => import("viewer/view/ai_jobs/workflow_config_keys"),
+        {
+          showErrorToast: false,
+        },
+      )) as any;
+      setConfigKeyOptions(WORKFLOW_CONFIG_KEYS.map((k) => ({ value: k })));
+    } catch (error) {
+      // If the error has nothing to do with imports failing, propagate the error further upwards.
+      if (!(error instanceof DynamicImportError)) throw error;
+      if (error.reason === "new-version-available") {
+        Toast.info(
+          "Workflow key autocompletion is unavailable. A new WEBKNOSSOS version was released – please reload.",
+        );
+      } else {
+        Toast.warning("Workflow key autocompletion could not be loaded due to a network problem.");
+      }
+    }
   });
 
   function addEntry() {

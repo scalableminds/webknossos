@@ -214,7 +214,8 @@ export default class WkDev {
 
   async benchmarkRotate(n: number = 10) {
     // Dynamic import to avoid circular imports.
-    // biome-ignore lint/plugin/no-bare-dynamic-import: benchmark-only; cyclic dep via importWithRetry is not worth it here and a failed import is acceptable.
+    // Bare import is allowed here (whitelisted in tools/check-no-bare-dynamic-imports.js):
+    // benchmark-only; cyclic dep via importWithRetry is not worth it here and a failed import is acceptable.
     const { rotate3DViewTo } = await import("viewer/controller/camera_controller");
 
     const animateAsPromise = (plane: OrthoView) => {

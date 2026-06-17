@@ -28,7 +28,7 @@ export function createWorker<TExposed extends UseCreateWorkerToUseMe<AnyFn> | An
       // which Vite resolves statically at build time — no runtime dynamic import() occurs there.
       // This import() is only reached in Vitest/Node where wrap is null and web workers don't
       // exist, so importWithRetry's "stale chunk URL after deployment" protection does not apply.
-      // biome-ignore lint/plugin/no-bare-dynamic-import: browser workers are eagerly bundled; this import() is Vitest/Node-only
+      // Bare import is allowed here (whitelisted in tools/check-no-bare-dynamic-imports.js).
       const workerModule = await import(`./${pathToWorkerWithoutExtension}.worker.ts`);
       return workerModule.default(...params);
     };

@@ -10,7 +10,6 @@ import { RootForFastTooltips } from "components/fast_tooltip";
 import { load as loadFeatureToggles } from "features";
 import checkBrowserFeatures from "libs/browser_feature_check";
 import ErrorHandling from "libs/error_handling";
-import { notifyUserAboutFailedDynamicImport } from "libs/import_with_retry";
 import UserLocalStorage from "libs/user_local_storage";
 import window, { document } from "libs/window";
 import { compress, decompress } from "lz-string";
@@ -104,16 +103,6 @@ async function initApp() {
     throwAssertions: false,
   });
 
-  // Safety net for dynamic imports which are not wrapped with importWithRetry:
-  // Vite emits this event whenever a dynamically imported chunk (or one of its
-  // dependencies) could not be fetched. This typically happens when a new
-  // WEBKNOSSOS version was deployed (which invalidates the old chunk URLs)
-  // or when the network is flaky. The import() call site still receives the
-  // error. Also see https://github.com/scalableminds/webknossos/issues/9540
-  window.addEventListener("vite:preloadError", (event) => {
-    ErrorHandling.notify(event.payload, { context: "vite:preloadError" });
-    notifyUserAboutFailedDynamicImport();
-  });
   message.config({ top: 30 });
   checkBrowserFeatures();
   const containerElement = document.getElementById("main-container");

@@ -17,7 +17,7 @@ const RETRY_DELAY_FACTOR_MS = 500; // leads to delays of 1s and 2s between the a
 
 const FAILED_IMPORT_TOAST_KEY = "failed-dynamic-import";
 
-export type DynamicImportFailureReason = "new-version" | "network";
+export type DynamicImportFailureReason = "new-version-available" | "network";
 
 // Thrown by importWithRetry when all retries are exhausted. The `reason` field
 // tells call sites whether the failure was due to a new deployment (stale chunk
@@ -57,12 +57,9 @@ async function isNewerVersionDeployed(): Promise<boolean> {
   }
 }
 
-// reason is optional: if omitted (e.g. from the vite:preloadError handler in
-// main.tsx), the version check is performed here instead.
-export async function notifyUserAboutFailedDynamicImport(reason?: DynamicImportFailureReason) {
-  const resolvedReason = reason ?? ((await isNewerVersionDeployed()) ? "new-version" : "network");
+async function notifyUserAboutFailedDynamicImport(reason: DynamicImportFailureReason) {
   const message =
-    resolvedReason === "new-version"
+    reason === "new-version-available"
       ? "A new version of WEBKNOSSOS was released. Please reload the page to avoid errors."
       : "Some parts of WEBKNOSSOS could not be loaded (the server might be unreachable). Please check your network connection and reload the page.";
   Toast.error(message, {
@@ -87,7 +84,7 @@ export default async function importWithRetry<T>(
     console.error("Failed to load dynamically imported module.", originalError);
     // Determine the reason before throwing so callers can read it off the error.
     const reason: DynamicImportFailureReason = (await isNewerVersionDeployed())
-      ? "new-version"
+      ? "new-version-available"
       : "network";
     ErrorHandling.notify(originalError as Error, { context: "dynamic-import", reason });
     if (showErrorToast) {

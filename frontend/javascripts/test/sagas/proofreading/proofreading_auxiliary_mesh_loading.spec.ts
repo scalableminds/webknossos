@@ -191,8 +191,11 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
           ); // operation finished
           yield meshTracker.consumeFinishedLoadingActions(1);
 
-
-          const { removedMeshes, addedMeshes, loadedMeshIds: loadedMeshIdsAfterMerge } = meshTracker.getMeshInfos();
+          const {
+            removedMeshes,
+            addedMeshes,
+            loadedMeshIds: loadedMeshIdsAfterMerge,
+          } = meshTracker.getMeshInfos();
           expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6]);
           expect(sortBy([...removedMeshes])).toEqual([1, 4]);
           expect([...addedMeshes]).toEqual([1]);
@@ -259,8 +262,11 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         ); // operation finished
         yield* meshTracker.consumeFinishedLoadingActions(2);
 
-
-        const { removedMeshes, addedMeshes, loadedMeshIds: loadedMeshIdsAfterMerge } = meshTracker.getMeshInfos();
+        const {
+          removedMeshes,
+          addedMeshes,
+          loadedMeshIds: loadedMeshIdsAfterMerge,
+        } = meshTracker.getMeshInfos();
         expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 1339]);
         expect(sortBy([...removedMeshes])).toEqual([1, 1339]); // Although 1339 is not loaded it is tried to be removed by the proofreading saga to refresh it.
         expect(sortBy([...addedMeshes])).toEqual([1, 1339]);
@@ -303,7 +309,11 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
       yield meshTracker.consumeFinishedLoadingActions(1);
 
-      const { removedMeshes, addedMeshes, loadedMeshIds: loadedMeshIdsAfterMerge } = meshTracker.getMeshInfos();
+      const {
+        removedMeshes,
+        addedMeshes,
+        loadedMeshIds: loadedMeshIdsAfterMerge,
+      } = meshTracker.getMeshInfos();
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4]);
       expect(sortBy([...removedMeshes])).toEqual([4, 6]);
       expect(sortBy([...addedMeshes])).toEqual([4]);
@@ -341,7 +351,11 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       yield call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
       yield meshTracker.consumeFinishedLoadingActions(2);
 
-      const { removedMeshes, addedMeshes, loadedMeshIds: loadedMeshIdsAfterMerge } = meshTracker.getMeshInfos();
+      const {
+        removedMeshes,
+        addedMeshes,
+        loadedMeshIds: loadedMeshIdsAfterMerge,
+      } = meshTracker.getMeshInfos();
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 6, 1339]);
       expect(sortBy([...removedMeshes])).toEqual([1, 1339]);
       expect(sortBy([...addedMeshes])).toEqual([1, 1339]);
@@ -406,7 +420,11 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       yield take("FINISH_MAPPING_INITIALIZATION");
       yield meshTracker.consumeFinishedLoadingActions(1);
 
-      const { removedMeshes, addedMeshes, loadedMeshIds: loadedMeshIdsAfterMerge } = meshTracker.getMeshInfos();
+      const {
+        removedMeshes,
+        addedMeshes,
+        loadedMeshIds: loadedMeshIdsAfterMerge,
+      } = meshTracker.getMeshInfos();
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1]);
       expect(sortBy([...removedMeshes])).toEqual([1, 4, 6]);
       expect(sortBy([...addedMeshes])).toEqual([1]);
@@ -454,8 +472,11 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       );
       yield* meshTracker.consumeFinishedLoadingActions(2);
 
-
-      const { removedMeshes, addedMeshes, loadedMeshIds: loadedMeshIdsAfterMerge } = meshTracker.getMeshInfos();
+      const {
+        removedMeshes,
+        addedMeshes,
+        loadedMeshIds: loadedMeshIdsAfterMerge,
+      } = meshTracker.getMeshInfos();
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6, 1339]);
       expect(sortBy([...removedMeshes])).toEqual([1, 4, 1339]);
       expect(sortBy([...addedMeshes])).toEqual([1, 1339]);
@@ -518,8 +539,11 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
       yield* meshTracker.consumeFinishedLoadingActions(2);
 
-
-      const { removedMeshes, addedMeshes, loadedMeshIds: loadedMeshIdsAfterMerge } = meshTracker.getMeshInfos();
+      const {
+        removedMeshes,
+        addedMeshes,
+        loadedMeshIds: loadedMeshIdsAfterMerge,
+      } = meshTracker.getMeshInfos();
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 6, 1339]);
       expect(sortBy([...removedMeshes])).toEqual([1, 4, 1339]);
       expect(sortBy([...addedMeshes])).toEqual([1, 1339]);
@@ -582,9 +606,13 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
       yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
       yield take("FINISH_MAPPING_INITIALIZATION");
       // Loading meshes 1, 1339, 1340.
-      yield* meshTracker.consumeFinishedLoadingActions(3)
+      yield* meshTracker.consumeFinishedLoadingActions(3);
 
-      const { removedMeshes, addedMeshes, loadedMeshIds: loadedMeshIdsAfterMerge } = meshTracker.getMeshInfos();
+      const {
+        removedMeshes,
+        addedMeshes,
+        loadedMeshIds: loadedMeshIdsAfterMerge,
+      } = meshTracker.getMeshInfos();
       expect(sortBy([...loadedMeshIdsAfterMerge])).toEqual([1, 4, 6, 1339, 1340]);
       expect(sortBy([...removedMeshes])).toEqual([1, 1339, 1340]);
       expect(sortBy([...addedMeshes])).toEqual([1, 1339, 1340]);

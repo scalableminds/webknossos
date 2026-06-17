@@ -73,7 +73,11 @@ export function* pushSaveQueueAsync(): Saga<never> {
         yield* delay(0);
       }
 
-      // Save queue is empty, wait for push event
+      // Save queue is empty, ignore any saveNow actions
+      // and wait for push event.
+      // todop: if we remove this flush, two subsequent save_now actions cause problems.
+      // why are these two save_now actions there in the first place?
+      yield* flush(saveNowChannel);
       yield* take("PUSH_SAVE_QUEUE_TRANSACTION");
     }
 

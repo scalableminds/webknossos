@@ -10,7 +10,7 @@ import Toast from "libs/toast";
 import window, { alert, document, location } from "libs/window";
 import memoizeOne from "memoize-one";
 import messages from "messages";
-import { call, delay, put, race, take } from "typed-redux-saga";
+import { actionChannel, call, delay, flush, put, race, take } from "typed-redux-saga";
 import { ControlModeEnum } from "viewer/constants";
 import { maySendSaveRequest } from "viewer/model/accessors/annotation_accessor";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
@@ -56,6 +56,7 @@ export function* pushSaveQueueAsync(): Saga<never> {
   yield* call(ensureWkInitialized);
 
   yield* put(setLastSaveTimestampAction());
+  const saveNowChannel = yield* actionChannel<SaveNowAction>("SAVE_NOW");
   let loopCounter = 0;
 
   while (true) {
@@ -76,16 +77,24 @@ export function* pushSaveQueueAsync(): Saga<never> {
       yield* take("PUSH_SAVE_QUEUE_TRANSACTION");
     }
 
-    let { forcePush } = yield* race({
+    const { forcePush: firstForcePush } = yield* race({
       timeout: delay(PUSH_THROTTLE_TIME),
-      forcePush: take("SAVE_NOW"),
+      forcePush: take(saveNowChannel),
     });
 
+    let bestForcePush: SaveNowAction | undefined;
+    if (firstForcePush != null) {
+      const remainingActions = (yield* flush(saveNowChannel));
+      const allActions = [firstForcePush, ...remainingActions];
+      bestForcePush =
+        allActions.find((a) => a.operationContext != null) ?? allActions.at(-1)!;
+    }
+
+    ColoredLogger.logYellow("[Save Queue Draining] forcePush=", bestForcePush);
     yield* waitFor(maySendSaveRequest);
 
-    const enforceEmptySaveQueue = forcePush != null;
-    const operationContext: OperationContext | null =
-      (forcePush as SaveNowAction | undefined)?.operationContext ?? null;
+    const enforceEmptySaveQueue = bestForcePush != null;
+    const operationContext: OperationContext | null = bestForcePush?.operationContext ?? null;
 
     function* runSaveRetryLoop(ctx: OperationContext) {
       yield* put(setSaveBusyAction(true));

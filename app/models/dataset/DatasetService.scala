@@ -18,7 +18,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{
   UsableDataSource
 }
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.datastore.services.DataSourcePathInfo
+import com.scalableminds.webknossos.datastore.services.{DataSourcePathInfo, DataSourceWithPathInfo}
 import com.typesafe.scalalogging.LazyLogging
 import models.folder.FolderDAO
 import models.organization.{Organization, OrganizationDAO}
@@ -144,7 +144,9 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       metadata: JsArray = JsArray.empty,
       description: Option[String] = None,
       creationType: DatasetCreationType.Value,
-      importURL: Option[String] = None
+      importURL: Option[String] = None,
+      rootPath: Option[String] = None,
+      rootRealPath: Option[String] = None
   ): Fox[Dataset] = {
     implicit val ctx: DBAccessContext = GlobalAccessContext
 
@@ -176,6 +178,8 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         metadata = metadata,
         creationType = Some(creationType),
         importURL = importURL,
+        rootPath = rootPath,
+        rootRealPath = rootRealPath,
       )
       _ <- datasetDAO.insertOne(dataset)
       _ <- datasetDataLayerDAO.updateLayers(datasetId, dataSource)
@@ -185,12 +189,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     } yield dataset
   }
 
-  def updateDataSources(dataStore: DataStore, dataSources: List[DataSource])(
+  def updateDataSources(dataStore: DataStore, dataSourcesWithPathInfo: List[DataSourceWithPathInfo])(
       implicit ctx: DBAccessContext): Fox[List[ObjectId]] = {
 
-    val groupedByOrga = dataSources.groupBy(_.id.organizationId).toList
+    val groupedByOrga = dataSourcesWithPathInfo.groupBy(_.dataSource.id.organizationId).toList
     Fox
-      .serialCombined(groupedByOrga) { (orgaTuple: (String, List[DataSource])) =>
+      .serialCombined(groupedByOrga) { (orgaTuple: (String, List[DataSourceWithPathInfo])) =>
         organizationDAO.findOne(orgaTuple._1).shiftBox.flatMap {
           case Full(organization) if dataStore.onlyAllowedOrganization.exists(_ != organization._id) =>
             logger.info(
@@ -198,11 +202,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
             Fox.successful(List.empty)
           case Full(organization) =>
             for {
-              foundDatasets <- datasetDAO.findAllByDirectoryNamesAndOrganization(orgaTuple._2.map(_.id.directoryName),
-                                                                                 organization._id)
+              foundDatasets <- datasetDAO.findAllByDirectoryNamesAndOrganization(
+                orgaTuple._2.map(_.dataSource.id.directoryName),
+                organization._id)
               foundDatasetsByDirectoryName = foundDatasets.groupBy(_.directoryName)
-              existingIds <- Fox.serialCombined(orgaTuple._2)(dataSource =>
-                updateDataSourceFromDataStore(dataStore, dataSource, foundDatasetsByDirectoryName))
+              existingIds <- Fox.serialCombined(orgaTuple._2)(dataSourceWithPathInfo =>
+                updateDataSourceFromDataStore(dataStore, dataSourceWithPathInfo, foundDatasetsByDirectoryName))
             } yield existingIds.flatten
           case _ =>
             logger.info(
@@ -215,9 +220,12 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
 
   private def updateDataSourceFromDataStore(
       dataStore: DataStore,
-      dataSource: DataSource,
+      dataSourceWithPathInfo: DataSourceWithPathInfo,
       foundDatasetsByDirectoryName: Map[String, List[Dataset]]
   )(implicit ctx: DBAccessContext): Fox[Option[ObjectId]] = {
+    val dataSource = dataSourceWithPathInfo.dataSource
+    val rootPath = dataSourceWithPathInfo.rootPath
+    val rootRealPath = dataSourceWithPathInfo.rootRealPath
     val foundDatasetOpt = foundDatasetsByDirectoryName.get(dataSource.id.directoryName).flatMap(_.headOption)
     val isVirtual = foundDatasetOpt.exists(_.isVirtual)
     if (isVirtual) { // Virtual datasets should not be updated from the datastore, as we do not expect them to exist as data source properties on the datastore.
@@ -225,22 +233,30 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     } else {
       foundDatasetOpt match {
         case Some(foundDataset) if foundDataset._dataStore == dataStore.name =>
-          updateKnownDataSource(foundDataset, dataSource, dataStore).map(Some(_))
+          updateKnownDataSource(foundDataset, dataSource, dataStore, rootPath, rootRealPath).map(Some(_))
         case Some(foundDataset) => // This only returns None for Datasets that are present on a normal Datastore but also got reported from a scratch Datastore
-          updateDataSourceDifferentDataStore(foundDataset, dataSource, dataStore)
+          updateDataSourceDifferentDataStore(foundDataset, dataSource, dataStore, rootPath, rootRealPath)
         case _ =>
-          createDataset(dataStore,
-                        ObjectId.generate,
-                        dataSource.id.directoryName,
-                        dataSource,
-                        creationType = DatasetCreationType.DiskScan).map(ds => Some(ds._id))
+          createDataset(
+            dataStore,
+            ObjectId.generate,
+            dataSource.id.directoryName,
+            dataSource,
+            creationType = DatasetCreationType.DiskScan,
+            rootPath = rootPath,
+            rootRealPath = rootRealPath
+          ).map(ds => Some(ds._id))
       }
     }
   }
 
-  private def updateKnownDataSource(foundDataset: Dataset, dataSource: DataSource, dataStore: DataStore)(
-      implicit ctx: DBAccessContext): Fox[ObjectId] =
-    if (foundDataset.inboxSourceHash.contains(dataSource.hashCode))
+  private def updateKnownDataSource(foundDataset: Dataset,
+                                    dataSource: DataSource,
+                                    dataStore: DataStore,
+                                    rootPath: Option[String],
+                                    rootRealPath: Option[String])(implicit ctx: DBAccessContext): Fox[ObjectId] =
+    if (foundDataset.inboxSourceHash.contains(dataSource.hashCode) &&
+        foundDataset.rootPath == rootPath && foundDataset.rootRealPath == rootRealPath)
       Fox.successful(foundDataset._id)
     else
       for {
@@ -249,12 +265,18 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                          dataStore.name,
                                          dataSource.hashCode,
                                          dataSource,
-                                         dataSource.isUsable)
+                                         dataSource.isUsable,
+                                         rootPath,
+                                         rootRealPath)
         _ <- notifyDatastoreOnUpdate(foundDataset._id)
       } yield foundDataset._id
 
-  private def updateDataSourceDifferentDataStore(foundDataset: Dataset, dataSource: DataSource, dataStore: DataStore)(
-      implicit ctx: DBAccessContext): Fox[Option[ObjectId]] =
+  private def updateDataSourceDifferentDataStore(
+      foundDataset: Dataset,
+      dataSource: DataSource,
+      dataStore: DataStore,
+      rootPath: Option[String],
+      rootRealPath: Option[String])(implicit ctx: DBAccessContext): Fox[Option[ObjectId]] =
     // The dataset is already present (belonging to the same organization), but reported from a different datastore
     (for {
       originalDataStore <- dataStoreDAO.findOneByName(foundDataset._dataStore)
@@ -269,7 +291,9 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                            dataStore.name,
                                            dataSource.hashCode,
                                            dataSource,
-                                           dataSource.isUsable)(GlobalAccessContext)
+                                           dataSource.isUsable,
+                                           rootPath,
+                                           rootRealPath)(using GlobalAccessContext)
           _ <- notifyDatastoreOnUpdate(foundDataset._id)
         } yield Some(foundDataset._id)
       } else {
@@ -306,7 +330,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                                            dataset._dataStore,
                                            updatedDataSource.hashCode(),
                                            updatedDataSource,
-                                           isUsable = true)(GlobalAccessContext)
+                                           isUsable = true)(using GlobalAccessContext)
           _ <- dataStoreClient.invalidateDatasetInDSCache(datasetId)
           _ <- pathDeletionService.deletePaths(datastoreClient, pathsToDelete)
         } yield ()
@@ -703,7 +727,10 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
     if (dataset.isVirtual && dataset.isUsable) {
       for {
         client <- clientFor(dataset)
-        _ <- client.writeMirror(Seq(dataset._id), failOnError = true)
+        writtenPaths <- client.writeMirror(Seq(dataset._id), failOnError = true)
+        _ <- Fox.runOptional(writtenPaths.headOption) {
+          case (_, path) => datasetDAO.updateMirrorPath(dataset._id, path)
+        }
       } yield ()
     } else Fox.successful(())
 
@@ -764,7 +791,11 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
         "tags" -> dataset.tags,
         "folderId" -> dataset._folder,
         "usedStorageBytes" -> usedStorageBytes,
-        "isVirtual" -> dataset.isVirtual
+        "isVirtual" -> dataset.isVirtual,
+        "creationType" -> dataset.creationType,
+        "rootPath" -> dataset.rootPath,
+        "rootRealPath" -> dataset.rootRealPath,
+        "mirrorPath" -> dataset.mirrorPath
       )
     }
 }

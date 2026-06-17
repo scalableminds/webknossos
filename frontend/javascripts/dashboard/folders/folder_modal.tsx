@@ -73,7 +73,7 @@ function EditFolderModalContent({ folderId, onClose }: { folderId: string; onClo
             label="Access Permissions"
             info={ACCESS_PERMISSIONS_INFO}
           >
-            <TeamSelectionComponent mode="multiple" allowNonEditableTeams allowCreatingTeams />
+            <TeamSelectionComponent mode="multiple" allowNonEditableTeams allowManagingTeams />
           </FormItemWithInfo>
         </Form>
       </div>
@@ -147,7 +147,7 @@ function CreateFolderModalContent({
             label="Access Permissions"
             info={ACCESS_PERMISSIONS_INFO}
           >
-            <TeamSelectionComponent mode="multiple" allowNonEditableTeams allowCreatingTeams />
+            <TeamSelectionComponent mode="multiple" allowNonEditableTeams allowManagingTeams />
           </FormItemWithInfo>
         </Form>
       </div>

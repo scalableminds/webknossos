@@ -20,7 +20,7 @@ type TeamSelectionComponentProps = {
   mode?: "tags" | "multiple" | undefined;
   allowNonEditableTeams?: boolean;
   // Allow admins/managers to create a new team without leaving this component.
-  allowCreatingTeams?: boolean;
+  allowManagingTeams?: boolean;
   disabled?: boolean;
   prefix?: ReactNode;
 };
@@ -31,7 +31,7 @@ function TeamSelectionComponent({
   afterFetchedTeams,
   mode,
   allowNonEditableTeams,
-  allowCreatingTeams,
+  allowManagingTeams = true,
   disabled,
   prefix,
 }: TeamSelectionComponentProps) {
@@ -40,7 +40,7 @@ function TeamSelectionComponent({
   const [isFetchingData, setIsFetchingData] = useState(false);
   const [isCreateTeamModalOpen, setIsCreateTeamModalOpen] = useState(false);
   const activeUser = useWkSelector((state) => state.activeUser);
-  const canCreateTeams = allowCreatingTeams === true && isUserAdminOrManager(activeUser);
+  const canCreateTeams = allowManagingTeams === true && isUserAdminOrManager(activeUser);
 
   // Sync selectedTeams with value
   useEffect(() => {

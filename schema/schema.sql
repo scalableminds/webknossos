@@ -1164,7 +1164,7 @@ BEGIN
   SELECT LPAD(TO_HEX(FLOOR(EXTRACT(EPOCH FROM clock_timestamp()))::BIGINT), 8, '0') INTO time_component;
   -- 5 bytes (10 hex chars): random value. Spec says should be random per process. This is not easily available in postgres, we do random per call instead.
   SELECT LEFT(REPLACE(gen_random_uuid()::TEXT, '-', ''), 10) INTO random_component;
-  -- 3 bytes (6 hex chars): incrementing counter with randomized start
+  -- 3 bytes (6 hex chars): incrementing counter. Spec says should get randomized start, but we are certain to have just one postgres process running, so the conflict scenario is not plausible.
   SELECT LPAD(TO_HEX(nextval('webknossos.objectid_sequence')::BIGINT % 16777216), 6, '0') INTO counter;
   result := time_component || random_component || counter;
 

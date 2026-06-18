@@ -430,9 +430,8 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     Store.dispatch,
     yield* select((state) => state.annotation),
   );
-  // todop: double-check this comment
-  // saveQueueEntries must not change during performRebasing saga. When collaborationMode==Concurrent, this is enforced via busy blocking.
-  // When concurrent editing is disabled, this code typically (?) runs in read-only mode where the save queue is empty.
+  // saveQueueEntries must not change during performRebasing saga. This is achieved
+  // by the operationContext in which performRebasing is called (see caller).
   const saveQueueEntries = yield* select((state) => state.save.queue);
   const hasLocalUnsavedChanges = saveQueueEntries.length > 0;
   const hasRemoteUnseenChanges = missingUpdateActions.length > 0;

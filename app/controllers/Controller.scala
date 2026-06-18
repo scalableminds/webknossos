@@ -2,10 +2,8 @@ package controllers
 
 import com.scalableminds.util.accesscontext.{AuthorizedAccessContext, DBAccessContext}
 import com.scalableminds.util.mvc.ExtendedController
-import com.scalableminds.util.tools.Fox
 import com.typesafe.scalalogging.LazyLogging
 import models.user.User
-import play.api.libs.json.{JsReadable, JsSuccess}
 import play.api.mvc.InjectedController
 import play.silhouette.api.actions.{SecuredRequest, UserAwareRequest}
 import security.{UserAwareRequestLogging, WkEnv}

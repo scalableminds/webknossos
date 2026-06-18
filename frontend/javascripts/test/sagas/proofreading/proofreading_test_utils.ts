@@ -58,6 +58,14 @@ import type { NumberLike, SaveQueueEntry, Segment, WebknossosState } from "viewe
 import { combinedReducer } from "viewer/store";
 import { expect, vi } from "vitest";
 import { edgesForInitialMapping, initialMapping } from "./proofreading_fixtures";
+
+export function operationStarted(id: string) {
+  return (action: any) => action.type === "REGISTER_OPERATION" && action.id === id;
+}
+
+export function operationFinished(id: string) {
+  return (action: any) => action.type === "UNREGISTER_OPERATION" && action.id === id;
+}
 import {
   createSkeletonTracingFromAdjacency,
   encodeServerTracing,
@@ -591,10 +599,7 @@ export function* performCutFromAllNeighbours(
     ),
   );
   yield take("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");
-  yield take(
-    ((action: any) =>
-      action.type === "UNREGISTER_OPERATION" && action.id === "proofreading") as any,
-  ); // Wait till full proofreading operation is done.
+  yield take(operationFinished("proofreading")); // Wait till full proofreading operation is done.
 }
 
 // All usages of this function should have an initial mapping with a agglomerate id 1 = 1-2-3-1337-1338-1.
@@ -656,10 +661,7 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
   yield put(minCutPartitionsAction());
   yield take("FINISH_MAPPING_INITIALIZATION");
   // Checking optimistic merge is not necessary as no "foreign" update was injected.
-  yield take(
-    ((action: any) =>
-      action.type === "UNREGISTER_OPERATION" && action.id === "proofreading") as any,
-  ); // Wait till full proofreading operation is done.
+  yield take(operationFinished("proofreading")); // Wait till full proofreading operation is done.
 }
 
 export const mockEdgesForPartitionedAgglomerateMinCut = (

@@ -35,6 +35,7 @@ import {
   makeMappingEditableForTest,
   mockEdgesForPartitionedAgglomerateMinCut,
   mockInitialBucketAndAgglomerateData,
+  operationFinished,
   simulatePartitionedSplitAgglomeratesViaMeshes,
 } from "./proofreading_test_utils";
 import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
@@ -308,10 +309,7 @@ describe("Proofreading (with mesh actions)", () => {
       ),
     );
     yield take("FINISH_MAPPING_INITIALIZATION");
-    yield take(
-      ((action: any) =>
-        action.type === "UNREGISTER_OPERATION" && action.id === "proofreading") as any,
-    );
+    yield take(operationFinished("proofreading"));
 
     // Checking optimistic merge is not necessary as no "foreign" update was injected.
     yield call(() => api.tracing.save()); // Also pulls newest version from backend.

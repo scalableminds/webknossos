@@ -53,6 +53,7 @@ import {
   makeMappingEditableForTest,
   mockEdgesForPartitionedAgglomerateMinCut,
   mockInitialBucketAndAgglomerateData,
+  operationFinished,
   performCutFromAllNeighbours,
   prepareGetNeighborsForAgglomerateNode,
   simulatePartitionedSplitAgglomeratesViaMeshes,
@@ -184,11 +185,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
           // Execute the actual merge and wait for the finished mapping.
           const meshTracker = yield* trackMeshes(context, tracingId);
           yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
-          yield take(
-            ((action: Action) =>
-              action.type === "UNREGISTER_OPERATION" &&
-              (action as any).id === "proofreading") as ActionPattern,
-          ); // operation finished
+          yield take(operationFinished("proofreading")); // operation finished
           yield meshTracker.consumeFinishedLoadingActions(1);
 
           const {
@@ -255,11 +252,7 @@ describe("Proofreading (with auxiliary mesh loading enabled)", () => {
         const meshTracker = yield* trackMeshes(context, tracingId);
         // Execute the split and wait for the auxiliary meshes being reloaded properly.
         yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
-        yield take(
-          ((action: Action) =>
-            action.type === "UNREGISTER_OPERATION" &&
-            (action as any).id === "proofreading") as ActionPattern,
-        ); // operation finished
+        yield take(operationFinished("proofreading")); // operation finished
         yield* meshTracker.consumeFinishedLoadingActions(2);
 
         const {

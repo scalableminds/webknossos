@@ -319,8 +319,6 @@ function* loadCoarseMesh(
   segmentId: number,
   position: Vector3,
   additionalCoordinates: AdditionalCoordinate[] | undefined,
-  // Opacity of the mesh that this (re)load replaces, so the reloaded mesh keeps
-  // the user's chosen opacity. Falls back to DEFAULT_MESH_OPACITY when undefined.
   opacity?: number,
 ): Saga<void> {
   const autoRenderMeshInProofreading = yield* select(
@@ -2113,7 +2111,7 @@ export function* refreshAffectedMeshes(
     newAgglomerateId: number;
     nodePosition: Vector3;
     // Opacity to apply to the reloaded mesh. If unset, the opacity of the old
-    // mesh (oldAgglomerateId) is captured before its removal (see below).
+    // mesh (oldAgglomerateId) is used before its removal (see below).
     opacity?: number;
   }>,
 ) {
@@ -2265,8 +2263,6 @@ export function* splitAgglomerateInMapping(
       splitMapping: Mapping;
       oldAgglomerateIds: Set<number>;
       newAgglomerateIds: Set<number>;
-      // Maps each newly created agglomerate id to the agglomerate id it was split off from.
-      // Used to let reloaded meshes inherit the opacity of the original agglomerate.
       newToOldAgglomerateIds: Map<number, number>;
     }
   | undefined
@@ -2317,19 +2313,18 @@ export function* splitAgglomerateInMapping(
   // Create a new mapping which is equal to the old one with the difference that
   // ids from splitSegmentIds are mapped to their new target agglomerate ids.
   const splitMapping = new Map(
-    Array.from(activeMapping.mapping as NumberLikeMap, ([segmentId, agglomerateId]) => {
+    Array.from(activeMapping.mapping as NumberLikeMap, ([segmentId, prevAgglomerateId]) => {
       // @ts-expect-error get() is expected to accept the type that segmentId has.
       const mappedId = mappingAfterSplit.get(segmentId);
       if (mappedId != null) {
         const newId = Number(mappedId);
         newAgglomerateIds.add(newId);
-        // `agglomerateId` is the id this segment had before the split, i.e. the original agglomerate.
         if (!newToOldAgglomerateIds.has(newId)) {
-          newToOldAgglomerateIds.set(newId, Number(agglomerateId));
+          newToOldAgglomerateIds.set(newId, Number(prevAgglomerateId));
         }
         return [segmentId, mappedId];
       }
-      return [segmentId, agglomerateId];
+      return [segmentId, prevAgglomerateId];
     }),
   );
   // Add potentially missing entries of segment in additionalSegmentsToRequest to the new map.

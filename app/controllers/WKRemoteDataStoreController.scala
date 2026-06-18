@@ -349,6 +349,18 @@ class WKRemoteDataStoreController @Inject()(
       }
     }
 
+  def findDatasetLocalRootPath(name: String,
+                               key: String,
+                               datasetId: ObjectId): Action[AnyContent] =
+    Action.async { _ =>
+      dataStoreService.validateAccess(name, key) { _ =>
+        for {
+          dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId)
+          localRootPathOpt = dataset.rootPath.filter(UPath.fromString(_).map(_.isLocal).getOrElse(false))
+        } yield Ok(Json.toJson(localRootPathOpt.getOrElse(""))) // Emptystring means no local rootpath
+      }
+    }
+
   def getDataSource(name: String, key: String, datasetId: ObjectId): Action[AnyContent] =
     Action.async { _ =>
       dataStoreService.validateAccess(name, key) { _ =>

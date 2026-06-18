@@ -3,6 +3,7 @@ package com.scalableminds.webknossos.datastore.services
 import org.apache.pekko.actor.ActorSystem
 import com.google.inject.Inject
 import com.google.inject.name.Named
+import com.scalableminds.util.Msg
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.time.Instant
@@ -10,17 +11,17 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.helpers.{IntervalScheduler, UPath}
-import com.scalableminds.webknossos.datastore.models.datasource._
+import com.scalableminds.webknossos.datastore.models.datasource.*
 import com.scalableminds.webknossos.datastore.storage.DataVaultService
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.util.tools.Box.tryo
-import com.scalableminds.util.tools._
+import com.scalableminds.util.tools.*
 import play.api.inject.ApplicationLifecycle
 import play.api.libs.json.Json
 
 import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 
 class DataSourceService @Inject()(
     config: DataStoreConfig,
@@ -39,7 +40,6 @@ class DataSourceService @Inject()(
 
   override protected def tickerEnabled: Boolean = config.Datastore.WatchFileSystem.enabled
   override protected def tickerInterval: FiniteDuration = config.Datastore.WatchFileSystem.interval
-
   override protected def tickerInitialDelay: FiniteDuration = config.Datastore.WatchFileSystem.initialDelay
 
   private val propertiesFileName = Path.of(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
@@ -53,10 +53,20 @@ class DataSourceService @Inject()(
       _ = if (scanBaseDirsVerboseCounter >= 10) scanBaseDirsVerboseCounter = 0
     } yield ()
 
-  def scanBaseDirectories(verbose: Boolean, organizationId: Option[String]): Fox[Unit] = {
+  def scanBaseDirectories(verbose: Boolean, organizationId: Option[String]): Fox[Unit] = for {
+    resultBox <- scanBaseDirectoriesImpl(verbose, organizationId).shiftBox
+    res <- resultBox match {
+      case f: Failure =>
+        logger.error(f"Error while scanning base directories: ${formatFailureChain(f, includeStackTraces = true)}")
+        f.toFox
+      case _ => resultBox.toFox
+    }
+  } yield res
+
+  private def scanBaseDirectoriesImpl(verbose: Boolean, organizationId: Option[String]): Fox[Unit] = {
     val before = Instant.now
     for {
-      allOrgaDirsWithIds: Seq[(Path, String)] <- orgaDirsToScan(organizationId).toFox ?~> "TODO" // TODO
+      allOrgaDirsWithIds: Seq[(Path, String)] <- orgaDirsToScan(organizationId).toFox ?~> Msg.DataStore.getBaseDirsToScanFailed
       allOrgaDirsFormatted = allOrgaDirsWithIds.map(_._1).mkString(", ")
       _ = if (verbose) logger.info(s"Scanning base directories ($allOrgaDirsFormatted)...")
       _ = if (verbose && organizationId.isEmpty) logEmptyDirs(allOrgaDirsWithIds.map(_._1))
@@ -72,7 +82,6 @@ class DataSourceService @Inject()(
                               foundDataSources,
                               realPathInfos,
                               realPathScanFailures)
-      // TODO log and bubble s"Failed to scan base directories. Error during list directories on '$dataBaseDir$selectedOrgaLabel': $e"
     } yield ()
   }
 

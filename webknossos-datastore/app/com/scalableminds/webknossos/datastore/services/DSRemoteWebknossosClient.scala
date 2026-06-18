@@ -249,11 +249,12 @@ class DSRemoteWebknossosClient @Inject() (
           .getWithJsonResponse[ObjectId] ?~> "Failed to get dataset id from remote webknossos"
     )
 
-  def getRootPath(datasetId: ObjectId): Fox[Path] =
+  def getLocalRootPathOrEmpty(datasetId: ObjectId): Fox[Path] =
     for {
-      rootPathStr <- rpc(s"") // TODO build wk side, fill in uri
+      rootPathStr <- rpc(s"$webknossosUri/api/datastores/$dataStoreName/findDatasetLocalRootPath")
         .addQueryParam("key", dataStoreKey)
-        .getWithJsonResponse[String] ?~> "Failed to get data source from remote webknossos"
+        .addQueryParam("datasetId", datasetId)
+        .getWithJsonResponse[String] ?~> "Failed to get data source root path remote webknossos"
       rootPath <- if (rootPathStr.isEmpty) Fox.empty else Fox.successful(Path.of(rootPathStr))
     } yield rootPath
 }

@@ -97,7 +97,7 @@ class DataSourceController @Inject()(
     }
   }
 
-  def triggerInboxCheckBlocking(organizationId: Option[String]): Action[AnyContent] = Action.async { implicit request =>
+  def scanBaseDirectories(organizationId: Option[String]): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(
       organizationId
         .map(id => UserAccessRequest.administrateDatasets(id))
@@ -124,10 +124,12 @@ class DataSourceController @Inject()(
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
         dataSource <- datasetCache.getById(datasetId)
-        // TODO should really use dataset rootPath directly. query from wk?
-        orgaDir <- baseDirService.oneLocalForOrga(dataSource.id.organizationId).toFox
-        datasetDir = orgaDir.resolve(dataSource.id.directoryName).resolve(dataLayerName)
-        exploredMappings = mappingService.exploreMappings(datasetDir)
+        rootPathBox <- dsRemoteWebknossosClient.getLocalRootPathOrEmpty(datasetId).shiftBox
+        exploredMappings <- rootPathBox match {
+          case Full(localRootPath) => Fox.successful(mappingService.exploreMappings(localRootPath.resolve(dataLayerName)))
+          case Empty => Fox.successful(Seq.empty)
+          case f: Failure => f.toFox
+        }
       } yield addNoCacheHeaderFallback(Ok(Json.toJson(exploredMappings)))
     }
   }
@@ -227,8 +229,7 @@ class DataSourceController @Inject()(
     Action.async(validateJson[UsableDataSource]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
-          rootPathLocal <- Box.tryo(Path.of(rootPath)).toFox
-          _ <- dataSourceService.updateDataSourceOnDisk(rootPathLocal, request.body)
+          _ <- dataSourceService.updateDataSourceOnDisk(Path.of(rootPath), request.body)
           _ = datasetCache.invalidateCache(datasetId)
         } yield Ok
       }
@@ -292,7 +293,7 @@ class DataSourceController @Inject()(
       }
     }
 
-  def deleteOnDisk(datasetId: ObjectId): Action[AnyContent] =
+  def deleteOnDisk(datasetId: ObjectId, rootPath: String): Action[AnyContent] =
     Action.async { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
@@ -300,7 +301,7 @@ class DataSourceController @Inject()(
           dataSourceId = dataSource.id
           _ <- localDatasetDeletionService
             .deleteOnDisk(datasetId,
-                          Path.of("TODO rootPath"), // TODO
+                          Path.of(rootPath),
                           dataSourceId.organizationId,
                           dataSourceId.directoryName,
                           reason = Some("the user wants to delete the dataset"))
@@ -638,7 +639,7 @@ class DataSourceController @Inject()(
     for {
       dataSourceFromDB <- dsRemoteWebknossosClient.getDataSource(datasetId) ~> NOT_FOUND
       dataSourceId = dataSourceFromDB.id
-      rootPathBox <- dsRemoteWebknossosClient.getRootPath(datasetId).shiftBox
+      rootPathBox <- dsRemoteWebknossosClient.getLocalRootPathOrEmpty(datasetId).shiftBox
       dataSourceFromDirOpt = rootPathBox.toOption.flatMap { rootPath =>
         if (Files.exists(rootPath)) {
           Some(

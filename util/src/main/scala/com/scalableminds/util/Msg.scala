@@ -305,6 +305,7 @@ object Msg {
     val deleteFailed: String = "Could not delete data store."
     val uploadToPathsNotAllowed: String =
       "The data store that holds the layers requested to be linked does not support dataset upload to paths."
+    val getBaseDirsToScanFailed = "Could not determine base directories to scan from config."
   }
   object TracingStore {
     val notFound: String = "Tracing store could not be found or accessed."

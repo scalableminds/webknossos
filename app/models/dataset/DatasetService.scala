@@ -652,7 +652,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
                 datasetsUsingDataFromThisDir
                   .mkString(",")
               }"
-              _ <- datastoreClient.deleteOnDisk(dataset._id) ?~> Msg.Dataset.Delete.failed
+              _ <- datastoreClient.deleteOnDisk(dataset._id, rootPath) ?~> Msg.Dataset.Delete.failed
             } yield ()
           case None => Fox.successful(())
         }

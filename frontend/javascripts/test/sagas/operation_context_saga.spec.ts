@@ -66,7 +66,10 @@ describe("operation_context_saga", () => {
     let maxConcurrentCount = 0;
 
     function* opA() {
-      const ctx = yield* createOperationContext({ id: "floodfill", behaviorWhenDisallowed: "ignore" });
+      const ctx = yield* createOperationContext({
+        id: "floodfill",
+        behaviorWhenDisallowed: "ignore",
+      });
       if (ctx == null) return;
       yield* ctx.execute(function* () {
         concurrentCount++;
@@ -237,8 +240,12 @@ describe("operation_context_saga", () => {
 
     await sagaMiddleware.run(op).toPromise();
 
-    expect(snapshots[0]).toEqual([{ id: "floodfill", description: "Floodfill is being computed." }]);
-    expect(snapshots[1]).toEqual([{ id: "floodfill", description: "Floodfill is being computed." }]);
+    expect(snapshots[0]).toEqual([
+      { id: "floodfill", description: "Floodfill is being computed." },
+    ]);
+    expect(snapshots[1]).toEqual([
+      { id: "floodfill", description: "Floodfill is being computed." },
+    ]);
     expect(snapshots[2]).toEqual([]); // after execute completes
   });
 

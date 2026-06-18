@@ -10,8 +10,7 @@ export type OperationId =
   | "undo"
   | "redo"
   | "save"
-  | "rebase"
-;
+  | "rebase";
 
 export type RegisterOperationAction = {
   type: "REGISTER_OPERATION";

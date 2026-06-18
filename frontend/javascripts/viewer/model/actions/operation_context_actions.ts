@@ -1,3 +1,4 @@
+// todop: probably a good idea to list possible OperationIds here.
 export type OperationId = string;
 
 export type RegisterOperationAction = {

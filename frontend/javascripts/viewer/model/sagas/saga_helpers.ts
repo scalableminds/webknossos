@@ -24,6 +24,7 @@ export function* takeEveryInOperationContext<P extends ActionPattern>(
   saga: (action: Action, ctx: OperationContext) => Saga<void>,
   options: OperationOptions,
 ): Saga<void> {
+  // todop: add docstring.
   function* wrapper(action: Action) {
     const existingCtx = (action as any).operationContext ?? null;
     const ctx = yield* getOrCreateOperationContext(

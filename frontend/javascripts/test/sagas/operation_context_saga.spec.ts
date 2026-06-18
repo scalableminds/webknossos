@@ -3,70 +3,27 @@ import { applyMiddleware, createStore } from "redux";
 import createSagaMiddleware from "redux-saga";
 import { delay } from "redux-saga/effects";
 import { call } from "typed-redux-saga";
+import defaultState from "viewer/default_state";
+import type { Action } from "viewer/model/actions/actions";
 import {
   _resetOperationContextForTesting,
   borrowedContext,
   createOperationContext,
   getOrCreateOperationContext,
 } from "viewer/model/sagas/operation_context_saga";
+import { combinedReducer, type WebknossosState } from "viewer/store";
 import { beforeEach, describe, expect, it } from "vitest";
 
 // Minimal store for operation context tests — only handles the four operation context
 // action types. Predicates in these tests don't access other WK state slices.
 function makeTestStore() {
   const sagaMiddleware = createSagaMiddleware();
-  const store = createStore(
-    (
-      state: any = { operationContext: { activeOperations: [], childOperations: [] } },
-      action: any,
-    ) => {
-      switch (action.type) {
-        case "REGISTER_OPERATION":
-          return {
-            operationContext: {
-              ...state.operationContext,
-              activeOperations: [
-                ...state.operationContext.activeOperations,
-                { id: action.id, description: action.description },
-              ],
-            },
-          };
-        case "UNREGISTER_OPERATION":
-          return {
-            operationContext: {
-              activeOperations: state.operationContext.activeOperations.filter(
-                // todop: avoid any
-                (op: any) => op.id !== action.id,
-              ),
-              childOperations: state.operationContext.childOperations.filter(
-                (c: any) => c.parentId !== action.id,
-              ),
-            },
-          };
-        case "REGISTER_CHILD_OPERATION":
-          return {
-            operationContext: {
-              ...state.operationContext,
-              childOperations: [
-                ...state.operationContext.childOperations,
-                { id: action.id, parentId: action.parentId },
-              ],
-            },
-          };
-        case "UNREGISTER_CHILD_OPERATION":
-          return {
-            operationContext: {
-              ...state.operationContext,
-              childOperations: state.operationContext.childOperations.filter(
-                (c: any) => c.id !== action.id,
-              ),
-            },
-          };
-        default:
-          return state;
-      }
-    },
-    applyMiddleware(sagaMiddleware),
+  const store = createStore<WebknossosState, Action>(
+    combinedReducer as any,
+    defaultState,
+    applyMiddleware(
+      sagaMiddleware,
+    ),
   );
   return { store, sagaMiddleware };
 }

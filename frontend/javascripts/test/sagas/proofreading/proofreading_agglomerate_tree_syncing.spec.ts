@@ -152,6 +152,7 @@ describe("Proofreading agglomerate tree syncing", () => {
         // Wait till proofreading action is finished; including refreshing agglomerate trees.
         yield take(
           ((action: Action) =>
+            // todop: this pattern appears several times in this repo
             action.type === "REGISTER_OPERATION" &&
             (action as any).id === "proofreading") as ActionPattern,
         ); // Operation starts

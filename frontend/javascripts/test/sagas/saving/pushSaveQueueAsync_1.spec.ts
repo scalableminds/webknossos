@@ -10,7 +10,7 @@ import * as opCtxModule from "viewer/model/sagas/operation_context_saga";
 import Store, { startSaga } from "viewer/store";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-describe("pushSaveQueueAsync (integration)", () => {
+describe("pushSaveQueueAsync (integration) - 1", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
     await setupWebknossosForTesting(context, "skeleton");
   });
@@ -85,28 +85,6 @@ describe("pushSaveQueueAsync (integration)", () => {
       expect(context.mocks.sendSaveRequestWithToken.mock.calls.length).toEqual(callsBefore + 1);
       const saveCall = spy.mock.calls.find(([options]) => (options as any).id === "save");
       expect(saveCall![1]).toEqual(fakeParentCtx);
-    });
-    await task.toPromise();
-  });
-
-  it<WebknossosTestContext>("sends multiple save requests on saveNow when save queue was filled during saving", async (context) => {
-    const task = startSaga(function* () {
-      context.mocks.sendSaveRequestWithToken.mockImplementation(() => sleep(100));
-      const callsBefore = context.mocks.sendSaveRequestWithToken.mock.calls.length;
-
-      // Create a node and start saving
-      yield put(createNodeAction([1, 1, 1], [], [0, 0, 0], 0, 0));
-
-      // Kick off saving.
-      yield put(saveNowAction());
-
-      // Create another node while saving is active.
-      yield delay(50);
-      Store.dispatch(createNodeAction([1, 1, 1], [], [0, 0, 0], 0, 0));
-
-      // Wait for saving to be done.
-      yield* take("UNREGISTER_OPERATION");
-      expect(context.mocks.sendSaveRequestWithToken.mock.calls.length).toEqual(callsBefore + 2);
     });
     await task.toPromise();
   });

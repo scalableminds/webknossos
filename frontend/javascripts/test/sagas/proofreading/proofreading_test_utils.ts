@@ -25,10 +25,6 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
-import {
-  registerOperationAction,
-  unregisterOperationAction,
-} from "viewer/model/actions/operation_context_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import {
   cutAgglomerateFromNeighborsAction,

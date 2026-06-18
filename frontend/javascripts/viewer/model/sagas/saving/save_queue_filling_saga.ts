@@ -125,50 +125,54 @@ export function* setupSavingForTracingType(
     ["ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE"],
     buffers.expanding<EnsureTracingsWereDiffedToSaveQueueAction>(1),
   );
-  let ensureAction: EnsureTracingsWereDiffedToSaveQueueAction | undefined;
-  function* resolveEnsureDiffedActions() {
-    const pendingActions: EnsureTracingsWereDiffedToSaveQueueAction[] =
-      yield* flush(ensureDiffedChannel);
-
-    // include the first action we already took from the race
-    const actionsToProcess = ensureAction ? [ensureAction, ...pendingActions] : pendingActions;
-    ensureAction = undefined;
-
-    for (const action of actionsToProcess) {
-      (action as EnsureTracingsWereDiffedToSaveQueueAction).callback(tracingId);
+  let ensureActions: EnsureTracingsWereDiffedToSaveQueueAction[] = [];
+  function resolveEnsureDiffedActions() {
+    for (const action of ensureActions) {
+      action.callback(tracingId);
     }
+    ensureActions = [];
   }
 
   while (true) {
-    if (!finishedRebaseActionBuffer.isEmpty()) {
+    // Wait for either:
+    // - a finished rebase/forwarding which needs to reset prevTracing
+    // - a user action which requires diffing
+    // - an "ensureAction" to confirm that diffing ran
+    // The order of the race effect parameters is important, because it
+    // defines the priority in case multiple takes are possible.
+    // Concretely, if a rebase was finished, this needs to be taken care of
+    // as a top priority.
+    // Afterwards, we prioritize consumption of tracingActionChannel since we
+    // don't want to eply to the ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE action
+    // if there are unprocessed user actions.
+    const [finishedRebaseAction, _tracingAction, newEnsureAction] = yield* race([
+      take(finishedRebaseActionChannel),
+      take(tracingActionChannel),
+      take(ensureDiffedChannel),
+    ]);
+    if (finishedRebaseAction != null) {
       yield* flush(finishedRebaseActionChannel);
       prevTracing = yield* getTracing();
       continue;
-    } else if (!tracingActionBuffer.isEmpty()) {
-      // Prioritize consumption of tracingActionChannel since we don't want to
-      // reply to the ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE action if there
-      // are unprocessed user actions.
-      yield* take(tracingActionChannel);
-    } else {
-      // Wait for either a user action or the "ensureAction".
-      const actions = yield* race([
-        take(finishedRebaseActionChannel),
-        take(tracingActionChannel),
-        take(ensureDiffedChannel),
-      ]);
-      if (actions.finishedRebaseAction != null) {
-        prevTracing = yield* getTracing();
-        continue;
-      }
-      if (actions.ensureAction != null) {
-        ensureAction = actions.ensureAction;
-      }
+    }
+    if (newEnsureAction != null) {
+      // Consume entire channel so that we know which ensureActions we
+      // can resolve after diffing. New "ensureActions" that might arrive
+      // during diffing, will be buffered and should kick-off new diffing
+      // in the next while-loop-iteration.
+      const remainingActions = yield* flush(ensureDiffedChannel);
+
+      // include the first action we already took from the race
+      ensureActions = [
+        newEnsureAction as EnsureTracingsWereDiffedToSaveQueueAction,
+        ...remainingActions,
+      ];
     }
 
     // We are about to diff old and new tracing to produce update actions
     // for the save queue. All buffered actions in tracingActionBuffer can
     // be flushed away, because it won't make sense to diff again when
-    // tracing cannot have changed.
+    // `tracing` cannot have changed without a new tracingActionChannel entry.
     tracingActionBuffer.flush();
 
     const allowSave = yield* select(mayAddToSaveQueue);

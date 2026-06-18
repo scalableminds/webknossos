@@ -108,16 +108,18 @@ object AssetCompilation {
       val runnerValue = (Compile / runner).value
       val sourceManagedValue = sourceManaged.value
 
-      val schemaPath = baseDirectoryValue / "schema" / "schema.sql"
+      // Records the last schema update (written by dbtool.js)
+      val schemaRefreshedStampFile = baseDirectoryValue / "schema" / "refreshStamp" / "stamp"
+      // Records the last successful generation.
+      val codeGenStampFile = sourceManagedValue / "slick-schema-codegen.stamp"
+
       val schemaOutDir = sourceManagedValue / "schema"
       val slickTablesOutPath = schemaOutDir / "com" / "scalableminds" / "webknossos" / "schema" / "Tables.scala"
-      // Records the last successful generation.
-      val stampFile = sourceManagedValue / "slick-schema-codegen.stamp"
 
       // The generator reads the live DB; schema.sql mtime is our proxy for "schema changed". This only
       // gates whether we connect to the DB at all, the generator itself rewrites only the table files
       // whose content actually changed, so re-running it when nothing changed costs no recompiles.
-      val shouldUpdate = !slickTablesOutPath.exists || !stampFile.exists || stampFile.lastModified < schemaPath.lastModified
+      val shouldUpdate = !slickTablesOutPath.exists || !codeGenStampFile.exists || codeGenStampFile.lastModified < schemaRefreshedStampFile.lastModified
 
       if (shouldUpdate) {
         streamsValue.log.info(
@@ -148,8 +150,8 @@ object AssetCompilation {
         // Fail this task if the subprocess failed.
         runResult.get
 
-        // Mark this schema.sql state as generated so we do not re-run until schema.sql changes again.
-        IO.touch(stampFile)
+        // Mark this schema.sql state as generated so we do not re-run until the schema changes again.
+        IO.touch(codeGenStampFile)
 
       } else {
         streamsValue.log.info("Slick SQL schema already up to date.")
@@ -167,6 +169,6 @@ object AssetCompilation {
     Compile / sourceGenerators += slickClassesFromDBSchemaTask,
     Compile / managedSourceDirectories += sourceManaged.value,
     // Trigger hot reload (including schema re-generation) if schema changed
-    PlayKeys.playMonitoredFiles += baseDirectory.value / "schema"
+    PlayKeys.playMonitoredFiles += baseDirectory.value / "schema" / "refreshStamp"
   )
 }

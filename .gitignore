@@ -59,7 +59,7 @@ target/
 temp-webknossos-schema**
 tracingData/
 userBinaryData/
-schema/refreshed*
+schema/refreshStamp/stamp
 
 # IntelliJ
 .idea/

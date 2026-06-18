@@ -175,6 +175,18 @@ object DataSourceRegistrationInfo {
   implicit val jsonFormat: OFormat[DataSourceRegistrationInfo] = Json.format[DataSourceRegistrationInfo]
 }
 
+case class StorageDetailEntry(
+    layerName: String,
+    name: String,
+    attachmentType: Option[LayerAttachmentType],
+    usedStorageBytes: Long,
+    lastUpdated: Instant,
+)
+
+object StorageDetailEntry {
+  implicit val jsonFormat: OFormat[StorageDetailEntry] = Json.format[StorageDetailEntry]
+}
+
 class DatasetController @Inject()(userService: UserService,
                                   userDAO: UserDAO,
                                   datasetService: DatasetService,
@@ -873,7 +885,10 @@ class DatasetController @Inject()(userService: UserService,
             dataStore <- dataStoreDAO.findOneByName(dataStoreName.trim) ?~> "datastore.notFound"
             client = new WKRemoteDataStoreClient(dataStore, rpc)
             datasetsForDatastore = byDataStore(dataStoreName)
-            _ <- client.writeMirror(datasetsForDatastore.map(_._id), failOnError = false)
+            writtenPaths <- client.writeMirror(datasetsForDatastore.map(_._id), failOnError = false)
+            _ <- Fox.serialCombined(writtenPaths) {
+              case (datasetId, path) => datasetDAO.updateMirrorPath(datasetId, path)(using GlobalAccessContext)
+            }
             _ = Instant.logSince(
               before,
               s"Writing mirrors for ${datasetsForDatastore.length} datasets on datastore $dataStoreName (for details see datastore logging)",
@@ -884,5 +899,27 @@ class DatasetController @Inject()(userService: UserService,
                              s"Writing mirrors for all ${datasets.length} datasets (for details see datastore logging)",
                              logger)
       } yield Ok
+    }
+
+  def usedStorageDetails(datasetId: ObjectId): Action[AnyContent] =
+    sil.SecuredAction.async { implicit request =>
+      for {
+        dataset <- datasetDAO.findOne(datasetId) ?~> notFoundMessage(datasetId.toString) ~> NOT_FOUND
+        // While reading these details is not exactly editing, only those who can see the settings page should see this.
+        _ <- Fox.assertTrue(datasetService.isEditableBy(dataset, Some(request.identity))) ?~> Msg.notAllowed ~> FORBIDDEN
+        _ <- Fox.fromBool(dataset.isUsable) ?~> Msg.Dataset.notUsable(datasetId)
+        magDetails <- organizationDAO.getUsedStorageMagDetailsForDataset(datasetId)
+        attachmentDetails <- organizationDAO.getUsedStorageAttachmentDetailsForDataset(datasetId)
+        magEntries = magDetails.map {
+          case (layerName, name, usedStorageBytes, lastUpdated) =>
+            StorageDetailEntry(layerName, name, None, usedStorageBytes, lastUpdated)
+        }
+        attachmentEntries <- Fox.combined(attachmentDetails.map {
+          case (layerName, name, typeStr, usedStorageBytes, lastUpdated) =>
+            for {
+              attachmentType <- LayerAttachmentType.fromString(typeStr).toFox
+            } yield StorageDetailEntry(layerName, name, Some(attachmentType), usedStorageBytes, lastUpdated)
+        })
+      } yield Ok(Json.toJson(magEntries ++ attachmentEntries))
     }
 }

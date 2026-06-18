@@ -43,10 +43,10 @@ class ManagedS3Service @Inject()(config: DataStoreConfig, baseDirService: BaseDi
   }
 
   def isS3UploadEnabled(organizationId: String): Boolean =
-    baseDirService.getOneS3ForOrga(organizationId, requireAllowsUpload = true).isDefined
+    baseDirService.getOneForOrga(organizationId, requireS3 = true, requireAllowsUpload = true).isDefined
 
   def s3UploadBaseDir(organizationId: String): Box[UPath] =
-    baseDirService.getOneS3ForOrga(organizationId, requireAllowsUpload = true)
+    baseDirService.getOneForOrga(organizationId, requireS3 = true, requireAllowsUpload = true)
 
   private def transferManagerForEndpoint(s3UploadEndpoint: URI, credential: S3AccessKeyCredential): Fox[S3TransferManager] =
     transferManagerCache.getOrLoad((s3UploadEndpoint, credential), _ => {

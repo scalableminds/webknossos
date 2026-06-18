@@ -346,11 +346,14 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- datasetService.assertValidDatasetName(newDatasetName)
           _ <- datasetService.assertValidLayerNameLax(outputSegmentationLayerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
+          dataStoreClient <- datasetService.clientFor(dataset)
+          organizationBaseDirectory <- dataStoreClient.getOrganizationBaseDirectory(organization._id, requireLocal = true)
           _ <- Fox.runIf(!multiUser.isSuperUser && includesEditableMapping)(Fox.runOptional(boundingBox)(bbox =>
             jobService.assertBoundingBoxLimits(bbox, None)))
           commandArgs = Json.obj(
             "dataset_id" -> dataset._id,
             "organization_id" -> organization._id,
+            "organization_base_directory" -> organizationBaseDirectory,
             "dataset_name" -> dataset.name,
             "dataset_directory_name" -> dataset.directoryName,
             "fallback_layer_name" -> fallbackLayerName,

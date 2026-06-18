@@ -24,7 +24,7 @@ class MappingService @Inject()(config: DataStoreConfig, baseDirService: BaseDirS
   def loadMappingBytes(request: DataServiceMappingRequest): Box[Array[Byte]] =
     for {
       dataSourceId <- Box(request.dataSourceId)
-      orgaDir <- baseDirService.oneLocalForOrga(dataSourceId.organizationId)
+      orgaDir <- baseDirService.getOneLocalForOrga(dataSourceId.organizationId)
       mappingFilePath = orgaDir
         .resolve(dataSourceId.directoryName)
         .resolve(request.dataLayer.name)

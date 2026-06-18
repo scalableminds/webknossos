@@ -190,12 +190,12 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
   private def uploadDirectoryFor(organizationId: String, uploadId: String, uploadDomain: UploadDomain): Box[Path] =
     for {
-      orgaDir <- baseDirService.oneLocalForOrga(organizationId, requireAllowsUpload = true)
+      orgaDir <- baseDirService.getOneLocalForOrga(organizationId, requireAllowsUpload = true)
     } yield orgaDir.resolve(uploadingDir).resolve(uploadDomain.toString).resolve(uploadId)
 
   private def uploadBackupDirectoryFor(organizationId: String, uploadId: String): Box[Path] =
     for {
-      orgaDir <- baseDirService.oneLocalForOrga(organizationId, requireAllowsUpload = true)
+      orgaDir <- baseDirService.getOneLocalForOrga(organizationId, requireAllowsUpload = true)
     } yield orgaDir.resolve(trashDir).resolve(s"uploadBackup__$uploadId")
 
   def reserveDatasetUpload(datasetUploadInfo: DatasetUploadInfo,
@@ -246,7 +246,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                                      uploadDomain: UploadDomain): Fox[Unit] =
     for {
       _ <- baseDirService
-        .oneLocalForOrga(dataSourceId.organizationId, createIfMissing = true, checkWritable = true)
+        .getOneLocalForOrga(dataSourceId.organizationId, createIfMissing = true, checkWritable = true)
         .toFox
       uploadId = resumableUploadInfo.uploadId
       _ = logger.info(f"Reserving ${uploadFullName(uploadDomain, uploadId, datasetId, dataSourceId)}...")
@@ -544,7 +544,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       } yield s3TargetPath
     } else {
       for {
-        orgaDir <- baseDirService.oneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload = true).toFox
+        orgaDir <- baseDirService.getOneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload = true).toFox
         finalUploadedLocalPath = orgaDir.resolve(dataSourceId.directoryName).resolve(layerName).resolve(dirName)
         _ = logger.info(
           s"finishUpload for $domain ($datasetId): Moving data to final local path $finalUploadedLocalPath...")
@@ -558,7 +558,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                                           dataSourceId: DataSourceId): Fox[Option[UsableDataSource]] =
     if (needsConversion) {
       for {
-        orgaDir <- baseDirService.oneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload = true).toFox
+        orgaDir <- baseDirService.getOneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload = true).toFox
         forConversionPath = orgaDir.resolve(forConversionDir).resolve(dataSourceId.directoryName)
         _ = logger.info(s"finishUpload for $datasetId: Moving data to input dir for worker conversion...")
         _ <- tryo(FileUtils.moveDirectory(unpackedDir.toFile, forConversionPath.toFile)).toFox
@@ -583,7 +583,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
           } yield s3TargetPath
         } else {
           for {
-            orgaDir <- baseDirService.oneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload = true).toFox
+            orgaDir <- baseDirService.getOneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload = true).toFox
             finalUploadedLocalPath = orgaDir.resolve(dataSourceId.directoryName)
             _ = logger.info(s"finishUpload for $datasetId: Moving data to final local path $finalUploadedLocalPath...")
             _ <- tryo(FileUtils.moveDirectory(unpackedDir.toFile, finalUploadedLocalPath.toFile)).toFox
@@ -747,7 +747,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
 
   private def unpackToDirFor(dataSourceId: DataSourceId, domain: UploadDomain, uploadId: String): Box[Path] =
     for {
-      orgaDir <- baseDirService.oneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload = true)
+      orgaDir <- baseDirService.getOneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload = true)
     } yield
       orgaDir
         .resolve(uploadingDir)

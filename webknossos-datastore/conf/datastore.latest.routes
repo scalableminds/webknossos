@@ -128,6 +128,8 @@ POST          /datasets/validatePaths                                           
 POST          /datasets/writeMirrors                                                                                  @com.scalableminds.webknossos.datastore.controllers.DataSourceController.writeMirrors(failOnError: Boolean)
 DELETE        /datasets/:datasetId                                                                                    @com.scalableminds.webknossos.datastore.controllers.DataSourceController.invalidateCache(datasetId: ObjectId)
 
+GET           /getOrganizationBaseDirectory                                                                           @com.scalableminds.webknossos.datastore.controllers.DataSourceController.getOrganizationBaseDirectory(organizationId: String, requireLocal: Boolean)
+
 # Actions
 POST          /triggers/checkInboxBlocking                                                                            @com.scalableminds.webknossos.datastore.controllers.DataSourceController.scanBaseDirectories(organizationId: Option[String])
 POST          /triggers/createOrganizationDirectory                                                                   @com.scalableminds.webknossos.datastore.controllers.DataSourceController.createOrganizationDirectory(organizationId: String)

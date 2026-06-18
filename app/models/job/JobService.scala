@@ -4,14 +4,13 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.geometry.BoundingBox
 import com.scalableminds.webknossos.datastore.models.VoxelSize
-import models.dataset.Dataset
+import models.dataset.{Dataset, DatasetDAO, DatasetService}
 import com.scalableminds.util.mvc.Formatter
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.typesafe.scalalogging.LazyLogging
 import mail.{DefaultMails, MailchimpClient, MailchimpTag, Send}
 import models.analytics.{AnalyticsService, FailedJobEvent, RunJobEvent}
-import models.dataset.DatasetDAO
 import models.job.JobCommand.JobCommand
 import models.organization.{CreditTransactionService, OrganizationDAO}
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
@@ -37,6 +36,7 @@ class JobService @Inject()(wkConf: WkConf,
                            defaultMails: DefaultMails,
                            analyticsService: AnalyticsService,
                            userService: UserService,
+                           datasetService: DatasetService,
                            creditTransactionService: CreditTransactionService,
                            wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                            slackNotificationService: SlackNotificationService)(implicit ec: ExecutionContext)
@@ -235,8 +235,11 @@ class JobService @Inject()(wkConf: WkConf,
     for {
       organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization.notFound(
         dataset._organization)
+      dataStoreClient <- datasetService.clientFor(dataset)(GlobalAccessContext)
+      organizationBaseDirectory <- dataStoreClient.getOrganizationBaseDirectory(organization._id, requireLocal = true)
       commandArgs = Json.obj(
         "organization_id" -> organization._id,
+        "organization_base_directory" -> organizationBaseDirectory,
         "organization_display_name" -> organization.name,
         "dataset_name" -> dataset.name,
         "dataset_id" -> dataset._id,

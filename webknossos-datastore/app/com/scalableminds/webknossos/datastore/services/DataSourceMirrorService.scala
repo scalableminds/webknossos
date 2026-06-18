@@ -33,7 +33,7 @@ class DataSourceMirrorService @Inject()(
 
   private def getMirrorDir(dataSource: UsableDataSource): Box[Path] =
     for {
-      orgaDir <- baseDirService.oneLocalForOrga(dataSource.id.organizationId)
+      orgaDir <- baseDirService.getOneLocalForOrga(dataSource.id.organizationId)
     } yield orgaDir.resolve(".mirror").resolve(dataSource.id.directoryName)
 
   def writeMirror(dataSource: UsableDataSource, datasetId: ObjectId)(

@@ -572,7 +572,7 @@ class DSLegacyApiController @Inject()(
         for {
           datasetIdOpt: Option[ObjectId] <- Fox.fromFuture(
             remoteWebknossosClient.getDatasetId(organizationId, datasetDirectoryName).toFutureOption)
-          orgaDir <- baseDirService.oneLocalForOrga(organizationId).toFox
+          orgaDir <- baseDirService.getOneLocalForOrga(organizationId).toFox
           result <- datasetIdOpt match {
             case Some(datasetId) =>
               // Dataset is present in DB

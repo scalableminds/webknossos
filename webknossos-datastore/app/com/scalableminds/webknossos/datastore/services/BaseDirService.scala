@@ -14,51 +14,35 @@ class BaseDirService @Inject()(config: DataStoreConfig) extends LazyLogging {
 
   private lazy val baseDirectories: Seq[BaseDirConfig] = new BaseDirConfigReader().read(config.Datastore.baseDirectories)
 
-  def s3UploadEnabled(organizationId: String): Boolean =
-    getOneS3ForOrga(organizationId, requireAllowsUpload = true).isDefined
-
-  def getOneS3ForOrga(organizationId: String, requireAllowsUpload: Boolean = false): Box[UPath] = {
+  def getOneForOrga(organizationId: String, requireAllowsUpload: Boolean = false, requireLocal: Boolean = false, requireS3: Boolean = false): Box[UPath] = {
     val orgaSpecificPath: Option[UPath] =
       baseDirectories
         .filter(_.organizationId.contains(organizationId))
-        .filter(_.path.getScheme.contains(PathSchemes.schemeS3))
+        .filter(d => !requireS3 || d.path.getScheme.contains(PathSchemes.schemeS3))
+        .filter(d => !requireLocal || d.path.isLocal)
         .find(d => !requireAllowsUpload || d.allowsUpload)
         .map(_.path)
 
     val orgaAgnosticPath: Option[UPath] =
       baseDirectories.filter(_.organizationId.isEmpty)
-        .filter(_.path.getScheme.contains(PathSchemes.schemeS3))
-        .find(_.allowsUpload || !requireAllowsUpload)
+        .filter(d => !requireS3 || d.path.getScheme.contains(PathSchemes.schemeS3))
+        .filter(d => !requireLocal || d.path.isLocal)
+        .find(d => !requireAllowsUpload || d.allowsUpload)
         .map(_.path / organizationId)
 
-    Box(orgaSpecificPath.orElse(orgaAgnosticPath))
+    Box(orgaSpecificPath.orElse(orgaAgnosticPath)) ?~! s"No matching base directory configured for organization $organizationId."
   }
 
-  def oneLocalForOrga(organizationId: String,
-                      requireAllowsUpload: Boolean = false,
-                      createIfMissing: Boolean = false,
-                      checkWritable: Boolean = false): Box[Path] = {
-    val orgaSpecificPath: Option[Path] =
-      baseDirectories
-        .filter(_.organizationId.contains(organizationId))
-        .filter(_.allowsUpload || !requireAllowsUpload)
-        .flatMap(_.path.toLocalPath)
-        .headOption
-
-    val orgaAgnosticPath: Option[Path] =
-      baseDirectories
-        .filter(_.organizationId.isEmpty)
-        .filter(_.allowsUpload || !requireAllowsUpload)
-        .flatMap(_.path.toLocalPath)
-        .headOption
-        .map(_.resolve(organizationId))
-
+  def getOneLocalForOrga(organizationId: String,
+                         requireAllowsUpload: Boolean = false,
+                         createIfMissing: Boolean = false,
+                         checkWritable: Boolean = false): Box[Path] =
     for {
-      selected <- Box(orgaSpecificPath.orElse(orgaAgnosticPath)) ?~! s"No local directory configured for organization $organizationId"
+      selectedUPath <- getOneForOrga(organizationId, requireAllowsUpload, requireLocal = true)
+      selected <- selectedUPath.toLocalPath
       _ <- if (createIfMissing) this.createIfMissing(selected) else Full(())
       _ <- if (checkWritable) this.checkWritable(selected) else Full(())
     } yield selected
-  }
 
   // Returns orga-specific and orga-agnostic mixed!
   val allLocalBaseDirs: Seq[Path] = baseDirectories.flatMap(_.path.toLocalPath)

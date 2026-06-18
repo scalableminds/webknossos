@@ -92,7 +92,7 @@ class DataSourceController @Inject()(
   def getOneBaseDirForOrgaAbsolute(organizationId: String): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
       for {
-        orgaBaseDir <- baseDirService.oneLocalForOrga(organizationId).toFox
+        orgaBaseDir <- baseDirService.getOneLocalForOrga(organizationId).toFox
       } yield Ok(Json.toJson(UPath.fromLocalPath(orgaBaseDir)))
     }
   }
@@ -239,7 +239,7 @@ class DataSourceController @Inject()(
     accessTokenService.validateAccessFromTokenContextForSyncBlock(
       UserAccessRequest.administrateDatasets(organizationId)) {
       for {
-        _ <- baseDirService.oneLocalForOrga(organizationId, createIfMissing = true, checkWritable = true)
+        _ <- baseDirService.getOneLocalForOrga(organizationId, createIfMissing = true, checkWritable = true)
       } yield Ok
     }
   }
@@ -660,4 +660,12 @@ class DataSourceController @Inject()(
       }
     } yield dataSourceToReturn
 
+
+  def getOrganizationBaseDirectory(organizationId: String, requireLocal: Boolean): Action[AnyContent] = Action.async { implicit request =>
+    accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
+      for {
+        baseDirectory <- baseDirService.getOneForOrga(organizationId, requireLocal = requireLocal).toFox
+      } yield Ok(Json.toJson(baseDirectory))
+    }
+  }
 }

@@ -1,4 +1,4 @@
-import { call, put, select, take } from "redux-saga/effects";
+import { call, put, take } from "redux-saga/effects";
 import { takeEvery } from "typed-redux-saga";
 import type { OperationId } from "viewer/model/actions/operation_context_actions";
 import {
@@ -8,7 +8,7 @@ import {
   unregisterOperationAction,
 } from "viewer/model/actions/operation_context_actions";
 import type { WebknossosState } from "viewer/store";
-import type { Saga } from "./effect_generators";
+import { type Saga, select } from "./effect_generators";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

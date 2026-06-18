@@ -103,7 +103,7 @@ class DataSourceController @Inject()(
         .map(id => UserAccessRequest.administrateDatasets(id))
         .getOrElse(UserAccessRequest.administrateDatasets)) {
       for {
-        _ <- dataSourceService.checkInbox(verbose = true, organizationId = organizationId)
+        _ <- dataSourceService.scanBaseDirectories(verbose = true, organizationId = organizationId)
       } yield Ok
     }
   }
@@ -223,12 +223,12 @@ class DataSourceController @Inject()(
     }
   }
 
-  def updateOnDisk(datasetId: ObjectId): Action[UsableDataSource] =
+  def updateOnDisk(datasetId: ObjectId, rootPath: String): Action[UsableDataSource] =
     Action.async(validateJson[UsableDataSource]) { implicit request =>
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
         for {
-          rootPath <- Fox.successful(Path.of("TODO")) // TODO
-          _ <- dataSourceService.updateDataSourceOnDisk(rootPath, request.body)
+          rootPathLocal <- Box.tryo(Path.of(rootPath)).toFox
+          _ <- dataSourceService.updateDataSourceOnDisk(rootPathLocal, request.body)
           _ = datasetCache.invalidateCache(datasetId)
         } yield Ok
       }

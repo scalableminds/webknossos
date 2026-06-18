@@ -311,7 +311,7 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
       _ <- if (isChanged) {
         logger.info(s"Updating dataSource of $datasetId")
         for {
-          _ <- Fox.runIf(!dataset.isVirtual)(dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource))
+          _ <- Fox.runIf(!dataset.isVirtual)(Fox.runOptional(dataset.rootPath)(r => dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource, r)))
           datastoreClient <- clientFor(dataset)
           removedPaths = existingDataSource.allExplicitPaths.diff(updatedDataSource.allExplicitPaths)
           pathsUsedOnlyByThisDataset <- if (removedPaths.nonEmpty) findPathsUsedOnlyByThisDataset(datasetId)
@@ -570,9 +570,9 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
           teamManagerMemberships <- Fox.fillOption(userTeamManagerMemberships)(
             userService.teamManagerMembershipsFor(user._id))
         } yield
-          (user.isAdminOf(dataset._organization)
+          user.isAdminOf(dataset._organization)
             || user.isDatasetManager
-            || teamManagerMemberships.map(_.teamId).intersect(datasetAllowedTeams).nonEmpty)
+            || teamManagerMemberships.map(_.teamId).intersect(datasetAllowedTeams).nonEmpty
       case _ => Fox.successful(false)
     }
 

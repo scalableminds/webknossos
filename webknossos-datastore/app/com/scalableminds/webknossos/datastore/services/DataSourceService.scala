@@ -44,26 +44,27 @@ class DataSourceService @Inject()(
 
   private val propertiesFileName = Path.of(UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
 
-  private var inboxCheckVerboseCounter = 0
+  private var scanBaseDirsVerboseCounter = 0
 
   def tick(): Fox[Unit] =
     for {
-      _ <- checkInbox(verbose = inboxCheckVerboseCounter == 0, organizationId = None)
-      _ = inboxCheckVerboseCounter += 1
-      _ = if (inboxCheckVerboseCounter >= 10) inboxCheckVerboseCounter = 0
+      _ <- scanBaseDirectories(verbose = scanBaseDirsVerboseCounter == 0, organizationId = None)
+      _ = scanBaseDirsVerboseCounter += 1
+      _ = if (scanBaseDirsVerboseCounter >= 10) scanBaseDirsVerboseCounter = 0
     } yield ()
 
-  def checkInbox(verbose: Boolean, organizationId: Option[String]): Fox[Unit] = {
+  def scanBaseDirectories(verbose: Boolean, organizationId: Option[String]): Fox[Unit] = {
     val before = Instant.now
     for {
-      allOrgaDirsWithIds: Seq[(Path, String)] <- orgaDirsToScan(organizationId).toFox ?~> "TODO"
+      allOrgaDirsWithIds: Seq[(Path, String)] <- orgaDirsToScan(organizationId).toFox ?~> "TODO" // TODO
       allOrgaDirsFormatted = allOrgaDirsWithIds.map(_._1).mkString(", ")
-      _ = if (verbose) logger.info(s"Scanning inbox ($allOrgaDirsFormatted)...")
+      _ = if (verbose) logger.info(s"Scanning base directories ($allOrgaDirsFormatted)...")
       _ = if (verbose && organizationId.isEmpty) logEmptyDirs(allOrgaDirsWithIds.map(_._1))
-      foundDataSourcesWithPathInfo = allOrgaDirsWithIds.flatMap(scanOrganizationDirForDataSources)
-      foundDataSources = foundDataSourcesWithPathInfo.map(_.dataSource)
-      (realPathInfos, realPathScanFailures) = scanRealPaths(foundDataSourcesWithPathInfo)
-      _ <- remoteWebknossosClient.reportDataSources(foundDataSourcesWithPathInfo, organizationId)
+      foundDataSourcesWithPathInfoRaw = allOrgaDirsWithIds.flatMap(scanOrganizationDirForDataSources)
+      foundDataSourcesWithPathInfoDeduplicated = deduplicateByDataSourceId(foundDataSourcesWithPathInfoRaw, verbose)
+      foundDataSources = foundDataSourcesWithPathInfoDeduplicated.map(_.dataSource)
+      (realPathInfos, realPathScanFailures) = scanRealPaths(foundDataSourcesWithPathInfoDeduplicated)
+      _ <- remoteWebknossosClient.reportDataSources(foundDataSourcesWithPathInfoDeduplicated, organizationId)
       _ <- remoteWebknossosClient.reportRealPaths(realPathInfos)
       _ = logFoundDatasources(allOrgaDirsFormatted,
                               before,
@@ -71,7 +72,7 @@ class DataSourceService @Inject()(
                               foundDataSources,
                               realPathInfos,
                               realPathScanFailures)
-      // TODO log and bubble s"Failed to scan inbox. Error during list directories on '$dataBaseDir$selectedOrgaLabel': $e"
+      // TODO log and bubble s"Failed to scan base directories. Error during list directories on '$dataBaseDir$selectedOrgaLabel': $e"
     } yield ()
   }
 
@@ -193,7 +194,7 @@ class DataSourceService @Inject()(
     val realPathScanSummary =
       s"${countScannedRealPaths(realPathInfosByDataSource)} scanned realpaths.$realPathFailuresSummary"
     val shortForm =
-      s"Finished scanning inbox ($allOrgaDirsFormatted), took ${formatDuration(Instant.since(before))}: ${foundDataSources
+      s"Finished scanning base directories ($allOrgaDirsFormatted), took ${formatDuration(Instant.since(before))}: ${foundDataSources
         .count(_.isUsable)} active, ${foundDataSources.count(!_.isUsable)} inactive. $realPathScanSummary"
     val msg = if (verbose) {
       val byOrganization: Map[String, Seq[DataSource]] = foundDataSources.groupBy(_.id.organizationId)
@@ -231,6 +232,20 @@ class DataSourceService @Inject()(
       val moreLabel = if (emptyDirs.length > limit) s", ... (${emptyDirs.length} total)" else ""
       logger.warn(s"Empty organization dataset dirs: ${emptyDirs.take(limit).mkString(", ")}$moreLabel")
     }
+  }
+
+  private def deduplicateByDataSourceId(dataSourcesWithPathInfo: Seq[DataSourceWithRootPathInfo], verbose: Boolean): Seq[DataSourceWithRootPathInfo] = {
+    if (verbose) {
+      dataSourcesWithPathInfo.groupBy(_.dataSource.id).foreach {
+        case (dataSourceId, dataSources) if dataSources.length > 1 =>
+          val rootPaths = dataSources.flatMap(_.rootPath).mkString(", ")
+          logger.warn(
+            s"Found ${dataSources.length} datasets with conflicting id $dataSourceId at root paths: $rootPaths. " +
+              s"Using the first one and ignoring the others.")
+        case _ => ()
+      }
+    }
+    dataSourcesWithPathInfo.distinctBy(_.dataSource.id)
   }
 
   private def scanOrganizationDirForDataSources(orgaDirWithId: (Path, String)): Seq[DataSourceWithRootPathInfo] = {

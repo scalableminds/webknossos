@@ -771,7 +771,7 @@ class DatasetController @Inject()(userService: UserService,
         _ <- Fox.runIf(!dataset.isVirtual) {
           for {
             updatedDataSource <- datasetService.usableDataSourceFor(dataset)
-            _ <- dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource)
+            _ <- Fox.runOptional(dataset.rootPath)(r => dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource, r))
           } yield ()
         }
         _ <- usedStorageService.refreshStorageReportForDataset(dataset)
@@ -809,7 +809,7 @@ class DatasetController @Inject()(userService: UserService,
         _ <- Fox.runIf(!dataset.isVirtual) {
           for {
             updatedDataSource <- datasetService.usableDataSourceFor(dataset)
-            _ <- dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource)
+            _ <- Fox.runOptional(dataset.rootPath)(r => dataStoreClient.updateDataSourceOnDisk(datasetId, updatedDataSource, r))
           } yield ()
         }
         _ <- usedStorageService.refreshStorageReportForDataset(dataset)

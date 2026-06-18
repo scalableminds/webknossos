@@ -214,7 +214,7 @@ export function* synchronizeAnnotationWithBackend(
   }
   // Update RebaseRelevantAnnotationState information as new updates have been stored on the server.
   if (saveQueue.length === 0) {
-    yield* put(snapshotAnnotationStateForNextRebaseAction());
+    yield* put(snapshotAnnotationStateForNextRebaseAction()); // todop: test that this is triggered?
   }
   return { hadConflict: false };
 }

@@ -22,6 +22,8 @@ import type { WebknossosState } from "viewer/store";
   function is a primitive value.
  */
 export function isUserInterfaceBlocked(state: WebknossosState): boolean {
+  // todop: in readonly mode, there's no need to block. this would be annoying
+  // to users that simply view the page.
   return state.operationContext.activeOperations.length > 0;
 }
 

@@ -506,7 +506,9 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
 }
 const REBASING_BUSY_BLOCK_REASON = "Syncing Annotation";
 
-function* maybeRequeuePollAndWait(ensureHasNewestVersion: EnsureHasNewestVersionAction | undefined) {
+function* maybeRequeuePollAndWait(
+  ensureHasNewestVersion: EnsureHasNewestVersionAction | undefined,
+) {
   // We need to postpone the poll operation (because the version restore is open).
   if (ensureHasNewestVersion != null) {
     // The ensureHasNewestVersion action was already dequeued from the channel.
@@ -530,10 +532,13 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
   );
   while (true) {
     const interval = yield* call(getPollInterval);
-    let { ensureHasNewestVersion } = yield* race({
+    let { ensureHasNewestVersion: untypedEnsureHasNewestVersion } = yield* race({
       sleep: delay(interval),
       ensureHasNewestVersion: take(channel),
     });
+    const ensureHasNewestVersion = untypedEnsureHasNewestVersion as
+      | EnsureHasNewestVersionAction
+      | undefined;
     const needsCheckForUpdatesOnServer = yield* select(needsPollAnnotationUpdates);
     if (needsCheckForUpdatesOnServer === "no") {
       // We don't need to poll for the newest version (because we can safely assume that
@@ -541,44 +546,30 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
       yield* call(fulfillAllEnsureHasNewestVersionActions, ensureHasNewestVersion, channel);
       continue;
     } else if (needsCheckForUpdatesOnServer === "later") {
-      yield* maybeRequeuePollAndWait(ensureHasNewestVersion as EnsureHasNewestVersionAction | undefined);
+      yield* maybeRequeuePollAndWait(ensureHasNewestVersion);
       continue;
     }
 
-    // Now, initiate the actual polling.
-
-    // In live collab mode, the user could update the annotation concurrently with rebasing.
-    // Therefore, acquire the busy lock to prevent user update actions from interfering with the rebase.
-    // In non-live-collab mode (typically read-only polling), skip busy blocking to avoid freezing the UI.
-    const isUpdatingCurrentlyAllowed = yield* select(
-      (state) => state.annotation.isUpdatingCurrentlyAllowed,
-    );
-    const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
-    const guardAsBlocking = collaborationMode === "Concurrent" && isUpdatingCurrentlyAllowed;
+    // Now, let's initiate the actual rebasing. For that, we acquire the operation context
+    // to block user actions from interfering with rebasing.
     let rebasingResult: RebasingSuccessInfo;
-    if (guardAsBlocking) {
-      // Acquire the operation context to block user actions from interfering with rebasing.
-      const ctx = yield* getOrCreateOperationContext(
-        {
-          id: "rebase",
-          description: REBASING_BUSY_BLOCK_REASON,
-          behaviorWhenDisallowed: "ignore",
-        },
-        (ensureHasNewestVersion as EnsureHasNewestVersionAction | undefined)?.operationContext ??
-          null,
-      );
-      if (ctx == null) {
-        yield* maybeRequeuePollAndWait(ensureHasNewestVersion as EnsureHasNewestVersionAction | undefined);
-        continue;
-      }
-      let result!: RebasingSuccessInfo;
-      yield* ctx.execute(function* () {
-        result = yield* call(performRebasingIfNecessary);
-      });
-      rebasingResult = result;
-    } else {
-      rebasingResult = yield* call(performRebasingIfNecessary);
+    const ctx = yield* getOrCreateOperationContext(
+      {
+        id: "rebase",
+        description: REBASING_BUSY_BLOCK_REASON,
+        behaviorWhenDisallowed: "ignore",
+      },
+      ensureHasNewestVersion?.operationContext ?? null,
+    );
+    if (ctx == null) {
+      yield* maybeRequeuePollAndWait(ensureHasNewestVersion);
+      continue;
     }
+    let result!: RebasingSuccessInfo;
+    yield* ctx.execute(function* () {
+      result = yield* call(performRebasingIfNecessary);
+    });
+    rebasingResult = result;
     const { successful, shouldTerminate } = rebasingResult;
 
     if (shouldTerminate) {

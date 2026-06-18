@@ -48,6 +48,7 @@ import type { SetIdReservationsAction } from "../actions/actions";
 import type {
   FinishMappingInitializationAction,
   SetMappingAction,
+  SetMappingDataAction,
   SetMappingEnabledAction,
   SetMappingNameAction,
 } from "../actions/settings_actions";
@@ -68,6 +69,7 @@ import { forEachGroups } from "./skeletontracing_reducer_helpers";
 export type VolumeTracingReducerAction =
   | VolumeTracingAction
   | SetMappingAction
+  | SetMappingDataAction
   | FinishMappingInitializationAction
   | SetMappingEnabledAction
   | SetMappingNameAction

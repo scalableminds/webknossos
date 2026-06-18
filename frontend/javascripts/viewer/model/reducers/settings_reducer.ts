@@ -252,6 +252,41 @@ function SettingsReducer(state: WebknossosState, action: Action): WebknossosStat
     }
 
     case "SET_MAPPING": {
+      // Phase 1 of mapping activation: a mapping is requested by name. The actual mapping
+      // data is not known yet (the mapping saga loads it and then dispatches SET_MAPPING_DATA),
+      // so the mapping dictionary is cleared here.
+      const { mappingName, mappingType, layerName, isMergerModeMapping } = action;
+
+      // Editable mappings cannot be disabled or switched for now
+      if (!isMappingActivationAllowed(state, mappingName, layerName, !!isMergerModeMapping))
+        return state;
+
+      const hideUnmappedIds =
+        action.hideUnmappedIds != null
+          ? action.hideUnmappedIds
+          : getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName)
+              .hideUnmappedIds;
+      return updateActiveMapping(
+        state,
+        {
+          mappingName,
+          mapping: undefined,
+          mappingColors: undefined,
+          mappingType,
+          hideUnmappedIds,
+          mappingStatus:
+            mappingName != null ? MappingStatusEnum.ACTIVATING : MappingStatusEnum.DISABLED,
+          isMergerModeMapping,
+        },
+        layerName,
+      );
+    }
+
+    case "SET_MAPPING_DATA": {
+      // Phase 2 of mapping activation: the actual mapping data arrives (loaded by the mapping
+      // saga or supplied directly). The mapping dictionary is stored and the status is set to
+      // ACTIVATING; finishMappingActivation in the mapping saga will set it to ENABLED once the
+      // textures have been updated.
       const { mappingName, mapping, mappingColors, mappingType, layerName, isMergerModeMapping } =
         action;
 

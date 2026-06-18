@@ -145,8 +145,9 @@ export const VolumeTracingSaveRelevantActions: Action["type"][] = [
   "MERGE_SEGMENTS_ITEMS",
   "SET_SEGMENTS",
   ...AllUserBoundingBoxActions,
-  // Note that the following three actions are defined in settings_actions.ts
+  // Note that the following actions are defined in settings_actions.ts
   "SET_MAPPING",
+  "SET_MAPPING_DATA",
   "SET_MAPPING_ENABLED",
   "FINISH_MAPPING_INITIALIZATION",
   "BATCH_UPDATE_GROUPS_AND_SEGMENTS",

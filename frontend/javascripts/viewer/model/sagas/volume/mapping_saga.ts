@@ -54,11 +54,13 @@ import { snapshotMappingDataForNextRebaseAction } from "viewer/model/actions/sav
 import type {
   OptionalMappingProperties,
   SetMappingAction,
+  SetMappingDataAction,
 } from "viewer/model/actions/settings_actions";
 import {
   clearMappingAction,
   finishMappingInitializationAction,
   setMappingAction,
+  setMappingDataAction,
 } from "viewer/model/actions/settings_actions";
 import {
   MAPPING_MESSAGE_KEY,
@@ -149,10 +151,13 @@ export default function* watchActivatedMappings(): Saga<void> {
   const oldActiveMappingByLayer = {
     value: yield* select((state) => state.temporaryConfiguration.activeMappingByLayer),
   };
-  // Buffer actions since they might be dispatched before WK_INITIALIZED
+  // Buffer the activation requests since they might be dispatched before WK_INITIALIZED.
+  // Only SET_MAPPING (phase 1, the activation request) is handled here; SET_MAPPING_DATA
+  // (phase 2, the actual mapping data) is handled by finishMappingActivation below.
   const setMappingActionChannel = yield* actionChannel("SET_MAPPING");
   yield* call(ensureWkInitialized);
   yield* takeLatest(setMappingActionChannel, handleSetMapping, oldActiveMappingByLayer);
+  yield* takeEvery("SET_MAPPING_DATA", finishMappingActivation);
   yield* takeEvery(
     "ENSURE_LAYER_MAPPINGS_ARE_LOADED",
     function* handler(action: EnsureLayerMappingsAreLoadedAction) {
@@ -170,16 +175,20 @@ export default function* watchActivatedMappings(): Saga<void> {
     yield* takeLatestMappingChange(oldActiveMappingByLayer, layer.name);
   }
   // Keep RebaseRelevantAnnotationState updated.
-  yield* takeEvery("SET_MAPPING", keepMappingInfoInUpdated);
+  yield* takeEvery(["SET_MAPPING", "SET_MAPPING_DATA"], keepMappingInfoInUpdated);
 }
 
 function* clearActiveMapping(volumeTracingId: string, activeMapping: ActiveMappingInfo) {
   const newMapping = new Map();
 
   yield* put(
-    setMappingAction(volumeTracingId, activeMapping.mappingName, activeMapping.mappingType, false, {
-      mapping: newMapping,
-    }),
+    setMappingDataAction(
+      volumeTracingId,
+      activeMapping.mappingName,
+      activeMapping.mappingType,
+      newMapping,
+      false,
+    ),
   );
 }
 
@@ -405,13 +414,7 @@ function* handleSetMapping(
   oldActiveMappingByLayer: Container<Record<string, ActiveMappingInfo>>,
   action: SetMappingAction,
 ): Saga<void> {
-  const {
-    layerName,
-    mappingName,
-    mappingType,
-    mapping: existingMapping,
-    showLoadingIndicator,
-  } = action;
+  const { layerName, mappingName, mappingType, showLoadingIndicator } = action;
 
   // Editable mappings cannot be disabled or switched for now
   const isEditableMappingActivationAllowed = yield* select((state) =>
@@ -420,24 +423,6 @@ function* handleSetMapping(
   if (!isEditableMappingActivationAllowed) return;
 
   if (mappingName == null) {
-    return;
-  }
-  if (existingMapping != null) {
-    // A fully fledged mapping object was already passed
-    // (e.g., via the front-end API).
-    // Only the custom colors have to be configured, if they
-    // were passed.
-    if (action.mappingColors) {
-      const classes = convertMappingObjectToEquivalenceClasses(existingMapping);
-      yield* call(setCustomColors, action, classes, layerName);
-    }
-
-    if (import.meta.env.MODE === "test") {
-      // in test context, the mapping.ts code is not executed (which is usually responsible
-      // for finishing the initialization).
-      // TODO #9064: Refactor this
-      yield put(finishMappingInitializationAction(layerName));
-    }
     return;
   }
 
@@ -482,6 +467,50 @@ function* handleSetMapping(
   }
 }
 
+function* finishMappingActivation(action: SetMappingDataAction): Saga<void> {
+  // Phase 2 of mapping activation: the mapping data has been stored in the store (by the
+  // SET_MAPPING_DATA reducer). Here we update the mapping textures (a no-op if the layer's
+  // textures have not been set up yet, e.g. in tests without a GPU) and finish the activation
+  // (status ACTIVATING -> ENABLED).
+  // Previously this was driven by a store-property listener in mappings.ts, which neither ran in
+  // tests nor reacted to no-op (same-identity) mappings. See #9064.
+  const { layerName, mappingName, mapping, mappingColors, isMergerModeMapping } = action;
+
+  // Mirror the gate of the SET_MAPPING_DATA reducer.
+  const isActivationAllowed = yield* select((state) =>
+    isMappingActivationAllowed(state, mappingName, layerName, !!isMergerModeMapping),
+  );
+  if (!isActivationAllowed) return;
+
+  // Only proceed if the reducer actually applied this exact mapping and the activation is still
+  // in progress. This skips superseded/rejected actions and avoids double-finishing.
+  const activeMapping = yield* select((state) =>
+    getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
+  );
+  if (
+    activeMapping.mapping !== mapping ||
+    activeMapping.mappingStatus !== MappingStatusEnum.ACTIVATING
+  ) {
+    return;
+  }
+
+  // Apply custom colors if they were passed directly (e.g. via the front-end API). For JSON
+  // mappings the colors are applied in handleSetJsonMapping instead (using the server-provided
+  // class ordering), which is why those dispatches don't carry mappingColors.
+  if (mappingColors != null && mappingColors.length > 0) {
+    const classes = convertMappingObjectToEquivalenceClasses(mapping);
+    yield* call(setCustomColors, action, classes, layerName);
+  }
+
+  const mappings = Model.getLayerByName(layerName).mappings;
+  if (mappings != null) {
+    yield* call([mappings, mappings.updateMappingTextures], mapping);
+  }
+
+  yield* put(finishMappingInitializationAction(layerName));
+  message.destroy(MAPPING_MESSAGE_KEY);
+}
+
 function* handleSetHdf5Mapping(
   layerName: string,
   layerInfo: APIDataLayer,
@@ -521,7 +550,7 @@ function* updateLocalHdf5Mapping(
       // In cases where a mapping is already set and the zoom threshold is exceeded, it is not changed
       // to avoid useless updates to the cuckoo textures. Once the threshold is no longer exceeded, the mapping
       // will be updated again.
-      yield* put(setMappingAction(layerName, mappingName, "HDF5", true, { mapping: new Map() }));
+      yield* put(setMappingDataAction(layerName, mappingName, "HDF5", new Map(), true));
     }
     return;
   }
@@ -570,15 +599,9 @@ function* updateLocalHdf5Mapping(
     onlyB: newSegmentIds,
   });
 
-  yield* put(setMappingAction(layerName, mappingName, "HDF5", true, { mapping }));
+  yield* put(setMappingDataAction(layerName, mappingName, "HDF5", mapping, true));
 
   yield* call(adaptActiveSegmentToProofreadingMarker, layerName);
-
-  if (import.meta.env.MODE === "test") {
-    // in test context, the mapping.ts code is not executed (which is usually responsible
-    // for finishing the initialization).
-    yield put(finishMappingInitializationAction(layerName));
-  }
 }
 
 export async function fetchAgglomeratesForSegmentIds(
@@ -707,7 +730,12 @@ function* handleSetJsonMapping(
   }
 
   console.timeEnd("MappingSaga JSON");
-  yield* put(setMappingAction(layerName, mappingName, mappingType, false, mappingProperties));
+  // The custom colors (if any) were already applied above, so they are not passed again here
+  // (finishMappingActivation would otherwise re-apply them based on a possibly different class
+  // ordering).
+  yield* put(
+    setMappingDataAction(layerName, mappingName, mappingType, mapping, false, { hideUnmappedIds }),
+  );
 }
 
 function convertMappingObjectToEquivalenceClasses(existingMapping: Mapping) {
@@ -858,10 +886,10 @@ function* ensureMappingsAreLoadedAndRequestedMappingExists(
   return true;
 }
 
-// On every setMappingAction make sure in case it only updates the mapping with info already stored on the server
-// the RebaseRelevantAnnotationState is updated as well.
-function* keepMappingInfoInUpdated(setMappingAction: SetMappingAction) {
-  if (setMappingAction.isVersionStoredOnServer) {
-    yield put(snapshotMappingDataForNextRebaseAction(setMappingAction.layerName));
+// On every SET_MAPPING / SET_MAPPING_DATA make sure that, in case it only updates the mapping with
+// info already stored on the server, the RebaseRelevantAnnotationState is updated as well.
+function* keepMappingInfoInUpdated(action: SetMappingAction | SetMappingDataAction) {
+  if (action.isVersionStoredOnServer) {
+    yield put(snapshotMappingDataForNextRebaseAction(action.layerName));
   }
 }

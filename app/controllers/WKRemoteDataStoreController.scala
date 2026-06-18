@@ -223,7 +223,9 @@ class WKRemoteDataStoreController @Inject()(
           _ <- Fox.runIf(request.body.needsConversion) {
             for {
               voxelSize <- request.body.voxelSize.toFox ?~> Msg.Dataset.Upload.needsConversionMissingVoxelSize
-              _ <- jobService.submitConvertToWkwJob(updated, user, voxelSize)
+              dataStoreClient <- datasetService.clientFor(dataset)(GlobalAccessContext)
+              organizationBaseDirectory <- dataStoreClient.getOrganizationBaseDirectory(dataset._organization, requireLocal = true)
+              _ <- jobService.submitConvertToWkwJob(updated, user, voxelSize, organizationBaseDirectory)
             } yield ()
           }
         } yield Ok

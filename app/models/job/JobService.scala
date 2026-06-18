@@ -15,6 +15,7 @@ import models.job.JobCommand.JobCommand
 import models.organization.{CreditTransactionService, OrganizationDAO}
 import models.user.{MultiUserDAO, User, UserDAO, UserService}
 import com.scalableminds.util.tools.Full
+import com.scalableminds.webknossos.datastore.helpers.UPath
 import org.apache.pekko.actor.ActorSystem
 import play.api.libs.json.{JsObject, JsValue, Json}
 import security.WkSilhouetteEnvironment
@@ -36,7 +37,6 @@ class JobService @Inject()(wkConf: WkConf,
                            defaultMails: DefaultMails,
                            analyticsService: AnalyticsService,
                            userService: UserService,
-                           datasetService: DatasetService,
                            creditTransactionService: CreditTransactionService,
                            wkSilhouetteEnvironment: WkSilhouetteEnvironment,
                            slackNotificationService: SlackNotificationService)(implicit ec: ExecutionContext)
@@ -231,12 +231,10 @@ class JobService @Inject()(wkConf: WkConf,
       _ = analyticsService.track(RunJobEvent(owner, command))
     } yield job
 
-  def submitConvertToWkwJob(dataset: Dataset, user: User, voxelSize: VoxelSize): Fox[Unit] =
+  def submitConvertToWkwJob(dataset: Dataset, user: User, voxelSize: VoxelSize, organizationBaseDirectory: UPath): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization.notFound(
         dataset._organization)
-      dataStoreClient <- datasetService.clientFor(dataset)(GlobalAccessContext)
-      organizationBaseDirectory <- dataStoreClient.getOrganizationBaseDirectory(organization._id, requireLocal = true)
       commandArgs = Json.obj(
         "organization_id" -> organization._id,
         "organization_base_directory" -> organizationBaseDirectory,

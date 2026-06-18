@@ -282,7 +282,7 @@ class JobController @Inject()(jobDAO: JobDAO,
       log(Some(slackNotificationService.noticeFailedJobRequest)) {
         for {
           dataset <- datasetDAO.findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
-          organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization
+          datasetOrganization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization
             .notFound(dataset._organization)
           _ <- Fox.runOptional(layerName)(datasetService.assertValidLayerNameLax)
           _ <- Fox.runOptional(annotationLayerName)(datasetService.assertValidLayerNameLax)
@@ -302,14 +302,18 @@ class JobController @Inject()(jobDAO: JobDAO,
             additionalAxes.map(_.intersectWithAdditionalCoordinates(parsedAdditionalCoordinates)))
           ndBoundingBox = NDBoundingBox(threeDBBox, additionalAxesOfNdBBox.getOrElse(Seq.empty), axisOrder)
           command = JobCommand.export_tiff
+          dataStoreClient <- datasetService.clientFor(dataset)
+          userOrganizationBaseDirectory <- dataStoreClient.getOrganizationBaseDirectory(request.identity._organization, requireLocal = true)
           exportFileName = if (asOmeTiff)
             s"${formatDateForFilename(new Date())}__${dataset.name}__${annotationLayerName.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.ome.tif"
           else
             s"${formatDateForFilename(new Date())}__${dataset.name}__${annotationLayerName.map(_ => "volume").getOrElse(layerName.getOrElse(""))}.zip"
+
           commandArgs = Json.obj(
             "dataset_id" -> dataset._id,
             "dataset_directory_name" -> dataset.directoryName,
-            "organization_id" -> organization._id,
+            "organization_id" -> datasetOrganization._id,
+            "user_organization_base_directory" -> userOrganizationBaseDirectory,
             "dataset_name" -> dataset.name,
             "nd_bbox" -> ndBoundingBox.toWkLibsDict,
             "export_file_name" -> exportFileName,
@@ -347,7 +351,7 @@ class JobController @Inject()(jobDAO: JobDAO,
           _ <- datasetService.assertValidLayerNameLax(outputSegmentationLayerName)
           multiUser <- multiUserDAO.findOne(request.identity._multiUser)
           dataStoreClient <- datasetService.clientFor(dataset)
-          organizationBaseDirectory <- dataStoreClient.getOrganizationBaseDirectory(organization._id, requireLocal = true)
+          organizationBaseDirectory <- dataStoreClient.getOrganizationBaseDirectory(request.identity._organization, requireLocal = true)
           _ <- Fox.runIf(!multiUser.isSuperUser && includesEditableMapping)(Fox.runOptional(boundingBox)(bbox =>
             jobService.assertBoundingBoxLimits(bbox, None)))
           commandArgs = Json.obj(
@@ -415,11 +419,14 @@ class JobController @Inject()(jobDAO: JobDAO,
           }
           layerName = animationJobOptions.layerName
           _ <- datasetService.assertValidLayerNameLax(layerName)
+          dataStoreClient <- datasetService.clientFor(dataset)
+          userOrganizationBaseDirectory <- dataStoreClient.getOrganizationBaseDirectory(request.identity._organization, requireLocal = true)
           exportFileName = s"webknossos_animation_${formatDateForFilename(new Date())}__${dataset.name}__$layerName.mp4"
           command = JobCommand.render_animation
           commandArgs = Json.obj(
             "dataset_id" -> dataset._id,
             "organization_id" -> organization._id,
+            "user_organization_base_directory" -> userOrganizationBaseDirectory,
             "dataset_name" -> dataset.name,
             "dataset_directory_name" -> dataset.directoryName,
             "export_file_name" -> exportFileName,

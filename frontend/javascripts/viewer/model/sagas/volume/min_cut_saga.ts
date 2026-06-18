@@ -22,7 +22,7 @@ import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { MagInfo } from "viewer/model/helpers/mag_info";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
-import { takeEveryUnlessBusy } from "viewer/model/sagas/saga_helpers";
+import { takeEveryInOperationContext } from "viewer/model/sagas/saga_helpers";
 import type { MutableNode, Node } from "viewer/model/types/tree_types";
 import { api } from "viewer/singletons";
 
@@ -839,5 +839,8 @@ function labelDeletedEdges(
 }
 
 export default function* listenToMinCut(): Saga<void> {
-  yield* takeEveryUnlessBusy("PERFORM_MIN_CUT", performMinCut, "Min-cut is being computed.");
+  yield* takeEveryInOperationContext("PERFORM_MIN_CUT", performMinCut, {
+    id: "minCut",
+    description: "Min-cut is being computed.",
+  });
 }

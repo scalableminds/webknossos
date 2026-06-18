@@ -21,7 +21,6 @@ import type { AdditionalCoordinate, ServerEditableMapping } from "types/api_type
 import Constants, {
   MappingStatusEnum,
   OrthoViews,
-  SagaIdentifier,
   TreeTypeEnum,
   type Vector3,
 } from "viewer/constants";
@@ -91,12 +90,7 @@ import {
   setTreeNameAction,
   setTreesAgglomerateInfoTracingIdAction,
 } from "viewer/model/actions/skeletontracing_actions";
-import {
-  allowSagaWhileBusyAction,
-  disallowSagaWhileBusyAction,
-  type EnterAction,
-  type EscapeAction,
-} from "viewer/model/actions/ui_actions";
+import type { EnterAction, EscapeAction } from "viewer/model/actions/ui_actions";
 import {
   clickSegmentAction,
   initializeEditableMappingAction,
@@ -132,7 +126,7 @@ import type { Tree } from "../../../types/tree_types";
 import { ensureWkInitialized } from "../../ready_sagas";
 import {
   spawnUntilCanceled,
-  takeEveryUnlessBusy,
+  takeEveryInOperationContext,
   takeWithBatchActionSupport,
 } from "../../saga_helpers";
 import { subscribeToAnnotationMutex } from "../../saving/save_mutex_saga";
@@ -160,41 +154,48 @@ const PROOFREADING_BUSY_REASON = "Proofreading in progress";
 export default function* proofreadRootSaga(): Saga<void> {
   yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
   yield* call(ensureWkInitialized);
+  const proofreadingOptions = {
+    id: "proofreading",
+    description: PROOFREADING_BUSY_REASON,
+    // Allow save to run alongside proofreading (replaces allowSagaWhileBusyAction pattern)
+    // todop: no, this allows saving to kick in at an arbitrary point. we want a suboperation.
+    allowAdditionalOperation: (pendingId: string) => pendingId === "save",
+  };
 
-  yield* takeEveryUnlessBusy(
+  yield* takeEveryInOperationContext(
     "MERGE_TREES",
     runSagaAndCatchSoftError(handleMergeViaTree),
-    PROOFREADING_BUSY_REASON,
+    proofreadingOptions,
   );
-  yield* takeEveryUnlessBusy(
+  yield* takeEveryInOperationContext(
     ["DELETE_EDGE", "MIN_CUT_AGGLOMERATE_WITH_NODE_IDS"],
     runSagaAndCatchSoftError(handleSplitViaTree),
-    PROOFREADING_BUSY_REASON,
+    proofreadingOptions,
   );
   yield* takeEvery(["PROOFREAD_AT_POSITION"], runSagaAndCatchSoftError(proofreadAtPosition));
   yield* takeEvery(
     ["CLEAR_PROOFREADING_BY_PRODUCTS"],
     runSagaAndCatchSoftError(clearProofreadingByproducts),
   );
-  yield* takeEveryUnlessBusy(
+  yield* takeEveryInOperationContext(
     "PROOFREAD_MERGE",
     runSagaAndCatchSoftError(handleProofreadMerge),
-    PROOFREADING_BUSY_REASON,
+    proofreadingOptions,
   );
-  yield* takeEveryUnlessBusy(
+  yield* takeEveryInOperationContext(
     "MIN_CUT_AGGLOMERATE",
     runSagaAndCatchSoftError(handleMinCutAgglomerate),
-    PROOFREADING_BUSY_REASON,
+    proofreadingOptions,
   );
-  yield* takeEveryUnlessBusy(
+  yield* takeEveryInOperationContext(
     ["MIN_CUT_PARTITIONS", "ENTER"],
     runSagaAndCatchSoftError(performPartitionedMinCut),
-    PROOFREADING_BUSY_REASON,
+    proofreadingOptions,
   );
-  yield* takeEveryUnlessBusy(
+  yield* takeEveryInOperationContext(
     ["CUT_AGGLOMERATE_FROM_NEIGHBORS"],
     runSagaAndCatchSoftError(handleProofreadCutFromNeighbors),
-    PROOFREADING_BUSY_REASON,
+    proofreadingOptions,
   );
 
   yield* takeEvery(
@@ -274,15 +275,11 @@ function proofreadCoarseMagIndex(): number {
 }
 
 function* syncWithBackend() {
-  yield* put(allowSagaWhileBusyAction(SagaIdentifier.SAVE_SAGA));
   yield* call([Model, Model.ensureSavedState]);
-  yield* put(disallowSagaWhileBusyAction(SagaIdentifier.SAVE_SAGA));
 }
 
 function* pollNewestBackendVersion() {
-  yield* put(allowSagaWhileBusyAction(SagaIdentifier.SAVE_SAGA));
   yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch);
-  yield* put(disallowSagaWhileBusyAction(SagaIdentifier.SAVE_SAGA));
 }
 
 function* subscribeToAnnotationMutexInLiveCollab(proofreadingSagaId: string) {

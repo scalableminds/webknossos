@@ -8,9 +8,10 @@ import type {
   ComputeQuickSelectForRectAction,
 } from "viewer/model/actions/volumetracing_actions";
 import { type Saga, select } from "viewer/model/sagas/effect_generators";
+import { createOperationContext } from "viewer/model/sagas/operation_context_saga";
 import type { VolumeTracing } from "viewer/store";
 import { getActiveSegmentationTracing } from "../../../accessors/volumetracing_accessor";
-import { setBusyBlockingInfoAction, setQuickSelectStateAction } from "../../../actions/ui_actions";
+import { setQuickSelectStateAction } from "../../../actions/ui_actions";
 import { requestBucketModificationInVolumeTracing } from "../../saga_helpers";
 import performQuickSelectHeuristic from "./quick_select_heuristic_saga";
 import performQuickSelectML from "./quick_select_ml_saga";
@@ -24,40 +25,41 @@ export default function* listenToQuickSelect(): Saga<void> {
   yield* takeEvery(
     ["COMPUTE_QUICK_SELECT_FOR_RECT", "COMPUTE_QUICK_SELECT_FOR_POINT"],
     function* guard(action: ComputeQuickSelectForRectAction | ComputeQuickSelectForPointAction) {
+      const ctx = yield* createOperationContext({
+        id: "quickSelect",
+        description: "Quick-Selecting segment",
+        behaviorWhenDisallowed: "ignore",
+      });
+      if (ctx == null) {
+        console.warn(`Ignoring ${action.type} request: quick select already running`);
+        return;
+      }
       try {
-        const volumeTracing: VolumeTracing | null | undefined = yield* select(
-          getActiveSegmentationTracing,
-        );
-        if (volumeTracing) {
-          // As changes to the volume layer will be applied, the potentially existing mapping should be locked to ensure a consistent state.
-          const isModificationAllowed = yield* call(
-            requestBucketModificationInVolumeTracing,
-            volumeTracing,
+        yield* ctx.execute(function* () {
+          const volumeTracing: VolumeTracing | null | undefined = yield* select(
+            getActiveSegmentationTracing,
           );
-          if (!isModificationAllowed) {
-            return;
+          if (volumeTracing) {
+            // As changes to the volume layer will be applied, the potentially existing mapping should be locked to ensure a consistent state.
+            const isModificationAllowed = yield* call(
+              requestBucketModificationInVolumeTracing,
+              volumeTracing,
+            );
+            if (!isModificationAllowed) {
+              return;
+            }
           }
-        }
-        const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
-        if (busyBlockingInfo.isBusy) {
-          console.warn(
-            `Ignoring ${action.type} request (reason: ${busyBlockingInfo.reason || "null"})`,
-          );
-          return;
-        }
-        yield* put(setBusyBlockingInfoAction(true, "Quick-Selecting segment"));
-
-        yield* put(setQuickSelectStateAction("active"));
-        if (yield* call(shouldUseHeuristic)) {
-          yield* call(performQuickSelectHeuristic, action);
-        } else {
-          yield* call(performQuickSelectML, action);
-        }
+          yield* put(setQuickSelectStateAction("active"));
+          if (yield* call(shouldUseHeuristic)) {
+            yield* call(performQuickSelectHeuristic, action);
+          } else {
+            yield* call(performQuickSelectML, action);
+          }
+        });
       } catch (ex) {
         Toast.error((ex as Error).toString());
         ErrorHandling.notify(ex as Error);
       } finally {
-        yield* put(setBusyBlockingInfoAction(false));
         action.quickSelectGeometry.setCoordinates([0, 0, 0], [0, 0, 0]);
         yield* put(setQuickSelectStateAction("inactive"));
       }

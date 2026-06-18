@@ -39,7 +39,7 @@ import {
   updateTemporarySettingAction,
   updateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
-import { setBusyBlockingInfoAction, setToolAction } from "viewer/model/actions/ui_actions";
+import { setToolAction } from "viewer/model/actions/ui_actions";
 import type {
   ClickSegmentAction,
   CreateCellAction,
@@ -57,9 +57,10 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
 import {
   requestBucketModificationInVolumeTracing,
-  takeEveryUnlessBusy,
+  takeEveryInOperationContext,
   takeWithBatchActionSupport,
 } from "viewer/model/sagas/saga_helpers";
+import { createOperationContext } from "viewer/model/sagas/operation_context_saga";
 import listenToMinCut from "viewer/model/sagas/volume/min_cut_saga";
 import listenToQuickSelect from "viewer/model/sagas/volume/quick_select/quick_select_saga";
 import { deleteSegmentDataVolumeAction } from "viewer/model/sagas/volume/update_actions";
@@ -76,10 +77,10 @@ const OVERWRITE_EMPTY_WARNING_KEY = "OVERWRITE-EMPTY-WARNING";
 
 function* watchVolumeTracingAsync(): Saga<void> {
   yield* call(ensureWkInitialized);
-  yield* takeEveryUnlessBusy(
+  yield* takeEveryInOperationContext(
     "INTERPOLATE_SEGMENTATION_LAYER",
     maybeInterpolateSegmentationLayer,
-    "Interpolating segment",
+    { id: "interpolateSegmentationLayer", description: "Interpolating segment" },
   );
   yield* fork(warnOfTooLowOpacity);
 }
@@ -149,10 +150,10 @@ export function* editVolumeLayerAsync(): Saga<never> {
       continue;
     }
     const wroteVoxelsBox = { value: false };
-    const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
+    const isBlocked = yield* select((state) => state.operationContext.activeOperations.length > 0);
 
-    if (busyBlockingInfo.isBusy) {
-      console.warn(`Ignoring brush request (reason: ${busyBlockingInfo.reason || "null"})`);
+    if (isBlocked) {
+      console.warn("Ignoring brush request: an operation is currently running");
       continue;
     }
 
@@ -584,17 +585,20 @@ function* handleDeleteSegmentData(): Saga<void> {
   while (true) {
     const action = (yield* take("DELETE_SEGMENT_DATA")) as DeleteSegmentDataAction;
 
-    yield* put(setBusyBlockingInfoAction(true, "Segment is being deleted."));
-    yield* put(
-      pushSaveQueueTransaction([deleteSegmentDataVolumeAction(action.segmentId, action.layerName)]),
-    );
-    yield* call([Model, Model.ensureSavedState]);
+    const ctx = yield* createOperationContext({
+      id: "deleteSegment",
+      description: "Segment is being deleted.",
+    });
+    yield* ctx.execute(function* () {
+      yield* put(
+        pushSaveQueueTransaction([deleteSegmentDataVolumeAction(action.segmentId, action.layerName)]),
+      );
+      yield* call([Model, Model.ensureSavedState]);
 
-    yield* call([api.data, api.data.reloadBuckets], action.layerName, (bucket) =>
-      bucket.containsValue(action.segmentId),
-    );
-
-    yield* put(setBusyBlockingInfoAction(false));
+      yield* call([api.data, api.data.reloadBuckets], action.layerName, (bucket) =>
+        bucket.containsValue(action.segmentId),
+      );
+    });
     if (action.callback) {
       action.callback();
     }

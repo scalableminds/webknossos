@@ -25,6 +25,10 @@ import {
 } from "viewer/model/accessors/volumetracing_accessor";
 import { setCollaborationModeAction } from "viewer/model/actions/annotation_actions";
 import { setZoomStepAction } from "viewer/model/actions/flycam_actions";
+import {
+  registerOperationAction,
+  unregisterOperationAction,
+} from "viewer/model/actions/operation_context_actions";
 import { setActiveOrganizationAction } from "viewer/model/actions/organization_actions";
 import {
   cutAgglomerateFromNeighborsAction,
@@ -34,7 +38,7 @@ import {
 } from "viewer/model/actions/proofread_actions";
 import { setMappingAction, updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { applySkeletonUpdateActionsFromServerAction } from "viewer/model/actions/skeletontracing_actions";
-import { setBusyBlockingInfoAction, setToolAction } from "viewer/model/actions/ui_actions";
+import { setToolAction } from "viewer/model/actions/ui_actions";
 import {
   applyVolumeUpdateActionsFromServerAction,
   setActiveCellAction,
@@ -460,11 +464,14 @@ export function mockInitialBucketAndAgglomerateData(
 
 export function* makeMappingEditableForTest(): Saga<void> {
   // Usually the user creates an editable mapping via the first proofreading action.
-  // Therefore the context is busy blocked by the proofreading saga.
-  // As we do this manually here, we need to mock that wk is busy.
-  yield put(setBusyBlockingInfoAction(true, "Blocking in test for making mapping editable"));
+  // Therefore the operation context is active (proofreading operation running).
+  // As we do this manually here, we dispatch the operation actions to simulate that.
+  // todop: will this update the module state in the operation context saga?
+  yield put(
+    registerOperationAction("proofreading", "Blocking in test for making mapping editable"),
+  );
   yield call(createEditableMapping);
-  yield put(setBusyBlockingInfoAction(false));
+  yield put(unregisterOperationAction("proofreading"));
   // Delay is needed to avoid the auto mapping data reloading of mapping saga to interfere with tests.
   // Some tests check whether the missing agglomerate ids not present in the partial mapping in the frontend
   // are actually loaded during rebasing. Such a scenario might happen when doing proofreading via meshes.
@@ -584,7 +591,10 @@ export function* performCutFromAllNeighbours(
     ),
   );
   yield take("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");
-  yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Wait till full merge operation is done.
+  yield take(
+    ((action: any) =>
+      action.type === "UNREGISTER_OPERATION" && action.id === "proofreading") as any,
+  ); // Wait till full proofreading operation is done.
 }
 
 // All usages of this function should have an initial mapping with a agglomerate id 1 = 1-2-3-1337-1338-1.
@@ -646,7 +656,10 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
   yield put(minCutPartitionsAction());
   yield take("FINISH_MAPPING_INITIALIZATION");
   // Checking optimistic merge is not necessary as no "foreign" update was injected.
-  yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Wait till full merge operation is done.
+  yield take(
+    ((action: any) =>
+      action.type === "UNREGISTER_OPERATION" && action.id === "proofreading") as any,
+  ); // Wait till full proofreading operation is done.
 }
 
 export const mockEdgesForPartitionedAgglomerateMinCut = (

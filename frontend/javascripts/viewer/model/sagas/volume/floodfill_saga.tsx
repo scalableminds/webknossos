@@ -16,7 +16,6 @@ import { getActiveMagIndexForLayer } from "viewer/model/accessors/flycam_accesso
 import { AnnotationTool, Toolkit } from "viewer/model/accessors/tool_accessor";
 import { enforceActiveVolumeTracing } from "viewer/model/accessors/volumetracing_accessor";
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
-import { setBusyBlockingInfoAction } from "viewer/model/actions/ui_actions";
 import {
   type FloodFillAction,
   finishAnnotationStrokeAction,
@@ -26,6 +25,7 @@ import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import Dimensions from "viewer/model/dimensions";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select } from "viewer/model/sagas/effect_generators";
+import { createOperationContext } from "viewer/model/sagas/operation_context_saga";
 import { requestBucketModificationInVolumeTracing } from "viewer/model/sagas/saga_helpers";
 import { Model } from "viewer/singletons";
 import { getUserBoundingBoxesThatContainPosition } from "../../accessors/tracing_accessor";
@@ -212,125 +212,128 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
     }
   }
 
-  const busyBlockingInfo = yield* select((state) => state.uiInformation.busyBlockingInfo);
-
-  if (busyBlockingInfo.isBusy) {
-    console.warn(`Ignoring floodfill request (reason: ${busyBlockingInfo.reason || "unknown"})`);
-    return;
-  }
-  // As the flood fill will be applied to the volume layer,
-  // the potentially existing mapping should be locked to ensure a consistent state.
-  const isModificationAllowed = yield* call(
-    requestBucketModificationInVolumeTracing,
-    volumeTracing,
-  );
-  if (!isModificationAllowed) {
-    return;
-  }
-  const finestSegmentationLayerMag = magInfo.getFinestMag();
-  const boundingBoxForFloodFill = yield* call(
-    getBoundingBoxForFloodFill,
-    seedPosition,
-    planeId,
-    finestSegmentationLayerMag,
-  );
-  if ("failureReason" in boundingBoxForFloodFill) {
-    Toast.warning(boundingBoxForFloodFill.failureReason, {
-      key: NO_FLOODFILL_BBOX_TOAST_KEY,
-    });
-    return;
-  } else {
-    Toast.close(NO_FLOODFILL_BBOX_TOAST_KEY);
-  }
-  yield* put(setBusyBlockingInfoAction(true, "Floodfill is being computed."));
-  const progressCallback = createProgressCallback({
-    pauseDelay: 200,
-    successMessageDelay: 2000,
+  const ctx = yield* createOperationContext({
+    id: "floodfill",
+    description: "Floodfill is being computed.",
+    behaviorWhenDisallowed: "ignore",
   });
-  yield* call(progressCallback, false, "Performing floodfill...");
-  console.time("cube.floodFill");
-  const startTimeOfFloodfill = performance.now();
-  const fillMode = yield* select((state) => state.userConfiguration.fillMode);
-
-  const {
-    bucketsWithLabeledVoxelsMap: labelMasksByBucketAndW,
-    wasBoundingBoxExceeded,
-    coveredBoundingBox,
-  } = yield* call(
-    { context: cube, fn: cube.floodFill },
-    seedPosition,
-    additionalCoordinates,
-    activeCellId,
-    dimensionIndices,
-    boundingBoxForFloodFill,
-    labeledZoomStep,
-    progressCallback,
-    fillMode === FillModeEnum._3D,
-    splitBoundaryMesh,
-  );
-  console.timeEnd("cube.floodFill");
-  yield* call(progressCallback, false, "Finalizing floodfill...");
-  const indexSet: Set<number> = new Set();
-
-  for (const labelMaskByIndex of labelMasksByBucketAndW.values()) {
-    for (const zIndex of labelMaskByIndex.keys()) {
-      indexSet.add(zIndex);
-    }
+  if (ctx == null) {
+    console.warn("Ignoring floodfill request: floodfill already running");
+    return;
   }
+  yield* ctx.execute(function* () {
+    // As the flood fill will be applied to the volume layer,
+    // the potentially existing mapping should be locked to ensure a consistent state.
+    const isModificationAllowed = yield* call(
+      requestBucketModificationInVolumeTracing,
+      volumeTracing,
+    );
+    if (!isModificationAllowed) {
+      return;
+    }
+    const finestSegmentationLayerMag = magInfo.getFinestMag();
+    const boundingBoxForFloodFill = yield* call(
+      getBoundingBoxForFloodFill,
+      seedPosition,
+      planeId,
+      finestSegmentationLayerMag,
+    );
+    if ("failureReason" in boundingBoxForFloodFill) {
+      Toast.warning(boundingBoxForFloodFill.failureReason, {
+        key: NO_FLOODFILL_BBOX_TOAST_KEY,
+      });
+      return;
+    } else {
+      Toast.close(NO_FLOODFILL_BBOX_TOAST_KEY);
+    }
+    const progressCallback = createProgressCallback({
+      pauseDelay: 200,
+      successMessageDelay: 2000,
+    });
+    yield* call(progressCallback, false, "Performing floodfill...");
+    console.time("cube.floodFill");
+    const startTimeOfFloodfill = performance.now();
+    const fillMode = yield* select((state) => state.userConfiguration.fillMode);
 
-  console.time("applyLabeledVoxelMapToAllMissingMags");
+    const {
+      bucketsWithLabeledVoxelsMap: labelMasksByBucketAndW,
+      wasBoundingBoxExceeded,
+      coveredBoundingBox,
+    } = yield* call(
+      { context: cube, fn: cube.floodFill },
+      seedPosition,
+      additionalCoordinates,
+      activeCellId,
+      dimensionIndices,
+      boundingBoxForFloodFill,
+      labeledZoomStep,
+      progressCallback,
+      fillMode === FillModeEnum._3D,
+      splitBoundaryMesh,
+    );
+    console.timeEnd("cube.floodFill");
+    yield* call(progressCallback, false, "Finalizing floodfill...");
+    const indexSet: Set<number> = new Set();
 
-  for (const indexZ of indexSet) {
-    const labeledVoxelMapFromFloodFill: LabeledVoxelsMap = new Map();
-
-    for (const [bucketAddress, labelMaskByIndex] of labelMasksByBucketAndW.entries()) {
-      const map = labelMaskByIndex.get(indexZ);
-
-      if (map != null) {
-        labeledVoxelMapFromFloodFill.set(bucketAddress, map);
+    for (const labelMaskByIndex of labelMasksByBucketAndW.values()) {
+      for (const zIndex of labelMaskByIndex.keys()) {
+        indexSet.add(zIndex);
       }
     }
 
-    applyLabeledVoxelMapToAllMissingMags(
-      labeledVoxelMapFromFloodFill,
-      labeledZoomStep,
-      dimensionIndices,
-      magInfo,
-      cube,
-      activeCellId,
-      indexZ,
-      true,
+    console.time("applyLabeledVoxelMapToAllMissingMags");
+
+    for (const indexZ of indexSet) {
+      const labeledVoxelMapFromFloodFill: LabeledVoxelsMap = new Map();
+
+      for (const [bucketAddress, labelMaskByIndex] of labelMasksByBucketAndW.entries()) {
+        const map = labelMaskByIndex.get(indexZ);
+
+        if (map != null) {
+          labeledVoxelMapFromFloodFill.set(bucketAddress, map);
+        }
+      }
+
+      applyLabeledVoxelMapToAllMissingMags(
+        labeledVoxelMapFromFloodFill,
+        labeledZoomStep,
+        dimensionIndices,
+        magInfo,
+        cube,
+        activeCellId,
+        indexZ,
+        true,
+      );
+    }
+
+    yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
+    yield* put(
+      updateSegmentAction(
+        volumeTracing.activeCellId,
+        {
+          anchorPosition: seedPosition,
+          additionalCoordinates: additionalCoordinates || undefined,
+        },
+        volumeTracing.tracingId,
+      ),
     );
-  }
 
-  yield* put(finishAnnotationStrokeAction(volumeTracing.tracingId));
-  yield* put(
-    updateSegmentAction(
-      volumeTracing.activeCellId,
-      {
-        anchorPosition: seedPosition,
-        additionalCoordinates: additionalCoordinates || undefined,
-      },
-      volumeTracing.tracingId,
-    ),
-  );
+    console.timeEnd("applyLabeledVoxelMapToAllMissingMags");
 
-  console.timeEnd("applyLabeledVoxelMapToAllMissingMags");
+    yield* call(
+      notifyUserAboutResult,
+      wasBoundingBoxExceeded,
+      startTimeOfFloodfill,
+      progressCallback,
+      fillMode,
+      coveredBoundingBox,
+      oldSegmentIdAtSeed,
+      activeCellId,
+      seedPosition,
+    );
 
-  yield* call(
-    notifyUserAboutResult,
-    wasBoundingBoxExceeded,
-    startTimeOfFloodfill,
-    progressCallback,
-    fillMode,
-    coveredBoundingBox,
-    oldSegmentIdAtSeed,
-    activeCellId,
-    seedPosition,
-  );
-
-  cube.triggerPushQueue();
-  yield* put(setBusyBlockingInfoAction(false));
+    cube.triggerPushQueue();
+  });
 
   if (floodFillAction.callback != null) {
     floodFillAction.callback();

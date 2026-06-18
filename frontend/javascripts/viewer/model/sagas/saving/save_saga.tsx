@@ -1,4 +1,3 @@
-import type { ActionPattern } from "@redux-saga/types";
 import { getAgglomeratesForSegmentsFromTracingstore, getUpdateActionLog } from "admin/rest_api";
 import features from "features";
 import ErrorHandling from "libs/error_handling";
@@ -18,7 +17,7 @@ import {
   takeEvery,
 } from "typed-redux-saga";
 import type { APIUpdateActionBatch } from "types/api_types";
-import { SagaIdentifier, type Vector3 } from "viewer/constants";
+import type { Vector3 } from "viewer/constants";
 import {
   isAnnotationEditableByNonOwners,
   mayEditAnnotation,
@@ -68,12 +67,8 @@ import { select, take } from "viewer/model/sagas/effect_generators";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import { Model, Store } from "viewer/singletons";
 import type { NumberLike, StoreAnnotation, WebknossosState } from "viewer/store";
-import {
-  enforceExecutionAsBusyBlockingUnlessAllowed,
-  spawnUntilCanceled,
-  takeEveryWithBatchActionSupport,
-  waitFor,
-} from "../saga_helpers";
+import { createOperationContext } from "../operation_context_saga";
+import { spawnUntilCanceled, takeEveryWithBatchActionSupport, waitFor } from "../saga_helpers";
 import {
   refreshAffectedMeshes,
   splitAgglomerateInMapping,
@@ -557,16 +552,24 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
     );
     const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
     const guardAsBlocking = collaborationMode === "Concurrent" && isUpdatingCurrentlyAllowed;
-    const { successful, shouldTerminate } = guardAsBlocking
-      ? yield* call(
-          // Ensuring wk is in busy state while rebasing so no user update actions can interfere potential syncing with the backend.
-          enforceExecutionAsBusyBlockingUnlessAllowed<RebasingSuccessInfo>,
-          performRebasingIfNecessary,
-          REBASING_BUSY_BLOCK_REASON,
-          // In case another saga is already blocking the busy state, check whether the save saga is still allowed to run now or should wait for the busy flag.
-          SagaIdentifier.SAVE_SAGA,
-        )
-      : yield* call(performRebasingIfNecessary);
+    let rebasingResult: RebasingSuccessInfo;
+    if (guardAsBlocking) {
+      // todop: adapt comment.
+      // Acquire the operation context to block user actions from interfering with rebasing.
+      // The proofreading context allows save to run alongside it via allowAdditionalOperation.
+      const ctx = yield* createOperationContext({
+        id: "save",
+        description: REBASING_BUSY_BLOCK_REASON,
+      });
+      let result!: RebasingSuccessInfo;
+      yield* ctx.execute(function* () {
+        result = yield* call(performRebasingIfNecessary);
+      });
+      rebasingResult = result;
+    } else {
+      rebasingResult = yield* call(performRebasingIfNecessary);
+    }
+    const { successful, shouldTerminate } = rebasingResult;
 
     if (shouldTerminate) {
       // A hard error was thrown. Terminate this saga.
@@ -959,15 +962,8 @@ function* removeOutdatedMeshes(
 function* reloadMeshes(
   meshIdsToReloadPerLayer: ApplyingUpdateArtifacts["meshIdsToRemovePerLayer"],
 ) {
-  // First wait in case the ui state is busy until it is no longer to ensure a potential running proofreading saga finished.
-  const busyState = yield* select((state) => state.uiInformation.busyBlockingInfo);
-  if (busyState.isBusy) {
-    yield* take(
-      ((action: Action) =>
-        action.type === "SET_BUSY_BLOCKING_INFO_ACTION" &&
-        !action.value.isBusy) as ActionPattern<Action>,
-    );
-  }
+  // First wait in case an operation is running (e.g. proofreading) until it finishes.
+  yield* waitFor((state) => state.operationContext.activeOperations.length === 0);
   const refreshAffectedMeshesEffects = [];
   for (const [tracingId, meshIdsToReload] of meshIdsToReloadPerLayer.entries()) {
     const refreshList: Array<{

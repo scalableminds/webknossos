@@ -42,7 +42,6 @@ import type {
   OrthoViewWithoutTD,
   OverwriteMode,
   Rect,
-  SagaIdentifier,
   TDViewDisplayMode,
   Vector2,
   Vector3,
@@ -562,11 +561,6 @@ export type BorderOpenStatus = {
   right: boolean;
 };
 export type Theme = "light" | "dark";
-export type BusyBlockingInfo = {
-  isBusy: boolean;
-  reason?: string;
-  allowedSagas: SagaIdentifier[];
-};
 export type ContextMenuInfo = {
   readonly contextMenuPosition: Readonly<[number, number]> | null | undefined;
   readonly clickedNodeId: number | null | undefined;
@@ -602,7 +596,6 @@ type UiInformation = {
   readonly theme: Theme;
   readonly isWkInitialized: boolean;
   readonly isUiReady: boolean;
-  readonly busyBlockingInfo: BusyBlockingInfo;
   readonly quickSelectState:
     | "inactive"
     | "drawing" // the user is currently drawing a bounding box

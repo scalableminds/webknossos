@@ -129,8 +129,8 @@ describe("Proofreading should generate correct update actions", () => {
       // Execute the actual merge and wait for the finished mapping.
       yield put(proofreadMergeAction(targetPosition, targetSegmentId));
       // Wait till proofreading action is finished; including refreshing agglomerate trees.
-      yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
-      yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
+      yield take(((action: any) => action.type === "REGISTER_OPERATION" && action.id === "proofreading") as any); // Operation starts
+      yield take(((action: any) => action.type === "UNREGISTER_OPERATION" && action.id === "proofreading") as any); // and finishes
     });
     await task.toPromise();
   }
@@ -191,8 +191,8 @@ describe("Proofreading should generate correct update actions", () => {
         minCutAgglomerateWithPositionAction(targetPosition, targetSegmentId, sourceAgglomerateId),
       );
       // Wait till proofreading action is finished; including refreshing agglomerate trees.
-      yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // Turning busy state on
-      yield take("SET_BUSY_BLOCKING_INFO_ACTION"); // and off when finished
+      yield take(((action: any) => action.type === "REGISTER_OPERATION" && action.id === "proofreading") as any); // Operation starts
+      yield take(((action: any) => action.type === "UNREGISTER_OPERATION" && action.id === "proofreading") as any); // and finishes
     });
     await task.toPromise();
   }

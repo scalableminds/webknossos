@@ -293,10 +293,6 @@ const defaultState: WebknossosState = {
       left: false,
     },
     theme: getSystemColorTheme(),
-    busyBlockingInfo: {
-      isBusy: false,
-      allowedSagas: [],
-    },
     isWkInitialized: false,
     isUiReady: false,
     quickSelectState: "inactive",

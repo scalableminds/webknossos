@@ -11,6 +11,7 @@ import { type APIUser, TracingTypeEnum } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
 import UrlManager from "viewer/controller/url_manager";
 import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
+import { isUserInterfaceBlocked } from "viewer/model/accessors/accessor_helpers";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getTracingType } from "viewer/model/accessors/tracing_accessor";
 import { setSkeletonTracingAction } from "viewer/model/actions/skeletontracing_actions";
@@ -125,7 +126,7 @@ function SaveActions() {
   const hasTracing = useWkSelector(
     (state) => state.annotation.skeleton != null || state.annotation.volumes.length > 0,
   );
-  const busyBlockingInfo = useWkSelector((state) => state.uiInformation.busyBlockingInfo);
+  const isBusy = useWkSelector(isUserInterfaceBlocked);
 
   const isAnnotationOwner = activeUser && annotationOwner?.id === activeUser?.id;
   const copyAnnotationText = isAnnotationOwner ? "Duplicate" : "Copy To My Account";
@@ -137,7 +138,7 @@ function SaveActions() {
   if (!restrictions.allowSave) {
     return (
       <Space.Compact>
-        <UndoRedoActions hasTracing={hasTracing} isBusy={busyBlockingInfo.isBusy} />
+        <UndoRedoActions hasTracing={hasTracing} isBusy={isBusy} />
         <SandboxActions activeUser={activeUser} copyAnnotationText={copyAnnotationText} />
       </Space.Compact>
     );
@@ -145,7 +146,7 @@ function SaveActions() {
 
   return (
     <Space.Compact>
-      <UndoRedoActions hasTracing={hasTracing} isBusy={busyBlockingInfo.isBusy} />
+      <UndoRedoActions hasTracing={hasTracing} isBusy={isBusy} />
       <SaveButton key="save-button" />
     </Space.Compact>
   );

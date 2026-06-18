@@ -304,7 +304,7 @@ describe("Proofreading (with mesh actions)", () => {
       ),
     );
     yield take("FINISH_MAPPING_INITIALIZATION");
-    yield take("SET_BUSY_BLOCKING_INFO_ACTION");
+    yield take(((action: any) => action.type === "UNREGISTER_OPERATION" && action.id === "proofreading") as any);
 
     // Checking optimistic merge is not necessary as no "foreign" update was injected.
     yield call(() => api.tracing.save()); // Also pulls newest version from backend.

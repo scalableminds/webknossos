@@ -11,7 +11,7 @@ export type OperationId =
   | "redo"
   | "save"
   | "rebase"
-  | (string & {}); // todop: don't allow this
+;
 
 export type RegisterOperationAction = {
   type: "REGISTER_OPERATION";

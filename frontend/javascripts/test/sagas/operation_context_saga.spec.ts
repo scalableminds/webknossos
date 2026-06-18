@@ -36,7 +36,7 @@ describe("operation_context_saga", () => {
     const log: string[] = [];
 
     function* op1() {
-      const ctx = yield* createOperationContext({ id: "op1" });
+      const ctx = yield* createOperationContext({ id: "floodfill" });
       yield* ctx.execute(function* () {
         log.push("op1:start");
         yield delay(20);
@@ -45,7 +45,7 @@ describe("operation_context_saga", () => {
     }
 
     function* op2() {
-      const ctx = yield* createOperationContext({ id: "op2" });
+      const ctx = yield* createOperationContext({ id: "minCut" });
       yield* ctx.execute(function* () {
         yield* call(noop);
         log.push("op2:start");
@@ -66,7 +66,7 @@ describe("operation_context_saga", () => {
     let maxConcurrentCount = 0;
 
     function* opA() {
-      const ctx = yield* createOperationContext({ id: "my-op", behaviorWhenDisallowed: "ignore" });
+      const ctx = yield* createOperationContext({ id: "floodfill", behaviorWhenDisallowed: "ignore" });
       if (ctx == null) return;
       yield* ctx.execute(function* () {
         concurrentCount++;
@@ -154,14 +154,14 @@ describe("operation_context_saga", () => {
     let secondContextWasNull = false;
 
     function* op1() {
-      const ctx = yield* createOperationContext({ id: "op1" });
+      const ctx = yield* createOperationContext({ id: "floodfill" });
       yield* ctx.execute(function* () {
         yield delay(20);
       });
     }
 
     function* op2() {
-      const ctx = yield* createOperationContext({ id: "op2", behaviorWhenDisallowed: "ignore" });
+      const ctx = yield* createOperationContext({ id: "minCut", behaviorWhenDisallowed: "ignore" });
       secondContextWasNull = ctx == null;
     }
 
@@ -177,7 +177,7 @@ describe("operation_context_saga", () => {
     let caughtError: Error | null = null;
 
     function* op1() {
-      const ctx = yield* createOperationContext({ id: "op1" });
+      const ctx = yield* createOperationContext({ id: "floodfill" });
       yield* ctx.execute(function* () {
         yield delay(20);
       });
@@ -185,7 +185,7 @@ describe("operation_context_saga", () => {
 
     function* op2() {
       try {
-        yield* createOperationContext({ id: "op2", behaviorWhenDisallowed: "raise" });
+        yield* createOperationContext({ id: "minCut", behaviorWhenDisallowed: "raise" });
       } catch (err) {
         caughtError = err as Error;
       }
@@ -196,8 +196,8 @@ describe("operation_context_saga", () => {
     await Promise.all([t1.toPromise(), t2.toPromise()]);
 
     expect(caughtError).not.toBeNull();
-    expect((caughtError as unknown as Error).message).toContain("op2");
-    expect((caughtError as unknown as Error).message).toContain("op1");
+    expect((caughtError as unknown as Error).message).toContain("minCut");
+    expect((caughtError as unknown as Error).message).toContain("floodfill");
   });
 
   it("execute() throws on second call", async () => {
@@ -205,7 +205,7 @@ describe("operation_context_saga", () => {
     let threwOnSecondCall = false;
 
     function* op() {
-      const ctx = yield* createOperationContext({ id: "op" });
+      const ctx = yield* createOperationContext({ id: "floodfill" });
       yield* ctx.execute(function* () {});
       try {
         yield* ctx.execute(function* () {});
@@ -224,8 +224,8 @@ describe("operation_context_saga", () => {
 
     function* op() {
       const ctx = yield* createOperationContext({
-        id: "tracked-op",
-        description: "Tracking test",
+        id: "floodfill",
+        description: "Floodfill is being computed.",
       });
       snapshots.push([...store.getState().operationContext.activeOperations]);
       yield* ctx.execute(function* () {
@@ -237,8 +237,8 @@ describe("operation_context_saga", () => {
 
     await sagaMiddleware.run(op).toPromise();
 
-    expect(snapshots[0]).toEqual([{ id: "tracked-op", description: "Tracking test" }]);
-    expect(snapshots[1]).toEqual([{ id: "tracked-op", description: "Tracking test" }]);
+    expect(snapshots[0]).toEqual([{ id: "floodfill", description: "Floodfill is being computed." }]);
+    expect(snapshots[1]).toEqual([{ id: "floodfill", description: "Floodfill is being computed." }]);
     expect(snapshots[2]).toEqual([]); // after execute completes
   });
 
@@ -247,22 +247,22 @@ describe("operation_context_saga", () => {
     const log: string[] = [];
 
     function* op() {
-      const parentCtx = yield* createOperationContext({ id: "parent" });
+      const parentCtx = yield* createOperationContext({ id: "proofreading" });
       yield* parentCtx.execute(function* () {
         log.push("parent:start");
-        const childCtx = borrowedContext(parentCtx, "child");
+        const childCtx = borrowedContext(parentCtx, "save");
         yield* childCtx.execute(function* () {
           log.push("child:start");
           const inStore = store
             .getState()
-            .operationContext.childOperations.some((c: any) => c.id === "child");
+            .operationContext.childOperations.some((c: any) => c.id === "save");
           log.push(inStore ? "child:in-store" : "child:not-in-store");
           log.push("child:end");
         });
         log.push("parent:end");
         const stillInStore = store
           .getState()
-          .operationContext.childOperations.some((c: any) => c.id === "child");
+          .operationContext.childOperations.some((c: any) => c.id === "save");
         log.push(stillInStore ? "child:still-in-store" : "child:removed-from-store");
       });
     }
@@ -284,9 +284,9 @@ describe("operation_context_saga", () => {
     let threwOnSecondCall = false;
 
     function* op() {
-      const parentCtx = yield* createOperationContext({ id: "parent" });
+      const parentCtx = yield* createOperationContext({ id: "proofreading" });
       yield* parentCtx.execute(function* () {
-        const childCtx = borrowedContext(parentCtx, "child");
+        const childCtx = borrowedContext(parentCtx, "save");
         yield* childCtx.execute(function* () {});
         try {
           yield* childCtx.execute(function* () {});
@@ -305,9 +305,9 @@ describe("operation_context_saga", () => {
     const log: string[] = [];
 
     function* op() {
-      const parentCtx = yield* createOperationContext({ id: "parent" });
+      const parentCtx = yield* createOperationContext({ id: "proofreading" });
       yield* parentCtx.execute(function* () {
-        const childCtx = yield* getOrCreateOperationContext({ id: "child" }, parentCtx);
+        const childCtx = yield* getOrCreateOperationContext({ id: "save" }, parentCtx);
         // Borrowed context preserves the parent's ID
         log.push(`id-matches-parent: ${childCtx.id === parentCtx.id}`);
         yield* childCtx.execute(function* () {
@@ -327,7 +327,7 @@ describe("operation_context_saga", () => {
 
     function* op() {
       // No existing context — should acquire a new lock
-      const ctx = yield* getOrCreateOperationContext({ id: "standalone" });
+      const ctx = yield* getOrCreateOperationContext({ id: "floodfill" });
       log.push(`id: ${ctx.id}`);
       yield* ctx.execute(function* () {
         yield* call(noop);
@@ -336,6 +336,6 @@ describe("operation_context_saga", () => {
     }
 
     await sagaMiddleware.run(op).toPromise();
-    expect(log).toEqual(["id: standalone", "ran"]);
+    expect(log).toEqual(["id: floodfill", "ran"]);
   });
 });

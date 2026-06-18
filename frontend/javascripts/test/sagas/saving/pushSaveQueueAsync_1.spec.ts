@@ -72,7 +72,7 @@ describe("pushSaveQueueAsync (integration) - 1", () => {
     await context.api.tracing.save(); // start with clean queue
 
     const task = startSaga(function* () {
-      const fakeParentCtx = { id: "fake-proofreading" } as unknown as OperationContext;
+      const fakeParentCtx = { id: "proofreading" } as unknown as OperationContext;
       const callsBefore = context.mocks.sendSaveRequestWithToken.mock.calls.length;
       const spy = vi.spyOn(opCtxModule, "getOrCreateOperationContext");
 

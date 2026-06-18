@@ -79,7 +79,6 @@ export function* pushSaveQueueAsync(): Saga<never> {
       // todop: if we remove this flush, two subsequent save_now actions cause problems.
       // why are these two save_now actions there in the first place?
       yield* flush(saveNowChannel);
-      yield* take("PUSH_SAVE_QUEUE_TRANSACTION");
     }
 
     const { forcePush: firstForcePush } = yield* race({

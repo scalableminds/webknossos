@@ -29,7 +29,7 @@ import { AnnotationTool, Toolkits } from "viewer/model/accessors/tool_accessor";
 import { setViewModeAction, updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setThemeAction, setToolAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import type { UserConfiguration } from "viewer/store";
+import Store, { type UserConfiguration } from "viewer/store";
 import {
   type TracingViewMenuProps,
   useTracingViewMenuItems,
@@ -140,7 +140,10 @@ export const CommandPalette = () => {
         // removing the watermark is a paid feature
         commands.push({
           name: `Toggle ${getPhraseFromCamelCaseString(key)}`,
-          command: () => dispatch(updateUserSettingAction(key, !userConfig[key])),
+          // Read the current value from the store at click time instead of capturing it here,
+          // because the command list is built once and would otherwise hold a stale value.
+          command: () =>
+            dispatch(updateUserSettingAction(key, !Store.getState().userConfiguration[key])),
           color: commandEntryColor,
         });
       }

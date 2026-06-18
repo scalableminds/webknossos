@@ -554,9 +554,7 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
     const guardAsBlocking = collaborationMode === "Concurrent" && isUpdatingCurrentlyAllowed;
     let rebasingResult: RebasingSuccessInfo;
     if (guardAsBlocking) {
-      // todop: adapt comment.
       // Acquire the operation context to block user actions from interfering with rebasing.
-      // The proofreading context allows save to run alongside it via allowAdditionalOperation.
       const ctx = yield* getOrCreateOperationContext(
         {
           id: "rebase",

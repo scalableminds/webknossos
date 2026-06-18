@@ -24,7 +24,13 @@ export function* takeEveryInOperationContext<P extends ActionPattern>(
   saga: (action: Action, ctx: OperationContext) => Saga<void>,
   options: OperationOptions,
 ): Saga<void> {
-  // todop: add docstring.
+  /* Listens for actions and runs the provided saga inside an operation context,
+   * automatically acquiring and releasing the context. If an action carries an
+   * operationContext field, that context is used as the parent (for nested operations);
+   * otherwise creates a fresh context.
+   * Ignores the action if the operation context cannot be acquired (i.e., another operation
+   * is already ongoing which doesn't allow additional executions).
+  // */
   function* wrapper(action: Action) {
     const existingCtx = (action as any).operationContext ?? null;
     const ctx = yield* getOrCreateOperationContext(

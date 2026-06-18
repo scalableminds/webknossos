@@ -335,7 +335,9 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
     // the back-end. If the front-end does a proofreading operation in parallel,
     // there is a risk of a race condition. Therefore, we cancel the updateHdf5
     // saga as soon as an operation starts and retry afterwards.
-    // todop: only cancel when its a proofreading operation or rebasing?
+    // Theoretically, the take on REGISTER_OPERATION could be narrowed down
+    // so that we only cancel when its a proofreading operation or rebasing operation.
+    // However, for now the wide `take` should be okay, too.
     while (true) {
       const isBlocked = yield* select(
         (state) => state.operationContext.activeOperations.length > 0,

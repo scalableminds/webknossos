@@ -253,7 +253,6 @@ function* manageUndoStates(): Saga<never> {
       }
       const wasInterpreted = yield* call(maybeInterpretUndoAsDiscardUiAction);
       if (!wasInterpreted) {
-        // todop: wrap whole saga within createOperationContext?
         const ctx = yield* createOperationContext({
           id: "undo",
           description: "Undo is being performed.",

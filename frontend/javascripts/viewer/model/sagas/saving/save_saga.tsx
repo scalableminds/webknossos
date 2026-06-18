@@ -506,6 +506,17 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
 }
 const REBASING_BUSY_BLOCK_REASON = "Syncing Annotation";
 
+function* maybeRequeuePollAndWait(ensureHasNewestVersion: EnsureHasNewestVersionAction | undefined) {
+  // We need to postpone the poll operation (because the version restore is open).
+  if (ensureHasNewestVersion != null) {
+    // The ensureHasNewestVersion action was already dequeued from the channel.
+    // Put it back by dispatching it again.
+    yield* put(ensureHasNewestVersion);
+    // Now, wait in a throttled manner until needsPollAnnotationUpdates becomes "yes".
+    yield* waitFor((state) => needsPollAnnotationUpdates(state) === "yes");
+  }
+}
+
 function* watchForNewerAnnotationVersion(): Saga<void> {
   yield* call(ensureWkInitialized);
 
@@ -518,7 +529,6 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
     buffers.expanding<EnsureHasNewestVersionAction>(1),
   );
   while (true) {
-    // Use this annotation for rebasing the incoming update actions.
     const interval = yield* call(getPollInterval);
     let { ensureHasNewestVersion } = yield* race({
       sleep: delay(interval),
@@ -531,14 +541,7 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
       yield* call(fulfillAllEnsureHasNewestVersionActions, ensureHasNewestVersion, channel);
       continue;
     } else if (needsCheckForUpdatesOnServer === "later") {
-      // We need to postpone the poll operation (because the version restore is open).
-      if (ensureHasNewestVersion != null) {
-        // The ensureHasNewestVersion action was already dequeued from the channel.
-        // Put it back by dispatching it again.
-        yield* put(ensureHasNewestVersion);
-        // Now, wait in a throttled manner until needsPollAnnotationUpdates becomes "yes".
-        yield* waitFor((state) => needsPollAnnotationUpdates(state) === "yes");
-      }
+      yield* maybeRequeuePollAndWait(ensureHasNewestVersion as EnsureHasNewestVersionAction | undefined);
       continue;
     }
 
@@ -565,20 +568,9 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
           null,
       );
       if (ctx == null) {
-        // todop: DRY with equal block from above
-        if (ensureHasNewestVersion != null) {
-          // ColoredLogger.logGreen("watchForNewerAnnotationVersion > 4");
-          // The ensureHasNewestVersion action was already dequeued from the channel.
-          // Put it back by dispatching it again.
-          yield* put(ensureHasNewestVersion);
-          // Now, wait in a throttled manner until needsPollAnnotationUpdates becomes "yes".
-          // ColoredLogger.logGreen("watchForNewerAnnotationVersion > 5");
-          yield* waitFor((state) => needsPollAnnotationUpdates(state) === "yes");
-          // ColoredLogger.logGreen("watchForNewerAnnotationVersion > 6");
-        }
+        yield* maybeRequeuePollAndWait(ensureHasNewestVersion as EnsureHasNewestVersionAction | undefined);
         continue;
       }
-      // ColoredLogger.logGreen("watchForNewerAnnotationVersion > 8");
       let result!: RebasingSuccessInfo;
       yield* ctx.execute(function* () {
         result = yield* call(performRebasingIfNecessary);

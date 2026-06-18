@@ -1,5 +1,6 @@
 package com.scalableminds.webknossos.datastore.services
 
+import com.scalableminds.util.Msg
 import com.scalableminds.util.tools.{Box, Full}
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.DataStoreConfig
@@ -85,9 +86,11 @@ class BaseDirService @Inject()(config: DataStoreConfig) extends LazyLogging {
   }
 
   private def createIfMissing(orgaPath: Path): Box[Unit] =
-    tryo {
-      Files.createDirectory(orgaPath)
-    }.map(_ => ()) ?~! "Could not create organization directory on datastore server"
+    if (Files.exists(orgaPath)) Full(())
+    else
+      tryo {
+        Files.createDirectories(orgaPath)
+      }.map(_ => ()) ?~! Msg.Organization.Create.directoryCreateFailed
 
   private def checkWritable(orgaPath: Path): Box[Unit] =
     for {

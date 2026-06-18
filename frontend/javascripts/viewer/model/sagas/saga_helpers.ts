@@ -12,7 +12,7 @@ import { Store } from "viewer/singletons";
 import type { ActiveMappingInfo, VolumeTracing, WebknossosState } from "viewer/store";
 import {
   setMappingIsLockedAction,
-  setVolumeBucketDataHasChangedAction,
+  setVolumeBucketDataHasBeenChangedAction,
 } from "../actions/volumetracing_actions";
 
 export function* takeEveryUnlessBusy<P extends ActionPattern>(
@@ -178,7 +178,7 @@ export function* requestBucketModificationInVolumeTracing(
   }
 
   // Mark that bucket data has changed
-  yield* put(setVolumeBucketDataHasChangedAction(volumeTracing.tracingId));
+  yield* put(setVolumeBucketDataHasBeenChangedAction(volumeTracing.tracingId));
   return true;
 }
 

@@ -25,7 +25,7 @@ import {
   setActiveCellAction,
   setLargestSegmentIdAction,
   setSegmentGroupsAction,
-  setVolumeBucketDataHasChangedAction,
+  setVolumeBucketDataHasBeenChangedAction,
   toggleSegmentGroupAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
@@ -183,7 +183,7 @@ describe("Update Action Application for VolumeTracing", () => {
     mergeSegmentItemsAction(3, 2, 30, 20, tracingId),
     removeSegmentAction(3, tracingId),
     setLargestSegmentIdAction(10000),
-    setVolumeBucketDataHasChangedAction(tracingId),
+    setVolumeBucketDataHasBeenChangedAction(tracingId),
     setSegmentGroupsAction([makeBasicGroupObject(3, "group 3 - renamed")], tracingId),
   ];
 

@@ -63,7 +63,7 @@ export type ToggleAllSegmentsAction = ReturnType<typeof toggleAllSegmentsAction>
 export type SetHasEditableMappingAction = ReturnType<typeof setHasEditableMappingAction>;
 export type SetMappingIsLockedAction = ReturnType<typeof setMappingIsLockedAction>;
 export type SetVolumeBucketDataHasChangedAction = ReturnType<
-  typeof setVolumeBucketDataHasChangedAction
+  typeof setVolumeBucketDataHasBeenChangedAction
 >;
 
 export type ApplyVolumeUpdateActionsFromServerAction = ReturnType<
@@ -154,7 +154,7 @@ export const VolumeTracingSaveRelevantActions: Action["type"][] = [
   "SET_MAPPING_IS_LOCKED",
   "TOGGLE_SEGMENT_GROUP",
   "TOGGLE_ALL_SEGMENTS",
-  "SET_VOLUME_BUCKET_DATA_HAS_CHANGED",
+  "SET_VOLUME_BUCKET_DATA_HAS_BEEN_CHANGED",
 ];
 
 export const initializeVolumeTracingAction = (tracing: ServerVolumeTracing) =>
@@ -538,11 +538,10 @@ export const cancelQuickSelectAction = () => ({ type: "CANCEL_QUICK_SELECT" }) a
 
 export const confirmQuickSelectAction = () => ({ type: "CONFIRM_QUICK_SELECT" }) as const;
 
-export const setVolumeBucketDataHasChangedAction = (tracingId: string, value: boolean = true) =>
+export const setVolumeBucketDataHasBeenChangedAction = (tracingId: string) =>
   ({
-    type: "SET_VOLUME_BUCKET_DATA_HAS_CHANGED",
+    type: "SET_VOLUME_BUCKET_DATA_HAS_BEEN_CHANGED",
     tracingId,
-    value,
   }) as const;
 
 export const applyVolumeUpdateActionsFromServerAction = (

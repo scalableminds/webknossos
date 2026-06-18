@@ -327,9 +327,9 @@ function VolumeTracingReducer(
       return expandSegmentParents(state, action);
     }
 
-    case "SET_VOLUME_BUCKET_DATA_HAS_CHANGED": {
+    case "SET_VOLUME_BUCKET_DATA_HAS_BEEN_CHANGED": {
       return updateVolumeTracing(state, action.tracingId, {
-        volumeBucketDataHasChanged: action.value,
+        volumeBucketDataHasChanged: true,
       });
     }
 

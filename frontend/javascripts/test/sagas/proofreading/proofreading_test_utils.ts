@@ -66,6 +66,7 @@ export function operationStarted(id: string) {
 export function operationFinished(id: string) {
   return (action: any) => action.type === "UNREGISTER_OPERATION" && action.id === id;
 }
+
 import {
   createSkeletonTracingFromAdjacency,
   encodeServerTracing,

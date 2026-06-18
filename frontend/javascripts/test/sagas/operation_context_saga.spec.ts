@@ -11,7 +11,7 @@ import {
   createOperationContext,
   getOrCreateOperationContext,
 } from "viewer/model/sagas/operation_context_saga";
-import { combinedReducer, OperationContextState, type WebknossosState } from "viewer/store";
+import { combinedReducer, type OperationContextState, type WebknossosState } from "viewer/store";
 import { beforeEach, describe, expect, it } from "vitest";
 
 // Minimal store for operation context tests — only handles the four operation context
@@ -21,9 +21,7 @@ function makeTestStore() {
   const store = createStore<WebknossosState, Action>(
     combinedReducer as any,
     defaultState,
-    applyMiddleware(
-      sagaMiddleware,
-    ),
+    applyMiddleware(sagaMiddleware),
   );
   return { store, sagaMiddleware };
 }

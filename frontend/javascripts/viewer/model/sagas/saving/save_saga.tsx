@@ -68,7 +68,7 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
 import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import { Model, Store } from "viewer/singletons";
-import type { NumberLike, StoreAnnotation, WebknossosState } from "viewer/store";
+import type { StoreAnnotation, WebknossosState } from "viewer/store";
 import {
   enforceExecutionAsBusyBlockingUnlessAllowed,
   spawnUntilCanceled,
@@ -603,6 +603,17 @@ export function* tryToIncorporateActions(
     }
     map.get(key)?.add(value);
   }
+  function addToNestedMap(
+    map: Map<string, Map<number, number>>,
+    key: string,
+    innerKey: number,
+    innerValue: number,
+  ) {
+    if (!map.has(key)) {
+      map.set(key, new Map());
+    }
+    map.get(key)?.set(innerKey, innerValue);
+  }
   // Tracks which agglomerate ids were changed of which the frontend has loaded meshes to assist proofreading.
   // Maps from the old agglomerate id to a potentially new one.
   // Duplicates are later ignored when refreshing the meshes.
@@ -620,7 +631,9 @@ export function* tryToIncorporateActions(
   }
 
   for (const actionBatch of newerActions) {
-    const agglomerateIdsToRefreshPerLayer: Map<string, Set<NumberLike>> = new Map();
+    // Per layer: maps each split segment id (segmentId1/segmentId2 of splitAgglomerate actions)
+    // to the agglomerate id it belonged to before the split.
+    const splitSegmentIdToOldAgglomeratePerLayer: Map<string, Map<number, number>> = new Map();
     for (const action of actionBatch.value) {
       switch (action.name) {
         /////////////
@@ -805,21 +818,32 @@ export function* tryToIncorporateActions(
           }
           // Note that a "normal" split typically contains multiple splitAgglomerate
           // actions (each action merely removes an edge in the graph).
-          const { agglomerateId, actionTracingId } = action.value;
-          if (agglomerateId != null) {
-            // The action already contains the info about what agglomerate was split.
-            // As the split could have happened between segments not loaded in this client,
-            // we need to reload in case any segment of the agglomerate is loaded and
-            // cannot guess the expected result without asking the backend.
-            addToMap(agglomerateIdsToRefreshPerLayer, actionTracingId, agglomerateId);
-          } else {
-            console.log(
-              "Cannot apply splitAgglomerate action due to agglomerateId not being provided in the action",
-              action.value,
+          const { segmentId1, segmentId2, agglomerateId, actionTracingId } = action.value;
+          // segmentId1 keeps agglomerateId, segmentId2 gets a new agglomerate id. We re-request
+          // both from the tracingstore (the new id cannot be known locally), each tagged with the
+          // old agglomerate id they belonged to. As the split could have happened between segments
+          // not loaded in this client, we need to reload in case any segment of the agglomerate is
+          // loaded and cannot guess the expected result without asking the backend.
+          if (segmentId1 == null || segmentId2 == null || agglomerateId == null) {
+            // Current proofreading actions always set these props, so this should never happen.
+            throw new Error(
+              `Cannot apply splitAgglomerate action: segmentId1, segmentId2 and agglomerateId must be set. Got ${JSON.stringify(
+                action.value,
+              )}`,
             );
-            yield* call(finalize);
-            return FailedIncorporateActionsReturnValue;
           }
+          addToNestedMap(
+            splitSegmentIdToOldAgglomeratePerLayer,
+            actionTracingId,
+            segmentId1,
+            agglomerateId,
+          );
+          addToNestedMap(
+            splitSegmentIdToOldAgglomeratePerLayer,
+            actionTracingId,
+            segmentId2,
+            agglomerateId,
+          );
           break;
         }
 
@@ -898,26 +922,22 @@ export function* tryToIncorporateActions(
     yield* put(setVersionNumberAction(actionBatch.version));
     for (const [
       tracingId,
-      agglomerateIdsToRefreshSet,
-    ] of agglomerateIdsToRefreshPerLayer.entries()) {
-      if (agglomerateIdsToRefreshSet && agglomerateIdsToRefreshSet.size > 0) {
-        //  TODO (#6921): Add 64 bit support
-        const agglomerateIdToRefresh = [...agglomerateIdsToRefreshSet.values().map(Number)];
-        if (agglomerateIdToRefresh == null) {
-          continue;
-        }
+      splitSegmentIdToOldAgglomerate,
+    ] of splitSegmentIdToOldAgglomeratePerLayer.entries()) {
+      if (splitSegmentIdToOldAgglomerate && splitSegmentIdToOldAgglomerate.size > 0) {
+        // Any involved old agglomerate id works as sourceAgglomerateId; the function re-maps the
+        // local segments of every old agglomerate referenced in the passed map anyway.
+        const sourceAgglomerateId = splitSegmentIdToOldAgglomerate.values().next().value as number;
         const activeMapping = yield* select(
           (store) => store.temporaryConfiguration.activeMappingByLayer[tracingId],
         );
         const splitMappingInfo = yield* splitAgglomerateInMapping(
           activeMapping,
-          agglomerateIdToRefresh[0],
+          sourceAgglomerateId,
           tracingId,
           actionBatch.version,
           false,
-          // In the very rare case where split actions of two different agglomerate ids were included in the same version
-          // we also request those other agglomerate ids in the same request to save requests.
-          new Set(agglomerateIdToRefresh.slice(1)),
+          splitSegmentIdToOldAgglomerate,
         );
 
         if (splitMappingInfo == null) {

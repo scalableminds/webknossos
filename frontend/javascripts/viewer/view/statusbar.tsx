@@ -46,6 +46,7 @@ import { setActiveCellAction } from "viewer/model/actions/volumetracing_actions"
 import { getSupportedValueRangeForElementClass } from "viewer/model/bucket_data_handling/data_rendering_logic";
 import { getGlobalDataConnectionInfo } from "viewer/model/data_connection_info";
 import { Store } from "viewer/singletons";
+import BorderToggleButton from "./components/border_toggle_button";
 import { NumberInputPopoverSetting } from "./left_border_tabs/components/number_input_popover_setting";
 
 const { Text } = Typography;
@@ -454,8 +455,10 @@ function SegmentAndMousePosition() {
 function Statusbar() {
   return (
     <span className="statusbar">
+      <BorderToggleButton side="left" inFooter />
       <ShortcutsInfo />
       <Infos />
+      <BorderToggleButton side="right" inFooter />
     </span>
   );
 }

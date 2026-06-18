@@ -11,12 +11,11 @@ import { stringToColor } from "libs/format_utils";
 import Persistence from "libs/persistence";
 import { useQueryWithErrorHandling } from "libs/react_hooks";
 import { filterWithSearchQueryAND, localeCompareBy } from "libs/utils";
-import partial from "lodash-es/partial";
 import messages from "messages";
 import type React from "react";
 import { useState } from "react";
-import type { APITeam, APITeamMembership, APIUser } from "types/api_types";
-import EditTeamModalView from "./edit_team_modal_view";
+import type { APITeam, APIUser } from "types/api_types";
+import { isUserInTeam, TeamMembersRow } from "./team_member_row";
 
 const { Column } = Table;
 const { Search } = Input;
@@ -66,58 +65,6 @@ export function renderTeamRolesAndPermissionsForUser(user: APIUser) {
   return <Space wrap>{tagElements}</Space>;
 }
 
-export function filterTeamMembersOf(team: APITeam, user: APIUser): boolean {
-  return user.teams.some((userTeam: APITeamMembership) => userTeam.id === team.id) || user.isAdmin;
-}
-
-export function renderUsersForTeam(
-  team: APITeam,
-  allUsers: APIUser[],
-  renderAdditionalContent = (_teamMember: APIUser, _team: APITeam): React.ReactNode => {
-    return null;
-  },
-) {
-  const teamMembers = allUsers
-    .filter((user) => filterTeamMembersOf(team, user))
-    .filter((user) => user.isActive);
-  if (teamMembers.length === 0) return messages["team.no_members"];
-
-  return (
-    <ul>
-      {teamMembers.map((teamMember) => (
-        <li key={`team_member_${teamMember.id}`}>
-          <Space size="small">
-            <span>
-              {teamMember.firstName} {teamMember.lastName} ({teamMember.email})
-            </span>
-            {renderTeamRolesForUser(teamMember, team)}
-            {renderAdditionalContent(teamMember, team)}
-          </Space>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function renderTeamRolesForUser(user: APIUser, highlightedTeam: APITeam) {
-  // used by teams list page
-  // does not include dataset managers and team names
-  const tags = user.isAdmin
-    ? [["Admin - Access to all Teams", "red"]]
-    : user.teams
-        .filter((team) => team.id === highlightedTeam.id)
-        .map((team) => {
-          const roleName = team.isTeamManager ? "Team Manager" : "Member";
-          return [`${roleName}`, stringToColor(roleName)];
-        });
-
-  return tags.map(([text, color]) => (
-    <Tag key={`${text}_${user.id}`} color={color} style={{ marginBottom: 4 }} variant="outlined">
-      {text}
-    </Tag>
-  ));
-}
-
 const persistence = new Persistence<Pick<{ searchQuery: string }, "searchQuery">>(
   {
     searchQuery: PropTypes.string,
@@ -142,8 +89,7 @@ function TeamListView() {
   const [searchQuery, setSearchQuery] = useState(() => persistence.load().searchQuery || "");
   const [isLoadingMutation, setIsLoadingMutation] = useState(false);
   const [isTeamCreationModalVisible, setIsTeamCreationModalVisible] = useState(false);
-  const [isTeamEditModalVisible, setIsTeamEditModalVisible] = useState(false);
-  const [selectedTeam, setSelectedTeam] = useState<APITeam | null>(null);
+  const [expandedTeamIds, setExpandedTeamIds] = useState<readonly React.Key[]>([]);
 
   const isLoading = isLoadingTeams || isLoadingUsers || isLoadingMutation;
 
@@ -182,11 +128,20 @@ function TeamListView() {
     ]);
   }
 
+  function countActiveMembers(team: APITeam) {
+    return users.filter((user) => user.isActive && isUserInTeam(user, team)).length;
+  }
+
+  function expandTeamRow(team: APITeam, event: React.MouseEvent) {
+    event.stopPropagation();
+    setExpandedTeamIds((teamIds) => (teamIds.includes(team.id) ? teamIds : [...teamIds, team.id]));
+  }
+
   return (
     <AdminPage
       title="Teams"
       descriptionURI="https://docs.webknossos.org/webknossos/users/teams.html"
-      description="Manage team membership and dataset access boundaries."
+      description="Create teams and manage their members. Team membership determines which datasets, tasks, and projects a user can access."
       actions={
         <Button
           icon={<PlusOutlined />}
@@ -206,8 +161,11 @@ function TeamListView() {
             defaultPageSize: 50,
           }}
           expandable={{
-            expandedRowRender: (team) => renderUsersForTeam(team, users),
+            expandedRowRender: (team) => <TeamMembersRow team={team} users={users} />,
             rowExpandable: (_team) => true,
+            expandRowByClick: true,
+            expandedRowKeys: expandedTeamIds,
+            onExpandedRowsChange: setExpandedTeamIds,
           }}
         >
           <Column
@@ -217,27 +175,32 @@ function TeamListView() {
             sorter={localeCompareBy<APITeam>((team) => team.name)}
           />
           <Column
+            title="Members"
+            key="members"
+            width={150}
+            render={(__, team: APITeam) => countActiveMembers(team)}
+            sorter={(teamA: APITeam, teamB: APITeam) =>
+              countActiveMembers(teamA) - countActiveMembers(teamB)
+            }
+          />
+          <Column
             title="Actions"
             key="actions"
             render={(__, team: APITeam) => (
-              <span>
-                <div>
-                  <LinkButton
-                    onClick={() => {
-                      setSelectedTeam(team);
-                      setIsTeamEditModalVisible(true);
-                    }}
-                    icon={<UserOutlined />}
-                  >
-                    Add / Remove Users
-                  </LinkButton>
-                </div>
-                <div>
-                  <LinkButton onClick={partial(deleteTeam, team)} icon={<DeleteOutlined />}>
-                    Delete
-                  </LinkButton>
-                </div>
-              </span>
+              <Space orientation="vertical" size={0}>
+                <LinkButton onClick={(event) => expandTeamRow(team, event)} icon={<UserOutlined />}>
+                  Manage users
+                </LinkButton>
+                <LinkButton
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    deleteTeam(team);
+                  }}
+                  icon={<DeleteOutlined />}
+                >
+                  Delete
+                </LinkButton>
+              </Space>
             )}
           />
         </Table>
@@ -246,14 +209,6 @@ function TeamListView() {
         isOpen={isTeamCreationModalVisible}
         onOk={createTeam}
         onCancel={() => setIsTeamCreationModalVisible(false)}
-      />
-      <EditTeamModalView
-        isOpen={isTeamEditModalVisible}
-        onCancel={() => {
-          setIsTeamEditModalVisible(false);
-          setSelectedTeam(null);
-        }}
-        team={selectedTeam}
       />
     </AdminPage>
   );

@@ -1,10 +1,55 @@
 # Publications
 The following publications used WEBKNOSSOS for exploring large 3D electron-microscopy (EM) and light-microscopy (LM) datasets as well as collaboratively generating annotations or other tasks. Please [get in touch with us](mailto:support@webknossos.org) if your publication is missing.
 
+## 2026
+* Arent J. Kievits, B. H. Peter Duinkerken, Ryan Lane, Ben N. G. Giepmans & Jacob P. Hoogenboom.  
+  Mitigation of artifacts in imaging biosamples with optical scanning transmission electron microscopy.  
+  [Applied Microscopy, Volume 56, Article 11 (2026). DOI: 10.1186/s42649-026-00132-y](https://doi.org/10.1186/s42649-026-00132-y)
+
 ## 2025
 * Jakob Reichmann, Anne Schnurpfeil, Sylvia Mittelstädt, Patrick Moller Jensen, Vedrana Andersen Dahl, Anders Bjorholm Dahl, Carina Weide, Eva von Campenhausen, Hector Dejea, Paul Tafforeau, Christopher Werlein, Danny Jonigk, Maximilian Ackermann, Klaus Engel, Julia Gallwas, Alexander Dietz, Mir Fuad Hasanov & Tim Salditt.  
   3D multiscale characterization of the human placenta: Bridging anatomy and histology by X-ray phase-contrast tomography.  
   [PNAS Nexus, Volume 4, Issue 1 (2025). DOI: 10.1093/pnasnexus/pgae583](https://doi.org/10.1093/pnasnexus/pgae583)
+
+* Yuh-Tarng Chen, Dominica de Thomas Wagner, Alastair J. Loutit, Ali Nourizonoz, Marina Ulanova, Danai Graikou, Man-Shan Chang, Mary-Claude Croisier-Coeytaux, Stéphanie Clerc-Rosset, Jérôme Blanc, Graham Knott, Kuo-Sheng Lee & Daniel Huber.  
+  Lamellar Schwann cells in the Pacinian corpuscle potentiate vibration perception.  
+  [Science Advances, Volume 11, Issue 24 (2025). DOI: 10.1126/sciadv.adt5110](https://doi.org/10.1126/sciadv.adt5110)
+
+* N. Klimpert, M. Kollo, D. H. Brann, C. Tan, D. Barry, Y. Ma, A. T. Schaefer & A. Fleischmann.  
+  3D spatial transcriptomics reveals the molecular structure of input and output pathways in the mouse olfactory bulb.  
+  [bioRxiv (2025). DOI: 10.1101/2025.02.19.639192](https://doi.org/10.1101/2025.02.19.639192)
+
+* Yagmur Yener, Alessandro Motta & Moritz Helmstaedter.  
+  Connectomic analysis of astrocyte-synapse interactions in the cerebral cortex.  
+  [bioRxiv (2025). DOI: 10.1101/2025.02.20.639274](https://doi.org/10.1101/2025.02.20.639274)
+
+* Moritz Helmstaedter.  
+  Synaptic-resolution connectomics: towards large brains and connectomic screening.  
+  [Nature Reviews Neuroscience, Volume 27, Issue 2 (2025). DOI: 10.1038/s41583-025-00998-z](https://doi.org/10.1038/s41583-025-00998-z)
+
+* Uzair Shah, Mahmood Alzubaidi, Marco Agus, Corrado Calì, Pierre J. Magistretti & Mowafa Househ.  
+  Deep learning for brain electron microscopy segmentation: Advances, challenges, and future directions in connectomics and ultrastructure analysis.  
+  [Computers & Graphics, Volume 132 (2025), 104391. DOI: 10.1016/j.cag.2025.104391](https://doi.org/10.1016/j.cag.2025.104391)
+
+* Nare Karagulyan.  
+  Synaptic mechanisms of sound intensity coding in the cochlea.  
+  [Doctoral thesis, Georg-August-Universität Göttingen (2025). DOI: 10.53846/dissem-46052026](https://dx.doi.org/10.53846/goediss-11524)
+
+* Sol Kim, Andre Graubner, Lukas Kapp-Schwoerer, Karthik Kashinath & Konrad Schindler.  
+  A large-scale dataset for training deep learning segmentation and tracking of extreme weather.  
+  [Scientific Data, Volume 12, Article 1151 (2025). DOI: 10.1038/s41597-025-05480-0](https://doi.org/10.1038/s41597-025-05480-0)
+
+* Jiaxuan Ren, Hengshuang Ling & Yingtian Pan.  
+  COCTA: A Cortex Vessel Segmentation Benchmark using Optical Coherence Tomography Angiography.  
+  [IEEE International Symposium on Biomedical Imaging (ISBI) (2025). DOI:10.1109/ISBI60581.2025.10980798](https://doi.org/10.1109/ISBI60581.2025.10980798)
+
+* Michael Crossley, Anna Simon, Shashidhara Marathe & Kevin Staras.  
+  Functional mapping of the molluscan brain guided by synchrotron X-ray tomography.  
+  [Proceedings of the National Academy of Sciences (2025). DOI: 10.1073/pnas.2422706122](https://doi.org/10.1073/pnas.2422706122)
+
+* Jonas Franz, Marina Eckermann, Jakob Reichmann & Tim Salditt.  
+  3D imaging of neuronal inclusions and protein aggregates in human neurodegeneration by multiscale X-ray phase-contrast tomography.  
+  [Brain Pathology (2025). DOI: 10.1111/bpa.70044](https://doi.org/10.1111/bpa.70044)
 
 ## 2024
 * Andrea Nathansen, Matthis Clausen, Manuel Berning, Ethan MacKenzie, Yuxin Zhang, Alexandra Pacureanu, Andreas T. Schaefer, Norman Rzepka, & Carles Bosch.  

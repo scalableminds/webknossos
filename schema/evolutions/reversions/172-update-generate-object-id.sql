@@ -1,6 +1,6 @@
 START TRANSACTION;
 
-do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 170 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
+do $$ begin if (select schemaVersion from webknossos.releaseInformation) <> 172 then raise exception 'Previous schema version mismatch'; end if; end; $$ language plpgsql;
 
 CREATE OR REPLACE FUNCTION webknossos.generate_object_id() RETURNS TEXT AS $$
 DECLARE
@@ -25,6 +25,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-UPDATE webknossos.releaseInformation SET schemaVersion = 169;
+UPDATE webknossos.releaseInformation SET schemaVersion = 171;
 
 COMMIT TRANSACTION;

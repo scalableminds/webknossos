@@ -475,12 +475,7 @@ export function* makeMappingEditableForTest(): Saga<void> {
   // Usually the user creates an editable mapping via the first proofreading action.
   // Therefore the operation context is active (proofreading operation running).
   // As we do this manually here, we dispatch the operation actions to simulate that.
-  // todop: will this update the module state in the operation context saga?
-  yield put(
-    registerOperationAction("proofreading", "Blocking in test for making mapping editable"),
-  );
   yield call(createEditableMapping);
-  yield put(unregisterOperationAction("proofreading"));
   // Delay is needed to avoid the auto mapping data reloading of mapping saga to interfere with tests.
   // Some tests check whether the missing agglomerate ids not present in the partial mapping in the frontend
   // are actually loaded during rebasing. Such a scenario might happen when doing proofreading via meshes.

@@ -5,13 +5,12 @@
  */
 
 import { buffers } from "redux-saga";
-import { actionChannel, call, flush, put, race, take, takeLatest } from "typed-redux-saga";
+import { actionChannel, call, flush, put, race, take } from "typed-redux-saga";
 import { mayAddToSaveQueue } from "viewer/model/accessors/annotation_accessor";
 import { selectTracing } from "viewer/model/accessors/tracing_accessor";
 import { FlycamActions } from "viewer/model/actions/flycam_actions";
 import {
   type EnsureTracingsWereDiffedToSaveQueueAction,
-  type FinishedRebaseAction,
   pushSaveQueueTransaction,
 } from "viewer/model/actions/save_actions";
 import type { InitializeSkeletonTracingAction } from "viewer/model/actions/skeletontracing_actions";
@@ -110,14 +109,15 @@ export function* setupSavingForTracingType(
       : VolumeTracingSaveRelevantActions,
     tracingActionBuffer,
   );
+
   // During rebasing, the local users updates are replayed and thus the identity of skeleton nodes and edges in the diffable map entries change.
   // But content wise they should be the same. Thus, after rebasing reload the tracing to avoid diffs caused by the diffable map identity mismatches.
-  yield* takeLatest(
+  // FINISHED_REBASING and FINISH_FORWARDING_UPDATE_ACTIONS actions are stored in the following
+  // buffer.
+  const finishedRebaseActionBuffer = buffers.expanding<Action>();
+  const finishedRebaseActionChannel = yield* actionChannel(
     ["FINISHED_REBASING", "FINISH_FORWARDING_UPDATE_ACTIONS"],
-    function* resetPrevTracing(_action: FinishedRebaseAction) {
-      // todop: use a channel and consume the action at the right spot in the while(true) loop below
-      prevTracing = yield* getTracing();
-    },
+    finishedRebaseActionBuffer,
   );
 
   // See Model.ensureSavedState for an explanation of this action channel.
@@ -140,21 +140,36 @@ export function* setupSavingForTracingType(
   }
 
   while (true) {
-    // Prioritize consumption of tracingActionChannel since we don't want to
-    // reply to the ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE action if there
-    // are unprocessed user actions.
-    if (!tracingActionBuffer.isEmpty()) {
+    if (!finishedRebaseActionBuffer.isEmpty()) {
+      yield* flush(finishedRebaseActionChannel);
+      prevTracing = yield* getTracing();
+      continue;
+    } else if (!tracingActionBuffer.isEmpty()) {
+      // Prioritize consumption of tracingActionChannel since we don't want to
+      // reply to the ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE action if there
+      // are unprocessed user actions.
       yield* take(tracingActionChannel);
     } else {
       // Wait for either a user action or the "ensureAction".
-      const actions = yield* race({
-        _tracingAction: take(tracingActionChannel),
-        ensureAction: take(ensureDiffedChannel),
-      });
+      const actions = yield* race([
+        take(finishedRebaseActionChannel),
+        take(tracingActionChannel),
+        take(ensureDiffedChannel),
+      ]);
+      if (actions.finishedRebaseAction != null) {
+        prevTracing = yield* getTracing();
+        continue;
+      }
       if (actions.ensureAction != null) {
         ensureAction = actions.ensureAction;
       }
     }
+
+    // We are about to diff old and new tracing to produce update actions
+    // for the save queue. All buffered actions in tracingActionBuffer can
+    // be flushed away, because it won't make sense to diff again when
+    // tracing cannot have changed.
+    tracingActionBuffer.flush();
 
     const allowSave = yield* select(mayAddToSaveQueue);
     if (!allowSave) {

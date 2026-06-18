@@ -11,7 +11,7 @@ import {
   createOperationContext,
   getOrCreateOperationContext,
 } from "viewer/model/sagas/operation_context_saga";
-import { combinedReducer, type WebknossosState } from "viewer/store";
+import { combinedReducer, OperationContextState, type WebknossosState } from "viewer/store";
 import { beforeEach, describe, expect, it } from "vitest";
 
 // Minimal store for operation context tests — only handles the four operation context
@@ -222,8 +222,7 @@ describe("operation_context_saga", () => {
 
   it("activeOperations in store tracks operation lifecycle", async () => {
     const { store, sagaMiddleware } = makeTestStore();
-    // todop: avoid any
-    const snapshots: any[][] = [];
+    const snapshots: Array<OperationContextState["activeOperations"]> = [];
 
     function* op() {
       const ctx = yield* createOperationContext({

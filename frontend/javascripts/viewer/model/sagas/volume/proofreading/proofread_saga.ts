@@ -272,11 +272,11 @@ function proofreadCoarseMagIndex(): number {
     : 3;
 }
 
-function* syncWithBackend(ctx?: OperationContext): Saga<void> {
+function* syncWithBackend(ctx: OperationContext | undefined): Saga<void> {
   yield* call([Model, Model.ensureSavedState], ctx);
 }
 
-function* pollNewestBackendVersion(ctx?: OperationContext): Saga<void> {
+function* pollNewestBackendVersion(ctx: OperationContext): Saga<void> {
   yield* call(dispatchEnsureHasNewestVersionAsync, Store.dispatch, ctx);
 }
 
@@ -532,7 +532,7 @@ function lookupAgglomerateId(
 // Note: the skeletontracing reducer already mutated the trees according to the received action.
 function* setupTreeProofreadingAction(
   action: MergeTreesAction | DeleteEdgeAction | MinCutAgglomerateAction,
-  ctx?: OperationContext,
+  ctx: OperationContext,
 ) {
   const allowUpdate = yield* select(mayEditAnnotation);
   if (!allowUpdate) return null;
@@ -649,11 +649,11 @@ function* setupTreeProofreadingAction(
   }
 }
 
-function* handleMergeViaTree(action: MergeTreesAction, ctx?: OperationContext): Saga<void> {
+function* handleMergeViaTree(action: MergeTreesAction, ctx: OperationContext): Saga<void> {
   // Ignore MergeTrees actions that were dispatched by the proofreading saga itself.
   if (action.initiator === "PROOFREADING") return;
 
-  const setup = yield* call(setupTreeProofreadingAction, action);
+  const setup = yield* call(setupTreeProofreadingAction, action, ctx);
   if (!setup) return;
   const {
     unsubscribeFromAnnotationMutex,
@@ -700,7 +700,12 @@ function* handleMergeViaTree(action: MergeTreesAction, ctx?: OperationContext): 
 
     yield* call(pushPendingProofreadingOperationInfo, volumeTracingId, sourceInfo, targetInfo);
     yield* put(pushSaveQueueTransaction(items));
-    const postProcessResult = yield* call(syncAndUpdatePostProcessingInfo, sourceInfo, targetInfo);
+    const postProcessResult = yield* call(
+      syncAndUpdatePostProcessingInfo,
+      sourceInfo,
+      targetInfo,
+      ctx,
+    );
     if (!postProcessResult) return;
     ({ sourceInfo, targetInfo } = postProcessResult);
 
@@ -788,12 +793,12 @@ function* handleMergeViaTree(action: MergeTreesAction, ctx?: OperationContext): 
 
 function* handleSplitViaTree(
   action: DeleteEdgeAction | MinCutAgglomerateAction,
-  ctx?: OperationContext,
+  ctx: OperationContext,
 ): Saga<void> {
   // Ignore DeleteEdge actions that were dispatched by the proofreading saga itself.
   if (action.type === "DELETE_EDGE" && action.initiator === "PROOFREADING") return;
 
-  const setup = yield* call(setupTreeProofreadingAction, action);
+  const setup = yield* call(setupTreeProofreadingAction, action, ctx);
   if (!setup) return;
 
   const {
@@ -854,7 +859,12 @@ function* handleSplitViaTree(
 
     yield* call(pushPendingProofreadingOperationInfo, volumeTracingId, sourceInfo, targetInfo);
     yield* put(pushSaveQueueTransaction(items));
-    const postProcessResult = yield* call(syncAndUpdatePostProcessingInfo, sourceInfo, targetInfo);
+    const postProcessResult = yield* call(
+      syncAndUpdatePostProcessingInfo,
+      sourceInfo,
+      targetInfo,
+      ctx,
+    );
     if (!postProcessResult) return;
     ({ sourceInfo, targetInfo } = postProcessResult);
 
@@ -1076,7 +1086,7 @@ function* performMinCut(
 
 function* performPartitionedMinCut(
   action: MinCutPartitionsAction | EnterAction,
-  ctx?: OperationContext,
+  ctx: OperationContext,
 ): Saga<void> {
   const isMultiSplitActive = yield* select((state) => state.userConfiguration.isMultiSplitActive);
   const isFromEditingEvent = action.type === "ENTER" && isEditableEventTarget(action.event.target);
@@ -1142,6 +1152,7 @@ function* performPartitionedMinCut(
       syncAndUpdatePostProcessingInfo,
       dummySourceInfo,
       dummySourceInfo,
+      ctx,
     );
     if (!postProcessResult) return;
     const agglomerateIdBeforeSplit = postProcessResult.sourceInfo.agglomerateId;
@@ -1372,7 +1383,7 @@ function* syncAndUpdatePostProcessingInfo<
 >(
   sourceInfo: T1,
   targetInfo: T2,
-  ctx?: OperationContext,
+  ctx: OperationContext,
 ): Saga<{ sourceInfo: T1; targetInfo: T2 } | null> {
   yield* call(syncWithBackend, ctx);
   const proofreadingPostProcessingInfo = yield* call(popPendingProofreadingOperationInfo);
@@ -1396,7 +1407,7 @@ function* refreshProofreadingSegmentsAndMeshes(
   targetInfo: IdInfoOpt,
   sourceAgglomerateId: number,
   targetAgglomerateId: number,
-  ctx?: OperationContext,
+  ctx: OperationContext,
 ): Saga<void> {
   /* Ensure segment items exist for affected segments and reload affected meshes */
   const refreshInfos = [
@@ -1422,7 +1433,7 @@ function* refreshProofreadingSegmentsAndMeshes(
   yield* spawnUntilCanceled(refreshAffectedMeshes, volumeTracingId, refreshInfos);
 }
 
-function* handleProofreadMerge(action: ProofreadMergeAction, ctx?: OperationContext) {
+function* handleProofreadMerge(action: ProofreadMergeAction, ctx: OperationContext) {
   const allowUpdate = yield* select((state) => mayEditAnnotation(state));
   if (!allowUpdate) return;
 
@@ -1496,7 +1507,7 @@ function* handleProofreadMerge(action: ProofreadMergeAction, ctx?: OperationCont
     );
 
     const postProcessResult = yield* call(() =>
-      syncAndUpdatePostProcessingInfo(sourceInfo, targetInfo),
+      syncAndUpdatePostProcessingInfo(sourceInfo, targetInfo, ctx),
     );
     if (!postProcessResult) return;
     ({ sourceInfo, targetInfo } = postProcessResult);
@@ -1535,6 +1546,7 @@ function* handleProofreadMerge(action: ProofreadMergeAction, ctx?: OperationCont
       targetInfo,
       sourceAgglomerateId,
       targetAgglomerateId,
+      ctx,
     );
   } finally {
     if (unsubscribeFromAnnotationMutex) {
@@ -1543,11 +1555,14 @@ function* handleProofreadMerge(action: ProofreadMergeAction, ctx?: OperationCont
   }
 }
 
-function* handleMinCutAgglomerate(action: MinCutAgglomerateWithPositionAction) {
+function* handleMinCutAgglomerate(
+  action: MinCutAgglomerateWithPositionAction,
+  ctx: OperationContext,
+) {
   const allowUpdate = yield* select((state) => mayEditAnnotation(state));
   if (!allowUpdate) return;
 
-  const preparation = yield* call(prepareSplitOrMerge, false);
+  const preparation = yield* call(prepareSplitOrMerge, false, ctx);
   if (!preparation) return;
 
   let { agglomerateFileMag, volumeTracing, activeMapping, annotationVersion } = preparation;
@@ -1600,7 +1615,7 @@ function* handleMinCutAgglomerate(action: MinCutAgglomerateWithPositionAction) {
   );
   try {
     const postProcessResult = yield* call(() =>
-      syncAndUpdatePostProcessingInfo(sourceInfo, targetInfo),
+      syncAndUpdatePostProcessingInfo(sourceInfo, targetInfo, ctx),
     );
     if (!postProcessResult) return;
     ({ sourceInfo, targetInfo } = postProcessResult);
@@ -1694,6 +1709,7 @@ function* handleMinCutAgglomerate(action: MinCutAgglomerateWithPositionAction) {
       targetInfo,
       sourceAgglomerateId,
       targetAgglomerateId,
+      ctx,
     );
   } finally {
     if (unsubscribeFromAnnotationMutex) {
@@ -1702,7 +1718,7 @@ function* handleMinCutAgglomerate(action: MinCutAgglomerateWithPositionAction) {
   }
 }
 
-function* handleProofreadCutFromNeighbors(action: Action, ctx?: OperationContext) {
+function* handleProofreadCutFromNeighbors(action: Action, ctx: OperationContext) {
   // Actually, action is CutAgglomerateFromNeighborsAction but the
   // takeEveryUnlessBusy wrapper does not understand this.
   if (action.type !== "CUT_AGGLOMERATE_FROM_NEIGHBORS") {
@@ -1775,7 +1791,12 @@ function* handleProofreadCutFromNeighbors(action: Action, ctx?: OperationContext
   );
   try {
     const dummyInfo = idInfos[0];
-    const postProcessResult = yield* call(syncAndUpdatePostProcessingInfo, dummyInfo, dummyInfo);
+    const postProcessResult = yield* call(
+      syncAndUpdatePostProcessingInfo,
+      dummyInfo,
+      dummyInfo,
+      ctx,
+    );
     if (!postProcessResult) return;
     const targetAgglomerateIdBeforeSplit = postProcessResult.sourceInfo.agglomerateId;
 
@@ -1866,7 +1887,7 @@ type Preparation = {
 
 export function* prepareSplitOrMerge(
   isTreeProofreading: boolean,
-  ctx?: OperationContext,
+  ctx: OperationContext,
 ): Saga<Preparation | null> {
   const volumeTracingLayer = yield* select((state) => getActiveSegmentationTracingLayer(state));
   const volumeTracing = yield* select((state) => getActiveSegmentationTracing(state));

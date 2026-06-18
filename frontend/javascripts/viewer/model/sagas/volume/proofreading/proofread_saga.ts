@@ -1173,11 +1173,11 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
     const oldAgglomerateId = agglomerateId;
     // All these segments belonged to oldAgglomerateId before the (min-cut) split.
     const segmentsToOldAgglomerateId = new Map(
-        Array.from(additionalUnmappedSegmentsToReRequest, (segmentId) => [
-          segmentId,
-          oldAgglomerateId,
-        ]),
-      );
+      Array.from(additionalUnmappedSegmentsToReRequest, (segmentId) => [
+        segmentId,
+        oldAgglomerateId,
+      ]),
+    );
     const splitMappingInfo = yield* splitAgglomerateInMapping(
       activeMapping,
       oldAgglomerateId,

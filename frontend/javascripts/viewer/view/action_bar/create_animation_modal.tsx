@@ -522,7 +522,7 @@ function CreateAnimationModal(props: Props) {
                     type="secondary"
                     style={{ display: "block", fontSize: 12, marginTop: 7 }}
                   >
-                    ≈ 8s · 15s · 30s
+                    ≈ 15s · 22s · 30s
                   </Typography.Text>
                 </Col>
               </Row>
@@ -575,9 +575,6 @@ function CreateAnimationModal(props: Props) {
                     >
                       <InfoCircleOutlined className="icon-margin-left" />
                     </Tooltip>
-                    <Tag color="processing" style={{ marginInlineStart: 8 }}>
-                      New
-                    </Tag>
                   </Checkbox>
                 </Col>
                 <Col span={12}>
@@ -590,11 +587,6 @@ function CreateAnimationModal(props: Props) {
                       WEBKNOSSOS watermark
                     </Checkbox>
                   </PricingEnforcedSpan>
-                  {!arePaidFeaturesAllowed ? (
-                    <Tag icon={<LockOutlined />} style={{ marginInlineStart: 8 }}>
-                      Paid plan
-                    </Tag>
-                  ) : null}
                 </Col>
               </Row>
             </Flex>

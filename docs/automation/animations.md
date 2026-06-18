@@ -40,8 +40,8 @@ You can choose between two resolutions for your animation video:
 
 Controls the length of the rendered video. Longer durations result in a slower, more detailed camera movement and take more time to render.
 
-- **Fast:** A short clip (≈ 8 seconds).
-- **Standard:** The default length (≈ 15 seconds).
+- **Fast:** A short clip (≈ 15 seconds).
+- **Standard:** The default length (≈ 22 seconds).
 - **Slow:** A longer clip (≈ 30 seconds).
 
 ### Content

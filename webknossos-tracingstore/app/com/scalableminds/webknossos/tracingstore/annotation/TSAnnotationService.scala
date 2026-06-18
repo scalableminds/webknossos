@@ -288,8 +288,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     for {
       volumeTracing <- annotationWithTracings.getVolume(action.actionTracingId).toFox
       _ <- assertMappingIsNotLocked(volumeTracing)
+      _ <- Fox.fromBool(!volumeTracing.volumeBucketDataHasChanged.getOrElse(false)) ?~> Msg.Annotation.volumeBucketsNotEmpty
       baseMappingName <- volumeTracing.mappingName.toFox ?~> Msg.Annotation.makeEditableNoBaseMapping
-      _ <- Fox.fromBool(volumeTracingService.volumeBucketsAreEmpty(action.actionTracingId)) ?~> Msg.Annotation.volumeBucketsNotEmpty
       editableMappingInfo = editableMappingService.create(baseMappingName)
       updater <- editableMappingUpdaterFor(annotationId,
                                            action.actionTracingId,

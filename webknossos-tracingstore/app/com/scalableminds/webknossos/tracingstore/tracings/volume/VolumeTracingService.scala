@@ -758,9 +758,6 @@ class VolumeTracingService @Inject() (
       _ <- saveVolume(tracingId, tracing.version, tracing.copy(mags = mags.toList.sortBy(_.maxDim).map(vec3IntToProto)))
     } yield ()
 
-  def volumeBucketsAreEmpty(tracingId: String): Boolean =
-    volumeDataStore.getMultipleKeys(None, Some(tracingId), limit = Some(1))(wrapInBox).isEmpty
-
   def createAdHocMesh(
       annotationId: ObjectId,
       tracingId: String,

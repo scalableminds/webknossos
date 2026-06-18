@@ -1,9 +1,9 @@
-import { InfoCircleOutlined } from "@ant-design/icons";
+import { InfoCircleOutlined, LockOutlined } from "@ant-design/icons";
+import animationExamplePoster from "@images/animation-example-poster.jpg";
 import {
   isFeatureAllowedByPricingPlan,
   PricingPlanEnum,
 } from "admin/organization/pricing_plan_utils";
-
 import { startRenderAnimationJob } from "admin/rest_api";
 import {
   Alert,
@@ -11,12 +11,17 @@ import {
   Checkbox,
   Col,
   Divider,
+  Flex,
   Modal,
   type ModalProps,
-  Radio,
   Row,
+  Segmented,
+  Select,
   Space,
+  Tag,
   Tooltip,
+  Typography,
+  theme,
 } from "antd";
 import { LayerSelection } from "components/layer_selection";
 import { PricingEnforcedSpan } from "components/pricing_enforcers";
@@ -34,6 +39,7 @@ import {
   APIJobCommand,
   type APISegmentationLayer,
   CAMERA_POSITIONS,
+  MOVIE_DURATIONS,
   MOVIE_RESOLUTIONS,
   type RenderAnimationOptions,
 } from "types/api_types";
@@ -134,7 +140,7 @@ export default function CreateAnimationModalWrapper(props: Props) {
   if (colorLayers.length === 0) {
     const { isOpen, onClose } = props;
     return (
-      <Modal open={isOpen} onOk={onClose} onCancel={onClose} title="Create Animation">
+      <Modal open={isOpen} onOk={onClose} onCancel={onClose} title="Create animation">
         WEBKNOSSOS cannot create animations for datasets without color layers.
       </Modal>
     );
@@ -173,10 +179,14 @@ function CreateAnimationModal(props: Props) {
 
   const [selectedCameraPosition, setCameraPosition] = useState(CAMERA_POSITIONS.MOVING);
   const [selectedMovieResolution, setMovieResolution] = useState(MOVIE_RESOLUTIONS.SD);
+  const [selectedMovieDuration, setMovieDuration] = useState(MOVIE_DURATIONS.STANDARD);
   const [isWatermarkEnabled, setWatermarkEnabled] = useState(true);
   const [areMeshesEnabled, setMeshesEnabled] = useState(true);
   const [areSkeletonsEnabled, setSkeletonsEnabled] = useState(false);
+  const [isImageDataHidden, setImageDataHidden] = useState(false);
   const [isSaveBlenderFileEnabled, setSaveBlenderFileEnabled] = useState(false);
+
+  const { token } = theme.useToken();
 
   const annotationType = useWkSelector((state) => state.annotation.annotationType);
   const annotationId = useWkSelector((state) => state.annotation.annotationId);
@@ -310,9 +320,11 @@ function CreateAnimationModal(props: Props) {
       boundingBox: computeBoundingBoxObjectFromBoundingBox(boundingBox),
       includeWatermark: isWatermarkEnabled,
       movieResolution: selectedMovieResolution,
+      movieDuration: selectedMovieDuration,
       cameraPosition: selectedCameraPosition,
       annotationId: isAnnotationMode ? annotationId : null,
       includeSkeletons: isAnnotationMode && hasSkeleton && areSkeletonsEnabled,
+      hideImageData: isImageDataHidden,
       saveBlenderFile: isSuperUser && isSaveBlenderFileEnabled,
     };
 
@@ -346,203 +358,293 @@ function CreateAnimationModal(props: Props) {
     dataset.dataStore.jobsSupportedByAvailableWorkers.includes(APIJobCommand.RENDER_ANIMATION)
   );
 
+  const fieldLabel = (label: string) => (
+    <Typography.Text strong style={{ display: "block", fontSize: 13, marginBottom: 8 }}>
+      {label}
+    </Typography.Text>
+  );
+
+  const cameraPositionOptions = [
+    { value: CAMERA_POSITIONS.MOVING, label: "Orbiting camera (circles the dataset)" },
+    { value: CAMERA_POSITIONS.STATIC_XY, label: "Fixed camera — XY view" },
+    { value: CAMERA_POSITIONS.STATIC_XZ, label: "Fixed camera — XZ view" },
+    { value: CAMERA_POSITIONS.STATIC_YZ, label: "Fixed camera — YZ view" },
+    {
+      value: CAMERA_POSITIONS.STATIC_ISOMETRIC,
+      label: "Fixed isometric view (all 3 viewports)",
+    },
+  ];
+
+  const startButton = isFeatureDisabled ? (
+    <Tooltip title="This feature is not available on your WEBKNOSSOS server. Contact your administrator.">
+      <Button type="primary" disabled>
+        Create animation
+      </Button>
+    </Tooltip>
+  ) : (
+    <Button type="primary" onClick={submitJob} disabled={activeUser == null}>
+      Start animation
+    </Button>
+  );
+
   return (
     <Modal
       title="Create Animation"
       open={isOpen}
-      width={700}
+      width={900}
       onCancel={onClose}
-      okText={isFeatureDisabled ? "This feature is not available" : "Start Animation"}
-      footer={[
-        <Button key="cancel" onClick={(evt: React.MouseEvent<HTMLButtonElement>) => onClose?.(evt)}>
-          Cancel
-        </Button>,
-        isFeatureDisabled ? (
-          <Tooltip
-            key="ok"
-            title="This feature is not available on your WEBKNOSSOS server. Contact your administrator."
-          >
-            <Button type="primary" disabled>
-              Start Animation
-            </Button>
-          </Tooltip>
-        ) : (
-          <Button key="ok" type="primary" onClick={submitJob} disabled={activeUser == null}>
-            Start Animation
-          </Button>
-        ),
-      ]}
-    >
-      <Row gutter={8}>
-        <Col span={12} style={{ textAlign: "center" }}>
-          <video
-            src="https://static.webknossos.org/assets/docs/webknossos_animation_example.mp4"
-            style={{ width: "100%", display: "inline-block", objectFit: "cover" }}
-            controls={true}
-            autoPlay
-            muted={true}
-          />
-        </Col>
-        <Col span={12}>
-          <p style={{ paddingLeft: 10 }}>
-            Create a short, engaging animation of your data. Watch as the block of volumetric image
-            data shrinks to reveal segmented objects. Choose from three perspective options and
-            select the color layer and meshes you want to render. The resulting video file can be
-            used for presentations, publications, or your website.
-          </p>
-        </Col>
-      </Row>
-      <Divider
-        style={{
-          margin: "18px 0",
-        }}
-      >
-        Animation Setup
-      </Divider>
-      <Row gutter={[8, 30]}>
-        <Col span={8}>Camera Position</Col>
-        <Col span={16}>
-          <Radio.Group
-            value={selectedCameraPosition}
-            onChange={(ev) => setCameraPosition(ev.target.value)}
-            optionType="default"
-          >
-            <Space orientation="vertical">
-              <Radio.Button value={CAMERA_POSITIONS.MOVING}>
-                Camera circling around the dataset
-              </Radio.Button>
-              <Radio.Button value={CAMERA_POSITIONS.STATIC_XY}>
-                Static camera looking at XY-viewport{" "}
-              </Radio.Button>
-              <Radio.Button value={CAMERA_POSITIONS.STATIC_XZ}>
-                Static camera looking at XZ-viewport{" "}
-              </Radio.Button>
-              <Radio.Button value={CAMERA_POSITIONS.STATIC_YZ}>
-                Static camera looking at YZ-viewport{" "}
-              </Radio.Button>
-              <Radio.Button value={CAMERA_POSITIONS.STATIC_ISOMETRIC}>
-                Static camera with an isometric perspective looking at all 3 viewports{" "}
-              </Radio.Button>
-            </Space>
-          </Radio.Group>
-        </Col>
-
-        <Col span={8}>Movie Resolution</Col>
-        <Col span={16}>
-          <Radio.Group
-            value={selectedMovieResolution}
-            onChange={(ev) => setMovieResolution(ev.target.value)}
-            optionType="default"
-          >
-            <Space orientation="vertical">
-              <Radio.Button value={MOVIE_RESOLUTIONS.SD}>
-                Standard Definition (640 × 360)
-              </Radio.Button>
-              <Radio.Button value={MOVIE_RESOLUTIONS.HD} disabled={!arePaidFeaturesAllowed}>
-                <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-                  High Definition (1920 × 1080)
-                </PricingEnforcedSpan>
-              </Radio.Button>
-            </Space>
-          </Radio.Group>
-        </Col>
-
-        <Col span={8}>Options</Col>
-        <Col span={16}>
-          <Space orientation="vertical">
-            <Checkbox
-              checked={areMeshesEnabled}
-              onChange={(ev) => setMeshesEnabled(ev.target.checked)}
-            >
-              Include the currently selected 3D meshes
-              <Tooltip
-                title="When enabled, all meshes currently visible in WEBKNOSSOS will be included in the animation."
-                placement="right"
-              >
-                <InfoCircleOutlined className="icon-margin-left" />
-              </Tooltip>
-            </Checkbox>
-            <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
-              <Checkbox
-                disabled={!arePaidFeaturesAllowed}
-                checked={isWatermarkEnabled}
-                onChange={(ev) => setWatermarkEnabled(ev.target.checked)}
-              >
-                Include WEBKNOSSOS Watermark
-              </Checkbox>
-            </PricingEnforcedSpan>
-            {isAnnotationMode && hasSkeleton ? (
-              <Checkbox
-                checked={areSkeletonsEnabled}
-                onChange={(ev) => setSkeletonsEnabled(ev.target.checked)}
-              >
-                Include skeletons
-                <Tooltip
-                  title="When enabled, the visible skeleton trees of the current annotation will be included in the animation."
-                  placement="right"
-                >
-                  <InfoCircleOutlined className="icon-margin-left" />
-                </Tooltip>
-              </Checkbox>
-            ) : null}
+      footer={
+        <Flex justify="space-between" align="center" gap={12}>
+          <span>
             {isSuperUser ? (
-              <Checkbox
-                checked={isSaveBlenderFileEnabled}
-                onChange={(ev) => setSaveBlenderFileEnabled(ev.target.checked)}
-              >
-                Save Blender file (super user only)
-                <Tooltip
-                  title="When enabled, the intermediate Blender file will be saved alongside the animation output for debugging purposes."
-                  placement="right"
+              <>
+                <Checkbox
+                  checked={isSaveBlenderFileEnabled}
+                  onChange={(ev) => setSaveBlenderFileEnabled(ev.target.checked)}
                 >
-                  <InfoCircleOutlined className="icon-margin-left" />
-                </Tooltip>
-              </Checkbox>
+                  Save Blender file
+                  <Tooltip
+                    title="When enabled, the intermediate Blender file will be saved alongside the animation output for debugging purposes."
+                    placement="top"
+                  >
+                    <InfoCircleOutlined className="icon-margin-left" />
+                  </Tooltip>
+                </Checkbox>
+                <Tag style={{ marginInlineStart: 8 }}>Super user</Tag>
+              </>
             ) : null}
+          </span>
+          <Space>
+            <Button onClick={(evt: React.MouseEvent<HTMLButtonElement>) => onClose?.(evt)}>
+              Cancel
+            </Button>
+            {startButton}
           </Space>
+        </Flex>
+      }
+    >
+      <Row gutter={32} style={{ marginBottom: 24 }}>
+        {/* Left column: preview & description */}
+        <Col span={9}>
+          <Flex vertical gap={18}>
+            <video
+              src="https://static.webknossos.org/assets/docs/webknossos_animation_example.mp4"
+              poster={animationExamplePoster}
+              style={{
+                width: "100%",
+                aspectRatio: "16 / 9",
+                objectFit: "cover",
+                borderRadius: token.borderRadiusLG,
+                background: "#0d0f17",
+              }}
+              controls={true}
+              autoPlay
+              muted={true}
+              preload="metadata"
+            />
+            <Typography.Text type="secondary" style={{ fontSize: 14 }}>
+              Render a short video of your data. Pick a camera path, resolution and duration, choose
+              the layer and bounding box, and decide which meshes and skeletons to include.
+              Rendering runs as a background job — you'll get an email when it's done, and the video
+              will be available on the{" "}
+              <a href="/jobs" target="_blank" rel="noopener noreferrer">
+                Processing Jobs
+              </a>{" "}
+              page.
+            </Typography.Text>
+          </Flex>
+        </Col>
+
+        {/* Right column: form */}
+        <Col span={15}>
+          <Flex vertical gap={20}>
+            <Flex vertical gap={16}>
+              <Divider titlePlacement="left" style={{ margin: 0 }}>
+                Camera &amp; quality
+              </Divider>
+              <div>
+                {fieldLabel("Camera position")}
+                <Select
+                  value={selectedCameraPosition}
+                  onChange={setCameraPosition}
+                  options={cameraPositionOptions}
+                  popupMatchSelectWidth={false}
+                  style={{ width: "100%" }}
+                />
+              </div>
+              <Row gutter={24}>
+                <Col span={12}>
+                  {fieldLabel("Movie resolution")}
+                  <Segmented
+                    block
+                    value={selectedMovieResolution}
+                    onChange={(value) => setMovieResolution(value as MOVIE_RESOLUTIONS)}
+                    options={[
+                      { value: MOVIE_RESOLUTIONS.SD, label: "SD · 640×360" },
+                      {
+                        value: MOVIE_RESOLUTIONS.HD,
+                        disabled: !arePaidFeaturesAllowed,
+                        label: (
+                          <span>
+                            HD · 1080p
+                            {!arePaidFeaturesAllowed ? (
+                              <LockOutlined style={{ marginInlineStart: 6, fontSize: 12 }} />
+                            ) : null}
+                          </span>
+                        ),
+                      },
+                    ]}
+                  />
+                  {!arePaidFeaturesAllowed ? (
+                    <Typography.Text
+                      type="secondary"
+                      style={{ display: "block", fontSize: 12, marginTop: 7 }}
+                    >
+                      <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+                        HD is available on a paid plan.
+                      </PricingEnforcedSpan>
+                    </Typography.Text>
+                  ) : null}
+                </Col>
+                <Col span={12}>
+                  {fieldLabel("Video duration")}
+                  <Segmented
+                    block
+                    value={selectedMovieDuration}
+                    onChange={(value) => setMovieDuration(value as MOVIE_DURATIONS)}
+                    options={[
+                      { value: MOVIE_DURATIONS.FAST, label: "Fast" },
+                      { value: MOVIE_DURATIONS.STANDARD, label: "Standard" },
+                      { value: MOVIE_DURATIONS.SLOW, label: "Slow" },
+                    ]}
+                  />
+                  <Typography.Text
+                    type="secondary"
+                    style={{ display: "block", fontSize: 12, marginTop: 7 }}
+                  >
+                    ≈ 8s · 15s · 30s
+                  </Typography.Text>
+                </Col>
+              </Row>
+            </Flex>
+
+            <Flex vertical gap={14}>
+              <Divider titlePlacement="left" style={{ margin: 0 }}>
+                Content
+              </Divider>
+              <Row gutter={[14, 14]}>
+                <Col span={12}>
+                  <Checkbox
+                    checked={areMeshesEnabled}
+                    onChange={(ev) => setMeshesEnabled(ev.target.checked)}
+                  >
+                    Include 3D meshes
+                    <Tooltip
+                      title="When enabled, all meshes currently visible in WEBKNOSSOS will be included in the animation."
+                      placement="right"
+                    >
+                      <InfoCircleOutlined className="icon-margin-left" />
+                    </Tooltip>
+                  </Checkbox>
+                </Col>
+                {isAnnotationMode && hasSkeleton ? (
+                  <Col span={12}>
+                    <Checkbox
+                      checked={areSkeletonsEnabled}
+                      onChange={(ev) => setSkeletonsEnabled(ev.target.checked)}
+                    >
+                      Include skeletons
+                      <Tooltip
+                        title="When enabled, the visible skeleton trees of the current annotation will be included in the animation."
+                        placement="right"
+                      >
+                        <InfoCircleOutlined className="icon-margin-left" />
+                      </Tooltip>
+                    </Checkbox>
+                  </Col>
+                ) : null}
+                <Col span={12}>
+                  <Checkbox
+                    checked={isImageDataHidden}
+                    onChange={(ev) => setImageDataHidden(ev.target.checked)}
+                  >
+                    Hide image data
+                    <Tooltip
+                      title="When enabled, the volumetric image data is hidden and only the meshes and skeletons are rendered."
+                      placement="right"
+                    >
+                      <InfoCircleOutlined className="icon-margin-left" />
+                    </Tooltip>
+                    <Tag color="processing" style={{ marginInlineStart: 8 }}>
+                      New
+                    </Tag>
+                  </Checkbox>
+                </Col>
+                <Col span={12}>
+                  <PricingEnforcedSpan requiredPricingPlan={PricingPlanEnum.Team}>
+                    <Checkbox
+                      disabled={!arePaidFeaturesAllowed}
+                      checked={isWatermarkEnabled}
+                      onChange={(ev) => setWatermarkEnabled(ev.target.checked)}
+                    >
+                      WEBKNOSSOS watermark
+                    </Checkbox>
+                  </PricingEnforcedSpan>
+                  {!arePaidFeaturesAllowed ? (
+                    <Tag icon={<LockOutlined />} style={{ marginInlineStart: 8 }}>
+                      Paid plan
+                    </Tag>
+                  ) : null}
+                </Col>
+              </Row>
+            </Flex>
+
+            <Flex vertical gap={14}>
+              <Divider titlePlacement="left" style={{ margin: 0 }}>
+                Layer &amp; data
+              </Divider>
+              <Row gutter={24}>
+                <Col span={12}>
+                  {fieldLabel("Layer")}
+                  <LayerSelection
+                    layers={colorLayers}
+                    value={selectedColorLayerName}
+                    onChange={setSelectedColorLayerName}
+                    getReadableNameForLayer={(layer) => layer.name}
+                    style={{ width: "100%" }}
+                  />
+                </Col>
+                <Col span={12}>
+                  {fieldLabel("Bounding box")}
+                  <BoundingBoxSelection
+                    value={selectedBoundingBoxId}
+                    userBoundingBoxes={userBoundingBoxes}
+                    setSelectedBoundingBoxId={(boxId: number | null) => {
+                      if (boxId != null) {
+                        setSelectedBoundingBoxId(boxId);
+                      }
+                    }}
+                    style={{ width: "100%" }}
+                  />
+                </Col>
+              </Row>
+            </Flex>
+
+            {!isValid ? (
+              <Alert
+                type="error"
+                message={
+                  <ul style={{ margin: 0, paddingInlineStart: 18 }}>
+                    {validationErrors.map((errorMessage) => (
+                      <li key={errorMessage.slice(5)}>{errorMessage}</li>
+                    ))}
+                  </ul>
+                }
+              />
+            ) : null}
+          </Flex>
         </Col>
       </Row>
-      <Divider style={{ margin: "18px 0" }}>Layer & Bounding Box</Divider>
-      <Row gutter={[8, 20]}>
-        <Col span={8}>Layer</Col>
-        <Col span={16}>
-          <LayerSelection
-            layers={colorLayers}
-            value={selectedColorLayerName}
-            onChange={setSelectedColorLayerName}
-            getReadableNameForLayer={(layer) => layer.name}
-            style={{ width: "100%" }}
-          />
-        </Col>
-        <Col span={8}>Bounding Box</Col>
-        <Col span={16}>
-          <BoundingBoxSelection
-            value={selectedBoundingBoxId}
-            userBoundingBoxes={userBoundingBoxes}
-            setSelectedBoundingBoxId={(boxId: number | null) => {
-              if (boxId != null) {
-                setSelectedBoundingBoxId(boxId);
-              }
-            }}
-            style={{ width: "100%" }}
-          />
-        </Col>
-      </Row>
-      {!isValid ? (
-        <Row gutter={[8, 20]}>
-          <Alert
-            type="error"
-            style={{ marginTop: 18, width: "100%" }}
-            title={
-              <ul>
-                {validationErrors.map((errorMessage) => (
-                  <li key={errorMessage.slice(5)}>{errorMessage}</li>
-                ))}
-              </ul>
-            }
-          />
-        </Row>
-      ) : null}
     </Modal>
   );
 }

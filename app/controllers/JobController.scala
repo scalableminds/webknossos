@@ -28,6 +28,10 @@ object MovieResolutionSetting extends ExtendedEnumeration {
   val SD, HD = Value
 }
 
+object MovieDurationSetting extends ExtendedEnumeration {
+  val FAST, STANDARD, SLOW = Value
+}
+
 object CameraPositionSetting extends ExtendedEnumeration {
   val MOVING, STATIC_ISOMETRIC, STATIC_XY, STATIC_XZ, STATIC_YZ = Value
 }
@@ -38,10 +42,12 @@ case class AnimationJobOptions(
     includeWatermark: Boolean,
     meshes: JsValue,
     movieResolution: MovieResolutionSetting.Value,
+    movieDuration: MovieDurationSetting.Value,
     cameraPosition: CameraPositionSetting.Value,
     magForTextures: Vec3Int,
     annotationId: Option[ObjectId],
     includeSkeletons: Boolean,
+    hideImageData: Boolean,
     saveBlenderFile: Boolean
 )
 
@@ -423,10 +429,12 @@ class JobController @Inject()(jobDAO: JobDAO,
             "include_watermark" -> animationJobOptions.includeWatermark,
             "meshes" -> animationJobOptions.meshes,
             "movie_resolution" -> animationJobOptions.movieResolution,
+            "movie_duration" -> animationJobOptions.movieDuration,
             "camera_position" -> animationJobOptions.cameraPosition,
             "mag_for_textures" -> animationJobOptions.magForTextures,
             "annotation_id" -> animationJobOptions.annotationId,
             "include_skeletons" -> animationJobOptions.includeSkeletons,
+            "hide_image_data" -> animationJobOptions.hideImageData,
             "save_blender_file" -> animationJobOptions.saveBlenderFile,
           )
           job <- jobService.submitJob(command, commandArgs, request.identity, dataset._dataStore) ?~> Msg.Job.RenderAnimation.submitFailed

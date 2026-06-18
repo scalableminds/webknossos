@@ -1,5 +1,17 @@
-// todop: probably a good idea to list possible OperationIds here.
-export type OperationId = string;
+// Named operations currently used in the app. Child operations (registered via borrowedContext)
+// can use any id, but top-level operations should use one of these known IDs to maintain clarity.
+export type OperationId =
+  | "proofreading"
+  | "minCut"
+  | "floodfill"
+  | "quickSelect"
+  | "interpolateSegmentationLayer"
+  | "deleteSegment"
+  | "undo"
+  | "redo"
+  | "save"
+  | "rebase"
+  | (string & {}); // todop: don't allow this
 
 export type RegisterOperationAction = {
   type: "REGISTER_OPERATION";

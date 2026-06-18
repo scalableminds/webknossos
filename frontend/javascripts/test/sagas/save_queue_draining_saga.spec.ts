@@ -1,6 +1,8 @@
 import { sendSaveRequestWithToken } from "admin/rest_api";
 import DiffableMap from "libs/diffable_map";
 import { alert } from "libs/window";
+import { applyMiddleware, createStore } from "redux";
+import createSagaMiddleware from "redux-saga";
 import { call, put } from "redux-saga/effects";
 import { TIMESTAMP } from "test/global_mocks";
 import { UnitLong } from "viewer/constants";
@@ -11,14 +13,15 @@ import {
   shiftSaveQueueAction,
 } from "viewer/model/actions/save_actions";
 import compactSaveQueue from "viewer/model/helpers/compaction/compact_save_queue";
+// biome-ignore lint/performance/noNamespaceImport: necessary for mocking
+import * as saveMutexModule from "viewer/model/sagas/saving/save_mutex_saga";
+import { MutexFetchingStrategy } from "viewer/model/sagas/saving/save_mutex_saga";
 import {
   addVersionNumbers,
   sendSaveRequestToServer,
   synchronizeAnnotationWithBackend,
   toggleErrorHighlighting,
 } from "viewer/model/sagas/saving/save_queue_draining_saga";
-import { MutexFetchingStrategy } from "viewer/model/sagas/saving/save_mutex_saga";
-import * as saveMutexModule from "viewer/model/sagas/saving/save_mutex_saga";
 import {
   createEdge,
   updateActiveNode,
@@ -26,10 +29,8 @@ import {
   updateCameraAnnotation,
   updateSegmentPartialVolumeAction,
 } from "viewer/model/sagas/volume/update_actions";
-import { applyMiddleware, createStore } from "redux";
-import createSagaMiddleware from "redux-saga";
 import type { SaveQueueEntry } from "viewer/store";
-import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { expectValueDeepEqual } from "../helpers/saga_test_helpers";
 import { createSaveQueueFromUpdateActions } from "../helpers/saveHelpers";
 import "test/helpers/apiHelpers"; // ensures Store is available
@@ -214,136 +215,6 @@ describe("Save Saga", () => {
     ]);
   });
 
-  it.skip("should send update actions", () => {
-    const updateActions = [[createEdge(1, 0, 1, tracingId)], [createEdge(1, 1, 2, tracingId)]];
-    const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
-    const saga = pushSaveQueueAsync();
-    expectValueDeepEqual(expect, saga.next(), call(ensureWkInitialized));
-    saga.next(); // setLastSaveTimestampAction
-
-    saga.next(); // select state
-
-    expectValueDeepEqual(expect, saga.next([]), take("PUSH_SAVE_QUEUE_TRANSACTION"));
-    saga.next(); // race
-
-    saga.next({
-      forcePush: saveNowAction(),
-    }); // select gate check
-    expectValueDeepEqual(
-      expect,
-      saga.next(true), // gate check: savingAllowed = true
-      put(setSaveBusyAction(true)),
-    );
-
-    expectValueDeepEqual(
-      expect,
-      saga.next(), // getOrCreateOperationContext
-      call(getOrCreateOperationContext, { id: "save", description: "Saving annotation" }, null),
-    );
-
-    const synchronizeAnnotationWithBackendCallEffect = saga.next(fakeCtx); // calling synchronizeAnnotationWithBackend
-    const enforceEmptySaveQueue = true;
-    expectValueDeepEqual(
-      expect,
-      synchronizeAnnotationWithBackendCallEffect,
-      call(synchronizeAnnotationWithBackend, enforceEmptySaveQueue, fakeCtx),
-    );
-    const { fn: synchronizeAnnotationWithBackendSagaFn, args } =
-      synchronizeAnnotationWithBackendCallEffect.value.payload;
-
-    // Start synchronizeAnnotationWithBackend sub saga
-    const synchronizeAnnotationWithBackendSaga = synchronizeAnnotationWithBackendSagaFn(...args);
-    synchronizeAnnotationWithBackendSaga.next();
-    synchronizeAnnotationWithBackendSaga.next(false); // selecting collaborationMode = false (not Concurrent)
-    synchronizeAnnotationWithBackendSaga.next(MutexFetchingStrategy.Continuously); // select mutex fetching strategy
-    expectValueDeepEqual(
-      expect,
-      synchronizeAnnotationWithBackendSaga.next(saveQueue),
-      call(sendSaveRequestToServer, true),
-    );
-    synchronizeAnnotationWithBackendSaga.next({
-      numberOfSentItems: saveQueue.length,
-      hadConflict: false,
-    });
-    expectValueDeepEqual(
-      expect,
-      synchronizeAnnotationWithBackendSaga.next([]), // select save queue
-      put(snapshotAnnotationStateForNextRebaseAction()),
-    );
-    expectValueDeepEqual(
-      expect,
-      synchronizeAnnotationWithBackendSaga.next(), // select save queue
-      put(setSaveBusyAction(false)),
-    );
-    expect(synchronizeAnnotationWithBackendSaga.next().done).toBe(true);
-
-    saga.next({ shouldRetryOnConflict: false }); // select state
-    expectValueDeepEqual(expect, saga.next([]), take("PUSH_SAVE_QUEUE_TRANSACTION"));
-  });
-
-  it.skip("should dispatch doneSavingAction when mutex fetching strategy is ad hoc", () => {
-    const updateActions = [[createEdge(1, 0, 1, tracingId)], [createEdge(1, 1, 2, tracingId)]];
-    const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
-    const saga = pushSaveQueueAsync();
-    expectValueDeepEqual(expect, saga.next(), call(ensureWkInitialized));
-    saga.next(); // setLastSaveTimestampAction
-
-    saga.next(); // select state
-
-    saga.next([]);
-    saga.next(); // race
-
-    saga.next({
-      forcePush: saveNowAction(),
-    }); // select gate check
-    saga.next(true); // gate check: savingAllowed = true → setSaveBusyAction
-
-    expectValueDeepEqual(
-      expect,
-      saga.next(), // getOrCreateOperationContext
-      call(getOrCreateOperationContext, { id: "save", description: "Saving annotation" }, null),
-    );
-
-    const synchronizeAnnotationWithBackendCallEffect = saga.next(fakeCtx); // calling synchronizeAnnotationWithBackend
-    const enforceEmptySaveQueue = true;
-    expectValueDeepEqual(
-      expect,
-      synchronizeAnnotationWithBackendCallEffect,
-      call(synchronizeAnnotationWithBackend, enforceEmptySaveQueue, fakeCtx),
-    );
-    const { fn: synchronizeAnnotationWithBackendSagaFn, args } =
-      synchronizeAnnotationWithBackendCallEffect.value.payload;
-
-    // Start synchronizeAnnotationWithBackend sub saga
-    const synchronizeAnnotationWithBackendSaga = synchronizeAnnotationWithBackendSagaFn(...args);
-    synchronizeAnnotationWithBackendSaga.next();
-    synchronizeAnnotationWithBackendSaga.next(false); // selecting collaborationMode = false (not Concurrent)
-    synchronizeAnnotationWithBackendSaga.next(MutexFetchingStrategy.AdHoc); // select mutex fetching strategy
-    expectValueDeepEqual(
-      expect,
-      synchronizeAnnotationWithBackendSaga.next(saveQueue),
-      call(sendSaveRequestToServer, false),
-    );
-    synchronizeAnnotationWithBackendSaga.next({
-      numberOfSentItems: saveQueue.length,
-      hadConflict: false,
-    });
-    expectValueDeepEqual(
-      expect,
-      synchronizeAnnotationWithBackendSaga.next([]),
-      put(snapshotAnnotationStateForNextRebaseAction()),
-    );
-    expectValueDeepEqual(
-      expect,
-      synchronizeAnnotationWithBackendSaga.next(),
-      put(setSaveBusyAction(false)),
-    );
-    expect(synchronizeAnnotationWithBackendSaga.next().done).toBe(true);
-
-    saga.next({ shouldRetryOnConflict: false }); // select state
-    expectValueDeepEqual(expect, saga.next([]), take("PUSH_SAVE_QUEUE_TRANSACTION"));
-  });
-
   it("should send request to server", () => {
     const saveQueue = createSaveQueueFromUpdateActions(
       [[createEdge(1, 0, 1, tracingId)], [createEdge(1, 1, 2, tracingId)]],
@@ -452,126 +323,6 @@ describe("Save Saga", () => {
     expect(() => saga.next()).toThrow();
   });
 
-  it.skip("should send update actions right away and try to reach a state where all updates are saved", () => {
-    const updateActions = [[createEdge(1, 0, 1, tracingId)], [createEdge(1, 1, 2, tracingId)]];
-    const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
-    const saga = pushSaveQueueAsync();
-    expectValueDeepEqual(expect, saga.next(), call(ensureWkInitialized));
-
-    saga.next();
-    saga.next(); // select state
-
-    expectValueDeepEqual(expect, saga.next([]), take("PUSH_SAVE_QUEUE_TRANSACTION"));
-    saga.next(); // race
-
-    saga.next({
-      forcePush: saveNowAction(),
-    }); // select gate check
-    saga.next(true); // gate check: savingAllowed = true → setSaveBusyAction
-
-    expectValueDeepEqual(
-      expect,
-      saga.next(), // getOrCreateOperationContext
-      call(getOrCreateOperationContext, { id: "save", description: "Saving annotation" }, null),
-    );
-
-    const synchronizeAnnotationWithBackendCallEffect = saga.next(fakeCtx); // calling synchronizeAnnotationWithBackend
-    const enforceEmptySaveQueue = true;
-    expectValueDeepEqual(
-      expect,
-      synchronizeAnnotationWithBackendCallEffect,
-      call(synchronizeAnnotationWithBackend, enforceEmptySaveQueue, fakeCtx),
-    );
-    const { fn: synchronizeAnnotationWithBackendSagaFn, args } =
-      synchronizeAnnotationWithBackendCallEffect.value.payload;
-
-    // Start synchronizeAnnotationWithBackend sub saga
-    const synchronizeAnnotationWithBackendSaga = synchronizeAnnotationWithBackendSagaFn(...args);
-    synchronizeAnnotationWithBackendSaga.next();
-    synchronizeAnnotationWithBackendSaga.next(false); // selecting collaborationMode = false (not Concurrent)
-    synchronizeAnnotationWithBackendSaga.next(MutexFetchingStrategy.Continuously); // select mutex fetching strategy
-    expectValueDeepEqual(
-      expect,
-      synchronizeAnnotationWithBackendSaga.next(saveQueue),
-      call(sendSaveRequestToServer, true),
-    );
-    synchronizeAnnotationWithBackendSaga.next({
-      numberOfSentItems: saveQueue.length,
-      hadConflict: false,
-    });
-    expectValueDeepEqual(
-      expect,
-      synchronizeAnnotationWithBackendSaga.next([]), // select save queue
-      put(snapshotAnnotationStateForNextRebaseAction()),
-    );
-    expectValueDeepEqual(
-      expect,
-      synchronizeAnnotationWithBackendSaga.next(), // select save queue
-      put(setSaveBusyAction(false)),
-    );
-    expect(synchronizeAnnotationWithBackendSaga.next().done).toBe(true);
-
-    saga.next({ shouldRetryOnConflict: false }); // select state
-    expectValueDeepEqual(expect, saga.next([]), take("PUSH_SAVE_QUEUE_TRANSACTION"));
-  });
-
-  it.skip("should not try to reach state with all actions being saved when saving is triggered by a timeout", () => {
-    const updateActions = [[createEdge(1, 0, 1, tracingId)], [createEdge(1, 1, 2, tracingId)]];
-    const saveQueue = createSaveQueueFromUpdateActions(updateActions, TIMESTAMP);
-    const saga = pushSaveQueueAsync();
-    expectValueDeepEqual(expect, saga.next(), call(ensureWkInitialized));
-    saga.next();
-    saga.next(); // select state
-
-    expectValueDeepEqual(expect, saga.next([]), take("PUSH_SAVE_QUEUE_TRANSACTION"));
-    saga.next(); // race
-
-    saga.next({
-      timeout: "a placeholder",
-    }); // select gate check
-    saga.next(true); // gate check: savingAllowed = true → setSaveBusyAction
-
-    expectValueDeepEqual(
-      expect,
-      saga.next(), // getOrCreateOperationContext
-      call(getOrCreateOperationContext, { id: "save", description: "Saving annotation" }, null),
-    );
-
-    const synchronizeAnnotationWithBackendCallEffect = saga.next(fakeCtx); // calling synchronizeAnnotationWithBackend
-    const enforceEmptySaveQueue = false;
-    expectValueDeepEqual(
-      expect,
-      synchronizeAnnotationWithBackendCallEffect,
-      call(synchronizeAnnotationWithBackend, enforceEmptySaveQueue, fakeCtx),
-    );
-    const { fn: synchronizeAnnotationWithBackendSagaFn, args } =
-      synchronizeAnnotationWithBackendCallEffect.value.payload;
-
-    // Start synchronizeAnnotationWithBackend sub saga
-    const synchronizeAnnotationWithBackendSaga = synchronizeAnnotationWithBackendSagaFn(...args);
-    synchronizeAnnotationWithBackendSaga.next();
-    synchronizeAnnotationWithBackendSaga.next(false); // selecting collaborationMode = false (not Concurrent)
-    synchronizeAnnotationWithBackendSaga.next(MutexFetchingStrategy.Continuously); // select mutex fetching strategy
-    synchronizeAnnotationWithBackendSaga.next(saveQueue.length); // select save queue length
-    expectValueDeepEqual(
-      expect,
-      synchronizeAnnotationWithBackendSaga.next(saveQueue),
-      call(sendSaveRequestToServer, true),
-    );
-
-    expectValueDeepEqual(
-      expect,
-      synchronizeAnnotationWithBackendSaga.next({
-        numberOfSentItems: saveQueue.length,
-        hadConflict: false,
-      }),
-      put(setSaveBusyAction(false)),
-    );
-    expect(synchronizeAnnotationWithBackendSaga.next().done).toBe(true);
-
-    saga.next([]);
-  });
-
   it("should remove the correct update actions", () => {
     const saveQueue = createSaveQueueFromUpdateActions(
       [[updateActiveNode(initialState.annotation)], [updateActiveNode(initialState.annotation)]],
@@ -656,11 +407,10 @@ describe("Save Saga", () => {
 describe("synchronizeAnnotationWithBackend (integration)", () => {
   beforeEach(() => {
     vi.mocked(sendSaveRequestWithToken).mockResolvedValue({} as any);
-    vi.spyOn(saveMutexModule, "getCurrentMutexFetchingStrategy").mockImplementation(
-      function* () {
-        return MutexFetchingStrategy.Continuously;
-      } as any,
-    );
+    vi.spyOn(saveMutexModule, "getCurrentMutexFetchingStrategy").mockImplementation(function* () {
+      yield null; // dummy yield to avoid linting complaint
+      return MutexFetchingStrategy.Continuously;
+    } as any);
   });
 
   afterEach(() => {
@@ -682,11 +432,10 @@ describe("synchronizeAnnotationWithBackend (integration)", () => {
   });
 
   it("returns { hadConflict: true } on 409 with AdHoc strategy", async () => {
-    vi.spyOn(saveMutexModule, "getCurrentMutexFetchingStrategy").mockImplementation(
-      function* () {
-        return MutexFetchingStrategy.AdHoc;
-      } as any,
-    );
+    vi.spyOn(saveMutexModule, "getCurrentMutexFetchingStrategy").mockImplementation(function* () {
+      yield null; // dummy yield to avoid linting complaint
+      return MutexFetchingStrategy.AdHoc;
+    } as any);
     vi.mocked(sendSaveRequestWithToken).mockRejectedValue({ status: 409 });
 
     const saveQueue = createSaveQueueFromUpdateActions(

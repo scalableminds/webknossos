@@ -67,7 +67,7 @@ message VolumeTracing {
   optional bool volumeBucketDataHasChanged = 24; // The volume bucket data has been edited at least once
   // Unused and not persisted. The fronted manages this itself and it initially defaults to false on every reload. 
   // If true, segments that are not registered will be hidden.
-  optional bool hideUnregisteredSegments = 25; 
+  optional bool UNUSED_hideUnregisteredSegments = 25; 
   repeated VolumeUserStateProto userStates = 26;
 }
 

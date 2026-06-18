@@ -125,7 +125,7 @@ case class UpdateTracingVolumeAction(
       largestSegmentId = largestSegmentId,
       zoomLevel = zoomLevel,
       editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(editPositionAdditionalCoordinates),
-      hideUnregisteredSegments = hideUnregisteredSegments
+      uNUSEDHideUnregisteredSegments = hideUnregisteredSegments
     )
 }
 

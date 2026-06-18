@@ -529,10 +529,12 @@ const descriptionFns: Record<
     };
   },
   updateVolumeBucketDataHasChanged: (
-    _action: AsServerAction<UpdateVolumeBucketDataHasChangedUpdateAction>,
+    action: AsServerAction<UpdateVolumeBucketDataHasChangedUpdateAction>,
   ): Description => {
     return {
-      description: "Edited the volume data.",
+      description: action.value.volumeBucketDataHasChanged
+        ? "Edited the volume data."
+        : "Reset volume data to an unmodified state.",
       icon: <EditOutlined />,
     };
   },

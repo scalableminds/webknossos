@@ -6,7 +6,9 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import play.api.libs.json.{Format, JsError, JsResult, JsString, JsSuccess, JsValue}
 import play.api.mvc.{PathBindable, QueryStringBindable}
 
+import java.util.concurrent.atomic.AtomicInteger
 import scala.concurrent.ExecutionContext
+import scala.util.Random
 
 // Follows BSON ObjectId spec https://github.com/mongodb/specifications/blob/master/source/bson-objectid/objectid.md#design-rationale
 
@@ -15,12 +17,12 @@ case class ObjectId(id: String) {
 }
 
 object ObjectId extends FoxImplicits {
-  private lazy val atomicCounter = new java.util.concurrent.atomic.AtomicInteger(scala.util.Random.nextInt(0x1000000))
+  private lazy val atomicCounter = new AtomicInteger(Random.nextInt(0x1000000))
   private lazy val HEX_CHARS: Array[Char] = "0123456789abcdef".toCharArray
 
   private lazy val processRandomBytes: Array[Byte] = {
     val bytes = Array.ofDim[Byte](5)
-    scala.util.Random.nextBytes(bytes)
+    Random.nextBytes(bytes)
     bytes
   }
 

@@ -19,7 +19,7 @@ export const AiJobsDrawer = ({ isOpen }: { isOpen: boolean }) => {
   const orgaHasAiPlan = useWkSelector((state) => hasAiPlan(state.activeOrganization));
   const activeUser = useWkSelector((state) => state.activeUser);
   const isSuperUser = activeUser?.isSuperUser ?? false;
-  const {token} = theme.useToken();
+  const { token } = theme.useToken();
 
   const ai_job_drawer_state = useWkSelector((state) => state.uiInformation.aIJobDrawerState);
   const canTrainModels = isSuperUser || orgaHasAiPlan;

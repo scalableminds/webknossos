@@ -32,8 +32,6 @@ import splitBoundaryMeshSaga from "./split_boundary_mesh_saga";
 import { warnIfEmailIsUnverified } from "./user_saga";
 import window from "libs/window";
 
-window.DEBUG_STR = "";
-
 let rootSagaCrashed = false;
 export default function* rootSaga(): Saga<void> {
   while (true) {

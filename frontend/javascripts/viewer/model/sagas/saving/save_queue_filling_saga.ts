@@ -145,28 +145,17 @@ export function* setupSavingForTracingType(
     // Afterwards, we prioritize consumption of tracingActionChannel since we
     // don't want to eply to the ENSURE_TRACINGS_WERE_DIFFED_TO_SAVE_QUEUE action
     // if there are unprocessed user actions.
-    console.log(window.DEBUG_STR + "[FILL] A) Before race - waiting for action");
     const [finishedRebaseAction, _tracingAction, newEnsureAction] = yield* race([
       take(finishedRebaseActionChannel),
       take(tracingActionChannel),
       take(ensureDiffedChannel),
     ]);
-    console.log(
-      window.DEBUG_STR +
-        "[FILL] B) After race - finishedRebaseAction: " +
-        (finishedRebaseAction != null) +
-        ", newEnsureAction: " +
-        (newEnsureAction != null),
-    );
     if (finishedRebaseAction != null) {
-      console.log(window.DEBUG_STR + "[FILL] C) Handling finishedRebaseAction, flushing");
       yield* flush(finishedRebaseActionChannel);
       prevTracing = yield* getTracing();
-      console.log(window.DEBUG_STR + "[FILL] C) Rebase finished, continuing");
       continue;
     }
     if (newEnsureAction != null) {
-      console.log(window.DEBUG_STR + "[FILL] D) Handling newEnsureAction, flushing remaining");
       // Consume entire channel so that we know which ensureActions we
       // can resolve after diffing. New "ensureActions" that might arrive
       // during diffing, will be buffered and should kick-off new diffing
@@ -184,11 +173,9 @@ export function* setupSavingForTracingType(
     // for the save queue. All buffered actions in tracingActionBuffer can
     // be flushed away, because it won't make sense to diff again when
     // `tracing` cannot have changed without a new tracingActionChannel entry.
-    console.log(window.DEBUG_STR + "[FILL] E) Before tracingActionBuffer flush");
     tracingActionBuffer.flush();
 
     const allowSave = yield* select(mayAddToSaveQueue);
-    console.log(window.DEBUG_STR + "[FILL] F) Checking if save allowed: " + allowSave);
     if (!allowSave) {
       yield* call(resolveEnsureDiffedActions);
       // Note that we completely ignore changes if adding to save queue
@@ -197,21 +184,13 @@ export function* setupSavingForTracingType(
     }
     const tracing = yield* getTracing();
 
-    console.log(window.DEBUG_STR + "[FILL] G) Before diffing");
     const items = compactUpdateActions(
       Array.from(yield* call(performDiffTracing, prevTracing, tracing)),
       prevTracing,
       tracing,
     );
-    console.log(window.DEBUG_STR + "[FILL] H) Diffing complete, items: " + items.length);
 
     if (items.length > 0) {
-      console.log(
-        window.DEBUG_STR +
-          "[FILL] I) Pushing save queue transaction with " +
-          items.length +
-          " items",
-      );
       yield* put(pushSaveQueueTransaction(items));
     }
 

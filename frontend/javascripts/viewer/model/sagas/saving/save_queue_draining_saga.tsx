@@ -72,9 +72,6 @@ export function* pushSaveQueueAsync(): Saga<never> {
     saveQueue = yield* select((state) => state.save.queue);
 
     if (saveQueue.length === 0) {
-      console.log(
-        window.DEBUG_STR + "[DRAIN] A) Queue empty, waiting for PUSH_SAVE_QUEUE_TRANSACTION",
-      );
       if (loopCounter % 100 === 0) {
         // See https://github.com/scalableminds/webknossos/pull/6076 (or 82e16e1) for an explanation
         // of this delay call.
@@ -82,36 +79,24 @@ export function* pushSaveQueueAsync(): Saga<never> {
       }
 
       yield* take("PUSH_SAVE_QUEUE_TRANSACTION");
-      console.log(
-        window.DEBUG_STR +
-          "[DRAIN] B) PUSH_SAVE_QUEUE_TRANSACTION received, flushing saveNowChannel",
-      );
       // The save queue was empty and just got filled. Ignore any pre-existing saveNow actions from
       // the buffer as we don't want to immediately save now (new SAVE_NOW actions are needed for that.
       // todop (lo pri): if we remove this flush, two subsequent save_now actions cause problems.
       // why are these two save_now actions there in the first place?
       yield* flush(saveNowChannel);
-      console.log(window.DEBUG_STR + "[DRAIN] C) Flushed saveNowChannel");
     }
 
-    console.log(window.DEBUG_STR + "[DRAIN] D) Before race - waiting for timeout or forcePush");
     const { forcePush: firstForcePush } = yield* race({
       timeout: delay(PUSH_THROTTLE_TIME),
       forcePush: take(saveNowChannel),
     });
 
-    console.log(
-      window.DEBUG_STR + "[DRAIN] E) After race, firstForcePush: " + (firstForcePush != null),
-    );
     let bestForcePush: SaveNowAction | undefined;
     if (firstForcePush != null) {
-      console.log(
-        window.DEBUG_STR + "[DRAIN] F) firstForcePush is present, flushing remaining actions",
-      );
+
       const remainingActions = yield* flush(saveNowChannel);
       const allActions = [firstForcePush, ...remainingActions];
       bestForcePush = allActions.find((a) => a.operationContext != null) ?? allActions.at(-1)!;
-      console.log(window.DEBUG_STR + "[DRAIN] G) Selected bestForcePush");
     }
 
     yield* waitFor(maySendSaveRequest);

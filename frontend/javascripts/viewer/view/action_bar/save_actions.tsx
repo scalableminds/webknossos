@@ -10,7 +10,10 @@ import { useDispatch } from "react-redux";
 import { type APIUser, TracingTypeEnum } from "types/api_types";
 import { ControlModeEnum } from "viewer/constants";
 import UrlManager from "viewer/controller/url_manager";
-import { isUserInterfaceBlocked, mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
+import {
+  isUserInterfaceBlocked,
+  mayEditAnnotation,
+} from "viewer/model/accessors/annotation_accessor";
 import { enforceSkeletonTracing } from "viewer/model/accessors/skeletontracing_accessor";
 import { getTracingType } from "viewer/model/accessors/tracing_accessor";
 import { setSkeletonTracingAction } from "viewer/model/actions/skeletontracing_actions";

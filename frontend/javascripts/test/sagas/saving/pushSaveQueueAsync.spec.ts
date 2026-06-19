@@ -1,7 +1,10 @@
 import { sleep } from "libs/utils";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
-import { delay, put } from "typed-redux-saga";
-import { saveNowAction } from "viewer/model/actions/save_actions";
+import { actionChannel, delay, put } from "typed-redux-saga";
+import {
+  dispatchEnsureTracingsWereDiffedToSaveQueueAction,
+  saveNowAction,
+} from "viewer/model/actions/save_actions";
 import { createNodeAction } from "viewer/model/actions/skeletontracing_actions";
 import { call, take } from "viewer/model/sagas/effect_generators";
 import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
@@ -128,4 +131,40 @@ describe("pushSaveQueueAsync (integration) - 1", () => {
     });
     await task.toPromise();
   });
+
+  it<WebknossosTestContext>(
+    "sends multiple save requests on saveNow when save queue was filled during saving",
+    { timeout: 10_000 },
+    async (context) => {
+      const task = startSaga(function* () {
+        context.mocks.sendSaveRequestWithToken.mockImplementation(() => sleep(100));
+        const callsBefore = context.mocks.sendSaveRequestWithToken.mock.calls.length;
+
+        // Create a node and start saving
+        yield put(createNodeAction([1, 1, 1], [], [0, 0, 0], 0, 0));
+        // Without the following line, the test becomes flaky under high CPU load
+        // because the diffing saga is executed only after the saveNow() action
+        // is dispatched below. Then, the saveNow action will be ignored because
+        // nothing is in the save queue yet.
+        yield call(
+          dispatchEnsureTracingsWereDiffedToSaveQueueAction,
+          Store.dispatch,
+          Store.getState().annotation,
+        );
+
+        // Kick off saving.
+        yield put(saveNowAction());
+
+        // Create another node while saving is active.
+        yield delay(50);
+        const channel = yield actionChannel("UNREGISTER_OPERATION");
+        Store.dispatch(createNodeAction([1, 1, 1], [], [0, 0, 0], 0, 0));
+
+        // Wait for saving to be done.
+        yield* take(channel);
+        expect(context.mocks.sendSaveRequestWithToken.mock.calls.length).toEqual(callsBefore + 2);
+      });
+      await task.toPromise();
+    },
+  );
 });

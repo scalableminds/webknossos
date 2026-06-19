@@ -196,7 +196,7 @@ export function isUserInterfaceBlocked(state: WebknossosState): boolean {
     return false;
   }
 
-  const { activeOperations, childOperations } = state.operationContext;
+  const { activeOperations } = state.operationContext;
   if (activeOperations.length === 0) {
     // No operation is going on anyway.
     return false;

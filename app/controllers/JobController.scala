@@ -9,7 +9,6 @@ import models.dataset.{DataStoreDAO, DatasetDAO, DatasetLayerAdditionalAxesDAO, 
 import models.job._
 import models.organization.{CreditTransactionDAO, CreditTransactionService, OrganizationDAO, PricingPlan}
 import models.user.{MultiUserDAO, UserService}
-import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.{WkEnv, WkSilhouetteEnvironment}
 import telemetry.SlackNotificationService
@@ -23,6 +22,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.dataformats.zarr.Zarr3OutputHelper
 import com.scalableminds.webknossos.datastore.datareaders.{AxisOrder, FullAxisOrder, NDBoundingBox}
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
+import play.api.libs.json.{JsObject, JsValue, Json, OFormat}
 
 object MovieResolutionSetting extends ExtendedEnumeration {
   val SD, HD = Value
@@ -39,8 +39,6 @@ case class AnimationJobOptions(
     meshes: JsValue,
     movieResolution: MovieResolutionSetting.Value,
     cameraPosition: CameraPositionSetting.Value,
-    intensityMin: Double,
-    intensityMax: Double,
     magForTextures: Vec3Int,
     annotationId: Option[ObjectId],
     includeSkeletons: Boolean,
@@ -131,13 +129,18 @@ class JobController @Inject()(jobDAO: JobDAO,
     } yield Ok(js)
   }
 
+  /*
+   * Users may retry their failed jobs once (a second failure is likely persistent,
+   * so they are asked to contact administrators instead). Super users may always retry.
+   */
   def retry(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- Fox.fromBool(wkconf.Features.jobsEnabled) ?~> Msg.Job.notEnabled
-      _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
-      job <- jobDAO.findOne(id)
+      job <- jobDAO.findOne(id) ?~> Msg.Job.notFound
+      multiUser <- multiUserDAO.findOne(request.identity._multiUser)
+      _ <- Fox.fromBool(multiUser.isSuperUser || job.lastRetry.isEmpty) ?~> Msg.Job.alreadyRetried ~> FORBIDDEN
       _ <- creditTransactionService.reserveCreditsForRetry(job._id)
-      _ <- jobDAO.retryOne(id)
+      _ <- jobDAO.retryOne(id, retriedBySuperUser = multiUser.isSuperUser)
       js <- jobService.publicWrites(job)
     } yield Ok(js)
   }
@@ -421,8 +424,6 @@ class JobController @Inject()(jobDAO: JobDAO,
             "meshes" -> animationJobOptions.meshes,
             "movie_resolution" -> animationJobOptions.movieResolution,
             "camera_position" -> animationJobOptions.cameraPosition,
-            "intensity_min" -> animationJobOptions.intensityMin,
-            "intensity_max" -> animationJobOptions.intensityMax,
             "mag_for_textures" -> animationJobOptions.magForTextures,
             "annotation_id" -> animationJobOptions.annotationId,
             "include_skeletons" -> animationJobOptions.includeSkeletons,

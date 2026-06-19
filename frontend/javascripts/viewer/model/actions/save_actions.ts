@@ -260,6 +260,8 @@ export const subscribeToAnnotationMutexAction = (subscriptionId: number, callerI
     callerId,
   }) as const;
 
+// TODO #9389: The action is not really needed currently. This might change
+// when the mutex state is moved to the store, though (as suggested in the linked issue).
 export const unsubscribeFromAnnotationMutexAction = (subscriptionId: number) =>
   ({
     type: "UNSUBSCRIBE_FROM_ANNOTATION_MUTEX",

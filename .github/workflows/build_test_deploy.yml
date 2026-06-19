@@ -99,10 +99,9 @@ jobs:
         run: tools/assert-complete-migrations.sh
       - name: Assert no 'SELECT *'  are present in scala files
         run: tools/assert-no-select-asterisk-present.sh
-
-      - name: Lint backend code and check formatting
-        run: sbt ";scapegoat; util/scapegoat; webknossosTracingstore/scapegoat; webknossosDatastore/scapegoat; scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
-
+      # Backend format check is currently disabled after scala 3 upgrade, see https://github.com/scalableminds/webknossos/issues/9606
+      # - name: Check backend formatting
+      #   run: sbt "scalafmtCheck; util/scalafmtCheck; webknossosTracingstore/scalafmtCheck; webknossosDatastore/scalafmtCheck"
       - name: Run backend unit tests
         run: sbt -v "testOnly backend.*"
 

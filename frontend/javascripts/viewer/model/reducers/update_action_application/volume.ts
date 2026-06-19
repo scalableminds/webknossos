@@ -10,7 +10,7 @@ import {
   removeSegmentAction,
   setActiveCellAction,
   setSegmentGroupsAction,
-  setVolumeBucketDataHasBeenChangedAction,
+  setVolumeBucketDataHasChangedAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
 import type {
@@ -76,7 +76,7 @@ function applySingleAction(
     }
     case "updateVolumeBucketDataHasChanged": {
       // The updateVolumeBucketDataHasChanged update action can only set the flag to true. Never to false.
-      return VolumeTracingReducer(state, setVolumeBucketDataHasBeenChangedAction(actionTracingId));
+      return VolumeTracingReducer(state, setVolumeBucketDataHasChangedAction(actionTracingId));
     }
     case "createSegment": {
       const segment = ua.value;

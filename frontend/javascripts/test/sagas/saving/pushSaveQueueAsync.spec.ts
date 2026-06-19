@@ -1,4 +1,5 @@
 import { sleep } from "libs/utils";
+import window from "libs/window";
 import { setupWebknossosForTesting, type WebknossosTestContext } from "test/helpers/apiHelpers";
 import { actionChannel, delay, put } from "typed-redux-saga";
 import {
@@ -136,16 +137,21 @@ describe("pushSaveQueueAsync (integration) - 1", () => {
     "sends multiple save requests on saveNow when save queue was filled during saving",
     { timeout: 10_000 },
     async (context) => {
+      window.DEBUG_STR = "[DEBUG] ";
       const task = startSaga(function* () {
         context.mocks.sendSaveRequestWithToken.mockImplementation(() => sleep(100));
         const callsBefore = context.mocks.sendSaveRequestWithToken.mock.calls.length;
 
+        console.log(window.DEBUG_STR + "[SPEC] A) Before Create Node Action");
         // Create a node and start saving
         yield put(createNodeAction([1, 1, 1], [], [0, 0, 0], 0, 0));
         // Without the following line, the test becomes flaky under high CPU load
         // because the diffing saga is executed only after the saveNow() action
         // is dispatched below. Then, the saveNow action will be ignored because
         // nothing is in the save queue yet.
+        console.log(
+          window.DEBUG_STR + "[SPEC] B) Before dispatchEnsureTracingsWereDiffedToSaveQueueAction",
+        );
         yield call(
           dispatchEnsureTracingsWereDiffedToSaveQueueAction,
           Store.dispatch,
@@ -154,14 +160,19 @@ describe("pushSaveQueueAsync (integration) - 1", () => {
 
         // Kick off saving.
         yield put(saveNowAction());
+        console.log(window.DEBUG_STR + "[SPEC] C) Before delay");
 
         // Create another node while saving is active.
         yield delay(50);
+        console.log(window.DEBUG_STR + "[SPEC] D) Before actionChannel");
         const channel = yield actionChannel("UNREGISTER_OPERATION");
+        console.log(window.DEBUG_STR + "[SPEC] E) Before second createNodeAction");
         Store.dispatch(createNodeAction([1, 1, 1], [], [0, 0, 0], 0, 0));
+        console.log(window.DEBUG_STR + "[SPEC] F) Before take(channel)");
 
         // Wait for saving to be done.
         yield* take(channel);
+        console.log(window.DEBUG_STR + "[SPEC] G) After take(channel), before expect");
         expect(context.mocks.sendSaveRequestWithToken.mock.calls.length).toEqual(callsBefore + 2);
       });
       await task.toPromise();

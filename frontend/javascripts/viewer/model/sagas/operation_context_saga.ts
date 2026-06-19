@@ -16,7 +16,7 @@ export interface OperationOptions {
   id: OperationId;
   description?: string; // human-readable label stored in Redux (e.g. "Min-cut is being computed.")
   behaviorWhenDisallowed?: "wait" | "ignore" | "raise"; // defaults to "wait"
-  // If provided, called when `pendingId` wants to start while this operation is
+  // If provided, called when another `pendingId` wants to start while this operation is
   // running. Return true to allow concurrent execution. Absent means: never allow
   // additional operations. Receives the current store state so it can make
   // state-dependent decisions without yielding (keeping the critical section atomic).

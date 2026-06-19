@@ -12,6 +12,8 @@ export type OperationId =
   | "save"
   | "rebase";
 
+export const SYNC_RELATED_OPERATION_IDS: OperationId[] = ["save", "rebase"];
+
 export type RegisterOperationAction = {
   type: "REGISTER_OPERATION";
   id: OperationId;

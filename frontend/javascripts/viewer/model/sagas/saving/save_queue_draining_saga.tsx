@@ -15,6 +15,10 @@ import { ControlModeEnum } from "viewer/constants";
 import { maySendSaveRequest } from "viewer/model/accessors/annotation_accessor";
 import { getMagInfo } from "viewer/model/accessors/dataset_accessor";
 import {
+  type OperationId,
+  SYNC_RELATED_OPERATION_IDS,
+} from "viewer/model/actions/operation_context_actions";
+import {
   dispatchEnsureHasNewestVersionAsync,
   type SaveNowAction,
   setLastSaveTimestampAction,
@@ -39,7 +43,7 @@ import {
   SAVE_RETRY_WAITING_TIME,
 } from "viewer/model/sagas/saving/save_saga_constants";
 import { Model, Store } from "viewer/singletons";
-import type { SaveQueueEntry } from "viewer/store";
+import type { SaveQueueEntry, WebknossosState } from "viewer/store";
 import { waitFor } from "../saga_helpers";
 import {
   getCurrentMutexFetchingStrategy,
@@ -128,7 +132,12 @@ export function* pushSaveQueueAsync(): Saga<never> {
     }
 
     const saveCtx = yield* getOrCreateOperationContext(
-      { id: "save", description: "Saving annotation", behaviorWhenDisallowed: "ignore" },
+      {
+        id: "save",
+        description: "Saving annotation",
+        behaviorWhenDisallowed: "ignore",
+        allowAdditionalOperation,
+      },
       operationContext,
     );
     if (saveCtx != null) {
@@ -338,6 +347,26 @@ export function* sendSaveRequestToServer(
       retryCount++;
     }
   }
+}
+
+function allowAdditionalOperation(pendingId: OperationId, state: WebknossosState) {
+  if (state.annotation.collaborationMode === "Concurrent") {
+    // In concurrent collab mode, we forbid users from editing during saving
+    // because editing would interfere with rebase operations. No new operations
+    // should be started.
+    return false;
+  }
+
+  if (SYNC_RELATED_OPERATION_IDS.includes(pendingId)) {
+    // We never want to allow starting concurrent sync related operations (saving + rebasing)
+    // as high-level operations (child operations are not checked here, since they are
+    // granted execution by passing around an existing operation context).
+    return false;
+  }
+  // The current user is the only one that is allowed to edit the annotation currently.
+  // The current save operation should not prohibit other operations that the user
+  // initiates.
+  return true;
 }
 
 function* markBucketsAsNotDirty(saveQueue: Array<SaveQueueEntry>) {

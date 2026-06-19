@@ -32,12 +32,12 @@ jobs:
       - name: Install frontend dependencies
         run: yarn install --immutable
 
-      # - name: Lint frontend code and check formatting
-      #   run: yarn run check-frontend
-      # - name: Typecheck frontend code
-      #   run: yarn typecheck
-      # - name: Check for cyclic dependencies in frontend
-      #   run: yarn check-cyclic-dependencies
+      - name: Lint frontend code and check formatting
+        run: yarn run check-frontend
+      - name: Typecheck frontend code
+        run: yarn typecheck
+      - name: Check for cyclic dependencies in frontend
+        run: yarn check-cyclic-dependencies
       - name: Run frontend tests
         run: yarn run vitest run --config vitest_spec.config.ts --coverage.enabled true --silent=passed-only
       - name:

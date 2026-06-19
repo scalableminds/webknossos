@@ -29,7 +29,7 @@ import { AnnotationTool, Toolkits } from "viewer/model/accessors/tool_accessor";
 import { setViewModeAction, updateUserSettingAction } from "viewer/model/actions/settings_actions";
 import { setThemeAction, setToolAction } from "viewer/model/actions/ui_actions";
 import { setActiveUserAction } from "viewer/model/actions/user_actions";
-import Store, { type UserConfiguration } from "viewer/store";
+import type { UserConfiguration } from "viewer/store";
 import {
   type TracingViewMenuProps,
   useTracingViewMenuItems,
@@ -140,10 +140,7 @@ export const CommandPalette = () => {
         // removing the watermark is a paid feature
         commands.push({
           name: `Toggle ${getPhraseFromCamelCaseString(key)}`,
-          // Read the current value from the store at click time instead of capturing it here,
-          // because the command list is built once and would otherwise hold a stale value.
-          command: () =>
-            dispatch(updateUserSettingAction(key, !Store.getState().userConfiguration[key])),
+          command: () => dispatch(updateUserSettingAction(key, !userConfig[key])),
           color: commandEntryColor,
         });
       }
@@ -451,10 +448,13 @@ export const CommandPalette = () => {
 
   const [commands, setCommands] = useState<CommandWithoutId[]>(allStaticCommands);
 
-  // biome-ignore lint/correctness/useExhaustiveDependencies: only rerun if allowUpdate changes
+  // biome-ignore lint/correctness/useExhaustiveDependencies: rerun when inputs that the
+  // static commands close over change. userConfig is included so the "Toggle …" commands
+  // capture the current boolean value and actually flip it instead of repeatedly applying
+  // the value that was current when the palette mounted.
   useEffect(() => {
     setCommands(allStaticCommands);
-  }, [allowUpdate]);
+  }, [allowUpdate, userConfig]);
 
   const closePalette = () => {
     setPaletteKey((prevKey) => prevKey + 1);

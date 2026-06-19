@@ -329,7 +329,7 @@ export class WebKnossosModel {
       // The dispatch of the saveNowAction IN the while loop is deliberate.
       // Otherwise if an update action is pushed to the save queue during the Utils.sleep,
       // the while loop would continue running until the next save would be triggered.
-      // todop: state.save.isBusy could be replaced by checking the ongoing (sub) operations in the store.
+      // todop (clean up): state.save.isBusy could be replaced by checking the ongoing (sub) operations in the store.
       if (!Store.getState().save.isBusy) {
         Store.dispatch(saveNowAction(operationContext));
       }

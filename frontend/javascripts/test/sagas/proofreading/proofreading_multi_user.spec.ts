@@ -1065,7 +1065,7 @@ describe("Proofreading (Multi User)", () => {
     await task.toPromise();
   });
 
-  // todop: if the previous test hangs (can be reproduced by reverting f062ad4364), the following test also does not work. this means that some clean up
+  // todop (test clean up): if the previous test hangs (can be reproduced by reverting f062ad4364), the following test also does not work. this means that some clean up
   // doesn't work properly, I assume. might be worth to investigate. f062ad4364 also introduces the resetOperationContextOnWkReady saga which should
   // be restored after the revert probably.
   it("should not create a segment item after splitting when another user performed a merge that swallows that item", async (context: WebknossosTestContext) => {

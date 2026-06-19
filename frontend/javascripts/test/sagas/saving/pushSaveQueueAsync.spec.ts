@@ -139,6 +139,12 @@ describe("pushSaveQueueAsync (integration) - 1", () => {
     async (context) => {
       const task = startSaga(function* () {
         const savingDoneChannel = yield actionChannel("UNREGISTER_OPERATION");
+
+        // sendSaveRequestWithToken is used for saving and the first request
+        // will fulfill the promise in saveRequestStartedDeferred.
+        // The first request is finished when saveRequestFinishDeferred is resolved.
+        // The second request will go through immediately (we don't need control
+        // over that).
         const saveRequestStartedDeferred = new Deferred<void, void>();
         const saveRequestFinishDeferred = new Deferred<void, void>();
         context.mocks.sendSaveRequestWithToken.mockImplementation(() => {
@@ -146,7 +152,6 @@ describe("pushSaveQueueAsync (integration) - 1", () => {
           return saveRequestFinishDeferred.promise()
         });
         const callsBefore = context.mocks.sendSaveRequestWithToken.mock.calls.length;
-
 
         // Create a node and start saving
         yield put(createNodeAction([1, 1, 1], [], [0, 0, 0], 0, 0));
@@ -165,13 +170,17 @@ describe("pushSaveQueueAsync (integration) - 1", () => {
 
         // Wait until saving started.
         yield call(() => saveRequestStartedDeferred.promise());
-        // Create another node while saving is active.
 
+        // Create another node while saving is active.
         Store.dispatch(createNodeAction([1, 1, 1], [], [0, 0, 0], 0, 0));
+
+        // Let the first save request finish.
         saveRequestFinishDeferred.resolve();
 
-        // Wait for both save requests to be done.
+        // Wait for the save operation to complete.
         yield* take(savingDoneChannel);
+        // Since the second node was created during the first save request, a second save request
+        // should have been made.
         expect(context.mocks.sendSaveRequestWithToken.mock.calls.length).toEqual(callsBefore + 2);
       });
       await task.toPromise();

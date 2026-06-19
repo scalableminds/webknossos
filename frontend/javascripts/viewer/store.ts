@@ -76,6 +76,7 @@ import OrganizationReducer from "./model/reducers/organization_reducer";
 import ProofreadingReducer from "./model/reducers/proofreading_reducer";
 import type { TreeGroup, TreeMap } from "./model/types/tree_types";
 import type { StartAiJobDrawerState } from "./view/ai_jobs/constants";
+import { OperationId } from "./model/actions/operation_context_actions";
 
 export type { BoundingBoxObject } from "types/bounding_box";
 
@@ -672,8 +673,8 @@ export type StoreDataset = APIDataset & {
 // While operations are ongoing, the UI is typically blocked for the user (except when saving
 // in non-live-collab mode).
 export type OperationContextState = {
-  readonly activeOperations: ReadonlyArray<{ readonly id: string; readonly description?: string }>;
-  readonly childOperations: ReadonlyArray<{ readonly id: string; readonly parentId: string }>;
+  readonly activeOperations: ReadonlyArray<{ readonly id: OperationId; readonly description?: string }>;
+  readonly childOperations: ReadonlyArray<{ readonly id: OperationId; readonly parentId: OperationId }>;
 };
 
 export type WebknossosState = {

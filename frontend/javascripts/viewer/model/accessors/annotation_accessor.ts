@@ -187,3 +187,28 @@ export function getUserStateForTracing<
 
   return undefined;
 }
+
+export function isUserInterfaceBlocked(state: WebknossosState): boolean {
+  if (!mayEditAnnotation(state)) {
+    // The user is not allowed to edit the annotation, anyway. No need to block the UI
+    // (would also be annoying because it would turn the cursor into a spinner when the
+    // annotation is updating to remote changes).
+    return false;
+  }
+
+  const { activeOperations, childOperations } = state.operationContext;
+  if (activeOperations.length === 0) {
+    // No operation is going on anyway.
+    return false;
+  }
+  if (state.annotation.collaborationMode !== "Concurrent") {
+    // The current user is the only one that is allowed to edit the annotation currently.
+    // If the only active operation is a save operation, the UI should not be blocked.
+    // Reminder: in concurrent collab mode, we forbid users from editing during saving
+    // because editing would interfere with rebase operations.
+    const isOnlySaveOperation = activeOperations.length === 1 && activeOperations[0].id === "save";
+    return !isOnlySaveOperation;
+  }
+  // At least one operation is ongoing and should block the user.
+  return true;
+}

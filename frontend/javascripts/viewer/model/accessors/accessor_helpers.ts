@@ -1,5 +1,4 @@
 import isEqual from "lodash-es/isEqual";
-import type { WebknossosState } from "viewer/store";
 
 /*
   Wraps a given function so that it returns the same instance on consecutive
@@ -21,12 +20,6 @@ import type { WebknossosState } from "viewer/store";
   Note that this function isn't of any use if the return type of the passed
   function is a primitive value.
  */
-export function isUserInterfaceBlocked(state: WebknossosState): boolean {
-  // todop: in readonly mode, there's no need to block. this would be annoying
-  // to users that simply view the page.
-  return state.operationContext.activeOperations.length > 0;
-}
-
 export function reuseInstanceOnEquality<R, F extends (...args: Array<any>) => R>(
   fn: F,
   equalityFunction: (arg0: R, arg1: R) => boolean = isEqual,

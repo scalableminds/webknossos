@@ -508,6 +508,7 @@ function* loadPrecomputedMeshesInChunksForLod(
       mergedGeometry.boundsTree = yield* call(computeBvhAsync, mergedGeometry);
     }
   } catch (exception) {
+    mergedGeometry?.dispose();
     mergedGeometry = null;
     console.error(`Failed to merge mesh chunks for segment ${segmentId}:`, exception);
   }

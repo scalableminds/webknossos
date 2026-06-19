@@ -215,15 +215,6 @@ export type OptionalMappingProperties = {
   isMergerModeMapping?: boolean;
 };
 
-// Mapping activation has two phases:
-//  1. setMappingAction requests that a mapping (identified by name) becomes active. It does
-//     NOT carry the actual mapping data; the mapping saga loads the data and then dispatches
-//     setMappingDataAction.
-//  2. setMappingDataAction carries the actual mapping data (the Map). It is dispatched by the
-//     loader (see above) or directly by code that already holds the data (front-end API,
-//     merger mode, proofreading, save/rebase restores). It triggers the texture update and the
-//     finishMappingInitializationAction (status ACTIVATING -> ENABLED).
-
 export const setMappingAction = (
   layerName: string,
   mappingName: string | null | undefined,

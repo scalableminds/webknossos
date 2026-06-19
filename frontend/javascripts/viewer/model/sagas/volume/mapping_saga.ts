@@ -147,6 +147,15 @@ const takeLatestMappingChange = (
   });
 };
 
+// Mapping activation has two phases:
+//  1. setMappingAction requests that a mapping (identified by name) becomes active. It does
+//     NOT carry the actual mapping data; the mapping saga loads the data and then dispatches
+//     setMappingDataAction.
+//  2. setMappingDataAction carries the actual mapping data (the Map). It is dispatched after
+//     a setMappingAction or directly by code that already holds the data (front-end API,
+//     merger mode, proofreading, save/rebase restores). It triggers the texture update and the
+//     finishMappingInitializationAction (status ACTIVATING -> ENABLED).
+
 export default function* watchActivatedMappings(): Saga<void> {
   const oldActiveMappingByLayer = {
     value: yield* select((state) => state.temporaryConfiguration.activeMappingByLayer),
@@ -468,12 +477,10 @@ function* handleSetMapping(
 }
 
 function* finishMappingActivation(action: SetMappingDataAction): Saga<void> {
-  // Phase 2 of mapping activation: the mapping data has been stored in the store (by the
+  // Phase 2 of mapping activation: The mapping data has been stored in the store (by the
   // SET_MAPPING_DATA reducer). Here we update the mapping textures (a no-op if the layer's
   // textures have not been set up yet, e.g. in tests without a GPU) and finish the activation
   // (status ACTIVATING -> ENABLED).
-  // Previously this was driven by a store-property listener in mappings.ts, which neither ran in
-  // tests nor reacted to no-op (same-identity) mappings. See #9064.
   const { layerName, mappingName, mapping, mappingColors, isMergerModeMapping } = action;
 
   // Mirror the gate of the SET_MAPPING_DATA reducer.

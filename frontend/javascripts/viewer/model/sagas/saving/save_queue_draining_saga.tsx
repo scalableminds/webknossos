@@ -7,7 +7,6 @@ import { sendSaveRequestWithToken } from "admin/rest_api";
 import Date from "libs/date";
 import ErrorHandling from "libs/error_handling";
 import Toast from "libs/toast";
-import window from "libs/window";
 import window, { alert, document, location } from "libs/window";
 import memoizeOne from "memoize-one";
 import messages from "messages";
@@ -93,7 +92,6 @@ export function* pushSaveQueueAsync(): Saga<never> {
 
     let bestForcePush: SaveNowAction | undefined;
     if (firstForcePush != null) {
-
       const remainingActions = yield* flush(saveNowChannel);
       const allActions = [firstForcePush, ...remainingActions];
       bestForcePush = allActions.find((a) => a.operationContext != null) ?? allActions.at(-1)!;

@@ -149,7 +149,7 @@ describe("pushSaveQueueAsync (integration) - 1", () => {
         const saveRequestFinishDeferred = new Deferred<void, void>();
         context.mocks.sendSaveRequestWithToken.mockImplementation(() => {
           saveRequestStartedDeferred.resolve();
-          return saveRequestFinishDeferred.promise()
+          return saveRequestFinishDeferred.promise();
         });
         const callsBefore = context.mocks.sendSaveRequestWithToken.mock.calls.length;
 

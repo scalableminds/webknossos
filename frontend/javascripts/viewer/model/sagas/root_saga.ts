@@ -30,7 +30,6 @@ import { resetOperationContextOnWkReady } from "./operation_context_saga";
 import { toggleErrorHighlighting } from "./saving/save_queue_draining_saga";
 import splitBoundaryMeshSaga from "./split_boundary_mesh_saga";
 import { warnIfEmailIsUnverified } from "./user_saga";
-import window from "libs/window";
 
 let rootSagaCrashed = false;
 export default function* rootSaga(): Saga<void> {

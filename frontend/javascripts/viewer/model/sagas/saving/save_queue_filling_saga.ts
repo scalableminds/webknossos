@@ -3,7 +3,6 @@
  * with update actions that need to be saved to the server. Note that for proofreading,
  * the proofreading saga is directly responsible for filling the queue.
  */
-import window from "libs/window";
 import { buffers } from "redux-saga";
 import { actionChannel, call, flush, put, race, take } from "typed-redux-saga";
 import { mayAddToSaveQueue } from "viewer/model/accessors/annotation_accessor";

@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{Tracingstores, TracingstoresRow, GetResultTracingstoresRow}
 import com.typesafe.scalalogging.LazyLogging
 
 import javax.inject.Inject
@@ -91,7 +91,7 @@ class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       parsed <- parseFirst(r, name)
     } yield parsed
 
-  def findOneByUrl(url: String)(implicit ctx: DBAccessContext): Fox[TracingStore] =
+  def findOneByUrl(url: String)(using ctx: DBAccessContext): Fox[TracingStore] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM webknossos.tracingstores_ WHERE url = $url AND $accessQuery".as[TracingstoresRow])
@@ -100,7 +100,7 @@ class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
 
   def findFirst: Fox[TracingStore] =
     for {
-      all <- findAll(GlobalAccessContext)
+      all <- findAll(using GlobalAccessContext)
       first <- all.headOption.toFox
     } yield first
 

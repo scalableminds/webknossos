@@ -41,7 +41,6 @@ import type { Vector3 } from "viewer/constants";
 import { getSceneControllerOrNull } from "viewer/controller/scene_controller_provider";
 import {
   getColorLayers,
-  getEffectiveIntensityRange,
   getLayerByName,
   getMagInfo,
   is2dDataset,
@@ -295,13 +294,6 @@ function CreateAnimationModal(props: Props) {
         });
     });
 
-    // Submit the configured min/max intensity info to support float datasets
-    const [intensityMin, intensityMax] = getEffectiveIntensityRange(
-      dataset,
-      selectedColorLayerName,
-      state.datasetConfiguration,
-    );
-
     // the actual rendering bounding box in Blender is the intersection of the selected user bounding box and the color layer's outer bounds
     const colorLayerBB = new BoundingBox(
       computeBoundingBoxFromBoundingBoxObject(selectedColorLayer.boundingBox),
@@ -314,8 +306,6 @@ function CreateAnimationModal(props: Props) {
     const animationOptions: RenderAnimationOptions = {
       layerName: selectedColorLayerName,
       meshes,
-      intensityMin,
-      intensityMax,
       magForTextures,
       boundingBox: computeBoundingBoxObjectFromBoundingBox(boundingBox),
       includeWatermark: isWatermarkEnabled,

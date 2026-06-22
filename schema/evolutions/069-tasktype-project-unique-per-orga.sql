@@ -17,7 +17,7 @@ ALTER TABLE webknossos.projects ALTER COLUMN _organization SET NOT NULL;
 ALTER TABLE webknossos.tasktypes ALTER COLUMN _organization SET NOT NULL;
 
 ALTER TABLE webknossos.taskTypes ADD CONSTRAINT tasktypes_summary__organization_key UNIQUE(summary, _organization);
--- Project name uniqueness only enforced in scala, to allow re-using names of deleted ones.
+-- Project name uniqueness only enforced in scala, to allow reusing names of deleted ones.
 -- Compare https://github.com/scalableminds/webknossos/issues/5388
 
 CREATE VIEW webknossos.projects_ AS SELECT * FROM webknossos.projects WHERE NOT isDeleted;

@@ -33,7 +33,7 @@ class DatasetArrayBucketProvider(dataLayer: StaticLayer,
   // Cache the DatasetArrays of all mags of this layer
   private lazy val datasetArrayCache = AlfuCache[Vec3Int, DatasetArray](maxCapacity = 50)
 
-  def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
+  def load(readInstruction: DataReadInstruction)(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       datasetArray <- datasetArrayCache.getOrLoad(readInstruction.bucket.mag,
                                                   _ => openDatasetArrayWithTimeLogging(readInstruction))
@@ -47,7 +47,7 @@ class DatasetArrayBucketProvider(dataLayer: StaticLayer,
     } yield bucketData
 
   private def openDatasetArrayWithTimeLogging(
-      readInstruction: DataReadInstruction)(implicit ec: ExecutionContext, tc: TokenContext): Fox[DatasetArray] = {
+      readInstruction: DataReadInstruction)(using ec: ExecutionContext, tc: TokenContext): Fox[DatasetArray] = {
     val before = Instant.now
     val result = openDatasetArray(readInstruction)
     result.onComplete { _ =>
@@ -61,7 +61,7 @@ class DatasetArrayBucketProvider(dataLayer: StaticLayer,
     result
   }
 
-  private def openDatasetArray(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext,
+  private def openDatasetArray(readInstruction: DataReadInstruction)(using ec: ExecutionContext,
                                                                      tc: TokenContext): Fox[DatasetArray] = {
     val magLocatorOpt: Option[MagLocator] =
       dataLayer.mags.find(_.mag == readInstruction.bucket.mag)

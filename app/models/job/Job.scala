@@ -3,7 +3,7 @@ package models.job
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{Jobs, JobsRow, GetResultJobsRow}
 import models.job.JobState.JobState
 import models.job.JobCommand.JobCommand
 import play.api.libs.json.{JsObject, Json, OFormat}
@@ -154,7 +154,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
        """
 
   def findAllCompact(commandOpt: Option[JobCommand], skipForDeletedDatasets: Boolean)(
-      implicit ctx: DBAccessContext): Fox[Seq[JobCompactInfo]] =
+      using ctx: DBAccessContext): Fox[Seq[JobCompactInfo]] =
     for {
       accessQuery <- accessQueryFromAccessQWithPrefix(listAccessQ, q"j.")
       commandQuery = commandOpt.map(command => q"j.command = $command").getOrElse(q"TRUE")
@@ -305,13 +305,13 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                     ${j.created}, ${j.isDeleted})""".asUpdate)
     } yield ()
 
-  def updateManualState(id: ObjectId, manualState: JobState)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateManualState(id: ObjectId, manualState: JobState)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(q"""UPDATE webknossos.jobs SET manualState = $manualState WHERE _id = $id""".asUpdate)
     } yield ()
 
-  def retryOne(id: ObjectId, retriedBySuperUser: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def retryOne(id: ObjectId, retriedBySuperUser: Boolean)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(q"""UPDATE webknossos.jobs

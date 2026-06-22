@@ -43,7 +43,7 @@ class ShortLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
     } yield parsed
 
   // shortLink table does not have isDeleted column, so existingCollectionName won’t work
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[ShortLink] =
+  override def findOne(id: ObjectId)(using ctx: DBAccessContext): Fox[ShortLink] =
     for {
       r <- run(q"SELECT $columns FROM $collectionName WHERE _id = $id".as[ShortlinksRow])
       parsed <- parseFirst(r, id)

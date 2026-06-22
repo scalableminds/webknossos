@@ -43,14 +43,14 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
     val width = com.scalableminds.util.tools.Math.clamp(w.getOrElse(DefaultThumbnailWidth), 1, MaxThumbnailWidth)
     val height = com.scalableminds.util.tools.Math.clamp(h.getOrElse(DefaultThumbnailHeight), 1, MaxThumbnailHeight)
     for {
-      dataset <- datasetDAO.findOne(datasetIdValidated)(GlobalAccessContext)
+      dataset <- datasetDAO.findOne(datasetIdValidated)(using GlobalAccessContext)
       image <- thumbnailCachingService.getOrLoad(
         dataset._id,
         layerName,
         width,
         height,
         mappingName,
-        _ => getThumbnail(dataset, layerName, width, height, mappingName)(ec, GlobalAccessContext)
+        _ => getThumbnail(dataset, layerName, width, height, mappingName)(using ec, GlobalAccessContext)
       )
     } yield image
   }
@@ -63,7 +63,7 @@ class ThumbnailService @Inject()(datasetService: DatasetService,
       layer <- usableDataSource.dataLayers.find(_.name == layerName).toFox ?~> Msg.Dataset.Layer
         .notFound(layerName) ~> NOT_FOUND
       viewConfiguration <- datasetConfigurationService.getDatasetViewConfigurationForDataset(List.empty, dataset._id)(
-        ctx)
+        using ctx)
       (mag1BoundingBox, mag, intensityRangeOpt, colorSettingsOpt, mapping) = selectParameters(viewConfiguration,
                                                                                               usableDataSource,
                                                                                               layerName,

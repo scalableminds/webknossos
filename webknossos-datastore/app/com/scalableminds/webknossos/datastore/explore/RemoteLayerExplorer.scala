@@ -21,7 +21,7 @@ trait RemoteLayerExplorer extends FoxImplicits {
   implicit def ec: ExecutionContext
 
   def explore(remotePath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]]
+      using tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]]
 
   def name: String
 

@@ -424,9 +424,15 @@ type RebasingSuccessInfo = { successful: boolean; shouldTerminate: boolean };
 function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
   const missingUpdateActions = yield* call(fetchNewestMissingUpdateActions);
-  const annotation = yield* select((state) => state.annotation);
+  const hasRemoteUnseenChanges = missingUpdateActions.length > 0;
+
+  if (!hasRemoteUnseenChanges) {
+    // Neither a rebase nor a fast-forward is necessary since there are no remote changes to incorporate.
+    return { successful: true, shouldTerminate: false };
+  }
 
   // Ensure tracings were diffed so that the save queue can be inspected afterwards.
+  const annotation = yield* select((state) => state.annotation);
   yield dispatchEnsureTracingsWereDiffedToSaveQueueAction(
     Store.dispatch,
     annotation,
@@ -435,12 +441,6 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   // by the operationContext in which performRebasing is called (see caller).
   const saveQueueEntries = yield* select((state) => state.save.queue);
   const hasLocalUnsavedChanges = saveQueueEntries.length > 0;
-  const hasRemoteUnseenChanges = missingUpdateActions.length > 0;
-
-  if (!hasRemoteUnseenChanges) {
-    // Neither a rebase nor a fast-forward is necessary since there are no remote changes to incorporate.
-    return { successful: true, shouldTerminate: false };
-  }
 
   // Side note: In a scenario where a user has an annotation open that they are not allowed to edit but another user is actively editing,
   // this function will notice that there are missingUpdateActions and apply them. This should not trigger a full "rewinding" rebase

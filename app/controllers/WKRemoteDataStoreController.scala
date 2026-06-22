@@ -223,7 +223,7 @@ class WKRemoteDataStoreController @Inject()(
             for {
               voxelSize <- request.body.voxelSize.toFox ?~> Msg.Dataset.Upload.needsConversionMissingVoxelSize
               dataStoreClient <- datasetService.clientFor(dataset)(using GlobalAccessContext)
-              organizationBaseDirectory <- dataStoreClient.getOrganizationBaseDirectory(dataset._organization, requireLocal = true)
+              organizationBaseDirectory <- dataStoreClient.getOrganizationBaseDirectory(dataset._organization, requireAllowsUpload = true, requireLocal = true)
               _ <- jobService.submitConvertToWkwJob(updated, user, voxelSize, organizationBaseDirectory)
             } yield ()
           }
@@ -309,6 +309,7 @@ class WKRemoteDataStoreController @Inject()(
       dataStoreService.validateAccess(name, key) { dataStore =>
         implicit val ctx: DBAccessContext = GlobalAccessContext
         for {
+          // Note that root path info None will not overwrite a set value in the db.
           _ <- datasetService.updateDataSources(dataStore, List(DataSourceWithRootPathInfo(request.body, None, None)))
         } yield Ok
       }
@@ -353,9 +354,10 @@ class WKRemoteDataStoreController @Inject()(
                                key: String,
                                datasetId: ObjectId): Action[AnyContent] =
     Action.async { _ =>
-      dataStoreService.validateAccess(name, key) { _ =>
+      dataStoreService.validateAccess(name, key) { dataStore =>
         for {
           dataset <- datasetDAO.findOne(datasetId)(using GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId)
+          _ <- Fox.fromBool(dataset._dataStore == dataStore.name) ?~> Msg.notAllowed ~> FORBIDDEN
           localRootPathOpt = dataset.rootPath.filter(UPath.fromString(_).map(_.isLocal).getOrElse(false))
         } yield Ok(Json.toJson(localRootPathOpt.getOrElse(""))) // Emptystring means no local rootpath
       }

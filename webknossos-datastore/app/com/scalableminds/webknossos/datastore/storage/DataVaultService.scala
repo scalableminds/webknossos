@@ -74,7 +74,7 @@ class DataVaultService @Inject()(ws: WSClient,
   private def credentializedUPathForMag(magLocator: MagLocator)(
       implicit ec: ExecutionContext): Fox[CredentializedUPath] =
     for {
-      credentialBox <- credentialFor(magLocator: MagLocator).shiftBox
+      credentialBox <- credentialFor(magLocator).shiftBox
       magPath <- magLocator.path.toFox
       _ <- Fox.fromBool(magPath.isAbsolute) ?~> Msg.Dataset.Mag.pathNotAbsolute
     } yield CredentializedUPath(magPath, credentialBox.toOption)

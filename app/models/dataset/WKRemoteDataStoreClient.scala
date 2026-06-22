@@ -167,10 +167,11 @@ class WKRemoteDataStoreClient(dataStore: DataStore, rpc: RPC) extends LazyLoggin
     } else Fox.successful(())
   }
 
-  def getOrganizationBaseDirectory(organizationId: String, requireLocal: Boolean): Fox[UPath] =
+  def getOrganizationBaseDirectory(organizationId: String, requireAllowsUpload: Boolean = false, requireLocal: Boolean = false): Fox[UPath] =
     rpc(s"${dataStore.url}/data/getOrganizationBaseDirectory")
       .addQueryParam("organizationId", organizationId)
       .addQueryParam("requireLocal", requireLocal)
+      .addQueryParam("requireAllowsUpload", requireAllowsUpload)
       .addQueryParam("token", RpcTokenHolder.webknossosToken)
       .getWithJsonResponse[UPath]
 }

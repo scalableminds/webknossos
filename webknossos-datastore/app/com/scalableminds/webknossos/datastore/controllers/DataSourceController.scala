@@ -124,6 +124,7 @@ class DataSourceController @Inject()(
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
       for {
         dataSource <- datasetCache.getById(datasetId)
+        _ <- dataSource.getDataLayer(dataLayerName).toFox ?~> Msg.Dataset.Layer.notFound(dataLayerName)
         rootPathBox <- dsRemoteWebknossosClient.getLocalRootPathOrEmpty(datasetId).shiftBox
         exploredMappings <- rootPathBox match {
           case Full(localRootPath) => Fox.successful(mappingService.exploreMappings(localRootPath.resolve(dataLayerName)))
@@ -640,15 +641,15 @@ class DataSourceController @Inject()(
       dataSourceFromDB <- dsRemoteWebknossosClient.getDataSource(datasetId) ~> NOT_FOUND
       dataSourceId = dataSourceFromDB.id
       rootPathBox <- dsRemoteWebknossosClient.getLocalRootPathOrEmpty(datasetId).shiftBox
-      dataSourceFromDirOpt = rootPathBox.toOption.flatMap { rootPath =>
-        if (Files.exists(rootPath)) {
-          Some(
-            dataSourceService.dataSourceFromDir(
+      dataSourceFromDirOpt <- rootPathBox match {
+        case Full(rootPath) if Files.exists(rootPath)  =>
+          Fox.successful(Some(dataSourceService.dataSourceFromDir(
               rootPath,
               dataSourceId.organizationId,
               resolvePaths = true
-            ))
-        } else None
+            )))
+        case f: Failure => f.toFox
+        case _ => Fox.successful(None)
       }
       _ <- Fox.runOptional(dataSourceFromDirOpt)(ds => dsRemoteWebknossosClient.updateDataSource(ds, datasetId))
       _ = datasetCache.invalidateCache(datasetId)
@@ -661,10 +662,14 @@ class DataSourceController @Inject()(
     } yield dataSourceToReturn
 
 
-  def getOrganizationBaseDirectory(organizationId: String, requireLocal: Boolean): Action[AnyContent] = Action.async { implicit request =>
+  def getOrganizationBaseDirectory(organizationId: String, requireAllowsUpload: Boolean, requireLocal: Boolean): Action[AnyContent] = Action.async { implicit request =>
     accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
       for {
-        baseDirectory <- baseDirService.getOneForOrga(organizationId, requireLocal = requireLocal).toFox
+        baseDirectory <- baseDirService.getOneForOrga(
+          organizationId,
+          requireAllowsUpload = requireAllowsUpload,
+          requireLocal = requireLocal
+        ).toFox
       } yield Ok(Json.toJson(baseDirectory))
     }
   }

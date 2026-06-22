@@ -647,14 +647,18 @@ class DatasetService @Inject()(organizationDAO: OrganizationDAO,
           case Some(rootPath) =>
             for {
               datastore <- dataStoreFor(dataset)
-              datasetsUsingDataFromThisDir <- findDatasetsUsingDataFromDir(UPath.fromLocalPath(Path.of(rootPath)), datastore, dataset._id)
+              rootPathValidated <- UPath.fromString(rootPath).toFox
+              _ <- Fox.fromBool(rootPathValidated.isLocal)
+              datasetsUsingDataFromThisDir <- findDatasetsUsingDataFromDir(rootPathValidated, datastore, dataset._id)
               _ <- Fox.fromBool(datasetsUsingDataFromThisDir.isEmpty) ?~> s"Cannot delete dataset because ${datasetsUsingDataFromThisDir.length} other datasets reference its data: ${
                 datasetsUsingDataFromThisDir
                   .mkString(",")
               }"
               _ <- datastoreClient.deleteOnDisk(dataset._id, rootPath) ?~> Msg.Dataset.Delete.failed
             } yield ()
-          case None => Fox.successful(())
+          case None =>
+            // Non-Virtual datasets should all have root paths. In case no root path is set, we skip deleting it.
+            Fox.successful(())
         }
       }
       _ <- Fox.runIf(

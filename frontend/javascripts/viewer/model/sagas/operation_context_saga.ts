@@ -116,10 +116,11 @@ export function* createOperationContext(
     const context: OperationContext = {
       id: options.id,
       *execute<T>(saga: () => Saga<T>): Saga<T> {
-        if (consumed)
+        if (consumed) {
           throw new Error(
             `[${options.id}] context already consumed — execute() may only be called once`,
           );
+        }
         consumed = true;
         try {
           return yield* saga();

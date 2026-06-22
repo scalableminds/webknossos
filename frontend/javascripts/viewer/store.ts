@@ -666,7 +666,7 @@ export type StoreDataset = APIDataset & {
 
 // Tracks which named operations are currently running and how they relate to each other.
 // `activeOperations` is the stack of top-level operations (e.g. "PROOFREADING", "FLOODFILL").
-// An operation blocks concurrent starts of the same ID and, by default, all other operations too.
+// An operation blocks concurrent starts of the same ID and all other operations, by default.
 // `childOperations` lists sub-operations that a parent has explicitly pre-authorized to run
 // inside it (e.g. "SAVE" inside "PROOFREADING") so they bypass the normal exclusion check.
 // While operations are ongoing, the UI is typically blocked for the user (except when saving

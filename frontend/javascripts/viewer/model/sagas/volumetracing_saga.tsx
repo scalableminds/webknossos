@@ -153,7 +153,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
     const isBlocked = yield* select((state) => state.operationContext.activeOperations.length > 0);
 
     if (isBlocked) {
-      console.warn("Ignoring brush request: an operation is currently running");
+      console.warn("Ignoring brush request: An operation is currently running.");
       continue;
     }
 

@@ -30,7 +30,6 @@ import play.api.libs.json.{JsObject, Json}
 import telemetry.SlackNotificationService
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource
-import play.api.i18n.MessagesProvider
 
 import scala.concurrent.ExecutionContext
 

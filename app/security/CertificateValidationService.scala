@@ -63,7 +63,7 @@ class CertificateValidationService @Inject()(implicit ec: ExecutionContext) exte
       (for {
         certificate <- Properties.envOrNone("CERTIFICATE")
         // JwtJson already throws an error which is transformed to an empty option when the certificate is expired.
-        // In case the token is expired, tge default map will be used.
+        // In case the token is expired, the default map will be used.
         token <- JwtJson.decodeJson(certificate, publicKey, JwtOptions(expiration = false)).toOption
         featureOverrides <- Some(
           (token \ "webknossos").asOpt[Map[String, Boolean]].getOrElse(defaultConfigOverridesMap))

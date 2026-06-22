@@ -968,7 +968,7 @@ export type BucketRetrievalSource =
 export const getBucketRetrievalSourceFn =
   // The function that is passed to memoize will only be executed once
   // per layerName. This is important since the function uses reuseInstanceOnEquality
-  // to create a function that ensures that identical BucketRetrievalSource tuples will be re-used between
+  // to create a function that ensures that identical BucketRetrievalSource tuples will be reused between
   // consecutive calls.
   memoize((layerName: string) =>
     reuseInstanceOnEquality((state: WebknossosState): BucketRetrievalSource => {

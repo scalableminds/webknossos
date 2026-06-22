@@ -4,10 +4,25 @@ import AdminPage from "admin/admin_page";
 import { getUsersOrganizations } from "admin/api/organization";
 import { getShowTrainingDataLink, JobState } from "admin/job/job_list_view";
 import { getAiModels, updateAiModel } from "admin/rest_api";
-import { App, Button, Col, Flex, Input, Modal, Row, Select, Space, Table, Typography } from "antd";
+import {
+  App,
+  Button,
+  Col,
+  Flex,
+  Input,
+  Modal,
+  Row,
+  Select,
+  Space,
+  Spin,
+  Table,
+  type TableProps,
+  Typography,
+} from "antd";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
 import LinkButton from "components/link_button";
+import Markdown from "libs/markdown_adapter";
 import { useFetch } from "libs/react_helpers";
 import { useWkSelector } from "libs/react_hooks";
 import Toast from "libs/toast";
@@ -44,6 +59,59 @@ export default function AiModelListView() {
     },
   });
 
+  const columns: TableProps<AiModel>["columns"] = [
+    {
+      title: "Name",
+      dataIndex: "name",
+      key: "name",
+      render: (name: string, model: AiModel) => (
+        <Space orientation="vertical">
+          {name}
+          <FormattedId id={model.id} />
+        </Space>
+      ),
+    },
+    {
+      title: "Created at",
+      key: "created",
+      defaultSortOrder: "descend",
+      sorter: (a: AiModel, b: AiModel) => a.created - b.created,
+      render: (model: AiModel) => <FormattedDate timestamp={model.created} />,
+    },
+    {
+      title: "User",
+      dataIndex: "user",
+      key: "user",
+      render: (user: AiModel["user"]) => formatUserName(activeUser, user),
+      filters: uniq(aiModels.map((model) => formatUserName(null, model.user))).map((username) => ({
+        text: username,
+        value: username,
+      })),
+      onFilter: (value: Key | boolean, model: AiModel) =>
+        formatUserName(null, model.user).startsWith(String(value)),
+      filterSearch: true,
+    },
+    {
+      title: "Status",
+      dataIndex: "trainingJob",
+      key: "status",
+      render: (trainingJob: AiModel["trainingJob"]) =>
+        trainingJob && <JobState job={trainingJob} />,
+    },
+    {
+      title: "Comment",
+      dataIndex: "comment",
+      key: "comment",
+      render: (comment: AiModel["comment"]) => <Markdown>{comment}</Markdown>,
+    },
+    {
+      title: "Actions",
+      render: (aiModel: AiModel) =>
+        renderActionsForModel(modal, aiModel, () => setCurrentlyEditedModel(aiModel)),
+      key: "actions",
+    },
+  ];
+
   return (
     <>
       {currentlyEditedModel ? (
@@ -73,73 +141,23 @@ export default function AiModelListView() {
           />
         }
       >
-        <Table
-          rowKey={(run: AiModel) => `${run.id}`}
-          pagination={{ pageSize: 100 }}
-          columns={[
-            {
-              title: "Name",
-              dataIndex: "name",
-              key: "name",
-              render: (name: string, model: AiModel) => (
-                <Space orientation="vertical">
-                  {name}
-                  <FormattedId id={model.id} />
-                </Space>
-              ),
-            },
-            {
-              title: "Created at",
-              key: "created",
-              defaultSortOrder: "descend",
-              sorter: (a: AiModel, b: AiModel) => a.created - b.created,
-              render: (model: AiModel) => <FormattedDate timestamp={model.created} />,
-            },
-            {
-              title: "User",
-              dataIndex: "user",
-              key: "user",
-              render: (user: AiModel["user"]) => formatUserName(activeUser, user),
-              filters: uniq(aiModels.map((model) => formatUserName(null, model.user))).map(
-                (username) => ({
-                  text: username,
-                  value: username,
-                }),
-              ),
-              onFilter: (value: Key | boolean, model: AiModel) =>
-                formatUserName(null, model.user).startsWith(String(value)),
-              filterSearch: true,
-            },
-            {
-              title: "Status",
-              dataIndex: "trainingJob",
-              key: "status",
-              render: (trainingJob: AiModel["trainingJob"]) =>
-                trainingJob && <JobState job={trainingJob} />,
-            },
-            {
-              title: "Comment",
-              dataIndex: "comment",
-              key: "comment",
-            },
-            {
-              title: "Actions",
-              render: (aiModel: AiModel) =>
-                renderActionsForModel(modal, aiModel, () => setCurrentlyEditedModel(aiModel)),
-              key: "actions",
-            },
-          ]}
-          dataSource={filterWithSearchQueryAND(
-            aiModels,
-            [
-              "name",
-              "comment",
-              (model) => formatUserName(null, model.user),
-              (model) => model.trainingJob?.state || "",
-            ],
-            searchQuery,
-          )}
-        />
+        <Spin spinning={isFetching} size="large">
+          <Table
+            rowKey={(run: AiModel) => `${run.id}`}
+            pagination={{ pageSize: 100 }}
+            columns={columns}
+            dataSource={filterWithSearchQueryAND(
+              aiModels,
+              [
+                "name",
+                "comment",
+                (model) => formatUserName(null, model.user),
+                (model) => model.trainingJob?.state || "",
+              ],
+              searchQuery,
+            )}
+          />
+        </Spin>
       </AdminPage>
     </>
   );
@@ -227,7 +245,7 @@ function EditModelSharedOrganizationsModal({
       open
       onOk={submitNewSharedOrganizations}
       onCancel={onClose}
-      maskClosable={false}
+      mask={{ closable: false }}
       width={800}
     >
       <p>
@@ -245,7 +263,7 @@ function EditModelSharedOrganizationsModal({
           allowClear
           autoFocus
           style={{ minWidth: 400 }}
-          dropdownMatchSelectWidth={false}
+          popupMatchSelectWidth={false}
           placeholder="Please select"
           onChange={handleChange}
           options={options}

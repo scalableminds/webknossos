@@ -17,7 +17,7 @@ import scala.jdk.CollectionConverters._
 class FileSystemDataVault extends DataVault with FoxImplicits {
 
   override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] =
     for {
       localPath <- vaultPathToLocalPath(path)
@@ -101,7 +101,7 @@ class FileSystemDataVault extends DataVault with FoxImplicits {
       } else List.empty
     } yield listing
 
-  override def getUsedStorageBytes(path: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+  override def getUsedStorageBytes(path: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     for {
       localPath <- vaultPathToLocalPath(path)
       usedStorageBytes <- tryo(FileUtils.sizeOfAsBigInteger(localPath.toFile).longValue).toFox ?~> "Failed to get used storage bytes"

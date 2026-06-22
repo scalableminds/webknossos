@@ -48,7 +48,7 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
   private val workflowRouteRegex = "^/workflows/([^/^#]+)".r
   private val annotationRouteRegex = "^/annotations/([^/^#]+)".r
 
-  def getOpenGraphTags(uriPath: String, sharingToken: Option[String])(implicit ec: ExecutionContext,
+  def getOpenGraphTags(uriPath: String, sharingToken: Option[String])(using ec: ExecutionContext,
                                                                       ctx: DBAccessContext): Fox[OpenGraphTags] =
     for {
       tagsBox <- getOpenGraphTagsImpl(uriPath, sharingToken).shiftBox
@@ -60,16 +60,16 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
     } yield tags
 
   private def getOpenGraphTagsImpl(uriPath: String, sharingToken: Option[String])(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       ctx: DBAccessContext): Fox[OpenGraphTags] =
     for {
       (uriPathResolved, sharingTokenResolved) <- resolveShortLinkIfNeeded(uriPath, sharingToken)
       ctxWithToken = URLSharing.fallbackTokenAccessContext(sharingTokenResolved)
       pageType = detectPageType(uriPathResolved)
       tagsFox = pageType match {
-        case OpenGraphPageType.dataset => datasetOpenGraphTags(uriPathResolved, sharingTokenResolved)(ec, ctxWithToken)
+        case OpenGraphPageType.dataset => datasetOpenGraphTags(uriPathResolved, sharingTokenResolved)(using ec, ctxWithToken)
         case OpenGraphPageType.annotation =>
-          annotationOpenGraphTags(uriPathResolved, sharingTokenResolved)(ec, ctxWithToken)
+          annotationOpenGraphTags(uriPathResolved, sharingTokenResolved)(using ec, ctxWithToken)
         case OpenGraphPageType.workflow =>
           Fox.successful(defaultTags(OpenGraphPageType.workflow)) // No sharing token mechanism for workflows yet
         case OpenGraphPageType.unknown => Fox.successful(defaultTags())
@@ -103,7 +103,7 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
       case _                       => OpenGraphPageType.unknown
     }
 
-  private def datasetOpenGraphTags(uriPath: String, token: Option[String])(implicit ec: ExecutionContext,
+  private def datasetOpenGraphTags(uriPath: String, token: Option[String])(using ec: ExecutionContext,
                                                                            ctx: DBAccessContext): Fox[OpenGraphTags] =
     uriPath match {
       case datasetRoute1Regex(datasetIdStr) =>
@@ -134,7 +134,7 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
       datasetIdOpt: Option[ObjectId],
       organizationIdOpt: Option[String],
       datasetNameOpt: Option[String],
-      token: Option[String])(implicit ec: ExecutionContext, ctx: DBAccessContext) =
+      token: Option[String])(using ec: ExecutionContext, ctx: DBAccessContext) =
     for {
       dataset <- (datasetIdOpt, organizationIdOpt, datasetNameOpt) match {
         case (Some(datasetId), None, None) =>
@@ -154,7 +154,7 @@ class OpenGraphService @Inject()(datasetDAO: DatasetDAO,
       )
 
   private def annotationOpenGraphTags(uriPath: String, token: Option[String])(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       ctx: DBAccessContext): Fox[OpenGraphTags] =
     uriPath match {
       case annotationRouteRegex(annotationId) =>

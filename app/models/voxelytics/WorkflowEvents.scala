@@ -83,18 +83,18 @@ object WorkflowEvent {
 
     override def writes(a: WorkflowEvent): JsObject = a match {
       case s: RunStateChangeEvent =>
-        Json.obj("type" -> "RUN_STATE_CHANGE") ++ Json.toJson(s)(RunStateChangeEvent.jsonFormat).as[JsObject]
+        Json.obj("type" -> "RUN_STATE_CHANGE") ++ Json.toJson(s)(using RunStateChangeEvent.jsonFormat).as[JsObject]
       case s: TaskStateChangeEvent =>
-        Json.obj("type" -> "TASK_STATE_CHANGE") ++ Json.toJson(s)(TaskStateChangeEvent.jsonFormat).as[JsObject]
+        Json.obj("type" -> "TASK_STATE_CHANGE") ++ Json.toJson(s)(using TaskStateChangeEvent.jsonFormat).as[JsObject]
       case s: ChunkStateChangeEvent =>
-        Json.obj("type" -> "CHUNK_STATE_CHANGE") ++ Json.toJson(s)(ChunkStateChangeEvent.jsonFormat).as[JsObject]
+        Json.obj("type" -> "CHUNK_STATE_CHANGE") ++ Json.toJson(s)(using ChunkStateChangeEvent.jsonFormat).as[JsObject]
       case s: RunHeartbeatEvent =>
-        Json.obj("type" -> "RUN_HEARTBEAT") ++ Json.toJson(s)(RunHeartbeatEvent.jsonFormat).as[JsObject]
+        Json.obj("type" -> "RUN_HEARTBEAT") ++ Json.toJson(s)(using RunHeartbeatEvent.jsonFormat).as[JsObject]
       case s: ChunkProfilingEvent =>
-        Json.obj("type" -> "CHUNK_PROFILING") ++ Json.toJson(s)(ChunkProfilingEvent.jsonFormat).as[JsObject]
+        Json.obj("type" -> "CHUNK_PROFILING") ++ Json.toJson(s)(using ChunkProfilingEvent.jsonFormat).as[JsObject]
       case s: ArtifactFileChecksumEvent =>
         Json
-          .obj("type" -> "ARTIFACT_FILE_CHECKSUM") ++ Json.toJson(s)(ArtifactFileChecksumEvent.jsonFormat).as[JsObject]
+          .obj("type" -> "ARTIFACT_FILE_CHECKSUM") ++ Json.toJson(s)(using ArtifactFileChecksumEvent.jsonFormat).as[JsObject]
     }
   }
 }

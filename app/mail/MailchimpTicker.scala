@@ -1,7 +1,7 @@
 package mail
 
 import org.apache.pekko.actor.ActorSystem
-import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
+import com.scalableminds.util.accesscontext.GlobalAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
@@ -22,8 +22,6 @@ class MailchimpTicker @Inject()(val lifecycle: ApplicationLifecycle,
     extends IntervalScheduler
     with LazyLogging {
 
-  implicit val ctx: DBAccessContext = GlobalAccessContext
-
   override protected def tickerInterval: FiniteDuration = 1 hour
 
   override protected def tickerInitialDelay: FiniteDuration = 1 hour
@@ -31,7 +29,7 @@ class MailchimpTicker @Inject()(val lifecycle: ApplicationLifecycle,
   override protected def tick(): Fox[Unit] = {
     logger.info("Checking if any users need mailchimp tagging...")
     for {
-      multiUsers: List[MultiUser] <- multiUserDAO.findAll(GlobalAccessContext)
+      multiUsers: List[MultiUser] <- multiUserDAO.findAll(using GlobalAccessContext)
       _ = multiUsers.foreach(withErrorLogging(_, tagUserByActivity))
     } yield ()
   }

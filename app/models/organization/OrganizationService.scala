@@ -40,7 +40,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     )
 
   def publicWrites(organization: Organization, requestingUser: Option[User] = None)(
-      implicit ctx: DBAccessContext): Fox[JsObject] = {
+      using ctx: DBAccessContext): Fox[JsObject] = {
 
     val adminOnlyInfo = if (requestingUser.exists(_.isAdminOf(organization._id))) {
       Json.obj(
@@ -81,12 +81,12 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         Fox.fromBool(usedStorageBytes + additionalRequestedStorage.getOrElse(0L) <= includedStorage)) ?~> Msg.Organization.storageExceeded
     } yield ()
 
-  def findOneByInviteOrDefault(inviteOpt: Option[Invite])(implicit ctx: DBAccessContext): Fox[Organization] =
+  def findOneByInviteOrDefault(inviteOpt: Option[Invite])(using ctx: DBAccessContext): Fox[Organization] =
     inviteOpt match {
       case Some(invite) => organizationDAO.findOne(invite._organization) ?~> Msg.Organization.notFoundByInvite
       case None =>
         for {
-          allOrganizations <- organizationDAO.findAll(GlobalAccessContext)
+          allOrganizations <- organizationDAO.findAll(using GlobalAccessContext)
           _ <- Fox.fromBool(allOrganizations.length == 1) ?~> Msg.Organization.ambiguous
           defaultOrganization <- allOrganizations.headOption.toFox
         } yield defaultOrganization
@@ -97,7 +97,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     val userIsSuperUser = requestingUser.toFox.flatMap(
       user =>
         multiUserDAO
-          .findOne(user._multiUser)(GlobalAccessContext)
+          .findOne(user._multiUser)(using GlobalAccessContext)
           .flatMap(multiUser => Fox.fromBool(multiUser.isSuperUser)))
 
     // If at least one of the conditions is fulfilled, success is returned.
@@ -110,7 +110,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
 
   def assertNoOrganizationsPresent: Fox[Unit] =
     for {
-      organizations <- organizationDAO.findAll(GlobalAccessContext)
+      organizations <- organizationDAO.findAll(using GlobalAccessContext)
       _ <- Fox.fromBool(organizations.isEmpty) ?~> Msg.Organization.notEmpty
     } yield ()
 
@@ -121,7 +121,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         .flatMap(TextUtils.normalizeStrong)
         .getOrElse(normalizedName)
         .replaceAll(" ", "_")
-      existingOrganization <- organizationDAO.findOne(organizationId)(GlobalAccessContext).shiftBox
+      existingOrganization <- organizationDAO.findOne(organizationId)(using GlobalAccessContext).shiftBox
       _ <- Fox.fromBool(existingOrganization.isEmpty) ?~> Msg.Organization.idTaken
       initialPricingParameters = if (conf.Features.isWkorgInstance) (PricingPlan.Personal, Some(1), Some(50000000000L))
       else (PricingPlan.Custom, None, None)
@@ -154,12 +154,12 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
         .futureBox
 
     for {
-      datastores <- dataStoreDAO.findAll(GlobalAccessContext)
+      datastores <- dataStoreDAO.findAll(using GlobalAccessContext)
       _ <- Fox.fromFuture(Future.sequence(datastores.map(sendRPCToDataStore)))
     } yield ()
   }
 
-  def assertUsersCanBeAdded(organizationId: String, usersToAddCount: Int = 1)(implicit ctx: DBAccessContext,
+  def assertUsersCanBeAdded(organizationId: String, usersToAddCount: Int = 1)(using ctx: DBAccessContext,
                                                                               ec: ExecutionContext): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(organizationId)
@@ -180,7 +180,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
   def newUserMailRecipient(organization: Organization): Fox[String] =
     fallbackOnOwnerEmail(organization.newUserMailingList, organization)
 
-  def acceptTermsOfService(organizationId: String, version: Int)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def acceptTermsOfService(organizationId: String, version: Int)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- Fox.fromBool(conf.WebKnossos.TermsOfService.enabled) ?~> Msg.Organization.TermsOfService.notEnabled
       requiredVersion = conf.WebKnossos.TermsOfService.version
@@ -190,7 +190,7 @@ class OrganizationService @Inject()(organizationDAO: OrganizationDAO,
     } yield ()
 
   def assertIsSuperUserOrOrganizationHasAiPlan(organization: Organization, user: User)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     for {
       isSuperUser <- userService.isSuperUser(user._multiUser)
       _ <- Fox.runIf(!isSuperUser)(Fox.fromBool(organization.aiPlan.isDefined)) ?~> Msg.Job.Credits.noAiPlan

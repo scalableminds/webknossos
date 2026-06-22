@@ -43,7 +43,9 @@ function OperationContextReducer(state: WebknossosState, action: Action): Webkno
         ...state,
         operationContext: {
           ...state.operationContext,
-          childOperations: state.operationContext.childOperations.filter((c) => c.id !== action.id),
+          childOperations: state.operationContext.childOperations.filter(
+            (c) => !(c.id === action.id && c.parentId === action.parentId),
+          ),
         },
       };
     default:

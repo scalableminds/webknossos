@@ -166,7 +166,7 @@ export function borrowedContext(
       try {
         yield* saga();
       } finally {
-        yield put(unregisterChildOperationAction(childId));
+        yield put(unregisterChildOperationAction(childId, existing.id));
       }
     },
   };

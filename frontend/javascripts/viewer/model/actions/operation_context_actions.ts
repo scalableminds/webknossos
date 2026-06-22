@@ -31,6 +31,7 @@ export type RegisterChildOperationAction = {
 export type UnregisterChildOperationAction = {
   type: "UNREGISTER_CHILD_OPERATION";
   id: OperationId;
+  parentId: OperationId;
 };
 
 export type OperationContextAction =
@@ -64,7 +65,9 @@ export const registerChildOperationAction = (
 
 export const unregisterChildOperationAction = (
   id: OperationId,
+  parentId: OperationId,
 ): UnregisterChildOperationAction => ({
   type: "UNREGISTER_CHILD_OPERATION",
   id,
+  parentId,
 });

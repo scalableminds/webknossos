@@ -3,7 +3,7 @@ import Toast from "libs/toast";
 import window, { document, location } from "libs/window";
 import pick from "lodash-es/pick";
 import messages from "messages";
-import type { APIUser } from "types/api_types";
+import type { APIUser, ServerErrorMessage } from "types/api_types";
 import { getActionLog } from "viewer/model/helpers/action_logger_middleware";
 
 // Note that if you set this value to true for debugging airbrake reporting,
@@ -41,12 +41,14 @@ class ErrorWithParams extends Error {
 // will show the error to the user.
 // If some other error occurred, this function will tell the user so.
 
-// Extracts a human-readable message from an error thrown by the request module.
-// Server errors are rejected as plain objects with a `messages` array (see
-// handle_request_error_helper) and therefore don't carry a usable `.message`.
+/**
+ * Extracts a human-readable message from an error thrown by the request module.
+ * Server errors are rejected as plain objects with a `messages` array (see
+ * handle_request_error_helper) and therefore don't carry a usable `.message`.
+ */
 export function extractServerErrorMessage(error: unknown, fallback?: string): string {
   if (error != null && typeof error === "object" && "messages" in error) {
-    const serverMessages = (error as { messages?: Array<{ error?: string }> }).messages;
+    const serverMessages = (error as { messages?: Array<ServerErrorMessage> }).messages;
     const errorTexts = (serverMessages ?? [])
       .map((message) => message.error)
       .filter((text): text is string => text != null);

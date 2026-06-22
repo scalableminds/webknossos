@@ -7,52 +7,58 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import javax.inject.Inject
 import models.dataset.{DataStore, DataStoreDAO, DataStoreService}
 import models.user.{MultiUserDAO, UserService}
-import com.scalableminds.util.tools.Empty
-import play.api.libs.functional.syntax._
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent}
+import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
 
 import scala.concurrent.ExecutionContext
 
-class DataStoreController @Inject()(dataStoreDAO: DataStoreDAO,
-                                    dataStoreService: DataStoreService,
-                                    userService: UserService,
-                                    sil: Silhouette[WkEnv],
-                                    multiUserDAO: MultiUserDAO)(implicit ec: ExecutionContext)
+case class DataStoreParameters(
+    name: String,
+    url: String,
+    publicUrl: String,
+    key: String,
+    isScratch: Option[Boolean],
+    allowsUpload: Option[Boolean],
+    allowsUploadToPaths: Option[Boolean]
+)
+object DataStoreParameters {
+  implicit val jsonFormat: OFormat[DataStoreParameters] = Json.format[DataStoreParameters]
+}
+
+class DataStoreController @Inject()(
+    dataStoreDAO: DataStoreDAO,
+    dataStoreService: DataStoreService,
+    userService: UserService,
+    sil: Silhouette[WkEnv],
+    multiUserDAO: MultiUserDAO)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
-
-  private val dataStoreReads: Reads[DataStore] =
-    ((__ \ "name").read[String] and
-      (__ \ "url").read[String] and
-      (__ \ "publicUrl").read[String] and
-      (__ \ "key").read[String] and
-      (__ \ "isScratch").readNullable[Boolean] and
-      (__ \ "allowsUpload").readNullable[Boolean] and
-      (__ \ "allowsUploadToPaths").readNullable[Boolean])(DataStore.fromForm)
 
   def list: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
       dataStores <- dataStoreDAO.findAll ?~> Msg.DataStore.listFailed
       js <- Fox.serialCombined(dataStores)(d => dataStoreService.publicWrites(d))
-    } yield {
-      Ok(Json.toJson(js))
-    }
+    } yield Ok(Json.toJson(js))
   }
 
-  def create: Action[JsValue] = sil.SecuredAction.async(parse.json) { implicit request =>
-    withJsonBodyUsing(dataStoreReads) { dataStore =>
-      dataStoreDAO.findOneByName(dataStore.name).shiftBox.flatMap {
-        case Empty =>
-          for {
-            _ <- userService.assertIsSuperUser(request.identity) ~> FORBIDDEN
-            _ <- dataStoreDAO.insertOne(dataStore) ?~> Msg.DataStore.createFailed
-            js <- dataStoreService.publicWrites(dataStore)
-          } yield { Ok(Json.toJson(js)) }
-        case _ => Fox.successful(JsonBadRequest(Msg.DataStore.nameTaken(dataStore.name)))
-      }
-    }
+  def create: Action[DataStoreParameters] = sil.SecuredAction.async(validateJson[DataStoreParameters]) {
+    implicit request =>
+      for {
+        _ <- userService.assertIsSuperUser(request.identity) ~> FORBIDDEN
+        _ <- dataStoreDAO.findOneByName(request.body.name).reverse ?~> Msg.DataStore.nameTaken(request.body.name)
+        dataStore = DataStore(
+          name = request.body.name,
+          url = request.body.url,
+          publicUrl = request.body.publicUrl,
+          key = request.body.key,
+          isScratch = request.body.isScratch.getOrElse(false),
+          allowsUpload = request.body.allowsUpload.getOrElse(true),
+          allowsUploadToPaths = request.body.allowsUploadToPaths.getOrElse(true)
+        )
+        _ <- dataStoreDAO.insertOne(dataStore) ?~> Msg.DataStore.createFailed
+        js <- dataStoreService.publicWrites(dataStore)
+      } yield Ok(Json.toJson(js))
   }
 
   def delete(name: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>

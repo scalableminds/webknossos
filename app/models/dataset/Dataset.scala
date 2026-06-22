@@ -45,7 +45,7 @@ import com.scalableminds.webknossos.schema.Tables.{
   DatasetsRow,
   GetResultDatasetsRow
 }
-import controllers.DatasetUpdateParameters
+import controllers.DatasetUpdatePartialParameters
 import models.dataset.DatasetCreationType.DatasetCreationType
 
 import javax.inject.Inject
@@ -85,6 +85,9 @@ case class Dataset(
     tags: List[String] = List.empty,
     creationType: Option[DatasetCreationType] = None,
     importURL: Option[String] = None,
+    rootPath: Option[String] = None,
+    rootRealPath: Option[String] = None,
+    mirrorPath: Option[String] = None,
     created: Instant = Instant.now,
     isDeleted: Boolean = false
 )
@@ -120,7 +123,7 @@ trait DatasetDAOLike {
 }
 
 class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerDAO, organizationDAO: OrganizationDAO)(
-    implicit ec: ExecutionContext
+    using ec: ExecutionContext
 ) extends SQLDAO[Dataset, DatasetsRow, Datasets](sqlClient)
     with DatasetDAOLike {
   protected val collection = Datasets
@@ -178,6 +181,9 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       parseArrayLiteral(r.tags).sorted,
       creationType,
       r.importurl,
+      r.rootpath,
+      r.rootrealpath,
+      r.mirrorpath,
       Instant.fromSql(r.created),
       r.isdeleted
     )
@@ -620,7 +626,8 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
                    AND $accessQuery""".asUpdate)
     } yield ()
 
-  def updatePartial(datasetId: ObjectId, params: DatasetUpdateParameters)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def updatePartial(datasetId: ObjectId, params: DatasetUpdatePartialParameters)(
+      implicit ctx: DBAccessContext): Fox[Unit] = {
     val setQueries = List(
       params.description.map(d => q"description = $d"),
       params.name.map(v => q"name = $v"),
@@ -645,17 +652,15 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
     }
   }
 
-  def updateFields(
-      datasetId: ObjectId,
-      description: Option[String],
-      name: Option[String],
-      sortingKey: Instant,
-      isPublic: Boolean,
-      tags: List[String],
-      metadata: JsArray,
-      folderId: ObjectId
-  )(implicit ctx: DBAccessContext): Fox[Unit] = {
-    val updateParameters = new DatasetUpdateParameters(
+  def updateFields(datasetId: ObjectId,
+                   description: Option[String],
+                   name: Option[String],
+                   sortingKey: Instant,
+                   isPublic: Boolean,
+                   tags: List[String],
+                   metadata: JsArray,
+                   folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+    val updateParameters = new DatasetUpdatePartialParameters(
       description = Some(description),
       name = Some(name),
       sortingKey = Some(sortingKey),
@@ -702,6 +707,14 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
                    WHERE _id = $datasetId""".asUpdate)
     } yield ()
 
+  def updateMirrorPath(datasetId: ObjectId, mirrorPath: String)(implicit ctx: DBAccessContext): Fox[Unit] =
+    for {
+      _ <- assertUpdateAccess(datasetId)
+      _ <- run(q"""UPDATE webknossos.datasets
+                   SET mirrorPath = $mirrorPath
+                   WHERE _id = $datasetId""".asUpdate)
+    } yield ()
+
   def insertOne(d: Dataset): Fox[Unit] = {
     val adminViewConfiguration: Option[JsValue] = d.adminViewConfiguration.map(Json.toJson(_))
     val defaultViewConfiguration: Option[JsValue] = d.defaultViewConfiguration.map(Json.toJson(_))
@@ -713,7 +726,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
                      description, directoryName, isPublic, isUsable, isVirtual,
                      name, voxelSizeFactor, voxelSizeUnit, status,
                      sharingToken, sortingKey, metadata, tags, creationType,
-                     importURL, created, isDeleted
+                     importURL, rootPath, rootRealPath, mirrorPath, created, isDeleted
                    )
                    VALUES(
                      ${d._id}, ${d._dataStore}, ${d._organization}, ${d._publication},
@@ -722,7 +735,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
                      ${d.description}, ${d.directoryName}, ${d.isPublic}, ${d.isUsable}, ${d.isVirtual},
                      ${d.name}, ${d.voxelSize.map(_.factor)}, ${d.voxelSize.map(_.unit)}, ${d.status.take(1024)},
                      ${d.sharingToken}, ${d.sortingKey}, ${d.metadata}, ${d.tags}, ${d.creationType},
-                     ${d.importURL}, ${d.created}, ${d.isDeleted}
+                     ${d.importURL}, ${d.rootPath}, ${d.rootRealPath}, ${d.mirrorPath}, ${d.created}, ${d.isDeleted}
                    )""".asUpdate)
     } yield ()
   }
@@ -732,11 +745,17 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       dataStoreName: String,
       inboxSourceHash: Int,
       newDataSource: DataSource,
-      isUsable: Boolean
-  )(implicit ctx: DBAccessContext): Fox[Unit] =
+      isUsable: Boolean,
+      rootPath: Option[String] = None,
+      rootRealPath: Option[String] = None)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(newDataSource.id.organizationId)
       defaultViewConfiguration: Option[JsValue] = newDataSource.defaultViewConfiguration.map(Json.toJson(_))
+      pathUpdates = List(
+        rootPath.map(v => q"rootPath = $v"),
+        rootRealPath.map(v => q"rootRealPath = $v"),
+      ).flatten
+      pathUpdatesQuery = if (pathUpdates.nonEmpty) q", ${SqlToken.joinBySeparator(pathUpdates, ", ")}" else q""
       _ <- run(q"""UPDATE webknossos.datasets
                    SET
                      _dataStore = $dataStoreName,
@@ -747,6 +766,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
                      voxelSizeFactor = ${newDataSource.voxelSizeOpt.map(_.factor)},
                      voxelSizeUnit = ${newDataSource.voxelSizeOpt.map(_.unit)},
                      status = ${newDataSource.statusOpt.getOrElse("").take(1024)}
+                     $pathUpdatesQuery
                    WHERE _id = $id""".asUpdate)
       _ <- datasetLayerDAO.updateLayers(id, newDataSource)
     } yield ()

@@ -7,7 +7,7 @@ For API details, see the WEBKNOSSOS [Frontend API documentation](https://webknos
 
 ## Create a Script
 
-1. Open the `Scripts` page in the administration section.
+1. Open `Task Management > Scripts`.
 2. Click `Add Script`.
 3. Fill in:
    - `Script Name`: Human-readable label shown in selectors.

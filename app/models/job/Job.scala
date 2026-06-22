@@ -81,6 +81,7 @@ case class JobCompactInfo(
     created: Instant,
     started: Option[Instant],
     ended: Option[Instant],
+    lastRetry: Option[Instant],
     costInMilliCredits: Option[Int]
 ) extends JobResultLinks {
 
@@ -164,7 +165,7 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       rows <- run(
         q"""
           SELECT j._id, j.command, u._organization, mu.firstName, mu.lastName, mu.email, j.commandArgs, COALESCE(j.manualState, j.state),
-                 j.returnValue, j._voxelytics_workflowHash, j.created, j.started, j.ended, ct.milli_credit_delta
+                 j.returnValue, j._voxelytics_workflowHash, j.created, j.started, j.ended, j.lastRetry, ct.milli_credit_delta
           FROM webknossos.jobs_ j
           JOIN webknossos.users_ u on j._owner = u._id
           JOIN webknossos.multiusers_ mu on u._multiUser = mu._id
@@ -173,20 +174,22 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
           LEFT JOIN LATERAL (SELECT milli_credit_delta FROM webknossos.credit_transactions_ WHERE _paid_job = j._id LIMIT 1) ct ON TRUE
           WHERE $commandQuery AND $accessQuery AND $skipForDeletedQuery
           ORDER BY j.created DESC -- list newest first
-         """.as[(ObjectId,
-                 String,
-                 String,
-                 String,
-                 String,
-                 String,
-                 String,
-                 String,
-                 Option[String],
-                 Option[String],
-                 Instant,
-                 Option[Instant],
-                 Option[Instant],
-                 Option[Int])])
+         """.as[
+          (ObjectId,
+           String,
+           String,
+           String,
+           String,
+           String,
+           String,
+           String,
+           Option[String],
+           Option[String],
+           Instant,
+           Option[Instant],
+           Option[Instant],
+           Option[Instant],
+           Option[Int])])
       parsed <- Fox.serialCombined(rows) { row =>
         for {
           command <- JobCommand.fromString(row._2).toFox
@@ -208,7 +211,8 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
             created = row._11,
             started = row._12,
             ended = row._13,
-            costInMilliCredits = row._14.map(_ * -1) // delta is negative, so cost should be positive.
+            lastRetry = row._14,
+            costInMilliCredits = row._15.map(_ * -1) // delta is negative, so cost should be positive.
           )
       }
     } yield parsed
@@ -307,13 +311,13 @@ class JobDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       _ <- run(q"""UPDATE webknossos.jobs SET manualState = $manualState WHERE _id = $id""".asUpdate)
     } yield ()
 
-  def retryOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def retryOne(id: ObjectId, retriedBySuperUser: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(q"""UPDATE webknossos.jobs
              SET state = ${JobState.PENDING},
                  manualState = NULL,
-                 retriedBySuperUser = true,
+                 retriedBySuperUser = $retriedBySuperUser,
                  lastRetry = ${Instant.now}
              WHERE _id = $id
              AND (

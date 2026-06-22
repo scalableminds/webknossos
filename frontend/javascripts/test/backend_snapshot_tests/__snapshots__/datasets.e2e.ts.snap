@@ -14,6 +14,7 @@ exports[`Dataset API (E2E) > getActiveDatasets 1`] = `
     "allowedTeams": [],
     "allowedTeamsCumulative": [],
     "created": "created",
+    "creationType": "DiskScan",
     "dataSource": {
       "dataLayers": [
         {
@@ -81,8 +82,11 @@ exports[`Dataset API (E2E) > getActiveDatasets 1`] = `
     "lastUsedByUser": 0,
     "logoUrl": "/images/mpi-logos.svg",
     "metadata": [],
+    "mirrorPath": null,
     "name": "test-dataset",
     "owningOrganization": "Organization_X",
+    "rootPath": "rootPath",
+    "rootRealPath": "rootRealPath",
     "sortingKey": "sortingKey",
     "tags": [],
     "usedStorageBytes": 0,

@@ -4,7 +4,7 @@ A group of many related Tasks is called a Project. Projects have a priority assi
 ## Creating a Project
 
 To create a project, follow these steps:
-1. Open the `Projects` page of the administration section and click on `Add Project`.
+1. Open `Task Management > Annotation Projects` and click on `Add Project`.
 2. Fill out the form to create the _Project_.
    - Note that you can assign a `Priority` to the Project. A higher value means that Tasks from this Project will be more likely to be assigned to users.
    - With the `Time Limit` property, you can specify the expected completion time of a Task Instance. There will be an email notification if users exceed this limit.
@@ -14,7 +14,7 @@ To create a project, follow these steps:
 Create a Project
 ///
 
-To pause or resume a project, open the `Projects` page and click the pause/resume icon in the project's `Actions` column. 
+To pause or resume a project, open `Task Management > Annotation Projects` and click the pause/resume icon in the project's `Actions` column.
 
 
 ## Project progress and statistics
@@ -27,7 +27,7 @@ You can view your project's progress from your dashboard in the Statistics menu 
 
 The `Project Progress` report gives a compact overview across all projects of a selected team.
 
-1. Select `Statistics > Project Progress` in the top navigation bar.
+1. Select `Task Management > Project Progress` in the top navigation bar.
 2. Pick a team in the filter section.
 3. Click Search
 
@@ -48,7 +48,7 @@ Notes:
 
 The `Annotation Time per User` report helps analyze workload and throughput per user.
 
-1. Open `Statistics > Time Tracking` in the top navigation bar.
+1. Open `Task Management > Time Tracking` in the top navigation bar.
 2. Configure filters to narrow the results:
    - Include only tasks from projects and/or all annotations
    - Teams

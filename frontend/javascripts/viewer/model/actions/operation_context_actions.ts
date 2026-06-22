@@ -14,60 +14,36 @@ export type OperationId =
 
 export const SYNC_RELATED_OPERATION_IDS: OperationId[] = ["SAVE", "REBASE"];
 
-export type RegisterOperationAction = {
-  type: "REGISTER_OPERATION";
-  id: OperationId;
-  description?: string;
-};
-export type UnregisterOperationAction = {
-  type: "UNREGISTER_OPERATION";
-  id: OperationId;
-};
-export type RegisterChildOperationAction = {
-  type: "REGISTER_CHILD_OPERATION";
-  id: OperationId;
-  parentId: OperationId;
-};
-export type UnregisterChildOperationAction = {
-  type: "UNREGISTER_CHILD_OPERATION";
-  id: OperationId;
-  parentId: OperationId;
-};
+export const registerOperationAction = (id: OperationId, description?: string) => ({
+  type: "REGISTER_OPERATION" as const,
+  id,
+  description,
+});
+
+export const unregisterOperationAction = (id: OperationId) => ({
+  type: "UNREGISTER_OPERATION" as const,
+  id,
+});
+
+export const registerChildOperationAction = (id: OperationId, parentId: OperationId) => ({
+  type: "REGISTER_CHILD_OPERATION" as const,
+  id,
+  parentId,
+});
+
+export const unregisterChildOperationAction = (id: OperationId, parentId: OperationId) => ({
+  type: "UNREGISTER_CHILD_OPERATION" as const,
+  id,
+  parentId,
+});
+
+export type RegisterOperationAction = ReturnType<typeof registerOperationAction>;
+export type UnregisterOperationAction = ReturnType<typeof unregisterOperationAction>;
+export type RegisterChildOperationAction = ReturnType<typeof registerChildOperationAction>;
+export type UnregisterChildOperationAction = ReturnType<typeof unregisterChildOperationAction>;
 
 export type OperationContextAction =
   | RegisterOperationAction
   | UnregisterOperationAction
   | RegisterChildOperationAction
   | UnregisterChildOperationAction;
-
-export const registerOperationAction = (
-  id: OperationId,
-  description?: string,
-): RegisterOperationAction => ({
-  type: "REGISTER_OPERATION",
-  id,
-  description,
-});
-
-export const unregisterOperationAction = (id: OperationId): UnregisterOperationAction => ({
-  type: "UNREGISTER_OPERATION",
-  id,
-});
-
-export const registerChildOperationAction = (
-  id: OperationId,
-  parentId: OperationId,
-): RegisterChildOperationAction => ({
-  type: "REGISTER_CHILD_OPERATION",
-  id,
-  parentId,
-});
-
-export const unregisterChildOperationAction = (
-  id: OperationId,
-  parentId: OperationId,
-): UnregisterChildOperationAction => ({
-  type: "UNREGISTER_CHILD_OPERATION",
-  id,
-  parentId,
-});

@@ -10,6 +10,7 @@ import type { Saga } from "viewer/model/sagas/effect_generators";
 import loadHistogramDataSaga from "viewer/model/sagas/load_histogram_data_saga";
 import { watchDataRelevantChanges } from "viewer/model/sagas/prefetch_saga";
 import ReadySagas from "viewer/model/sagas/ready_sagas";
+import reduxActionLoggingSaga from "viewer/model/sagas/redux_action_logging_saga";
 import SaveSagas from "viewer/model/sagas/saving/save_saga";
 import SettingsSaga from "viewer/model/sagas/settings_saga";
 import SkeletontracingSagas from "viewer/model/sagas/skeletontracing_saga";
@@ -92,6 +93,7 @@ function* restartableSaga(): Saga<void> {
       call(toolSaga),
       call(manyBucketUpdatesWarningSaga),
       call(idReservationSaga),
+      call(reduxActionLoggingSaga),
     ]);
   } catch (err: any) {
     rootSagaCrashed = true;

@@ -2279,21 +2279,33 @@ function getSegmentIdsThatMapToAgglomerate(
     .map(([segmentId, _agglomerateId]) => segmentId);
 }
 
+/**
+ * Re-builds the local mapping to reflect a server-side agglomerate split by re-requesting the affected
+ * segments' new agglomerate ids and returning the updated mapping plus the involved old/new ids.
+ *
+ * @param activeMapping - Current full mapping; copied over to splitMapping return value unchanged
+ *   except for reassigned segments.
+ * @param sourceAgglomerateId - The agglomerate that was split; all of its local segments are re-requested.
+ * @param volumeTracingId - Id of the volume tracing whose (editable) mapping is updated.
+ * @param version - Annotation version at which to look up the post-split agglomerate ids.
+ * @param syncAgglomerateTrees - If true (and the mapping is named), sync the skeleton trees to the split.
+ * @param additionalSegmentIdToOldAgglomerateId - Extra segments to re-request, mapped to their pre-split
+ *   agglomerate id (passed explicitly since they may not be in the local mapping); their old agglomerates
+ *   count as involved old agglomerates too.
+ * @param addAdditionalSegmentsToMapping - Whether to also write those extra segments into the returned
+ *   mapping (needed e.g. by partitioned min-cut; forwarded foreign splits keep them out).
+ * @returns `undefined` if nothing to split and the input mapping is `null`; otherwise `{ splitMapping`
+ *   (rebuilt full mapping)`, oldAgglomerateIds` (ids before the split)`, newAgglomerateIds` (new ids produced
+ *   by the split)`, newToOldAgglomerateIds` (each new id → the old id it came from, e.g. for carrying over
+ *   mesh opacity)`}`.
+ */
 export function* splitAgglomerateInMapping(
   activeMapping: ActiveMappingInfo,
   sourceAgglomerateId: number,
   volumeTracingId: string,
   version: number,
   syncAgglomerateTrees: boolean,
-  // Maps each additionally-to-be-requested segment id to the agglomerate id it belonged to
-  // before the split. These segments may not be present in the local store mapping, so the old
-  // agglomerate id is passed explicitly (and cannot be inferred from the mapping).
-  // TODO(#6921): keys are numbers and may mix with a bigint store mapping once 64-bit is enabled.
   additionalSegmentIdToOldAgglomerateId: Map<number, number> = new Map(),
-  // Whether the additionally requested segments should be written into the returned (partial)
-  // mapping even if they were not present before. This is needed by callers that read those
-  // segments back from the mapping (e.g. partitioned min-cut). For forwarding foreign splits we
-  // keep the partial mapping sparse and only use these segments to discover agglomerate ids.
   addAdditionalSegmentsToMapping = false,
 ): Saga<
   | {
@@ -2343,7 +2355,6 @@ export function* splitAgglomerateInMapping(
     annotationId,
     version,
   );
-  const newAgglomerateIds = new Set<number>();
   const newToOldAgglomerateIds = new Map<number, number>();
 
   // Create a new mapping which is equal to the old one with the difference that
@@ -2353,12 +2364,16 @@ export function* splitAgglomerateInMapping(
       // @ts-expect-error get() is expected to accept the type that segmentId has.
       const mappedId = mappingAfterSplit.get(segmentId);
       if (mappedId != null) {
-        const newId = Number(mappedId);
-        newAgglomerateIds.add(newId);
-        if (!newToOldAgglomerateIds.has(newId)) {
-          newToOldAgglomerateIds.set(newId, Number(prevAgglomerateId));
-        }
+        const mappedIdNumber = Number(mappedId);
+        // A split never merges two old agglomerates into one new one, so every segment that maps to
+        // a given newId shares the same prevAgglomerateId — overwriting an existing entry is a no-op.
+        newToOldAgglomerateIds.set(mappedIdNumber, Number(prevAgglomerateId));
         return [segmentId, mappedId];
+      } else {
+        console.error(
+          "Got a agglomerate id mapping reply from the server which did not include the new agglomerate id of a requested segment.",
+          `${segmentId} was not present in ${mappingAfterSplit}.`,
+        );
       }
       return [segmentId, prevAgglomerateId];
     }),
@@ -2373,17 +2388,18 @@ export function* splitAgglomerateInMapping(
     const mappedId = mappingAfterSplit.get(segmentId);
     if (mappedId != null) {
       const newId = Number(mappedId);
-      newAgglomerateIds.add(newId);
       newToOldAgglomerateIds.set(newId, oldAgglomerateId);
       if (addAdditionalSegmentsToMapping) {
         splitMapping.set(segmentId, mappedId);
       }
     }
   }
+  // Below newToOldAgglomerateIds is used to generate the new ids list / set
+  // as they are exactly the keys of newToOldAgglomerateIds (every newId has a record)
   if (syncAgglomerateTrees && activeMapping.mappingName) {
     yield* call(
       syncAgglomerateTreesAfterSplitAction,
-      Array.from(newAgglomerateIds),
+      Array.from(newToOldAgglomerateIds.keys()),
       Array.from(oldAgglomerateIds),
       volumeTracingId,
     );
@@ -2392,7 +2408,7 @@ export function* splitAgglomerateInMapping(
   return {
     splitMapping: splitMapping as Mapping,
     oldAgglomerateIds,
-    newAgglomerateIds,
+    newAgglomerateIds: new Set(newToOldAgglomerateIds.keys()),
     newToOldAgglomerateIds,
   };
 }

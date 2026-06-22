@@ -172,12 +172,12 @@ object Zarr3ArrayHeader extends JsonImplicits {
         fill_value <- (fill_value_raw.validate[String],
                        fill_value_raw.validate[Number],
                        fill_value_raw.validate[Boolean]) match {
-          case (asStr: JsSuccess[String], _, _) =>
-            asStr.flatMap(value => JsSuccess[Either[String, Number]](Left(value)))
-          case (_, asNum: JsSuccess[Number], _) =>
-            asNum.flatMap(value => JsSuccess[Either[String, Number]](Right(value)))
-          case (_, _, asBool: JsSuccess[Boolean]) =>
-            asBool.flatMap(value => JsSuccess[Either[String, Number]](Left(value.toString)))
+          case (JsSuccess(value, _), _, _) =>
+            JsSuccess[Either[String, Number]](Left(value))
+          case (_, JsSuccess(value, _), _) =>
+            JsSuccess[Either[String, Number]](Right(value))
+          case (_, _, JsSuccess(value, _)) =>
+            JsSuccess[Either[String, Number]](Left(value.toString))
           case _ => JsError("Could not parse fill_value as string, number or boolean value.")
         }
         attributes = (json \ "attributes").validate[JsObject].asOpt

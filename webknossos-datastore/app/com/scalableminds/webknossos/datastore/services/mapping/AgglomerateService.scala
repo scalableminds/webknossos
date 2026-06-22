@@ -69,7 +69,7 @@ class AgglomerateService @Inject()(zarrAgglomerateService: ZarrAgglomerateServic
         attachment
       )
 
-  def applyAgglomerate(request: DataServiceDataRequest)(data: Array[Byte])(implicit ec: ExecutionContext,
+  def applyAgglomerate(request: DataServiceDataRequest)(data: Array[Byte])(using ec: ExecutionContext,
                                                                            tc: TokenContext): Fox[Array[Byte]] =
     for {
       mappingName <- request.settings.appliedAgglomerate.toFox
@@ -85,7 +85,7 @@ class AgglomerateService @Inject()(zarrAgglomerateService: ZarrAgglomerateServic
     } yield data
 
   def generateTreeAsSkeleton(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[SkeletonTracing] =
     for {
       before <- Instant.nowFox
@@ -107,7 +107,7 @@ class AgglomerateService @Inject()(zarrAgglomerateService: ZarrAgglomerateServic
       }
     } yield treeAsSkeleton
 
-  def largestAgglomerateId(agglomerateFileKey: AgglomerateFileKey)(implicit ec: ExecutionContext,
+  def largestAgglomerateId(agglomerateFileKey: AgglomerateFileKey)(using ec: ExecutionContext,
                                                                    tc: TokenContext): Fox[Long] =
     agglomerateFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 => zarrAgglomerateService.largestAgglomerateId(agglomerateFileKey)
@@ -116,7 +116,7 @@ class AgglomerateService @Inject()(zarrAgglomerateService: ZarrAgglomerateServic
     }
 
   def segmentIdsForAgglomerateId(agglomerateFileKey: AgglomerateFileKey,
-                                 agglomerateId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
+                                 agglomerateId: Long)(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
     agglomerateFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
         zarrAgglomerateService.segmentIdsForAgglomerateId(agglomerateFileKey, agglomerateId)
@@ -126,7 +126,7 @@ class AgglomerateService @Inject()(zarrAgglomerateService: ZarrAgglomerateServic
     }
 
   def agglomerateIdsForSegmentIds(agglomerateFileKey: AgglomerateFileKey, segmentIds: Seq[Long])(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[Seq[Long]] =
     agglomerateFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
@@ -136,7 +136,7 @@ class AgglomerateService @Inject()(zarrAgglomerateService: ZarrAgglomerateServic
       case _ => unsupportedDataFormat(agglomerateFileKey)
     }
 
-  def positionForSegmentId(agglomerateFileKey: AgglomerateFileKey, segmentId: Long)(implicit ec: ExecutionContext,
+  def positionForSegmentId(agglomerateFileKey: AgglomerateFileKey, segmentId: Long)(using ec: ExecutionContext,
                                                                                     tc: TokenContext): Fox[Vec3Int] =
     agglomerateFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
@@ -147,7 +147,7 @@ class AgglomerateService @Inject()(zarrAgglomerateService: ZarrAgglomerateServic
     }
 
   def generateAgglomerateGraph(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[AgglomerateGraph] =
     agglomerateFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>

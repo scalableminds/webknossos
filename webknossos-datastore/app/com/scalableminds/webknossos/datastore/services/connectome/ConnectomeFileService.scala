@@ -111,7 +111,7 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
       )
 
   def listConnectomeFiles(dataSourceId: DataSourceId, dataLayer: DataLayer)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[Seq[ConnectomeFileNameWithMappingName]] = {
     val connectomeFileNames = dataLayer.attachments.map(_.connectomes).getOrElse(Seq.empty).map(_.name)
 
@@ -135,7 +135,7 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
     )
   }
 
-  private def mappingNameForConnectomeFile(connectomeFileKey: ConnectomeFileKey)(implicit ec: ExecutionContext,
+  private def mappingNameForConnectomeFile(connectomeFileKey: ConnectomeFileKey)(using ec: ExecutionContext,
                                                                                  tc: TokenContext): Fox[String] =
     connectomeFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 => zarrConnectomeFileService.mappingNameForConnectomeFile(connectomeFileKey)
@@ -144,7 +144,7 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
     }
 
   def synapsesForAgglomerates(connectomeFileKey: ConnectomeFileKey, agglomerateIds: Seq[Long])(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[Seq[DirectedSynapseList]] =
     if (agglomerateIds.length == 1) {
       for {
@@ -182,7 +182,7 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
   }
 
   private def ingoingSynapsesForAgglomerate(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[Seq[Long]] =
     connectomeFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
@@ -193,7 +193,7 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
     }
 
   private def outgoingSynapsesForAgglomerate(connectomeFileKey: ConnectomeFileKey, agglomerateId: Long)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[Seq[Long]] =
     connectomeFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
@@ -206,7 +206,7 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
   private def synapseIdsForDirectedPair(
       connectomeFileKey: ConnectomeFileKey,
       srcAgglomerateId: Long,
-      dstAgglomerateId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
+      dstAgglomerateId: Long)(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
     connectomeFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
         zarrConnectomeFileService.synapseIdsForDirectedPair(connectomeFileKey, srcAgglomerateId, dstAgglomerateId)
@@ -218,7 +218,7 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
   def synapticPartnerForSynapses(
       connectomeFileKey: ConnectomeFileKey,
       synapseIds: List[Long],
-      direction: SynapticPartnerDirection)(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Long]] =
+      direction: SynapticPartnerDirection)(using ec: ExecutionContext, tc: TokenContext): Fox[List[Long]] =
     connectomeFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
         zarrConnectomeFileService.synapticPartnerForSynapses(connectomeFileKey, synapseIds, direction)
@@ -228,7 +228,7 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
     }
 
   def positionsForSynapses(connectomeFileKey: ConnectomeFileKey, synapseIds: List[Long])(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[Seq[Seq[Long]]] =
     connectomeFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
@@ -239,7 +239,7 @@ class ConnectomeFileService @Inject()(hdf5ConnectomeFileService: Hdf5ConnectomeF
     }
 
   def typesForSynapses(connectomeFileKey: ConnectomeFileKey, synapseIds: List[Long])(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[SynapseTypesWithLegend] =
     connectomeFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 => zarrConnectomeFileService.typesForSynapses(connectomeFileKey, synapseIds)

@@ -35,7 +35,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
                        mappingName: Option[String],
                        additionalCoordinates: Option[Seq[AdditionalCoordinate]],
                        annotationVersion: Option[Long],
-  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     calculateSegmentVolume(
       segmentId,
       mag,
@@ -51,7 +51,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       mag: Vec3Int,
       mappingName: Option[String],
       additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-      annotationVersion: Option[Long])(implicit ec: ExecutionContext, tc: TokenContext): Fox[BoundingBox] =
+      annotationVersion: Option[Long])(using ec: ExecutionContext, tc: TokenContext): Fox[BoundingBox] =
     calculateSegmentBoundingBox(
       segmentId,
       mag,
@@ -64,7 +64,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       bucketPositions: Seq[Vec3Int],
       mag: Vec3Int,
       additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
-      implicit tc: TokenContext,
+      using tc: TokenContext,
       ec: ExecutionContext): Fox[(Seq[Box[Array[Byte]]], ElementClass.Value)] =
     for {
       tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound
@@ -95,7 +95,7 @@ class VolumeSegmentStatisticsService @Inject()(volumeTracingService: VolumeTraci
       tracingId: String,
       mappingName: Option[String],
       additionalCoordinates: Option[Seq[AdditionalCoordinate]],
-      annotationVersion: Option[Long])(segmentId: Long, mag: Vec3Int)(implicit ec: ExecutionContext, tc: TokenContext) =
+      annotationVersion: Option[Long])(segmentId: Long, mag: Vec3Int)(using ec: ExecutionContext, tc: TokenContext) =
     for {
       tracing <- annotationService.findVolume(annotationId, tracingId) ?~> Msg.Annotation.notFound
       fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracing)

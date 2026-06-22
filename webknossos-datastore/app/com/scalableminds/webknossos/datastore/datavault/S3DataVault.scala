@@ -98,7 +98,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
     })
 
   override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] =
     for {
       objectKey <- S3UriUtils.objectKeyFromVaultPath(path).toFox
@@ -144,7 +144,7 @@ class S3DataVault(s3AccessKeyCredential: Option[S3AccessKeyCredential],
     } yield s3SubPrefixes.map(_.prefix())
   }
 
-  override def getUsedStorageBytes(path: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] = {
+  override def getUsedStorageBytes(path: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] = {
     def fetchBatchRecursive(prefixKey: String,
                             client: S3AsyncClient,
                             continuationToken: Option[String],

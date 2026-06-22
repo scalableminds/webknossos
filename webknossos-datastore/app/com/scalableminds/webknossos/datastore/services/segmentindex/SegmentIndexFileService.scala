@@ -77,7 +77,7 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
     * If a segment is not present in the file, an empty array is returned, not a failure!
     */
   def readSegmentIndex(segmentIndexFileKey: SegmentIndexFileKey,
-                       segmentId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Vec3Int]] =
+                       segmentId: Long)(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Vec3Int]] =
     segmentIndexFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
         zarrSegmentIndexFileService.readSegmentIndex(segmentIndexFileKey: SegmentIndexFileKey, segmentId: Long)
@@ -99,7 +99,7 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
                        segmentIndexFileKey: SegmentIndexFileKey,
                        agglomerateFileKeyOpt: Option[AgglomerateFileKey],
                        segmentId: Long,
-                       mag: Vec3Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+                       mag: Vec3Int)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     segmentVolumeCache.getOrLoad(
       (dataSourceId, dataLayer.name, segmentIndexFileKey, agglomerateFileKeyOpt, segmentId, mag),
       _ =>
@@ -118,7 +118,7 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
                             segmentIndexFileKey: SegmentIndexFileKey,
                             agglomerateFileKeyOpt: Option[AgglomerateFileKey],
                             segmentId: Long,
-                            mag: Vec3Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[BoundingBox] =
+                            mag: Vec3Int)(using ec: ExecutionContext, tc: TokenContext): Fox[BoundingBox] =
     segmentBoundingBoxCache.getOrLoad(
       (dataSourceId, dataLayer.name, segmentIndexFileKey, agglomerateFileKeyOpt, segmentId, mag),
       _ =>
@@ -138,7 +138,7 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
       bucketPositionsInRequestedMag: Seq[Vec3Int],
       requestedMag: Vec3Int,
       additionalCoordinates: Option[Seq[AdditionalCoordinate]])(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[(Seq[Box[Array[Byte]]], ElementClass.Value)] = {
     // Additional coordinates parameter ignored, see #7556
 
@@ -174,7 +174,7 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
   private def getBucketPositions(segmentIndexFileKey: SegmentIndexFileKey,
                                  agglomerateFileKeyOpt: Option[AgglomerateFileKey])(
       segmentOrAgglomerateId: Long,
-      requestedMag: Vec3Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Set[Vec3IntProto]] =
+      requestedMag: Vec3Int)(using ec: ExecutionContext, tc: TokenContext): Fox[Set[Vec3IntProto]] =
     for {
       segmentIds <- getSegmentIdsForAgglomerateIdIfNeeded(agglomerateFileKeyOpt, segmentOrAgglomerateId)
       positionsPerSegment <- Fox.serialCombined(segmentIds)(segmentId =>
@@ -183,7 +183,7 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
     } yield positionsCollected
 
   private def getBucketPositions(segmentIndexFileKey: SegmentIndexFileKey, segmentId: Long, requestedMag: Vec3Int)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[Array[Vec3Int]] =
     for {
       mag1BucketPositions <- readSegmentIndex(segmentIndexFileKey, segmentId)
@@ -192,7 +192,7 @@ class SegmentIndexFileService @Inject()(hdf5SegmentIndexFileService: Hdf5Segment
 
   private def getSegmentIdsForAgglomerateIdIfNeeded(
       agglomerateFileKeyOpt: Option[AgglomerateFileKey],
-      segmentOrAgglomerateId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
+      segmentOrAgglomerateId: Long)(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
     // Editable mappings cannot happen here since those requests go to the tracingstore
     agglomerateFileKeyOpt match {
       case Some(agglomerateFileKey) =>

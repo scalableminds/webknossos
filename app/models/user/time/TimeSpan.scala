@@ -2,7 +2,7 @@ package models.user.time
 
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{Timespans, TimespansRow, GetResultTimespansRow}
 import models.annotation.AnnotationState.AnnotationState
 import models.annotation.AnnotationType.AnnotationType
 import play.api.libs.json.{JsObject, JsValue, Json}

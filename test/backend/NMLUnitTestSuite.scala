@@ -28,7 +28,7 @@ class NMLUnitTestSuite extends AsyncWordSpec {
   private val mockDatasetDAO = new DatasetDAOLike {
     override def findOneByIdOrNameAndOrganization(datasetIdOpt: Option[ObjectId],
                                                   datasetName: String,
-                                                  organizationId: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
+                                                  organizationId: String)(using ctx: DBAccessContext): Fox[Dataset] =
       Fox.successful(
         Dataset(
           _id = ObjectId.dummyId,

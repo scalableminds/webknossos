@@ -182,7 +182,7 @@ trait NgffExplorationUtils extends FoxImplicits {
     Vec3Double(xFactors.product, yFactors.product, zFactors.product)
   }
 
-  protected def getShape(dataset: NgffDataset, path: VaultPath)(implicit tc: TokenContext): Fox[Array[Long]]
+  protected def getShape(dataset: NgffDataset, path: VaultPath)(using tc: TokenContext): Fox[Array[Long]]
 
   private def createAdditionalAxis(name: String, index: Int, bounds: Seq[Int]): Box[AdditionalAxis] =
     for {
@@ -191,7 +191,7 @@ trait NgffExplorationUtils extends FoxImplicits {
     } yield AdditionalAxis(normalizedName, bounds, index)
 
   protected def getAdditionalAxes(multiscale: NgffMultiscalesItem, remotePath: VaultPath)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[Seq[AdditionalAxis]] = {
     val defaultAxes = List("c", "x", "y", "z")
     for {
@@ -210,7 +210,7 @@ trait NgffExplorationUtils extends FoxImplicits {
   }
 
   protected def getNgffMultiscaleChannelCount(multiscale: NgffMultiscalesItem, remotePath: VaultPath)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[Int] =
     for {
       firstDataset <- multiscale.datasets.headOption.toFox
@@ -230,7 +230,7 @@ trait NgffExplorationUtils extends FoxImplicits {
                             datasetName: String,
                             voxelSizeInAxisUnits: Vec3Double,
                             axisOrder: AxisOrder,
-                            isSegmentation: Boolean)(implicit tc: TokenContext): Fox[StaticLayer]
+                            isSegmentation: Boolean)(using tc: TokenContext): Fox[StaticLayer]
 
   protected def layersFromNgffMultiscale(multiscale: NgffMultiscalesItem,
                                          remotePath: VaultPath,
@@ -238,7 +238,7 @@ trait NgffExplorationUtils extends FoxImplicits {
                                          channelCount: Int,
                                          channelAttributes: Option[Seq[ChannelAttributes]] = None,
                                          isSegmentation: Boolean = false)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       axisOrder <- extractAxisOrder(multiscale.axes) ?~> "Could not extract XYZ axis order mapping. Does the data have x, y and z axes, stated in multiscales metadata?"
@@ -304,10 +304,10 @@ trait NgffExplorationUtils extends FoxImplicits {
   }
 
   protected def layersForLabel(remotePath: VaultPath, labelPath: String, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]]
+      using tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]]
 
   protected def exploreLabelLayers(remotePath: VaultPath, credentialId: Option[String])(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       labelDescriptionPath <- Fox.successful(remotePath / NgffLabelsGroup.LABEL_PATH)

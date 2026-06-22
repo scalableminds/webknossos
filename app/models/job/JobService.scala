@@ -57,9 +57,9 @@ class JobService @Inject()(wkConf: WkConf,
 
   private def trackNewlyFailed(jobBeforeChange: Job, jobAfterChange: Job): Unit = {
     for {
-      user <- userDAO.findOne(jobBeforeChange._owner)(GlobalAccessContext)
-      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
-      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
+      user <- userDAO.findOne(jobBeforeChange._owner)(using GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
+      organization <- organizationDAO.findOne(user._organization)(using GlobalAccessContext)
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
       _ = analyticsService.track(FailedJobEvent(user, jobBeforeChange.command))
       workflowLink = jobAfterChange.workflowLinkSlackFormatted(wkConf.Http.uri)
@@ -81,12 +81,12 @@ class JobService @Inject()(wkConf: WkConf,
 
   private def trackNewlySuccessful(jobBeforeChange: Job, jobAfterChange: Job): Unit = {
     for {
-      user <- userDAO.findOne(jobBeforeChange._owner)(GlobalAccessContext)
-      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
+      user <- userDAO.findOne(jobBeforeChange._owner)(using GlobalAccessContext)
+      organization <- organizationDAO.findOne(user._organization)(using GlobalAccessContext)
       resultLink = jobAfterChange.resultLinkPublic(organization._id, wkConf.Http.uri)
       resultLinkSlack = jobAfterChange.resultLinkSlackFormatted(organization._id, wkConf.Http.uri)
       workflowLink = jobAfterChange.workflowLinkSlackFormatted(wkConf.Http.uri)
-      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
       superUserLabel = if (multiUser.isSuperUser) " (for superuser)" else ""
       msg = s"Job `${jobBeforeChange._id}` succeeded${durationLabel(jobAfterChange)}. Command `${jobBeforeChange.command}`, organization: ${organization.name}.$resultLinkSlack$workflowLink"
       _ = logger.info(msg)
@@ -103,7 +103,7 @@ class JobService @Inject()(wkConf: WkConf,
 
   private def sendSuccessEmailNotification(user: User, job: Job, resultLink: String): Unit =
     for {
-      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
       datasetName = job.datasetName.getOrElse("")
       genericEmailTemplate = defaultMails.jobSuccessfulGenericMail(multiUser, datasetName, resultLink, _, _)
       emailTemplate <- (job.command match {
@@ -157,7 +157,7 @@ class JobService @Inject()(wkConf: WkConf,
 
   private def sendFailedEmailNotification(user: User, job: Job): Unit =
     for {
-      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
       datasetName = job.datasetName.getOrElse("")
       emailTemplate = job.command match {
         case JobCommand.convert_to_wkw => defaultMails.jobFailedUploadConvertMail(multiUser, datasetName)
@@ -174,13 +174,12 @@ class JobService @Inject()(wkConf: WkConf,
       for {
         datasetDirectoryName <- commandArgs.get("dataset_directory_name").map(_.as[String]).toFox
         organizationId <- commandArgs.get("organization_id").map(_.as[String]).toFox
-        dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(datasetDirectoryName, organizationId)(
-          GlobalAccessContext)
+        dataset <- datasetDAO.findOneByDirectoryNameAndOrganization(datasetDirectoryName, organizationId)(using GlobalAccessContext)
         _ <- datasetDAO.deleteDataset(dataset._id)
       } yield ()
     } else Fox.successful(())
 
-  def publicWrites(job: Job)(implicit ctx: DBAccessContext): Fox[JsValue] =
+  def publicWrites(job: Job)(using ctx: DBAccessContext): Fox[JsValue] =
     for {
       owner <- userDAO.findOne(job._owner) ?~> Msg.User.notFound
       ownerMultiUser <- multiUserDAO.findOne(owner._multiUser)
@@ -209,7 +208,7 @@ class JobService @Inject()(wkConf: WkConf,
       )
 
   // Only seen by the workers
-  def parameterWrites(job: Job)(implicit ctx: DBAccessContext): Fox[JsObject] =
+  def parameterWrites(job: Job)(using ctx: DBAccessContext): Fox[JsObject] =
     for {
       owner <- userDAO.findOne(job._owner)
       userAuthToken <- Fox.fromFuture(
@@ -233,7 +232,7 @@ class JobService @Inject()(wkConf: WkConf,
 
   def submitConvertToWkwJob(dataset: Dataset, user: User, voxelSize: VoxelSize, organizationBaseDirectory: UPath): Fox[Unit] =
     for {
-      organization <- organizationDAO.findOne(dataset._organization)(GlobalAccessContext) ?~> Msg.Organization.notFound(
+      organization <- organizationDAO.findOne(dataset._organization)(using GlobalAccessContext) ?~> Msg.Organization.notFound(
         dataset._organization)
       commandArgs = Json.obj(
         "organization_id" -> organization._id,
@@ -253,7 +252,7 @@ class JobService @Inject()(wkConf: WkConf,
                     jobBoundingBoxInTargetMag: BoundingBox,
                     creditTransactionComment: String,
                     user: User,
-                    datastoreName: String)(implicit ctx: DBAccessContext): Fox[Job] =
+                    datastoreName: String)(using ctx: DBAccessContext): Fox[Job] =
     for {
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(user, user._organization)
       _ <- Fox.fromBool(isTeamManagerOrAdmin || user.isDatasetManager) ?~> Msg.Job.paidNoAdminOrManager

@@ -40,7 +40,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
   def reserveDatasetUploadToPaths(
       parameters: ReserveDatasetUploadToPathsRequest,
       requestingUser: User,
-      newDatasetId: ObjectId)(implicit ec: ExecutionContext, ctx: DBAccessContext): Fox[UsableDataSource] =
+      newDatasetId: ObjectId)(using ec: ExecutionContext, ctx: DBAccessContext): Fox[UsableDataSource] =
     for {
       organization <- organizationDAO.findOne(requestingUser._organization)
       _ <- organizationService.assertUsedStorageNotExceeded(organization) ?~> Msg.Dataset.Upload.storageExceeded ~> FORBIDDEN
@@ -71,10 +71,9 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
         isVirtual = true,
         creationType = DatasetCreationType.UploadToPaths
       )
-      _ <- datasetDAO.updateFolder(newDatasetId, parameters.folderId.getOrElse(organization._rootFolder))(
-        GlobalAccessContext)
+      _ <- datasetDAO.updateFolder(newDatasetId, parameters.folderId.getOrElse(organization._rootFolder))(using GlobalAccessContext)
       _ <- datasetService.addInitialTeams(dataset, parameters.initialTeamIds, requestingUser) // called with user access context. Should be fine now that the folder is set correctly
-      _ <- datasetService.addUploader(dataset, requestingUser._id)(GlobalAccessContext)
+      _ <- datasetService.addUploader(dataset, requestingUser._id)(using GlobalAccessContext)
     } // Note: not returning the one with layersToLink. Those are managed by the server entirely, so the client doesn’t need their paths.
     yield dataSourceWithPaths
 
@@ -82,7 +81,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
   def reserveDatasetUploadToPathsForPreliminary(
       parameters: ReserveDatasetUploadToPathsForPreliminaryRequest,
       requestingUser: User,
-      dataset: Dataset)(implicit ec: ExecutionContext, ctx: DBAccessContext): Fox[UsableDataSource] =
+      dataset: Dataset)(using ec: ExecutionContext, ctx: DBAccessContext): Fox[UsableDataSource] =
     for {
       _ <- Fox.fromBool(dataset.status == DataSourceStatus.notYetUploaded) ?~> s"Dataset is not in uploading status, got ${dataset.status}."
       _ <- Fox.fromBool(dataset._uploader.contains(requestingUser._id)) ?~> s"Cannot reserve paths for a dataset someone else uploaded."
@@ -101,7 +100,7 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
     } yield dataSourceWithPaths
 
   private def findReferencedDataStore(
-      layersToLink: Seq[LinkedLayerIdentifier])(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[DataStore] = {
+      layersToLink: Seq[LinkedLayerIdentifier])(using ctx: DBAccessContext, ec: ExecutionContext): Fox[DataStore] = {
     val datasetIds = layersToLink.map(_.datasetId).toSet
     for {
       datasets <- Fox.serialCombined(datasetIds)(datasetDAO.findOne)
@@ -319,12 +318,12 @@ class UploadToPathsService @Inject()(datasetService: DatasetService,
     } yield ()
 
   private def deletePathsForOldPending(dataset: Dataset, pathOpt: Option[UPath])(
-      implicit ec: ExecutionContext): Fox[_] =
+      implicit ec: ExecutionContext): Fox[Unit] =
     Fox.runOptional(pathOpt) { path =>
       for {
-        client <- datasetService.clientFor(dataset)(GlobalAccessContext)
+        client <- datasetService.clientFor(dataset)(using GlobalAccessContext)
         _ <- pathDeletionService.deletePaths(client, Seq(path))
       } yield ()
-    }
+    }.map(_ => ())
 
 }

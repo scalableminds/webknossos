@@ -3,7 +3,7 @@ package models.folder
 import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{Folders, FoldersRow, GetResultFoldersRow}
 import com.typesafe.scalalogging.LazyLogging
 import models.organization.{Organization, OrganizationDAO}
 import models.team.{TeamDAO, TeamService}
@@ -39,7 +39,7 @@ class FolderService @Inject()(teamDAO: TeamDAO,
   def publicWrites(
       folder: Folder,
       requestingUser: Option[User] = None,
-      requestingUserOrganization: Option[Organization] = None)(implicit ctx: DBAccessContext): Fox[JsObject] =
+      requestingUserOrganization: Option[Organization] = None)(using ctx: DBAccessContext): Fox[JsObject] =
     for {
       teams <- teamService.allowedTeamsForFolder(folder._id, cumulative = false, requestingUser)
       teamsJs <- Fox.serialCombined(teams)(t => teamService.publicWrites(t, requestingUserOrganization)) ?~> Msg.Dataset.List.teamWritesFailed
@@ -67,7 +67,7 @@ class FolderService @Inject()(teamDAO: TeamDAO,
     )
 
   def updateAllowedTeams(folderId: ObjectId, teams: List[ObjectId], requestingUser: User)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- folderDAO.findOne(folderId) ?~> Msg.Folder.notFound
       includeMemberOnlyTeams = requestingUser.isDatasetManager
@@ -83,7 +83,7 @@ class FolderService @Inject()(teamDAO: TeamDAO,
     Fox.fromBool(!name.contains("/")) ?~> Msg.Folder.nameMustNotContainSlash
 
   def getOrCreateFromPathLiteral(folderPathLiteral: String, organizationId: String)(
-      implicit ctx: DBAccessContext): Fox[ObjectId] =
+      using ctx: DBAccessContext): Fox[ObjectId] =
     for {
       organization <- organizationDAO.findOne(organizationId)
       foldersWithParents: Seq[FolderWithParent] <- folderDAO.findTreeOf(organization._rootFolder)
@@ -117,7 +117,7 @@ class FolderService @Inject()(teamDAO: TeamDAO,
   }
 
   private def createMissingFoldersForPathNames(parentFolderId: ObjectId, remainingPathNames: List[String])(
-      implicit ctx: DBAccessContext): Fox[ObjectId] =
+      using ctx: DBAccessContext): Fox[ObjectId] =
     remainingPathNames match {
       case pathNamesHead :: pathNamesTail =>
         for {
@@ -244,25 +244,25 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       firstRow <- rows.headOption.toFox
     } yield firstRow
 
-  def updateName(folderId: ObjectId, name: String)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateName(folderId: ObjectId, name: String)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(folderId)
       _ <- run(q"UPDATE webknossos.folders SET name = $name WHERE _id = $folderId".asUpdate)
     } yield ()
 
-  def updateMetadata(folderId: ObjectId, metadata: JsArray)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateMetadata(folderId: ObjectId, metadata: JsArray)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(folderId)
       _ <- run(q"UPDATE webknossos.folders SET metadata = $metadata WHERE _id = $folderId".asUpdate)
     } yield ()
 
-  def findAllEditableIds(implicit ctx: DBAccessContext): Fox[List[ObjectId]] =
+  def findAllEditableIds(using ctx: DBAccessContext): Fox[List[ObjectId]] =
     for {
       updateAccessQuery <- accessQueryFromAccessQ(updateAccessQ)
       rows <- run(q"SELECT _id FROM webknossos.folders_ WHERE $updateAccessQuery".as[ObjectId])
     } yield rows.toList
 
-  def isEditable(folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Boolean] =
+  def isEditable(folderId: ObjectId)(using ctx: DBAccessContext): Fox[Boolean] =
     for {
       updateAccessQuery <- accessQueryFromAccessQ(updateAccessQ)
       rows <- run(q"""SELECT EXISTS(
@@ -275,7 +275,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       result <- rows.headOption.toFox
     } yield result
 
-  def findTreeOf(folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[FolderWithParent]] =
+  def findTreeOf(folderId: ObjectId)(using ctx: DBAccessContext): Fox[List[FolderWithParent]] =
     for {
       accessQueryWithPrefix <- accessQueryFromAccessQWithPrefix(readAccessQWithPrefix, prefix = q"f.")
       accessQuery <- readAccessQuery
@@ -296,7 +296,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- Fox.combined(rows.toList.map(parseWithParent))
     } yield parsed
 
-  def insertAsChild(parentId: ObjectId, f: Folder)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def insertAsChild(parentId: ObjectId, f: Folder)(using ctx: DBAccessContext): Fox[Unit] = {
     val insertPathQuery =
       q"""INSERT INTO webknossos.folder_paths(_ancestor, _descendant, depth)
              SELECT _ancestor, ${f._id}, depth + 1 -- links to ancestors
@@ -309,7 +309,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield ()
   }
 
-  def moveSubtree(idValidated: ObjectId, newParentIdValidated: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def moveSubtree(idValidated: ObjectId, newParentIdValidated: ObjectId)(using ctx: DBAccessContext): Fox[Unit] = {
     val deleteObsoletePathsQuery =
       q"""
          DELETE FROM webknossos.folder_paths fp1
@@ -332,7 +332,7 @@ class FolderDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield ()
   }
 
-  override def deleteOne(folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  override def deleteOne(folderId: ObjectId)(using ctx: DBAccessContext): Fox[Unit] = {
     val deleteFolderQuery = q"UPDATE webknossos.folders SET isDeleted = true WHERE _id = $folderId".asUpdate
     val deletePathsQuery =
       q"DELETE FROM webknossos.folder_paths WHERE _ancestor = $folderId OR _descendant = $folderId".asUpdate

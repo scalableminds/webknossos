@@ -227,7 +227,7 @@ class BinaryDataController @Inject()(
             request.body.cuboid,
             request.body.segmentId,
             request.body.voxelSizeFactorInUnit,
-            tokenContextForRequest(request),
+            tokenContextForRequest(using request),
             request.body.mapping,
             request.body.mappingType,
             request.body.additionalCoordinates,
@@ -280,7 +280,7 @@ class BinaryDataController @Inject()(
       dataSourceId: DataSourceId,
       dataLayer: DataLayer,
       dataRequests: DataRequestCollection
-  )(implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
+  )(using tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
     val requests =
       dataRequests.map(r =>
         DataServiceDataRequest(Some(datasetId), Some(dataSourceId), dataLayer, r.cuboid(dataLayer), r.settings))

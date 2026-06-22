@@ -147,7 +147,7 @@ object StaticLayer {
   implicit object staticLayerFormat extends Format[StaticLayer] with MagFormatHelper {
     override def reads(json: JsValue): JsResult[StaticLayer] =
       for {
-        category <- json.validate((JsPath \ "category").read[LayerCategory.Value])
+        category <- json.validate(using (JsPath \ "category").read[LayerCategory.Value])
         layer <- category match {
           case LayerCategory.color        => json.validate[StaticColorLayer]
           case LayerCategory.segmentation => json.validate[StaticSegmentationLayer]

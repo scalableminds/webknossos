@@ -635,7 +635,7 @@ class DataSourceController @Inject()(
     } yield mirrorPathOpt.flatten.map((datasetId, _))
   }
 
-  private def refreshDataSource(datasetId: ObjectId)(implicit tc: TokenContext): Fox[DataSource] =
+  private def refreshDataSource(datasetId: ObjectId)(using tc: TokenContext): Fox[DataSource] =
     for {
       dataSourceFromDB <- dsRemoteWebknossosClient.getDataSource(datasetId) ~> NOT_FOUND
       dataSourceId = dataSourceFromDB.id

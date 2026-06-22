@@ -2323,10 +2323,7 @@ export function* updateMappingWithMerge(
     sourceAgglomerateId,
     targetAgglomerateId,
   );
-  // Note that mergedMapping may be identical (by reference) to activeMapping.mapping when the
-  // merge was a no-op. We still dispatch here: finishMappingActivation reacts to the
-  // SET_MAPPING_DATA action (not to a store-identity change), so the activation completes
-  // correctly even in the no-op case. See #9064.
+  // Even when the merge was a no-op, we still dispatch setMappingDataAction here, so the activation completes correctly (see the finishMappingActivation saga).
   yield* put(
     setMappingDataAction(
       volumeTracingId,

@@ -209,8 +209,13 @@ export function setMappingNameReducer(
    * tracing object (which is also persisted on the back-end). Only null
    * or the name of a HDF5 mapping is stored there, though.
    */
-  // Editable mappings or locked mappings cannot be disabled or switched for now
+  // Editable mappings or locked mappings cannot be disabled or switched for now.
   if (volumeTracing.hasEditableMapping || volumeTracing.mappingIsLocked) {
+    return state;
+  }
+
+  // If the name wouldn't change there is not need to update.
+  if (volumeTracing.mappingName === mappingName) {
     return state;
   }
 

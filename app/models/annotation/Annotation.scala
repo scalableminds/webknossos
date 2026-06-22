@@ -5,7 +5,12 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{
+  AnnotationLayersRow,
+  Annotations,
+  AnnotationsRow,
+  GetResultAnnotationsRow
+}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import models.annotation.AnnotationState.AnnotationState
 import models.annotation.CollaborationMode.CollaborationMode

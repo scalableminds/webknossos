@@ -4,7 +4,12 @@ import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{
+  OrganizationPlanUpdatesRow,
+  Organizations,
+  OrganizationsRow,
+  GetResultOrganizationsRow
+}
 import PricingPlan.PricingPlan
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachmentType

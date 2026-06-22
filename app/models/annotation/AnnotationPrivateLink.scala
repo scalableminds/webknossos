@@ -3,7 +3,11 @@ package models.annotation
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{
+  AnnotationPrivatelinks,
+  AnnotationPrivatelinksRow,
+  GetResultAnnotationPrivatelinksRow
+}
 import play.api.libs.json.{JsValue, Json, OFormat}
 import security.RandomIDGenerator
 import com.scalableminds.util.objectid.ObjectId

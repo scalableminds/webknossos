@@ -6,7 +6,13 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.models.datasource.DatasetViewConfiguration.DatasetViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{
+  UserExperiencesRow,
+  Users,
+  UsersRow,
+  GetResultUsersRow,
+  UserTeamRolesRow
+}
 
 import javax.inject.Inject
 import models.team._

@@ -3,7 +3,7 @@ package models.job
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{Jobs, JobsRow, GetResultJobsRow}
 import models.job.JobState.JobState
 import models.job.JobCommand.JobCommand
 import play.api.libs.json.{JsObject, Json, OFormat}

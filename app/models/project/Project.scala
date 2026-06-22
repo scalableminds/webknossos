@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{Projects, ProjectsRow, GetResultProjectsRow}
 import com.typesafe.scalalogging.LazyLogging
 import models.annotation.{AnnotationState, AnnotationType}
 import models.task.TaskDAO

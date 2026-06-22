@@ -109,6 +109,8 @@ function createDataset(dataLayers: Array<APIColorLayer | APISegmentationLayer>):
     created: 1502288550432,
     isEditable: true,
     directoryName: "ROI2017_wkw",
+    isVirtual: false,
+    creationType: "Upload",
     isUnreported: false,
     tags: [],
     folderId: "66f3c82466010002752e972c",

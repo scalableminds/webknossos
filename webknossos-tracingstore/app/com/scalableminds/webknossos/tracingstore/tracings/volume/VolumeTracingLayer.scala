@@ -26,7 +26,7 @@ trait AbstractVolumeTracingBucketProvider extends BucketProvider with VolumeTrac
   def bucketStream(version: Option[Long] = None): Iterator[(BucketPosition, Array[Byte])]
 }
 
-class VolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit val ec: ExecutionContext)
+class VolumeTracingBucketProvider(layer: VolumeTracingLayer)
     extends AbstractVolumeTracingBucketProvider {
 
   val volumeDataStore: FossilDBClient = layer.volumeDataStore
@@ -55,7 +55,7 @@ class VolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit val ec: Ex
     bucketStreamWithVersion(layer, version)
 }
 
-class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer)(implicit val ec: ExecutionContext)
+class TemporaryVolumeTracingBucketProvider(layer: VolumeTracingLayer)
     extends AbstractVolumeTracingBucketProvider {
 
   val volumeDataStore: FossilDBClient = layer.volumeDataStore

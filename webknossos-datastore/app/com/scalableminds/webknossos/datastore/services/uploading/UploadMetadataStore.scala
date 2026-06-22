@@ -165,13 +165,13 @@ class DatasetUploadMetadataStore @Inject()(protected val store: DataStoreRedisSt
     store.insertSerialized(redisKeyForUploadIdByDataSourceId(dataSourceId), uploadId)
 
   def insertLinkedLayerIdentifiers(uploadId: String,
-                                   linkedLayerIdentifiers: Option[Seq[LinkedLayerIdentifier]]): Fox[_] =
+                                   linkedLayerIdentifiers: Option[Seq[LinkedLayerIdentifier]]): Fox[Unit] =
     store.insertSerialized(redisKeyForLinkedLayerIdentifier(uploadId), linkedLayerIdentifiers.getOrElse(Seq.empty))
 
-  def insertNeedsConversion(uploadId: String, needsConversion: Boolean): Fox[_] =
+  def insertNeedsConversion(uploadId: String, needsConversion: Boolean): Fox[Unit] =
     store.insertSerialized(redisKeyForNeedsConversion(uploadId), needsConversion)
 
-  def insertVoxelSize(uploadId: String, voxelSize: VoxelSize): Fox[_] =
+  def insertVoxelSize(uploadId: String, voxelSize: VoxelSize): Fox[Unit] =
     store.insertSerialized(redisKeyForVoxelSize(uploadId), voxelSize)
 
   override def cleanUp(uploadId: String)(implicit ec: ExecutionContext): Fox[Unit] =

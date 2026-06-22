@@ -332,7 +332,7 @@ class VolumeTracingZarrStreamingController @Inject()(
       mag: Vec3Int,
       position: Vec3Int,
       cubeSize: Int,
-      additionalCoordinates: Option[Seq[AdditionalCoordinate]])(implicit tc: TokenContext): Fox[Array[Byte]] =
+      additionalCoordinates: Option[Seq[AdditionalCoordinate]])(using tc: TokenContext): Fox[Array[Byte]] =
     if (missingBucketIndices.nonEmpty) {
       for {
         remoteFallbackLayer <- tracingService.remoteFallbackLayerForVolumeTracing(tracing, annotationId) ?~> "No data at coordinates, no fallback layer defined"

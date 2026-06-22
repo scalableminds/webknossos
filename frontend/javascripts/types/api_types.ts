@@ -225,6 +225,18 @@ type MutableAPIDatasetBase = MutableAPIDataSourceId & {
   isEditable: boolean;
   isPublic: boolean;
   directoryName: string;
+  isVirtual: boolean;
+  creationType?:
+    | "Upload"
+    | "DiskScan"
+    | "UploadToPaths"
+    | "ExploreAndAdd"
+    | "Compose"
+    | "DuplicateToOrga"
+    | null;
+  rootPath?: string | null;
+  rootRealPath?: string | null;
+  mirrorPath?: string | null;
   logoUrl: string | null | undefined;
   lastUsedByUser: number;
   sortingKey: number;
@@ -327,7 +339,6 @@ export type NovelUserExperienceInfoType = {
   hasSeenDashboardWelcomeBanner?: boolean;
   hasSeenSegmentAnythingWithDepth?: boolean;
   lastViewedWhatsNewTimestamp?: number;
-  hasDiscardedHelpButton?: boolean;
   latestAcknowledgedMaintenanceInfo?: string;
   suppressManyBucketUpdatesWarning?: boolean;
 };
@@ -866,6 +877,7 @@ export type APIJob = {
   readonly returnValue: string | null | undefined;
   readonly voxelyticsWorkflowHash: string | null | undefined;
   readonly created: number;
+  readonly lastRetry: number | null | undefined;
   readonly costInMilliCredits: number | null | undefined;
 };
 
@@ -1356,8 +1368,6 @@ export type RenderAnimationOptions = {
   } & MeshInformation)[];
   boundingBox: BoundingBoxObject;
   includeWatermark: boolean;
-  intensityMin: number;
-  intensityMax: number;
   magForTextures: Vector3;
   movieResolution: MOVIE_RESOLUTIONS;
   cameraPosition: CAMERA_POSITIONS;
@@ -1368,4 +1378,14 @@ export type RenderAnimationOptions = {
 
 export type ServerErrorMessage = {
   error: string;
+};
+
+export type LayerAttachmentType = "mesh" | "agglomerate" | "segmentIndex" | "connectome" | "cumsum";
+
+export type APIStorageDetailEntry = {
+  layerName: string;
+  name: string;
+  attachmentType: LayerAttachmentType | null;
+  usedStorageBytes: number;
+  lastUpdated: string;
 };

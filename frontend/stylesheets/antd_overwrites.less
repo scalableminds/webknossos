@@ -237,10 +237,17 @@ label.ant-checkbox-wrapper {
 }
 
 .ant-tree-directory .ant-tree-title {
-  // Make the directory tree element full-width (subtract the width of the
-  // directory icon)
-  width: calc(100% - 24px);
+  // Make the directory tree element full-width. The folder icon is rendered inside the title
+  // itself (see folder_tree.tsx), so no extra width needs to be reserved for it.
+  width: 100%;
   display: flex;
+  min-width: 0;
+}
+
+// When none of the folders have subfolders, every expand/collapse caret is a no-op and just
+// wastes horizontal space. Collapse that column so the folder icons start at the very left.
+.folder-tree-flat .ant-tree-switcher-noop {
+  display: none;
 }
 
 .ant-tree-directory {
@@ -270,7 +277,6 @@ label.ant-checkbox-wrapper {
 }
 
 .action-bar {
-
   // UI for additional coordinates should always be in dark mode
   // since it is located in the navbar's action bar.
   .ant-input-group-addon {

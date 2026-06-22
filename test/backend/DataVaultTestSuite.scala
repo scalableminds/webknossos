@@ -61,7 +61,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
                               .create(CredentializedUPath(upath, None), ws, dummyDataStoreHost)
                               .getOrElse(fail("Failed to create HttpsDataVault")))
             (vaultPath / s"neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey")
-              .readBytes(range)(globalExecutionContext, emptyTokenContext)
+              .readBytes(range)(using globalExecutionContext, emptyTokenContext)
               .futureBox
               .map {
                 case Full(bytes) =>
@@ -81,7 +81,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
                                         .getOrElse(fail("Failed to create GoogleCloudDataVault")))
         "return correct response (start-end range)" in {
           (vaultPath / dataKey)
-            .readBytesEncodingAndRangeHeader(range)(globalExecutionContext, emptyTokenContext)
+            .readBytesEncodingAndRangeHeader(range)(using globalExecutionContext, emptyTokenContext)
             .futureBox
             .map {
               case Full((bytes, encoding, rangeHeader)) =>
@@ -95,7 +95,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
 
         "return correct response (suffix-length range)" in {
           (vaultPath / dataKey)
-            .readBytesEncodingAndRangeHeader(suffixRange)(globalExecutionContext, emptyTokenContext)
+            .readBytesEncodingAndRangeHeader(suffixRange)(using globalExecutionContext, emptyTokenContext)
             .futureBox
             .map {
               case Full((bytes, encoding, rangeHeader)) =>
@@ -110,7 +110,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
         "return empty box" when {
           "requesting a non-existent object" in {
             (vaultPath / s"non-existent-key${UUID.randomUUID}")
-              .readBytes()(globalExecutionContext, emptyTokenContext)
+              .readBytes()(using globalExecutionContext, emptyTokenContext)
               .futureBox
               .map(assertBoxEmpty)
           }
@@ -118,7 +118,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
         "return failure" when {
           "requesting invalid range" in {
             (vaultPath / dataKey)
-              .readBytes(ByteRange.startEndExclusive(-5, -10))(globalExecutionContext, emptyTokenContext)
+              .readBytes(ByteRange.startEndExclusive(-5, -10))(using globalExecutionContext, emptyTokenContext)
               .futureBox
               .map(assertBoxFailure)
           }
@@ -134,7 +134,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
                   .getOrElse(fail("Failed to create GoogleCloudDataVault"))
               )
             (vaultPath / dataKey)
-              .readBytes(ByteRange.startEndExclusive(-10, 10))(globalExecutionContext, emptyTokenContext)
+              .readBytes(ByteRange.startEndExclusive(-10, 10))(using globalExecutionContext, emptyTokenContext)
               .futureBox
               .map(assertBoxFailure)
           }
@@ -148,9 +148,9 @@ class DataVaultTestSuite extends AsyncWordSpec {
                             .create(CredentializedUPath(upathGzip, None))
                             .getOrElse(fail("Failed to create GoogleCloudDataVault")))
           for {
-            bytesBox <- vaultPathGzip.readBytes()(globalExecutionContext, emptyTokenContext).futureBox
+            bytesBox <- vaultPathGzip.readBytes()(using globalExecutionContext, emptyTokenContext).futureBox
             headerBox <- vaultPathGzip
-              .readBytesEncodingAndRangeHeader()(globalExecutionContext, emptyTokenContext)
+              .readBytesEncodingAndRangeHeader()(using globalExecutionContext, emptyTokenContext)
               .futureBox
           } yield {
             (bytesBox, headerBox) match {
@@ -172,7 +172,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
                             .create(CredentializedUPath(upathGzip, None))
                             .getOrElse(fail("Failed to create GoogleCloudDataVault")))
           vaultPathGzip
-            .readBytes(ByteRange.startEndExclusive(0, 100))(globalExecutionContext, emptyTokenContext)
+            .readBytes(ByteRange.startEndExclusive(0, 100))(using globalExecutionContext, emptyTokenContext)
             .futureBox
             .map(assertBoxFailure)
         }
@@ -188,7 +188,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
                             S3DataVault
                               .create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext)
                               .getOrElse(fail("Failed to create S3DataVault")))
-            (vaultPath / "s0/5/5/5").readBytes(range)(globalExecutionContext, emptyTokenContext).futureBox.map {
+            (vaultPath / "s0/5/5/5").readBytes(range)(using globalExecutionContext, emptyTokenContext).futureBox.map {
               case Full(bytes) =>
                 assert(bytes.length == range.length)
                 assert(bytes.take(10).sameElements(Array(0, 0, 0, 3, 0, 0, 0, 64, 0, 0)))
@@ -214,7 +214,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
                               .create(CredentializedUPath(upath, None), ws, dummyDataStoreHost)
                               .getOrElse(fail("Failed to create HttpsDataVault")))
             (vaultPath / s"neuroglancer-fafb-data/fafb_v14/fafb_v14_orig/$dataKey")
-              .readBytes()(globalExecutionContext, emptyTokenContext)
+              .readBytes()(using globalExecutionContext, emptyTokenContext)
               .futureBox
               .map {
                 case Full(bytes) =>
@@ -233,7 +233,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
                                         GoogleCloudDataVault
                                           .create(CredentializedUPath(upath, None))
                                           .getOrElse(fail("Failed to create GoogleCloudDataVault")))
-          (vaultPath / dataKey).readBytes()(globalExecutionContext, emptyTokenContext).futureBox.map {
+          (vaultPath / dataKey).readBytes()(using globalExecutionContext, emptyTokenContext).futureBox.map {
             case Full(bytes) =>
               assert(bytes.length == dataLength)
               assert(bytes.take(10).sameElements(Array(-1, -40, -1, -32, 0, 16, 74, 70, 73, 70)))
@@ -253,7 +253,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
                               .create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext)
                               .getOrElse(fail("Failed to create S3DataVault")))
             (vaultPath / "33792-34304_29696-30208_3216-3232")
-              .readBytes()(globalExecutionContext, emptyTokenContext)
+              .readBytes()(using globalExecutionContext, emptyTokenContext)
               .futureBox
               .map {
                 case Full(bytes) =>
@@ -272,7 +272,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
                 .create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext)
                 .getOrElse(fail("Failed to create S3DataVault"))
               val vaultPath = new VaultPath(upath, s3DataVault)
-              vaultPath.readBytes()(globalExecutionContext, emptyTokenContext).futureBox.map(assertBoxEmpty)
+              vaultPath.readBytes()(using globalExecutionContext, emptyTokenContext).futureBox.map(assertBoxEmpty)
             }
           }
         }
@@ -286,7 +286,7 @@ class DataVaultTestSuite extends AsyncWordSpec {
                 .create(CredentializedUPath(upath, None), clientPool)(globalExecutionContext)
                 .getOrElse(fail("Failed to create S3DataVault"))
               val vaultPath = new VaultPath(upath, s3DataVault)
-              vaultPath.readBytes()(globalExecutionContext, emptyTokenContext).futureBox.map(assertBoxEmpty)
+              vaultPath.readBytes()(using globalExecutionContext, emptyTokenContext).futureBox.map(assertBoxEmpty)
             }
           }
         }
@@ -337,13 +337,13 @@ class DataVaultTestSuite extends AsyncWordSpec {
     "using vault path" when {
       class MockDataVault extends DataVault {
         override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(
-            implicit ec: ExecutionContext,
+            using ec: ExecutionContext,
             tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] = ???
 
         override def listDirectory(path: VaultPath,
                                    maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]] = ???
 
-        override def getUsedStorageBytes(path: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+        override def getUsedStorageBytes(path: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
           ???
       }
 

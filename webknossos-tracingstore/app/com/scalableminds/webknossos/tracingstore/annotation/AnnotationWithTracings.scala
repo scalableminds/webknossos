@@ -84,9 +84,8 @@ case class AnnotationWithTracings(
   def getEditableMappingTracingIds: List[String] = editableMappingsByTracingId.keys.toList
 
   def getEditableMappingsInfo: List[(String, EditableMappingInfo)] =
-    editableMappingsByTracingId.view.flatMap {
-      case (id, (info: EditableMappingInfo, _)) => Some(id, info)
-      case _                                    => None
+    editableMappingsByTracingId.view.map {
+      case (id, (info, _)) => (id, info)
     }.toList
 
   def getEditableMappingInfo(tracingId: String): Option[EditableMappingInfo] =

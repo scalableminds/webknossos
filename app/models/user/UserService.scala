@@ -60,13 +60,13 @@ class UserService @Inject()(conf: WkConf,
   private val userCache: AlfuCache[(ObjectId, String), User] =
     AlfuCache(timeToLive = conf.WebKnossos.Cache.User.timeout, timeToIdle = conf.WebKnossos.Cache.User.timeout)
 
-  def userFromMultiUserEmail(email: String)(implicit ctx: DBAccessContext): Fox[User] =
+  def userFromMultiUserEmail(email: String)(using ctx: DBAccessContext): Fox[User] =
     for {
-      multiUser <- multiUserDAO.findOneByEmail(email)(GlobalAccessContext)
+      multiUser <- multiUserDAO.findOneByEmail(email)(using GlobalAccessContext)
       user <- disambiguateUserFromMultiUser(multiUser)
     } yield user
 
-  private def disambiguateUserFromMultiUser(multiUser: MultiUser)(implicit ctx: DBAccessContext): Fox[User] =
+  private def disambiguateUserFromMultiUser(multiUser: MultiUser)(using ctx: DBAccessContext): Fox[User] =
     multiUser._lastLoggedInIdentity match {
       case Some(userId) =>
         for {
@@ -81,20 +81,20 @@ class UserService @Inject()(conf: WkConf,
 
   def assertNotInOrgaYet(multiUserId: ObjectId, organizationId: String): Fox[Unit] =
     for {
-      userBox <- userDAO.findOneByOrgaAndMultiUser(organizationId, multiUserId)(GlobalAccessContext).shiftBox
+      userBox <- userDAO.findOneByOrgaAndMultiUser(organizationId, multiUserId)(using GlobalAccessContext).shiftBox
       _ <- Fox.fromBool(userBox.isEmpty) ?~> Msg.Organization.alreadyJoined
     } yield ()
 
-  def assertIsSuperUser(user: User)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def assertIsSuperUser(user: User)(using ctx: DBAccessContext): Fox[Unit] =
     assertIsSuperUser(user._multiUser)
 
-  def assertIsSuperUser(multiUserId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def assertIsSuperUser(multiUserId: ObjectId)(using ctx: DBAccessContext): Fox[Unit] =
     Fox.assertTrue(isSuperUser(multiUserId)) ?~> Msg.User.superUserOnly
 
-  def isSuperUser(multiUserId: ObjectId)(implicit ctx: DBAccessContext): Fox[Boolean] =
+  def isSuperUser(multiUserId: ObjectId)(using ctx: DBAccessContext): Fox[Boolean] =
     multiUserDAO.findOne(multiUserId).map(_.isSuperUser)
 
-  def findOneCached(userId: ObjectId)(implicit ctx: DBAccessContext): Fox[User] =
+  def findOneCached(userId: ObjectId)(using ctx: DBAccessContext): Fox[User] =
     userCache.getOrLoad((userId, ctx.toStringAnonymous), _ => userDAO.findOne(userId))
 
   def insert(organizationId: String,
@@ -110,7 +110,7 @@ class UserService @Inject()(conf: WkConf,
              teamMemberships: Seq[TeamMembership]): Fox[User] = {
     implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
     for {
-      _ <- Fox.assertTrue(multiUserDAO.emailNotPresentYet(email)(GlobalAccessContext)) ?~> Msg.User.Email.taken
+      _ <- Fox.assertTrue(multiUserDAO.emailNotPresentYet(email)(using GlobalAccessContext)) ?~> Msg.User.Email.taken
       multiUserId = ObjectId.generate
       multiUser = MultiUser(
         multiUserId,
@@ -143,11 +143,11 @@ class UserService @Inject()(conf: WkConf,
     } yield user
   }
 
-  def fillSuperUserIdentity(originalUser: User, organizationId: String)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def fillSuperUserIdentity(originalUser: User, organizationId: String)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       multiUser <- multiUserDAO.findOne(originalUser._multiUser)
       existingIdentity: Box[User] <- userDAO
-        .findOneByOrgaAndMultiUser(organizationId, originalUser._multiUser)(GlobalAccessContext)
+        .findOneByOrgaAndMultiUser(organizationId, originalUser._multiUser)(using GlobalAccessContext)
         .shiftBox
       teamMemberships <- initialTeamMemberships(organizationId, None)
       _ <- if (multiUser.isSuperUser && existingIdentity.isEmpty) {
@@ -196,7 +196,7 @@ class UserService @Inject()(conf: WkConf,
         created = Instant.now
       )
       _ <- userDAO.insertOne(user)
-      _ <- userDAO.updateTeamMembershipsForUser(user._id, teamMemberships)(GlobalAccessContext)
+      _ <- userDAO.updateTeamMembershipsForUser(user._id, teamMemberships)(using GlobalAccessContext)
       _ = logger.info(
         s"Multiuser ${originalUser._multiUser} joined organization $organizationId with new user id $newUserId.")
     } yield user
@@ -211,7 +211,7 @@ class UserService @Inject()(conf: WkConf,
              isDatasetManager: Boolean,
              teamMemberships: List[TeamMembership],
              experiences: Map[String, Int],
-             lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[User] = {
+             lastTaskTypeId: Option[ObjectId])(using ctx: DBAccessContext): Fox[User] = {
 
     if (user.isDeactivated && activated) {
       logger.info(s"Activating user ${user._id}. Access context: ${ctx.toStringAnonymous}")
@@ -243,14 +243,14 @@ class UserService @Inject()(conf: WkConf,
   def changePasswordInfo(loginInfo: LoginInfo, passwordInfo: PasswordInfo): Fox[PasswordInfo] =
     for {
       userIdValidated <- ObjectId.fromString(loginInfo.providerKey)
-      user <- findOneCached(userIdValidated)(GlobalAccessContext)
-      _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordInfo)(GlobalAccessContext)
+      user <- findOneCached(userIdValidated)(using GlobalAccessContext)
+      _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordInfo)(using GlobalAccessContext)
     } yield passwordInfo
 
   private def getOpenIdConnectPasswordInfo: PasswordInfo =
     PasswordInfo("Empty", "")
 
-  def updateUserConfiguration(user: User, configuration: JsObject)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateUserConfiguration(user: User, configuration: JsObject)(using ctx: DBAccessContext): Fox[Unit] =
     userDAO.updateUserConfiguration(user._id, configuration).map { result =>
       removeUserFromCache(user._id)
       result
@@ -259,9 +259,9 @@ class UserService @Inject()(conf: WkConf,
   def updateDatasetViewConfiguration(user: User,
                                      datasetId: ObjectId,
                                      datasetConfiguration: DatasetViewConfiguration,
-                                     layerConfiguration: Option[JsValue])(implicit ctx: DBAccessContext): Fox[Unit] =
+                                     layerConfiguration: Option[JsValue])(using ctx: DBAccessContext): Fox[Unit] =
     for {
-      dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId)
+      dataset <- datasetDAO.findOne(datasetId)(using GlobalAccessContext) ?~> Msg.Dataset.notFound(datasetId)
       layerMap = layerConfiguration.flatMap(_.asOpt[Map[String, JsValue]]).getOrElse(Map.empty)
       _ <- Fox.serialCombined(layerMap.toList) {
         case (name, config) =>
@@ -279,14 +279,14 @@ class UserService @Inject()(conf: WkConf,
                                                                                    datasetConfiguration)
     } yield ()
 
-  def updateLastTaskTypeId(user: User, lastTaskTypeId: Option[String])(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateLastTaskTypeId(user: User, lastTaskTypeId: Option[ObjectId])(using ctx: DBAccessContext): Fox[Unit] =
     userDAO.updateLastTaskTypeId(user._id, lastTaskTypeId).map { result =>
       removeUserFromCache(user._id)
       result
     }
 
   def retrieve(loginInfo: LoginInfo): Future[Option[User]] =
-    findOneCached(ObjectId(loginInfo.providerKey))(GlobalAccessContext).futureBox.map(_.toOption)
+    findOneCached(ObjectId(loginInfo.providerKey))(using GlobalAccessContext).futureBox.map(_.toOption)
 
   def createLoginInfo(userId: ObjectId): LoginInfo =
     LoginInfo(CredentialsProvider.ID, userId.id)
@@ -326,8 +326,8 @@ class UserService @Inject()(conf: WkConf,
       case None => Fox.successful(user.isAdminOf(organizationId))
       case Some(taskId) =>
         (for {
-          task <- taskDAO.findOne(taskId)(GlobalAccessContext)
-          project <- projectDAO.findOne(task._project)(GlobalAccessContext)
+          task <- taskDAO.findOne(taskId)(using GlobalAccessContext)
+          project <- projectDAO.findOne(task._project)(using GlobalAccessContext)
           teamManagerTeamIds <- teamManagerTeamIdsFor(user._id)
         } yield
           (teamManagerTeamIds.contains(project._team) || user.isAdminOf(organizationId))) ?~> Msg.Team.adminNotAllowed
@@ -335,7 +335,7 @@ class UserService @Inject()(conf: WkConf,
 
   def isTeamManagerOrAdminOf(user: User, _team: ObjectId): Fox[Boolean] =
     (for {
-      team <- teamDAO.findOne(_team)(GlobalAccessContext)
+      team <- teamDAO.findOne(_team)(using GlobalAccessContext)
       teamManagerTeamIds <- teamManagerTeamIdsFor(user._id)
     } yield teamManagerTeamIds.contains(_team) || user.isAdminOf(team._organization)) ?~> Msg.Team.adminNotAllowed
 
@@ -362,9 +362,9 @@ class UserService @Inject()(conf: WkConf,
     implicit val ctx: DBAccessContext = GlobalAccessContext
     for {
       isEditable <- isEditableBy(user, requestingUser)
-      organization <- organizationDAO.findOne(user._organization)(GlobalAccessContext)
+      organization <- organizationDAO.findOne(user._organization)(using GlobalAccessContext)
       teamMemberships <- teamMembershipsFor(user._id)
-      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
       novelUserExperienceInfos = multiUser.novelUserExperienceInfos
       teamMembershipsJs <- Fox.serialCombined(teamMemberships)(tm => teamMembershipService.publicWrites(tm))
       isGuest <- userDAO.isUserAGuest(user._id)

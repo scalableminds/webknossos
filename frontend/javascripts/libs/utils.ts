@@ -437,8 +437,8 @@ export function isUserAdmin(user: APIUser): boolean {
   return user.isAdmin;
 }
 
-export function isUserAdminOrTeamManager(user: APIUser): boolean {
-  return isUserAdmin(user) || isUserTeamManager(user);
+export function isUserAdminOrTeamManager(user: APIUser | null | undefined): boolean {
+  return user != null && (isUserAdmin(user) || isUserTeamManager(user));
 }
 
 function isUserDatasetManager(user: APIUser): boolean {

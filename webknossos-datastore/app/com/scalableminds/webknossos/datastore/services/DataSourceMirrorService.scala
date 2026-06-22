@@ -31,16 +31,16 @@ class DataSourceMirrorService @Inject()(
 ) extends FoxImplicits
     with LazyLogging {
 
-  private def getMirrorDir(dataSource: UsableDataSource): Box[Path] =
+  private def getMirrorDir(dataSource: UsableDataSource, createIfMissing: Boolean): Box[Path] =
     for {
-      orgaDir <- baseDirService.getOneLocalForOrga(dataSource.id.organizationId, createIfMissing = true, checkWritable = true)
+      orgaDir <- baseDirService.getOneLocalForOrga(dataSource.id.organizationId, createIfMissing = createIfMissing, checkWritable = true)
     } yield orgaDir.resolve(".mirror").resolve(dataSource.id.directoryName)
 
   def writeMirror(dataSource: UsableDataSource, datasetId: ObjectId)(
       implicit ec: ExecutionContext): Fox[Option[String]] =
     if (dataSource.allExplicitPaths.forall(_.isLocal)) {
       for {
-        mirrorDir <- getMirrorDir(dataSource).toFox
+        mirrorDir <- getMirrorDir(dataSource, createIfMissing = true).toFox
         tempMirrorDir = mirrorDir.resolveSibling(mirrorDir.getFileName.toString + ".new")
         _ = logger.info(s"Writing dataset mirror for $datasetId at $mirrorDir...")
         _ <- ensureMirrorParent(mirrorDir)

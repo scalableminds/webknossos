@@ -12,7 +12,7 @@ import java.nio.file.{Files, Path}
 
 class BaseDirService @Inject()(config: DataStoreConfig) extends LazyLogging {
 
-  private lazy val baseDirectories: Seq[BaseDirConfig] = new BaseDirConfigReader().read(config.Datastore.baseDirectories)
+  val baseDirectories: Seq[BaseDirConfig] = new BaseDirConfigReader().read(config.Datastore.baseDirectories)
 
   def getOneForOrga(organizationId: String, requireAllowsUpload: Boolean = false, requireLocal: Boolean = false, requireS3: Boolean = false): Box[UPath] = {
     val orgaSpecificPath: Option[UPath] =

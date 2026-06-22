@@ -35,7 +35,7 @@ class BaseDirConfigReader {
 class SingleBaseDirConfigReader(underlyingConfig: Config) extends ConfigReader {
   override val raw: Configuration = Configuration(underlyingConfig)
 
-  def readOne: BaseDirConfig =
+  def readOne: BaseDirConfig = {
     val pathStr = get[String]("path")
     val path = UPath.fromString(pathStr).getOrElse {
       throw new ConfigException.BadValue("datastore.baseDirectories.path", s"Invalid path: $pathStr")
@@ -46,4 +46,6 @@ class SingleBaseDirConfigReader(underlyingConfig: Config) extends ConfigReader {
       get[Boolean]("allowsUpload"),
       get[Boolean]("doScan")
     )
+  }
+
 }

@@ -164,7 +164,10 @@ describe("operation_context_saga", () => {
     }
 
     function* op2() {
-      const ctx = yield* createOperationContext({ id: "MIN_CUT", behaviorWhenDisallowed: "ignore" });
+      const ctx = yield* createOperationContext({
+        id: "MIN_CUT",
+        behaviorWhenDisallowed: "ignore",
+      });
       secondContextWasNull = ctx == null;
     }
 

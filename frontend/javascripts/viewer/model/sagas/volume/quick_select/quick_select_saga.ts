@@ -31,8 +31,10 @@ export default function* listenToQuickSelect(): Saga<void> {
         behaviorWhenDisallowed: "ignore",
       });
       if (ctx == null) {
-        const operations = yield* select(state => state.operationContext.activeOperations)
-        console.warn(`Ignoring ${action.type} request because another operation is already running (${operations.map(op => op.id).join(", ")}).`);
+        const operations = yield* select((state) => state.operationContext.activeOperations);
+        console.warn(
+          `Ignoring ${action.type} request because another operation is already running (${operations.map((op) => op.id).join(", ")}).`,
+        );
         return;
       }
       try {

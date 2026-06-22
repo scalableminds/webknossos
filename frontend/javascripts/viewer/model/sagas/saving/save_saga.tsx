@@ -433,10 +433,7 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
 
   // Ensure tracings were diffed so that the save queue can be inspected afterwards.
   const annotation = yield* select((state) => state.annotation);
-  yield dispatchEnsureTracingsWereDiffedToSaveQueueAction(
-    Store.dispatch,
-    annotation,
-  );
+  yield dispatchEnsureTracingsWereDiffedToSaveQueueAction(Store.dispatch, annotation);
   // saveQueueEntries must not change during performRebasing saga. This is achieved
   // by the operationContext in which performRebasing is called (see caller).
   const saveQueueEntries = yield* select((state) => state.save.queue);

@@ -3,7 +3,11 @@ package models.annotation
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{
+  AnnotationPrivatelinks,
+  AnnotationPrivatelinksRow,
+  GetResultAnnotationPrivatelinksRow
+}
 import play.api.libs.json.{JsValue, Json, OFormat}
 import security.RandomIDGenerator
 import com.scalableminds.util.objectid.ObjectId
@@ -68,7 +72,7 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: Exec
     } yield ()
 
   def updateOne(id: ObjectId, annotationId: ObjectId, expirationDateTime: Option[Instant])(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(q"""UPDATE webknossos.annotation_privateLinks
@@ -78,7 +82,7 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: Exec
                    WHERE _id = $id""".asUpdate)
     } yield ()
 
-  def findAllByAnnotation(annotationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[AnnotationPrivateLink]] =
+  def findAllByAnnotation(annotationId: ObjectId)(using ctx: DBAccessContext): Fox[List[AnnotationPrivateLink]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(

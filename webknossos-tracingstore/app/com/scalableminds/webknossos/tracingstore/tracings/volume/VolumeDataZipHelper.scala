@@ -54,7 +54,6 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with 
                   } else Fox.successful(())
                 }.getOrElse(Fox.successful(()))
               } else Fox.successful(())
-            case _ => Fox.successful(())
           }
         case _ => Fox.successful(())
       }
@@ -150,7 +149,6 @@ trait VolumeDataZipHelper extends WKWDataFormatHelper with ReversionHelper with 
           res <- block(index, inputStreamToTempfile(is))
           _ = index += 1
         } yield res
-      case _ => Fox.successful(())
     }
     for {
       _ <- unzipResult

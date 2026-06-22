@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{Scripts, ScriptsRow, GetResultScriptsRow}
 import models.user.{UserDAO, UserService}
 import play.api.libs.json._
 import com.scalableminds.util.objectid.ObjectId
@@ -72,7 +72,7 @@ class ScriptDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    VALUES(${s._id}, ${s._owner}, ${s.name}, ${s.gist}, ${s.created}, ${s.isDeleted})""".asUpdate)
     } yield ()
 
-  def updateOne(s: Script)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateOne(s: Script)(using ctx: DBAccessContext): Fox[Unit] =
     for { //note that s.created is skipped
       _ <- assertUpdateAccess(s._id)
       _ <- run(q"""UPDATE webknossos.scripts

@@ -52,7 +52,7 @@ class AdHocMeshActor(val service: AdHocMeshService, val timeout: FiniteDuration)
 
   def receive: Receive = {
     case request: AdHocMeshRequest =>
-      sender() ! Await.result(service.requestAdHocMesh(request)(request.tokenContext).futureBox, timeout)
+      sender() ! Await.result(service.requestAdHocMesh(request)(using request.tokenContext).futureBox, timeout)
     case _ =>
       sender() ! Failure("Unexpected message sent to AdHocMeshActor.")
   }
@@ -81,7 +81,7 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
       }
     }
 
-  def requestAdHocMesh(request: AdHocMeshRequest)(implicit tc: TokenContext): Fox[(Array[Float], List[Int])] =
+  def requestAdHocMesh(request: AdHocMeshRequest)(using tc: TokenContext): Fox[(Array[Float], List[Int])] =
     request.dataLayer.elementClass match {
       case ElementClass.uint8 | ElementClass.int8 =>
         generateAdHocMeshImpl[Byte, ByteBuffer](request,
@@ -102,7 +102,7 @@ class AdHocMeshService(binaryDataService: BinaryDataService,
 
   private def generateAdHocMeshImpl[T: ClassTag, B <: Buffer](
       request: AdHocMeshRequest,
-      dataTypeFunctors: DataTypeFunctors[T, B])(implicit tc: TokenContext): Fox[(Array[Float], List[Int])] = {
+      dataTypeFunctors: DataTypeFunctors[T, B])(using tc: TokenContext): Fox[(Array[Float], List[Int])] = {
 
     def applyJsonMappingIfNeeded(data: Array[T]): Fox[Array[T]] =
       request.mapping match {

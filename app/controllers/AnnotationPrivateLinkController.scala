@@ -46,14 +46,14 @@ class AnnotationPrivateLinkController @Inject()(
       annotationIdValidated <- ObjectId.fromString(annotationId)
       userBox <- bearerTokenService.userForTokenOpt(userToken).shiftBox
       ctx = DBAccessContext(userBox.toOption)
-      annotation <- annotationDAO.findOne(annotationIdValidated)(ctx) ?~> Msg.Annotation.notFound
+      annotation <- annotationDAO.findOne(annotationIdValidated)(using ctx) ?~> Msg.Annotation.notFound
     } yield annotation
 
   private def findAnnotationByPrivateLinkIfNotExpired(accessToken: String): Fox[Annotation] =
     for {
       annotationPrivateLink <- annotationPrivateLinkDAO.findOneByAccessToken(accessToken)
       _ <- Fox.fromBool(annotationPrivateLink.expirationDateTime.forall(_ > Instant.now)) ?~> Msg.Annotation.PrivateLink.expired ~> NOT_FOUND
-      annotation <- annotationDAO.findOne(annotationPrivateLink._annotation)(GlobalAccessContext)
+      annotation <- annotationDAO.findOne(annotationPrivateLink._annotation)(using GlobalAccessContext)
     } yield annotation
 
   def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>

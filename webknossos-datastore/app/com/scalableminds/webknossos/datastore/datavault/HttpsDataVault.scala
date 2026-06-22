@@ -31,7 +31,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
   private lazy val dataStoreAuthority = new URI(dataStoreHost).getAuthority
 
   override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] =
     for {
       uri <- path.toRemoteUri.toFox
@@ -52,7 +52,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
     // HTTP file listing is currently not supported.
     Fox.successful(List.empty)
 
-  override def getUsedStorageBytes(path: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+  override def getUsedStorageBytes(path: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     // paid HTTP file storage is not supported.
     Fox.successful(0L)
 
@@ -69,7 +69,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
       }
     )
 
-  private def getWithRange(uri: URI, range: StartEndExclusiveByteRange)(implicit ec: ExecutionContext,
+  private def getWithRange(uri: URI, range: StartEndExclusiveByteRange)(using ec: ExecutionContext,
                                                                         tc: TokenContext): Fox[WSResponse] =
     for {
       _ <- ensureRangeRequestsSupported(uri)
@@ -77,7 +77,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
       _ = updateRangeRequestsSupportedForResponse(response)
     } yield response
 
-  private def getWithSuffixRange(uri: URI, range: SuffixLengthByteRange)(implicit ec: ExecutionContext,
+  private def getWithSuffixRange(uri: URI, range: SuffixLengthByteRange)(using ec: ExecutionContext,
                                                                          tc: TokenContext): Fox[WSResponse] =
     for {
       _ <- ensureRangeRequestsSupported(uri)
@@ -85,7 +85,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
       _ = updateRangeRequestsSupportedForResponse(response)
     } yield response
 
-  private def getComplete(uri: URI)(implicit ec: ExecutionContext, tc: TokenContext): Fox[WSResponse] =
+  private def getComplete(uri: URI)(using ec: ExecutionContext, tc: TokenContext): Fox[WSResponse] =
     Fox.fromFuture(buildRequest(uri).get())
 
   private def ensureRangeRequestsSupported(uri: URI)(implicit ec: ExecutionContext): Fox[Unit] =
@@ -113,7 +113,7 @@ class HttpsDataVault(credential: Option[DataVaultCredential], ws: WSClient, data
       supportsRangeRequests = Some(response.header("Content-Range").isDefined)
     }
 
-  private def buildRequest(uri: URI)(implicit tc: TokenContext): WSRequest = {
+  private def buildRequest(uri: URI)(using tc: TokenContext): WSRequest = {
     val request = ws.url(uri.toString).withRequestTimeout(readTimeout)
     tc.userTokenOpt match {
       // If a user token is present, and this request is targeted at the data store, use the user token to authenticate at the datastore

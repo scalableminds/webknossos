@@ -51,7 +51,7 @@ case class SqlToken(sql: String, values: List[SqlValue] = List()) {
     parts.tail.zip(values).foldLeft(parts.head)((acc, x) => acc + x._2.debugInfo + x._1)
   }
 
-  def as[R](implicit resultConverter: GetResult[R]): SqlStreamingAction[Vector[R], R, Effect] =
+  def as[R](using resultConverter: GetResult[R]): SqlStreamingAction[Vector[R], R, Effect] =
     new StreamingInvokerAction[Vector[R], R, Effect] {
       def statements: List[String] = List(sql)
 
@@ -71,7 +71,7 @@ case class SqlToken(sql: String, values: List[SqlValue] = List()) {
       protected def createBuilder: mutable.Builder[R, Vector[R]] = Vector.newBuilder[R]
     }
 
-  def asUpdate: SqlAction[Int, NoStream, Effect] = as[Int](GetUpdateValue).head
+  def asUpdate: SqlAction[Int, NoStream, Effect] = as[Int](using GetUpdateValue).head
 }
 
 object SqlToken {

@@ -467,4 +467,35 @@ describe("synchronizeAnnotationWithBackend (integration)", () => {
 
     expect(sendSaveRequestWithToken).toHaveBeenCalledTimes(1);
   });
+
+  it("dispatches snapshotAnnotationStateForNextRebaseAction after draining the queue", async () => {
+    const saveQueue = createSaveQueueFromUpdateActions(
+      [[createEdge(1, 0, 1, tracingId)], [createEdge(1, 1, 2, tracingId)]],
+      TIMESTAMP,
+    );
+
+    const dispatchedTypes: string[] = [];
+    const initial = {
+      annotation: { version: 1, annotationId, tracingStore: { url: TRACINGSTORE_URL } },
+      save: { queue: saveQueue },
+    };
+    function reducer(state: typeof initial = initial, action: any) {
+      if (action.type === "SHIFT_SAVE_QUEUE")
+        return { ...state, save: { queue: state.save.queue.slice(action.count) } };
+      if (action.type === "SET_VERSION_NUMBER")
+        return { ...state, annotation: { ...state.annotation, version: action.version } };
+      return state;
+    }
+    const collectingMiddleware = () => (next: any) => (action: any) => {
+      dispatchedTypes.push(action.type);
+      return next(action);
+    };
+    const sagaMiddleware = createSagaMiddleware();
+    createStore(reducer, applyMiddleware(collectingMiddleware, sagaMiddleware));
+
+    const task = sagaMiddleware.run(synchronizeAnnotationWithBackend, true);
+    await task.toPromise();
+
+    expect(dispatchedTypes).toContain("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");
+  });
 });

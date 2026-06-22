@@ -17,7 +17,7 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
   override def name: String = "WEBKNOSSOS-based Zarr"
 
   override def explore(remotePath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
+      using tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       dataSourcePropertiesPath <- Fox.successful(remotePath / UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON)
       dataSource <- dataSourcePropertiesPath.parseAsJson[UsableDataSource]
@@ -41,7 +41,7 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
                         remoteDatasetPath: VaultPath,
                         layerName: String,
                         headerFilename: String,
-                        credentialId: Option[String])(implicit tc: TokenContext): Fox[Seq[MagLocator]] =
+                        credentialId: Option[String])(using tc: TokenContext): Fox[Seq[MagLocator]] =
     Fox.serialCombined(mags)(m =>
       for {
         magPath <- fixRemoteMagPath(m, remoteDatasetPath, layerName, headerFilename)
@@ -50,7 +50,7 @@ class WebknossosZarrExplorer(implicit val ec: ExecutionContext) extends RemoteLa
   private def fixRemoteMagPath(mag: MagLocator,
                                remoteDatasetPath: VaultPath,
                                layerName: String,
-                               headerFilename: String)(implicit tc: TokenContext): Fox[Option[UPath]] =
+                               headerFilename: String)(using tc: TokenContext): Fox[Option[UPath]] =
     mag.path match {
       case Some(path) => Fox.successful(Some(path.resolvedIn(remoteDatasetPath.toUPath)))
       case None       =>

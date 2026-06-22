@@ -84,7 +84,7 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
                           ${mu.created}, ${mu.isEmailVerified}, ${mu.isDeleted})""".asUpdate)
     } yield ()
 
-  def updatePasswordInfo(multiUserId: ObjectId, passwordInfo: PasswordInfo)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updatePasswordInfo(multiUserId: ObjectId, passwordInfo: PasswordInfo)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(multiUserId)
       passwordInfoHasher <- PasswordHasherType.fromString(passwordInfo.hasher).toFox
@@ -95,7 +95,7 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
                    WHERE _id = $multiUserId""".asUpdate)
     } yield ()
 
-  def updateEmail(multiUserId: ObjectId, email: String)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateEmail(multiUserId: ObjectId, email: String)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(multiUserId)
       _ <- run(q"""UPDATE webknossos.multiusers
@@ -106,7 +106,7 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
                    WHERE _id = $multiUserId""".asUpdate)
     } yield ()
 
-  def updateEmailVerification(multiUserId: ObjectId, verified: Boolean)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateEmailVerification(multiUserId: ObjectId, verified: Boolean)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(multiUserId)
       _ <- run(q"""UPDATE webknossos.multiusers
@@ -114,7 +114,7 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
                    WHERE _id = $multiUserId""".asUpdate)
     } yield ()
 
-  def updateLastLoggedInIdentity(multiUserId: ObjectId, userId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateLastLoggedInIdentity(multiUserId: ObjectId, userId: ObjectId)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(multiUserId)
       _ <- run(q"""UPDATE webknossos.multiusers
@@ -123,7 +123,7 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
     } yield ()
 
   def updateNovelUserExperienceInfos(multiUserId: ObjectId, novelUserExperienceInfos: JsObject)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(multiUserId)
       _ <- run(q"""UPDATE webknossos.multiusers
@@ -139,7 +139,7 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
                    WHERE _id = $multiUserId""".asUpdate)
     } yield ()
 
-  def updateSelectedTheme(multiUserId: ObjectId, selectedTheme: Theme)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateSelectedTheme(multiUserId: ObjectId, selectedTheme: Theme)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(multiUserId)
       _ <- run(q"""UPDATE webknossos.multiusers
@@ -155,14 +155,14 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
                      (SELECT _id FROM webknossos.users WHERE _organization = $organizationId)""".asUpdate)
     } yield ()
 
-  def findOneById(id: ObjectId)(implicit ctx: DBAccessContext): Fox[MultiUser] =
+  def findOneById(id: ObjectId)(using ctx: DBAccessContext): Fox[MultiUser] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[MultiusersRow])
       parsed <- parseFirst(r, id)
     } yield parsed
 
-  def findOneByEmail(email: String)(implicit ctx: DBAccessContext): Fox[MultiUser] =
+  def findOneByEmail(email: String)(using ctx: DBAccessContext): Fox[MultiUser] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE email = $email AND $accessQuery".as[MultiusersRow])
@@ -181,7 +181,7 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
       parsed <- parseFirst(r, organizationId)
     } yield parsed
 
-  def emailNotPresentYet(email: String)(implicit ctx: DBAccessContext): Fox[Boolean] =
+  def emailNotPresentYet(email: String)(using ctx: DBAccessContext): Fox[Boolean] =
     for {
       accessQuery <- readAccessQuery
       idList <- run(q"SELECT _id FROM $existingCollectionName WHERE email = $email AND $accessQuery".as[String])

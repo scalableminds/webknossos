@@ -121,7 +121,7 @@ class WorkerLivenessService @Inject()(workerService: WorkerService,
 
   override protected def tick(): Fox[Unit] =
     for {
-      workers <- workerDAO.findAll(GlobalAccessContext)
+      workers <- workerDAO.findAll(using GlobalAccessContext)
       _ = workers.foreach(reportIfLivenessChanged)
     } yield ()
 

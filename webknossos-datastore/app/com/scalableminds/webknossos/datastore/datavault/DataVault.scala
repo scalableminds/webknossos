@@ -7,10 +7,10 @@ import scala.concurrent.ExecutionContext
 
 trait DataVault {
   def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])]
 
   def listDirectory(path: VaultPath, maxItems: Int)(implicit ec: ExecutionContext): Fox[List[VaultPath]]
 
-  def getUsedStorageBytes(path: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long]
+  def getUsedStorageBytes(path: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Long]
 }

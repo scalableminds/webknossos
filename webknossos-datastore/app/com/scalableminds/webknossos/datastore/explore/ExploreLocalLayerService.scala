@@ -49,7 +49,7 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
             .fromMagLiteral(dir.getFileName.toString, allowScalar = true)
             .toFox ?~> s"invalid mag: ${dir.getFileName}"
           vaultPath <- dataVaultService.vaultPathFor(dir) ?~> Msg.DataVault.setupFailed
-          layersWithVoxelSizes <- new ZarrArrayExplorer(mag).explore(vaultPath, None)(TokenContext(None))
+          layersWithVoxelSizes <- new ZarrArrayExplorer(mag).explore(vaultPath, None)(using TokenContext(None))
         } yield layersWithVoxelSizes))
       (layers, voxelSize) <- adaptLayersAndVoxelSize(layersWithVoxelSizes.flatten, None)
       relativeLayers = layers.map(selectLastTwoDirectories)
@@ -143,7 +143,7 @@ class ExploreLocalLayerService @Inject()(dataVaultService: DataVaultService)
         if (subdirs.size == 1) subdirs.head.getFileName.toString else layerDirectory
       } else layerDirectory
       vaultPath <- dataVaultService.vaultPathFor(path.resolve(layer)) ?~> Msg.DataVault.setupFailed
-      layersWithVoxelSizes <- explorer.explore(vaultPath, None)(TokenContext(None))
+      layersWithVoxelSizes <- explorer.explore(vaultPath, None)(using TokenContext(None))
       (layers, voxelSize) <- adaptLayersAndVoxelSize(layersWithVoxelSizes, None)
       relativeLayers = makeLayersRelative(layers)
       dataSource = new UsableDataSource(dataSourceId, relativeLayers, voxelSize)

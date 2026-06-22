@@ -57,12 +57,12 @@ class ZarrSegmentIndexFileService @Inject()(dataVaultService: DataVaultService, 
   private lazy val attributesCache = AlfuCache[SegmentIndexFileKey, SegmentIndexFileAttributes]()
 
   private def readSegmentIndexFileAttributes(segmentIndexFileKey: SegmentIndexFileKey)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[SegmentIndexFileAttributes] =
     attributesCache.getOrLoad(segmentIndexFileKey, key => readSegmentIndexFileAttributesImpl(key))
 
   private def readSegmentIndexFileAttributesImpl(segmentIndexFileKey: SegmentIndexFileKey)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[SegmentIndexFileAttributes] =
     for {
       groupVaultPath <- dataVaultService.vaultPathFor(segmentIndexFileKey.attachment)
@@ -74,7 +74,7 @@ class ZarrSegmentIndexFileService @Inject()(dataVaultService: DataVaultService, 
     } yield segmentIndexFileAttributes
 
   def readSegmentIndex(segmentIndexFileKey: SegmentIndexFileKey,
-                       segmentId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Vec3Int]] =
+                       segmentId: Long)(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Vec3Int]] =
     for {
       attributes <- readSegmentIndexFileAttributes(segmentIndexFileKey)
       hashBucketOffsetsArray <- openZarrArray(segmentIndexFileKey, keyHashBucketOffsets)
@@ -89,7 +89,7 @@ class ZarrSegmentIndexFileService @Inject()(dataVaultService: DataVaultService, 
   private def readTopLefts(segmentIndexFileKey: SegmentIndexFileKey,
                            bucketStart: Long,
                            bucketEnd: Long,
-                           segmentId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Vec3Int]] =
+                           segmentId: Long)(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Vec3Int]] =
     for {
       attributes <- readSegmentIndexFileAttributes(segmentIndexFileKey)
       hashBucketsArray <- openZarrArray(segmentIndexFileKey, keyHashBuckets)
@@ -119,12 +119,12 @@ class ZarrSegmentIndexFileService @Inject()(dataVaultService: DataVaultService, 
     (0 until bucket.getShape()(0)).find(idx => bucket.getLong(bucket.getIndex.set(Array(idx, 0))) == segmentId)
 
   private def openZarrArray(segmentIndexFileKey: SegmentIndexFileKey,
-                            zarrArrayName: String)(implicit ec: ExecutionContext, tc: TokenContext): Fox[DatasetArray] =
+                            zarrArrayName: String)(using ec: ExecutionContext, tc: TokenContext): Fox[DatasetArray] =
     openArraysCache.getOrLoad((segmentIndexFileKey, zarrArrayName),
                               _ => openZarrArrayImpl(segmentIndexFileKey, zarrArrayName))
 
   private def openZarrArrayImpl(segmentIndexFileKey: SegmentIndexFileKey, zarrArrayName: String)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[DatasetArray] =
     for {
       groupVaultPath <- dataVaultService.vaultPathFor(segmentIndexFileKey.attachment)

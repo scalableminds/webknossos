@@ -2059,6 +2059,7 @@ class DataApi {
     mag1Bbox: BoundingBoxMinMaxType,
     _zoomStep: number | null | undefined = null,
     additionalCoordinates: AdditionalCoordinate[] | null = null,
+    signal?: AbortSignal,
   ) {
     const layer = getLayerByName(Store.getState().dataset, layerName);
     const magInfo = getMagInfo(layer.mags);
@@ -2084,9 +2085,25 @@ class DataApi {
       );
     }
 
-    const buckets = await Promise.all(
-      bucketAddresses.map((addr) => this.getLoadedBucket(layerName, addr)),
-    );
+    // Fetch buckets via a worker pool so that
+    // - in case of cancellation, we don't need to await all bucket requests
+    // - a slow request never blocks a free slot (which would happen when fetching
+    //   batch-by-batch).
+    // Note: the abort signal is not forwarded to individual fetches because other parts
+    // of the app may need those same buckets and we don't want to abort their requests.
+    const BUCKET_POOL_SIZE = 10;
+    const buckets = new Array(bucketAddresses.length);
+    let nextIndex = 0;
+    const worker = async () => {
+      while (nextIndex < bucketAddresses.length) {
+        signal?.throwIfAborted();
+        // Claim the next index before any await so no two workers pick the same one.
+        const i = nextIndex++;
+        buckets[i] = await this.getLoadedBucket(layerName, bucketAddresses[i]);
+      }
+    };
+    await Promise.all(Array.from({ length: BUCKET_POOL_SIZE }, worker));
+
     const { elementClass } = getLayerByName(Store.getState().dataset, layerName);
     return this.cutOutCuboid(buckets, mag1Bbox, elementClass, mags, zoomStep);
   }

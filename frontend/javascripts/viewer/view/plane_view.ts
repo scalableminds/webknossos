@@ -261,6 +261,19 @@ class PlaneView {
     MESH_HOVER_THROTTLING_DELAY,
   );
 
+  performMipHitTest(mousePosition: [number, number]): Vector3 | null {
+    const storeState = Store.getState();
+    if (storeState.viewModeData.plane.activeViewport !== OrthoViews.TDView) return null;
+    const tdViewport = getInputCatcherRect(storeState, "TDView");
+    const mouse = new ThreeVector2(
+      (mousePosition[0] / tdViewport.width) * 2 - 1,
+      ((mousePosition[1] / tdViewport.height) * 2 - 1) * -1,
+    );
+    raycaster.setFromCamera(mouse, this.cameras[OrthoViews.TDView]);
+    const worldPos = getSceneController().getMipHitPosition(raycaster.ray);
+    return worldPos != null ? (worldPos.toArray() as Vector3) : null;
+  }
+
   clearLastMeshHitTest = () => {
     if (oldRaycasterHit?.node.parent != null) {
       const sceneController = getSceneController();

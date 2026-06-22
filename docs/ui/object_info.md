@@ -75,6 +75,19 @@ Right-click a bounding box for additional actions:
 
 Use the search button at the top of the tab, or press ++ctrl++ / ++cmd++ + ++shift++ + ++f++, to find a bounding box by name in long lists.
 
+### Maximum Intensity Projection (MIP)
+
+Each bounding box can be rendered as a **Maximum Intensity Projection (MIP)** in the 3D viewport. A MIP casts rays through the volume and displays the highest intensity value encountered along each ray, producing a useful projection for structures (especially useful for light-microscopy datasets).
+
+To enable MIP for a bounding box, right-click it and choose **Render as MIP**, then select a layer and magnification. Multiple layers can be active on the same bounding box at once; their projections are blended additively using each layer's configured color and opacity.
+
+Once loaded, the MIP rendering appears in the 3D viewport. Shift-clicking on a MIP projection navigates to the maximum-intensity voxel along the click ray.
+
+Use the MIP icon button in the tab toolbar to open the **Maximum Intensity Projection (MIP) Settings** popover, which provides the following controls:
+
+- **Ray marching steps:** Controls the number of samples taken along each ray. Higher values produce a smoother, more accurate projection at the cost of GPU performance.
+- **Depth-correct rendering:** When enabled, MIP volumes interact correctly with mesh depth — meshes can occlude or be occluded by the MIP content. Disable this for better performance if depth sorting with meshes is not needed.
+
 ## Abstract Tree Tab
 
 The `AbsTree` tab displays a 2D representation of a skeleton annotation. This can be useful for visualizing the structure of large and complex skeletons. Be aware that generating the abstract tree can be resource-intensive for very large skeletons.

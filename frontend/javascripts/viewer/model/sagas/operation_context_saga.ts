@@ -25,7 +25,7 @@ export interface OperationOptions {
 
 export interface OperationContext {
   id: OperationId;
-  execute(saga: () => Generator): Generator;
+  execute<T>(saga: () => Saga<T>): Saga<T>;
 }
 
 // Tracks a running operation alongside its concurrency predicate.
@@ -115,14 +115,14 @@ export function* createOperationContext(
     let consumed = false;
     const context: OperationContext = {
       id: options.id,
-      *execute(saga: () => Generator) {
+      *execute<T>(saga: () => Saga<T>): Saga<T> {
         if (consumed)
           throw new Error(
             `[${options.id}] context already consumed — execute() may only be called once`,
           );
         consumed = true;
         try {
-          yield* saga();
+          return yield* saga();
         } finally {
           activeOperations = activeOperations.filter((op) => op.id !== options.id);
           yield put(unregisterOperationAction(options.id));
@@ -159,12 +159,12 @@ export function borrowedContext(
   let consumed = false;
   return {
     id: existing.id,
-    *execute(saga: () => Generator) {
+    *execute<T>(saga: () => Saga<T>): Saga<T> {
       if (consumed) throw new Error(`[${childId}] borrowed context already consumed`);
       consumed = true;
       yield put(registerChildOperationAction(childId, existing.id));
       try {
-        yield* saga();
+        return yield* saga();
       } finally {
         yield put(unregisterChildOperationAction(childId, existing.id));
       }

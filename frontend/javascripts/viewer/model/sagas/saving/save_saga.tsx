@@ -552,7 +552,6 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
 
     // Now, let's initiate the actual rebasing. For that, we acquire the operation context
     // to block user actions from interfering with rebasing.
-    let rebasingResult: RebasingSuccessInfo;
     const ctx = yield* getOrCreateOperationContext(
       {
         id: "REBASE",
@@ -565,12 +564,9 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
       yield* maybeRequeuePollAndWait(ensureHasNewestVersion);
       continue;
     }
-    let result!: RebasingSuccessInfo;
-    yield* ctx.execute(function* () {
-      result = yield* call(performRebasingIfNecessary);
+    const { successful, shouldTerminate } = yield* ctx.execute(function* () {
+      return yield* call(performRebasingIfNecessary);
     });
-    rebasingResult = result;
-    const { successful, shouldTerminate } = rebasingResult;
 
     if (shouldTerminate) {
       // A hard error was thrown. Terminate this saga.

@@ -1360,6 +1360,12 @@ export enum MOVIE_RESOLUTIONS {
   HD = "HD",
 }
 
+export enum MOVIE_DURATIONS {
+  SHORT = "SHORT",
+  STANDARD = "STANDARD",
+  LONG = "LONG",
+}
+
 export type RenderAnimationOptions = {
   layerName: string;
   meshes: ({
@@ -1371,9 +1377,11 @@ export type RenderAnimationOptions = {
   includeWatermark: boolean;
   magForTextures: Vector3;
   movieResolution: MOVIE_RESOLUTIONS;
+  movieDuration: MOVIE_DURATIONS;
   cameraPosition: CAMERA_POSITIONS;
   annotationId: string | null;
   includeSkeletons: boolean;
+  hideImageData: boolean;
   saveBlenderFile: boolean;
 };
 

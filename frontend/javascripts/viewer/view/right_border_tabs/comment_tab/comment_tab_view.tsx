@@ -1,7 +1,6 @@
 import {
   ArrowLeftOutlined,
   ArrowRightOutlined,
-  DownOutlined,
   EditOutlined,
   InfoCircleOutlined,
   SearchOutlined,
@@ -53,6 +52,7 @@ import { buildKeyBindingsFromConfig } from "viewer/view/keyboard_shortcuts/keybo
 import Comment, { commentListId } from "viewer/view/right_border_tabs/comment_tab/comment";
 import AdvancedSearchPopover from "../advanced_search_popover";
 import { ColoredDotIcon } from "../segments_tab/segment_list_item";
+import { TreeSwitcherIcon } from "../trees_tab/tree_switcher_icon";
 
 const commentTabId = "commentTabId";
 enum SortByEnum {
@@ -412,7 +412,7 @@ function CommentTabView(props: Props) {
               onExpand={onExpand}
               // @ts-expect-error
               onSelect={onSelect}
-              switcherIcon={<DownOutlined />}
+              switcherIcon={({ expanded }) => <TreeSwitcherIcon expanded={expanded} />}
               height={height}
               ref={treeRef}
               blockNode

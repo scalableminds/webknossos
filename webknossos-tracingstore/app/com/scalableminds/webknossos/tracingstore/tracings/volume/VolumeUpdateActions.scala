@@ -707,7 +707,7 @@ case class UpsertSegmentGroupVolumeAction(groupId: Int,
 
   private def renameInGroups(groups: Seq[SegmentGroup]): (Seq[SegmentGroup], Boolean) = {
     // To avoid traversing into the subbranch of the group which should be renamed, we pass the second argument to fold left.
-    // It keeps track of whether the renaming was already done and then earlies out instead of traversing deeper.
+    // It keeps track of whether the renaming was already done and then stops early instead of traversing deeper.
     val updated = groups.foldLeft((Vector.empty[SegmentGroup], false)) {
       // Pass as already renamed.
       case ((acc, true), g) =>

@@ -661,10 +661,13 @@ export function updateActiveSegmentId(activeSegmentId: number, actionTracingId: 
   } as const;
 }
 
-export function updateVolumeBucketDataHasChanged(actionTracingId: string) {
+export function updateVolumeBucketDataHasChanged(
+  volumeBucketDataHasChanged: boolean,
+  actionTracingId: string,
+) {
   return {
     name: "updateVolumeBucketDataHasChanged",
-    value: { actionTracingId },
+    value: { volumeBucketDataHasChanged, actionTracingId },
   } as const;
 }
 

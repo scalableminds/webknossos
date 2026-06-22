@@ -529,11 +529,7 @@ const descriptionFns: Record<
     };
   },
   updateVolumeBucketDataHasChanged: (
-    action: AsServerAction<
-      UpdateVolumeBucketDataHasChangedUpdateAction & {
-        value: { volumeBucketDataHasChanged: boolean };
-      }
-    >,
+    action: AsServerAction<UpdateVolumeBucketDataHasChangedUpdateAction>,
   ): Description => {
     return {
       description: action.value.volumeBucketDataHasChanged

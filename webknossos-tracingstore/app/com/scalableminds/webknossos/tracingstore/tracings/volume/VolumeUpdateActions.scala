@@ -125,6 +125,7 @@ case class UpdateTracingVolumeAction(
       largestSegmentId = largestSegmentId,
       zoomLevel = zoomLevel,
       editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(editPositionAdditionalCoordinates),
+      uNUSEDHideUnregisteredSegments = hideUnregisteredSegments
     )
 }
 
@@ -168,7 +169,8 @@ case class UpdateLargestSegmentIdVolumeAction(largestSegmentId: Long,
     tracing.copy(largestSegmentId = Some(largestSegmentId))
 }
 
-case class UpdateVolumeBucketDataHasChangedVolumeAction(actionTracingId: String,
+case class UpdateVolumeBucketDataHasChangedVolumeAction(volumeBucketDataHasChanged: Boolean,
+                                                        actionTracingId: String,
                                                         actionTimestamp: Option[Long] = None,
                                                         actionAuthorId: Option[ObjectId] = None,
                                                         info: Option[String] = None)
@@ -181,7 +183,7 @@ case class UpdateVolumeBucketDataHasChangedVolumeAction(actionTracingId: String,
     this.copy(actionTracingId = newTracingId)
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
-    tracing.copy(volumeBucketDataHasChanged = Some(true))
+    tracing.copy(volumeBucketDataHasChanged = Some(volumeBucketDataHasChanged))
 }
 
 case class UpdateUserBoundingBoxesVolumeAction(boundingBoxes: List[NamedBoundingBox],

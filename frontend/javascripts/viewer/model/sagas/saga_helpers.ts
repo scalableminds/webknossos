@@ -30,7 +30,7 @@ export function* takeEveryInOperationContext<P extends ActionPattern>(
    * otherwise creates a fresh context.
    * Ignores the action if the operation context cannot be acquired (i.e., another operation
    * is already ongoing which doesn't allow additional executions).
-  // */
+   */
   function* wrapper(action: Action) {
     const existingCtx = (action as any).operationContext ?? null;
     const ctx = yield* getOrCreateOperationContext(

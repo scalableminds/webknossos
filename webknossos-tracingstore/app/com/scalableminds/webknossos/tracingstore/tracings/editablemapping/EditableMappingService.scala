@@ -190,7 +190,7 @@ class EditableMappingService @Inject()(
   def findSegmentIdAtPositionIfNeeded(remoteFallbackLayer: RemoteFallbackLayer,
                                       positionOpt: Option[Vec3Int],
                                       segmentIdOpt: Option[Long],
-                                      magOpt: Option[Vec3Int])(implicit tc: TokenContext): Fox[Long] =
+                                      magOpt: Option[Vec3Int])(using tc: TokenContext): Fox[Long] =
     segmentIdOpt match {
       case Some(segmentId) => Fox.successful(segmentId)
       case None            => findSegmentIdAtPosition(remoteFallbackLayer, positionOpt, magOpt)
@@ -198,7 +198,7 @@ class EditableMappingService @Inject()(
 
   private def findSegmentIdAtPosition(remoteFallbackLayer: RemoteFallbackLayer,
                                       positionOpt: Option[Vec3Int],
-                                      magOpt: Option[Vec3Int])(implicit tc: TokenContext): Fox[Long] =
+                                      magOpt: Option[Vec3Int])(using tc: TokenContext): Fox[Long] =
     for {
       pos <- positionOpt.toFox ?~> "segment id or position is required in editable mapping action"
       mag <- magOpt.toFox ?~> "segment id or mag is required in editable mapping action"
@@ -207,7 +207,7 @@ class EditableMappingService @Inject()(
     } yield segmentIdAtVoxel
 
   def volumeData(editableMappingLayer: EditableMappingLayer, dataRequests: DataRequestCollection)(
-      implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
+      using tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
     val requests = dataRequests.map(
       r =>
         DataServiceDataRequest(None,
@@ -219,7 +219,7 @@ class EditableMappingService @Inject()(
   }
 
   def volumeDataBucketBoxes(editableMappingLayer: EditableMappingLayer, dataRequests: DataRequestCollection)(
-      implicit tc: TokenContext): Fox[Seq[Box[Array[Byte]]]] = {
+      using tc: TokenContext): Fox[Seq[Box[Array[Byte]]]] = {
     val requests = dataRequests.map(
       r =>
         DataServiceDataRequest(None,
@@ -286,7 +286,7 @@ class EditableMappingService @Inject()(
       editableMapping: EditableMappingInfo,
       editableMappingVersion: Long,
       tracingId: String,
-      remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[Map[Long, Long]] =
+      remoteFallbackLayer: RemoteFallbackLayer)(using tc: TokenContext): Fox[Map[Long, Long]] =
     for {
       editableMappingForSegmentIds <- getSegmentToAgglomerateForSegmentIds(segmentIds,
                                                                            tracingId,
@@ -302,7 +302,7 @@ class EditableMappingService @Inject()(
                                      version: Long,
                                      editableMappingInfo: EditableMappingInfo,
                                      remoteFallbackLayer: RemoteFallbackLayer,
-                                     agglomerateId: Long)(implicit tc: TokenContext): Fox[Array[Byte]] =
+                                     agglomerateId: Long)(using tc: TokenContext): Fox[Array[Byte]] =
     for {
       agglomerateGraphBox <- getAgglomerateGraphForId(tracingId, version, agglomerateId).shiftBox
       _ <- Fox.fromBool(agglomerateGraphBox.map(_.segments.nonEmpty).getOrElse(true)) ?~> Msg.Annotation.EditableMapping.getAgglomerateTreeEmpty
@@ -353,7 +353,7 @@ class EditableMappingService @Inject()(
   def getBaseSegmentToAgglomerate(
       baseMappingName: String,
       segmentIds: Set[Long],
-      remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[Map[Long, Long]] = {
+      remoteFallbackLayer: RemoteFallbackLayer)(using tc: TokenContext): Fox[Map[Long, Long]] = {
     val segmentIdsOrdered = segmentIds.toList
     for {
       agglomerateIdsOrdered <- remoteDatastoreClient.getAgglomerateIdsForSegmentIds(remoteFallbackLayer,
@@ -399,7 +399,7 @@ class EditableMappingService @Inject()(
     } yield segmentId
 
   def createAdHocMesh(editableMappingLayer: EditableMappingLayer, request: WebknossosAdHocMeshRequest)(
-      implicit tc: TokenContext): Fox[(Array[Float], List[Int])] = {
+      using tc: TokenContext): Fox[(Array[Float], List[Int])] = {
     val adHocMeshRequest = AdHocMeshRequest(
       datasetId = None,
       dataSourceId = None,
@@ -435,7 +435,7 @@ class EditableMappingService @Inject()(
       tracingId: String,
       version: Long,
       agglomerateId: Long,
-      remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[AgglomerateGraph] =
+      remoteFallbackLayer: RemoteFallbackLayer)(using tc: TokenContext): Fox[AgglomerateGraph] =
     for {
       agglomerateGraphBox <- getAgglomerateGraphForId(tracingId, version, agglomerateId).shiftBox
       agglomerateGraph <- agglomerateGraphBox match {
@@ -451,7 +451,7 @@ class EditableMappingService @Inject()(
       version: Long,
       editableMappingInfo: EditableMappingInfo,
       parameters: MinCutParameters,
-      remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[List[EdgeWithPositions]] =
+      remoteFallbackLayer: RemoteFallbackLayer)(using tc: TokenContext): Fox[List[EdgeWithPositions]] =
     for {
       // called here to ensure updates are applied
       agglomerateGraph <- getAgglomerateGraphForIdWithFallback(editableMappingInfo,
@@ -548,7 +548,7 @@ class EditableMappingService @Inject()(
       editableMappingInfo: EditableMappingInfo,
       version: Long,
       parameters: NeighborsParameters,
-      remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[(Long, Seq[NodeWithPosition])] =
+      remoteFallbackLayer: RemoteFallbackLayer)(using tc: TokenContext): Fox[(Long, Seq[NodeWithPosition])] =
     for {
       agglomerateGraph <- getAgglomerateGraphForIdWithFallback(editableMappingInfo,
                                                                tracingId,
@@ -573,7 +573,7 @@ class EditableMappingService @Inject()(
       annotationId: ObjectId,
       tracingId: String,
       version: Option[Long],
-      remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[Seq[(Long, Long, Boolean)]] =
+      remoteFallbackLayer: RemoteFallbackLayer)(using tc: TokenContext): Fox[Seq[(Long, Long, Boolean)]] =
     for {
       updateGroups <- tracingDataStore.annotationUpdates.getMultipleVersionsAsVersionValueTuple(
         annotationId.toString,

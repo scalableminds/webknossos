@@ -168,7 +168,7 @@ class AnnotationController @Inject()(
   def reset(typ: String, id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity) ?~> Msg.Annotation.notFound ~> NOT_FOUND
-      owner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
+      owner <- userService.findOneCached(annotation._user)(using GlobalAccessContext)
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, owner._organization, annotation._task))
       _ <- annotationService.resetToBase(annotation) ?~> Msg.Annotation.Reset.failed
       updated <- provider.provideAnnotation(typ, id, request.identity)
@@ -179,7 +179,7 @@ class AnnotationController @Inject()(
   def reopen(typ: String, id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     def isReopenAllowed(user: User, annotation: Annotation) =
       for {
-        owner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
+        owner <- userService.findOneCached(annotation._user)(using GlobalAccessContext)
         isAdminOrTeamManager <- userService.isTeamManagerOrAdminOf(user, owner._organization, annotation._task)
         _ <- Fox.fromBool(annotation.state == AnnotationState.Finished) ?~> Msg.Annotation.Reopen.notFinished
         _ <- Fox.fromBool(isAdminOrTeamManager || annotation._user == user._id) ?~> Msg.Annotation.Reopen.notAllowed
@@ -234,7 +234,7 @@ class AnnotationController @Inject()(
     sil.UserAwareAction.async { implicit request =>
       val ctx = URLSharing.fallbackTokenAccessContext(sharingToken) // users with dataset sharing token may also get a sandbox annotation
       for {
-        dataset <- datasetDAO.findOne(datasetId)(ctx) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
+        dataset <- datasetDAO.findOne(datasetId)(using ctx) ?~> Msg.Dataset.notFound(datasetId) ~> NOT_FOUND
         tracingType <- TracingType.fromString(typ).toFox
         _ <- Fox.fromBool(tracingType == TracingType.skeleton) ?~> Msg.Annotation.sandboxSkeletonOnly
         annotation = Annotation(
@@ -253,7 +253,7 @@ class AnnotationController @Inject()(
     }
 
   private def finishAnnotation(typ: String, id: ObjectId, issuingUser: User, timestamp: Instant)(
-      implicit ctx: DBAccessContext): Fox[(Annotation, String)] =
+      using ctx: DBAccessContext): Fox[(Annotation, String)] =
     for {
       annotation <- provider.provideAnnotation(typ, id, issuingUser) ~> NOT_FOUND
       restrictions <- provider.restrictionsFor(typ, id) ?~> Msg.Annotation.Restrictions.notFound ~> NOT_FOUND
@@ -328,7 +328,7 @@ class AnnotationController @Inject()(
 
     for {
       annotation <- provider.provideAnnotation(typ, id, request.identity) ~> NOT_FOUND
-      owner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
+      owner <- userService.findOneCached(annotation._user)(using GlobalAccessContext)
       _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, owner._organization, annotation._task))
       result <- tryToCancel(annotation)
     } yield result
@@ -380,7 +380,7 @@ class AnnotationController @Inject()(
         annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
           annotationDAO.countAllListableExplorationals(isFinished)) ?~> Msg.Annotation.countListableFailed
         annotationInfosJsons = annotationInfos.map(annotationService.writeCompactInfo)
-        _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
+        _ = userDAO.updateLastActivity(request.identity._id)(using GlobalAccessContext)
       } yield {
         val result = Ok(Json.toJson(annotationInfosJsons))
         annotationCount match {
@@ -430,7 +430,7 @@ class AnnotationController @Inject()(
   private def duplicateAnnotation(annotation: Annotation, user: User): Fox[Annotation] =
     for {
       // GlobalAccessContext is allowed here because the user was already allowed to see the annotation
-      dataset <- datasetDAO.findOne(annotation._dataset)(GlobalAccessContext) ?~> Msg.Dataset
+      dataset <- datasetDAO.findOne(annotation._dataset)(using GlobalAccessContext) ?~> Msg.Dataset
         .notFoundForAnnotation(annotation._dataset, annotation._id) ~> NOT_FOUND
       _ <- Fox.fromBool(dataset.isUsable) ?~> Msg.Dataset.notUsable(dataset._id)
       dataSource <- if (annotation._task.isDefined)

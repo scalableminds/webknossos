@@ -42,19 +42,19 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
 
   protected lazy val bucketScanner = new NativeBucketScanner()
 
-  private def mapSingleSegment(segmentToAgglomerate: DatasetArray, segmentId: Long)(implicit ec: ExecutionContext,
+  private def mapSingleSegment(segmentToAgglomerate: DatasetArray, segmentId: Long)(using ec: ExecutionContext,
                                                                                     tc: TokenContext): Fox[Long] =
     for {
       asMultiArray <- segmentToAgglomerate.readAsMultiArray(offset = segmentId, shape = 1)
     } yield asMultiArray.getLong(0)
 
   private def openZarrArrayCached(agglomerateFileKey: AgglomerateFileKey,
-                                  zarrArrayName: String)(implicit ec: ExecutionContext, tc: TokenContext) =
+                                  zarrArrayName: String)(using ec: ExecutionContext, tc: TokenContext) =
     openArraysCache.getOrLoad((agglomerateFileKey, zarrArrayName),
                               _ => openZarrArray(agglomerateFileKey, zarrArrayName))
 
   private def openZarrArray(agglomerateFileKey: AgglomerateFileKey,
-                            zarrArrayName: String)(implicit ec: ExecutionContext, tc: TokenContext): Fox[DatasetArray] =
+                            zarrArrayName: String)(using ec: ExecutionContext, tc: TokenContext): Fox[DatasetArray] =
     for {
       groupVaultPath <- dataVaultService.vaultPathFor(agglomerateFileKey.attachment)
       segmentToAgglomeratePath = groupVaultPath / zarrArrayName
@@ -68,7 +68,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
     } yield zarrArray
 
   def applyAgglomerate(agglomerateFileKey: AgglomerateFileKey, elementClass: ElementClass.Value)(
-      data: Array[Byte])(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] = {
+      data: Array[Byte])(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] = {
 
     val bytesPerElement = ElementClass.bytesPerElement(elementClass)
     val isSigned = ElementClass.isSigned(elementClass)
@@ -91,7 +91,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
   }
 
   def generateTree(agglomerateFileKey: AgglomerateFileKey,
-                   agglomerateId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[SkeletonTracing] =
+                   agglomerateId: Long)(using ec: ExecutionContext, tc: TokenContext): Fox[SkeletonTracing] =
     for {
       agglomerateToSegmentsOffsets <- openZarrArrayCached(agglomerateFileKey, keyAgglomerateToSegmentsOffsets)
       agglomerateToEdgesOffsets <- openZarrArrayCached(agglomerateFileKey, keyAgglomerateToEdgesOffsets)
@@ -150,7 +150,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
       skeleton = SkeletonTracingDefaults.createInstance.copy(trees = trees)
     } yield skeleton
 
-  def largestAgglomerateId(agglomerateFileKey: AgglomerateFileKey)(implicit ec: ExecutionContext,
+  def largestAgglomerateId(agglomerateFileKey: AgglomerateFileKey)(using ec: ExecutionContext,
                                                                    tc: TokenContext): Fox[Long] =
     for {
       array <- openZarrArrayCached(agglomerateFileKey, keyAgglomerateToSegmentsOffsets)
@@ -159,7 +159,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
     } yield shapeFirstElement
 
   def generateAgglomerateGraph(agglomerateFileKey: AgglomerateFileKey, agglomerateId: Long)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[AgglomerateGraph] =
     for {
       agglomerateToSegmentsOffsets <- openZarrArrayCached(agglomerateFileKey, keyAgglomerateToSegmentsOffsets)
@@ -220,7 +220,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
     } yield agglomerateGraph
 
   def segmentIdsForAgglomerateId(agglomerateFileKey: AgglomerateFileKey,
-                                 agglomerateId: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
+                                 agglomerateId: Long)(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
     for {
       agglomerateToSegmentsOffsets <- openZarrArrayCached(agglomerateFileKey, keyAgglomerateToSegmentsOffsets)
       agglomerateToSegments <- openZarrArrayCached(agglomerateFileKey, keyAgglomerateToSegments)
@@ -236,7 +236,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
     } yield segmentIds.toSeq
 
   def agglomerateIdsForSegmentIds(agglomerateFileKey: AgglomerateFileKey, segmentIds: Seq[Long])(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[Seq[Long]] =
     for {
       segmentToAgglomerate <- openZarrArrayCached(agglomerateFileKey, keySegmentToAgglomerate)
@@ -245,7 +245,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
       }
     } yield agglomerateIds
 
-  def positionForSegmentId(agglomerateFileKey: AgglomerateFileKey, segmentId: Long)(implicit ec: ExecutionContext,
+  def positionForSegmentId(agglomerateFileKey: AgglomerateFileKey, segmentId: Long)(using ec: ExecutionContext,
                                                                                     tc: TokenContext): Fox[Vec3Int] =
     for {
       segmentToAgglomerate <- openZarrArrayCached(agglomerateFileKey, keySegmentToAgglomerate)
@@ -265,7 +265,7 @@ class ZarrAgglomerateService @Inject()(config: DataStoreConfig,
       rangeStart: Long,
       rangeEnd: Long,
       segmentId: Long,
-      agglomerateToSegments: DatasetArray)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+      agglomerateToSegments: DatasetArray)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     if (rangeStart > rangeEnd) Fox.failure("Could not find segmentId in agglomerate file")
     else {
       val middle = rangeStart + (rangeEnd - rangeStart) / 2

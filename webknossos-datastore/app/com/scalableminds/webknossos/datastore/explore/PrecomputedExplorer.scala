@@ -26,7 +26,7 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
   override def name: String = "Neuroglancer Precomputed"
 
   override def explore(remotePath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
+      using tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       infoPath <- Fox.successful(remotePath / PrecomputedHeader.FILENAME_INFO)
       precomputedHeader <- infoPath
@@ -37,7 +37,7 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
   private def layerFromPrecomputedHeader(
       precomputedHeader: PrecomputedHeader,
       remotePath: VaultPath,
-      credentialId: Option[String])(implicit tc: TokenContext): Fox[(StaticLayer, VoxelSize)] =
+      credentialId: Option[String])(using tc: TokenContext): Fox[(StaticLayer, VoxelSize)] =
     for {
       name <- Fox.successful(guessNameFromPath(remotePath))
       firstScale <- precomputedHeader.scales.headOption.toFox
@@ -90,7 +90,7 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
   }
 
   private def exploreMeshesForLayer(meshPath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[Seq[LayerAttachment]] = {
+      using tc: TokenContext): Fox[Seq[LayerAttachment]] = {
     val exploredMeshesFox =
       for {
         meshInfo <- (meshPath / NeuroglancerMesh.FILENAME_INFO)

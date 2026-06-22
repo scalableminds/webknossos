@@ -20,7 +20,7 @@ class AnnotationStore @Inject()(
 
   private val cacheTimeout = 60 minutes
 
-  def requestAnnotation(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
+  def requestAnnotation(id: AnnotationIdentifier, user: Option[User])(using ctx: DBAccessContext): Fox[Annotation] =
     requestFromCache(id).getOrElse(requestFromHandler(id, user))
 
   private def requestFromCache(id: AnnotationIdentifier): Option[Fox[Annotation]] = {
@@ -32,7 +32,7 @@ class AnnotationStore @Inject()(
       None
   }
 
-  private def requestFromHandler(id: AnnotationIdentifier, user: Option[User])(implicit ctx: DBAccessContext) = {
+  private def requestFromHandler(id: AnnotationIdentifier, user: Option[User])(using ctx: DBAccessContext) = {
     val handler = annotationInformationHandlerSelector.informationHandlers(id.annotationType)
     for {
       annotation <- handler.provideAnnotation(id.identifier, user)

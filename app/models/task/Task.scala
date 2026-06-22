@@ -5,7 +5,7 @@ import com.scalableminds.util.geometry.{BoundingBox, Vec3Double, Vec3Int}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{Tasks, TasksRow, GetResultTasksRow}
 import com.scalableminds.webknossos.tracingstore.tracings.NamedBoundingBox
 
 import javax.inject.Inject
@@ -81,18 +81,18 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   private def listAccessQ(requestingUserId: ObjectId) = deleteAccessQ(requestingUserId)
 
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[Task]] =
+  override def findAll(using ctx: DBAccessContext): Fox[List[Task]] =
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[TasksRow])
       parsed <- parseAll(r)
     } yield parsed
 
-  def findAllByTaskType(taskTypeId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Task]] =
+  def findAllByTaskType(taskTypeId: ObjectId)(using ctx: DBAccessContext): Fox[List[Task]] =
     findAllByProjectAndTaskTypeAndIdsAndUser(None, Some(taskTypeId), None, None, None)
 
   def findAllByProject(projectId: ObjectId, limit: Int, pageNumber: Int)(
-      implicit ctx: DBAccessContext): Fox[List[Task]] =
+      using ctx: DBAccessContext): Fox[List[Task]] =
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       r <- run(q"""SELECT $columns
@@ -105,7 +105,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def countAllByProject(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[Int] =
+  def countAllByProject(projectId: ObjectId)(using ctx: DBAccessContext): Fox[Int] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT COUNT(*) FROM $existingCollectionName WHERE _project = $projectId AND $accessQuery""".as[Int])
@@ -215,7 +215,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       userIdOpt: Option[ObjectId],
       randomizeOpt: Option[Boolean],
       pageNumber: Int = 0
-  )(implicit ctx: DBAccessContext): Fox[List[Task]] = {
+  )(using ctx: DBAccessContext): Fox[List[Task]] = {
 
     val orderRandom = randomizeOpt match {
       case Some(true) => q"ORDER BY RANDOM()"
@@ -308,7 +308,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         """.asUpdate)
     } yield ()
 
-  def updateTotalInstances(id: ObjectId, newTotalInstances: Long)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateTotalInstances(id: ObjectId, newTotalInstances: Long)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
       query = q"UPDATE $collectionName SET totalInstances = $newTotalInstances WHERE _id = $id".asUpdate
@@ -318,7 +318,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
     } yield ()
 
   def incrementTotalInstancesOfAllWithProject(projectId: ObjectId, delta: Long)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     for {
       accessQuery <- readAccessQuery
       _ <- run(
@@ -336,7 +336,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       _ <- run(q"UPDATE webknossos.tasks SET _script = NULL WHERE _script = $scriptId".asUpdate)
     } yield ()
 
-  def logTime(id: ObjectId, time: FiniteDuration)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def logTime(id: ObjectId, time: FiniteDuration)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(q"""UPDATE webknossos.tasks
@@ -344,7 +344,7 @@ class TaskDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                    WHERE _id = $id""".asUpdate)
     } yield ()
 
-  def removeOneAndItsAnnotations(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+  def removeOneAndItsAnnotations(id: ObjectId)(using ctx: DBAccessContext): Fox[Unit] = {
     val queries = List(
       q"UPDATE webknossos.tasks SET isDeleted = TRUE WHERE _id = $id".asUpdate,
       q"UPDATE webknossos.annotations SET isDeleted = TRUE WHERE _task = $id".asUpdate

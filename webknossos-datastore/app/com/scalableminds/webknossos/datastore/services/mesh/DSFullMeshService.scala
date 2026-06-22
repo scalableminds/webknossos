@@ -71,7 +71,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       datasetId: ObjectId,
       dataSource: UsableDataSource,
       dataLayer: DataLayer,
-      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Float] =
+      fullMeshRequest: FullMeshRequest)(using ec: ExecutionContext, tc: TokenContext): Fox[Float] =
     if (fullMeshRequest.meshFileName.isDefined)
       for {
         stlChunks <- loadMeshChunksFromMeshFile(dataSource, dataLayer, fullMeshRequest)
@@ -83,7 +83,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       datasetId: ObjectId,
       dataSource: UsableDataSource,
       dataLayer: DataLayer,
-      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Float] =
+      fullMeshRequest: FullMeshRequest)(using ec: ExecutionContext, tc: TokenContext): Fox[Float] =
     for {
       mag <- fullMeshRequest.mag.toFox ?~> Msg.Mesh.magNeededForAdHoc
       segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Msg.Dataset.Layer.mustBeSegmentation
@@ -107,7 +107,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
   def loadFor(datasetId: ObjectId,
               dataSource: UsableDataSource,
               dataLayer: DataLayer,
-              fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
+              fullMeshRequest: FullMeshRequest)(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     if (fullMeshRequest.meshFileName.isDefined)
       loadFullMeshFromMeshFile(dataSource, dataLayer, fullMeshRequest)
     else
@@ -117,7 +117,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       datasetId: ObjectId,
       dataSource: UsableDataSource,
       dataLayer: DataLayer,
-      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
+      fullMeshRequest: FullMeshRequest)(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       mag <- fullMeshRequest.mag.toFox ?~> Msg.Mesh.magNeededForAdHoc
       segmentationLayer <- tryo(dataLayer.asInstanceOf[SegmentationLayer]).toFox ?~> Msg.Dataset.Layer.mustBeSegmentation
@@ -149,7 +149,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       segmentationLayer: SegmentationLayer,
       fullMeshRequest: FullMeshRequest,
       mag: Vec3Int,
-  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] =
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] =
     for {
       segmentIndexFileKey <- segmentIndexFileService.lookUpSegmentIndexFileKey(dataSource.id, segmentationLayer)
       segmentIds <- segmentIdsForAgglomerateIdIfNeeded(
@@ -205,7 +205,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       segmentationLayer: SegmentationLayer,
       fullMeshRequest: FullMeshRequest,
       topLeft: VoxelPosition,
-      chunkSize: Vec3Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] = {
+      chunkSize: Vec3Int)(using ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] = {
     // Iterative parallel BFS. Each wave dispatches all frontier positions concurrently
     // (in actorPoolSize batches) rather than serially one at a time.
     // visited is marked before dispatch so parallel wave members don't queue the same position.
@@ -258,7 +258,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
   private def loadMeshChunksFromMeshFile(
       dataSource: UsableDataSource,
       dataLayer: DataLayer,
-      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Seq[Array[Byte]]] =
+      fullMeshRequest: FullMeshRequest)(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[Array[Byte]]] =
     for {
       meshFileName <- fullMeshRequest.meshFileName.toFox ?~> Msg.Mesh.File.meshFileNameRequired
       meshFileKey <- meshFileService.lookUpMeshFileKey(dataSource.id, dataLayer, meshFileName)
@@ -292,7 +292,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
   private def loadFullMeshFromMeshFile(
       dataSource: UsableDataSource,
       dataLayer: DataLayer,
-      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
+      fullMeshRequest: FullMeshRequest)(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       before <- Instant.nowFox
       stlEncodedChunks <- loadMeshChunksFromMeshFile(dataSource, dataLayer, fullMeshRequest)
@@ -305,7 +305,7 @@ class DSFullMeshService @Inject()(meshFileService: MeshFileService,
       meshFileKey: MeshFileKey,
       chunkInfo: MeshChunk,
       transform: Array[Array[Double]],
-      vertexQuantizationBits: Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
+      vertexQuantizationBits: Int)(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       (dracoMeshChunkBytes, encoding) <- meshFileService.readMeshChunk(
         meshFileKey,

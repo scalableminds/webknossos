@@ -424,11 +424,12 @@ type RebasingSuccessInfo = { successful: boolean; shouldTerminate: boolean };
 function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
   const collaborationMode = yield* select((state) => state.annotation.collaborationMode);
   const missingUpdateActions = yield* call(fetchNewestMissingUpdateActions);
+  const annotation = yield* select((state) => state.annotation);
 
   // Ensure tracings were diffed so that the save queue can be inspected afterwards.
   yield dispatchEnsureTracingsWereDiffedToSaveQueueAction(
     Store.dispatch,
-    yield* select((state) => state.annotation),
+    annotation,
   );
   // saveQueueEntries must not change during performRebasing saga. This is achieved
   // by the operationContext in which performRebasing is called (see caller).

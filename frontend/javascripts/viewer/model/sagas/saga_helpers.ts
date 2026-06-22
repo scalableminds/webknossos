@@ -38,8 +38,9 @@ export function* takeEveryInOperationContext<P extends ActionPattern>(
       existingCtx,
     );
     if (ctx == null) {
+      const operations = yield* select(state => state.operationContext.activeOperations)
       console.warn(
-        `Ignoring ${String((action as any).type)}: operation "${options.id}" already running`,
+        `Ignoring ${String((action as any).type)} operation, because another operation is already running (${operations.map(op => op.id).join(", ")}).`,
       );
       return;
     }

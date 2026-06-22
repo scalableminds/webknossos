@@ -218,7 +218,8 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
     behaviorWhenDisallowed: "ignore",
   });
   if (ctx == null) {
-    console.warn("Ignoring floodfill request: floodfill already running");
+    const operations = yield* select(state => state.operationContext.activeOperations)
+    console.warn(`Ignoring floodfill request because another operation is already running (${operations.map(op => op.id).join(", ")}).`)
     return;
   }
   yield* ctx.execute(function* () {

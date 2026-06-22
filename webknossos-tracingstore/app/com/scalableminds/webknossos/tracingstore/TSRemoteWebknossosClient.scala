@@ -64,7 +64,7 @@ class TSRemoteWebknossosClient @Inject()(
       .silent
       .postJson(Json.toJson(tracingUpdatesReport))
 
-  def getDataSourceForAnnotation(annotationId: ObjectId)(implicit tc: TokenContext): Fox[UsableDataSource] =
+  def getDataSourceForAnnotation(annotationId: ObjectId)(using tc: TokenContext): Fox[UsableDataSource] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/dataSource")
       .addQueryParam("annotationId", annotationId)
       .addQueryParam("key", tracingStoreKey)
@@ -129,11 +129,11 @@ class TSRemoteWebknossosClient @Inject()(
     }
   }
 
-  def voxelSizeForAnnotationWithCache(annotationId: ObjectId)(implicit tc: TokenContext,
+  def voxelSizeForAnnotationWithCache(annotationId: ObjectId)(using tc: TokenContext,
                                                               ec: ExecutionContext): Fox[VoxelSize] =
     voxelSizeCache.getOrLoad(annotationId, aId => voxelSizeForAnnotation(aId))
 
-  private def voxelSizeForAnnotation(annotationId: ObjectId)(implicit tc: TokenContext,
+  private def voxelSizeForAnnotation(annotationId: ObjectId)(using tc: TokenContext,
                                                              ec: ExecutionContext): Fox[VoxelSize] =
     for {
       datasetId <- getDatasetIdForAnnotation(annotationId)
@@ -145,7 +145,7 @@ class TSRemoteWebknossosClient @Inject()(
       scale <- result.voxelSizeOpt.toFox ?~> "Could not determine voxel size of dataset"
     } yield scale
 
-  override def requestUserAccess(accessRequest: UserAccessRequest)(implicit tc: TokenContext): Fox[UserAccessAnswer] =
+  override def requestUserAccess(accessRequest: UserAccessRequest)(using tc: TokenContext): Fox[UserAccessAnswer] =
     rpc(s"$webknossosUri/api/tracingstores/$tracingStoreName/validateUserAccess")
       .addQueryParam("key", tracingStoreKey)
       .withTokenFromContext

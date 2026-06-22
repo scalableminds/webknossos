@@ -22,14 +22,14 @@ class LayerToLinkService @Inject()(datasetDAO: DatasetDAO, userService: UserServ
   def validateLayerToLink(layerIdentifier: LinkedLayerIdentifier, requestingUser: User)(
       implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      dataset <- datasetDAO.findOne(layerIdentifier.datasetId)(AuthorizedAccessContext(requestingUser)) ?~> Msg.Dataset
+      dataset <- datasetDAO.findOne(layerIdentifier.datasetId)(using AuthorizedAccessContext(requestingUser)) ?~> Msg.Dataset
         .notFound(layerIdentifier.datasetId) ~> NOT_FOUND
       isTeamManagerOrAdmin <- userService.isTeamManagerOrAdminOfOrg(requestingUser, dataset._organization)
       _ <- Fox.fromBool(isTeamManagerOrAdmin || requestingUser.isDatasetManager || dataset.isPublic) ?~> Msg.Dataset.Upload.linkRestricted
     } yield ()
 
   def addLayersToLinkToDataSource(dataSource: UsableDataSource, layersToLink: Seq[LinkedLayerIdentifier])(
-      implicit ctx: DBAccessContext,
+      using ctx: DBAccessContext,
       ec: ExecutionContext): Fox[UsableDataSource] =
     for {
       linkedLayers <- Fox.serialCombined(layersToLink)(resolveLayerToLink) ?~> Msg.Dataset.LayerToLink.failed
@@ -37,7 +37,7 @@ class LayerToLinkService @Inject()(datasetDAO: DatasetDAO, userService: UserServ
       _ <- Fox.fromBool(allLayers.length == allLayers.map(_.name).distinct.length) ?~> Msg.Dataset.Layer.duplicateNames
     } yield dataSource.copy(dataLayers = allLayers)
 
-  private def resolveLayerToLink(layerToLink: LinkedLayerIdentifier)(implicit ctx: DBAccessContext,
+  private def resolveLayerToLink(layerToLink: LinkedLayerIdentifier)(using ctx: DBAccessContext,
                                                                      ec: ExecutionContext): Fox[StaticLayer] =
     for {
       dataset <- datasetDAO.findOne(layerToLink.datasetId) ?~> Msg.Dataset.notFound(layerToLink.datasetId)

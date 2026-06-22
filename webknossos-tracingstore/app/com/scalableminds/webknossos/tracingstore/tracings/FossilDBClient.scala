@@ -198,7 +198,6 @@ class FossilDBClient(
             case VersionValueBoxProto(None, None, _) => Empty
             case _ => com.scalableminds.util.tools.Failure("Unexpected reply format in FossilDB getMultipleKeysByList")
           }
-        case _ => com.scalableminds.util.tools.Failure("Unexpected reply format in FossilDB getMultipleKeysByList")
       }
     } yield parsedValues
 

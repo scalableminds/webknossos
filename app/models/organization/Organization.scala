@@ -15,6 +15,7 @@ import slick.jdbc.PostgresProfile.api._
 import utils.sql.{SQLDAO, SqlClient, SqlToken}
 
 import javax.inject.Inject
+import scala.annotation.nowarn
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.FiniteDuration
 
@@ -103,11 +104,12 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       value <- rows.headOption.toFox
     } yield value == 0
 
-  @deprecated("use findOne with string type instead", since = "")
-  override def findOne(id: ObjectId)(implicit ctx: DBAccessContext): Fox[Organization] =
+  @deprecated("use findOne with string type instead")
+  @nowarn("msg=overrides concrete, non-deprecated")
+  override def findOne(id: ObjectId)(using ctx: DBAccessContext): Fox[Organization] =
     Fox.failure("Cannot find organization by ObjectId. Use findOne with string type instead")
 
-  def findOne(organizationId: String)(implicit ctx: DBAccessContext): Fox[Organization] =
+  def findOne(organizationId: String)(using ctx: DBAccessContext): Fox[Organization] =
     for {
       accessQuery <- readAccessQuery
       r <- run(
@@ -152,7 +154,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       r <- rList.headOption.toFox
     } yield r
 
-  def findOrganizationIdForDataset(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[String] =
+  def findOrganizationIdForDataset(datasetId: ObjectId)(using ctx: DBAccessContext): Fox[String] =
     for {
       accessQuery <- readAccessQuery
       rList <- run(q"""SELECT o._id FROM webknossos.organizations_ o
@@ -162,7 +164,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
     } yield r
 
   def updateFields(organizationId: String, name: String, newUserMailingList: String)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(organizationId)
       _ <- run(q"""UPDATE webknossos.organizations
@@ -283,7 +285,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
     } yield parsed
 
   def acceptTermsOfService(organizationId: String, version: Int, timestamp: Instant)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(organizationId)
       _ <- run(q"""UPDATE webknossos.organizations
@@ -295,7 +297,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
 
   def getUsedStorageMagDetailsForDataset(datasetId: ObjectId): Fox[List[(String, String, Long, Instant)]] = {
     implicit val gr: GetResult[(String, String, Long, Instant)] =
-      GetResult(r => (r.nextString(), r.nextString(), r.nextLong(), GetInstant(r)))
+      GetResult(using r => (r.nextString(), r.nextString(), r.nextLong(), GetInstant(r)))
     for {
       rows <- run(q"""SELECT layerName,
                    CONCAT((mag).x::INT, '-', (mag).y::INT, '-', (mag).z::INT),
@@ -309,7 +311,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
   def getUsedStorageAttachmentDetailsForDataset(
       datasetId: ObjectId): Fox[List[(String, String, String, Long, Instant)]] = {
     implicit val gr: GetResult[(String, String, String, Long, Instant)] =
-      GetResult(r => (r.nextString(), r.nextString(), r.nextString(), r.nextLong(), GetInstant(r)))
+      GetResult(using r => (r.nextString(), r.nextString(), r.nextString(), r.nextLong(), GetInstant(r)))
     for {
       rows <- run(q"""SELECT layerName, name, type, usedStorageBytes, lastUpdated
             FROM webknossos.organization_usedStorage_attachments
@@ -319,7 +321,7 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
 
   // While organizationId is not a valid ObjectId, we wrap it here to pass it to the generic assertUpdateAccess.
   // There, no properties of the ObjectId are used other than its string content.
-  private def assertUpdateAccess(organizationId: String)(implicit ctx: DBAccessContext): Fox[Unit] =
+  private def assertUpdateAccess(organizationId: String)(using ctx: DBAccessContext): Fox[Unit] =
     assertUpdateAccess(ObjectId(organizationId))
 
   def updatePlan(organizationId: String, planUpdate: OrganizationPlanUpdate): Fox[Unit] =

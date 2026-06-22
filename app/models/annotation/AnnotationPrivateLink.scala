@@ -68,7 +68,7 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: Exec
     } yield ()
 
   def updateOne(id: ObjectId, annotationId: ObjectId, expirationDateTime: Option[Instant])(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(q"""UPDATE webknossos.annotation_privateLinks
@@ -78,7 +78,7 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: Exec
                    WHERE _id = $id""".asUpdate)
     } yield ()
 
-  def findAllByAnnotation(annotationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[AnnotationPrivateLink]] =
+  def findAllByAnnotation(annotationId: ObjectId)(using ctx: DBAccessContext): Fox[List[AnnotationPrivateLink]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(

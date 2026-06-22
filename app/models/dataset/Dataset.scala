@@ -107,7 +107,7 @@ object DatasetCompactInfo {
 
 trait DatasetDAOLike {
   def findOneByIdOrNameAndOrganization(datasetIdOpt: Option[ObjectId], datasetName: String, organizationId: String)(
-      implicit ctx: DBAccessContext
+      using ctx: DBAccessContext
   ): Fox[Dataset]
 }
 
@@ -232,7 +232,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       searchQuery: Option[String],
       includeSubfolders: Boolean,
       limitOpt: Option[Int]
-  )(implicit ctx: DBAccessContext): Fox[List[Dataset]] =
+  )(using ctx: DBAccessContext): Fox[List[Dataset]] =
     for {
       selectionPredicates <- buildSelectionPredicates(
         isActiveOpt,
@@ -263,7 +263,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       createdSinceOpt: Option[Instant] = None,
       limitOpt: Option[Int] = None,
       requestingUserOrga: Option[String] = None
-  )(implicit ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
+  )(using ctx: DBAccessContext): Fox[List[DatasetCompactInfo]] =
     for {
       selectionPredicates <- buildSelectionPredicates(
         isActiveOpt,
@@ -382,7 +382,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       includeSubfolders: Boolean,
       statusOpt: Option[String],
       createdSinceOpt: Option[Instant]
-  )(implicit ctx: DBAccessContext): Fox[SqlToken] =
+  )(using ctx: DBAccessContext): Fox[SqlToken] =
     for {
       accessQuery <- readAccessQuery
       folderPredicate = folderIdOpt match {
@@ -456,7 +456,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       r <- rList.headOption.toFox
     } yield r
 
-  def findOneByDirectoryNameAndOrganization(directoryName: String, organizationId: String)(implicit
+  def findOneByDirectoryNameAndOrganization(directoryName: String, organizationId: String)(using
       ctx: DBAccessContext
   ): Fox[Dataset] =
     for {
@@ -470,7 +470,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       parsed <- parseFirst(r, s"$organizationId/$directoryName")
     } yield parsed
 
-  def findOneByImportURL(importURL: String, organizationId: String)(implicit ctx: DBAccessContext): Fox[Dataset] =
+  def findOneByImportURL(importURL: String, organizationId: String)(using ctx: DBAccessContext): Fox[Dataset] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns
@@ -483,7 +483,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       parsed <- parseFirst(r, importURL)
     } yield parsed
 
-  def findOneByDataSourceId(dataSourceId: DataSourceId)(implicit ctx: DBAccessContext): Fox[Dataset] =
+  def findOneByDataSourceId(dataSourceId: DataSourceId)(using ctx: DBAccessContext): Fox[Dataset] =
     findOneByDirectoryNameAndOrganization(dataSourceId.directoryName, dataSourceId.organizationId)
 
   def doesDatasetNameExistInOrganization(datasetName: String, organizationId: String): Fox[Boolean] =
@@ -499,7 +499,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
   // Legacy links to Datasets used their name and organizationId as identifier. In #8075 name was changed to directoryName.
   // Thus, interpreting the name as the directory name should work, as changing the directory name is not possible.
   // This way of looking up datasets should only be used for backwards compatibility.
-  def findOneByNameAndOrganization(directoryName: String, organizationId: String)(implicit
+  def findOneByNameAndOrganization(directoryName: String, organizationId: String)(using
       ctx: DBAccessContext
   ): Fox[Dataset] =
     for {
@@ -516,7 +516,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
 
   // Some users use legacy software to create NMLs with dataset names. For some datasets, this differs from dataset directoryName
   // To support uploading these NMLs if the name happens to be unique in the orga, this is used.
-  private def findOneByNameAndOrganizationIfUnique(name: String, organizationId: String)(implicit
+  private def findOneByNameAndOrganizationIfUnique(name: String, organizationId: String)(using
       ctx: DBAccessContext
   ): Fox[Dataset] =
     for {
@@ -535,7 +535,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
     } yield parsed
 
   def findOneByIdOrNameAndOrganization(datasetIdOpt: Option[ObjectId], datasetName: String, organizationId: String)(
-      implicit ctx: DBAccessContext
+      using ctx: DBAccessContext
   ): Fox[Dataset] =
     datasetIdOpt match {
       case Some(datasetId) => findOne(datasetId) ?~> Msg.Dataset.notFound(datasetId)
@@ -549,7 +549,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
         } yield orFromName) ?~> Msg.Dataset.notFound(datasetName)
     }
 
-  def findAllByDirectoryNamesAndOrganization(directoryNames: List[String], organizationId: String)(implicit
+  def findAllByDirectoryNamesAndOrganization(directoryNames: List[String], organizationId: String)(using
       ctx: DBAccessContext
   ): Fox[List[Dataset]] =
     for {
@@ -562,7 +562,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       parsed <- parseAll(r)
     } yield parsed
 
-  def findAllByPublication(publicationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Dataset]] =
+  def findAllByPublication(publicationId: ObjectId)(using ctx: DBAccessContext): Fox[List[Dataset]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns
@@ -574,7 +574,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
 
   /* Disambiguation method for legacy URLs and NMLs: if the user has access to multiple datasets of the same name, use the oldest.
    * This is reasonable, because the legacy URL/NML was likely created before this ambiguity became possible */
-  def getOrganizationIdForDataset(datasetName: String)(implicit ctx: DBAccessContext): Fox[String] =
+  def getOrganizationIdForDataset(datasetName: String)(using ctx: DBAccessContext): Fox[String] =
     for {
       accessQuery <- readAccessQuery
       rList <- run(q"""SELECT _organization
@@ -586,14 +586,14 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       r <- rList.headOption.toFox
     } yield r
 
-  def getNameById(id: ObjectId)(implicit ctx: DBAccessContext): Fox[String] =
+  def getNameById(id: ObjectId)(using ctx: DBAccessContext): Fox[String] =
     for {
       accessQuery <- readAccessQuery
       rList <- run(q"SELECT name FROM $existingCollectionName WHERE _id = $id AND $accessQuery".as[String])
       r <- rList.headOption.toFox
     } yield r
 
-  def getSharingTokenById(datasetId: ObjectId)(implicit ctx: DBAccessContext): Fox[Option[String]] =
+  def getSharingTokenById(datasetId: ObjectId)(using ctx: DBAccessContext): Fox[Option[String]] =
     for {
       accessQuery <- readAccessQuery
       rList <- run(q"""SELECT sharingToken
@@ -603,7 +603,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       r <- rList.headOption.toFox
     } yield r
 
-  def updateSharingTokenById(datasetId: ObjectId, sharingToken: Option[String])(implicit
+  def updateSharingTokenById(datasetId: ObjectId, sharingToken: Option[String])(using
       ctx: DBAccessContext
   ): Fox[Unit] =
     for {
@@ -616,7 +616,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
     } yield ()
 
   def updatePartial(datasetId: ObjectId, params: DatasetUpdatePartialParameters)(
-      implicit ctx: DBAccessContext): Fox[Unit] = {
+      using ctx: DBAccessContext): Fox[Unit] = {
     val setQueries = List(
       params.description.map(d => q"description = $d"),
       params.name.map(v => q"name = $v"),
@@ -648,7 +648,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
                    isPublic: Boolean,
                    tags: List[String],
                    metadata: JsArray,
-                   folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] = {
+                   folderId: ObjectId)(using ctx: DBAccessContext): Fox[Unit] = {
     val updateParameters = new DatasetUpdatePartialParameters(
       description = Some(description),
       name = Some(name),
@@ -664,13 +664,13 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
     updatePartial(datasetId, updateParameters)
   }
 
-  def updateTags(id: ObjectId, tags: List[String])(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateTags(id: ObjectId, tags: List[String])(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(q"UPDATE webknossos.datasets SET tags = $tags WHERE _id = $id".asUpdate)
     } yield ()
 
-  def updateAdminViewConfiguration(datasetId: ObjectId, configuration: DatasetViewConfiguration)(implicit
+  def updateAdminViewConfiguration(datasetId: ObjectId, configuration: DatasetViewConfiguration)(using
       ctx: DBAccessContext
   ): Fox[Unit] =
     for {
@@ -680,7 +680,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
                    WHERE _id = $datasetId""".asUpdate)
     } yield ()
 
-  def updateUploader(datasetId: ObjectId, uploaderIdOpt: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateUploader(datasetId: ObjectId, uploaderIdOpt: Option[ObjectId])(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(datasetId)
       _ <- run(q"""UPDATE webknossos.datasets
@@ -688,7 +688,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
                    WHERE _id = $datasetId""".asUpdate)
     } yield ()
 
-  def updateFolder(datasetId: ObjectId, folderId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateFolder(datasetId: ObjectId, folderId: ObjectId)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(datasetId)
       _ <- run(q"""UPDATE webknossos.datasets
@@ -760,7 +760,7 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       _ <- datasetLayerDAO.updateLayers(id, newDataSource)
     } yield ()
 
-  def updateDatasetStatusByDatasetId(id: ObjectId, newStatus: String, isUsable: Boolean)(implicit
+  def updateDatasetStatusByDatasetId(id: ObjectId, newStatus: String, isUsable: Boolean)(using
       ctx: DBAccessContext
   ): Fox[Unit] =
     for {
@@ -961,7 +961,7 @@ class DatasetMagDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
     } yield ()
 
   implicit def GetResultDataSourceMagRow: GetResult[DataSourceMagRow] =
-    GetResult { r =>
+    GetResult(using { r =>
       val datasetId = ObjectId(r.nextString())
       val layerName = r.nextString()
       val magLiteral = r.nextString()
@@ -981,7 +981,7 @@ class DatasetMagDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
         r.nextString(),
         r.nextString()
       )
-    }
+    })
 
   // Note equivalent in DatasetLayerAttachmentsDAO
   def findMagPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] =
@@ -1588,7 +1588,7 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
     } yield ()
 
   implicit def GetResultStorageRelevantDataLayerAttachment: GetResult[StorageRelevantDataLayerAttachment] =
-    GetResult(r =>
+    GetResult(using r =>
       StorageRelevantDataLayerAttachment(
         ObjectId(r.nextString()),
         r.nextString(),

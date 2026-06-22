@@ -62,7 +62,7 @@ class OrganizationController @Inject()(
   def get(organizationId: String): Action[AnyContent] =
     sil.UserAwareAction.async { implicit request =>
       for {
-        org <- organizationDAO.findOne(organizationId)(GlobalAccessContext)
+        org <- organizationDAO.findOne(organizationId)(using GlobalAccessContext)
         js <- organizationService.publicWrites(org, request.identity)
       } yield {
         Ok(Json.toJson(js))
@@ -102,7 +102,7 @@ class OrganizationController @Inject()(
 
   def getDefault: Action[AnyContent] = sil.UserAwareAction.async { implicit request =>
     for {
-      allOrgs <- organizationDAO.findAll(GlobalAccessContext) ?~> Msg.Organization.listFailed
+      allOrgs <- organizationDAO.findAll(using GlobalAccessContext) ?~> Msg.Organization.listFailed
       org <- allOrgs.headOption.toFox ?~> Msg.Organization.listFailed
       js <- organizationService.publicWrites(org, request.identity)
     } yield {

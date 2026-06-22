@@ -61,12 +61,12 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService, annotati
         else if (annotation.visibility == AnnotationVisibility.Internal) {
           (for {
             user <- userOption.toFox
-            owner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
+            owner <- userService.findOneCached(annotation._user)(using GlobalAccessContext)
           } yield owner._organization == user._organization).orElse(Fox.successful(false))
         } else {
           (for {
             user <- userOption.toFox
-            owner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
+            owner <- userService.findOneCached(annotation._user)(using GlobalAccessContext)
             isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user,
                                                                              owner._organization,
                                                                              annotation._task)
@@ -87,7 +87,7 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService, annotati
         for {
           readAccessAllowed <- allowAccess(userOpt)
           annotationOwnerBox <- userService
-            .findOneCached(annotation._user)(GlobalAccessContext)
+            .findOneCached(annotation._user)(using GlobalAccessContext)
             .shiftBox // sandbox annotations have no owner
           annotationIsMutable = !(annotation.state == Finished) && !annotation.isLockedByOwner
         } yield
@@ -101,7 +101,7 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService, annotati
       override def allowFinish(userOption: Option[User]): Fox[Boolean] =
         (for {
           user <- userOption.toFox
-          owner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
+          owner <- userService.findOneCached(annotation._user)(using GlobalAccessContext)
           isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, owner._organization, annotation._task)
         } yield {
           (annotation._user == user._id || isTeamManagerOrAdminOfTeam) && !(annotation.state == Finished) && !annotation.isLockedByOwner
@@ -111,7 +111,7 @@ class AnnotationRestrictionDefaults @Inject()(userService: UserService, annotati
       override def allowFinishSoft(userOption: Option[User]): Fox[Boolean] =
         (for {
           user <- userOption.toFox
-          owner <- userService.findOneCached(annotation._user)(GlobalAccessContext)
+          owner <- userService.findOneCached(annotation._user)(using GlobalAccessContext)
           isTeamManagerOrAdminOfTeam <- userService.isTeamManagerOrAdminOf(user, owner._organization, annotation._task)
         } yield {
           (annotation._user == user._id || isTeamManagerOrAdminOfTeam) && !annotation.isLockedByOwner

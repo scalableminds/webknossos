@@ -39,7 +39,7 @@ class AiInferenceService @Inject()(dataStoreDAO: DataStoreDAO,
                                    jobDAO: JobDAO,
                                    jobService: JobService) {
 
-  def publicWrites(aiInference: AiInference, requestingUser: User)(implicit ctx: DBAccessContext,
+  def publicWrites(aiInference: AiInference, requestingUser: User)(using ctx: DBAccessContext,
                                                                    ec: ExecutionContext): Fox[JsObject] =
     for {
       inferenceJob <- jobDAO.findOne(aiInference._inferenceJob)

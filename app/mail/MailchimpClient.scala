@@ -45,7 +45,7 @@ class MailchimpClient @Inject()(wkConf: WkConf, rpc: RPC, multiUserDAO: MultiUse
   def tagUser(user: User, tag: MailchimpTag): Unit =
     if (conf.host.nonEmpty) {
       for {
-        multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+        multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
         _ = tagMultiUser(multiUser, tag)
       } yield ()
       ()

@@ -8,9 +8,9 @@ import com.scalableminds.util.tools.Box
 import scala.concurrent.ExecutionContext
 
 trait BucketProvider {
-  def load(readInstruction: DataReadInstruction)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]]
+  def load(readInstruction: DataReadInstruction)(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]]
 
-  def loadMultiple(readInstructions: Seq[DataReadInstruction])(implicit ec: ExecutionContext,
+  def loadMultiple(readInstructions: Seq[DataReadInstruction])(using ec: ExecutionContext,
                                                                tc: TokenContext): Fox[Seq[Box[Array[Byte]]]] =
     Fox.fromFuture(Fox.serialSequence(readInstructions) { readInstruction =>
       load(readInstruction)

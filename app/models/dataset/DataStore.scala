@@ -53,7 +53,7 @@ class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO, jobService: JobServ
 
   def validateAccess(name: String, key: String)(block: DataStore => Future[Result]): Fox[Result] =
     Fox.fromFuture((for {
-      dataStore <- dataStoreDAO.findOneByName(name)(GlobalAccessContext)
+      dataStore <- dataStoreDAO.findOneByName(name)(using GlobalAccessContext)
       _ <- Fox.fromBool(key == dataStore.key)
       result <- Fox.fromFuture(block(dataStore))
     } yield result).getOrElse(Forbidden(Json.obj("granted" -> false, "msg" -> Msg.DataStore.notFound))))
@@ -83,14 +83,14 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
         r.onlyallowedorganization
       ))
 
-  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
+  def findOneByName(name: String)(using ctx: DBAccessContext): Fox[DataStore] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE name = $name AND $accessQuery".as[DatastoresRow])
       parsed <- parseFirst(r, name)
     } yield parsed
 
-  def findOneByUrl(url: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
+  def findOneByUrl(url: String)(using ctx: DBAccessContext): Fox[DataStore] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE url = $url AND $accessQuery".as[DatastoresRow])
@@ -103,14 +103,14 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
       parsed <- parseAll(r)
     } yield parsed
 
-  def findOneWithUploadsAllowed(implicit ctx: DBAccessContext): Fox[DataStore] =
+  def findOneWithUploadsAllowed(using ctx: DBAccessContext): Fox[DataStore] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE allowsUpload AND $accessQuery".as[DatastoresRow])
       parsed <- parseFirst(r, "find one with uploads allowed")
     } yield parsed
 
-  def findOneWithUploadsToPathsAllowed(implicit ctx: DBAccessContext): Fox[DataStore] =
+  def findOneWithUploadsToPathsAllowed(using ctx: DBAccessContext): Fox[DataStore] =
     for {
       accessQuery <- readAccessQuery
       r <- run(

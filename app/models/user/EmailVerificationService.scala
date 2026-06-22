@@ -24,9 +24,9 @@ class EmailVerificationService @Inject()(conf: WkConf,
   private lazy val Mailer =
     actorSystem.actorSelection("/user/mailActor")
 
-  def sendEmailVerification(user: User)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def sendEmailVerification(user: User)(using ctx: DBAccessContext): Fox[Unit] =
     for {
-      multiUser <- multiUserDAO.findOne(user._multiUser)(ctx)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(using ctx)
       key: String = RandomIDGenerator.generateBlocking(32)
       expiration = conf.WebKnossos.User.EmailVerification.linkExpiry.map(Instant.now + _)
       evk: EmailVerificationKey = EmailVerificationKey(ObjectId.generate,
@@ -41,19 +41,19 @@ class EmailVerificationService @Inject()(conf: WkConf,
       _ = Mailer ! Send(defaultMails.emailVerificationMail(multiUser, fullVerificationLink))
     } yield ()
 
-  def verify(key: String)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Unit] =
+  def verify(key: String)(using ctx: DBAccessContext, ec: ExecutionContext): Fox[Unit] =
     for {
       isEmailVerified <- isEmailAlreadyVerifiedByKey(key)
       _ <- Fox.runIf(!isEmailVerified)(checkAndVerify(key))
     } yield ()
 
-  private def isEmailAlreadyVerifiedByKey(key: String)(implicit ctx: DBAccessContext): Fox[Boolean] =
+  private def isEmailAlreadyVerifiedByKey(key: String)(using ctx: DBAccessContext): Fox[Boolean] =
     for {
       evk <- emailVerificationKeyDAO.findOneByKey(key) ?~> Msg.User.Email.Verification.keyInvalid
       multiUser <- multiUserDAO.findOne(evk._multiUser) ?~> Msg.User.notFound
     } yield multiUser.isEmailVerified
 
-  private def checkAndVerify(key: String)(implicit ctx: DBAccessContext, ec: ExecutionContext): Fox[Unit] =
+  private def checkAndVerify(key: String)(using ctx: DBAccessContext, ec: ExecutionContext): Fox[Unit] =
     for {
       evk <- emailVerificationKeyDAO.findOneByKey(key) ?~> Msg.User.Email.Verification.keyInvalid
       multiUser <- multiUserDAO.findOne(evk._multiUser) ?~> Msg.User.notFound
@@ -65,7 +65,7 @@ class EmailVerificationService @Inject()(conf: WkConf,
     } yield ()
 
   def assertEmailVerifiedOrResendVerificationMail(user: User)(
-      implicit ctx: DBAccessContext,
+      using ctx: DBAccessContext,
       ec: ExecutionContext
   ): Fox[Unit] =
     for {
@@ -75,7 +75,7 @@ class EmailVerificationService @Inject()(conf: WkConf,
     } yield ()
 
   private def userHasVerifiedEmail(user: User)(
-      implicit ctx: DBAccessContext
+      using ctx: DBAccessContext
   ): Fox[Boolean] =
     for {
       multiUser: MultiUser <- multiUserDAO.findOne(user._multiUser) ?~> Msg.User.notFound

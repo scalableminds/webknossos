@@ -107,7 +107,7 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
     } yield WebAuthnCredential(ObjectId(r._id), ObjectId(r._multiuser), r.name, record, r.isdeleted)
   }
 
-  def findAllForUser(multiUserId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[WebAuthnCredential]] =
+  def findAllForUser(multiUserId: ObjectId)(using ctx: DBAccessContext): Fox[List[WebAuthnCredential]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(
@@ -117,7 +117,7 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
     } yield parsed
 
   def findByCredentialId(multiUserId: ObjectId, credentialId: Array[Byte])(
-      implicit ctx: DBAccessContext): Fox[WebAuthnCredential] =
+      using ctx: DBAccessContext): Fox[WebAuthnCredential] =
     for {
       accessQuery <- readAccessQuery
       r <- run(

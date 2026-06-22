@@ -3,13 +3,12 @@ import com.google.inject.Inject
 import com.scalableminds.util.io.PathUtils
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
-import com.scalableminds.webknossos.datastore.services.BaseDirService
 import com.typesafe.scalalogging.LazyLogging
 
 import java.nio.file.{Files, Path}
 import scala.annotation.tailrec
 
-class LocalDatasetDeletionService @Inject()(baseDirService: BaseDirService)
+class LocalDatasetDeletionService @Inject()
     extends LazyLogging
     with DirectoryConstants {
 
@@ -20,7 +19,7 @@ class LocalDatasetDeletionService @Inject()(baseDirService: BaseDirService)
                    reason: Option[String] = None): Box[Unit] =
     if (Files.exists(path)) {
       for {
-        orgaDir <- baseDirService.getOneLocalForOrga(organizationId, createIfMissing = true, checkWritable = true)
+        orgaDir = path.normalize.getParent
         trashPath: Path = orgaDir.resolve(trashDir)
         targetPath = trashPath.resolve(directoryName)
         _ = PathUtils.ensureDirectory(trashPath)

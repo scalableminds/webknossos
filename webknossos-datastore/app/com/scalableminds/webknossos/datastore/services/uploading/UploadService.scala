@@ -389,13 +389,15 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       unpackToDir <- unpackToDirFor(dataSourceId, UploadDomain.dataset, uploadId).toFox
       unpackResult <- unpackOrMoveUploaded(uploadDir, unpackToDir, datasetId, UploadDomain.dataset).shiftBox
       _ <- cleanUpUploaded(uploadId, reason = "Upload complete, data unpacked.", UploadDomain.dataset)
-      _ <- cleanUpOnFailure(unpackResult,
+      _ <- cleanUpOnFailure(UploadDomain.dataset,
+                            unpackResult,
                             datasetId,
                             dataSourceId,
                             unpackToDir,
                             label = s"unpacking dataset to $unpackToDir").toFox
       postProcessingResult <- exploreUploadedDataSourceIfNeeded(needsConversion, unpackToDir, dataSourceId).shiftBox
-      _ <- cleanUpOnFailure(postProcessingResult,
+      _ <- cleanUpOnFailure(UploadDomain.dataset,
+                            postProcessingResult,
                             datasetId,
                             dataSourceId,
                             unpackToDir,
@@ -433,7 +435,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       _ <- checkWithinRequestedFileSize(uploadDir, uploadId, datasetId, UploadDomain.mag) ?~> "dataset.upload.fileSizeCheck.failed"
       _ <- checkAllChunksUploaded(uploadId, UploadDomain.mag) ?~> "dataset.upload.allChunksUploadedCheck.failed"
       unpackResult <- unpackOrMoveUploaded(uploadDir, unpackToDir, datasetId, UploadDomain.mag).shiftBox
-      _ <- cleanUpOnFailure(unpackResult,
+      _ <- cleanUpOnFailure(UploadDomain.mag,
+                            unpackResult,
                             datasetId,
                             dataSourceId,
                             unpackToDir,
@@ -462,7 +465,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
       _ <- checkWithinRequestedFileSize(uploadDir, uploadId, datasetId, UploadDomain.attachment) ?~> "dataset.upload.fileSizeCheck.failed"
       _ <- checkAllChunksUploaded(uploadId, UploadDomain.attachment) ?~> "dataset.upload.allChunksUploadedCheck.failed"
       unpackResult <- unpackOrMoveUploaded(uploadDir, unpackToDir, datasetId, UploadDomain.attachment).shiftBox
-      _ <- cleanUpOnFailure(unpackResult,
+      _ <- cleanUpOnFailure(UploadDomain.attachment,
+                            unpackResult,
                             datasetId,
                             dataSourceId,
                             unpackToDir,
@@ -701,7 +705,8 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
     } yield filesToDelete
   }
 
-  private def cleanUpOnFailure[T](result: Box[T],
+  private def cleanUpOnFailure[T](domain: UploadDomain,
+                                  result: Box[T],
                                   datasetId: ObjectId,
                                   dataSourceId: DataSourceId,
                                   unpackToDir: Path,
@@ -723,7 +728,9 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                                                  dataSourceId.organizationId,
                                                  dataSourceId.directoryName,
                                                  Some("the upload failed"))
-        remoteWebknossosClient.deleteDataset(datasetId)
+        if (domain == UploadDomain.dataset) {
+          remoteWebknossosClient.deleteDataset(datasetId)
+        }
         for {
           _ <- result ?~! s"Error while $label"
         } yield ()

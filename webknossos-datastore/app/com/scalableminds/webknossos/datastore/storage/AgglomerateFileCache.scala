@@ -4,7 +4,7 @@ import java.util
 import ch.systemsx.cisd.hdf5.{HDF5DataSet, IHDF5Reader}
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.tools.{Box, Full}
-import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
+import com.scalableminds.webknossos.datastore.dataformats.SafeCacheable
 import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, LayerAttachment}
 import com.scalableminds.webknossos.datastore.models.requests.{Cuboid, DataServiceDataRequest}
 import com.typesafe.scalalogging.LazyLogging
@@ -17,7 +17,7 @@ case class CachedAgglomerateFile(reader: IHDF5Reader,
                                  dataset: HDF5DataSet,
                                  agglomerateIdCache: AgglomerateIdCache,
                                  cache: Either[AgglomerateIdCache, BoundingBoxCache])
-    extends SafeCachable {
+    extends SafeCacheable {
   override protected def onFinalize(): Unit = { dataset.close(); reader.close() }
 }
 

@@ -38,7 +38,7 @@ class DataProxyController @Inject()(accessTokenService: DataStoreAccessTokenServ
             .notFound(dataLayerName) ~> NOT_FOUND
           magLocator <- dataLayer.mags.find(_.mag == magValidated).toFox ?~> Msg.Dataset.Layer
             .magNotFound(dataLayerName, mag) ~> NOT_FOUND
-          magPath <- dataVaultService.vaultPathFor(magLocator, dataSource.id, dataLayerName)
+          magPath <- dataVaultService.vaultPathFor(magLocator)
           requestedPath = magPath / path
           byteRange <- ByteRange.fromRequest(request)
           (bytes, encoding, rangeHeader) <- requestedPath.readBytesEncodingAndRangeHeader(byteRange)

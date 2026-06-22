@@ -66,7 +66,7 @@ object S3UriUtils {
       "https",
       null,
       uri.getHost,
-      -1,
+      uri.getPort,
       null,
       null,
       null

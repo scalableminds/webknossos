@@ -46,10 +46,9 @@ class DataVaultService @Inject()(ws: WSClient,
   def vaultPathFor(localPath: Path)(implicit ec: ExecutionContext): Fox[VaultPath] =
     vaultPathFor(UPath.fromLocalPath(localPath))
 
-  def vaultPathFor(magLocator: MagLocator, dataSourceId: DataSourceId, layerName: String)(
-      implicit ec: ExecutionContext): Fox[VaultPath] =
+  def vaultPathFor(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[VaultPath] =
     for {
-      credentializedUpath <- credentializedUPathForMag(dataSourceId, layerName, magLocator)
+      credentializedUpath <- credentializedUPathForMag(magLocator)
       vaultPath <- vaultPathFor(credentializedUpath)
     } yield vaultPath
 
@@ -60,10 +59,9 @@ class DataVaultService @Inject()(ws: WSClient,
       vaultPath <- vaultPathFor(CredentializedUPath(attachment.path, credentialBox.toOption))
     } yield vaultPath
 
-  def removeVaultFromCache(magLocator: MagLocator, datasetId: DataSourceId, layerName: String)(
-      implicit ec: ExecutionContext): Fox[Unit] =
+  def removeVaultFromCache(magLocator: MagLocator)(implicit ec: ExecutionContext): Fox[Unit] =
     for {
-      credentializedUpath <- credentializedUPathForMag(datasetId, layerName, magLocator)
+      credentializedUpath <- credentializedUPathForMag(magLocator)
       _ = removeVaultFromCache(credentializedUpath)
     } yield ()
 
@@ -73,7 +71,7 @@ class DataVaultService @Inject()(ws: WSClient,
       _ = removeVaultFromCache(CredentializedUPath(attachment.path, credentialBox.toOption))
     } yield ()
 
-  private def credentializedUPathForMag(datasetId: DataSourceId, layerName: String, magLocator: MagLocator)(
+  private def credentializedUPathForMag(magLocator: MagLocator)(
       implicit ec: ExecutionContext): Fox[CredentializedUPath] =
     for {
       credentialBox <- credentialFor(magLocator: MagLocator).shiftBox

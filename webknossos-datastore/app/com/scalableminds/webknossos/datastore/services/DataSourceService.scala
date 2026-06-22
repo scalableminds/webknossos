@@ -365,7 +365,7 @@ class DataSourceService @Inject()(
       removedEntriesList = for {
         dataLayerOpt <- dataLayers
         dataLayer <- dataLayerOpt
-        _ = dataLayer.mags.foreach(mag => dataVaultService.removeVaultFromCache(mag, dataSource.id, dataLayer.name))
+        _ = dataLayer.mags.foreach(mag => dataVaultService.removeVaultFromCache(mag))
         _ = dataLayer.attachments.foreach(_.allAttachments.foreach(attachment =>
           dataVaultService.removeVaultFromCache(attachment)))
       } yield dataLayer.mags.length

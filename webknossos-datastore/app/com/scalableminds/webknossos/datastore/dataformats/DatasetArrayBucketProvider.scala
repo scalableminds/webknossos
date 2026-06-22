@@ -72,9 +72,7 @@ class DatasetArrayBucketProvider(dataLayer: StaticLayer,
         dataVaultServiceOpt match {
           case Some(dataVaultServiceOpt: DataVaultService) =>
             for {
-              magPath: VaultPath <- dataVaultServiceOpt.vaultPathFor(magLocator,
-                                                                     readInstruction.dataSourceId,
-                                                                     readInstruction.dataLayer.name)
+              magPath: VaultPath <- dataVaultServiceOpt.vaultPathFor(magLocator)
               chunkContentsCache <- sharedChunkContentsCacheOpt.toFox
               datasetArray <- dataLayer.dataFormat match {
                 case DataFormat.zarr =>

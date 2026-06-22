@@ -19,7 +19,9 @@ class ManagedS3Service @Inject()(config: DataStoreConfig, baseDirService: BaseDi
     with LazyLogging {
 
   private val transferManagerCache: AlfuCache[(URI, S3AccessKeyCredential), S3TransferManager] =
-    AlfuCache(timeToIdle = 356.days, timeToLive = 356.days)
+    AlfuCache(timeToIdle = 356.days, timeToLive = 356.days, onRemovalFn = Some { (_, managerBox) =>
+      managerBox.foreach(_.close())
+    })
 
   def pathIsInManagedS3(path: UPath): Boolean =
     path.getScheme.contains(PathSchemes.schemeS3) && globalCredentials.exists(c =>

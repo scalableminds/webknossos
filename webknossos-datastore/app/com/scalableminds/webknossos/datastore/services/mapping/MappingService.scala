@@ -39,7 +39,7 @@ class MappingService @Inject()(config: DataStoreConfig, baseDirService: BaseDirS
 
     def loadAndParseMapping(mappingRequest: DataServiceMappingRequest): Box[AbstractDataLayerMapping] =
       for {
-        rawMapping <- loadMappingBytes(request)
+        rawMapping <- loadMappingBytes(mappingRequest)
         mapping <- MappingParser.parse[T](rawMapping, fromLongFn)
       } yield mapping
 

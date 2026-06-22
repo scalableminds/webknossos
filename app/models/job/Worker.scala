@@ -8,7 +8,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.IntervalScheduler
 import com.scalableminds.webknossos.datastore.storage.TemporaryStore
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{Workers, WorkersRow, GetResultWorkersRow}
 import com.typesafe.scalalogging.LazyLogging
 import models.job.JobCommand.JobCommand
 import play.api.inject.ApplicationLifecycle
@@ -121,7 +121,7 @@ class WorkerLivenessService @Inject()(workerService: WorkerService,
 
   override protected def tick(): Fox[Unit] =
     for {
-      workers <- workerDAO.findAll(GlobalAccessContext)
+      workers <- workerDAO.findAll(using GlobalAccessContext)
       _ = workers.foreach(reportIfLivenessChanged)
     } yield ()
 

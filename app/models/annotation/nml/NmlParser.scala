@@ -53,13 +53,13 @@ class NmlParser @Inject() (datasetDAO: DatasetDAOLike)
       nmlInputStream: InputStream,
       sharedParsingParameters: SharedParsingParameters,
       basePath: Option[String] = None
-  )(implicit ec: ExecutionContext, ctx: DBAccessContext): Fox[NmlParseSuccessWithoutFile] =
+  )(using ec: ExecutionContext, ctx: DBAccessContext): Fox[NmlParseSuccessWithoutFile] =
     for {
       nmlParsedParameters <- getParametersFromNML(nmlInputStream, name, sharedParsingParameters).toFox
       parsedResult <- nmlParametersToResult(nmlParsedParameters, basePath)
     } yield parsedResult
 
-  private def nmlParametersToResult(nmlParams: NmlParsedParameters, basePath: Option[String])(implicit
+  private def nmlParametersToResult(nmlParams: NmlParsedParameters, basePath: Option[String])(using
       ec: ExecutionContext,
       ctx: DBAccessContext
   ): Fox[NmlParseSuccessWithoutFile] =

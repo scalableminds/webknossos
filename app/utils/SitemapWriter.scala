@@ -65,7 +65,7 @@ class SitemapWriter @Inject()(publicationDAO: PublicationDAO, wkConf: WkConf)(im
 
   private def getAllURLs: Fox[List[SitemapURL]] =
     for {
-      publications <- publicationDAO.findAll(GlobalAccessContext)
+      publications <- publicationDAO.findAll(using GlobalAccessContext)
     } yield proxyURLs ::: publications.map(pub => SitemapURL("/publication/" + pub._id.id, None, Some("weekly")))
 
 }

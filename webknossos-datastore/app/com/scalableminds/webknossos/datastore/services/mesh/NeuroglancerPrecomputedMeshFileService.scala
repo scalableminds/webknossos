@@ -30,7 +30,7 @@ class NeuroglancerPrecomputedMeshFileService @Inject()(dataVaultService: DataVau
 
   private lazy val meshInfoCache = AlfuCache[MeshFileKey, NeuroglancerMesh](100)
 
-  private def loadRemoteMeshInfo(meshFileKey: MeshFileKey)(implicit tc: TokenContext): Fox[NeuroglancerMesh] =
+  private def loadRemoteMeshInfo(meshFileKey: MeshFileKey)(using tc: TokenContext): Fox[NeuroglancerMesh] =
     for {
       vaultPath <- dataVaultService.vaultPathFor(meshFileKey.attachment)
       meshInfoPath = vaultPath / NeuroglancerMesh.FILENAME_INFO
@@ -73,7 +73,7 @@ class NeuroglancerPrecomputedMeshFileService @Inject()(dataVaultService: DataVau
   }
 
   def listMeshChunksForMultipleSegments(meshFileKey: MeshFileKey, segmentId: Seq[Long])(
-      implicit tc: TokenContext): Fox[WebknossosSegmentInfo] =
+      using tc: TokenContext): Fox[WebknossosSegmentInfo] =
     for {
       vaultPath <- dataVaultService.vaultPathFor(meshFileKey.attachment)
       mesh <- meshInfoCache.getOrLoad(meshFileKey, loadRemoteMeshInfo)
@@ -85,7 +85,7 @@ class NeuroglancerPrecomputedMeshFileService @Inject()(dataVaultService: DataVau
     } yield segmentInfo
 
   private def listMeshChunks(vaultPath: VaultPath, mesh: NeuroglancerMesh, segmentId: Long)(
-      implicit tc: TokenContext): Fox[List[MeshLodInfo]] =
+      using tc: TokenContext): Fox[List[MeshLodInfo]] =
     for {
       _ <- Fox.successful(())
       minishardInfo = mesh.shardingSpecification.getMinishardInfo(segmentId)
@@ -102,7 +102,7 @@ class NeuroglancerPrecomputedMeshFileService @Inject()(dataVaultService: DataVau
     } yield meshSegmentInfo
 
   def readMeshChunk(meshFileKey: MeshFileKey, meshChunkDataRequests: Seq[MeshChunkDataRequest])(
-      implicit tc: TokenContext): Fox[(Array[Byte], String)] =
+      using tc: TokenContext): Fox[(Array[Byte], String)] =
     for {
       vaultPath <- dataVaultService.vaultPathFor(meshFileKey.attachment)
       segmentId <- meshChunkDataRequests.head.segmentId.toFox ?~> "Segment id parameter is required"
@@ -115,7 +115,7 @@ class NeuroglancerPrecomputedMeshFileService @Inject()(dataVaultService: DataVau
       output = chunks.flatten.toArray
     } yield (output, NeuroglancerMesh.meshEncoding)
 
-  def getVertexQuantizationBits(meshFileKey: MeshFileKey)(implicit tc: TokenContext): Fox[Int] =
+  def getVertexQuantizationBits(meshFileKey: MeshFileKey)(using tc: TokenContext): Fox[Int] =
     for {
       meshInfo <- meshInfoCache.getOrLoad(meshFileKey, loadRemoteMeshInfo)
     } yield meshInfo.meshInfo.vertex_quantization_bits

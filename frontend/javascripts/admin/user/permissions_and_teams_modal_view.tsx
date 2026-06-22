@@ -273,7 +273,7 @@ function PermissionsAndTeamsModalView(props: TeamRoleModalProps) {
   const onlyEditingSingleUser = selectedUserIds.length === 1;
 
   useEffect(() => {
-    // If a single user is selected, pre-select their teams
+    // If a single user is selected, preselect their teams
     const singleUserMaybe = getSingleUserMaybe(selectedUserIds, users);
 
     if (singleUserMaybe) {

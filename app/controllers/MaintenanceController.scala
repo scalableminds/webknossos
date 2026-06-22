@@ -14,7 +14,7 @@ import utils.sql.{SQLDAO, SqlClient}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{Maintenances, MaintenancesRow, GetResultMaintenancesRow}
 import security.WkEnv
 
 class MaintenanceController @Inject()(
@@ -61,7 +61,7 @@ class MaintenanceController @Inject()(
   def listAll: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
-      maintenances <- maintenanceDAO.findAll(GlobalAccessContext)
+      maintenances <- maintenanceDAO.findAll(using GlobalAccessContext)
       js = maintenances.map(maintenanceService.publicWrites)
     } yield Ok(Json.toJson(js))
   }

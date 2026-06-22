@@ -5,7 +5,7 @@ import type { Tree } from "viewer/model/types/tree_types";
 
 const NODE_RADIUS = 2;
 const MAX_NODE_DISTANCE = 100;
-const CLICK_TRESHOLD = 6;
+const CLICK_THRESHOLD = 6;
 const MODE_NORMAL = 0; // draw every node and the complete tree
 
 const MODE_NOCHAIN = 1; // draw only decision points
@@ -70,7 +70,7 @@ class AbstractTreeRenderer {
     let id = null;
 
     for (const entry of nodeList) {
-      if (Math.abs(x - entry.x) <= CLICK_TRESHOLD && Math.abs(y - entry.y) <= CLICK_TRESHOLD) {
+      if (Math.abs(x - entry.x) <= CLICK_THRESHOLD && Math.abs(y - entry.y) <= CLICK_THRESHOLD) {
         id = entry.id;
         break;
       }
@@ -356,7 +356,7 @@ class AbstractTreeRenderer {
   /**
    * Draws the dashed chain indicator and the start and end nodes.
    * @param  {Number} top      y coordinate in pixels
-   * @param  {Number} middle   middel x coordinate in pixels
+   * @param  {Number} middle   middle x coordinate in pixels
    * @param  {AbstractNodeType} node
    * @param  {Decision} decision
    */

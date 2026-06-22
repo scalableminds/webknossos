@@ -139,7 +139,7 @@ class AiModelService @Inject()(dataStoreDAO: DataStoreDAO,
       case None =>
         for {
           organizationId <- aiModel._organization.toFox ?~> "aiModel.noOrganization"
-          dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)(GlobalAccessContext)
+          dataStore <- dataStoreDAO.findOneByName(aiModel._dataStore)(using GlobalAccessContext)
           dataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
           dataStoreBaseDir <- dataStoreClient.getBaseDirAbsolute
           baseDirUPath <- UPath.fromString(dataStoreBaseDir).toFox
@@ -303,7 +303,7 @@ class AiModelDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         q"UPDATE webknossos.aiModels SET name = ${a.name}, comment = ${a.comment}, modified = ${a.modified} WHERE _id = ${a._id}".asUpdate)
     } yield ()
 
-  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[AiModel] =
+  def findOneByName(name: String)(using ctx: DBAccessContext): Fox[AiModel] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE name = $name AND $accessQuery".as[AimodelsRow])

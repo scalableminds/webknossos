@@ -28,5 +28,5 @@ case class OrganizationPlanUpdate(
 
 object OrganizationPlanUpdate extends TristateOptionJsonHelper {
   implicit val jsonFormat: OFormat[OrganizationPlanUpdate] =
-    Json.configured(tristateOptionParsing).format[OrganizationPlanUpdate]
+    Json.configured(using tristateOptionParsing).format[OrganizationPlanUpdate]
 }

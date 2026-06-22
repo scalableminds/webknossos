@@ -41,6 +41,28 @@ class ErrorWithParams extends Error {
 // will show the error to the user.
 // If some other error occurred, this function will tell the user so.
 
+// Extracts a human-readable message from an error thrown by the request module.
+// Server errors are rejected as plain objects with a `messages` array (see
+// handle_request_error_helper) and therefore don't carry a usable `.message`.
+export function extractServerErrorMessage(error: unknown, fallback?: string): string {
+  if (error != null && typeof error === "object" && "messages" in error) {
+    const serverMessages = (error as { messages?: Array<{ error?: string }> }).messages;
+    const errorTexts = (serverMessages ?? [])
+      .map((message) => message.error)
+      .filter((text): text is string => text != null);
+
+    if (errorTexts.length > 0) {
+      return errorTexts.join(" ");
+    }
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return fallback ?? "An unknown error occurred.";
+}
+
 export function handleGenericError(
   error: Error & {
     messages?: unknown;

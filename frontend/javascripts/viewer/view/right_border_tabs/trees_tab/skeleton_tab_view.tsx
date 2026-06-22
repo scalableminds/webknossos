@@ -30,6 +30,7 @@ import {
   Tooltip,
 } from "antd";
 import { saveAs } from "file-saver";
+import { extractServerErrorMessage } from "libs/error_handling";
 import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
 import { readFileAsArrayBuffer, readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
@@ -136,28 +137,6 @@ type State = {
 // surfaced instead of being replaced by the generic "could not be parsed" message.
 class VolumeImportError extends Error {
   name = "VolumeImportError";
-}
-
-// Extracts a human-readable message from an error thrown by the request module.
-// Server errors are rejected as plain objects with a `messages` array (see
-// handle_request_error_helper) and therefore don't carry a usable `.message`.
-function extractServerErrorMessage(error: unknown): string {
-  if (error != null && typeof error === "object" && "messages" in error) {
-    const serverMessages = (error as { messages?: Array<{ error?: string }> }).messages;
-    const errorTexts = (serverMessages ?? [])
-      .map((message) => message.error)
-      .filter((text): text is string => text != null);
-
-    if (errorTexts.length > 0) {
-      return errorTexts.join(" ");
-    }
-  }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return "An unknown error occurred while importing the volume annotation.";
 }
 
 export async function importTracingFiles(files: Array<File>, createGroupForEachFile: boolean) {
@@ -300,7 +279,12 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           } catch (importError) {
             // Surface the server error (e.g. mismatching mags) instead of swallowing it
             // and replacing it with the generic "could not be parsed" message below.
-            throw new VolumeImportError(extractServerErrorMessage(importError));
+            throw new VolumeImportError(
+              extractServerErrorMessage(
+                importError,
+                "An unknown error occurred while importing the volume annotation.",
+              ),
+            );
           }
 
           Store.dispatch(importVolumeTracingAction());

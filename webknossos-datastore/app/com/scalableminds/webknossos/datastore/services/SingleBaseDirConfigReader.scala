@@ -15,10 +15,10 @@ case class BaseDirConfig(
 class BaseDirConfigReader {
 
   def read(rawConfigs: List[Config]): List[BaseDirConfig] = {
-    val baseDirConfigs = rawConfigs.flatMap { rawConfig =>
+    val baseDirConfigs = rawConfigs.map { rawConfig =>
       new SingleBaseDirConfigReader(rawConfig).readOne
     }
-    if (baseDirConfigs.forall(c => c.doScan && c.path.isRemote))
+    if (baseDirConfigs.exists(c => c.doScan && c.path.isRemote))
       throw new ConfigException.BadValue("datastore.baseDirectories", "Cannot enable doScan on remote paths.")
     for {
       a <- baseDirConfigs
@@ -35,17 +35,15 @@ class BaseDirConfigReader {
 class SingleBaseDirConfigReader(underlyingConfig: Config) extends ConfigReader {
   override val raw: Configuration = Configuration(underlyingConfig)
 
-  def readOne: Option[BaseDirConfig] =
-    for {
-      pathStr <- getOptional[String]("path")
-      path <- UPath.fromString(pathStr).toOption
-      allowsUpload <- getOptional[Boolean]("allowsUpload")
-      doScan <- getOptional[Boolean]("doScan")
-    } yield
-      BaseDirConfig(
-        path.toAbsolute,
-        getOptional[String]("organizationId"),
-        allowsUpload,
-        doScan
-      )
+  def readOne: BaseDirConfig =
+    val pathStr = get[String]("path")
+    val path = UPath.fromString(pathStr).getOrElse {
+      throw new ConfigException.BadValue("datastore.baseDirectories.path", s"Invalid path: $pathStr")
+    }
+    BaseDirConfig(
+      path.toAbsolute,
+      getOptional[String]("organizationId"),
+      get[Boolean]("allowsUpload"),
+      get[Boolean]("doScan")
+    )
 }

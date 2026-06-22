@@ -383,7 +383,7 @@ function CreateAnimationModal(props: Props) {
     </Tooltip>
   ) : (
     <Button type="primary" onClick={submitJob} disabled={activeUser == null}>
-      Start animation
+      Create Animation
     </Button>
   );
 
@@ -513,9 +513,9 @@ function CreateAnimationModal(props: Props) {
                     value={selectedMovieDuration}
                     onChange={(value) => setMovieDuration(value as MOVIE_DURATIONS)}
                     options={[
-                      { value: MOVIE_DURATIONS.FAST, label: "Fast" },
+                      { value: MOVIE_DURATIONS.SHORT, label: "Short" },
                       { value: MOVIE_DURATIONS.STANDARD, label: "Standard" },
-                      { value: MOVIE_DURATIONS.SLOW, label: "Slow" },
+                      { value: MOVIE_DURATIONS.LONG, label: "Long" },
                     ]}
                   />
                   <Typography.Text
@@ -625,7 +625,7 @@ function CreateAnimationModal(props: Props) {
             {!isValid ? (
               <Alert
                 type="error"
-                message={
+                title={
                   <ul style={{ margin: 0, paddingInlineStart: 18 }}>
                     {validationErrors.map((errorMessage) => (
                       <li key={errorMessage.slice(5)}>{errorMessage}</li>

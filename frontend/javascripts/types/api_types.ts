@@ -1360,9 +1360,9 @@ export enum MOVIE_RESOLUTIONS {
 }
 
 export enum MOVIE_DURATIONS {
-  FAST = "FAST",
+  SHORT = "SHORT",
   STANDARD = "STANDARD",
-  SLOW = "SLOW",
+  LONG = "LONG",
 }
 
 export type RenderAnimationOptions = {

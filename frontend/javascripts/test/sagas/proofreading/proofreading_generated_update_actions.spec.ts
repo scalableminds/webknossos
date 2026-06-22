@@ -131,8 +131,8 @@ describe("Proofreading should generate correct update actions", () => {
       // Execute the actual merge and wait for the finished mapping.
       yield put(proofreadMergeAction(targetPosition, targetSegmentId));
       // Wait till proofreading action is finished; including refreshing agglomerate trees.
-      yield take(operationStarted("proofreading")); // Operation starts
-      yield take(operationFinished("proofreading")); // and finishes
+      yield take(operationStarted("PROOFREADING")); // Operation starts
+      yield take(operationFinished("PROOFREADING")); // and finishes
     });
     await task.toPromise();
   }
@@ -193,8 +193,8 @@ describe("Proofreading should generate correct update actions", () => {
         minCutAgglomerateWithPositionAction(targetPosition, targetSegmentId, sourceAgglomerateId),
       );
       // Wait till proofreading action is finished; including refreshing agglomerate trees.
-      yield take(operationStarted("proofreading")); // Operation starts
-      yield take(operationFinished("proofreading")); // and finishes
+      yield take(operationStarted("PROOFREADING")); // Operation starts
+      yield take(operationFinished("PROOFREADING")); // and finishes
     });
     await task.toPromise();
   }

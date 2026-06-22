@@ -246,7 +246,7 @@ export function* performMergeTreesProofreading(
   const targetNode = agglomerateTrees.getOrThrow(4).nodes.getOrThrow(7);
   yield put(mergeTreesAction(sourceNode.id, targetNode.id));
   yield take("FINISH_MAPPING_INITIALIZATION");
-  yield take(operationFinished("proofreading")); // Wait till full proofreading operation is done.
+  yield take(operationFinished("PROOFREADING")); // Wait till full proofreading operation is done.
 }
 
 // Loads agglomerate tree for agglomerate 1 and splits segments 2 and 3.
@@ -278,7 +278,7 @@ export function* performSplitTreesProofreading(
   yield put(deleteEdgeAction(sourceNode.id, targetNode.id));
 
   yield take("FINISH_MAPPING_INITIALIZATION");
-  yield take(operationFinished("proofreading")); // Wait till full proofreading operation is done.
+  yield take(operationFinished("PROOFREADING")); // Wait till full proofreading operation is done.
 }
 
 export function* performMinCutWithNodesProofreading(
@@ -325,7 +325,7 @@ export function* performMinCutWithNodesProofreading(
   yield put(minCutAgglomerateAction(sourceNode.id, targetNode.id));
 
   yield take("FINISH_MAPPING_INITIALIZATION");
-  yield take(operationFinished("proofreading")); // Wait till full proofreading operation is done.
+  yield take(operationFinished("PROOFREADING")); // Wait till full proofreading operation is done.
 }
 
 export const mockEdgesForAgglomerateMinCut = (

@@ -133,7 +133,7 @@ export function* pushSaveQueueAsync(): Saga<never> {
 
     const saveCtx = yield* getOrCreateOperationContext(
       {
-        id: "save",
+        id: "SAVE",
         description: "Saving annotation",
         behaviorWhenDisallowed: "ignore",
         allowAdditionalOperation,

@@ -80,7 +80,7 @@ function* watchVolumeTracingAsync(): Saga<void> {
   yield* takeEveryInOperationContext(
     "INTERPOLATE_SEGMENTATION_LAYER",
     maybeInterpolateSegmentationLayer,
-    { id: "interpolateSegmentationLayer", description: "Interpolating segment" },
+    { id: "INTERPOLATE_SEGMENTATION_LAYER", description: "Interpolating segment" },
   );
   yield* fork(warnOfTooLowOpacity);
 }
@@ -586,7 +586,7 @@ function* handleDeleteSegmentData(): Saga<void> {
     const action = (yield* take("DELETE_SEGMENT_DATA")) as DeleteSegmentDataAction;
 
     const ctx = yield* createOperationContext({
-      id: "deleteSegment",
+      id: "DELETE_SEGMENT",
       description: "Segment is being deleted.",
     });
     yield* ctx.execute(function* () {

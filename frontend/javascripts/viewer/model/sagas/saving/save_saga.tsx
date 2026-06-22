@@ -554,7 +554,7 @@ function* watchForNewerAnnotationVersion(): Saga<void> {
     let rebasingResult: RebasingSuccessInfo;
     const ctx = yield* getOrCreateOperationContext(
       {
-        id: "rebase",
+        id: "REBASE",
         description: REBASING_BUSY_BLOCK_REASON,
         behaviorWhenDisallowed: "ignore",
       },

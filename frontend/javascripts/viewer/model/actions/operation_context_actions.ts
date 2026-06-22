@@ -1,18 +1,18 @@
 // Named operations currently used in the app. Child operations (registered via borrowedContext)
 // can use any id, but top-level operations should use one of these known IDs to maintain clarity.
 export type OperationId =
-  | "proofreading"
-  | "minCut"
-  | "floodfill"
-  | "quickSelect"
-  | "interpolateSegmentationLayer"
-  | "deleteSegment"
-  | "undo"
-  | "redo"
-  | "save"
-  | "rebase";
+  | "PROOFREADING"
+  | "MIN_CUT"
+  | "FLOODFILL"
+  | "QUICK_SELECT"
+  | "INTERPOLATE_SEGMENTATION_LAYER"
+  | "DELETE_SEGMENT"
+  | "UNDO"
+  | "REDO"
+  | "SAVE"
+  | "REBASE";
 
-export const SYNC_RELATED_OPERATION_IDS: OperationId[] = ["save", "rebase"];
+export const SYNC_RELATED_OPERATION_IDS: OperationId[] = ["SAVE", "REBASE"];
 
 export type RegisterOperationAction = {
   type: "REGISTER_OPERATION";

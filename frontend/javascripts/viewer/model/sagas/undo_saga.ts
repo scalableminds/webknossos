@@ -254,7 +254,7 @@ function* manageUndoStates(): Saga<never> {
       const wasInterpreted = yield* call(maybeInterpretUndoAsDiscardUiAction);
       if (!wasInterpreted) {
         const ctx = yield* createOperationContext({
-          id: "undo",
+          id: "UNDO",
           description: "Undo is being performed.",
           behaviorWhenDisallowed: "ignore",
         });
@@ -288,7 +288,7 @@ function* manageUndoStates(): Saga<never> {
       }
 
       const ctx = yield* createOperationContext({
-        id: "redo",
+        id: "REDO",
         description: "Redo is being performed.",
         behaviorWhenDisallowed: "ignore",
       });

@@ -591,7 +591,7 @@ export function* performCutFromAllNeighbours(
     ),
   );
   yield take("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");
-  yield take(operationFinished("proofreading")); // Wait till full proofreading operation is done.
+  yield take(operationFinished("PROOFREADING")); // Wait till full proofreading operation is done.
 }
 
 // All usages of this function should have an initial mapping with a agglomerate id 1 = 1-2-3-1337-1338-1.
@@ -653,7 +653,7 @@ export function* simulatePartitionedSplitAgglomeratesViaMeshes(
   yield put(minCutPartitionsAction());
   yield take("FINISH_MAPPING_INITIALIZATION");
   // Checking optimistic merge is not necessary as no "foreign" update was injected.
-  yield take(operationFinished("proofreading")); // Wait till full proofreading operation is done.
+  yield take(operationFinished("PROOFREADING")); // Wait till full proofreading operation is done.
 }
 
 export const mockEdgesForPartitionedAgglomerateMinCut = (

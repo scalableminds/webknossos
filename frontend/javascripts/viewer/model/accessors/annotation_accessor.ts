@@ -206,7 +206,7 @@ export function isUserInterfaceBlocked(state: WebknossosState): boolean {
     // If the only active operation is a save operation, the UI should not be blocked.
     // Reminder: in concurrent collab mode, we forbid users from editing during saving
     // because editing would interfere with rebase operations.
-    const isOnlySaveOperation = activeOperations.length === 1 && activeOperations[0].id === "save";
+    const isOnlySaveOperation = activeOperations.length === 1 && activeOperations[0].id === "SAVE";
     return !isOnlySaveOperation;
   }
   // At least one operation is ongoing and should block the user.

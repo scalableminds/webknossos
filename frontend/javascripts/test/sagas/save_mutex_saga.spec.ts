@@ -65,11 +65,11 @@ async function makeProofreadMerge(
     yield put(setActiveCellAction(1));
     // Execute the actual merge and wait for the finished mapping.
     yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
-    yield take(operationStarted("proofreading"));
+    yield take(operationStarted("PROOFREADING"));
     if (waitTillFinished) {
       // Wait for proofreading operation to start and then finish to ensure saving of the whole saga is done.
       yield take("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");
-      yield take(operationFinished("proofreading"));
+      yield take(operationFinished("PROOFREADING"));
     }
   });
   await task.toPromise();

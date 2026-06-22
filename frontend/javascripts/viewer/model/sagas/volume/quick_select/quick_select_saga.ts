@@ -26,7 +26,7 @@ export default function* listenToQuickSelect(): Saga<void> {
     ["COMPUTE_QUICK_SELECT_FOR_RECT", "COMPUTE_QUICK_SELECT_FOR_POINT"],
     function* guard(action: ComputeQuickSelectForRectAction | ComputeQuickSelectForPointAction) {
       const ctx = yield* createOperationContext({
-        id: "quickSelect",
+        id: "QUICK_SELECT",
         description: "Quick-Selecting segment",
         behaviorWhenDisallowed: "ignore",
       });

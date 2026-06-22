@@ -36,7 +36,7 @@ describe("operation_context_saga", () => {
     const log: string[] = [];
 
     function* op1() {
-      const ctx = yield* createOperationContext({ id: "floodfill" });
+      const ctx = yield* createOperationContext({ id: "FLOODFILL" });
       yield* ctx.execute(function* () {
         log.push("op1:start");
         yield delay(20);
@@ -45,7 +45,7 @@ describe("operation_context_saga", () => {
     }
 
     function* op2() {
-      const ctx = yield* createOperationContext({ id: "minCut" });
+      const ctx = yield* createOperationContext({ id: "MIN_CUT" });
       yield* ctx.execute(function* () {
         yield* call(noop);
         log.push("op2:start");
@@ -67,7 +67,7 @@ describe("operation_context_saga", () => {
 
     function* opA() {
       const ctx = yield* createOperationContext({
-        id: "floodfill",
+        id: "FLOODFILL",
         behaviorWhenDisallowed: "ignore",
       });
       if (ctx == null) return;
@@ -93,8 +93,8 @@ describe("operation_context_saga", () => {
 
     function* saveOp() {
       const ctx = yield* createOperationContext({
-        id: "save",
-        allowAdditionalOperation: (pendingId) => pendingId === "undo",
+        id: "SAVE",
+        allowAdditionalOperation: (pendingId) => pendingId === "UNDO",
       });
       yield* ctx.execute(function* () {
         log.push("save:start");
@@ -104,7 +104,7 @@ describe("operation_context_saga", () => {
     }
 
     function* undoOp() {
-      const ctx = yield* createOperationContext({ id: "undo" });
+      const ctx = yield* createOperationContext({ id: "UNDO" });
       yield* ctx.execute(function* () {
         yield* call(noop);
         log.push("undo:start");
@@ -126,10 +126,10 @@ describe("operation_context_saga", () => {
 
     function* saveOp() {
       const ctx = yield* createOperationContext({
-        id: "save",
+        id: "SAVE",
         allowAdditionalOperation: (pendingId, state) => {
           stateSeenByPredicate = state;
-          return pendingId === "undo";
+          return pendingId === "UNDO";
         },
       });
       yield* ctx.execute(function* () {
@@ -138,7 +138,7 @@ describe("operation_context_saga", () => {
     }
 
     function* undoOp() {
-      const ctx = yield* createOperationContext({ id: "undo" });
+      const ctx = yield* createOperationContext({ id: "UNDO" });
       yield* ctx.execute(function* () {});
     }
 
@@ -149,7 +149,7 @@ describe("operation_context_saga", () => {
     // The predicate received state with save already registered
     expect(
       stateSeenByPredicate?.operationContext?.activeOperations.map((op: any) => op.id),
-    ).toContain("save");
+    ).toContain("SAVE");
   });
 
   it("behaviorWhenDisallowed: ignore returns null when blocked", async () => {
@@ -157,14 +157,14 @@ describe("operation_context_saga", () => {
     let secondContextWasNull = false;
 
     function* op1() {
-      const ctx = yield* createOperationContext({ id: "floodfill" });
+      const ctx = yield* createOperationContext({ id: "FLOODFILL" });
       yield* ctx.execute(function* () {
         yield delay(20);
       });
     }
 
     function* op2() {
-      const ctx = yield* createOperationContext({ id: "minCut", behaviorWhenDisallowed: "ignore" });
+      const ctx = yield* createOperationContext({ id: "MIN_CUT", behaviorWhenDisallowed: "ignore" });
       secondContextWasNull = ctx == null;
     }
 
@@ -180,7 +180,7 @@ describe("operation_context_saga", () => {
     let caughtError: Error | null = null;
 
     function* op1() {
-      const ctx = yield* createOperationContext({ id: "floodfill" });
+      const ctx = yield* createOperationContext({ id: "FLOODFILL" });
       yield* ctx.execute(function* () {
         yield delay(20);
       });
@@ -188,7 +188,7 @@ describe("operation_context_saga", () => {
 
     function* op2() {
       try {
-        yield* createOperationContext({ id: "minCut", behaviorWhenDisallowed: "raise" });
+        yield* createOperationContext({ id: "MIN_CUT", behaviorWhenDisallowed: "raise" });
       } catch (err) {
         caughtError = err as Error;
       }
@@ -199,8 +199,8 @@ describe("operation_context_saga", () => {
     await Promise.all([t1.toPromise(), t2.toPromise()]);
 
     expect(caughtError).not.toBeNull();
-    expect((caughtError as unknown as Error).message).toContain("minCut");
-    expect((caughtError as unknown as Error).message).toContain("floodfill");
+    expect((caughtError as unknown as Error).message).toContain("MIN_CUT");
+    expect((caughtError as unknown as Error).message).toContain("FLOODFILL");
   });
 
   it("execute() throws on second call", async () => {
@@ -208,7 +208,7 @@ describe("operation_context_saga", () => {
     let threwOnSecondCall = false;
 
     function* op() {
-      const ctx = yield* createOperationContext({ id: "floodfill" });
+      const ctx = yield* createOperationContext({ id: "FLOODFILL" });
       yield* ctx.execute(function* () {});
       try {
         yield* ctx.execute(function* () {});
@@ -227,7 +227,7 @@ describe("operation_context_saga", () => {
 
     function* op() {
       const ctx = yield* createOperationContext({
-        id: "floodfill",
+        id: "FLOODFILL",
         description: "Floodfill is being computed.",
       });
       snapshots.push([...store.getState().operationContext.activeOperations]);
@@ -241,10 +241,10 @@ describe("operation_context_saga", () => {
     await sagaMiddleware.run(op).toPromise();
 
     expect(snapshots[0]).toEqual([
-      { id: "floodfill", description: "Floodfill is being computed." },
+      { id: "FLOODFILL", description: "Floodfill is being computed." },
     ]);
     expect(snapshots[1]).toEqual([
-      { id: "floodfill", description: "Floodfill is being computed." },
+      { id: "FLOODFILL", description: "Floodfill is being computed." },
     ]);
     expect(snapshots[2]).toEqual([]); // after execute completes
   });
@@ -254,22 +254,22 @@ describe("operation_context_saga", () => {
     const log: string[] = [];
 
     function* op() {
-      const parentCtx = yield* createOperationContext({ id: "proofreading" });
+      const parentCtx = yield* createOperationContext({ id: "PROOFREADING" });
       yield* parentCtx.execute(function* () {
         log.push("parent:start");
-        const childCtx = borrowedContext(parentCtx, "save");
+        const childCtx = borrowedContext(parentCtx, "SAVE");
         yield* childCtx.execute(function* () {
           log.push("child:start");
           const inStore = store
             .getState()
-            .operationContext.childOperations.some((c: any) => c.id === "save");
+            .operationContext.childOperations.some((c: any) => c.id === "SAVE");
           log.push(inStore ? "child:in-store" : "child:not-in-store");
           log.push("child:end");
         });
         log.push("parent:end");
         const stillInStore = store
           .getState()
-          .operationContext.childOperations.some((c: any) => c.id === "save");
+          .operationContext.childOperations.some((c: any) => c.id === "SAVE");
         log.push(stillInStore ? "child:still-in-store" : "child:removed-from-store");
       });
     }
@@ -291,9 +291,9 @@ describe("operation_context_saga", () => {
     let threwOnSecondCall = false;
 
     function* op() {
-      const parentCtx = yield* createOperationContext({ id: "proofreading" });
+      const parentCtx = yield* createOperationContext({ id: "PROOFREADING" });
       yield* parentCtx.execute(function* () {
-        const childCtx = borrowedContext(parentCtx, "save");
+        const childCtx = borrowedContext(parentCtx, "SAVE");
         yield* childCtx.execute(function* () {});
         try {
           yield* childCtx.execute(function* () {});
@@ -312,9 +312,9 @@ describe("operation_context_saga", () => {
     const log: string[] = [];
 
     function* op() {
-      const parentCtx = yield* createOperationContext({ id: "proofreading" });
+      const parentCtx = yield* createOperationContext({ id: "PROOFREADING" });
       yield* parentCtx.execute(function* () {
-        const childCtx = yield* getOrCreateOperationContext({ id: "save" }, parentCtx);
+        const childCtx = yield* getOrCreateOperationContext({ id: "SAVE" }, parentCtx);
         // Borrowed context preserves the parent's ID
         log.push(`id-matches-parent: ${childCtx.id === parentCtx.id}`);
         yield* childCtx.execute(function* () {
@@ -334,7 +334,7 @@ describe("operation_context_saga", () => {
 
     function* op() {
       // No existing context — should acquire a new lock
-      const ctx = yield* getOrCreateOperationContext({ id: "floodfill" });
+      const ctx = yield* getOrCreateOperationContext({ id: "FLOODFILL" });
       log.push(`id: ${ctx.id}`);
       yield* ctx.execute(function* () {
         yield* call(noop);
@@ -343,6 +343,6 @@ describe("operation_context_saga", () => {
     }
 
     await sagaMiddleware.run(op).toPromise();
-    expect(log).toEqual(["id: floodfill", "ran"]);
+    expect(log).toEqual(["id: FLOODFILL", "ran"]);
   });
 });

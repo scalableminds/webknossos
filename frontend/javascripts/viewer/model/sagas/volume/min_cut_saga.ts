@@ -840,7 +840,7 @@ function labelDeletedEdges(
 
 export default function* listenToMinCut(): Saga<void> {
   yield* takeEveryInOperationContext("PERFORM_MIN_CUT", performMinCut, {
-    id: "minCut",
+    id: "MIN_CUT",
     description: "Min-cut is being computed.",
   });
 }

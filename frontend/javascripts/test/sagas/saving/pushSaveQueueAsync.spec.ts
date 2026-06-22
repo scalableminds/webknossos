@@ -64,7 +64,7 @@ describe("pushSaveQueueAsync (integration) - 1", () => {
     let saveCall;
     await vi.waitFor(
       () => {
-        saveCall = spy.mock.calls.find(([options]) => (options as any).id === "save");
+        saveCall = spy.mock.calls.find(([options]) => (options as any).id === "SAVE");
       },
       { timeout: 200 },
     );
@@ -76,7 +76,7 @@ describe("pushSaveQueueAsync (integration) - 1", () => {
     await context.api.tracing.save(); // start with clean queue
 
     const task = startSaga(function* () {
-      const fakeParentCtx = { id: "proofreading" } as unknown as OperationContext;
+      const fakeParentCtx = { id: "PROOFREADING" } as unknown as OperationContext;
       const callsBefore = context.mocks.sendSaveRequestWithToken.mock.calls.length;
       const spy = vi.spyOn(opCtxModule, "getOrCreateOperationContext");
 
@@ -87,7 +87,7 @@ describe("pushSaveQueueAsync (integration) - 1", () => {
       // Wait for save (child) operation to be completed.
       yield* take("UNREGISTER_CHILD_OPERATION");
       expect(context.mocks.sendSaveRequestWithToken.mock.calls.length).toEqual(callsBefore + 1);
-      const saveCall = spy.mock.calls.find(([options]) => (options as any).id === "save");
+      const saveCall = spy.mock.calls.find(([options]) => (options as any).id === "SAVE");
       expect(saveCall![1]).toEqual(fakeParentCtx);
     });
     await task.toPromise();

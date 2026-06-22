@@ -309,7 +309,7 @@ describe("Proofreading (with mesh actions)", () => {
       ),
     );
     yield take("FINISH_MAPPING_INITIALIZATION");
-    yield take(operationFinished("proofreading"));
+    yield take(operationFinished("PROOFREADING"));
 
     // Checking optimistic merge is not necessary as no "foreign" update was injected.
     yield call(() => api.tracing.save()); // Also pulls newest version from backend.

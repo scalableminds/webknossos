@@ -156,7 +156,7 @@ export default function* proofreadRootSaga(): Saga<void> {
   yield* takeWithBatchActionSupport("INITIALIZE_SKELETONTRACING");
   yield* call(ensureWkInitialized);
   const proofreadingOptions = {
-    id: "proofreading" as const,
+    id: "PROOFREADING" as const,
     description: PROOFREADING_BUSY_REASON,
   };
 

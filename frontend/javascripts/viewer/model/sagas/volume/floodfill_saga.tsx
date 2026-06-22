@@ -213,7 +213,7 @@ function* handleFloodFill(floodFillAction: FloodFillAction): Saga<void> {
   }
 
   const ctx = yield* createOperationContext({
-    id: "floodfill",
+    id: "FLOODFILL",
     description: "Floodfill is being computed.",
     behaviorWhenDisallowed: "ignore",
   });

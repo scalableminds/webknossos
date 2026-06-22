@@ -188,6 +188,12 @@ export function getUserStateForTracing<
   return undefined;
 }
 
+export function isSaving(state: WebknossosState): boolean {
+  return state.operationContext.activeOperations
+    .concat(state.operationContext.childOperations)
+    .some((op) => op.id === "SAVE");
+}
+
 export function isUserInterfaceBlocked(state: WebknossosState): boolean {
   if (!mayEditAnnotation(state)) {
     // The user is not allowed to edit the annotation, anyway. No need to block the UI

@@ -163,16 +163,6 @@ function SaveReducer(state: WebknossosState, action: Action): WebknossosState {
       });
     }
 
-    case "SET_SAVE_BUSY": {
-      return update(state, {
-        save: {
-          isBusy: {
-            $set: action.isBusy,
-          },
-        },
-      });
-    }
-
     case "SET_LAST_SAVE_TIMESTAMP": {
       return updateKey(state, "save", { lastSaveTimestamp: action.timestamp });
     }

@@ -209,7 +209,6 @@ const defaultState: WebknossosState = {
   },
   save: {
     queue: [],
-    isBusy: false,
     isSavingDisabled: false,
     lastSaveTimestamp: 0,
     progressInfo: {

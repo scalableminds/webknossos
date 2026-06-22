@@ -24,7 +24,6 @@ export type NotifyAboutUpdatedBucketsAction = ReturnType<typeof notifyAboutUpdat
 export type SaveNowAction = ReturnType<typeof saveNowAction>;
 export type ShiftSaveQueueAction = ReturnType<typeof shiftSaveQueueAction>;
 type DiscardSaveQueueAction = ReturnType<typeof discardSaveQueueAction>;
-export type SetSaveBusyAction = ReturnType<typeof setSaveBusyAction>;
 export type SetLastSaveTimestampAction = ReturnType<typeof setLastSaveTimestampAction>;
 export type SetVersionNumberAction = ReturnType<typeof setVersionNumberAction>;
 export type UndoAction = ReturnType<typeof undoAction>;
@@ -70,7 +69,6 @@ export type SaveAction =
   | ShiftSaveQueueAction
   | DiscardSaveQueueAction
   | NotifyAboutUpdatedBucketsAction
-  | SetSaveBusyAction
   | SetLastSaveTimestampAction
   | SetVersionNumberAction
   | UndoAction
@@ -140,12 +138,6 @@ export const shiftSaveQueueAction = (count: number) =>
 export const discardSaveQueueAction = () =>
   ({
     type: "DISCARD_SAVE_QUEUE",
-  }) as const;
-
-export const setSaveBusyAction = (isBusy: boolean) =>
-  ({
-    type: "SET_SAVE_BUSY",
-    isBusy,
   }) as const;
 
 export const setLastSaveTimestampAction = () =>

@@ -6,6 +6,7 @@ import reduce from "lodash-es/reduce";
 import sum from "lodash-es/sum";
 import type { APICompoundType } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
+import { isSaving } from "viewer/model/accessors/annotation_accessor";
 import {
   getLayerByName,
   getSegmentationLayerWithMappingSupport,
@@ -246,7 +247,7 @@ export class WebKnossosModel {
 
   stateSaved() {
     const state = Store.getState();
-    const storeStateSaved = !state.save.isBusy && getTotalSaveQueueLength(state.save.queue) === 0;
+    const storeStateSaved = !isSaving(state) && getTotalSaveQueueLength(state.save.queue) === 0;
 
     const pushQueuesSaved = reduce(
       this.dataLayers,
@@ -318,9 +319,9 @@ export class WebKnossosModel {
 
     while (
       // Wait while saving is in progress... (the remaining check would also work
-      // without the isBusy condition, but that way we avoid repeatedly and uselessly
+      // without the isSaving condition, but that way we avoid repeatedly and uselessly
       // triggering waitForDifferResponses).
-      Store.getState().save.isBusy ||
+      isSaving(Store.getState()) ||
       // ...or rebasing is in progress.
       Store.getState().save.rebaseRelevantServerAnnotationState.isRebasingOrForwarding ||
       // If no saving or rebasing is in progress, enforce diffed state to save queue.
@@ -329,8 +330,7 @@ export class WebKnossosModel {
       // The dispatch of the saveNowAction IN the while loop is deliberate.
       // Otherwise if an update action is pushed to the save queue during the Utils.sleep,
       // the while loop would continue running until the next save would be triggered.
-      // todop (clean up): state.save.isBusy could be replaced by checking the ongoing (sub) operations in the store.
-      if (!Store.getState().save.isBusy) {
+      if (!isSaving(Store.getState())) {
         Store.dispatch(saveNowAction(operationContext));
       }
 

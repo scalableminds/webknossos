@@ -130,6 +130,36 @@ type State = {
   groupToDelete: number | null | undefined;
 };
 
+// Thrown while importing a volume annotation ZIP when the import cannot proceed
+// (e.g. there is no editable volume layer, or the server rejected the data). Unlike
+// generic parsing failures, the message of this error is user-facing and should be
+// surfaced instead of being replaced by the generic "could not be parsed" message.
+class VolumeImportError extends Error {
+  name = "VolumeImportError";
+}
+
+// Extracts a human-readable message from an error thrown by the request module.
+// Server errors are rejected as plain objects with a `messages` array (see
+// handle_request_error_helper) and therefore don't carry a usable `.message`.
+function extractServerErrorMessage(error: unknown): string {
+  if (error != null && typeof error === "object" && "messages" in error) {
+    const serverMessages = (error as { messages?: Array<{ error?: string }> }).messages;
+    const errorTexts = (serverMessages ?? [])
+      .map((message) => message.error)
+      .filter((text): text is string => text != null);
+
+    if (errorTexts.length > 0) {
+      return errorTexts.join(" ");
+    }
+  }
+
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  return "An unknown error occurred while importing the volume annotation.";
+}
+
 export async function importTracingFiles(files: Array<File>, createGroupForEachFile: boolean) {
   try {
     const wrappedAddTreesAndGroupsAction = (
@@ -246,23 +276,32 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
           const { annotation, dataset } = storeState;
 
           if (annotation.volumes.length === 0) {
-            throw new Error("A volume tracing must already exist when importing a volume tracing.");
+            throw new VolumeImportError(
+              "The volume data could not be imported because this annotation does not contain an editable volume layer. To import an annotation that contains volume data, upload it via the dashboard to create a new annotation, or add a volume layer to this annotation first.",
+            );
           }
 
           const oldVolumeTracing = getActiveSegmentationTracing(storeState);
 
           if (oldVolumeTracing == null) {
-            throw new Error(
-              "Ensure that a volume tracing layer is visible when importing a volume tracing.",
+            throw new VolumeImportError(
+              "The volume data could not be imported because no editable volume layer is active. Please make sure that exactly one volume layer is visible and try again.",
             );
           }
 
-          const newLargestSegmentId = await importVolumeTracing(
-            annotation,
-            oldVolumeTracing,
-            dataFile,
-            annotation.version,
-          );
+          let newLargestSegmentId: number;
+          try {
+            newLargestSegmentId = await importVolumeTracing(
+              annotation,
+              oldVolumeTracing,
+              dataFile,
+              annotation.version,
+            );
+          } catch (importError) {
+            // Surface the server error (e.g. mismatching mags) instead of swallowing it
+            // and replacing it with the generic "could not be parsed" message below.
+            throw new VolumeImportError(extractServerErrorMessage(importError));
+          }
 
           Store.dispatch(importVolumeTracingAction());
           Store.dispatch(setVersionNumberAction(annotation.version + 1));
@@ -274,6 +313,11 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
         await reader.close();
         return nmlImportActions;
       } catch (error) {
+        if (error instanceof NmlParseError || error instanceof VolumeImportError) {
+          // These errors carry a helpful, user-facing message and should be shown to the
+          // user instead of being replaced by the generic "could not be parsed" message.
+          throw error;
+        }
         // @ts-expect-error
         console.error(`Tried parsing file "${file.name}" as ZIP but failed. ${error.message}`);
         return undefined;

@@ -44,7 +44,6 @@ import {
   makeMappingEditableForTest,
   mockInitialBucketAndAgglomerateData,
   operationFinished,
-  operationStarted,
 } from "./proofreading_test_utils";
 
 describe("Proofreading agglomerate tree syncing", () => {
@@ -152,8 +151,7 @@ describe("Proofreading agglomerate tree syncing", () => {
         // Execute the actual merge and wait for the finished mapping.
         yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
         // Wait till proofreading action is finished; including refreshing agglomerate trees.
-        yield take(operationStarted("PROOFREADING")); // Operation starts
-        yield take(operationFinished("PROOFREADING")); // and finishes
+        yield take(operationFinished("PROOFREADING"));
 
         const updatedAgglomerateTrees = yield* select((state) =>
           getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -212,8 +210,7 @@ describe("Proofreading agglomerate tree syncing", () => {
         // Execute the actual merge and wait for the finished mapping.
         yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
         // Wait till proofreading action is finished; including refreshing agglomerate trees.
-        yield take(operationStarted("PROOFREADING")); // Operation starts
-        yield take(operationFinished("PROOFREADING")); // and finishes
+        yield take(operationFinished("PROOFREADING"));
 
         const updatedAgglomerateTrees = yield* select((state) =>
           getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -287,8 +284,7 @@ describe("Proofreading agglomerate tree syncing", () => {
         // Execute the split and wait for the finished mapping.
         yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
         // Wait till proofreading action is finished; including refreshing agglomerate trees.
-        yield take(operationStarted("PROOFREADING")); // Operation starts
-        yield take(operationFinished("PROOFREADING")); // and finishes
+        yield take(operationFinished("PROOFREADING"));
 
         const updatedAgglomerateTrees = yield* select((state) =>
           getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -353,8 +349,7 @@ describe("Proofreading agglomerate tree syncing", () => {
         // Execute the split and wait for the finished mapping.
         yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
         // Wait till proofreading action is finished; including refreshing agglomerate trees.
-        yield take(operationStarted("PROOFREADING")); // Operation starts
-        yield take(operationFinished("PROOFREADING")); // and finishes
+        yield take(operationFinished("PROOFREADING"));
 
         const updatedAgglomerateTrees = yield* select((state) =>
           getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -627,8 +622,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       // Execute the actual merge and wait for the finished mapping.
       yield put(proofreadMergeAction(getPositionForSegmentId(6), 6));
       // Wait till proofreading action is finished; including refreshing agglomerate trees.
-      yield take(operationStarted("PROOFREADING")); // Operation starts
-      yield take(operationFinished("PROOFREADING")); // and finishes
+      yield take(operationFinished("PROOFREADING"));
 
       const updatedAgglomerateTrees = yield* select((state) =>
         getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -687,8 +681,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       // Execute the actual merge and wait for the finished mapping.
       yield put(proofreadMergeAction(getPositionForSegmentId(1), 1));
       // Wait till proofreading action is finished; including refreshing agglomerate trees.
-      yield take(operationStarted("PROOFREADING")); // Operation starts
-      yield take(operationFinished("PROOFREADING")); // and finishes
+      yield take(operationFinished("PROOFREADING"));
 
       const updatedAgglomerateTrees = yield* select((state) =>
         getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -1116,8 +1109,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       // Execute the actual merge and wait for the finished mapping.
       yield put(proofreadMergeAction(getPositionForSegmentId(4), 4));
       // Wait till proofreading action is finished; including refreshing agglomerate trees.
-      yield take(operationStarted("PROOFREADING")); // Operation starts
-      yield take(operationFinished("PROOFREADING")); // and finishes
+      yield take(operationFinished("PROOFREADING"));
 
       const updatedAgglomerateTrees = yield* select((state) =>
         getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),
@@ -1185,8 +1177,7 @@ describe("Proofreading agglomerate tree syncing", () => {
       // Execute the split and wait for the finished mapping.
       yield put(minCutAgglomerateWithPositionAction(getPositionForSegmentId(2), 2, 1));
       // Wait till proofreading action is finished; including refreshing agglomerate trees.
-      yield take(operationStarted("PROOFREADING")); // Operation starts
-      yield take(operationFinished("PROOFREADING")); // and finishes
+      yield take(operationFinished("PROOFREADING"));
 
       const updatedAgglomerateTrees = yield* select((state) =>
         getTreesWithType(state.annotation.skeleton!, TreeTypeEnum.AGGLOMERATE),

@@ -5,7 +5,7 @@ import play.silhouette.impl.authenticators.BearerTokenAuthenticator
 import com.scalableminds.util.enumeration.ExtendedEnumeration
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{Tokens, TokensRow, GetResultTokensRow}
 import TokenType.TokenType
 import com.scalableminds.util.objectid.ObjectId
 import utils.sql.{SQLDAO, SqlClient}

@@ -23,7 +23,7 @@ object Zarr3Array extends LazyLogging with FoxImplicits {
       channelIndex: Option[Int],
       additionalAxes: Option[Seq[AdditionalAxis]],
       sharedChunkContentsCache: AlfuCache[String, MultiArray]
-  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[Zarr3Array] =
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Zarr3Array] =
     for {
       headerBytes <- (path / Zarr3ArrayHeader.FILENAME_ZARR_JSON)
         .readBytes() ?~> s"Could not read header at ${Zarr3ArrayHeader.FILENAME_ZARR_JSON}"
@@ -129,7 +129,7 @@ class Zarr3Array(
 
   private def readAndParseShardIndex(
       shardPath: VaultPath
-  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[(Long, Long)]] =
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[(Long, Long)]] =
     for {
       shardIndexRaw <- readShardIndex(shardPath) ?-> Msg.Zarr.readShardIndexFailed
       parsed = parseShardIndex(shardIndexRaw)
@@ -144,7 +144,7 @@ class Zarr3Array(
     }
   private def getShardIndexSize = shardIndexEntryLength * chunksPerShard + shardIndexChecksumLength
 
-  private def readShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext) =
+  private def readShardIndex(shardPath: VaultPath)(using ec: ExecutionContext, tc: TokenContext) =
     shardingCodec match {
       case Some(codec) if codec.index_location == IndexLocationSetting.start =>
         shardPath.readBytes(ByteRange.startEndExclusive(0, getShardIndexSize.toLong))
@@ -182,7 +182,7 @@ class Zarr3Array(
 
   override protected def getShardedChunkPathAndRange(
       chunkIndex: Array[Int]
-  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[(VaultPath, StartEndExclusiveByteRange)] =
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[(VaultPath, StartEndExclusiveByteRange)] =
     for {
       shardCoordinates <- chunkIndexToShardIndex(chunkIndex).headOption.toFox
       shardFilename = getChunkFilename(shardCoordinates)

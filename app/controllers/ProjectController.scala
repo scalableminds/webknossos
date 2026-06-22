@@ -93,7 +93,7 @@ class ProjectController @Inject()(
     for {
       _ <- projectService.validateProjectName(request.body.name)
       _ <- projectDAO
-        .findOneByNameAndOrganization(request.body.name, request.identity._organization)(GlobalAccessContext)
+        .findOneByNameAndOrganization(request.body.name, request.identity._organization)(using GlobalAccessContext)
         .reverse ?~> Msg.Project.nameTaken(request.body.name)
       _ <- Fox
         .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, request.body.team)) ?~> Msg.notAllowed ~> FORBIDDEN
@@ -115,7 +115,7 @@ class ProjectController @Inject()(
   def update(id: ObjectId): Action[ProjectParameters] = sil.SecuredAction.async(validateJson[ProjectParameters]) {
     implicit request =>
       for {
-        project: Project <- projectDAO.findOne(id)(GlobalAccessContext) ?~> Msg.Project.notFound(id) ~> NOT_FOUND
+        project: Project <- projectDAO.findOne(id)(using GlobalAccessContext) ?~> Msg.Project.notFound(id) ~> NOT_FOUND
         _ <- Fox
           .assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN
         updated = project.copy(
@@ -174,7 +174,7 @@ class ProjectController @Inject()(
         _ <- Fox.assertTrue(userService.isTeamManagerOrAdminOf(request.identity, project._team)) ?~> Msg.notAllowed ~> FORBIDDEN
         tasks <- taskDAO.findAllByProject(project._id, limit.getOrElse(Int.MaxValue), pageNumber.getOrElse(0))
         taskCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
-          taskDAO.countAllByProject(project._id)(GlobalAccessContext))
+          taskDAO.countAllByProject(project._id)(using GlobalAccessContext))
         js <- Fox.serialCombined(tasks)(task => taskService.publicWrites(task))
       } yield {
         val result = Ok(Json.toJson(js))

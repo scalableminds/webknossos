@@ -26,7 +26,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
   private lazy val binaryDataService: BinaryDataService = dataServicesHolder.binaryDataService
 
   def findPositionWithData(datasetId: ObjectId, dataSourceId: DataSourceId, dataLayer: DataLayer)(
-      implicit tc: TokenContext): Fox[Option[(Vec3Int, Vec3Int)]] =
+      using tc: TokenContext): Fox[Option[(Vec3Int, Vec3Int)]] =
     for {
       positionAndMagOpt <- checkAllPositionsForData(datasetId, dataSourceId, dataLayer)
     } yield positionAndMagOpt
@@ -35,7 +35,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
                          dataSourceId: DataSourceId,
                          dataLayer: DataLayer,
                          position: Vec3Int,
-                         mag: Vec3Int)(implicit tc: TokenContext): Fox[Array[Byte]] = {
+                         mag: Vec3Int)(using tc: TokenContext): Fox[Array[Byte]] = {
     val request = DataRequest(
       VoxelPosition(position.x, position.y, position.z, mag),
       DataLayer.bucketLength,
@@ -61,7 +61,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
                                      dataSourceId: DataSourceId,
                                      dataLayer: DataLayer,
                                      positions: List[Vec3Int],
-                                     mag: Vec3Int)(implicit tc: TokenContext) =
+                                     mag: Vec3Int)(using tc: TokenContext) =
     for {
       dataBucketWise: Seq[Array[Byte]] <- Fox.fromFuture(
         Fox.sequenceOfFulls(positions.map(getDataFor(datasetId, dataSourceId, dataLayer, _, mag))))
@@ -112,7 +112,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
   }
 
   private def checkAllPositionsForData(datasetId: ObjectId, dataSourceId: DataSourceId, dataLayer: DataLayer)(
-      implicit tc: TokenContext): Fox[Option[(Vec3Int, Vec3Int)]] = {
+      using tc: TokenContext): Fox[Option[(Vec3Int, Vec3Int)]] = {
 
     def searchPositionIter(positions: List[Vec3Int], mag: Vec3Int): Fox[Option[Vec3Int]] =
       positions match {
@@ -147,7 +147,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
   }
 
   def createHistogram(datasetId: ObjectId, dataSourceId: DataSourceId, dataLayer: DataLayer)(
-      implicit tc: TokenContext): Fox[Seq[Histogram]] =
+      using tc: TokenContext): Fox[Seq[Histogram]] =
     if (dataLayer.resolutions.nonEmpty) {
       val positions = createPositions(dataLayer, 2).distinct
       histogramForPositions(datasetId, dataSourceId, dataLayer, positions, dataLayer.resolutions.minBy(_.maxDim))
@@ -158,7 +158,7 @@ class FindDataService @Inject()(dataServicesHolder: BinaryDataServiceHolder)(imp
                                     dataSourceId: DataSourceId,
                                     dataLayer: DataLayer,
                                     positions: List[Vec3Int],
-                                    mag: Vec3Int)(implicit tc: TokenContext): Fox[Seq[Histogram]] =
+                                    mag: Vec3Int)(using tc: TokenContext): Fox[Seq[Histogram]] =
     for {
       dataConcatenated <- getConcatenatedDataFor(datasetId, dataSourceId, dataLayer, positions, mag) ?~> Msg.Dataset.loadingDataFailed
       isUint24 = dataLayer.elementClass == ElementClass.uint24

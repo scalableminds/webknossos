@@ -27,7 +27,7 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext)
   override def name: String = "OME NGFF Zarr v0.5"
 
   override def explore(remotePath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
+      using tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       zarrJsonPath <- Fox.successful(remotePath / Zarr3ArrayHeader.FILENAME_ZARR_JSON)
       groupHeader <- zarrJsonPath
@@ -54,7 +54,7 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext)
                             datasetName: String,
                             voxelSizeInAxisUnits: Vec3Double,
                             axisOrder: AxisOrder,
-                            isSegmentation: Boolean)(implicit tc: TokenContext): Fox[StaticLayer] =
+                            isSegmentation: Boolean)(using tc: TokenContext): Fox[StaticLayer] =
     for {
       magsWithAttributes <- Fox.serialCombined(multiscale.datasets)(d =>
         zarrMagFromNgffDataset(d, remotePath, voxelSizeInAxisUnits, axisOrder, credentialId, Some(channelIndex)))
@@ -96,7 +96,7 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext)
     } yield layer
 
   private def getZarrHeader(ngffDataset: NgffDataset, layerPath: VaultPath)(
-      implicit tc: TokenContext): Fox[Zarr3ArrayHeader] = {
+      using tc: TokenContext): Fox[Zarr3ArrayHeader] = {
     val magPath = layerPath / ngffDataset.path
     val zarrJsonPath = magPath / Zarr3ArrayHeader.FILENAME_ZARR_JSON
     for {
@@ -110,7 +110,7 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext)
       voxelSizeInAxisUnits: Vec3Double,
       axisOrder: AxisOrder,
       credentialId: Option[String],
-      channelIndex: Option[Int])(implicit ec: ExecutionContext, tc: TokenContext): Fox[MagWithAttributes] =
+      channelIndex: Option[Int])(using ec: ExecutionContext, tc: TokenContext): Fox[MagWithAttributes] =
     for {
       mag <- magFromTransforms(ngffDataset.coordinateTransformations, voxelSizeInAxisUnits, axisOrder) ?~> "Could not extract mag from scale transforms"
       magPath = layerPath / ngffDataset.path
@@ -126,14 +126,14 @@ class NgffV0_5Explorer(implicit val ec: ExecutionContext)
                         elementClass,
                         boundingBox)
 
-  protected def getShape(dataset: NgffDataset, path: VaultPath)(implicit tc: TokenContext): Fox[Array[Long]] =
+  protected def getShape(dataset: NgffDataset, path: VaultPath)(using tc: TokenContext): Fox[Array[Long]] =
     for {
       zarrHeader <- getZarrHeader(dataset, path)
       shape = zarrHeader.shape
     } yield shape
 
   protected def layersForLabel(remotePath: VaultPath, labelPath: String, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
+      using tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       fullLabelPath <- Fox.successful(remotePath / "labels" / labelPath)
       zarrJsonPath = fullLabelPath / Zarr3ArrayHeader.FILENAME_ZARR_JSON

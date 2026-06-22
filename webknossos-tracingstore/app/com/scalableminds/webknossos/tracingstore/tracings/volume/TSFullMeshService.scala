@@ -39,7 +39,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
     with LazyLogging {
 
   def loadFor(annotationId: ObjectId, tracingId: String, fullMeshRequest: FullMeshRequest, version: Option[Long])(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[Array[Byte]] =
     for {
       tracing <- annotationService.findVolume(annotationId, tracingId, version) ?~> Msg.Annotation.notFound
@@ -52,7 +52,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       annotationId: ObjectId,
       tracingId: String,
       tracing: VolumeTracing,
-      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
+      fullMeshRequest: FullMeshRequest)(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       remoteFallbackLayer <- remoteFallbackLayerForVolumeTracing(tracing, annotationId)
       baseMappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
@@ -71,7 +71,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       annotationId: ObjectId,
       tracingId: String,
       tracing: VolumeTracing,
-      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
+      fullMeshRequest: FullMeshRequest)(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       mag <- fullMeshRequest.mag.toFox ?~> Msg.Mesh.magNeededForAdHoc
       _ <- Fox.fromBool(tracing.mags.contains(vec3IntToProto(mag))) ?~> Msg.Annotation.Volume
@@ -102,7 +102,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       tracing: VolumeTracing,
       mag: Vec3Int,
       voxelSize: VoxelSize,
-      fullMeshRequest: FullMeshRequest)(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] =
+      fullMeshRequest: FullMeshRequest)(using ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] =
     for {
       fallbackLayer <- volumeTracingService.getFallbackLayer(annotationId, tracing)
       mappingName <- annotationService.baseMappingName(annotationId, tracingId, tracing)
@@ -149,7 +149,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       voxelSize: VoxelSize,
       fullMeshRequest: FullMeshRequest,
       topLeftOpt: Option[VoxelPosition],
-      chunkSize: Vec3Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] = {
+      chunkSize: Vec3Int)(using ec: ExecutionContext, tc: TokenContext): Fox[List[Array[Float]]] = {
     // visited does not need to be thread-safe: it is mutated only at the start of each
     // processFrontier call (before any concurrent work begins); Fox.combined only reads it
     // (via generateNextTopLeftsFromNeighbors.filterNot), and waves execute sequentially
@@ -200,7 +200,7 @@ class TSFullMeshService @Inject()(volumeTracingService: VolumeTracingService,
       annotationId: ObjectId,
       tracingId: String,
       tracing: VolumeTracing,
-      adHocMeshRequest: WebknossosAdHocMeshRequest)(implicit tc: TokenContext): Fox[(Array[Float], List[Int])] =
+      adHocMeshRequest: WebknossosAdHocMeshRequest)(using tc: TokenContext): Fox[(Array[Float], List[Int])] =
     if (tracing.getHasEditableMapping) {
       val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
       editableMappingService.createAdHocMesh(mappingLayer, adHocMeshRequest)

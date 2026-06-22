@@ -14,6 +14,7 @@ object Dependencies {
   private val silhouetteVersion = "10.0.4"
   private val brotliVersion = "1.22.0"
   private val slickVersion = "3.5.2"
+  private val postgresVersion = "42.7.10"
   private val awsVersion = "2.42.41"
   private val scalapbVersion = scalapb.compiler.Version.scalapbVersion
   private val grpcVersion = scalapb.compiler.Version.grpcJavaVersion
@@ -39,6 +40,19 @@ object Dependencies {
     "at.favre.lib" % "bcrypt" % "0.10.2",
     // Play http filters. Not imported.
     filters,
+  )
+
+  val slickCodegenDependencies: Seq[ModuleID] = Seq(
+    // SQL Queries. import slick
+    "com.typesafe.slick" %% "slick" % slickVersion,
+    // SQL Type code generation. import slick.codegen
+    "com.typesafe.slick" %% "slick-codegen" % slickVersion,
+    // SQL Queries connection pool. not imported.
+    "com.typesafe.slick" %% "slick-hikaricp" % slickVersion,
+    // SQL Queries postgres specifics. not imported.
+    "org.postgresql" % "postgresql" % postgresVersion,
+    // Logging. import org.slf4j
+    "org.slf4j" % "slf4j-simple" % "2.0.18",
   )
 
   val webknossosDatastoreDependencies: Seq[ModuleID] = Seq(
@@ -111,7 +125,7 @@ object Dependencies {
     // SQL Queries class generation. Started with runner as slick.codegen.SourceCodeGenerator
     "com.typesafe.slick" %% "slick-codegen" % slickVersion,
     // SQL Queries postgres specifics. not imported.
-    "org.postgresql" % "postgresql" % "42.7.10",
+    "org.postgresql" % "postgresql" % postgresVersion,
     /// WebAuthn for passkey authentication. import com.webauthn4j
     "com.webauthn4j" % "webauthn4j-core" % "0.29.7.RELEASE" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
   )

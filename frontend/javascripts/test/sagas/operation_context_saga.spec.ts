@@ -324,11 +324,12 @@ describe("operation_context_saga", () => {
           yield* call(noop);
           log.push("child:ran");
         });
+        log.push("parent:ran");
       });
     }
 
     await sagaMiddleware.run(op).toPromise();
-    expect(log).toEqual(["id-matches-parent: true", "child:ran"]);
+    expect(log).toEqual(["id-matches-parent: true", "child:ran", "parent:ran"]);
   });
 
   it("getOrCreateOperationContext creates new context when none provided", async () => {

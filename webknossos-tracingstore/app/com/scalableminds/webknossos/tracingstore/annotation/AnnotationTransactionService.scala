@@ -73,7 +73,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
   private def handleUpdateGroupOfTransaction(
       annotationId: ObjectId,
       previousVersionFox: Fox[Long],
-      updateGroup: UpdateActionGroup)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+      updateGroup: UpdateActionGroup)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     for {
       previousCommittedVersion: Long <- previousVersionFox
       result <- if (previousCommittedVersion + 1 == updateGroup.version) {
@@ -101,7 +101,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
 
   // For an update group (that is the last of a transaction), fetch all previous uncommitted for the same transaction
   // and commit them all.
-  private def commitWithPending(annotationId: ObjectId, updateGroup: UpdateActionGroup)(implicit ec: ExecutionContext,
+  private def commitWithPending(annotationId: ObjectId, updateGroup: UpdateActionGroup)(using ec: ExecutionContext,
                                                                                         tc: TokenContext): Fox[Long] =
     for {
       previousActionGroupsToCommit <- getAllUncommittedFor(annotationId, updateGroup.transactionId)
@@ -155,7 +155,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
     }
 
   def handleSingleUpdateAction(annotationId: ObjectId, currentVersion: Long, updateAction: UpdateAction)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[Long] = {
     val wrapped = List(
       UpdateActionGroup(
@@ -172,7 +172,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
     handleUpdateGroups(annotationId, wrapped)
   }
 
-  def handleUpdateGroups(annotationId: ObjectId, updateGroups: List[UpdateActionGroup])(implicit ec: ExecutionContext,
+  def handleUpdateGroups(annotationId: ObjectId, updateGroups: List[UpdateActionGroup])(using ec: ExecutionContext,
                                                                                         tc: TokenContext): Fox[Long] =
     if (updateGroups.forall(_.transactionGroupCount == 1)) {
       commitUpdates(annotationId, updateGroups)
@@ -185,7 +185,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
 
   // Perform version check and commit the passed updates
   private def commitUpdates(annotationId: ObjectId, updateGroups: List[UpdateActionGroup])(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[Long] =
     for {
       _ <- reportUpdates(annotationId, updateGroups)
@@ -207,7 +207,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
     } yield newVersion
 
   private def applyImmediatelyIfNeeded(annotationId: ObjectId, updates: List[UpdateAction], newVersion: Long)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[Unit] =
     if (containsApplyImmediatelyUpdateActions(updates)) {
       annotationService.get(annotationId, Some(newVersion)).map(_ => ())
@@ -219,7 +219,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
   }
 
   private def handleUpdateGroup(annotationId: ObjectId, updateActionGroup: UpdateActionGroup)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[Unit] =
     for {
       updateActionsProcessed <- Fox.successful(preprocessActionsForStorage(updateActionGroup))
@@ -278,7 +278,7 @@ class AnnotationTransactionService @Inject()(handledGroupIdStore: TracingStoreRe
   }
 
   private def reportUpdates(annotationId: ObjectId, updateGroups: List[UpdateActionGroup])(
-      implicit tc: TokenContext): Fox[Unit] =
+      using tc: TokenContext): Fox[Unit] =
     for {
       _ <- remoteWebknossosClient.reportAnnotationUpdates(
         AnnotationUpdatesReport(

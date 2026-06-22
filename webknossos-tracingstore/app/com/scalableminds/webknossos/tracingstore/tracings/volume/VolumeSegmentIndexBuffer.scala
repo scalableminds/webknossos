@@ -208,7 +208,7 @@ class VolumeSegmentIndexBuffer(
                                                                    mag,
                                                                    mappingName,
                                                                    editableMappingTracingId,
-                                                                   annotationVersion)(tc)
+                                                                   annotationVersion)(using tc)
       case _ => Fox.successful(List.empty)
     }
 

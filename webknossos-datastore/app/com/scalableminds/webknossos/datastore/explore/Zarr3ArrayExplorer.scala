@@ -22,7 +22,7 @@ class Zarr3ArrayExplorer(implicit val ec: ExecutionContext) extends RemoteLayerE
   override def name: String = "Zarr v3 Array"
 
   override def explore(remotePath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
+      using tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       zarrayPath <- Fox.successful(remotePath / Zarr3ArrayHeader.FILENAME_ZARR_JSON)
       name = guessNameFromPath(remotePath)

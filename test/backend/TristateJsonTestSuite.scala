@@ -14,7 +14,7 @@ class TristateJsonTestSuite extends AsyncWordSpec {
 
   object ExampleClass extends TristateOptionJsonHelper {
     implicit val jsonFormat: OFormat[ExampleClass] =
-      Json.configured(tristateOptionParsing).format[ExampleClass]
+      Json.configured(using tristateOptionParsing).format[ExampleClass]
   }
 
   "TristateJsonFormat" should {

@@ -38,7 +38,7 @@ trait FallbackDataHelper extends FoxImplicits {
     } yield RemoteFallbackLayer(datasetId, layerName, tracing.elementClass)
 
   def getFallbackBucketFromDataStore(remoteFallbackLayer: RemoteFallbackLayer, dataRequest: WebknossosDataRequest)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[Array[Byte]] =
     for {
       (data, missingBucketIndices) <- fallbackBucketDataCache.getOrLoad(
@@ -50,6 +50,6 @@ trait FallbackDataHelper extends FoxImplicits {
   // Get multiple buckets at once: pro: fewer requests, con: no tracingstore-side caching
   def getFallbackBucketsFromDataStore(
       remoteFallbackLayer: RemoteFallbackLayer,
-      dataRequests: Seq[WebknossosDataRequest])(implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] =
+      dataRequests: Seq[WebknossosDataRequest])(using tc: TokenContext): Fox[(Array[Byte], List[Int])] =
     remoteDatastoreClient.getData(remoteFallbackLayer, dataRequests)
 }

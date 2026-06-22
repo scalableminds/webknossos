@@ -18,7 +18,7 @@ class N5CompactMultiscalesExplorer(implicit val ec: ExecutionContext) extends N5
   override def name: String = "N5 Multiscales with compact metadata"
 
   override def explore(remotePath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
+      using tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       metadataPath <- Fox.successful(remotePath / N5Metadata.FILENAME_ATTRIBUTES_JSON)
       n5Metadata <- metadataPath
@@ -50,7 +50,7 @@ class N5CompactMultiscalesExplorer(implicit val ec: ExecutionContext) extends N5
       magIndex: Int,
       axisOrder: AxisOrder,
       remotePath: VaultPath,
-      credentialId: Option[String])(implicit ec: ExecutionContext, tc: TokenContext): Fox[MagWithAttributes] =
+      credentialId: Option[String])(using ec: ExecutionContext, tc: TokenContext): Fox[MagWithAttributes] =
     for {
       mag <- tryo(
         Vec3Int(downsamplingFactor(axisOrder.x),

@@ -28,7 +28,7 @@ class TaskInformationHandler @Inject()(
     with FoxImplicits {
 
   override def provideAnnotation(taskId: ObjectId, userOpt: Option[User])(
-      implicit ctx: DBAccessContext): Fox[Annotation] =
+      using ctx: DBAccessContext): Fox[Annotation] =
     for {
       task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound(taskId)
       annotations <- annotationDAO.findAllByTaskIdAndType(task._id, AnnotationType.Task)
@@ -49,7 +49,7 @@ class TaskInformationHandler @Inject()(
                                                   taskBoundingBoxes) ?~> Msg.Annotation.Merge.failedCompound
     } yield mergedAnnotation
 
-  def restrictionsFor(taskId: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =
+  def restrictionsFor(taskId: ObjectId)(using ctx: DBAccessContext): Fox[AnnotationRestrictions] =
     for {
       task <- taskDAO.findOne(taskId) ?~> Msg.Task.notFound(taskId)
       project <- projectDAO.findOne(task._project)

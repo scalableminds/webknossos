@@ -8,6 +8,7 @@ const { Command } = require("commander");
 const repoRootPath = path.resolve(path.join(__dirname, "..", ".."));
 const schemaPath = path.join(repoRootPath, "schema", "schema.sql");
 const evolutionsPath = path.join(repoRootPath, "schema", "evolutions");
+const refreshStampPath = path.join(repoRootPath, "schema", "refreshStamp", "stamp");
 const SCHEMA_DUMP_CACHE_DIR = path.join(repoRootPath, "target", "db-schema-dump");
 const SCHEMA_DUMP_CACHE_HASH_FILE = path.join(SCHEMA_DUMP_CACHE_DIR, ".schema-hash");
 
@@ -186,6 +187,12 @@ function prepareTestDbWithoutSchemaRefresh() {
 
 function refreshSchema() {
   console.log(safePsqlSpawn([PG_CONFIG.url, "-v", "ON_ERROR_STOP=ON", "-f", schemaPath]));
+  updateRefreshStamp();
+}
+
+function updateRefreshStamp() {
+  fs.mkdirSync(path.dirname(refreshStampPath), { recursive: true });
+  fs.writeFileSync(refreshStampPath, `Last schema changes by dbtool.js applied at ${new Date().toISOString()}.\n`);
 }
 
 function dumpCurrentSchema(databaseUrl, schemaDir, silent = false) {
@@ -383,6 +390,7 @@ function applyEvolutions() {
       ]);
     }
     console.log("✨✨ Successfully applied the evolutions");
+    updateRefreshStamp();
   } else {
     console.log("There are no evolutions that can be applied.");
   }

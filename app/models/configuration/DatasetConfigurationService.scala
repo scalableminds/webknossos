@@ -21,7 +21,7 @@ class DatasetConfigurationService @Inject()(datasetService: DatasetService,
                                             thumbnailCachingService: ThumbnailCachingService,
                                             datasetDataLayerDAO: DatasetLayerDAO)(implicit ec: ExecutionContext) {
   def getDatasetViewConfigurationForUserAndDataset(requestedVolumeIds: List[String], user: User, datasetId: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
+      using ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
     for {
 
       dataset <- datasetDAO.findOne(datasetId)
@@ -32,7 +32,7 @@ class DatasetConfigurationService @Inject()(datasetService: DatasetService,
     } yield buildCompleteDatasetConfiguration(datasetViewConfiguration, layerConfigurations)
 
   def getDatasetViewConfigurationForDataset(requestedVolumeIds: List[String], datasetId: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
+      using ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
     for {
       dataset <- datasetDAO.findOne(datasetId)
       datasetViewConfiguration = getDatasetViewConfigurationFromDefaultAndAdmin(dataset)
@@ -47,7 +47,7 @@ class DatasetConfigurationService @Inject()(datasetService: DatasetService,
   }
 
   def getCompleteAdminViewConfiguration(datasetId: ObjectId)(
-      implicit ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
+      using ctx: DBAccessContext): Fox[DatasetViewConfiguration] =
     for {
       dataset <- datasetDAO.findOne(datasetId)
       datasetViewConfiguration = getDatasetViewConfigurationFromDefaultAndAdmin(dataset)
@@ -94,7 +94,7 @@ class DatasetConfigurationService @Inject()(datasetService: DatasetService,
   }
 
   def updateAdminViewConfigurationFor(dataset: Dataset, rawAdminViewConfiguration: DatasetViewConfiguration)(
-      implicit ctx: DBAccessContext): Fox[Unit] = {
+      using ctx: DBAccessContext): Fox[Unit] = {
     val datasetViewConfiguration = rawAdminViewConfiguration - "layers"
     val layerViewConfigurations =
       rawAdminViewConfiguration

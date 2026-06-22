@@ -474,7 +474,10 @@ function* performRebasingIfNecessary(): Saga<RebasingSuccessInfo> {
     if (hasLocalUnsavedChanges) {
       // Only if a rewinding rebase was necessary, the pending update actions in the save queue must be reapplied.
       // Note that we do not need to call resolveApplyingUpdateArtifacts(_artifactInfos) here
-      // because the proofreading saga is responsible for handling the own updates.
+      // because we are merely re-applying our own (rebased) update actions. The original
+      // emitter of these updates (e.g., the proofreading saga) is responsible for handling
+      // such updates.
+      // TODO #9711: Refactor this?
       const { success, artifactInfos: _artifactInfos } = yield* call(
         reapplyUpdateActionsFromSaveQueue, // isRebasingOrForwarding := false (in happy case)
         missingUpdateActions,

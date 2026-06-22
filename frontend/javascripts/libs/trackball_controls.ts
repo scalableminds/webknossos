@@ -1,5 +1,14 @@
 import window, { document } from "libs/window";
-import {EventDispatcher, OrthographicCamera, Quaternion, Vector2, Vector3 } from "three";
+import {
+  EventDispatcher,
+  type OrthographicCamera,
+  type PerspectiveCamera,
+  Quaternion,
+  Vector2,
+  Vector3,
+} from "three";
+
+type TrackballCamera = OrthographicCamera | PerspectiveCamera;
 
 /**
  * The MIT License
@@ -30,11 +39,13 @@ import {EventDispatcher, OrthographicCamera, Quaternion, Vector2, Vector3 } from
 
 interface ITrackballControls {
   new (
-    object: OrthographicCamera,
+    object: TrackballCamera,
     domElement: HTMLElement,
     target: Vector3,
     updateCallback: (args: any) => void,
   ): ITrackballControls;
+
+  object: TrackballCamera;
 
   enabled: boolean;
   keyboardEnabled: boolean;
@@ -51,6 +62,7 @@ interface ITrackballControls {
   maxDistance: number;
   keys: number[];
   target: Vector3;
+  lastTarget: Vector3;
 
   rotateCamera: () => void;
   destroy: () => void;
@@ -59,7 +71,7 @@ interface ITrackballControls {
 
 const TrackballControls = function (
   this: any,
-  object: OrthographicCamera,
+  object: TrackballCamera,
   domElement: HTMLElement,
   target: Vector3,
   updateCallback: (args: any) => void,

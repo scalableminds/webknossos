@@ -16,15 +16,47 @@ import constants, {
   ArbitraryViewport,
   OrthoViews,
   OrthoViewValuesWithoutTDView,
+  TD_VIEW_PERSPECTIVE_FOV,
+  TDViewCameraModeEnum,
 } from "viewer/constants";
 import { reuseInstanceOnEquality } from "viewer/model/accessors/accessor_helpers";
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
-import { getBaseVoxelFactorsInUnit } from "viewer/model/scaleinfo";
+import { getBaseVoxelFactorsInUnit, voxelToUnit } from "viewer/model/scaleinfo";
 import type { Flycam, WebknossosState } from "viewer/store";
 import Dimensions from "../dimensions";
 
+const PERSPECTIVE_HALF_FOV_TAN = Math.tan((TD_VIEW_PERSPECTIVE_FOV / 2) * (Math.PI / 180));
+
+// Returns true if the 3D viewport currently uses a perspective camera.
+// This is only the case in orthogonal (plane) mode; the arbitrary/flight views always
+// keep an orthographic TDView camera regardless of the user setting.
+export function isTDViewPerspective(state: WebknossosState): boolean {
+  return (
+    state.userConfiguration.tdViewCameraMode === TDViewCameraModeEnum.PERSPECTIVE &&
+    isPlaneMode(state)
+  );
+}
+
+// The world-space height that a perspective camera with TD_VIEW_PERSPECTIVE_FOV shows at the
+// given distance to its look-at target. Conversely, the distance needed to show a given height.
+export function getFrustumHeightForPerspectiveDistance(distance: number): number {
+  return 2 * distance * PERSPECTIVE_HALF_FOV_TAN;
+}
+export function getPerspectiveDistanceForFrustumHeight(height: number): number {
+  return height / (2 * PERSPECTIVE_HALF_FOV_TAN);
+}
+
 export function getTDViewportSize(state: WebknossosState): [number, number] {
   const camera = state.viewModeData.plane.tdCamera;
+  if (isTDViewPerspective(state)) {
+    // For a perspective camera the apparent "viewport size" is the world-space extent visible
+    // at the look-at target (the flycam position), derived from the camera's distance and fov.
+    const target = voxelToUnit(state.dataset.dataSource.scale, getPosition(state.flycam));
+    const distance = V3.length(V3.sub(camera.position, target));
+    const height = getFrustumHeightForPerspectiveDistance(distance);
+    const aspectRatio = getInputCatcherAspectRatio(state, OrthoViews.TDView);
+    return [height * aspectRatio, height];
+  }
   return [camera.right - camera.left, camera.top - camera.bottom];
 }
 export function getTDViewZoom(state: WebknossosState) {

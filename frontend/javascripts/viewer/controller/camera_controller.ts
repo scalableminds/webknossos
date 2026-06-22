@@ -5,6 +5,7 @@ import {
   Euler,
   Matrix4,
   type OrthographicCamera,
+  PerspectiveCamera,
   Quaternion,
   Vector3 as ThreeVector3,
 } from "three";
@@ -19,21 +20,41 @@ import { getDatasetExtentInUnit } from "viewer/model/accessors/dataset_accessor"
 import { getPosition, getRotationInRadian } from "viewer/model/accessors/flycam_accessor";
 import {
   getInputCatcherAspectRatio,
+  getPerspectiveDistanceForFrustumHeight,
   getPlaneExtentInVoxelFromStore,
+  getTDViewportSize,
+  isTDViewPerspective,
 } from "viewer/model/accessors/view_mode_accessor";
 import { setTDCameraWithoutTimeTrackingAction } from "viewer/model/actions/view_mode_actions";
 import { listenToStoreProperty } from "viewer/model/helpers/listener_helpers";
 import { getBaseVoxelInUnit, voxelToUnit } from "viewer/model/scaleinfo";
 import { api } from "viewer/singletons";
-import type { CameraData } from "viewer/store";
+import type { CameraData, WebknossosState } from "viewer/store";
 import Store from "viewer/store";
 
+type TDCamera = OrthographicCamera | PerspectiveCamera;
+
 type Props = {
-  cameras: OrthoViewMap<OrthographicCamera>;
+  cameras: OrthoViewMap<TDCamera>;
   onCameraPositionChanged: () => void;
   onTDCameraChanged: (userTriggered?: boolean) => void;
   setTargetAndFixPosition: () => void;
 };
+
+// The far plane is set so that all elements of the scene (including the offset dataset planes) are
+// visible. The near plane must be > 0 for a perspective camera; keeping far/near <= 1e6 avoids
+// z-fighting while still allowing the camera to dolly very close to the scene.
+export function getTDViewFar(state: WebknossosState): number {
+  const datasetExtent = getDatasetExtentInUnit(state.dataset);
+  const diagonalDatasetExtent = Math.sqrt(
+    datasetExtent.width ** 2 + datasetExtent.height ** 2 + datasetExtent.depth ** 2,
+  );
+  return Math.max(8000000, diagonalDatasetExtent * 2);
+}
+
+export function getTDViewNear(far: number, isPerspective: boolean): number {
+  return isPerspective ? Math.max(1, far / 1e6) : 0;
+}
 
 function getQuaternionFromCamera(_up: Vector3, position: Vector3, center: Vector3) {
   const up = V3.normalize(_up);
@@ -96,16 +117,16 @@ class CameraController extends PureComponent<Props> {
     // Take the whole diagonal extent of the dataset to get the possible maximum extent of the dataset.
     // This is used as an indication to set the far plane. This needs to be multiplied by 2
     // as the dataset planes in the 3d viewport are offset by the maximum of width, height and extent to ensure the dataset is visible.
-    const datasetExtent = getDatasetExtentInUnit(Store.getState().dataset);
-    const diagonalDatasetExtent = Math.sqrt(
-      datasetExtent.width ** 2 + datasetExtent.height ** 2 + datasetExtent.depth ** 2,
-    );
-    const far = Math.max(8000000, diagonalDatasetExtent * 2);
+    const far = getTDViewFar(Store.getState());
 
     for (const cam of Object.values(this.props.cameras)) {
-      cam.near = 0;
+      // The TDView camera may be a perspective camera, which requires a positive near plane.
+      cam.near = getTDViewNear(far, cam instanceof PerspectiveCamera);
       cam.far = far;
+      cam.updateProjectionMatrix();
     }
+    const tdCameraIsPerspective =
+      this.props.cameras[OrthoViews.TDView] instanceof PerspectiveCamera;
 
     const tdId = `inputcatcher_${OrthoViews.TDView}`;
     this.bindToEvents();
@@ -113,7 +134,7 @@ class CameraController extends PureComponent<Props> {
       this.props.setTargetAndFixPosition();
       Store.dispatch(
         setTDCameraWithoutTimeTrackingAction({
-          near: 0,
+          near: getTDViewNear(far, tdCameraIsPerspective),
           far,
         }),
       );
@@ -141,28 +162,40 @@ class CameraController extends PureComponent<Props> {
         state.flycam.zoomStep,
         planeId,
       ).map((x) => x * scaleFactor);
-      this.props.cameras[planeId].left = -width / 2;
-      this.props.cameras[planeId].right = width / 2;
-      this.props.cameras[planeId].bottom = -height / 2;
-      this.props.cameras[planeId].top = height / 2;
+      // The non-TD viewports always use an orthographic camera.
+      const planeCamera = this.props.cameras[planeId] as OrthographicCamera;
+      planeCamera.left = -width / 2;
+      planeCamera.right = width / 2;
+      planeCamera.bottom = -height / 2;
+      planeCamera.top = height / 2;
       // We only set the `near` value here. The effect of far=clippingDistance is
       // achieved by offsetting the plane onto which is rendered by the amount
       // of clippingDistance. Theoretically, `far` could be set here too, however,
       // this leads to imprecision related bugs which cause the planes to not render
       // for certain clippingDistance values.
-      this.props.cameras[planeId].near = -clippingDistance;
-      this.props.cameras[planeId].updateProjectionMatrix();
+      planeCamera.near = -clippingDistance;
+      planeCamera.updateProjectionMatrix();
     }
 
     if (inputCatcherRects != null) {
       // Update td camera's aspect ratio
       const tdCamera = this.props.cameras[OrthoViews.TDView];
-      const oldMid = (tdCamera.right + tdCamera.left) / 2;
-      const oldWidth = tdCamera.right - tdCamera.left;
-      const oldHeight = tdCamera.top - tdCamera.bottom;
       const tdRect = inputCatcherRects[OrthoViews.TDView];
       // Do not update the tdCamera if the tdView is not visible
       if (tdRect.height === 0 || tdRect.width === 0) return;
+
+      if (tdCamera instanceof PerspectiveCamera) {
+        // For a perspective camera the apparent zoom is the distance to the target, which is
+        // unaffected by the viewport size. We only need to keep the aspect ratio in sync.
+        tdCamera.aspect = tdRect.width / tdRect.height;
+        tdCamera.updateProjectionMatrix();
+        this.props.onTDCameraChanged(false);
+        return;
+      }
+
+      const oldMid = (tdCamera.right + tdCamera.left) / 2;
+      const oldWidth = tdCamera.right - tdCamera.left;
+      const oldHeight = tdCamera.top - tdCamera.bottom;
       const oldAspectRatio = oldWidth / oldHeight;
       const newAspectRatio = tdRect.width / tdRect.height;
       const newWidth = (oldWidth * newAspectRatio) / oldAspectRatio;
@@ -231,11 +264,19 @@ class CameraController extends PureComponent<Props> {
   updateTDCamera(cameraData: CameraData): void {
     const tdCamera = this.props.cameras[OrthoViews.TDView];
     tdCamera.position.set(...cameraData.position);
-    tdCamera.left = cameraData.left;
-    tdCamera.right = cameraData.right;
-    tdCamera.top = cameraData.top;
-    tdCamera.bottom = cameraData.bottom;
     tdCamera.up = new ThreeVector3(...cameraData.up);
+
+    if (tdCamera instanceof PerspectiveCamera) {
+      // A perspective camera has no left/right/top/bottom frustum; its projection is defined by
+      // fov (constant), aspect and near/far. The camera's orientation (lookAt) is applied by the
+      // TrackballControls via onCameraPositionChanged below.
+      tdCamera.aspect = getInputCatcherAspectRatio(Store.getState(), OrthoViews.TDView);
+    } else {
+      tdCamera.left = cameraData.left;
+      tdCamera.right = cameraData.right;
+      tdCamera.top = cameraData.top;
+      tdCamera.bottom = cameraData.bottom;
+    }
     tdCamera.updateProjectionMatrix();
     this.props.onCameraPositionChanged();
   }
@@ -259,6 +300,7 @@ export function rotate3DViewTo(
   const state = Store.getState();
   const { dataset } = state;
   const { tdCamera } = state.viewModeData.plane;
+  const isPerspective = isTDViewPerspective(state);
   const flycamPos = voxelToUnit(dataset.dataSource.scale, getPosition(state.flycam));
   const flycamRotation = getRotationInRadian(state.flycam);
   const datasetExtent = getDatasetExtentInUnit(dataset);
@@ -269,9 +311,16 @@ export function rotate3DViewTo(
     datasetExtent.height,
     datasetExtent.depth,
   );
-  // Use width and height to keep the same zoom.
-  let width = tdCamera.right - tdCamera.left;
-  let height = tdCamera.top - tdCamera.bottom;
+  // The TDView camera is considered uninitialized while its up vector is still the zero default
+  // (see default_state). For a perspective camera the frustum is never populated, so we cannot use
+  // top/bottom to detect this; the zero up vector works for both camera modes.
+  const isUninitialized = tdCamera.up[0] === 0 && tdCamera.up[1] === 0 && tdCamera.up[2] === 0;
+  // Use width and height to keep the same zoom. For a perspective camera the frustum is not stored
+  // on the camera, so derive the currently visible extent from the camera distance instead.
+  let [width, height] =
+    isPerspective && !isUninitialized
+      ? getTDViewportSize(state)
+      : [tdCamera.right - tdCamera.left, tdCamera.top - tdCamera.bottom];
 
   // Way to calculate the position and rotation of the camera:
   // First, the camera is either positioned at the current center of the flycam or in the dataset center.
@@ -309,10 +358,20 @@ export function rotate3DViewTo(
   // Rotate the positionOffsetVector and upVector by the flycam rotation.
   const rotatedOffset = positionOffsetVector.applyEuler(new Euler(...flycamRotation, "ZYX"));
   const rotatedUp = upVector.applyEuler(new Euler(...flycamRotation, "ZYX"));
+  // For a perspective camera the apparent zoom is governed by the camera's distance to the target,
+  // so position it at the distance that shows the desired `height`. For an orthographic camera the
+  // distance is irrelevant (the camera is parked far "in the back") and the zoom comes from the
+  // frustum, so we keep the full clippingOffsetFactor distance.
+  const offsetForPosition = isPerspective
+    ? rotatedOffset
+        .clone()
+        .normalize()
+        .multiplyScalar(getPerspectiveDistanceForFrustumHeight(height))
+    : rotatedOffset;
   const position = [
-    flycamPos[0] + rotatedOffset.x,
-    flycamPos[1] + rotatedOffset.y,
-    flycamPos[2] + rotatedOffset.z,
+    flycamPos[0] + offsetForPosition.x,
+    flycamPos[1] + offsetForPosition.y,
+    flycamPos[2] + offsetForPosition.z,
   ] as Vector3;
   const up = [rotatedUp.x, rotatedUp.y, rotatedUp.z] as Vector3;
 
@@ -339,14 +398,11 @@ export function rotate3DViewTo(
     // camera's position which should be on a sphere (center=currentFlycamPos, radius=centerDistance).
     const newPosition = V3.toArray(V3.sub(flycamPos, V3.scale(tweened.forward, centerDistance)));
     Store.dispatch(
-      setTDCameraWithoutTimeTrackingAction({
-        position: newPosition,
-        up: tweened.up,
-        left,
-        right,
-        top,
-        bottom,
-      }),
+      setTDCameraWithoutTimeTrackingAction(
+        isPerspective
+          ? { position: newPosition, up: tweened.up }
+          : { position: newPosition, up: tweened.up, left, right, top, bottom },
+      ),
     );
   };
 

@@ -8,16 +8,19 @@ import throttle from "lodash-es/throttle";
 import {
   DirectionalLight,
   OrthographicCamera,
+  PerspectiveCamera,
   Vector2 as ThreeVector2,
   Vector3 as ThreeVector3,
 } from "three";
 import TWEEN from "tween.js";
-import type { OrthoViewMap, Vector2, Vector3, Viewport } from "viewer/constants";
+import type { OrthoViewMap, TDViewCameraMode, Vector2, Vector3, Viewport } from "viewer/constants";
 import Constants, {
   OrthoViewColors,
   OrthoViews,
   OrthoViewValues,
   PerformanceMarkEnum,
+  TD_VIEW_PERSPECTIVE_FOV,
+  TDViewCameraModeEnum,
 } from "viewer/constants";
 import type { VertexSegmentMapping } from "viewer/controller/mesh_helpers";
 import { getWebGlAnalyticsInformation } from "viewer/controller/renderer";
@@ -44,11 +47,23 @@ type RaycasterHit = {
   point: Vector3;
 } | null;
 
+// The 3D viewport (TDView) camera can be either orthographic or perspective (see the
+// `tdViewCameraMode` user setting). All other viewports always use an orthographic camera.
+type TDCamera = OrthographicCamera | PerspectiveCamera;
+
+function createTDViewCamera(mode: TDViewCameraMode): TDCamera {
+  if (mode === TDViewCameraModeEnum.PERSPECTIVE) {
+    // The near/far planes are refined by the CameraController once the dataset extent is known.
+    return new PerspectiveCamera(TD_VIEW_PERSPECTIVE_FOV, 1, 1, 8000000);
+  }
+  return new OrthographicCamera(0, 0, 0, 0);
+}
+
 const createDirLight = (
   position: Vector3,
   target: Vector3,
   intensity: number,
-  camera: OrthographicCamera,
+  camera: TDCamera,
 ) => {
   const dirLight = new DirectionalLight(0x888888, intensity);
   dirLight.position.set(...position);
@@ -66,7 +81,10 @@ const MESH_HOVER_THROTTLING_DELAY = 50;
 let oldRaycasterHit: RaycasterHit = null;
 
 class PlaneView {
-  cameras: OrthoViewMap<OrthographicCamera>;
+  cameras: OrthoViewMap<TDCamera>;
+  // The two directional lights are parented to the TDView camera. We keep references so they
+  // can be re-parented when the TDView camera is swapped between ortho and perspective.
+  tdViewLights: DirectionalLight[] = [];
   isRunning: boolean = false;
   needsRerender: boolean;
   unsubscribeFunctions: Array<() => void> = [];
@@ -74,20 +92,25 @@ class PlaneView {
   constructor() {
     const { scene } = getSceneController();
     // Initialize main js components
-    const cameras = {} as OrthoViewMap<OrthographicCamera>;
+    const cameras = {} as OrthoViewMap<TDCamera>;
 
     for (const plane of OrthoViewValues) {
       // Let's set up cameras
       // No need to set any properties, because the cameras controller will deal with that
-      cameras[plane] = new OrthographicCamera(0, 0, 0, 0);
+      cameras[plane] =
+        plane === OrthoViews.TDView
+          ? createTDViewCamera(Store.getState().userConfiguration.tdViewCameraMode)
+          : new OrthographicCamera(0, 0, 0, 0);
       // This name can be used to retrieve the camera from the scene
       cameras[plane].name = plane;
       scene.add(cameras[plane]);
     }
     this.cameras = cameras;
 
-    createDirLight([10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, this.cameras[OrthoViews.TDView]);
-    createDirLight([-10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, this.cameras[OrthoViews.TDView]);
+    this.tdViewLights = [
+      createDirLight([10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, this.cameras[OrthoViews.TDView]),
+      createDirLight([-10, 10, 10], [0, 0, 10], LIGHT_INTENSITY, this.cameras[OrthoViews.TDView]),
+    ];
     this.cameras[OrthoViews.PLANE_XY].position.z = -1;
     this.cameras[OrthoViews.PLANE_YZ].position.x = 1;
     this.cameras[OrthoViews.PLANE_XZ].position.y = 1;
@@ -297,8 +320,41 @@ class PlaneView {
     }
   };
 
-  getCameras(): OrthoViewMap<OrthographicCamera> {
+  getCameras(): OrthoViewMap<TDCamera> {
     return this.cameras;
+  }
+
+  // Swaps the TDView camera between an orthographic and a perspective projection, preserving
+  // position and up vector and re-parenting the directional lights. Returns the (possibly new)
+  // TDView camera. The caller is responsible for setting up the projection (near/far/aspect) and
+  // updating the trackball controls to reference the new camera.
+  setTDCameraMode(mode: TDViewCameraMode): TDCamera {
+    const oldCamera = this.cameras[OrthoViews.TDView];
+    const shouldBePerspective = mode === TDViewCameraModeEnum.PERSPECTIVE;
+    const isAlreadyPerspective = oldCamera instanceof PerspectiveCamera;
+    if (shouldBePerspective === isAlreadyPerspective) {
+      return oldCamera;
+    }
+
+    const { scene } = getSceneController();
+    const newCamera = createTDViewCamera(mode);
+    newCamera.name = OrthoViews.TDView;
+    newCamera.position.copy(oldCamera.position);
+    newCamera.up.copy(oldCamera.up);
+
+    // Re-parent the directional lights so meshes stay lit after the swap.
+    for (const light of this.tdViewLights) {
+      oldCamera.remove(light);
+      oldCamera.remove(light.target);
+      newCamera.add(light);
+      newCamera.add(light.target);
+    }
+
+    scene.remove(oldCamera);
+    scene.add(newCamera);
+    this.cameras[OrthoViews.TDView] = newCamera;
+    this.needsRerender = true;
+    return newCamera;
   }
 
   stop(): void {
@@ -440,7 +496,7 @@ class PlaneView {
     window.measuredTimeToFirstRender = true;
   }
 
-  getCameraForPlane(plane: Viewport) {
+  getCameraForPlane(plane: Viewport): TDCamera {
     if (plane === "arbitraryViewport") {
       throw new Error("Cannot access camera for arbitrary viewport.");
     }

@@ -1172,7 +1172,7 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
     // Capture into a const so the type is narrowed inside the closure below.
     const oldAgglomerateId = agglomerateId;
     // All these segments belonged to oldAgglomerateId before the (min-cut) split.
-    const segmentsToOldAgglomerateId = new Map(
+    const segmentToOldAgglomerateIdMap = new Map(
       Array.from(additionalUnmappedSegmentsToReRequest, (segmentId) => [
         segmentId,
         oldAgglomerateId,
@@ -1184,7 +1184,7 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
       volumeTracingId,
       currentVersion,
       autoUpdateAgglomerateTrees,
-      segmentsToOldAgglomerateId,
+      segmentToOldAgglomerateIdMap,
       // Min-cut reads the partition/edge segments back from the mapping, so they must be added.
       true,
     );
@@ -2115,6 +2115,35 @@ export function* refreshAffectedSegmentItems(
   yield* all(ensureSegmentItemEffects);
 }
 
+// Capture the current opacities of the given old agglomerates' meshes, keyed by agglomerate id, so
+// that reloaded meshes can keep the user-chosen opacity. Duplicate and nullish ids are ignored, so
+// callers can pass the raw oldAgglomerateId of every item even when several share the same id (e.g.
+// a split produces two pieces from the same original agglomerate). Callers must invoke this before
+// any old mesh is removed, otherwise the original opacity can no longer be read.
+export function* getOpacityByOldAgglomerateId(
+  layerName: string,
+  oldAgglomerateIds: Iterable<number | null | undefined>,
+  additionalCoordinates: AdditionalCoordinate[] | null | undefined,
+): Saga<Map<number, number>> {
+  return yield* select((state) => {
+    const opacities = new Map<number, number>();
+    for (const oldAgglomerateId of oldAgglomerateIds) {
+      if (oldAgglomerateId != null && !opacities.has(oldAgglomerateId)) {
+        const opacity = getMeshInfoForSegment(
+          state,
+          additionalCoordinates || null,
+          layerName,
+          Number(oldAgglomerateId),
+        )?.opacity;
+        if (opacity != null) {
+          opacities.set(oldAgglomerateId, opacity);
+        }
+      }
+    }
+    return opacities;
+  });
+}
+
 export function* refreshAffectedMeshes(
   layerName: string,
   items: Array<{
@@ -2136,26 +2165,14 @@ export function* refreshAffectedMeshes(
 
   // Capture the opacities of all old meshes up front, i.e. before any of them are removed below,
   // so that reloaded meshes keep the user-chosen opacity. This must happen before the removal
-  // loop because multiple items can share the same oldAgglomerateId (e.g. a split produces two
-  // pieces from the same original agglomerate); removing one item's old mesh must not prevent
-  // another item from reading the original opacity.
-  const opacityByOldAgglomerateId = yield* select((state) => {
-    const opacities = new Map<number, number>();
-    for (const item of items) {
-      if (item.oldAgglomerateId != null && !opacities.has(item.oldAgglomerateId)) {
-        const opacity = getMeshInfoForSegment(
-          state,
-          additionalCoordinates || null,
-          layerName,
-          Number(item.oldAgglomerateId),
-        )?.opacity;
-        if (opacity != null) {
-          opacities.set(item.oldAgglomerateId, opacity);
-        }
-      }
-    }
-    return opacities;
-  });
+  // loop because removing one item's old mesh must not prevent another item from reading the
+  // original opacity.
+  const opacityByOldAgglomerateId = yield* call(
+    getOpacityByOldAgglomerateId,
+    layerName,
+    items.map((item) => item.oldAgglomerateId),
+    additionalCoordinates,
+  );
 
   // Remember which meshes were removed in this saga
   // and which were fetched again to avoid doing redundant work.

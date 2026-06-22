@@ -76,6 +76,7 @@ import {
   waitFor,
 } from "../saga_helpers";
 import {
+  getOpacityByOldAgglomerateId,
   refreshAffectedMeshes,
   splitAgglomerateInMapping,
   updateMappingWithMerge,
@@ -964,21 +965,13 @@ export function* tryToIncorporateActions(
         if (loadedMeshesOfSplitAction.size > 0) {
           // Capture the opacities of the original agglomerates before their meshes are removed,
           // so each split-off agglomerate can inherit the opacity of the agglomerate it came from.
-          const opacityByOldAgglomerateId = yield* select((state) => {
-            const opacities = new Map<number, number>();
-            for (const oldAggloId of oldAgglomerateIds) {
-              const opacity = getMeshInfoForSegment(
-                state,
-                state.flycam.additionalCoordinates,
-                tracingId,
-                oldAggloId,
-              )?.opacity;
-              if (opacity != null) {
-                opacities.set(oldAggloId, opacity);
-              }
-            }
-            return opacities;
-          });
+          const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+          const opacityByOldAgglomerateId = yield* call(
+            getOpacityByOldAgglomerateId,
+            tracingId,
+            oldAgglomerateIds,
+            additionalCoordinates,
+          );
           oldAgglomerateIds.forEach((oldAggloId) => {
             addToMap(meshIdsToRemovePerLayer, tracingId, oldAggloId);
           });

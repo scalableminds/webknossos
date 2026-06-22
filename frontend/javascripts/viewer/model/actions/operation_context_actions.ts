@@ -1,5 +1,10 @@
-// Named operations currently used in the app. Child operations (registered via borrowedContext)
-// can use any id, but top-level operations should use one of these known IDs to maintain clarity.
+/*
+ * This module defines the action types/creators for operation context handling.
+ * These actions should only be used by operation_context_saga.ts.
+ * From application code, getOrCreateOperationContext should be used typically.
+ */
+
+// Named operations currently used in the app. Child operations (registered via borrowedContext).
 export type OperationId =
   | "PROOFREADING"
   | "MIN_CUT"

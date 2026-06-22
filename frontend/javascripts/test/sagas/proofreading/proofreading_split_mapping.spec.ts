@@ -10,13 +10,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 /*
  * Focused unit tests for `splitAgglomerateInMapping`.
  *
- * Crucially, the segment ids (1..4) and their agglomerate ids (100/200/300) live in disjoint value
- * ranges, so that no segment id accidentally equals its agglomerate id. This guarantees the test
- * really exercises the bug mentioned in https://github.com/scalableminds/webknossos/issues/9559#issuecomment-4739369932
- * Discovering the split-off agglomerate requires querying the actual segment (segmentId2),
- * not the agglomerate id (which was done prior to the fix; -> querying the agglomerate id would
- * finding nothing because the agglomerate id is not a segment id).
+ * Ensures that `splitAgglomerateInMapping` queries the backend using segment ids, not agglomerate ids.
+ * Prior to the fix, the code queried by agglomerate id, which always returned nothing because
+ * agglomerate ids are not segment ids.
+ *
+ * To make this guarantee explicit, segment ids (1..4) and agglomerate ids (100/200/300) are kept in
+ * disjoint value ranges — so no segment id can accidentally equal an agglomerate id, and a query
+ * that mistakenly uses the agglomerate id will reliably fail.
+ *
+ * This is a regression test for the bug explained here: https://github.com/scalableminds/webknossos/issues/9559#issuecomment-4739369932
  */
+
 describe("splitAgglomerateInMapping", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
     await setupWebknossosForTesting(context, "hybrid");
@@ -66,7 +70,7 @@ describe("splitAgglomerateInMapping", () => {
   describe.each([
     false,
     true,
-  ])("[addAdditionalSegmentsToMapping=%s] Should include newly additional requested mapping info in split mapping", (addAdditionalSegmentsToMapping) => {
+  ])("[addAdditionalSegmentsToMapping=%s] Should (not) include newly additional requested mapping info in split mapping", (addAdditionalSegmentsToMapping) => {
     it("discovers the split-off agglomerate of a not-locally-mapped segment without polluting the sparse mapping", async (context: WebknossosTestContext) => {
       // Agglomerate 100 = {segment 1, segment 2}, agglomerate 200 = {segment 3, segment 4}.
       // The local store mapping does NOT contain segment 2 (only its mesh is loaded), mirroring a
@@ -112,7 +116,9 @@ describe("splitAgglomerateInMapping", () => {
           [300, 100],
         ]),
       );
-      // Segment 2 stays out of the (sparse) mapping, because it was not present locally.
+      // If addAdditionalSegmentsToMapping = true
+      // - Segment 2 stays out of the (sparse) mapping, because it was not present locally.
+      // - Else it is present in the mapping.
       const maybeAdditionalEntry: [number, number][] = addAdditionalSegmentsToMapping
         ? [[2, 300]]
         : [];
@@ -125,34 +131,20 @@ describe("splitAgglomerateInMapping", () => {
   it("re-maps the local segments of every involved agglomerate when multiple agglomerates are split in one batch", async (context: WebknossosTestContext) => {
     // Agglomerate 100 = {1, 2}, agglomerate 200 = {3, 4}. Both are split in the same batch:
     // 100 -> {1 keeps 100} + {2 -> 300}; 200 -> {3 keeps 200} + {4 -> 400}.
-    const activeMapping = buildActiveMapping(
-      new Map([
-        [1, 100],
-        [2, 100],
-        [3, 200],
-        [4, 200],
-      ]),
-    );
-    const additionalSegmentIdToOldAgglomerateId = new Map([
+    const segmentIdToOldAgglomerateId = new Map([
       [1, 100],
       [2, 100],
       [3, 200],
       [4, 200],
     ]);
+    const activeMapping = buildActiveMapping(segmentIdToOldAgglomerateId);
 
-    const result = await runSplit(
-      context,
-      activeMapping,
-      100,
-      additionalSegmentIdToOldAgglomerateId,
-      false,
-      [
-        [1, 100],
-        [2, 300],
-        [3, 200],
-        [4, 400],
-      ],
-    );
+    const result = await runSplit(context, activeMapping, 100, segmentIdToOldAgglomerateId, false, [
+      [1, 100],
+      [2, 300],
+      [3, 200],
+      [4, 400],
+    ]);
 
     // Both old agglomerates are scheduled for refresh and both split-off agglomerates discovered.
     expect(result?.oldAgglomerateIds).toEqual(new Set([100, 200]));

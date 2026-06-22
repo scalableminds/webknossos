@@ -215,6 +215,10 @@ export type OptionalMappingProperties = {
   isMergerModeMapping?: boolean;
 };
 
+// Phase 1 of activating a mapping by name: requests that the mapping becomes active, without
+// carrying its data (cf. mapping_saga.ts). The mapping saga loads the data and then dispatches
+// setMappingDataAction(phase 2). Only needed for activation — updating an already-active mapping
+// uses setMappingDataAction on its own. See the two-case explanation in mapping_saga.tss
 export const setMappingAction = (
   layerName: string,
   mappingName: string | null | undefined,
@@ -243,14 +247,19 @@ export const setMappingAction = (
     isVersionStoredOnServer,
   }) as const;
 
+// The actual mapping data arrives here. This is dispatched either as phase 2 of an
+// activation (after SET_MAPPING, with the data loaded by the mapping saga) !or! on its own
+// to update the data of an already-active mapping / supply a custom mapping directly (e.g.
+// proofreading, save/rebase, the front-end API) — in that case there is NO preceding
+// SET_MAPPING, see mapping_saga.ts. The mapping dictionary is stored and the status is set
+// to ACTIVATING; finishMappingActivation in the mapping saga will set it to ENABLED once the
+// textures have been updated.
 export const setMappingDataAction = (
   layerName: string,
   mappingName: string | null | undefined,
   mappingType: MappingType,
   mapping: Mapping,
-  // If true, the mapping saga automatically makes sure that the new mapping info is stored in RebaseRelevantAnnotationState
-  // for future rebases. Only set to true, if this info is really stored this was on the server.
-  isVersionStoredOnServer: boolean,
+  isVersionStoredOnServer: boolean, // same as in setMappingAction (see above).
   {
     mappingColors,
     hideUnmappedIds,

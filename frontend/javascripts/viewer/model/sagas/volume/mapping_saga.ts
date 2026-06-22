@@ -147,22 +147,33 @@ const takeLatestMappingChange = (
   });
 };
 
-// Mapping activation has two phases:
-//  1. setMappingAction requests that a mapping (identified by name) becomes active. It does
-//     NOT carry the actual mapping data; the mapping saga loads the data and then dispatches
-//     setMappingDataAction.
-//  2. setMappingDataAction carries the actual mapping data (the Map). It is dispatched after
-//     a setMappingAction or directly by code that already holds the data (front-end API,
-//     merger mode, proofreading, save/rebase restores). It triggers the texture update and the
-//     finishMappingInitializationAction (status ACTIVATING -> ENABLED).
+// There are two distinct ways the active mapping's data ends up in the store. SET_MAPPING_DATA
+// is involved in both, so it is important to keep them apart:
+//
+// (1) ACTIVATING a mapping by name is a TWO-PHASE process:
+//      Phase 1: setMappingAction requests that a mapping (identified by name) becomes active. It
+//               does NOT carry the actual mapping data; the mapping saga loads the data and then
+//               dispatches setMappingDataAction itself.
+//      Phase 2: setMappingDataAction carries the loaded mapping data (the Map). It triggers the
+//               texture update and finishMappingInitializationAction (status ACTIVATING -> ENABLED).
+//
+// (2) UPDATING the data of an already-active mapping (or supplying fully custom data directly)
+//     only needs setMappingDataAction ON ITS OWN — there is NO preceding setMappingAction:
+//      - proofreading split/merge and save/rebase recompute the mapping locally and re-publish it
+//        for the already-active mapping, and
+//      - the front-end API (api.data.setMapping) / merger mode supply a custom mapping directly
+//        (under the synthetic name "<custom mapping>"), for which there is nothing to load.
+//     Because there is no setMappingAction on this path, setMappingDataAction is the action that
+//     carries mappingName/mappingType into the store here.
 
 export default function* watchActivatedMappings(): Saga<void> {
   const oldActiveMappingByLayer = {
     value: yield* select((state) => state.temporaryConfiguration.activeMappingByLayer),
   };
   // Buffer the activation requests since they might be dispatched before WK_INITIALIZED.
-  // Only SET_MAPPING (phase 1, the activation request) is handled here; SET_MAPPING_DATA
-  // (phase 2, the actual mapping data) is handled by finishMappingActivation below.
+  // Only SET_MAPPING (the activation request, phase 1 of case (1) above) is handled here.
+  // SET_MAPPING_DATA (the actual mapping data — phase 2 of an activation, or a standalone data
+  // update as in case (2)) is handled by finishMappingActivation below.
   const setMappingActionChannel = yield* actionChannel("SET_MAPPING");
   yield* call(ensureWkInitialized);
   yield* takeLatest(setMappingActionChannel, handleSetMapping, oldActiveMappingByLayer);
@@ -477,10 +488,11 @@ function* handleSetMapping(
 }
 
 function* finishMappingActivation(action: SetMappingDataAction): Saga<void> {
-  // Phase 2 of mapping activation: The mapping data has been stored in the store (by the
-  // SET_MAPPING_DATA reducer). Here we update the mapping textures (a no-op if the layer's
-  // textures have not been set up yet, e.g. in tests without a GPU) and finish the activation
-  // (status ACTIVATING -> ENABLED).
+  // Runs on every SET_MAPPING_DATA, i.e. for phase 2 of an activation (case 1) as well as for a
+  // standalone data update of an already-active / directly-supplied mapping (case 2). The mapping
+  // data has already been stored in the store (by the SET_MAPPING_DATA reducer). Here we update
+  // the mapping textures (a no-op if the layer's textures have not been set up yet, e.g. in tests
+  // without a GPU) and finish the activation (status ACTIVATING -> ENABLED).
   const { layerName, mappingName, mapping, mappingColors, isMergerModeMapping } = action;
 
   // Mirror the gate of the SET_MAPPING_DATA reducer.

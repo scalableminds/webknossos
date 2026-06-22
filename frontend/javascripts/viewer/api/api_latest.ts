@@ -1747,8 +1747,9 @@ class DataApi {
       mapping instanceof Map
         ? (new Map(mapping as Map<unknown, unknown>) as Mapping)
         : new Map(Object.entries(mapping).map(([key, value]) => [Number.parseInt(key, 10), value]));
-    // The mapping data is supplied directly here, so we dispatch the data action (phase 2)
-    // rather than an activation request (phase 1) that would try to load the mapping.
+    // The mapping data is supplied directly here, so we dispatch SET_MAPPING_DATA on its own
+    // (no preceding setMappingAction): there is no named mapping to load from the server, the
+    // passed data already IS the mapping. See the two-case explanation in mapping_saga.ts.
     Store.dispatch(
       setMappingDataAction(layerName, "<custom mapping>", "JSON", mappingObject, false, {
         mappingColors,

@@ -36,7 +36,7 @@ class AboutPageRedirectController @Inject()(conf: WkConf,
     } else {
       for {
         multiUserOpt <- Fox.runOptional(request.identity)(user =>
-          multiUserDAO.findOne(user._multiUser)(GlobalAccessContext))
+          multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext))
         openGraphTags <- openGraphService.getOpenGraphTags(
           request.path,
           request.getQueryString("sharingToken").orElse(request.getQueryString("token")))

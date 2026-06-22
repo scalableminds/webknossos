@@ -53,7 +53,6 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
             )
           )
         }
-      case _ => None
     } ++ mags.map { mag =>
       NamedFunctionStream.fromJsonSerializable(zarrHeaderFilePath(defaultLayerName, mag), header)
     } ++ Seq(

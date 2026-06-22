@@ -22,7 +22,7 @@ class N5ArrayExplorer(implicit val ec: ExecutionContext) extends N5Explorer with
   override def name: String = "N5 Array"
 
   override def explore(remotePath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
+      using tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       headerPath <- Fox.successful(remotePath / N5Header.FILENAME_ATTRIBUTES_JSON)
       name = guessNameFromPath(remotePath)

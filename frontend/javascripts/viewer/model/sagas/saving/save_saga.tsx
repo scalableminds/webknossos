@@ -4,6 +4,7 @@ import features from "features";
 import ErrorHandling from "libs/error_handling";
 import { NumberLikeMapWrapper } from "libs/number_like_map_wrapper";
 import Toast from "libs/toast";
+import { addToNestedMap, addToSetMap } from "libs/utils";
 import sum from "lodash-es/sum";
 import { buffers, type Channel } from "redux-saga";
 import {
@@ -596,23 +597,6 @@ export function* tryToIncorporateActions(
     }
   }
 
-  function addToMap<T>(map: Map<string, Set<T>>, key: string, value: T) {
-    if (!map.has(key)) {
-      map.set(key, new Set());
-    }
-    map.get(key)?.add(value);
-  }
-  function addToNestedMap(
-    map: Map<string, Map<number, number>>,
-    key: string,
-    innerKey: number,
-    innerValue: number,
-  ) {
-    if (!map.has(key)) {
-      map.set(key, new Map());
-    }
-    map.get(key)?.set(innerKey, innerValue);
-  }
   // Tracks which agglomerate ids were changed of which the frontend has loaded meshes to assist proofreading.
   // Maps from the old agglomerate id to a potentially new one.
   // Duplicates are later ignored when refreshing the meshes.
@@ -779,8 +763,8 @@ export function* tryToIncorporateActions(
           // agglomerateId2 is merged into agglomerateId1 and the frontend currently has at least one of the meshes loaded.
           // Outdate agglomerateId1 and agglomerateId2. Only agglomerateId1 needs to be reloaded however.
           // Track outdated and updated agglomerateIds to refresh after applying updates.
-          addToMap(meshIdsToRemovePerLayer, actionTracingId, agglomerateId1);
-          addToMap(meshIdsToRemovePerLayer, actionTracingId, agglomerateId2);
+          addToSetMap(meshIdsToRemovePerLayer, actionTracingId, agglomerateId1);
+          addToSetMap(meshIdsToRemovePerLayer, actionTracingId, agglomerateId2);
           // The merged mesh keeps agglomerateId1 (the source), so it should inherit the source's
           // opacity. Fall back to the target's opacity in case only the target mesh was loaded.
           const mergedMeshOpacity = yield* select(
@@ -965,7 +949,9 @@ export function* tryToIncorporateActions(
         if (loadedMeshesOfSplitAction.size > 0) {
           // Capture the opacities of the original agglomerates before their meshes are removed,
           // so each split-off agglomerate can inherit the opacity of the agglomerate it came from.
-          const additionalCoordinates = yield* select((state) => state.flycam.additionalCoordinates);
+          const additionalCoordinates = yield* select(
+            (state) => state.flycam.additionalCoordinates,
+          );
           const opacityByOldAgglomerateId = yield* call(
             getOpacityByOldAgglomerateId,
             tracingId,
@@ -973,7 +959,7 @@ export function* tryToIncorporateActions(
             additionalCoordinates,
           );
           oldAgglomerateIds.forEach((oldAggloId) => {
-            addToMap(meshIdsToRemovePerLayer, tracingId, oldAggloId);
+            addToSetMap(meshIdsToRemovePerLayer, tracingId, oldAggloId);
           });
           newAgglomerateIds.forEach((newAggloId) => {
             const oldAggloId = newToOldAgglomerateIds.get(newAggloId);

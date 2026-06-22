@@ -4,6 +4,7 @@ import {
   ExclamationCircleOutlined,
   ExportOutlined,
   FileTextOutlined,
+  FolderOutlined,
   SettingOutlined,
   TeamOutlined,
 } from "@ant-design/icons";
@@ -26,6 +27,7 @@ const BREADCRUMB_LABELS = {
   sharing: "Sharing & Permissions",
   metadata: "Metadata",
   defaultConfig: "View Configuration",
+  storage: "Storage Details",
   delete: "Delete Dataset",
 };
 
@@ -149,6 +151,11 @@ const DatasetSettingsView: React.FC = () => {
           key: "defaultConfig",
           icon: formErrors.defaultConfig ? errorIcon : <SettingOutlined />,
           label: "View Configuration",
+        },
+        {
+          key: "storage",
+          icon: <FolderOutlined />,
+          label: "Storage Details",
         },
         features().allowDeleteDatasets
           ? {

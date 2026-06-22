@@ -62,7 +62,6 @@ case class RunInferenceParameters(datasetId: ObjectId,
                                   maskAnnotationLayerName: Option[String],
                                   newDatasetName: String,
                                   workflowYaml: Option[String],
-                                  invertColorLayer: Option[Boolean],
                                   seedGeneratorDistanceThreshold: Option[Double],
                                   doSplitMergerEvaluation: Option[Boolean],
                                   evalUseSparseTracing: Option[Boolean],
@@ -113,7 +112,6 @@ class AiModelController @Inject()(
 
   def readAiModelInfo(aiModelId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
-      _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(request.identity)
       aiModel <- aiModelDAO.findOne(aiModelId) ?~> Msg.AiModel.notFound ~> NOT_FOUND
       jsResult <- aiModelService.publicWrites(aiModel, request.identity)
     } yield Ok(jsResult)
@@ -130,7 +128,6 @@ class AiModelController @Inject()(
   def readAiInferenceInfo(aiInferenceId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     {
       for {
-        _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(request.identity)
         aiInference <- aiInferenceDAO.findOne(aiInferenceId) ?~> Msg.AiInference.notFound ~> NOT_FOUND
         jsResult <- aiInferenceService.publicWrites(aiInference, request.identity)
       } yield Ok(jsResult)
@@ -149,7 +146,6 @@ class AiModelController @Inject()(
   def listAiInferences: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     {
       for {
-        _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(request.identity)
         aiInferences <- aiInferenceDAO.findAll
         jsResults <- Fox.serialCombined(aiInferences)(inference =>
           aiInferenceService.publicWrites(inference, request.identity))
@@ -160,7 +156,7 @@ class AiModelController @Inject()(
   def runNeuronTraining: Action[RunNeuronModelTrainingParameters] =
     sil.SecuredAction.async(validateJson[RunNeuronModelTrainingParameters]) { implicit request =>
       for {
-        organization <- organizationDAO.findOne(request.identity._organization)(GlobalAccessContext) ?~> Msg.Organization
+        organization <- organizationDAO.findOne(request.identity._organization)(using GlobalAccessContext) ?~> Msg.Organization
           .notFound(request.identity._organization)
         _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(organization, request.identity)
         trainingAnnotations = request.body.trainingAnnotations
@@ -216,7 +212,7 @@ class AiModelController @Inject()(
   def runInstanceTraining: Action[RunInstanceModelTrainingParameters] =
     sil.SecuredAction.async(validateJson[RunInstanceModelTrainingParameters]) { implicit request =>
       for {
-        organization <- organizationDAO.findOne(request.identity._organization)(GlobalAccessContext) ?~> Msg.Organization
+        organization <- organizationDAO.findOne(request.identity._organization)(using GlobalAccessContext) ?~> Msg.Organization
           .notFound(request.identity._organization)
         _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(organization, request.identity)
         trainingAnnotations = request.body.trainingAnnotations
@@ -294,7 +290,6 @@ class AiModelController @Inject()(
           "model_organization_id" -> Some(aiModel).filterNot(_.isPretrained).flatMap(_._organization),
           "dataset_directory_name" -> dataset.directoryName,
           "new_dataset_name" -> request.body.newDatasetName,
-          "invert_color_layer" -> request.body.invertColorLayer,
           "seed_generator_distance_threshold" -> request.body.seedGeneratorDistanceThreshold,
           "custom_configuration" -> request.body.customConfiguration
         )
@@ -357,7 +352,6 @@ class AiModelController @Inject()(
           "annotation_id" -> request.body.annotationId,
           "dataset_directory_name" -> dataset.directoryName,
           "new_dataset_name" -> request.body.newDatasetName,
-          "invert_color_layer" -> request.body.invertColorLayer,
           "do_split_merger_evaluation" -> doSplitMergerEvaluation,
           "eval_use_sparse_tracing" -> request.body.evalUseSparseTracing,
           "eval_max_edge_length" -> request.body.evalMaxEdgeLength,
@@ -398,7 +392,6 @@ class AiModelController @Inject()(
           } else sharedOrganizationIds
         }
         for {
-          _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(request.identity)
           aiModel <- aiModelDAO.findOne(aiModelId) ?~> Msg.AiModel.notFound ~> NOT_FOUND
           _ <- Fox.fromBool(aiModel._organization.contains(request.identity._organization)) ?~> Msg.AiModel.notOwned
           _ <- aiModelDAO.updateOne(aiModel.copy(name = request.body.name,
@@ -442,7 +435,7 @@ class AiModelController @Inject()(
 
   private def reserveUploadToPathForPreliminary(existingAiModelId: ObjectId,
                                                 params: ReserveAiModelUploadToPathParameters,
-                                                user: User)(implicit ctx: DBAccessContext): Fox[ObjectId] =
+                                                user: User)(using ctx: DBAccessContext): Fox[ObjectId] =
     for {
       existingModel <- aiModelDAO.findOne(existingAiModelId)
       _ <- Fox.fromBool(existingModel._organization.contains(user._organization)) ?~> Msg.AiModel.Reserve.wrongOrga ~> FORBIDDEN
@@ -454,7 +447,7 @@ class AiModelController @Inject()(
     } yield existingAiModelId
 
   private def reserveUploadToPathNew(params: ReserveAiModelUploadToPathParameters, user: User)(
-      implicit ctx: DBAccessContext): Fox[ObjectId] = {
+      using ctx: DBAccessContext): Fox[ObjectId] = {
     val newId = ObjectId.generate
     for {
       _ <- aiModelDAO.findOneByName(params.name).reverse ?~> Msg.AiModel.nameTaken(params.name)
@@ -490,7 +483,6 @@ class AiModelController @Inject()(
   def deleteAiModel(aiModelId: ObjectId): Action[AnyContent] =
     sil.SecuredAction.async { implicit request =>
       for {
-        _ <- organizationService.assertIsSuperUserOrOrganizationHasAiPlan(request.identity)
         referencesCount <- aiInferenceDAO.countForModel(aiModelId)
         _ <- Fox.fromBool(referencesCount == 0) ?~> Msg.AiModel.Delete.referencedByInferences
         _ <- aiModelDAO.findOne(aiModelId) ?~> Msg.AiModel.notFound ~> NOT_FOUND

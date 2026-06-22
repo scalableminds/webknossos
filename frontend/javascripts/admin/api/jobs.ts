@@ -181,7 +181,6 @@ type RunNeuronInferenceParameters = {
   maskAnnotationLayerName?: string;
   newDatasetName: string;
   workflowYaml?: string;
-  invertColorLayer?: boolean;
   doSplitMergerEvaluation: boolean;
   evalUseSparseTracing?: boolean;
   evalMaxEdgeLength?: number;
@@ -199,7 +198,6 @@ type RunInstanceInferenceParameters = {
   maskAnnotationLayerName?: string;
   newDatasetName: string;
   workflowYaml?: string;
-  invertColorLayer?: boolean;
   seedGeneratorDistanceThreshold?: number | null;
   customConfiguration?: Record<string, JsonPrimitive>;
 };

@@ -5,7 +5,7 @@ import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContex
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, JsonHelper}
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{Tasktypes, TasktypesRow, GetResultTasktypesRow}
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.TracingType.TracingType
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
@@ -32,19 +32,15 @@ case class TaskType(
 
 class TaskTypeService @Inject()(teamDAO: TeamDAO) {
 
-  def fromForm(
-      summary: String,
-      description: String,
-      team: ObjectId,
-      settings: AnnotationSettings,
-      recommendedConfiguration: Option[JsValue],
-      tracingType: TracingType
-  ): TaskType =
-    TaskType(ObjectId.generate, team, summary, description, settings, recommendedConfiguration, tracingType)
+  def assertValidTaskTypeSummary(taskTypeSummary: String)(implicit ec: ExecutionContext): Fox[Unit] =
+    for {
+      _ <- Fox.fromBool(taskTypeSummary.length >= 2) ?~> Msg.TaskType.summaryTooShort
+      _ <- Fox.fromBool(taskTypeSummary.length <= 50) ?~> Msg.TaskType.summaryTooLong
+    } yield ()
 
   def publicWrites(taskType: TaskType): Fox[JsObject] =
     for {
-      team <- teamDAO.findOne(taskType._team)(GlobalAccessContext) ?~> Msg.Team.notFound(taskType._team)
+      team <- teamDAO.findOne(taskType._team)(using GlobalAccessContext) ?~> Msg.Team.notFound(taskType._team)
     } yield
       Json.obj(
         "id" -> taskType._id.toString,
@@ -104,7 +100,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
        OR _organization = (SELECT _organization from webknossos.users_ WHERE _id = $requestingUserId AND isAdmin))"""
 
   def findOneBySummaryAndOrganization(summary: String, organizationId: String)(
-      implicit ctx: DBAccessContext): Fox[TaskType] =
+      using ctx: DBAccessContext): Fox[TaskType] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns
@@ -137,7 +133,7 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
                     """.asUpdate)
     } yield ()
 
-  def updateOne(t: TaskType)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def updateOne(t: TaskType)(using ctx: DBAccessContext): Fox[Unit] =
     for { // note that t.created is immutable, hence skipped here
       _ <- assertUpdateAccess(t._id)
       _ <- run(q"""UPDATE webknossos.taskTypes
@@ -165,6 +161,6 @@ class TaskTypeDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       count <- countList.headOption.toFox
     } yield count
 
-  override def deleteOne(taskTypeId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  override def deleteOne(taskTypeId: ObjectId)(using ctx: DBAccessContext): Fox[Unit] =
     deleteOneWithNameSuffix(taskTypeId, nameColumn = "summary")
 }

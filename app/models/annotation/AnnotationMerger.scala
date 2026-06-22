@@ -24,7 +24,7 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
       annotationB: Annotation,
       issuingUser: User,
       remapSegmentIds: Boolean,
-  )(implicit ctx: DBAccessContext): Fox[Annotation] =
+  )(using ctx: DBAccessContext): Fox[Annotation] =
     mergeN(
       ObjectId.generate,
       toTemporaryStore = false,
@@ -45,7 +45,7 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
       annotations: List[Annotation],
       additionalBoundingBoxes: Seq[NamedBoundingBox],
       remapSegmentIds: Boolean
-  )(implicit ctx: DBAccessContext): Fox[Annotation] =
+  )(using ctx: DBAccessContext): Fox[Annotation] =
     if (annotations.isEmpty)
       Fox.empty
     else {
@@ -77,7 +77,7 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
       requestingUserId: ObjectId,
       toTemporaryStore: Boolean,
       additionalBoundingBoxes: Seq[NamedBoundingBox],
-      remapSegmentIds: Boolean)(implicit ctx: DBAccessContext): Fox[List[AnnotationLayer]] =
+      remapSegmentIds: Boolean)(using ctx: DBAccessContext): Fox[List[AnnotationLayer]] =
     for {
       dataset <- datasetDAO.findOne(datasetId)
       tracingStoreClient: WKRemoteTracingStoreClient <- tracingStoreService.clientFor(dataset)

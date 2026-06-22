@@ -27,7 +27,7 @@ class ProjectInformationHandler @Inject()(
     with FoxImplicits {
 
   override def provideAnnotation(projectId: ObjectId, userOpt: Option[User])(
-      implicit ctx: DBAccessContext): Fox[Annotation] =
+      using ctx: DBAccessContext): Fox[Annotation] =
     for {
       project <- projectDAO.findOne(projectId) ?~> Msg.Project.notFound(projectId)
       user <- userOpt.toFox ?~> Msg.User.notAuthenticated
@@ -48,7 +48,7 @@ class ProjectInformationHandler @Inject()(
                                                   remapSegmentIds = true) ?~> Msg.Annotation.Merge.failedCompound
     } yield mergedAnnotation
 
-  override def restrictionsFor(projectId: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =
+  override def restrictionsFor(projectId: ObjectId)(using ctx: DBAccessContext): Fox[AnnotationRestrictions] =
     for {
       project <- projectDAO.findOne(projectId)
     } yield {

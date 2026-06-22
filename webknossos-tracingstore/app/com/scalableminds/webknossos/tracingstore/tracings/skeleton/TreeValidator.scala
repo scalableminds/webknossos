@@ -24,7 +24,7 @@ object TreeValidator {
       _ <- checkAllTreeGroupIdsUsedExist(trees, treeGroups)
       _ <- checkAllNodesUsedInBranchPointsExist(trees, branchPoints)
       _ <- checkAllNodesUsedInCommentsExist(trees, comments)
-    } yield Full(())
+    } yield ()
 
   private def checkNoDuplicateTreeIds(trees: Seq[Tree]): Box[Unit] = {
     val treeIds = trees.map(_.treeId)

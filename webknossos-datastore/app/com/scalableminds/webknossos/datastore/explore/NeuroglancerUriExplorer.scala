@@ -23,7 +23,7 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
   override def name: String = "Neuroglancer URI Explorer"
 
   override def explore(remotePath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
+      using tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       remoteUri <- remotePath.toRemoteUri.toFox
       uriFragment <- tryo(remoteUri.getFragment.drop(1)).toFox ?~> "URI has no matching fragment part"
@@ -37,7 +37,7 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
     } yield renamedLayers.zip(layers.map(_._2))
 
   private def exploreNeuroglancerLayer(layerSpec: JsValue)(
-      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
+      using tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       _ <- Fox.successful(())
       obj <- JsonHelper.as[JsObject](layerSpec).toFox
@@ -52,7 +52,7 @@ class NeuroglancerUriExplorer(dataVaultService: DataVaultService)(implicit val e
     } yield layerWithViewConfiguration
 
   private def exploreLayer(layerType: String, remotePath: VaultPath, name: String)(
-      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
+      using tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
     layerType match {
       case "n5" =>
         Fox.firstSuccess(

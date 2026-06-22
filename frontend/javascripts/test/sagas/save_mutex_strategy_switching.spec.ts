@@ -110,7 +110,7 @@ describe("Save Mutex Saga collaboration mode switching", () => {
 
   /*
    * Tests for:
-   *   Exclusive -> {Concurrent, OnwerOnly}
+   *   Exclusive -> {Concurrent, OwnerOnly}
    */
   it<WebknossosTestContext>("Switching from Exclusive to Concurrent should cancel the continuous mutex saga and start the ad-hoc saga.", async (context: WebknossosTestContext) => {
     await setupWebknossosForTestingWithRestrictions(context, "Exclusive", true);

@@ -140,7 +140,7 @@ class DataSourceService @Inject()(
   }
 
   private def scanRealPathsForDataSource(dataSourceWithRootPathInfo: DataSourceWithRootPathInfo): (DataSourcePathInfo, Seq[Failure]) = {
-    val datasetPath: Option[Path] = dataSourceWithRootPathInfo.rootPath.map(Path.of(_))
+    val datasetPath: Option[Path] = dataSourceWithRootPathInfo.rootRealPath.orElse(dataSourceWithRootPathInfo.rootPath).map(Path.of(_))
     val dataSource = dataSourceWithRootPathInfo.dataSource
     dataSource.toUsable match {
       case Some(usableDataSource) =>
@@ -171,9 +171,8 @@ class DataSourceService @Inject()(
         for {
           magPathLocal <- magPath.toLocalPath
           realMagPath <- tryo(magPathLocal.toRealPath())
-          datasetPath <- Box(datasetPathOpt)
           // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
-          isDatasetLocal = realMagPath.startsWith(datasetPath)
+          isDatasetLocal = datasetPathOpt.exists(datasetPath => realMagPath.startsWith(datasetPath))
         } yield RealPathInfo(magPath, UPath.fromLocalPath(realMagPath), hasLocalData = isDatasetLocal)
       }
     } yield result
@@ -186,9 +185,8 @@ class DataSourceService @Inject()(
         _ <- Box.fromBool(attachment.path.isAbsolute) ?~ "Attachment path as stored in db must be absolute"
         attachmentPath <- attachment.path.toLocalPath
         realAttachmentPath <- tryo(attachmentPath.toRealPath())
-        datasetPath <- Box(datasetPathOpt)
         // Does this dataset have local data, i.e. the data that is referenced by the mag path is within the dataset directory
-        isDatasetLocal = realAttachmentPath.startsWith(datasetPath)
+        isDatasetLocal = datasetPathOpt.exists(datasetPath => realAttachmentPath.startsWith(datasetPath))
       } yield RealPathInfo(attachment.path, UPath.fromLocalPath(realAttachmentPath), hasLocalData = isDatasetLocal)
     }
 

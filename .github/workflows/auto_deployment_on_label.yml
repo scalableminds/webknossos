@@ -13,12 +13,20 @@ jobs:
     permissions:
       deployments: write
     steps:
+      - name: Calculate branch environment name
+        id: get_env
+        run: |
+          # Replicate the exact same sanitization logic you used to create it
+          SANITIZED=$(echo "$HEAD_REF" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]' | sed 's/^[0-9]*//')
+          echo "dynamic_env=dev-${SANITIZED}" >> "$GITHUB_OUTPUT"
+        env:
+          HEAD_REF: ${{ github.head_ref }}
       - name: Deactivate deployment environment
         uses: bobheadxi/deployments@v1.5.0
         with:
           step: delete-env
           token: ${{ secrets.GITHUB_TOKEN }}
-          env: dev
+          env: ${{ steps.get_env.outputs.dynamic_env }}
 
   trigger-autodeployment-on-label:
     runs-on: ubuntu-22.04

@@ -1,4 +1,3 @@
-import { DownOutlined } from "@ant-design/icons";
 import { type Tree as AntdTree, type GetRef, type MenuProps, Modal, type TreeProps } from "antd";
 import { SimpleRow } from "dashboard/folders/metadata_table";
 import { pluralize } from "libs/utils";
@@ -48,6 +47,7 @@ import {
   setExpandedGroups,
   setUpdateTreeGroups,
 } from "./tree_hierarchy_renderers";
+import { TreeSwitcherIcon } from "./tree_switcher_icon";
 
 function TreeHierarchyView(props: Props) {
   const dispatch = useDispatch();
@@ -353,7 +353,7 @@ function TreeHierarchyView(props: Props) {
                           decreaseRenamingCounter,
                         )
                   }
-                  switcherIcon={<DownOutlined />}
+                  switcherIcon={({ expanded }) => <TreeSwitcherIcon expanded={expanded} />}
                   onSelect={(_selectedKeys, info: { node: TreeNode; nativeEvent: MouseEvent }) =>
                     info.node.type === GroupTypeEnum.TREE
                       ? onSelectTreeNode(info.node, info.nativeEvent)

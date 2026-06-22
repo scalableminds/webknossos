@@ -29,7 +29,7 @@ object MovieResolutionSetting extends ExtendedEnumeration {
 }
 
 object MovieDurationSetting extends ExtendedEnumeration {
-  val FAST, STANDARD, SLOW = Value
+  val SHORT, STANDARD, LONG = Value
 }
 
 object CameraPositionSetting extends ExtendedEnumeration {

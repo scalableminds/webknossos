@@ -246,7 +246,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                                      uploadDomain: UploadDomain): Fox[Unit] =
     for {
       _ <- baseDirService
-        .getOneLocalForOrga(dataSourceId.organizationId, createIfMissing = true, checkWritable = true)
+        .getOneLocalForOrga(dataSourceId.organizationId, requireAllowsUpload = true, createIfMissing = true, checkWritable = true)
         .toFox
       uploadId = resumableUploadInfo.uploadId
       _ = logger.info(f"Reserving ${uploadFullName(uploadDomain, uploadId, datasetId, dataSourceId)}...")

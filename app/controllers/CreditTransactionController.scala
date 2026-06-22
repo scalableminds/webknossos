@@ -43,7 +43,7 @@ class CreditTransactionController @Inject()(organizationDAO: OrganizationDAO,
                  expiresAt: Option[String]): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can add credits to an organization"
-      _ <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Msg.Organization.notFound(organizationId)
+      _ <- organizationDAO.findOne(organizationId)(using GlobalAccessContext) ?~> Msg.Organization.notFound(organizationId)
       moneySpentInDecimal <- tryo(BigDecimal(moneySpent)).toFox ?~> s"moneySpent $moneySpent is not a valid decimal"
       _ <- Fox.fromBool(moneySpentInDecimal >= 0) ?~> "moneySpent must be a positive number"
       _ <- Fox.fromBool(creditAmount > 0) ?~> "creditAmount must be a positive number"

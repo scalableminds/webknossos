@@ -123,8 +123,6 @@ class EditableMappingUpdater(
         }
       case _: Failure =>
         mappingFox
-      case _ =>
-        mappingFox
     }
 
   def applyOneUpdate(mapping: EditableMappingInfo, update: UpdateAction)(
@@ -143,11 +141,11 @@ class EditableMappingUpdater(
       segmentId1 <- editableMappingService.findSegmentIdAtPositionIfNeeded(remoteFallbackLayer,
                                                                            update.segmentPosition1,
                                                                            update.segmentId1,
-                                                                           update.mag)(tokenContext)
+                                                                           update.mag)(using tokenContext)
       segmentId2 <- editableMappingService.findSegmentIdAtPositionIfNeeded(remoteFallbackLayer,
                                                                            update.segmentPosition2,
                                                                            update.segmentId2,
-                                                                           update.mag)(tokenContext)
+                                                                           update.mag)(using tokenContext)
       agglomerateId <- agglomerateIdForSegmentId(segmentId1)
       agglomerateGraph <- agglomerateGraphForIdWithFallback(editableMappingInfo, agglomerateId)
       _ = if (segmentId1 == 0)
@@ -191,7 +189,7 @@ class EditableMappingUpdater(
         case Some(agglomerateId) => Fox.successful(agglomerateId)
         case None =>
           editableMappingService
-            .getBaseSegmentToAgglomerate(baseMappingName, Set(segmentId), remoteFallbackLayer)(tokenContext)
+            .getBaseSegmentToAgglomerate(baseMappingName, Set(segmentId), remoteFallbackLayer)(using tokenContext)
             .flatMap(baseSegmentToAgglomerate => baseSegmentToAgglomerate.get(segmentId).toFox)
       }
     } yield agglomerateId
@@ -235,7 +233,7 @@ class EditableMappingUpdater(
                                                                   tracingId,
                                                                   oldVersion,
                                                                   agglomerateId,
-                                                                  remoteFallbackLayer)(tokenContext)
+                                                                  remoteFallbackLayer)(using tokenContext)
     }
   }
 
@@ -324,7 +322,7 @@ class EditableMappingUpdater(
   private def largestAgglomerateId(mapping: EditableMappingInfo): Fox[Long] =
     for {
       largestBaseAgglomerateId <- remoteDatastoreClient.getLargestAgglomerateId(remoteFallbackLayer,
-                                                                                mapping.baseMappingName)(tokenContext)
+                                                                                mapping.baseMappingName)(using tokenContext)
     } yield math.max(mapping.largestAgglomerateId, largestBaseAgglomerateId)
 
   private def applyMergeAction(mapping: EditableMappingInfo, update: MergeAgglomerateUpdateAction)(
@@ -333,11 +331,11 @@ class EditableMappingUpdater(
       segmentId1 <- editableMappingService.findSegmentIdAtPositionIfNeeded(remoteFallbackLayer,
                                                                            update.segmentPosition1,
                                                                            update.segmentId1,
-                                                                           update.mag)(tokenContext)
+                                                                           update.mag)(using tokenContext)
       segmentId2 <- editableMappingService.findSegmentIdAtPositionIfNeeded(remoteFallbackLayer,
                                                                            update.segmentPosition2,
                                                                            update.segmentId2,
-                                                                           update.mag)(tokenContext)
+                                                                           update.mag)(using tokenContext)
       _ = if (segmentId1 == 0)
         logger.warn(
           s"Merge action for editable mapping $tracingId: Looking up segment id at position ${update.segmentPosition1} in mag ${update.mag} returned invalid value zero. Merging outside of dataset?")

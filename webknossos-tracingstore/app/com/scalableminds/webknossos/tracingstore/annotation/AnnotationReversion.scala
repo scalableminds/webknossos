@@ -27,13 +27,13 @@ trait AnnotationReversion extends FoxImplicits {
       volumeTracing: VolumeTracing,
       editableMappingInfo: EditableMappingInfo,
       currentMaterializedVersion: Long,
-      targetVersion: Long)(implicit tc: TokenContext, ec: ExecutionContext): Fox[EditableMappingUpdater]
+      targetVersion: Long)(using tc: TokenContext, ec: ExecutionContext): Fox[EditableMappingUpdater]
 
   def revertDistributedElements(annotationId: ObjectId,
                                 currentAnnotationWithTracings: AnnotationWithTracings,
                                 sourceAnnotationWithTracings: AnnotationWithTracings,
                                 sourceVersion: Long,
-                                newVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
+                                newVersion: Long)(using ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
     for {
       _ <- Fox.serialCombined(sourceAnnotationWithTracings.getVolumes) {
         // Only volume data for volume layers present in the *source annotation* needs to be reverted.
@@ -67,7 +67,7 @@ trait AnnotationReversion extends FoxImplicits {
       tracingBeforeRevert: VolumeTracing,
       sourceVersion: Long,
       newVersion: Long,
-      tracingId: String)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
+      tracingId: String)(using ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
     for {
       updaterOpt <- Fox.successful(currentAnnotationWithTracings.getEditableMappingUpdater(tracingId))
       updater <- updaterOpt.toFox.orElse(
@@ -80,7 +80,7 @@ trait AnnotationReversion extends FoxImplicits {
   private def editableMappingReversionUpdater(annotationId: ObjectId,
                                               tracingId: String,
                                               tracingBeforeRevert: VolumeTracing,
-                                              targetVersion: Long)(implicit ec: ExecutionContext, tc: TokenContext) =
+                                              targetVersion: Long)(using ec: ExecutionContext, tc: TokenContext) =
     for {
       editableMappingInfo <- getEditableMappingInfoRaw(tracingId, version = None) ?~> Msg.Annotation.getEditableMappingInfoRawFailed
       updater <- editableMappingUpdaterFor(annotationId,

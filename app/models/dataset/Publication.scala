@@ -3,7 +3,7 @@ package models.dataset
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{Publications, PublicationsRow, GetResultPublicationsRow}
 import models.annotation.{AnnotationDAO, AnnotationService}
 import play.api.http.Status.NOT_FOUND
 import play.api.libs.json.Format.GenericFormat

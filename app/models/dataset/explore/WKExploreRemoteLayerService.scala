@@ -74,7 +74,7 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
       }
       datastore <- selectDataStore(parameters.map(_.dataStoreName))
       client: WKRemoteDataStoreClient = new WKRemoteDataStoreClient(datastore, rpc)
-      organization <- organizationDAO.findOne(requestingUser._organization)(GlobalAccessContext)
+      organization <- organizationDAO.findOne(requestingUser._organization)(using GlobalAccessContext)
       userToken <- bearerTokenService.createAndInitDataStoreTokenForUser(requestingUser)
       exploreResponse <- client.exploreRemoteDataset(parametersWithCredentialId, organization._id, userToken)
     } yield exploreResponse
@@ -85,8 +85,8 @@ class WKExploreRemoteLayerService @Inject()(credentialService: CredentialService
         .findUniqueElement(dataStoreNames)
         .toFox ?~> Msg.Dataset.Explore.dataStoreMustBeEqualForAll
       dataStore <- dataStoreNameOpt match {
-        case Some(dataStoreName) => dataStoreDAO.findOneByName(dataStoreName)(GlobalAccessContext)
-        case None                => dataStoreDAO.findOneWithUploadsAllowed(GlobalAccessContext)
+        case Some(dataStoreName) => dataStoreDAO.findOneByName(dataStoreName)(using GlobalAccessContext)
+        case None                => dataStoreDAO.findOneWithUploadsAllowed(using GlobalAccessContext)
       }
     } yield dataStore
 

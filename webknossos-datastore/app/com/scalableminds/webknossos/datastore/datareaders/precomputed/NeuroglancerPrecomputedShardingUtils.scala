@@ -32,10 +32,10 @@ trait NeuroglancerPrecomputedShardingUtils extends FoxImplicits {
     ByteRange.startEndExclusive(0, end)
   }
 
-  private def getShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
+  private def getShardIndex(shardPath: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     shardIndexCache.getOrLoad(shardPath, readShardIndex)
 
-  private def readShardIndex(shardPath: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
+  private def readShardIndex(shardPath: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     shardPath.readBytes(shardIndexRange)
 
   private def parseShardIndex(index: Array[Byte]): Seq[(Long, Long)] =
@@ -106,12 +106,12 @@ trait NeuroglancerPrecomputedShardingUtils extends FoxImplicits {
     chunkIds.lazyZip(chunkStartOffsets).lazyZip(chunkSizes).toArray
   }
 
-  def getMinishardIndex(shardPath: VaultPath, minishardNumber: Int)(implicit ec: ExecutionContext,
+  def getMinishardIndex(shardPath: VaultPath, minishardNumber: Int)(using ec: ExecutionContext,
                                                                     tc: TokenContext): Fox[Array[(Long, Long, Long)]] =
     minishardIndexCache.getOrLoad((shardPath, minishardNumber), readMinishardIndex)
 
   private def readMinishardIndex(vaultPathAndMinishardNumber: (VaultPath, Int))(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[Array[(Long, Long, Long)]] = {
     val (vaultPath, minishardNumber) = vaultPathAndMinishardNumber
     for {
@@ -133,7 +133,7 @@ trait NeuroglancerPrecomputedShardingUtils extends FoxImplicits {
       chunkEnd = (shardIndexRange.end) + chunkSpecification._2 + chunkSpecification._3
     } yield ByteRange.startEndExclusive(chunkStart, chunkEnd)
 
-  def getChunk(chunkRange: ByteRange, shardPath: VaultPath)(implicit ec: ExecutionContext,
+  def getChunk(chunkRange: ByteRange, shardPath: VaultPath)(using ec: ExecutionContext,
                                                             tc: TokenContext): Fox[Array[Byte]] =
     for {
       rawBytes <- shardPath.readBytes(chunkRange)

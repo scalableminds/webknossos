@@ -89,7 +89,7 @@ class ZarrStreamingController @Inject()(
         dataLayerName,
         ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) => {
           remoteTracingstoreClient
-            .getOmeNgffHeader(annotationLayer.tracingId, annotationSource.tracingStoreUrl)(relevantTokenContext)
+            .getOmeNgffHeader(annotationLayer.tracingId, annotationSource.tracingStoreUrl)(using relevantTokenContext)
             .map(ngffMetadata => Ok(Json.toJson(ngffMetadata)))
         },
         orElse = annotationSource =>
@@ -110,8 +110,7 @@ class ZarrStreamingController @Inject()(
         dataLayerName,
         ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) => {
           remoteTracingstoreClient
-            .getZarrJsonGroupHeaderWithNgff(annotationLayer.tracingId, annotationSource.tracingStoreUrl)(
-              relevantTokenContext)
+            .getZarrJsonGroupHeaderWithNgff(annotationLayer.tracingId, annotationSource.tracingStoreUrl)(using relevantTokenContext)
             .map(header => Ok(Json.toJson(header)))
         },
         orElse = annotationSource =>
@@ -209,7 +208,7 @@ class ZarrStreamingController @Inject()(
             remoteTracingstoreClient.getVolumeLayerAsZarrLayer(l.tracingId,
                                                                Some(l.name),
                                                                annotationSource.tracingStoreUrl,
-                                                               zarrVersion)(relevantTokenContext))
+                                                               zarrVersion)(using relevantTokenContext))
         allLayer = dataSourceLayers ++ annotationLayers
         zarrSource = UsableDataSource(dataSource.id, allLayer, dataSource.scale)
       } yield Ok(Json.toJson(zarrSource))
@@ -236,8 +235,7 @@ class ZarrStreamingController @Inject()(
         dataLayerName,
         ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
           remoteTracingstoreClient
-            .getRawZarrCube(annotationLayer.tracingId, mag, coordinates, annotationSource.tracingStoreUrl)(
-              relevantTokenContext)
+            .getRawZarrCube(annotationLayer.tracingId, mag, coordinates, annotationSource.tracingStoreUrl)(using relevantTokenContext)
             .map(Ok(_)),
         orElse = annotationSource => rawZarrCube(annotationSource.datasetId, dataLayerName, mag, coordinates)
       )
@@ -248,7 +246,7 @@ class ZarrStreamingController @Inject()(
       dataLayerName: String,
       mag: String,
       coordinates: String,
-  )(implicit tc: TokenContext): Fox[Result] =
+  )(using tc: TokenContext): Fox[Result] =
     for {
       (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> SERVICE_UNAVAILABLE
       reorderedAdditionalAxes = dataLayer.additionalAxes.map(reorderAdditionalAxes)
@@ -324,7 +322,7 @@ class ZarrStreamingController @Inject()(
         dataLayerName,
         ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
           remoteTracingstoreClient
-            .getZArray(annotationLayer.tracingId, mag, annotationSource.tracingStoreUrl)(relevantTokenContext)
+            .getZArray(annotationLayer.tracingId, mag, annotationSource.tracingStoreUrl)(using relevantTokenContext)
             .map(z => Ok(Json.toJson(z))),
         orElse = annotationSource => zArray(annotationSource.datasetId, dataLayerName, mag)
       )
@@ -337,7 +335,7 @@ class ZarrStreamingController @Inject()(
         dataLayerName,
         ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
           remoteTracingstoreClient
-            .getZarrJson(annotationLayer.tracingId, mag, annotationSource.tracingStoreUrl)(relevantTokenContext)
+            .getZarrJson(annotationLayer.tracingId, mag, annotationSource.tracingStoreUrl)(using relevantTokenContext)
             .map(z => Ok(Json.toJson(z))),
         orElse = annotationSource => zarrJsonForMag(annotationSource.datasetId, dataLayerName, mag)
       )
@@ -401,7 +399,7 @@ class ZarrStreamingController @Inject()(
             .getDataLayerMagDirectoryContents(annotationLayer.tracingId,
                                               mag,
                                               annotationSource.tracingStoreUrl,
-                                              zarrVersion)(relevantTokenContext)
+                                              zarrVersion)(using relevantTokenContext)
             .map(
               layers =>
                 Ok(
@@ -447,8 +445,7 @@ class ZarrStreamingController @Inject()(
         dataLayerName,
         ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
           remoteTracingstoreClient
-            .getDataLayerDirectoryContents(annotationLayer.tracingId, annotationSource.tracingStoreUrl, zarrVersion)(
-              relevantTokenContext)
+            .getDataLayerDirectoryContents(annotationLayer.tracingId, annotationSource.tracingStoreUrl, zarrVersion)(using relevantTokenContext)
             .map(
               layers =>
                 Ok(
@@ -517,7 +514,7 @@ class ZarrStreamingController @Inject()(
         dataLayerName,
         ifIsAnnotationLayer = (annotationLayer, annotationSource, relevantTokenContext) =>
           remoteTracingstoreClient
-            .getZGroup(annotationLayer.tracingId, annotationSource.tracingStoreUrl)(relevantTokenContext)
+            .getZGroup(annotationLayer.tracingId, annotationSource.tracingStoreUrl)(using relevantTokenContext)
             .map(Ok(_)),
         orElse = _ => Fox.successful(Ok(zGroupJson))
       )

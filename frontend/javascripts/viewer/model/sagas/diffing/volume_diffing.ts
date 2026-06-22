@@ -1,4 +1,5 @@
 import { diffDiffableMaps } from "libs/diffable_map";
+import errorHandling from "libs/error_handling";
 import { diffArrays } from "libs/utils";
 import isEqual from "lodash-es/isEqual";
 import keyBy from "lodash-es/keyBy";
@@ -54,12 +55,16 @@ export function* diffVolumeTracing(
     yield updateLargestSegmentId(volumeTracing.largestSegmentId, volumeTracing.tracingId);
   }
   if (prevVolumeTracing.volumeBucketDataHasChanged !== volumeTracing.volumeBucketDataHasChanged) {
-    yield updateVolumeBucketDataHasChanged(
-      volumeTracing.volumeBucketDataHasChanged ?? true,
-      volumeTracing.tracingId,
-    );
+    if (volumeTracing.volumeBucketDataHasChanged) {
+      yield updateVolumeBucketDataHasChanged(volumeTracing.tracingId);
+    } else {
+      const error = new Error(
+        `volumeBucketDataHasChanged was changed to ${volumeTracing.volumeBucketDataHasChanged} which is not true!`,
+      );
+      errorHandling.notify(error);
+      console.warn(volumeTracing.volumeBucketDataHasChanged);
+    }
   }
-
   yield* diffBoundingBoxes(
     prevVolumeTracing.userBoundingBoxes,
     volumeTracing.userBoundingBoxes,

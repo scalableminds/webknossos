@@ -227,7 +227,7 @@ class TSAnnotationController @Inject()(
   private def findAndAdaptVolumesForAnnotation(
       annotation: AnnotationProto,
       requestingUserId: ObjectId,
-      ownerId: ObjectId)(implicit tc: TokenContext): Fox[Seq[VolumeTracing]] = {
+      ownerId: ObjectId)(using tc: TokenContext): Fox[Seq[VolumeTracing]] = {
     val volumeLayersOfAnnotation = annotation.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Volume)
     for {
       volumeTracings <- annotationService
@@ -245,7 +245,7 @@ class TSAnnotationController @Inject()(
   private def findAndAdaptSkeletonsForAnnotation(
       annotation: AnnotationProto,
       requestingUserId: ObjectId,
-      ownerId: ObjectId)(implicit tc: TokenContext): Fox[Seq[SkeletonTracing]] = {
+      ownerId: ObjectId)(using tc: TokenContext): Fox[Seq[SkeletonTracing]] = {
     val skeletonLayersOfAnnotation = annotation.annotationLayers.filter(_.typ == AnnotationLayerTypeProto.Skeleton)
     for {
       skeletonTracings <- annotationService

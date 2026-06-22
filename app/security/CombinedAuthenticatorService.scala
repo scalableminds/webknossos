@@ -71,9 +71,9 @@ case class CombinedAuthenticatorService(cookieSettings: CookieAuthenticatorSetti
 
   override def retrieve[B](implicit request: ExtractableRequest[B]): Future[Option[CombinedAuthenticator]] =
     for {
-      optionCookie <- cookieAuthenticatorService.retrieve(request)
+      optionCookie <- cookieAuthenticatorService.retrieve(using request)
       optionCookieUnlessSignedOutEverywhere <- cookieUnlessSignedOutEverywhere(optionCookie)
-      optionToken <- tokenAuthenticatorService.retrieve(request)
+      optionToken <- tokenAuthenticatorService.retrieve(using request)
     } yield {
       optionCookieUnlessSignedOutEverywhere.map(CombinedAuthenticator(_)).orElse {
         optionToken.map(CombinedAuthenticator(_))

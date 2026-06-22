@@ -369,7 +369,7 @@ class UploadService @Inject()(dataSourceService: DataSourceService,
                              dataSourceId: DataSourceId) =
     s"upload $uploadId for $uploadDomain (dataset $datasetId - $dataSourceId)"
 
-  def finishDatasetUpload(uploadId: String, datasetId: ObjectId)(implicit tc: TokenContext): Fox[Unit] =
+  def finishDatasetUpload(uploadId: String, datasetId: ObjectId)(using tc: TokenContext): Fox[Unit] =
     for {
       dataSourceId <- datasetUploadMetadataStore.findDataSourceId(uploadId)
       needsConversion <- datasetUploadMetadataStore.findNeedsConversion(uploadId)

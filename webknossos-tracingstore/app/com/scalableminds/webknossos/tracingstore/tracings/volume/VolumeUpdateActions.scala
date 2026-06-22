@@ -944,7 +944,7 @@ object DeleteUserBoundingBoxVolumeAction {
 }
 object UpdateUserBoundingBoxVolumeAction extends TristateOptionJsonHelper {
   implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVolumeAction] =
-    Json.configured(tristateOptionParsing).format[UpdateUserBoundingBoxVolumeAction]
+    Json.configured(using tristateOptionParsing).format[UpdateUserBoundingBoxVolumeAction]
 }
 object UpdateUserBoundingBoxVisibilityVolumeAction {
   implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVisibilityVolumeAction] =
@@ -967,7 +967,7 @@ object LegacyUpdateSegmentVolumeAction {
 }
 object UpdateSegmentPartialVolumeAction extends TristateOptionJsonHelper {
   implicit val jsonFormat: OFormat[UpdateSegmentPartialVolumeAction] =
-    Json.configured(tristateOptionParsing).format[UpdateSegmentPartialVolumeAction]
+    Json.configured(using tristateOptionParsing).format[UpdateSegmentPartialVolumeAction]
 }
 object UpdateMetadataOfSegmentVolumeAction {
   implicit val jsonFormat: OFormat[UpdateMetadataOfSegmentVolumeAction] =

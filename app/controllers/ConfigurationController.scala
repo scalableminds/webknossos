@@ -57,10 +57,9 @@ class ConfigurationController @Inject()(
       for {
         configuration <- request.identity.toFox
           .flatMap(user =>
-            datasetConfigurationService.getDatasetViewConfigurationForUserAndDataset(request.body, user, datasetId)(
-              GlobalAccessContext))
+            datasetConfigurationService.getDatasetViewConfigurationForUserAndDataset(request.body, user, datasetId)(using GlobalAccessContext))
           .orElse(
-            datasetConfigurationService.getDatasetViewConfigurationForDataset(request.body, datasetId)(ctx)
+            datasetConfigurationService.getDatasetViewConfigurationForDataset(request.body, datasetId)(using ctx)
           )
           .getOrElse(Map.empty)
       } yield Ok(Json.toJson(configuration))
@@ -86,7 +85,7 @@ class ConfigurationController @Inject()(
   def updateDatasetAdminViewConfiguration(datasetId: ObjectId): Action[JsObject] =
     sil.SecuredAction.async(validateJson[JsObject]) { implicit request =>
       for {
-        dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext)
+        dataset <- datasetDAO.findOne(datasetId)(using GlobalAccessContext)
         _ <- datasetService.isEditableBy(dataset, Some(request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- datasetConfigurationService.updateAdminViewConfigurationFor(dataset, request.body.fields.toMap)
       } yield JsonOk(Msg.User.Configuration.updateSuccessForDataset)

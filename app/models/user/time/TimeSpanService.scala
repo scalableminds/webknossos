@@ -37,13 +37,13 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     actorSystem.actorSelection("/user/mailActor")
 
   def logUserInteractionIfTheyArePotentialContributor(timestamp: Instant, user: User, annotation: Annotation)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     if (user._id == annotation._user || annotation.othersMayEdit) {
       logUserInteraction(Seq(timestamp), user, annotation)
     } else Fox.successful(())
 
   def logUserInteraction(timestamps: Seq[Instant], user: User, annotation: Annotation)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     trackTime(timestamps, user._id, annotation)
 
   def sumTimespansPerInterval[T](groupingF: TimeSpan => T, timeSpansBox: Box[List[TimeSpan]]): Map[T, Duration] =
@@ -58,7 +58,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
 
   @SuppressWarnings(Array("TraversableHead", "TraversableLast")) // Only functions call this which put at least one timestamp in the seq
   private def trackTime(timestamps: Seq[Instant], userId: ObjectId, annotation: Annotation)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     if (timestamps.isEmpty) {
       logger.warn("Timetracking called with empty timestamps list.")
       Fox.successful(())
@@ -112,7 +112,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
       current = updateTimeSpan(current, timestamps.last)
       lastUserActivities.update(userId, current)
 
-      flushToDb(timeSpansToInsert, timeSpansToUpdate)(ctx)
+      flushToDb(timeSpansToInsert, timeSpansToUpdate)(using ctx)
     }
 
   private def isNotInterrupted(current: Instant, last: TimeSpan) =
@@ -125,24 +125,24 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     // Log time to annotation
     annotation match {
       case Some(a: ObjectId) =>
-        annotationDAO.logTime(a, duration)(GlobalAccessContext) ?~> "FAILED: AnnotationService.logTime"
+        annotationDAO.logTime(a, duration)(using GlobalAccessContext) ?~> "FAILED: AnnotationService.logTime"
       case _ =>
         Fox.successful(())
       // do nothing, this is not a stored annotation
     }
 
   private def signalOverTime(time: FiniteDuration, annotationOpt: Option[Annotation])(
-      implicit ctx: DBAccessContext): Fox[?] =
+      using ctx: DBAccessContext): Fox[?] =
     for {
       annotation <- annotationOpt.toFox
-      user <- userService.findOneCached(annotation._user)(GlobalAccessContext)
-      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
-      task <- annotationService.taskFor(annotation)(GlobalAccessContext)
+      user <- userService.findOneCached(annotation._user)(using GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
+      task <- annotationService.taskFor(annotation)(using GlobalAccessContext)
       project <- projectDAO.findOne(task._project)
       annotationTime <- annotation.tracingTime.toFox ?~> "no annotation.tracingTime"
       timeLimit <- project.expectedTime.toFox ?~> "no project.expectedTime"
-      projectOwner <- userService.findOneCached(project._owner)(GlobalAccessContext)
-      projectOwnerMultiUser <- multiUserDAO.findOne(projectOwner._multiUser)(GlobalAccessContext)
+      projectOwner <- userService.findOneCached(project._owner)(using GlobalAccessContext)
+      projectOwnerMultiUser <- multiUserDAO.findOne(projectOwner._multiUser)(using GlobalAccessContext)
     } yield {
       if (annotationTime >= timeLimit && annotationTime - time.toMillis < timeLimit) {
         Mailer ! Send(
@@ -155,8 +155,8 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     annotation.flatMap(_._task) match {
       case Some(taskId) =>
         for {
-          _ <- taskDAO.logTime(taskId, duration)(GlobalAccessContext) ?~> "FAILED: TaskSQLDAO.logTime"
-          _ <- signalOverTime(duration, annotation)(GlobalAccessContext).shiftBox //signalOverTime is expected to fail in some cases, hence the .shiftBox
+          _ <- taskDAO.logTime(taskId, duration)(using GlobalAccessContext) ?~> "FAILED: TaskSQLDAO.logTime"
+          _ <- signalOverTime(duration, annotation)(using GlobalAccessContext).shiftBox //signalOverTime is expected to fail in some cases, hence the .shiftBox
         } yield {}
       case _ =>
         Fox.successful(())
@@ -165,7 +165,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
   // We intentionally return a Fox[Option] here, since the calling for-comprehension expects an Option[Annotation]. In case
   // None is passed in as "annotation", we want to pass this None on as Fox.successful(None) and not break the for-comprehension
   // by returning Fox.empty.
-  private def getAnnotation(annotation: Option[ObjectId])(implicit ctx: DBAccessContext): Fox[Option[Annotation]] =
+  private def getAnnotation(annotation: Option[ObjectId])(using ctx: DBAccessContext): Fox[Option[Annotation]] =
     annotation match {
       case Some(annotationId) =>
         annotationDAO.findOne(annotationId).map(Some(_))
@@ -174,7 +174,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     }
 
   private def flushToDb(timespansToInsert: List[TimeSpan], timespansToUpdate: List[(TimeSpan, Instant)])(
-      implicit ctx: DBAccessContext) = {
+      using ctx: DBAccessContext) = {
     val updateResult = for {
       _ <- Fox.serialCombined(timespansToInsert)(t => timeSpanDAO.insertOne(t))
       _ <- Fox.serialCombined(timespansToUpdate)(t => updateTimeSpanInDb(t._1, t._2))
@@ -188,7 +188,7 @@ class TimeSpanService @Inject()(annotationDAO: AnnotationDAO,
     updateResult
   }
 
-  private def updateTimeSpanInDb(timeSpan: TimeSpan, timestamp: Instant)(implicit ctx: DBAccessContext) = {
+  private def updateTimeSpanInDb(timeSpan: TimeSpan, timestamp: Instant)(using ctx: DBAccessContext) = {
     val duration = timestamp - timeSpan.lastUpdate
     val updated = timeSpan.addTime(duration, timestamp)
 

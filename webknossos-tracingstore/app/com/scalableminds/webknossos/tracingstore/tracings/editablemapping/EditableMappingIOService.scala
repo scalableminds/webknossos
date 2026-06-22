@@ -133,7 +133,7 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService,
                                 annotationId: ObjectId,
                                 startVersion: Long,
                                 baseMappingName: String,
-                                editedEdgesZip: File)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+                                editedEdgesZip: File)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     for {
       _ <- tracingDataStore.editableMappingsInfo.put(
         tracingId,
@@ -162,7 +162,7 @@ class EditableMappingIOService @Inject()(tempFileService: TsTempFileService,
       numberOfSavedVersions = updatesGrouped.length
     } yield numberOfSavedVersions
 
-  private def unzipAndReadZarr(editedEdgesZip: File)(implicit ec: ExecutionContext,
+  private def unzipAndReadZarr(editedEdgesZip: File)(using ec: ExecutionContext,
                                                      tc: TokenContext): Fox[(MultiArray, MultiArray)] = {
     val unzippedDir = tempFileService.createDirectory()
     for {

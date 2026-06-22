@@ -15,6 +15,7 @@ object Dependencies {
   private val brotliVersion = "1.23.0"
   private val slickVersion = "3.6.1"
   private val awsVersion = "2.46.10"
+  private val postgresVersion = "42.7.11"
   private val scalapbVersion = scalapb.compiler.Version.scalapbVersion
   private val grpcVersion = scalapb.compiler.Version.grpcJavaVersion
 
@@ -29,10 +30,6 @@ object Dependencies {
     "commons-io" % "commons-io" % "2.22.0",
     // HashCodeBuilder. import org.apache.commons.lang3
     "org.apache.commons" % "commons-lang3" % "3.20.0",
-    // ObjectIds. import reactivemongo.api.bson
-    ("org.reactivemongo" %% "reactivemongo-bson-api" % "1.0.10")
-      .exclude("org.scala-lang", "scala-reflect")
-      .cross(CrossVersion.for3Use2_13),
     // Protocol buffers. import scalapb
     "com.thesamet.scalapb" %% "scalapb-runtime" % scalapbVersion,
     // LazyLogging. import com.typesafe.scalalogging
@@ -43,6 +40,19 @@ object Dependencies {
     "at.favre.lib" % "bcrypt" % "0.10.2",
     // Play http filters. Not imported.
     filters,
+  )
+
+  val slickCodegenDependencies: Seq[ModuleID] = Seq(
+    // SQL Queries. import slick
+    "com.typesafe.slick" %% "slick" % slickVersion,
+    // SQL Type code generation. import slick.codegen
+    "com.typesafe.slick" %% "slick-codegen" % slickVersion,
+    // SQL Queries connection pool. not imported.
+    "com.typesafe.slick" %% "slick-hikaricp" % slickVersion,
+    // SQL Queries postgres specifics. not imported.
+    "org.postgresql" % "postgresql" % postgresVersion,
+    // Logging. import org.slf4j
+    "org.slf4j" % "slf4j-simple" % "2.0.18",
   )
 
   val webknossosDatastoreDependencies: Seq[ModuleID] = Seq(
@@ -58,13 +68,8 @@ object Dependencies {
     ws,
     // Dependency Injection. import javax.inject.Inject
     guice,
-    // Redis database client. import com.redis
-    ("net.debasishg" %% "redisclient" % "3.42")
-      .cross(CrossVersion.for3Use2_13)
-      .exclude("org.scala-lang.modules", "scala-xml_2.13")
-      .exclude("org.scala-lang.modules", "scala-parser-combinators_2.13")
-      .exclude("org.scala-lang.modules", "scala-collection-compat_2.13")
-      .exclude("com.typesafe.play", "twirl-api_2.13"),
+    // Redis database client. import io.lettuce.core
+    "io.lettuce" % "lettuce-core" % "7.6.0.RELEASE",
     // Read hdf5 files. import ch.systemsx.cisd.hdf5
     "cisd" % "jhdf5" % "19.04.1",
     // MultiArray (ndarray) handles. import ucar
@@ -120,7 +125,7 @@ object Dependencies {
     // SQL Queries class generation. Started with runner as slick.codegen.SourceCodeGenerator
     "com.typesafe.slick" %% "slick-codegen" % slickVersion,
     // SQL Queries postgres specifics. not imported.
-    "org.postgresql" % "postgresql" % "42.7.11",
+    "org.postgresql" % "postgresql" % postgresVersion,
     /// WebAuthn for passkey authentication. import com.webauthn4j
     "com.webauthn4j" % "webauthn4j-core" % "0.29.7.RELEASE" exclude ("com.fasterxml.jackson.core", "jackson-databind"),
   )

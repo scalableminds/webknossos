@@ -34,7 +34,6 @@ class WKWBucketStreamSink(val layer: DataLayer, tracingHasFallbackLayer: Boolean
               os => WKWFile.write(os, header, Array(data).iterator).toFox
             ))
         }
-      case _ => None
     } ++ mags.map { mag =>
       NamedFunctionStream(f"${mag.toMagLiteral(allowScalar = true)}/$FILENAME_HEADER_WKW",
                           os => Fox.successful(header.writeTo(new DataOutputStream(os), isHeaderFile = true)))

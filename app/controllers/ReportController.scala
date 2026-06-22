@@ -188,7 +188,7 @@ class ReportController @Inject()(reportDAO: ReportDAO,
     val foxes = users.map { user =>
       for {
         pendingTaskCountsByProjects <- reportDAO.getAvailableTaskCountsByProjectsFor(user._id)
-        multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+        multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
       } yield {
         AvailableTaskCountsEntry(user._id.toString,
                                  multiUser.fullName,

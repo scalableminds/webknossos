@@ -28,26 +28,26 @@ class SavedTracingInformationHandler @Inject()(
 
   override val useCache = false
 
-  override def nameForAnnotation(annotation: Annotation)(implicit ctx: DBAccessContext): Fox[String] =
+  override def nameForAnnotation(annotation: Annotation)(using ctx: DBAccessContext): Fox[String] =
     for {
-      userBox <- userService.findOneCached(annotation._user)(GlobalAccessContext).shiftBox
+      userBox <- userService.findOneCached(annotation._user)(using GlobalAccessContext).shiftBox
       multiUserBox <- (userBox match {
         case Full(user) => multiUserDAO.findOne(user._multiUser)
         case f: Failure => f.toFox
         case Empty      => Fox.empty
       }).shiftBox
       userName = multiUserBox.map(_.abbreviatedName).getOrElse("")
-      datasetName <- datasetDAO.findOne(annotation._dataset)(GlobalAccessContext).map(_.name)
+      datasetName <- datasetDAO.findOne(annotation._dataset)(using GlobalAccessContext).map(_.name)
       task = annotation._task.map(_.toString).getOrElse("explorational")
     } yield {
       val id = formatHash(annotation.id)
       normalize(s"${datasetName}__${task}__${userName}__$id")
     }
 
-  def provideAnnotation(annotationId: ObjectId, userOpt: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation] =
+  def provideAnnotation(annotationId: ObjectId, userOpt: Option[User])(using ctx: DBAccessContext): Fox[Annotation] =
     annotationDAO.findOne(annotationId) ?~> Msg.Annotation.notFound
 
-  def restrictionsFor(identifier: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions] =
+  def restrictionsFor(identifier: ObjectId)(using ctx: DBAccessContext): Fox[AnnotationRestrictions] =
     for {
       annotation <- annotationDAO.findOne(identifier) ?~> Msg.Annotation.notFound
     } yield annotationRestrictionDefults.defaultsFor(annotation)

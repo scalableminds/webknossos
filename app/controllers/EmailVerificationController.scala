@@ -18,7 +18,7 @@ class EmailVerificationController @Inject()(emailVerificationService: EmailVerif
 
   def verify(key: String): Action[AnyContent] = Action.async { _ =>
     for {
-      _ <- emailVerificationService.verify(key)(GlobalAccessContext, ec)
+      _ <- emailVerificationService.verify(key)(using GlobalAccessContext, ec)
     } yield Ok
   }
 

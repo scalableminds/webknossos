@@ -5,7 +5,11 @@ import com.fasterxml.jackson.annotation._
 import com.scalableminds.util.accesscontext.DBAccessContext
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{JsonHelper, Fox, FoxImplicits}
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{
+  Webauthncredentials,
+  WebauthncredentialsRow,
+  GetResultWebauthncredentialsRow
+}
 import com.webauthn4j.converter.AttestedCredentialDataConverter
 import com.webauthn4j.converter.util.ObjectConverter
 import com.webauthn4j.credential.{CredentialRecordImpl => WebAuthnCredentialRecord}
@@ -103,7 +107,7 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
     } yield WebAuthnCredential(ObjectId(r._Id), ObjectId(r._Multiuser), r.name, record, r.isdeleted)
   }
 
-  def findAllForUser(multiUserId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[WebAuthnCredential]] =
+  def findAllForUser(multiUserId: ObjectId)(using ctx: DBAccessContext): Fox[List[WebAuthnCredential]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(
@@ -113,7 +117,7 @@ class WebAuthnCredentialDAO @Inject()(sqlClient: SqlClient)(implicit ec: Executi
     } yield parsed
 
   def findByCredentialId(multiUserId: ObjectId, credentialId: Array[Byte])(
-      implicit ctx: DBAccessContext): Fox[WebAuthnCredential] =
+      using ctx: DBAccessContext): Fox[WebAuthnCredential] =
     for {
       accessQuery <- readAccessQuery
       r <- run(

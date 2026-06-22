@@ -1,10 +1,11 @@
 import { SettingOutlined } from "@ant-design/icons";
 import { getConnectomeFilesForDatasetLayer } from "admin/rest_api";
 import { Col, Popover, Row, Select, Tooltip } from "antd";
+import { useWkSelector } from "libs/react_hooks";
 import { settings } from "messages";
-import React from "react";
-import { connect } from "react-redux";
-import type { APIConnectomeFile, APIDataset, APISegmentationLayer } from "types/api_types";
+import { useEffect } from "react";
+import { useDispatch } from "react-redux";
+import type { APISegmentationLayer } from "types/api_types";
 import { userSettings } from "types/schemas/user_settings.schema";
 import defaultState from "viewer/default_state";
 import { isTracingLayerWithoutFallback } from "viewer/model/accessors/volumetracing_accessor";
@@ -13,61 +14,32 @@ import {
   updateCurrentConnectomeFileAction,
 } from "viewer/model/actions/connectome_actions";
 import { updateUserSettingAction } from "viewer/model/actions/settings_actions";
-import type { WebknossosState } from "viewer/store";
-import Store from "viewer/store";
 import ButtonComponent from "viewer/view/components/button_component";
 import NumberSliderSetting from "viewer/view/left_border_tabs/components/number_slider_setting";
 import { getBaseSegmentationName } from "viewer/view/right_border_tabs/segments_tab/segments_view_helper";
 
 const { Option } = Select;
-type OwnProps = {
+
+type Props = {
   segmentationLayer: APISegmentationLayer | null | undefined;
 };
-type StateProps = {
-  dataset: APIDataset;
-  availableConnectomeFiles: Array<APIConnectomeFile> | null | undefined;
-  currentConnectomeFile: APIConnectomeFile | null | undefined;
-  pendingConnectomeFileName: string | null | undefined;
-  particleSize: number;
-};
-type Props = OwnProps & StateProps;
 
-const mapStateToProps = (state: WebknossosState, ownProps: OwnProps): StateProps => {
-  const { segmentationLayer } = ownProps;
-  const connectomeData =
+function ConnectomeSettings({ segmentationLayer }: Props) {
+  const dispatch = useDispatch();
+
+  const dataset = useWkSelector((state) => state.dataset);
+  const connectomeData = useWkSelector((state) =>
     segmentationLayer != null
       ? state.localSegmentationData[segmentationLayer.name].connectomeData
-      : null;
-  return {
-    dataset: state.dataset,
-    availableConnectomeFiles:
-      connectomeData != null ? connectomeData.availableConnectomeFiles : null,
-    currentConnectomeFile: connectomeData != null ? connectomeData.currentConnectomeFile : null,
-    pendingConnectomeFileName:
-      connectomeData != null ? connectomeData.pendingConnectomeFileName : null,
-    particleSize: state.userConfiguration.particleSize,
-  };
-};
+      : null,
+  );
+  const particleSize = useWkSelector((state) => state.userConfiguration.particleSize);
 
-class ConnectomeFilters extends React.Component<Props> {
-  componentDidMount() {
-    this.maybeFetchConnectomeFiles();
-  }
+  const availableConnectomeFiles = connectomeData?.availableConnectomeFiles ?? null;
+  const currentConnectomeFile = connectomeData?.currentConnectomeFile ?? null;
+  const pendingConnectomeFileName = connectomeData?.pendingConnectomeFileName ?? null;
 
-  componentDidUpdate(prevProps: Props) {
-    if (prevProps.segmentationLayer !== this.props.segmentationLayer) {
-      this.maybeFetchConnectomeFiles();
-    }
-  }
-
-  async maybeFetchConnectomeFiles() {
-    const {
-      dataset,
-      segmentationLayer,
-      availableConnectomeFiles,
-      currentConnectomeFile,
-      pendingConnectomeFileName,
-    } = this.props;
+  const maybeFetchConnectomeFiles = async () => {
     // If availableConnectomeFiles is not null, they have already been fetched
     if (
       segmentationLayer == null ||
@@ -75,13 +47,14 @@ class ConnectomeFilters extends React.Component<Props> {
       availableConnectomeFiles != null
     )
       return;
+
     const connectomeFiles = await getConnectomeFilesForDatasetLayer(
       dataset.dataStore.url,
       dataset,
       getBaseSegmentationName(segmentationLayer),
     );
     const layerName = segmentationLayer.name;
-    Store.dispatch(updateConnectomeFileListAction(layerName, connectomeFiles));
+    dispatch(updateConnectomeFileListAction(layerName, connectomeFiles));
 
     if (currentConnectomeFile == null && connectomeFiles.length > 0) {
       // If there was a pending connectome file name, use it, otherwise select the first one
@@ -89,24 +62,27 @@ class ConnectomeFilters extends React.Component<Props> {
         pendingConnectomeFileName != null
           ? pendingConnectomeFileName
           : connectomeFiles[0].connectomeFileName;
-      Store.dispatch(updateCurrentConnectomeFileAction(layerName, connectomeFileName));
+      dispatch(updateCurrentConnectomeFileAction(layerName, connectomeFileName));
     }
-  }
+  };
 
-  handleConnectomeFileSelected = async (connectomeFileName: string | null | undefined) => {
-    const { segmentationLayer } = this.props;
+  // Fetch the list of connectome files once a (new) segmentation layer becomes available.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Refetch once the segmentation layer changes.
+  useEffect(() => {
+    maybeFetchConnectomeFiles();
+  }, [segmentationLayer]);
 
+  const handleConnectomeFileSelected = (connectomeFileName: string | null | undefined) => {
     if (segmentationLayer != null && connectomeFileName != null) {
-      Store.dispatch(updateCurrentConnectomeFileAction(segmentationLayer.name, connectomeFileName));
+      dispatch(updateCurrentConnectomeFileAction(segmentationLayer.name, connectomeFileName));
     }
   };
 
-  updateParticleSize = (value: number) => {
-    Store.dispatch(updateUserSettingAction("particleSize", value));
+  const updateParticleSize = (value: number) => {
+    dispatch(updateUserSettingAction("particleSize", value));
   };
 
-  getConnectomeFileSettings = () => {
-    const { currentConnectomeFile, availableConnectomeFiles, particleSize } = this.props;
+  const renderConnectomeFileSettings = () => {
     const currentConnectomeFileName =
       currentConnectomeFile != null ? currentConnectomeFile.connectomeFileName : null;
     return (
@@ -127,7 +103,7 @@ class ConnectomeFilters extends React.Component<Props> {
               <Select
                 placeholder="Select a connectome file"
                 value={currentConnectomeFileName}
-                onChange={this.handleConnectomeFileSelected}
+                onChange={handleConnectomeFileSelected}
                 size="small"
                 loading={availableConnectomeFiles == null}
                 style={{
@@ -164,7 +140,7 @@ class ConnectomeFilters extends React.Component<Props> {
               max={userSettings.particleSize.maximum}
               step={0.1}
               value={particleSize}
-              onChange={this.updateParticleSize}
+              onChange={updateParticleSize}
               defaultValue={defaultState.userConfiguration.particleSize}
             />
           </Col>
@@ -173,21 +149,16 @@ class ConnectomeFilters extends React.Component<Props> {
     );
   };
 
-  render() {
-    return (
-      <Tooltip title="Configure Connectome Settings">
-        <Popover content={this.getConnectomeFileSettings} trigger="click" placement="bottomRight">
-          <ButtonComponent
-            icon={<SettingOutlined />}
-            title="Configure Connectome Settings"
-            variant="text"
-            color="default"
-          />
-        </Popover>
-      </Tooltip>
-    );
-  }
+  return (
+    <Popover content={renderConnectomeFileSettings} trigger="click" placement="bottomRight">
+      <ButtonComponent
+        icon={<SettingOutlined />}
+        title="Configure Connectome Settings"
+        variant="text"
+        color="default"
+      />
+    </Popover>
+  );
 }
 
-const connector = connect(mapStateToProps);
-export default connector(ConnectomeFilters);
+export default ConnectomeSettings;

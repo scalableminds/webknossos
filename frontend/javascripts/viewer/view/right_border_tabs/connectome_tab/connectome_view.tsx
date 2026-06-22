@@ -6,7 +6,7 @@ import {
   getSynapsesOfAgglomerates,
   getSynapseTypes,
 } from "admin/rest_api";
-import { Alert, Divider, Empty, Space, Tooltip, type TreeProps } from "antd";
+import { Alert, Divider, Empty, Space, Spin, Tooltip, type TreeProps } from "antd";
 import DiffableMap from "libs/diffable_map";
 import { stringToAntdColorPresetRgb } from "libs/format_utils";
 import Toast from "libs/toast";
@@ -88,6 +88,7 @@ type State = {
   availableSynapseTypes: Array<string>;
   checkedKeys: Array<string>;
   expandedKeys: Array<string>;
+  isLoading: boolean;
 };
 
 const getSynapseIdsFromConnectomeData = (connectomeData: ConnectomeData): Array<number> => {
@@ -211,6 +212,7 @@ class ConnectomeView extends React.Component<Props, State> {
     availableSynapseTypes: [],
     checkedKeys: [],
     expandedKeys: [],
+    isLoading: false,
   };
 
   componentDidMount() {
@@ -351,88 +353,96 @@ class ConnectomeView extends React.Component<Props, State> {
       activeAgglomerateIds.length === 0
     )
       return;
-    const fetchProperties: [string, APIDataset, string, string] = [
-      dataset.dataStore.url,
-      dataset,
-      getBaseSegmentationName(segmentationLayer),
-      currentConnectomeFile.connectomeFileName,
-    ];
-    const synapsesOfAgglomerates = await getSynapsesOfAgglomerates(
-      ...fetchProperties,
-      activeAgglomerateIds,
-    );
 
-    if (synapsesOfAgglomerates.length !== activeAgglomerateIds.length) {
-      throw new Error(
-        `Requested synapses of ${activeAgglomerateIds.length} agglomerate(s), but got synapses for ${synapsesOfAgglomerates.length} agglomerate(s).`,
+    this.setState({ isLoading: true });
+    try {
+      const fetchProperties: [string, APIDataset, string, string] = [
+        dataset.dataStore.url,
+        dataset,
+        getBaseSegmentationName(segmentationLayer),
+        currentConnectomeFile.connectomeFileName,
+      ];
+      const synapsesOfAgglomerates = await getSynapsesOfAgglomerates(
+        ...fetchProperties,
+        activeAgglomerateIds,
       );
+
+      if (synapsesOfAgglomerates.length !== activeAgglomerateIds.length) {
+        throw new Error(
+          `Requested synapses of ${activeAgglomerateIds.length} agglomerate(s), but got synapses for ${synapsesOfAgglomerates.length} agglomerate(s).`,
+        );
+      }
+
+      // Uniquify synapses to avoid requesting data multiple times
+      const allInSynapseIds = unique(
+        synapsesOfAgglomerates.flatMap((connections) => connections.in),
+      );
+      const allOutSynapseIds = unique(
+        synapsesOfAgglomerates.flatMap((connections) => connections.out),
+      );
+      const allSynapseIds = unique([...allInSynapseIds, ...allOutSynapseIds]);
+      const [synapseSources, synapseDestinations, synapsePositions, synapseTypesAndNames] =
+        await Promise.all([
+          getSynapseSources(...fetchProperties, allInSynapseIds),
+          getSynapseDestinations(...fetchProperties, allOutSynapseIds),
+          getSynapsePositions(...fetchProperties, allSynapseIds),
+          getSynapseTypes(...fetchProperties, allSynapseIds),
+        ]);
+      // Ideally, the backend would send the typeToString mapping from the hdf5 file.
+      // However, the used jhdf5 library seems to have a bug which makes it impossible to read
+      // hdf5 array attributes which is why this information is read from a json file, instead.
+      // Since it's easy to forget to create the json file, this code exists to act as a fail-safe.
+      const { synapseTypes, typeToString } = ensureTypeToString(synapseTypesAndNames);
+
+      const agglomerates = safeZipObject(activeAgglomerateIds, synapsesOfAgglomerates);
+      const synapseIdToSource = safeZipObject(allInSynapseIds, synapseSources);
+      const synapseIdToDestination = safeZipObject(allOutSynapseIds, synapseDestinations);
+      const synapseIdToPosition = safeZipObject(allSynapseIds, synapsePositions);
+      const synapseIdToType = safeZipObject(allSynapseIds, synapseTypes);
+
+      const synapseObjects = allSynapseIds.map((synapseId) => ({
+        id: synapseId,
+        src: synapseIdToSource[synapseId],
+        dst: synapseIdToDestination[synapseId],
+        position: synapseIdToPosition[synapseId],
+        type: typeToString[synapseIdToType[synapseId]],
+      }));
+
+      const synapses = safeZipObject(allSynapseIds, synapseObjects);
+
+      const connectomeData = {
+        agglomerates,
+        synapses,
+        connectomeFile: currentConnectomeFile,
+      };
+      // Auto-expand all nodes by default. The antd properties like `defaultExpandAll` only work on the first render
+      // but not when switching to another agglomerate, afterwards.
+      const treeData = convertConnectomeToTreeData(connectomeData) || [];
+      const expandedKeys = Array.from(
+        mapAndFilterTreeData(
+          treeData,
+          (node) => node.key,
+          (node) => node.data.type !== "synapse",
+        ),
+      );
+      // Auto-load the skeletons of the active agglomerates and check all occurrences of the same agglomerate
+      const topLevelCheckedKeys = treeData.map((topLevelTreeNode) => topLevelTreeNode.key);
+      const checkedKeys = Array.from(
+        mapAndFilterTreeData(
+          treeData,
+          (node) => node.key,
+          (node) => topLevelCheckedKeys.some((topLevelKey) => node.key.startsWith(topLevelKey)),
+        ),
+      );
+      this.setState({
+        connectomeData,
+        availableSynapseTypes: typeToString,
+        checkedKeys,
+        expandedKeys,
+      });
+    } finally {
+      this.setState({ isLoading: false });
     }
-
-    // Uniquify synapses to avoid requesting data multiple times
-    const allInSynapseIds = unique(synapsesOfAgglomerates.flatMap((connections) => connections.in));
-    const allOutSynapseIds = unique(
-      synapsesOfAgglomerates.flatMap((connections) => connections.out),
-    );
-    const allSynapseIds = unique([...allInSynapseIds, ...allOutSynapseIds]);
-    const [synapseSources, synapseDestinations, synapsePositions, synapseTypesAndNames] =
-      await Promise.all([
-        getSynapseSources(...fetchProperties, allInSynapseIds),
-        getSynapseDestinations(...fetchProperties, allOutSynapseIds),
-        getSynapsePositions(...fetchProperties, allSynapseIds),
-        getSynapseTypes(...fetchProperties, allSynapseIds),
-      ]);
-    // Ideally, the backend would send the typeToString mapping from the hdf5 file.
-    // However, the used jhdf5 library seems to have a bug which makes it impossible to read
-    // hdf5 array attributes which is why this information is read from a json file, instead.
-    // Since it's easy to forget to create the json file, this code exists to act as a fail-safe.
-    const { synapseTypes, typeToString } = ensureTypeToString(synapseTypesAndNames);
-
-    const agglomerates = safeZipObject(activeAgglomerateIds, synapsesOfAgglomerates);
-    const synapseIdToSource = safeZipObject(allInSynapseIds, synapseSources);
-    const synapseIdToDestination = safeZipObject(allOutSynapseIds, synapseDestinations);
-    const synapseIdToPosition = safeZipObject(allSynapseIds, synapsePositions);
-    const synapseIdToType = safeZipObject(allSynapseIds, synapseTypes);
-
-    const synapseObjects = allSynapseIds.map((synapseId) => ({
-      id: synapseId,
-      src: synapseIdToSource[synapseId],
-      dst: synapseIdToDestination[synapseId],
-      position: synapseIdToPosition[synapseId],
-      type: typeToString[synapseIdToType[synapseId]],
-    }));
-
-    const synapses = safeZipObject(allSynapseIds, synapseObjects);
-
-    const connectomeData = {
-      agglomerates,
-      synapses,
-      connectomeFile: currentConnectomeFile,
-    };
-    // Auto-expand all nodes by default. The antd properties like `defaultExpandAll` only work on the first render
-    // but not when switching to another agglomerate, afterwards.
-    const treeData = convertConnectomeToTreeData(connectomeData) || [];
-    const expandedKeys = Array.from(
-      mapAndFilterTreeData(
-        treeData,
-        (node) => node.key,
-        (node) => node.data.type !== "synapse",
-      ),
-    );
-    // Auto-load the skeletons of the active agglomerates and check all occurrences of the same agglomerate
-    const topLevelCheckedKeys = treeData.map((topLevelTreeNode) => topLevelTreeNode.key);
-    const checkedKeys = Array.from(
-      mapAndFilterTreeData(
-        treeData,
-        (node) => node.key,
-        (node) => topLevelCheckedKeys.some((topLevelKey) => node.key.startsWith(topLevelKey)),
-      ),
-    );
-    this.setState({
-      connectomeData,
-      availableSynapseTypes: typeToString,
-      checkedKeys,
-      expandedKeys,
-    });
   }
 
   updateSynapseTrees(
@@ -764,6 +774,7 @@ class ConnectomeView extends React.Component<Props, State> {
                 width: 220,
               }}
               disabled={disabled}
+              size="small"
             />
           </Tooltip>
           <ButtonComponent
@@ -790,7 +801,7 @@ class ConnectomeView extends React.Component<Props, State> {
 
   getSynapseTree() {
     const { activeAgglomerateIds, currentConnectomeFile } = this.props;
-    const { filteredConnectomeData, checkedKeys, expandedKeys } = this.state;
+    const { filteredConnectomeData, checkedKeys, expandedKeys, isLoading } = this.state;
 
     if (currentConnectomeFile == null) {
       return (
@@ -805,6 +816,13 @@ class ConnectomeView extends React.Component<Props, State> {
             </span>
           }
         />
+      );
+    } else if (isLoading) {
+      return (
+        <Space orientation="vertical" align="center" style={{ width: "100%", marginTop: 24 }}>
+          <Spin size="large" />
+          <span>Loading synapses…</span>
+        </Space>
       );
     } else if (activeAgglomerateIds.length === 0 || filteredConnectomeData == null) {
       return (

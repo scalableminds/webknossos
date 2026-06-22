@@ -4,6 +4,9 @@ import type { WebknossosState } from "viewer/store";
 function OperationContextReducer(state: WebknossosState, action: Action): WebknossosState {
   switch (action.type) {
     case "REGISTER_OPERATION":
+      if (state.operationContext.activeOperations.some((op) => op.id === action.id)) {
+        throw new Error(`Operation "${action.id}" is already registered`);
+      }
       return {
         ...state,
         operationContext: {
@@ -28,6 +31,15 @@ function OperationContextReducer(state: WebknossosState, action: Action): Webkno
         },
       };
     case "REGISTER_CHILD_OPERATION":
+      if (
+        state.operationContext.childOperations.some(
+          (c) => c.id === action.id && c.parentId === action.parentId,
+        )
+      ) {
+        throw new Error(
+          `Child operation "${action.id}" is already registered under parent "${action.parentId}"`,
+        );
+      }
       return {
         ...state,
         operationContext: {

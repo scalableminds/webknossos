@@ -9,7 +9,7 @@ on:
 jobs:
   cleanup-deployment-on-close:
     runs-on: ubuntu-22.04
-    if: ${{ github.event.action == 'closed' }}
+    if: ${{ github.event.action == 'closed' && contains(github.event.pull_request.labels.*.name, 'autodeploy') }}
     permissions:
       deployments: write
     steps:
@@ -21,7 +21,7 @@ jobs:
           echo "dynamic_env=dev-${SANITIZED}" >> "$GITHUB_OUTPUT"
         env:
           HEAD_REF: ${{ github.head_ref }}
-      - name: Deactivate deployment environment
+      - name: Delete deployment environment
         uses: bobheadxi/deployments@v1.5.0
         with:
           step: delete-env

@@ -21,7 +21,7 @@ class ContentStableSourceCodeGenerator(model: slickModel.Model) extends SourceCo
 
   private val logger = LoggerFactory.getLogger(classOf[ContentStableSourceCodeGenerator])
 
-  // We don’t use snake case in sql colum names, so skip slick’s snake-to-camel conversion.
+  // We don’t use snake case in sql column names, so skip slick’s snake-to-camel conversion.
   override def Table =
     (t: slickModel.Table) =>
       new SourceCodeTableDef(t) {

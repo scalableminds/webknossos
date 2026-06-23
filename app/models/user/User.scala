@@ -203,16 +203,38 @@ class UserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
        """
 
   // Necessary since a tuple can only have 22 elements
-  implicit def GetResultUserCompactInfo: GetResult[UserCompactInfo] = GetResult using
-  { prs =>
-    import prs._
-    // format: off
-    UserCompactInfo(<<[ObjectId],<<[ObjectId],<<[String],<<[String],<<[String],<<[String],<<[Boolean],<<[Boolean],
-      <<[Boolean],<<[Boolean],<<[String],<<[String],<<[String],<<[String], <<[String],<<[Instant],<<[String],
-      <<[String],<<[String],<<[Instant],<<?[String],<<[Boolean],<<[Boolean],<<[Boolean],<<[Boolean],<<[Boolean]
-    )
-    // format: on
-  }
+  implicit def GetResultUserCompactInfo: GetResult[UserCompactInfo] =
+    prs => {
+      import prs._
+      UserCompactInfo(
+        _id = <<[ObjectId],
+        _multiUserId = <<[ObjectId],
+        email = <<[String],
+        firstName = <<[String],
+        lastName = <<[String],
+        userConfiguration = <<[String],
+        isAdmin = <<[Boolean],
+        isOrganizationOwner = <<[Boolean],
+        isDatasetManager = <<[Boolean],
+        isDeactivated = <<[Boolean],
+        teamIdsAsArrayLiteral = <<[String],
+        teamNamesAsArrayLiteral = <<[String],
+        teamManagersAsArrayLiteral = <<[String],
+        experienceValuesAsArrayLiteral = <<[String],
+        experienceDomainsAsArrayLiteral = <<[String],
+        lastActivity = <<[Instant],
+        organizationId = <<[String],
+        novelUserExperienceInfos = <<[String],
+        selectedTheme = <<[String],
+        created = <<[Instant],
+        lastTaskTypeId = <<?[String],
+        isSuperUser = <<[Boolean],
+        isEmailVerified = <<[Boolean],
+        isEditable = <<[Boolean],
+        isGuest = <<[Boolean],
+        isUnlisted = <<[Boolean]
+      )
+    }
 
   private def payingOrganizationInfoSubquery =
     q"""(

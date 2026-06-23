@@ -22,18 +22,20 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._
 import scala.sys.process._
 
-class Startup @Inject()(actorSystem: ActorSystem,
-                        conf: WkConf,
-                        initialDataService: InitialDataService,
-                        cleanUpService: WkCleanUpService,
-                        annotationDAO: AnnotationDAO,
-                        wkSilhouetteEnvironment: WkSilhouetteEnvironment,
-                        lifecycle: ApplicationLifecycle,
-                        tempFileService: WkTempFileService,
-                        inviteService: InviteService,
-                        thumbnailCachingService: ThumbnailCachingService,
-                        sqlClient: SqlClient,
-                        slackNotificationService: SlackNotificationService)(implicit ec: ExecutionContext)
+class Startup @Inject() (
+    actorSystem: ActorSystem,
+    conf: WkConf,
+    initialDataService: InitialDataService,
+    cleanUpService: WkCleanUpService,
+    annotationDAO: AnnotationDAO,
+    wkSilhouetteEnvironment: WkSilhouetteEnvironment,
+    lifecycle: ApplicationLifecycle,
+    tempFileService: WkTempFileService,
+    inviteService: InviteService,
+    thumbnailCachingService: ThumbnailCachingService,
+    sqlClient: SqlClient,
+    slackNotificationService: SlackNotificationService
+)(implicit ec: ExecutionContext)
     extends LazyLogging {
 
   private val beforeStartup = Instant.now
@@ -86,7 +88,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
 
   if (conf.Slick.checkSchemaOnStartup) {
     ensurePostgresDatabase()
-    Future { checkPostgresSchema() }
+    Future(checkPostgresSchema())
   }
 
   initialDataService.insert.futureBox.map {
@@ -107,7 +109,11 @@ class Startup @Inject()(actorSystem: ActorSystem,
     val capturingProcessLogger =
       ProcessLogger((o: String) => errorMessageBuilder.append(o), (e: String) => errorMessageBuilder.append(e))
 
-    val result = Process("./tools/postgres/dbtool.js check-db-schema", None, "POSTGRES_URL" -> postgresUrl) ! capturingProcessLogger
+    val result = Process(
+      "./tools/postgres/dbtool.js check-db-schema",
+      None,
+      "POSTGRES_URL" -> postgresUrl
+    ) ! capturingProcessLogger
     if (result == 0) {
       logger.info("Database schema is up to date.")
     } else {
@@ -136,7 +142,7 @@ class Startup @Inject()(actorSystem: ActorSystem,
       conf.Mail.Smtp.tls,
       conf.Mail.Smtp.auth,
       conf.Mail.Smtp.user,
-      conf.Mail.Smtp.pass,
+      conf.Mail.Smtp.pass
     )
     actorSystem.actorOf(Props(new Mailer(mailerConf)), name = "mailActor")
   }

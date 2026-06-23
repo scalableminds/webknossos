@@ -9,11 +9,13 @@ import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import scala.collection.mutable
 import scala.concurrent.ExecutionContext
 
-class VolumeBucketBuffer(version: Long,
-                         volumeLayer: VolumeTracingLayer,
-                         val volumeDataStore: FossilDBClient,
-                         val temporaryTracingService: TemporaryTracingService,
-                         toTemporaryStore: Boolean)(using ec: ExecutionContext)
+class VolumeBucketBuffer(
+    version: Long,
+    volumeLayer: VolumeTracingLayer,
+    val volumeDataStore: FossilDBClient,
+    val temporaryTracingService: TemporaryTracingService,
+    toTemporaryStore: Boolean
+)(using ec: ExecutionContext)
     extends VolumeTracingBucketHelper
     with ProtoGeometryImplicits {
 
@@ -44,13 +46,12 @@ class VolumeBucketBuffer(version: Long,
       bucketDataBoxes <- loadBuckets(volumeLayer, bucketPositions, Some(version))
       _ <- Fox.fromBool(bucketDataBoxes.length == bucketPositions.length)
       _ <- Fox.assertNoFailure(bucketDataBoxes)
-      _ = bucketDataBoxes.zip(bucketPositions).foreach {
-        case (bucketDataBox, bucketPosition) =>
-          bucketDataBox match {
-            case Full(_)    => bucketDataBuffer.put(bucketPosition, (bucketDataBox, false))
-            case Empty      => bucketDataBuffer.put(bucketPosition, (Empty, false))
-            case _: Failure => () // we asserted no failures above
-          }
+      _ = bucketDataBoxes.zip(bucketPositions).foreach { case (bucketDataBox, bucketPosition) =>
+        bucketDataBox match {
+          case Full(_)    => bucketDataBuffer.put(bucketPosition, (bucketDataBox, false))
+          case Empty      => bucketDataBuffer.put(bucketPosition, (Empty, false))
+          case _: Failure => () // we asserted no failures above
+        }
       }
     } yield bucketDataBoxes
 

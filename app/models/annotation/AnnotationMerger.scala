@@ -14,9 +14,9 @@ import com.scalableminds.webknossos.tracingstore.tracings.NamedBoundingBox
 
 import scala.concurrent.ExecutionContext
 
-class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: TracingStoreService)(
-    implicit ec: ExecutionContext)
-    extends FoxImplicits
+class AnnotationMerger @Inject() (datasetDAO: DatasetDAO, tracingStoreService: TracingStoreService)(implicit
+    ec: ExecutionContext
+) extends FoxImplicits
     with LazyLogging {
 
   def mergeTwo(
@@ -53,17 +53,16 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
           newId,
           userId,
           toTemporaryStore,
-          additionalBoundingBoxes) ?~> "Failed to merge annotations in tracingstore."
-      } yield {
-        Annotation(
-          newId,
-          datasetId,
-          None,
-          userId,
-          mergedAnnotationLayers,
-          typ = typ
-        )
-      }
+          additionalBoundingBoxes
+        ) ?~> "Failed to merge annotations in tracingstore."
+      } yield Annotation(
+        newId,
+        datasetId,
+        None,
+        userId,
+        mergedAnnotationLayers,
+        typ = typ
+      )
     }
 
   private def mergeAnnotationsInTracingstore(
@@ -72,16 +71,19 @@ class AnnotationMerger @Inject()(datasetDAO: DatasetDAO, tracingStoreService: Tr
       newAnnotationId: ObjectId,
       requestingUserId: ObjectId,
       toTemporaryStore: Boolean,
-      additionalBoundingBoxes: Seq[NamedBoundingBox])(using ctx: DBAccessContext): Fox[List[AnnotationLayer]] =
+      additionalBoundingBoxes: Seq[NamedBoundingBox]
+  )(using ctx: DBAccessContext): Fox[List[AnnotationLayer]] =
     for {
       dataset <- datasetDAO.findOne(datasetId)
       tracingStoreClient: WKRemoteTracingStoreClient <- tracingStoreService.clientFor(dataset)
-      mergedAnnotationProto <- tracingStoreClient.mergeAnnotationsByIds(annotations.map(_._id),
-                                                                        annotations.map(_._user),
-                                                                        newAnnotationId,
-                                                                        toTemporaryStore,
-                                                                        requestingUserId,
-                                                                        additionalBoundingBoxes)
+      mergedAnnotationProto <- tracingStoreClient.mergeAnnotationsByIds(
+        annotations.map(_._id),
+        annotations.map(_._user),
+        newAnnotationId,
+        toTemporaryStore,
+        requestingUserId,
+        additionalBoundingBoxes
+      )
       layers = mergedAnnotationProto.annotationLayers.map(AnnotationLayer.fromProto)
     } yield layers.toList
 

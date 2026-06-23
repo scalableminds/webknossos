@@ -15,22 +15,26 @@ import java.net.URI
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class CredentialService @Inject()(credentialDAO: CredentialDAO) {
+class CredentialService @Inject() (credentialDAO: CredentialDAO) {
 
-  def createCredentialOpt(uri: URI,
-                          credentialIdentifier: Option[String],
-                          credentialSecret: Option[String],
-                          userId: Option[ObjectId],
-                          organizationId: Option[String]): Option[DataVaultCredential] =
+  def createCredentialOpt(
+      uri: URI,
+      credentialIdentifier: Option[String],
+      credentialSecret: Option[String],
+      userId: Option[ObjectId],
+      organizationId: Option[String]
+  ): Option[DataVaultCredential] =
     uri.getScheme match {
       case PathSchemes.schemeHttps | PathSchemes.schemeHttp =>
-        credentialIdentifier.map(
-          username =>
-            HttpBasicAuthCredential(uri.toString,
-                                    username,
-                                    credentialSecret.getOrElse(""),
-                                    userId.map(_.toString),
-                                    organizationId))
+        credentialIdentifier.map(username =>
+          HttpBasicAuthCredential(
+            uri.toString,
+            username,
+            credentialSecret.getOrElse(""),
+            userId.map(_.toString),
+            organizationId
+          )
+        )
       case PathSchemes.schemeS3 =>
         (credentialIdentifier, credentialSecret) match {
           case (Some(keyId), Some(secretKey)) =>

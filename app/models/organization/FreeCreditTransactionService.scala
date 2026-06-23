@@ -12,9 +12,11 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.{DurationInt, FiniteDuration}
 
-class FreeCreditTransactionService @Inject()(creditTransactionDAO: CreditTransactionDAO,
-                                             val lifecycle: ApplicationLifecycle,
-                                             val actorSystem: ActorSystem)(implicit val ec: ExecutionContext)
+class FreeCreditTransactionService @Inject() (
+    creditTransactionDAO: CreditTransactionDAO,
+    val lifecycle: ApplicationLifecycle,
+    val actorSystem: ActorSystem
+)(implicit val ec: ExecutionContext)
     extends Controller
     with FoxImplicits
     with LazyLogging

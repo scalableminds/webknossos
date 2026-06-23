@@ -44,14 +44,13 @@ object JsonHelper extends LazyLogging {
           Failure(s"An EOF exception occurred during json read. File: ${rootPath.relativize(path).toString}")
         case _: AccessDeniedException | _: FileNotFoundException =>
           logger.warn(
-            s"File access exception in JsonHelper while trying to extract json from file. File: ${rootPath.toString}")
+            s"File access exception in JsonHelper while trying to extract json from file. File: ${rootPath.toString}"
+          )
           Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString}'. Access denied.")
         case e: Exception =>
           logger.warn(s"Json mapping issue in '${rootPath.toString}': $e")
           Failure(s"Failed to parse Json in '${rootPath.relativize(path).toString}': $e")
-      } finally {
-        if (buffer != null) buffer.close()
-      }
+      } finally if (buffer != null) buffer.close()
     } else Failure("Invalid path for json parsing.")
 
   def parseFromFileAs[T: Reads](path: Path, rootPath: Path): Box[T] =

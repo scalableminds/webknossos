@@ -213,27 +213,25 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       visibility <- AnnotationVisibility.fromString(r.visibility).toFox
       collaborationMode <- CollaborationMode.fromString(r.collaborationmode).toFox
       annotationLayers <- annotationLayerDAO.findAnnotationLayersFor(ObjectId(r._Id))
-    } yield {
-      Annotation(
-        ObjectId(r._Id),
-        ObjectId(r._Dataset),
-        r._Task.map(ObjectId(_)),
-        ObjectId(r._User),
-        annotationLayers,
-        r.description,
-        visibility,
-        r.name,
-        state,
-        r.islockedbyowner,
-        parseArrayLiteral(r.tags).toSet,
-        r.tracingtime,
-        typ,
-        collaborationMode,
-        Instant.fromSql(r.created),
-        Instant.fromSql(r.modified),
-        r.isdeleted
-      )
-    }
+    } yield Annotation(
+      ObjectId(r._Id),
+      ObjectId(r._Dataset),
+      r._Task.map(ObjectId(_)),
+      ObjectId(r._User),
+      annotationLayers,
+      r.description,
+      visibility,
+      r.name,
+      state,
+      r.islockedbyowner,
+      parseArrayLiteral(r.tags).toSet,
+      r.tracingtime,
+      typ,
+      collaborationMode,
+      Instant.fromSql(r.created),
+      Instant.fromSql(r.modified),
+      r.isdeleted
+    )
 
   override protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken =
     q"visibility = ${AnnotationVisibility.Public}"
@@ -335,41 +333,61 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
   }
 
   // Necessary since a tuple can only have 22 elements
-  implicit def GetResultAnnotationCompactInfo: GetResult[AnnotationCompactInfo] = GetResult(using { prs =>
-    import prs._
+  implicit def GetResultAnnotationCompactInfo: GetResult[AnnotationCompactInfo] =
+    prs => {
+      import prs._
 
-    val id = <<[ObjectId]
-    val name = <<[String]
-    val description = <<[String]
-    val ownerId = <<[ObjectId]
-    val ownerFirstName = <<[String]
-    val ownerLastName = <<[String]
-    val collaborationMode = CollaborationMode.fromString(<<[String]).getOrElse(CollaborationMode.OwnerOnly)
-    val teamIds = parseArrayLiteral(<<[String]).map(ObjectId(_))
-    val teamNames = parseArrayLiteral(<<[String])
-    val teamOrganizationIds = parseArrayLiteral(<<[String])
-    val modified = <<[Instant]
-    val tags = parseArrayLiteral(<<[String]).toSet
-    val state = AnnotationState.fromString(<<[String]).getOrElse(AnnotationState.Active)
-    val isLockedByOwner = <<[Boolean]
-    val dataSetName = <<[String]
-    val typ = AnnotationType.fromString(<<[String]).getOrElse(AnnotationType.Explorational)
-    val visibility = AnnotationVisibility.fromString(<<[String]).getOrElse(AnnotationVisibility.Internal)
-    val tracingTime = Option(<<[Long])
-    val organizationId = <<[String]
-    val tracingIds = parseArrayLiteral(<<[String])
-    val annotationLayerNames = parseArrayLiteral(<<[String])
-    val annotationLayerTypes = parseArrayLiteral(<<[String])
-    val annotationLayerStatistics =
-      parseArrayLiteral(<<[String]).map(layerStats => JsonHelper.parseAs[JsObject](layerStats).getOrElse(Json.obj()))
+      val id = <<[ObjectId]
+      val name = <<[String]
+      val description = <<[String]
+      val ownerId = <<[ObjectId]
+      val ownerFirstName = <<[String]
+      val ownerLastName = <<[String]
+      val collaborationMode = CollaborationMode.fromString(<<[String]).getOrElse(CollaborationMode.OwnerOnly)
+      val teamIds = parseArrayLiteral(<<[String]).map(ObjectId(_))
+      val teamNames = parseArrayLiteral(<<[String])
+      val teamOrganizationIds = parseArrayLiteral(<<[String])
+      val modified = <<[Instant]
+      val tags = parseArrayLiteral(<<[String]).toSet
+      val state = AnnotationState.fromString(<<[String]).getOrElse(AnnotationState.Active)
+      val isLockedByOwner = <<[Boolean]
+      val dataSetName = <<[String]
+      val typ = AnnotationType.fromString(<<[String]).getOrElse(AnnotationType.Explorational)
+      val visibility = AnnotationVisibility.fromString(<<[String]).getOrElse(AnnotationVisibility.Internal)
+      val tracingTime = Option(<<[Long])
+      val organizationId = <<[String]
+      val tracingIds = parseArrayLiteral(<<[String])
+      val annotationLayerNames = parseArrayLiteral(<<[String])
+      val annotationLayerTypes = parseArrayLiteral(<<[String])
+      val annotationLayerStatistics =
+        parseArrayLiteral(<<[String]).map(layerStats => JsonHelper.parseAs[JsObject](layerStats).getOrElse(Json.obj()))
 
-    // format: off
-    AnnotationCompactInfo(id, typ, name, description, ownerId, ownerFirstName, ownerLastName, collaborationMode, teamIds,
-      teamNames, teamOrganizationIds, modified, tags, state, isLockedByOwner, dataSetName, visibility, tracingTime,
-      organizationId, tracingIds, annotationLayerNames, annotationLayerTypes, annotationLayerStatistics
-    )
-    // format: on
-  })
+      AnnotationCompactInfo(
+        id,
+        typ,
+        name,
+        description,
+        ownerId,
+        ownerFirstName,
+        ownerLastName,
+        collaborationMode,
+        teamIds,
+        teamNames,
+        teamOrganizationIds,
+        modified,
+        tags,
+        state,
+        isLockedByOwner,
+        dataSetName,
+        visibility,
+        tracingTime,
+        organizationId,
+        tracingIds,
+        annotationLayerNames,
+        annotationLayerTypes,
+        annotationLayerStatistics
+      )
+    }
 
   /** Find all annotations which are listable by the user specified in 'forUser'
     *
@@ -812,9 +830,11 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       _ <- run(q"UPDATE webknossos.annotations SET collaborationMode = $collaborationMode WHERE _id = $id".asUpdate)
     } yield ()
 
-  def getViewConfigurationForUserWithFallback(annotation: ObjectId,
-                                              requestingUserId: ObjectId,
-                                              annotationOwnerId: ObjectId): Fox[Option[JsObject]] =
+  def getViewConfigurationForUserWithFallback(
+      annotation: ObjectId,
+      requestingUserId: ObjectId,
+      annotationOwnerId: ObjectId
+  ): Fox[Option[JsObject]] =
     for {
       // Single scan: fetch both the requesting user's row and the owner's fallback row, preferring
       // the requesting user's config via ORDER BY.  In PostgreSQL a boolean expression evaluates to

@@ -18,8 +18,10 @@ trait AnnotationReversion extends FoxImplicits {
 
   def findVolumeRaw(tracingId: String, version: Option[Long] = None): Fox[VersionedKeyValuePair[VolumeTracing]]
 
-  protected def getEditableMappingInfoRaw(volumeTracingId: String,
-                                          version: Option[Long]): Fox[VersionedKeyValuePair[EditableMappingInfo]]
+  protected def getEditableMappingInfoRaw(
+      volumeTracingId: String,
+      version: Option[Long]
+  ): Fox[VersionedKeyValuePair[EditableMappingInfo]]
 
   protected def editableMappingUpdaterFor(
       annotationId: ObjectId,
@@ -27,36 +29,46 @@ trait AnnotationReversion extends FoxImplicits {
       volumeTracing: VolumeTracing,
       editableMappingInfo: EditableMappingInfo,
       currentMaterializedVersion: Long,
-      targetVersion: Long)(using tc: TokenContext, ec: ExecutionContext): Fox[EditableMappingUpdater]
+      targetVersion: Long
+  )(using tc: TokenContext, ec: ExecutionContext): Fox[EditableMappingUpdater]
 
-  def revertDistributedElements(annotationId: ObjectId,
-                                currentAnnotationWithTracings: AnnotationWithTracings,
-                                sourceAnnotationWithTracings: AnnotationWithTracings,
-                                sourceVersion: Long,
-                                newVersion: Long)(using ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
+  def revertDistributedElements(
+      annotationId: ObjectId,
+      currentAnnotationWithTracings: AnnotationWithTracings,
+      sourceAnnotationWithTracings: AnnotationWithTracings,
+      sourceVersion: Long,
+      newVersion: Long
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
     for {
       _ <- Fox.serialCombined(sourceAnnotationWithTracings.getVolumes) {
         // Only volume data for volume layers present in the *source annotation* needs to be reverted.
         case (tracingId, sourceTracing) =>
           for {
             tracingBeforeRevertOpt <- Fox.successful(currentAnnotationWithTracings.getVolume(tracingId))
-            tracingBeforeRevert: VolumeTracing <- tracingBeforeRevertOpt.toFox.orElse(findVolumeRaw(tracingId).map(
-              _.value)) // If source annotation doesn’t have this tracing layer, use the last existing one as a “before point” for the reversion
+            tracingBeforeRevert: VolumeTracing <- tracingBeforeRevertOpt.toFox.orElse(
+              findVolumeRaw(tracingId).map(_.value)
+            ) // If source annotation doesn’t have this tracing layer, use the last existing one as a “before point” for the reversion
             shouldRevertElements = tracingBeforeRevert.version > sourceVersion
             _ <- Fox.runIf(shouldRevertElements && !sourceTracing.getHasEditableMapping)(
-              volumeTracingService.revertVolumeData(tracingId,
-                                                    annotationId,
-                                                    sourceVersion,
-                                                    sourceTracing,
-                                                    newVersion: Long,
-                                                    tracingBeforeRevert)) ?~> Msg.Annotation.Revert.volumeDataFailed
+              volumeTracingService.revertVolumeData(
+                tracingId,
+                annotationId,
+                sourceVersion,
+                sourceTracing,
+                newVersion: Long,
+                tracingBeforeRevert
+              )
+            ) ?~> Msg.Annotation.Revert.volumeDataFailed
             _ <- Fox.runIf(shouldRevertElements && sourceTracing.getHasEditableMapping)(
-              revertEditableMappingFields(annotationId,
-                                          currentAnnotationWithTracings,
-                                          tracingBeforeRevert,
-                                          sourceVersion,
-                                          newVersion,
-                                          tracingId)) ?~> Msg.Annotation.Revert.editableMappingDataFailed
+              revertEditableMappingFields(
+                annotationId,
+                currentAnnotationWithTracings,
+                tracingBeforeRevert,
+                sourceVersion,
+                newVersion,
+                tracingId
+              )
+            ) ?~> Msg.Annotation.Revert.editableMappingDataFailed
           } yield ()
       }
     } yield ()
@@ -67,27 +79,36 @@ trait AnnotationReversion extends FoxImplicits {
       tracingBeforeRevert: VolumeTracing,
       sourceVersion: Long,
       newVersion: Long,
-      tracingId: String)(using ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
+      tracingId: String
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Unit] =
     for {
       updaterOpt <- Fox.successful(currentAnnotationWithTracings.getEditableMappingUpdater(tracingId))
       updater <- updaterOpt.toFox.orElse(
-        editableMappingReversionUpdater(annotationId, tracingId, tracingBeforeRevert, newVersion))
+        editableMappingReversionUpdater(annotationId, tracingId, tracingBeforeRevert, newVersion)
+      )
       _ <- updater.revertToVersion(sourceVersion)
       _ <- updater.flushBuffersToFossil()
     } yield ()
 
   // If source annotation doesn’t have this editable mapping, use the last existing one as a “before point” for the reversion
-  private def editableMappingReversionUpdater(annotationId: ObjectId,
-                                              tracingId: String,
-                                              tracingBeforeRevert: VolumeTracing,
-                                              targetVersion: Long)(using ec: ExecutionContext, tc: TokenContext) =
+  private def editableMappingReversionUpdater(
+      annotationId: ObjectId,
+      tracingId: String,
+      tracingBeforeRevert: VolumeTracing,
+      targetVersion: Long
+  )(using ec: ExecutionContext, tc: TokenContext) =
     for {
-      editableMappingInfo <- getEditableMappingInfoRaw(tracingId, version = None) ?~> Msg.Annotation.getEditableMappingInfoRawFailed
-      updater <- editableMappingUpdaterFor(annotationId,
-                                           tracingId,
-                                           tracingBeforeRevert,
-                                           editableMappingInfo.value,
-                                           tracingBeforeRevert.version,
-                                           targetVersion) ?~> Msg.Annotation.initEditableMappingUpdaterFailed
+      editableMappingInfo <- getEditableMappingInfoRaw(
+        tracingId,
+        version = None
+      ) ?~> Msg.Annotation.getEditableMappingInfoRawFailed
+      updater <- editableMappingUpdaterFor(
+        annotationId,
+        tracingId,
+        tracingBeforeRevert,
+        editableMappingInfo.value,
+        tracingBeforeRevert.version,
+        targetVersion
+      ) ?~> Msg.Annotation.initEditableMappingUpdaterFailed
     } yield updater
 }

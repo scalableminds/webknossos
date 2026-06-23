@@ -14,14 +14,15 @@ import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
 
-class SavedTracingInformationHandler @Inject()(
+class SavedTracingInformationHandler @Inject() (
     annotationDAO: AnnotationDAO,
     annotationRestrictionDefults: AnnotationRestrictionDefaults,
     userService: UserService,
     multiUserDAO: MultiUserDAO,
     val datasetService: DatasetService,
     val datasetDAO: DatasetDAO,
-    val annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore)(implicit val ec: ExecutionContext)
+    val annotationDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore
+)(implicit val ec: ExecutionContext)
     extends AnnotationInformationHandler
     with Formatter
     with FoxImplicits {

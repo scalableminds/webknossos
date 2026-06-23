@@ -6,7 +6,7 @@ import reduce from "lodash-es/reduce";
 import sum from "lodash-es/sum";
 import type { APICompoundType } from "types/api_types";
 import type { Vector3 } from "viewer/constants";
-import { isSaving } from "viewer/model/accessors/annotation_accessor";
+import { isSaving, isSavingOrRebasing } from "viewer/model/accessors/annotation_accessor";
 import {
   getLayerByName,
   getSegmentationLayerWithMappingSupport,
@@ -317,20 +317,19 @@ export class WebKnossosModel {
       return true;
     }
 
-    while (
-      // Wait while saving is in progress... (the remaining check would also work
-      // without the isSaving condition, but that way we avoid repeatedly and uselessly
-      // triggering waitForDifferResponses).
-      isSaving(Store.getState()) ||
-      // ...or rebasing is in progress.
-      Store.getState().save.rebaseRelevantServerAnnotationState.isRebasingOrForwarding ||
-      // If no saving or rebasing is in progress, enforce diffed state to save queue.
-      ((await waitForDifferResponses()) && !this.stateSaved())
-    ) {
-      // The dispatch of the saveNowAction IN the while loop is deliberate.
-      // Otherwise if an update action is pushed to the save queue during the Utils.sleep,
-      // the while loop would continue running until the next save would be triggered.
-      if (!isSaving(Store.getState())) {
+    while (true) {
+      // If saving or rebasing is in progress, we always need to keep waiting.
+      if (!isSavingOrRebasing(Store.getState())) {
+        // Only when neither is in progress, we enforce the diffed state to the
+        // save queue and check whether everything is saved.
+        await waitForDifferResponses();
+        if (this.stateSaved()) {
+          break;
+        }
+      }
+      // This isSavingOrRebasing should NOT be combined with the previous if
+      // because Store.getState() may have changed after the await.
+      if (!isSavingOrRebasing(Store.getState())) {
         Store.dispatch(saveNowAction(operationContext));
       }
 

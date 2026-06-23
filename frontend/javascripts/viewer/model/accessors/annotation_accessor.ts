@@ -194,6 +194,10 @@ export function isSaving(state: WebknossosState): boolean {
     .some((op) => op.id === "SAVE");
 }
 
+export function isSavingOrRebasing(state: WebknossosState): boolean {
+  return isSaving(state) || state.save.rebaseRelevantServerAnnotationState.isRebasingOrForwarding;
+}
+
 export function isUserInterfaceBlocked(state: WebknossosState): boolean {
   if (!mayEditAnnotation(state)) {
     // The user is not allowed to edit the annotation, anyway. No need to block the UI

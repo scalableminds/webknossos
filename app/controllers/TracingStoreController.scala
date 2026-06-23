@@ -17,10 +17,11 @@ object TracingStoreParameters {
   implicit val jsonFormat: OFormat[TracingStoreParameters] = Json.format[TracingStoreParameters]
 }
 
-class TracingStoreController @Inject()(
+class TracingStoreController @Inject() (
     tracingStoreService: TracingStoreService,
     tracingStoreDAO: TracingStoreDAO,
-    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext, playBodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 

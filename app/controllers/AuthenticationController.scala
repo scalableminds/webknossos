@@ -265,8 +265,10 @@ class AuthenticationController @Inject() (
                   _ <- Fox.fromBool(
                     inviteBox.isDefined || conf.Features.registerToDefaultOrgaEnabled
                   ) ?~> Msg.User.needsInvite
-                  organization <- organizationService.findOneByInviteOrDefault(inviteBox.toOption)(using GlobalAccessContext)
-                  _ <- organizationService.assertUsersCanBeAdded(organization._id)(using GlobalAccessContext,
+                  organization <- organizationService
+                    .findOneByInviteOrDefault(inviteBox.toOption)(using GlobalAccessContext)
+                  _ <- organizationService.assertUsersCanBeAdded(organization._id)(using
+                    GlobalAccessContext,
                     ec
                   ) ?~> Msg.Organization.usersUserLimitReached
                   autoActivate = inviteBox.toOption.map(_.autoActivate).getOrElse(organization.enableAutoVerify)
@@ -393,7 +395,8 @@ class AuthenticationController @Inject() (
     for {
       organization <- organizationDAO.findOne(organizationId) ?~> Msg.Organization.notFound(organizationId) ~> NOT_FOUND
       _ <- userService.fillSuperUserIdentity(request.identity, organization._id)
-      targetUser <- userDAO.findOneByOrgaAndMultiUser(organization._id, request.identity._multiUser)(using GlobalAccessContext
+      targetUser <- userDAO.findOneByOrgaAndMultiUser(organization._id, request.identity._multiUser)(using
+        GlobalAccessContext
       ) ?~> Msg.User.notFound ~> NOT_FOUND
       _ <- Fox.fromBool(!targetUser.isDeactivated) ?~> Msg.User.isDeactivated
       result <- Fox.fromFuture(switchToUser(targetUser._id))
@@ -431,7 +434,9 @@ class AuthenticationController @Inject() (
   def joinOrganization(inviteToken: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       invite <- inviteDAO.findOneByTokenValue(inviteToken) ?~> Msg.User.invalidInviteToken
-      organization <- organizationDAO.findOne(invite._organization)(using GlobalAccessContext) ?~> Msg.User.invalidInviteToken
+      organization <- organizationDAO.findOne(invite._organization)(using
+        GlobalAccessContext
+      ) ?~> Msg.User.invalidInviteToken
       _ <- userService.assertNotInOrgaYet(request.identity._multiUser, organization._id)
       requestingMultiUser <- multiUserDAO.findOne(request.identity._multiUser)
       alreadyPayingOrgaForMultiUser <- userDAO.findPayingOrgaIdForMultiUser(requestingMultiUser._id)
@@ -535,8 +540,9 @@ class AuthenticationController @Inject() (
             case Full(user) =>
               for {
                 _ <- Fox.successful(logger.info(s"Multiuser ${user._multiUser} reset their password."))
-                _ <- multiUserDAO
-                  .updatePasswordInfo(user._multiUser, passwordHasher.hash(passwords.password1))(using GlobalAccessContext)
+                _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordHasher.hash(passwords.password1))(using
+                  GlobalAccessContext
+                )
                 _ <- bearerTokenAuthenticatorService.remove(passwords.token.trim)
               } yield Ok
             case _ =>
@@ -687,7 +693,9 @@ class AuthenticationController @Inject() (
           Msg.Passkeys.unauthorized ~> UNAUTHORIZED
         multiUser <- multiUserDAO.findOneById(multiUserId)(using GlobalAccessContext) ??~>
           Msg.Passkeys.unauthorized ~> UNAUTHORIZED
-        credential <- webAuthnCredentialDAO.findByCredentialId(multiUser._id, credentialId)(using GlobalAccessContext) ??~>
+        credential <- webAuthnCredentialDAO.findByCredentialId(multiUser._id, credentialId)(using
+          GlobalAccessContext
+        ) ??~>
           Msg.Passkeys.unauthorized ~> UNAUTHORIZED
         serverProperty = ServerProperty.builder().origin(origin).rpId(origin.getHost).challenge(challenge).build()
 
@@ -985,7 +993,9 @@ class AuthenticationController @Inject() (
   private def acceptTermsOfServiceForUser(user: User, termsOfServiceVersion: Option[Int]): Fox[Unit] =
     for {
       acceptedVersion <- termsOfServiceVersion.toFox ?~> "Terms of service must be accepted."
-      _ <- organizationService.acceptTermsOfService(user._organization, acceptedVersion)(using DBAccessContext(Some(user)))
+      _ <- organizationService.acceptTermsOfService(user._organization, acceptedVersion)(using
+        DBAccessContext(Some(user))
+      )
     } yield ()
 
   case class CreateUserInOrganizationParameters(

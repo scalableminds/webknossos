@@ -8,11 +8,11 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait UserAwareRequestLogging extends AbstractRequestLogging {
 
-  case class RequesterIdOpt(id: Option[String]) //forcing implicit conversion
+  case class RequesterIdOpt(id: Option[String]) // forcing implicit conversion
 
-  def log(notifier: Option[String => Unit] = None)(block: => Future[Result])(implicit request: Request[?],
-                                                                             requesterIdOpt: RequesterIdOpt,
-                                                                             ec: ExecutionContext): Future[Result] =
+  def log(notifier: Option[String => Unit] = None)(
+      block: => Future[Result]
+  )(implicit request: Request[?], requesterIdOpt: RequesterIdOpt, ec: ExecutionContext): Future[Result] =
     for {
       result: Result <- block
       _ = logRequestFormatted(request, result, notifier, requesterIdOpt.id)

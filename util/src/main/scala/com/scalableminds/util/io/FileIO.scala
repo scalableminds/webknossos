@@ -31,9 +31,10 @@ object NamedFunctionStream {
   def fromString(name: String, str: String)(implicit ec: ExecutionContext): NamedFunctionStream =
     fromBytes(name, str.getBytes(Charset.forName("UTF-8")))
 
-  def fromJsonSerializable[T](name: String, o: T, prettyPrint: Boolean = true)(
-      implicit w: Writes[T],
-      ec: ExecutionContext): NamedFunctionStream = {
+  def fromJsonSerializable[T](name: String, o: T, prettyPrint: Boolean = true)(implicit
+      w: Writes[T],
+      ec: ExecutionContext
+  ): NamedFunctionStream = {
     val jsValue = w.writes(o)
     val str = if (prettyPrint) Json.prettyPrint(jsValue) else jsValue.toString
     fromString(name, str)
@@ -58,9 +59,7 @@ object FileIO {
       } catch {
         case ex: Exception =>
           Failure(ex.getMessage)
-      } finally {
-        p.close()
-      }
+      } finally p.close()
     } catch {
       case ex: Exception =>
         Failure(ex.getMessage)

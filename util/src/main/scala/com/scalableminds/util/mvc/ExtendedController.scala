@@ -79,8 +79,9 @@ trait CspHeaders extends HeaderNames {
   def addCspHeader(result: Result): Result =
     result.withHeaders((CONTENT_SECURITY_POLICY, contentSecurityPolicyDirectivesString))
 
-  def addCspHeader(action: Action[AnyContent])(implicit request: Request[AnyContent],
-                                               ec: ExecutionContext): Future[Result] =
+  def addCspHeader(
+      action: Action[AnyContent]
+  )(implicit request: Request[AnyContent], ec: ExecutionContext): Future[Result] =
     action.apply(request).map(addCspHeader)
 }
 
@@ -111,11 +112,13 @@ trait ResultImplicits extends BoxToResultHelpers {
 
 class JsonResult(status: Int)
     extends Result(header = ResponseHeader(status), body = HttpEntity.NoEntity)
-    with JsonResultAttribues {
+    with JsonResultAttributes {
 
   private def createResult(content: JsValue)(implicit writeable: Writeable[JsValue]): Result =
-    Result(header = ResponseHeader(status),
-           body = HttpEntity.Strict(writeable.transform(content), writeable.contentType))
+    Result(
+      header = ResponseHeader(status),
+      body = HttpEntity.Strict(writeable.transform(content), writeable.contentType)
+    )
 
   private def messageTypeFromStatus =
     if (status == OK)
@@ -182,13 +185,13 @@ trait MimeTypes {
   val octetStreamMimeType: String = "application/octet-stream"
 }
 
-trait JsonResults extends JsonResultAttribues {
+trait JsonResults extends JsonResultAttributes {
   val JsonOk = new JsonResult(OK)
   val JsonBadRequest = new JsonResult(BAD_REQUEST)
   val JsonNotFound = new JsonResult(NOT_FOUND)
 }
 
-trait JsonResultAttribues {
+trait JsonResultAttributes {
   val jsonSuccess = "success"
   val jsonError = "error"
 }
@@ -200,9 +203,11 @@ trait ValidationHelpers {
       _.validate[A].asEither.left.map(e => BadRequest(JsError.toJson(e)))
     )
 
-  def validateProto[A <: GeneratedMessage](implicit bodyParsers: PlayBodyParsers,
-                                           companion: GeneratedMessageCompanion[A],
-                                           ec: ExecutionContext): BodyParser[A] =
+  def validateProto[A <: GeneratedMessage](implicit
+      bodyParsers: PlayBodyParsers,
+      companion: GeneratedMessageCompanion[A],
+      ec: ExecutionContext
+  ): BodyParser[A] =
     bodyParsers.raw.validate { raw =>
       if (raw.size < raw.memoryThreshold) {
         Box(raw.asBytes())

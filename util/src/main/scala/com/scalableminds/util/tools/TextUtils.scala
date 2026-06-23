@@ -61,12 +61,13 @@ object TextUtils {
     sw.toString
   }
 
-  def parseCommaSeparated[T](commaSeparatedStrOpt: Option[String])(parseEntry: String => Fox[T])(
-      implicit ec: ExecutionContext): Fox[List[T]] =
+  def parseCommaSeparated[T](
+      commaSeparatedStrOpt: Option[String]
+  )(parseEntry: String => Fox[T])(implicit ec: ExecutionContext): Fox[List[T]] =
     commaSeparatedStrOpt match {
       case None                                                 => Fox.successful(List.empty)
       case Some(commaSeparatedStr) if commaSeparatedStr.isEmpty => Fox.successful(List.empty)
-      case Some(commaSeparatedStr) =>
+      case Some(commaSeparatedStr)                              =>
         Fox.serialCombined(commaSeparatedStr.split(",").toList)(entry => parseEntry(entry))
     }
 

@@ -1,6 +1,6 @@
 package com.scalableminds.webknossos.datastore.dataformats
 
-trait SafeCachable {
+trait SafeCacheable {
 
   private var accessCounter = 0
 

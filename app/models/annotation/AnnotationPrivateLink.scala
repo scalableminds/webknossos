@@ -16,11 +16,13 @@ import utils.sql.{SQLDAO, SqlClient, SqlToken}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-case class AnnotationPrivateLink(_id: ObjectId,
-                                 _annotation: ObjectId,
-                                 accessToken: String,
-                                 expirationDateTime: Option[Instant],
-                                 isDeleted: Boolean = false)
+case class AnnotationPrivateLink(
+    _id: ObjectId,
+    _annotation: ObjectId,
+    accessToken: String,
+    expirationDateTime: Option[Instant],
+    isDeleted: Boolean = false
+)
 
 object AnnotationPrivateLink {
   implicit val jsonFormat: OFormat[AnnotationPrivateLink] = Json.format[AnnotationPrivateLink]
@@ -32,20 +34,21 @@ object AnnotationPrivateLinkParams {
   implicit val jsonFormat: OFormat[AnnotationPrivateLinkParams] = Json.format[AnnotationPrivateLinkParams]
 }
 
-class AnnotationPrivateLinkService @Inject()()(implicit ec: ExecutionContext) {
+class AnnotationPrivateLinkService @Inject() ()(implicit ec: ExecutionContext) {
   def publicWrites(annotationPrivateLink: AnnotationPrivateLink): Fox[JsValue] =
     Fox.successful(
       Json.obj(
         "id" -> annotationPrivateLink._id.toString,
         "annotation" -> annotationPrivateLink._annotation.toString,
         "accessToken" -> annotationPrivateLink.accessToken,
-        "expirationDateTime" -> annotationPrivateLink.expirationDateTime,
-      ))
+        "expirationDateTime" -> annotationPrivateLink.expirationDateTime
+      )
+    )
 
   def generateToken: String = RandomIDGenerator.generateBlocking(12)
 }
 
-class AnnotationPrivateLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class AnnotationPrivateLinkDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[AnnotationPrivateLink, AnnotationPrivatelinksRow, AnnotationPrivatelinks](sqlClient) {
   protected val collection = AnnotationPrivatelinks
   protected def resultConverter = GetResultAnnotationPrivatelinksRow
@@ -66,13 +69,16 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: Exec
 
   def insertOne(aPL: AnnotationPrivateLink): Fox[Unit] =
     for {
-      _ <- run(q"""INSERT INTO webknossos.annotation_privateLinks
+      _ <- run(
+        q"""INSERT INTO webknossos.annotation_privateLinks
                      (_id, _annotation, accessToken, expirationDateTime, isDeleted)
-                   VALUES(${aPL._id}, ${aPL._annotation}, ${aPL.accessToken}, ${aPL.expirationDateTime}, ${aPL.isDeleted})""".asUpdate)
+                   VALUES(${aPL._id}, ${aPL._annotation}, ${aPL.accessToken}, ${aPL.expirationDateTime}, ${aPL.isDeleted})""".asUpdate
+      )
     } yield ()
 
-  def updateOne(id: ObjectId, annotationId: ObjectId, expirationDateTime: Option[Instant])(
-      using ctx: DBAccessContext): Fox[Unit] =
+  def updateOne(id: ObjectId, annotationId: ObjectId, expirationDateTime: Option[Instant])(using
+      ctx: DBAccessContext
+  ): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(id)
       _ <- run(q"""UPDATE webknossos.annotation_privateLinks
@@ -87,14 +93,16 @@ class AnnotationPrivateLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: Exec
       accessQuery <- readAccessQuery
       r <- run(
         q"""SELECT $columns FROM $existingCollectionName WHERE _annotation = $annotationId AND $accessQuery"""
-          .as[AnnotationPrivatelinksRow])
+          .as[AnnotationPrivatelinksRow]
+      )
       parsed <- parseAll(r)
     } yield parsed
 
   def findOneByAccessToken(accessToken: String): Fox[AnnotationPrivateLink] =
     for {
       r <- run(
-        q"SELECT $columns FROM $existingCollectionName WHERE accessToken = $accessToken".as[AnnotationPrivatelinksRow])
+        q"SELECT $columns FROM $existingCollectionName WHERE accessToken = $accessToken".as[AnnotationPrivatelinksRow]
+      )
       parsed <- parseFirst(r, accessToken)
     } yield parsed
 }

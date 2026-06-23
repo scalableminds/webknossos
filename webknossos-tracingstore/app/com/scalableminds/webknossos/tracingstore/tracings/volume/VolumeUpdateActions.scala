@@ -36,8 +36,10 @@ trait ApplyableVolumeUpdateAction extends VolumeUpdateAction {
 }
 
 trait BucketMutatingVolumeUpdateAction extends ApplyableVolumeUpdateAction {
-  override def applyOn(tracing: VolumeTracing): VolumeTracing =
-    if (tracing.getVolumeBucketDataHasChanged) tracing else tracing.copy(volumeBucketDataHasChanged = Some(true))
+  // Upon the first Bucket-mutating action the volumeBucketDataHasChanged flag of the 
+  // volume tracing proto should be set to true. This is done by the  action 
+  // UpdateVolumeBucketDataHasChangedVolumeAction which needs to be sent by the frontend.
+  override def applyOn(tracing: VolumeTracing): VolumeTracing = tracing
 }
 
 trait UserStateVolumeUpdateAction extends ApplyableVolumeUpdateAction with UserStateUpdateAction {
@@ -122,8 +124,7 @@ case class UpdateTracingVolumeAction(
       editRotation = editRotation,
       largestSegmentId = largestSegmentId,
       zoomLevel = zoomLevel,
-      editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(editPositionAdditionalCoordinates),
-      hideUnregisteredSegments = hideUnregisteredSegments
+      editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(editPositionAdditionalCoordinates)
     )
 }
 
@@ -165,6 +166,23 @@ case class UpdateLargestSegmentIdVolumeAction(largestSegmentId: Long,
 
   override def applyOn(tracing: VolumeTracing): VolumeTracing =
     tracing.copy(largestSegmentId = Some(largestSegmentId))
+}
+
+case class UpdateVolumeBucketDataHasChangedVolumeAction(volumeBucketDataHasChanged: Boolean,
+                                                        actionTracingId: String,
+                                                        actionTimestamp: Option[Long] = None,
+                                                        actionAuthorId: Option[ObjectId] = None,
+                                                        info: Option[String] = None)
+    extends ApplyableVolumeUpdateAction {
+  override def addTimestamp(timestamp: Long): VolumeUpdateAction = this.copy(actionTimestamp = Some(timestamp))
+  override def addAuthorId(authorId: Option[ObjectId]): VolumeUpdateAction =
+    this.copy(actionAuthorId = authorId)
+  override def addInfo(info: Option[String]): UpdateAction = this.copy(info = info)
+  override def withActionTracingId(newTracingId: String): LayerUpdateAction =
+    this.copy(actionTracingId = newTracingId)
+
+  override def applyOn(tracing: VolumeTracing): VolumeTracing =
+    tracing.copy(volumeBucketDataHasChanged = Some(volumeBucketDataHasChanged))
 }
 
 case class UpdateUserBoundingBoxesVolumeAction(boundingBoxes: List[NamedBoundingBox],
@@ -929,6 +947,10 @@ object UpdateActiveSegmentIdVolumeAction {
 }
 object UpdateLargestSegmentIdVolumeAction {
   implicit val jsonFormat: OFormat[UpdateLargestSegmentIdVolumeAction] = Json.format[UpdateLargestSegmentIdVolumeAction]
+}
+object UpdateVolumeBucketDataHasChangedVolumeAction {
+  implicit val jsonFormat: OFormat[UpdateVolumeBucketDataHasChangedVolumeAction] =
+    Json.format[UpdateVolumeBucketDataHasChangedVolumeAction]
 }
 object UpdateUserBoundingBoxesVolumeAction {
   implicit val jsonFormat: OFormat[UpdateUserBoundingBoxesVolumeAction] =

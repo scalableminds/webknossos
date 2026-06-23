@@ -154,7 +154,7 @@ export const VolumeTracingSaveRelevantActions: Action["type"][] = [
   "SET_MAPPING_IS_LOCKED",
   "TOGGLE_SEGMENT_GROUP",
   "TOGGLE_ALL_SEGMENTS",
-  "SET_HIDE_UNREGISTERED_SEGMENTS",
+  "SET_VOLUME_BUCKET_DATA_HAS_CHANGED",
 ];
 
 export const initializeVolumeTracingAction = (tracing: ServerVolumeTracing) =>
@@ -259,7 +259,7 @@ export const clickSegmentAction = (
 
 export const updateProofreadingMarkerPositionAction = (
   position: Vector3 | undefined,
-  layerName?: string,
+  layerName: string,
 ) =>
   ({
     type: "UPDATE_PROOFREADING_MARKER_POSITION",

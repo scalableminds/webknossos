@@ -103,6 +103,7 @@ conf/application.conf-e
 .bloop
 .metals
 metals.sbt
+conf/application.local.conf
 
 **/screenshots/*.diff.png
 **/screenshots/*.new.png

@@ -227,16 +227,17 @@ describe("VolumeTracing", () => {
     const newState = VolumeTracingReducer(initialState, registerLabelPoint);
     expect(newState).not.toBe(initialState);
 
-    const tracing = getFirstVolumeTracingOrFail(newState.annotation);
-    expect(tracing.lastLabelActions[0].centroid).toEqual(direction);
+    const { lastLabelActions } = newState.localSegmentationStateByLayer[VOLUME_TRACING_ID];
+    expect(lastLabelActions[0].centroid).toEqual(direction);
   });
 
   it("should add values to the contourList", () => {
     const { newState, contourList } = prepareContourListTest(initialState);
     expect(newState).not.toBe(initialState);
 
-    const tracing = getFirstVolumeTracingOrFail(newState.annotation);
-    expect(tracing.contourList).toEqual(contourList);
+    expect(newState.localSegmentationStateByLayer[VOLUME_TRACING_ID].contourList).toEqual(
+      contourList,
+    );
   });
 
   it("should add values to the contourList even if getActiveMagIndexForLayer(zoomStep, 'tracingId') > 1", () => {
@@ -252,8 +253,9 @@ describe("VolumeTracing", () => {
     const { newState, contourList } = prepareContourListTest(alteredState);
     expect(newState).not.toBe(initialState);
 
-    const tracing = getFirstVolumeTracingOrFail(newState.annotation);
-    expect(tracing.contourList).toEqual(contourList);
+    expect(newState.localSegmentationStateByLayer[VOLUME_TRACING_ID].contourList).toEqual(
+      contourList,
+    );
   });
 
   it("should not add values to the contourList if volumetracing is not allowed", () => {
@@ -295,8 +297,7 @@ describe("VolumeTracing", () => {
     // And reset the list
     newState = VolumeTracingReducer(newState, resetContour);
     expect(newState).not.toBe(initialState);
-    const tracing = getFirstVolumeTracingOrFail(newState.annotation);
-    expect(tracing.contourList).toEqual([]);
+    expect(newState.localSegmentationStateByLayer[VOLUME_TRACING_ID].contourList).toEqual([]);
   });
 
   describe("should merge segments", () => {

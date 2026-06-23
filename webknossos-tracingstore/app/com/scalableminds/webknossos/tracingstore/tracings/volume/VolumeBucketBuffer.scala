@@ -1,6 +1,5 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
-import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
 import com.scalableminds.webknossos.datastore.models.BucketPosition
@@ -14,7 +13,7 @@ class VolumeBucketBuffer(version: Long,
                          volumeLayer: VolumeTracingLayer,
                          val volumeDataStore: FossilDBClient,
                          val temporaryTracingService: TemporaryTracingService,
-                         toTemporaryStore: Boolean)(using tc: TokenContext, ec: ExecutionContext)
+                         toTemporaryStore: Boolean)(using ec: ExecutionContext)
     extends VolumeTracingBucketHelper
     with ProtoGeometryImplicits {
 

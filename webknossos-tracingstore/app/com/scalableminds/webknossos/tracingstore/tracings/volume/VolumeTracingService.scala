@@ -142,7 +142,7 @@ class VolumeTracingService @Inject() (
         volumeDataStore,
         temporaryTracingService,
         false
-      )(using tc, ec)
+      )(using ec)
       _ <- Fox.runIf(volumeLayer.tracing.getHasSegmentIndex)(volumeBucketBuffer.prefill(updateActions.flatMap {
         case a: UpdateBucketVolumeAction => Some(a.bucketPosition)
         case _                           => None

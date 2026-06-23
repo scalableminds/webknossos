@@ -34,7 +34,7 @@ class UnionFind[T](initialElements: Seq[T] = Nil) {
         n1.parent = Some(n2)
 
       // Case #4: rank1 == rank2 -> keep n1 as representative and increment rank
-      case (Some(n1 @ UnionFind.Node(_, rank1, _)), Some(n2 @ UnionFind.Node(_, rank2, _))) =>
+      case (Some(n1 @ UnionFind.Node(_, rank1, _)), Some(n2 @ UnionFind.Node(_, _, _))) =>
         n1.rank = rank1 + 1
         n2.parent = Some(n1)
 

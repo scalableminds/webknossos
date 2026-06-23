@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.Annotation.{AnnotationLayerProto, 
 import com.scalableminds.webknossos.datastore.SkeletonTracing._
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
 import com.scalableminds.webknossos.datastore.geometry.ColorProto
-import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryImplicits, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.datastore.helpers.{NodeDefaults, ProtoGeometryConversions, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.VoxelSize
 import com.scalableminds.webknossos.datastore.models.annotation._
 import com.scalableminds.webknossos.datastore.models.datasource.{
@@ -97,7 +97,7 @@ class AnnotationService @Inject() (
     rpc: RPC
 )(implicit ec: ExecutionContext, val materializer: Materializer)
     extends FoxImplicits
-    with ProtoGeometryImplicits
+    with ProtoGeometryConversions
     with AnnotationLayerPrecedence
     with LazyLogging {
 
@@ -210,7 +210,7 @@ class AnnotationService @Inject() (
         case AnnotationLayerType.Skeleton =>
           val skeleton = SkeletonTracingDefaults.createInstance.copy(
             datasetName = dataset.name,
-            editPosition = usableDataSource.center,
+            editPosition = vec3IntToProto(usableDataSource.center),
             organizationId = Some(dataset._organization),
             additionalAxes = AdditionalAxis.toProto(usableDataSource.additionalAxesUnion)
           )
@@ -398,7 +398,11 @@ class AnnotationService @Inject() (
       startPosition: Vec3Int,
       startRotation: Vec3Double
   ): SkeletonTracing = {
-    val initialNode = NodeDefaults.createInstance.withId(1).withPosition(startPosition).withRotation(startRotation)
+    val initialNode =
+      NodeDefaults.createInstance
+        .withId(1)
+        .withPosition(vec3IntToProto(startPosition))
+        .withRotation(vec3DoubleToProto(startRotation))
     val initialTree = Tree(
       1,
       Seq(initialNode),
@@ -412,10 +416,10 @@ class AnnotationService @Inject() (
     SkeletonTracingDefaults.createInstance.copy(
       datasetName = "unused",
       boundingBox = boundingBox.flatMap { box =>
-        if (box.isEmpty) None else Some(box)
+        if (box.isEmpty) None else Some(boundingBoxToProto(box))
       },
-      editPosition = startPosition,
-      editRotation = startRotation,
+      editPosition = vec3IntToProto(startPosition),
+      editRotation = vec3DoubleToProto(startRotation),
       activeNodeId = Some(1),
       trees = Seq(initialTree)
     )

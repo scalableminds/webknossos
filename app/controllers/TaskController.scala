@@ -9,7 +9,7 @@ import com.scalableminds.util.collections.SequenceUtils
 import com.scalableminds.util.tools.{Fox, FoxImplicits, JsonHelper}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 
 import javax.inject.Inject
 import models.annotation._
@@ -51,7 +51,7 @@ class TaskController @Inject() (
     sil: Silhouette[WkEnv]
 )(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
-    with ProtoGeometryImplicits
+    with ProtoGeometryConversions
     with FoxImplicits {
 
   def read(taskId: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>

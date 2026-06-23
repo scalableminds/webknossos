@@ -7,7 +7,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource._
@@ -90,11 +90,11 @@ case class VolumeTracingLayer(
     volumeDataStore: FossilDBClient
 )(implicit val ec: ExecutionContext)
     extends SegmentationLayer
-    with ProtoGeometryImplicits
+    with ProtoGeometryConversions
     with VolumeBucketCompression {
 
-  override val boundingBox: BoundingBox = tracing.boundingBox
-  override val elementClass: ElementClass.Value = tracing.elementClass
+  override val boundingBox: BoundingBox = boundingBoxFromProto(tracing.boundingBox)
+  override val elementClass: ElementClass.Value = elementClassFromProto(tracing.elementClass)
   override val largestSegmentId: Option[Long] = tracing.largestSegmentId
   override val defaultViewConfiguration: Option[LayerViewConfiguration] = None
   override val adminViewConfiguration: Option[LayerViewConfiguration] = None

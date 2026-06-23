@@ -6,7 +6,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing.ElementClassProto
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.datastore.models.WebknossosDataRequest
 import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, ElementClass}
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.FallbackDataKey
@@ -17,7 +17,7 @@ import scala.concurrent.ExecutionContext
 
 case class RemoteFallbackLayer(datasetId: ObjectId, layerName: String, elementClass: ElementClassProto)
 
-object RemoteFallbackLayer extends ProtoGeometryImplicits {
+object RemoteFallbackLayer extends ProtoGeometryConversions {
   def fromDataLayerAndDatasetId(dataLayer: DataLayer, datasetId: ObjectId): Box[RemoteFallbackLayer] = {
     val elementClassProtoBox = ElementClass.toProto(dataLayer.elementClass)
     elementClassProtoBox.map(elementClassProto => RemoteFallbackLayer(datasetId, dataLayer.name, elementClassProto))

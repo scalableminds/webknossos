@@ -7,8 +7,6 @@ import slick.jdbc.PostgresProfile.api._
 import slick.jdbc.TransactionIsolation.Serializable
 import slick.sql.SqlAction
 import slick.util.{Dumpable, TreePrinter}
-import utils.sql.SqlInterpolation.sqlInterpolation
-
 import java.io.{ByteArrayOutputStream, PrintWriter}
 import java.nio.charset.StandardCharsets
 import javax.inject.Inject
@@ -19,9 +17,8 @@ class SimpleSQLDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContex
     extends FoxImplicits
     with LazyLogging
     with SqlTypeImplicits
-    with SqlEscaping {
-
-  implicit protected def sqlInterpolationWrapper(s: StringContext): SqlInterpolator = sqlInterpolation(s)
+    with SqlEscaping
+    with SqlInterpolationSyntax {
 
   // Concurrent access for Serializable transactions leads to this error, can be solved by retry.
   protected lazy val transactionSerializationError = "could not serialize access"

@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.SkeletonTracing.{
   StringOpt
 }
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.tracingstore.tracings.{TracingId, TracingType}
 import com.scalableminds.webknossos.tracingstore.tracings.volume.MagRestrictions
 
@@ -51,7 +51,7 @@ class TaskCreationService @Inject() (
     tracingStoreService: TracingStoreService
 )(implicit ec: ExecutionContext)
     extends FoxImplicits
-    with ProtoGeometryImplicits {
+    with ProtoGeometryConversions {
 
   def assertBatchLimit(batchSize: Int, taskType: TaskType): Fox[Unit] = {
     val batchLimit =
@@ -286,11 +286,11 @@ class TaskCreationService @Inject() (
 
   // Used in createFromFiles. Called once per requested task if volume tracing is passed
   private def addVolumeFallbackBoundingBox(volume: UploadedVolumeLayer, datasetId: ObjectId): Fox[UploadedVolumeLayer] =
-    if (volume.tracing.boundingBox.isEmpty) {
+    if (boundingBoxFromProto(volume.tracing.boundingBox).isEmpty) {
       for {
         dataset <- datasetDAO.findOne(datasetId)(using GlobalAccessContext)
         dataSource <- datasetService.usableDataSourceFor(dataset)
-      } yield volume.copy(tracing = volume.tracing.copy(boundingBox = dataSource.boundingBox))
+      } yield volume.copy(tracing = volume.tracing.copy(boundingBox = boundingBoxToProto(dataSource.boundingBox)))
     } else Fox.successful(volume)
 
   // Used in createFromFiles. Called once per requested task
@@ -305,14 +305,28 @@ class TaskCreationService @Inject() (
     val paramBox: Box[(Option[BoundingBox], ObjectId, Vec3Int, Vec3Double)] =
       (skeletonTracing, datasetIdBox) match {
         case (Full(tracing), Full(datasetId)) =>
-          Full((tracing.boundingBox, datasetId, tracing.editPosition, tracing.editRotation))
+          Full(
+            (
+              boundingBoxOptFromProto(tracing.boundingBox),
+              datasetId,
+              vec3IntFromProto(tracing.editPosition),
+              vec3DoubleFromProto(tracing.editRotation)
+            )
+          )
         case (f: Failure, _) => f
         case (_, f: Failure) => f
         case (_, Empty)      => Failure("Could not find dataset for task creation.")
         case (Empty, _)      =>
           (uploadedVolumeLayer, datasetIdBox) match {
             case (Full(layer), Full(datasetId)) =>
-              Full((Some(layer.tracing.boundingBox), datasetId, layer.tracing.editPosition, layer.tracing.editRotation))
+              Full(
+                (
+                  Some(boundingBoxFromProto(layer.tracing.boundingBox)),
+                  datasetId,
+                  vec3IntFromProto(layer.tracing.editPosition),
+                  vec3DoubleFromProto(layer.tracing.editRotation)
+                )
+              )
             case (f: Failure, _) => f
             case (_, f: Failure) => f
             case _               => Failure(Msg.Task.Create.needsEitherSkeletonOrVolume)

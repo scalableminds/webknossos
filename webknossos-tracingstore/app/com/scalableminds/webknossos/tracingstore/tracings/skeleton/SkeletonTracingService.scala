@@ -6,7 +6,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, TreeBody}
 import com.scalableminds.webknossos.datastore.geometry.NamedBoundingBoxProto
-import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, SkeletonTracingDefaults}
+import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryConversions, SkeletonTracingDefaults}
 import com.scalableminds.webknossos.datastore.models.datasource.AdditionalAxis
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.util.tools.{Box, Full}
@@ -17,7 +17,7 @@ class SkeletonTracingService @Inject() (
     tracingDataStore: TracingDataStore,
     temporaryTracingService: TemporaryTracingService
 ) extends KeyValueStoreConversions
-    with ProtoGeometryImplicits
+    with ProtoGeometryConversions
     with BoundingBoxMerger
     with ColorGenerator
     with AnnotationUserStateUtils

@@ -8,7 +8,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
-import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryImplicits}
+import com.scalableminds.webknossos.datastore.helpers.{NativeBucketScanner, ProtoGeometryConversions}
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
@@ -44,7 +44,7 @@ class VolumeSegmentIndexService @Inject() (
     remoteDatastoreClient: TSRemoteDatastoreClient,
     temporaryTracingService: TemporaryTracingService
 ) extends KeyValueStoreConversions
-    with ProtoGeometryImplicits
+    with ProtoGeometryConversions
     with VolumeBucketCompression
     with SegmentIndexKeyHelper
     with ReversionHelper
@@ -177,7 +177,7 @@ class VolumeSegmentIndexService @Inject() (
       isTemporaryTracing <- temporaryTracingService.isTemporaryTracing(tracingId)
       segmentIndexReader = new VolumeSegmentIndexBuffer(
         tracingId = tracingId,
-        elementClass = tracing.elementClass,
+        elementClass = elementClassFromProto(tracing.elementClass),
         mappingName = mappingName,
         volumeSegmentIndexClient = volumeSegmentIndexClient,
         version = annotationVersion,

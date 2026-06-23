@@ -14,7 +14,7 @@ import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
 import com.scalableminds.webknossos.datastore.helpers.{
   GetSegmentIndexParameters,
   MissingBucketHeaders,
-  ProtoGeometryImplicits,
+  ProtoGeometryConversions,
   SegmentStatisticsParameters,
   SegmentStatisticsParametersMeshBased
 }
@@ -69,7 +69,7 @@ class VolumeTracingController @Inject() (
     val rpc: RPC
 )(implicit val ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends Controller
-    with ProtoGeometryImplicits
+    with ProtoGeometryConversions
     with MissingBucketHeaders
     with KeyValueStoreConversions {
 

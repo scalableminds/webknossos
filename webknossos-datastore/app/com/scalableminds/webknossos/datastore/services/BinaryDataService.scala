@@ -182,7 +182,7 @@ class BinaryDataService(
     } yield resultData
 
   def handleDataRequests(
-      requests: List[DataServiceDataRequest]
+      requests: Seq[DataServiceDataRequest]
   )(using tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
     val requestsCount = requests.length
     val requestData = requests.zipWithIndex.map { case (request, index) =>

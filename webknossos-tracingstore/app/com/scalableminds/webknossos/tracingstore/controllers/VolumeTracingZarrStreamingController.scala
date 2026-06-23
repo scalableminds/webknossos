@@ -16,10 +16,10 @@ import com.scalableminds.webknossos.datastore.datareaders.zarr.{
   NgffMetadataV0_5,
   ZarrHeader
 }
-import com.scalableminds.webknossos.datastore.datareaders.zarr3._
+import com.scalableminds.webknossos.datastore.datareaders.zarr3.*
 import com.scalableminds.webknossos.datastore.datareaders.{ArrayOrder, AxisOrder}
-import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryImplicits, UPath}
-import com.scalableminds.webknossos.datastore.models.datasource._
+import com.scalableminds.webknossos.datastore.helpers.{ProtoGeometryConversions, UPath}
+import com.scalableminds.webknossos.datastore.models.datasource.*
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.services.UserAccessRequest
 import com.scalableminds.webknossos.tracingstore.annotation.TSAnnotationService
@@ -45,7 +45,7 @@ class VolumeTracingZarrStreamingController @Inject() (
     remoteWebknossosClient: TSRemoteWebknossosClient
 )(implicit ec: ExecutionContext)
     extends ExtendedController
-    with ProtoGeometryImplicits
+    with ProtoGeometryConversions
     with FoxImplicits
     with Zarr3OutputHelper {
 
@@ -138,7 +138,7 @@ class VolumeTracingZarrStreamingController @Inject() (
             .fromBool(existingMags.contains(magParsed)) ?~> Msg.Annotation.Volume.wrongMag(tracingId, mag) ~> NOT_FOUND
 
           cubeLength = DataLayer.bucketLength
-          (channels, dtype) = ElementClass.toChannelAndZarrString(tracing.elementClass)
+          (channels, dtype) = ElementClass.toChannelAndZarrString(elementClassFromProto(tracing.elementClass))
           // data request method always decompresses before sending
           compressor = None
 
@@ -275,18 +275,20 @@ class VolumeTracingZarrStreamingController @Inject() (
             name = layerName,
             dataFormat = if (zarrVersion == 2) DataFormat.zarr else DataFormat.zarr3,
             largestSegmentId = tracing.largestSegmentId,
-            boundingBox = tracing.boundingBox,
-            elementClass = tracing.elementClass,
-            mags = tracing.mags.toList.map(m =>
-              MagLocator(
-                m,
-                Some(UPath.fromLocalPath(Path.of(s"./$layerName/${m.toMagLiteral(allowScalar = true)}"))),
-                None,
-                Some(AxisOrder.cxyz),
-                None,
-                None
-              )
-            ),
+            boundingBox = boundingBoxFromProto(tracing.boundingBox),
+            elementClass = elementClassFromProto(tracing.elementClass),
+            mags = tracing.mags.toList
+              .map(vec3IntFromProto)
+              .map(m =>
+                MagLocator(
+                  m,
+                  Some(UPath.fromLocalPath(Path.of(s"./$layerName/${m.toMagLiteral(allowScalar = true)}"))),
+                  None,
+                  Some(AxisOrder.cxyz),
+                  None,
+                  None
+                )
+              ),
             mappings = None
           )
         } yield Ok(Json.toJson(zarrLayer))

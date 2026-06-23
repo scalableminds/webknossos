@@ -9,7 +9,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits, TextUtils}
 import com.scalableminds.webknossos.datastore.Annotation.AnnotationProto
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, SkeletonTracingOpt, SkeletonTracings}
 import com.scalableminds.webknossos.datastore.VolumeTracing.{VolumeTracing, VolumeTracingOpt, VolumeTracings}
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.datastore.models.annotation.{
   AnnotationLayer,
   AnnotationLayerStatistics,
@@ -79,7 +79,7 @@ class AnnotationIOController @Inject() (
 )(implicit ec: ExecutionContext, val materializer: Materializer)
     extends Controller
     with FoxImplicits
-    with ProtoGeometryImplicits
+    with ProtoGeometryConversions
     with AnnotationLayerPrecedence
     with LazyLogging {
   implicit val actorSystem: ActorSystem = ActorSystem()
@@ -383,7 +383,7 @@ class AnnotationIOController @Inject() (
       case _                                                                                 => None
     }.headOption
     val bbox =
-      if (volumeTracing.boundingBox.isEmpty)
+      if (boundingBoxFromProto(volumeTracing.boundingBox).isEmpty)
         boundingBoxToProto(fallbackLayerOpt.map(_.boundingBox).getOrElse(dataSource.boundingBox))
       else volumeTracing.boundingBox
 

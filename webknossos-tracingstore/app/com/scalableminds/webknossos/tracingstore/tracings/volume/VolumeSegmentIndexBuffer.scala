@@ -4,7 +4,7 @@ import com.scalableminds.util.accesscontext.TokenContext
 import com.scalableminds.util.geometry.Vec3Int
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.geometry.{ListOfVec3IntProto, Vec3IntProto}
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.tracingstore.TSRemoteDatastoreClient
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.datasource.{AdditionalAxis, ElementClass}
@@ -52,7 +52,7 @@ class VolumeSegmentIndexBuffer(
     toTemporaryStore: Boolean = false
 ) extends KeyValueStoreConversions
     with SegmentIndexKeyHelper
-    with ProtoGeometryImplicits
+    with ProtoGeometryConversions
     with FoxImplicits
     with LazyLogging {
 

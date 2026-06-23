@@ -1,7 +1,7 @@
 package com.scalableminds.webknossos.tracingstore.tracings.volume
 
 import com.scalableminds.util.tools.Fox
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.datastore.models.BucketPosition
 import com.scalableminds.webknossos.tracingstore.tracings.{FossilDBClient, TemporaryTracingService}
 import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
@@ -17,7 +17,7 @@ class VolumeBucketBuffer(
     toTemporaryStore: Boolean
 )(using ec: ExecutionContext)
     extends VolumeTracingBucketHelper
-    with ProtoGeometryImplicits {
+    with ProtoGeometryConversions {
 
   // bucketPos → (bucketData, isChanged)
   private lazy val bucketDataBuffer: mutable.Map[BucketPosition, (Box[Array[Byte]], Boolean)] =

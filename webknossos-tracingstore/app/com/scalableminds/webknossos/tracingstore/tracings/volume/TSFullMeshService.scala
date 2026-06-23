@@ -8,7 +8,7 @@ import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.geometry.Vec3IntProto
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.datastore.models.datasource.DataLayer
 import com.scalableminds.webknossos.datastore.models.{
   BucketPosition,
@@ -34,7 +34,7 @@ class TSFullMeshService @Inject() (
     val remoteDatastoreClient: TSRemoteDatastoreClient,
     val remoteWebknossosClient: TSRemoteWebknossosClient
 ) extends FallbackDataHelper
-    with ProtoGeometryImplicits
+    with ProtoGeometryConversions
     with FullMeshHelper
     with FoxImplicits
     with LazyLogging {

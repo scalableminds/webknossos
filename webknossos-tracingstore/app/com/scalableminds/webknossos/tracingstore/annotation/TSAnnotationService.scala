@@ -16,7 +16,7 @@ import com.scalableminds.webknossos.datastore.Annotation.{
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SkeletonTracing.{SkeletonTracing, Tree, TreeBody}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.datastore.models.annotation.AnnotationLayerType
 import com.scalableminds.webknossos.tracingstore.tracings._
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
@@ -51,7 +51,7 @@ class TSAnnotationService @Inject() (
     tracingDataStore: TracingDataStore
 ) extends KeyValueStoreConversions
     with FallbackDataHelper
-    with ProtoGeometryImplicits
+    with ProtoGeometryConversions
     with AnnotationReversion
     with FoxImplicits
     with UpdateGroupHandling
@@ -680,12 +680,10 @@ class TSAnnotationService @Inject() (
   ) = {
     // Flush updated tracing objects, but only if they were updated.
     // If they weren’t updated, the older versions that will automatically be fetched are guaranteed identical
-    val allMayHaveUpdates = updates.exists { (update: UpdateAction) =>
-      update match {
-        case _: RevertToVersionAnnotationAction => true
-        case _: ResetToBaseAnnotationAction     => true
-        case _                                  => false
-      }
+    val allMayHaveUpdates = updates.exists {
+      case _: RevertToVersionAnnotationAction => true
+      case _: ResetToBaseAnnotationAction     => true
+      case _                                  => false
     }
     val tracingIdsWithUpdates: Set[String] = updates.flatMap {
       case a: LayerUpdateAction        => Some(a.actionTracingId)
@@ -765,10 +763,10 @@ class TSAnnotationService @Inject() (
   def editableMappingLayer(annotationId: ObjectId, tracingId: String, tracing: VolumeTracing): EditableMappingLayer =
     EditableMappingLayer(
       name = tracingId,
-      tracing.boundingBox,
+      boundingBox = boundingBoxFromProto(tracing.boundingBox),
       resolutions = tracing.mags.map(vec3IntFromProto).toList,
       largestSegmentId = Some(0L),
-      elementClass = tracing.elementClass,
+      elementClass = elementClassFromProto(tracing.elementClass),
       tracing = tracing,
       annotationId = annotationId,
       annotationService = this,

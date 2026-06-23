@@ -18,8 +18,8 @@ sbtJniCoreScope := Compile
 
 val failOnWarning = if (sys.props.contains("failOnWarning")) Seq("-Werror") else Seq()
 ThisBuild / scalacOptions ++= Seq(
-  "-explain", // More detailed compiler output
-  "-explain-types", // Explain type errors in detail
+  // "-explain", // More detailed compiler output
+  // "-explain-types", // Explain type errors in detail
   "-release:17",
   "-feature",
   "-deprecation",

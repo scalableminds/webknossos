@@ -11,7 +11,6 @@ import com.scalableminds.util.tools.Fox
 import com.scalableminds.webknossos.datastore.DataStoreConfig
 import com.scalableminds.webknossos.datastore.helpers.MissingBucketHeaders
 import com.scalableminds.webknossos.datastore.image.{ImageCreator, ImageCreatorParameters}
-import com.scalableminds.webknossos.datastore.models.DataRequestCollection._
 import com.scalableminds.webknossos.datastore.models.datasource._
 import com.scalableminds.webknossos.datastore.models.requests.{
   DataServiceDataRequest,
@@ -106,7 +105,7 @@ class BinaryDataController @Inject() (
           depth,
           DataServiceRequestSettings(halfByte = halfByte, appliedAgglomerate = mappingName)
         )
-        (data, indices) <- requestData(datasetId, dataSource.id, dataLayer, dataRequest)
+        (data, indices) <- requestData(datasetId, dataSource.id, dataLayer, List(dataRequest))
       } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
     }
   }
@@ -116,7 +115,7 @@ class BinaryDataController @Inject() (
       accessTokenService.validateAccessFromTokenContext(UserAccessRequest.readDataset(datasetId)) {
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
-          (data, indices) <- requestData(datasetId, dataSource.id, dataLayer, request.body)
+          (data, indices) <- requestData(datasetId, dataSource.id, dataLayer, List(request.body))
         } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
       }
     }
@@ -144,7 +143,7 @@ class BinaryDataController @Inject() (
           cubeSize,
           cubeSize
         )
-        (data, indices) <- requestData(datasetId, dataSource.id, dataLayer, dataRequest)
+        (data, indices) <- requestData(datasetId, dataSource.id, dataLayer, List(dataRequest))
       } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
     }
   }
@@ -178,7 +177,7 @@ class BinaryDataController @Inject() (
           depth = 1,
           DataServiceRequestSettings(appliedAgglomerate = mappingName)
         )
-        (data, _) <- requestData(datasetId, dataSource.id, dataLayer, dataRequest)
+        (data, _) <- requestData(datasetId, dataSource.id, dataLayer, List(dataRequest))
         intensityRange: Option[(Double, Double)] = intensityMin.flatMap(min => intensityMax.map(max => (min, max)))
         layerColor = color.flatMap(Color.fromHTML)
         params = ImageCreatorParameters(
@@ -299,7 +298,7 @@ class BinaryDataController @Inject() (
       datasetId: ObjectId,
       dataSourceId: DataSourceId,
       dataLayer: DataLayer,
-      dataRequests: DataRequestCollection
+      dataRequests: List[AbstractDataRequest]
   )(using tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
     val requests =
       dataRequests.map(r =>

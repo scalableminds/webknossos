@@ -9,7 +9,7 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.EditableMappingInfo.EditableMappingInfo
 import com.scalableminds.webknossos.datastore.SkeletonTracing.SkeletonTracing
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.datastore.models.AdditionalCoordinate
 import com.scalableminds.webknossos.datastore.models.annotation.{AnnotationLayer, AnnotationLayerType}
 import com.scalableminds.webknossos.tracingstore.tracings.editablemapping.{
@@ -30,7 +30,7 @@ case class AnnotationWithTracings(
     editableMappingsByTracingId: Map[String, (EditableMappingInfo, EditableMappingUpdater)]
 ) extends LazyLogging
     with FoxImplicits
-    with ProtoGeometryImplicits {
+    with ProtoGeometryConversions {
 
   // Assumes that there is at most one skeleton layer per annotation. This is true as of this writing
   def getSkeletonId: Option[String] =
@@ -145,8 +145,8 @@ case class AnnotationWithTracings(
             if (actionUserId.toString == userState.userId)
               userState.copy(
                 userId = actionUserId.toString,
-                editPosition = a.editPosition,
-                editRotation = a.editRotation,
+                editPosition = vec3IntToProto(a.editPosition),
+                editRotation = vec3DoubleToProto(a.editRotation),
                 zoomLevel = a.zoomLevel,
                 editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(a.editPositionAdditionalCoordinates)
               )
@@ -157,8 +157,8 @@ case class AnnotationWithTracings(
             annotation = annotation.copy(userStates =
               annotation.userStates :+ AnnotationUserStateProto(
                 userId = actionUserId.toString,
-                editPosition = a.editPosition,
-                editRotation = a.editRotation,
+                editPosition = vec3IntToProto(a.editPosition),
+                editRotation = vec3DoubleToProto(a.editRotation),
                 zoomLevel = a.zoomLevel,
                 editPositionAdditionalCoordinates = AdditionalCoordinate.toProto(a.editPositionAdditionalCoordinates)
               )

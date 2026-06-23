@@ -16,31 +16,28 @@ import scala.collection.mutable.ListBuffer
 import scala.concurrent.duration
 import scala.concurrent.duration.FiniteDuration
 
-class SqlInterpolator(val s: StringContext) extends AnyVal {
-  def q(param: SqlToken*): SqlToken = {
-    val parts = s.parts.toList
-    val tokens = param.toList
+trait SqlInterpolationSyntax {
+  extension (s: StringContext)
+    def q(param: SqlToken*): SqlToken = {
+      val parts = s.parts.toList
+      val tokens = param.toList
 
-    val outputSql = new mutable.StringBuilder()
-    val outputValues = ListBuffer[SqlValue]()
+      val outputSql = new mutable.StringBuilder()
+      val outputValues = ListBuffer[SqlValue]()
 
-    assert(parts.length == tokens.length + 1)
-    for (i <- parts.indices) {
-      outputSql ++= parts(i)
+      assert(parts.length == tokens.length + 1)
+      for (i <- parts.indices) {
+        outputSql ++= parts(i)
 
-      if (i < tokens.length) {
-        val token = tokens(i)
-        outputSql ++= token.sql
-        outputValues ++= token.values
+        if (i < tokens.length) {
+          val token = tokens(i)
+          outputSql ++= token.sql
+          outputValues ++= token.values
+        }
       }
+
+      SqlToken(sql = outputSql.toString, values = outputValues.toList)
     }
-
-    SqlToken(sql = outputSql.toString, values = outputValues.toList)
-  }
-}
-
-object SqlInterpolation {
-  implicit def sqlInterpolation(s: StringContext): SqlInterpolator = new SqlInterpolator(s)
 }
 
 case class SqlToken(sql: String, values: List[SqlValue] = List()) {

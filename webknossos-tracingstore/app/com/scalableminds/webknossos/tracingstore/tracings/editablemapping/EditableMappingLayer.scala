@@ -7,7 +7,7 @@ import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.VolumeTracing.VolumeTracing
 import com.scalableminds.webknossos.datastore.dataformats.BucketProvider
-import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryImplicits
+import com.scalableminds.webknossos.datastore.helpers.ProtoGeometryConversions
 import com.scalableminds.webknossos.datastore.models.{BucketPosition, WebknossosDataRequest}
 import com.scalableminds.webknossos.datastore.models.datasource.LayerViewConfiguration.LayerViewConfiguration
 import com.scalableminds.webknossos.datastore.models.datasource.{
@@ -29,7 +29,7 @@ import scala.concurrent.ExecutionContext
 
 class EditableMappingBucketProvider(layer: EditableMappingLayer)
     extends BucketProvider
-    with ProtoGeometryImplicits
+    with ProtoGeometryConversions
     with LazyLogging
     with FoxImplicits {
 

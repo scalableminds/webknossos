@@ -34,7 +34,7 @@ object SegmentStatisticsParametersMeshBased {
     Json.format[SegmentStatisticsParametersMeshBased]
 }
 
-trait SegmentStatistics extends ProtoGeometryImplicits with FoxImplicits {
+trait SegmentStatistics extends ProtoGeometryConversions with FoxImplicits {
 
   protected def bucketScanner: NativeBucketScanner
 

@@ -10,6 +10,43 @@ import {
 import type { WebknossosState } from "viewer/store";
 import { type Saga, select } from "./effect_generators";
 
+/*
+ * This module introduces the concept of Operation Contexts that can be used
+ * to execute redux sagas with isolation guarantees. By default, only one
+ * operation can be executed at the same time. However, this restriction can
+ * be softened when needed. Additionally, a running operation can also spawn
+ * a child operation (which is always allowed to run in parallel to its parent).
+ *
+ * For executing a redux saga as an operation, one needs to acquire an operation
+ * context in which the execution is done. The acquisition of the operation context,
+ * is similar to a mutex acquisition in the sense that a successful acquisition
+ * guarantees the specified isolation and allows the actual saga execution.
+ * The context itself can be passed around so that child operations can be executed
+ * within the same context.
+ *
+ * Operations itself have IDs which can be used to check whether a specific operation
+ * is running or whether a new operation should be allowed to run in addition
+ * to existing ones.
+ * Running (child) operations are also registered in the redux store.
+ *
+ * When acquiring an operation context, one can either wait for the current holder
+ * to finish ("wait"), silently skip ("ignore"), or throw ("raise").
+ *
+ * The same operation ID may never run twice in parallel. Additional IDs can be
+ * allowed to overlap by supplying `allowAdditionalOperation` in OperationOptions.
+ *
+ * Child operations (contexts for these can be created with `borrowedContext`) run
+ * under an existing parent context. They appear as entries in
+ * `state.operationContext.childOperations` for observability.
+ *
+ * Public API:
+ *   createOperationContext(options)  — acquire a new top-level lock
+ *   borrowedContext(parent, childId) — attach a child to an existing lock (prefer
+ *                                      getOrCreateOperationContext, though)
+ *   getOrCreateOperationContext(options, existing?) — create or borrow based on
+ *                                                     whether a parent context is given
+ */
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface OperationOptions {

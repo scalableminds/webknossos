@@ -248,7 +248,7 @@ function* manageUndoStates(): Saga<never> {
       } as WarnUndoState);
     } else if (undo) {
       if (!(yield* call(areCurrentBucketSnapshotsEmpty))) {
-        yield* call([Toast, Toast.warning], "Cannot redo at the moment. Please try again.");
+        yield* call([Toast, Toast.warning], "Cannot undo at the moment. Please try again.");
         continue;
       }
       const wasInterpreted = yield* call(maybeInterpretUndoAsDiscardUiAction);

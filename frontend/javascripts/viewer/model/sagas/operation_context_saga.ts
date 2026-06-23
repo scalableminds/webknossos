@@ -168,7 +168,7 @@ export function* createOperationContext(
     yield take("UNREGISTER_OPERATION");
     // Re-check after waking: another waiter may have grabbed the lock first.
     // Cast is safe: we only reach "wait" when behaviorWhenDisallowed is "wait" or undefined.
-    return yield* createOperationContext(options as NonNullableOptions);
+    return yield call(createOperationContext, options as NonNullableOptions);
   }
 
   if (behavior === "raise") {
@@ -181,9 +181,14 @@ export function* createOperationContext(
   return null;
 }
 
-// Returns a context that runs within an existing (parent) lock.
+// Returns a new context that exists within an existing (parent) lock.
 // The child is registered in the Redux store for the duration of execute(),
 // which is also single-use to prevent accidental double-execution.
+// Running child operations aren't tracked in module state, because
+// they are always allowed to execute (their parents granted the permission
+// by passing their context) -> no need for synchronous canStart checks.
+// Also, there is no allowAdditionalOperation predicate for child operations
+// (because only the main operation may grant additional operations).
 export function borrowedContext(
   existing: OperationContext,
   childId: OperationId,

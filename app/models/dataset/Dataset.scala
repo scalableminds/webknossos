@@ -975,9 +975,9 @@ class DatasetMagDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
       )
     } yield ()
 
-  implicit def GetResultDataSourceMagRow: GetResult[DataSourceMagRow] =
-    GetResult using
-      { r =>
+  implicit def GetResultDataSourceMagRow: GetResult[DataSourceMagRow] = {
+    GetResult(
+      using { r =>
         val datasetId = ObjectId(r.nextString())
         val layerName = r.nextString()
         val magLiteral = r.nextString()
@@ -998,6 +998,8 @@ class DatasetMagDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
           r.nextString()
         )
       }
+    )
+  }
 
   // Note equivalent in DatasetLayerAttachmentsDAO
   def findMagPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] =

@@ -26,13 +26,13 @@ import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 
 import scala.concurrent.ExecutionContext
 
-class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracingService,
-                                          remoteWebknossosClient: TSRemoteWebknossosClient,
-                                          annotationService: TSAnnotationService,
-                                          accessTokenService: TracingStoreAccessTokenService,
-                                          slackNotificationService: TSSlackNotificationService)(
-    implicit val ec: ExecutionContext,
-    val bodyParsers: PlayBodyParsers)
+class SkeletonTracingController @Inject() (
+    skeletonTracingService: SkeletonTracingService,
+    remoteWebknossosClient: TSRemoteWebknossosClient,
+    annotationService: TSAnnotationService,
+    accessTokenService: TracingStoreAccessTokenService,
+    slackNotificationService: TSSlackNotificationService
+)(implicit val ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends Controller {
 
   implicit val tracingsCompanion: SkeletonTracings.type = SkeletonTracings
@@ -95,9 +95,7 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
             tracings <- annotationService.findMultipleSkeletons(request.body)
-          } yield {
-            Ok(tracings.toByteArray).as(protobufMimeType)
-          }
+          } yield Ok(tracings.toByteArray).as(protobufMimeType)
         }
       }
     }
@@ -119,13 +117,15 @@ class SkeletonTracingController @Inject()(skeletonTracingService: SkeletonTracin
     }
 
   // Used in task creation. History is dropped. Caller is responsible to create and save a matching AnnotationProto object
-  def duplicate(tracingId: String,
-                newTracingId: String,
-                ownerId: ObjectId,
-                requestingUserId: ObjectId,
-                editPosition: Option[String],
-                editRotation: Option[String],
-                boundingBox: Option[String]): Action[AnyContent] =
+  def duplicate(
+      tracingId: String,
+      newTracingId: String,
+      ownerId: ObjectId,
+      requestingUserId: ObjectId,
+      editPosition: Option[String],
+      editRotation: Option[String],
+      boundingBox: Option[String]
+  ): Action[AnyContent] =
     Action.async { implicit request =>
       log() {
         logTime(slackNotificationService.noticeSlowRequest) {

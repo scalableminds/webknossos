@@ -50,7 +50,7 @@ case class DatasetMagStorageReport(
     path: String,
     _organization: String,
     usedStorageBytes: Long,
-    lastUpdated: Instant = Instant.now,
+    lastUpdated: Instant = Instant.now
 )
 
 case class DataLayerAttachmentStorageReport(
@@ -61,10 +61,10 @@ case class DataLayerAttachmentStorageReport(
     `type`: LayerAttachmentType.LayerAttachmentType,
     _organization: String,
     usedStorageBytes: Long,
-    lastUpdated: Instant = Instant.now,
+    lastUpdated: Instant = Instant.now
 )
 
-class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class OrganizationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Organization, OrganizationsRow, Organizations](sqlClient) {
   protected val collection = Organizations
   protected def resultConverter = GetResultOrganizationsRow
@@ -73,26 +73,24 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
     for {
       pricingPlan <- PricingPlan.fromString(r.pricingplan).toFox
       aiPlan <- Fox.runOptional(r.aiplan)(aiPlanLiteral => AiPlan.fromString(aiPlanLiteral).toFox)
-    } yield {
-      Organization(
-        r._id,
-        r.additionalinformation,
-        r.logourl,
-        r.name,
-        pricingPlan,
-        aiPlan,
-        r.paiduntil.map(Instant.fromSql),
-        r.includedusers,
-        r.includedstorage,
-        ObjectId(r._rootfolder),
-        r.newusermailinglist,
-        r.enableautoverify,
-        r.lasttermsofserviceacceptancetime.map(Instant.fromSql),
-        r.lasttermsofserviceacceptanceversion,
-        Instant.fromSql(r.created),
-        r.isdeleted
-      )
-    }
+    } yield Organization(
+      r._id,
+      r.additionalinformation,
+      r.logourl,
+      r.name,
+      pricingPlan,
+      aiPlan,
+      r.paiduntil.map(Instant.fromSql),
+      r.includedusers,
+      r.includedstorage,
+      ObjectId(r._rootfolder),
+      r.newusermailinglist,
+      r.enableautoverify,
+      r.lasttermsofserviceacceptancetime.map(Instant.fromSql),
+      r.lasttermsofserviceacceptanceversion,
+      Instant.fromSql(r.created),
+      r.isdeleted
+    )
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""(_id IN (SELECT _organization FROM webknossos.users_ WHERE _multiUser = (SELECT _multiUser FROM webknossos.users_ WHERE _id = $requestingUserId)))
@@ -119,7 +117,8 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       accessQuery <- readAccessQuery
       r <- run(
         q"SELECT $columns FROM $existingCollectionName WHERE _id = $organizationId AND $accessQuery"
-          .as[OrganizationsRow])
+          .as[OrganizationsRow]
+      )
       parsed <- parseFirst(r, organizationId)
     } yield parsed
 
@@ -168,8 +167,9 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       r <- rList.headOption.toFox
     } yield r
 
-  def updateFields(organizationId: String, name: String, newUserMailingList: String)(
-      using ctx: DBAccessContext): Fox[Unit] =
+  def updateFields(organizationId: String, name: String, newUserMailingList: String)(using
+      ctx: DBAccessContext
+  ): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(organizationId)
       _ <- run(q"""UPDATE webknossos.organizations
@@ -184,22 +184,28 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
     for {
       _ <- run(
         DBIO
-          .sequence(Seq(
-            q"DELETE FROM webknossos.organization_usedStorage_mags WHERE _organization = $organizationId".asUpdate,
-            q"DELETE FROM webknossos.organization_usedStorage_attachments WHERE _organization = $organizationId".asUpdate
-          ))
-          .transactionally)
+          .sequence(
+            Seq(
+              q"DELETE FROM webknossos.organization_usedStorage_mags WHERE _organization = $organizationId".asUpdate,
+              q"DELETE FROM webknossos.organization_usedStorage_attachments WHERE _organization = $organizationId".asUpdate
+            )
+          )
+          .transactionally
+      )
     } yield ()
 
   def deleteUsedStorageForDataset(datasetId: ObjectId): Fox[Unit] =
     for {
       _ <- run(
         DBIO
-          .sequence(Seq(
-            q"DELETE FROM webknossos.organization_usedStorage_mags WHERE _dataset = $datasetId".asUpdate,
-            q"DELETE FROM webknossos.organization_usedStorage_attachments WHERE _dataset = $datasetId".asUpdate
-          ))
-          .transactionally)
+          .sequence(
+            Seq(
+              q"DELETE FROM webknossos.organization_usedStorage_mags WHERE _dataset = $datasetId".asUpdate,
+              q"DELETE FROM webknossos.organization_usedStorage_attachments WHERE _dataset = $datasetId".asUpdate
+            )
+          )
+          .transactionally
+      )
     } yield ()
 
   def updateLastStorageScanTime(organizationId: String, time: Instant): Fox[Unit] =
@@ -209,9 +215,10 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
 
   def upsertUsedStorage(
       datasetMagReports: List[DatasetMagStorageReport],
-      dataLayerAttachmentReports: List[DataLayerAttachmentStorageReport],
+      dataLayerAttachmentReports: List[DataLayerAttachmentStorageReport]
   ): Fox[Unit] = {
-    val datasetMagReportsQueries = datasetMagReports.map(r => q"""
+    val datasetMagReportsQueries = datasetMagReports.map(r =>
+      q"""
           INSERT INTO webknossos.organization_usedStorage_mags (
             _dataset, layerName, mag, path, _organization, usedStorageBytes, lastUpdated
           )
@@ -222,8 +229,10 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
             _organization = EXCLUDED._organization,
             usedStorageBytes = EXCLUDED.usedStorageBytes,
             lastUpdated = EXCLUDED.lastUpdated;
-          """.asUpdate)
-    val dataLayerAttachmentReportsQueries = dataLayerAttachmentReports.map(r => q"""
+          """.asUpdate
+    )
+    val dataLayerAttachmentReportsQueries = dataLayerAttachmentReports.map(r =>
+      q"""
           INSERT INTO webknossos.organization_usedStorage_attachments (
             _dataset, layerName, name, path, type, _organization, usedStorageBytes, lastUpdated
           )
@@ -234,7 +243,8 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
             _organization = EXCLUDED._organization,
             usedStorageBytes = EXCLUDED.usedStorageBytes,
             lastUpdated = EXCLUDED.lastUpdated;
-          """.asUpdate)
+          """.asUpdate
+    )
 
     for {
       _ <- run(DBIO.sequence(datasetMagReportsQueries ++ dataLayerAttachmentReportsQueries).transactionally)
@@ -289,8 +299,9 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       parsed <- parseAll(rows)
     } yield parsed
 
-  def acceptTermsOfService(organizationId: String, version: Int, timestamp: Instant)(
-      using ctx: DBAccessContext): Fox[Unit] =
+  def acceptTermsOfService(organizationId: String, version: Int, timestamp: Instant)(using
+      ctx: DBAccessContext
+  ): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(organizationId)
       _ <- run(q"""UPDATE webknossos.organizations
@@ -314,7 +325,8 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
   }
 
   def getUsedStorageAttachmentDetailsForDataset(
-      datasetId: ObjectId): Fox[List[(String, String, String, Long, Instant)]] = {
+      datasetId: ObjectId
+  ): Fox[List[(String, String, String, Long, Instant)]] = {
     implicit val gr: GetResult[(String, String, String, Long, Instant)] =
       GetResult(using r => (r.nextString(), r.nextString(), r.nextString(), r.nextLong(), GetInstant(r)))
     for {
@@ -332,22 +344,27 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
   def updatePlan(organizationId: String, planUpdate: OrganizationPlanUpdate): Fox[Unit] =
     for {
       _ <- Fox.runOptional(planUpdate.pricingPlan)(newPricingPlan =>
-        run(q"UPDATE webknossos.organizations SET pricingPlan = $newPricingPlan WHERE _id = $organizationId".asUpdate))
+        run(q"UPDATE webknossos.organizations SET pricingPlan = $newPricingPlan WHERE _id = $organizationId".asUpdate)
+      )
       _ <- Fox.runIf(planUpdate.paidUntilChanged)(
         run(
-          q"""UPDATE webknossos.organizations SET paidUntil = ${planUpdate.paidUntilFlat} WHERE _id = $organizationId""".asUpdate)
+          q"""UPDATE webknossos.organizations SET paidUntil = ${planUpdate.paidUntilFlat} WHERE _id = $organizationId""".asUpdate
+        )
       )
       _ <- Fox.runIf(planUpdate.includedUsersChanged)(
         run(
-          q"""UPDATE webknossos.organizations SET includedUsers = ${planUpdate.includedUsersFlat} WHERE _id = $organizationId""".asUpdate)
+          q"""UPDATE webknossos.organizations SET includedUsers = ${planUpdate.includedUsersFlat} WHERE _id = $organizationId""".asUpdate
+        )
       )
       _ <- Fox.runIf(planUpdate.includedStorageChanged)(
         run(
-          q"""UPDATE webknossos.organizations SET includedStorage = ${planUpdate.includedStorageFlat} WHERE _id = $organizationId""".asUpdate)
+          q"""UPDATE webknossos.organizations SET includedStorage = ${planUpdate.includedStorageFlat} WHERE _id = $organizationId""".asUpdate
+        )
       )
       _ <- Fox.runIf(planUpdate.aiPlanChanged)(
         run(
-          q"""UPDATE webknossos.organizations SET aiPlan = ${planUpdate.aiPlanFlat} WHERE _id = $organizationId""".asUpdate)
+          q"""UPDATE webknossos.organizations SET aiPlan = ${planUpdate.aiPlanFlat} WHERE _id = $organizationId""".asUpdate
+        )
       )
     } yield ()
 
@@ -375,23 +392,23 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
   private def parsePlanUpdate(row: OrganizationPlanUpdatesRow): Fox[OrganizationPlanUpdate] =
     for {
       pricingPlan: Option[PricingPlan] <- Fox.runOptional(row.pricingplan)(pricingPlanStr =>
-        PricingPlan.fromString(pricingPlanStr).toFox)
+        PricingPlan.fromString(pricingPlanStr).toFox
+      )
       aiPlanParsed: Option[AiPlan] <- Fox.runOptional(row.aiplan)(aiPlanStr => AiPlan.fromString(aiPlanStr).toFox)
       aiPlan = if (row.aiplanchanged) Some(aiPlanParsed) else None
       paidUntil = if (row.paiduntilchanged) Some(row.paiduntil.map(Instant.fromSql)) else None
       includedStorageBytes = if (row.includedstoragechanged) Some(row.includedstorage.map(ByteCount(_))) else None
       includedUsers = if (row.includeduserschanged) Some(row.includedusers) else None
-    } yield
-      OrganizationPlanUpdate(
-        row._organization,
-        row.description,
-        pricingPlan,
-        aiPlan,
-        paidUntil,
-        includedUsers,
-        includedStorageBytes,
-        Instant.fromSql(row.created)
-      )
+    } yield OrganizationPlanUpdate(
+      row._organization,
+      row.description,
+      pricingPlan,
+      aiPlan,
+      paidUntil,
+      includedUsers,
+      includedStorageBytes,
+      Instant.fromSql(row.created)
+    )
 
   def findPlanUpdates(organizationId: String): Fox[Seq[OrganizationPlanUpdate]] =
     for {
@@ -401,7 +418,8 @@ class OrganizationDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
                       FROM webknossos.organization_plan_updates
                       WHERE _organization = $organizationId
                       ORDER BY created
-         """.as[OrganizationPlanUpdatesRow])
+         """.as[OrganizationPlanUpdatesRow]
+      )
       parsed <- Fox.serialCombined(rows)(parsePlanUpdate)
     } yield parsed
 

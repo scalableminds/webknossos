@@ -16,7 +16,7 @@ object ShortLink {
   implicit val jsonFormat: OFormat[ShortLink] = Json.format[ShortLink]
 }
 
-class ShortLinkDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class ShortLinkDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[ShortLink, ShortlinksRow, Shortlinks](sqlClient) {
   protected val collection = Shortlinks
   protected def resultConverter = GetResultShortlinksRow

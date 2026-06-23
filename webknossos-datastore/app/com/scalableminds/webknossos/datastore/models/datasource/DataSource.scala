@@ -43,12 +43,13 @@ object DataSource {
     }
 }
 
-case class UnusableDataSource(id: DataSourceId,
-                              dataLayers: Option[List[StaticLayer]] = None,
-                              status: String,
-                              scale: Option[VoxelSize] = None,
-                              existingDataSourceProperties: Option[JsValue] = None)
-    extends DataSource {
+case class UnusableDataSource(
+    id: DataSourceId,
+    dataLayers: Option[List[StaticLayer]] = None,
+    status: String,
+    scale: Option[VoxelSize] = None,
+    existingDataSourceProperties: Option[JsValue] = None
+) extends DataSource {
   val toUsable: Option[UsableDataSource] = None
 
   val voxelSizeOpt: Option[VoxelSize] = scale
@@ -66,12 +67,13 @@ object UnusableDataSource {
   implicit def jsonFormat: Format[UnusableDataSource] = Json.format[UnusableDataSource]
 }
 
-case class UsableDataSource(id: DataSourceId,
-                            dataLayers: List[StaticLayer],
-                            scale: VoxelSize,
-                            defaultViewConfiguration: Option[DatasetViewConfiguration] = None,
-                            statusOpt: Option[String] = None)
-    extends DataSource {
+case class UsableDataSource(
+    id: DataSourceId,
+    dataLayers: List[StaticLayer],
+    scale: VoxelSize,
+    defaultViewConfiguration: Option[DatasetViewConfiguration] = None,
+    statusOpt: Option[String] = None
+) extends DataSource {
 
   val toUsable: Option[UsableDataSource] = Some(this)
 

@@ -20,8 +20,7 @@ package com.scalableminds.util.tools
 
 trait Tryo {
 
-  /**
-    * Wraps a "try" block around the function f. If f throws
+  /** Wraps a "try" block around the function f. If f throws
     * an exception with its class in the 'ignore' list or if 'ignore' is
     * null or an empty list, ignore the exception and return None.
     *
@@ -36,9 +35,9 @@ trait Tryo {
     *   </ul>
     */
   def tryo[T](ignore: List[Class[?]], onError: Box[Throwable => Unit])(f: => T): Box[T] =
-    try {
+    try
       Full(f)
-    } catch {
+    catch {
       case c: Throwable =>
         onError.foreach(_(c))
         if (ignore == null || !ignore.exists(_.isAssignableFrom(c.getClass)))
@@ -47,8 +46,7 @@ trait Tryo {
           Empty
     }
 
-  /**
-    * Wraps a "try" block around the function f. If f throws
+  /** Wraps a "try" block around the function f. If f throws
     * an exception that is in the domain of the handler PF,
     * the handler will be invoked on the exception. Otherwise
     * the exception is wrapped into a Failure.
@@ -62,15 +60,14 @@ trait Tryo {
     * @see com.scalableminds.util.tools.Failure
     */
   def tryo[T](handler: PartialFunction[Throwable, T], f: => T): Box[T] =
-    try {
+    try
       Full(f)
-    } catch {
+    catch {
       case t if handler.isDefinedAt(t) => Full(handler(t))
       case e: Throwable                => Failure(e.getMessage, Full(e), Empty)
     }
 
-  /**
-    * Wraps a "try" block around the function f
+  /** Wraps a "try" block around the function f
     * @param f - the block of code to evaluate
     * @return <ul>
     *   <li>Full(result of the evaluation of f) if f doesn't throw any exception
@@ -79,8 +76,7 @@ trait Tryo {
     */
   def tryo[T](f: => T): Box[T] = tryo(Nil, Empty)(f)
 
-  /**
-    * Wraps a "try" block around the function f and trigger a callback function if an exception is thrown
+  /** Wraps a "try" block around the function f and trigger a callback function if an exception is thrown
     * @param onError - an optional callback function that will use the thrown exception as a parameter
     * @param f - the block of code to evaluate
     * @return <ul>
@@ -90,8 +86,7 @@ trait Tryo {
     */
   def tryo[T](onError: Throwable => Unit)(f: => T): Box[T] = tryo(Nil, Full(onError))(f)
 
-  /**
-    * Wraps a "try" block around the function f
+  /** Wraps a "try" block around the function f
     * @param ignore - a list of exception classes to ignore. A thrown exception will be ignored if it is assignable from one of
     * the exception classes in the list
     * @param f - the block of code to evaluate
@@ -103,8 +98,7 @@ trait Tryo {
     */
   def tryo[T](ignore: List[Class[?]])(f: => T): Box[T] = tryo(ignore, Empty)(f)
 
-  /**
-    * Wraps a "try" block around the function f. Takes only one Class of exception to ignore
+  /** Wraps a "try" block around the function f. Takes only one Class of exception to ignore
     * @param ignore - a single exception classes to ignore. A thrown exception will be ignored if it is assignable from this class.
     * @param f - the block of code to evaluate
     * @return <ul>

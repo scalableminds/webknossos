@@ -20,8 +20,9 @@ trait DataSourceToDiskWriter extends DataSourceValidation with FoxImplicits {
 
   protected def dataBaseDir: Path
 
-  def updateDataSourceOnDisk(dataSource: UsableDataSource, expectExisting: Boolean, validate: Boolean)(
-      implicit ec: ExecutionContext): Fox[Unit] = {
+  def updateDataSourceOnDisk(dataSource: UsableDataSource, expectExisting: Boolean, validate: Boolean)(implicit
+      ec: ExecutionContext
+  ): Fox[Unit] = {
     val organizationDir = dataBaseDir.resolve(dataSource.id.organizationId)
     val dataSourcePath = organizationDir.resolve(dataSource.id.directoryName)
 
@@ -29,12 +30,18 @@ trait DataSourceToDiskWriter extends DataSourceValidation with FoxImplicits {
       _ <- Fox.runIf(validate)(assertValidDataSource(dataSource).toFox)
       propertiesFile = dataSourcePath.resolve(propertiesFileName)
       _ <- Fox.runIf(!expectExisting)(PathUtils.ensureDirectoryBox(dataSourcePath).toFox)
-      _ <- Fox.runIf(!expectExisting)(Fox.fromBool(!Files.exists(propertiesFile))) ?~> Msg.Dataset.DataSource.alreadyPresent
-      _ <- Fox.runIf(expectExisting)(backupPreviousProperties(dataSourcePath).toFox) ?~> Msg.Dataset.DataSource.updateFileFailed
+      _ <- Fox.runIf(!expectExisting)(
+        Fox.fromBool(!Files.exists(propertiesFile))
+      ) ?~> Msg.Dataset.DataSource.alreadyPresent
+      _ <- Fox.runIf(expectExisting)(
+        backupPreviousProperties(dataSourcePath).toFox
+      ) ?~> Msg.Dataset.DataSource.updateFileFailed
       dataSourceWithRelativizedPaths = relativizePathsOfDataSource(dataSourcePath, dataSource)
       _ <- JsonHelper
-        .writeToFile(propertiesFile,
-                     JsonHelper.removeKeyRecursively(Json.toJson(dataSourceWithRelativizedPaths), Set("resolutions")))
+        .writeToFile(
+          propertiesFile,
+          JsonHelper.removeKeyRecursively(Json.toJson(dataSourceWithRelativizedPaths), Set("resolutions"))
+        )
         .toFox ?~> Msg.Dataset.DataSource.updateFileFailed
     } yield ()
   }

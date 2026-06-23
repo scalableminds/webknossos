@@ -353,7 +353,8 @@ class AnnotationIOController @Inject() (
       dataSource: UsableDataSource
   ): Fox[List[List[UploadedVolumeLayer]]] =
     for {
-      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)(using GlobalAccessContext
+      dataStore <- dataStoreDAO.findOneByName(dataset._dataStore.trim)(using
+        GlobalAccessContext
       ) ?~> Msg.DataStore.notFoundForDataset
       remoteDataStoreClient = new WKRemoteDataStoreClient(dataStore, rpc)
       allAdapted <- Fox.serialCombined(volumeLayersGrouped) { volumeLayers =>
@@ -535,10 +536,13 @@ class AnnotationIOController @Inject() (
           skeletonAnnotationLayer =>
             tracingStoreClient.getSkeletonTracing(annotation._id, skeletonAnnotationLayer, version)
         } ?~> Msg.Annotation.Download.fetchSkeletonLayerFailed
-        annotationOwner <- userService.findOneCached(annotation._user)(using GlobalAccessContext
+        annotationOwner <- userService.findOneCached(annotation._user)(using
+          GlobalAccessContext
         ) ?~> Msg.Annotation.Download.findUserFailed
         ownerMultiUser <- multiUserDAO.findOne(annotationOwner._multiUser)(using GlobalAccessContext)
-        taskOpt <- Fox.runOptional(annotation._task)(taskDAO.findOne(_)(using GlobalAccessContext)) ?~> Msg.Task.notFound
+        taskOpt <- Fox.runOptional(annotation._task)(
+          taskDAO.findOne(_)(using GlobalAccessContext)
+        ) ?~> Msg.Task.notFound
         annotationProto <- tracingStoreClient.getAnnotationProto(annotation._id, version)
         nmlStream = nmlWriter.toNmlStream(
           name,
@@ -614,9 +618,10 @@ class AnnotationIOController @Inject() (
       _ <- restrictions.allowDownload(requestingUser) ?~> Msg.Annotation.Download.notAllowed ~> FORBIDDEN
       dataset <- datasetDAO.findOne(annotation._dataset)(using GlobalAccessContext) ?~> Msg.Dataset
         .notFoundForAnnotation(annotation._dataset, annotation._id) ~> NOT_FOUND
-      organization <- organizationDAO.findOne(dataset._organization)(using GlobalAccessContext) ?~> Msg.Organization.notFound(
-        dataset._organization
-      ) ~> NOT_FOUND
+      organization <- organizationDAO.findOne(dataset._organization)(using GlobalAccessContext) ?~> Msg.Organization
+        .notFound(
+          dataset._organization
+        ) ~> NOT_FOUND
       temporaryFile <- annotationToTemporaryFile(
         dataset,
         annotation,

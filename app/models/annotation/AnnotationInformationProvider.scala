@@ -12,18 +12,18 @@ import com.scalableminds.util.objectid.ObjectId
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class AnnotationInformationProvider @Inject()(
+class AnnotationInformationProvider @Inject() (
     annotationDAO: AnnotationDAO,
     annotationInformationHandlerSelector: AnnotationInformationHandlerSelector,
-    annotationStore: AnnotationStore)(implicit ec: ExecutionContext)
+    annotationStore: AnnotationStore
+)(implicit ec: ExecutionContext)
     extends play.api.http.Status
     with FoxImplicits {
 
   def provideAnnotation(typ: String, id: ObjectId, user: User)(using ctx: DBAccessContext): Fox[Annotation] =
     provideAnnotation(typ, id, Some(user))
 
-  def provideAnnotation(typ: String, id: ObjectId, userOpt: Option[User])(
-      using ctx: DBAccessContext): Fox[Annotation] =
+  def provideAnnotation(typ: String, id: ObjectId, userOpt: Option[User])(using ctx: DBAccessContext): Fox[Annotation] =
     for {
       annotationIdentifier <- AnnotationIdentifier.parse(typ, id)
       annotation <- provideAnnotation(annotationIdentifier, userOpt) ?~> Msg.Annotation.notFound
@@ -41,8 +41,9 @@ class AnnotationInformationProvider @Inject()(
   def provideAnnotation(id: ObjectId, user: User)(using ctx: DBAccessContext): Fox[Annotation] =
     provideAnnotation(id, Some(user))
 
-  def provideAnnotation(annotationIdentifier: AnnotationIdentifier, userOpt: Option[User])(
-      using ctx: DBAccessContext): Fox[Annotation] =
+  def provideAnnotation(annotationIdentifier: AnnotationIdentifier, userOpt: Option[User])(using
+      ctx: DBAccessContext
+  ): Fox[Annotation] =
     annotationStore.requestAnnotation(annotationIdentifier, userOpt)
 
   def nameFor(annotation: Annotation)(using ctx: DBAccessContext): Fox[String] =

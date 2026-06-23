@@ -1,3 +1,4 @@
+import Mutex from "libs/mutex";
 import { call, put, take } from "redux-saga/effects";
 import { takeEvery } from "typed-redux-saga";
 import type { OperationId } from "viewer/model/actions/operation_context_actions";
@@ -9,7 +10,6 @@ import {
 } from "viewer/model/actions/operation_context_actions";
 import type { WebknossosState } from "viewer/store";
 import { type Saga, select } from "./effect_generators";
-import Mutex from "libs/mutex";
 
 /*
  * This module introduces the concept of Operation Contexts that can be used
@@ -73,10 +73,12 @@ interface ActiveOperation {
   allowAdditionalOperation?: (pendingId: OperationId, state: WebknossosState) => boolean;
 }
 
-// ─── Mutex ────────────────────────────────────────────────────────────────────
-// Array rather than scalar to support optional concurrent operations.
-// The Redux store mirrors this for observability.
-
+// ─── Module state ────────────────────────────────────────────────────────────────────
+// activeOperations contains operations and their optional predicate functions.
+// Using this array, checkCanStart determines whether a new operation may run.
+// The Redux store mirrors this for observability. That way, we do not need to
+// store predicate functions (which are not serializable) in the store and have
+// synchronous access (no yields for read/write).
 let activeOperations: ActiveOperation[] = [];
 
 // This mutex is used to guard the check-and-start-operation logic in

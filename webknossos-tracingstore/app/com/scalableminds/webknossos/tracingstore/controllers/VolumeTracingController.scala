@@ -73,15 +73,10 @@ class VolumeTracingController @Inject() (
     with MissingBucketHeaders
     with KeyValueStoreConversions {
 
-  implicit val tracingsCompanion: VolumeTracings.type = VolumeTracings
-
-  implicit def packMultiple(tracings: List[VolumeTracing]): VolumeTracings =
-    VolumeTracings(tracings.map(t => VolumeTracingOpt(Some(t))))
-
-  implicit def packMultipleOpt(tracings: List[Option[VolumeTracing]]): VolumeTracings =
+  private def packMultiple(tracings: Seq[Option[VolumeTracing]]): VolumeTracings =
     VolumeTracings(tracings.map(t => VolumeTracingOpt(t)))
 
-  implicit def unpackMultiple(tracings: VolumeTracings): List[Option[VolumeTracing]] =
+  private def unpackMultiple(tracings: VolumeTracings): Seq[Option[VolumeTracing]] =
     tracings.tracings.toList.map(_.tracing)
 
   def save(newTracingId: String): Action[VolumeTracing] = Action.async(validateProto[VolumeTracing]) {
@@ -114,7 +109,7 @@ class VolumeTracingController @Inject() (
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
           for {
             tracings <- annotationService.findMultipleVolumes(request.body)
-          } yield Ok(tracings.toByteArray).as(protobufMimeType)
+          } yield Ok(packMultiple(tracings).toByteArray).as(protobufMimeType)
         }
       }
     }
@@ -157,7 +152,7 @@ class VolumeTracingController @Inject() (
     Action.async(validateProto[VolumeTracings]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
-          val tracingsFlat = request.body.flatten
+          val tracingsFlat = unpackMultiple(request.body).flatten
           val shouldCreateSegmentIndex = volumeSegmentIndexService.shouldCreateSegmentIndexForMerged(tracingsFlat)
           for {
             mergedTracingRaw <- volumeTracingService
@@ -215,7 +210,7 @@ class VolumeTracingController @Inject() (
     Action.async(validateProto[VolumeTracings]) { implicit request =>
       log() {
         accessTokenService.validateAccessFromTokenContext(UserAccessRequest.webknossos) {
-          val tracingsFlat = request.body.flatten
+          val tracingsFlat = unpackMultiple(request.body).flatten
           for {
             mergedVolumeStats <- temporaryMergedVolumeStatsStore
               .pop(newTracingId)

@@ -86,28 +86,10 @@ trait CspHeaders extends HeaderNames {
 }
 
 trait ResultImplicits extends BoxToResultHelpers {
+  import scala.language.implicitConversions
 
   implicit def fox2FutureResult[T <: Result](b: Fox[T])(implicit ec: ExecutionContext): Future[Result] =
     b.futureBox.map(asResult)
-
-  implicit def futureBox2Result[T <: Result](b: Box[Future[T]])(implicit ec: ExecutionContext): Future[Result] =
-    b match {
-      case Full(f) =>
-        f.map(value => asResult(Full(value)))
-      case Empty =>
-        Future.successful(asResult(Empty))
-      case f: Failure =>
-        Future.successful(asResult(f))
-    }
-
-  implicit def boxFuture2Result[T <: Result](f: Future[Box[T]])(implicit ec: ExecutionContext): Future[Result] =
-    f.map { b =>
-      asResult(b)
-    }
-
-  implicit def box2Result[T <: Result](b: Box[T]): Result =
-    asResult(b)
-
 }
 
 class JsonResult(status: Int)
@@ -192,8 +174,8 @@ trait JsonResults extends JsonResultAttributes {
 }
 
 trait JsonResultAttributes {
-  val jsonSuccess = "success"
-  val jsonError = "error"
+  protected val jsonSuccess = "success"
+  protected val jsonError = "error"
 }
 
 trait ValidationHelpers {

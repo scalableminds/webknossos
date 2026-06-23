@@ -361,6 +361,6 @@ trait NgffExplorationUtils extends FoxImplicits {
       }
     } yield layerTuples.flatten
 
-  implicit def multiScalesV0_5ToV0_4(multiscalesItemV0_5: NgffMultiscalesItemV0_5): NgffMultiscalesItem =
+  def multiScalesV0_5ToV0_4(multiscalesItemV0_5: NgffMultiscalesItemV0_5): NgffMultiscalesItem =
     NgffMultiscalesItemV0_5.asV0_4(multiscalesItemV0_5)
 }

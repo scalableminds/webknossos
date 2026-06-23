@@ -24,7 +24,6 @@ ThisBuild / scalacOptions ++= Seq(
   "-feature",
   "-deprecation",
   "-Wunused:imports,privates,locals,implicits,linted",
-  "-language:implicitConversions",
   "-language:postfixOps",
   "-Wconf:src=target/.*:s",
   "-Wconf:src=webknossos-datastore/target/.*:s",

@@ -651,7 +651,9 @@ function* adaptActiveSegmentToProofreadingMarker(layerName: string) {
     return;
   }
 
-  const { proofreadingMarkerPosition } = volumeTracing;
+  const proofreadingMarkerPosition = yield* select(
+    (state) => state.localSegmentationStateByLayer[layerName]?.proofreadingMarkerPosition,
+  );
   if (proofreadingMarkerPosition) {
     const agglomerateId = yield* call(getSegmentIdForPositionAsync, proofreadingMarkerPosition);
     const activeSegmentId = yield* call(getActiveCellId, volumeTracing);

@@ -120,7 +120,7 @@ export function SegmentStatisticsModal({
   );
   const currentMeshFile = useWkSelector((state) =>
     visibleSegmentationLayer != null
-      ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
+      ? state.localSegmentationStateByLayer[visibleSegmentationLayer.name].currentMeshFile
       : null,
   );
   const mappingName: string | null | undefined = useWkSelector(getCurrentMappingName);

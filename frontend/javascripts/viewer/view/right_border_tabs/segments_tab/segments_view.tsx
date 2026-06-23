@@ -195,11 +195,11 @@ const mapStateToProps = (state: WebknossosState) => {
     datasetName: state.dataset.name,
     availableMeshFiles:
       visibleSegmentationLayer != null
-        ? state.localSegmentationData[visibleSegmentationLayer.name].availableMeshFiles
+        ? state.localSegmentationStateByLayer[visibleSegmentationLayer.name].availableMeshFiles
         : null,
     currentMeshFile:
       visibleSegmentationLayer != null
-        ? state.localSegmentationData[visibleSegmentationLayer.name].currentMeshFile
+        ? state.localSegmentationStateByLayer[visibleSegmentationLayer.name].currentMeshFile
         : null,
     activeUser: state.activeUser,
     preferredQualityForMeshPrecomputation:

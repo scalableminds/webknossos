@@ -166,6 +166,10 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
           withNewEditableMapping <- addEditableMapping(annotationId, annotationWithTracings, a, targetVersion) ?~> Msg.Annotation.ApplyUpdate.addEditableMappingFailed
           withApplyedVolumeAction <- withNewEditableMapping.applyVolumeAction(a).toFox
         } yield withApplyedVolumeAction
+      case a: UpdateVolumeBucketDataHasChangedVolumeAction if !a.volumeBucketDataHasChanged =>
+        // volumeBucketDataHasChanged can only ever be set to true (once bucket data was
+        // mutated) and never back to false. A false value indicates a frontend bug.
+        Fox.failure("Received updateVolumeBucketDataHasChanged action with value=false, which is not allowed.")
       case a: ApplyableVolumeUpdateAction =>
         annotationWithTracings.applyVolumeAction(a).toFox ?~> Msg.Annotation.ApplyUpdate.volumeActionFailed
       case a: EditableMappingUpdateAction =>
@@ -284,8 +288,8 @@ class TSAnnotationService @Inject()(val remoteWebknossosClient: TSRemoteWebknoss
     for {
       volumeTracing <- annotationWithTracings.getVolume(action.actionTracingId).toFox
       _ <- assertMappingIsNotLocked(volumeTracing)
+      _ <- Fox.fromBool(!volumeTracing.volumeBucketDataHasChanged.getOrElse(false)) ?~> Msg.Annotation.volumeBucketsNotEmpty
       baseMappingName <- volumeTracing.mappingName.toFox ?~> Msg.Annotation.makeEditableNoBaseMapping
-      _ <- Fox.fromBool(volumeTracingService.volumeBucketsAreEmpty(action.actionTracingId)) ?~> Msg.Annotation.volumeBucketsNotEmpty
       editableMappingInfo = editableMappingService.create(baseMappingName)
       updater <- editableMappingUpdaterFor(annotationId,
                                            action.actionTracingId,

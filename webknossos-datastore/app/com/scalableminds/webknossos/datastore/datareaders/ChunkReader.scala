@@ -9,6 +9,7 @@ import com.scalableminds.util.tools.Box.tryo
 import ucar.ma2.{Array => MultiArray}
 
 import scala.concurrent.ExecutionContext
+import scala.util.Random
 
 class ChunkReader(header: DatasetHeader) extends FoxImplicits {
 
@@ -17,8 +18,12 @@ class ChunkReader(header: DatasetHeader) extends FoxImplicits {
 
   def read(path: VaultPath, chunkShapeFromMetadata: Array[Int], range: ByteRange, useSkipTypingShortcut: Boolean)(
       implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[MultiArray] =
+      tc: TokenContext): Fox[MultiArray] = {
+    val r = Random.nextDouble()
+
     for {
+      _ <- if (r < 0.2) Fox.failure("simulated chunk read failure") else Fox.successful(())
+      _ <- if (r < 0.4) Fox.empty else Fox.successful(())
       chunkBytesAndShapeBox: Box[(Array[Byte], Option[Array[Int]])] <- readChunkBytesAndShape(path, range).shiftBox
       chunkShape: Array[Int] = chunkBytesAndShapeBox.toOption.flatMap(_._2).getOrElse(chunkShapeFromMetadata)
       typed <- chunkBytesAndShapeBox.map(_._1) match {
@@ -32,6 +37,7 @@ class ChunkReader(header: DatasetHeader) extends FoxImplicits {
           f.toFox ?~> s"Reading chunk at $path failed"
       }
     } yield typed
+  }
 
   def createFromFillValue(chunkShape: Array[Int], useSkipTypingShortcut: Boolean)(
       implicit ec: ExecutionContext): Fox[MultiArray] =

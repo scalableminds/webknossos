@@ -28,7 +28,6 @@ __pycache__/
 .jvmopts
 build/
 
-
 # Webknossos
 backup/
 binaryData
@@ -89,7 +88,7 @@ tmp/
 errorShots/
 
 
-# Sublime 
+# Sublime
 *.sublime-project
 *.sublime-workspace
 
@@ -114,7 +113,7 @@ conf/application.local.conf
 tools/debugging/version-visualizer/data/*
 !tools/debugging/version-visualizer/data/.gitignore
 
-# Yarn 
+# Yarn
 .yarn/*
 !.yarn/cache
 !.yarn/patches

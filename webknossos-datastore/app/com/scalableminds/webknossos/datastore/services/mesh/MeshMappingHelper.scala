@@ -27,7 +27,7 @@ trait MeshMappingHelper extends FoxImplicits {
       agglomerateId: Long,
       mappingNameForMeshFile: Option[String],
       omitMissing: Boolean // If true, failing lookups in the agglomerate file will just return empty list.
-  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Seq[Long]] =
     (targetMappingName, editableMappingTracingId) match {
       case (None, None) =>
         // No mapping selected, assume id matches meshFile
@@ -56,15 +56,17 @@ trait MeshMappingHelper extends FoxImplicits {
             tracingstoreUri,
             tracingId,
             annotationVersionOpt,
-            agglomerateId)
-          segmentIds <- if (segmentIdsResult.agglomerateIdIsPresent)
-            Fox.successful(segmentIdsResult.segmentIds)
-          else // the agglomerate id is not present in the editable mapping. Fetch its info from the base mapping.
-            for {
-              agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
-              agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSourceId, dataLayer, mappingName)
-              localSegmentIds <- agglomerateService.segmentIdsForAgglomerateId(agglomerateFileKey, agglomerateId)
-            } yield localSegmentIds
+            agglomerateId
+          )
+          segmentIds <-
+            if (segmentIdsResult.agglomerateIdIsPresent)
+              Fox.successful(segmentIdsResult.segmentIds)
+            else // the agglomerate id is not present in the editable mapping. Fetch its info from the base mapping.
+              for {
+                agglomerateService <- binaryDataServiceHolder.binaryDataService.agglomerateServiceOpt.toFox
+                agglomerateFileKey <- agglomerateService.lookUpAgglomerateFileKey(dataSourceId, dataLayer, mappingName)
+                localSegmentIds <- agglomerateService.segmentIdsForAgglomerateId(agglomerateFileKey, agglomerateId)
+              } yield localSegmentIds
         } yield segmentIds
       case _ => Fox.failure("Cannot determine segment ids for editable mapping without base mapping")
     }

@@ -15,7 +15,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.duration.DurationInt
 import scala.util.Properties
 
-class CertificateValidationService @Inject()(implicit ec: ExecutionContext) extends LazyLogging {
+class CertificateValidationService @Inject() (implicit ec: ExecutionContext) extends LazyLogging {
 
   // The publicKeyBox is empty if no public key is provided, Failure if decoding the public key failed or Full if there is a valid public key.
   private lazy val publicKeyBox: Box[PublicKey] = Box(webknossos.BuildInfo.toMap.get("certificatePublicKey")).flatMap {
@@ -63,12 +63,14 @@ class CertificateValidationService @Inject()(implicit ec: ExecutionContext) exte
       (for {
         certificate <- Properties.envOrNone("CERTIFICATE")
         // JwtJson already throws an error which is transformed to an empty option when the certificate is expired.
-        // In case the token is expired, tge default map will be used.
+        // In case the token is expired, the default map will be used.
         token <- JwtJson.decodeJson(certificate, publicKey, JwtOptions(expiration = false)).toOption
         featureOverrides <- Some(
-          (token \ "webknossos").asOpt[Map[String, Boolean]].getOrElse(defaultConfigOverridesMap))
+          (token \ "webknossos").asOpt[Map[String, Boolean]].getOrElse(defaultConfigOverridesMap)
+        )
         featureOverridesWithDefaults = featureOverrides ++ defaultConfigOverridesMap.view.filterKeys(
-          !featureOverrides.contains(_))
+          !featureOverrides.contains(_)
+        )
       } yield featureOverridesWithDefaults).getOrElse(defaultConfigOverridesMap)
     case Empty => Map.empty
     case _     => defaultConfigOverridesMap

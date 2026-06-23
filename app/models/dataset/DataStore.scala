@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.objectid.ObjectId
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{Datastores, DatastoresRow, GetResultDatastoresRow}
 import models.job.JobService
 
 import javax.inject.Inject
@@ -32,35 +32,35 @@ object DataStore {
   implicit val jsonFormat: Format[DataStore] = Json.format[DataStore]
 }
 
-class DataStoreService @Inject()(dataStoreDAO: DataStoreDAO, jobService: JobService, conf: WkConf)(
-    implicit ec: ExecutionContext)
-    extends FoxImplicits
+class DataStoreService @Inject() (dataStoreDAO: DataStoreDAO, jobService: JobService, conf: WkConf)(implicit
+    ec: ExecutionContext
+) extends FoxImplicits
     with Results {
 
   def publicWrites(dataStore: DataStore): Fox[JsObject] =
     for {
       jobsSupportedByAvailableWorkers <- jobService.jobsSupportedByAvailableWorkers(dataStore.name)
       jobsEnabled = conf.Features.jobsEnabled && jobsSupportedByAvailableWorkers.nonEmpty
-    } yield
-      Json.obj(
-        "name" -> dataStore.name,
-        "url" -> dataStore.publicUrl,
-        "allowsUpload" -> dataStore.allowsUpload,
-        "jobsSupportedByAvailableWorkers" -> Json.toJson(
-          if (conf.Features.jobsEnabled) jobsSupportedByAvailableWorkers else List.empty),
-        "jobsEnabled" -> jobsEnabled
-      )
+    } yield Json.obj(
+      "name" -> dataStore.name,
+      "url" -> dataStore.publicUrl,
+      "allowsUpload" -> dataStore.allowsUpload,
+      "jobsSupportedByAvailableWorkers" -> Json.toJson(
+        if (conf.Features.jobsEnabled) jobsSupportedByAvailableWorkers else List.empty
+      ),
+      "jobsEnabled" -> jobsEnabled
+    )
 
   def validateAccess(name: String, key: String)(block: DataStore => Future[Result]): Fox[Result] =
     Fox.fromFuture((for {
-      dataStore <- dataStoreDAO.findOneByName(name)(GlobalAccessContext)
+      dataStore <- dataStoreDAO.findOneByName(name)(using GlobalAccessContext)
       _ <- Fox.fromBool(key == dataStore.key)
       result <- Fox.fromFuture(block(dataStore))
     } yield result).getOrElse(Forbidden(Json.obj("granted" -> false, "msg" -> Msg.DataStore.notFound))))
 
 }
 
-class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class DataStoreDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[DataStore, DatastoresRow, Datastores](sqlClient) {
   protected val collection = Datastores
   protected def resultConverter = GetResultDatastoresRow
@@ -81,16 +81,17 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
         r.allowsuploadtopaths,
         r.reportusedstorageenabled,
         r.onlyallowedorganization
-      ))
+      )
+    )
 
-  def findOneByName(name: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
+  def findOneByName(name: String)(using ctx: DBAccessContext): Fox[DataStore] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE name = $name AND $accessQuery".as[DatastoresRow])
       parsed <- parseFirst(r, name)
     } yield parsed
 
-  def findOneByUrl(url: String)(implicit ctx: DBAccessContext): Fox[DataStore] =
+  def findOneByUrl(url: String)(using ctx: DBAccessContext): Fox[DataStore] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE url = $url AND $accessQuery".as[DatastoresRow])
@@ -103,19 +104,20 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
       parsed <- parseAll(r)
     } yield parsed
 
-  def findOneWithUploadsAllowed(implicit ctx: DBAccessContext): Fox[DataStore] =
+  def findOneWithUploadsAllowed(using ctx: DBAccessContext): Fox[DataStore] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE allowsUpload AND $accessQuery".as[DatastoresRow])
       parsed <- parseFirst(r, "find one with uploads allowed")
     } yield parsed
 
-  def findOneWithUploadsToPathsAllowed(implicit ctx: DBAccessContext): Fox[DataStore] =
+  def findOneWithUploadsToPathsAllowed(using ctx: DBAccessContext): Fox[DataStore] =
     for {
       accessQuery <- readAccessQuery
       r <- run(
         q"SELECT $columns FROM $existingCollectionName WHERE allowsUploadToPaths AND $accessQuery LIMIT 1"
-          .as[DatastoresRow])
+          .as[DatastoresRow]
+      )
       parsed <- parseFirst(r, "find one with uploads allowed")
     } yield parsed
 
@@ -126,11 +128,13 @@ class DataStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
 
   def insertOne(d: DataStore): Fox[Unit] =
     for {
-      _ <- run(q"""INSERT INTO webknossos.dataStores
+      _ <- run(
+        q"""INSERT INTO webknossos.dataStores
                      (name, url, publicUrl, key, isScratch,
                      isDeleted, allowsUpload, allowsUploadToPaths, reportUsedStorageEnabled)
                    VALUES(${d.name}, ${d.url}, ${d.publicUrl},  ${d.key}, ${d.isScratch},
-                     ${d.isDeleted}, ${d.allowsUpload}, ${d.allowsUploadToPaths}, ${d.reportUsedStorageEnabled})""".asUpdate)
+                     ${d.isDeleted}, ${d.allowsUpload}, ${d.allowsUploadToPaths}, ${d.reportUsedStorageEnabled})""".asUpdate
+      )
     } yield ()
 
   def deleteOneByName(name: String): Fox[Unit] =

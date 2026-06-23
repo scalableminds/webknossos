@@ -11,23 +11,27 @@ import com.scalableminds.webknossos.datastore.models.datasource.{ElementClass, S
 
 import scala.concurrent.ExecutionContext
 
-case class MagWithAttributes(mag: MagLocator,
-                             remotePath: VaultPath,
-                             elementClass: ElementClass.Value,
-                             boundingBox: BoundingBox)
+case class MagWithAttributes(
+    mag: MagLocator,
+    remotePath: VaultPath,
+    elementClass: ElementClass.Value,
+    boundingBox: BoundingBox
+)
 
 trait RemoteLayerExplorer extends FoxImplicits {
 
   implicit def ec: ExecutionContext
 
-  def explore(remotePath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]]
+  def explore(remotePath: VaultPath, credentialId: Option[String])(using
+      tc: TokenContext
+  ): Fox[List[(StaticLayer, VoxelSize)]]
 
   def name: String
 
   protected def looksLikeSegmentationLayer(layerName: String, elementClass: ElementClass.Value): Boolean =
     Set("segmentation", "labels").contains(layerName.toLowerCase) && ElementClass.segmentationElementClasses.contains(
-      elementClass)
+      elementClass
+    )
 
   protected def guessNameFromPath(path: VaultPath): String =
     path.basename

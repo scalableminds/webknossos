@@ -43,11 +43,11 @@ case class DataLayerAttachments(
 
   def withAdded(attachment: LayerAttachment, attachmentType: LayerAttachmentType.Value): DataLayerAttachments =
     attachmentType match {
-      case LayerAttachmentType.mesh => this.copy(meshes = this.meshes :+ attachment)
+      case LayerAttachmentType.mesh        => this.copy(meshes = this.meshes :+ attachment)
       case LayerAttachmentType.agglomerate =>
         this.copy(agglomerates = this.agglomerates :+ attachment)
       case LayerAttachmentType.segmentIndex => this.copy(segmentIndex = Some(attachment))
-      case LayerAttachmentType.connectome =>
+      case LayerAttachmentType.connectome   =>
         this.copy(connectomes = this.connectomes :+ attachment)
       case LayerAttachmentType.cumsum => this.copy(cumsum = Some(attachment))
     }
@@ -61,8 +61,10 @@ case class DataLayerAttachments(
       case LayerAttachmentType.cumsum       => cumsum.find(_.name == name)
     }
 
-  def getByTypeAndNameAlwaysReturnSingletons(attachmentType: LayerAttachmentType,
-                                             name: String): Option[LayerAttachment] =
+  def getByTypeAndNameAlwaysReturnSingletons(
+      attachmentType: LayerAttachmentType,
+      name: String
+  ): Option[LayerAttachment] =
     attachmentType match {
       case LayerAttachmentType.mesh         => meshes.find(_.name == name)
       case LayerAttachmentType.agglomerate  => agglomerates.find(_.name == name)
@@ -81,13 +83,14 @@ case class DataLayerAttachments(
     )
 
   def mappedWithType(
-      attachmentMapping: (LayerAttachment, LayerAttachmentType) => LayerAttachment): DataLayerAttachments =
+      attachmentMapping: (LayerAttachment, LayerAttachmentType) => LayerAttachment
+  ): DataLayerAttachments =
     DataLayerAttachments(
       meshes = meshes.map(attachmentMapping(_, LayerAttachmentType.mesh)),
       agglomerates = agglomerates.map(attachmentMapping(_, LayerAttachmentType.agglomerate)),
       segmentIndex = segmentIndex.map(attachmentMapping(_, LayerAttachmentType.segmentIndex)),
       connectomes = connectomes.map(attachmentMapping(_, LayerAttachmentType.connectome)),
-      cumsum = cumsum.map(attachmentMapping(_, LayerAttachmentType.cumsum)),
+      cumsum = cumsum.map(attachmentMapping(_, LayerAttachmentType.cumsum))
     )
 
   def renameByMap(renamingMap: Map[(LayerAttachmentType, String), String]): DataLayerAttachments =
@@ -99,7 +102,7 @@ case class DataLayerAttachments(
         segmentIndex.map(a => a.copy(name = renamingMap.getOrElse((LayerAttachmentType.segmentIndex, a.name), a.name))),
       connectomes =
         connectomes.map(a => a.copy(name = renamingMap.getOrElse((LayerAttachmentType.connectome, a.name), a.name))),
-      cumsum = cumsum.map(a => a.copy(name = renamingMap.getOrElse((LayerAttachmentType.cumsum, a.name), a.name))),
+      cumsum = cumsum.map(a => a.copy(name = renamingMap.getOrElse((LayerAttachmentType.cumsum, a.name), a.name)))
     )
 
   def resolvedIn(dataSourcePath: UPath): DataLayerAttachments =
@@ -151,10 +154,12 @@ object LayerAttachmentType extends ExtendedEnumeration {
 
 }
 
-case class LayerAttachment(name: String,
-                           path: UPath,
-                           dataFormat: LayerAttachmentDataformat.LayerAttachmentDataformat,
-                           credentialId: Option[String] = None) {
+case class LayerAttachment(
+    name: String,
+    path: UPath,
+    dataFormat: LayerAttachmentDataformat.LayerAttachmentDataformat,
+    credentialId: Option[String] = None
+) {
   // Returns Failure for attachments with remote paths.
   def localPath: Box[Path] = path.toLocalPath
 
@@ -175,9 +180,11 @@ case class LayerAttachment(name: String,
 object LayerAttachment {
   implicit val jsonFormat: Format[LayerAttachment] = Json.format[LayerAttachment]
 
-  def scanForFiles(layerDirectory: Path,
-                   directoryName: String,
-                   dataFormat: LayerAttachmentDataformat.LayerAttachmentDataformat): Seq[LayerAttachment] = {
+  def scanForFiles(
+      layerDirectory: Path,
+      directoryName: String,
+      dataFormat: LayerAttachmentDataformat.LayerAttachmentDataformat
+  ): Seq[LayerAttachment] = {
     val dir = layerDirectory.resolve(directoryName)
     val scanExtension = dataFormat.toString
     if (Files.exists(dir)) {
@@ -185,11 +192,13 @@ object LayerAttachment {
         PathUtils.listFiles(dir, silent = true, PathUtils.fileExtensionFilter(scanExtension))
       paths match {
         case Full(p) =>
-          p.map(
-            path =>
-              LayerAttachment(FilenameUtils.removeExtension(path.getFileName.toString),
-                              UPath.fromLocalPath(path),
-                              dataFormat))
+          p.map(path =>
+            LayerAttachment(
+              FilenameUtils.removeExtension(path.getFileName.toString),
+              UPath.fromLocalPath(path),
+              dataFormat
+            )
+          )
         case _ => Seq.empty
       }
     } else {

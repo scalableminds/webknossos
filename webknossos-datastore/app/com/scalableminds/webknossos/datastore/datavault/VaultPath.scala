@@ -17,24 +17,31 @@ import scala.concurrent.ExecutionContext
 
 class VaultPath(upath: UPath, dataVault: DataVault) extends LazyLogging with FoxImplicits {
 
-  def readBytes(byteRange: ByteRange = ByteRange.complete)(implicit ec: ExecutionContext,
-                                                           tc: TokenContext): Fox[Array[Byte]] =
+  def readBytes(
+      byteRange: ByteRange = ByteRange.complete
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      (bytes, encoding, rangeHeader) <- dataVault.readBytesEncodingAndRangeHeader(this, byteRange) ?-> "Failed to read from vault path"
+      (bytes, encoding, rangeHeader) <- dataVault.readBytesEncodingAndRangeHeader(
+        this,
+        byteRange
+      ) ?-> "Failed to read from vault path"
       decoded <- decode(bytes, encoding) ?~> s"Failed to decode $encoding-encoded response."
     } yield decoded
 
-  def readBytesEncodingAndRangeHeader(byteRange: ByteRange = ByteRange.complete)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] =
+  def readBytesEncodingAndRangeHeader(
+      byteRange: ByteRange = ByteRange.complete
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] =
     dataVault.readBytesEncodingAndRangeHeader(this, byteRange) ?-> "Failed to read from vault path"
 
-  def getUsedStorageBytes(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+  def getUsedStorageBytes(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     dataVault.getUsedStorageBytes(this)
 
-  def readLastBytes(byteCount: Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
+  def readLastBytes(byteCount: Int)(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
-      (bytes, encoding, _) <- dataVault.readBytesEncodingAndRangeHeader(this, SuffixLengthByteRange(byteCount)) ?-> "Failed to read from vault path"
+      (bytes, encoding, _) <- dataVault.readBytesEncodingAndRangeHeader(
+        this,
+        SuffixLengthByteRange(byteCount)
+      ) ?-> "Failed to read from vault path"
       decoded <- decode(bytes, encoding) ?~> s"Failed to decode $encoding-encoded response."
     } yield decoded
 
@@ -53,12 +60,12 @@ class VaultPath(upath: UPath, dataVault: DataVault) extends LazyLogging with Fox
     val brotliInputStream = new BrotliInputStream(new ByteArrayInputStream(bytes))
     val out = new ByteArrayOutputStream
     var read = brotliInputStream.read
-    try {
+    try
       while (read > -1) {
         out.write(read)
         read = brotliInputStream.read
       }
-    } catch {
+    catch {
       case _: IOException =>
     }
     out.toByteArray
@@ -93,7 +100,7 @@ class VaultPath(upath: UPath, dataVault: DataVault) extends LazyLogging with Fox
 
   override def hashCode(): Int = hashCodeCached
 
-  def parseAsJson[T: Reads](implicit ec: ExecutionContext, tc: TokenContext): Fox[T] =
+  def parseAsJson[T: Reads](using ec: ExecutionContext, tc: TokenContext): Fox[T] =
     for {
       fileBytes <- this.readBytes()
       parsed <- JsonHelper.parseAs[T](fileBytes).toFox

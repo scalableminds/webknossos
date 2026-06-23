@@ -25,32 +25,39 @@ import security.WkEnv
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class CreditTransactionController @Inject()(organizationDAO: OrganizationDAO,
-                                            creditTransactionService: CreditTransactionService,
-                                            freeCreditTransactionService: FreeCreditTransactionService,
-                                            creditTransactionDAO: CreditTransactionDAO,
-                                            creditTransactionPublicWritesService: CreditTransactionPublicWritesService,
-                                            userService: UserService,
-                                            sil: Silhouette[WkEnv])(implicit ec: ExecutionContext)
+class CreditTransactionController @Inject() (
+    organizationDAO: OrganizationDAO,
+    creditTransactionService: CreditTransactionService,
+    freeCreditTransactionService: FreeCreditTransactionService,
+    creditTransactionDAO: CreditTransactionDAO,
+    creditTransactionPublicWritesService: CreditTransactionPublicWritesService,
+    userService: UserService,
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext)
     extends Controller
     with FoxImplicits {
 
-  def addCredits(organizationId: String,
-                 creditAmount: Int,
-                 moneySpent: String,
-                 currency: String,
-                 comment: Option[String],
-                 expiresAt: Option[String]): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
+  def addCredits(
+      organizationId: String,
+      creditAmount: Int,
+      moneySpent: String,
+      currency: String,
+      comment: Option[String],
+      expiresAt: Option[String]
+  ): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> "Only super users can add credits to an organization"
-      _ <- organizationDAO.findOne(organizationId)(GlobalAccessContext) ?~> Msg.Organization.notFound(organizationId)
+      _ <- organizationDAO.findOne(organizationId)(using GlobalAccessContext) ?~> Msg.Organization.notFound(
+        organizationId
+      )
       moneySpentInDecimal <- tryo(BigDecimal(moneySpent)).toFox ?~> s"moneySpent $moneySpent is not a valid decimal"
       _ <- Fox.fromBool(moneySpentInDecimal >= 0) ?~> "moneySpent must be a positive number"
       _ <- Fox.fromBool(creditAmount > 0) ?~> "creditAmount must be a positive number"
       commentNoOptional = comment.getOrElse(s"Adding $creditAmount credits for $moneySpentInDecimal $currency.")
       expirationDateOpt <- Fox.runOptional(expiresAt)(Instant.fromString(_).toFox)
-      _ <- Fox
-        .runOptional(expirationDateOpt)(expirationDate => Fox.fromBool(!expirationDate.isPast)) ?~> "Expiration date must be in the future"
+      _ <- Fox.runOptional(expirationDateOpt)(expirationDate =>
+        Fox.fromBool(!expirationDate.isPast)
+      ) ?~> "Expiration date must be in the future"
       milliCreditsAmount = creditAmount * 1000
       addCreditsTransaction = CreditTransaction(
         ObjectId.generate,

@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import com.scalableminds.webknossos.datastore.rpc.RPC
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{Tracingstores, TracingstoresRow, GetResultTracingstoresRow}
 import com.typesafe.scalalogging.LazyLogging
 
 import javax.inject.Inject
@@ -28,10 +28,11 @@ object TracingStore {
     TracingStore(name, url, publicUrl, "")
 }
 
-class TracingStoreService @Inject()(
+class TracingStoreService @Inject() (
     tracingStoreDAO: TracingStoreDAO,
     rpc: RPC,
-    tracingDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore)(implicit ec: ExecutionContext)
+    tracingDataSourceTemporaryStore: AnnotationDataSourceTemporaryStore
+)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging
     with Results {
@@ -41,7 +42,8 @@ class TracingStoreService @Inject()(
       Json.obj(
         "name" -> tracingStore.name,
         "url" -> tracingStore.publicUrl
-      ))
+      )
+    )
 
   def validateAccess(name: String, key: String)(block: TracingStore => Future[Result]): Fox[Result] =
     Fox.fromFuture(
@@ -51,7 +53,8 @@ class TracingStoreService @Inject()(
         .getOrElse {
           logger.info(s"Denying tracing store request from $name due to unknown key.")
           Forbidden(Msg.TracingStore.notFound)
-        }) // Default error
+        }
+    ) // Default error
 
   def clientFor(dataset: Dataset): Fox[WKRemoteTracingStoreClient] =
     for {
@@ -64,7 +67,7 @@ class TracingStoreService @Inject()(
     } yield new WKRemoteTracingStoreClient(tracingStore, None, rpc, tracingDataSourceTemporaryStore)
 }
 
-class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class TracingStoreDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[TracingStore, TracingstoresRow, Tracingstores](sqlClient) {
   protected val collection = Tracingstores
   protected def resultConverter = GetResultTracingstoresRow
@@ -77,7 +80,8 @@ class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
         r.publicurl,
         r.key,
         r.isdeleted
-      ))
+      )
+    )
 
   def findOneByKey(key: String): Fox[TracingStore] =
     for {
@@ -91,7 +95,7 @@ class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
       parsed <- parseFirst(r, name)
     } yield parsed
 
-  def findOneByUrl(url: String)(implicit ctx: DBAccessContext): Fox[TracingStore] =
+  def findOneByUrl(url: String)(using ctx: DBAccessContext): Fox[TracingStore] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"SELECT $columns FROM webknossos.tracingstores_ WHERE url = $url AND $accessQuery".as[TracingstoresRow])
@@ -100,7 +104,7 @@ class TracingStoreDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionCont
 
   def findFirst: Fox[TracingStore] =
     for {
-      all <- findAll(GlobalAccessContext)
+      all <- findAll(using GlobalAccessContext)
       first <- all.headOption.toFox
     } yield first
 

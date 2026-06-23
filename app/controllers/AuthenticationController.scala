@@ -265,8 +265,9 @@ class AuthenticationController @Inject() (
                   _ <- Fox.fromBool(
                     inviteBox.isDefined || conf.Features.registerToDefaultOrgaEnabled
                   ) ?~> Msg.User.needsInvite
-                  organization <- organizationService.findOneByInviteOrDefault(inviteBox.toOption)(GlobalAccessContext)
-                  _ <- organizationService.assertUsersCanBeAdded(organization._id)(
+                  organization <- organizationService
+                    .findOneByInviteOrDefault(inviteBox.toOption)(using GlobalAccessContext)
+                  _ <- organizationService.assertUsersCanBeAdded(organization._id)(using
                     GlobalAccessContext,
                     ec
                   ) ?~> Msg.Organization.usersUserLimitReached
@@ -315,10 +316,10 @@ class AuthenticationController @Inject() (
         isEmailVerified = isEmailVerified,
         teamMemberships = teamMemberships
       ) ?~> Msg.User.createFailed
-      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+      multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
       _ = analyticsService.track(SignupEvent(user, inviteBox.isDefined))
       _ <- Fox.runIf(inviteBox.isDefined)(
-        Fox.runOptional(inviteBox.toOption)(i => inviteService.deactivateUsedInvite(i)(GlobalAccessContext))
+        Fox.runOptional(inviteBox.toOption)(i => inviteService.deactivateUsedInvite(i)(using GlobalAccessContext))
       )
       newUserEmailRecipient <- organizationService.newUserMailRecipient(organization)
       _ =
@@ -343,10 +344,10 @@ class AuthenticationController @Inject() (
             value <- combinedAuthenticatorService.init(authenticator)
             result <- combinedAuthenticatorService.embed(value, Ok)
             _ <- Fox.runIf(conf.WebKnossos.User.EmailVerification.activated)(
-              emailVerificationService.assertEmailVerifiedOrResendVerificationMail(user)(GlobalAccessContext, ec)
+              emailVerificationService.assertEmailVerifiedOrResendVerificationMail(user)(using GlobalAccessContext, ec)
             )
-            _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(GlobalAccessContext)
-            _ = userDAO.updateLastActivity(user._id)(GlobalAccessContext)
+            _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(using GlobalAccessContext)
+            _ = userDAO.updateLastActivity(user._id)(using GlobalAccessContext)
             _ = logger.info(f"User ${user._id} authenticated.")
           } yield result
         case None =>
@@ -363,7 +364,7 @@ class AuthenticationController @Inject() (
         signInData => {
           val email = signInData.email.toLowerCase
           val userFopt: Future[Option[User]] =
-            userService.userFromMultiUserEmail(email)(GlobalAccessContext).futureBox.map(_.toOption)
+            userService.userFromMultiUserEmail(email)(using GlobalAccessContext).futureBox.map(_.toOption)
           val idF = userFopt.map(userOpt =>
             userOpt.map(_._id.id).getOrElse("")
           ) // do not fail here if there is no user for email. Fail below.
@@ -394,7 +395,7 @@ class AuthenticationController @Inject() (
     for {
       organization <- organizationDAO.findOne(organizationId) ?~> Msg.Organization.notFound(organizationId) ~> NOT_FOUND
       _ <- userService.fillSuperUserIdentity(request.identity, organization._id)
-      targetUser <- userDAO.findOneByOrgaAndMultiUser(organization._id, request.identity._multiUser)(
+      targetUser <- userDAO.findOneByOrgaAndMultiUser(organization._id, request.identity._multiUser)(using
         GlobalAccessContext
       ) ?~> Msg.User.notFound ~> NOT_FOUND
       _ <- Fox.fromBool(!targetUser.isDeactivated) ?~> Msg.User.isDeactivated
@@ -433,12 +434,14 @@ class AuthenticationController @Inject() (
   def joinOrganization(inviteToken: String): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       invite <- inviteDAO.findOneByTokenValue(inviteToken) ?~> Msg.User.invalidInviteToken
-      organization <- organizationDAO.findOne(invite._organization)(GlobalAccessContext) ?~> Msg.User.invalidInviteToken
+      organization <- organizationDAO.findOne(invite._organization)(using
+        GlobalAccessContext
+      ) ?~> Msg.User.invalidInviteToken
       _ <- userService.assertNotInOrgaYet(request.identity._multiUser, organization._id)
       requestingMultiUser <- multiUserDAO.findOne(request.identity._multiUser)
       alreadyPayingOrgaForMultiUser <- userDAO.findPayingOrgaIdForMultiUser(requestingMultiUser._id)
       _ <- Fox.runIf(!requestingMultiUser.isSuperUser && alreadyPayingOrgaForMultiUser.isEmpty)(
-        organizationService.assertUsersCanBeAdded(organization._id)(GlobalAccessContext, ec)
+        organizationService.assertUsersCanBeAdded(organization._id)(using GlobalAccessContext, ec)
       ) ?~> Msg.Organization.usersUserLimitReached
       teamMemberships <- userService.initialTeamMemberships(organization._id, Some(invite._id))
       _ <- userService.joinOrganization(
@@ -461,7 +464,7 @@ class AuthenticationController @Inject() (
           newUserEmailRecipient
         )
       )
-      _ <- inviteService.deactivateUsedInvite(invite)(GlobalAccessContext)
+      _ <- inviteService.deactivateUsedInvite(invite)(using GlobalAccessContext)
     } yield Ok
   }
 
@@ -504,7 +507,7 @@ class AuthenticationController @Inject() (
         bogusForm => Future.successful(BadRequest(bogusForm.toString)),
         email => {
           val userFopt: Future[Option[User]] =
-            userService.userFromMultiUserEmail(email.toLowerCase)(GlobalAccessContext).futureBox.map(_.toOption)
+            userService.userFromMultiUserEmail(email.toLowerCase)(using GlobalAccessContext).futureBox.map(_.toOption)
           val idF = userFopt.map(userOpt =>
             userOpt.map(_._id.id).getOrElse("")
           ) // do not fail here if there is no user for email. Fail below to unify error handling.
@@ -512,7 +515,7 @@ class AuthenticationController @Inject() (
             case None => Future.successful(Ok) // No email sent, but same reply, in order not to leak list of accounts.
             case Some(user) =>
               for {
-                multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+                multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
                 token <- Fox.fromFuture(
                   bearerTokenAuthenticatorService
                     .createAndInit(user.loginInfo, TokenType.ResetPassword, deleteOld = true)
@@ -537,8 +540,9 @@ class AuthenticationController @Inject() (
             case Full(user) =>
               for {
                 _ <- Fox.successful(logger.info(s"Multiuser ${user._multiUser} reset their password."))
-                _ <- multiUserDAO
-                  .updatePasswordInfo(user._multiUser, passwordHasher.hash(passwords.password1))(GlobalAccessContext)
+                _ <- multiUserDAO.updatePasswordInfo(user._multiUser, passwordHasher.hash(passwords.password1))(using
+                  GlobalAccessContext
+                )
                 _ <- bearerTokenAuthenticatorService.remove(passwords.token.trim)
               } yield Ok
             case _ =>
@@ -687,9 +691,11 @@ class AuthenticationController @Inject() (
         credentialId = authData.getCredentialId
         multiUserId <- ObjectId.fromString(new String(authData.getUserHandle)) ??~>
           Msg.Passkeys.unauthorized ~> UNAUTHORIZED
-        multiUser <- multiUserDAO.findOneById(multiUserId)(GlobalAccessContext) ??~>
+        multiUser <- multiUserDAO.findOneById(multiUserId)(using GlobalAccessContext) ??~>
           Msg.Passkeys.unauthorized ~> UNAUTHORIZED
-        credential <- webAuthnCredentialDAO.findByCredentialId(multiUser._id, credentialId)(GlobalAccessContext) ??~>
+        credential <- webAuthnCredentialDAO.findByCredentialId(multiUser._id, credentialId)(using
+          GlobalAccessContext
+        ) ??~>
           Msg.Passkeys.unauthorized ~> UNAUTHORIZED
         serverProperty = new ServerProperty(origin, origin.getHost, challenge)
 
@@ -835,9 +841,9 @@ class AuthenticationController @Inject() (
           authenticator: CombinedAuthenticator <- combinedAuthenticatorService.create(loginInfo)
           value: Cookie <- combinedAuthenticatorService.init(authenticator)
           result: AuthenticatorResult <- combinedAuthenticatorService.embed(value, Redirect("/dashboard"))
-          _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(GlobalAccessContext)
+          _ <- multiUserDAO.updateLastLoggedInIdentity(user._multiUser, user._id)(using GlobalAccessContext)
           _ = logger.info(f"User ${user._id} logged in.")
-          _ = userDAO.updateLastActivity(user._id)(GlobalAccessContext)
+          _ = userDAO.updateLastActivity(user._id)(using GlobalAccessContext)
         } yield result
       case None =>
         Future.successful(BadRequest(Msg.User.invalidCredentials))
@@ -848,13 +854,13 @@ class AuthenticationController @Inject() (
   private def loginOrSignupViaOidc(
       openIdConnectUserInfo: OpenIdConnectUserInfo
   ): Request[AnyContent] => Future[Result] = { implicit request: Request[AnyContent] =>
-    userService.userFromMultiUserEmail(openIdConnectUserInfo.email)(GlobalAccessContext).futureBox.flatMap {
+    userService.userFromMultiUserEmail(openIdConnectUserInfo.email)(using GlobalAccessContext).futureBox.flatMap {
       case Full(user) =>
         val loginInfo = LoginInfo("credentials", user._id.toString)
         loginUser(loginInfo)
       case Empty =>
         for {
-          organization: Organization <- organizationService.findOneByInviteOrDefault(None)(GlobalAccessContext)
+          organization: Organization <- organizationService.findOneByInviteOrDefault(None)(using GlobalAccessContext)
           user <- createUser(
             organization,
             openIdConnectUserInfo.email,
@@ -899,7 +905,7 @@ class AuthenticationController @Inject() (
     sil.SecuredAction.async(validateJson[CreateOrganizationWithExistingUserParams]) { implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity)
-        user <- userDAO.findOne(request.body.userId)(GlobalAccessContext)
+        user <- userDAO.findOne(request.body.userId)(using GlobalAccessContext)
         newOrganizationId = RandomIDGenerator.generateBlocking(8, useHex = true)
         organization <- organizationService.createOrganization(
           Some(newOrganizationId),
@@ -963,7 +969,7 @@ class AuthenticationController @Inject() (
                         teamMemberships = teamMemberships
                       ) ?~> Msg.User.createFailed
                       _ = analyticsService.track(SignupEvent(user, hadInvite = false))
-                      multiUser <- multiUserDAO.findOne(user._multiUser)(GlobalAccessContext)
+                      multiUser <- multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext)
                       _ <- organizationService
                         .createOrganizationDirectory(organization._id) ?~> Msg.Organization.Create.directoryCreateFailed
                       _ <- Fox.runIf(conf.WebKnossos.TermsOfService.enabled)(
@@ -987,7 +993,9 @@ class AuthenticationController @Inject() (
   private def acceptTermsOfServiceForUser(user: User, termsOfServiceVersion: Option[Int]): Fox[Unit] =
     for {
       acceptedVersion <- termsOfServiceVersion.toFox ?~> "Terms of service must be accepted."
-      _ <- organizationService.acceptTermsOfService(user._organization, acceptedVersion)(DBAccessContext(Some(user)))
+      _ <- organizationService.acceptTermsOfService(user._organization, acceptedVersion)(using
+        DBAccessContext(Some(user))
+      )
     } yield ()
 
   case class CreateUserInOrganizationParameters(
@@ -1038,7 +1046,7 @@ class AuthenticationController @Inject() (
     var (errors, fN, lN) = normalizeName(firstName, lastName)
     for {
       nameEmailError: (String, String, String, List[String]) <- multiUserDAO
-        .findOneByEmail(email.toLowerCase)(GlobalAccessContext)
+        .findOneByEmail(email.toLowerCase)(using GlobalAccessContext)
         .shiftBox
         .flatMap {
           case Full(_) =>

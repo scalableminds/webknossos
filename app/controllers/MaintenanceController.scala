@@ -14,14 +14,15 @@ import utils.sql.{SQLDAO, SqlClient}
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{Maintenances, MaintenancesRow, GetResultMaintenancesRow}
 import security.WkEnv
 
-class MaintenanceController @Inject()(
+class MaintenanceController @Inject() (
     sil: Silhouette[WkEnv],
     maintenanceDAO: MaintenanceDAO,
     maintenanceService: MaintenanceService,
-    userService: UserService)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+    userService: UserService
+)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
@@ -61,7 +62,7 @@ class MaintenanceController @Inject()(
   def listAll: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
-      maintenances <- maintenanceDAO.findAll(GlobalAccessContext)
+      maintenances <- maintenanceDAO.findAll(using GlobalAccessContext)
       js = maintenances.map(maintenanceService.publicWrites)
     } yield Ok(Json.toJson(js))
   }
@@ -70,11 +71,13 @@ class MaintenanceController @Inject()(
     implicit request =>
       for {
         _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
-        newMaintenance = Maintenance(ObjectId.generate,
-                                     request.identity._id,
-                                     request.body.startTime,
-                                     request.body.endTime,
-                                     request.body.message)
+        newMaintenance = Maintenance(
+          ObjectId.generate,
+          request.identity._id,
+          request.body.startTime,
+          request.body.endTime,
+          request.body.message
+        )
         _ <- maintenanceDAO.insertOne(newMaintenance)
       } yield Ok(maintenanceService.publicWrites(newMaintenance))
   }
@@ -82,24 +85,28 @@ class MaintenanceController @Inject()(
   def createAdHocMaintenance: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       _ <- userService.assertIsSuperUser(request.identity) ?~> Msg.notAllowed ~> FORBIDDEN
-      newMaintenance = Maintenance(ObjectId.generate,
-                                   request.identity._id,
-                                   Instant.now,
-                                   Instant.in(adHocMaintenanceDuration),
-                                   "WEBKNOSSOS is temporarily under maintenance.")
+      newMaintenance = Maintenance(
+        ObjectId.generate,
+        request.identity._id,
+        Instant.now,
+        Instant.in(adHocMaintenanceDuration),
+        "WEBKNOSSOS is temporarily under maintenance."
+      )
       _ <- maintenanceDAO.insertOne(newMaintenance)
     } yield Ok(maintenanceService.publicWrites(newMaintenance))
   }
 
 }
 
-case class Maintenance(_id: ObjectId,
-                       _user: ObjectId,
-                       startTime: Instant,
-                       endTime: Instant,
-                       message: String,
-                       created: Instant = Instant.now,
-                       isDeleted: Boolean = false)
+case class Maintenance(
+    _id: ObjectId,
+    _user: ObjectId,
+    startTime: Instant,
+    endTime: Instant,
+    message: String,
+    created: Instant = Instant.now,
+    isDeleted: Boolean = false
+)
 
 case class MaintenanceParameters(startTime: Instant, endTime: Instant, message: String)
 
@@ -107,7 +114,7 @@ object MaintenanceParameters {
   implicit val jsonFormat: OFormat[MaintenanceParameters] = Json.format[MaintenanceParameters]
 }
 
-class MaintenanceService @Inject()() {
+class MaintenanceService @Inject() () {
   def publicWrites(m: Maintenance): JsObject =
     Json.obj(
       "id" -> m._id,
@@ -117,20 +124,22 @@ class MaintenanceService @Inject()() {
     )
 }
 
-class MaintenanceDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class MaintenanceDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Maintenance, MaintenancesRow, Maintenances](sqlClient) {
   protected val collection = Maintenances
   protected def resultConverter = GetResultMaintenancesRow
 
   protected def parse(r: MaintenancesRow): Fox[Maintenance] =
     Fox.successful(
-      Maintenance(ObjectId(r._Id),
-                  ObjectId(r._User),
-                  Instant.fromSql(r.starttime),
-                  Instant.fromSql(r.endtime),
-                  r.message,
-                  Instant.fromSql(r.created),
-                  r.isdeleted)
+      Maintenance(
+        ObjectId(r._Id),
+        ObjectId(r._User),
+        Instant.fromSql(r.starttime),
+        Instant.fromSql(r.endtime),
+        r.message,
+        Instant.fromSql(r.created),
+        r.isdeleted
+      )
     )
 
   def findCurrentAndUpcoming: Fox[List[Maintenance]] =

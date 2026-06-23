@@ -7,7 +7,6 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.task._
 import play.silhouette.api.Silhouette
 import models.user.UserService
-import play.api.libs.json.Reads._
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv
@@ -24,11 +23,13 @@ object ScriptParameters {
   implicit val jsonFormat: OFormat[ScriptParameters] = Json.format[ScriptParameters]
 }
 
-class ScriptController @Inject()(scriptDAO: ScriptDAO,
-                                 taskDAO: TaskDAO,
-                                 scriptService: ScriptService,
-                                 userService: UserService,
-                                 sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+class ScriptController @Inject() (
+    scriptDAO: ScriptDAO,
+    taskDAO: TaskDAO,
+    scriptService: ScriptService,
+    userService: UserService,
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
@@ -38,10 +39,12 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
       _ <- Fox.fromBool(isTeamManagerOrAdmin) ?~> Msg.notAllowed ~> FORBIDDEN
       _ <- Fox.fromBool(request.body.owner == request.identity._id) ?~> Msg.notAllowed ~> FORBIDDEN
       _ <- scriptService.assertValidScriptName(request.body.name)
-      script = Script(_id = ObjectId.generate,
-                      _owner = request.body.owner,
-                      name = request.body.name,
-                      gist = request.body.gist)
+      script = Script(
+        _id = ObjectId.generate,
+        _owner = request.body.owner,
+        name = request.body.name,
+        gist = request.body.gist
+      )
       _ <- scriptDAO.insertOne(script)
       js <- scriptService.publicWrites(script) ?~> Msg.Script.publicWritesFailed
     } yield Ok(js)
@@ -67,8 +70,9 @@ class ScriptController @Inject()(scriptDAO: ScriptDAO,
         oldScript <- scriptDAO.findOne(scriptId) ?~> Msg.Script.notFound(scriptId) ~> NOT_FOUND
         _ <- Fox.fromBool(oldScript._owner == request.identity._id) ?~> Msg.Script.updateOnlyOwner ~> FORBIDDEN
         _ <- scriptService.assertValidScriptName(request.body.name)
-        _ <- Fox.runIf(request.body.owner != oldScript._owner)(userService.findOneCached(request.body.owner)) ?~> Msg.User
-          .notFound(request.body.owner)
+        _ <- Fox.runIf(request.body.owner != oldScript._owner)(
+          userService.findOneCached(request.body.owner)
+        ) ?~> Msg.User.notFound(request.body.owner)
         updatedScript = oldScript.copy(name = request.body.name, gist = request.body.gist, _owner = request.body.owner)
         _ <- scriptDAO.updateOne(updatedScript)
         js <- scriptService.publicWrites(updatedScript) ?~> Msg.Script.publicWritesFailed

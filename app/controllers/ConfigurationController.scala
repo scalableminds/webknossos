@@ -16,13 +16,14 @@ import security.{URLSharing, WkEnv}
 
 import scala.concurrent.ExecutionContext
 
-class ConfigurationController @Inject()(
+class ConfigurationController @Inject() (
     userService: UserService,
     datasetService: DatasetService,
     datasetDAO: DatasetDAO,
     datasetConfigurationService: DatasetConfigurationService,
     userKeyboardShortcutsConfigsDAO: UserKeyboardShortcutsConfigsDAO,
-    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext, bodyParsers: PlayBodyParsers)
     extends Controller {
 
   def read: Action[AnyContent] = sil.UserAwareAction { implicit request =>
@@ -58,9 +59,11 @@ class ConfigurationController @Inject()(
         configuration <- request.identity.toFox
           .flatMap(user =>
             datasetConfigurationService.getDatasetViewConfigurationForUserAndDataset(request.body, user, datasetId)(
-              GlobalAccessContext))
+              using GlobalAccessContext
+            )
+          )
           .orElse(
-            datasetConfigurationService.getDatasetViewConfigurationForDataset(request.body, datasetId)(ctx)
+            datasetConfigurationService.getDatasetViewConfigurationForDataset(request.body, datasetId)(using ctx)
           )
           .getOrElse(Map.empty)
       } yield Ok(Json.toJson(configuration))
@@ -86,7 +89,7 @@ class ConfigurationController @Inject()(
   def updateDatasetAdminViewConfiguration(datasetId: ObjectId): Action[JsObject] =
     sil.SecuredAction.async(validateJson[JsObject]) { implicit request =>
       for {
-        dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext)
+        dataset <- datasetDAO.findOne(datasetId)(using GlobalAccessContext)
         _ <- datasetService.isEditableBy(dataset, Some(request.identity)) ?~> Msg.notAllowed ~> FORBIDDEN
         _ <- datasetConfigurationService.updateAdminViewConfigurationFor(dataset, request.body.fields.toMap)
       } yield JsonOk(Msg.User.Configuration.updateSuccessForDataset)

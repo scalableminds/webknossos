@@ -71,29 +71,39 @@ trait AccessTokenService {
   private lazy val accessAnswersCache: AlfuCache[(UserAccessRequest, Option[String]), UserAccessAnswer] =
     AlfuCache(timeToLive = AccessExpiration, timeToIdle = AccessExpiration)
 
-  def validateAccessFromTokenContextForSyncBlock(accessRequest: UserAccessRequest)(
-      block: => Result)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Result] =
+  def validateAccessFromTokenContextForSyncBlock(
+      accessRequest: UserAccessRequest
+  )(block: => Result)(using ec: ExecutionContext, tc: TokenContext): Fox[Result] =
     validateAccessFromTokenContext(accessRequest) {
       Future.successful(block)
     }
 
   def validateAccessFromTokenContext(accessRequest: UserAccessRequest, useCaching: Boolean = true)(
-      block: => Future[Result])(implicit ec: ExecutionContext, tc: TokenContext): Fox[Result] =
+      block: => Future[Result]
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[Result] =
     for {
-      userAccessAnswer <- hasUserAccess(accessRequest, useCaching) ?~> "Failed to check data access, token may be expired, consider reloading."
+      userAccessAnswer <- hasUserAccess(
+        accessRequest,
+        useCaching
+      ) ?~> "Failed to check data access, token may be expired, consider reloading."
       result <- Fox.fromFuture(executeBlockOnPositiveAnswer(userAccessAnswer, block))
     } yield result
 
-  private def hasUserAccess(accessRequest: UserAccessRequest, useCaching: Boolean)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[UserAccessAnswer] =
+  private def hasUserAccess(accessRequest: UserAccessRequest, useCaching: Boolean)(using
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[UserAccessAnswer] =
     if (useCaching) {
-      accessAnswersCache.getOrLoad((accessRequest, tc.userTokenOpt),
-                                   _ => remoteWebknossosClient.requestUserAccess(accessRequest))
+      accessAnswersCache.getOrLoad(
+        (accessRequest, tc.userTokenOpt),
+        _ => remoteWebknossosClient.requestUserAccess(accessRequest)
+      )
     } else remoteWebknossosClient.requestUserAccess(accessRequest)
 
-  private def executeBlockOnPositiveAnswer(userAccessAnswer: UserAccessAnswer,
-                                           block: => Future[Result]): Future[Result] =
+  private def executeBlockOnPositiveAnswer(
+      userAccessAnswer: UserAccessAnswer,
+      block: => Future[Result]
+  ): Future[Result] =
     userAccessAnswer match {
       case UserAccessAnswer(true, _) =>
         block
@@ -106,5 +116,5 @@ trait AccessTokenService {
     }
 }
 
-class DataStoreAccessTokenService @Inject()(val remoteWebknossosClient: DSRemoteWebknossosClient)
+class DataStoreAccessTokenService @Inject() (val remoteWebknossosClient: DSRemoteWebknossosClient)
     extends AccessTokenService

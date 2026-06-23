@@ -10,15 +10,16 @@ import security.WkEnv
 import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 
-class EmailVerificationController @Inject()(emailVerificationService: EmailVerificationService, sil: Silhouette[WkEnv])(
-    implicit ec: ExecutionContext,
-    val bodyParsers: PlayBodyParsers)
+class EmailVerificationController @Inject() (
+    emailVerificationService: EmailVerificationService,
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
   def verify(key: String): Action[AnyContent] = Action.async { _ =>
     for {
-      _ <- emailVerificationService.verify(key)(GlobalAccessContext, ec)
+      _ <- emailVerificationService.verify(key)(using GlobalAccessContext, ec)
     } yield Ok
   }
 

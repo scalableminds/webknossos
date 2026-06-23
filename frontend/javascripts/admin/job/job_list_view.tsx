@@ -13,7 +13,7 @@ import { PropTypes } from "@scalableminds/prop-types";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import AdminPage from "admin/admin_page";
 import { cancelJob, getJobs, retryJob } from "admin/rest_api";
-import { App, Input, Spin, Table, Tooltip } from "antd";
+import { App, Input, Space, Spin, Table, Tooltip } from "antd";
 import { AsyncLink } from "components/async_clickables";
 import FormattedDate from "components/formatted_date";
 import FormattedId from "components/formatted_id";
@@ -134,8 +134,10 @@ export function JobState({ job }: { job: APIJob }) {
 
   return (
     <Tooltip title={tooltip}>
-      <span>{icon}</span>
-      {jobStateNormalized}
+      <Space size={2}>
+        {icon}
+        {jobStateNormalized}
+      </Space>
     </Tooltip>
   );
 }

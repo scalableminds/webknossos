@@ -40,9 +40,9 @@ import security.{Token, TokenDAO, TokenType, WkEnv}
 
 import scala.concurrent.ExecutionContext
 
-class InitialDataController @Inject()(initialDataService: InitialDataService, sil: Silhouette[WkEnv])(
-    implicit ec: ExecutionContext)
-    extends Controller
+class InitialDataController @Inject() (initialDataService: InitialDataService, sil: Silhouette[WkEnv])(implicit
+    ec: ExecutionContext
+) extends Controller
     with FoxImplicits {
 
   def triggerInsert: Action[AnyContent] = sil.UserAwareAction.async { _ =>
@@ -52,27 +52,29 @@ class InitialDataController @Inject()(initialDataService: InitialDataService, si
   }
 }
 
-class InitialDataService @Inject()(userService: UserService,
-                                   userDAO: UserDAO,
-                                   datasetDAO: DatasetDAO,
-                                   datasetLayerDAO: DatasetLayerDAO,
-                                   multiUserDAO: MultiUserDAO,
-                                   userExperiencesDAO: UserExperiencesDAO,
-                                   taskTypeDAO: TaskTypeDAO,
-                                   dataStoreDAO: DataStoreDAO,
-                                   folderDAO: FolderDAO,
-                                   aiModelDAO: AiModelDAO,
-                                   aiModelService: AiModelService,
-                                   folderService: FolderService,
-                                   tracingStoreDAO: TracingStoreDAO,
-                                   teamDAO: TeamDAO,
-                                   tokenDAO: TokenDAO,
-                                   projectDAO: ProjectDAO,
-                                   publicationDAO: PublicationDAO,
-                                   organizationDAO: OrganizationDAO,
-                                   storeModules: StoreModules,
-                                   organizationService: OrganizationService,
-                                   conf: WkConf)(implicit ec: ExecutionContext)
+class InitialDataService @Inject() (
+    userService: UserService,
+    userDAO: UserDAO,
+    datasetDAO: DatasetDAO,
+    datasetLayerDAO: DatasetLayerDAO,
+    multiUserDAO: MultiUserDAO,
+    userExperiencesDAO: UserExperiencesDAO,
+    taskTypeDAO: TaskTypeDAO,
+    dataStoreDAO: DataStoreDAO,
+    folderDAO: FolderDAO,
+    aiModelDAO: AiModelDAO,
+    aiModelService: AiModelService,
+    folderService: FolderService,
+    tracingStoreDAO: TracingStoreDAO,
+    teamDAO: TeamDAO,
+    tokenDAO: TokenDAO,
+    projectDAO: ProjectDAO,
+    publicationDAO: PublicationDAO,
+    organizationDAO: OrganizationDAO,
+    storeModules: StoreModules,
+    organizationService: OrganizationService,
+    conf: WkConf
+)(implicit ec: ExecutionContext)
     extends FoxImplicits
     with LazyLogging {
   implicit val ctx: GlobalAccessContext.type = GlobalAccessContext
@@ -159,7 +161,8 @@ Samplecountry
     Some("https://static.webknossos.org/images/icon-only.svg"),
     Some("Dummy Title that is usually very long and contains highly scientific terms"),
     Some(
-      "This is a wonderful dummy publication, it has authors, it has a link, it has a doi number, those could go here.\nLorem [ipsum](https://github.com/scalableminds/webknossos) dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua.")
+      "This is a wonderful dummy publication, it has authors, it has a link, it has a doi number, those could go here.\nLorem [ipsum](https://github.com/scalableminds/webknossos) dolor sit amet, consetetur sadipscing elitr, sed diam nonumy eirmod tempor invidunt ut labore et dolore magna aliquyam erat, sed diam voluptua."
+    )
   )
   private val defaultDataStore =
     DataStore(conf.Datastore.name, conf.Http.uri, conf.Datastore.publicUri.getOrElse(conf.Http.uri), conf.Datastore.key)
@@ -190,7 +193,8 @@ Samplecountry
     uploadToPathIsPending = false,
     name = "Neuron Segmentation",
     comment = Some(
-      "Advanced neuron segmentation and reconstruction pipeline. Optimized for dense neuronal tissue from SEM, FIB-SEM, SBEM, Multi-SEM microscopes."),
+      "Advanced neuron segmentation and reconstruction pipeline. Optimized for dense neuronal tissue from SEM, FIB-SEM, SBEM, Multi-SEM microscopes."
+    ),
     category = Some(AiModelCategory.em_neurons),
     isSuperUserOnly = false,
     isPretrained = true
@@ -207,7 +211,8 @@ Samplecountry
     uploadToPathIsPending = false,
     name = "Mitochondria Detection",
     comment = Some(
-      "Instance segmentation model for mitochondria detection. Optimized for EM data. Powered by [MitoNet (Conrad & Narayan 2022)](https://volume-em.github.io/empanada)."),
+      "Instance segmentation model for mitochondria detection. Optimized for EM data. Powered by [MitoNet (Conrad & Narayan 2022)](https://volume-em.github.io/empanada)."
+    ),
     category = Some(AiModelCategory.em_mitochondria),
     isSuperUserOnly = false,
     isPretrained = true
@@ -306,7 +311,7 @@ Samplecountry
               Some(UPath.fromStringUnsafe("https://static.webknossos.org/data/zarr_v3/l4_sample/segmentation/16-16-4"))
           )
         ),
-        largestSegmentId = Some(2504697),
+        largestSegmentId = Some(2504697)
       )
     ),
     scale = VoxelSize(Vec3Double(11.239999771118164, 11.239999771118164, 28), LengthUnit.nanometer)
@@ -435,23 +440,27 @@ Samplecountry
   private def insertRootFolder(): Fox[Unit] =
     folderDAO.findOne(defaultOrganization._rootFolder).shiftBox.flatMap {
       case Full(_) => Fox.successful(())
-      case _ =>
+      case _       =>
         folderDAO.insertAsRoot(Folder(defaultOrganization._rootFolder, folderService.defaultRootName, JsArray.empty))
     }
 
-  private def insertDefaultUser(userEmail: String,
-                                multiUser: MultiUser,
-                                user: User,
-                                isTeamManager: Boolean): Fox[Unit] =
+  private def insertDefaultUser(
+      userEmail: String,
+      multiUser: MultiUser,
+      user: User,
+      isTeamManager: Boolean
+  ): Fox[Unit] =
     userService.userFromMultiUserEmail(userEmail).shiftBox.flatMap {
       case Full(_) => Fox.successful(())
-      case _ =>
+      case _       =>
         for {
           _ <- multiUserDAO.insertOne(multiUser)
           _ <- userDAO.insertOne(user)
           _ <- userExperiencesDAO.updateExperiencesForUser(user, Map("sampleExp" -> 10))
-          _ <- userDAO.insertTeamMembership(user._id,
-                                            TeamMembership(organizationTeam._id, isTeamManager = isTeamManager))
+          _ <- userDAO.insertTeamMembership(
+            user._id,
+            TeamMembership(organizationTeam._id, isTeamManager = isTeamManager)
+          )
           _ = logger.info(s"Inserted default user $userEmail")
         } yield ()
     }
@@ -460,7 +469,7 @@ Samplecountry
     val expiryTime = conf.Silhouette.TokenAuthenticator.authenticatorExpiry
     tokenDAO.findOneByLoginInfo("credentials", defaultUser._id.id, TokenType.Authentication).shiftBox.flatMap {
       case Full(_) => Fox.successful(())
-      case _ =>
+      case _       =>
         val newToken = Token(
           ObjectId.generate,
           defaultUserToken,
@@ -477,7 +486,7 @@ Samplecountry
   private def insertOrganization(): Fox[Unit] =
     organizationDAO.findOne(defaultOrganization._id).shiftBox.flatMap {
       case Full(_) => Fox.successful(())
-      case _ =>
+      case _       =>
         organizationDAO.insertOne(defaultOrganization)
     }
 
@@ -506,14 +515,16 @@ Samplecountry
     projectDAO.findAll.flatMap { projects =>
       if (projects.isEmpty) {
         userService.userFromMultiUserEmail(defaultUserEmail).flatMap { user =>
-          val project = Project(ObjectId.generate,
-                                organizationTeam._id,
-                                user._id,
-                                "sampleProject",
-                                100,
-                                paused = false,
-                                Some(5400000),
-                                isBlacklistedFromReport = false)
+          val project = Project(
+            ObjectId.generate,
+            organizationTeam._id,
+            user._id,
+            "sampleProject",
+            100,
+            paused = false,
+            Some(5400000),
+            isBlacklistedFromReport = false
+          )
           for { _ <- projectDAO.insertOne(project, defaultOrganization._id) } yield ()
         }
       } else Fox.successful(())
@@ -534,15 +545,15 @@ Samplecountry
     } else Fox.successful(())
   }
 
-  private def insertRemoteNDDataset(): Fox[Unit] = datasetDAO.findOne(remoteNDZarrDataset._id).shiftBox.flatMap {
-    maybeDataset =>
+  private def insertRemoteNDDataset(): Fox[Unit] =
+    datasetDAO.findOne(remoteNDZarrDataset._id).shiftBox.flatMap { maybeDataset =>
       if (maybeDataset.isEmpty) {
         for {
           _ <- datasetDAO.insertOne(remoteNDZarrDataset)
           _ <- datasetLayerDAO.updateLayers(remoteNDZarrDataset._id, remoteNDZarrDataSource)
         } yield ()
       } else Fox.successful(())
-  }
+    }
 
   private def insertModelIfAbsent(model: AiModel): Fox[Unit] =
     aiModelDAO.findOne(model._id).shiftBox.flatMap {
@@ -576,10 +587,13 @@ Samplecountry
         if (maybeStore.isEmpty) {
           logger.info("Inserting local tracingstore")
           tracingStoreDAO.insertOne(
-            TracingStore(conf.Tracingstore.name,
-                         conf.Http.uri,
-                         conf.Tracingstore.publicUri.getOrElse(conf.Http.uri),
-                         conf.Tracingstore.key))
+            TracingStore(
+              conf.Tracingstore.name,
+              conf.Http.uri,
+              conf.Tracingstore.publicUri.getOrElse(conf.Http.uri),
+              conf.Tracingstore.key
+            )
+          )
         } else Fox.successful(())
       }
     } else Fox.successful(())
@@ -609,5 +623,7 @@ Samplecountry
     } else Fox.successful(())
 
   private def createOrganizationDirectory(): Fox[Unit] =
-    organizationService.createOrganizationDirectory(defaultOrganization._id) ?~> Msg.Organization.Create.directoryCreateFailed
+    organizationService.createOrganizationDirectory(
+      defaultOrganization._id
+    ) ?~> Msg.Organization.Create.directoryCreateFailed
 }

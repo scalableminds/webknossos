@@ -17,16 +17,18 @@ object SkeletonTracingDefaults extends ProtoGeometryImplicits {
   private val userBoundingBox = None
 
   def createInstance: SkeletonTracing =
-    SkeletonTracing(datasetName,
-                    trees,
-                    createdTimestamp,
-                    boundingBox,
-                    activeNodeId,
-                    editPosition,
-                    editRotation,
-                    zoomLevel,
-                    version,
-                    userBoundingBox)
+    SkeletonTracing(
+      datasetName,
+      trees,
+      createdTimestamp,
+      boundingBox,
+      activeNodeId,
+      editPosition,
+      editRotation,
+      zoomLevel,
+      version,
+      userBoundingBox
+    )
 
   def emptyUserState(userId: ObjectId): SkeletonUserStateProto =
     SkeletonUserStateProto(

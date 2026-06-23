@@ -33,34 +33,36 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
   private lazy val additionalAxesSorted = reorderAdditionalAxes(layer.additionalAxes.getOrElse(Seq.empty))
 
   def apply(bucketStream: Iterator[(BucketPosition, Array[Byte])], mags: Seq[Vec3Int], voxelSize: Option[VoxelSize])(
-      implicit ec: ExecutionContext): Iterator[NamedStream] = {
+      implicit ec: ExecutionContext
+  ): Iterator[NamedStream] = {
 
-    val header = Zarr3ArrayHeader.fromDataLayer(layer,
-                                                mags.headOption.getOrElse(Vec3Int.ones),
-                                                additionalCodecs = Seq(BloscCodecConfiguration.defaultForWKZarrOutput))
-    bucketStream.flatMap {
-      case (bucket, data) =>
-        val skipBucket = if (tracingHasFallbackLayer) isAllZero(data) else isRevertedElement(data)
-        if (skipBucket) {
-          // If the tracing has no fallback segmentation, all-zero buckets can be omitted entirely
-          None
-        } else {
-          val filePath = zarrChunkFilePath(defaultLayerName, bucket, additionalAxesSorted)
-          Some(
-            NamedFunctionStream(
-              filePath,
-              os => Fox.successful(os.write(compressor.compress(data)))
-            )
+    val header = Zarr3ArrayHeader.fromDataLayer(
+      layer,
+      mags.headOption.getOrElse(Vec3Int.ones),
+      additionalCodecs = Seq(BloscCodecConfiguration.defaultForWKZarrOutput)
+    )
+    bucketStream.flatMap { case (bucket, data) =>
+      val skipBucket = if (tracingHasFallbackLayer) isAllZero(data) else isRevertedElement(data)
+      if (skipBucket) {
+        // If the tracing has no fallback segmentation, all-zero buckets can be omitted entirely
+        None
+      } else {
+        val filePath = zarrChunkFilePath(defaultLayerName, bucket, additionalAxesSorted)
+        Some(
+          NamedFunctionStream(
+            filePath,
+            os => Fox.successful(os.write(compressor.compress(data)))
           )
-        }
-      case _ => None
+        )
+      }
     } ++ mags.map { mag =>
       NamedFunctionStream.fromJsonSerializable(zarrHeaderFilePath(defaultLayerName, mag), header)
     } ++ Seq(
       NamedFunctionStream.fromJsonSerializable(
         UsableDataSource.FILENAME_DATASOURCE_PROPERTIES_JSON,
         createVolumeDataSource(voxelSize)
-      ))
+      )
+    )
   }
 
   private def createVolumeDataSource(voxelSize: Option[VoxelSize]): UsableDataSource = {
@@ -83,18 +85,25 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
           additionalAxes =
             if (additionalAxesSorted.isEmpty) None
             else Some(additionalAxesSorted)
-        )),
-      scale = voxelSize.getOrElse(VoxelSize.fromFactorWithDefaultUnit(Vec3Double.ones)) // Download should still be available if the dataset no longer exists. In that case, the voxel size is unknown
+        )
+      ),
+      scale = voxelSize.getOrElse(
+        VoxelSize.fromFactorWithDefaultUnit(Vec3Double.ones)
+      ) // Download should still be available if the dataset no longer exists. In that case, the voxel size is unknown
     )
   }
 
-  private def reorderAdditionalCoordinates(additionalCoordinates: Seq[AdditionalCoordinate],
-                                           additionalAxesSorted: Seq[AdditionalAxis]): Seq[AdditionalCoordinate] =
+  private def reorderAdditionalCoordinates(
+      additionalCoordinates: Seq[AdditionalCoordinate],
+      additionalAxesSorted: Seq[AdditionalAxis]
+  ): Seq[AdditionalCoordinate] =
     additionalCoordinates.sortBy(c => additionalAxesSorted.indexWhere(a => a.name == c.name))
 
-  private def zarrChunkFilePath(layerName: String,
-                                bucketPosition: BucketPosition,
-                                additionalAxesSorted: Seq[AdditionalAxis]): String = {
+  private def zarrChunkFilePath(
+      layerName: String,
+      bucketPosition: BucketPosition,
+      additionalAxesSorted: Seq[AdditionalAxis]
+  ): String = {
     // In volume annotations, store buckets/chunks as additionalCoordinates, then z,y,x
     val additionalCoordinatesPart =
       additionalCoordinatesFilePath(bucketPosition.additionalCoordinates, additionalAxesSorted)
@@ -102,8 +111,10 @@ class Zarr3BucketStreamSink(val layer: VolumeTracingLayer, tracingHasFallbackLay
     s"$layerName/${bucketPosition.mag.toMagLiteral(allowScalar = true)}/$channelPart$dimensionSeparator$additionalCoordinatesPart${bucketPosition.bucketX}$dimensionSeparator${bucketPosition.bucketY}$dimensionSeparator${bucketPosition.bucketZ}"
   }
 
-  private def additionalCoordinatesFilePath(additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
-                                            additionalAxesSorted: Seq[AdditionalAxis]) =
+  private def additionalCoordinatesFilePath(
+      additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
+      additionalAxesSorted: Seq[AdditionalAxis]
+  ) =
     additionalCoordinatesOpt match {
       case Some(additionalCoordinates) if additionalCoordinates.nonEmpty =>
         reorderAdditionalCoordinates(additionalCoordinates, additionalAxesSorted)

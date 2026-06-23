@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{Teams, TeamsRow, GetResultTeamsRow}
 
 import javax.inject.Inject
 import models.dataset.Dataset
@@ -27,23 +27,25 @@ case class Team(
     isDeleted: Boolean = false
 )
 
-class TeamService @Inject()(organizationDAO: OrganizationDAO,
-                            teamDAO: TeamDAO,
-                            projectDAO: ProjectDAO,
-                            taskTypeDAO: TaskTypeDAO)(implicit ec: ExecutionContext)
+class TeamService @Inject() (
+    organizationDAO: OrganizationDAO,
+    teamDAO: TeamDAO,
+    projectDAO: ProjectDAO,
+    taskTypeDAO: TaskTypeDAO
+)(implicit ec: ExecutionContext)
     extends FoxImplicits {
 
   def publicWrites(team: Team, organizationOpt: Option[Organization] = None): Fox[JsObject] =
     for {
-      organization <- Fox.fillOption(organizationOpt)(organizationDAO.findOne(team._organization)(GlobalAccessContext))
-    } yield {
-      Json.obj(
-        "id" -> team._id.toString,
-        "name" -> team.name,
-        "organization" -> organization._id,
-        "isOrganizationTeam" -> team.isOrganizationTeam
+      organization <- Fox.fillOption(organizationOpt)(
+        organizationDAO.findOne(team._organization)(using GlobalAccessContext)
       )
-    }
+    } yield Json.obj(
+      "id" -> team._id.toString,
+      "name" -> team.name,
+      "organization" -> organization._id,
+      "isOrganizationTeam" -> team.isOrganizationTeam
+    )
 
   def assertNoReferences(teamId: ObjectId): Fox[Unit] =
     for {
@@ -53,16 +55,18 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
       _ <- Fox.fromBool(taskTypeCount == 0) ?~> Msg.Team.inUseByTaskTypes(taskTypeCount)
     } yield ()
 
-  def allowedTeamsForFolder(folderId: ObjectId, cumulative: Boolean, requestingUser: Option[User] = None)(
-      implicit ctx: DBAccessContext): Fox[List[Team]] =
+  def allowedTeamsForFolder(folderId: ObjectId, cumulative: Boolean, requestingUser: Option[User] = None)(using
+      ctx: DBAccessContext
+  ): Fox[List[Team]] =
     for {
       teamIds <- allowedTeamIdsForFolder(folderId, cumulative)
       teams <- teamDAO.findAllByIds(teamIds)
       teamsFiltered = removeForeignOrganizationTeams(teams, requestingUser)
     } yield teamsFiltered
 
-  def allowedTeamsForDataset(dataset: Dataset, cumulative: Boolean, requestingUser: Option[User] = None)(
-      implicit ctx: DBAccessContext): Fox[List[Team]] =
+  def allowedTeamsForDataset(dataset: Dataset, cumulative: Boolean, requestingUser: Option[User] = None)(using
+      ctx: DBAccessContext
+  ): Fox[List[Team]] =
     for {
       teamIds <- allowedTeamIdsForDataset(dataset, cumulative)
       teams <- teamDAO.findAllByIds(teamIds)
@@ -86,7 +90,7 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
     teams.filter(team => requestingUser.map(_._organization).contains(team._organization))
 }
 
-class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class TeamDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[Team, TeamsRow, Teams](sqlClient) {
   protected val collection = Teams
   protected def resultConverter = GetResultTeamsRow
@@ -100,7 +104,8 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
         r.isorganizationteam,
         Instant.fromSql(r.created),
         r.isdeleted
-      ))
+      )
+    )
 
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
     q"""_id IN (SELECT _team FROM webknossos.user_team_roles WHERE _user = $requestingUserId)
@@ -113,11 +118,12 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
   def countByNameAndOrganization(teamName: String, organizationId: String): Fox[Int] =
     for {
       countList <- run(
-        q"SELECT COUNT(*) FROM webknossos.teams WHERE name = $teamName AND _organization = $organizationId".as[Int])
+        q"SELECT COUNT(*) FROM webknossos.teams WHERE name = $teamName AND _organization = $organizationId".as[Int]
+      )
       count <- countList.headOption.toFox
     } yield count
 
-  def findAllEditable(implicit ctx: DBAccessContext): Fox[List[Team]] =
+  def findAllEditable(using ctx: DBAccessContext): Fox[List[Team]] =
     for {
       requestingUserId <- userIdFromCtx
       accessQuery <- readAccessQuery
@@ -140,15 +146,16 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def findAllIdsByOrganization(organizationId: String)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] =
+  def findAllIdsByOrganization(organizationId: String)(using ctx: DBAccessContext): Fox[List[ObjectId]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(
-        q"SELECT _id FROM $existingCollectionName WHERE _organization = $organizationId AND $accessQuery".as[String])
+        q"SELECT _id FROM $existingCollectionName WHERE _organization = $organizationId AND $accessQuery".as[String]
+      )
       parsed <- Fox.serialCombined(r.toList)(col => ObjectId.fromString(col))
     } yield parsed
 
-  def findAllByIds(teamIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[Team]] =
+  def findAllByIds(teamIds: List[ObjectId])(using ctx: DBAccessContext): Fox[List[Team]] =
     for {
       accessQuery <- readAccessQuery
       idPredicate = if (teamIds.isEmpty) q"FALSE" else q"_id IN ${SqlToken.tupleFromList(teamIds)}"
@@ -157,7 +164,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def findSharedTeamsForAnnotation(annotationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Team]] =
+  def findSharedTeamsForAnnotation(annotationId: ObjectId)(using ctx: DBAccessContext): Fox[List[Team]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns FROM $existingCollectionName
@@ -219,7 +226,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       _ <- run(q"DELETE FROM webknossos.folder_allowedTeams WHERE _team = $teamId".asUpdate)
     } yield ()
 
-  override def deleteOne(teamId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  override def deleteOne(teamId: ObjectId)(using ctx: DBAccessContext): Fox[Unit] =
     deleteOneWithNameSuffix(teamId)
 
 }

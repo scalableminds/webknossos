@@ -29,8 +29,9 @@ class ParsedMappingCache(val maxEntries: Int)
     extends LRUConcurrentCache[CachedMapping, Fox[AbstractDataLayerMapping]]
     with FoxImplicits {
 
-  def withCache[T](mappingRequest: DataServiceMappingRequest)(
-      loadFn: DataServiceMappingRequest => Fox[AbstractDataLayerMapping])(f: AbstractDataLayerMapping => T): Fox[T] = {
+  def withCache[T](
+      mappingRequest: DataServiceMappingRequest
+  )(loadFn: DataServiceMappingRequest => Fox[AbstractDataLayerMapping])(f: AbstractDataLayerMapping => T): Fox[T] = {
 
     val cachedMappingInfo = CachedMapping.fromMappingRequest(mappingRequest)
 

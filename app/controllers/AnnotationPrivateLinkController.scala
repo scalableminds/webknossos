@@ -16,13 +16,14 @@ import security.{WkEnv, WkSilhouetteEnvironment}
 import com.scalableminds.util.objectid.ObjectId
 
 import scala.concurrent.ExecutionContext
-class AnnotationPrivateLinkController @Inject()(
+class AnnotationPrivateLinkController @Inject() (
     annotationDAO: AnnotationDAO,
     annotationService: AnnotationService,
     annotationPrivateLinkDAO: AnnotationPrivateLinkDAO,
     wkSilhouetteEnvironment: WkSilhouetteEnvironment,
     annotationPrivateLinkService: AnnotationPrivateLinkService,
-    sil: Silhouette[WkEnv])(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
+    sil: Silhouette[WkEnv]
+)(implicit ec: ExecutionContext, val bodyParsers: PlayBodyParsers)
     extends Controller
     with FoxImplicits {
 
@@ -35,9 +36,10 @@ class AnnotationPrivateLinkController @Inject()(
         case Full(a) => Fox.successful(a)
         case _       => findAnnotationByIdAndUserToken(accessTokenOrId, userToken)
       }
-      writtenAnnotation <- annotationService.writesAsAnnotationSource(annotation,
-                                                                      accessViaPrivateLink =
-                                                                        annotationByLinkBox.nonEmpty)
+      writtenAnnotation <- annotationService.writesAsAnnotationSource(
+        annotation,
+        accessViaPrivateLink = annotationByLinkBox.nonEmpty
+      )
     } yield Ok(writtenAnnotation)
   }
 
@@ -46,14 +48,16 @@ class AnnotationPrivateLinkController @Inject()(
       annotationIdValidated <- ObjectId.fromString(annotationId)
       userBox <- bearerTokenService.userForTokenOpt(userToken).shiftBox
       ctx = DBAccessContext(userBox.toOption)
-      annotation <- annotationDAO.findOne(annotationIdValidated)(ctx) ?~> Msg.Annotation.notFound
+      annotation <- annotationDAO.findOne(annotationIdValidated)(using ctx) ?~> Msg.Annotation.notFound
     } yield annotation
 
   private def findAnnotationByPrivateLinkIfNotExpired(accessToken: String): Fox[Annotation] =
     for {
       annotationPrivateLink <- annotationPrivateLinkDAO.findOneByAccessToken(accessToken)
-      _ <- Fox.fromBool(annotationPrivateLink.expirationDateTime.forall(_ > Instant.now)) ?~> Msg.Annotation.PrivateLink.expired ~> NOT_FOUND
-      annotation <- annotationDAO.findOne(annotationPrivateLink._annotation)(GlobalAccessContext)
+      _ <- Fox.fromBool(
+        annotationPrivateLink.expirationDateTime.forall(_ > Instant.now)
+      ) ?~> Msg.Annotation.PrivateLink.expired ~> NOT_FOUND
+      annotation <- annotationDAO.findOne(annotationPrivateLink._annotation)(using GlobalAccessContext)
     } yield annotation
 
   def list: Action[AnyContent] = sil.SecuredAction.async { implicit request =>
@@ -74,11 +78,13 @@ class AnnotationPrivateLinkController @Inject()(
   def get(id: ObjectId): Action[AnyContent] = sil.SecuredAction.async { implicit request =>
     for {
       annotationPrivateLink <- annotationPrivateLinkDAO.findOne(id)
-      _ <- Fox
-        .fromBool(annotationPrivateLink.expirationDateTime.forall(_ > Instant.now)) ?~> Msg.Annotation.PrivateLink.expired ~> NOT_FOUND
+      _ <- Fox.fromBool(
+        annotationPrivateLink.expirationDateTime.forall(_ > Instant.now)
+      ) ?~> Msg.Annotation.PrivateLink.expired ~> NOT_FOUND
       _ <- annotationDAO.findOne(annotationPrivateLink._annotation) ?~> Msg.Annotation.notFound ~> NOT_FOUND
-      annotationPrivateLinkJs <- annotationPrivateLinkService
-        .publicWrites(annotationPrivateLink) ?~> Msg.Annotation.PrivateLink.publicWritesFailed
+      annotationPrivateLinkJs <- annotationPrivateLinkService.publicWrites(
+        annotationPrivateLink
+      ) ?~> Msg.Annotation.PrivateLink.publicWritesFailed
     } yield Ok(annotationPrivateLinkJs)
   }
 
@@ -90,11 +96,9 @@ class AnnotationPrivateLinkController @Inject()(
       for {
         annotationId <- ObjectId.fromString(params.annotation)
         _ <- annotationDAO.assertUpdateAccess(annotationId) ?~> Msg.Annotation.Edit.notAllowed ~> FORBIDDEN
-        _ <- annotationPrivateLinkDAO.insertOne(AnnotationPrivateLink(
-          _id,
-          annotationId,
-          accessToken,
-          params.expirationDateTime)) ?~> Msg.Annotation.PrivateLink.createFailed
+        _ <- annotationPrivateLinkDAO.insertOne(
+          AnnotationPrivateLink(_id, annotationId, accessToken, params.expirationDateTime)
+        ) ?~> Msg.Annotation.PrivateLink.createFailed
         inserted <- annotationPrivateLinkDAO.findOne(_id)
         js <- annotationPrivateLinkService.publicWrites(inserted) ?~> Msg.Annotation.PrivateLink.publicWritesFailed
       } yield Ok(js)
@@ -108,7 +112,11 @@ class AnnotationPrivateLinkController @Inject()(
         aPLInfo <- annotationPrivateLinkDAO.findOne(id) ?~> Msg.Annotation.PrivateLink.notFound(id) ~> NOT_FOUND
         _ <- annotationDAO.assertUpdateAccess(aPLInfo._annotation) ?~> Msg.Annotation.Edit.notAllowed ~> FORBIDDEN
         _ <- annotationDAO.assertUpdateAccess(annotationId) ?~> Msg.Annotation.Edit.notAllowed ~> FORBIDDEN
-        _ <- annotationPrivateLinkDAO.updateOne(id, annotationId, params.expirationDateTime) ?~> Msg.Annotation.PrivateLink.updateFailed
+        _ <- annotationPrivateLinkDAO.updateOne(
+          id,
+          annotationId,
+          params.expirationDateTime
+        ) ?~> Msg.Annotation.PrivateLink.updateFailed
         updated <- annotationPrivateLinkDAO.findOne(id) ?~> Msg.Annotation.PrivateLink.notFound(id)
         js <- annotationPrivateLinkService.publicWrites(updated) ?~> Msg.Annotation.PrivateLink.publicWritesFailed
       } yield Ok(js)

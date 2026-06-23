@@ -25,6 +25,7 @@ import {
   setActiveCellAction,
   setLargestSegmentIdAction,
   setSegmentGroupsAction,
+  setVolumeBucketDataHasChangedAction,
   toggleSegmentGroupAction,
   updateSegmentAction,
 } from "viewer/model/actions/volumetracing_actions";
@@ -106,6 +107,7 @@ const actionNamesHelper: Record<ApplicableVolumeUpdateAction["name"], true> = {
   updateActiveSegmentId: true,
   updateSegmentVisibility: true,
   updateSegmentGroupVisibility: true,
+  updateVolumeBucketDataHasChanged: true,
 };
 const actionNamesList = Object.keys(actionNamesHelper);
 
@@ -181,6 +183,7 @@ describe("Update Action Application for VolumeTracing", () => {
     mergeSegmentItemsAction(3, 2, 30, 20, tracingId),
     removeSegmentAction(3, tracingId),
     setLargestSegmentIdAction(10000),
+    setVolumeBucketDataHasChangedAction(tracingId),
     setSegmentGroupsAction([makeBasicGroupObject(3, "group 3 - renamed")], tracingId),
   ];
 
@@ -256,32 +259,14 @@ describe("Update Action Application for VolumeTracing", () => {
           seenActionTypes.add(action.name);
         }
 
-        let reappliedNewState = transformStateAsReadOnly(state2WithoutActiveBoundingBox, (state) =>
-          applyActions(state, [
-            applyVolumeUpdateActionsFromServerAction(updateActions),
-            setActiveUserBoundingBoxId(null),
-          ]),
+        const reappliedNewState = transformStateAsReadOnly(
+          state2WithoutActiveBoundingBox,
+          (state) =>
+            applyActions(state, [
+              applyVolumeUpdateActionsFromServerAction(updateActions),
+              setActiveUserBoundingBoxId(null),
+            ]),
         );
-
-        // fixing activeUnmappedSegmentId mismatch as the frontend supports a createCellAction,
-        // which sets activeUnmappedSegmentId to null but the matching annotation update action equivalent
-        // "updateActiveSegmentId" sets activeUnmappedSegmentId to undefined.
-        if (
-          reappliedNewState.annotation.volumes[0].activeUnmappedSegmentId == null &&
-          state3.annotation.volumes[0].activeUnmappedSegmentId == null
-        ) {
-          reappliedNewState = update(reappliedNewState, {
-            annotation: {
-              volumes: {
-                [0]: {
-                  activeUnmappedSegmentId: {
-                    $set: state3.annotation.volumes[0].activeUnmappedSegmentId,
-                  },
-                },
-              },
-            },
-          });
-        }
 
         expect(reappliedNewState.annotation.volumes[0]).toEqual(state3.annotation.volumes[0]);
       });

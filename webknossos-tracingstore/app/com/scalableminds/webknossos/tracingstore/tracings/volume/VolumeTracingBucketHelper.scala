@@ -180,7 +180,6 @@ trait VolumeTracingBucketHelper
     with BucketKeys
     with ReversionHelper {
 
-  implicit def ec: ExecutionContext
   def volumeDataStore: FossilDBClient
   def temporaryTracingService: TemporaryTracingService
 
@@ -188,7 +187,7 @@ trait VolumeTracingBucketHelper
       volumeLayer: VolumeTracingLayer,
       bucketPositions: Seq[BucketPosition],
       version: Option[Long]
-  ): Fox[Seq[Box[Array[Byte]]]] = {
+  )(using ec: ExecutionContext): Fox[Seq[Box[Array[Byte]]]] = {
     val bucketKeys = bucketPositions.map(buildBucketKey(volumeLayer.name, _, volumeLayer.additionalAxes))
 
     for {
@@ -214,7 +213,7 @@ trait VolumeTracingBucketHelper
       volumeLayer: VolumeTracingLayer,
       bucketPositions: Seq[BucketPosition],
       bucketBoxesFromFossil: Seq[Box[Array[Byte]]]
-  ): Fox[Seq[Box[Array[Byte]]]] =
+  )(using ec: ExecutionContext): Fox[Seq[Box[Array[Byte]]]] =
     if (!volumeLayer.includeFallbackDataIfAvailable || volumeLayer.tracing.fallbackLayer.isEmpty) {
       Fox.successful(bucketBoxesFromFossil)
     } else {
@@ -237,7 +236,7 @@ trait VolumeTracingBucketHelper
           )
         }
         (flatDataFromDataStore, datastoreMissingBucketIndices) <- volumeLayer.volumeTracingService
-          .getFallbackBucketsFromDataStore(remoteFallbackLayer, dataRequests)(volumeLayer.tokenContext)
+          .getFallbackBucketsFromDataStore(remoteFallbackLayer, dataRequests)(using volumeLayer.tokenContext)
         bucketBoxesFromDataStore <- splitIntoBuckets(
           dataRequests.length,
           flatDataFromDataStore,
@@ -283,7 +282,7 @@ trait VolumeTracingBucketHelper
       volumeLayer: VolumeTracingLayer,
       bucket: BucketPosition,
       version: Option[Long] = None
-  ): Fox[Array[Byte]] = {
+  )(using ec: ExecutionContext): Fox[Array[Byte]] = {
     val bucketKey = buildBucketKey(volumeLayer.name, bucket, volumeLayer.additionalAxes)
 
     val dataFox =
@@ -314,7 +313,9 @@ trait VolumeTracingBucketHelper
     }
   }
 
-  private def loadFallbackBucket(layer: VolumeTracingLayer, bucket: BucketPosition): Fox[Array[Byte]] = {
+  private def loadFallbackBucket(layer: VolumeTracingLayer, bucket: BucketPosition)(using
+      ec: ExecutionContext
+  ): Fox[Array[Byte]] = {
     val dataRequest: WebknossosDataRequest = WebknossosDataRequest(
       position = Vec3Int(bucket.topLeft.mag1X, bucket.topLeft.mag1Y, bucket.topLeft.mag1Z),
       mag = bucket.mag,
@@ -327,8 +328,10 @@ trait VolumeTracingBucketHelper
     for {
       remoteFallbackLayer <- layer.volumeTracingService
         .remoteFallbackLayerForVolumeTracing(layer.tracing, layer.annotationId)
-      bucketData <- layer.volumeTracingService
-        .getFallbackBucketFromDataStore(remoteFallbackLayer, dataRequest)(ec, layer.tokenContext)
+      bucketData <- layer.volumeTracingService.getFallbackBucketFromDataStore(remoteFallbackLayer, dataRequest)(using
+        ec,
+        layer.tokenContext
+      )
     } yield bucketData
 
   }
@@ -340,7 +343,7 @@ trait VolumeTracingBucketHelper
       version: Long,
       toTemporaryStore: Boolean = false,
       fossilPutBuffer: Option[FossilDBPutBuffer] = None
-  ): Fox[Unit] =
+  )(using ec: ExecutionContext): Fox[Unit] =
     saveBucket(
       volumeLayer.tracingId,
       volumeLayer.expectedUncompressedBucketSize,
@@ -361,7 +364,7 @@ trait VolumeTracingBucketHelper
       toTemporaryStore: Boolean,
       additionalAxes: Option[Seq[AdditionalAxis]],
       fossilPutBuffer: Option[FossilDBPutBuffer]
-  ): Fox[Unit] = {
+  )(using ec: ExecutionContext): Fox[Unit] = {
     val bucketKey = buildBucketKey(tracingId, bucket, additionalAxes)
     val compressedBucket = compressVolumeBucket(data, expectedUncompressedBucketSize)
     if (toTemporaryStore) {

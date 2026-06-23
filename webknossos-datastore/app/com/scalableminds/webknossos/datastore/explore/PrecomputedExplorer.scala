@@ -25,8 +25,9 @@ import scala.concurrent.ExecutionContext
 class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayerExplorer with FoxImplicits {
   override def name: String = "Neuroglancer Precomputed"
 
-  override def explore(remotePath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String])(using
+      tc: TokenContext
+  ): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       infoPath <- Fox.successful(remotePath / PrecomputedHeader.FILENAME_INFO)
       precomputedHeader <- infoPath
@@ -37,31 +38,39 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
   private def layerFromPrecomputedHeader(
       precomputedHeader: PrecomputedHeader,
       remotePath: VaultPath,
-      credentialId: Option[String])(implicit tc: TokenContext): Fox[(StaticLayer, VoxelSize)] =
+      credentialId: Option[String]
+  )(using tc: TokenContext): Fox[(StaticLayer, VoxelSize)] =
     for {
       name <- Fox.successful(guessNameFromPath(remotePath))
       firstScale <- precomputedHeader.scales.headOption.toFox
       boundingBox <- BoundingBox
         .fromTopLeftAndSize(firstScale.voxel_offset.getOrElse(Array(0, 0, 0)), firstScale.size.map(_.toInt))
         .toFox
-      elementClass: ElementClass.Value <- elementClassFromPrecomputedDataType(precomputedHeader.data_type).toFox ?~> s"Unknown data type ${precomputedHeader.data_type}"
+      elementClass: ElementClass.Value <- elementClassFromPrecomputedDataType(
+        precomputedHeader.data_type
+      ).toFox ?~> s"Unknown data type ${precomputedHeader.data_type}"
       smallestResolution = firstScale.resolution
       voxelSize <- Vec3Double.fromArray(smallestResolution).toFox
       mags: List[MagLocator] <- Fox.serialCombined(precomputedHeader.scales)(
-        getMagFromScale(_, smallestResolution, remotePath, credentialId).toFox)
+        getMagFromScale(_, smallestResolution, remotePath, credentialId).toFox
+      )
       meshAttachments <- exploreMeshesForLayer(remotePath / precomputedHeader.meshPath, credentialId)
-      attachmentsGrouped = if (meshAttachments.nonEmpty) Some(DataLayerAttachments(meshes = meshAttachments))
-      else None
-      layer = if (precomputedHeader.describesSegmentationLayer) {
-        StaticSegmentationLayer(name,
-                                DataFormat.neuroglancerPrecomputed,
-                                boundingBox,
-                                elementClass,
-                                mags,
-                                largestSegmentId = None,
-                                attachments = attachmentsGrouped)
-      } else
-        StaticColorLayer(name, DataFormat.neuroglancerPrecomputed, boundingBox, elementClass, mags)
+      attachmentsGrouped =
+        if (meshAttachments.nonEmpty) Some(DataLayerAttachments(meshes = meshAttachments))
+        else None
+      layer =
+        if (precomputedHeader.describesSegmentationLayer) {
+          StaticSegmentationLayer(
+            name,
+            DataFormat.neuroglancerPrecomputed,
+            boundingBox,
+            elementClass,
+            mags,
+            largestSegmentId = None,
+            attachments = attachmentsGrouped
+          )
+        } else
+          StaticColorLayer(name, DataFormat.neuroglancerPrecomputed, boundingBox, elementClass, mags)
     } yield (layer, VoxelSize.fromFactorWithDefaultUnit(voxelSize))
 
   private def elementClassFromPrecomputedDataType(precomputedDataType: String): Option[ElementClass.Value] =
@@ -74,10 +83,12 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
       case _         => None
     }
 
-  private def getMagFromScale(scale: PrecomputedScale,
-                              minimalResolution: Array[Double],
-                              remotePath: VaultPath,
-                              credentialId: Option[String]): Option[MagLocator] = {
+  private def getMagFromScale(
+      scale: PrecomputedScale,
+      minimalResolution: Array[Double],
+      remotePath: VaultPath,
+      credentialId: Option[String]
+  ): Option[MagLocator] = {
     val normalizedResolution = scale.resolution.zip(minimalResolution).map { case (r, m) => (r / m).toInt }
     for {
       mag <- Vec3Int.fromList(normalizedResolution.toList)
@@ -89,19 +100,22 @@ class PrecomputedExplorer(implicit val ec: ExecutionContext) extends RemoteLayer
     } yield MagLocator(mag, Some(path.toUPath), None, Some(axisOrder), channelIndex = None, credentialId)
   }
 
-  private def exploreMeshesForLayer(meshPath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[Seq[LayerAttachment]] = {
+  private def exploreMeshesForLayer(meshPath: VaultPath, credentialId: Option[String])(using
+      tc: TokenContext
+  ): Fox[Seq[LayerAttachment]] = {
     val exploredMeshesFox =
       for {
         meshInfo <- (meshPath / NeuroglancerMesh.FILENAME_INFO)
           .parseAsJson[NeuroglancerPrecomputedMeshInfo] ?~> "Failed to read mesh info"
         _ <- Fox.fromBool(meshInfo.transform.length == 12) ?~> "Invalid mesh info: transform has to be of length 12"
-      } yield
-        Seq(
-          LayerAttachment(NeuroglancerMesh.meshName,
-                          meshPath.toUPath,
-                          LayerAttachmentDataformat.neuroglancerPrecomputed,
-                          credentialId))
+      } yield Seq(
+        LayerAttachment(
+          NeuroglancerMesh.meshName,
+          meshPath.toUPath,
+          LayerAttachmentDataformat.neuroglancerPrecomputed,
+          credentialId
+        )
+      )
     // If mesh exploration at this path failed, continue but return no meshes.
     exploredMeshesFox.orElse(Fox.successful(Seq.empty))
   }

@@ -1,8 +1,5 @@
 package com.scalableminds.webknossos.datastore.helpers
 
-import com.github.sbt.jni.syntax.NativeLoader
-import com.scalableminds.webknossos.datastore.helpers.NativeBucketScanner.getClass
-
 import java.nio.file.Files
 
 object NativeLoaderUtils {

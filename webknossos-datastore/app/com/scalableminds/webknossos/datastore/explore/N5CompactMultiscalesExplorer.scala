@@ -17,13 +17,16 @@ class N5CompactMultiscalesExplorer(implicit val ec: ExecutionContext) extends N5
 
   override def name: String = "N5 Multiscales with compact metadata"
 
-  override def explore(remotePath: VaultPath, credentialId: Option[String])(
-      implicit tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String])(using
+      tc: TokenContext
+  ): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       metadataPath <- Fox.successful(remotePath / N5Metadata.FILENAME_ATTRIBUTES_JSON)
       n5Metadata <- metadataPath
         .parseAsJson[N5CompactMultiscalesMetadata] ?~> s"Failed to read N5 header at $metadataPath"
-      _ <- Fox.fromBool(n5Metadata.multiScale.contains(true)) ?~> s"N5 header at $metadataPath does not have multiScale=true"
+      _ <- Fox.fromBool(
+        n5Metadata.multiScale.contains(true)
+      ) ?~> s"N5 header at $metadataPath does not have multiScale=true"
       axisOrder <- extractAxisOrder(n5Metadata.axes.getOrElse(List("x", "y", "z")))
       downsamplingFactors <- n5Metadata.downsamplingFactors
         .orElse(n5Metadata.scales)
@@ -39,8 +42,14 @@ class N5CompactMultiscalesExplorer(implicit val ec: ExecutionContext) extends N5
 
   private def extractVoxelSize(axisOrder: AxisOrder, n5Metadata: N5CompactMultiscalesMetadata): Fox[VoxelSize] =
     for {
-      axisUnitFactors <- extractAxisUnitFactors(n5Metadata.units, axisOrder) ?~> "Could not extract axis unit-to-nm factors"
-      voxelSizeInAxisUnits <- extractVoxelSizeInAxisUnits(n5Metadata.resolution, axisOrder) ?~> "Could not extract voxel size from scale transforms"
+      axisUnitFactors <- extractAxisUnitFactors(
+        n5Metadata.units,
+        axisOrder
+      ) ?~> "Could not extract axis unit-to-nm factors"
+      voxelSizeInAxisUnits <- extractVoxelSizeInAxisUnits(
+        n5Metadata.resolution,
+        axisOrder
+      ) ?~> "Could not extract voxel size from scale transforms"
       voxelSizeNanometers = voxelSizeInAxisUnits * axisUnitFactors
       voxelSize = VoxelSize.fromFactorWithDefaultUnit(voxelSizeNanometers)
     } yield voxelSize
@@ -50,12 +59,16 @@ class N5CompactMultiscalesExplorer(implicit val ec: ExecutionContext) extends N5
       magIndex: Int,
       axisOrder: AxisOrder,
       remotePath: VaultPath,
-      credentialId: Option[String])(implicit ec: ExecutionContext, tc: TokenContext): Fox[MagWithAttributes] =
+      credentialId: Option[String]
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[MagWithAttributes] =
     for {
       mag <- tryo(
-        Vec3Int(downsamplingFactor(axisOrder.x),
-                downsamplingFactor(axisOrder.y),
-                downsamplingFactor(axisOrder.zWithFallback))).toFox
+        Vec3Int(
+          downsamplingFactor(axisOrder.x),
+          downsamplingFactor(axisOrder.y),
+          downsamplingFactor(axisOrder.zWithFallback)
+        )
+      ).toFox
       magPath = remotePath / s"s$magIndex"
       headerPath = magPath / N5Header.FILENAME_ATTRIBUTES_JSON
       n5Header <- headerPath.parseAsJson[N5Header] ?~> s"failed to read n5 header at $headerPath"
@@ -63,10 +76,11 @@ class N5CompactMultiscalesExplorer(implicit val ec: ExecutionContext) extends N5
       boundingBox <- n5Header
         .boundingBox(axisOrder)
         .toFox ?~> s"failed to read bounding box from n5 header at $headerPath"
-    } yield
-      MagWithAttributes(MagLocator(mag, Some(magPath.toUPath), None, Some(axisOrder), None, credentialId),
-                        magPath,
-                        elementClass,
-                        boundingBox)
+    } yield MagWithAttributes(
+      MagLocator(mag, Some(magPath.toUPath), None, Some(axisOrder), None, credentialId),
+      magPath,
+      elementClass,
+      boundingBox
+    )
 
 }

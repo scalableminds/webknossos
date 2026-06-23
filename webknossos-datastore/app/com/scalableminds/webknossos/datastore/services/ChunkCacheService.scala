@@ -25,6 +25,6 @@ trait ChunkCacheService {
   }
 }
 
-class DSChunkCacheService @Inject()(config: DataStoreConfig) extends ChunkCacheService {
+class DSChunkCacheService @Inject() (config: DataStoreConfig) extends ChunkCacheService {
   protected val maxSizeBytes: Long = config.Datastore.Cache.ImageArrayChunks.maxSizeBytes
 }

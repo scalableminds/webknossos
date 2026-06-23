@@ -24,14 +24,14 @@ trait KeyValueStoreConversions {
 
   def wrapInBox[T](x: T): Box[T] = Full(x)
 
-  protected  def jsonToBytes[T](o: T)(implicit w: Writes[T]): Array[Byte] = w.writes(o).toString.getBytes("UTF-8")
+  protected def jsonToBytes[T](o: T)(implicit w: Writes[T]): Array[Byte] = w.writes(o).toString.getBytes("UTF-8")
 
-  protected  def jsonFromBytes[T](a: Array[Byte])(implicit r: Reads[T]): Box[T] =
+  protected def jsonFromBytes[T](a: Array[Byte])(implicit r: Reads[T]): Box[T] =
     JsonHelper.parseAs[T](a)
 
-  protected  def toProtoBytes[T <: GeneratedMessage](o: T): Array[Byte] = o.toByteArray
+  protected def toProtoBytes[T <: GeneratedMessage](o: T): Array[Byte] = o.toByteArray
 
-  protected  def fromProtoBytes[T <: GeneratedMessage](a: Array[Byte])(implicit
+  protected def fromProtoBytes[T <: GeneratedMessage](a: Array[Byte])(implicit
       companion: GeneratedMessageCompanion[T]
   ): Box[T] = tryo(companion.parseFrom(a))
 
@@ -119,7 +119,8 @@ class FossilDBClient(
     if (mayBeEmpty.getOrElse(false) && errorMessage.contains("No such element")) Fox.empty
     else Fox.fromBool(success) ?~> errorMessage.getOrElse("")
 
-  def get[T](key: String, version: Option[Long] = None, mayBeEmpty: Option[Boolean] = None)(fromByteArray: Array[Byte] => Box[T]
+  def get[T](key: String, version: Option[Long] = None, mayBeEmpty: Option[Boolean] = None)(
+      fromByteArray: Array[Byte] => Box[T]
   ): Fox[VersionedKeyValuePair[T]] =
     for {
       reply <- wrapException(stub.get(GetRequest(collection, key, version, mayBeEmpty)))
@@ -179,7 +180,8 @@ class FossilDBClient(
       )
     } yield batchedResults.flatten
 
-  private def getMultipleKeysByListImpl[T](keys: Seq[String], version: Option[Long])(fromByteArray: Array[Byte] => Box[T]
+  private def getMultipleKeysByListImpl[T](keys: Seq[String], version: Option[Long])(
+      fromByteArray: Array[Byte] => Box[T]
   ): Fox[Seq[Box[VersionedKeyValuePair[T]]]] =
     for {
       reply: GetMultipleKeysByListReply <- Fox.fromFuture(
@@ -198,7 +200,6 @@ class FossilDBClient(
             case VersionValueBoxProto(None, None, _) => Empty
             case _ => com.scalableminds.util.tools.Failure("Unexpected reply format in FossilDB getMultipleKeysByList")
           }
-        case _ => com.scalableminds.util.tools.Failure("Unexpected reply format in FossilDB getMultipleKeysByList")
       }
     } yield parsedValues
 

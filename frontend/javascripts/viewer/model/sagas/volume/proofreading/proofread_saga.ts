@@ -48,6 +48,7 @@ import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
   getActiveSegmentationTracing,
   getActiveSegmentationTracingLayer,
+  getActiveUnmappedSegmentId,
   getEditableMappingForVolumeTracingId,
   getMeshInfoForSegment,
   getSegmentsForLayer,
@@ -76,7 +77,7 @@ import {
   loadPrecomputedMeshAction,
 } from "viewer/model/actions/segmentation_actions";
 import {
-  setMappingAction,
+  setMappingDataAction,
   setMappingNameAction,
   type UpdateUserSettingAction,
 } from "viewer/model/actions/settings_actions";
@@ -232,9 +233,11 @@ function* clearActiveSegmentIfTdViewportIsActive(): Saga<void> {
   const activeViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
   const activeTool = yield* select((state) => state.uiInformation.activeTool);
   const activeVolumeTracing = yield* select(getActiveSegmentationTracing);
+  const activeUnmappedSegmentId = yield* select((state) =>
+    getActiveUnmappedSegmentId(state, activeVolumeTracing),
+  );
   const hasHighlightedSuperVoxel =
-    activeVolumeTracing?.activeCellId != null &&
-    activeVolumeTracing?.activeUnmappedSegmentId != null;
+    activeVolumeTracing?.activeCellId != null && activeUnmappedSegmentId != null;
   if (
     hasHighlightedSuperVoxel &&
     activeTool === AnnotationTool.PROOFREAD &&
@@ -252,7 +255,7 @@ function* showToastIfSegmentOfOtherAgglomerateWasSelected(
   if (!layerName) {
     return;
   }
-  const layerData = yield* select((state) => state.localSegmentationData[layerName]);
+  const layerData = yield* select((state) => state.localSegmentationStateByLayer[layerName]);
   if (!layerData || !layerData.minCutPartitions) {
     return;
   }
@@ -334,7 +337,7 @@ function* loadCoarseMesh(
   yield* call(dispatchMaybeFetchMeshFilesAsync, Store.dispatch, layer, dataset, false);
 
   const currentMeshFile = yield* select(
-    (state) => state.localSegmentationData[layerName].currentMeshFile,
+    (state) => state.localSegmentationStateByLayer[layerName].currentMeshFile,
   );
 
   const meshInfo = yield* select((state) =>
@@ -895,13 +898,11 @@ function* handleSplitViaTree(action: DeleteEdgeAction | MinCutAgglomerateAction)
       return;
     }
     yield* put(
-      setMappingAction(
+      setMappingDataAction(
         volumeTracingId,
-        activeMapping.mappingName,
-        activeMapping.mappingType,
+        splitMappingInfo.splitMapping,
         // As these split actions were already sent to the server, splitMapping is stored on the server already.
         true,
-        { mapping: splitMappingInfo.splitMapping },
       ),
     );
 
@@ -1088,7 +1089,8 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
     return;
   }
   const partitions = yield* select(
-    (state) => state.localSegmentationData[preparation.volumeTracing.tracingId].minCutPartitions,
+    (state) =>
+      state.localSegmentationStateByLayer[preparation.volumeTracing.tracingId].minCutPartitions,
   );
   let agglomerateId = partitions.agglomerateId;
   if (partitions[1].length <= 0 || partitions[2].length <= 0) {
@@ -1182,15 +1184,11 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
     const { splitMapping } = splitMappingInfo;
 
     yield* put(
-      setMappingAction(
+      setMappingDataAction(
         volumeTracingId,
-        activeMapping.mappingName,
-        activeMapping.mappingType,
+        splitMapping,
         // As these split actions were already sent to the server, splitMapping is stored on the server already.
         true,
-        {
-          mapping: splitMapping,
-        },
       ),
     );
 
@@ -1351,7 +1349,7 @@ function* clearProofreadingByproducts() {
   );
   const meshInfos =
     (yield* select(
-      (state) => state.localSegmentationData[layerName]?.meshes?.[additionalCoordinateKey],
+      (state) => state.localSegmentationStateByLayer[layerName]?.meshes?.[additionalCoordinateKey],
     )) || {};
   const meshRemoveActions = Object.values(meshInfos).map((meshInfo) => {
     return removeMeshAction(layerName, meshInfo.segmentId);
@@ -1649,18 +1647,14 @@ function* handleMinCutAgglomerate(action: MinCutAgglomerateWithPositionAction) {
     }
     const { splitMapping } = splitMappingInfo;
 
-    console.log("dispatch setMappingAction in proofreading saga");
     yield* put(
-      setMappingAction(
+      setMappingDataAction(
         volumeTracingId,
-        activeMapping.mappingName,
-        activeMapping.mappingType,
+        splitMapping,
         // As these split actions were already sent to the server, splitMapping is stored on the server already.
         true,
-        { mapping: splitMapping },
       ),
     );
-    console.log("finished updating the mapping after a min-cut");
 
     // Now that the local mapping information has changed due to the reloading of the mapping,
     // reload the agglomerate id info and the mapping.
@@ -1799,15 +1793,11 @@ function* handleProofreadCutFromNeighbors(action: Action) {
     const { splitMapping } = splitMappingInfo;
 
     yield* put(
-      setMappingAction(
+      setMappingDataAction(
         volumeTracingId,
-        activeMapping.mappingName,
-        activeMapping.mappingType,
+        splitMapping,
         // As these split actions were already sent to the server, splitMapping is stored on the server already.
         true,
-        {
-          mapping: splitMapping,
-        },
       ),
     );
 
@@ -2327,38 +2317,8 @@ export function* updateMappingWithMerge(
     sourceAgglomerateId,
     targetAgglomerateId,
   );
-  if (mergedMapping === activeMapping.mapping) {
-    /* TODO #9064: in case setMappingAction is called with the same mapping
-     * as already active, the reducer will set the state to ACTIVATING
-     * but the listenToStoreProperty handler in mappings.ts will never be
-     * triggered, because the callback is only called if the identity of the
-     * watched property changes.
-     * three possible solutions:
-     *   a) avoid dispatching setMappingAction when the mapping did not change
-     *      (this is the current solution here).
-     *   b) Don't set the state to activating in the reducer if the mapping identity,
-     *      did not change.
-     *      (I feel like this makes the logic that controls the lifecycle of the mapping status
-     *      more complicated?)
-     *   c) Refactor the mappings.ts code so that it reacts to all setMapping actions.
-     *      (for example, this could happen in a saga. this would also solve the problem
-     *      that the mapping_saga currently dispatches finishMappingInitializationAction
-     *      when IS_TESTING is true).
-     *      <-- my favorite
-     */
-    return;
-  }
-  yield* put(
-    setMappingAction(
-      volumeTracingId,
-      activeMapping.mappingName,
-      activeMapping.mappingType,
-      isVersionStoredOnServer,
-      {
-        mapping: mergedMapping,
-      },
-    ),
-  );
+  // Even when the merge was a no-op, we still dispatch setMappingDataAction here, so the activation completes correctly (see the finishMappingActivation saga).
+  yield* put(setMappingDataAction(volumeTracingId, mergedMapping, isVersionStoredOnServer));
 }
 
 type IdInfo = { agglomerateId: number; unmappedId: number; position: Vector3 };
@@ -2380,7 +2340,10 @@ function* gatherInfoForOperation(
   preparation: Preparation,
 ): Saga<GatheredInfos | null> {
   const { volumeTracing } = preparation;
-  const { tracingId: volumeTracingId, activeCellId, activeUnmappedSegmentId } = volumeTracing;
+  const { tracingId: volumeTracingId, activeCellId } = volumeTracing;
+  const activeUnmappedSegmentId = yield* select((state) =>
+    getActiveUnmappedSegmentId(state, volumeTracing),
+  );
   if (activeCellId === 0) {
     console.warn("[Proofreading] Cannot execute operation because active segment id is 0");
     return null;

@@ -23,22 +23,26 @@ import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 
-case class CreditTransaction(_id: ObjectId = ObjectId.generate,
-                             _organization: String,
-                             _relatedTransaction: Option[ObjectId] = None,
-                             _paidJob: Option[ObjectId] = None,
-                             milliCreditDelta: Int,
-                             comment: String,
-                             transactionState: TransactionState,
-                             creditState: CreditState,
-                             expirationDate: Option[Instant] = None,
-                             createdAt: Instant = Instant.now,
-                             updatedAt: Instant = Instant.now,
-                             isDeleted: Boolean = false)
+case class CreditTransaction(
+    _id: ObjectId = ObjectId.generate,
+    _organization: String,
+    _relatedTransaction: Option[ObjectId] = None,
+    _paidJob: Option[ObjectId] = None,
+    milliCreditDelta: Int,
+    comment: String,
+    transactionState: TransactionState,
+    creditState: CreditState,
+    expirationDate: Option[Instant] = None,
+    createdAt: Instant = Instant.now,
+    updatedAt: Instant = Instant.now,
+    isDeleted: Boolean = false
+)
 
-class CreditTransactionDAO @Inject()(conf: WkConf,
-                                     slackNotificationService: SlackNotificationService,
-                                     sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class CreditTransactionDAO @Inject() (
+    conf: WkConf,
+    slackNotificationService: SlackNotificationService,
+    sqlClient: SqlClient
+)(implicit ec: ExecutionContext)
     extends SQLDAO[CreditTransaction, CreditTransactionsRow, CreditTransactions](sqlClient) {
 
   protected val collection = CreditTransactions
@@ -51,55 +55,55 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
       id <- ObjectId.fromString(row._Id)
       jobIdOpt <- Fox.runOptional(row._PaidJob)(ObjectId.fromString)
       relatedTransactionOpt <- Fox.runOptional(row._RelatedTransaction)(ObjectId.fromString)
-    } yield {
-      CreditTransaction(
-        id,
-        row._Organization,
-        relatedTransactionOpt,
-        jobIdOpt,
-        row.milliCreditDelta,
-        row.comment,
-        transactionState,
-        creditState,
-        row.expirationDate.map(Instant.fromSql),
-        Instant.fromSql(row.createdAt),
-        Instant.fromSql(row.updatedAt),
-        row.isDeleted
-      )
-    }
-
-  implicit val getCreditTransactions: GetResult[CreditTransaction] = GetResult { prs =>
-    import prs._
-    val transactionId = <<[ObjectId]
-    val organizationId = <<[String]
-    val relatedTransaction = <<?[ObjectId]
-    val paidJobId = <<?[ObjectId]
-    val milliCreditChange = <<[Int]
-    val comment = <<[String]
-    val transactionStateOpt = CreditTransactionState.fromString(<<[String])
-    val transactionState = transactionStateOpt.getOrElse(
-      throw new RuntimeException(s"Unknown credit transaction state: $transactionStateOpt"))
-    val creditStateOpt = CreditState.fromString(<<[String])
-    val creditState = creditStateOpt.getOrElse(throw new RuntimeException(s"Unknown credit state: $creditStateOpt"))
-    val expiresAt = <<?[Instant]
-    val createdAt = <<[Instant]
-    val updatedAt = <<[Instant]
-    val isDeleted = <<[Boolean]
-    CreditTransaction(
-      transactionId,
-      organizationId,
-      relatedTransaction,
-      paidJobId,
-      milliCreditChange,
-      comment,
+    } yield CreditTransaction(
+      id,
+      row._Organization,
+      relatedTransactionOpt,
+      jobIdOpt,
+      row.milliCreditDelta,
+      row.comment,
       transactionState,
       creditState,
-      expiresAt,
-      createdAt,
-      updatedAt,
-      isDeleted
+      row.expirationDate.map(Instant.fromSql),
+      Instant.fromSql(row.createdAt),
+      Instant.fromSql(row.updatedAt),
+      row.isDeleted
     )
-  }
+
+  implicit val getCreditTransactions: GetResult[CreditTransaction] =
+    prs => {
+      import prs._
+      val transactionId = <<[ObjectId]
+      val organizationId = <<[String]
+      val relatedTransaction = <<?[ObjectId]
+      val paidJobId = <<?[ObjectId]
+      val milliCreditChange = <<[Int]
+      val comment = <<[String]
+      val transactionStateOpt = CreditTransactionState.fromString(<<[String])
+      val transactionState = transactionStateOpt.getOrElse(
+        throw new RuntimeException(s"Unknown credit transaction state: $transactionStateOpt")
+      )
+      val creditStateOpt = CreditState.fromString(<<[String])
+      val creditState = creditStateOpt.getOrElse(throw new RuntimeException(s"Unknown credit state: $creditStateOpt"))
+      val expiresAt = <<?[Instant]
+      val createdAt = <<[Instant]
+      val updatedAt = <<[Instant]
+      val isDeleted = <<[Boolean]
+      CreditTransaction(
+        transactionId,
+        organizationId,
+        relatedTransaction,
+        paidJobId,
+        milliCreditChange,
+        comment,
+        transactionState,
+        creditState,
+        expiresAt,
+        createdAt,
+        updatedAt,
+        isDeleted
+      )
+    }
 
   // Superusers may read and update transactions of all orgas, but not list them.
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =
@@ -114,23 +118,24 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
 
   override protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken = q"FALSE"
 
-  override def findAll(implicit ctx: DBAccessContext): Fox[List[CreditTransaction]] =
+  override def findAll(using ctx: DBAccessContext): Fox[List[CreditTransaction]] =
     for {
       accessQuery <- accessQueryFromAccessQ(listAccessQ)
       r <- run(q"SELECT $columns FROM $existingCollectionName WHERE $accessQuery".as[CreditTransactionsRow])
       parsed <- parseAll(r)
     } yield parsed
 
-  def getMilliCreditBalance(organizationId: String)(implicit ctx: DBAccessContext): Fox[Int] =
+  def getMilliCreditBalance(organizationId: String)(using ctx: DBAccessContext): Fox[Int] =
     for {
       accessQuery <- readAccessQuery
       r <- run(
         q"SELECT COALESCE(SUM(milli_credit_delta), 0) FROM $existingCollectionName WHERE _organization = $organizationId AND $accessQuery"
-          .as[Int])
+          .as[Int]
+      )
       firstRow <- r.headOption.toFox
     } yield firstRow
 
-  def insertNewPendingTransaction(transaction: CreditTransaction)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def insertNewPendingTransaction(transaction: CreditTransaction)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- readAccessQuery
       _ <- run(
@@ -145,7 +150,7 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
       )
     } yield ()
 
-  def addJobIdToTransaction(transaction: CreditTransaction, jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def addJobIdToTransaction(transaction: CreditTransaction, jobId: ObjectId)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(transaction._id)
       _ <- run(
@@ -156,7 +161,7 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
       )
     } yield ()
 
-  def insertTransaction(transaction: CreditTransaction)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def insertTransaction(transaction: CreditTransaction)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- readAccessQuery
       _ <- run(q"""INSERT INTO webknossos.credit_transactions
@@ -186,7 +191,7 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
           """.asUpdate
   }
 
-  def commitTransaction(transactionId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  def commitTransaction(transactionId: ObjectId)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(transactionId)
       _ <- run(
@@ -197,12 +202,13 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
       )
     } yield ()
 
-  def refundTransaction(transactionId: ObjectId, isCancelled: Boolean = false)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+  def refundTransaction(transactionId: ObjectId, isCancelled: Boolean = false)(using ctx: DBAccessContext): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(transactionId)
       transactionToRefund <- findOne(transactionId)
-      _ <- Fox.fromBool(transactionToRefund.transactionState == CreditTransactionState.Pending) ?~> "Can only refund pending transactions."
+      _ <- Fox.fromBool(
+        transactionToRefund.transactionState == CreditTransactionState.Pending
+      ) ?~> "Can only refund pending transactions."
       refundComment = transactionToRefund._paidJob
         .map(jobId => if (isCancelled) s"Refund for cancelled job $jobId." else s"Refund for failed job $jobId.")
         .getOrElse(s"Refund for transaction $transactionId.")
@@ -235,25 +241,30 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
         DBIO
           .sequence(List(insertRefundTransaction, setToRefunded))
           .transactionally
-          .withTransactionIsolation(Serializable))
-      _ <- Fox.fromBool(updatedRows.forall(_ == 1)) ?~> s"Failed to refund transaction ${transactionToRefund._id} properly."
+          .withTransactionIsolation(Serializable)
+      )
+      _ <- Fox.fromBool(
+        updatedRows.forall(_ == 1)
+      ) ?~> s"Failed to refund transaction ${transactionToRefund._id} properly."
     } yield ()
 
-  def findTransactionForJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[CreditTransaction] =
+  def findTransactionForJob(jobId: ObjectId)(using ctx: DBAccessContext): Fox[CreditTransaction] =
     for {
       accessQuery <- readAccessQuery
       r <- run(
         q"SELECT $columns FROM $existingCollectionName WHERE _paid_job = $jobId AND $accessQuery"
-          .as[CreditTransactionsRow])
+          .as[CreditTransactionsRow]
+      )
       parsed <- parseFirst(r, jobId)
     } yield parsed
 
-  def findPendingTransactionForJob(jobId: ObjectId)(implicit ctx: DBAccessContext): Fox[CreditTransaction] =
+  def findPendingTransactionForJob(jobId: ObjectId)(using ctx: DBAccessContext): Fox[CreditTransaction] =
     for {
       accessQuery <- readAccessQuery
       r <- run(
         q"SELECT $columns FROM $existingCollectionName WHERE _paid_job = $jobId AND transaction_state = ${CreditTransactionState.Pending} AND $accessQuery"
-          .as[CreditTransactionsRow])
+          .as[CreditTransactionsRow]
+      )
       parsed <- parseFirst(r, jobId)
     } yield parsed
 
@@ -277,7 +288,8 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
             ORDER BY created_at DESC
          """.as[CreditTransaction]
       transactionsWhereRevokingFailed <- transactionsWithExpiredCredits.foldLeft(
-        DBIO.successful(List()): DBIO[List[CreditTransaction]]) { (previousTransactionRevocationQueries, transaction) =>
+        DBIO.successful(List()): DBIO[List[CreditTransaction]]
+      ) { (previousTransactionRevocationQueries, transaction) =>
         for {
           transactionsWhereRevokingFailed <- previousTransactionRevocationQueries
           revokeExpiredCreditsTransaction <- revokeExpiredCreditsTransactionQuery(transaction).asTry
@@ -307,37 +319,38 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
 		""".as[Int]
       freeCreditsAvailable = freeCreditsAvailableResult.headOption.getOrElse(0)
 
-      _ <- if (freeCreditsAvailable <= 0) {
-        // Fully spent, update credit_state to 'Spent'
-        q"""
+      _ <-
+        if (freeCreditsAvailable <= 0) {
+          // Fully spent, update credit_state to 'Spent'
+          q"""
         UPDATE webknossos.credit_transactions
         SET credit_state = ${CreditState.Spent}, updated_at = NOW()
         WHERE _id = ${transaction._id}
       """.asUpdate
-      } else {
-        val creditStateOfExpiredTransaction = if (freeCreditsAvailable == transaction.milliCreditDelta) {
-          CreditState.Revoked
-        } else { CreditState.PartiallyRevoked }
-        val grantMonth = f"${transaction.createdAt.year}%04d-${transaction.createdAt.monthOfYear}%02d"
-        val revokingTransaction = CreditTransaction(
-          ObjectId.generate,
-          transaction._organization,
-          Some(transaction._id),
-          None,
-          -freeCreditsAvailable,
-          s"Revoked unused complimentary credits ($grantMonth)",
-          CreditTransactionState.Complete,
-          CreditState.Revoking,
-        )
-        for {
-          _ <- q"""
+        } else {
+          val creditStateOfExpiredTransaction = if (freeCreditsAvailable == transaction.milliCreditDelta) {
+            CreditState.Revoked
+          } else { CreditState.PartiallyRevoked }
+          val grantMonth = f"${transaction.createdAt.year}%04d-${transaction.createdAt.monthOfYear}%02d"
+          val revokingTransaction = CreditTransaction(
+            ObjectId.generate,
+            transaction._organization,
+            Some(transaction._id),
+            None,
+            -freeCreditsAvailable,
+            s"Revoked unused complimentary credits ($grantMonth)",
+            CreditTransactionState.Complete,
+            CreditState.Revoking
+          )
+          for {
+            _ <- q"""
             UPDATE webknossos.credit_transactions
             SET credit_state = $creditStateOfExpiredTransaction, updated_at = NOW()
             WHERE _id = ${transaction._id}
           """.asUpdate
-          _ <- insertRevokingTransaction(revokingTransaction)
-        } yield ()
-      }
+            _ <- insertRevokingTransaction(revokingTransaction)
+          } yield ()
+        }
       _ = logger.info(s"revokeExpiredCreditsTransactionQuery for transaction ${transaction._id} finished")
     } yield ()
 
@@ -348,17 +361,23 @@ class CreditTransactionDAO @Inject()(conf: WkConf,
         case (failedTransactions, organizationId) =>
           run(
             revokeExpiredCreditsForOrganizationQuery(organizationId).transactionally.withTransactionIsolation(
-              Serializable)).map(failedTransactions ++ _)
+              Serializable
+            )
+          ).map(failedTransactions ++ _)
       }
       _ = if (failedTransactionsToRevoke.nonEmpty) {
         val failedTransactions = failedTransactionsToRevoke.map(transaction =>
-          s"Failed to revoke credits for transaction ${transaction._id} for organization ${transaction._organization}.")
-        slackNotificationService.warn("Failed to revoke some expired credits for organizations",
-                                      s"${failedTransactions.mkString("\n")}")
+          s"Failed to revoke credits for transaction ${transaction._id} for organization ${transaction._organization}."
+        )
+        slackNotificationService.warn(
+          "Failed to revoke some expired credits for organizations",
+          s"${failedTransactions.mkString("\n")}"
+        )
       }
     } yield ()
 
   def handOutMonthlyFreeCredits(): Fox[Unit] =
-    run(q"SELECT webknossos.hand_out_monthly_free_credits(${conf.Jobs.monthlyFreeMilliCredits}::INT);".as[Unit])
-      .map(_ => ())
+    run(q"SELECT webknossos.hand_out_monthly_free_credits(${conf.Jobs.monthlyFreeMilliCredits}::INT);".as[Unit]).map(
+      _ => ()
+    )
 }

@@ -16,14 +16,14 @@ addCommandAlias(
 // fix jni for scala version 3
 sbtJniCoreScope := Compile
 
-// failOnWarning is temporarily disabled after scala3 upgrade. See https://github.com/scalableminds/webknossos/issues/9606
-val failOnWarning = Seq() // if (sys.props.contains("failOnWarning")) Seq("-Xfatal-warnings") else Seq()
+val failOnWarning = if (sys.props.contains("failOnWarning")) Seq("-Werror") else Seq()
 ThisBuild / scalacOptions ++= Seq(
   "-explain", // More detailed compiler output
   "-explain-types", // Explain type errors in detail
   "-release:17",
   "-feature",
   "-deprecation",
+  "-Wunused:imports,privates,locals,implicits,linted",
   "-language:implicitConversions",
   "-language:postfixOps",
   "-Wconf:src=target/.*:s",
@@ -63,6 +63,13 @@ lazy val util = (project in file("util")).settings(
   commonSettings,
   libraryDependencies ++= Dependencies.utilDependencies,
   dependencyOverrides ++= Dependencies.dependencyOverrides
+)
+
+// Standalone slick code generator. Not part of the app; its compiled classpath is used by the
+// slick schema generation task to produce one Tables source file per table (see AssetCompilation).
+lazy val webknossosSlickCodegen = (project in file("webknossos-slick-codegen")).settings(
+  commonSettings,
+  libraryDependencies ++= Dependencies.slickCodegenDependencies
 )
 
 lazy val webknossosJni = (project in file("webknossos-jni"))

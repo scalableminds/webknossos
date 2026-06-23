@@ -12,7 +12,7 @@ import ch.systemsx.cisd.hdf5.{
 import com.scalableminds.util.Msg
 import com.scalableminds.util.cache.LRUConcurrentCache
 import com.scalableminds.util.tools.{Box, Failure, Full}
-import com.scalableminds.webknossos.datastore.dataformats.SafeCachable
+import com.scalableminds.webknossos.datastore.dataformats.SafeCacheable
 import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachment
 import com.scalableminds.webknossos.datastore.services.ArrayArtifactHashing
 import com.scalableminds.webknossos.datastore.services.mesh.MeshFileUtils
@@ -22,7 +22,7 @@ import java.nio.file.Path
 import scala.util.Using
 
 class CachedHdf5File(reader: IHDF5Reader)
-    extends SafeCachable
+    extends SafeCacheable
     with AutoCloseable
     with ArrayArtifactHashing
     with MeshFileUtils
@@ -88,11 +88,12 @@ class Hdf5FileCache(val maxEntries: Int) extends LRUConcurrentCache[String, Cach
 
   def withCachedHdf5[T](filePath: Path)(block: CachedHdf5File => T): Box[T] =
     for {
-      _ <- if (filePath.toFile.exists()) {
-        Full(true)
-      } else {
-        Failure(Msg.Mesh.File.openFailed)
-      }
+      _ <-
+        if (filePath.toFile.exists()) {
+          Full(true)
+        } else {
+          Failure(Msg.Mesh.File.openFailed)
+        }
       result = Using(this.getCachedHdf5File(filePath)(CachedHdf5File.fromPath)) {
         block
       }

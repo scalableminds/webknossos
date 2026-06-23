@@ -26,6 +26,7 @@ RUNNING_PID
 metals.sbt
 __pycache__/
 .jvmopts
+build/
 
 # Webknossos
 backup/
@@ -59,6 +60,7 @@ target/
 temp-webknossos-schema**
 tracingData/
 userBinaryData/
+schema/refreshStamp/stamp
 
 # IntelliJ
 .idea/
@@ -102,6 +104,7 @@ conf/application.conf-e
 .bloop
 .metals
 metals.sbt
+conf/application.local.conf
 
 **/screenshots/*.diff.png
 **/screenshots/*.new.png
@@ -124,4 +127,3 @@ public/index.html
 tsconfig.tsbuildinfo
 
 .claude
-.jvmopts

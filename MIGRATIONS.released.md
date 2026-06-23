@@ -19,6 +19,7 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 - [165-annotation-mutex-sessionid.sql](schema/evolutions/165-annotation-mutex-sessionid.sql)
 - [166-keyboard-shortcuts.sql](schema/evolutions/166-keyboard-shortcuts.sql)
 - [167-upload-mags-attachments.sql](schema/evolutions/167-upload-mags-attachments.sql)
+- [168-remove-annotation-team.sql](schema/evolutions/168-remove-annotation-team.sql)
 - [169-per-user-annotation-view-config.sql](schema/evolutions/169-per-user-annotation-view-config.sql)
 - [170-dataset-storage-paths.sql](schema/evolutions/170-dataset-storage-paths.sql)
 - [171-remove-hasDiscardedHelpButton.sql](schema/evolutions/171-remove-hasDiscardedHelpButton.sql)

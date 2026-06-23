@@ -25,14 +25,7 @@ RUNNING_PID
 .metals
 metals.sbt
 __pycache__/
-<<<<<<< Updated upstream
 .jvmopts
-
-||||||| constructed merge base
-
-=======
-.jvmopts
->>>>>>> Stashed changes
 
 # Webknossos
 backup/
@@ -93,7 +86,7 @@ tmp/
 errorShots/
 
 
-# Sublime 
+# Sublime
 *.sublime-project
 *.sublime-workspace
 
@@ -117,7 +110,7 @@ metals.sbt
 tools/debugging/version-visualizer/data/*
 !tools/debugging/version-visualizer/data/.gitignore
 
-# Yarn 
+# Yarn
 .yarn/*
 !.yarn/cache
 !.yarn/patches

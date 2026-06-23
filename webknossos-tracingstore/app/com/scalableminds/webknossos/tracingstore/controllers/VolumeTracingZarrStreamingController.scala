@@ -329,7 +329,7 @@ class VolumeTracingZarrStreamingController @Inject()(
      tracing: VolumeTracing,
      annotationId: ObjectId,
      data: Array[Byte],
-     emptyBucketIndices: List[Int],
+     emptyBucketIndices: Seq[Int],
      mag: Vec3Int,
      position: Vec3Int,
      cubeSize: Int,

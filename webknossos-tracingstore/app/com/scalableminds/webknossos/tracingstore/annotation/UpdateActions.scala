@@ -71,6 +71,8 @@ object UpdateAction {
           case "updateBucket"           => deserialize[UpdateBucketVolumeAction](jsonValue)
           case "updateVolumeTracing"    => deserialize[UpdateTracingVolumeAction](jsonValue)
           case "updateLargestSegmentId" => deserialize[UpdateLargestSegmentIdVolumeAction](jsonValue)
+          case "updateVolumeBucketDataHasChanged" =>
+            deserialize[UpdateVolumeBucketDataHasChangedVolumeAction](jsonValue)
           case "updateUserBoundingBoxesInVolumeTracing" =>
             deserialize[UpdateUserBoundingBoxesVolumeAction](jsonValue)
           case "addUserBoundingBoxInVolumeTracing"    => deserialize[AddUserBoundingBoxVolumeAction](jsonValue)
@@ -192,6 +194,9 @@ object UpdateAction {
       case s: UpdateLargestSegmentIdVolumeAction =>
         Json.obj("name" -> "updateLargestSegmentId",
                  "value" -> Json.toJson(s)(using UpdateLargestSegmentIdVolumeAction.jsonFormat))
+      case s: UpdateVolumeBucketDataHasChangedVolumeAction =>
+        Json.obj("name" -> "updateVolumeBucketDataHasChanged",
+                 "value" -> Json.toJson(s)(using UpdateVolumeBucketDataHasChangedVolumeAction.jsonFormat))
       case s: UpdateActiveSegmentIdVolumeAction =>
         Json.obj("name" -> "updateActiveSegmentId",
                  "value" -> Json.toJson(s)(using UpdateActiveSegmentIdVolumeAction.jsonFormat))

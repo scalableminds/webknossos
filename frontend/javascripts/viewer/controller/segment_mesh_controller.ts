@@ -28,6 +28,7 @@ import { getAdditionalCoordinatesAsString } from "viewer/model/accessors/flycam_
 import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
   getActiveSegmentationTracing,
+  getActiveUnmappedSegmentId,
   getSegmentColorAsHSLA,
 } from "viewer/model/accessors/volumetracing_accessor";
 import { NO_LOD_MESH_INDEX } from "viewer/model/sagas/meshes/common_mesh_saga";
@@ -263,8 +264,9 @@ export default class SegmentMeshController {
     const state = Store.getState();
     if (isNewlyAddedMesh) {
       const isVisible =
-        state.localSegmentationData?.[layerName]?.meshes?.[additionalCoordinatesString]?.[segmentId]
-          .isVisible ?? true;
+        state.localSegmentationStateByLayer?.[layerName]?.meshes?.[additionalCoordinatesString]?.[
+          segmentId
+        ].isVisible ?? true;
       this.setMeshVisibility(segmentId, isVisible, layerName, additionalCoordinates);
     }
 
@@ -273,7 +275,7 @@ export default class SegmentMeshController {
       // addMeshFromGeometry is often called multiple times for different sets of geometries.
       // Therefore, used a throttled variant of the updateActiveUnmappedSegmentIdHighlighting method.
       this.throttledUpdateActiveUnmappedSegmentIdHighlighting(
-        segmentationTracing.activeUnmappedSegmentId,
+        getActiveUnmappedSegmentId(state, segmentationTracing),
       );
     }
   }

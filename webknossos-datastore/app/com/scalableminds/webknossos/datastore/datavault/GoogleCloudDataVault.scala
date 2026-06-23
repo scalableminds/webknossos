@@ -38,7 +38,7 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
   private lazy val bucket: String = uri.getAuthority
 
   override def readBytesEncodingAndRangeHeader(path: VaultPath, range: ByteRange)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[(Array[Byte], Encoding.Value, Option[String])] =
     for {
       objName <- getObjectName(path).toFox
@@ -96,7 +96,7 @@ class GoogleCloudDataVault(uri: URI, credential: Option[GoogleServiceAccountCred
       }.toSingleBox("Invalid UPath")
     } yield paths).toFox
 
-  override def getUsedStorageBytes(path: VaultPath)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+  override def getUsedStorageBytes(path: VaultPath)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     (for {
       objName <- getObjectName(path)
       blobs <- tryo(storage.list(bucket, Storage.BlobListOption.prefix(objName))) // no currentDirectory(); Do deep recursive listing

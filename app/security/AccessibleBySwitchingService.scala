@@ -31,7 +31,7 @@ class AccessibleBySwitchingService @Inject()(
   def getOrganizationToSwitchTo(user: User,
                                 datasetId: Option[ObjectId],
                                 annotationId: Option[ObjectId],
-                                workflowHash: Option[String])(implicit ctx: DBAccessContext): Fox[Organization] =
+                                workflowHash: Option[String])(using ctx: DBAccessContext): Fox[Organization] =
     for {
       isSuperUser <- multiUserDAO.findOne(user._multiUser).map(_.isSuperUser)
       selectedOrganization <- if (isSuperUser)
@@ -74,7 +74,7 @@ class AccessibleBySwitchingService @Inject()(
       identities <- userDAO.findAllByMultiUser(multiUserId)
       selectedIdentity <- Fox.find(identities)(identity =>
         canAccessDatasetOrAnnotationOrWorkflow(identity, datasetIdOpt, annotationIdOpt, workflowHashOpt))
-      selectedOrganization <- organizationDAO.findOne(selectedIdentity._organization)(GlobalAccessContext)
+      selectedOrganization <- organizationDAO.findOne(selectedIdentity._organization)(using GlobalAccessContext)
     } yield selectedOrganization
 
   private def canAccessDatasetOrAnnotationOrWorkflow(user: User,
@@ -94,15 +94,15 @@ class AccessibleBySwitchingService @Inject()(
   }
 
   private def canAccessDataset(ctx: DBAccessContext, datasetId: ObjectId): Fox[Boolean] = {
-    val foundFox = datasetDAO.findOne(datasetId)(ctx)
+    val foundFox = datasetDAO.findOne(datasetId)(using ctx)
     foundFox.shiftBox.map(_.isDefined)
   }
 
   private def canAccessAnnotation(user: User, ctx: DBAccessContext, annotationId: ObjectId): Fox[Boolean] = {
     val foundFox = for {
-      annotation <- annotationDAO.findOne(annotationId)(GlobalAccessContext)
+      annotation <- annotationDAO.findOne(annotationId)(using GlobalAccessContext)
       _ <- Fox.fromBool(annotation.state != Cancelled)
-      restrictions <- annotationProvider.restrictionsFor(AnnotationIdentifier(annotation.typ, annotationId))(ctx)
+      restrictions <- annotationProvider.restrictionsFor(AnnotationIdentifier(annotation.typ, annotationId))(using ctx)
       _ <- restrictions.allowAccess(user)
     } yield ()
     foundFox.shiftBox.map(_.isDefined)

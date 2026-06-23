@@ -91,7 +91,7 @@ class MeshFileService @Inject()(hdf5MeshFileService: Hdf5MeshFileService,
         attachment.copy(path = resolvedPath)
       )
 
-  def listMeshFiles(dataSourceId: DataSourceId, dataLayer: DataLayer)(implicit ec: ExecutionContext,
+  def listMeshFiles(dataSourceId: DataSourceId, dataLayer: DataLayer)(using ec: ExecutionContext,
                                                                       tc: TokenContext): Fox[Seq[MeshFileInfo]] = {
     val meshFileNames = dataLayer.attachments.map(_.meshes).getOrElse(Seq.empty).map(_.name)
 
@@ -116,7 +116,7 @@ class MeshFileService @Inject()(hdf5MeshFileService: Hdf5MeshFileService,
   }
 
   // Same as above but this variant constructs the meshFilePath itself and converts null to None
-  def mappingNameForMeshFile(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext,
+  def mappingNameForMeshFile(meshFileKey: MeshFileKey)(using ec: ExecutionContext,
                                                        tc: TokenContext): Fox[Option[String]] =
     meshFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
@@ -128,7 +128,7 @@ class MeshFileService @Inject()(hdf5MeshFileService: Hdf5MeshFileService,
       case _ => unsupportedDataFormat(meshFileKey)
     }
 
-  private def versionForMeshFile(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Long] =
+  private def versionForMeshFile(meshFileKey: MeshFileKey)(using ec: ExecutionContext, tc: TokenContext): Fox[Long] =
     meshFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
         zarrMeshFileService.versionForMeshFile(meshFileKey)
@@ -139,7 +139,7 @@ class MeshFileService @Inject()(hdf5MeshFileService: Hdf5MeshFileService,
       case _ => unsupportedDataFormat(meshFileKey)
     }
 
-  def getVertexQuantizationBits(meshFileKey: MeshFileKey)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Int] =
+  def getVertexQuantizationBits(meshFileKey: MeshFileKey)(using ec: ExecutionContext, tc: TokenContext): Fox[Int] =
     meshFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.neuroglancerPrecomputed =>
         neuroglancerPrecomputedMeshService.getVertexQuantizationBits(meshFileKey)
@@ -147,7 +147,7 @@ class MeshFileService @Inject()(hdf5MeshFileService: Hdf5MeshFileService,
     }
 
   def listMeshChunksForSegmentsMerged(meshFileKey: MeshFileKey, segmentIds: Seq[Long])(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[WebknossosSegmentInfo] =
     meshFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 =>
@@ -160,7 +160,7 @@ class MeshFileService @Inject()(hdf5MeshFileService: Hdf5MeshFileService,
     }
 
   def readMeshChunk(meshFileKey: MeshFileKey, meshChunkDataRequests: Seq[MeshChunkDataRequest],
-  )(implicit ec: ExecutionContext, tc: TokenContext): Fox[(Array[Byte], String)] =
+  )(using ec: ExecutionContext, tc: TokenContext): Fox[(Array[Byte], String)] =
     meshFileKey.attachment.dataFormat match {
       case LayerAttachmentDataformat.zarr3 => zarrMeshFileService.readMeshChunk(meshFileKey, meshChunkDataRequests)
       case LayerAttachmentDataformat.hdf5  => hdf5MeshFileService.readMeshChunk(meshFileKey, meshChunkDataRequests).toFox

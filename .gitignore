@@ -25,14 +25,7 @@ RUNNING_PID
 .metals
 metals.sbt
 __pycache__/
-<<<<<<< Updated upstream
 .jvmopts
-
-||||||| constructed merge base
-
-=======
-.jvmopts
->>>>>>> Stashed changes
 
 # Webknossos
 backup/
@@ -66,6 +59,7 @@ target/
 temp-webknossos-schema**
 tracingData/
 userBinaryData/
+schema/refreshStamp/stamp
 
 # IntelliJ
 .idea/
@@ -109,6 +103,7 @@ conf/application.conf-e
 .bloop
 .metals
 metals.sbt
+conf/application.local.conf
 
 **/screenshots/*.diff.png
 **/screenshots/*.new.png

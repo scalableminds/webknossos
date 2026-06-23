@@ -49,7 +49,7 @@ class RPCRequest(val id: Int, val url: String, wsClient: WSClient)(implicit ec: 
     this
   }
 
-  def withTokenFromContext(implicit tc: TokenContext): RPCRequest =
+  def withTokenFromContext(using tc: TokenContext): RPCRequest =
     addQueryParam("token", tc.userTokenOpt)
 
   def addHttpHeader(headerName: String, headerValue: String): RPCRequest = {

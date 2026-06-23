@@ -17,7 +17,7 @@ object TeamMembership {
 }
 
 class TeamMembershipService @Inject()(teamDAO: TeamDAO) {
-  def publicWrites(teamMembership: TeamMembership)(implicit ctx: DBAccessContext): Fox[JsObject] =
+  def publicWrites(teamMembership: TeamMembership)(using ctx: DBAccessContext): Fox[JsObject] =
     for {
       team <- teamDAO.findOne(teamMembership.teamId)
     } yield

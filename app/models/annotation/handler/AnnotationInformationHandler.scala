@@ -35,13 +35,13 @@ trait AnnotationInformationHandler extends FoxImplicits {
 
   def useCache: Boolean = true
 
-  def provideAnnotation(identifier: ObjectId, user: Option[User])(implicit ctx: DBAccessContext): Fox[Annotation]
+  def provideAnnotation(identifier: ObjectId, user: Option[User])(using ctx: DBAccessContext): Fox[Annotation]
 
   @nowarn // suppress warning about unused implicit ctx, as it is used in subclasses
-  def nameForAnnotation(t: Annotation)(implicit ctx: DBAccessContext): Fox[String] =
+  def nameForAnnotation(t: Annotation)(using ctx: DBAccessContext): Fox[String] =
     Fox.successful(t.id)
 
-  def restrictionsFor(identifier: ObjectId)(implicit ctx: DBAccessContext): Fox[AnnotationRestrictions]
+  def restrictionsFor(identifier: ObjectId)(using ctx: DBAccessContext): Fox[AnnotationRestrictions]
 
   def assertAllOnSameDataset(annotations: List[Annotation]): Fox[Boolean] = {
     @tailrec
@@ -67,7 +67,7 @@ trait AnnotationInformationHandler extends FoxImplicits {
 
   protected def registerDataSourceInTemporaryStore(temporaryAnnotationId: ObjectId, datasetId: ObjectId): Fox[Unit] =
     for {
-      dataset <- datasetDAO.findOne(datasetId)(GlobalAccessContext) ?~> Msg.Dataset
+      dataset <- datasetDAO.findOne(datasetId)(using GlobalAccessContext) ?~> Msg.Dataset
         .notFoundForAnnotation(datasetId, temporaryAnnotationId)
       dataSource <- datasetService.usableDataSourceFor(dataset)
       _ = annotationDataSourceTemporaryStore.store(temporaryAnnotationId, dataSource, datasetId)

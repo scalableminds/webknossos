@@ -40,14 +40,14 @@ class TSRemoteDatastoreClient @Inject()(
     AlfuCache(timeToLive = 10 minutes)
 
   def getAgglomerateTree(remoteFallbackLayer: RemoteFallbackLayer, mappingName: String, agglomerateId: Long)(
-      implicit tc: TokenContext): Fox[Array[Byte]] =
+      using tc: TokenContext): Fox[Array[Byte]] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       result <- rpc(s"$remoteLayerUri/agglomerates/$mappingName/skeleton/$agglomerateId").withTokenFromContext.getWithBytesResponse
     } yield result
 
   def getData(remoteFallbackLayer: RemoteFallbackLayer, dataRequests: Seq[WebknossosDataRequest])(
-      implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] =
+      using tc: TokenContext): Fox[(Array[Byte], List[Int])] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       response <- rpc(s"$remoteLayerUri/data").withTokenFromContext.silent.postJson(dataRequests)
@@ -57,7 +57,7 @@ class TSRemoteDatastoreClient @Inject()(
     } yield (bytes, indices)
 
   def getVoxelAtPosition(remoteFallbackLayer: RemoteFallbackLayer, pos: Vec3Int, mag: Vec3Int)(
-      implicit tc: TokenContext): Fox[Array[Byte]] =
+      using tc: TokenContext): Fox[Array[Byte]] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       result <- rpc(s"$remoteLayerUri/data").withTokenFromContext
@@ -74,7 +74,7 @@ class TSRemoteDatastoreClient @Inject()(
 
   def getAgglomerateIdsForSegmentIds(remoteFallbackLayer: RemoteFallbackLayer,
                                      mappingName: String,
-                                     segmentIdsOrdered: List[Long])(implicit tc: TokenContext): Fox[List[Long]] =
+                                     segmentIdsOrdered: List[Long])(using tc: TokenContext): Fox[List[Long]] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       segmentIdsOrderedProto = ListOfLong(items = segmentIdsOrdered)
@@ -83,7 +83,7 @@ class TSRemoteDatastoreClient @Inject()(
     } yield result.items.toList
 
   def getAgglomerateGraph(remoteFallbackLayer: RemoteFallbackLayer, baseMappingName: String, agglomerateId: Long)(
-      implicit tc: TokenContext): Fox[AgglomerateGraph] =
+      using tc: TokenContext): Fox[AgglomerateGraph] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       result <- rpc(s"$remoteLayerUri/agglomerates/$baseMappingName/agglomerateGraph/$agglomerateId").silent.withTokenFromContext.silent
@@ -91,7 +91,7 @@ class TSRemoteDatastoreClient @Inject()(
     } yield result
 
   def getLargestAgglomerateId(remoteFallbackLayer: RemoteFallbackLayer, mappingName: String)(
-      implicit tc: TokenContext): Fox[Long] = {
+      using tc: TokenContext): Fox[Long] = {
     val cacheKey = (remoteFallbackLayer, mappingName, tc.userTokenOpt)
     largestAgglomerateIdCache.getOrLoad(
       cacheKey,
@@ -106,7 +106,7 @@ class TSRemoteDatastoreClient @Inject()(
     )
   }
 
-  def hasSegmentIndexFile(remoteFallbackLayer: RemoteFallbackLayer)(implicit tc: TokenContext): Fox[Boolean] =
+  def hasSegmentIndexFile(remoteFallbackLayer: RemoteFallbackLayer)(using tc: TokenContext): Fox[Boolean] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       hasIndexFile <- rpc(s"$remoteLayerUri/hasSegmentIndex").withTokenFromContext.silent.getWithJsonResponse[Boolean]
@@ -118,7 +118,7 @@ class TSRemoteDatastoreClient @Inject()(
       mag: Vec3Int,
       mappingName: Option[String], // should be the baseMappingName in case of editable mappings
       editableMappingTracingId: Option[String],
-      annotationVersion: Option[Long])(implicit tc: TokenContext): Fox[Seq[(Long, Set[Vec3IntProto])]] =
+      annotationVersion: Option[Long])(using tc: TokenContext): Fox[Seq[(Long, Set[Vec3IntProto])]] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       result <- rpc(s"$remoteLayerUri/segmentIndex").withTokenFromContext.silent
@@ -135,7 +135,7 @@ class TSRemoteDatastoreClient @Inject()(
     } yield result.map(data => (data.segmentId, data.positions.toSet.map(vec3IntToProto)))
 
   def loadFullMeshStl(remoteFallbackLayer: RemoteFallbackLayer, fullMeshRequest: FullMeshRequest)(
-      implicit tc: TokenContext): Fox[Array[Byte]] =
+      using tc: TokenContext): Fox[Array[Byte]] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       result <- rpc(s"$remoteLayerUri/meshes/fullMesh.stl").withTokenFromContext

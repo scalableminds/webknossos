@@ -828,7 +828,7 @@ object DeleteUserBoundingBoxSkeletonAction {
 }
 object UpdateUserBoundingBoxSkeletonAction extends TristateOptionJsonHelper {
   implicit val jsonFormat: OFormat[UpdateUserBoundingBoxSkeletonAction] =
-    Json.configured(tristateOptionParsing).format[UpdateUserBoundingBoxSkeletonAction]
+    Json.configured(using tristateOptionParsing).format[UpdateUserBoundingBoxSkeletonAction]
 }
 object UpdateUserBoundingBoxVisibilitySkeletonAction {
   implicit val jsonFormat: OFormat[UpdateUserBoundingBoxVisibilitySkeletonAction] =

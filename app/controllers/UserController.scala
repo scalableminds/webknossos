@@ -62,7 +62,7 @@ class UserController @Inject()(userService: UserService,
     log() {
       for {
         userJs <- userService.publicWrites(request.identity, request.identity)
-        _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
+        _ = userDAO.updateLastActivity(request.identity._id)(using GlobalAccessContext)
       } yield Ok(userJs)
     }
   }
@@ -93,7 +93,7 @@ class UserController @Inject()(userService: UserService,
         annotationCount: Option[Int] <- Fox.runIf(includeTotalCount.getOrElse(false))(
           annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Explorational))
         jsonList = annotations.map(annotationService.writeCompactInfo)
-        _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
+        _ = userDAO.updateLastActivity(request.identity._id)(using GlobalAccessContext)
       } yield {
         val result = Ok(Json.toJson(jsonList))
         annotationCount match {
@@ -117,7 +117,7 @@ class UserController @Inject()(userService: UserService,
         annotationCount <- Fox.runIf(includeTotalCount.getOrElse(false))(
           annotationDAO.countAllFor(request.identity._id, isFinished, AnnotationType.Task))
         jsonList <- Fox.serialCombined(annotations)(a => annotationService.publicWrites(a, Some(request.identity)))
-        _ = userDAO.updateLastActivity(request.identity._id)(GlobalAccessContext)
+        _ = userDAO.updateLastActivity(request.identity._id)(using GlobalAccessContext)
       } yield {
         val result = Ok(Json.toJson(jsonList))
         annotationCount match {
@@ -245,7 +245,7 @@ class UserController @Inject()(userService: UserService,
     }
 
   private def checkEmailDoesNotExistIfChanged(email: String, oldEmail: String)(
-      implicit ctx: DBAccessContext): Fox[Unit] =
+      using ctx: DBAccessContext): Fox[Unit] =
     if (oldEmail == email) {
       Fox.successful(())
     } else {
@@ -267,7 +267,7 @@ class UserController @Inject()(userService: UserService,
   private def checkNoActivateBeyondLimit(user: User, isActive: Boolean): Fox[Unit] =
     for {
       _ <- Fox.runIf(user.isDeactivated && isActive)(organizationService
-        .assertUsersCanBeAdded(user._organization)(GlobalAccessContext, ec)) ?~> Msg.Organization.usersUserLimitReached
+        .assertUsersCanBeAdded(user._organization)(using GlobalAccessContext, ec)) ?~> Msg.Organization.usersUserLimitReached
     } yield ()
 
   private def checkNoDeactivateWithRemainingTask(user: User, isActive: Boolean): Fox[Unit] =
@@ -332,7 +332,7 @@ class UserController @Inject()(userService: UserService,
                                         firstName,
                                         lastName)
         teams <- Fox.combined(teamMemberships.map(t =>
-          teamDAO.findOne(t.teamId)(GlobalAccessContext) ?~> Msg.Team.notFound(t.teamId) ~> NOT_FOUND))
+          teamDAO.findOne(t.teamId)(using GlobalAccessContext) ?~> Msg.Team.notFound(t.teamId) ~> NOT_FOUND))
         oldTeamMemberships <- userService.teamMembershipsFor(user._id)
         teamsWithoutUpdate <- Fox.filterNot(oldTeamMemberships)(t =>
           userService.isTeamManagerOrAdminOf(request.identity, t.teamId))

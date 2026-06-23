@@ -72,20 +72,20 @@ trait AccessTokenService {
     AlfuCache(timeToLive = AccessExpiration, timeToIdle = AccessExpiration)
 
   def validateAccessFromTokenContextForSyncBlock(accessRequest: UserAccessRequest)(
-      block: => Result)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Result] =
+      block: => Result)(using ec: ExecutionContext, tc: TokenContext): Fox[Result] =
     validateAccessFromTokenContext(accessRequest) {
       Future.successful(block)
     }
 
   def validateAccessFromTokenContext(accessRequest: UserAccessRequest, useCaching: Boolean = true)(
-      block: => Future[Result])(implicit ec: ExecutionContext, tc: TokenContext): Fox[Result] =
+      block: => Future[Result])(using ec: ExecutionContext, tc: TokenContext): Fox[Result] =
     for {
       userAccessAnswer <- hasUserAccess(accessRequest, useCaching) ?~> "Failed to check data access, token may be expired, consider reloading."
       result <- Fox.fromFuture(executeBlockOnPositiveAnswer(userAccessAnswer, block))
     } yield result
 
   private def hasUserAccess(accessRequest: UserAccessRequest, useCaching: Boolean)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[UserAccessAnswer] =
     if (useCaching) {
       accessAnswersCache.getOrLoad((accessRequest, tc.userTokenOpt),

@@ -74,7 +74,7 @@ function* maybeFetchMeshFiles(action: MaybeFetchMeshFilesAction): Saga<void> {
 
   function* maybeActivateMeshFile(availableMeshFiles: APIMeshFileInfo[]) {
     const currentMeshFile = yield* select(
-      (state) => state.localSegmentationData[layerName].currentMeshFile,
+      (state) => state.localSegmentationStateByLayer[layerName].currentMeshFile,
     );
     if (!currentMeshFile && availableMeshFiles.length > 0 && autoActivate) {
       yield* put(updateCurrentMeshFileAction(layerName, availableMeshFiles[0].name));

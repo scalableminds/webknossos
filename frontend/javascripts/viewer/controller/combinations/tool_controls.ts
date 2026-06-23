@@ -654,7 +654,7 @@ export class DrawToolController extends VolumeToolController {
 
         const state = Store.getState();
         const volumeTracing = enforceActiveVolumeTracing(state);
-        const contourTracingMode = getContourTracingMode(volumeTracing);
+        const contourTracingMode = getContourTracingMode(state, volumeTracing);
 
         if (contourTracingMode === ContourModeEnum.DELETE) {
           handleMoveForDrawOrErase(pos);

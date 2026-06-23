@@ -7,7 +7,7 @@ import scala.util.{Success, Try}
 trait FoxImplicits {
 
   import scala.language.implicitConversions
-  
+
   /*
    * Intermediate class for implicit conversion. Never instantiate manually, always use `toFox` (e.g. for box, try, options)
    */

@@ -262,11 +262,11 @@ class VolumeTracingController @Inject()(
               .toFox ?~> "All data requests must request the same volume version"
             tracing <- annotationService.findVolume(annotationId, tracingId, requestedVersion) ?~> Msg.Annotation
               .notFound
-            (data, indices) <- if (tracing.getHasEditableMapping) {
+            (data, emptyIndices, failureIndices) <- if (tracing.getHasEditableMapping) {
               val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
               editableMappingService.volumeData(mappingLayer, request.body)
             } else volumeTracingService.data(annotationId, tracingId, tracing, request.body)
-          } yield Ok(data).withHeaders(createMissingBucketsHeaders(indices)*)
+          } yield Ok(data).withHeaders(createMissingBucketsHeaders(emptyIndices ++ failureIndices)*)
         }
       }
     }

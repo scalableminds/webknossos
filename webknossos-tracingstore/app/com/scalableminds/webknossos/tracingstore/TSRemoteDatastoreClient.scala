@@ -53,7 +53,8 @@ class TSRemoteDatastoreClient @Inject()(
       response <- rpc(s"$remoteLayerUri/data").withTokenFromContext.silent.postJson(dataRequests)
       _ <- Fox.fromBool(Status.isSuccessful(response.status))
       bytes = response.bodyAsBytes.toArray
-      indices <- parseMissingBucketHeader(response.header(missingBucketsHeader)) ?~> "failed to parse missing bucket header"
+      // TODO
+      indices <- parseMissingBucketHeader(response.header(failureBucketIndicesHeader)) ?~> "failed to parse missing bucket header"
     } yield (bytes, indices)
 
   def getVoxelAtPosition(remoteFallbackLayer: RemoteFallbackLayer, pos: Vec3Int, mag: Vec3Int)(

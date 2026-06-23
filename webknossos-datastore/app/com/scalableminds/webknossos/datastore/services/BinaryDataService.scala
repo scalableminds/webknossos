@@ -12,7 +12,7 @@ import com.scalableminds.webknossos.datastore.models.datasource.{DataLayer, Data
 import com.scalableminds.webknossos.datastore.models.requests.{DataReadInstruction, DataServiceDataRequest}
 import com.scalableminds.webknossos.datastore.storage._
 import com.typesafe.scalalogging.LazyLogging
-import com.scalableminds.util.tools.{Box, Empty, Full}
+import com.scalableminds.util.tools.{Box, Empty, Failure, Full}
 import ucar.ma2.{Array => MultiArray}
 import com.scalableminds.util.tools.Box.tryo
 import com.scalableminds.webknossos.datastore.services.mapping.AgglomerateService
@@ -166,8 +166,7 @@ class BinaryDataService(val dataBaseDir: Path,
     } yield resultData
 
   def handleDataRequests(requests: List[DataServiceDataRequest])(
-      using tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
-    val requestsCount = requests.length
+      using tc: TokenContext): Fox[(Array[Byte], List[Int], List[Int])] = {
     val requestData = requests.zipWithIndex.map {
       case (request, index) =>
         for {
@@ -177,11 +176,11 @@ class BinaryDataService(val dataBaseDir: Path,
     }
 
     Fox.fromFuture {
-      Fox.sequenceOfFulls(requestData).map { l =>
-        val bytesArrays = l.map { case (byteArray, _) => byteArray }
-        val foundIndices = l.map { case (_, index)    => index }
-        val notFoundIndices = List.range(0, requestsCount).diff(foundIndices)
-        (bytesArrays.appendArrays, notFoundIndices)
+      Fox.sequence(requestData).map { boxes =>
+        val byteArrays = boxes.collect { case Full((byteArray, _)) => byteArray }
+        val emptyIndices = boxes.zipWithIndex.collect { case (Empty, i)      => i }
+        val failureIndices = boxes.zipWithIndex.collect { case (_: Failure, i) => i }
+        (byteArrays.appendArrays, emptyIndices, failureIndices)
       }
     }
   }

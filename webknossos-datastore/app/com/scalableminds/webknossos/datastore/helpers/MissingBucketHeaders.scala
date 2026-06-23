@@ -7,13 +7,18 @@ import scala.concurrent.ExecutionContext
 
 trait MissingBucketHeaders extends FoxImplicits {
 
-  protected lazy val missingBucketsHeader: String = "MISSING-BUCKETS"
+  protected lazy val failureBucketIndicesHeader: String = "Failure-Bucket-Indices"
+  protected lazy val emptyBucketIndicesHeader: String = "Empty-Bucket-Indices"
+  protected lazy val legacyMissingBucketsHeader: String = "MISSING-BUCKETS"
 
-  protected def createMissingBucketsHeaders(indices: List[Int]): Seq[(String, String)] =
-    List(missingBucketsHeader -> formatMissingBucketList(indices),
-         "Access-Control-Expose-Headers" -> missingBucketsHeader)
+  protected def createMissingBucketsHeaders(emptyBucketIndices: Seq[Int], failureBucketIndices: Seq[Int]): Seq[(String, String)] =
+    Seq(
+      failureBucketIndicesHeader -> formatIndices(failureBucketIndices),
+      emptyBucketIndicesHeader -> formatIndices(emptyBucketIndices),
+      "Access-Control-Expose-Headers" -> s"$failureBucketIndicesHeader, $emptyBucketIndicesHeader"
+    )
 
-  private def formatMissingBucketList(indices: List[Int]): String =
+  private def formatIndices(indices: Seq[Int]): String =
     "[" + indices.mkString(", ") + "]"
 
   protected def parseMissingBucketHeader(headerLiteralOpt: Option[String])(

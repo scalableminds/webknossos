@@ -207,7 +207,7 @@ class EditableMappingService @Inject()(
     } yield segmentIdAtVoxel
 
   def volumeData(editableMappingLayer: EditableMappingLayer, dataRequests: DataRequestCollection)(
-      using tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
+      using tc: TokenContext): Fox[(Array[Byte], List[Int], List[Int])] = {
     val requests = dataRequests.map(
       r =>
         DataServiceDataRequest(None,

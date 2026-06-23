@@ -307,14 +307,14 @@ class VolumeTracingZarrStreamingController @Inject()(
               version = None,
               additionalCoordinates = additionalCoordinates
             )
-            (data, missingBucketIndices) <- if (tracing.getHasEditableMapping) {
+            (data, emptyIndices, failureIndices) <- if (tracing.getHasEditableMapping) {
               val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
               editableMappingService.volumeData(mappingLayer, List(wkRequest))
             } else tracingService.data(annotationId, tracingId, tracing, List(wkRequest))
             dataWithFallback <- getFallbackLayerDataIfEmpty(tracing,
                                                             annotationId,
                                                             data,
-                                                            missingBucketIndices,
+                                                            emptyIndices ++ failureIndices,
                                                             magParsed,
                                                             Vec3Int(x, y, z),
                                                             cubeSize,

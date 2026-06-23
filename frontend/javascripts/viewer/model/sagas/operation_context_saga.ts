@@ -9,6 +9,7 @@ import {
 } from "viewer/model/actions/operation_context_actions";
 import type { WebknossosState } from "viewer/store";
 import { type Saga, select } from "./effect_generators";
+import Mutex from "libs/mutex";
 
 /*
  * This module introduces the concept of Operation Contexts that can be used
@@ -78,20 +79,12 @@ interface ActiveOperation {
 
 let activeOperations: ActiveOperation[] = [];
 
-// Promise-chain mutex serializing the check-and-register critical section.
-// acquireCriticalSectionMutex() is synchronous and atomically advances the chain tail,
-// so two callers in the same JS tick queue correctly behind each other.
-// The returned promise resolves only when the previous holder calls release().
-let criticalSectionMutex: Promise<void> = Promise.resolve();
-
-function acquireCriticalSectionMutex(): Promise<() => void> {
-  let release!: () => void;
-  const prev = criticalSectionMutex;
-  criticalSectionMutex = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  return prev.then(() => release);
-}
+// This mutex is used to guard the check-and-start-operation logic in
+// createOperationContext. The mutex is NOT held for the whole lifecycle
+// of the operation. It's merely used to prevent two createOperationContext
+// invocations from simultaneously spawning an operation without knowing about
+// the other.
+let criticalSectionMutex = new Mutex();
 
 // ─── Operation Context ────────────────────────────────────────────────────────
 
@@ -131,7 +124,7 @@ export function* createOperationContext(
   // Acquire the mutex, snapshot state, do the atomic check-and-push, then release
   // before any further yields. This prevents two concurrent callers from both
   // reading activeOperations and both deciding canStart = true.
-  const release: () => void = yield call(acquireCriticalSectionMutex);
+  const release: () => void = yield call(() => criticalSectionMutex.acquire());
   const state: WebknossosState = yield select((s: WebknossosState) => s);
   const canStart = checkCanStart(options.id, state);
   if (canStart) {
@@ -233,7 +226,7 @@ export function* getOrCreateOperationContext(
 // Resets module-level state. Only intended for use in tests.
 export function _resetOperationContextForTesting(): void {
   activeOperations = [];
-  criticalSectionMutex = Promise.resolve();
+  criticalSectionMutex = new Mutex();
 }
 
 export function* resetOperationContextOnWkReady(): Saga<void> {

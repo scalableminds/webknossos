@@ -897,8 +897,6 @@ function* handleSplitViaTree(action: DeleteEdgeAction | MinCutAgglomerateAction)
     yield* put(
       setMappingDataAction(
         volumeTracingId,
-        activeMapping.mappingName,
-        activeMapping.mappingType,
         splitMappingInfo.splitMapping,
         // As these split actions were already sent to the server, splitMapping is stored on the server already.
         true,
@@ -1184,8 +1182,6 @@ function* performPartitionedMinCut(action: MinCutPartitionsAction | EnterAction)
     yield* put(
       setMappingDataAction(
         volumeTracingId,
-        activeMapping.mappingName,
-        activeMapping.mappingType,
         splitMapping,
         // As these split actions were already sent to the server, splitMapping is stored on the server already.
         true,
@@ -1647,18 +1643,14 @@ function* handleMinCutAgglomerate(action: MinCutAgglomerateWithPositionAction) {
     }
     const { splitMapping } = splitMappingInfo;
 
-    console.log("dispatch setMappingDataAction in proofreading saga");
     yield* put(
       setMappingDataAction(
         volumeTracingId,
-        activeMapping.mappingName,
-        activeMapping.mappingType,
         splitMapping,
         // As these split actions were already sent to the server, splitMapping is stored on the server already.
         true,
       ),
     );
-    console.log("finished updating the mapping after a min-cut");
 
     // Now that the local mapping information has changed due to the reloading of the mapping,
     // reload the agglomerate id info and the mapping.
@@ -1799,8 +1791,6 @@ function* handleProofreadCutFromNeighbors(action: Action) {
     yield* put(
       setMappingDataAction(
         volumeTracingId,
-        activeMapping.mappingName,
-        activeMapping.mappingType,
         splitMapping,
         // As these split actions were already sent to the server, splitMapping is stored on the server already.
         true,
@@ -2324,15 +2314,7 @@ export function* updateMappingWithMerge(
     targetAgglomerateId,
   );
   // Even when the merge was a no-op, we still dispatch setMappingDataAction here, so the activation completes correctly (see the finishMappingActivation saga).
-  yield* put(
-    setMappingDataAction(
-      volumeTracingId,
-      activeMapping.mappingName,
-      activeMapping.mappingType,
-      mergedMapping,
-      isVersionStoredOnServer,
-    ),
-  );
+  yield* put(setMappingDataAction(volumeTracingId, mergedMapping, isVersionStoredOnServer));
 }
 
 type IdInfo = { agglomerateId: number; unmappedId: number; position: Vector3 };

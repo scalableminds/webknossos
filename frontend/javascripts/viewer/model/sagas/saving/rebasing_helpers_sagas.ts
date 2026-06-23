@@ -188,8 +188,6 @@ function* addMissingSegmentsToLoadedMappings(
     yield* put(
       setMappingDataAction(
         volumeTracingId,
-        activeMapping.mappingName,
-        activeMapping.mappingType,
         mergedMapping as Mapping,
         // Although this version is stored on the server, the used version to fetch the mapping info might be different
         // from the version stored in RebaseRelevantAnnotationState. Thus, we update RebaseRelevantAnnotationState not via the

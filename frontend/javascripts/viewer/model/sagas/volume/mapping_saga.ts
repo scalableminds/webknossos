@@ -147,24 +147,23 @@ const takeLatestMappingChange = (
   });
 };
 
-// There are two distinct ways the active mapping's data ends up in the store. SET_MAPPING_DATA
-// is involved in both, so it is important to keep them apart:
+// There are two distinct ways the active mapping ends up in the store. Keeping them apart matters:
 //
-// (1) ACTIVATING a mapping by name is a TWO-PHASE process:
-//      Phase 1: setMappingAction requests that a mapping (identified by name) becomes active. It
-//               does NOT carry the actual mapping data; the mapping saga loads the data and then
-//               dispatches setMappingDataAction itself.
-//      Phase 2: setMappingDataAction carries the loaded mapping data (the Map). It triggers the
+// (1) ACTIVATING a mapping is always a TWO-PHASE process:
+//      Phase 1: setMappingAction configures which mapping becomes active (its name + type). It does
+//               NOT carry the mapping data. Normally the mapping saga reacts to it, loads the data
+//               from the server and dispatches setMappingDataAction itself. If the caller already
+//               holds the data (front-end API / merger mode supplying a custom mapping under the
+//               synthetic name "<custom mapping>"), it passes dataIsProvidedExternally so the saga
+//               skips loading and the caller dispatches setMappingDataAction itself.
+//      Phase 2: setMappingDataAction carries the actual mapping data (the Map). It triggers the
 //               texture update and finishMappingInitializationAction (status ACTIVATING -> ENABLED).
 //
-// (2) UPDATING the data of an already-active mapping (or supplying fully custom data directly)
-//     only needs setMappingDataAction ON ITS OWN — there is NO preceding setMappingAction:
-//      - proofreading split/merge and save/rebase recompute the mapping locally and re-publish it
-//        for the already-active mapping, and
-//      - the front-end API (api.data.setMapping) / merger mode supply a custom mapping directly
-//        (under the synthetic name "<custom mapping>"), for which there is nothing to load.
-//     Because there is no setMappingAction on this path, setMappingDataAction is the action that
-//     carries mappingName/mappingType into the store here.
+// (2) UPDATING the data of an already-active mapping only needs setMappingDataAction ON ITS OWN —
+//     there is NO setMappingAction, because the mapping (name + type) is already configured. This
+//     is used by proofreading split/merge and save/rebase, which recompute the mapping locally and
+//     re-publish it. setMappingDataAction therefore never carries a name/type: it always refers to
+//     the mapping that setMappingAction configured (phase 1) or that is already active.
 
 export default function* watchActivatedMappings(): Saga<void> {
   const oldActiveMappingByLayer = {
@@ -198,18 +197,10 @@ export default function* watchActivatedMappings(): Saga<void> {
   yield* takeEvery(["SET_MAPPING", "SET_MAPPING_DATA"], keepMappingInfoInUpdated);
 }
 
-function* clearActiveMapping(volumeTracingId: string, activeMapping: ActiveMappingInfo) {
+function* clearActiveMapping(volumeTracingId: string) {
   const newMapping = new Map();
 
-  yield* put(
-    setMappingDataAction(
-      volumeTracingId,
-      activeMapping.mappingName,
-      activeMapping.mappingType,
-      newMapping,
-      false,
-    ),
-  );
+  yield* put(setMappingDataAction(volumeTracingId, newMapping, false));
 }
 
 function* reloadHdf5Mapping() {
@@ -223,10 +214,6 @@ function* reloadHdf5Mapping() {
   if (actionTracingId == null) {
     return;
   }
-  const activeMapping = yield* select(
-    (store) => store.temporaryConfiguration.activeMappingByLayer[actionTracingId],
-  );
-
   const layerName = actionTracingId;
   const mappingInfo = yield* select((state) =>
     getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
@@ -239,7 +226,7 @@ function* reloadHdf5Mapping() {
     throw new Error("Could not apply splitAgglomerate because no active mapping was found.");
   }
 
-  yield* call(clearActiveMapping, actionTracingId, activeMapping);
+  yield* call(clearActiveMapping, actionTracingId);
   yield* call(updateLocalHdf5Mapping, layerName, layerInfo, mappingName);
 }
 
@@ -434,7 +421,8 @@ function* handleSetMapping(
   oldActiveMappingByLayer: Container<Record<string, ActiveMappingInfo>>,
   action: SetMappingAction,
 ): Saga<void> {
-  const { layerName, mappingName, mappingType, showLoadingIndicator } = action;
+  const { layerName, mappingName, mappingType, showLoadingIndicator, dataIsProvidedExternally } =
+    action;
 
   // Editable mappings cannot be disabled or switched for now
   const isEditableMappingActivationAllowed = yield* select((state) =>
@@ -443,6 +431,14 @@ function* handleSetMapping(
   if (!isEditableMappingActivationAllowed) return;
 
   if (mappingName == null) {
+    return;
+  }
+
+  if (dataIsProvidedExternally) {
+    // The caller supplies the mapping data directly via a follow-up setMappingDataAction (e.g. the
+    // front-end API / merger mode), so there is nothing to load from the server here. The
+    // SET_MAPPING reducer already configured name/type/status; finishMappingActivation completes
+    // the activation once the data action arrives.
     return;
   }
 
@@ -489,23 +485,26 @@ function* handleSetMapping(
 
 function* finishMappingActivation(action: SetMappingDataAction): Saga<void> {
   // Runs on every SET_MAPPING_DATA, i.e. for phase 2 of an activation (case 1) as well as for a
-  // standalone data update of an already-active / directly-supplied mapping (case 2). The mapping
-  // data has already been stored in the store (by the SET_MAPPING_DATA reducer). Here we update
+  // standalone data update of an already-active mapping (case 2). The mapping data has already
+  // been stored in the store (by the SET_MAPPING_DATA reducer). Here we update
   // the mapping textures (a no-op if the layer's textures have not been set up yet, e.g. in tests
   // without a GPU) and finish the activation (status ACTIVATING -> ENABLED).
-  const { layerName, mappingName, mapping, mappingColors, isMergerModeMapping } = action;
+  const { layerName, mapping, mappingColors, isMergerModeMapping } = action;
+
+  // The mapping's name/type live in the active mapping (configured by SET_MAPPING or already
+  // active); the data action no longer carries them.
+  const activeMapping = yield* select((state) =>
+    getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
+  );
 
   // Mirror the gate of the SET_MAPPING_DATA reducer.
   const isActivationAllowed = yield* select((state) =>
-    isMappingActivationAllowed(state, mappingName, layerName, !!isMergerModeMapping),
+    isMappingActivationAllowed(state, activeMapping.mappingName, layerName, !!isMergerModeMapping),
   );
   if (!isActivationAllowed) return;
 
   // Only proceed if the reducer actually applied this exact mapping and the activation is still
   // in progress. This skips superseded/rejected actions and avoids double-finishing.
-  const activeMapping = yield* select((state) =>
-    getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName),
-  );
   if (
     activeMapping.mapping !== mapping ||
     activeMapping.mappingStatus !== MappingStatusEnum.ACTIVATING
@@ -569,7 +568,7 @@ function* updateLocalHdf5Mapping(
       // In cases where a mapping is already set and the zoom threshold is exceeded, it is not changed
       // to avoid useless updates to the cuckoo textures. Once the threshold is no longer exceeded, the mapping
       // will be updated again.
-      yield* put(setMappingDataAction(layerName, mappingName, "HDF5", new Map(), true));
+      yield* put(setMappingDataAction(layerName, new Map(), true));
     }
     return;
   }
@@ -618,7 +617,7 @@ function* updateLocalHdf5Mapping(
     onlyB: newSegmentIds,
   });
 
-  yield* put(setMappingDataAction(layerName, mappingName, "HDF5", mapping, true));
+  yield* put(setMappingDataAction(layerName, mapping, true));
 
   yield* call(adaptActiveSegmentToProofreadingMarker, layerName);
 }
@@ -752,9 +751,7 @@ function* handleSetJsonMapping(
   // The custom colors (if any) were already applied above, so they are not passed again here
   // (finishMappingActivation would otherwise re-apply them based on a possibly different class
   // ordering).
-  yield* put(
-    setMappingDataAction(layerName, mappingName, mappingType, mapping, false, { hideUnmappedIds }),
-  );
+  yield* put(setMappingDataAction(layerName, mapping, false, { hideUnmappedIds }));
 }
 
 function convertMappingObjectToEquivalenceClasses(existingMapping: Mapping) {

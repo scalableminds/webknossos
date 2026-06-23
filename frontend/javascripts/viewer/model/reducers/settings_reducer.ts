@@ -280,25 +280,27 @@ function SettingsReducer(state: WebknossosState, action: Action): WebknossosStat
     }
 
     case "SET_MAPPING_DATA": {
-      const { mappingName, mapping, mappingColors, mappingType, layerName, isMergerModeMapping } =
-        action;
+      // This action only updates the mapping data. The mapping's name and type were configured by
+      // the preceding SET_MAPPING (phase 1) or belong to an already-active mapping, so we read
+      // them from the current active mapping rather than from the action.
+      const { mapping, mappingColors, layerName, isMergerModeMapping } = action;
+      const activeMappingInfo = getMappingInfo(
+        state.temporaryConfiguration.activeMappingByLayer,
+        layerName,
+      );
+      const { mappingName } = activeMappingInfo;
 
       // Editable mappings cannot be disabled or switched for now
       if (!isMappingActivationAllowed(state, mappingName, layerName, !!isMergerModeMapping))
         return state;
 
       const hideUnmappedIds =
-        action.hideUnmappedIds != null
-          ? action.hideUnmappedIds
-          : getMappingInfo(state.temporaryConfiguration.activeMappingByLayer, layerName)
-              .hideUnmappedIds;
+        action.hideUnmappedIds != null ? action.hideUnmappedIds : activeMappingInfo.hideUnmappedIds;
       return updateActiveMapping(
         state,
         {
-          mappingName,
           mapping,
           mappingColors,
-          mappingType,
           hideUnmappedIds,
           mappingStatus:
             mappingName != null ? MappingStatusEnum.ACTIVATING : MappingStatusEnum.DISABLED,

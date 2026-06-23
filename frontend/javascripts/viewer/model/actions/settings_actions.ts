@@ -217,8 +217,8 @@ export type OptionalMappingProperties = {
 
 // Phase 1 of activating a mapping by name: requests that the mapping becomes active, without
 // carrying its data (cf. mapping_saga.ts). The mapping saga loads the data and then dispatches
-// setMappingDataAction(phase 2). Only needed for activation — updating an already-active mapping
-// uses setMappingDataAction on its own. See the two-case explanation in mapping_saga.tss
+// setMappingDataAction (phase 2). This is the only action that configures the active mapping's
+// name and type — setMappingDataAction merely updates the data of the mapping configured here.
 export const setMappingAction = (
   layerName: string,
   mappingName: string | null | undefined,
@@ -230,10 +230,15 @@ export const setMappingAction = (
     hideUnmappedIds,
     showLoadingIndicator,
     isMergerModeMapping,
+    dataIsProvidedExternally,
   }: {
     hideUnmappedIds?: boolean;
     showLoadingIndicator?: boolean;
     isMergerModeMapping?: boolean;
+    // If true, the caller supplies the mapping data itself via a follow-up setMappingDataAction
+    // (e.g. the front-end API / merger mode), so the mapping saga must NOT try to load it from the
+    // server. This action then only configures name/type/status in the store.
+    dataIsProvidedExternally?: boolean;
   } = {},
 ) =>
   ({
@@ -244,20 +249,16 @@ export const setMappingAction = (
     hideUnmappedIds,
     showLoadingIndicator,
     isMergerModeMapping,
+    dataIsProvidedExternally,
     isVersionStoredOnServer,
   }) as const;
 
-// The actual mapping data arrives here. This is dispatched either as phase 2 of an
-// activation (after SET_MAPPING, with the data loaded by the mapping saga) !or! on its own
-// to update the data of an already-active mapping / supply a custom mapping directly (e.g.
-// proofreading, save/rebase, the front-end API) — in that case there is NO preceding
-// SET_MAPPING, see mapping_saga.ts. The mapping dictionary is stored and the status is set
-// to ACTIVATING; finishMappingActivation in the mapping saga will set it to ENABLED once the
-// textures have been updated.
+// Updates the DATA of the layer's already-configured active mapping.
+// The mapping dictionary is stored and the status is set to ACTIVATING;
+// finishMappingActivation in the mapping saga sets it to ENABLED once the
+// textures have been updated. See the two-case explanation in mapping_saga.ts.
 export const setMappingDataAction = (
   layerName: string,
-  mappingName: string | null | undefined,
-  mappingType: MappingType,
   mapping: Mapping,
   isVersionStoredOnServer: boolean, // same as in setMappingAction (see above).
   {
@@ -273,8 +274,6 @@ export const setMappingDataAction = (
   ({
     type: "SET_MAPPING_DATA",
     layerName,
-    mappingName,
-    mappingType,
     mapping,
     mappingColors,
     hideUnmappedIds,

@@ -895,8 +895,6 @@ export function* tryToIncorporateActions(
         yield* put(
           setMappingDataAction(
             tracingId,
-            activeMapping.mappingName,
-            activeMapping.mappingType,
             splitMapping,
             true, // Might be optimistic. The mapping might not be in in the same state as on the server when reapplying local updates.
             // The finishedApplyingMissingUpdatesAction action takes care of storing the newest info in RebaseRelevantAnnotationState

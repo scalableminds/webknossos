@@ -7,7 +7,6 @@ import com.scalableminds.util.tools.{Fox, FoxImplicits}
 import models.task._
 import play.silhouette.api.Silhouette
 import models.user.UserService
-import play.api.libs.json.Reads._
 import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, PlayBodyParsers}
 import security.WkEnv

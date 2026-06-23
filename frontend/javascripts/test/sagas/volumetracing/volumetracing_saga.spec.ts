@@ -106,6 +106,7 @@ describe("VolumeTracingSaga", () => {
     saga.next(true);
     saga.next(false); // isBlocked = false
     saga.next(volumeTracing);
+    saga.next(ContourModeEnum.DRAW);
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
     saga.next(AnnotationTool.BRUSH);
     saga.next(false);
@@ -148,6 +149,7 @@ describe("VolumeTracingSaga", () => {
     saga.next(true);
     saga.next(false); // isBlocked = false
     saga.next(volumeTracing);
+    saga.next(ContourModeEnum.DRAW);
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
     saga.next(AnnotationTool.TRACE);
     saga.next(false);
@@ -201,6 +203,7 @@ describe("VolumeTracingSaga", () => {
     saga.next(true);
     saga.next(false); // isBlocked = false
     saga.next(volumeTracing);
+    saga.next(ContourModeEnum.DRAW);
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
     saga.next(AnnotationTool.TRACE);
     saga.next(false);
@@ -264,7 +267,8 @@ describe("VolumeTracingSaga", () => {
     saga.next(startEditing);
     saga.next(true);
     saga.next(false); // isBlocked = false
-    saga.next({ ...volumeTracing, contourTracingMode: ContourModeEnum.DELETE });
+    saga.next({ ...volumeTracing });
+    saga.next(ContourModeEnum.DELETE);
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
     saga.next(AnnotationTool.TRACE);
     saga.next(false);
@@ -344,6 +348,7 @@ describe("VolumeTracingSaga", () => {
     saga.next(true);
     saga.next(false); // isBlocked = false
     saga.next(volumeTracing);
+    saga.next(ContourModeEnum.DRAW);
     saga.next(OverwriteModeEnum.OVERWRITE_ALL);
     saga.next(AnnotationTool.BRUSH);
     saga.next(false);

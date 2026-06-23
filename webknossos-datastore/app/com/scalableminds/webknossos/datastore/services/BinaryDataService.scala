@@ -34,7 +34,7 @@ class BinaryDataService(val dataBaseDir: Path,
 
   private lazy val bucketProviderCache = new BucketProviderCache(maxEntries = 5000)
 
-  def handleDataRequest(request: DataServiceDataRequest)(implicit tc: TokenContext): Fox[Array[Byte]] = {
+  def handleDataRequest(request: DataServiceDataRequest)(using tc: TokenContext): Fox[Array[Byte]] = {
     val bucketQueue = request.cuboid.allBucketsInCuboid
 
     if (!request.cuboid.hasValidDimensions) {
@@ -56,7 +56,7 @@ class BinaryDataService(val dataBaseDir: Path,
   }
 
   def handleMultipleBucketRequests(requests: Seq[DataServiceDataRequest])(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[Seq[Box[Array[Byte]]]] =
     if (requests.isEmpty) Fox.successful(Seq.empty)
     else {
@@ -145,7 +145,7 @@ class BinaryDataService(val dataBaseDir: Path,
   }
 
   private def convertAccordingToRequest(request: DataServiceDataRequest, inputArray: Array[Byte])(
-      implicit tc: TokenContext): Fox[Array[Byte]] =
+      using tc: TokenContext): Fox[Array[Byte]] =
     for {
       clippedData <- convertIfNecessary(
         !request.cuboid.toMag1BoundingBox.isFullyContainedIn(request.dataLayer.boundingBox),
@@ -166,7 +166,7 @@ class BinaryDataService(val dataBaseDir: Path,
     } yield resultData
 
   def handleDataRequests(requests: List[DataServiceDataRequest])(
-      implicit tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
+      using tc: TokenContext): Fox[(Array[Byte], List[Int])] = {
     val requestsCount = requests.length
     val requestData = requests.zipWithIndex.map {
       case (request, index) =>
@@ -187,7 +187,7 @@ class BinaryDataService(val dataBaseDir: Path,
   }
 
   private def handleBucketRequest(request: DataServiceDataRequest, bucket: BucketPosition)(
-      implicit tc: TokenContext): Fox[Array[Byte]] =
+      using tc: TokenContext): Fox[Array[Byte]] =
     if (request.dataLayer.containsMag(bucket.mag)) {
       val readInstruction =
         DataReadInstruction(dataBaseDir,

@@ -68,7 +68,7 @@ class DatasetArray(vaultPath: VaultPath,
       offsetXYZ: Vec3Int,
       shapeXYZ: Vec3Int,
       additionalCoordinatesOpt: Option[Seq[AdditionalCoordinate]],
-      shouldReadUint24: Boolean)(implicit ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
+      shouldReadUint24: Boolean)(using ec: ExecutionContext, tc: TokenContext): Fox[Array[Byte]] =
     for {
       (offsetArray, shapeArray) <- tryo(constructOffsetAndShapeArrays(
         offsetXYZ,
@@ -115,7 +115,7 @@ class DatasetArray(vaultPath: VaultPath,
   }
 
   // returns byte array in fortran-order with little-endian values
-  private def readBytes(offset: Array[Int], shape: Array[Int])(implicit ec: ExecutionContext,
+  private def readBytes(offset: Array[Int], shape: Array[Int])(using ec: ExecutionContext,
                                                                tc: TokenContext): Fox[Array[Byte]] =
     for {
       typedMultiArray <- readAsFortranOrder(offset, shape)
@@ -149,7 +149,7 @@ class DatasetArray(vaultPath: VaultPath,
   // The local variables like chunkIndices are also in this order unless explicitly named.
   // Loading data adapts to the array's axis order so that …CXYZ data in fortran-order is
   // returned, regardless of the array’s internal storage.
-  private def readAsFortranOrder(offset: Array[Int], shape: Array[Int])(implicit ec: ExecutionContext,
+  private def readAsFortranOrder(offset: Array[Int], shape: Array[Int])(using ec: ExecutionContext,
                                                                         tc: TokenContext): Fox[MultiArray] = {
     val totalOffset: Array[Int] = offset.zip(header.voxelOffset).map { case (o, v) => o - v }.padTo(offset.length, 0)
     val chunkIndices = ChunkUtils.computeChunkIndices(
@@ -185,10 +185,10 @@ class DatasetArray(vaultPath: VaultPath,
     }
   }
 
-  def readAsMultiArray(offset: Long, shape: Int)(implicit ec: ExecutionContext, tc: TokenContext): Fox[MultiArray] =
+  def readAsMultiArray(offset: Long, shape: Int)(using ec: ExecutionContext, tc: TokenContext): Fox[MultiArray] =
     readAsMultiArray(Array(offset), Array(shape))
 
-  def readAsMultiArray(offset: Array[Long], shape: Array[Int])(implicit ec: ExecutionContext,
+  def readAsMultiArray(offset: Array[Long], shape: Array[Int])(using ec: ExecutionContext,
                                                                tc: TokenContext): Fox[MultiArray] =
     if (shape.contains(0)) {
       Fox.successful(MultiArrayUtils.createEmpty(header.resolvedDataType, rank))
@@ -232,7 +232,7 @@ class DatasetArray(vaultPath: VaultPath,
       .mkString(",")}, offsetInChunk: ${offsetInChunk.mkString(",")}"
 
   protected def getShardedChunkPathAndRange(chunkIndex: Array[Int])(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[(VaultPath, StartEndExclusiveByteRange)] =
     ??? // Defined in subclass
 
@@ -240,14 +240,14 @@ class DatasetArray(vaultPath: VaultPath,
     s"${dataSourceId}__${layerName}__${vaultPath}__chunk_${chunkIndex.mkString(",")}"
 
   private def getSourceChunkDataWithCache(chunkIndex: Array[Int], useSkipTypingShortcut: Boolean = false)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[MultiArray] =
     // Note: we omit the tokenContext from the cacheKey because (a) Failures aren’t cached anyway and (b) the dataset access is checked again in the controllers. Omitting it here prevents wasteful data duplicates in the cache.
     sharedChunkContentsCache.getOrLoad(chunkContentsCacheKey(chunkIndex),
                                        _ => readSourceChunkData(chunkIndex, useSkipTypingShortcut))
 
   private def readSourceChunkData(chunkIndex: Array[Int], useSkipTypingShortcut: Boolean)(
-      implicit ec: ExecutionContext,
+      using ec: ExecutionContext,
       tc: TokenContext): Fox[MultiArray] =
     if (header.isSharded) {
       val chunkShape = chunkShapeAtIndex(chunkIndex)

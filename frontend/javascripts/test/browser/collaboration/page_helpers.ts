@@ -63,7 +63,10 @@ export async function getNewPage(authToken: string): Promise<{ page: Page; brows
       `--window-size=${PAGE_WIDTH},${PAGE_HEIGHT}`,
     ],
     headless: HEADLESS,
-    executablePath: "/usr/bin/google-chrome",
+    executablePath:
+      process.platform === "darwin"
+        ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+        : "/usr/bin/google-chrome",
   });
   const page = await browser.newPage();
   await page.setViewportSize({ width: PAGE_WIDTH, height: PAGE_HEIGHT });

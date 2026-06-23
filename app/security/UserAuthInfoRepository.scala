@@ -19,7 +19,7 @@ class UserAuthInfoRepository @Inject()(userService: UserService, multiUserDAO: M
     for {
       userOpt <- userService.retrieve(loginInfo)
       multiUserBox <- Fox
-        .runOptional(userOpt)(user => multiUserDAO.findOne(user._multiUser)(GlobalAccessContext))
+        .runOptional(userOpt)(user => multiUserDAO.findOne(user._multiUser)(using GlobalAccessContext))
         .futureBox
     } yield multiUserBox.toOption.flatten.map(_.passwordInfo.asInstanceOf[T])
 

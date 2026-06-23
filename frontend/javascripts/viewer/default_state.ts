@@ -315,7 +315,7 @@ const defaultState: WebknossosState = {
       unmappedSegmentId: null,
     },
   },
-  localSegmentationData: {},
+  localSegmentationStateByLayer: {},
   operationContext: {
     activeOperations: [],
     childOperations: [],

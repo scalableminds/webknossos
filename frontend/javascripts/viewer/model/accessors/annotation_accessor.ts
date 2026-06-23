@@ -47,7 +47,7 @@ export function mayAddToSaveQueue(state: WebknossosState): boolean {
    * with update actions.
    */
   return (
-    // allowSave is initialized with allowUpdate and may be overriden when
+    // allowSave is initialized with allowUpdate and may be overridden when
     // saving is disabled (via DISABLE_SAVING action).
     Boolean(state.annotation.restrictions.allowSave) &&
     !state.uiInformation.showVersionRestore &&

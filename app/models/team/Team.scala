@@ -4,7 +4,7 @@ import com.scalableminds.util.Msg
 import com.scalableminds.util.accesscontext.{DBAccessContext, GlobalAccessContext}
 import com.scalableminds.util.time.Instant
 import com.scalableminds.util.tools.{Fox, FoxImplicits}
-import com.scalableminds.webknossos.schema.Tables._
+import com.scalableminds.webknossos.schema.Tables.{Teams, TeamsRow, GetResultTeamsRow}
 
 import javax.inject.Inject
 import models.dataset.Dataset
@@ -35,7 +35,7 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
 
   def publicWrites(team: Team, organizationOpt: Option[Organization] = None): Fox[JsObject] =
     for {
-      organization <- Fox.fillOption(organizationOpt)(organizationDAO.findOne(team._organization)(GlobalAccessContext))
+      organization <- Fox.fillOption(organizationOpt)(organizationDAO.findOne(team._organization)(using GlobalAccessContext))
     } yield {
       Json.obj(
         "id" -> team._id.toString,
@@ -54,7 +54,7 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
     } yield ()
 
   def allowedTeamsForFolder(folderId: ObjectId, cumulative: Boolean, requestingUser: Option[User] = None)(
-      implicit ctx: DBAccessContext): Fox[List[Team]] =
+      using ctx: DBAccessContext): Fox[List[Team]] =
     for {
       teamIds <- allowedTeamIdsForFolder(folderId, cumulative)
       teams <- teamDAO.findAllByIds(teamIds)
@@ -62,7 +62,7 @@ class TeamService @Inject()(organizationDAO: OrganizationDAO,
     } yield teamsFiltered
 
   def allowedTeamsForDataset(dataset: Dataset, cumulative: Boolean, requestingUser: Option[User] = None)(
-      implicit ctx: DBAccessContext): Fox[List[Team]] =
+      using ctx: DBAccessContext): Fox[List[Team]] =
     for {
       teamIds <- allowedTeamIdsForDataset(dataset, cumulative)
       teams <- teamDAO.findAllByIds(teamIds)
@@ -117,7 +117,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       count <- countList.headOption.toFox
     } yield count
 
-  def findAllEditable(implicit ctx: DBAccessContext): Fox[List[Team]] =
+  def findAllEditable(using ctx: DBAccessContext): Fox[List[Team]] =
     for {
       requestingUserId <- userIdFromCtx
       accessQuery <- readAccessQuery
@@ -140,7 +140,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def findAllIdsByOrganization(organizationId: String)(implicit ctx: DBAccessContext): Fox[List[ObjectId]] =
+  def findAllIdsByOrganization(organizationId: String)(using ctx: DBAccessContext): Fox[List[ObjectId]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(
@@ -148,7 +148,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- Fox.serialCombined(r.toList)(col => ObjectId.fromString(col))
     } yield parsed
 
-  def findAllByIds(teamIds: List[ObjectId])(implicit ctx: DBAccessContext): Fox[List[Team]] =
+  def findAllByIds(teamIds: List[ObjectId])(using ctx: DBAccessContext): Fox[List[Team]] =
     for {
       accessQuery <- readAccessQuery
       idPredicate = if (teamIds.isEmpty) q"FALSE" else q"_id IN ${SqlToken.tupleFromList(teamIds)}"
@@ -157,7 +157,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       parsed <- parseAll(r)
     } yield parsed
 
-  def findSharedTeamsForAnnotation(annotationId: ObjectId)(implicit ctx: DBAccessContext): Fox[List[Team]] =
+  def findSharedTeamsForAnnotation(annotationId: ObjectId)(using ctx: DBAccessContext): Fox[List[Team]] =
     for {
       accessQuery <- readAccessQuery
       r <- run(q"""SELECT $columns FROM $existingCollectionName
@@ -219,7 +219,7 @@ class TeamDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
       _ <- run(q"DELETE FROM webknossos.folder_allowedTeams WHERE _team = $teamId".asUpdate)
     } yield ()
 
-  override def deleteOne(teamId: ObjectId)(implicit ctx: DBAccessContext): Fox[Unit] =
+  override def deleteOne(teamId: ObjectId)(using ctx: DBAccessContext): Fox[Unit] =
     deleteOneWithNameSuffix(teamId)
 
 }

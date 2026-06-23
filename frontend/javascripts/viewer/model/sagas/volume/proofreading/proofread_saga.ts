@@ -47,6 +47,7 @@ import { AnnotationTool } from "viewer/model/accessors/tool_accessor";
 import {
   getActiveSegmentationTracing,
   getActiveSegmentationTracingLayer,
+  getActiveUnmappedSegmentId,
   getEditableMappingForVolumeTracingId,
   getMeshInfoForSegment,
   getSegmentsForLayer,
@@ -231,9 +232,11 @@ function* clearActiveSegmentIfTdViewportIsActive(): Saga<void> {
   const activeViewport = yield* select((state) => state.viewModeData.plane.activeViewport);
   const activeTool = yield* select((state) => state.uiInformation.activeTool);
   const activeVolumeTracing = yield* select(getActiveSegmentationTracing);
+  const activeUnmappedSegmentId = yield* select((state) =>
+    getActiveUnmappedSegmentId(state, activeVolumeTracing),
+  );
   const hasHighlightedSuperVoxel =
-    activeVolumeTracing?.activeCellId != null &&
-    activeVolumeTracing?.activeUnmappedSegmentId != null;
+    activeVolumeTracing?.activeCellId != null && activeUnmappedSegmentId != null;
   if (
     hasHighlightedSuperVoxel &&
     activeTool === AnnotationTool.PROOFREAD &&
@@ -251,7 +254,7 @@ function* showToastIfSegmentOfOtherAgglomerateWasSelected(
   if (!layerName) {
     return;
   }
-  const layerData = yield* select((state) => state.localSegmentationData[layerName]);
+  const layerData = yield* select((state) => state.localSegmentationStateByLayer[layerName]);
   if (!layerData || !layerData.minCutPartitions) {
     return;
   }
@@ -329,7 +332,7 @@ function* loadCoarseMesh(
   yield* call(dispatchMaybeFetchMeshFilesAsync, Store.dispatch, layer, dataset, false);
 
   const currentMeshFile = yield* select(
-    (state) => state.localSegmentationData[layerName].currentMeshFile,
+    (state) => state.localSegmentationStateByLayer[layerName].currentMeshFile,
   );
 
   const meshInfo = yield* select((state) =>
@@ -1100,7 +1103,8 @@ function* performPartitionedMinCut(
     return;
   }
   const partitions = yield* select(
-    (state) => state.localSegmentationData[preparation.volumeTracing.tracingId].minCutPartitions,
+    (state) =>
+      state.localSegmentationStateByLayer[preparation.volumeTracing.tracingId].minCutPartitions,
   );
   let agglomerateId = partitions.agglomerateId;
   if (partitions[1].length <= 0 || partitions[2].length <= 0) {
@@ -1364,7 +1368,7 @@ function* clearProofreadingByproducts() {
   );
   const meshInfos =
     (yield* select(
-      (state) => state.localSegmentationData[layerName]?.meshes?.[additionalCoordinateKey],
+      (state) => state.localSegmentationStateByLayer[layerName]?.meshes?.[additionalCoordinateKey],
     )) || {};
   const meshRemoveActions = Object.values(meshInfos).map((meshInfo) => {
     return removeMeshAction(layerName, meshInfo.segmentId);
@@ -2411,7 +2415,10 @@ function* gatherInfoForOperation(
   preparation: Preparation,
 ): Saga<GatheredInfos | null> {
   const { volumeTracing } = preparation;
-  const { tracingId: volumeTracingId, activeCellId, activeUnmappedSegmentId } = volumeTracing;
+  const { tracingId: volumeTracingId, activeCellId } = volumeTracing;
+  const activeUnmappedSegmentId = yield* select((state) =>
+    getActiveUnmappedSegmentId(state, volumeTracing),
+  );
   if (activeCellId === 0) {
     console.warn("[Proofreading] Cannot execute operation because active segment id is 0");
     return null;

@@ -16,7 +16,7 @@ trait MissingBucketHeaders extends FoxImplicits {
       emptyBucketIndicesHeader -> formatIndices(emptyBucketIndices),
       failureBucketIndicesHeader -> formatIndices(failureBucketIndices),
       // Kept for the moment in order not to break existing sessions. Remove after some days.
-      legacyMissingBucketsHeader -> formatIndices(emptyBucketIndices ++ failureBucketIndices),
+      legacyMissingBucketsHeader -> formatIndices((emptyBucketIndices ++ failureBucketIndices).sorted),
       "Access-Control-Expose-Headers" -> s"$failureBucketIndicesHeader, $emptyBucketIndicesHeader, $legacyMissingBucketsHeader"
     )
 

@@ -79,16 +79,15 @@ interface ActiveOperation {
 let activeOperations: ActiveOperation[] = [];
 
 // Promise-chain mutex serializing the check-and-register critical section.
-// acquireOperationsMutex() is synchronous and atomically advances the chain tail,
+// acquireCriticalSectionMutex() is synchronous and atomically advances the chain tail,
 // so two callers in the same JS tick queue correctly behind each other.
 // The returned promise resolves only when the previous holder calls release().
-// todo: reset this when WK main sagas are reset.
-let operationsMutex: Promise<void> = Promise.resolve();
+let criticalSectionMutex: Promise<void> = Promise.resolve();
 
-function acquireOperationsMutex(): Promise<() => void> {
+function acquireCriticalSectionMutex(): Promise<() => void> {
   let release!: () => void;
-  const prev = operationsMutex;
-  operationsMutex = new Promise<void>((resolve) => {
+  const prev = criticalSectionMutex;
+  criticalSectionMutex = new Promise<void>((resolve) => {
     release = resolve;
   });
   return prev.then(() => release);
@@ -132,7 +131,7 @@ export function* createOperationContext(
   // Acquire the mutex, snapshot state, do the atomic check-and-push, then release
   // before any further yields. This prevents two concurrent callers from both
   // reading activeOperations and both deciding canStart = true.
-  const release: () => void = yield call(acquireOperationsMutex);
+  const release: () => void = yield call(acquireCriticalSectionMutex);
   const state: WebknossosState = yield select((s: WebknossosState) => s);
   const canStart = checkCanStart(options.id, state);
   if (canStart) {
@@ -234,7 +233,7 @@ export function* getOrCreateOperationContext(
 // Resets module-level state. Only intended for use in tests.
 export function _resetOperationContextForTesting(): void {
   activeOperations = [];
-  operationsMutex = Promise.resolve();
+  criticalSectionMutex = Promise.resolve();
 }
 
 export function* resetOperationContextOnWkReady(): Saga<void> {

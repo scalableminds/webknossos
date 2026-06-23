@@ -15,9 +15,11 @@ import {
   enforceActiveVolumeTracing,
   getActiveSegmentationTracingLayer,
 } from "viewer/model/accessors/volumetracing_accessor";
-import type { Action } from "viewer/model/actions/actions";
 import { addUserBoundingBoxAction } from "viewer/model/actions/annotation_actions";
-import { finishAnnotationStrokeAction } from "viewer/model/actions/volumetracing_actions";
+import {
+  finishAnnotationStrokeAction,
+  type PerformMinCutAction,
+} from "viewer/model/actions/volumetracing_actions";
 import BoundingBox from "viewer/model/bucket_data_handling/bounding_box";
 import type { MagInfo } from "viewer/model/helpers/mag_info";
 import type { Saga } from "viewer/model/sagas/effect_generators";
@@ -199,11 +201,7 @@ type LL = (vec: Vector3) => number;
 // the min-cut in better mags. As a result, the cut is initially drawn
 // "with broad/fast strokes" and the final details are solved in higher
 // mags.
-function* performMinCut(action: Action): Saga<void> {
-  if (action.type !== "PERFORM_MIN_CUT") {
-    throw new Error("Satisfy typescript.");
-  }
-
+function* performMinCut(action: PerformMinCutAction): Saga<void> {
   const skeleton = yield* select((store) => store.annotation.skeleton);
 
   if (!skeleton) {

@@ -19,9 +19,20 @@ import {
   type OperationOptions,
 } from "./operation_context_saga";
 
+// Narrows an action-pattern argument (a single action-type string or an array of them)
+// to the matching member(s) of the Action union, so the handler can be typed precisely.
+// Any other pattern (e.g. a predicate function) falls back to the full Action union.
+type ActionFromPattern<P> = P extends Action["type"]
+  ? Extract<Action, { type: P }>
+  : P extends ReadonlyArray<infer U>
+    ? U extends Action["type"]
+      ? Extract<Action, { type: U }>
+      : Action
+    : Action;
+
 export function* takeEveryInOperationContext<P extends ActionPattern>(
   actionDescriptor: P,
-  saga: (action: Action, ctx: OperationContext) => Saga<void>,
+  saga: (action: ActionFromPattern<P>, ctx: OperationContext) => Saga<void>,
   options: OperationOptions,
 ): Saga<void> {
   /* Listens for actions and runs the provided saga inside an operation context,
@@ -44,7 +55,7 @@ export function* takeEveryInOperationContext<P extends ActionPattern>(
       );
       return;
     }
-    yield* ctx.execute(() => saga(action, ctx));
+    yield* ctx.execute(() => saga(action as ActionFromPattern<P>, ctx));
   }
   yield* takeEvery(actionDescriptor, wrapper);
 }

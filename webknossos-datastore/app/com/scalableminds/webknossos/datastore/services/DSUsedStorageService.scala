@@ -31,15 +31,17 @@ object PathStorageUsageResponse {
 
 case class PathPair(original: String, upath: UPath)
 
-class DSUsedStorageService @Inject()(config: DataStoreConfig,
-                                     dataVaultService: DataVaultService,
-                                     managedS3Service: ManagedS3Service)
-    extends FoxImplicits
+class DSUsedStorageService @Inject() (
+    config: DataStoreConfig,
+    dataVaultService: DataVaultService,
+    managedS3Service: ManagedS3Service
+) extends FoxImplicits
     with LazyLogging {
 
-  def measureStorageForPaths(paths: List[String], organizationId: String)(
-      implicit ec: ExecutionContext,
-      tc: TokenContext): Fox[List[PathStorageReport]] = {
+  def measureStorageForPaths(paths: List[String], organizationId: String)(implicit
+      ec: ExecutionContext,
+      tc: TokenContext
+  ): Fox[List[PathStorageReport]] = {
     val organizationDirectory = config.Datastore.baseDirectory.resolve(organizationId)
     for {
       // Keep track of original path as its UPath might be normalized and turned into an absolute path.
@@ -48,33 +50,41 @@ class DSUsedStorageService @Inject()(config: DataStoreConfig,
       pathPairs <- Fox.serialCombined(paths) { path =>
         UPath.fromString(path).toFox.map(upath => PathPair(path, upath))
       }
-      pathPairsWithAbsoluteUpath = pathPairs.map(pathPair => {
+      pathPairsWithAbsoluteUpath = pathPairs.map(pathPair =>
         pathPair.upath.toLocalPath match {
           case Full(localPath) =>
             pathPair.copy(
-              upath = UPath.fromLocalPath(organizationDirectory.resolve(localPath).normalize().toAbsolutePath))
+              upath = UPath.fromLocalPath(organizationDirectory.resolve(localPath).normalize().toAbsolutePath)
+            )
           case _ => pathPair
         }
-      })
+      )
       // Check to only measure remote paths that are part of a vault that is configured.
       (pathPairsToMeasure, _absoluteUpathsToSkip) = pathPairsWithAbsoluteUpath.partition(path =>
-        path.upath.isLocal || managedS3Service.pathIsInManagedS3(path.upath))
+        path.upath.isLocal || managedS3Service.pathIsInManagedS3(path.upath)
+      )
       vaultPathsForPathPairsToMeasure <- Fox.serialCombined(pathPairsToMeasure)(pathPair =>
-        dataVaultService.vaultPathFor(pathPair.upath))
+        dataVaultService.vaultPathFor(pathPair.upath)
+      )
       usedBytes <- Fox.fromFuture(
-        Fox.serialSequence(vaultPathsForPathPairsToMeasure)(vaultPath => vaultPath.getUsedStorageBytes))
+        Fox.serialSequence(vaultPathsForPathPairsToMeasure)(vaultPath => vaultPath.getUsedStorageBytes)
+      )
       pathPairsWithStorageUsedBox = pathPairsToMeasure.zip(usedBytes)
-      successfulStorageUsedBoxes = pathPairsWithStorageUsedBox.collect {
-        case (pathPair, Full(usedStorageBytes)) =>
-          // Use original path to create the storage report to enable matching in core backend. See comment above.
-          PathStorageReport(pathPair.original, usedStorageBytes)
+      successfulStorageUsedBoxes = pathPairsWithStorageUsedBox.collect { case (pathPair, Full(usedStorageBytes)) =>
+        // Use original path to create the storage report to enable matching in core backend. See comment above.
+        PathStorageReport(pathPair.original, usedStorageBytes)
       }
       failedPaths = pathPairsWithStorageUsedBox.collect {
         case (pair, box) if box.isEmpty => pair.original
       }
-      _ <- Fox.runIfSeqNonEmpty(failedPaths)(logger.error(
-        s"Failed to measure storage for ${failedPaths.length} paths: ${failedPaths.take(5).mkString(", ")}${if (failedPaths.length > 5) "..."
-        else "."}"))
+      _ <- Fox.runIfSeqNonEmpty(failedPaths)(
+        logger.error(
+          s"Failed to measure storage for ${failedPaths.length} paths: ${failedPaths.take(5).mkString(", ")}${
+              if (failedPaths.length > 5) "..."
+              else "."
+            }"
+        )
+      )
     } yield successfulStorageUsedBoxes
   }
 }

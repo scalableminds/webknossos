@@ -38,7 +38,8 @@ case class N5Header(
     N5DataType.toArrayDataType(
       N5DataType
         .fromString(dataType)
-        .getOrElse(throw new IllegalArgumentException(s"Unsupported N5 dataType: $dataType")))
+        .getOrElse(throw new IllegalArgumentException(s"Unsupported N5 dataType: $dataType"))
+    )
 
   lazy val voxelOffset: Array[Int] = Array.fill(rank)(0)
 }

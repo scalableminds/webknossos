@@ -42,7 +42,7 @@ object PasswordHasherType extends ExtendedEnumeration {
   val SCrypt, Empty = Value
 }
 
-class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class MultiUserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SQLDAO[MultiUser, MultiusersRow, Multiusers](sqlClient) {
   protected val collection = Multiusers
   protected def resultConverter = GetResultMultiusersRow
@@ -51,23 +51,21 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
     for {
       novelUserExperienceInfos <- JsonHelper.parseAs[JsObject](r.noveluserexperienceinfos).toFox
       theme <- Theme.fromString(r.selectedtheme).toFox
-    } yield {
-      MultiUser(
-        ObjectId(r._Id),
-        r.email,
-        PasswordInfo(r.passwordinfoHasher, r.passwordinfoPassword),
-        r.firstname,
-        r.lastname,
-        r.issuperuser,
-        r._Lastloggedinidentity.map(ObjectId(_)),
-        novelUserExperienceInfos,
-        theme,
-        Instant.fromSql(r.created),
-        r.isemailverified,
-        Instant.fromSql(r.emailchangedate),
-        r.isdeleted
-      )
-    }
+    } yield MultiUser(
+      ObjectId(r._Id),
+      r.email,
+      PasswordInfo(r.passwordinfoHasher, r.passwordinfoPassword),
+      r.firstname,
+      r.lastname,
+      r.issuperuser,
+      r._Lastloggedinidentity.map(ObjectId(_)),
+      novelUserExperienceInfos,
+      theme,
+      Instant.fromSql(r.created),
+      r.isemailverified,
+      Instant.fromSql(r.emailchangedate),
+      r.isdeleted
+    )
 
   def insertOne(mu: MultiUser): Fox[Unit] =
     for {
@@ -122,8 +120,9 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
                    WHERE _id = $multiUserId""".asUpdate)
     } yield ()
 
-  def updateNovelUserExperienceInfos(multiUserId: ObjectId, novelUserExperienceInfos: JsObject)(
-      using ctx: DBAccessContext): Fox[Unit] =
+  def updateNovelUserExperienceInfos(multiUserId: ObjectId, novelUserExperienceInfos: JsObject)(using
+      ctx: DBAccessContext
+  ): Fox[Unit] =
     for {
       _ <- assertUpdateAccess(multiUserId)
       _ <- run(q"""UPDATE webknossos.multiusers
@@ -208,14 +207,15 @@ class MultiUserDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext
     } yield head
 }
 
-class UserKeyboardShortcutsConfigsDAO @Inject()(sqlClient: SqlClient)(implicit ec: ExecutionContext)
+class UserKeyboardShortcutsConfigsDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
     extends SimpleSQLDAO(sqlClient) {
 
   def findOneForUser(multiUserId: ObjectId): Fox[JsObject] =
     for {
       rows <- run(
         q"SELECT shortcutsConfig FROM webknossos.multiUser_keyboardShortcutsConfigs WHERE _multiUser = $multiUserId"
-          .as[String])
+          .as[String]
+      )
     } yield rows.headOption.flatMap(r => JsonHelper.parseAs[JsObject](r).toOption).getOrElse(Json.obj())
 
   def updateForMultiUser(multiUserId: ObjectId, shortcutsConfig: JsObject): Fox[Unit] =

@@ -5,16 +5,12 @@ import scala.annotation.tailrec
 // based on https://codereview.stackexchange.com/questions/17621/disjoint-sets-implementation
 class UnionFind[T](initialElements: Seq[T] = Nil) {
 
-  /**
-    * Add a new single-node forest to the disjoint-set forests. It will
-    * be placed into its own set.
+  /** Add a new single-node forest to the disjoint-set forests. It will be placed into its own set.
     */
   def add(elem: T): Unit =
     nodes += (elem -> UnionFind.Node(elem, 0, None))
 
-  /**
-    * Union the disjoint-sets of which elem1
-    * and elem2 are members of.
+  /** Union the disjoint-sets of which elem1 and elem2 are members of.
     */
   def union(elem1: T, elem2: T): Unit =
     // retrieve representative nodes
@@ -43,9 +39,7 @@ class UnionFind[T](initialElements: Seq[T] = Nil) {
       case _ => throw new MatchError("either element could not be found")
     }
 
-  /**
-    * Finds the representative for a disjoint-set, of which
-    * elem is a member of.
+  /** Finds the representative for a disjoint-set, of which elem is a member of.
     */
   def find(elem: T): Option[T] =
     nodes.get(elem) match {
@@ -57,11 +51,8 @@ class UnionFind[T](initialElements: Seq[T] = Nil) {
       case None => None
     }
 
-  /**
-    * Returns the number of disjoint-sets managed in this data structure.
-    * Keep in mind: this is a non-vital/non-standard operation, so we do
-    * not keep track of the number of sets, and instead this method recomputes
-    * them each time.
+  /** Returns the number of disjoint-sets managed in this data structure. Keep in mind: this is a non-vital/non-standard
+    * operation, so we do not keep track of the number of sets, and instead this method recomputes them each time.
     */
   def size: Int =
     nodes.values.count(_.parent.isEmpty)
@@ -79,9 +70,9 @@ object UnionFind {
 
   private case class Node[T](elem: T, var rank: Int, var parent: Option[Node[T]]) {
 
-    /**
-      * Compute representative of this set.
-      * @return root element of the set
+    /** Compute representative of this set.
+      * @return
+      *   root element of the set
       */
     @tailrec
     final def getRepresentative: Node[T] = parent match {

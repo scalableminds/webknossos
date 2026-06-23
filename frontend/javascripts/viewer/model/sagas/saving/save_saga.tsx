@@ -697,6 +697,7 @@ export function* tryToIncorporateActions(
           break;
         }
         case "updateLargestSegmentId":
+        case "updateVolumeBucketDataHasChanged":
         case "createSegment":
         case "mergeSegmentItems":
         case "deleteSegment":

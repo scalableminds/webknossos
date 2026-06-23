@@ -60,7 +60,7 @@ function _getInterpolationInfo(state: WebknossosState, explanationPrefix: string
       directionFactor,
     };
   }
-  const mostRecentLabelAction = getLastLabelAction(volumeTracing);
+  const mostRecentLabelAction = getLastLabelAction(state, volumeTracing);
 
   const activeViewport = mostRecentLabelAction?.plane || OrthoViews.PLANE_XY;
   const thirdDim = Dimensions.thirdDimensionForPlane(activeViewport);

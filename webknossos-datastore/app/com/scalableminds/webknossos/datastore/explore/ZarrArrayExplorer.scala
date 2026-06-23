@@ -23,8 +23,9 @@ class ZarrArrayExplorer(mag: Vec3Int = Vec3Int.ones)(implicit val ec: ExecutionC
 
   override def name: String = "Zarr Array"
 
-  override def explore(remotePath: VaultPath, credentialId: Option[String])(
-      using tc: TokenContext): Fox[List[(StaticLayer, VoxelSize)]] =
+  override def explore(remotePath: VaultPath, credentialId: Option[String])(using
+      tc: TokenContext
+  ): Fox[List[(StaticLayer, VoxelSize)]] =
     for {
       zarrayPath <- Fox.successful(remotePath / ZarrHeader.FILENAME_DOT_ZARRAY)
       name = guessNameFromPath(remotePath)
@@ -35,15 +36,18 @@ class ZarrArrayExplorer(mag: Vec3Int = Vec3Int.ones)(implicit val ec: ExecutionC
         .boundingBox(guessedAxisOrder)
         .toFox ?~> "failed to read bounding box from zarr header. Make sure data is in (T/C)ZYX format"
       magLocator = MagLocator(mag, Some(remotePath.toUPath), None, Some(guessedAxisOrder), None, credentialId)
-      layer: StaticLayer = if (looksLikeSegmentationLayer(name, elementClass)) {
-        StaticSegmentationLayer(name,
-                                DataFormat.zarr,
-                                boundingBox,
-                                elementClass,
-                                List(magLocator),
-                                largestSegmentId = None)
-      } else
-        StaticColorLayer(name, DataFormat.zarr, boundingBox, elementClass, List(magLocator), additionalAxes = None)
+      layer: StaticLayer =
+        if (looksLikeSegmentationLayer(name, elementClass)) {
+          StaticSegmentationLayer(
+            name,
+            DataFormat.zarr,
+            boundingBox,
+            elementClass,
+            List(magLocator),
+            largestSegmentId = None
+          )
+        } else
+          StaticColorLayer(name, DataFormat.zarr, boundingBox, elementClass, List(magLocator), additionalAxes = None)
     } yield List((layer, VoxelSize.fromFactorWithDefaultUnit(Vec3Double.ones)))
 
 }

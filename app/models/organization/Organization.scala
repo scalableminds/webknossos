@@ -313,7 +313,7 @@ class OrganizationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionCon
 
   def getUsedStorageMagDetailsForDataset(datasetId: ObjectId): Fox[List[(String, String, Long, Instant)]] = {
     implicit val gr: GetResult[(String, String, Long, Instant)] =
-      GetResult(using r => (r.nextString(), r.nextString(), r.nextLong(), GetInstant(r)))
+      r => (r.nextString(), r.nextString(), r.nextLong(), GetInstant(r))
     for {
       rows <- run(q"""SELECT layerName,
                    CONCAT((mag).x::INT, '-', (mag).y::INT, '-', (mag).z::INT),
@@ -328,7 +328,7 @@ class OrganizationDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionCon
       datasetId: ObjectId
   ): Fox[List[(String, String, String, Long, Instant)]] = {
     implicit val gr: GetResult[(String, String, String, Long, Instant)] =
-      GetResult(using r => (r.nextString(), r.nextString(), r.nextString(), r.nextLong(), GetInstant(r)))
+      r => (r.nextString(), r.nextString(), r.nextString(), r.nextLong(), GetInstant(r))
     for {
       rows <- run(q"""SELECT layerName, name, type, usedStorageBytes, lastUpdated
             FROM webknossos.organization_usedStorage_attachments

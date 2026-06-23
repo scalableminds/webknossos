@@ -428,14 +428,6 @@ sealed abstract class Box[+A] extends Product with Serializable {
     */
   def filterMsg(msg: String)(p: A => Boolean): Box[A] = filter(p) ?~ msg
 
-  /** This method calls the specified function with the specified `in` value and the value contained in this `Box`. If
-    * this box is empty, returns the `in` value directly.
-    *
-    * @return
-    *   The result of the function or the `in` value.
-    */
-  def run[T](in: => T)(f: (T, A) => T): T = in
-
   /** Perform a side effect by passing this `Box` to the specified function and return this `Box` unmodified. Similar to
     * `foreach`, except that `foreach` returns `Unit`, while this method allows chained use of the `Box`.
     *
@@ -613,8 +605,6 @@ final case class Full[+A](value: A) extends Box[A] {
   override def toList: List[A] = List(value)
 
   override def toOption: Option[A] = Some(value)
-
-  override def run[T](in: => T)(f: (T, A) => T): T = f(in, value)
 
   override def fullXform[T](v: T)(f: T => A => T): T = f(v)(value)
 

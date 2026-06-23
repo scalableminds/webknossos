@@ -9,7 +9,10 @@ import { ContourModeEnum, OrthoViews, OverwriteModeEnum } from "viewer/constants
 import { getSegmentIdInfoForPosition } from "viewer/controller/combinations/volume_handlers";
 import getSceneController from "viewer/controller/scene_controller_provider";
 import { CONTOUR_COLOR_DELETE, CONTOUR_COLOR_NORMAL } from "viewer/geometries/helper_geometries";
-import { mayEditAnnotation } from "viewer/model/accessors/annotation_accessor";
+import {
+  isUserInterfaceBlocked,
+  mayEditAnnotation,
+} from "viewer/model/accessors/annotation_accessor";
 import {
   getSupportedValueRangeOfLayer,
   isInSupportedValueRangeForLayer,
@@ -156,7 +159,7 @@ export function* editVolumeLayerAsync(): Saga<never> {
       continue;
     }
     const wroteVoxelsBox = { value: false };
-    const isBlocked = yield* select((state) => state.operationContext.activeOperations.length > 0);
+    const isBlocked = yield* select(isUserInterfaceBlocked);
 
     if (isBlocked) {
       console.warn("Ignoring brush request: An operation is currently running.");

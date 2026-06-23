@@ -166,7 +166,7 @@ class BinaryDataService(val dataBaseDir: Path,
     } yield resultData
 
   def handleDataRequests(requests: List[DataServiceDataRequest])(
-      using tc: TokenContext): Fox[(Array[Byte], List[Int], List[Int])] = {
+      using tc: TokenContext): Fox[(Array[Byte], Seq[Int], Seq[Int])] = {
     val requestData = requests.zipWithIndex.map {
       case (request, index) =>
         for {

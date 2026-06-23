@@ -30,7 +30,6 @@ import {
   Tooltip,
 } from "antd";
 import { saveAs } from "file-saver";
-import { extractServerErrorMessage } from "libs/error_handling";
 import { formatLengthAsVx, formatNumberToLength } from "libs/format_utils";
 import { readFileAsArrayBuffer, readFileAsText } from "libs/read_file";
 import Toast from "libs/toast";
@@ -268,24 +267,12 @@ export async function importTracingFiles(files: Array<File>, createGroupForEachF
             );
           }
 
-          let newLargestSegmentId: number;
-          try {
-            newLargestSegmentId = await importVolumeTracing(
-              annotation,
-              oldVolumeTracing,
-              dataFile,
-              annotation.version,
-            );
-          } catch (importError) {
-            // Surface the server error (e.g. mismatching mags) instead of swallowing it
-            // and replacing it with the generic "could not be parsed" message below.
-            throw new VolumeImportError(
-              extractServerErrorMessage(
-                importError,
-                "An unknown error occurred while importing the volume annotation.",
-              ),
-            );
-          }
+          const newLargestSegmentId = await importVolumeTracing(
+            annotation,
+            oldVolumeTracing,
+            dataFile,
+            annotation.version,
+          );
 
           Store.dispatch(importVolumeTracingAction());
           Store.dispatch(setVersionNumberAction(annotation.version + 1));

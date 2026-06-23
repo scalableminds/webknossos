@@ -80,7 +80,7 @@ import { setActiveCellAction, updateSegmentAction } from "../../actions/volumetr
 import type DataCube from "../../bucket_data_handling/data_cube";
 import { listenToStoreProperty } from "../../helpers/listener_helpers";
 import { ensureWkInitialized } from "../ready_sagas";
-import { waitFor } from "../saga_helpers";
+import { waitUntilNoActiveOperations } from "../saga_helpers";
 
 type APIMappings = Record<string, APIMapping>;
 type Container<T> = { value: T };
@@ -353,7 +353,7 @@ function* watchChangedBucketsForLayer(layerName: string): Saga<never> {
         console.log("Cancelled updateHdf5");
       }
 
-      yield* waitFor((state) => state.operationContext.activeOperations.length === 0);
+      yield* waitUntilNoActiveOperations();
       console.log("Retrying updateHdf5...");
     }
   }

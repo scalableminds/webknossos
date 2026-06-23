@@ -245,3 +245,18 @@ export function* waitFor(
     yield delay(throttleMs);
   }
 }
+
+export function* waitUntilNoActiveOperations(): Saga<void> {
+  // Waits until there are no active operations anymore. In contrast to the generic
+  // `waitFor`, this listens specifically for UNREGISTER_OPERATION actions (the only
+  // actions that can decrease the active operation count), so no polling delay is needed.
+  if (yield* select((state) => state.operationContext.activeOperations.length === 0)) {
+    return;
+  }
+  while (true) {
+    yield take("UNREGISTER_OPERATION");
+    if (yield* select((state) => state.operationContext.activeOperations.length === 0)) {
+      return;
+    }
+  }
+}

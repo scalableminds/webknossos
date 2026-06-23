@@ -9,8 +9,6 @@ User-facing changes are documented in the [changelog](CHANGELOG.released.md).
 ## [26.07.0](https://github.com/scalableminds/webknossos/releases/tag/26.07.0) - 2026-06-23
 [Commits](https://github.com/scalableminds/webknossos/compare/26.06.0...26.07.0)
 
-- Added `isPretrained` and `isSuperUserOnly` columns to `webknossos.aiModels`.
-- Dropped constraint on `_user` column in `webknossos.aiModels`. Pretrained models don't have a user/owner.
 
 ### Postgres Evolutions
 - [162-pretrained-ai-models.sql](schema/evolutions/162-pretrained-ai-models.sql)

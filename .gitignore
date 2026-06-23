@@ -26,6 +26,8 @@ RUNNING_PID
 metals.sbt
 __pycache__/
 .jvmopts
+build/
+
 
 # Webknossos
 backup/
@@ -126,4 +128,3 @@ public/index.html
 tsconfig.tsbuildinfo
 
 .claude
-.jvmopts

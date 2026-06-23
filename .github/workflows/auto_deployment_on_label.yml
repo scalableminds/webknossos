@@ -9,16 +9,24 @@ on:
 jobs:
   cleanup-deployment-on-close:
     runs-on: ubuntu-22.04
-    if: ${{ github.event.action == 'closed' }}
+    if: ${{ github.event.action == 'closed' && contains(github.event.pull_request.labels.*.name, 'autodeploy') }}
     permissions:
       deployments: write
     steps:
-      - name: Deactivate deployment environment
+      - name: Calculate branch environment name
+        id: get_env
+        run: |
+          # Replicate the exact same sanitization logic you used to create it
+          SANITIZED=$(echo "$HEAD_REF" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]' | sed 's/^[0-9]*//')
+          echo "dynamic_env=dev-${SANITIZED}" >> "$GITHUB_OUTPUT"
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+      - name: Delete deployment environment
         uses: bobheadxi/deployments@v1.5.0
         with:
-          step: deactivate-env
+          step: delete-env
           token: ${{ secrets.GITHUB_TOKEN }}
-          env: dev
+          env: ${{ steps.get_env.outputs.dynamic_env }}
 
   trigger-autodeployment-on-label:
     runs-on: ubuntu-22.04
@@ -41,9 +49,13 @@ jobs:
           fi
           SANITIZED=$(echo "$HEAD_REF" | tr -cd '[:alnum:]' | tr '[:upper:]' '[:lower:]' | sed 's/^[0-9]*//')
           echo "env_url=https://${SANITIZED}.webknossos.xyz" >> "$GITHUB_OUTPUT"
+          
+          # Create a unique environment name based on the sanitized branch
+          echo "dynamic_env=dev-${SANITIZED}" >> "$GITHUB_OUTPUT"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HEAD_REF: ${{ github.head_ref }}
+
       - name: Start deployment
         if: steps.check_build.outputs.skip != 'true'
         uses: bobheadxi/deployments@v1.5.0
@@ -51,7 +63,9 @@ jobs:
         with:
           step: start
           token: ${{ secrets.GITHUB_TOKEN }}
-          env: dev
+          # Use the dynamic environment name
+          env: ${{ steps.check_build.outputs.dynamic_env }}
+
       - name: Trigger autodeployment hook
         if: steps.check_build.outputs.skip != 'true'
         run: |
@@ -62,6 +76,7 @@ jobs:
         env:
           AUTO_DEV_DEPLOY_TOKEN: ${{ secrets.AUTO_DEV_DEPLOY_TOKEN }}
           HEAD_REF: ${{ github.head_ref }}
+
       - name: Finish deployment
         if: always() && steps.gh_deployment.outputs.deployment_id != ''
         uses: bobheadxi/deployments@v1.5.0
@@ -72,4 +87,6 @@ jobs:
           env: ${{ steps.gh_deployment.outputs.env }}
           deployment_id: ${{ steps.gh_deployment.outputs.deployment_id }}
           env_url: ${{ steps.check_build.outputs.env_url }}
-          override: false
+          # Set to true so this specific branch's old deployments are cleaned up,
+          # without touching other PR deployments.
+          override: true

@@ -13,7 +13,7 @@ Creating an animation is easy:
 3. For larger datasets, use the bounding box tool to create a bounding box around your area of interest. Smaller datasets can be used in their entirety.
 4. From the `Menu` dropdown in the navbar at the top of the screen, select "Create Animation".
 5. Configure the animation options in the modal that opens.
-6. Click the `Start Animation` button to launch the animation creation.
+6. Click the `Create animation` button to launch the animation creation.
 
 Either periodically check the [background jobs page](./jobs.md) or wait for an email confirmation to download the animation video file. Creating an animation may take a while, depending on the selected bounding box size and the number of included 3D meshes.
 
@@ -25,22 +25,31 @@ The "Create Animation" modal offers several options to customize your animation:
 
 This setting determines the movement of the camera in the animation.
 
-- **Camera circling around the dataset:** The camera will rotate around the center of the bounding box.
-- **Static camera looking at XY/XZ/YZ-viewport:** The camera will be fixed on one of the 2D viewports.
-- **Static camera with an isometric perspective:** The camera will be in a fixed position showing a 3D view of the data.
+- **Orbiting camera (circles the dataset):** The camera will rotate around the center of the bounding box.
+- **Fixed camera — XY/XZ/YZ view:** The camera will be fixed, looking at one of the 2D viewports.
+- **Fixed isometric view (all 3 viewports):** The camera will be in a fixed position showing a 3D isometric view of the data.
 
 ### Movie Resolution
 
 You can choose between two resolutions for your animation video:
 
-- **Standard Definition (640x360):** A smaller resolution, suitable for quick previews or sharing.
-- **High Definition (1920x1080):** A full HD resolution, ideal for presentations and high-quality showcases. Access to this option may depend on your WEBKNOSSOS plan.
+- **Standard Definition (640×360):** A smaller resolution, suitable for quick previews or sharing.
+- **High Definition (1920×1080):** A full HD resolution, ideal for presentations and high-quality showcases. Access to this option may depend on your WEBKNOSSOS plan.
 
-### Options
+### Video Duration
 
-- **Include the currently selected 3D meshes:** If checked, the animation will include any meshes that are currently loaded in the 3D view.
-- **Include WEBKNOSSOS Watermark:** If checked, the WEBKNOSSOS logo will be displayed as a watermark on the animation video. Access to this option may depend on your WEBKNOSSOS plan.
-- **Include skeleton annotation:** If checked, the visible skeleton trees of the current annotation will be included in the animation. This option is only available when viewing an annotation that contains a skeleton layer (not in view-only mode).
+Controls the length of the rendered video. Longer durations result in a slower, more detailed camera movement and take more time to render.
+
+- **Fast:** A short clip (≈ 15 seconds).
+- **Standard:** The default length (≈ 22 seconds).
+- **Slow:** A longer clip (≈ 30 seconds).
+
+### Content
+
+- **Include 3D meshes:** If checked, the animation will include any meshes that are currently visible in the 3D view.
+- **Include skeletons:** If checked, the visible skeleton trees of the current annotation will be included in the animation. This option is only available when viewing an annotation that contains a skeleton layer (not in view-only mode).
+- **Hide image data:** If checked, the volumetric image data is hidden and only the 3D meshes and skeletons are rendered. Useful for showcasing segmented objects on their own.
+- **WEBKNOSSOS watermark:** If checked, the WEBKNOSSOS logo will be displayed as a watermark on the animation video. Access to this option may depend on your WEBKNOSSOS plan.
 
 ### Layer & Bounding Box
 

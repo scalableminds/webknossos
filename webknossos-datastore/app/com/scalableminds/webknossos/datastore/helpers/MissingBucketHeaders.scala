@@ -13,16 +13,18 @@ trait MissingBucketHeaders extends FoxImplicits {
 
   protected def createMissingBucketsHeaders(emptyBucketIndices: Seq[Int], failureBucketIndices: Seq[Int]): Seq[(String, String)] =
     Seq(
-      failureBucketIndicesHeader -> formatIndices(failureBucketIndices),
       emptyBucketIndicesHeader -> formatIndices(emptyBucketIndices),
-      "Access-Control-Expose-Headers" -> s"$failureBucketIndicesHeader, $emptyBucketIndicesHeader"
+      failureBucketIndicesHeader -> formatIndices(failureBucketIndices),
+      // Kept for the moment in order not to break existing sessions. Remove after some days.
+      legacyMissingBucketsHeader -> formatIndices(emptyBucketIndices ++ failureBucketIndices),
+      "Access-Control-Expose-Headers" -> s"$failureBucketIndicesHeader, $emptyBucketIndicesHeader, $legacyMissingBucketsHeader"
     )
 
   private def formatIndices(indices: Seq[Int]): String =
     "[" + indices.mkString(", ") + "]"
 
   protected def parseMissingBucketHeader(headerLiteralOpt: Option[String])(
-      implicit ec: ExecutionContext): Fox[List[Int]] =
+      implicit ec: ExecutionContext): Fox[Seq[Int]] =
     for {
       headerLiteral: String <- headerLiteralOpt.toFox
       headerLiteralTrim = headerLiteral.trim

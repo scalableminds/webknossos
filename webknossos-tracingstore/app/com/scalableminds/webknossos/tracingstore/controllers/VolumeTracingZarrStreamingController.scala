@@ -311,10 +311,11 @@ class VolumeTracingZarrStreamingController @Inject()(
               val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
               editableMappingService.volumeData(mappingLayer, List(wkRequest))
             } else tracingService.data(annotationId, tracingId, tracing, List(wkRequest))
+            _ <- Fox.fromBool(failureIndices.isEmpty) ?~> Msg.Zarr.chunkLoadingError ~> INTERNAL_SERVER_ERROR
             dataWithFallback <- getFallbackLayerDataIfEmpty(tracing,
                                                             annotationId,
                                                             data,
-                                                            emptyIndices ++ failureIndices,
+                                                            emptyIndices,
                                                             magParsed,
                                                             Vec3Int(x, y, z),
                                                             cubeSize,
@@ -325,15 +326,15 @@ class VolumeTracingZarrStreamingController @Inject()(
     }
 
   private def getFallbackLayerDataIfEmpty(
-      tracing: VolumeTracing,
-      annotationId: ObjectId,
-      data: Array[Byte],
-      missingBucketIndices: List[Int],
-      mag: Vec3Int,
-      position: Vec3Int,
-      cubeSize: Int,
-      additionalCoordinates: Option[Seq[AdditionalCoordinate]])(using tc: TokenContext): Fox[Array[Byte]] =
-    if (missingBucketIndices.nonEmpty) {
+     tracing: VolumeTracing,
+     annotationId: ObjectId,
+     data: Array[Byte],
+     emptyBucketIndices: List[Int],
+     mag: Vec3Int,
+     position: Vec3Int,
+     cubeSize: Int,
+     additionalCoordinates: Option[Seq[AdditionalCoordinate]])(using tc: TokenContext): Fox[Array[Byte]] =
+    if (emptyBucketIndices.nonEmpty) {
       for {
         remoteFallbackLayer <- tracingService.remoteFallbackLayerForVolumeTracing(tracing, annotationId) ?~> "No data at coordinates, no fallback layer defined"
         request = WebknossosDataRequest(
@@ -345,11 +346,11 @@ class VolumeTracingZarrStreamingController @Inject()(
           version = None,
           additionalCoordinates = additionalCoordinates
         )
-        (fallbackData, fallbackMissingBucketIndices) <- remoteDataStoreClient.getData(
+        (fallbackData, fallbackEmptyBucketIndices, fallbackFailureBucketIndices) <- remoteDataStoreClient.getData(
           remoteFallbackLayer,
           List(request)) ~> SERVICE_UNAVAILABLE // return 503 if the request fails, assuming the datastore is still initializing
         // We only expect missing buckets if something went wrong with loading the fallback layer, e.g. applying the agglomerate. Otherwise, a fill value is used and returned to us.
-        _ <- Fox.fromBool(fallbackMissingBucketIndices.isEmpty) ?~> "Could not retrieve data from fallback layer" ~> INTERNAL_SERVER_ERROR
+        _ <- Fox.fromBool(fallbackEmptyBucketIndices.isEmpty && fallbackFailureBucketIndices.isEmpty) ?~> Msg.Annotation.Volume.fallbackDataLoadingFailed ~> INTERNAL_SERVER_ERROR
       } yield fallbackData
     } else Fox.successful(data)
 }

@@ -12,7 +12,7 @@ import play.core.WebCommands
 import javax.inject.Inject
 
 trait AdditionalHeaders extends MissingBucketHeaders {
-  def options(request: RequestHeader): Result =
+  protected def options(request: RequestHeader): Result =
     Ok(":D").withHeaders(
       "Access-Control-Allow-Origin" -> "*",
       "Access-Control-Max-Age" -> "600",

@@ -266,7 +266,7 @@ class VolumeTracingController @Inject()(
               val mappingLayer = annotationService.editableMappingLayer(annotationId, tracingId, tracing)
               editableMappingService.volumeData(mappingLayer, request.body)
             } else volumeTracingService.data(annotationId, tracingId, tracing, request.body)
-          } yield Ok(data).withHeaders(createMissingBucketsHeaders(emptyIndices ++ failureIndices)*)
+          } yield Ok(data).withHeaders(createMissingBucketsHeaders(emptyIndices, failureIndices)*)
         }
       }
     }

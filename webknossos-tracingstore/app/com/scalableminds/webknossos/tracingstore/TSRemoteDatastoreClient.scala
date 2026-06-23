@@ -47,15 +47,15 @@ class TSRemoteDatastoreClient @Inject()(
     } yield result
 
   def getData(remoteFallbackLayer: RemoteFallbackLayer, dataRequests: Seq[WebknossosDataRequest])(
-      using tc: TokenContext): Fox[(Array[Byte], List[Int])] =
+      using tc: TokenContext): Fox[(Array[Byte], Seq[Int], Seq[Int])] =
     for {
       remoteLayerUri <- getRemoteLayerUri(remoteFallbackLayer)
       response <- rpc(s"$remoteLayerUri/data").withTokenFromContext.silent.postJson(dataRequests)
       _ <- Fox.fromBool(Status.isSuccessful(response.status))
       bytes = response.bodyAsBytes.toArray
-      // TODO
-      indices <- parseMissingBucketHeader(response.header(failureBucketIndicesHeader)) ?~> "failed to parse missing bucket header"
-    } yield (bytes, indices)
+      emptyIndices <- parseMissingBucketHeader(response.header(emptyBucketIndicesHeader)) ?~> "failed to parse empty bucket indices header"
+      failureIndices <- parseMissingBucketHeader(response.header(failureBucketIndicesHeader)) ?~> "failed to parse failure bucket indices header"
+    } yield (bytes, emptyIndices, failureIndices)
 
   def getVoxelAtPosition(remoteFallbackLayer: RemoteFallbackLayer, pos: Vec3Int, mag: Vec3Int)(
       using tc: TokenContext): Fox[Array[Byte]] =

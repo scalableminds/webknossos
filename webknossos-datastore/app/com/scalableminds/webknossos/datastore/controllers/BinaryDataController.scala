@@ -67,7 +67,7 @@ class BinaryDataController @Inject()(
                   + request.body.headOption
                     .map(firstReq => s" First of ${request.body.size} requests was $firstReq")
                     .getOrElse(""))
-          } yield Ok(data).withHeaders(createMissingBucketsHeaders(emptyIndices ++ failureIndices)*)
+          } yield Ok(data).withHeaders(createMissingBucketsHeaders(emptyIndices, failureIndices)*)
         }
       }
     }
@@ -104,7 +104,7 @@ class BinaryDataController @Inject()(
           DataServiceRequestSettings(halfByte = halfByte, appliedAgglomerate = mappingName)
         )
         (data, emptyIndices, failureIndices) <- requestData(datasetId, dataSource.id, dataLayer, dataRequest)
-      } yield Ok(data).withHeaders(createMissingBucketsHeaders(emptyIndices ++ failureIndices)*)
+      } yield Ok(data).withHeaders(createMissingBucketsHeaders(emptyIndices, failureIndices)*)
     }
   }
 
@@ -114,7 +114,7 @@ class BinaryDataController @Inject()(
         for {
           (dataSource, dataLayer) <- datasetCache.getWithLayer(datasetId, dataLayerName) ~> NOT_FOUND
           (data, emptyIndices, failureIndices) <- requestData(datasetId, dataSource.id, dataLayer, request.body)
-        } yield Ok(data).withHeaders(createMissingBucketsHeaders(emptyIndices ++ failureIndices)*)
+        } yield Ok(data).withHeaders(createMissingBucketsHeaders(emptyIndices, failureIndices)*)
       }
     }
 
@@ -139,7 +139,7 @@ class BinaryDataController @Inject()(
           cubeSize
         )
         (data, emptyIndices, failureIndices) <- requestData(datasetId, dataSource.id, dataLayer, dataRequest)
-      } yield Ok(data).withHeaders(createMissingBucketsHeaders(emptyIndices ++ failureIndices)*)
+      } yield Ok(data).withHeaders(createMissingBucketsHeaders(emptyIndices, failureIndices)*)
     }
   }
 

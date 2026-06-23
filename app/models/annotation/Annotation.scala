@@ -334,33 +334,33 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
 
   // Necessary since a tuple can only have 22 elements
   implicit def GetResultAnnotationCompactInfo: GetResult[AnnotationCompactInfo] = GetResult using
-  { prs =>
-    import prs._
+    { prs =>
+      import prs._
 
-    val id = <<[ObjectId]
-    val name = <<[String]
-    val description = <<[String]
-    val ownerId = <<[ObjectId]
-    val ownerFirstName = <<[String]
-    val ownerLastName = <<[String]
-    val collaborationMode = CollaborationMode.fromString(<<[String]).getOrElse(CollaborationMode.OwnerOnly)
-    val teamIds = parseArrayLiteral(<<[String]).map(ObjectId(_))
-    val teamNames = parseArrayLiteral(<<[String])
-    val teamOrganizationIds = parseArrayLiteral(<<[String])
-    val modified = <<[Instant]
-    val tags = parseArrayLiteral(<<[String]).toSet
-    val state = AnnotationState.fromString(<<[String]).getOrElse(AnnotationState.Active)
-    val isLockedByOwner = <<[Boolean]
-    val dataSetName = <<[String]
-    val typ = AnnotationType.fromString(<<[String]).getOrElse(AnnotationType.Explorational)
-    val visibility = AnnotationVisibility.fromString(<<[String]).getOrElse(AnnotationVisibility.Internal)
-    val tracingTime = Option(<<[Long])
-    val organizationId = <<[String]
-    val tracingIds = parseArrayLiteral(<<[String])
-    val annotationLayerNames = parseArrayLiteral(<<[String])
-    val annotationLayerTypes = parseArrayLiteral(<<[String])
-    val annotationLayerStatistics =
-      parseArrayLiteral(<<[String]).map(layerStats => JsonHelper.parseAs[JsObject](layerStats).getOrElse(Json.obj()))
+      val id = <<[ObjectId]
+      val name = <<[String]
+      val description = <<[String]
+      val ownerId = <<[ObjectId]
+      val ownerFirstName = <<[String]
+      val ownerLastName = <<[String]
+      val collaborationMode = CollaborationMode.fromString(<<[String]).getOrElse(CollaborationMode.OwnerOnly)
+      val teamIds = parseArrayLiteral(<<[String]).map(ObjectId(_))
+      val teamNames = parseArrayLiteral(<<[String])
+      val teamOrganizationIds = parseArrayLiteral(<<[String])
+      val modified = <<[Instant]
+      val tags = parseArrayLiteral(<<[String]).toSet
+      val state = AnnotationState.fromString(<<[String]).getOrElse(AnnotationState.Active)
+      val isLockedByOwner = <<[Boolean]
+      val dataSetName = <<[String]
+      val typ = AnnotationType.fromString(<<[String]).getOrElse(AnnotationType.Explorational)
+      val visibility = AnnotationVisibility.fromString(<<[String]).getOrElse(AnnotationVisibility.Internal)
+      val tracingTime = Option(<<[Long])
+      val organizationId = <<[String]
+      val tracingIds = parseArrayLiteral(<<[String])
+      val annotationLayerNames = parseArrayLiteral(<<[String])
+      val annotationLayerTypes = parseArrayLiteral(<<[String])
+      val annotationLayerStatistics =
+        parseArrayLiteral(<<[String]).map(layerStats => JsonHelper.parseAs[JsObject](layerStats).getOrElse(Json.obj()))
 
     // format: off
     AnnotationCompactInfo(id, typ, name, description, ownerId, ownerFirstName, ownerLastName, collaborationMode, teamIds,
@@ -368,7 +368,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       organizationId, tracingIds, annotationLayerNames, annotationLayerTypes, annotationLayerStatistics
     )
     // format: on
-  }
+    }
 
   /** Find all annotations which are listable by the user specified in 'forUser'
     *

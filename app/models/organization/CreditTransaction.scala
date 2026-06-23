@@ -71,39 +71,39 @@ class CreditTransactionDAO @Inject() (
     )
 
   implicit val getCreditTransactions: GetResult[CreditTransaction] = GetResult using
-  { prs =>
-    import prs._
-    val transactionId = <<[ObjectId]
-    val organizationId = <<[String]
-    val relatedTransaction = <<?[ObjectId]
-    val paidJobId = <<?[ObjectId]
-    val milliCreditChange = <<[Int]
-    val comment = <<[String]
-    val transactionStateOpt = CreditTransactionState.fromString(<<[String])
-    val transactionState = transactionStateOpt.getOrElse(
-      throw new RuntimeException(s"Unknown credit transaction state: $transactionStateOpt")
-    )
-    val creditStateOpt = CreditState.fromString(<<[String])
-    val creditState = creditStateOpt.getOrElse(throw new RuntimeException(s"Unknown credit state: $creditStateOpt"))
-    val expiresAt = <<?[Instant]
-    val createdAt = <<[Instant]
-    val updatedAt = <<[Instant]
-    val isDeleted = <<[Boolean]
-    CreditTransaction(
-      transactionId,
-      organizationId,
-      relatedTransaction,
-      paidJobId,
-      milliCreditChange,
-      comment,
-      transactionState,
-      creditState,
-      expiresAt,
-      createdAt,
-      updatedAt,
-      isDeleted
-    )
-  }
+    { prs =>
+      import prs._
+      val transactionId = <<[ObjectId]
+      val organizationId = <<[String]
+      val relatedTransaction = <<?[ObjectId]
+      val paidJobId = <<?[ObjectId]
+      val milliCreditChange = <<[Int]
+      val comment = <<[String]
+      val transactionStateOpt = CreditTransactionState.fromString(<<[String])
+      val transactionState = transactionStateOpt.getOrElse(
+        throw new RuntimeException(s"Unknown credit transaction state: $transactionStateOpt")
+      )
+      val creditStateOpt = CreditState.fromString(<<[String])
+      val creditState = creditStateOpt.getOrElse(throw new RuntimeException(s"Unknown credit state: $creditStateOpt"))
+      val expiresAt = <<?[Instant]
+      val createdAt = <<[Instant]
+      val updatedAt = <<[Instant]
+      val isDeleted = <<[Boolean]
+      CreditTransaction(
+        transactionId,
+        organizationId,
+        relatedTransaction,
+        paidJobId,
+        milliCreditChange,
+        comment,
+        transactionState,
+        creditState,
+        expiresAt,
+        createdAt,
+        updatedAt,
+        isDeleted
+      )
+    }
 
   // Superusers may read and update transactions of all orgas, but not list them.
   override protected def readAccessQ(requestingUserId: ObjectId): SqlToken =

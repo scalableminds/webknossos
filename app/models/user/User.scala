@@ -204,15 +204,15 @@ class UserDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionContext)
 
   // Necessary since a tuple can only have 22 elements
   implicit def GetResultUserCompactInfo: GetResult[UserCompactInfo] = GetResult using
-  { prs =>
-    import prs._
+    { prs =>
+      import prs._
     // format: off
     UserCompactInfo(<<[ObjectId],<<[ObjectId],<<[String],<<[String],<<[String],<<[String],<<[Boolean],<<[Boolean],
       <<[Boolean],<<[Boolean],<<[String],<<[String],<<[String],<<[String], <<[String],<<[Instant],<<[String],
       <<[String],<<[String],<<[Instant],<<?[String],<<[Boolean],<<[Boolean],<<[Boolean],<<[Boolean],<<[Boolean]
     )
     // format: on
-  }
+    }
 
   private def payingOrganizationInfoSubquery =
     q"""(

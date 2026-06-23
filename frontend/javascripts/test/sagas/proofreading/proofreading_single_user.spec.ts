@@ -30,7 +30,7 @@ import {
   mockInitialBucketAndAgglomerateData,
   getPositionForSegmentId,
 } from "./proofreading_test_utils";
-import { waitFor } from "viewer/model/sagas/saga_helpers";
+import { waitUntilNoActiveOperations } from "viewer/model/sagas/saga_helpers";
 
 describe("Proofreading (Single User)", () => {
   beforeEach<WebknossosTestContext>(async (context) => {
@@ -157,7 +157,7 @@ describe("Proofreading (Single User)", () => {
       expect(mapping1).toEqual(expectedMappingAfterSplit);
 
       yield call(() => api.tracing.save());
-      yield* waitFor((state) => state.operationContext.activeOperations.length === 0);
+      yield call(waitUntilNoActiveOperations);
       yield call(() => api.tracing.save());
 
       yield expectSegmentList(tracingId, [

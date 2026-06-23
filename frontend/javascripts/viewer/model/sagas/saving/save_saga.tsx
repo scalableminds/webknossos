@@ -68,7 +68,12 @@ import { ensureWkInitialized } from "viewer/model/sagas/ready_sagas";
 import { Model, Store } from "viewer/singletons";
 import type { NumberLike, StoreAnnotation, WebknossosState } from "viewer/store";
 import { getOrCreateOperationContext } from "../operation_context_saga";
-import { spawnUntilCanceled, takeEveryWithBatchActionSupport, waitFor } from "../saga_helpers";
+import {
+  spawnUntilCanceled,
+  takeEveryWithBatchActionSupport,
+  waitFor,
+  waitUntilNoActiveOperations,
+} from "../saga_helpers";
 import {
   refreshAffectedMeshes,
   splitAgglomerateInMapping,
@@ -961,7 +966,7 @@ function* reloadMeshes(
   meshIdsToReloadPerLayer: ApplyingUpdateArtifacts["meshIdsToRemovePerLayer"],
 ) {
   // First wait in case an operation is running (e.g. proofreading) until it finishes.
-  yield* waitFor((state) => state.operationContext.activeOperations.length === 0);
+  yield call(waitUntilNoActiveOperations);
   const refreshAffectedMeshesEffects = [];
   for (const [tracingId, meshIdsToReload] of meshIdsToReloadPerLayer.entries()) {
     const refreshList: Array<{

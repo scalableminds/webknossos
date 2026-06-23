@@ -51,7 +51,7 @@ import {
   splitSegment2And3,
   splitSegment7And1337AndMerge1337And5,
 } from "./proofreading_interaction_update_action_fixtures";
-import { waitFor } from "viewer/model/sagas/saga_helpers";
+import { waitUntilNoActiveOperations } from "viewer/model/sagas/saga_helpers";
 
 function* prepareEditableMapping(
   context: WebknossosTestContext,
@@ -128,7 +128,7 @@ describe("Proofreading (Multi User)", () => {
 
       yield* expectMapping(tracingId, expectedMappingAfterMerge);
 
-      yield* waitFor((state) => state.operationContext.activeOperations.length === 0);
+      yield call(waitUntilNoActiveOperations);
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
       const receivedUpdateActions = getFlattenedUpdateActions(context).slice(-2);
@@ -244,7 +244,7 @@ describe("Proofreading (Multi User)", () => {
       yield take("FINISH_MAPPING_INITIALIZATION");
 
       yield* expectMapping(tracingId, expectedMappingAfterMerge2);
-      yield* waitFor((state) => state.operationContext.activeOperations.length === 0);
+      yield call(waitUntilNoActiveOperations);
       yield call(() => api.tracing.save()); // Also pulls newest version from backend.
 
       const receivedUpdateActions = getFlattenedUpdateActions(context);
@@ -343,7 +343,7 @@ describe("Proofreading (Multi User)", () => {
       yield* expectMapping(tracingId, expectedMappingAfterMerge);
 
       // Wait until proofreading saga is done
-      yield* waitFor((state) => state.operationContext.activeOperations.length === 0);
+      yield call(waitUntilNoActiveOperations);
       yield call(() => api.tracing.save());
 
       const receivedUpdateActions = getFlattenedUpdateActions(context);
@@ -706,7 +706,7 @@ describe("Proofreading (Multi User)", () => {
       );
 
       yield take("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");
-      yield* waitFor((state) => state.operationContext.activeOperations.length === 0);
+      yield call(waitUntilNoActiveOperations);
 
       const receivedUpdateActions = getFlattenedUpdateActions(context).slice(-3);
 
@@ -862,7 +862,7 @@ describe("Proofreading (Multi User)", () => {
       );
 
       yield take("SNAPSHOT_ANNOTATION_STATE_FOR_NEXT_REBASE");
-      yield* waitFor((state) => state.operationContext.activeOperations.length === 0);
+      yield call(waitUntilNoActiveOperations);
 
       const backendState = backendMock.getState();
       const frontendState = Store.getState();
@@ -971,7 +971,7 @@ describe("Proofreading (Multi User)", () => {
         ),
       );
       yield take("FINISH_MAPPING_INITIALIZATION");
-      yield* waitFor((state) => state.operationContext.activeOperations.length === 0);
+      yield call(waitUntilNoActiveOperations);
       yield call(() => api.tracing.save());
 
       const mergeSaveActionBatch = getFlattenedUpdateActions(context).slice(-2);
@@ -1059,7 +1059,7 @@ describe("Proofreading (Multi User)", () => {
         blockedBySessionId: null,
       }));
       // Wait till not busy anymore to check that no dead lock happens.
-      yield* waitFor((state) => state.operationContext.activeOperations.length === 0);
+      yield call(waitUntilNoActiveOperations);
     });
 
     await task.toPromise();
@@ -1114,7 +1114,7 @@ describe("Proofreading (Multi User)", () => {
           getPositionForSegmentId(5), // At this position is: unmappedId=5 / mappedId=4
         ),
       );
-      yield* waitFor((state) => state.operationContext.activeOperations.length === 0);
+      yield call(waitUntilNoActiveOperations);
 
       yield take("FINISH_MAPPING_INITIALIZATION");
       yield take("FINISH_MAPPING_INITIALIZATION");
@@ -1138,7 +1138,7 @@ describe("Proofreading (Multi User)", () => {
         ((action: Action) =>
           action.type === "FINISHED_LOADING_MESH" && action.segmentId === 1339) as ActionPattern,
       );
-      yield* waitFor((state) => state.operationContext.activeOperations.length === 0);
+      yield call(waitUntilNoActiveOperations);
       yield call(() => api.tracing.save());
 
       const backendState = backendMock.getState();

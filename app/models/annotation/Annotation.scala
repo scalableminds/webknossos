@@ -213,27 +213,25 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       visibility <- AnnotationVisibility.fromString(r.visibility).toFox
       collaborationMode <- CollaborationMode.fromString(r.collaborationmode).toFox
       annotationLayers <- annotationLayerDAO.findAnnotationLayersFor(ObjectId(r._Id))
-    } yield {
-      Annotation(
-        ObjectId(r._Id),
-        ObjectId(r._Dataset),
-        r._Task.map(ObjectId(_)),
-        ObjectId(r._User),
-        annotationLayers,
-        r.description,
-        visibility,
-        r.name,
-        state,
-        r.islockedbyowner,
-        parseArrayLiteral(r.tags).toSet,
-        r.tracingtime,
-        typ,
-        collaborationMode,
-        Instant.fromSql(r.created),
-        Instant.fromSql(r.modified),
-        r.isdeleted
-      )
-    }
+    } yield Annotation(
+      ObjectId(r._Id),
+      ObjectId(r._Dataset),
+      r._Task.map(ObjectId(_)),
+      ObjectId(r._User),
+      annotationLayers,
+      r.description,
+      visibility,
+      r.name,
+      state,
+      r.islockedbyowner,
+      parseArrayLiteral(r.tags).toSet,
+      r.tracingtime,
+      typ,
+      collaborationMode,
+      Instant.fromSql(r.created),
+      Instant.fromSql(r.modified),
+      r.isdeleted
+    )
 
   override protected def anonymousReadAccessQ(sharingToken: Option[String]): SqlToken =
     q"visibility = ${AnnotationVisibility.Public}"
@@ -335,7 +333,8 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
   }
 
   // Necessary since a tuple can only have 22 elements
-  implicit def GetResultAnnotationCompactInfo: GetResult[AnnotationCompactInfo] = GetResult(using { prs =>
+  implicit def GetResultAnnotationCompactInfo: GetResult[AnnotationCompactInfo] = GetResult using
+  { prs =>
     import prs._
 
     val id = <<[ObjectId]
@@ -369,7 +368,7 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       organizationId, tracingIds, annotationLayerNames, annotationLayerTypes, annotationLayerStatistics
     )
     // format: on
-  })
+  }
 
   /** Find all annotations which are listable by the user specified in 'forUser'
     *
@@ -812,9 +811,11 @@ class AnnotationDAO @Inject() (sqlClient: SqlClient, annotationLayerDAO: Annotat
       _ <- run(q"UPDATE webknossos.annotations SET collaborationMode = $collaborationMode WHERE _id = $id".asUpdate)
     } yield ()
 
-  def getViewConfigurationForUserWithFallback(annotation: ObjectId,
-                                              requestingUserId: ObjectId,
-                                              annotationOwnerId: ObjectId): Fox[Option[JsObject]] =
+  def getViewConfigurationForUserWithFallback(
+      annotation: ObjectId,
+      requestingUserId: ObjectId,
+      annotationOwnerId: ObjectId
+  ): Fox[Option[JsObject]] =
     for {
       // Single scan: fetch both the requesting user's row and the owner's fallback row, preferring
       // the requesting user's config via ORDER BY.  In PostgreSQL a boolean expression evaluates to

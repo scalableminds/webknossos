@@ -626,8 +626,9 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
                    AND $accessQuery""".asUpdate)
     } yield ()
 
-  def updatePartial(datasetId: ObjectId, params: DatasetUpdatePartialParameters)(
-      using ctx: DBAccessContext): Fox[Unit] = {
+  def updatePartial(datasetId: ObjectId, params: DatasetUpdatePartialParameters)(using
+      ctx: DBAccessContext
+  ): Fox[Unit] = {
     val setQueries = List(
       params.description.map(d => q"description = $d"),
       params.name.map(v => q"name = $v"),
@@ -652,14 +653,16 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
     }
   }
 
-  def updateFields(datasetId: ObjectId,
-                   description: Option[String],
-                   name: Option[String],
-                   sortingKey: Instant,
-                   isPublic: Boolean,
-                   tags: List[String],
-                   metadata: JsArray,
-                   folderId: ObjectId)(using ctx: DBAccessContext): Fox[Unit] = {
+  def updateFields(
+      datasetId: ObjectId,
+      description: Option[String],
+      name: Option[String],
+      sortingKey: Instant,
+      isPublic: Boolean,
+      tags: List[String],
+      metadata: JsArray,
+      folderId: ObjectId
+  )(using ctx: DBAccessContext): Fox[Unit] = {
     val updateParameters = new DatasetUpdatePartialParameters(
       description = Some(description),
       name = Some(name),
@@ -747,13 +750,14 @@ class DatasetDAO @Inject() (sqlClient: SqlClient, datasetLayerDAO: DatasetLayerD
       newDataSource: DataSource,
       isUsable: Boolean,
       rootPath: Option[String] = None,
-      rootRealPath: Option[String] = None)(using ctx: DBAccessContext): Fox[Unit] =
+      rootRealPath: Option[String] = None
+  )(using ctx: DBAccessContext): Fox[Unit] =
     for {
       organization <- organizationDAO.findOne(newDataSource.id.organizationId)
       defaultViewConfiguration: Option[JsValue] = newDataSource.defaultViewConfiguration.map(Json.toJson(_))
       pathUpdates = List(
         rootPath.map(v => q"rootPath = $v"),
-        rootRealPath.map(v => q"rootRealPath = $v"),
+        rootRealPath.map(v => q"rootRealPath = $v")
       ).flatten
       pathUpdatesQuery = if (pathUpdates.nonEmpty) q", ${SqlToken.joinBySeparator(pathUpdates, ", ")}" else q""
       _ <- run(q"""UPDATE webknossos.datasets
@@ -972,7 +976,8 @@ class DatasetMagDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
     } yield ()
 
   implicit def GetResultDataSourceMagRow: GetResult[DataSourceMagRow] =
-    GetResult(using { r =>
+    GetResult using
+    { r =>
       val datasetId = ObjectId(r.nextString())
       val layerName = r.nextString()
       val magLiteral = r.nextString()
@@ -992,7 +997,7 @@ class DatasetMagDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
         r.nextString(),
         r.nextString()
       )
-    })
+    }
 
   // Note equivalent in DatasetLayerAttachmentsDAO
   def findMagPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] =
@@ -1599,25 +1604,26 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
     } yield ()
 
   implicit def GetResultStorageRelevantDataLayerAttachment: GetResult[StorageRelevantDataLayerAttachment] =
-    GetResult(using r =>
-      StorageRelevantDataLayerAttachment(
-        ObjectId(r.nextString()),
-        r.nextString(),
-        r.nextString(),
-        r.nextString(), {
-          val format = r.nextString()
-          LayerAttachmentType
-            .fromString(format)
-            .getOrElse(
-              // Abort row parsing if the value is invalid. Will be converted into a DBIO Error.
-              throw new IllegalArgumentException(
-                s"Invalid LayerAttachmentType value: '$format'"
+    GetResult(using
+      r =>
+        StorageRelevantDataLayerAttachment(
+          ObjectId(r.nextString()),
+          r.nextString(),
+          r.nextString(),
+          r.nextString(), {
+            val format = r.nextString()
+            LayerAttachmentType
+              .fromString(format)
+              .getOrElse(
+                // Abort row parsing if the value is invalid. Will be converted into a DBIO Error.
+                throw new IllegalArgumentException(
+                  s"Invalid LayerAttachmentType value: '$format'"
+                )
               )
-            )
-        },
-        r.nextString(),
-        r.nextString()
-      )
+          },
+          r.nextString(),
+          r.nextString()
+        )
     )
 
   // Note equivalent in DatasetMagsDAO

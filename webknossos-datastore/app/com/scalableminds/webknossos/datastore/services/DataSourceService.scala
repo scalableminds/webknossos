@@ -23,7 +23,7 @@ import java.nio.file.{Files, Path}
 import scala.concurrent.ExecutionContext
 import scala.concurrent.duration._
 
-class DataSourceService @Inject()(
+class DataSourceService @Inject() (
     config: DataStoreConfig,
     dataVaultService: DataVaultService,
     val remoteWebknossosClient: DSRemoteWebknossosClient,
@@ -84,12 +84,14 @@ class DataSourceService @Inject()(
           for {
             _ <- remoteWebknossosClient.reportDataSources(foundDataSourcesWithPathInfo, organizationId)
             _ <- remoteWebknossosClient.reportRealPaths(realPathInfos)
-            _ = logFoundDatasources(before,
-                                    verbose,
-                                    selectedOrgaLabel,
-                                    foundDataSources,
-                                    realPathInfos,
-                                    realPathScanFailures)
+            _ = logFoundDatasources(
+              before,
+              verbose,
+              selectedOrgaLabel,
+              foundDataSources,
+              realPathInfos,
+              realPathScanFailures
+            )
           } yield ()
         case e =>
           val errorMsg = s"Failed to scan inbox. Error during list directories on '$dataBaseDir$selectedOrgaLabel': $e"
@@ -104,11 +106,13 @@ class DataSourceService @Inject()(
       before <- Instant.nowFox
       (realPathInfos, realPathScanFailures) = scanRealPaths(dataSources)
       _ <- remoteWebknossosClient.reportRealPaths(realPathInfos)
-      realPathFailuresSummary = if (realPathScanFailures.isEmpty) ""
-      else s". ${realPathScanFailures.length} realPath scan failures"
+      realPathFailuresSummary =
+        if (realPathScanFailures.isEmpty) ""
+        else s". ${realPathScanFailures.length} realPath scan failures"
       _ = Instant.logSince(
         before,
-        s"Scanned ${countScannedRealPaths(realPathInfos)} realpaths for ${dataSources.length} virtual datasets$realPathFailuresSummary.")
+        s"Scanned ${countScannedRealPaths(realPathInfos)} realpaths for ${dataSources.length} virtual datasets$realPathFailuresSummary."
+      )
       _ = logRealPathScanFailures(verbose = true, realPathScanFailures)
     } yield ()
 
@@ -178,19 +182,21 @@ class DataSourceService @Inject()(
       } yield RealPathInfo(attachment.path, UPath.fromLocalPath(realAttachmentPath), hasLocalData = isDatasetLocal)
     }
 
-  private def logFoundDatasources(before: Instant,
-                                  verbose: Boolean,
-                                  selectedOrgaLabel: String,
-                                  foundDataSources: Seq[DataSource],
-                                  realPathInfosByDataSource: Seq[DataSourcePathInfo],
-                                  realPathScanFailures: Seq[Failure]): Unit = {
+  private def logFoundDatasources(
+      before: Instant,
+      verbose: Boolean,
+      selectedOrgaLabel: String,
+      foundDataSources: Seq[DataSource],
+      realPathInfosByDataSource: Seq[DataSourcePathInfo],
+      realPathScanFailures: Seq[Failure]
+  ): Unit = {
     val realPathFailuresSummary =
       if (realPathScanFailures.isEmpty) "" else s" ${realPathScanFailures.length} realPath scan failures"
     val realPathScanSummary =
       s"${countScannedRealPaths(realPathInfosByDataSource)} scanned realpaths.$realPathFailuresSummary"
     val shortForm =
       s"Finished scanning inbox ($dataBaseDir$selectedOrgaLabel), took ${formatDuration(Instant.since(before))}: ${foundDataSources
-        .count(_.isUsable)} active, ${foundDataSources.count(!_.isUsable)} inactive. $realPathScanSummary"
+          .count(_.isUsable)} active, ${foundDataSources.count(!_.isUsable)} inactive. $realPathScanSummary"
     val msg = if (verbose) {
       val byOrganization: Map[String, Seq[DataSource]] = foundDataSources.groupBy(_.id.organizationId)
       shortForm + ". " + byOrganization.keys.map { team =>
@@ -241,9 +247,11 @@ class DataSourceService @Inject()(
       case Full(dataSourceDirs) =>
         dataSourceDirs.map { dirPath =>
           val realPath = tryo(dirPath.toRealPath()).getOrElse(dirPath)
-          DataSourceWithPathInfo(dataSourceFromDir(dirPath, organization, resolvePaths = true),
-                                 Some(dirPath.toString),
-                                 Some(realPath.toString))
+          DataSourceWithPathInfo(
+            dataSourceFromDir(dirPath, organization, resolvePaths = true),
+            Some(dirPath.toString),
+            Some(realPath.toString)
+          )
         }
       case _ =>
         logger.error(s"Failed to list directories for organization $organization at path $path")
@@ -271,16 +279,20 @@ class DataSourceService @Inject()(
               else dataSourceWithAttachments
             dataSourceWithResolvedPaths.copy(id)
           } else
-            UnusableDataSource(id,
-                               None,
-                               s"Error: ${validationErrors.mkString(" ")}",
-                               Some(dataSource.scale),
-                               Some(Json.toJson(dataSource)))
+            UnusableDataSource(
+              id,
+              None,
+              s"Error: ${validationErrors.mkString(" ")}",
+              Some(dataSource.scale),
+              Some(Json.toJson(dataSource))
+            )
         case e =>
-          UnusableDataSource(id,
-                             None,
-                             s"Error: Invalid json format in $propertiesFile: $e",
-                             existingDataSourceProperties = JsonHelper.parseFromFile(propertiesFile, path).toOption)
+          UnusableDataSource(
+            id,
+            None,
+            s"Error: Invalid json format in $propertiesFile: $e",
+            existingDataSourceProperties = JsonHelper.parseFromFile(propertiesFile, path).toOption
+          )
       }
     } else {
       UnusableDataSource(id, None, DataSourceStatus.notImportedYet)
@@ -293,7 +305,8 @@ class DataSourceService @Inject()(
         newMags = Some(dataLayer.mags.map { magLocator =>
           magLocator.copy(
             path =
-              Some(dataVaultService.resolveMagPath(magLocator, dataSourcePath, dataSourcePath.resolve(dataLayer.name))))
+              Some(dataVaultService.resolveMagPath(magLocator, dataSourcePath, dataSourcePath.resolve(dataLayer.name)))
+          )
         }),
         attachmentMapping =
           (attachments: DataLayerAttachments) => attachments.resolvedIn(UPath.fromLocalPath(dataSourcePath))
@@ -311,7 +324,7 @@ class DataSourceService @Inject()(
               mag.copy(
                 path = Some(newBasePath / layer.name / mag.mag.toMagLiteral(true))
               )
-        },
+          },
         attachmentMapping = _.resolvedIn(newBasePath)
       )
     }
@@ -319,7 +332,7 @@ class DataSourceService @Inject()(
   }
 
   private def addScannedAttachments(dataSourcePath: Path, dataSource: UsableDataSource) =
-    dataSource.dataLayers.map(dataLayer => {
+    dataSource.dataLayers.map { dataLayer =>
       val dataLayerPath = dataSourcePath.resolve(dataLayer.name)
       dataLayer.withMergedAttachments(
         DataLayerAttachments(
@@ -330,7 +343,7 @@ class DataSourceService @Inject()(
           CumsumFileInfo.scanForCumsumFile(dataLayerPath)
         ).relativizedIn(UPath.fromLocalPath(dataSourcePath))
       )
-    })
+    }
 
   def invalidateVaultCache(dataSource: DataSource, dataLayerName: Option[String]): Option[Int] =
     for {
@@ -339,13 +352,15 @@ class DataSourceService @Inject()(
         case Some(ln) => Seq(usableDataSource.getDataLayer(ln))
         case None     => usableDataSource.dataLayers.map(d => Some(d))
       }
-      removedEntriesList = for {
-        dataLayerOpt <- dataLayers
-        dataLayer <- dataLayerOpt
-        _ = dataLayer.mags.foreach(mag => dataVaultService.removeVaultFromCache(mag, dataSource.id, dataLayer.name))
-        _ = dataLayer.attachments.foreach(_.allAttachments.foreach(attachment =>
-          dataVaultService.removeVaultFromCache(attachment)))
-      } yield dataLayer.mags.length
+      removedEntriesList =
+        for {
+          dataLayerOpt <- dataLayers
+          dataLayer <- dataLayerOpt
+          _ = dataLayer.mags.foreach(mag => dataVaultService.removeVaultFromCache(mag, dataSource.id, dataLayer.name))
+          _ = dataLayer.attachments.foreach(
+            _.allAttachments.foreach(attachment => dataVaultService.removeVaultFromCache(attachment))
+          )
+        } yield dataLayer.mags.length
     } yield removedEntriesList.sum
 
   def deleteLocalPathsFromDisk(paths: Seq[UPath]): Box[Unit] = {

@@ -563,7 +563,7 @@ sealed abstract class Box[+A] extends Product with Serializable {
     * // Returns Empty because the partial function is not defined for Empty Empty transform { case Failure("error",
     * Empty, Empty) => Full("alternative") }
     *
-    * }}}
+    *   }}}
     */
   def transform[B >: A](transformFn: PartialFunction[Box[A], Box[B]]): Box[B] =
     transformFn.applyOrElse(this, (thisBox: Box[A]) => thisBox)

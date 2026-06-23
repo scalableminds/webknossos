@@ -24,11 +24,11 @@ object ZarrCoordinatesParser extends FoxImplicits {
       reorderedAdditionalAxes = reorderedAdditionalAxesOpt.getOrElse(List.empty)
       _ <- Fox.fromBool(reorderedAdditionalAxes.length == ints.length - 4) ?~> Msg.Zarr.invalidAdditionalCoordinates
       requestContainsAdditionalCoordinates = ints.length > 4
-      additionalCoordinates = if (requestContainsAdditionalCoordinates)
-        Some(ints.slice(1, ints.length - 3).zipWithIndex.map {
-          case (coordinate, index) =>
+      additionalCoordinates =
+        if (requestContainsAdditionalCoordinates)
+          Some(ints.slice(1, ints.length - 3).zipWithIndex.map { case (coordinate, index) =>
             new AdditionalCoordinate(name = reorderedAdditionalAxes(index).name, value = coordinate)
-        })
-      else None
+          })
+        else None
     } yield (x, y, z, additionalCoordinates)
 }

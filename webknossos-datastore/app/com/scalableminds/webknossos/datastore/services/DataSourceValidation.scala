@@ -28,8 +28,10 @@ trait DataSourceValidation {
     val errors = List(
       check(dataSource.scale.factor.isStrictlyPositive, "Voxel size (scale) is negative in at least one dimension."),
       check(magsXIsSorted && magsYIsSorted && magsZIsSorted, "Mags do not monotonically increase in all dimensions."),
-      check(magsSorted.forall(magsOfLayer => magsOfLayer.length == magsOfLayer.distinct.length),
-            "There are duplicate mags in a layer."),
+      check(
+        magsSorted.forall(magsOfLayer => magsOfLayer.length == magsOfLayer.distinct.length),
+        "There are duplicate mags in a layer."
+      ),
       check(dataSource.dataLayers.nonEmpty, "No layers."),
       check(dataSource.dataLayers.forall(!_.boundingBox.isEmpty), "Empty bounding box in a layer."),
       check(

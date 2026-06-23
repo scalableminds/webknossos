@@ -975,31 +975,28 @@ class DatasetMagDAO @Inject() (sqlClient: SqlClient)(implicit ec: ExecutionConte
       )
     } yield ()
 
-  implicit def GetResultDataSourceMagRow: GetResult[DataSourceMagRow] = {
-    GetResult(
-      using { r =>
-        val datasetId = ObjectId(r.nextString())
-        val layerName = r.nextString()
-        val magLiteral = r.nextString()
-        val parsedMagOpt = Vec3Int.fromList(parseArrayLiteral(magLiteral).map(_.toInt))
-        DataSourceMagRow(
-          datasetId,
-          layerName,
-          parsedMagOpt.getOrElse(
-            // Abort row parsing if the value is invalid. Will be converted into a DBIO Error.
-            throw new IllegalArgumentException(
-              s"Invalid mag literal for dataset $datasetId with value: '$magLiteral'"
-            )
-          ),
-          r.nextStringOption(),
-          r.nextStringOption(),
-          r.nextBoolean(),
-          r.nextString(),
-          r.nextString()
-        )
-      }
-    )
-  }
+  implicit def GetResultDataSourceMagRow: GetResult[DataSourceMagRow] =
+    r => {
+      val datasetId = ObjectId(r.nextString())
+      val layerName = r.nextString()
+      val magLiteral = r.nextString()
+      val parsedMagOpt = Vec3Int.fromList(parseArrayLiteral(magLiteral).map(_.toInt))
+      DataSourceMagRow(
+        datasetId,
+        layerName,
+        parsedMagOpt.getOrElse(
+          // Abort row parsing if the value is invalid. Will be converted into a DBIO Error.
+          throw new IllegalArgumentException(
+            s"Invalid mag literal for dataset $datasetId with value: '$magLiteral'"
+          )
+        ),
+        r.nextStringOption(),
+        r.nextStringOption(),
+        r.nextBoolean(),
+        r.nextString(),
+        r.nextString()
+      )
+    }
 
   // Note equivalent in DatasetLayerAttachmentsDAO
   def findMagPathsUsedOnlyByThisDataset(datasetId: ObjectId): Fox[Seq[UPath]] =
@@ -1606,27 +1603,25 @@ class DatasetLayerAttachmentDAO @Inject() (sqlClient: SqlClient)(implicit ec: Ex
     } yield ()
 
   implicit def GetResultStorageRelevantDataLayerAttachment: GetResult[StorageRelevantDataLayerAttachment] =
-    GetResult(using
-      r =>
-        StorageRelevantDataLayerAttachment(
-          ObjectId(r.nextString()),
-          r.nextString(),
-          r.nextString(),
-          r.nextString(), {
-            val format = r.nextString()
-            LayerAttachmentType
-              .fromString(format)
-              .getOrElse(
-                // Abort row parsing if the value is invalid. Will be converted into a DBIO Error.
-                throw new IllegalArgumentException(
-                  s"Invalid LayerAttachmentType value: '$format'"
-                )
+    r =>
+      StorageRelevantDataLayerAttachment(
+        ObjectId(r.nextString()),
+        r.nextString(),
+        r.nextString(),
+        r.nextString(), {
+          val format = r.nextString()
+          LayerAttachmentType
+            .fromString(format)
+            .getOrElse(
+              // Abort row parsing if the value is invalid. Will be converted into a DBIO Error.
+              throw new IllegalArgumentException(
+                s"Invalid LayerAttachmentType value: '$format'"
               )
-          },
-          r.nextString(),
-          r.nextString()
-        )
-    )
+            )
+        },
+        r.nextString(),
+        r.nextString()
+      )
 
   // Note equivalent in DatasetMagsDAO
   def findAllStorageRelevantAttachments(

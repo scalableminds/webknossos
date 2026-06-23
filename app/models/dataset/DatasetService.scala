@@ -40,7 +40,6 @@ import security.RandomIDGenerator
 import telemetry.SlackNotificationService
 import utils.WkConf
 
-import java.nio.file.Path
 import javax.inject.Inject
 import scala.concurrent.duration.*
 import scala.concurrent.ExecutionContext

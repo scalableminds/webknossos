@@ -11,7 +11,7 @@ import com.scalableminds.webknossos.datastore.explore.{
   ExploreRemoteLayerParameters
 }
 import com.scalableminds.webknossos.datastore.helpers.UPath
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSource, UsableDataSource}
+import com.scalableminds.webknossos.datastore.models.datasource.UsableDataSource
 import com.scalableminds.webknossos.datastore.models.{AdditionalCoordinate, RawCuboidRequest, VoxelSize}
 import com.scalableminds.webknossos.datastore.rpc.RPC
 import com.scalableminds.webknossos.datastore.services.{

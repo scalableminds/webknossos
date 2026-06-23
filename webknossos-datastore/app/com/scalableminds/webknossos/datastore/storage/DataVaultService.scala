@@ -16,7 +16,7 @@ import com.scalableminds.webknossos.datastore.datavault.{
 import com.typesafe.scalalogging.LazyLogging
 import com.scalableminds.webknossos.datastore.dataformats.MagLocator
 import com.scalableminds.webknossos.datastore.helpers.{PathSchemes, UPath}
-import com.scalableminds.webknossos.datastore.models.datasource.{DataSourceId, LayerAttachment}
+import com.scalableminds.webknossos.datastore.models.datasource.LayerAttachment
 import com.scalableminds.webknossos.datastore.services.{DSRemoteWebknossosClient, ManagedS3Service}
 import play.api.libs.ws.WSClient
 

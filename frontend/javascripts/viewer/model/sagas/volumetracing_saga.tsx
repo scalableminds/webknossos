@@ -55,7 +55,7 @@ import {
 import { markVolumeTransactionEnd } from "viewer/model/bucket_data_handling/bucket";
 import type { Saga } from "viewer/model/sagas/effect_generators";
 import { select, take } from "viewer/model/sagas/effect_generators";
-import { createOperationContext } from "viewer/model/sagas/operation_context_saga";
+import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
 import {
   requestBucketModificationInVolumeTracing,
   takeEveryInOperationContext,
@@ -82,6 +82,11 @@ function* watchVolumeTracingAsync(): Saga<void> {
     maybeInterpolateSegmentationLayer,
     { id: "INTERPOLATE_SEGMENTATION_LAYER", description: "Interpolating segment" },
   );
+  yield* takeEveryInOperationContext("DELETE_SEGMENT_DATA", handleDeleteSegmentData, {
+    id: "DELETE_SEGMENT",
+    description: "Segment is being deleted.",
+  });
+
   yield* fork(warnOfTooLowOpacity);
 }
 
@@ -580,36 +585,28 @@ function* ensureValidBrushSize(): Saga<void> {
   );
 }
 
-function* handleDeleteSegmentData(): Saga<void> {
-  yield* take("WK_INITIALIZED");
-  while (true) {
-    const action = (yield* take("DELETE_SEGMENT_DATA")) as DeleteSegmentDataAction;
+function* handleDeleteSegmentData(
+  action: DeleteSegmentDataAction,
+  ctx: OperationContext,
+): Saga<void> {
+  yield* put(
+    pushSaveQueueTransaction([deleteSegmentDataVolumeAction(action.segmentId, action.layerName)]),
+  );
+  yield* call([Model, Model.ensureSavedState], ctx);
 
-    const ctx = yield* createOperationContext({
-      id: "DELETE_SEGMENT",
-      description: "Segment is being deleted.",
-    });
-    yield* ctx.execute(function* () {
-      yield* put(
-        pushSaveQueueTransaction([
-          deleteSegmentDataVolumeAction(action.segmentId, action.layerName),
-        ]),
-      );
-      yield* call([Model, Model.ensureSavedState]);
-
-      yield* call([api.data, api.data.reloadBuckets], action.layerName, (bucket) =>
-        bucket.containsValue(action.segmentId),
-      );
-    });
-    if (action.callback) {
-      action.callback();
-    }
+  yield* call(
+    [api.data, api.data.reloadBuckets],
+    action.layerName,
+    (bucket) => bucket.containsValue(action.segmentId),
+    ctx,
+  );
+  if (action.callback) {
+    action.callback();
   }
 }
 
 export default [
   editVolumeLayerAsync,
-  handleDeleteSegmentData,
   ensureToolIsAllowedInMag,
   floodFill,
   watchVolumeTracingAsync,

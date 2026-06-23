@@ -176,6 +176,7 @@ import {
   zoomedPositionToZoomedAddress,
 } from "viewer/model/helpers/position_converter";
 import { getConstructorForElementClass } from "viewer/model/helpers/typed_buffer";
+import type { OperationContext } from "viewer/model/sagas/operation_context_saga";
 import { getHalfViewportExtentsInUnitFromState } from "viewer/model/sagas/saga_selectors";
 import { applyLabeledVoxelMapToAllMissingMags } from "viewer/model/sagas/volume/helpers";
 import { fetchAgglomeratesForSegmentIds } from "viewer/model/sagas/volume/mapping_saga";
@@ -1678,13 +1679,14 @@ class DataApi {
   async reloadBuckets(
     layerName: string,
     predicateFn?: (bucket: DataBucket) => boolean,
+    ctx?: OperationContext,
   ): Promise<void> {
     const truePredicate = () => true;
     await Promise.all(
       Object.values(this.model.dataLayers).map(async (dataLayer: DataLayer) => {
         if (dataLayer.name === layerName) {
           if (dataLayer.cube.isSegmentation) {
-            await Model.ensureSavedState();
+            await Model.ensureSavedState(ctx);
           }
 
           dataLayer.cube.removeBucketsIf(predicateFn || truePredicate);
